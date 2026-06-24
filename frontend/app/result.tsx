@@ -8,14 +8,19 @@ import { BOSS_LORD_IMBALANCE, CODEX, ENEMIES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
 
 export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
-  const { outcome, enemyId, stability, training, shards } = useLocalSearchParams<{ outcome: string; enemyId: string; stability: string; training?: string; shards?: string }>();
+  const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess } = useLocalSearchParams<{
+    outcome: string; enemyId: string; stability: string; training?: string; shards?: string;
+    fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
+  }>();
   const won = outcome === "win";
   const isTraining = training === "1";
-  const shardsEarned = parseInt(shards || "0", 10);
+  const baseShards = parseInt(shards || "0", 10);
+  const fullChainCompleted = fullChain === "1";
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -25,6 +30,22 @@ export default function Result() {
     if (!enemy || !won) return [];
     return CODEX.filter((c) => enemy.teaches.includes(c.id));
   }, [enemy, won]);
+
+  const enemyClinical = enemy ? ENEMY_CLINICAL[enemy.id] : undefined;
+  const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
+  const starRules = getStarRules(profile, enemyClinical);
+  const starResult = useMemo(() => {
+    return computeStars({
+      won,
+      fullChainCompleted,
+      unsafeActionsUsed: parseInt(unsafe || "0", 10),
+      poorFitActionsUsed: parseInt(poorFit || "0", 10),
+      turnsTaken: parseInt(turns || "0", 10),
+      reassessUsed: reassess === "1",
+    }, starRules);
+  }, [won, fullChainCompleted, unsafe, poorFit, turns, reassess, starRules]);
+
+  const rewardBreakdown = won ? calculateRewards(baseShards, starResult.stars, fullChainCompleted) : null;
 
   // After loss, current failure count was just incremented by battle.tsx
   const failureCount = enemy ? ((player?.failure_counts || {})[enemy.id] || 0) : 0;
@@ -62,6 +83,30 @@ export default function Result() {
 
         {won && (
           <>
+            {/* Stars */}
+            <View style={styles.starsCard}>
+              <Text style={styles.starsTitle}>STARS EARNED</Text>
+              <View style={styles.starsRow}>
+                {[0, 1, 2].map((i) => (
+                  <Ionicons
+                    key={i}
+                    name={i < starResult.stars ? "star" : "star-outline"}
+                    size={36}
+                    color={i < starResult.stars ? COLORS.brand : COLORS.onSurfaceTertiary}
+                    style={{ marginHorizontal: 4 }}
+                  />
+                ))}
+              </View>
+              <View style={{ gap: 4, marginTop: 8 }}>
+                {["Stabilized the patient.", "Completed the clinical care chain.", "Efficient and safe care."].map((label, i) => (
+                  <View key={i} style={styles.starLine}>
+                    <Ionicons name={i < starResult.stars ? "checkmark-circle" : "ellipse-outline"} size={14} color={i < starResult.stars ? COLORS.success : COLORS.onSurfaceTertiary} />
+                    <Text style={[styles.starLabel, i < starResult.stars && { color: COLORS.onSurface }]}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
             <View style={styles.statRow}>
               <View style={styles.stat}>
                 <Text style={styles.statLbl}>STABILITY</Text>
@@ -73,10 +118,15 @@ export default function Result() {
               </View>
             </View>
 
-            {shardsEarned > 0 && (
+            {rewardBreakdown && rewardBreakdown.total > 0 && (
               <View style={styles.shardsCard} testID="result-shards">
-                <Ionicons name="diamond" size={20} color={COLORS.brand} />
-                <Text style={styles.shardsTxt}>You earned {shardsEarned} Codex Shards.</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+                  <Ionicons name="diamond" size={20} color={COLORS.brand} />
+                  <Text style={styles.shardsTxt}>{rewardBreakdown.total} Codex Shards earned.</Text>
+                </View>
+                <Text style={styles.shardsBreakdown}>
+                  Base {rewardBreakdown.base}{rewardBreakdown.starBonus ? ` · Stars +${rewardBreakdown.starBonus}` : ""}{rewardBreakdown.chainBonus ? ` · Care Chain +${rewardBreakdown.chainBonus}` : ""}
+                </Text>
               </View>
             )}
 
@@ -162,6 +212,12 @@ const styles = StyleSheet.create({
   primaryTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
   secondary: { borderWidth: 1, borderColor: COLORS.borderStrong, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
   secondaryTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
-  shardsCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
+  shardsCard: { flexDirection: "column", gap: 6, backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
   shardsTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600" },
+  shardsBreakdown: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
+  starsCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", gap: 4 },
+  starsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  starsRow: { flexDirection: "row", marginTop: 4 },
+  starLine: { flexDirection: "row", alignItems: "center", gap: 6 },
+  starLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
 });

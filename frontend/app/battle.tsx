@@ -7,8 +7,9 @@ import * as Haptics from "expo-haptics";
 
 import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
-import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, useItem as applyItem, type BattleState } from "@/src/game/battle";
+import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
+import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
@@ -48,34 +49,29 @@ export default function Battle() {
   const gentleHint = failureCount >= 1;
 
   const [state, setState] = useState<BattleState>(() => {
-    const base = initBattle(enemy, team, player?.inventory || {});
-    let stability = base.stability;
-    let visibleClues = [...base.visibleClues];
-    let hiddenClueIds = [...base.hiddenClueIds];
-    let revealedLabels = [...base.revealedLabels];
-    const log = [...base.log];
+    const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
+    const handicap = getStartingHandicap(profile);
+    const mentorAid = failureCount >= 3;
+    const base = initBattle(enemy, team, {
+      inventory: player?.inventory || {},
+      profile,
+      enemyMastery: player?.enemy_mastery,
+      chapter: player?.chapter_progress,
+      startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0),
+      enemyDamageReduction: handicap.enemyDamageReduction,
+      revealOneExtraClue: handicap.revealOneExtraClue || isTraining,
+    });
+    let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
     if (player?.aptitude === "weaver" && hiddenClueIds.length > 0) {
       const revealed = hiddenClueIds.shift()!;
-      visibleClues.push(revealed);
+      visibleClues = [...visibleClues, revealed];
       const clue = enemy.hiddenClues.find(c => c.id === revealed);
-      if (clue) revealedLabels.push(clue.label);
-      log.push(`⟡ Weaver's Eye: one hidden clue revealed at battle start.`);
+      if (clue) revealedLabels = [...revealedLabels, clue.label];
+      log = [...log, `⟡ Weaver's Eye: one hidden clue revealed at battle start.`];
     }
-    if (mentorAid) {
-      stability = Math.min(100, stability + 10);
-      log.push(`🕯 A mentor steadies your hand. Starting Stability +10.`);
-    }
-    if (isTraining) {
-      if (hiddenClueIds.length > 0) {
-        const revealed = hiddenClueIds.shift()!;
-        visibleClues.push(revealed);
-        const clue = enemy.hiddenClues.find(c => c.id === revealed);
-        if (clue) revealedLabels.push(clue.label);
-      }
-      stability = Math.min(100, stability + 10);
-      log.push(`📜 Training Battle: hidden clue revealed, enemy weakened.`);
-    }
+    if (mentorAid) log = [...log, `🕯 A mentor steadies your hand. Starting Stability +10.`];
+    if (isTraining) log = [...log, `📜 Training Battle: hidden clue revealed, enemy weakened.`];
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });
 
@@ -98,7 +94,7 @@ export default function Battle() {
     }
     if (state.ap < effective.cost) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setState((s) => applySkill(s, effective, hero));
+    setState((s) => applySkill(s, effective, hero).state);
     setDetail(null);
   };
   const handleTempAction = (actionId: string) => {
@@ -150,7 +146,9 @@ export default function Battle() {
       const isBoss = enemy.id === BOSS_LORD_IMBALANCE.id;
       const baseXp = isBoss ? 150 : 35 + enemy.difficulty * 10;
       const xp = isTraining ? Math.floor(baseXp * 0.5) : baseXp;
-      const shards = isTraining ? 10 : (isBoss ? 100 : 25);
+      const baseShards = isTraining ? 10 : (isBoss ? 100 : 25);
+      const chainBonus = state.fullChainCompleted ? 10 : 0;
+      const shards = baseShards + chainBonus;
       const startingInventory = player?.inventory || {};
       const inventoryDelta: Record<string, number> = {};
       for (const [k, v] of Object.entries(state.inventory)) {
@@ -158,7 +156,7 @@ export default function Battle() {
         if (diff !== 0) inventoryDelta[k] = diff;
       }
       await applyRewards({
-        xp, codex: enemy.teaches, enemyId: enemy.id, codexShards: shards, inventoryDelta,
+        xp, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, inventoryDelta,
         mastery: enemy.bestCounters.reduce((acc, c) => {
           const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", cleanse: "judgment", command: "command", analyze: "systems", support: "stabilization" };
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
@@ -168,8 +166,23 @@ export default function Battle() {
     } else if (state.outcome === "loss") {
       await recordFailure(enemy.id);
     }
-    const shardsParam = state.outcome === "win" ? String(isTraining ? 10 : (enemy.id === BOSS_LORD_IMBALANCE.id ? 100 : 25)) : "0";
-    router.replace({ pathname: "/result", params: { outcome: state.outcome, enemyId: enemy.id, stability: String(state.stability), training: isTraining ? "1" : "0", shards: shardsParam } });
+    const isBoss2 = enemy.id === BOSS_LORD_IMBALANCE.id;
+    const baseShards = state.outcome === "win" ? (isTraining ? 10 : (isBoss2 ? 100 : 25)) : 0;
+    router.replace({
+      pathname: "/result",
+      params: {
+        outcome: state.outcome,
+        enemyId: enemy.id,
+        stability: String(state.stability),
+        training: isTraining ? "1" : "0",
+        shards: String(baseShards),
+        fullChain: state.fullChainCompleted ? "1" : "0",
+        unsafe: String(state.unsafeActionsUsed),
+        poorFit: String(state.poorFitActionsUsed),
+        turns: String(state.turnsTaken),
+        reassess: state.reassessUsed ? "1" : "0",
+      },
+    });
   };
 
   // Flatten all skills from team for the Actions tab
@@ -294,16 +307,19 @@ export default function Battle() {
               <View style={styles.grid}>
                 {state.temporaryActionIds.map((aid) => {
                   const a = TEMP_ACTIONS[aid]; if (!a) return null;
-                  const disabled = state.ap < a.costAP || state.outcome !== "ongoing";
+                  const preview = previewTempStatus(state, aid);
+                  const isLocked = preview.status === "locked";
+                  const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing";
                   return (
                     <Pressable
                       key={`tmp-${aid}`}
-                      style={[styles.actionBtn, { borderColor: COLORS.brand }, disabled && styles.disabled]}
+                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
                       onPress={() => disabled ? null : handleTempAction(aid)}
                       onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })}
                       delayLongPress={350}
                       testID={`battle-temp-${aid}`}
                     >
+                      <StatusBadge status={preview.status} />
                       <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1}>{a.name}</Text>
                       <Text style={styles.actionEffect} numberOfLines={2}>Team Support • {a.costAP} AP</Text>
                     </Pressable>
@@ -312,16 +328,19 @@ export default function Battle() {
                 {allTeamSkills.map(({ hero, skill }) => {
                   const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
                   const cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
-                  const disabled = state.ap < cost || state.outcome !== "ongoing";
+                  const preview = previewSkillStatus(state, skill);
+                  const isLocked = preview.status === "locked";
+                  const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
                   return (
                     <Pressable
                       key={`${hero.id}-${skill.id}`}
-                      style={[styles.actionBtn, disabled && styles.disabled]}
+                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
                       onPress={() => disabled ? null : handleSkill(hero, skill)}
                       onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero, skill })}
                       delayLongPress={350}
                       testID={`battle-skill-${skill.id}`}
                     >
+                      <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
                         <Text style={styles.actionName} numberOfLines={1}>{skill.name}</Text>
                         <Text style={styles.apTag}>{cost} AP</Text>
@@ -339,16 +358,19 @@ export default function Battle() {
               <View style={styles.grid}>
                 {ITEMS.map(item => {
                   const qty = state.inventory[item.name] || 0;
-                  const disabled = qty <= 0 || state.ap < item.costAP || state.outcome !== "ongoing";
+                  const preview = previewItemStatus(state, item);
+                  const isLocked = preview.status === "locked";
+                  const disabled = isLocked || qty <= 0 || state.ap < item.costAP || state.outcome !== "ongoing";
                   return (
                     <Pressable
                       key={item.id}
-                      style={[styles.actionBtn, disabled && styles.disabled]}
+                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
                       onPress={() => disabled ? null : handleUseItem(item)}
                       onLongPress={() => setDetail({ kind: "item", item })}
                       delayLongPress={350}
                       testID={`battle-item-${item.id}`}
                     >
+                      <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
                         <Text style={styles.actionName} numberOfLines={1}>{item.displayName}</Text>
                         <Text style={styles.apTag}>×{qty}</Text>
@@ -367,16 +389,19 @@ export default function Battle() {
               {!state.callUsed && availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options match the situation yet.</Text>}
               <View style={styles.grid}>
                 {availableCalls.map(opt => {
-                  const disabled = state.ap < opt.costAP || state.outcome !== "ongoing";
+                  const preview = previewCallStatus(state, opt.id);
+                  const isLocked = preview.status === "locked";
+                  const disabled = isLocked || state.ap < opt.costAP || state.outcome !== "ongoing";
                   return (
                     <Pressable
                       key={opt.id}
-                      style={[styles.actionBtn, disabled && styles.disabled]}
+                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
                       onPress={() => disabled ? null : handleCall(opt)}
                       onLongPress={() => setDetail({ kind: "call", option: opt })}
                       delayLongPress={350}
                       testID={`call-opt-${opt.id}`}
                     >
+                      <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
                         <Text style={styles.actionName} numberOfLines={1}>{opt.name}</Text>
                         <Text style={styles.apTag}>{opt.costAP} AP</Text>
@@ -546,6 +571,17 @@ function DetailContent({ detail, state, onUse }: { detail: DetailEntry; state: B
   return null;
 }
 
+function StatusBadge({ status }: { status: ActionStatus }) {
+  if (status === "appropriate") return null;
+  const color = statusColor(status);
+  const label = statusLabel(status);
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: color + "26", borderColor: color }]}>
+      <Text style={[styles.statusBadgeTxt, { color }]} numberOfLines={1}>{label.toUpperCase()}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   content: { flex: 1 },
@@ -617,6 +653,8 @@ const styles = StyleSheet.create({
   actionEffect: { color: COLORS.onSurfaceSecondary, fontSize: 10, lineHeight: 12 },
   actionHero: { color: COLORS.onSurfaceTertiary, fontSize: 9, marginTop: 2, fontStyle: "italic" },
   apTag: { color: COLORS.brand, fontSize: 10, fontWeight: "700", marginLeft: 4 },
+  statusBadge: { position: "absolute", top: 4, right: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, maxWidth: "60%" },
+  statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
 
   teamList: { gap: SPACING.sm },
   teamCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surfaceTertiary, padding: SPACING.sm, borderRadius: RADIUS.md, borderLeftWidth: 4, borderWidth: 1, borderColor: COLORS.border },

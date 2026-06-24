@@ -11,6 +11,7 @@ type CreatePlayerArgs = {
   aptitude: string;
   recommended_aptitude?: string;
   learning_goal?: string;
+  learning_profile?: string;
   codex_depth?: string;
 };
 
@@ -18,7 +19,7 @@ type Ctx = {
   player: PlayerState | null;
   loading: boolean;
   createPlayer: (args: CreatePlayerArgs) => Promise<void>;
-  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; inventoryDelta?: Record<string, number> }) => Promise<void>;
+  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; inventoryDelta?: Record<string, number>; enemyName?: string }) => Promise<void>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -99,7 +100,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         next.inventory[k] = (next.inventory[k] || 0) + v;
       }
     }
+    if (rewards.enemyName) {
+      next.enemy_mastery = { ...(next.enemy_mastery || {}) };
+      next.enemy_mastery[rewards.enemyName] = (next.enemy_mastery[rewards.enemyName] || 0) + 1;
+    }
     next.runs_completed = next.runs_completed + 1;
+    // Auto-advance chapter at thresholds
+    const newChapter = next.runs_completed >= 10 ? 3 : next.runs_completed >= 3 ? 2 : 1;
+    next.chapter_progress = Math.max(next.chapter_progress || 1, newChapter);
     const updated = await api.updatePlayer(next.id, {
       xp: next.xp, rank: next.rank, rank_index: next.rank_index,
       mastery: next.mastery, codex_unlocked: next.codex_unlocked,
@@ -108,6 +116,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       failure_counts: next.failure_counts,
       codex_shards: next.codex_shards,
       inventory: next.inventory,
+      enemy_mastery: next.enemy_mastery,
+      chapter_progress: next.chapter_progress,
     });
     setPlayer(updated);
   }, [player]);

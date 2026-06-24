@@ -40,6 +40,7 @@ export default function Onboarding() {
         aptitude,
         recommended_aptitude: recommended || undefined,
         learning_goal: goal.label,
+        learning_profile: goal.id,
         codex_depth: goal.depth,
       });
       // Send player directly into first trial battle
@@ -211,7 +212,10 @@ export default function Onboarding() {
                 onPress={() => setLearningGoalId(g.id)}
                 testID={`goal-${g.id}`}
               >
-                <Text style={[styles.goalText, selected && { color: COLORS.brand }]}>{g.label}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.goalText, selected && { color: COLORS.brand }]}>{g.label}</Text>
+                  <Text style={styles.goalSub}>{g.sublabel}</Text>
+                </View>
                 {selected && <Ionicons name="checkmark-circle" size={20} color={COLORS.brand} />}
               </Pressable>
             );
@@ -323,6 +327,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   goalText: { color: COLORS.onSurface, fontSize: 14, flex: 1 },
+  goalSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 3 },
 
   trialMeta: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md, flexWrap: "wrap" },
   trialPill: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },

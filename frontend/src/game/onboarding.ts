@@ -80,13 +80,15 @@ export const APTITUDE_RESULT: Record<Aptitude, { title: string; body: string; bo
   },
 };
 
-// ---------- Learning Goals ----------
+// ---------- Learning Profiles ----------
+// Maps to the clinical-layer LearningProfile (clinical.ts).
+// `id` is used as `learning_profile`. `depth` is kept for codex copy compatibility.
 export const LEARNING_GOALS = [
-  { id: 'general', label: 'I want to learn how the body works.', depth: 'simple' },
-  { id: 'pre_nursing', label: 'I am preparing for nursing school.', depth: 'foundation' },
-  { id: 'in_nursing', label: 'I am in nursing school.', depth: 'clinical' },
-  { id: 'nclex', label: 'I am preparing for NCLEX.', depth: 'nclex' },
-  { id: 'pro', label: 'I am a healthcare professional.', depth: 'professional' },
+  { id: 'nonmedical', label: 'I want to learn how the body works.', sublabel: 'Guided lessons in plain language.', depth: 'simple' },
+  { id: 'preNursing', label: 'I am preparing for nursing or healthcare school.', sublabel: 'Foundational nursing concepts.', depth: 'foundation' },
+  { id: 'nursingStudent', label: 'I am in nursing school.', sublabel: 'Clinical judgment focus.', depth: 'clinical' },
+  { id: 'nclexPrep', label: 'I am preparing for NCLEX.', sublabel: 'NCLEX-lens with stricter feedback.', depth: 'nclex' },
+  { id: 'healthcareProfessional', label: 'I work in healthcare.', sublabel: 'Concise clinical synthesis.', depth: 'professional' },
 ] as const;
 
 export const DEPTH_LABEL: Record<string, string> = {

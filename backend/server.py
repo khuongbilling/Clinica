@@ -33,6 +33,7 @@ class PlayerCreate(BaseModel):
     aptitude: str  # guardian | sage | warden | weaver
     recommended_aptitude: Optional[str] = None
     learning_goal: Optional[str] = None
+    learning_profile: Optional[str] = None
     codex_depth: Optional[str] = None
 
 
@@ -51,6 +52,7 @@ class Player(BaseModel):
     aptitude: str
     recommended_aptitude: Optional[str] = None
     learning_goal: Optional[str] = None
+    learning_profile: Optional[str] = None
     codex_depth: str = "simple"
     onboarding_complete: bool = True
     rank: str = "Sprout Healer"
@@ -67,6 +69,8 @@ class Player(BaseModel):
     inventory: Dict[str, int] = Field(default_factory=dict)
     codex_shards: int = 0
     summon_history: List[Dict[str, Any]] = Field(default_factory=list)
+    enemy_mastery: Dict[str, int] = Field(default_factory=dict)
+    chapter_progress: int = 1
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -76,6 +80,7 @@ class PlayerUpdate(BaseModel):
     aptitude: Optional[str] = None
     recommended_aptitude: Optional[str] = None
     learning_goal: Optional[str] = None
+    learning_profile: Optional[str] = None
     codex_depth: Optional[str] = None
     onboarding_complete: Optional[bool] = None
     rank: Optional[str] = None
@@ -92,6 +97,8 @@ class PlayerUpdate(BaseModel):
     inventory: Optional[Dict[str, int]] = None
     codex_shards: Optional[int] = None
     summon_history: Optional[List[Dict[str, Any]]] = None
+    enemy_mastery: Optional[Dict[str, int]] = None
+    chapter_progress: Optional[int] = None
 
 
 # ---------- Routes ----------
@@ -117,6 +124,7 @@ async def create_player(payload: PlayerCreate):
         aptitude=payload.aptitude,
         recommended_aptitude=payload.recommended_aptitude,
         learning_goal=payload.learning_goal,
+        learning_profile=payload.learning_profile,
         codex_depth=payload.codex_depth or "simple",
         heroes_owned=[starting_hero, "village_caretaker"],
         active_team=[starting_hero, "village_caretaker"],

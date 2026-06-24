@@ -95,6 +95,7 @@ export interface PlayerState {
   aptitude: Aptitude;
   recommended_aptitude?: Aptitude | null;
   learning_goal?: string | null;
+  learning_profile?: string | null; // 'nonmedical' | 'preNursing' | 'nursingStudent' | 'nclexPrep' | 'healthcareProfessional'
   codex_depth: string;
   onboarding_complete: boolean;
   rank: string;
@@ -118,4 +119,6 @@ export interface PlayerState {
   inventory: Record<string, number>;
   codex_shards: number;
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
+  enemy_mastery?: Record<string, number>;
+  chapter_progress?: number;
 }
