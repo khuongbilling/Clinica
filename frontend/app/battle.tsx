@@ -9,6 +9,7 @@ import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
 import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, useItem as applyItem, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
+import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -422,6 +423,9 @@ export default function Battle() {
           )}
         </View>
       </View>
+
+      {/* First-battle coachmark */}
+      <LongPressCoachmark visible={activeTab === "actions" && !detail && state.outcome === "ongoing"} />
 
       {/* Detail modal */}
       {detail && (
