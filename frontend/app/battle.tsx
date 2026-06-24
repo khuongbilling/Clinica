@@ -180,7 +180,7 @@ export default function Battle() {
         unsafe: String(state.unsafeActionsUsed),
         poorFit: String(state.poorFitActionsUsed),
         turns: String(state.turnsTaken),
-        reassess: state.reassessUsed ? "1" : "0",
+        reassess: state.reassessUsedAnytime ? "1" : "0",
       },
     });
   };

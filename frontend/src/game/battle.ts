@@ -53,6 +53,7 @@ export interface BattleState {
   unsafeActionsUsed: number;
   poorFitActionsUsed: number;
   reassessUsed: boolean;
+  reassessUsedAnytime: boolean; // sticky flag for star scoring
   turnsTaken: number; // increments per player-action consuming AP
   feedbackLevel: ReturnType<typeof getActiveFeedbackLevel>;
   chapter: number;
@@ -121,6 +122,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     unsafeActionsUsed: 0,
     poorFitActionsUsed: 0,
     reassessUsed: false,
+    reassessUsedAnytime: false,
     turnsTaken: 0,
     feedbackLevel,
     chapter,
@@ -289,6 +291,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyR
   // Track reassess
   if ((action?.chainRoles || []).includes('Reassess')) {
     next.reassessUsed = true;
+    next.reassessUsedAnytime = true;
     next.reboundArmed = false;
   }
 
@@ -367,6 +370,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
 
   if ((action?.chainRoles || []).includes('Reassess')) {
     next.reassessUsed = true;
+    next.reassessUsedAnytime = true;
     next.reboundArmed = false;
   }
 
