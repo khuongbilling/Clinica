@@ -1,0 +1,178 @@
+{
+  "app_name": "CLINICA: KINGDOM OF HEALING",
+  "personality": "6 Glass / Luxe DARK",
+  "personality_one_liner": "A cinematic, premium dark-fantasy RPG interface where medical education feels like decoding ancient, high-stakes lore.",
+  "color": {
+    "surface": "#111315",
+    "onSurface": "#E5E7EB",
+    "surfaceSecondary": "#1A1D21",
+    "onSurfaceSecondary": "#D1D5DB",
+    "surfaceTertiary": "#252A2E",
+    "onSurfaceTertiary": "#9CA3AF",
+    "surfaceInverse": "#F9FAFB",
+    "onSurfaceInverse": "#111315",
+    "brand": "#D4AF37",
+    "brandPrimary": "#D4AF37",
+    "onBrandPrimary": "#111315",
+    "brandSecondary": "#8C7322",
+    "onBrandSecondary": "#F9FAFB",
+    "brandTertiary": "#3A3116",
+    "onBrandTertiary": "#EAD385",
+    "success": "#10B981",
+    "onSuccess": "#022C1E",
+    "warning": "#F59E0B",
+    "onWarning": "#452902",
+    "error": "#EF4444",
+    "onError": "#450A0A",
+    "info": "#9CA3AF",
+    "onInfo": "#111315",
+    "border": "#2E3338",
+    "borderStrong": "#4B5563",
+    "divider": "#1F2428",
+    "element_air": "#A7F3D0",
+    "element_river": "#059669",
+    "element_fire": "#DC2626",
+    "element_energy": "#FCD34D",
+    "element_storm": "#BEF264",
+    "element_mind": "#E5E7EB",
+    "element_filter": "#4D7C0F",
+    "element_forge": "#78716C",
+    "element_protection": "#9CA3AF",
+    "element_growth": "#10B981"
+  },
+  "typography": {
+    "displayFontFamily": "Cormorant Garamond",
+    "textFontFamily": "Satoshi",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous cinematic pacing. Use lg (16) to xl (24) for macro layout. Cramped screens ruin the premium game feel. Ensure comfortable safe-area clearance and thumb-zones.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "blur replaces shadow",
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use heavy glassmorphism for battle screen clue cards, floating action buttons, and modal overlays.",
+      "Use tinted translucent bases (e.g., brandTertiary or element colors) paired with expo-blur.",
+      "Make bottom tab bars and sticky headers frosted."
+    ],
+    "dont's": [
+      "Don't blur dense Codex body text areas or stat readouts.",
+      "Avoid stacking more than two glass surfaces to maintain high frame rate.",
+      "Never place thin serif typography directly on noisy background imagery without a heavy scrim."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Run (Home)",
+      "purpose": "The daily roguelite shift hub where players select encounters and view their kingdom progress.",
+      "states": {
+        "loading": "Centered glowing gold elemental emblem spinner.",
+        "empty": "Awaiting Shift: 'No encounters logged today.' with 'Start Shift' primary CTA.",
+        "error": "Torn parchment visual: 'The realm's connection severed.' + Retry button."
+      },
+      "layout": "Cinematic vertical scroll. Top: Safe-area clearing frosted header with Player Rank and current Kingdom health. Middle: A full-bleed hero card (using forest bg) representing the next encounter/boss with a dark vertical scrim and Antique Gold CTA ('Enter the Shift'). Bottom: Horizontal scroll of smaller cards for past encounters/rewards."
+    },
+    {
+      "name": "Battle (Encounter)",
+      "purpose": "The heart of the game: tactical, clue-based medical combat screen against disease corruptions.",
+      "states": {
+        "loading": "Dark screen fading into the encounter area.",
+        "empty": "N/A - Battle is heavily populated.",
+        "error": "Connection drop message with tactile 'Reconnect' button."
+      },
+      "layout": "Portrait mobile layout divided into Top-Middle-Bottom. TOP (Future): Enemy sprite/boss avatar center-aligned with a large, glowing Stability (health) meter and intent icon. MIDDLE (Present): The 3 active Healer Heroes arranged in a slight arc (Hero Corner concept) with their element icons. BOTTOM (Past/Action): The player's Hand containing 3-5 Clue Cards fanned horizontally. These cards must have large touch targets (thumb-friendly). A fixed 'floating' Action bar sits above the cards with 'Stabilize/Assess' buttons. Heavy use of glassmorphism on the clue cards."
+    },
+    {
+      "name": "Heroes (Roster)",
+      "purpose": "Collect and upgrade healer heroes, inspecting their rarity and skills.",
+      "states": {
+        "loading": "Skeleton grid of hero portrait cards.",
+        "empty": "'Your Hall of Heroes is empty. Recruit your first Healer.' + Summon CTA.",
+        "error": "'Failed to load roster.' + Retry button."
+      },
+      "layout": "Genshin-inspired high-definition grid. 2-column card layout (flexWrap, space-between). Each hero card features a dark-tinted image background, element-colored border, and their Rarity Stars (3 to 7) overlapping the bottom edge. Tapping a hero opens a full-screen sheet with large Cormorant Garamond typography and glass status panels."
+    },
+    {
+      "name": "Codex (Library)",
+      "purpose": "The educational payoff: deep-dive unlocked lore on diseases, body systems, and pharmacology.",
+      "states": {
+        "loading": "Parchment texture skeleton loaders.",
+        "empty": "'The library awaits new discoveries. Defeat corruptions to unlock lore.'",
+        "error": "'Lore unavailable.' + Retry button."
+      },
+      "layout": "Editorial-style layout mixed with Luxe Dark. Large serif headers (Cormorant Garamond). Section headers feature subtle Antique Gold gradient bands. Content is arranged in stacked horizontal list items with a left-aligned elemental icon block. Text must be perfectly legible (Satoshi 16pt body, 1.5x line height) over solid surfaceSecondary, avoiding noisy backgrounds for reading clarity."
+    },
+    {
+      "name": "Kingdom",
+      "purpose": "Base building and clinical progression hub.",
+      "states": {
+        "loading": "Glowing building outlines.",
+        "empty": "'The Kingdom is in ruins. Begin your first shift.'",
+        "error": "'Failed to survey the Kingdom.' + Retry button."
+      },
+      "layout": "Full-bleed background image of the castle under mist. Heavy vertical gradient scrim (transparent to 80% surface at bottom). Building nodes (Academy, Library, Apothecary) sit as floating frosted glass cards spaced asymmetrically. Clicking a node opens a bottom sheet to upgrade or manage."
+    }
+  ],
+  "images": {
+    "kingdom_bg": {
+      "url": "https://images.pexels.com/photos/29672206/pexels-photo-29672206.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "A castle shrouded in mist, surrounded by dense forest under a moody dark sky"
+    },
+    "encounter_forest_bg": {
+      "url": "https://images.pexels.com/photos/27987438/pexels-photo-27987438.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Ethereal misty forest scene evoking a fantasy RPG encounter area"
+    },
+    "codex_parchment_bg": {
+      "url": "https://images.pexels.com/photos/14167173/pexels-photo-14167173.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Open ancient spell book depicting mystical illustrations and enchantments"
+    }
+  },
+  "haptics": {
+    "card_select": "light",
+    "action_button": "medium",
+    "enemy_attack": "heavy",
+    "tab_switch": "light"
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: Follow the 6 Glass / Luxe DARK personality strictly. The UI must feel like a premium cinematic RPG (Genshin / Slay the Spire), not a clinical quiz app.",
+    "BATTLE SCREEN COMPOSITION: Use a Top-Middle-Bottom portrait hierarchy. Top = Enemy and Stability Meter. Middle = Player's Hero team (curved/arc setup). Bottom = Clue Cards (large touch targets, fanned or stacked) and Action Buttons. Ensure cards don't occlude the enemy sprite.",
+    "COLOR ENFORCEMENT: Never use Blues, Indigo, Purple, Orange, or Terracotta. Rely exclusively on the provided Gold (brand), Crimson, Mint, Emerald, Amber, and Silver palette tokens (defined as element_air, element_fire, etc. in the JSON).",
+    "TYPOGRAPHY HIERARCHY: Use Cormorant Garamond exclusively for dramatic titles, hero names, and spell/disease names. Use Satoshi for all body text, stats, and clue card descriptions. Weight must NEVER exceed 500.",
+    "GLASS & SCRIMS: Use expo-blur paired with translucent dark overlays for cards. Any text sitting on the background images (Kingdom, Encounter Forest) MUST have a heavy vertical gradient scrim (transparent to ≥70% surfaceInverse or surface) to guarantee WCAG contrast.",
+    "ELEMENTAL TYPING: Apply the specific element colors (e.g., element_fire for Infection, element_river for Cardiovascular) to badges, borders, and subtle glows around heroes or clue cards to immediately visually communicate the system without reading."
+  ]
+}
