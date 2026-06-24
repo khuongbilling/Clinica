@@ -4,18 +4,20 @@
 A fantasy mobile RPG that teaches biology, anatomy, physiology, microbiology, nursing foundations, clinical judgment, and NCLEX reasoning through gameplay. Players collect healer heroes, rebuild a fallen kingdom, and battle disease corruptions through clue-based encounters tied to body systems.
 
 ## MVP Scope (Chapter 1: The Fading Core)
-- **Multi-step Onboarding** — Welcome → Name → 3-question Calling Quiz → Recommended Aptitude (Accept or Choose Another) → Learning Goal (5 options → Codex depth) → First Trial: Air Crystal intro → Battle
-- **Daily Shift Run** — 3 deterministic encounters per session, drawn from starter + advanced enemy pools
+- **Multi-step Onboarding** — Welcome → Name → 3-question Calling Quiz → Recommended Aptitude → Learning Goal → First Trial: Air Crystal → Battle
+- **Daily Shift Run** — 3 deterministic encounters per session
 - **Clue-Based Battle System** — Action points (3 per turn), 3 visible + hidden clue cards, stability meter, corruption HP, hero skills with clinical risks
-- **Aptitude Passives in Battle** — Guardian (-5 dmg/turn), Sage (first scout -1 AP), Warden (block one complication), Weaver (auto-reveal 1 hidden clue at start)
-- **Mentor's Guidance System** — Per-enemy failure tracking. Loss 1 → gentle hint; Loss 2 → tactical hint; Loss 3+ → +10 starting stability "Mentor's Aid" boost + "Try Training Battle" CTA
-- **Training Battle Mode** — Hidden clues auto-revealed, +10 stability buffer, half rewards. Toggled via `training=1` query param
-- **Codex Depth Adaptation** — Learning goal maps to depth (`simple` / `foundation` / `clinical` / `nclex` / `professional`) — surfaced in Codex tab banner
-- **10 Starter Heroes** — Stabilizers, Assessors, Coordinators, Analysts, Specialists, Educators
-- **10 Enemies + Boss** — Air Sprite (tutorial), River Sludge, Energy Lock, Fire Imp, Mind Fog, Septara Seed, Cardion Echo, Glycora Spark, Pulmora Wisp, Electrox Flicker, + Chapter 1 boss Lord Imbalance
-- **18 Codex entries** across body systems
-- **Kingdom Building** — Academy of Healing, Library of Knowledge, Hall of Heroes, Apothecary
-- **Progression** — Clinical Rank, 6 Mastery stats (Assessment / Stabilization / Pharmacology / Judgment / Command / Systems)
+- **Pharmacy / Intervention Items** — 5 starter items (Albuterol Mist, Glucose Gel, Fluid Bolus, Isolation Kit, Lab Token) with clue-gated use, system-bonus effects, and persistent inventory
+- **Call Team Member** — One use per battle, 4 options conditionally available (Respiratory Support, Pharmacy, Rapid Response, Infection Control). Unlocks temporary actions (Open Airflow, Containment Order) so players are never stuck without the right hero
+- **Aptitude Passives in Battle** — Guardian (-5 dmg/turn), Sage (first scout -1 AP), Weaver (auto-reveal 1 hidden clue)
+- **Mentor's Guidance** — Per-enemy failure tracking. Loss 1 → gentle hint; Loss 2 → tactical hint; Loss 3+ → +10 stability boost + Training Battle CTA
+- **Training Battle Mode** — Hidden clue auto-revealed, +10 stability, half rewards
+- **Codex Depth Adaptation** — Learning goal maps to depth banner (simple / foundation / clinical / nclex / professional)
+- **Gacha / Summon Hall** — Codex Shards currency earned from battles (25 normal / 100 boss / 10 training). 12-hero Foundation Banner with weighted random pulls (100 shards/pull). Duplicates refund 25 shards.
+- **Active Team Builder** — Heroes screen tap-to-toggle (max 3 heroes), saved server-side
+- **18 Codex entries** across body systems with depth-aware framing
+- **Kingdom Building** — 4 starter buildings
+- **Progression** — Clinical Rank, 6 Mastery stats
 
 ## Architecture
 - **Frontend** — Expo Router 6, React Native 0.81. Game content client-side for snappy gameplay.
