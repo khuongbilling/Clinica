@@ -143,7 +143,7 @@ export default function Battle() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.enemyArea}>
-        <Pressable style={styles.closeBtn} onPress={() => router.back()} testID="battle-close">
+        <Pressable style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} testID="battle-close">
           <Ionicons name="close" size={20} color={COLORS.onSurface} />
         </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>

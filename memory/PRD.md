@@ -4,15 +4,18 @@
 A fantasy mobile RPG that teaches biology, anatomy, physiology, microbiology, nursing foundations, clinical judgment, and NCLEX reasoning through gameplay. Players collect healer heroes, rebuild a fallen kingdom, and battle disease corruptions through clue-based encounters tied to body systems.
 
 ## MVP Scope (Chapter 1: The Fading Core)
-- **Onboarding** — Player name + Aptitude selection (Guardian / Sage / Warden / Weaver)
+- **Multi-step Onboarding** — Welcome → Name → 3-question Calling Quiz → Recommended Aptitude (Accept or Choose Another) → Learning Goal (5 options → Codex depth) → First Trial: Air Crystal intro → Battle
 - **Daily Shift Run** — 3 deterministic encounters per session, drawn from starter + advanced enemy pools
-- **Clue-Based Battle System** — Action points (3 per turn), 3 visible + hidden clue cards, stability meter, corruption HP, hero skills with risks
+- **Clue-Based Battle System** — Action points (3 per turn), 3 visible + hidden clue cards, stability meter, corruption HP, hero skills with clinical risks
+- **Aptitude Passives in Battle** — Guardian (-5 dmg/turn), Sage (first scout -1 AP), Warden (block one complication), Weaver (auto-reveal 1 hidden clue at start)
+- **Mentor's Guidance System** — Per-enemy failure tracking. Loss 1 → gentle hint; Loss 2 → tactical hint; Loss 3+ → +10 starting stability "Mentor's Aid" boost + "Try Training Battle" CTA
+- **Training Battle Mode** — Hidden clues auto-revealed, +10 stability buffer, half rewards. Toggled via `training=1` query param
+- **Codex Depth Adaptation** — Learning goal maps to depth (`simple` / `foundation` / `clinical` / `nclex` / `professional`) — surfaced in Codex tab banner
 - **10 Starter Heroes** — Stabilizers, Assessors, Coordinators, Analysts, Specialists, Educators
-- **10 Enemies** — Air Sprite, River Sludge, Energy Lock, Fire Imp, Mind Fog, Septara Seed, Cardion Echo, Glycora Spark, Pulmora Wisp, Electrox Flicker
-- **Chapter 1 Boss** — Lord Imbalance (multi-system collapse) — unlocks after first shift
-- **Codex Library** — 18 educational entries across body systems (Air, River, Fire, Energy, Storm, Mind, Protection)
+- **10 Enemies + Boss** — Air Sprite (tutorial), River Sludge, Energy Lock, Fire Imp, Mind Fog, Septara Seed, Cardion Echo, Glycora Spark, Pulmora Wisp, Electrox Flicker, + Chapter 1 boss Lord Imbalance
+- **18 Codex entries** across body systems
 - **Kingdom Building** — Academy of Healing, Library of Knowledge, Hall of Heroes, Apothecary
-- **Progression** — Clinical Rank (Sprout Healer → Mythic Clinician), 6 Mastery stats (Assessment / Stabilization / Pharmacology / Judgment / Command / Systems)
+- **Progression** — Clinical Rank, 6 Mastery stats (Assessment / Stabilization / Pharmacology / Judgment / Command / Systems)
 
 ## Architecture
 - **Frontend** — Expo Router 6, React Native 0.81. Game content client-side for snappy gameplay.
