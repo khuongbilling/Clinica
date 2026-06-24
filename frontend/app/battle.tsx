@@ -284,6 +284,8 @@ export default function Battle() {
           ))}
         </View>
 
+        <Text style={styles.affordanceHint}>Tap to use · Long-press for details</Text>
+
         {/* Tab content */}
         <View style={styles.tabContent}>
           {activeTab === "actions" && (
@@ -293,7 +295,14 @@ export default function Battle() {
                   const a = TEMP_ACTIONS[aid]; if (!a) return null;
                   const disabled = state.ap < a.costAP || state.outcome !== "ongoing";
                   return (
-                    <Pressable key={`tmp-${aid}`} style={[styles.actionBtn, { borderColor: COLORS.brand }, disabled && styles.disabled]} onPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })} testID={`battle-temp-${aid}`}>
+                    <Pressable
+                      key={`tmp-${aid}`}
+                      style={[styles.actionBtn, { borderColor: COLORS.brand }, disabled && styles.disabled]}
+                      onPress={() => disabled ? null : handleTempAction(aid)}
+                      onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })}
+                      delayLongPress={350}
+                      testID={`battle-temp-${aid}`}
+                    >
                       <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1}>{a.name}</Text>
                       <Text style={styles.actionEffect} numberOfLines={2}>Team Support • {a.costAP} AP</Text>
                     </Pressable>
@@ -307,7 +316,9 @@ export default function Battle() {
                     <Pressable
                       key={`${hero.id}-${skill.id}`}
                       style={[styles.actionBtn, disabled && styles.disabled]}
-                      onPress={() => disabled ? null : setDetail({ kind: "skill", hero, skill })}
+                      onPress={() => disabled ? null : handleSkill(hero, skill)}
+                      onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero, skill })}
+                      delayLongPress={350}
                       testID={`battle-skill-${skill.id}`}
                     >
                       <View style={styles.actionHead}>
@@ -329,7 +340,14 @@ export default function Battle() {
                   const qty = state.inventory[item.name] || 0;
                   const disabled = qty <= 0 || state.ap < item.costAP || state.outcome !== "ongoing";
                   return (
-                    <Pressable key={item.id} style={[styles.actionBtn, disabled && styles.disabled]} onPress={() => disabled ? null : setDetail({ kind: "item", item })} testID={`battle-item-${item.id}`}>
+                    <Pressable
+                      key={item.id}
+                      style={[styles.actionBtn, disabled && styles.disabled]}
+                      onPress={() => disabled ? null : handleUseItem(item)}
+                      onLongPress={() => setDetail({ kind: "item", item })}
+                      delayLongPress={350}
+                      testID={`battle-item-${item.id}`}
+                    >
                       <View style={styles.actionHead}>
                         <Text style={styles.actionName} numberOfLines={1}>{item.displayName}</Text>
                         <Text style={styles.apTag}>×{qty}</Text>
@@ -350,7 +368,14 @@ export default function Battle() {
                 {availableCalls.map(opt => {
                   const disabled = state.ap < opt.costAP || state.outcome !== "ongoing";
                   return (
-                    <Pressable key={opt.id} style={[styles.actionBtn, disabled && styles.disabled]} onPress={() => disabled ? null : setDetail({ kind: "call", option: opt })} testID={`call-opt-${opt.id}`}>
+                    <Pressable
+                      key={opt.id}
+                      style={[styles.actionBtn, disabled && styles.disabled]}
+                      onPress={() => disabled ? null : handleCall(opt)}
+                      onLongPress={() => setDetail({ kind: "call", option: opt })}
+                      delayLongPress={350}
+                      testID={`call-opt-${opt.id}`}
+                    >
                       <View style={styles.actionHead}>
                         <Text style={styles.actionName} numberOfLines={1}>{opt.name}</Text>
                         <Text style={styles.apTag}>{opt.costAP} AP</Text>
@@ -573,6 +598,7 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: COLORS.brand },
   tabTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   tabTxtActive: { color: COLORS.onBrand },
+  affordanceHint: { color: COLORS.onSurfaceTertiary, fontSize: 9, textAlign: "center", marginBottom: SPACING.xs, fontStyle: "italic", letterSpacing: 0.5 },
 
   tabContent: { paddingBottom: SPACING.sm },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
