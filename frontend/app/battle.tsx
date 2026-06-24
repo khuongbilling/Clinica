@@ -24,7 +24,7 @@ type DetailEntry =
 export default function Battle() {
   const { enemyId, training } = useLocalSearchParams<{ enemyId: string; training?: string }>();
   const router = useRouter();
-  const { player, applyRewards, recordFailure } = usePlayer();
+  const { player, loading, applyRewards, recordFailure } = usePlayer();
   const isTraining = training === "1";
 
   const enemy = useMemo(() => {
@@ -173,6 +173,17 @@ export default function Battle() {
 
   // Flatten all skills from team for the Actions tab
   const allTeamSkills: { hero: Hero; skill: HeroSkill }[] = team.flatMap(h => h.skills.map(s => ({ hero: h, skill: s })));
+
+  // Hydration guard — render-block until player loads so inventory seeds correctly on deep-links
+  if (loading || !player) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <Text style={styles.detailKicker}>LOADING BATTLE…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>

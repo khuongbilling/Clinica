@@ -3,6 +3,17 @@
 ## Vision
 A fantasy mobile RPG that teaches biology, anatomy, physiology, microbiology, nursing foundations, clinical judgment, and NCLEX reasoning through gameplay. Players collect healer heroes, rebuild a fallen kingdom, and battle disease corruptions through clue-based encounters tied to body systems.
 
+### Battle Screen (Mobile-Optimized)
+- **Fixed bottom action bar** with 4 tabs: **ACTIONS / ITEMS / CALL / TEAM**
+- Compact enemy header (~25% smaller), inline corruption + stability bars
+- Collapsed Codex Guidance (single-line by default, taps to expand)
+- Compact horizontal chip-style clue cards
+- 2-column action button grid with: skill name • AP cost • short effect
+- **Detail Modal** on tap: RPG Effect / Battle Effect / Real-Life Nursing / NCLEX Focus, with USE button
+- RPG-renamed skills: Breath of Dawn, Lantern of Clues, Pattern Sight, Guardian's Touch, Vital Ward, Rally Bell, Focused Lens, Codex Link, Threadwatch, Safety Circle, Isolation Seal, Critical Response, River Surge, Infection Scan, Purity Mark, Skin Shield, Mend, Mind Anchor, Error Ward
+- RPG item display names: Bronchodilator Mist, Glucose Spark Gel, River Bolus, Barrier Kit, Codex Lab Sigil — each carries beginner + clinical/NCLEX explanations
+- Hydration-safe: battle screen waits for player to load before rendering (fixes deep-link inventory race)
+
 ## MVP Scope (Chapter 1: The Fading Core)
 - **Multi-step Onboarding** — Welcome → Name → 3-question Calling Quiz → Recommended Aptitude → Learning Goal → First Trial: Air Crystal → Battle
 - **Daily Shift Run** — 3 deterministic encounters per session
