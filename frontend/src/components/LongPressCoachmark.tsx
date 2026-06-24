@@ -68,7 +68,7 @@ export function LongPressCoachmark({ visible }: { visible: boolean }) {
       </Animated.View>
 
       <Pressable style={styles.gotItRow} onPress={dismiss} hitSlop={6}>
-        <Text style={styles.gotIt}>GOT IT — DON'T SHOW AGAIN</Text>
+        <Text style={styles.gotIt}>{"GOT IT — DON'T SHOW AGAIN"}</Text>
       </Pressable>
     </View>
   );

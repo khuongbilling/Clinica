@@ -87,16 +87,27 @@ export default function RunHome() {
                 <Text style={[styles.metaTxt, { color: ELEMENT_COLORS[BOSS_LORD_IMBALANCE.primarySystem] }]}>{BOSS_LORD_IMBALANCE.primarySystem.toUpperCase()}</Text>
               </View>
             </View>
-            <View style={[styles.bossCta, !bossUnlocked && { opacity: 0.4 }]}>
-              <Text style={styles.bossCtaText}>{bossUnlocked ? "ENTER THE FADING CORE" : "COMPLETE 1 SHIFT TO UNLOCK"}</Text>
-              <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
+            <View style={[styles.bossCta, !bossUnlocked && styles.bossCtaLocked]}>
+              {bossUnlocked ? (
+                <>
+                  <Text style={styles.bossCtaText} numberOfLines={1}>ENTER THE FADING CORE</Text>
+                  <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
+                </>
+              ) : (
+                <>
+                  <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceSecondary} />
+                  <Text style={styles.bossCtaLockedText} numberOfLines={1} adjustsFontSizeToFit>
+                    COMPLETE 1 SHIFT TO UNLOCK
+                  </Text>
+                </>
+              )}
             </View>
           </View>
         </Pressable>
 
         {/* Daily shift */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Shift</Text>
+          <Text style={styles.sectionTitle}>{"Today's Shift"}</Text>
           <Text style={styles.sectionSub}>3 encounters · {player.runs_completed} runs completed</Text>
         </View>
 
@@ -114,9 +125,13 @@ export default function RunHome() {
               <View style={styles.encMeta}>
                 <Text style={[styles.encSys, { color: ELEMENT_COLORS[e.primarySystem] }]}>{e.primarySystem.toUpperCase()}</Text>
                 {e.secondarySystem && (
-                  <Text style={[styles.encSys, { color: ELEMENT_COLORS[e.secondarySystem] }]}> · {e.secondarySystem.toUpperCase()}</Text>
+                  <>
+                    <Text style={styles.encDot2}>·</Text>
+                    <Text style={[styles.encSys, { color: ELEMENT_COLORS[e.secondarySystem] }]}>{e.secondarySystem.toUpperCase()}</Text>
+                  </>
                 )}
-                <Text style={styles.encDiff}>  ★{e.difficulty}</Text>
+                <Text style={styles.encDot2}>·</Text>
+                <Text style={styles.encDiff}>★{e.difficulty}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.onSurfaceTertiary} />
@@ -152,9 +167,15 @@ const styles = StyleSheet.create({
   metaTxt: { color: COLORS.onSurface, fontSize: 10, letterSpacing: 1, fontWeight: "600" },
   bossCta: {
     flexDirection: "row", backgroundColor: COLORS.brand, alignItems: "center", justifyContent: "center",
-    paddingVertical: 12, borderRadius: RADIUS.md, gap: SPACING.sm, marginTop: SPACING.sm,
+    paddingVertical: 12, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, gap: SPACING.sm, marginTop: SPACING.sm,
   },
-  bossCtaText: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
+  bossCtaLocked: {
+    backgroundColor: COLORS.surfaceTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  bossCtaText: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2, textAlign: "center", flexShrink: 1 },
+  bossCtaLockedText: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.5, textAlign: "center", flexShrink: 1 },
 
   sectionHeader: { gap: 4, marginTop: SPACING.sm },
   sectionTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "400" },
@@ -168,7 +189,8 @@ const styles = StyleSheet.create({
   encDot: { width: 8, height: 56, borderRadius: 4 },
   encName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "500" },
   encReal: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
-  encMeta: { flexDirection: "row", marginTop: 6 },
+  encMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
   encSys: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  encDot2: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
   encDiff: { color: COLORS.brand, fontSize: 10, fontWeight: "700" },
 });

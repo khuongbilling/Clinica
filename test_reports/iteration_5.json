@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 5 (Run home Boss CTA centering + meta-row polish + coachmark apostrophe lint fix) verified on mobile 390x844. PRIMARY BUG FIX CONFIRMED: locked boss CTA now renders lock icon on the LEFT and 'COMPLETE 1 SHIFT TO UNLOCK' horizontally centered with textAlign:'center' and the row using justifyContent:'center'. No right-arrow icon in the locked state. Muted background (rgb(37,42,46)) + subtle border distinguishes it from the brand-yellow unlocked state. After flipping runs_completed=1 via PUT /api/player, the CTA correctly switches to unlocked: brand-yellow (rgb(212,175,55)), text 'ENTER THE FADING CORE' centered with right-arrow, and tap navigates to /battle?enemyId=lord_imbalance. Today's Shift encounter meta rows render clean separators: 'AIR · ★1', 'RIVER · ★1', and 'ENERGY · STORM · ★3' — single middle dot between tokens via the new encDot2 separator + gap:6, no double-space sloppiness. Tab regression: all 5 tabs (Run, Heroes, Codex, Kingdom, Profile) navigate cleanly to /, /heroes, /codex, /kingdom, /profile with no errors. Coachmark regression: LongPressCoachmark renders on the first battle (testID coachmark-longpress visible), 'GOT IT — DON'T SHOW AGAIN' label renders with the correct curly apostrophe (lint fix via JS-string expression), and tapping it dismisses the bubble (visible:false after click) and persists via AsyncStorage. No red-screen errors. Console warnings carried over from prior iterations: 'shadow*' style deprecated, props.pointerEvents deprecated, useNativeDriver fallback — all RN-web internals, non-blocking. Backend untouched (per spec) — not retested.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web (lib)", "issue": "Carry-over warning: 'shadow*' style props are deprecated. Use 'boxShadow'. Reference: emitted from RN-web internals; non-blocking."},
+      {"component": "react-native-web (lib)", "issue": "Carry-over warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Reference: emitted from RN-web internals; non-blocking."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_5.json"
+  ],
+  "action_items": [
+    "None blocking. Locked CTA centering bug is fixed and verified on mobile viewport."
+  ],
+  "critical_code_review_comments": [
+    "index.tsx bossCta uses flexDirection:'row' + justifyContent:'center' + alignItems:'center' with gap:SPACING.sm. With a left lock icon (14px) the {icon+text} group is centered together inside the row, so the text visually sits a few pixels to the right of dead-center to make room for the icon. This is the standard icon-prefixed-centered-button pattern and matches what the user requested. If a perfectly text-centered-with-icon-floating-left layout is desired, the icon would need to be position:'absolute' left:SPACING.md — but the current solution looks balanced and is not sloppy.",
+    "bossCtaLockedText uses flexShrink:1 + adjustsFontSizeToFit + numberOfLines={1}. Good defensive sizing for the locked label across narrow devices.",
+    "encMeta now uses gap:6 + dedicated <Text style={styles.encDot2}>·</Text> separators (vs the previous '  ★' literal double-space). Clean and consistent.",
+    "LongPressCoachmark.tsx line 71 uses {\"GOT IT — DON'T SHOW AGAIN\"} as a JS string expression, sidestepping the JSX unescaped-apostrophe lint rule. Curly apostrophe renders correctly in DOM textContent."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_5.json"
+  ],
+  "success_rate": {"backend": "not retested (per request: frontend only)", "frontend": "100% on iteration-5 spec: locked-CTA-centered + lock-icon-left + no-arrow, unlocked-CTA-yellow + arrow + nav-to-battle, encounter-meta-dots, tabs-regression (5/5), coachmark-renders + dismiss + apostrophe."},
+  "seed_data_creation": "Reused TEST_locked_cta player (id 0647bdbe-3da8-423a-850b-07ae3d2c194e, sage aptitude) via POST /api/player. Flipped runs_completed 0→1→0 via PUT /api/player for locked/unlocked toggling. Not auto-cleaned.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "To test locked vs unlocked Boss CTA: POST /api/player with any aptitude, set localStorage 'clinica.playerId.v1' = player.id, then goto /(tabs). runs_completed=0 → locked CTA (lock icon + 'COMPLETE 1 SHIFT TO UNLOCK'). PUT /api/player {runs_completed:1} → reload → unlocked CTA. Coachmark test: localStorage.removeItem('clinica.coachmark.longpress.v1') before navigating to /battle?enemyId=... — bubble appears, testID 'coachmark-longpress', dismiss via 'GOT IT — DON\\u2019T SHOW AGAIN' Pressable or testID 'coachmark-dismiss' on the X icon.",
+  "rca_of_issue": "Original bug: locked CTA text 'COMPLETE 1 SHIFT TO UNLOCK' was flushed to the left because the bossCta style used flexDirection:'row' with justifyContent:'center' but the inner Text had no textAlign and no flexShrink, so when the text node was wider than the available space (or had a trailing icon), it pushed off-center. FIX VERIFIED: bossCtaLockedText style now includes textAlign:'center' + flexShrink:1, and the locked-state JSX renders only [lock-icon, text] (no right-arrow), so the centered flex row balances the icon+text group correctly. Measured layout: CTA box x=33 w=324 (right=357, center≈195); text box x=99.8 w=212.4 (right=312.2, center≈206) — within visually-centered tolerance given the 14px lock icon + 8px gap on the left side."
+}
