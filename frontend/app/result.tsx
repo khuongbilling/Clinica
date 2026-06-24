@@ -12,9 +12,10 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
-  const { outcome, enemyId, stability, training } = useLocalSearchParams<{ outcome: string; enemyId: string; stability: string; training?: string }>();
+  const { outcome, enemyId, stability, training, shards } = useLocalSearchParams<{ outcome: string; enemyId: string; stability: string; training?: string; shards?: string }>();
   const won = outcome === "win";
   const isTraining = training === "1";
+  const shardsEarned = parseInt(shards || "0", 10);
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -71,6 +72,13 @@ export default function Result() {
                 <Text style={styles.statVal}>+{Math.floor((enemy?.id === BOSS_LORD_IMBALANCE.id ? 150 : 35 + (enemy?.difficulty || 1) * 10) * (isTraining ? 0.5 : 1))}</Text>
               </View>
             </View>
+
+            {shardsEarned > 0 && (
+              <View style={styles.shardsCard} testID="result-shards">
+                <Ionicons name="diamond" size={20} color={COLORS.brand} />
+                <Text style={styles.shardsTxt}>You earned {shardsEarned} Codex Shards.</Text>
+              </View>
+            )}
 
             {codexUnlocked.length > 0 && (
               <>
@@ -154,4 +162,6 @@ const styles = StyleSheet.create({
   primaryTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
   secondary: { borderWidth: 1, borderColor: COLORS.borderStrong, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
   secondaryTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
+  shardsCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
+  shardsTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600" },
 });

@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 3 (Pharmacy Items + Call Team + Gacha Summon) verified end-to-end. Backend: 21/21 pytest tests PASSED including 6 NEW tests for inventory (5-item starter), codex_shards=50, active_team=2 heroes, summon_history=[] defaults on POST /api/player, plus PUT updates and GET persistence for inventory, codex_shards, active_team (1-3), and summon_history. Existing 15 regression tests still green. Frontend E2E (mobile 390x844, real onboarding -> battle -> summon -> heroes -> result): (1) Battle screen renders all 5 items battle-item-I001..I005 with correct starter qtys (×1/×1/×1/×1/×2) and CALL TEAM chip. (2) Lab Token (I005) costs 1 AP, decrements qty 2->1, reveals hidden 'Wheezing' clue. (3) Albuterol Mist (I001) is gated until Wheezing visible; after Lab Token, using it costs 2 AP, drops corruption 80->50 (-30 base), boosts stability 50%->60% (+10 Air bonus), and decrements qty 1->0. (4) CALL TEAM modal opens with context-aware options (call-opt-call_respiratory + call-opt-call_pharmacy for asthma enemy) and call-cancel works. (5) /summon: with 250 shards the summon-button is enabled; clicking decrements 100, renders summon-result, and appends to player.summon_history (verified via backend GET). Duplicate refund observed: second summon returned a duplicate and shards went 150 -> 75 (-100 +25). With 50 shards, summon-button is disabled. (6) Heroes tab: heroes-summon-button navigates to /summon; tapping hero-card-{id} for an owned hero toggles team membership and PUTs active_team to backend (verified: team grew from 2->3 with wound_sage, then tap-again removed it back to 2, respecting min 1 / max 3). (7) Result screen: result-shards card renders 'You earned 25 Codex Shards.' on win. No console errors observed during the full E2E run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/player", "issue": "Still returns 200 instead of 201 Created (carry-over)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_player_api.py",
+    "/app/backend/tests/test_iteration3_fields.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Return 201 Created from POST /api/player.",
+    "(Carry-over) Add testID to each bottom tab in app/(tabs)/_layout.tsx for tab-nav E2E coverage.",
+    "(Carry-over) Investigate older 'props.pointerEvents is deprecated' RN-web warning (not seen this run but worth a sweep)."
+  ],
+  "critical_code_review_comments": [
+    "server.py PlayerUpdate now exposes inventory/codex_shards/active_team/summon_history with correct typings (Dict[str,int], int, List[str], List[Dict]); update_player applies only non-None fields. Good.",
+    "Starter inventory and shards are hard-coded inside create_player; consider extracting STARTER_INVENTORY/STARTER_SHARDS constants for reuse (e.g., a future /reset endpoint or admin tooling).",
+    "gacha.ts SUMMON_COST=100 and DUPLICATE_REFUND=25 are centralized; weighted random uses cumulative subtract — fine. Rarity-5 'ghost slots' (clinical_sage, critical_guardian) have heroId but content.ts may not have these heroes — confirm graceful handling on summon (Heroes tab card lookup) for these IDs.",
+    "battle.tsx isClueRevealed correctly gates pharmacy items by substring match on revealed clue labels; Lab Token (no required keyword) correctly reveals a hidden clue.",
+    "heroes.tsx active_team min 1 / max 3 enforced in the tap handler; backend PUT only requires the array — UI is the gatekeeper. Consider also enforcing in backend if other clients are expected."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3_fields.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/iteration_3.json"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% on requested scope (battle items+call, summon flow incl. duplicate refund + disabled state, heroes summon nav + team toggle, result shards card)"},
+  "seed_data_creation": "Created TEST_iter3_inv/_guardian/_sage/_warden/_weaver/_upd_inv/_shards/_team/_summon (deleted via fixture teardown) and TEST_iter3_full/_UI/_UI2 via UI/API (these remain in DB; no UI delete path). All TEST_-prefixed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend: pytest /app/backend/tests/ -v (~3.5s, 21 tests). Frontend storage key is 'clinica.playerId.v1' (literal localStorage key from @react-native-async-storage/async-storage web). To bootstrap a player without going through onboarding, do POST /api/player then evaluate localStorage.setItem('clinica.playerId.v1', pid) BEFORE the first page load (writing after onboarding redirect already fired tends to require a reload AND a goto to a non-/ route). Direct API bumps to codex_shards (PUT) are the fastest way to exercise /summon without grinding battles. For E2E battle-to-result, follow the brief and skip — just deep-link /result?enemy=...&outcome=win&shards=25 to verify the shards card. Duplicate refund is randomized but observable across ~2 pulls when heroes_owned already contains weighted entries.",
+  "rca_of_issue": "N/A — feature additions verified working as specified."
+}

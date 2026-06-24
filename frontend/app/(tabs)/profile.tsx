@@ -58,6 +58,7 @@ export default function ProfileScreen() {
 
         <Text style={styles.section}>Stats</Text>
         <View style={styles.statsCard}>
+          <Stat label="Codex Shards" value={String(player.codex_shards || 0)} />
           <Stat label="Shifts Completed" value={String(player.runs_completed)} />
           <Stat label="Bosses Defeated" value={String(player.bosses_defeated.length)} />
           <Stat label="Heroes Recruited" value={String(player.heroes_owned.length)} />

@@ -59,10 +59,14 @@ class Player(BaseModel):
     mastery: MasteryStats = Field(default_factory=MasteryStats)
     codex_unlocked: List[str] = Field(default_factory=list)
     heroes_owned: List[str] = Field(default_factory=list)
+    active_team: List[str] = Field(default_factory=list)
     kingdom_levels: Dict[str, int] = Field(default_factory=dict)
     runs_completed: int = 0
     bosses_defeated: List[str] = Field(default_factory=list)
     failure_counts: Dict[str, int] = Field(default_factory=dict)
+    inventory: Dict[str, int] = Field(default_factory=dict)
+    codex_shards: int = 0
+    summon_history: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -80,10 +84,14 @@ class PlayerUpdate(BaseModel):
     mastery: Optional[MasteryStats] = None
     codex_unlocked: Optional[List[str]] = None
     heroes_owned: Optional[List[str]] = None
+    active_team: Optional[List[str]] = None
     kingdom_levels: Optional[Dict[str, int]] = None
     runs_completed: Optional[int] = None
     bosses_defeated: Optional[List[str]] = None
     failure_counts: Optional[Dict[str, int]] = None
+    inventory: Optional[Dict[str, int]] = None
+    codex_shards: Optional[int] = None
+    summon_history: Optional[List[Dict[str, Any]]] = None
 
 
 # ---------- Routes ----------
@@ -103,13 +111,23 @@ async def create_player(payload: PlayerCreate):
         "warden": "junior_warden",
         "weaver": "data_acolyte",
     }
+    starting_hero = aptitude_starting_hero[payload.aptitude]
     player = Player(
         name=payload.name.strip()[:24] or "Healer",
         aptitude=payload.aptitude,
         recommended_aptitude=payload.recommended_aptitude,
         learning_goal=payload.learning_goal,
         codex_depth=payload.codex_depth or "simple",
-        heroes_owned=[aptitude_starting_hero[payload.aptitude], "village_caretaker"],
+        heroes_owned=[starting_hero, "village_caretaker"],
+        active_team=[starting_hero, "village_caretaker"],
+        inventory={
+            "Albuterol Mist": 1,
+            "Glucose Gel": 1,
+            "Fluid Bolus": 1,
+            "Isolation Kit": 1,
+            "Lab Token": 2,
+        },
+        codex_shards=50,
         kingdom_levels={
             "academy_of_healing": 1,
             "library_of_knowledge": 1,

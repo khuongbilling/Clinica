@@ -18,8 +18,11 @@ type Ctx = {
   player: PlayerState | null;
   loading: boolean;
   createPlayer: (args: CreatePlayerArgs) => Promise<void>;
-  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string }) => Promise<void>;
+  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; inventoryDelta?: Record<string, number> }) => Promise<void>;
   recordFailure: (enemyId: string) => Promise<void>;
+  syncInventory: (newInventory: Record<string, number>) => Promise<void>;
+  saveActiveTeam: (teamIds: string[]) => Promise<void>;
+  summonOnce: () => Promise<{ entry: any; duplicate: boolean; message: string } | null>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -87,6 +90,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       // Reset failure count on win
       next.failure_counts = { ...(next.failure_counts || {}), [rewards.enemyId]: 0 };
     }
+    if (rewards.codexShards) {
+      next.codex_shards = (next.codex_shards || 0) + rewards.codexShards;
+    }
+    if (rewards.inventoryDelta) {
+      next.inventory = { ...(next.inventory || {}) };
+      for (const [k, v] of Object.entries(rewards.inventoryDelta)) {
+        next.inventory[k] = (next.inventory[k] || 0) + v;
+      }
+    }
     next.runs_completed = next.runs_completed + 1;
     const updated = await api.updatePlayer(next.id, {
       xp: next.xp, rank: next.rank, rank_index: next.rank_index,
@@ -94,6 +106,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       heroes_owned: next.heroes_owned, kingdom_levels: next.kingdom_levels,
       runs_completed: next.runs_completed, bosses_defeated: next.bosses_defeated,
       failure_counts: next.failure_counts,
+      codex_shards: next.codex_shards,
+      inventory: next.inventory,
     });
     setPlayer(updated);
   }, [player]);
@@ -106,12 +120,46 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setPlayer(updated);
   }, [player]);
 
+  const syncInventory = useCallback(async (newInventory: Record<string, number>) => {
+    if (!player) return;
+    const updated = await api.updatePlayer(player.id, { inventory: newInventory });
+    setPlayer(updated);
+  }, [player]);
+
+  const saveActiveTeam = useCallback(async (teamIds: string[]) => {
+    if (!player) return;
+    const updated = await api.updatePlayer(player.id, { active_team: teamIds });
+    setPlayer(updated);
+  }, [player]);
+
+  const summonOnce = useCallback(async () => {
+    if (!player) return null;
+    const { summonOnce: roll, SUMMON_COST, DUPLICATE_REFUND } = await import('./gacha');
+    if ((player.codex_shards || 0) < SUMMON_COST) {
+      return { entry: null as any, duplicate: false, message: 'Not enough Codex Shards.' };
+    }
+    const result = roll(player.heroes_owned);
+    const nextShards = (player.codex_shards || 0) - SUMMON_COST + (result.duplicate ? DUPLICATE_REFUND : 0);
+    const nextHeroes = result.duplicate ? player.heroes_owned : [...player.heroes_owned, result.entry.heroId];
+    const nextHistory = [
+      ...(player.summon_history || []),
+      { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.duplicate, date: new Date().toISOString() },
+    ];
+    const updated = await api.updatePlayer(player.id, {
+      codex_shards: nextShards,
+      heroes_owned: nextHeroes,
+      summon_history: nextHistory,
+    });
+    setPlayer(updated);
+    return result;
+  }, [player]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
   }, []);
 
-  const value = useMemo<Ctx>(() => ({ player, loading, createPlayer, applyRewards, recordFailure, resetPlayer, refresh }), [player, loading, createPlayer, applyRewards, recordFailure, resetPlayer, refresh]);
+  const value = useMemo<Ctx>(() => ({ player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, resetPlayer, refresh }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, resetPlayer, refresh]);
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
 

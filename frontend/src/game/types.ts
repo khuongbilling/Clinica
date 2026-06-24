@@ -106,8 +106,12 @@ export interface PlayerState {
   };
   codex_unlocked: string[];
   heroes_owned: string[];
+  active_team: string[];
   kingdom_levels: Record<string, number>;
   runs_completed: number;
   bosses_defeated: string[];
   failure_counts: Record<string, number>;
+  inventory: Record<string, number>;
+  codex_shards: number;
+  summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
 }
