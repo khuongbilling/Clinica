@@ -22,9 +22,9 @@ export const HEROES: Hero[] = [
     element: 'River',
     description: 'A vigilant med-surg healer who shores up vitals before the storm breaks.',
     skills: [
-      { id: 'air_blessing', name: 'Air Blessing', type: 'stabilize', cost: 1, description: 'Restore oxygenation. +20% stability.', stabilize: 20 },
-      { id: 'basic_assessment', name: 'Basic Assessment', type: 'scout', cost: 1, description: 'Reveal one hidden clue.', reveal: 1 },
-      { id: 'rapid_response', name: 'Rapid Response', type: 'stabilize', cost: 2, description: 'Emergency support. +35% stability.', stabilize: 35 },
+      { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 1, description: 'Restore oxygenation. +20% stability.', shortEffect: 'Air Stabilize • +20 Stability', rpgDescription: 'A bright breath restores oxygen flow to the fading Air Crystal.', beginnerExplanation: 'This supports breathing and oxygen.', nclexExplanation: 'When respiratory status is unstable, support oxygenation and reassess breathing effort, oxygen saturation, and response.', stabilize: 20 },
+      { id: 'lantern_of_clues', name: 'Lantern of Clues', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one hidden clue.', shortEffect: 'Scout • Reveal Hidden Clue', rpgDescription: 'A lantern of insight reveals what the corruption tried to hide.', beginnerExplanation: 'Look closer to find the important clue.', nclexExplanation: 'Assessment data helps the nurse recognize relevant cues before choosing interventions.', reveal: 1 },
+      { id: 'rapid_response', name: 'Rapid Response', type: 'stabilize', systemType: 'Universal', cost: 2, description: 'Emergency support. +35% stability.', shortEffect: 'Stabilize • +35 Stability', rpgDescription: 'The healer surges in with practiced calm — the patient pulls back from the edge.', beginnerExplanation: 'A big push of support when the patient is in trouble.', nclexExplanation: 'Recognize deterioration and escalate care. Rapid intervention can stabilize an acutely unstable patient.', stabilize: 35 },
     ],
   },
   {
@@ -36,8 +36,8 @@ export const HEROES: Hero[] = [
     element: 'River',
     description: 'Patrols the night shift, catching subtle deterioration before it cascades.',
     skills: [
-      { id: 'vital_monitoring', name: 'Vital Monitoring', type: 'scout', cost: 1, description: 'Reveal one hidden clue and reduce instability.', reveal: 1, stabilize: 8 },
-      { id: 'escalate_care', name: 'Escalate Care', type: 'command', cost: 2, description: 'Call rapid response. Strike 25 + stabilize 15.', strike: 25, stabilize: 15 },
+      { id: 'vital_ward', name: 'Vital Ward', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal a clue and steady the patient.', shortEffect: 'Scout • Reveal + Stabilize', rpgDescription: 'A watchful ward steadies the patient while clues surface.', beginnerExplanation: 'A careful check that also helps the patient feel better.', nclexExplanation: 'Frequent reassessment can catch early changes and prompt timely interventions.', reveal: 1, stabilize: 8 },
+      { id: 'rally_bell', name: 'Rally Bell', type: 'command', systemType: 'Universal', cost: 2, description: 'Summon support. Strike 25 + stabilize 15.', shortEffect: 'Command • Strike & Stabilize', rpgDescription: 'A silver bell summons nearby healers to steady the crisis.', beginnerExplanation: 'Call for help when the situation is getting worse.', nclexExplanation: 'Escalation is appropriate when patient status is unstable, worsening, or beyond what can be safely managed alone.', strike: 25, stabilize: 15 },
     ],
   },
   {
@@ -49,8 +49,8 @@ export const HEROES: Hero[] = [
     element: 'Mind',
     description: 'Sees patterns others miss. Cues sing to her like distant bells.',
     skills: [
-      { id: 'pattern_sight', name: 'Pattern Sight', type: 'scout', cost: 1, description: 'Reveal 2 hidden clues.', reveal: 2 },
-      { id: 'focused_assessment', name: 'Focused Assessment', type: 'analyze', cost: 2, description: 'Reveal all hidden clues and strike 15.', reveal: 99, strike: 15 },
+      { id: 'pattern_sight', name: 'Pattern Sight', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 2 hidden clues.', shortEffect: 'Analyze • Reveal 2 Clues', rpgDescription: 'Threads of the Codex reveal the pattern behind the corruption.', beginnerExplanation: 'Find which body system is in trouble.', nclexExplanation: 'Recognizing clinical patterns helps analyze cues, prioritize hypotheses, and select appropriate interventions.', reveal: 2 },
+      { id: 'focused_lens', name: 'Focused Lens', type: 'analyze', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues and strike 15.', shortEffect: 'Analyze • Reveal All + Strike 15', rpgDescription: 'A crystal lens sharpens the healer’s focus and prepares the next move.', beginnerExplanation: 'A careful check makes your next correct move stronger.', nclexExplanation: 'Focused assessment helps connect symptoms to priority problems and supports safer clinical decision-making.', reveal: 99, strike: 15 },
     ],
   },
   {
@@ -62,8 +62,8 @@ export const HEROES: Hero[] = [
     element: 'Protection',
     description: 'Holds the line. Falls do not happen on her watch.',
     skills: [
-      { id: 'isolation_field', name: 'Isolation Field', type: 'shield', cost: 1, description: 'Reduce next enemy damage by 50%.', shield: 50 },
-      { id: 'containment_order', name: 'Containment Order', type: 'command', cost: 2, description: 'Halve enemy instability for 2 turns.', shield: 100 },
+      { id: 'safety_circle', name: 'Safety Circle', type: 'shield', systemType: 'Protection', cost: 1, description: 'Reduce next enemy damage by 50%.', shortEffect: 'Protection Shield • -50% Damage', rpgDescription: 'A protective circle prevents harm before it reaches the patient.', beginnerExplanation: 'Stop a dangerous event before it happens.', nclexExplanation: 'Patient safety includes fall prevention, medication safety, infection prevention, and reducing avoidable harm.', shield: 50 },
+      { id: 'isolation_seal', name: 'Isolation Seal', type: 'command', systemType: 'Protection', cost: 2, description: 'Halve enemy instability and stop spread for the next turn.', shortEffect: 'Protection Shield • Stop Spread', rpgDescription: 'A seal of protection slows the spread of infectious corruption.', beginnerExplanation: 'Stop germs or infection from spreading.', nclexExplanation: 'Use appropriate precautions, PPE, isolation, and source control to reduce transmission risk.', shield: 100 },
     ],
   },
   {
@@ -75,8 +75,8 @@ export const HEROES: Hero[] = [
     element: 'Storm',
     description: 'Reads labs the way poets read sunsets.',
     skills: [
-      { id: 'trend_forecast', name: 'Trend Forecast', type: 'analyze', cost: 1, description: 'Reveal 1 clue and warn of next danger.', reveal: 1 },
-      { id: 'lab_lens', name: 'Lab Lens', type: 'scout', cost: 2, description: 'Reveal all hidden clues.', reveal: 99 },
+      { id: 'threadwatch', name: 'Threadwatch', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 1 clue and warn of next danger.', shortEffect: 'Analyze • Predict Next Threat', rpgDescription: 'The Weaver traces the next thread of deterioration before it snaps.', beginnerExplanation: 'See what may get worse soon.', nclexExplanation: 'Trending changes in assessment data can identify deterioration before a crisis occurs.', reveal: 1 },
+      { id: 'codex_link', name: 'Codex Link', type: 'scout', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues.', shortEffect: 'Analyze • Use Revealed Data', rpgDescription: 'The revealed clues connect into a glowing Codex chain.', beginnerExplanation: 'Use what you learned to make the right move.', nclexExplanation: 'Clinical judgment requires connecting assessment cues to the most appropriate intervention and evaluating response.', reveal: 99 },
     ],
   },
   {
@@ -88,8 +88,8 @@ export const HEROES: Hero[] = [
     element: 'Growth',
     description: 'The first healer most patients ever meet. Steady, kind, present.',
     skills: [
-      { id: 'basic_support', name: 'Basic Support', type: 'support', cost: 1, description: 'Stabilize 12 and gain 1 AP next turn.', stabilize: 12 },
-      { id: 'reassess', name: 'Reassess', type: 'scout', cost: 1, description: 'Reveal 1 clue.', reveal: 1 },
+      { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 1, description: 'Stabilize 15. Steady support.', shortEffect: 'Universal Stabilize • +15 Stability', rpgDescription: 'A steadying pulse of healing energy restores balance to the patient.', beginnerExplanation: 'This gives basic support when the patient is unstable.', nclexExplanation: 'Basic supportive care may help stabilize the patient while the nurse continues assessment, recognizes cues, and reassesses response.', stabilize: 15 },
+      { id: 'reassess', name: 'Reassess', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one clue.', shortEffect: 'Scout • Reveal Hidden Clue', rpgDescription: 'A patient eye returns to the bedside and asks one more question.', beginnerExplanation: 'Take another look — sometimes a missed clue changes everything.', nclexExplanation: 'Reassessment is essential after every intervention to evaluate response and detect change.', reveal: 1 },
     ],
   },
   {
@@ -101,8 +101,8 @@ export const HEROES: Hero[] = [
     element: 'Fire',
     description: 'Sprints toward crisis when others retreat. Lives for the code.',
     skills: [
-      { id: 'critical_response', name: 'Critical Response', type: 'stabilize', cost: 2, description: 'Massive stabilization +40%.', stabilize: 40 },
-      { id: 'fluid_surge', name: 'Fluid Surge', type: 'strike', cost: 2, description: 'Strike 30 + stabilize 15. Risk: heart failure.', strike: 30, stabilize: 15, risk: { ifSystem: 'River', penalty: 20, description: 'Aggressive fluids worsen pulmonary edema in Cardion.' } },
+      { id: 'critical_response', name: 'Critical Response', type: 'stabilize', systemType: 'Universal', cost: 2, description: 'Massive stabilization +40%.', shortEffect: 'Stabilize • +40 Stability', rpgDescription: 'In the chaos, the runner becomes the calm — and the patient stabilizes.', beginnerExplanation: 'Big emergency support when seconds matter.', nclexExplanation: 'In acute deterioration, prioritize ABCs and rapid stabilization while escalating care.', stabilize: 40 },
+      { id: 'river_surge', name: 'River Surge', type: 'strike', systemType: 'River', cost: 2, description: 'Strike 30 + stabilize 15. Risk: heart failure.', shortEffect: 'River Stabilize • BP Counter', rpgDescription: 'A healing current restores flow through the weakened River system.', beginnerExplanation: 'This supports circulation when blood pressure is low.', nclexExplanation: 'Hypotension and poor perfusion require prompt assessment and ordered fluid support — but be cautious in heart failure where overload worsens the patient.', strike: 30, stabilize: 15, risk: { ifSystem: 'River', penalty: 20, description: 'Aggressive fluids worsen pulmonary edema in Cardion.' } },
     ],
   },
   {
@@ -114,8 +114,8 @@ export const HEROES: Hero[] = [
     element: 'Fire',
     description: 'Walls of soap, isolation, and vigilance against the unseen.',
     skills: [
-      { id: 'infection_scan', name: 'Infection Scan', type: 'scout', cost: 1, description: 'Reveal infection clues + strike 10.', reveal: 1, strike: 10 },
-      { id: 'purification_strike', name: 'Purification Strike', type: 'strike', cost: 2, description: 'Antibiotic burst. Strike 35.', strike: 35 },
+      { id: 'infection_scan', name: 'Infection Scan', type: 'scout', systemType: 'Fire', cost: 1, description: 'Reveal infection clues + strike 10.', shortEffect: 'Fire Scout • Reveal + Strike 10', rpgDescription: 'A practiced eye scans for the source of the corruption.', beginnerExplanation: 'Look for where the infection is coming from.', nclexExplanation: 'Source identification is critical for infection management. Look for wounds, lines, lungs, and urine as common sources.', reveal: 1, strike: 10 },
+      { id: 'purity_mark', name: 'Purity Mark', type: 'strike', systemType: 'Fire', cost: 2, description: 'Antibiotic burst. Strike 35.', shortEffect: 'Fire Strike • -35 Corruption', rpgDescription: 'A cleansing mark burns away infectious corruption.', beginnerExplanation: 'This helps fight infection-type corruption.', nclexExplanation: 'Fever, chills, and spreading infection require recognition, infection control, ordered antimicrobial therapies, and monitoring for sepsis.', strike: 35 },
     ],
   },
   {
@@ -127,8 +127,8 @@ export const HEROES: Hero[] = [
     element: 'Protection',
     description: 'Knows every layer of skin, every stage of healing.',
     skills: [
-      { id: 'skin_shield', name: 'Skin Shield', type: 'shield', cost: 1, description: 'Prevent 30 damage next turn.', shield: 30 },
-      { id: 'mend', name: 'Mend', type: 'stabilize', cost: 1, description: 'Restore 18% stability.', stabilize: 18 },
+      { id: 'skin_shield', name: 'Skin Shield', type: 'shield', systemType: 'Protection', cost: 1, description: 'Prevent 30 damage next turn.', shortEffect: 'Protection Shield • -30 Damage', rpgDescription: 'A weave of healing knits the barrier before harm arrives.', beginnerExplanation: 'Protect the skin and body from harm.', nclexExplanation: 'Maintain skin integrity through positioning, pressure relief, and barrier care to prevent breakdown.', shield: 30 },
+      { id: 'mend', name: 'Mend', type: 'stabilize', systemType: 'Universal', cost: 1, description: 'Restore 18% stability.', shortEffect: 'Stabilize • +18 Stability', rpgDescription: 'Patient hands restore what was torn.', beginnerExplanation: 'Help the body heal a little at a time.', nclexExplanation: 'Steady supportive care promotes recovery. Reassess wounds and tissues regularly.', stabilize: 18 },
     ],
   },
   {
@@ -140,8 +140,8 @@ export const HEROES: Hero[] = [
     element: 'Mind',
     description: 'Listens. Truly listens. Crisis softens in her presence.',
     skills: [
-      { id: 'mind_anchor', name: 'Mind Anchor', type: 'cleanse', cost: 1, description: 'Cleanse status effects + stabilize 10.', cleanse: true, stabilize: 10 },
-      { id: 'safety_guard', name: 'Safety Guard', type: 'shield', cost: 2, description: 'Block next danger trigger entirely.', shield: 100 },
+      { id: 'mind_anchor', name: 'Mind Anchor', type: 'cleanse', systemType: 'Mind', cost: 1, description: 'Cleanse status effects + stabilize 10.', shortEffect: 'Mind Cleanse • +10 Stability', rpgDescription: 'A steady voice anchors the patient through the storm.', beginnerExplanation: 'Help the patient feel safe and calm.', nclexExplanation: 'Therapeutic communication, orientation, and de-escalation support patients in mental health and delirium crises.', cleanse: true, stabilize: 10 },
+      { id: 'error_ward', name: 'Error Ward', type: 'shield', systemType: 'Protection', cost: 2, description: 'Block next danger trigger entirely.', shortEffect: 'Safety Analyze • Cancel Unsafe Move', rpgDescription: 'A warning rune flashes before a harmful mistake is made.', beginnerExplanation: 'Catch a mistake before it hurts the patient.', nclexExplanation: 'Nurses must recognize unsafe orders, contraindications, and interventions that could worsen the patient.', shield: 100 },
     ],
   },
 ];

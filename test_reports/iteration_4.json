@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 4 (Battle screen UX overhaul) verified end-to-end on mobile 390x844. Backend: 21/21 pytest still green (no schema changes). Frontend: (1) Battle screen renders compact enemy header, bars, collapsed Codex (battle-guidance), clue row, and FIXED bottom action bar with AP dots + END TURN (battle-end-turn) and 4 tabs (tab-actions, tab-items, tab-call, tab-team) — all visible without scrolling within 844px viewport (battle-end-turn at y≈609). (2) ACTIONS tab shows team skill grid with NEW RPG names verified present on sage-team load (apprentice_seer + novice_guardian + junior_warden): Pattern Sight, Focused Lens, Breath of Dawn, Lantern of Clues, Rapid Response, Safety Circle, Isolation Seal. ZERO old names regression (Air Blessing, Basic Assessment, Basic Support, Vital Monitoring, Escalate Care, Focused Assessment, Lab Lens, Isolation Field — none found). On a weaver-team run (data_acolyte+village_caretaker), Threadwatch, Codex Link, Guardian's Touch render correctly. (3) Tapping battle-skill-pattern_sight opens detail modal (NOT immediate use). Modal contains all 4 expected sections: 'RPG Effect', 'Battle Effect', 'Real-Life Nursing', 'NCLEX Focus', plus USE button (detail-use). Pressing USE executes skill (modal closes, hidden 'Wheezing' clue revealed by reveal=2). (4) ITEMS tab renders all 5 starter items by displayName: 'Bronchodilator Mist', 'Glucose Spark Gel', 'River Bolus', 'Barrier Kit', 'Codex Lab Sigil'. Old name 'Albuterol Mist' NOT present in UI. (5) CALL tab: 2 context-aware options for asthma enemy (call_respiratory + call_pharmacy). Tapping a call option opens detail modal with USE (call) button. detail-cancel closes it. (6) TEAM tab shows 3 hero cards (team-{heroId}) for active_team plus 'YOUR APTITUDE PASSIVE' card (Sage's Eye passive text shown). (7) battle-close returns to /(tabs). Codex Guidance toggle: chevron flips between down/up on tap (state changes confirmed by re-tap working), but on the short default 'Match actions to the Air system.' string height stays at 37px collapsed=expanded — the numberOfLines={undefined|1} works only when text actually overflows 1 line. This is acceptable for short hints but main agent may consider longer hints to make the expand visible. Tap-to-open Detail Modal works for skills and calls; item taps were verified visually (modal opens on real player flows; direct deep-link test path shows qty=0 because player.inventory loads async after useState initializer — see RCA).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/player", "issue": "Still returns 200 instead of 201 Created (carry-over)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Battle screen state init (battle.tsx:49-79)", "issue": "useState initializer reads player?.inventory which is null on first render when reached via direct deep-link before usePlayer hydrates — state.inventory stays empty, all items appear disabled (qty=0). Works fine via in-app Run→encounter navigation since player is already loaded. Recommend a useEffect to re-init state.inventory when player.inventory transitions from undefined to defined, OR gate render until player !== undefined.", "testID": "battle-item-I001..I005", "priority": "MEDIUM"},
+      {"component": "Codex Guidance (battle.tsx:218-227)", "issue": "Collapsed/expanded height identical (37px) for short default hint string because text doesn't overflow 1 line; only the chevron flips. Functionally correct, but expand UX provides no visible benefit with short hints.", "testID": "battle-guidance", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web Pressable/View", "issue": "Console warning 'props.pointerEvents is deprecated. Use style.pointerEvents' carried over from prior iterations. Coming from RN/Expo internals; not blocking. Reference: not in /app code directly — RN web lib."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_player_api.py",
+    "/app/backend/tests/test_iteration3_fields.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: in battle.tsx, add `useEffect` watching `player?.inventory` to seed state.inventory once player hydrates, so direct deep-links and very-fast navigations don't start with an empty inventory.",
+    "Optional: expose Codex Guidance expand more visibly — e.g. always show 2 lines collapsed with a longer 'tactical' hint, or include a small 'tap for more' affordance when text fits in 1 line.",
+    "(Carry-over) POST /api/player returns 200 — consider 201 Created.",
+    "(Carry-over) RN-web 'props.pointerEvents is deprecated' warning sweep."
+  ],
+  "critical_code_review_comments": [
+    "battle.tsx is 608 lines — approaching the 700 line threshold. Consider extracting DetailContent + tab panels (ActionsTab, ItemsTab, CallTab, TeamTab) into separate components under /app/frontend/src/components/battle/.",
+    "Hero skill rename map is consistent across content.ts and uses — no orphan IDs detected. Save/load via player.heroes_owned references hero IDs (not skill IDs), so the skill rename is safe for persisted players.",
+    "DetailContent.kind='temp' assumes TEMP_ACTIONS[detail.actionId] is defined; safe today but a guard (`if (!a) return null`) would be defensive.",
+    "decideCallItem() (battle.tsx:113-119) returns the *internal* item.name like 'Albuterol Mist' — correct because it keys state.inventory by name, but the user-visible call confirmation may show this internal name. Verify the toast/log uses displayName lookup if shown to user.",
+    "Items panel uses item.name as inventory key (state.inventory[item.name]). Persisted inventory uses the same keys — consistent. Rename to use item.id would future-proof against display rebrands but isn't required now."
+  ],
+  "updated_files": [
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/iteration_4.json"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% on iteration-4 spec: tabs/RPG-names/skill-detail-modal/4-sections/USE/call-detail-modal/team/action-bar/close. Item-detail-modal verified visually + by code review; deep-link path shows qty=0 (race) but in-app path was already verified working in iteration_3."},
+  "seed_data_creation": "Created TEST_iter4_battle (weaver) and TEST_iter4_v2 (sage), TEST_iter4_items (sage) via POST /api/player. Not auto-cleaned (no UI delete path). All TEST_-prefixed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "To bootstrap a player and deep-link to /battle reliably: POST /api/player (with optional PUT to override active_team/heroes_owned for skill coverage), then on the Expo web page evaluate `localStorage.setItem('clinica.playerId.v1', pid)` BEFORE navigating to /battle?enemyId=... HOWEVER the battle state.inventory is initialized from player.inventory in the useState initializer (battle.tsx:49) — if player hasn't hydrated yet the state.inventory is empty and items will all render disabled (qty=0). To test items, either (a) navigate through the Run tab so player is already in store, or (b) wait for player store hydration before navigating to /battle. The 4 sections in detail modal are: 'RPG Effect' (only for skills with rpgDescription), 'Battle Effect', 'Real-Life Nursing' (skills with beginnerExplanation), 'NCLEX Focus' (skills with nclexExplanation). For items the modal has Battle Effect + Real-Life Nursing + NCLEX Focus (no RPG Effect section since item.rpgSubtitle is shown in kicker line). USE button testID = detail-use, CLOSE = detail-cancel.",
+  "rca_of_issue": "Items-tab tap not opening detail modal during deep-link test path. ROOT CAUSE: In battle.tsx line 49-79, useState lazy initializer runs once on mount and reads `player?.inventory || {}`. When deep-linking to /battle right after setting the playerId in localStorage, the usePlayer() hook is still hydrating (player === undefined), so initBattle is called with an empty inventory map. state.inventory remains {} for the life of the screen because there's no useEffect to re-seed it when player transitions to non-null. Result: all Pressable item buttons compute `disabled = qty <= 0 || ...` → disabled=true → onPress is `() => null`, so taps appear to do nothing. Reproduction: POST /api/player → setItem localStorage clinica.playerId.v1 → goto /battle?enemyId=air_sprite within ~3s → tab-items → tap battle-item-I005 (qty shows ×0, opacity 0.4). MITIGATION: (1) Quick fix — gate the battle render until player is hydrated: `if (player === undefined) return <Loading/>;` (2) Robust fix — useEffect(() => { if (player?.inventory) setState(s => ({...s, inventory: {...player.inventory}})) }, [player?.inventory]) but only when state hasn't been advanced (turn count == 0)."
+}

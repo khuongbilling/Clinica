@@ -3,13 +3,16 @@ import { ElementSystem } from './types';
 export interface Item {
   id: string;
   name: string;
+  displayName: string;
+  rpgSubtitle: string;
+  shortEffect: string;
   systemType: string;
   itemType: 'Pharmacy' | 'Intervention' | 'Safety' | 'Scout';
   costAP: number;
   target: 'corruption' | 'stability' | 'shield' | 'clue';
   baseEffect: number;
-  requiredClueKeyword: string | null; // substring match against revealed clue labels
-  requiredClueLabel: string; // human-readable for error messages
+  requiredClueKeyword: string | null;
+  requiredClueLabel: string;
   bonusVsSystem: ElementSystem | null;
   bonusEffect: number;
   description: string;
@@ -21,6 +24,9 @@ export const ITEMS: Item[] = [
   {
     id: 'I001',
     name: 'Albuterol Mist',
+    displayName: 'Bronchodilator Mist',
+    rpgSubtitle: 'Air Pharmacy Item',
+    shortEffect: 'Requires Wheezing • -30 Corruption',
     systemType: 'Air',
     itemType: 'Pharmacy',
     costAP: 2,
@@ -32,11 +38,14 @@ export const ITEMS: Item[] = [
     bonusEffect: 10,
     description: 'Opens narrowed airflow when wheezing is present.',
     beginnerExplanation: 'This helps open tight airways.',
-    clinicalExplanation: 'Bronchodilator-type intervention for bronchospasm/wheezing.',
+    clinicalExplanation: 'Represents a bronchodilator-type intervention such as albuterol for bronchospasm/wheezing — anticipate or administer as ordered or per protocol.',
   },
   {
     id: 'I002',
     name: 'Glucose Gel',
+    displayName: 'Glucose Spark Gel',
+    rpgSubtitle: 'Energy Pharmacy Item',
+    shortEffect: 'Requires Low Glucose • +30 Stability',
     systemType: 'Energy',
     itemType: 'Pharmacy',
     costAP: 2,
@@ -48,11 +57,14 @@ export const ITEMS: Item[] = [
     bonusEffect: 10,
     description: 'Restores energy when low glucose is revealed.',
     beginnerExplanation: 'This gives the body fast sugar energy.',
-    clinicalExplanation: 'Rapid glucose support for hypoglycemia symptoms.',
+    clinicalExplanation: 'Represents rapid glucose support for hypoglycemia per protocol.',
   },
   {
     id: 'I003',
     name: 'Fluid Bolus',
+    displayName: 'River Bolus',
+    rpgSubtitle: 'River Intervention Item',
+    shortEffect: 'Requires Low BP • +25 Stability',
     systemType: 'River',
     itemType: 'Intervention',
     costAP: 2,
@@ -64,11 +76,14 @@ export const ITEMS: Item[] = [
     bonusEffect: 10,
     description: 'Supports circulation when low blood pressure is revealed.',
     beginnerExplanation: 'This helps restore circulation.',
-    clinicalExplanation: 'Fluid support may improve perfusion when hypotension is present.',
+    clinicalExplanation: 'Represents fluid support for hypotension/perfusion concerns when appropriate and ordered/protocol-based.',
   },
   {
     id: 'I004',
     name: 'Isolation Kit',
+    displayName: 'Barrier Kit',
+    rpgSubtitle: 'Protection Safety Item',
+    shortEffect: 'Blocks Spread',
     systemType: 'Protection',
     itemType: 'Safety',
     costAP: 1,
@@ -80,11 +95,14 @@ export const ITEMS: Item[] = [
     bonusEffect: 15,
     description: 'Reduces infection spread.',
     beginnerExplanation: 'This helps stop germs from spreading.',
-    clinicalExplanation: 'Isolation and PPE reduce transmission risk.',
+    clinicalExplanation: 'Represents PPE, isolation precautions, and transmission prevention.',
   },
   {
     id: 'I005',
     name: 'Lab Token',
+    displayName: 'Codex Lab Sigil',
+    rpgSubtitle: 'Scout Item',
+    shortEffect: 'Reveal Hidden Clue',
     systemType: 'Universal',
     itemType: 'Scout',
     costAP: 1,
@@ -96,7 +114,7 @@ export const ITEMS: Item[] = [
     bonusEffect: 0,
     description: 'Reveal one hidden clue.',
     beginnerExplanation: 'This helps you find what is wrong.',
-    clinicalExplanation: 'Additional data can clarify the priority problem.',
+    clinicalExplanation: 'Represents obtaining additional clinical data to clarify the problem.',
   },
 ];
 

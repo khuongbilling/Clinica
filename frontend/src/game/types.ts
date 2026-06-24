@@ -12,18 +12,22 @@ export interface HeroSkill {
   id: string;
   name: string;
   type: ActionType;
+  systemType?: string; // 'Universal', 'Air', 'River', etc.
   cost: number;
   description: string;
+  shortEffect?: string; // brief mechanical summary for button
+  rpgDescription?: string; // fantasy flavor
+  beginnerExplanation?: string; // plain language
+  nclexExplanation?: string; // clinical NCLEX-style
   // Effects
-  reveal?: number; // hidden clues revealed
-  stabilize?: number; // restore stability %
-  strike?: number; // reduce enemy corruption
+  reveal?: number;
+  stabilize?: number;
+  strike?: number;
   cleanse?: boolean;
-  shield?: number; // dmg reduction on next enemy turn
-  // Risks (clinical reasoning)
+  shield?: number;
   risk?: {
     ifSystem?: ElementSystem;
-    penalty?: number; // stability damage
+    penalty?: number;
     description: string;
   };
 }
