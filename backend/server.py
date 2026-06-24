@@ -31,6 +31,9 @@ def now_iso() -> str:
 class PlayerCreate(BaseModel):
     name: str
     aptitude: str  # guardian | sage | warden | weaver
+    recommended_aptitude: Optional[str] = None
+    learning_goal: Optional[str] = None
+    codex_depth: Optional[str] = None
 
 
 class MasteryStats(BaseModel):
@@ -46,6 +49,10 @@ class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     aptitude: str
+    recommended_aptitude: Optional[str] = None
+    learning_goal: Optional[str] = None
+    codex_depth: str = "simple"
+    onboarding_complete: bool = True
     rank: str = "Sprout Healer"
     rank_index: int = 0
     xp: int = 0
@@ -55,12 +62,18 @@ class Player(BaseModel):
     kingdom_levels: Dict[str, int] = Field(default_factory=dict)
     runs_completed: int = 0
     bosses_defeated: List[str] = Field(default_factory=list)
+    failure_counts: Dict[str, int] = Field(default_factory=dict)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
 
 class PlayerUpdate(BaseModel):
     name: Optional[str] = None
+    aptitude: Optional[str] = None
+    recommended_aptitude: Optional[str] = None
+    learning_goal: Optional[str] = None
+    codex_depth: Optional[str] = None
+    onboarding_complete: Optional[bool] = None
     rank: Optional[str] = None
     rank_index: Optional[int] = None
     xp: Optional[int] = None
@@ -70,6 +83,7 @@ class PlayerUpdate(BaseModel):
     kingdom_levels: Optional[Dict[str, int]] = None
     runs_completed: Optional[int] = None
     bosses_defeated: Optional[List[str]] = None
+    failure_counts: Optional[Dict[str, int]] = None
 
 
 # ---------- Routes ----------
@@ -92,6 +106,9 @@ async def create_player(payload: PlayerCreate):
     player = Player(
         name=payload.name.strip()[:24] or "Healer",
         aptitude=payload.aptitude,
+        recommended_aptitude=payload.recommended_aptitude,
+        learning_goal=payload.learning_goal,
+        codex_depth=payload.codex_depth or "simple",
         heroes_owned=[aptitude_starting_hero[payload.aptitude], "village_caretaker"],
         kingdom_levels={
             "academy_of_healing": 1,

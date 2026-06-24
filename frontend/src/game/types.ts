@@ -89,6 +89,10 @@ export interface PlayerState {
   id: string;
   name: string;
   aptitude: Aptitude;
+  recommended_aptitude?: Aptitude | null;
+  learning_goal?: string | null;
+  codex_depth: string;
+  onboarding_complete: boolean;
   rank: string;
   rank_index: number;
   xp: number;
@@ -105,4 +109,5 @@ export interface PlayerState {
   kingdom_levels: Record<string, number>;
   runs_completed: number;
   bosses_defeated: string[];
+  failure_counts: Record<string, number>;
 }

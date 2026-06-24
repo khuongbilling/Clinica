@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CODEX } from "@/src/game/content";
+import { DEPTH_INTRO, DEPTH_LABEL } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -10,6 +11,7 @@ export default function CodexScreen() {
   const { player } = usePlayer();
   if (!player) return null;
   const unlocked = new Set(player.codex_unlocked);
+  const depth = player.codex_depth || "simple";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -17,6 +19,14 @@ export default function CodexScreen() {
         <Text style={styles.kicker}>THE GREAT CODEX</Text>
         <Text style={styles.title}>Library of Knowledge</Text>
         <Text style={styles.sub}>{unlocked.size} of {CODEX.length} pages restored</Text>
+
+        <View style={styles.depthCard} testID="codex-depth-banner">
+          <Ionicons name="bookmark" size={14} color={COLORS.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.depthLabel}>{(DEPTH_LABEL[depth] || "General Reading").toUpperCase()}</Text>
+            <Text style={styles.depthIntro}>{DEPTH_INTRO[depth] || DEPTH_INTRO.simple}</Text>
+          </View>
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {CODEX.map((entry) => {
@@ -60,6 +70,13 @@ const styles = StyleSheet.create({
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  depthCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.md,
+    backgroundColor: COLORS.brand + "12", borderColor: COLORS.brand + "40", borderWidth: 1,
+    borderRadius: RADIUS.md, padding: SPACING.sm,
+  },
+  depthLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  depthIntro: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
   scroll: { padding: SPACING.lg, paddingTop: 0, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   card: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md,

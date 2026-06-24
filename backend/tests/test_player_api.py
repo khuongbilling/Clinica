@@ -160,3 +160,92 @@ def test_update_player_404(api):
         timeout=15,
     )
     assert r.status_code == 404
+
+
+
+# ---------- New fields: recommended_aptitude, learning_goal, codex_depth, failure_counts ----------
+
+def test_create_player_with_new_fields(api, created_ids):
+    payload = {
+        "name": "TEST_new_fields",
+        "aptitude": "sage",
+        "recommended_aptitude": "weaver",
+        "learning_goal": "I am preparing for NCLEX.",
+        "codex_depth": "nclex",
+    }
+    r = api.post(f"{BASE_URL}/api/player", json=payload, timeout=15)
+    assert r.status_code == 200, r.text
+    p = r.json()
+    created_ids.append(p["id"])
+    assert p["recommended_aptitude"] == "weaver"
+    assert p["learning_goal"] == "I am preparing for NCLEX."
+    assert p["codex_depth"] == "nclex"
+    assert p["onboarding_complete"] is True
+    assert p["failure_counts"] == {}
+
+    # Verify persisted via GET
+    g = api.get(f"{BASE_URL}/api/player/{p['id']}", timeout=15)
+    gb = g.json()
+    assert gb["recommended_aptitude"] == "weaver"
+    assert gb["learning_goal"] == "I am preparing for NCLEX."
+    assert gb["codex_depth"] == "nclex"
+
+
+def test_create_player_defaults_codex_depth_simple(api, created_ids):
+    r = api.post(
+        f"{BASE_URL}/api/player",
+        json={"name": "TEST_default_depth", "aptitude": "guardian"},
+        timeout=15,
+    )
+    assert r.status_code == 200
+    p = r.json()
+    created_ids.append(p["id"])
+    assert p["codex_depth"] == "simple"
+    assert p["recommended_aptitude"] is None
+    assert p["learning_goal"] is None
+    assert p["onboarding_complete"] is True
+    assert p["failure_counts"] == {}
+
+
+def test_update_failure_counts(api, created_ids):
+    r = api.post(
+        f"{BASE_URL}/api/player",
+        json={"name": "TEST_fail", "aptitude": "warden"},
+        timeout=15,
+    )
+    pid = r.json()["id"]
+    created_ids.append(pid)
+
+    upd = api.put(
+        f"{BASE_URL}/api/player/{pid}",
+        json={"failure_counts": {"air_sprite": 2, "fire_imp": 1}},
+        timeout=15,
+    )
+    assert upd.status_code == 200, upd.text
+    body = upd.json()
+    assert body["failure_counts"] == {"air_sprite": 2, "fire_imp": 1}
+
+    # Reset on win simulation
+    upd2 = api.put(
+        f"{BASE_URL}/api/player/{pid}",
+        json={"failure_counts": {"air_sprite": 0, "fire_imp": 1}},
+        timeout=15,
+    )
+    assert upd2.status_code == 200
+    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    assert g.json()["failure_counts"] == {"air_sprite": 0, "fire_imp": 1}
+
+
+def test_delete_player_roundtrip(api):
+    r = api.post(
+        f"{BASE_URL}/api/player",
+        json={"name": "TEST_del", "aptitude": "sage"},
+        timeout=15,
+    )
+    pid = r.json()["id"]
+    d = api.delete(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    assert d.status_code == 200
+    assert d.json().get("deleted") == 1
+    # subsequent GET should 404
+    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    assert g.status_code == 404

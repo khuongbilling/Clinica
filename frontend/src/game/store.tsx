@@ -6,11 +6,20 @@ import { RANKS } from './content';
 
 const STORAGE_KEY = 'clinica.playerId.v1';
 
+type CreatePlayerArgs = {
+  name: string;
+  aptitude: string;
+  recommended_aptitude?: string;
+  learning_goal?: string;
+  codex_depth?: string;
+};
+
 type Ctx = {
   player: PlayerState | null;
   loading: boolean;
-  createPlayer: (name: string, aptitude: string) => Promise<void>;
-  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number> }) => Promise<void>;
+  createPlayer: (args: CreatePlayerArgs) => Promise<void>;
+  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string }) => Promise<void>;
+  recordFailure: (enemyId: string) => Promise<void>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -44,8 +53,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const createPlayer = useCallback(async (name: string, aptitude: string) => {
-    const p = await api.createPlayer(name, aptitude);
+  const createPlayer = useCallback(async (args: CreatePlayerArgs) => {
+    const p = await api.createPlayer(args);
     await AsyncStorage.setItem(STORAGE_KEY, p.id);
     setPlayer(p);
   }, []);
@@ -74,13 +83,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (rewards.buildings) {
       next.kingdom_levels = { ...next.kingdom_levels, ...rewards.buildings };
     }
+    if (rewards.enemyId) {
+      // Reset failure count on win
+      next.failure_counts = { ...(next.failure_counts || {}), [rewards.enemyId]: 0 };
+    }
     next.runs_completed = next.runs_completed + 1;
     const updated = await api.updatePlayer(next.id, {
       xp: next.xp, rank: next.rank, rank_index: next.rank_index,
       mastery: next.mastery, codex_unlocked: next.codex_unlocked,
       heroes_owned: next.heroes_owned, kingdom_levels: next.kingdom_levels,
       runs_completed: next.runs_completed, bosses_defeated: next.bosses_defeated,
+      failure_counts: next.failure_counts,
     });
+    setPlayer(updated);
+  }, [player]);
+
+  const recordFailure = useCallback(async (enemyId: string) => {
+    if (!player) return;
+    const current = (player.failure_counts || {})[enemyId] || 0;
+    const newCounts = { ...(player.failure_counts || {}), [enemyId]: current + 1 };
+    const updated = await api.updatePlayer(player.id, { failure_counts: newCounts });
     setPlayer(updated);
   }, [player]);
 
@@ -89,7 +111,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setPlayer(null);
   }, []);
 
-  const value = useMemo<Ctx>(() => ({ player, loading, createPlayer, applyRewards, resetPlayer, refresh }), [player, loading, createPlayer, applyRewards, resetPlayer, refresh]);
+  const value = useMemo<Ctx>(() => ({ player, loading, createPlayer, applyRewards, recordFailure, resetPlayer, refresh }), [player, loading, createPlayer, applyRewards, recordFailure, resetPlayer, refresh]);
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
 

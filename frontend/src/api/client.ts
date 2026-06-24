@@ -17,8 +17,8 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  createPlayer: (name: string, aptitude: string) =>
-    http<PlayerState>('/player', { method: 'POST', body: JSON.stringify({ name, aptitude }) }),
+  createPlayer: (params: { name: string; aptitude: string; recommended_aptitude?: string; learning_goal?: string; codex_depth?: string }) =>
+    http<PlayerState>('/player', { method: 'POST', body: JSON.stringify(params) }),
   getPlayer: (id: string) => http<PlayerState>(`/player/${id}`),
   updatePlayer: (id: string, patch: Partial<PlayerState>) =>
     http<PlayerState>(`/player/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),

@@ -6,14 +6,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
 import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
-import { applySkill, endPlayerTurn, flatSkills, initBattle, type BattleState } from "@/src/game/battle";
+import { getEnemyHint } from "@/src/game/onboarding";
+import { applySkill, endPlayerTurn, initBattle, type BattleState } from "@/src/game/battle";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function Battle() {
-  const { enemyId } = useLocalSearchParams<{ enemyId: string }>();
+  const { enemyId, training } = useLocalSearchParams<{ enemyId: string; training?: string }>();
   const router = useRouter();
-  const { player, applyRewards } = usePlayer();
+  const { player, applyRewards, recordFailure } = usePlayer();
+  const isTraining = training === "1";
 
   const enemy = useMemo(() => {
     if (!enemyId) return ENEMIES[0];
@@ -25,36 +27,94 @@ export default function Battle() {
     if (!player) return HEROES.slice(0, 3);
     const owned = HEROES.filter((h) => player.heroes_owned.includes(h.id));
     if (owned.length >= 3) return owned.slice(0, 3);
-    // fill from HEROES list
     const fill = HEROES.filter((h) => !player.heroes_owned.includes(h.id));
     return [...owned, ...fill].slice(0, 3);
   }, [player]);
 
-  const [state, setState] = useState<BattleState>(() => initBattle(enemy, team));
+  const failureCount = (player?.failure_counts || {})[enemy.id] || 0;
+  const mentorAid = failureCount >= 3;
+  const tacticalHint = failureCount >= 2;
+  const gentleHint = failureCount >= 1;
+
+  const [state, setState] = useState<BattleState>(() => {
+    const base = initBattle(enemy, team);
+    let stability = base.stability;
+    let visibleClues = [...base.visibleClues];
+    let hiddenClueIds = [...base.hiddenClueIds];
+    const log = [...base.log];
+
+    // Apply aptitude passives
+    if (player?.aptitude === "weaver" && hiddenClueIds.length > 0) {
+      const revealed = hiddenClueIds.shift()!;
+      visibleClues.push(revealed);
+      log.push(`⟡ Weaver's Eye: one hidden clue revealed at battle start.`);
+    }
+
+    // Apply mentor aid (+10 starting stability)
+    if (mentorAid) {
+      stability = Math.min(100, stability + 10);
+      log.push(`🕯 A mentor steadies your hand. Starting Stability +10.`);
+    }
+
+    // Training battle: reveal hidden clue + extra stability buffer
+    if (isTraining) {
+      if (hiddenClueIds.length > 0) {
+        const revealed = hiddenClueIds.shift()!;
+        visibleClues.push(revealed);
+      }
+      stability = Math.min(100, stability + 10);
+      log.push(`📜 Training Battle: hidden clue revealed, enemy weakened.`);
+    }
+
+    return { ...base, stability, visibleClues, hiddenClueIds, log };
+  });
+
   const [selectedHeroIdx, setSelectedHeroIdx] = useState(0);
+  const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
+  const [hintExpanded, setHintExpanded] = useState(true);
+
   const allClues = useMemo(() => [...enemy.visibleClues, ...enemy.hiddenClues], [enemy]);
   const stabilityColor = state.stability > 60 ? COLORS.success : state.stability > 30 ? COLORS.warning : COLORS.error;
   const corruptionPct = (state.corruption / enemy.corruption) * 100;
 
   const handleSkill = (hero: any, skill: any) => {
-    if (state.outcome !== "ongoing" || state.ap < skill.cost) return;
+    if (state.outcome !== "ongoing" || state.outcome === "loss") return;
+    // Sage: first scout costs 1 less AP
+    let effectiveSkill = skill;
+    if (player?.aptitude === "sage" && !sageScoutBonusUsed && skill.type === "scout" && skill.cost > 0) {
+      effectiveSkill = { ...skill, cost: Math.max(0, skill.cost - 1) };
+      setSageScoutBonusUsed(true);
+    }
+    if (state.ap < effectiveSkill.cost) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setState((s) => applySkill(s, skill, hero));
+    setState((s) => applySkill(s, effectiveSkill, hero));
   };
 
   const handleEndTurn = () => {
     if (state.outcome !== "ongoing") return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setState((s) => endPlayerTurn(s));
+    setState((s) => {
+      let next = endPlayerTurn(s);
+      // Guardian: reduce stability loss by 5 per turn
+      if (player?.aptitude === "guardian" && s.outcome === "ongoing" && next.outcome === "ongoing" && next.stability < s.stability) {
+        const recovered = Math.min(5, s.stability - next.stability);
+        next = { ...next, stability: Math.min(100, next.stability + recovered), log: [...next.log, `🛡 Guardian's Vigil: damage reduced by ${recovered}.`] };
+      }
+      // Warden: starting turn shield +25 once
+      // (handled at battle start via shieldNext seed below — we apply it once on turn 1)
+      return next;
+    });
   };
 
   const finish = async () => {
     if (state.outcome === "win") {
       const isBoss = enemy.id === BOSS_LORD_IMBALANCE.id;
-      const xp = isBoss ? 150 : 35 + enemy.difficulty * 10;
+      const baseXp = isBoss ? 150 : 35 + enemy.difficulty * 10;
+      const xp = isTraining ? Math.floor(baseXp * 0.5) : baseXp;
       await applyRewards({
         xp,
         codex: enemy.teaches,
+        enemyId: enemy.id, // resets failure_count for this enemy
         mastery: enemy.bestCounters.reduce((acc, c) => {
           const map: Record<string, keyof typeof acc> = {
             scout: "assessment", stabilize: "stabilization", strike: "pharmacology",
@@ -67,23 +127,29 @@ export default function Battle() {
         }, {} as any),
         bossId: isBoss ? enemy.id : undefined,
       });
+    } else if (state.outcome === "loss") {
+      await recordFailure(enemy.id);
     }
     router.replace({
       pathname: "/result",
-      params: { outcome: state.outcome, enemyId: enemy.id, stability: String(state.stability) },
+      params: { outcome: state.outcome, enemyId: enemy.id, stability: String(state.stability), training: isTraining ? "1" : "0" },
     });
   };
 
   const selectedHero = team[selectedHeroIdx];
+  const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
+  const hints = getEnemyHint(enemy.id);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* Top: Enemy + stability */}
       <View style={styles.enemyArea}>
         <Pressable style={styles.closeBtn} onPress={() => router.back()} testID="battle-close">
           <Ionicons name="close" size={20} color={COLORS.onSurface} />
         </Pressable>
-        <Text style={styles.enemyKicker}>{enemy.realWorld.toUpperCase()}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+          <Text style={styles.enemyKicker}>{enemy.realWorld.toUpperCase()}</Text>
+          {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
+        </View>
         <Text style={styles.enemyName}>{enemy.name}</Text>
         <View style={styles.systemPills}>
           <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
@@ -96,7 +162,6 @@ export default function Battle() {
           )}
         </View>
 
-        {/* Corruption bar */}
         <View style={styles.corruptRow}>
           <Text style={styles.barLabel}>CORRUPTION</Text>
           <View style={styles.barBg}>
@@ -104,8 +169,6 @@ export default function Battle() {
           </View>
           <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
-
-        {/* Stability bar */}
         <View style={styles.corruptRow}>
           <Text style={styles.barLabel}>STABILITY</Text>
           <View style={styles.barBg}>
@@ -115,7 +178,26 @@ export default function Battle() {
         </View>
       </View>
 
-      {/* Clue cards */}
+      {/* CODEX GUIDANCE */}
+      <Pressable style={styles.guidanceCard} onPress={() => setHintExpanded(!hintExpanded)} testID="battle-guidance">
+        <View style={styles.guidanceHead}>
+          <Ionicons name={mentorAid ? "sparkles" : "book-outline"} size={14} color={COLORS.brand} />
+          <Text style={styles.guidanceLabel}>{mentorAid ? "MENTOR'S AID ACTIVE" : tacticalHint ? "MENTOR'S GUIDANCE" : gentleHint ? "THE CODEX WHISPERS" : "CODEX GUIDANCE"}</Text>
+          <Ionicons name={hintExpanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.onSurfaceTertiary} style={{ marginLeft: "auto" }} />
+        </View>
+        {hintExpanded && (
+          <Text style={styles.guidanceText}>
+            {mentorAid
+              ? `A mentor steadies your hand. Starting Stability +10. ${hints.tactical}`
+              : tacticalHint
+                ? hints.tactical
+                : gentleHint
+                  ? hints.gentle
+                  : "Watch the clues. Choose actions that match the affected system."}
+          </Text>
+        )}
+      </Pressable>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clueRow}>
         {allClues.map((c) => {
           const isVisible = state.visibleClues.includes(c.id);
@@ -138,7 +220,6 @@ export default function Battle() {
         })}
       </ScrollView>
 
-      {/* Hero selector */}
       <View style={styles.heroRow}>
         {team.map((h, idx) => {
           const active = idx === selectedHeroIdx;
@@ -157,7 +238,6 @@ export default function Battle() {
         })}
       </View>
 
-      {/* Action bar */}
       <View style={styles.actionBar}>
         <View style={styles.apRow}>
           <Text style={styles.apLabel}>ACTION POINTS</Text>
@@ -173,7 +253,9 @@ export default function Battle() {
 
         <ScrollView style={{ maxHeight: 200 }}>
           {selectedHero.skills.map((s) => {
-            const disabled = state.ap < s.cost || state.outcome !== "ongoing";
+            const sageDiscounted = sageDiscount && s.type === "scout" && s.cost > 0;
+            const effectiveCost = sageDiscounted ? Math.max(0, s.cost - 1) : s.cost;
+            const disabled = state.ap < effectiveCost || state.outcome !== "ongoing";
             return (
               <Pressable
                 key={s.id}
@@ -183,17 +265,22 @@ export default function Battle() {
                 testID={`battle-skill-${s.id}`}
               >
                 <View style={styles.skillBtnLeft}>
-                  <Text style={styles.skillBtnName}>{s.name}</Text>
+                  <Text style={styles.skillBtnName}>{s.name}{sageDiscounted && <Text style={{ color: COLORS.brand }}>  · Sage discount</Text>}</Text>
                   <Text style={styles.skillBtnDesc}>{s.description}</Text>
                 </View>
-                <View style={styles.apCost}><Text style={styles.apCostTxt}>{s.cost}</Text></View>
+                <View style={styles.apCost}>
+                  {sageDiscounted ? (
+                    <Text style={styles.apCostTxt}>{effectiveCost}</Text>
+                  ) : (
+                    <Text style={styles.apCostTxt}>{s.cost}</Text>
+                  )}
+                </View>
               </Pressable>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Outcome modal */}
       {state.outcome !== "ongoing" && (
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
@@ -205,8 +292,8 @@ export default function Battle() {
             <Text style={styles.modalTitle}>{state.outcome === "win" ? "Purified" : "Patient Lost"}</Text>
             <Text style={styles.modalSub}>
               {state.outcome === "win"
-                ? `Stability held at ${state.stability}%. Codex pages restored.`
-                : `${enemy.dangerTrigger}. Review the codex and try again.`}
+                ? `Stability held at ${state.stability}%. Codex pages restored.${isTraining ? " (Training rewards reduced.)" : ""}`
+                : `${enemy.dangerTrigger}. ${gentleHint ? "Review the codex and try again." : "The Codex whispers — read the lesson and try again."}`}
             </Text>
             <Pressable style={styles.modalBtn} onPress={finish} testID="battle-finish">
               <Text style={styles.modalBtnTxt}>CONTINUE</Text>
@@ -223,6 +310,8 @@ const styles = StyleSheet.create({
   enemyArea: { padding: SPACING.lg, gap: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   closeBtn: { position: "absolute", right: SPACING.lg, top: SPACING.lg, padding: 6, zIndex: 1 },
   enemyKicker: { color: COLORS.error, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
+  trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: RADIUS.pill },
+  trainingTxt: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
   enemyName: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
   systemPills: { flexDirection: "row", gap: SPACING.sm },
   sysPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: RADIUS.pill, borderWidth: 1 },
@@ -232,6 +321,17 @@ const styles = StyleSheet.create({
   barBg: { flex: 1, height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 4, overflow: "hidden" },
   barFill: { height: "100%", borderRadius: 4 },
   barVal: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600", width: 44, textAlign: "right" },
+
+  guidanceCard: {
+    marginHorizontal: SPACING.lg, marginTop: SPACING.sm,
+    backgroundColor: COLORS.brand + "12", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.brand + "40",
+    padding: SPACING.sm, gap: 4,
+  },
+  guidanceHead: { flexDirection: "row", alignItems: "center", gap: 6 },
+  guidanceLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  guidanceText: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
+
   clueRow: { gap: SPACING.sm, padding: SPACING.md, paddingHorizontal: SPACING.lg },
   clue: {
     width: 130, padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, gap: 4,

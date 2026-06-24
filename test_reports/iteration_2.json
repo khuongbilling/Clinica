@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 2 verified the new multi-step onboarding + mentor's guidance feature additions. Backend: 15/15 pytest tests PASSED including 4 NEW tests covering recommended_aptitude/learning_goal/codex_depth on POST /api/player, default codex_depth='simple', onboarding_complete=true default, failure_counts={} default, PUT failure_counts updates and persistence, and DELETE round-trip 404. Frontend E2E (mobile 390x844): full onboarding flow Welcome -> Name -> Quiz Q1/Q2/Q3 -> Result -> Choose Another Path -> Goal -> Trial -> Battle works end-to-end. All required testIDs exist and resolve. ENTER BATTLE successfully created a player via POST /api/player and replaced route to /battle?enemyId=air_sprite. Battle screen shows Air Sprite with corruption=80, stability=50%, 3 visible clues + 1 hidden, plus battle-guidance banner. Codex tab depth banner correctly reflects learning_goal (NCLEX LENS rendered for codex_depth=nclex).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/player", "issue": "Still returns 200 OK instead of conventional 201 Created (carried over from iteration_1, low priority)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Battle close (back) when entered via router.replace from onboarding", "issue": "Pressing battle-close fires expo-router GO_BACK but there is no prior history (onboarding used router.replace -> battle). Console: 'The action GO_BACK was not handled by any navigator.' UX: close button does nothing on this first-trial path. Consider router.replace('/(tabs)/run') when there is no history.", "affected_testIDs": ["battle-close"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web", "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Likely emitted by a third-party RN component during onboarding/battle render. Not blocking but should be tracked. Reference: appears after navigating to /codex."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_player_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Carry-over) Add testID to each bottom tab in app/(tabs)/_layout.tsx so tab nav can be E2E-tested.",
+    "Fix battle-close UX after router.replace: when there is no back history (first-trial entry), navigate to /(tabs)/run instead of router.back() to avoid the GO_BACK navigator warning.",
+    "Investigate 'props.pointerEvents is deprecated' warning source (likely in a Pressable wrapper or LinearGradient usage); migrate to style.pointerEvents.",
+    "(Optional) Return 201 Created from POST /api/player for semantic correctness."
+  ],
+  "critical_code_review_comments": [
+    "server.py update_player still contains the 'isinstance(updates[\"mastery\"], dict) is False' branch which is unreachable because Pydantic's model_dump() already returns a dict. Safe but dead code; simplify.",
+    "store.tsx applyRewards now resets failure_counts[enemyId] to 0 on win which is correct; recordFailure increments on loss. PUT payload includes failure_counts so it persists.",
+    "onboarding.tsx correctly forwards recommended_aptitude (may be null if user choose-another before result?), learning_goal (label string, not id), and codex_depth (mapped from goal.depth). Note: backend stores learning_goal as the human label (e.g. 'I am preparing for NCLEX.'), not the id — depth banner relies on player.codex_depth, so this is fine, but if any future feature wants to filter by goal id, it must map back from label.",
+    "battle.tsx weaver passive (auto-reveal hidden) and sage passive (-1 AP first scout) and guardian passive (-5 dmg per turn) all implemented; mentor aid (+10 stability) at failure_counts >= 3 wired correctly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_player_api.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/iteration_2.json"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% on requested scope (welcome -> name -> 3 quiz -> result -> choose-another -> goal -> trial -> battle entry; codex depth banner)"},
+  "seed_data_creation": "Created TEST_-prefixed players (TEST_guardian/sage/warden/weaver, TEST_new_fields, TEST_default_depth, TEST_fail, TEST_del, TEST_get, TEST_upd, TEST_E2E_Hero via UI). All API-created TEST_ players are deleted via module-scoped fixture teardown. The UI-created TEST_E2E_Hero player remains in DB (no cleanup hook from frontend test).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use EXPO_PUBLIC_BACKEND_URL from /app/frontend/.env. To restart onboarding in browser: navigate to base URL, run localStorage.clear() then reload. Backend tests live at /app/backend/tests/test_player_api.py (15 tests, ~2s). The mentor's aid 3-failure trigger and guardian/sage/warden passives are coded but NOT exercised in this iteration's automation — recommend a unit/integration test in /app/frontend/src/game/battle.ts if regression coverage is desired. The battle close button has a known harmless navigator warning when entered fresh from onboarding.",
+  "rca_of_issue": "N/A — feature additions verified working. The only UX glitch (battle-close GO_BACK warning) is caused by onboarding using router.replace to reach /battle, leaving an empty navigation stack; fix is a small router.replace fallback in battle.tsx close handler."
+}
