@@ -1,0 +1,464 @@
+import { Building, CodexEntry, Enemy, Hero, Rank } from './types';
+
+// ---------- RANKS ----------
+export const RANKS: Rank[] = [
+  { name: 'Sprout Healer', xpRequired: 0 },
+  { name: 'Field Healer', xpRequired: 100 },
+  { name: 'Ward Healer', xpRequired: 250 },
+  { name: 'Clinical Guardian', xpRequired: 500 },
+  { name: 'Codex Adept', xpRequired: 850 },
+  { name: 'Master Healer', xpRequired: 1300 },
+  { name: 'Mythic Clinician', xpRequired: 2000 },
+];
+
+// ---------- HEROES ----------
+export const HEROES: Hero[] = [
+  {
+    id: 'novice_guardian',
+    name: 'Novice Guardian',
+    title: 'Apprentice Stabilizer',
+    rarity: 3,
+    role: 'Stabilizer',
+    element: 'River',
+    description: 'A vigilant med-surg healer who shores up vitals before the storm breaks.',
+    skills: [
+      { id: 'air_blessing', name: 'Air Blessing', type: 'stabilize', cost: 1, description: 'Restore oxygenation. +20% stability.', stabilize: 20 },
+      { id: 'basic_assessment', name: 'Basic Assessment', type: 'scout', cost: 1, description: 'Reveal one hidden clue.', reveal: 1 },
+      { id: 'rapid_response', name: 'Rapid Response', type: 'stabilize', cost: 2, description: 'Emergency support. +35% stability.', stabilize: 35 },
+    ],
+  },
+  {
+    id: 'night_watcher',
+    name: 'Night Watcher',
+    title: 'Vigil of the Ward',
+    rarity: 3,
+    role: 'Stabilizer',
+    element: 'River',
+    description: 'Patrols the night shift, catching subtle deterioration before it cascades.',
+    skills: [
+      { id: 'vital_monitoring', name: 'Vital Monitoring', type: 'scout', cost: 1, description: 'Reveal one hidden clue and reduce instability.', reveal: 1, stabilize: 8 },
+      { id: 'escalate_care', name: 'Escalate Care', type: 'command', cost: 2, description: 'Call rapid response. Strike 25 + stabilize 15.', strike: 25, stabilize: 15 },
+    ],
+  },
+  {
+    id: 'apprentice_seer',
+    name: 'Apprentice Seer',
+    title: 'Reader of Cues',
+    rarity: 3,
+    role: 'Assessor',
+    element: 'Mind',
+    description: 'Sees patterns others miss. Cues sing to her like distant bells.',
+    skills: [
+      { id: 'pattern_sight', name: 'Pattern Sight', type: 'scout', cost: 1, description: 'Reveal 2 hidden clues.', reveal: 2 },
+      { id: 'focused_assessment', name: 'Focused Assessment', type: 'analyze', cost: 2, description: 'Reveal all hidden clues and strike 15.', reveal: 99, strike: 15 },
+    ],
+  },
+  {
+    id: 'junior_warden',
+    name: 'Junior Warden',
+    title: 'Keeper of Safety',
+    rarity: 3,
+    role: 'Coordinator',
+    element: 'Protection',
+    description: 'Holds the line. Falls do not happen on her watch.',
+    skills: [
+      { id: 'isolation_field', name: 'Isolation Field', type: 'shield', cost: 1, description: 'Reduce next enemy damage by 50%.', shield: 50 },
+      { id: 'containment_order', name: 'Containment Order', type: 'command', cost: 2, description: 'Halve enemy instability for 2 turns.', shield: 100 },
+    ],
+  },
+  {
+    id: 'data_acolyte',
+    name: 'Data Acolyte',
+    title: 'Apprentice Weaver',
+    rarity: 3,
+    role: 'Analyst',
+    element: 'Storm',
+    description: 'Reads labs the way poets read sunsets.',
+    skills: [
+      { id: 'trend_forecast', name: 'Trend Forecast', type: 'analyze', cost: 1, description: 'Reveal 1 clue and warn of next danger.', reveal: 1 },
+      { id: 'lab_lens', name: 'Lab Lens', type: 'scout', cost: 2, description: 'Reveal all hidden clues.', reveal: 99 },
+    ],
+  },
+  {
+    id: 'village_caretaker',
+    name: 'Village Caretaker',
+    title: 'Hands of Comfort',
+    rarity: 3,
+    role: 'Educator',
+    element: 'Growth',
+    description: 'The first healer most patients ever meet. Steady, kind, present.',
+    skills: [
+      { id: 'basic_support', name: 'Basic Support', type: 'support', cost: 1, description: 'Stabilize 12 and gain 1 AP next turn.', stabilize: 12 },
+      { id: 'reassess', name: 'Reassess', type: 'scout', cost: 1, description: 'Reveal 1 clue.', reveal: 1 },
+    ],
+  },
+  {
+    id: 'storm_runner',
+    name: 'Storm Runner',
+    title: 'ER Trauma Sentinel',
+    rarity: 4,
+    role: 'Stabilizer',
+    element: 'Fire',
+    description: 'Sprints toward crisis when others retreat. Lives for the code.',
+    skills: [
+      { id: 'critical_response', name: 'Critical Response', type: 'stabilize', cost: 2, description: 'Massive stabilization +40%.', stabilize: 40 },
+      { id: 'fluid_surge', name: 'Fluid Surge', type: 'strike', cost: 2, description: 'Strike 30 + stabilize 15. Risk: heart failure.', strike: 30, stabilize: 15, risk: { ifSystem: 'River', penalty: 20, description: 'Aggressive fluids worsen pulmonary edema in Cardion.' } },
+    ],
+  },
+  {
+    id: 'infection_warden',
+    name: 'Infection Warden',
+    title: 'Sentinel of Containment',
+    rarity: 4,
+    role: 'Specialist',
+    element: 'Fire',
+    description: 'Walls of soap, isolation, and vigilance against the unseen.',
+    skills: [
+      { id: 'infection_scan', name: 'Infection Scan', type: 'scout', cost: 1, description: 'Reveal infection clues + strike 10.', reveal: 1, strike: 10 },
+      { id: 'purification_strike', name: 'Purification Strike', type: 'strike', cost: 2, description: 'Antibiotic burst. Strike 35.', strike: 35 },
+    ],
+  },
+  {
+    id: 'wound_sage',
+    name: 'Wound Sage',
+    title: 'Mender of Skin and Tissue',
+    rarity: 4,
+    role: 'Specialist',
+    element: 'Protection',
+    description: 'Knows every layer of skin, every stage of healing.',
+    skills: [
+      { id: 'skin_shield', name: 'Skin Shield', type: 'shield', cost: 1, description: 'Prevent 30 damage next turn.', shield: 30 },
+      { id: 'mend', name: 'Mend', type: 'stabilize', cost: 1, description: 'Restore 18% stability.', stabilize: 18 },
+    ],
+  },
+  {
+    id: 'mindkeeper',
+    name: 'Mindkeeper',
+    title: 'Anchor of the Restless Soul',
+    rarity: 4,
+    role: 'Specialist',
+    element: 'Mind',
+    description: 'Listens. Truly listens. Crisis softens in her presence.',
+    skills: [
+      { id: 'mind_anchor', name: 'Mind Anchor', type: 'cleanse', cost: 1, description: 'Cleanse status effects + stabilize 10.', cleanse: true, stabilize: 10 },
+      { id: 'safety_guard', name: 'Safety Guard', type: 'shield', cost: 2, description: 'Block next danger trigger entirely.', shield: 100 },
+    ],
+  },
+];
+
+// ---------- ENEMIES ----------
+export const ENEMIES: Enemy[] = [
+  {
+    id: 'air_sprite',
+    name: 'Air Sprite Corruption',
+    realWorld: 'Asthma exacerbation',
+    primarySystem: 'Air',
+    difficulty: 1,
+    startingStability: 55,
+    instability: 6,
+    corruption: 80,
+    weakSystem: 'Air',
+    visibleClues: [
+      { id: 'c1', label: 'O₂ Low', detail: 'SpO₂ 88% on room air.', hidden: false },
+      { id: 'c2', label: 'Wheezing', detail: 'Audible expiratory wheeze.', hidden: false },
+      { id: 'c3', label: 'Tripod Posture', detail: 'Sitting forward, hands on knees.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'RR 28', detail: 'Tachypnea with accessory muscle use.', hidden: true },
+      { id: 'h2', label: 'Albuterol overdue', detail: 'No rescue inhaler in 6 hours.', hidden: true },
+    ],
+    dangerTrigger: 'Respiratory failure',
+    bestCounters: ['stabilize', 'scout'],
+    teaches: ['oxygenation_basics', 'air_assessment'],
+  },
+  {
+    id: 'river_sludge',
+    name: 'River Sludge',
+    realWorld: 'Hypovolemia / poor perfusion',
+    primarySystem: 'River',
+    difficulty: 1,
+    startingStability: 60,
+    instability: 5,
+    corruption: 75,
+    weakSystem: 'River',
+    visibleClues: [
+      { id: 'c1', label: 'Weak Pulse', detail: 'Thready radial pulse.', hidden: false },
+      { id: 'c2', label: 'Pale Skin', detail: 'Cool, pale extremities.', hidden: false },
+      { id: 'c3', label: 'Dizzy on Stand', detail: 'Orthostatic symptoms.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'BP 88/52', detail: 'Hypotension confirmed.', hidden: true },
+    ],
+    dangerTrigger: 'Hypoperfusion shock',
+    bestCounters: ['stabilize', 'strike'],
+    teaches: ['circulation_basics'],
+  },
+  {
+    id: 'energy_lock',
+    name: 'Energy Lock',
+    realWorld: 'Hypoglycemia',
+    primarySystem: 'Energy',
+    difficulty: 1,
+    startingStability: 50,
+    instability: 7,
+    corruption: 70,
+    weakSystem: 'Energy',
+    visibleClues: [
+      { id: 'c1', label: 'Cold Sweat', detail: 'Diaphoresis without fever.', hidden: false },
+      { id: 'c2', label: 'Shakiness', detail: 'Fine tremor in hands.', hidden: false },
+      { id: 'c3', label: 'Confusion', detail: 'Slow, hesitant responses.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Glucose 48', detail: 'BG critically low.', hidden: true },
+    ],
+    dangerTrigger: 'Loss of consciousness',
+    bestCounters: ['stabilize', 'strike'],
+    teaches: ['energy_basics', 'hypoglycemia_rules'],
+  },
+  {
+    id: 'fire_imp',
+    name: 'Fire Imp',
+    realWorld: 'Localized infection',
+    primarySystem: 'Fire',
+    difficulty: 2,
+    startingStability: 65,
+    instability: 4,
+    corruption: 85,
+    weakSystem: 'Fire',
+    visibleClues: [
+      { id: 'c1', label: 'Fever 38.9°C', detail: 'Tactile warm forehead.', hidden: false },
+      { id: 'c2', label: 'Localized Redness', detail: 'Cellulitis-like erythema.', hidden: false },
+      { id: 'c3', label: 'Chills', detail: 'Rigors reported.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'WBC 14k', detail: 'Leukocytosis.', hidden: true },
+    ],
+    dangerTrigger: 'Systemic spread',
+    bestCounters: ['scout', 'strike', 'shield'],
+    teaches: ['infection_basics'],
+  },
+  {
+    id: 'septara_seed',
+    name: 'Septara Seed',
+    realWorld: 'Early sepsis',
+    primarySystem: 'Fire',
+    secondarySystem: 'River',
+    difficulty: 3,
+    startingStability: 45,
+    instability: 8,
+    corruption: 110,
+    weakSystem: 'Fire',
+    visibleClues: [
+      { id: 'c1', label: 'Fever 39.2°C', detail: 'High fever, sustained.', hidden: false },
+      { id: 'c2', label: 'HR 124', detail: 'Sinus tachycardia.', hidden: false },
+      { id: 'c3', label: 'Confusion', detail: 'New-onset AMS.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'BP 92/58', detail: 'Borderline hypotension.', hidden: true },
+      { id: 'h2', label: 'Lactate 3.4', detail: 'Tissue hypoperfusion.', hidden: true },
+    ],
+    dangerTrigger: 'Septic shock',
+    bestCounters: ['scout', 'strike', 'stabilize'],
+    teaches: ['sepsis_recognition', 'systemic_infection'],
+  },
+  {
+    id: 'cardion_echo',
+    name: 'Cardion Echo',
+    realWorld: 'Heart failure exacerbation',
+    primarySystem: 'River',
+    secondarySystem: 'Air',
+    difficulty: 3,
+    startingStability: 50,
+    instability: 6,
+    corruption: 100,
+    weakSystem: 'River',
+    visibleClues: [
+      { id: 'c1', label: 'Crackles', detail: 'Bibasilar rales.', hidden: false },
+      { id: 'c2', label: 'Leg Swelling', detail: '+2 pitting edema.', hidden: false },
+      { id: 'c3', label: 'SOB', detail: 'Dyspnea on exertion.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Weight +3kg', detail: 'Rapid fluid retention.', hidden: true },
+      { id: 'h2', label: 'BNP 1200', detail: 'Elevated.', hidden: true },
+    ],
+    dangerTrigger: 'Pulmonary flood',
+    bestCounters: ['stabilize', 'cleanse', 'scout'],
+    teaches: ['heart_failure_basics', 'fluid_balance'],
+  },
+  {
+    id: 'glycora_spark',
+    name: 'Glycora Spark',
+    realWorld: 'Early DKA',
+    primarySystem: 'Energy',
+    secondarySystem: 'Storm',
+    difficulty: 3,
+    startingStability: 48,
+    instability: 7,
+    corruption: 105,
+    weakSystem: 'Energy',
+    visibleClues: [
+      { id: 'c1', label: 'Glucose 486', detail: 'Severely elevated.', hidden: false },
+      { id: 'c2', label: 'Thirst', detail: 'Polydipsia, dry mucous membranes.', hidden: false },
+      { id: 'c3', label: 'Kussmaul Breathing', detail: 'Deep, rapid respirations.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'K⁺ 3.2', detail: 'Borderline hypokalemia.', hidden: true },
+      { id: 'h2', label: 'Ketones +++', detail: 'Heavy ketonuria.', hidden: true },
+    ],
+    dangerTrigger: 'Acid storm collapse',
+    bestCounters: ['scout', 'stabilize', 'strike'],
+    teaches: ['dka_basics', 'insulin_safety'],
+  },
+  {
+    id: 'pulmora_wisp',
+    name: 'Pulmora Wisp',
+    realWorld: 'COPD exacerbation',
+    primarySystem: 'Air',
+    difficulty: 2,
+    startingStability: 52,
+    instability: 5,
+    corruption: 90,
+    weakSystem: 'Air',
+    visibleClues: [
+      { id: 'c1', label: 'Pursed-lip Breathing', detail: 'Working hard to exhale.', hidden: false },
+      { id: 'c2', label: 'Barrel Chest', detail: 'Hyperinflated.', hidden: false },
+      { id: 'c3', label: 'SpO₂ 86%', detail: 'Mild hypoxia.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'CO₂ 58', detail: 'Hypercapnia.', hidden: true },
+    ],
+    dangerTrigger: 'Respiratory failure',
+    bestCounters: ['stabilize', 'scout'],
+    teaches: ['copd_basics'],
+  },
+  {
+    id: 'electrox_flicker',
+    name: 'Electrox Flicker',
+    realWorld: 'Hyperkalemia',
+    primarySystem: 'Storm',
+    secondarySystem: 'River',
+    difficulty: 3,
+    startingStability: 55,
+    instability: 6,
+    corruption: 95,
+    weakSystem: 'Storm',
+    visibleClues: [
+      { id: 'c1', label: 'Muscle Weakness', detail: 'Generalized weakness.', hidden: false },
+      { id: 'c2', label: 'Peaked T waves', detail: 'EKG abnormality.', hidden: false },
+      { id: 'c3', label: 'Tingling', detail: 'Paresthesias.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'K⁺ 6.4', detail: 'Critical hyperkalemia.', hidden: true },
+    ],
+    dangerTrigger: 'Rhythm collapse',
+    bestCounters: ['scout', 'cleanse', 'strike'],
+    teaches: ['electrolyte_basics', 'potassium_rules'],
+  },
+  {
+    id: 'mind_fog',
+    name: 'Mind Fog',
+    realWorld: 'Delirium',
+    primarySystem: 'Mind',
+    difficulty: 2,
+    startingStability: 58,
+    instability: 4,
+    corruption: 80,
+    weakSystem: 'Mind',
+    visibleClues: [
+      { id: 'c1', label: 'Disoriented', detail: 'Not oriented to time/place.', hidden: false },
+      { id: 'c2', label: 'Agitation', detail: 'Pulling at lines.', hidden: false },
+      { id: 'c3', label: 'Fluctuating LOC', detail: 'Sleep-wake reversal.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'UTI suspected', detail: 'Cloudy urine, odor.', hidden: true },
+    ],
+    dangerTrigger: 'Injury / fall',
+    bestCounters: ['shield', 'cleanse', 'scout'],
+    teaches: ['delirium_basics', 'safety_first'],
+  },
+];
+
+// ---------- CHAPTER 1 BOSS ----------
+export const BOSS_LORD_IMBALANCE: Enemy = {
+  id: 'lord_imbalance',
+  name: 'Lord Imbalance',
+  realWorld: 'Multi-system physiologic instability',
+  primarySystem: 'River',
+  secondarySystem: 'Mind',
+  difficulty: 5,
+  startingStability: 40,
+  instability: 9,
+  corruption: 180,
+  visibleClues: [
+    { id: 'c1', label: 'Air Faltering', detail: 'SpO₂ trending down, RR 26.', hidden: false },
+    { id: 'c2', label: 'River Weakening', detail: 'BP 96/60, HR 118.', hidden: false },
+    { id: 'c3', label: 'Mind Slipping', detail: 'New confusion, lethargy.', hidden: false },
+  ],
+  hiddenClues: [
+    { id: 'h1', label: 'Glucose 52', detail: 'Hypoglycemia compounding.', hidden: true },
+    { id: 'h2', label: 'Temp 38.8', detail: 'Source unclear — infection?', hidden: true },
+  ],
+  dangerTrigger: 'Multi-organ collapse',
+  bestCounters: ['scout', 'stabilize', 'strike', 'shield'],
+  teaches: ['lord_imbalance_lore', 'multi_system_priority'],
+};
+
+// ---------- CODEX ----------
+export const CODEX: CodexEntry[] = [
+  { id: 'oxygenation_basics', title: 'Oxygenation: The First Breath', system: 'Air', level: 1, body: 'Every cell needs oxygen. When SpO₂ drops below 92%, the body shifts to anaerobic metabolism and tissue damage begins. Look for tripod posture, accessory muscle use, and pursed-lip breathing — the body shouting for air.' },
+  { id: 'air_assessment', title: 'Air Assessment Priorities', system: 'Air', level: 2, body: 'Airway → Breathing → Circulation. Always. Before labs, before history, before the chart. Patent airway? Symmetrical chest rise? Adequate rate and depth? Tripod posture = severe distress.' },
+  { id: 'circulation_basics', title: 'Circulation & Perfusion', system: 'River', level: 1, body: 'The heart pumps oxygen-rich blood to every tissue. Weak pulse, cool skin, pale appearance, and dizziness all signal failing perfusion. Pressure matters, but so does volume and pump strength.' },
+  { id: 'energy_basics', title: 'Cellular Fuel', system: 'Energy', level: 1, body: 'Glucose is the brain’s only fuel. Below 70 mg/dL is hypoglycemia: shakiness, sweating, confusion. Treat fast — 15g of fast carbs, recheck in 15 minutes.' },
+  { id: 'hypoglycemia_rules', title: 'The 15/15 Rule', system: 'Energy', level: 2, body: 'For hypoglycemia in a conscious patient: 15 grams of fast carbs (juice, glucose tabs), wait 15 minutes, recheck. Repeat up to 3 times. If unconscious — IV dextrose or IM glucagon.' },
+  { id: 'infection_basics', title: 'Fever & the Immune Response', system: 'Fire', level: 1, body: 'Fever is the body’s alarm. It is also a weapon — many pathogens cannot survive elevated temperatures. Suppress fevers selectively, not reflexively, and never ignore the source.' },
+  { id: 'sepsis_recognition', title: 'Recognizing Sepsis Early', system: 'Fire', level: 3, body: 'Sepsis kills through escalation. Fever + tachycardia + tachypnea + altered mental status = SIRS criteria. Add hypotension or organ dysfunction → severe sepsis. Lactate ≥ 2 is your warning bell. Hour-1 bundle: cultures, broad-spectrum antibiotics, fluids, lactate, reassess.' },
+  { id: 'systemic_infection', title: 'When Infection Becomes Systemic', system: 'Fire', level: 3, body: 'Local infection contained by intact immune response stays local. When pathogens or their toxins enter the bloodstream, the body’s response becomes the danger: vasodilation, capillary leak, hypoperfusion. This is septic shock.' },
+  { id: 'heart_failure_basics', title: 'The Weak Pump', system: 'River', level: 2, body: 'In heart failure, the pump cannot move forward what it receives. Blood backs up: into the lungs (crackles, dyspnea) and into the periphery (edema, weight gain). Daily weights, not fluid boluses.' },
+  { id: 'fluid_balance', title: 'Fluid Balance & The Cardion Trap', system: 'River', level: 3, body: 'Fluids resuscitate shock — but drown a failing heart. Always ask: is this patient dry or wet? Crackles, JVD, edema, recent weight gain = wet. Aggressive fluids in Cardion = pulmonary edema.' },
+  { id: 'dka_basics', title: 'Diabetic Ketoacidosis', system: 'Energy', level: 3, body: 'Without insulin, cells starve while glucose floods the blood. The body burns fat instead, releasing ketones — acidic. Kussmaul breathing blows off CO₂ to compensate. Treat with fluids first, then insulin, watching K⁺ closely.' },
+  { id: 'insulin_safety', title: 'Insulin & Potassium', system: 'Storm', level: 4, body: 'Insulin drives potassium into cells along with glucose. In DKA, total body K⁺ is usually low even when serum levels look normal. Give insulin to a hypokalemic patient and rhythm collapse follows. Always check K⁺ first.' },
+  { id: 'copd_basics', title: 'COPD: The Trapped Breath', system: 'Air', level: 2, body: 'COPD destroys the recoil of lungs and the cilia of airways. Patients work hardest to exhale, not inhale. Pursed-lip breathing creates positive pressure. Watch O₂ titration — too much can suppress drive in CO₂ retainers.' },
+  { id: 'electrolyte_basics', title: 'The Storm Within', system: 'Storm', level: 2, body: 'Potassium, sodium, calcium, magnesium — these ions run every nerve, every muscle, every heartbeat. Imbalance presents as weakness, rhythm changes, paresthesias, confusion, or seizures.' },
+  { id: 'potassium_rules', title: 'Potassium Extremes', system: 'Storm', level: 3, body: 'Normal K⁺: 3.5–5.0. Below 3.5 = weakness, U waves, ileus. Above 5.5 = peaked T waves, then loss of P waves, then sine wave, then arrest. Calcium gluconate stabilizes the membrane; insulin + glucose, bicarb, β-agonists shift it; kayexalate or dialysis remove it.' },
+  { id: 'delirium_basics', title: 'Delirium vs Dementia', system: 'Mind', level: 2, body: 'Delirium is acute, fluctuating, and reversible. Dementia is chronic and progressive. Treat the cause: infection, medication, dehydration, hypoxia, pain, sleep deprivation. Reorient. Familiar faces. Daylight. Avoid restraints.' },
+  { id: 'safety_first', title: 'Safety Comes First', system: 'Protection', level: 1, body: 'A confused patient who falls suffers two injuries — the original problem and the fall. Bed alarms, low beds, frequent checks, family at bedside. Restraints are last, not first.' },
+  { id: 'lord_imbalance_lore', title: 'The Fading Core', system: 'Mind', level: 4, body: 'When multiple systems fail at once, prioritization becomes everything. ABCs first — but also: which problem will kill the patient in the next 5 minutes? Treat that. Then move down the list.' },
+  { id: 'multi_system_priority', title: 'Multi-System Priority Framework', system: 'Mind', level: 4, body: 'Use ABC-D-E: Airway, Breathing, Circulation, Disability (neuro/glucose), Exposure (temperature/infection). When two systems are critical, treat the one that supports the others. Oxygen has no substitute. Glucose to a confused patient is a 30-second test that prevents disaster.' },
+];
+
+// ---------- BUILDINGS ----------
+export const BUILDINGS: Building[] = [
+  { id: 'academy_of_healing', name: 'Academy of Healing', description: 'Trains your eye for vital signs and assessment.', unlocks: 'Basic Assessment +1 per battle', maxLevel: 5 },
+  { id: 'library_of_knowledge', name: 'Library of Knowledge', description: 'Reveals deeper codex layers.', unlocks: 'Unlock Codex Level 3 entries', maxLevel: 5 },
+  { id: 'hall_of_heroes', name: 'Hall of Heroes', description: 'Recruits and trains healer heroes.', unlocks: '+1 hero slot per level', maxLevel: 5 },
+  { id: 'apothecary', name: 'Apothecary', description: 'Crafts remedies and antidotes.', unlocks: 'Consumable items per shift', maxLevel: 5 },
+];
+
+// ---------- DAILY SHIFT ENCOUNTER POOL ----------
+export function pickDailyShift(): { encounters: Enemy[]; boss: Enemy } {
+  // Simple deterministic-ish pick: shuffle 3 starter enemies and use boss
+  const starters = [
+    ENEMIES.find(e => e.id === 'air_sprite')!,
+    ENEMIES.find(e => e.id === 'river_sludge')!,
+    ENEMIES.find(e => e.id === 'energy_lock')!,
+    ENEMIES.find(e => e.id === 'fire_imp')!,
+    ENEMIES.find(e => e.id === 'mind_fog')!,
+  ];
+  const advanced = [
+    ENEMIES.find(e => e.id === 'septara_seed')!,
+    ENEMIES.find(e => e.id === 'cardion_echo')!,
+    ENEMIES.find(e => e.id === 'glycora_spark')!,
+    ENEMIES.find(e => e.id === 'pulmora_wisp')!,
+    ENEMIES.find(e => e.id === 'electrox_flicker')!,
+  ];
+  const shuf = <T,>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+  const picks = [...shuf(starters).slice(0, 2), shuf(advanced)[0]];
+  return { encounters: picks, boss: BOSS_LORD_IMBALANCE };
+}
+
+export const APTITUDE_INFO: Record<string, { title: string; element: string; color: string; passive: string; icon: string }> = {
+  guardian: { title: 'Guardian', element: 'River', color: '#059669', passive: 'Bonus stability recovery in battle.', icon: 'shield-checkmark' },
+  sage: { title: 'Sage', element: 'Mind', color: '#E5E7EB', passive: 'Reveals one extra clue per encounter.', icon: 'eye' },
+  warden: { title: 'Warden', element: 'Protection', color: '#D4AF37', passive: 'Prevents one minor deterioration per battle.', icon: 'lock-closed' },
+  weaver: { title: 'Weaver', element: 'Storm', color: '#BEF264', passive: 'Predicts an upcoming complication.', icon: 'sparkles' },
+};
