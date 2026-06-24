@@ -24,6 +24,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "RUN",
+          tabBarButtonTestID: "tab-run",
           tabBarIcon: ({ color, size }) => <Ionicons name="flame" size={size} color={color} />,
         }}
       />
@@ -31,6 +32,7 @@ export default function TabsLayout() {
         name="heroes"
         options={{
           title: "HEROES",
+          tabBarButtonTestID: "tab-heroes",
           tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
         }}
       />
@@ -38,6 +40,7 @@ export default function TabsLayout() {
         name="codex"
         options={{
           title: "CODEX",
+          tabBarButtonTestID: "tab-codex",
           tabBarIcon: ({ color, size }) => <Ionicons name="book" size={size} color={color} />,
         }}
       />
@@ -45,6 +48,7 @@ export default function TabsLayout() {
         name="kingdom"
         options={{
           title: "KINGDOM",
+          tabBarButtonTestID: "tab-kingdom",
           tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} />,
         }}
       />
@@ -52,6 +56,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "PROFILE",
+          tabBarButtonTestID: "tab-profile",
           tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" size={size} color={color} />,
         }}
       />
