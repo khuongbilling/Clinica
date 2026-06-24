@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 7 (clinical reasoning RETEST after main-agent inventory fix) PASSED end-to-end on mobile 390x844. CORRECTING ITERATION 6: my prior 'inventory key mismatch' bug call was WRONG — the seeded inventory keys (Albuterol Mist, Glucose Gel, Fluid Bolus, Isolation Kit, Lab Token) match Item.name in /app/frontend/src/game/items.ts; the 'Bronchodilator Mist' string is only Item.displayName for UI. Freshly created nursingStudent-profile player (TEST_win) sees Bronchodilator Mist ×1 RECOMMENDED (after Wheezing reveal), Glucose Spark Gel ×1 LOCKED, River Bolus ×1 LOCKED, Barrier Kit ×1 POOR FIT, Codex Lab Sigil ×2 — confirmed visually. PRIMARY TEST (full chain + result screen): completed the Scout → Stabilize → Counter → Reassess care chain via Lantern of Clues → Breath of Dawn → end turn → Bronchodilator Mist → Reassess. Corruption progression: 80 → 80 → 21 (Bronchodilator with Strong + Air system match) → 1 (Reassess triggers Full-Care-Chain bonus -20 corruption + +15 stability per /app/frontend/src/game/battle.ts:223-225). Finished with Call Respiratory Support → Open Airflow (strike 25) for final kill. /result screen renders ALL spec'd components: (a) 'STARS EARNED' card with 3 star icons (2 filled gold + 1 outlined) ✓, (b) 3 checklist labels (✓ Stabilized the patient, ✓ Completed the clinical care chain, ○ Efficient and safe care) ✓, (c) 'Codex Shards' card showing '45 Codex Shards earned. Base 25 · Stars +10 · Care Chain +10' = correct math (25+5*2+10=45) ✓. URL params confirm wiring: outcome=win&shards=25&fullChain=1&unsafe=0&poorFit=0&turns=6&reassess=0. 2 stars (not 3) because turns=6 > nursingStudent default starTurnLimit=5 — efficient check failed; CORRECT per /app/frontend/src/game/clinical.ts:710. Codex Pages Restored block also renders (Oxygenation, Air Assessment Priorities). BACKEND REGRESSION: pytest backend/tests/test_iteration6_clinical_fields.py → 10/10 PASS in 1.95s, no regressions for learning_profile / enemy_mastery / chapter_progress. 1-STAR PATH was not executed end-to-end (chose to invest cycles in primary 3-star path validation), but result.tsx + computeStars logic statically verified to render 1 filled + 2 outlined stars and omit the Care Chain breakdown line when fullChainCompleted=false.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6_clinical_fields.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/iteration_7.json"
+  ],
+  "action_items": [
+    "OPTIONAL/LOW: state.reassessUsed is reset to false in endPlayerTurn (battle.ts:471). When a player uses the Reassess skill and then ends the turn, the URL param reassess=0 is passed to /result. For nursingStudent/preNursing/nonmedical profiles this is fine because StarRules.requireReassess is undefined. But for nclexPrep / healthcareProfessional profiles where requireReassess=true (clinical.ts:679), this could cause the 3rd star ('Efficient and safe care') to be unfairly denied even when reassess was performed. Recommend persisting reassessUsed across turns (sticky flag) OR snapshotting it before endPlayerTurn into a 'reassessUsedAnyTime' field used for star eval.",
+    "OPTIONAL: Cleanup test players TEST_chain / TEST_chain2 / TEST_win / TEST_sage / TEST_battle / TEST_inv from MongoDB if they persist (not auto-cleaned during frontend onboarding tests).",
+    "OPTIONAL: Run a focused 1-star regression — onboard a fresh player, then in battle spam Guardian's Touch repeatedly (no Scout-Stabilize-Counter-Reassess sequence) until corruption hits 0. Expected: 1 filled star + 2 outlined stars, breakdown showing only 'Base 25 · Stars +5' with no Care Chain line."
+  ],
+  "critical_code_review_comments": [
+    "RETRACTION: my iteration 6 critical bug 'server-seeded inventory uses old keys' was INCORRECT. The frontend's Item.name (e.g. 'Albuterol Mist') is intentionally the inventory key while displayName ('Bronchodilator Mist') is the UI label. Server.py:131-137 is consistent with items.ts.",
+    "battle.ts endPlayerTurn (line 471) resets reassessUsed=false at the start of every new player turn. This means computeStars() will only see reassessUsed=true if Reassess is the LAST action of the LAST player turn before winning. Brittle for the requireReassess star rule (nclexPrep / healthcareProfessional). Consider a separate sticky flag.",
+    "clinical.ts:712 — `poorOk` defaults to `scoring.poorFitActionsUsed === 0` for nursingStudent, which is harsher than `preNursing` (allowOnePoorFit:true). Confirmed working but note for design.",
+    "result.tsx is correct: 3 stars rendered via Ionicons star/star-outline, 3 checklist labels driven by index < starResult.stars, shardsCard renders 'Base X · Stars +Y · Care Chain +Z' via calculateRewards.",
+    "server.py create_player still doesn't validate learning_profile against the 5-id whitelist (non-blocking, pre-existing observation)."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_7.json"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 iteration-6 pytest passing — no regressions)",
+    "frontend": "100% for primary test path. Onboarding 5-profile flow ✓, trial battle entry ✓, items LOCKED→RECOMMENDED gating ✓, POOR FIT badge ✓, full Scout→Stabilize→Counter→Reassess care chain ✓, full-chain bonus (-20 corruption +15 stability) ✓, /result screen STARS EARNED card ✓, 3 checklist labels ✓, Codex Shards breakdown card ✓, URL params correctly propagated (outcome, fullChain, unsafe, poorFit, turns) ✓. 1-star path NOT live-tested but code path statically verified."
+  },
+  "seed_data_creation": "Created TEST_chain, TEST_chain2, TEST_win players via the onboarding UI (POST /api/player). Not auto-cleaned. Recommend manual DB cleanup or auto-cleanup hook.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 7 PASSED the primary chain+result test end-to-end. Reproduce in 30s: open https://med-adventure-2.preview.emergentagent.com/ on mobile viewport, complete onboarding (BEGIN→name→quiz q1/q2/q3 'guardian'→ACCEPT→goal-nursingStudent→CONTINUE→trial-enter→/battle?enemyId=air_sprite). In battle: Lantern of Clues → Breath of Dawn → END TURN → Items tab → Bronchodilator Mist (I001) → Actions tab → Reassess → END TURN → Call tab → Call Respiratory Support → Actions tab → Open Airflow → CONTINUE. Result URL has fullChain=1&shards=25&turns=6&unsafe=0&poorFit=0. Screen shows 2-star outcome with 'Base 25 · Stars +10 · Care Chain +10 = 45 Codex Shards'. To get 3 stars: finish in ≤5 turns (collapse Lantern+Breath+Bronchodilator+Reassess into 4 turns + final strike — but trial battle needs corruption=0 so probably requires luck with bronchodilator damage rolls).",
+  "rca_of_issue": "RCA of iteration-6 false positive: I conflated Item.name (inventory key = 'Albuterol Mist') with Item.displayName (UI label = 'Bronchodilator Mist'). Items tab renders displayName in the title but looks up qty via Item.name against state.inventory which is seeded by server with Item.name keys. Both match. Visual screenshot at /tmp/items_tab.png in iteration-7 confirms ×1/×1/×1/×1/×2 quantities. Main agent's correction was accurate. Apologies for the noise in iteration 6."
+}
