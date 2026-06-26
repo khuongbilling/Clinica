@@ -115,9 +115,7 @@ export default function Battle() {
     return "Lab Token";
   };
   const availableCalls = CALL_OPTIONS.filter(opt => {
-    if (state.callUsed) return false;
     if (opt.id === "call_respiratory") return enemy.primarySystem === "Air" || enemy.secondarySystem === "Air" || state.revealedLabels.some(l => l.toLowerCase().includes("wheez"));
-    if (opt.id === "call_rapid") return state.stability <= 30;
     if (opt.id === "call_infection") return enemy.primarySystem === "Fire" || enemy.secondarySystem === "Fire";
     return true;
   });
@@ -277,17 +275,23 @@ export default function Battle() {
       {/* Fixed bottom action bar */}
       <View style={styles.actionBar}>
         {/* Hero pills row */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.heroRow} keyboardShouldPersistTaps="handled">
+        <View style={styles.heroRow}>
           {team.map(h => {
             const acted = !!state.heroActionsUsed[h.id];
             const selected = state.selectedHeroId === h.id;
             const elementColor = ELEMENT_COLORS[h.element] || COLORS.brand;
+            const onPick = () => {
+              if (acted) return;
+              setState(prev => selectHero(prev, h.id));
+            };
             return (
               <Pressable
                 key={h.id}
-                onPress={() => !acted && setState(prev => selectHero(prev, h.id))}
+                onPress={onPick}
+                hitSlop={6}
                 style={[styles.heroPill, selected && !acted && { borderColor: elementColor, backgroundColor: elementColor + "18" }, acted && styles.heroPillActed]}
                 testID={`hero-pill-${h.id}`}
+                accessibilityRole="button"
               >
                 <Text style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
                   {h.name}
@@ -298,7 +302,7 @@ export default function Battle() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
 
         <View style={styles.apRow}>
           <Text style={styles.apLabel}>ACTION POINTS</Text>
@@ -704,8 +708,8 @@ const styles = StyleSheet.create({
   apTag: { color: COLORS.brand, fontSize: 10, fontWeight: "700", marginLeft: 4 },
   statusBadge: { position: "absolute", top: 4, right: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, maxWidth: "60%" },
   statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
-  heroRow: { paddingHorizontal: SPACING.lg, gap: 8, paddingBottom: 8 },
-  heroPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center" },
+  heroRow: { flexDirection: "row", paddingHorizontal: SPACING.lg, gap: 8, paddingBottom: 8, flexWrap: "wrap" },
+  heroPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center", flexShrink: 1 },
   heroPillActed: { opacity: 0.45 },
   heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
   heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1, marginTop: 2 },
