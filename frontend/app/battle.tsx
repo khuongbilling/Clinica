@@ -7,7 +7,7 @@ import * as Haptics from "expo-haptics";
 
 import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
-import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
+import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
@@ -185,8 +185,7 @@ export default function Battle() {
     });
   };
 
-  // Flatten all skills from team for the Actions tab
-  const allTeamSkills: { hero: Hero; skill: HeroSkill }[] = team.flatMap(h => h.skills.map(s => ({ hero: h, skill: s })));
+  // (Skills are filtered per selected hero in the Actions tab)
 
   // Hydration guard — render-block until player loads so inventory seeds correctly on deep-links
   if (loading || !player) {
@@ -277,6 +276,30 @@ export default function Battle() {
 
       {/* Fixed bottom action bar */}
       <View style={styles.actionBar}>
+        {/* Hero pills row */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.heroRow} keyboardShouldPersistTaps="handled">
+          {team.map(h => {
+            const acted = !!state.heroActionsUsed[h.id];
+            const selected = state.selectedHeroId === h.id;
+            const elementColor = ELEMENT_COLORS[h.element] || COLORS.brand;
+            return (
+              <Pressable
+                key={h.id}
+                onPress={() => !acted && setState(prev => selectHero(prev, h.id))}
+                style={[styles.heroPill, selected && !acted && { borderColor: elementColor, backgroundColor: elementColor + "18" }, acted && styles.heroPillActed]}
+                testID={`hero-pill-${h.id}`}
+              >
+                <Text style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
+                  {h.name}
+                </Text>
+                <Text style={[styles.heroPillRole, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
+                  {acted ? "ACTED" : h.element.toUpperCase()}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
         <View style={styles.apRow}>
           <Text style={styles.apLabel}>ACTION POINTS</Text>
           <View style={{ flexDirection: "row", gap: 4 }}>
@@ -325,42 +348,60 @@ export default function Battle() {
                     </Pressable>
                   );
                 })}
-                {allTeamSkills.map(({ hero, skill }) => {
-                  const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
-                  const cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
-                  const preview = previewSkillStatus(state, skill);
-                  const isLocked = preview.status === "locked";
-                  const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
-                  return (
-                    <Pressable
-                      key={`${hero.id}-${skill.id}`}
-                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
-                      onPress={() => disabled ? null : handleSkill(hero, skill)}
-                      onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero, skill })}
-                      delayLongPress={350}
-                      testID={`battle-skill-${skill.id}`}
-                    >
-                      <StatusBadge status={preview.status} />
-                      <View style={styles.actionHead}>
-                        <Text style={styles.actionName} numberOfLines={1}>{skill.name}</Text>
-                        <Text style={styles.apTag}>{cost} AP</Text>
-                      </View>
-                      <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
-                      <Text style={styles.actionHero} numberOfLines={1}>{hero.name}{sageDisc ? " · Sage discount" : ""}</Text>
-                    </Pressable>
-                  );
-                })}
+                {(() => {
+                  const selHero = state.team.find(h => h.id === state.selectedHeroId);
+                  if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above to select.</Text>;
+                  const acted = !!state.heroActionsUsed[selHero.id];
+                  if (acted) return <Text style={styles.emptyTab}>{selHero.name} has already acted. Pick another hero or end the turn.</Text>;
+                  return selHero.skills.map(skill => {
+                    const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
+                    let cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
+                    const airDisc = state.nextAirActionDiscount && skill.systemType === "Air";
+                    if (airDisc) cost = Math.max(1, cost - 1);
+                    const preview = previewSkillStatus(state, skill);
+                    const isLocked = preview.status === "locked";
+                    const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
+                    return (
+                      <Pressable
+                        key={`${selHero.id}-${skill.id}`}
+                        style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
+                        onPress={() => disabled ? null : handleSkill(selHero, skill)}
+                        onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })}
+                        delayLongPress={350}
+                        testID={`battle-skill-${skill.id}`}
+                      >
+                        <StatusBadge status={preview.status} />
+                        <View style={styles.actionHead}>
+                          <Text style={styles.actionName} numberOfLines={1}>{skill.name}</Text>
+                          <Text style={styles.apTag}>{cost} AP</Text>
+                        </View>
+                        <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
+                        <Text style={styles.actionHero} numberOfLines={1}>{sageDisc ? "Sage discount · " : ""}{airDisc ? "Air discount · " : ""}{skill.systemType || "Universal"}</Text>
+                      </Pressable>
+                    );
+                  });
+                })()}
               </View>
             </ScrollView>
           )}
           {activeTab === "items" && (
             <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+              {(() => {
+                const selHero = state.team.find(h => h.id === state.selectedHeroId);
+                if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — items consume the chosen hero&apos;s action.</Text>;
+                if (state.heroActionsUsed[selHero.id]) return <Text style={styles.emptyTab}>{selHero.name} has already acted. Pick another hero to use an item.</Text>;
+                return null;
+              })()}
               <View style={styles.grid}>
                 {ITEMS.map(item => {
                   const qty = state.inventory[item.name] || 0;
                   const preview = previewItemStatus(state, item);
                   const isLocked = preview.status === "locked";
-                  const disabled = isLocked || qty <= 0 || state.ap < item.costAP || state.outcome !== "ongoing";
+                  const sel = state.team.find(h => h.id === state.selectedHeroId);
+                  const heroBlocked = !sel || !!state.heroActionsUsed[sel.id];
+                  const discounted = state.preparedItemDiscount === item.name;
+                  const cost = discounted ? Math.max(1, item.costAP - 1) : item.costAP;
+                  const disabled = isLocked || qty <= 0 || state.ap < cost || state.outcome !== "ongoing" || heroBlocked;
                   return (
                     <Pressable
                       key={item.id}
@@ -376,7 +417,7 @@ export default function Battle() {
                         <Text style={styles.apTag}>×{qty}</Text>
                       </View>
                       <Text style={styles.actionEffect} numberOfLines={2}>{item.shortEffect}</Text>
-                      <Text style={styles.actionHero} numberOfLines={1}>{item.rpgSubtitle} · {item.costAP} AP</Text>
+                      <Text style={styles.actionHero} numberOfLines={1}>{discounted ? "Prepared · " : ""}{cost} AP</Text>
                     </Pressable>
                   );
                 })}
@@ -385,13 +426,19 @@ export default function Battle() {
           )}
           {activeTab === "call" && (
             <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
-              {state.callUsed && <Text style={styles.helpTxt}>You already called for support this battle.</Text>}
-              {!state.callUsed && availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options match the situation yet.</Text>}
+              {availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options match the situation yet.</Text>}
               <View style={styles.grid}>
                 {availableCalls.map(opt => {
+                  const callKey: keyof BattleState["callsUsed"] | null =
+                    opt.id === "call_pharmacy" ? "pharmacy" :
+                    opt.id === "call_respiratory" ? "respiratory" :
+                    opt.id === "call_rapid" ? "rapidResponse" :
+                    opt.id === "call_infection" ? "infectionControl" : null;
+                  const alreadyUsed = !!(callKey && state.callsUsed[callKey]);
                   const preview = previewCallStatus(state, opt.id);
                   const isLocked = preview.status === "locked";
-                  const disabled = isLocked || state.ap < opt.costAP || state.outcome !== "ongoing";
+                  const rapidGated = opt.id === "call_rapid" && state.stability > 30 && !state.dangerTriggerActive;
+                  const disabled = isLocked || alreadyUsed || rapidGated || state.ap < opt.costAP || state.outcome !== "ongoing";
                   return (
                     <Pressable
                       key={opt.id}
@@ -407,6 +454,8 @@ export default function Battle() {
                         <Text style={styles.apTag}>{opt.costAP} AP</Text>
                       </View>
                       <Text style={styles.actionEffect} numberOfLines={3}>{opt.description}</Text>
+                      {alreadyUsed && <Text style={styles.actionHero}>Already called</Text>}
+                      {rapidGated && !alreadyUsed && <Text style={styles.actionHero}>Reserved for Stability ≤ 30</Text>}
                     </Pressable>
                   );
                 })}
@@ -655,6 +704,12 @@ const styles = StyleSheet.create({
   apTag: { color: COLORS.brand, fontSize: 10, fontWeight: "700", marginLeft: 4 },
   statusBadge: { position: "absolute", top: 4, right: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, maxWidth: "60%" },
   statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
+  heroRow: { paddingHorizontal: SPACING.lg, gap: 8, paddingBottom: 8 },
+  heroPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center" },
+  heroPillActed: { opacity: 0.45 },
+  heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
+  heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1, marginTop: 2 },
+  emptyTab: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },
 
   teamList: { gap: SPACING.sm },
   teamCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surfaceTertiary, padding: SPACING.sm, borderRadius: RADIUS.md, borderLeftWidth: 4, borderWidth: 1, borderColor: COLORS.border },

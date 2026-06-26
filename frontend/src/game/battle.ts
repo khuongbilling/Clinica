@@ -1,8 +1,9 @@
 import { Enemy, Hero, HeroSkill } from './types';
-import { CallOption, Item, TEMP_ACTIONS } from './items';
+import { CallOption, Item, ITEMS, TEMP_ACTIONS } from './items';
 import {
   ActionClinical,
   ActionStatus,
+  apMessage,
   applyChapterForgivenessToStatus,
   buildRationale,
   CALL_CLINICAL,
@@ -18,9 +19,12 @@ import {
   generateBattleMessage,
   getActiveFeedbackLevel,
   getChapterForgiveness,
+  getDangerLevel,
   getEnemyDamage,
   getStabilizationModifier,
   getSystemMatchModifier,
+  getTreatmentStabilityModifier,
+  getTurnAP,
   ITEM_CLINICAL,
   LearningProfile,
   SKILL_CLINICAL,
@@ -44,7 +48,7 @@ export interface BattleState {
   outcome: 'ongoing' | 'win' | 'loss';
   turn: number;
   inventory: Record<string, number>;
-  callUsed: boolean;
+  callUsed: boolean; // legacy (any call used)
   temporaryActionIds: string[];
 
   // Clinical reasoning layer state
@@ -60,6 +64,15 @@ export interface BattleState {
   profile: LearningProfile | undefined;
   enemyDamageReduction: number;
   reboundArmed: boolean; // set true when corruption first drops below 40; cleared by reassess
+
+  // Hero-based turn system
+  selectedHeroId: string | null;
+  heroActionsUsed: Record<string, boolean>;
+  callsUsed: { pharmacy: boolean; respiratory: boolean; rapidResponse: boolean; infectionControl: boolean };
+  preparedItemDiscount: string | null;
+  nextAirActionDiscount: boolean;
+  rapidResponseActive: boolean;
+  dangerTriggerActive: boolean;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -85,7 +98,11 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   let stability = enemy.startingStability + (opts.startingStabilityBonus || 0);
   stability = clamp(stability, 0, 100);
 
+  const corruption = enemy.corruption;
+  const turnAp = getTurnAP(stability, corruption, chapter, {});
+
   const log: string[] = [`The ${enemy.name} corrupts the patient. Stability ${stability}%.`];
+  log.push(apMessage(turnAp));
 
   // Reveal one extra hidden clue if handicap calls for it
   const finalVisible = [...visibleClueIds];
@@ -99,15 +116,18 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     log.push(`Mentor's eye: one hidden clue is already revealed.`);
   }
 
+  const heroActionsUsed: Record<string, boolean> = {};
+  team.forEach(h => { heroActionsUsed[h.id] = false; });
+
   return {
     enemy,
     enemyClinical,
     team,
     stability,
-    corruption: enemy.corruption,
+    corruption,
     shieldNext: 0,
-    ap: 3,
-    apMax: 3,
+    ap: turnAp,
+    apMax: turnAp,
     visibleClues: finalVisible,
     hiddenClueIds: finalHidden,
     revealedLabels: finalRevealedLabels,
@@ -129,7 +149,32 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     profile: opts.profile,
     enemyDamageReduction: opts.enemyDamageReduction || 0,
     reboundArmed: false,
+
+    selectedHeroId: team[0]?.id || null,
+    heroActionsUsed,
+    callsUsed: { pharmacy: false, respiratory: false, rapidResponse: false, infectionControl: false },
+    preparedItemDiscount: null,
+    nextAirActionDiscount: false,
+    rapidResponseActive: false,
+    dangerTriggerActive: false,
   };
+}
+
+// ============================================================
+// Hero selection
+// ============================================================
+
+export function selectHero(s: BattleState, heroId: string): BattleState {
+  if (!s.team.find(h => h.id === heroId)) return s;
+  return { ...s, selectedHeroId: heroId };
+}
+
+export function isHeroReady(s: BattleState, heroId: string): boolean {
+  return !s.heroActionsUsed[heroId];
+}
+
+function consumeHeroAction(s: BattleState, heroId: string): BattleState {
+  return { ...s, heroActionsUsed: { ...s.heroActionsUsed, [heroId]: true } };
 }
 
 function revealHiddenClues(s: BattleState, count: number): BattleState {
@@ -171,7 +216,7 @@ function resolveAction(
 ): ResolveResult {
   const enemy = state.enemyClinical;
   const evalRes = evaluateClinicalAppropriateness(action, enemy, { revealedLabels: state.revealedLabels, stability: state.stability });
-  const sysMod = getSystemMatchModifier(systemType, enemy);
+  const sysMod = getSystemMatchModifier(systemType, enemy, state.enemy.primarySystem);
 
   // Chapter forgiveness on weak/inappropriate
   const forg = getChapterForgiveness(state.chapter);
@@ -239,7 +284,23 @@ export interface ApplyResult { state: BattleState; message: string; status?: Act
 
 export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyResult {
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
-  if (s.ap < skill.cost) return { state: s, message: 'Not enough AP.', aborted: true };
+
+  // Hero must be the selected hero, and ready
+  if (s.selectedHeroId && s.selectedHeroId !== hero.id) {
+    return { state: s, message: 'That hero is not selected.', aborted: true };
+  }
+  if (s.heroActionsUsed[hero.id]) {
+    return { state: s, message: `${hero.name} has already acted this turn.`, aborted: true };
+  }
+
+  // Compute cost with discounts
+  let cost = skill.cost;
+  let consumedAirDiscount = false;
+  if (s.nextAirActionDiscount && (skill.systemType === 'Air')) {
+    cost = Math.max(1, cost - 1);
+    consumedAirDiscount = true;
+  }
+  if (s.ap < cost) return { state: s, message: 'Not enough AP.', aborted: true };
 
   const action = SKILL_CLINICAL[skill.id];
   const systemType = skill.systemType || 'Universal';
@@ -248,12 +309,15 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyR
   const { state: post, aborted } = applyResolutionToState(s, res, skill.name);
   if (aborted) return { state: post, message: `${skill.name} is locked.`, status: 'locked', aborted: true };
 
-  let next = post;
-  next.ap = s.ap - skill.cost;
+  let next = consumeHeroAction(post, hero.id);
+  next.ap = s.ap - cost;
   next.turnsTaken = next.turnsTaken + 1;
   next.log = [...next.log, `${hero.name} → ${skill.name}.`];
+  if (consumedAirDiscount) next.nextAirActionDiscount = false;
 
-  const eff = (n: number) => combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier });
+  // Treatment stability modifier — corruption damage scales with how stable the patient is
+  const treatMod = getTreatmentStabilityModifier(next.stability);
+  const eff = (n: number) => combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, chapterModifier: treatMod });
   const stabEff = (n: number) => combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) });
 
   let effectAmount = 0;
@@ -325,7 +389,21 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyR
 
 export function useItem(s: BattleState, item: Item): ApplyResult {
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
-  if (s.ap < item.costAP) return { state: s, message: 'Not enough AP.', aborted: true };
+
+  // Require a selected hero who is ready
+  const heroId = s.selectedHeroId;
+  if (!heroId) return { state: s, message: 'Select a hero to use this item.', aborted: true };
+  if (s.heroActionsUsed[heroId]) {
+    const hero = s.team.find(h => h.id === heroId);
+    return { state: s, message: `${hero?.name || 'That hero'} has already acted this turn.`, aborted: true };
+  }
+  const hero = s.team.find(h => h.id === heroId);
+
+  // Item cost with prepared-pharmacy discount
+  let cost = item.costAP;
+  if (s.preparedItemDiscount === item.name) cost = Math.max(1, cost - 1);
+  if (s.ap < cost) return { state: s, message: 'Not enough AP.', aborted: true };
+
   const qty = s.inventory[item.name] || 0;
   if (qty <= 0) return { state: s, message: `${item.name} is not available.`, aborted: true };
 
@@ -336,21 +414,22 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   const { state: post, aborted } = applyResolutionToState(s, res, item.displayName);
   if (aborted) return { state: post, message: `${item.displayName} is locked.`, status: 'locked', aborted: true };
 
-  let next: BattleState = {
+  let next: BattleState = consumeHeroAction({
     ...post,
-    ap: s.ap - item.costAP,
+    ap: s.ap - cost,
     inventory: { ...s.inventory, [item.name]: qty - 1 },
     turnsTaken: post.turnsTaken + 1,
-    log: [...post.log, `Used ${item.displayName}.`],
-  };
+    log: [...post.log, `${hero?.name || 'Hero'} used ${item.displayName}.`],
+  }, heroId);
 
   const stabMod = getStabilizationModifier(next.corruption);
+  const treatMod = getTreatmentStabilityModifier(next.stability);
 
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
   if (item.target === 'corruption') {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier }));
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, chapterModifier: treatMod }));
     next.corruption = Math.max(0, next.corruption - amt);
     effectAmount = amt; effectType = 'corruption';
   }
@@ -399,6 +478,13 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
   if (!a) return { state: s, message: 'Action not available.', aborted: true };
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
   if (s.ap < a.costAP) return { state: s, message: 'Not enough AP.', aborted: true };
+  const heroId = s.selectedHeroId;
+  if (!heroId) return { state: s, message: 'Select a hero to perform this action.', aborted: true };
+  if (s.heroActionsUsed[heroId]) {
+    const hero = s.team.find(h => h.id === heroId);
+    return { state: s, message: `${hero?.name || 'That hero'} has already acted this turn.`, aborted: true };
+  }
+  const hero = s.team.find(h => h.id === heroId);
 
   const action = TEMP_CLINICAL[actionId];
   const res = resolveAction(action, 'Universal', s);
@@ -406,7 +492,7 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
   const { state: post, aborted } = applyResolutionToState(s, res, a.name);
   if (aborted) return { state: post, message: `${a.name} is locked.`, status: 'locked', aborted: true };
 
-  let next: BattleState = { ...post, ap: s.ap - a.costAP, turnsTaken: post.turnsTaken + 1, log: [...post.log, `Team support → ${a.name}.`] };
+  let next: BattleState = consumeHeroAction({ ...post, ap: s.ap - a.costAP, turnsTaken: post.turnsTaken + 1, log: [...post.log, `${hero?.name || 'Hero'} → ${a.name}.`] }, heroId);
   if (a.stabilize) {
     const amt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }));
     next.stability = clamp(next.stability + amt, 0, 100);
@@ -421,8 +507,22 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
 }
 
 export function applyCall(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {
-  if (s.callUsed) return { state: s, message: 'You already called for support this battle.', aborted: true };
+  // Per-consult tracking
+  const callKey: keyof BattleState['callsUsed'] | null =
+    option.id === 'call_pharmacy' ? 'pharmacy' :
+    option.id === 'call_respiratory' ? 'respiratory' :
+    option.id === 'call_rapid' ? 'rapidResponse' :
+    option.id === 'call_infection' ? 'infectionControl' : null;
+
+  if (callKey && s.callsUsed[callKey]) {
+    return { state: s, message: `${option.name} has already been called this battle.`, aborted: true };
+  }
   if (s.ap < option.costAP) return { state: s, message: 'Not enough AP.', aborted: true };
+
+  // Rapid Response gating — only allowed when patient is crashing
+  if (option.id === 'call_rapid' && s.stability > 30 && !s.dangerTriggerActive) {
+    return { state: s, message: 'Rapid Response is reserved for crashing patients (Stability ≤ 30).', aborted: true };
+  }
 
   const action = CALL_CLINICAL[option.id];
   const res = resolveAction(action, 'Universal', s);
@@ -430,24 +530,67 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
   const { state: post, aborted } = applyResolutionToState(s, res, option.name);
   if (aborted) return { state: post, message: `${option.name} is locked.`, status: 'locked', aborted: true };
 
-  let next: BattleState = { ...post, ap: s.ap - option.costAP, callUsed: true, turnsTaken: post.turnsTaken + 1, log: [...post.log, `📞 ${option.name}.`] };
+  // Calls do NOT consume a hero action
+  let next: BattleState = {
+    ...post,
+    ap: s.ap - option.costAP,
+    callUsed: true,
+    callsUsed: callKey ? { ...s.callsUsed, [callKey]: true } : s.callsUsed,
+    log: [...post.log, `📞 ${option.name}.`],
+  };
 
+  if (option.id === 'call_pharmacy') {
+    // Pick contextually-best item
+    let itemKey = 'Lab Token';
+    const revealed = next.revealedLabels.map(l => l.toLowerCase());
+    if (revealed.some(l => l.includes('wheeze') || l.includes('wheezing'))) itemKey = 'Albuterol Mist';
+    else if (revealed.some(l => l.includes('glucose'))) itemKey = 'Glucose Gel';
+    else if (revealed.some(l => l.includes('bp') || l.includes('blood pressure'))) itemKey = 'Fluid Bolus';
+    else if (s.enemy.primarySystem === 'Fire') itemKey = 'Isolation Kit';
+    else if (s.enemy.primarySystem === 'Air') itemKey = 'Albuterol Mist';
+    else if (s.enemy.primarySystem === 'Energy') itemKey = 'Glucose Gel';
+    else if (s.enemy.primarySystem === 'River') itemKey = 'Fluid Bolus';
+
+    next.inventory = { ...next.inventory, [itemKey]: (next.inventory[itemKey] || 0) + 1 };
+    next.preparedItemDiscount = itemKey;
+    const display = ITEMS.find(i => i.name === itemKey)?.displayName || itemKey;
+    next.log.push(`Pharmacy prepared ${display}. Costs 1 less AP this battle.`);
+    return { state: next, message: `Pharmacy prepared ${display}.`, status: res.status };
+  }
+
+  if (option.id === 'call_respiratory') {
+    next.nextAirActionDiscount = true;
+    if (option.actionId && !next.temporaryActionIds.includes(option.actionId)) {
+      next.temporaryActionIds = [...next.temporaryActionIds, option.actionId];
+    }
+    next.log.push(`Respiratory Support joins. Next Air action costs 1 less AP.`);
+    return { state: next, message: 'Respiratory support engaged.', status: res.status };
+  }
+
+  if (option.id === 'call_rapid') {
+    next.shieldNext = Math.max(next.shieldNext, 100); // fully block next attack
+    next.stability = clamp(next.stability + 10, 0, 100);
+    next.rapidResponseActive = true;
+    next.log.push(`Rapid Response: shield + Stability +10. Next turn AP restored to ≥4.`);
+    return { state: next, message: 'Rapid Response stabilized the crisis.', status: res.status };
+  }
+
+  if (option.id === 'call_infection') {
+    if (option.actionId && !next.temporaryActionIds.includes(option.actionId)) {
+      next.temporaryActionIds = [...next.temporaryActionIds, option.actionId];
+    }
+    next.log.push(`Infection Control engaged.`);
+    return { state: next, message: 'Infection Control engaged.', status: res.status };
+  }
+
+  // Legacy fallbacks
   if (option.effect === 'unlockAction' && option.actionId) {
     next.temporaryActionIds = [...next.temporaryActionIds, option.actionId];
-    const tName = TEMP_ACTIONS[option.actionId]?.name || option.actionId;
-    next.log.push(`${tName} is now available.`);
-    return { state: next, message: `${tName} unlocked.`, status: res.status };
-  }
-  if (option.effect === 'rapidResponse') {
-    next.shieldNext = Math.max(next.shieldNext, 80);
-    next.stability = clamp(next.stability + 10, 0, 100);
-    next.log.push(`Rapid Response: shield + Stability +10.`);
-    return { state: next, message: 'Rapid Response stabilized the crisis.', status: res.status };
+    return { state: next, message: 'Support unlocked.', status: res.status };
   }
   if (option.effect === 'addRelevantItem' && addedItemName) {
     next.inventory = { ...next.inventory, [addedItemName]: (next.inventory[addedItemName] || 0) + 1 };
-    next.log.push(`Pharmacy added ${addedItemName} ×1.`);
-    return { state: next, message: `Pharmacy added ${addedItemName}.`, status: res.status };
+    return { state: next, message: `Added ${addedItemName}.`, status: res.status };
   }
   return { state: next, message: 'Support called.', status: res.status };
 }
@@ -455,24 +598,62 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
 export function endPlayerTurn(s: BattleState): BattleState {
   if (s.outcome !== 'ongoing') return s;
   const log = [...s.log];
+
+  // Enemy turn — shielded by Rapid Response or shieldNext
   const baseDmg = getEnemyDamage(s.corruption, s.enemy.instability);
   const damageMultiplier = getChapterForgiveness(s.chapter).enemyDamageMultiplier;
   const reductionAfterShield = Math.floor(baseDmg * (1 - s.shieldNext / 100) * damageMultiplier);
   let reduced = Math.max(0, reductionAfterShield - s.enemyDamageReduction);
 
-  // Apply rebound if armed and no reassess used since
+  // Rebound: corruption dropped below 40 without reassess this turn
   if (s.reboundArmed && !s.reassessUsed) {
-    reduced = reduced + 5;
-    log.push(`⚠ Rebound: corruption surges back because reassessment was missed.`);
+    reduced = reduced + 10;
+    log.push(`⚠ Rebound Bronchospasm: the disease surges back. Stability and Corruption worsen.`);
   }
 
   let stability = clamp(s.stability - reduced, 0, 100);
+  let corruption = s.corruption;
+  if (s.reboundArmed && !s.reassessUsed) {
+    corruption = Math.min(100, corruption + 10);
+  }
+
   log.push(`The ${s.enemy.name} surges. Stability -${reduced}%${s.shieldNext ? ' (shielded)' : ''}.`);
   if (stability <= 0) {
     log.push(`💀 ${s.enemy.dangerTrigger}. The patient is lost.`);
-    return { ...s, stability: 0, shieldNext: 0, log, outcome: 'loss' };
+    return { ...s, stability: 0, corruption, shieldNext: 0, log, outcome: 'loss' };
   }
-  return { ...s, stability, shieldNext: 0, ap: s.apMax, turn: s.turn + 1, log, reassessUsed: false };
+
+  // Next-turn AP — dynamic based on patient state, with Rapid Response minimum
+  const modifiers: { preventNextAPLoss?: boolean } = {};
+  if (s.rapidResponseActive) modifiers.preventNextAPLoss = true;
+  let nextAp = getTurnAP(stability, corruption, s.chapter, modifiers);
+  if (s.rapidResponseActive) nextAp = Math.max(nextAp, 4);
+  log.push(apMessage(nextAp));
+
+  // Reset hero action map
+  const heroActionsUsed: Record<string, boolean> = {};
+  s.team.forEach(h => { heroActionsUsed[h.id] = false; });
+
+  // Update danger flag
+  const danger = getDangerLevel(stability, corruption);
+  const dangerTriggerActive = danger === 'critical';
+
+  return {
+    ...s,
+    stability,
+    corruption,
+    shieldNext: 0,
+    ap: nextAp,
+    apMax: nextAp,
+    turn: s.turn + 1,
+    log,
+    reassessUsed: false,
+    reboundArmed: false,
+    rapidResponseActive: false,
+    heroActionsUsed,
+    selectedHeroId: s.team.find(h => !heroActionsUsed[h.id])?.id || s.selectedHeroId,
+    dangerTriggerActive,
+  };
 }
 
 export function flatSkills(team: Hero[]): { hero: Hero; skill: import('./types').HeroSkill }[] {

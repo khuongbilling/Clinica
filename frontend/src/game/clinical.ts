@@ -584,15 +584,66 @@ export function evaluateClinicalAppropriateness(
 }
 
 // ------------------------------------------------------------
-// SYSTEM / ELEMENT MATCH
+// SYSTEM / ELEMENT MATCH (with clinical relatedness)
 // ------------------------------------------------------------
 
-export function getSystemMatchModifier(systemType: string | undefined, enemy: EnemyClinical | undefined): number {
+// Clinically related systems — oxygenation/circulation, glucose/mental status, etc.
+export const RELATED_SYSTEMS: Record<string, string[]> = {
+  Air: ['River', 'Protection'],
+  River: ['Air', 'Storm'],
+  Fire: ['Protection', 'River'],
+  Energy: ['Mind', 'River'],
+  Mind: ['Energy', 'Protection'],
+  Storm: ['River', 'Mind'],
+  Forge: ['Protection'],
+  Protection: ['Forge', 'Fire', 'Mind'],
+};
+
+export function getSystemMatchModifier(systemType: string | undefined, enemy: EnemyClinical | undefined, enemyPrimarySystem?: string): number {
   if (!systemType || !enemy) return 1.0;
-  if (systemType === 'Universal') return 1.0;
-  if (enemy.weaknesses.includes(systemType)) return 1.3;
-  if (enemy.resistances.includes(systemType)) return 0.6;
-  return 1.0;
+  if (systemType === 'Universal') return 0.75;
+  if (enemy.weaknesses.includes(systemType)) return 1.5;
+  if (enemy.resistances.includes(systemType)) return 0.5;
+  const sys = enemyPrimarySystem || enemy.weaknesses[0] || '';
+  const related = RELATED_SYSTEMS[sys] || [];
+  if (related.includes(systemType)) return 1.0;
+  return 0.25;
+}
+
+// Treatment is more effective when patient is more stable.
+export function getTreatmentStabilityModifier(stability: number): number {
+  if (stability >= 80) return 1.1;
+  if (stability >= 40) return 1.0;
+  if (stability >= 20) return 0.85;
+  return 0.7;
+}
+
+// Dynamic AP each turn based on patient state.
+export function getTurnAP(stability: number, corruption: number, chapter: number, modifiers: { allowHighStabilityBonus?: boolean; preventNextAPLoss?: boolean } = {}): number {
+  let ap = 4;
+  if (stability >= 80 && modifiers.allowHighStabilityBonus) ap += 1;
+  if (stability < 40) ap -= 1;
+  if (stability < 20) ap -= 1;
+  if (chapter >= 2 && corruption >= 80) ap -= 1;
+  if (modifiers.preventNextAPLoss) {
+    ap = Math.max(ap, 4);
+    modifiers.preventNextAPLoss = false;
+  }
+  return Math.max(2, Math.min(ap, 5));
+}
+
+export function apMessage(ap: number): string {
+  if (ap >= 5) return 'The patient is stable and the team is well coordinated. 5 AP available.';
+  if (ap >= 4) return 'The team has full coordination. 4 AP available.';
+  if (ap >= 3) return 'The situation is unstable. The team has less time. 3 AP available.';
+  return 'Critical condition. Prioritize emergency actions. 2 AP available.';
+}
+
+export function getDangerLevel(stability: number, corruption: number): 'controlled' | 'guarded' | 'unstable' | 'critical' {
+  if (stability < 20 || corruption >= 85) return 'critical';
+  if (stability < 40 || corruption >= 70) return 'unstable';
+  if (stability < 60 || corruption >= 40) return 'guarded';
+  return 'controlled';
 }
 
 // ------------------------------------------------------------
