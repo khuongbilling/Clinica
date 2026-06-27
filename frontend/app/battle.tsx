@@ -243,7 +243,8 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
         }, {} as any),
         bossId: isBoss ? enemy.id : undefined,
-      });
+        regionId: mission?.kingdomRegion ?? undefined,
+      } as any);
     } else if (state.outcome === "loss") {
       await recordFailure(enemy.id);
     }

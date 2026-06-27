@@ -121,4 +121,5 @@ export interface PlayerState {
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   enemy_mastery?: Record<string, number>;
   chapter_progress?: number;
+  region_progress?: Record<string, number>;
 }

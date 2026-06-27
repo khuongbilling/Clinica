@@ -85,6 +85,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     summon_history: [],
     enemy_mastery: {},
     chapter_progress: 1,
+    region_progress: {},
   };
 }
 
@@ -155,7 +156,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     trySyncToBackend(next);
   }, []);
 
-  const applyRewards = useCallback(async (rewards: Parameters<Ctx['applyRewards']>[0]) => {
+  const applyRewards = useCallback(async (rewards: Parameters<Ctx['applyRewards']>[0] & { regionId?: string }) => {
     if (!player) return;
     let next = { ...player };
     if (rewards.xp) next = applyXp(next, rewards.xp);
@@ -192,6 +193,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (rewards.enemyName) {
       next.enemy_mastery = { ...(next.enemy_mastery || {}) };
       next.enemy_mastery[rewards.enemyName] = (next.enemy_mastery[rewards.enemyName] || 0) + 1;
+    }
+    if (rewards.regionId) {
+      next.region_progress = { ...(next.region_progress || {}) };
+      next.region_progress[rewards.regionId] = (next.region_progress[rewards.regionId] || 0) + 1;
     }
     next.runs_completed = next.runs_completed + 1;
     const newChapter = next.runs_completed >= 10 ? 3 : next.runs_completed >= 3 ? 2 : 1;

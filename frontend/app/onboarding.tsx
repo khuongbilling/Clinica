@@ -58,12 +58,18 @@ export default function Onboarding() {
       <Frame>
         <View style={styles.heroBlock}>
           <Text style={styles.kicker}>CHAPTER I · THE FADING CORE</Text>
-          <Text style={styles.titleXL}>Welcome to{"\n"}Clinica</Text>
+          <Text style={styles.titleXL}>The Kingdom{"\n"}is Alive</Text>
+          <View style={styles.openingLines}>
+            {["Air breathes.", "River circulates.", "Fire defends.", "Energy fuels.", "Mind guides.", "Protection guards."].map((l) => (
+              <Text key={l} style={styles.openingLine}>{l}</Text>
+            ))}
+          </View>
           <Text style={styles.lede}>
-            The Great Codex has shattered. Disease Corruptions are spreading across the Kingdom of Clinica. Before you enter the Core, the Codex asks one question: what kind of healer calls to you?
+            But disease corruption is spreading.{"\n\n"}Lead your healer team. Read the clues. Keep the patient stable. Restore the body one battle at a time.
           </Text>
+          <Text style={styles.tagline}>Fight disease. Restore the body. Learn medicine through play.</Text>
         </View>
-        <Cta testID="welcome-begin" label="BEGIN CALLING QUIZ" onPress={() => setStep("name")} />
+        <Cta testID="welcome-begin" label="BEGIN HEALING" onPress={() => setStep("name")} />
       </Frame>
     );
   }
@@ -334,6 +340,10 @@ const styles = StyleSheet.create({
   },
   goalText: { color: COLORS.onSurface, fontSize: 14, flex: 1 },
   goalSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 3 },
+
+  openingLines: { gap: 2, marginVertical: SPACING.sm },
+  openingLine: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontStyle: "italic", letterSpacing: 0.3 },
+  tagline: { color: COLORS.brand, fontSize: 11, fontStyle: "italic", letterSpacing: 0.5, marginTop: SPACING.sm },
 
   clinicaCallout: {
     backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,
