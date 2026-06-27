@@ -72,7 +72,7 @@ export default function KingdomScreen() {
           style={StyleSheet.absoluteFillObject}
         />
         <LinearGradient
-          colors={["rgba(17,19,21,0.3)", "rgba(17,19,21,0.85)", COLORS.surface]}
+          colors={["rgba(8,6,20,0.15)", "rgba(12,10,28,0.82)", COLORS.surface]}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.heroInner}>
@@ -98,8 +98,8 @@ export default function KingdomScreen() {
           const color = ELEMENT_COLORS[REGION_ELEMENT[r.id]] || COLORS.brand;
           const unlocked = progress > 0;
           return (
-            <View key={r.id} style={[styles.regionCard, !unlocked && styles.regionCardLocked]} testID={`kingdom-region-${r.id}`}>
-              <View style={[styles.regionIcon, { borderColor: unlocked ? color : COLORS.border }]}>
+            <View key={r.id} style={[styles.regionCard, !unlocked && styles.regionCardLocked, { borderLeftColor: unlocked ? color : COLORS.border }]} testID={`kingdom-region-${r.id}`}>
+              <View style={[styles.regionIcon, { borderColor: unlocked ? color : COLORS.borderStrong, backgroundColor: unlocked ? color + "18" : COLORS.surface }]}>
                 <Ionicons name={(r.icon as any)} size={20} color={unlocked ? color : COLORS.onSurfaceTertiary} />
               </View>
               <View style={{ flex: 1 }}>
@@ -184,17 +184,18 @@ const styles = StyleSheet.create({
 
   regionCard: {
     flexDirection: "row", gap: SPACING.md, backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 4, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
+    borderLeftWidth: 3,
   },
-  regionCardLocked: { opacity: 0.6 },
-  regionIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
+  regionCardLocked: { opacity: 0.55 },
+  regionIcon: { width: 48, height: 48, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },
   regionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   regionName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "500" },
   regionNameLocked: { color: COLORS.onSurfaceTertiary },
   regionSystem: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   regionProgress: { fontSize: 12, fontWeight: "700" },
-  regionBar: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceTertiary, marginTop: 8, overflow: "hidden" },
-  regionBarFill: { height: "100%", borderRadius: 2 },
+  regionBar: { height: 6, borderRadius: 1, backgroundColor: COLORS.surfaceTertiary, marginTop: 8, overflow: "hidden" },
+  regionBarFill: { height: "100%", borderRadius: 1 },
   regionLockHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic", marginTop: 4 },
 
   bCard: {

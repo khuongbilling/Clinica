@@ -375,7 +375,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
           <Text style={styles.barLabel}>CORRUPT</Text>
-          <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.error }]} /></View>
+          <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
           <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
         <View style={styles.barRow}>
@@ -824,11 +824,12 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
+    backgroundColor: COLORS.surfaceSecondary,
   },
   closeBtn: { position: "absolute", right: SPACING.xs, top: SPACING.sm, padding: 8, zIndex: 2 },
   helpBtn: { position: "absolute", right: SPACING.xs + 32, top: SPACING.sm, padding: 8, zIndex: 2 },
   enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingRight: 68 },
-  enemyPortraitWrap: { width: 60, height: 60, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, flexShrink: 0 },
+  enemyPortraitWrap: { width: 64, height: 64, borderRadius: 4, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, flexShrink: 0 },
   enemyPortrait: { width: "100%", height: "100%" },
   enemyKicker: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700" },
   trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: RADIUS.pill },
@@ -849,21 +850,22 @@ const styles = StyleSheet.create({
   },
   barRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 8, letterSpacing: 1, fontWeight: "700", width: 52 },
-  barBg: { flex: 1, height: 6, backgroundColor: COLORS.surfaceTertiary, borderRadius: 4, overflow: "hidden" },
-  barFill: { height: "100%", borderRadius: 4 },
+  barBg: { flex: 1, height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: 2 },
   barVal: { color: COLORS.onSurface, fontSize: 10, fontWeight: "600", width: 36, textAlign: "right" },
   codexCard: {
-    backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.sm,
-    borderWidth: 1, borderColor: COLORS.brand + "30",
+    backgroundColor: COLORS.brand + "18", borderRadius: 4,
+    borderWidth: 1, borderColor: COLORS.brand + "50",
+    borderLeftWidth: 3, borderLeftColor: COLORS.brand,
     paddingHorizontal: SPACING.sm, paddingVertical: 6,
     flexDirection: "row", alignItems: "center", gap: 5,
   },
   codexLabel: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 0.4, flex: 1, lineHeight: 13 },
   codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 9 },
   clueRow: { gap: SPACING.sm, paddingVertical: 2 },
-  clue: { width: 90, height: 60, padding: SPACING.xs, borderRadius: RADIUS.sm, borderWidth: 1, gap: 2, backgroundColor: COLORS.surfaceSecondary },
-  clueVisible: { borderColor: COLORS.brand + "60" },
-  clueHidden: { borderColor: COLORS.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
+  clue: { width: 90, height: 60, padding: SPACING.xs, borderRadius: 4, borderWidth: 1, gap: 2, backgroundColor: COLORS.surface },
+  clueVisible: { borderColor: COLORS.brand + "80", borderTopWidth: 2, borderTopColor: COLORS.brand + "CC" },
+  clueHidden: { borderColor: COLORS.borderStrong, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
   clueLabel: { color: COLORS.onSurface, fontSize: 11, fontWeight: "600" },
   clueDetail: { color: COLORS.onSurfaceTertiary, fontSize: 9, lineHeight: 11 },
 
@@ -878,14 +880,14 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   heroRow: { flexDirection: "row", gap: 5 },
-  heroPill: { paddingHorizontal: 5, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, alignItems: "center", overflow: "hidden" },
+  heroPill: { paddingHorizontal: 5, paddingVertical: 5, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, alignItems: "center", overflow: "hidden" },
   heroPillActed: { opacity: 0.45 },
   heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
   heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "700", letterSpacing: 1, marginTop: 1 },
   apRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   apLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
-  apDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border },
-  apDotOn: { backgroundColor: COLORS.brand, borderColor: COLORS.brand },
+  apDot: { width: 10, height: 10, borderRadius: 2, backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.borderStrong },
+  apDotOn: { backgroundColor: COLORS.runeGold, borderColor: COLORS.runeGold },
   endBtn: { marginLeft: "auto", paddingHorizontal: 11, paddingVertical: 4, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.borderStrong },
   endTxt: { color: COLORS.onSurfaceSecondary, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
   tabs: { flexDirection: "row", gap: 4 },
@@ -899,8 +901,8 @@ const styles = StyleSheet.create({
   zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm, overflow: "hidden" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, paddingBottom: SPACING.sm },
   actionBtn: {
-    width: "48.5%", minHeight: 70, padding: 8, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border, gap: 2,
+    width: "48.5%", minHeight: 70, padding: 8, borderRadius: 4,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong, gap: 2,
   },
   disabled: { opacity: 0.4 },
   actionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -925,7 +927,7 @@ const styles = StyleSheet.create({
 
   // ── Modals ──
   modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", padding: SPACING.lg },
-  detailModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, padding: SPACING.lg, gap: 6, borderWidth: 1, borderColor: COLORS.brandTertiary, width: "100%", maxWidth: 380, maxHeight: "80%" },
+  detailModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 6, borderWidth: 1, borderColor: COLORS.brand + "50", width: "100%", maxWidth: 380, maxHeight: "80%" },
   detailKicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: "700" },
   detailTitle: { color: COLORS.onSurface, fontSize: 22, fontWeight: "400", marginBottom: 2 },
   detailHero: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", marginBottom: 6 },
@@ -935,7 +937,7 @@ const styles = StyleSheet.create({
   useBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
   modalDismiss: { padding: SPACING.sm, alignItems: "center", marginTop: 4 },
   modalDismissTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 2 },
-  outcomeModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, padding: SPACING.xl, alignItems: "center", gap: SPACING.md, borderWidth: 1, borderColor: COLORS.brandTertiary, width: "100%", maxWidth: 380 },
+  outcomeModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.xl, alignItems: "center", gap: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "60", width: "100%", maxWidth: 380 },
   modalTitle: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
   modalSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", lineHeight: 19 },
   continueBtn: { backgroundColor: COLORS.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.pill, marginTop: SPACING.sm },
