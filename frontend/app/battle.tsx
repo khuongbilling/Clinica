@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -42,6 +42,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training }: { enemyId?: string; training?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure } = usePlayer();
+  const { width: screenW, height: screenH } = useWindowDimensions();
   const isTraining = training === "1";
 
   const enemy = useMemo(() => {
@@ -336,13 +337,15 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       </ScrollView>
 
       {/* Fixed bottom action bar */}
-      <View style={styles.actionBar}>
-        {/* Hero pills row */}
-        <View style={styles.heroRow}>
+      <View style={[styles.actionBar, { maxHeight: screenH * 0.58 }]}>
+        {/* Hero pills row — always one row, flex splits width evenly */}
+        <View style={[styles.heroRow, { paddingHorizontal: SPACING.sm }]}>
           {team.map(h => {
             const acted = !!state.heroActionsUsed[h.id];
             const selected = state.selectedHeroId === h.id;
             const elementColor = ELEMENT_COLORS[h.element] || COLORS.brand;
+            const pillW = Math.floor((screenW - SPACING.sm * 2 - (team.length - 1) * 6) / team.length);
+            const spriteSize = Math.min(36, pillW - 16);
             const onPick = () => {
               if (acted) return;
               setState(prev => selectHero(prev, h.id));
@@ -352,14 +355,19 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                 key={h.id}
                 onPress={onPick}
                 hitSlop={6}
-                style={[styles.heroPill, selected && !acted && { borderColor: elementColor, backgroundColor: elementColor + "18" }, acted && styles.heroPillActed]}
+                style={[styles.heroPill, { width: pillW }, selected && !acted && { borderColor: elementColor, backgroundColor: elementColor + "18" }, acted && styles.heroPillActed]}
                 testID={`hero-pill-${h.id}`}
                 accessibilityRole="button"
               >
                 {getHeroSprite(h.id) && (
-                  <Image source={getHeroSprite(h.id)!} style={styles.heroPillSprite} resizeMode="cover" />
+                  <Image source={getHeroSprite(h.id)!} style={[styles.heroPillSprite, { width: spriteSize, height: spriteSize }]} resizeMode="cover" />
                 )}
-                <Text style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
+                <Text
+                  style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                >
                   {h.name}
                 </Text>
                 <Text style={[styles.heroPillRole, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
@@ -396,7 +404,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         {/* Tab content */}
         <View style={styles.tabContent}>
           {activeTab === "actions" && (
-            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
               <View style={styles.grid}>
                 {state.temporaryActionIds.map((aid) => {
                   const a = TEMP_ACTIONS[aid]; if (!a) return null;
@@ -481,7 +489,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             </ScrollView>
           )}
           {activeTab === "items" && (
-            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
               {(() => {
                 const selHero = state.team.find(h => h.id === state.selectedHeroId);
                 if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — items consume the chosen hero&apos;s action.</Text>;
@@ -521,7 +529,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             </ScrollView>
           )}
           {activeTab === "call" && (
-            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
               {availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options match the situation yet.</Text>}
               <View style={styles.grid}>
                 {availableCalls.map(opt => {
@@ -559,7 +567,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             </ScrollView>
           )}
           {activeTab === "team" && (
-            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
               <View style={styles.teamList}>
                 {team.map(h => {
                   const c = ELEMENT_COLORS[h.element];
@@ -806,9 +814,9 @@ const styles = StyleSheet.create({
   statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
   basicTag: { alignSelf: "flex-start", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, borderWidth: 1, borderColor: COLORS.onSurfaceTertiary, backgroundColor: COLORS.onSurfaceTertiary + "20", marginBottom: 2 },
   basicTagTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8, color: COLORS.onSurfaceTertiary },
-  heroRow: { flexDirection: "row", paddingHorizontal: SPACING.lg, gap: 8, paddingBottom: 8, flexWrap: "wrap" },
-  heroPill: { paddingHorizontal: 8, paddingTop: 6, paddingBottom: 6, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center", flexShrink: 1 },
-  heroPillSprite: { width: 40, height: 40, borderRadius: 8, marginBottom: 4, backgroundColor: COLORS.bg },
+  heroRow: { flexDirection: "row", gap: 6, paddingBottom: 8 },
+  heroPill: { paddingHorizontal: 6, paddingTop: 5, paddingBottom: 5, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, alignItems: "center", overflow: "hidden" },
+  heroPillSprite: { borderRadius: 8, marginBottom: 3, backgroundColor: COLORS.bg },
   heroPillActed: { opacity: 0.45 },
   heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
   heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1, marginTop: 2 },
