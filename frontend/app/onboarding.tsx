@@ -232,6 +232,12 @@ export default function Onboarding() {
     return (
       <Frame>
         <View style={styles.heroBlock}>
+          <View style={styles.clinicaCallout}>
+            <Text style={styles.clinicaCalloutLabel}>ABOUT CLINICA</Text>
+            <Text style={styles.clinicaCalloutText}>
+              Clinica is a kingdom shaped like the human body. Disease corruption is spreading through the body systems. Your healer team must read clues, keep Patient Stability above 0, reduce Disease Corruption to 0, and restore each region.
+            </Text>
+          </View>
           <Text style={styles.kicker}>FIRST TRIAL</Text>
           <Text style={styles.titleXL}>The Air{"\n"}Crystal</Text>
           <Text style={styles.lede}>
@@ -329,6 +335,13 @@ const styles = StyleSheet.create({
   goalText: { color: COLORS.onSurface, fontSize: 14, flex: 1 },
   goalSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 3 },
 
+  clinicaCallout: {
+    backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,
+    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30",
+    marginBottom: SPACING.sm,
+  },
+  clinicaCalloutLabel: { color: COLORS.brand, fontSize: 9, letterSpacing: 2, fontWeight: "700", marginBottom: 4 },
+  clinicaCalloutText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
   trialMeta: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md, flexWrap: "wrap" },
   trialPill: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
   trialPillTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1 },

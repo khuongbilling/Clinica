@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 
 import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
+import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
@@ -95,6 +96,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   });
 
   const [activeTab, setActiveTab] = useState<Tab>("actions");
+  const [showBriefing, setShowBriefing] = useState(true);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
   const [detail, setDetail] = useState<DetailEntry | null>(null);
@@ -151,7 +155,19 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const stabilityColor = state.stability > 60 ? COLORS.success : state.stability > 30 ? COLORS.warning : COLORS.error;
   const corruptionPct = (state.corruption / enemy.corruption) * 100;
   const hints = getEnemyHint(enemy.id);
+  const mission = getMission(enemy.id);
+  const isNonmedical = player?.learning_profile === "nonmedical";
+  const isFirstBattle = (player?.runs_completed ?? 0) === 0 && enemy.id === "air_sprite";
   const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
+
+  const showFeedback = (actionType: string) => {
+    if (!isNonmedical) return;
+    const msg = getGuidedFeedback(enemy.id, actionType);
+    if (!msg) return;
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    setFeedbackMsg(msg);
+    feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 3500);
+  };
 
   const handleSkill = (hero: Hero, skill: HeroSkill) => {
     if (state.outcome !== "ongoing") return;
@@ -164,6 +180,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     onRequiredAction(skill.type);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero).state);
+    showFeedback(skill.type);
     setDetail(null);
   };
   const handleTempAction = (actionId: string) => {
@@ -386,6 +403,17 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
       {/* ── ZONE D: Action area (flex 1, scrolls internally) ── */}
       <View style={styles.zoneD}>
+        {/* Objective strip / guided feedback banner */}
+        {isNonmedical && feedbackMsg ? (
+          <View style={styles.feedbackBanner}>
+            <Ionicons name="information-circle" size={11} color={COLORS.brand} />
+            <Text style={styles.feedbackText} numberOfLines={2}>{feedbackMsg}</Text>
+          </View>
+        ) : (
+          <View style={styles.objectiveStrip}>
+            <Text style={styles.objectiveText}>Goal: Scout → Stabilize → Counter → Reassess</Text>
+          </View>
+        )}
         {activeTab === "actions" && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
             {state.temporaryActionIds.map((aid) => {
@@ -561,6 +589,57 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
               <Text style={styles.modalDismissTxt}>CLOSE</Text>
             </Pressable>
           </Pressable>
+        </Pressable>
+      )}
+
+      {showBriefing && (
+        <Pressable style={styles.briefingOverlay} onPress={() => setShowBriefing(false)}>
+          <ScrollView contentContainerStyle={styles.briefingScroll} showsVerticalScrollIndicator={false}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              {isFirstBattle && (
+                <View style={styles.briefingClinica}>
+                  <Text style={styles.briefingClinicaKicker}>ABOUT CLINICA</Text>
+                  <Text style={styles.briefingClinicaText}>
+                    Clinica is a kingdom shaped like the human body. Disease corruption is spreading through the body systems. Your healer team must read clues, keep Patient Stability above 0, reduce Disease Corruption to 0, and restore each region.
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.briefingKicker}>MISSION BRIEFING</Text>
+              <Text style={styles.briefingTitle}>{mission?.missionTitle ?? enemy.name}</Text>
+              <Text style={styles.briefingEnemy}>{enemy.name} · {enemy.realWorld}</Text>
+              {mission && <Text style={styles.briefingStory}>{mission.story}</Text>}
+              <View style={styles.briefingDivider} />
+              <View style={styles.briefingRow}>
+                <View style={styles.briefingCol}>
+                  <Text style={styles.briefingColLabel}>SYSTEM</Text>
+                  <Text style={styles.briefingColVal}>{enemy.primarySystem}</Text>
+                </View>
+                <View style={styles.briefingColSep} />
+                <View style={styles.briefingCol}>
+                  <Text style={styles.briefingColLabel}>RECOMMENDED</Text>
+                  <Text style={styles.briefingColVal}>{(mission?.recommendedRoles ?? enemy.bestCounters).join(", ")}</Text>
+                </View>
+              </View>
+              <View style={styles.briefingWinRow}>
+                <Ionicons name="flag" size={12} color={COLORS.brand} />
+                <Text style={styles.briefingWinText}>{mission?.winCondition ?? "Keep Stability above 0 and reduce Corruption to 0"}</Text>
+              </View>
+              <View style={styles.briefingDivider} />
+              <Text style={styles.briefingGoalsTitle}>STAR GOALS</Text>
+              {(mission?.starGoals ?? (["Win the battle", "Complete the care chain", "Win efficiently"] as [string,string,string])).map((g, i) => (
+                <View key={i} style={styles.briefingGoalRow}>
+                  {Array.from({ length: i + 1 }).map((_, j) => (
+                    <Ionicons key={j} name="star-outline" size={11} color={COLORS.brand} />
+                  ))}
+                  <Text style={styles.briefingGoalText}>{g}</Text>
+                </View>
+              ))}
+              <Pressable style={styles.briefingEnterBtn} onPress={() => setShowBriefing(false)} testID="briefing-enter">
+                <Text style={styles.briefingEnterTxt}>ENTER BATTLE</Text>
+              </Pressable>
+              <Text style={styles.briefingDismissHint}>Tap anywhere to dismiss</Text>
+            </Pressable>
+          </ScrollView>
         </Pressable>
       )}
 
@@ -799,4 +878,41 @@ const styles = StyleSheet.create({
   modalSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", lineHeight: 19 },
   continueBtn: { backgroundColor: COLORS.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.pill, marginTop: SPACING.sm },
   continueBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
+
+  objectiveStrip: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 3, marginBottom: 3 },
+  objectiveText: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.4, fontStyle: "italic" },
+  feedbackBanner: {
+    flexDirection: "row", alignItems: "flex-start", gap: 5,
+    backgroundColor: COLORS.brand + "14", borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm, paddingVertical: 5,
+    borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: 4,
+  },
+  feedbackText: { color: COLORS.brand, fontSize: 10, lineHeight: 14, flex: 1 },
+
+  briefingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.93)", zIndex: 100 },
+  briefingScroll: { padding: SPACING.lg, paddingTop: SPACING.xl, paddingBottom: SPACING.xxl },
+  briefingClinica: {
+    backgroundColor: COLORS.brand + "14", borderRadius: RADIUS.md,
+    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: SPACING.lg,
+  },
+  briefingClinicaKicker: { color: COLORS.brand, fontSize: 9, letterSpacing: 2, fontWeight: "700", marginBottom: 4 },
+  briefingClinicaText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+  briefingKicker: { color: COLORS.brand, fontSize: 9, letterSpacing: 3, fontWeight: "700" },
+  briefingTitle: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300", lineHeight: 32, marginTop: 4 },
+  briefingEnemy: { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: 2, marginBottom: SPACING.sm },
+  briefingStory: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21 },
+  briefingDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.md },
+  briefingRow: { flexDirection: "row", gap: SPACING.md },
+  briefingCol: { flex: 1, gap: 4 },
+  briefingColSep: { width: 1, backgroundColor: COLORS.border },
+  briefingColLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1.5, fontWeight: "700" },
+  briefingColVal: { color: COLORS.onSurface, fontSize: 13, lineHeight: 18 },
+  briefingWinRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm },
+  briefingWinText: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
+  briefingGoalsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1.5, fontWeight: "700", marginBottom: 8 },
+  briefingGoalRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
+  briefingGoalText: { color: COLORS.onSurface, fontSize: 13, flex: 1 },
+  briefingEnterBtn: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", marginTop: SPACING.xl },
+  briefingEnterTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
+  briefingDismissHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, textAlign: "center", marginTop: SPACING.sm, fontStyle: "italic" },
 });

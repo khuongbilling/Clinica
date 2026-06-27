@@ -10,6 +10,7 @@ import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
+import { getMission } from "@/src/game/missions";
 
 export default function Result() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function Result() {
     return CODEX.filter((c) => enemy.teaches.includes(c.id));
   }, [enemy, won]);
 
+  const mission = enemy ? getMission(enemy.id) : null;
   const enemyClinical = enemy ? ENEMY_CLINICAL[enemy.id] : undefined;
   const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
   const starRules = getStarRules(profile, enemyClinical);
@@ -96,8 +98,8 @@ export default function Result() {
             />
           )}
           <Text style={styles.kicker}>{won ? "ENCOUNTER PURIFIED" : "PATIENT LOST"}</Text>
-          <Text style={styles.title}>{enemy?.name}</Text>
-          <Text style={styles.sub}>{enemy?.realWorld}{isTraining ? " · Training" : ""}</Text>
+          <Text style={styles.title}>{won && mission ? mission.victoryTitle : enemy?.name ?? ""}</Text>
+          <Text style={styles.sub}>{won && mission ? enemy?.name : enemy?.realWorld}{isTraining ? " · Training" : ""}</Text>
         </View>
 
         {won && (
@@ -117,7 +119,7 @@ export default function Result() {
                 ))}
               </View>
               <View style={{ gap: 4, marginTop: 8 }}>
-                {["Stabilized the patient.", "Completed the clinical care chain.", "Efficient and safe care."].map((label, i) => (
+                {(mission?.starGoals ?? ["Stabilized the patient.", "Completed the clinical care chain.", "Efficient and safe care."]).map((label, i) => (
                   <View key={i} style={styles.starLine}>
                     <Ionicons name={i < starResult.stars ? "checkmark-circle" : "ellipse-outline"} size={14} color={i < starResult.stars ? COLORS.success : COLORS.onSurfaceTertiary} />
                     <Text style={[styles.starLabel, i < starResult.stars && { color: COLORS.onSurface }]}>{label}</Text>
@@ -125,6 +127,13 @@ export default function Result() {
                 ))}
               </View>
             </View>
+
+            {mission && (
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>WHAT HAPPENED</Text>
+                <Text style={styles.summaryText}>{mission.clinicalSummary}</Text>
+              </View>
+            )}
 
             {(consultsUsed > 0 || emergencyCallsUsed > 0 || inappropriateConsultsUsed > 0 || basicAidUses > 2) && (
               <View style={styles.consultCard} testID="result-consult-notes">
@@ -167,6 +176,18 @@ export default function Result() {
                 <Text style={styles.shardsBreakdown}>
                   Base {rewardBreakdown.base}{rewardBreakdown.starBonus ? ` · Stars +${rewardBreakdown.starBonus}` : ""}{rewardBreakdown.chainBonus ? ` · Care Chain +${rewardBreakdown.chainBonus}` : ""}
                 </Text>
+              </View>
+            )}
+
+            {mission && (
+              <View style={styles.kingdomCard}>
+                <Ionicons name="globe-outline" size={16} color={COLORS.brand} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.kingdomTitle}>{mission.kingdomRegion}</Text>
+                  <Text style={styles.kingdomSub}>
+                    {Math.min((player?.runs_completed ?? 0), mission.kingdomMax)}/{mission.kingdomMax} restored
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -267,4 +288,14 @@ const styles = StyleSheet.create({
   consultTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2, marginBottom: 4 },
   consultGood: { color: COLORS.success, fontSize: 12, lineHeight: 17 },
   consultWarn: { color: COLORS.warning || COLORS.brand, fontSize: 12, lineHeight: 17 },
+  summaryCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 6 },
+  summaryTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  summaryText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+  kingdomCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,
+    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30",
+  },
+  kingdomTitle: { color: COLORS.brand, fontSize: 13, fontWeight: "600" },
+  kingdomSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 2 },
 });
