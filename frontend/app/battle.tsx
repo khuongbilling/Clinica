@@ -209,6 +209,14 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           <Pressable style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} testID="battle-close">
             <Ionicons name="close" size={18} color={COLORS.onSurface} />
           </Pressable>
+          <Pressable
+            style={styles.helpBtn}
+            onPress={() => router.push("/tutorial")}
+            hitSlop={10}
+            testID="battle-tutorial-button"
+          >
+            <Ionicons name="help-circle-outline" size={20} color={COLORS.onSurfaceSecondary} />
+          </Pressable>
           <View style={styles.enemyHeaderRow}>
             {getEnemySprite(enemy.id) && (
               <View style={[styles.enemyPortraitWrap, { borderColor: ELEMENT_COLORS[enemy.primarySystem] + "AA" }]}>
@@ -683,10 +691,11 @@ const styles = StyleSheet.create({
   contentInner: { paddingBottom: SPACING.md },
 
   enemyHeader: { padding: SPACING.lg, paddingBottom: SPACING.sm, gap: 4 },
-  enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md, paddingRight: 32 },
+  enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md, paddingRight: 76 },
   enemyPortraitWrap: { width: 72, height: 72, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary },
   enemyPortrait: { width: "100%", height: "100%" },
   closeBtn: { position: "absolute", right: SPACING.sm, top: SPACING.md, padding: 8, zIndex: 1 },
+  helpBtn: { position: "absolute", right: SPACING.sm + 36, top: SPACING.md, padding: 8, zIndex: 1 },
   enemyKicker: { color: COLORS.error, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 8, paddingVertical: 1, borderRadius: RADIUS.pill },
   trainingTxt: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 1 },

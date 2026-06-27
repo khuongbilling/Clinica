@@ -46,8 +46,18 @@ export default function RunHome() {
             <Text style={styles.kicker}>{apt.title.toUpperCase()} · {player.rank.toUpperCase()}</Text>
             <Text style={styles.welcome}>{player.name}</Text>
           </View>
-          <View style={[styles.aptBadge, { borderColor: apt.color }]}>
-            <Ionicons name={apt.icon as any} size={20} color={apt.color} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+            <Pressable
+              onPress={() => router.push("/tutorial")}
+              style={styles.helpBtn}
+              hitSlop={10}
+              testID="run-tutorial-button"
+            >
+              <Ionicons name="help-circle-outline" size={24} color={COLORS.onSurfaceSecondary} />
+            </Pressable>
+            <View style={[styles.aptBadge, { borderColor: apt.color }]}>
+              <Ionicons name={apt.icon as any} size={20} color={apt.color} />
+            </View>
           </View>
         </View>
 
@@ -157,6 +167,7 @@ const styles = StyleSheet.create({
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "600" },
   welcome: { color: COLORS.onSurface, fontSize: 26, fontWeight: "400", marginTop: 4 },
   aptBadge: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary },
+  helpBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: COLORS.surfaceSecondary },
   xpRow: { gap: 6 },
   xpBarBg: { height: 6, borderRadius: 3, backgroundColor: COLORS.surfaceSecondary, overflow: "hidden" },
   xpBarFill: { height: "100%", backgroundColor: COLORS.brand },

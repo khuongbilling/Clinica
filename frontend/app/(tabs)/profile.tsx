@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,6 +17,7 @@ const MASTERY_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { player, resetPlayer } = usePlayer();
   if (!player) return null;
   const apt = APTITUDE_INFO[player.aptitude];
@@ -65,6 +67,16 @@ export default function ProfileScreen() {
           <Stat label="Codex Pages" value={String(player.codex_unlocked.length)} />
         </View>
 
+        <Pressable
+          style={styles.tutorialBtn}
+          onPress={() => router.push("/tutorial")}
+          testID="profile-tutorial-button"
+        >
+          <Ionicons name="book" size={16} color={COLORS.brand} />
+          <Text style={styles.tutorialTxt}>{"How to Play — Healer's Manual"}</Text>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
+
         <Pressable style={styles.resetBtn} onPress={resetPlayer} testID="profile-reset-button">
           <Ionicons name="refresh" size={14} color={COLORS.error} />
           <Text style={styles.resetTxt}>Reset Account (Start Over)</Text>
@@ -111,4 +123,6 @@ const styles = StyleSheet.create({
   statVal: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
   resetBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: SPACING.md, marginTop: SPACING.md },
   resetTxt: { color: COLORS.error, fontSize: 12, fontWeight: "600" },
+  tutorialBtn: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.md, marginTop: SPACING.sm, backgroundColor: COLORS.brand + "12", borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "40" },
+  tutorialTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", flex: 1 },
 });
