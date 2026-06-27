@@ -1,0 +1,1046 @@
+# Replit Instruction Package: Import, Run, and Fix Clinica Battle Skill Logic
+
+## Project
+
+Clinica GitHub repo:
+
+```text
+https://github.com/khuongbilling/Clinica
+```
+
+I am moving this project from Emergent to Replit.
+
+Do **not** rebuild the whole app.
+
+I want controlled, focused edits.
+
+The current issue is that some hero skills do not lower **Disease Corruption**, so battles do not feel like RPG combat. Skills need to be classified better, and each hero needs a role-based corruption-lowering skill.
+
+---
+
+# Step 1: Import and Inspect First
+
+After importing the GitHub repo into Replit, inspect the project structure first.
+
+Do **not** edit files yet.
+
+Find the files that control:
+
+```text
+1. Hero skill data
+2. Enemy/disease data
+3. Battle/action resolution
+4. Item effects
+5. Clinical appropriateness rules
+6. Care Attempt
+7. Disease Corruption and Patient Stability changes
+8. MongoDB/database connection
+```
+
+Likely files may include:
+
+```text
+frontend/src/game/battle.ts
+frontend/src/game/content.ts
+frontend/src/game/clinical.ts
+frontend/src/game/items.ts
+frontend/src/game/types.ts
+backend/server.js
+backend/index.js
+backend/db.js
+server.js
+api.js
+.env.example
+package.json
+```
+
+After inspecting, summarize:
+
+```text
+- Which files control each part
+- Which function reduces Disease Corruption
+- How hero skills currently lower Corruption
+- Why some hero skills do not lower Corruption
+- What exact files should be edited first
+- Why the app is asking for MongoDB
+- Which MongoDB environment variable is expected
+- Whether the frontend battle system can run without MongoDB
+```
+
+Do not edit files until I approve.
+
+---
+
+# Step 1A: MongoDB / Database Setup for Replit Import
+
+When importing this GitHub project into Replit, Replit may ask for MongoDB or a database connection.
+
+MongoDB is likely being used by the backend to save things such as:
+
+```text
+User accounts
+Saved game progress
+Owned heroes
+Inventory
+Codex Shards
+Summon history
+Battle history
+```
+
+However, my current goal is to fix and test the **frontend battle mechanics**, especially:
+
+```text
+Hero skills
+Disease Corruption
+Patient Stability
+Care Attempt
+Items
+Clinical appropriateness
+Air Sprite battle testing
+```
+
+Do not let the MongoDB requirement block battle mechanic testing unless the backend is absolutely required.
+
+---
+
+# Step 1B: Inspect MongoDB Requirement
+
+Before editing files, inspect why the project is asking for MongoDB.
+
+Find:
+
+```text
+1. Which file imports or initializes MongoDB
+2. Which environment variable it expects
+3. Whether it expects MONGO_URL, MONGODB_URI, DATABASE_URL, or another name
+4. Whether MongoDB is required to run the frontend battle system
+5. Whether the frontend can run without the backend
+6. Whether the battle system can be tested with local/mock data
+```
+
+Do not edit anything yet. Report what you find first.
+
+---
+
+# Step 1C: Prefer Frontend-Only Testing First
+
+If MongoDB is only needed for saving progress, accounts, or backend persistence, temporarily bypass it.
+
+Preferred approach:
+
+```text
+Run the frontend only.
+Use existing local game data.
+Do not require MongoDB for battle testing.
+```
+
+If possible, start only the frontend development server.
+
+Find the correct command from `package.json`, such as:
+
+```bash
+npm run dev
+```
+
+or if the frontend has its own folder:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+# Step 1D: If Backend Blocks Startup
+
+If the backend fails because MongoDB is missing, do one of these temporary fixes.
+
+## Option A: Mock/skip database connection in development
+
+Add a development fallback so the app does not crash when MongoDB is missing.
+
+Example behavior:
+
+```text
+If MONGO_URL or MONGODB_URI is missing:
+- Log a warning
+- Skip database connection
+- Continue running frontend/battle testing if possible
+```
+
+Do not remove database code permanently.
+
+Do not rewrite the backend.
+
+Only add a safe local development fallback.
+
+## Option B: Use local mock save data
+
+If the app needs player data, create or use local mock data for testing.
+
+Mock data can include:
+
+```text
+Starter player
+Starter heroes
+Starter inventory
+Starter battle state
+Air Sprite enemy
+```
+
+The battle mechanic should be testable without real accounts or database persistence.
+
+---
+
+# Step 1E: If MongoDB Is Truly Required
+
+If the project cannot run without MongoDB, tell me exactly which environment variable is required.
+
+Examples:
+
+```text
+MONGO_URL
+MONGODB_URI
+DATABASE_URL
+```
+
+Then I can set it in Replit Secrets.
+
+Do not hardcode a real MongoDB connection string into the code.
+
+Use Replit Secrets / Environment Variables only.
+
+The MongoDB URI should look generally like:
+
+```text
+mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/clinica
+```
+
+Never print or expose the real password.
+
+---
+
+# Step 1F: Replit Secrets Instruction
+
+If MongoDB must be configured, explain this clearly:
+
+```text
+Go to Replit → Tools → Secrets
+Add the required variable name
+Paste the MongoDB connection string as the value
+Restart the app
+```
+
+Examples:
+
+```text
+Key: MONGO_URL
+Value: mongodb+srv://...
+```
+
+or:
+
+```text
+Key: MONGODB_URI
+Value: mongodb+srv://...
+```
+
+Use whatever exact variable name the code expects.
+
+---
+
+# Important MongoDB Rule
+
+Do not spend time building database features right now.
+
+The priority is:
+
+```text
+1. Get the frontend battle system running
+2. Fix hero skills so role-based skills reduce Disease Corruption
+3. Test Air Sprite battle
+4. Confirm Care Attempt stays weak
+5. Confirm items and clinical rules work
+```
+
+MongoDB persistence can be fixed later after the battle mechanics work.
+
+---
+
+# Step 2: Main Design Rule
+
+Use only two main battle meters:
+
+```text
+Patient Stability
+Disease Corruption
+```
+
+Do not add a third HP stat.
+
+---
+
+## Patient Stability
+
+Represents:
+
+```text
+How well the patient is tolerating the situation.
+How much safe clinical time the team has.
+How close the patient is to collapse.
+```
+
+Stability affects:
+
+```text
+AP per turn
+Treatment effectiveness
+Danger event risk
+Defeat risk
+Star rating
+```
+
+---
+
+## Disease Corruption
+
+Represents:
+
+```text
+How much control the disease process has over the patient.
+```
+
+Disease Corruption is the enemy HP.
+
+Reducing Corruption means the disease process is being controlled.
+
+---
+
+# Step 3: Fix Skill Logic
+
+Main goal:
+
+```text
+Every hero should have at least one role-based corruption-lowering skill.
+This should not be a generic universal treatment.
+The skill should come from the hero’s role and clinical identity.
+If the role fits the disease, it should lower Corruption strongly.
+If the role does not fit, it should lower Corruption very little.
+```
+
+Important:
+
+```text
+Do not add a universal weak treatment skill.
+Keep Care Attempt as the weak basic fallback.
+Care Attempt should remain separate from hero skills.
+```
+
+In this codebase, hero skills lower Disease Corruption when they have:
+
+```js
+strike: number
+```
+
+So the fix is mostly to add or revise `strike` values and clinical metadata.
+
+---
+
+# Step 4: Skill Category Rules
+
+Classify skills by purpose.
+
+---
+
+## Scout
+
+Purpose:
+
+```text
+Reveal hidden clue or enemy information.
+```
+
+Examples:
+
+```text
+Lantern of Clues
+Focused Lens
+Storm Check
+Codex Lab Sigil
+```
+
+Effect:
+
+```text
+Reveal clue.
+Usually should not reduce Corruption.
+```
+
+---
+
+## Stabilize
+
+Purpose:
+
+```text
+Restore Patient Stability.
+```
+
+Examples:
+
+```text
+Guardian’s Touch
+Breath of Dawn
+River Surge
+```
+
+Effect:
+
+```text
+Increase Patient Stability.
+Usually should not directly defeat disease.
+```
+
+Exception:
+
+```text
+Some mixed role skills like River Surge may stabilize and lower Corruption if clinically appropriate.
+```
+
+---
+
+## Shield / Protect
+
+Purpose:
+
+```text
+Prevent deterioration or block complication.
+```
+
+Examples:
+
+```text
+Vital Ward
+Safety Circle
+Isolation Seal
+Barrier Kit
+```
+
+Effect:
+
+```text
+Block damage, prevent spread, prevent fall, prevent complication.
+```
+
+May reduce Corruption only when it directly fits the disease process, such as infection control against Fire/Spread enemies.
+
+---
+
+## Treatment / Counter
+
+Purpose:
+
+```text
+Treat the disease cause.
+```
+
+Examples:
+
+```text
+Airway Rune
+Bronchodilator Mist
+Sugar Spark
+Purity Mark
+River Bolus
+Splint Ward
+Care Plan Ward
+Precision Insight
+```
+
+Effect:
+
+```text
+Reduce Disease Corruption.
+```
+
+---
+
+## Reassess
+
+Purpose:
+
+```text
+Confirm response after intervention and prevent rebound.
+```
+
+Examples:
+
+```text
+Reassess
+Threadwatch
+Codex Link
+```
+
+Effect:
+
+```text
+Prevent rebound.
+Complete care chain.
+May give small Stability bonus after correct treatment.
+Usually should not directly reduce Corruption unless part of a chain bonus.
+```
+
+---
+
+## Command / Consult
+
+Purpose:
+
+```text
+Coordinate outside support, prepare items, reduce AP cost, unlock temporary actions.
+```
+
+Examples:
+
+```text
+Call Pharmacy
+Call Respiratory Support
+Call Rapid Response
+Call Infection Control
+Rally Bell
+Command Shift
+```
+
+Effect:
+
+```text
+Supportive effect.
+Usually should not directly reduce Corruption.
+```
+
+---
+
+# Step 5: Care Attempt Rule
+
+Care Attempt should stay as the basic RPG fallback.
+
+It should:
+
+```text
+Cost 1 AP
+Consume selected hero action
+Reduce Corruption only slightly
+Not advance care chain
+Not count as correct treatment
+Not replace hero role skills
+```
+
+Expected balance:
+
+```text
+Care Attempt: -5 Corruption
+Correct role-based treatment: -25 to -45 Corruption
+```
+
+Star rule:
+
+```text
+Using Care Attempt more than 2 times should prevent 3-star clear.
+Player can still win, but less efficiently.
+```
+
+Do not rename Care Attempt to treatment.
+
+Avoid names like:
+
+```text
+Basic Treatment
+General Treatment
+Universal Treatment
+```
+
+Care Attempt means unfocused aid, not correct clinical care.
+
+---
+
+# Step 6: Hero Skill Fixes
+
+Edit the relevant data files only, likely:
+
+```text
+frontend/src/game/content.ts
+frontend/src/game/clinical.ts
+frontend/src/game/items.ts
+```
+
+Do not rebuild the battle system.
+
+---
+
+## Fix Novice Guardian
+
+Current problem:
+
+```text
+Novice Guardian does not clearly have a corruption-lowering role skill.
+```
+
+Add or replace one skill with:
+
+```js
+{
+  id: 'airway_rune',
+  name: 'Airway Rune',
+  type: 'strike',
+  systemType: 'Air',
+  cost: 2,
+  description: 'Air counter. Reduces Disease Corruption. Stronger when airway clues are present.',
+  shortEffect: 'Air Counter • -25 Corruption',
+  rpgDescription: 'A focused rune opens the flow of breath and weakens Air corruption.',
+  beginnerExplanation: 'This works best when the problem is breathing or wheezing.',
+  nclexExplanation: 'Airway and breathing problems require focused respiratory support and reassessment. This represents targeted airway/oxygenation intervention, not independent prescribing.',
+  strike: 25
+}
+```
+
+Clinical metadata:
+
+```js
+airway_rune: {
+  clinicalTags: ['airway', 'oxygenation', 'respiratory', 'bronchospasm', 'wheezing'],
+  appropriateForSystems: ['Air'],
+  chainRoles: ['Counter'],
+}
+```
+
+Expected result:
+
+```text
+Airway Rune strongly lowers Air Sprite/asthma corruption.
+Airway Rune does very little against leg injury, hypoglycemia, infection, or unrelated disease.
+```
+
+---
+
+## Fix Village Caretaker
+
+Add a Protection/Safety role-based corruption skill.
+
+```js
+{
+  id: 'care_plan_ward',
+  name: 'Care Plan Ward',
+  type: 'strike',
+  systemType: 'Protection',
+  cost: 2,
+  description: 'Protection counter. Reduces corruption when safety, infection spread, falls, or care coordination are part of the problem.',
+  shortEffect: 'Protection Counter • -20 Corruption',
+  rpgDescription: 'A careful plan seals gaps in care and weakens preventable harm.',
+  beginnerExplanation: 'This helps when the problem involves safety, falls, infection spread, or protection.',
+  nclexExplanation: 'Coordinated nursing care reduces preventable harm through safety planning, infection prevention, fall prevention, and reassessment.',
+  strike: 20
+}
+```
+
+Clinical metadata:
+
+```js
+care_plan_ward: {
+  clinicalTags: ['safety', 'fall prevention', 'infection isolation', 'transmission prevention', 'care coordination'],
+  appropriateForSystems: ['Protection', 'Fire', 'Mind', 'Forge'],
+  chainRoles: ['Protect', 'Counter'],
+}
+```
+
+Expected result:
+
+```text
+Care Plan Ward helps Fire/Spread enemies, fall-risk enemies, Forge injury enemies, and Protection problems.
+Care Plan Ward is weak against pure asthma or hypoglycemia.
+```
+
+---
+
+## Fix Night Watcher
+
+Night Watcher should not have a generic attack. His corruption-lowering skill should depend on assessment and trend recognition.
+
+```js
+{
+  id: 'precision_insight',
+  name: 'Precision Insight',
+  type: 'strike',
+  systemType: 'Universal',
+  cost: 2,
+  description: 'Clue-based counter. Weak before clues are revealed, stronger after assessment.',
+  shortEffect: 'Analyze Counter • -18 Corruption after clues',
+  rpgDescription: 'The Watcher strikes only after the pattern becomes clear.',
+  beginnerExplanation: 'This works better after you reveal clues.',
+  nclexExplanation: 'Clinical judgment depends on recognizing cues before acting. Assessment-guided intervention is safer and more effective than guessing.',
+  strike: 18
+}
+```
+
+Clinical metadata:
+
+```js
+precision_insight: {
+  clinicalTags: ['assessment', 'reassessment', 'clinical judgment', 'recognize cues'],
+  requiredClues: [],
+  chainRoles: ['Counter', 'Reassess'],
+}
+```
+
+Expected result:
+
+```text
+Precision Insight is weak before clues are revealed.
+Precision Insight becomes useful after assessment, but should not be stronger than system-specific treatments like Airway Rune, Purity Mark, River Surge, or Sugar Spark.
+```
+
+---
+
+## Fix Energy Treatment
+
+Add or verify Energy corruption skill:
+
+```js
+{
+  id: 'sugar_spark',
+  name: 'Sugar Spark',
+  type: 'strike',
+  systemType: 'Energy',
+  cost: 2,
+  description: 'Energy counter. Requires glucose clue to work well.',
+  shortEffect: 'Energy Counter • -30 Corruption',
+  rpgDescription: 'A spark of fuel breaks the Energy Lock.',
+  beginnerExplanation: 'This is strongest when low glucose is revealed.',
+  nclexExplanation: 'Hypoglycemia requires prompt recognition and glucose support per protocol, followed by reassessment.',
+  strike: 30
+}
+```
+
+Clinical metadata:
+
+```js
+sugar_spark: {
+  clinicalTags: ['glucose replacement', 'hypoglycemia', 'energy'],
+  requiredClues: ['Glucose'],
+  appropriateForSystems: ['Energy'],
+  chainRoles: ['Counter'],
+}
+```
+
+Expected result:
+
+```text
+Sugar Spark should be locked or weak until a glucose clue is revealed.
+Sugar Spark strongly lowers Energy Lock corruption after Low Glucose/Glucose 48 is revealed.
+```
+
+---
+
+## Fix Fire Treatment
+
+Purity Mark should remain a strong Fire corruption skill.
+
+Verify it has:
+
+```js
+strike: 35
+```
+
+Clinical metadata:
+
+```js
+purity_mark: {
+  clinicalTags: ['antimicrobial', 'infection treatment'],
+  appropriateForSystems: ['Fire'],
+  chainRoles: ['Counter'],
+}
+```
+
+Expected result:
+
+```text
+Purity Mark strongly lowers Fire Imp corruption.
+Purity Mark is poor fit against asthma, hypoglycemia, heart failure, and leg injury.
+```
+
+---
+
+## Fix River Treatment
+
+River Surge can be a mixed stabilize/treatment skill.
+
+It can have:
+
+```js
+strike: 30
+stabilize: 15
+```
+
+Clinical metadata:
+
+```js
+river_surge: {
+  clinicalTags: ['circulation', 'fluid resuscitation'],
+  appropriateForSystems: ['River'],
+  unsafeIfClues: ['Crackles', 'Leg Swelling', 'Weight +', 'BNP'],
+  chainRoles: ['Counter', 'Stabilize'],
+}
+```
+
+Expected result:
+
+```text
+River Surge works well against River Sludge / low BP / hypoperfusion.
+River Surge becomes unsafe or poor fit against Cardion Echo / heart failure when fluid overload clues are present.
+```
+
+If the current risk logic is too broad, narrow it to fluid overload clues or remove the risk temporarily and rely on clinical metadata.
+
+---
+
+# Step 7: Fix Items
+
+Edit:
+
+```text
+frontend/src/game/items.ts
+```
+
+Key disease-specific items should reduce Corruption because Corruption is disease control / enemy HP.
+
+---
+
+## Albuterol Mist / Bronchodilator Mist
+
+Keep target as:
+
+```js
+target: 'corruption'
+```
+
+This is already correct if present.
+
+---
+
+## Glucose Gel / Glucose Spark Gel
+
+Change from:
+
+```js
+target: 'stability'
+```
+
+to:
+
+```js
+target: 'corruption'
+```
+
+Keep:
+
+```js
+baseEffect: 30
+```
+
+Change short effect to:
+
+```text
+Requires Low Glucose • -30 Corruption
+```
+
+---
+
+## Fluid Bolus / River Bolus
+
+Change from:
+
+```js
+target: 'stability'
+```
+
+to:
+
+```js
+target: 'corruption'
+```
+
+Keep or adjust:
+
+```js
+baseEffect: 25
+```
+
+Change short effect to:
+
+```text
+Requires Low BP • -25 Corruption
+```
+
+---
+
+## Barrier Kit
+
+Barrier Kit can stay Shield/Protection, but against Fire/Spread enemies it may reduce Corruption slightly.
+
+Expected:
+
+```text
+Blocks spread.
+Against Fire/Spread enemies, may reduce Corruption by 10.
+```
+
+---
+
+# Step 8: Clinical Fit and Wrong Skills
+
+Wrong role-based skills should not be equally effective.
+
+Example:
+
+```text
+Airway Rune vs Air Sprite = strong.
+Airway Rune vs Fire Imp = weak or poor fit.
+Purity Mark vs Fire Imp = strong.
+Purity Mark vs Air Sprite = weak or poor fit.
+River Surge vs River Sludge = strong.
+River Surge vs fluid overload/heart failure clues = unsafe or poor fit.
+Sugar Spark without glucose clue = locked or weak.
+Care Plan Ward vs fall/infection/safety = useful.
+Care Plan Ward vs pure asthma = weak.
+```
+
+Use existing clinical appropriateness and system matching to reduce bad-fit skills.
+
+---
+
+# Step 9: Pre-Battle Team Choice Should Matter
+
+Do not solve every battle with generic skills.
+
+Players should be encouraged to choose the right team before battle.
+
+Before a battle, show preview information such as:
+
+```text
+Enemy: Air Sprite Corruption
+Likely System: Air
+Visible Clues:
+- Breathing Fast
+- O2 Glow Dim
+- Tripod Position
+
+Recommended Roles:
+- Scout
+- Air support
+- Stabilizer
+```
+
+The player should not be hard-locked if they bring the wrong team, but they should likely take more turns and earn fewer stars.
+
+---
+
+# Step 10: Star and Turn Balance
+
+Use stars to reward efficient clinical care.
+
+## Star 1
+
+```text
+Win the battle.
+```
+
+## Star 2
+
+```text
+Complete the clinical care chain.
+```
+
+## Star 3
+
+```text
+Win within target turns with no unsafe actions and no excessive Care Attempt use.
+```
+
+Care Attempt rule:
+
+```text
+More than 2 Care Attempts prevents 3-star clear.
+```
+
+Example target turns:
+
+```text
+Chapter 1 normal enemy: 4 turns for 3 stars
+Chapter 1 boss: 7 turns for 3 stars
+Chapter 2 normal enemy: 5 turns for 3 stars
+```
+
+---
+
+# Step 11: Testing Checklist
+
+After editing, test only Air Sprite first.
+
+## Air Sprite Test
+
+Check:
+
+```text
+1. Novice Guardian has Airway Rune.
+2. Airway Rune reduces Air Sprite Corruption.
+3. Airway Rune is much stronger than Care Attempt.
+4. Bronchodilator Mist lowers Corruption after Wheezing is revealed.
+5. Breath of Dawn restores Stability but does not kill disease.
+6. Lantern of Clues reveals Wheezing.
+7. Care Attempt only lowers Corruption slightly.
+8. Care Attempt does not advance care chain.
+9. More than 2 Care Attempts prevents 3-star clear.
+10. Each hero can still act only once per turn.
+11. Skills still cost AP.
+12. Wrong skills are weak or poor fit.
+13. Correct clinical chain wins faster.
+```
+
+Then test:
+
+```text
+Energy Lock:
+- Glucose clue revealed
+- Sugar Spark or Glucose Gel lowers Corruption
+
+Fire Imp:
+- Purity Mark lowers Corruption strongly
+- Barrier/Isolation prevents spread
+
+River Sludge:
+- River Surge or River Bolus lowers Corruption after low BP clue
+
+Bonegnaw Sprain:
+- Protection/Forge skills work
+- Air/Fire/Energy skills are weak or poor fit
+```
+
+---
+
+# Final Instruction
+
+Make this a focused mechanic fix.
+
+Do not rebuild the UI.
+
+Do not add a third stat.
+
+Do not remove Care Attempt.
+
+Do not make all heroes generic.
+
+Do not give everyone a universal treatment.
+
+Only fix the skill/item data and clinical metadata so role-based skills properly reduce Disease Corruption when they fit the disease.
+
+MongoDB/database persistence can be addressed later after the battle mechanics work.
