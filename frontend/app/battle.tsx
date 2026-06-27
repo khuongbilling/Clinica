@@ -126,11 +126,8 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     if (enemy.primarySystem === "Fire" || enemy.secondarySystem === "Fire") return "Isolation Kit";
     return "Lab Token";
   };
-  const availableCalls = CALL_OPTIONS.filter(opt => {
-    if (opt.id === "call_respiratory") return enemy.primarySystem === "Air" || enemy.secondarySystem === "Air" || state.revealedLabels.some(l => l.toLowerCase().includes("wheez"));
-    if (opt.id === "call_infection") return enemy.primarySystem === "Fire" || enemy.secondarySystem === "Fire";
-    return true;
-  });
+  // Show ALL calls all the time — players learn by misusing them (penalty handled in applyCall)
+  const availableCalls = CALL_OPTIONS;
   const handleCall = (opt: typeof CALL_OPTIONS[number]) => {
     const itemName = opt.effect === "addRelevantItem" ? decideCallItem() : undefined;
     const res = applyCall(state, opt, itemName);
