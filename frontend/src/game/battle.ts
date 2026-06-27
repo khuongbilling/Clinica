@@ -73,6 +73,12 @@ export interface BattleState {
   nextAirActionDiscount: boolean;
   rapidResponseActive: boolean;
   dangerTriggerActive: boolean;
+
+  // Consult balance tracking
+  consultsUsed: number;
+  emergencyCallsUsed: number;
+  inappropriateConsultsUsed: number;
+  blockNextSpread: boolean;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -157,6 +163,10 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     nextAirActionDiscount: false,
     rapidResponseActive: false,
     dangerTriggerActive: false,
+    consultsUsed: 0,
+    emergencyCallsUsed: 0,
+    inappropriateConsultsUsed: 0,
+    blockNextSpread: false,
   };
 }
 
@@ -507,7 +517,6 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
 }
 
 export function applyCall(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {
-  // Per-consult tracking
   const callKey: keyof BattleState['callsUsed'] | null =
     option.id === 'call_pharmacy' ? 'pharmacy' :
     option.id === 'call_respiratory' ? 'respiratory' :
@@ -517,9 +526,9 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
   if (callKey && s.callsUsed[callKey]) {
     return { state: s, message: `${option.name} has already been called this battle.`, aborted: true };
   }
-  if (s.ap < option.costAP) return { state: s, message: 'Not enough AP.', aborted: true };
+  if (s.ap < option.costAP) return { state: s, message: `Not enough AP (needs ${option.costAP}).`, aborted: true };
 
-  // Rapid Response gating — only allowed when patient is crashing
+  // Rapid Response hard-gate
   if (option.id === 'call_rapid' && s.stability > 30 && !s.dangerTriggerActive) {
     return { state: s, message: 'Rapid Response is reserved for crashing patients (Stability ≤ 30).', aborted: true };
   }
@@ -530,23 +539,34 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
   const { state: post, aborted } = applyResolutionToState(s, res, option.name);
   if (aborted) return { state: post, message: `${option.name} is locked.`, status: 'locked', aborted: true };
 
-  // Calls do NOT consume a hero action
+  // Calls do NOT consume a hero action — but they DO count toward consultsUsed
   let next: BattleState = {
     ...post,
     ap: s.ap - option.costAP,
     callUsed: true,
     callsUsed: callKey ? { ...s.callsUsed, [callKey]: true } : s.callsUsed,
-    log: [...post.log, `📞 ${option.name}.`],
+    consultsUsed: post.consultsUsed + 1,
+    log: [...post.log, `📞 ${option.name} (−${option.costAP} AP).`],
   };
 
+  const revealedLower = next.revealedLabels.map(l => l.toLowerCase());
+  const hasRespClue = revealedLower.some(l => /wheez|o2|tripod|breathing fast/.test(l));
+  const hasInfectionClue = revealedLower.some(l => /redness|infection|fever|wound/.test(l));
+
   if (option.id === 'call_pharmacy') {
-    // Pick contextually-best item
+    if (next.revealedLabels.length === 0) {
+      // No clinical data yet — Pharmacy can only hand over a generic Lab Sigil/Token
+      const fallback = 'Lab Token';
+      next.inventory = { ...next.inventory, [fallback]: (next.inventory[fallback] || 0) + 1 };
+      next.log.push(`Pharmacy needs more assessment data. ${fallback} added instead.`);
+      return { state: next, message: 'Pharmacy needs assessment first.', status: res.status };
+    }
+
     let itemKey = 'Lab Token';
-    const revealed = next.revealedLabels.map(l => l.toLowerCase());
-    if (revealed.some(l => l.includes('wheeze') || l.includes('wheezing'))) itemKey = 'Albuterol Mist';
-    else if (revealed.some(l => l.includes('glucose'))) itemKey = 'Glucose Gel';
-    else if (revealed.some(l => l.includes('bp') || l.includes('blood pressure'))) itemKey = 'Fluid Bolus';
-    else if (s.enemy.primarySystem === 'Fire') itemKey = 'Isolation Kit';
+    if (revealedLower.some(l => l.includes('wheez'))) itemKey = 'Albuterol Mist';
+    else if (revealedLower.some(l => l.includes('glucose'))) itemKey = 'Glucose Gel';
+    else if (revealedLower.some(l => /bp|blood pressure/.test(l))) itemKey = 'Fluid Bolus';
+    else if (s.enemy.primarySystem === 'Fire' || (s.enemyClinical?.diseaseTags || []).some(t => /infection|spread/.test(t))) itemKey = 'Isolation Kit';
     else if (s.enemy.primarySystem === 'Air') itemKey = 'Albuterol Mist';
     else if (s.enemy.primarySystem === 'Energy') itemKey = 'Glucose Gel';
     else if (s.enemy.primarySystem === 'River') itemKey = 'Fluid Bolus';
@@ -559,27 +579,43 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
   }
 
   if (option.id === 'call_respiratory') {
-    next.nextAirActionDiscount = true;
+    const appropriate = s.enemy.primarySystem === 'Air' || hasRespClue;
+    if (!appropriate) {
+      next.inappropriateConsultsUsed = next.inappropriateConsultsUsed + 1;
+      next.log.push(`Respiratory Support does not fit the current clues. Limited benefit.`);
+      return { state: next, message: 'Inappropriate consult — limited benefit.', status: 'inappropriate' };
+    }
+    // Unlock Assisted Airflow (open_airflow) — do NOT also discount Air actions
     if (option.actionId && !next.temporaryActionIds.includes(option.actionId)) {
       next.temporaryActionIds = [...next.temporaryActionIds, option.actionId];
     }
-    next.log.push(`Respiratory Support joins. Next Air action costs 1 less AP.`);
+    next.log.push(`Respiratory Support joins. Assisted Airflow is available this battle.`);
     return { state: next, message: 'Respiratory support engaged.', status: res.status };
   }
 
   if (option.id === 'call_rapid') {
-    next.shieldNext = Math.max(next.shieldNext, 100); // fully block next attack
-    next.stability = clamp(next.stability + 10, 0, 100);
+    next.shieldNext = Math.max(next.shieldNext, 100);
+    next.stability = clamp(next.stability + 15, 0, 100);
     next.rapidResponseActive = true;
-    next.log.push(`Rapid Response: shield + Stability +10. Next turn AP restored to ≥4.`);
+    next.emergencyCallsUsed = next.emergencyCallsUsed + 1;
+    next.log.push(`Rapid Response stabilized the crisis. Stability +15, next attack blocked.`);
     return { state: next, message: 'Rapid Response stabilized the crisis.', status: res.status };
   }
 
   if (option.id === 'call_infection') {
+    const appropriate = s.enemy.primarySystem === 'Fire'
+      || (s.enemyClinical?.diseaseTags || []).some(t => /infection|spread/.test(t))
+      || hasInfectionClue;
+    if (!appropriate) {
+      next.inappropriateConsultsUsed = next.inappropriateConsultsUsed + 1;
+      next.log.push(`Infection Control does not match the current problem. Limited benefit.`);
+      return { state: next, message: 'Inappropriate consult — limited benefit.', status: 'inappropriate' };
+    }
     if (option.actionId && !next.temporaryActionIds.includes(option.actionId)) {
       next.temporaryActionIds = [...next.temporaryActionIds, option.actionId];
     }
-    next.log.push(`Infection Control engaged.`);
+    next.blockNextSpread = true;
+    next.log.push(`Infection Control joins. Isolation Seal available, next spread blocked.`);
     return { state: next, message: 'Infection Control engaged.', status: res.status };
   }
 
@@ -623,11 +659,8 @@ export function endPlayerTurn(s: BattleState): BattleState {
     return { ...s, stability: 0, corruption, shieldNext: 0, log, outcome: 'loss' };
   }
 
-  // Next-turn AP — dynamic based on patient state, with Rapid Response minimum
-  const modifiers: { preventNextAPLoss?: boolean } = {};
-  if (s.rapidResponseActive) modifiers.preventNextAPLoss = true;
-  let nextAp = getTurnAP(stability, corruption, s.chapter, modifiers);
-  if (s.rapidResponseActive) nextAp = Math.max(nextAp, 4);
+  // Next-turn AP — dynamic based on patient state
+  let nextAp = getTurnAP(stability, corruption, s.chapter, {});
   log.push(apMessage(nextAp));
 
   // Reset hero action map

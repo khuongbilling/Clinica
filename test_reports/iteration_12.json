@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only test of Call Team / Consult balance changes. Wrote 37 deterministic logic tests against /app/frontend/src/game/{items,battle,clinical}.ts using sucrase-node. ALL 37 PASSED. Verified: AP costs (Pharmacy/Respiratory/Infection=2 AP, Rapid=3 AP); Pharmacy-without-clue adds Lab Token + no discount + correct log; Pharmacy-with-Wheezing adds Albuterol Mist + preparedItemDiscount=Albuterol Mist + effective cost 1 AP; Respiratory inappropriate on river_sludge increments inappropriateConsultsUsed + does NOT unlock open_airflow + correct log; Respiratory appropriate on Air Sprite unlocks open_airflow AND nextAirActionDiscount stays false AND Breath of Dawn consumes full AP (no discount); Rapid hard-gate aborts at stability>30 with no danger trigger and succeeds at stability≤30 with +15 stability, shieldNext=100, emergencyCallsUsed++; Infection inappropriate on Air Sprite increments inappropriateConsultsUsed + correct log + no temp action; Star penalties for consultsUsed=2, emergencyCallsUsed=1, inappropriateConsultsUsed=1 each withhold the 3rd star; One appropriate consult still earns 3 stars. Regression: dynamic AP=4 at full stability, hero-action-once-per-turn enforced (second applySkill aborts), endPlayerTurn no longer auto-restores AP after Rapid (rapidResponseActive cleared, AP recomputed dynamically). Verified Expo web preview loads without red-screen.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/frontend/tests/consult_balance.test.ts"
+  ],
+  "action_items": [
+    "Note: A non-blocking expo console warning '\"shadow*\" style props are deprecated. Use \"boxShadow\".' was emitted on home load — unrelated to this feature, but worth a sweep later.",
+    "Full Playwright run-through of the actual Battle screen (onboarding → trial battle → Call tab) was skipped to stay within scope and tokens; logic + URL-param plumbing was confirmed directly. Main agent may self-test the result.tsx CONSULT USE card visually if desired (it renders only when consults/emergency/inappropriate > 0)."
+  ],
+  "critical_code_review_comments": [
+    "battle.tsx line 472: rapidGated badge text exactly matches spec ('Reserved for Stability ≤ 30').",
+    "result.tsx uses COLORS.warning with fallback to COLORS.brand for consultWarn — safe since COLORS.warning is already used elsewhere (battle.tsx stabilityColor).",
+    "applyCall: consultsUsed counter is incremented for ALL calls including Rapid Response (line 548). Per the request, Rapid uses emergencyCallsUsed; but consultsUsed also ticks up. Star logic treats Rapid as both consult+emergency, so a lone Rapid yields consultsUsed=1 + emergencyCallsUsed=1 → emergency penalty triggers correctly (verified). This is consistent with spec.",
+    "battle.tsx availableCalls filter (line 129-133) hides Respiratory if not Air/no wheez clue and Infection if not Fire — this means the INAPPROPRIATE path for Respiratory/Infection cannot normally be triggered from the UI on Air Sprite (Infection button is filtered out). However the test spec asks for INFECTION-INAPPROPRIATE on Air Sprite — UI filtering would prevent the user from ever calling it. Logic-level handling is correct, but UI filter may mask this code path. Main agent: confirm whether the filter should allow inappropriate consults to be selected so the inappropriate-penalty path is reachable through the UI."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100% (37/37 logic tests)" },
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reusable: /app/frontend/tests/consult_balance.test.ts runs via `cd /app/frontend && npx sucrase-node tests/consult_balance.test.ts`. Covers all consult balance invariants (AP costs, pharmacy clue gating + discount, respiratory/infection inappropriate paths, rapid hard-gate, star penalties, regression for dynamic AP and hero-action-per-turn). One nuance to flag: UI filter in battle.tsx availableCalls hides call_infection from non-Fire enemies, so the user cannot trigger Infection-on-Air-Sprite through normal UI — the inappropriate-penalty code path exists in applyCall but is currently unreachable for that specific case via UI.",
+  "rca_of_issue": "n/a — feature passes."
+}

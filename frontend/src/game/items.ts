@@ -139,21 +139,21 @@ export const CALL_OPTIONS: CallOption[] = [
     costAP: 2,
     effect: 'unlockAction',
     actionId: 'open_airflow',
-    description: 'Respiratory Support joins. Unlocks Open Airflow.',
+    description: 'Unlocks Open Airflow. Strongest when respiratory clues are present.',
   },
   {
     id: 'call_pharmacy',
     name: 'Call Pharmacy',
     costAP: 2,
     effect: 'addRelevantItem',
-    description: 'Pharmacy prepares a useful intervention based on the situation.',
+    description: 'Prepares a context-relevant item (-1 AP). Needs at least one clue revealed.',
   },
   {
     id: 'call_rapid',
     name: 'Call Rapid Response',
-    costAP: 2,
+    costAP: 3,
     effect: 'rapidResponse',
-    description: 'Block next attack and +10 Stability. (Stability ≤ 30)',
+    description: 'Emergency only (Stability ≤ 30). +15 Stability + block next enemy attack.',
   },
   {
     id: 'call_infection',
@@ -161,7 +161,7 @@ export const CALL_OPTIONS: CallOption[] = [
     costAP: 2,
     effect: 'unlockAction',
     actionId: 'containment_order',
-    description: 'Infection Control joins. Unlocks Containment Order.',
+    description: 'Unlocks Containment Order. Strongest against infection/spread problems.',
   },
 ];
 

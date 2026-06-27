@@ -740,6 +740,9 @@ export interface BattleScoring {
   poorFitActionsUsed: number;
   turnsTaken: number;
   reassessUsed: boolean;
+  consultsUsed?: number;
+  emergencyCallsUsed?: number;
+  inappropriateConsultsUsed?: number;
 }
 
 export function computeStars(scoring: BattleScoring, rules: StarRules): { stars: number; details: string[] } {
@@ -762,8 +765,11 @@ export function computeStars(scoring: BattleScoring, rules: StarRules): { stars:
   const safe = scoring.unsafeActionsUsed === 0;
   const poorOk = rules.allowOnePoorFit ? scoring.poorFitActionsUsed <= 1 : scoring.poorFitActionsUsed === 0;
   const reassessOk = !rules.requireReassess || scoring.reassessUsed;
+  const consultsOk = (scoring.consultsUsed ?? 0) <= 1;
+  const noEmergency = (scoring.emergencyCallsUsed ?? 0) === 0;
+  const noInappropriate = (scoring.inappropriateConsultsUsed ?? 0) === 0;
 
-  if (scoring.won && efficient && safe && poorOk && reassessOk) {
+  if (scoring.won && efficient && safe && poorOk && reassessOk && consultsOk && noEmergency && noInappropriate) {
     stars++;
     details.push('Efficient and safe care.');
   }

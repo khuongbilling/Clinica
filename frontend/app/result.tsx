@@ -13,14 +13,18 @@ import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type Lear
 export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
-  const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess } = useLocalSearchParams<{
+  const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; shards?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
+    consults?: string; emergency?: string; inappropriate?: string;
   }>();
   const won = outcome === "win";
   const isTraining = training === "1";
   const baseShards = parseInt(shards || "0", 10);
   const fullChainCompleted = fullChain === "1";
+  const consultsUsed = parseInt(consults || "0", 10);
+  const emergencyCallsUsed = parseInt(emergency || "0", 10);
+  const inappropriateConsultsUsed = parseInt(inappropriate || "0", 10);
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -42,8 +46,11 @@ export default function Result() {
       poorFitActionsUsed: parseInt(poorFit || "0", 10),
       turnsTaken: parseInt(turns || "0", 10),
       reassessUsed: reassess === "1",
+      consultsUsed,
+      emergencyCallsUsed,
+      inappropriateConsultsUsed,
     }, starRules);
-  }, [won, fullChainCompleted, unsafe, poorFit, turns, reassess, starRules]);
+  }, [won, fullChainCompleted, unsafe, poorFit, turns, reassess, consultsUsed, emergencyCallsUsed, inappropriateConsultsUsed, starRules]);
 
   const rewardBreakdown = won ? calculateRewards(baseShards, starResult.stars, fullChainCompleted) : null;
 
@@ -106,6 +113,24 @@ export default function Result() {
                 ))}
               </View>
             </View>
+
+            {(consultsUsed > 0 || emergencyCallsUsed > 0 || inappropriateConsultsUsed > 0) && (
+              <View style={styles.consultCard} testID="result-consult-notes">
+                <Text style={styles.consultTitle}>CONSULT USE</Text>
+                {consultsUsed === 1 && inappropriateConsultsUsed === 0 && emergencyCallsUsed === 0 && (
+                  <Text style={styles.consultGood}>✓ One consult used appropriately — efficient teamwork.</Text>
+                )}
+                {consultsUsed > 1 && (
+                  <Text style={styles.consultWarn}>• {consultsUsed} consults used — efficiency star reduced.</Text>
+                )}
+                {emergencyCallsUsed > 0 && (
+                  <Text style={styles.consultWarn}>• Rapid Response was needed — efficiency star withheld.</Text>
+                )}
+                {inappropriateConsultsUsed > 0 && (
+                  <Text style={styles.consultWarn}>• {inappropriateConsultsUsed} consult{inappropriateConsultsUsed > 1 ? 's' : ''} did not fit the clinical problem.</Text>
+                )}
+              </View>
+            )}
 
             <View style={styles.statRow}>
               <View style={styles.stat}>
@@ -220,4 +245,8 @@ const styles = StyleSheet.create({
   starsRow: { flexDirection: "row", marginTop: 4 },
   starLine: { flexDirection: "row", alignItems: "center", gap: 6 },
   starLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  consultCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 4 },
+  consultTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2, marginBottom: 4 },
+  consultGood: { color: COLORS.success, fontSize: 12, lineHeight: 17 },
+  consultWarn: { color: COLORS.warning || COLORS.brand, fontSize: 12, lineHeight: 17 },
 });

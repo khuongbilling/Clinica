@@ -191,6 +191,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         poorFit: String(state.poorFitActionsUsed),
         turns: String(state.turnsTaken),
         reassess: state.reassessUsedAnytime ? "1" : "0",
+        consults: String(state.consultsUsed),
+        emergency: String(state.emergencyCallsUsed),
+        inappropriate: String(state.inappropriateConsultsUsed),
       },
     });
   };
