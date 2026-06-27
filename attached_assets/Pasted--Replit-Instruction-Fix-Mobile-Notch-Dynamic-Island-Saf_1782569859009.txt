@@ -1,0 +1,309 @@
+# Replit Instruction: Fix Mobile Notch / Dynamic Island Safe Area
+
+## Goal
+
+The mobile battle UI is much better now, but on phones with a black notch, dynamic island, or camera cutout, the top phone area is covering text.
+
+Fix the layout so the game respects the phone safe area and automatically moves content down enough on devices with a notch/dynamic island.
+
+Do not change battle mechanics. This is a layout-only fix.
+
+---
+
+# Problem
+
+On some phones, especially iPhone-style screens, the top black camera/dynamic island area overlaps the enemy label/title.
+
+The app should detect the device safe area and add padding automatically.
+
+Use CSS safe-area variables:
+
+```css
+env(safe-area-inset-top)
+env(safe-area-inset-bottom)
+env(safe-area-inset-left)
+env(safe-area-inset-right)
+```
+
+---
+
+# Step 1: Check Viewport Meta Tag
+
+Find the main HTML file, likely:
+
+```text
+index.html
+frontend/index.html
+public/index.html
+```
+
+Make sure the viewport meta tag includes:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+```
+
+Important:
+
+```text
+viewport-fit=cover
+```
+
+is required for safe-area handling on iPhone-like screens.
+
+If the viewport tag already exists, update it instead of adding a duplicate.
+
+---
+
+# Step 2: Add Safe Area Variables
+
+In the global CSS file, likely one of these:
+
+```text
+frontend/src/index.css
+frontend/src/App.css
+frontend/src/styles.css
+frontend/src/globals.css
+```
+
+Add:
+
+```css
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+```
+
+---
+
+# Step 3: Apply Safe Area to Main Battle Page
+
+Find the main battle container. It may be named something like:
+
+```css
+.battle-page
+.battle-screen
+.battle-container
+.mobile-battle
+```
+
+Add safe-area padding.
+
+Use:
+
+```css
+.battle-page,
+.battle-screen {
+  min-height: 100dvh;
+  height: 100dvh;
+  padding-top: calc(var(--safe-top) + 10px);
+  padding-bottom: calc(var(--safe-bottom) + 10px);
+  padding-left: max(14px, var(--safe-left));
+  padding-right: max(14px, var(--safe-right));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+```
+
+If only one of these classes exists, apply it to the existing battle container.
+
+Do not add duplicate containers.
+
+---
+
+# Step 4: If There Is a Fixed Header or Close Button
+
+If the help icon or close button uses fixed/absolute positioning near the top, adjust it too.
+
+Example:
+
+```css
+.battle-top-actions,
+.close-button,
+.help-button {
+  top: calc(var(--safe-top) + 12px);
+}
+```
+
+If the icons are inside the normal flow, do not force fixed positioning.
+
+---
+
+# Step 5: If the Top Enemy Header Still Gets Covered
+
+Add safe-area margin to the enemy header.
+
+Find the enemy header class, likely:
+
+```css
+.enemy-header
+.enemy-section
+.battle-enemy-header
+```
+
+Add:
+
+```css
+.enemy-header,
+.enemy-section {
+  margin-top: max(0px, calc(var(--safe-top) - 8px));
+}
+```
+
+If this creates too much space on phones without notches, reduce it to:
+
+```css
+.enemy-header,
+.enemy-section {
+  margin-top: calc(var(--safe-top) * 0.5);
+}
+```
+
+---
+
+# Step 6: Keep One-Screen Layout
+
+Adding safe-area padding may make the layout taller, so reduce spacing slightly on small screens.
+
+Inside the mobile media query, add:
+
+```css
+@media (max-width: 480px) {
+  .battle-page,
+  .battle-screen {
+    padding-top: calc(var(--safe-top) + 8px);
+    padding-bottom: calc(var(--safe-bottom) + 8px);
+  }
+
+  .enemy-portrait {
+    width: 68px;
+    height: 68px;
+  }
+
+  .enemy-title {
+    font-size: clamp(1.35rem, 6vw, 1.95rem);
+    line-height: 0.95;
+  }
+
+  .codex-card {
+    min-height: 38px;
+    max-height: 42px;
+  }
+
+  .hero-card {
+    min-height: 64px;
+  }
+
+  .action-card {
+    min-height: 78px;
+  }
+}
+```
+
+The goal is still:
+
+```text
+Enemy + meters + codex/clues + team + AP + actions visible on one screen.
+```
+
+---
+
+# Step 7: Bottom Safe Area
+
+If the bottom home indicator overlaps buttons or action cards, apply bottom safe-area padding to the action area.
+
+Find the action panel class, likely:
+
+```css
+.action-panel
+.battle-action-panel
+.action-area
+```
+
+Add:
+
+```css
+.action-panel,
+.battle-action-panel,
+.action-area {
+  padding-bottom: calc(var(--safe-bottom) + 8px);
+}
+```
+
+If this makes the action cards too tall, reduce action card height rather than allowing overlap.
+
+---
+
+# Step 8: Avoid Hardcoded Top Offsets
+
+Search for hardcoded top padding/margins like:
+
+```css
+padding-top: 0;
+padding-top: 8px;
+top: 0;
+top: 10px;
+margin-top: -;
+```
+
+Do not remove all of them blindly, but make sure the main battle screen and top buttons do not ignore the safe area.
+
+Replace unsafe top positioning with:
+
+```css
+top: calc(var(--safe-top) + 10px);
+```
+
+or:
+
+```css
+padding-top: calc(var(--safe-top) + 10px);
+```
+
+---
+
+# Step 9: Test Device Sizes
+
+Test in mobile preview at:
+
+```text
+375 x 812
+390 x 844
+393 x 852
+414 x 896
+430 x 932
+```
+
+Also test with iPhone-style device emulation if available.
+
+Confirm:
+
+```text
+1. Top text is not blocked by the notch/dynamic island.
+2. Help icon and close icon are not blocked.
+3. Enemy title remains visible.
+4. Corruption and Stability bars remain visible.
+5. Codex/clue row remains visible.
+6. Bottom buttons are not blocked by the home indicator.
+7. The full battle screen still fits without unnecessary scrolling.
+8. There is not excessive empty space on phones without a notch.
+```
+
+---
+
+# Final Requirement
+
+This should be a responsive safe-area fix.
+
+Do not solve it by adding a fixed large top margin like 60px to every device.
+
+Use:
+
+```css
+env(safe-area-inset-top)
+```
+
+so the phone automatically decides how much space is needed.
