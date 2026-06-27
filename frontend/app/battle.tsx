@@ -337,7 +337,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                   const a = TEMP_ACTIONS[aid]; if (!a) return null;
                   const preview = previewTempStatus(state, aid);
                   const isLocked = preview.status === "locked";
-                  const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing";
+                  const selHero = state.team.find(h => h.id === state.selectedHeroId);
+                  const heroBlocked = !selHero || !!state.heroActionsUsed[selHero.id];
+                  const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing" || heroBlocked;
                   return (
                     <Pressable
                       key={`tmp-${aid}`}
@@ -348,8 +350,12 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                       testID={`battle-temp-${aid}`}
                     >
                       <StatusBadge status={preview.status} />
-                      <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1}>{a.name}</Text>
-                      <Text style={styles.actionEffect} numberOfLines={2}>Team Support • {a.costAP} AP</Text>
+                      <View style={styles.actionHead}>
+                        <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1}>{a.name}</Text>
+                        <Text style={styles.apTag}>{a.costAP} AP</Text>
+                      </View>
+                      <Text style={styles.actionEffect} numberOfLines={2}>{a.shortEffect || a.description}</Text>
+                      <Text style={styles.actionHero} numberOfLines={1}>Team Support · {a.systemType || "Universal"}</Text>
                     </Pressable>
                   );
                 })}

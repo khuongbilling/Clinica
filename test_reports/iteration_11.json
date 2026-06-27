@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 11 verifies the 'Open Airflow' misleading-card bug fix (and the parallel Containment Order copy fix). Frontend-only test on mobile viewport 390x844 against https://med-adventure-2.preview.emergentagent.com using the documented fast path: welcome BEGIN → name (TEST_BugVerify) → quiz 3x guardian → ACCEPT → goal-nursingStudent → CONTINUE → trial-enter → trial battle vs Air Sprite (asthma exacerbation). Tapped tab-call → call-opt-call_respiratory → tab-actions, and inspected battle-temp-open_airflow. RESULTS — ALL 4 SPEC CHECKS PASS:\n\n(1) CARD EFFECT LINE: 'Open Airflow' card now reads exactly 'Air Counter • -25 Corruption · +10 Stability' (replacing the misleading 'Team Support • 1 AP'). The header still shows '1 AP' badge. ✅\n(2) CARD SYSTEM LINE: Below the effect, the source line reads 'Team Support · Air' (was the misleading source). ✅\n(3) LONG-PRESS DETAIL MODAL: Battle Effect section reads 'Open the airway. Corruption -25, Stability +10.' — RPG jargon 'Strike 25 + stabilize 10' is gone. Kicker still shows 'TEAM SUPPORT · 1 AP'. ✅\n(4) FUNCTIONAL REGRESSION: Using Open Airflow against the Air Sprite drove corruption 80→52 (Δ-28, in the ~25 ballpark with system bonus) and stability 50→56% (Δ+6, ~10 base modulated by clinical appropriateness/cap). Mechanically still works. ✅\n\nFAST REGRESSION: Hero pills (novice_guardian, village_caretaker) render and switch correctly; ACTIONS/ITEMS/CALL/TEAM tabs all reachable; AP dots refresh on end-turn; call-respiratory marked 'Already called' after use; Open Airflow appears in temp-actions list at top of skill grid; Status badge ('RECOMMENDED') still renders on the card. No red screen, no new console errors (only carry-over shadow*/pointerEvents/useNativeDriver web-preview warnings).\n\nCONTAINMENT ORDER: Not directly UI-tested live (trial battle is an Air enemy; a Fire enemy is not reachable from onboarding without additional level navigation). However, verified via source review of /app/frontend/src/game/items.ts:192-201 that containment_order has shortEffect='Protect Counter • -20 Corruption · 30% Shield', systemType='Protection', description='Halt spread. Corruption -20, Shield 30%.' — and the SAME render block (battle.tsx:357-358) drives both temp actions via `a.shortEffect || a.description` and `Team Support · {a.systemType || 'Universal'}`. So the same fix mechanically applies; the verified open_airflow render proves the rendering branch is correct for containment_order too. (Flagged for main-agent self-test or a dedicated fire-enemy battle to visually confirm.)\n\nBACKEND NOT TOUCHED per request; no backend regression run this iteration.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "Animated useNativeDriver", "issue": "Carry-over web-preview warning, non-blocking." },
+      { "component": "shadow* style props", "issue": "Carry-over deprecation warning. Non-blocking." },
+      { "component": "props.pointerEvents", "issue": "Carry-over deprecation warning. Non-blocking." }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_11.json"
+  ],
+  "action_items": [
+    "(Optional self-test) Visually confirm Containment Order card text against a fire_imp / infection enemy. Code is in place at items.ts:192-201 and uses the same battle.tsx render path that is verified for Open Airflow, so this is a low-risk visual confirmation only.",
+    "(Cosmetic carry-over) Migrate shadow* → boxShadow and props.pointerEvents → style.pointerEvents for RN-Web 0.74+ to clear console warnings."
+  ],
+  "critical_code_review_comments": [
+    "items.ts:169-179 — TempAction interface correctly extended with optional shortEffect and systemType; backward-compatible.",
+    "items.ts:182-191 — open_airflow now carries shortEffect='Air Counter • -25 Corruption · +10 Stability', systemType='Air', clinical description. Matches spec exactly.",
+    "items.ts:192-201 — containment_order parallel fields set: shortEffect='Protect Counter • -20 Corruption · 30% Shield', systemType='Protection'. Matches spec.",
+    "battle.tsx:357-358 — Temp action card now renders `{a.shortEffect || a.description}` as the effect line and `Team Support · {a.systemType || 'Universal'}` as the source line, eliminating the prior misleading 'Team Support • {cost} AP' effect line. AP badge still present in header (line 355).",
+    "battle.tsx:584-596 — Temp detail modal already uses `a.description` for the Battle Effect body, so the clinical phrasing 'Open the airway. Corruption -25, Stability +10.' picks up automatically. Good DRY — single source of truth in items.ts."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_11.json"
+  ],
+  "success_rate": {
+    "backend": "not tested this iteration (per request - frontend only; previous iteration 31/31 pytest pass)",
+    "frontend": "100% on the requested verifications — 4/4 spec checks PASS for Open Airflow card text, source line, long-press detail clinical wording, and functional regression (corruption/stability deltas in expected range). Containment Order verified via source review only (no fire enemy in trial battle)."
+  },
+  "seed_data_creation": "Created onboarding profile TEST_BugVerify (guardian/nursingStudent) via UI fast path. Not auto-cleaned.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bug-fix is fully verified for open_airflow. Same render branch governs containment_order — if a future iteration introduces a fire-enemy reachable from onboarding, do a visual spot-check. Backend untouched. Fast onboarding path used: welcome-begin → onboarding-name-input + onboarding-name-continue → quiz-q1/q2/q3-answer-guardian → result-accept → goal-nursingStudent → goal-continue → trial-enter → battle screen with testIDs tab-actions/items/call/team, call-opt-call_respiratory, battle-temp-open_airflow, detail-cancel/detail-use.",
+  "rca_of_issue": "Original bug: TempAction interface had no shortEffect/systemType fields, so the battle.tsx temp action card defaulted to a generic 'Team Support • {cost} AP' label as the effect line. Players (correctly) read this as the action's effect description, but it conveyed neither the -25 corruption nor +10 stability the action actually applied — yielding the user's confusion ('seems to lower corruption, but it doesn't list that'). FIX: (a) extend TempAction with optional shortEffect + systemType; (b) populate them on open_airflow and containment_order with clinically-worded effect strings; (c) change battle.tsx temp card to render `a.shortEffect || a.description` for the effect line and `Team Support · {a.systemType}` for the source line. The detail modal already used a.description, so updating that string also propagated to long-press detail. Verified live."
+}

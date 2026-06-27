@@ -171,6 +171,8 @@ export interface TempAction {
   name: string;
   costAP: number;
   description: string;
+  shortEffect?: string;
+  systemType?: string;
   stabilize?: number;
   strike?: number;
   shield?: number;
@@ -181,7 +183,9 @@ export const TEMP_ACTIONS: Record<string, TempAction> = {
     id: 'open_airflow',
     name: 'Open Airflow',
     costAP: 1,
-    description: 'Open the airway. Strike 25 + stabilize 10.',
+    systemType: 'Air',
+    description: 'Open the airway. Corruption -25, Stability +10.',
+    shortEffect: 'Air Counter • -25 Corruption · +10 Stability',
     strike: 25,
     stabilize: 10,
   },
@@ -189,7 +193,9 @@ export const TEMP_ACTIONS: Record<string, TempAction> = {
     id: 'containment_order',
     name: 'Containment Order',
     costAP: 1,
-    description: 'Halt spread. Strike 20 + shield 30%.',
+    systemType: 'Protection',
+    description: 'Halt spread. Corruption -20, Shield 30%.',
+    shortEffect: 'Protect Counter • -20 Corruption · 30% Shield',
     strike: 20,
     shield: 30,
   },
