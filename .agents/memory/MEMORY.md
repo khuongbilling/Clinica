@@ -1,1 +1,2 @@
 - [Clinica setup](clinica-setup.md) — Expo 54 web on port 5000 (CI=1 flag required); backend FastAPI port 8000; emergentintegrations removed; yarn fails use npm.
+- [Clinica adaptive system](clinica-adaptive-system.md) — two-axis: LearningProfile→ExplanationLayer (depth/language) + DifficultyLevel (clue visibility); fully independent axes.

@@ -12,6 +12,8 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
 import { getMission } from "@/src/game/missions";
 import { useTestSession } from "@/src/game/testSession";
+import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
+import { getDifficultyModifier } from "@/src/game/difficulty";
 
 export default function Result() {
   const router = useRouter();
@@ -43,6 +45,9 @@ export default function Result() {
   const mission = enemy ? getMission(enemy.id) : null;
   const enemyClinical = enemy ? ENEMY_CLINICAL[enemy.id] : undefined;
   const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
+  const explanationLayer = getExplanationLayer(player?.learning_profile);
+  const victorySummary = enemy ? getVictorySummary(enemy.id, explanationLayer) : null;
+  const diffMod = getDifficultyModifier(player?.difficulty as any);
   const starRules = getStarRules(profile, enemyClinical);
   const starResult = useMemo(() => {
     return computeStars({
@@ -140,6 +145,43 @@ export default function Result() {
                 ))}
               </View>
             </View>
+
+            {victorySummary && (
+              <View style={styles.victorySummaryCard}>
+                <Text style={styles.victorySummaryTitle}>WHAT YOU LEARNED</Text>
+                <Text style={styles.victorySummaryText}>{victorySummary.summary}</Text>
+                {victorySummary.nclexSteps && victorySummary.nclexSteps.length > 0 && (
+                  <View style={{ marginTop: 8, gap: 4 }}>
+                    {victorySummary.nclexSteps.map((step, i) => (
+                      <View key={i} style={styles.victoryStepRow}>
+                        <Ionicons name="checkmark-circle-outline" size={12} color={COLORS.brand} />
+                        <Text style={styles.victoryStepText}>{step}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {victorySummary.terms && victorySummary.terms.length > 0 && (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                    {victorySummary.terms.map((t, i) => (
+                      <View key={i} style={styles.victoryTermChip}>
+                        <Text style={styles.victoryTermText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {diffMod.rewardMultiplier !== 1 && (
+              <View style={styles.diffRewardNote}>
+                <Ionicons name="trending-up-outline" size={14} color={COLORS.brand} />
+                <Text style={styles.diffRewardText}>
+                  {diffMod.rewardMultiplier > 1
+                    ? `+${Math.round((diffMod.rewardMultiplier - 1) * 100)}% difficulty bonus applied`
+                    : `${Math.round((1 - diffMod.rewardMultiplier) * 100)}% guided-mode reduction applied`}
+                </Text>
+              </View>
+            )}
 
             {mission && (
               <View style={styles.summaryCard}>
@@ -304,6 +346,15 @@ const styles = StyleSheet.create({
   summaryCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, borderLeftWidth: 3, borderLeftColor: COLORS.success + "80", gap: 6 },
   summaryTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
   summaryText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+  victorySummaryCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.brand + "40", borderLeftWidth: 3, borderLeftColor: COLORS.brand, gap: 4 },
+  victorySummaryTitle: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  victorySummaryText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+  victoryStepRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  victoryStepText: { color: COLORS.onSurface, fontSize: 12, lineHeight: 18, flex: 1 },
+  victoryTermChip: { backgroundColor: COLORS.brand + "14", borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.brand + "30" },
+  victoryTermText: { color: COLORS.brand, fontSize: 11, fontWeight: "600" },
+  diffRewardNote: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.brand + "10", borderRadius: 4, padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.brand + "20" },
+  diffRewardText: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
   kingdomCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,

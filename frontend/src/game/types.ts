@@ -41,6 +41,14 @@ export interface Hero {
   element: ElementSystem;
   description: string;
   skills: HeroSkill[];
+  // Hero identity (Phase 2)
+  faction?: string;
+  quote?: string;
+  backstory?: string;
+  bestAgainst?: string;
+  medicalFocus?: string;
+  bondLevel?: number;
+  bondExp?: number;
 }
 
 export interface ClueCard {
@@ -95,7 +103,11 @@ export interface PlayerState {
   aptitude: Aptitude;
   recommended_aptitude?: Aptitude | null;
   learning_goal?: string | null;
-  learning_profile?: string | null; // 'nonmedical' | 'preNursing' | 'nursingStudent' | 'nclexPrep' | 'healthcareProfessional'
+  learning_profile?: string | null;
+  difficulty?: string | null;
+  player_class?: string | null;
+  system_affinity?: string | null;
+  explanation_style?: string | null;
   codex_depth: string;
   onboarding_complete: boolean;
   rank: string;

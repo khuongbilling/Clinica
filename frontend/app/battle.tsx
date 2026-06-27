@@ -8,6 +8,8 @@ import * as Haptics from "expo-haptics";
 import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
+import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBACK, STABILIZE_FEEDBACK, COUNTER_FEEDBACK, REASSESS_FEEDBACK } from "@/src/game/explanationLayers";
+import { OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
@@ -69,6 +71,8 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const mentorAid = failureCount >= 3;
   const tacticalHint = failureCount >= 2;
   const gentleHint = failureCount >= 1;
+  const explanationLayer = getExplanationLayer(player?.learning_profile);
+  const difficultyLevel = (player?.difficulty || 'standard') as DifficultyLevel;
 
   const [state, setState] = useState<BattleState>(() => {
     const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
@@ -82,6 +86,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0),
       enemyDamageReduction: handicap.enemyDamageReduction,
       revealOneExtraClue: handicap.revealOneExtraClue || isTraining,
+      difficulty: player?.difficulty || undefined,
     });
     let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
@@ -160,6 +165,8 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const corruptionPct = (state.corruption / enemy.corruption) * 100;
   const hints = getEnemyHint(enemy.id);
   const mission = getMission(enemy.id);
+  const adaptiveMission = MISSION_BRIEFINGS[enemy.id]?.[explanationLayer];
+  const objectiveStrip = getObjectiveStrip(enemy.id, explanationLayer, OBJECTIVE_BY_DIFFICULTY[difficultyLevel] || OBJECTIVE_BY_DIFFICULTY.standard);
   const isNonmedical = player?.learning_profile === "nonmedical";
   const isFirstBattle = (player?.runs_completed ?? 0) === 0 && enemy.id === "air_sprite";
   const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
@@ -206,8 +213,12 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   };
 
   const showFeedback = (actionType: string) => {
-    if (!isNonmedical) return;
-    const msg = getGuidedFeedback(enemy.id, actionType);
+    let msg: string | null = null;
+    if (actionType === 'scout')    msg = SCOUT_FEEDBACK[explanationLayer];
+    else if (actionType === 'stabilize') msg = STABILIZE_FEEDBACK[explanationLayer];
+    else if (actionType === 'strike')    msg = COUNTER_FEEDBACK[explanationLayer];
+    else if (actionType === 'analyze')   msg = REASSESS_FEEDBACK[explanationLayer];
+    else msg = getGuidedFeedback(enemy.id, actionType) ?? null;
     if (!msg) return;
     if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
     setFeedbackMsg(msg);
@@ -465,15 +476,15 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
       {/* ── ZONE D: Action area (flex 1, scrolls internally) ── */}
       <View style={styles.zoneD}>
-        {/* Objective strip / guided feedback banner */}
-        {isNonmedical && feedbackMsg ? (
+        {/* Objective strip / adaptive feedback banner */}
+        {feedbackMsg ? (
           <View style={styles.feedbackBanner}>
             <Ionicons name="information-circle" size={11} color={COLORS.brand} />
             <Text style={styles.feedbackText} numberOfLines={2}>{feedbackMsg}</Text>
           </View>
         ) : (
           <View style={styles.objectiveStrip}>
-            <Text style={styles.objectiveText}>Goal: Scout → Stabilize → Counter → Reassess</Text>
+            <Text style={styles.objectiveText}>Goal: {objectiveStrip}</Text>
           </View>
         )}
         {activeTab === "actions" && (
@@ -669,7 +680,16 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
               <Text style={styles.briefingKicker}>MISSION BRIEFING</Text>
               <Text style={styles.briefingTitle}>{mission?.missionTitle ?? enemy.name}</Text>
               <Text style={styles.briefingEnemy}>{enemy.name} · {enemy.realWorld}</Text>
-              {mission && <Text style={styles.briefingStory}>{mission.story}</Text>}
+              {adaptiveMission
+                ? <Text style={styles.briefingStory}>{adaptiveMission.story}</Text>
+                : mission && <Text style={styles.briefingStory}>{mission.story}</Text>
+              }
+              {adaptiveMission?.clinicalFocus && (
+                <View style={styles.briefingFocusCard}>
+                  <Text style={styles.briefingFocusLabel}>CLINICAL FOCUS</Text>
+                  <Text style={styles.briefingFocusText}>{adaptiveMission.clinicalFocus}</Text>
+                </View>
+              )}
               <View style={styles.briefingDivider} />
               <View style={styles.briefingRow}>
                 <View style={styles.briefingCol}>
@@ -960,6 +980,9 @@ const styles = StyleSheet.create({
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: SPACING.lg,
   },
   briefingClinicaKicker: { color: COLORS.brand, fontSize: 9, letterSpacing: 2, fontWeight: "700", marginBottom: 4 },
+  briefingFocusCard: { backgroundColor: COLORS.brand + "10", borderRadius: 4, padding: SPACING.sm, marginTop: SPACING.sm, borderWidth: 1, borderColor: COLORS.brand + "30", borderLeftWidth: 3, borderLeftColor: COLORS.brand },
+  briefingFocusLabel: { color: COLORS.brand, fontSize: 9, letterSpacing: 2, fontWeight: "700", marginBottom: 2 },
+  briefingFocusText: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
   briefingClinicaText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
   briefingKicker: { color: COLORS.brand, fontSize: 9, letterSpacing: 3, fontWeight: "700" },
   briefingTitle: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300", lineHeight: 32, marginTop: 4 },

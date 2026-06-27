@@ -1,0 +1,714 @@
+Replit Instruction Package: Opening Player Quiz, Class Picking, Personality-Based Customization, and Learning Setup
+
+Goal
+
+Improve the beginning onboarding questionnaire so it feels like a short RPG personality/class quiz instead of a boring survey.
+
+The quiz should customize the player experience based on:
+
+1. Learning goal
+2. Difficulty comfort
+3. Personality / decision style
+4. Preferred healer role
+5. Medical experience level
+
+The result should assign or recommend:
+
+Learning Profile
+Difficulty
+Player Class / Healer Archetype
+Starter hero recommendation
+Explanation depth
+Tutorial guidance level
+
+Do not make the quiz too long.
+
+Target completion time:
+
+30 to 60 seconds
+
+Maximum:
+
+5 questions
+
+Allow skip:
+
+Skip and start with recommended beginner setup
+
+---
+
+Core Design Rule
+
+The questionnaire should feel like an RPG class selection ritual.
+
+It should not feel like:
+
+A school intake form
+A medical exam
+A job personality test
+A long Myers-Briggs test
+
+It should feel like:
+
+A fantasy healer aptitude test
+A Codex alignment ritual
+A short personality/class quiz
+
+Use language like:
+
+The Codex is choosing your path.
+Answer a few questions to shape your healer style.
+
+---
+
+Opening Quiz Title
+
+Use:
+
+The Codex Awakening
+
+Subtitle:
+
+Shape your healer path in under one minute.
+
+Button:
+
+Begin Path
+
+Skip option:
+
+Skip for now
+
+If skipped, use default:
+
+learningProfile: "curious",
+difficulty: "guided",
+playerClass: "Novice Guardian",
+starterHero: "Novice Guardian"
+
+---
+
+Important Distinction
+
+The quiz should set both:
+
+Learning Profile = how the game explains medicine
+Difficulty = how much the game reveals and how hard battles are
+
+It should also recommend:
+
+Player Class = role identity and starter flavor
+
+Do not force the player permanently into one choice.
+
+Add:
+
+You can change learning depth and difficulty later in Settings.
+
+---
+
+Five-Question Quiz
+
+Question 1: Learning Goal
+
+Prompt:
+
+Why did the Codex call you?
+
+Choices:
+
+A. I am curious about medicine and want to learn in a fun way.
+B. I am learning anatomy, physiology, or healthcare basics.
+C. I am a nursing or healthcare student.
+D. I am preparing for NCLEX or clinical judgment exams.
+E. I already work in healthcare and want a light review.
+
+Map to:
+
+A -> learningProfile: "curious"
+B -> learningProfile: "medical_learner"
+C -> learningProfile: "nursing_student"
+D -> learningProfile: "nclex"
+E -> learningProfile: "professional"
+
+---
+
+Question 2: Challenge Preference
+
+Prompt:
+
+How much guidance do you want in battle?
+
+Choices:
+
+A. Guide me closely. I am new.
+B. Give me some clues, but let me think.
+C. Hide more clues so I can practice reasoning.
+D. Make it like clinical judgment. I want to assess first.
+E. Challenge me later with changing conditions.
+
+Map to:
+
+A -> difficulty: "guided"
+B -> difficulty: "standard"
+C -> difficulty: "clinical"
+D -> difficulty: "nclex"
+E -> difficulty: "clinical" initially, unlock "expert" later
+
+Note:
+
+Expert should not be forced at the start. If selected, explain that Expert unlocks later.
+
+---
+
+Question 3: Personality / Healer Style
+
+Prompt:
+
+When a patient is in danger, what do you do first?
+
+Choices:
+
+A. Protect them and buy time.
+B. Look for clues before acting.
+C. Treat the main problem quickly.
+D. Coordinate the team and resources.
+E. Prevent harm before it happens.
+
+Map to player class tendency:
+
+A -> "Guardian"
+B -> "Seer"
+C -> "Interventionist"
+D -> "Coordinator"
+E -> "Protector"
+
+---
+
+Question 4: Fantasy Role Preference
+
+Prompt:
+
+Which healer path calls to you?
+
+Choices:
+
+A. Air Temple Guardian: protects breathing and oxygenation.
+B. River Gate Healer: restores circulation and flow.
+C. Fire Ward Purifier: fights infection and inflammation.
+D. Energy Shrine Alchemist: restores glucose, fuel, and balance.
+E. Mind Lantern Guide: protects mental status, safety, and awareness.
+
+Map to system affinity:
+
+A -> "Air"
+B -> "River"
+C -> "Fire"
+D -> "Energy"
+E -> "Mind"
+
+If the game only has Air starter ready, still save this preference for future hero recommendations.
+
+---
+
+Question 5: Learning Style
+
+Prompt:
+
+How do you like to learn?
+
+Choices:
+
+A. Simple story first, medical meaning after.
+B. Visual examples and short definitions.
+C. Clinical reasoning and patient care steps.
+D. NCLEX-style cues, priorities, and rationales.
+E. Brief professional terms without too much explanation.
+
+Map to explanation preference:
+
+A -> "fantasy_first"
+B -> "visual_medical"
+C -> "clinical_reasoning"
+D -> "nclex_judgment"
+E -> "professional_brief"
+
+This can reinforce or slightly adjust learningProfile.
+
+---
+
+Result Screen
+
+After the quiz, show a short personalized result.
+
+Title:
+
+Your Healer Path
+
+Example result for Curious + Guided + Guardian + Air:
+
+Your Path: Air Temple Guardian
+
+You protect patients by keeping them stable, reading clues, and restoring breath when the windways tighten.
+
+Recommended Setup:
+Learning Depth: Curious Learner
+Challenge: Guided
+Starter Role: Stabilizer / Air Support
+First Hero: Novice Guardian
+
+You can change learning depth and difficulty later in Settings.
+
+Buttons:
+
+Begin First Mission
+Change Answers
+Skip to Game
+
+---
+
+Player Classes / Healer Archetypes
+
+Create light player classes for identity. These do not need complex mechanics yet.
+
+Guardian
+
+Theme:
+
+Protects Stability and buys time.
+
+Best for:
+
+Players who like defense, safety, and support.
+
+Possible future passive:
+
+Once per battle, prevent a small Stability loss.
+
+Seer
+
+Theme:
+
+Reveals clues and understands patterns.
+
+Best for:
+
+Players who like assessment and strategy.
+
+Possible future passive:
+
+First Scout action has a chance to reveal an extra clue.
+
+Interventionist
+
+Theme:
+
+Acts quickly once the priority is clear.
+
+Best for:
+
+Players who like decisive treatment and counters.
+
+Possible future passive:
+
+First correct Counter action gains a small Corruption bonus.
+
+Coordinator
+
+Theme:
+
+Uses AP, items, calls, and team resources efficiently.
+
+Best for:
+
+Players who like planning and resource management.
+
+Possible future passive:
+
+First Call action costs 1 less AP once per battle.
+
+Protector
+
+Theme:
+
+Prevents harm, complications, spread, falls, and unsafe actions.
+
+Best for:
+
+Players who like prevention and safety.
+
+Possible future passive:
+
+First unsafe-action warning is stronger or prevents penalty once.
+
+Do not make these passives overpowered at launch.
+
+Initially, player class can be mostly flavor plus minor guidance.
+
+---
+
+Medical Concept Tie-In
+
+Each class should connect to real clinical reasoning.
+
+Guardian = stabilization and patient safety
+Seer = assessment and recognizing cues
+Interventionist = targeted intervention
+Coordinator = care coordination and resource use
+Protector = prevention, safety, and harm reduction
+
+Show this in simple language:
+
+Your class is not just fantasy. It reflects a real clinical thinking style.
+
+---
+
+Starter Recommendation Logic
+
+Use quiz answers to recommend a starter path.
+
+Example logic:
+
+function recommendStarterPath(answers) {
+  const learningProfile = mapLearningProfile(answers.learningGoal);
+  const difficulty = mapDifficulty(answers.challenge);
+  const classStyle = mapClassStyle(answers.healerStyle);
+  const systemAffinity = mapSystemAffinity(answers.fantasyRole);
+  const explanationStyle = mapExplanationStyle(answers.learningStyle);
+
+  return {
+    learningProfile,
+    difficulty,
+    playerClass: classStyle,
+    preferredSystem: systemAffinity,
+    explanationStyle,
+    starterHero: "Novice Guardian"
+  };
+}
+
+For MVP, starterHero can remain Novice Guardian even if the player chooses another path.
+
+If preferredSystem is not Air, show:
+
+Your chosen path will unlock more strongly after the first Air Temple mission.
+
+Example:
+
+You chose Fire Ward Purifier. The Fire Ward unlocks soon, but your first mission begins in the Air Temple.
+
+This avoids breaking the starting flow.
+
+---
+
+Keep It Short
+
+Do not add more than 5 questions in the first onboarding.
+
+Avoid long text.
+
+Each question should fit on one mobile screen.
+
+Use large buttons.
+
+Use progress indicator:
+
+1 / 5
+2 / 5
+3 / 5
+4 / 5
+5 / 5
+
+Add skip option:
+
+Skip and use recommended path
+
+---
+
+Optional Fun Flavor Without Overdoing It
+
+You may borrow the feeling of:
+
+RPG class quiz
+personality quiz
+alignment test
+job-style aptitude test
+horoscope-like path result
+
+But do not use real astrology, Myers-Briggs, or copyrighted labels directly as the main system.
+
+Instead, use original Clinica terminology:
+
+Codex Path
+Healer Archetype
+Body-System Affinity
+Clinical Thinking Style
+
+Examples:
+
+Air-aligned Guardian
+River-aligned Coordinator
+Fire-aligned Protector
+Energy-aligned Interventionist
+Mind-aligned Seer
+
+This gives the fun of personality/horoscope style without becoming gimmicky.
+
+---
+
+Result Examples
+
+Example 1: Curious Casual Player
+
+Answers:
+
+Curious about medicine
+Needs guidance
+Protects first
+Air Temple
+Story first
+
+Result:
+
+Your Path: Air Temple Guardian
+
+You are a steady healer who protects the patient while learning what the clues mean.
+
+Learning Depth: Curious Learner
+Challenge: Guided
+Clinical Style: Stabilization and safety
+First Mission: Restore the Air Temple
+
+Example 2: Nursing Student
+
+Answers:
+
+Nursing student
+Clinical challenge
+Looks for clues
+Protection Wall
+Clinical reasoning
+
+Result:
+
+Your Path: Protection Seer
+
+You recognize risks before they become harm. Your strength is assessment, prevention, and patient safety.
+
+Learning Depth: Nursing Student
+Challenge: Clinical
+Clinical Style: Recognize cues and prevent harm
+First Mission: Restore the Air Temple
+
+Example 3: NCLEX Preparer
+
+Answers:
+
+NCLEX
+Clinical judgment
+Assess first
+Mind Lantern
+NCLEX rationales
+
+Result:
+
+Your Path: Mind Lantern Seer
+
+You practice recognizing cues, prioritizing hypotheses, taking action, and evaluating outcomes.
+
+Learning Depth: NCLEX Preparer
+Challenge: NCLEX
+Clinical Style: Clinical judgment and prioritization
+First Mission: Restore the Air Temple
+
+Example 4: Healthcare Professional
+
+Answers:
+
+Healthcare professional
+Some challenge
+Coordinate team
+River Gate
+Brief professional terms
+
+Result:
+
+Your Path: River Coordinator
+
+You manage flow, resources, and priorities under pressure.
+
+Learning Depth: Healthcare Professional
+Challenge: Clinical
+Clinical Style: Coordination, perfusion, and reassessment
+First Mission: Restore the Air Temple
+
+---
+
+Interface Style
+
+Make the quiz visually interesting.
+
+Use:
+
+Codex book animation
+Glowing rune choices
+Pixel/anime healer silhouettes
+Body-system icons
+Soft dark fantasy background
+Large readable answer cards
+
+Each answer card can include:
+
+Icon
+Short title
+One-line meaning
+
+Example:
+
+Guardian
+Protect and stabilize first.
+
+Do not make the quiz look like a plain form.
+
+---
+
+Optional Quick Mode
+
+If player wants to get into the game faster, add:
+
+Quick Start
+
+Quick Start sets:
+
+learningProfile: "curious",
+difficulty: "guided",
+playerClass: "Guardian",
+preferredSystem: "Air",
+explanationStyle: "fantasy_first"
+
+Then begins first mission.
+
+---
+
+Settings Screen
+
+Allow changes later:
+
+Learning Depth
+Difficulty
+Explanation Style
+Preferred System
+Player Class display
+
+Do not allow player class changes too often if it later affects gameplay. For now, if class is flavor-only, allow change.
+
+Add:
+
+Retake Codex Awakening Quiz
+
+---
+
+Data Model
+
+Add to player profile:
+
+player.onboarding = player.onboarding || {
+  completed: false,
+  quizSkipped: false,
+  learningProfile: "curious",
+  difficulty: "guided",
+  playerClass: "Guardian",
+  preferredSystem: "Air",
+  explanationStyle: "fantasy_first"
+};
+
+Or integrate with existing player state:
+
+player.learningProfile = "curious";
+player.difficulty = "guided";
+player.playerClass = "Guardian";
+player.preferredSystem = "Air";
+player.explanationStyle = "fantasy_first";
+player.onboardingCompleted = true;
+
+---
+
+Do Not Do
+
+Do not:
+
+Make the quiz longer than 5 questions.
+Use real Myers-Briggs labels like INFJ, ENTJ, etc.
+Use actual horoscope signs as a core mechanic.
+Ask for sensitive personal information.
+Ask for birthday, gender, race, religion, health information, or diagnosis.
+Make the quiz required forever.
+Lock players into choices permanently.
+Delay first battle too long.
+Make the player read long paragraphs before playing.
+
+Do:
+
+Make it feel like a RPG class quiz.
+Keep it short.
+Make results feel personal.
+Tie fantasy class to real clinical thinking.
+Let players change learning depth and difficulty later.
+Use the result to customize explanations and hints.
+
+---
+
+Implementation Priority
+
+Phase 1
+
+Add 5-question Codex Awakening quiz.
+Map answers to learningProfile, difficulty, playerClass, preferredSystem, explanationStyle.
+Add result screen.
+Allow skip and quick start.
+Save choices in player state.
+
+Phase 2
+
+Use quiz result to customize mission briefing, objective strip, feedback, and tutorial guidance.
+Show player class on profile/home screen.
+Add “Retake Codex Awakening Quiz” in settings.
+
+Phase 3
+
+Add class flavor to hero recommendations.
+Add minor non-overpowered class passives later.
+Add more starter visual styles and icons.
+
+---
+
+Testing Checklist
+
+Test:
+
+1. Quiz takes less than 60 seconds.
+2. Player can skip.
+3. Player can quick start.
+4. Result screen feels personal and RPG-like.
+5. Learning Profile saves correctly.
+6. Difficulty saves correctly.
+7. Player Class saves correctly.
+8. Preferred System saves correctly.
+9. Explanation Style saves correctly.
+10. First mission still starts smoothly.
+11. Player can retake quiz later.
+12. No sensitive personal information is requested.
+13. Nonmedical player is not overwhelmed.
+14. NCLEX player gets meaningful customization.
+
+---
+
+Final Design Intent
+
+The opening quiz should make the player feel:
+
+The game understands how I want to learn.
+I have a healer identity.
+My class connects to real clinical thinking.
+I can start playing quickly.
+
+It should increase personalization without becoming a boring survey.

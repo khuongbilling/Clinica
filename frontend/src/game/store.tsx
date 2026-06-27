@@ -12,6 +12,10 @@ type CreatePlayerArgs = {
   recommended_aptitude?: string;
   learning_goal?: string;
   learning_profile?: string;
+  difficulty?: string;
+  player_class?: string;
+  system_affinity?: string;
+  explanation_style?: string;
   codex_depth?: string;
 };
 
@@ -56,6 +60,10 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     recommended_aptitude: args.recommended_aptitude as any || null,
     learning_goal: args.learning_goal || null,
     learning_profile: args.learning_profile || null,
+    difficulty: args.difficulty || null,
+    player_class: args.player_class || null,
+    system_affinity: args.system_affinity || null,
+    explanation_style: args.explanation_style || null,
     codex_depth: args.codex_depth || 'simple',
     onboarding_complete: true,
     rank: 'Sprout Healer',

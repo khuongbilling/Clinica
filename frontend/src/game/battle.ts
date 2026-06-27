@@ -1,3 +1,4 @@
+import { getDifficultyModifier } from './difficulty';
 import { Enemy, Hero, HeroSkill } from './types';
 import { CallOption, Item, ITEMS, TEMP_ACTIONS } from './items';
 import {
@@ -62,6 +63,7 @@ export interface BattleState {
   feedbackLevel: ReturnType<typeof getActiveFeedbackLevel>;
   chapter: number;
   profile: LearningProfile | undefined;
+  difficulty: string | undefined;
   enemyDamageReduction: number;
   reboundArmed: boolean; // set true when corruption first drops below 40; cleared by reassess
 
@@ -92,18 +94,29 @@ export interface InitBattleOptions {
   startingStabilityBonus?: number;
   enemyDamageReduction?: number;
   revealOneExtraClue?: boolean;
+  difficulty?: string;
 }
 
 export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions = {}): BattleState {
-  const visibleClueIds = enemy.visibleClues.map(c => c.id);
-  const revealedLabels = enemy.visibleClues.map(c => c.label);
   const enemyClinical = ENEMY_CLINICAL[enemy.id];
   const chapter = opts.chapter || enemyClinical?.chapter || (enemy.difficulty <= 2 ? 1 : 2);
   const feedbackLevel = getActiveFeedbackLevel(opts.profile, enemy.name, opts.enemyMastery, chapter);
-  const hiddenClueIds = enemy.hiddenClues.map(c => c.id);
+
+  // Difficulty-based clue visibility
+  // allClues ordered: visibleClues first (priority), then hiddenClues
+  const allClues = [...enemy.visibleClues, ...enemy.hiddenClues];
+  const diffMod = getDifficultyModifier(opts.difficulty as any);
+  const targetVisible = Math.min(diffMod.visibleClues, allClues.length);
+  const finalVisible = allClues.slice(0, targetVisible).map(c => c.id);
+  const finalHidden = allClues.slice(targetVisible).map(c => c.id);
+  const finalRevealedLabels = allClues.slice(0, targetVisible).map(c => c.label);
 
   let stability = enemy.startingStability + (opts.startingStabilityBonus || 0);
   stability = clamp(stability, 0, 100);
+
+  // Apply difficulty damage adjustment to the handicap reduction
+  const diffDamageEffect = Math.round((1 - diffMod.enemyDamageMultiplier) * 100);
+  const combinedDamageReduction = (opts.enemyDamageReduction || 0) + diffDamageEffect;
 
   const corruption = enemy.corruption;
   const turnAp = getTurnAP(stability, corruption, chapter, {});
@@ -111,14 +124,11 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   const log: string[] = [`The ${enemy.name} corrupts the patient. Stability ${stability}%.`];
   log.push(apMessage(turnAp));
 
-  // Reveal one extra hidden clue if handicap calls for it
-  const finalVisible = [...visibleClueIds];
-  const finalHidden = [...hiddenClueIds];
-  const finalRevealedLabels = [...revealedLabels];
+  // Mentor aid: reveal one extra clue on top of difficulty count
   if (opts.revealOneExtraClue && finalHidden.length > 0) {
     const id = finalHidden.shift()!;
     finalVisible.push(id);
-    const clue = enemy.hiddenClues.find(c => c.id === id);
+    const clue = allClues.find(c => c.id === id);
     if (clue) finalRevealedLabels.push(clue.label);
     log.push(`Mentor's eye: one hidden clue is already revealed.`);
   }
@@ -154,7 +164,8 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     feedbackLevel,
     chapter,
     profile: opts.profile,
-    enemyDamageReduction: opts.enemyDamageReduction || 0,
+    difficulty: opts.difficulty,
+    enemyDamageReduction: combinedDamageReduction,
     reboundArmed: false,
 
     selectedHeroId: team[0]?.id || null,
