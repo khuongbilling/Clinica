@@ -42,7 +42,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training }: { enemyId?: string; training?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure } = usePlayer();
-  const { width: screenW, height: screenH } = useWindowDimensions();
+  const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
 
   const enemy = useMemo(() => {
@@ -245,75 +245,63 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* Scrollable upper content */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner} showsVerticalScrollIndicator={false}>
-        {/* Compact enemy header */}
-        <View style={styles.enemyHeader}>
-          <Pressable style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} testID="battle-close">
-            <Ionicons name="close" size={18} color={COLORS.onSurface} />
-          </Pressable>
-          <Pressable
-            style={styles.helpBtn}
-            onPress={() => router.push("/tutorial")}
-            hitSlop={10}
-            testID="battle-tutorial-button"
-          >
-            <Ionicons name="help-circle-outline" size={20} color={COLORS.onSurfaceSecondary} />
-          </Pressable>
-          <View style={styles.enemyHeaderRow}>
-            {getEnemySprite(enemy.id) && (
-              <View style={[styles.enemyPortraitWrap, { borderColor: ELEMENT_COLORS[enemy.primarySystem] + "AA" }]}>
-                <Image source={getEnemySprite(enemy.id)!} style={styles.enemyPortrait} resizeMode="cover" />
+
+      {/* ── ZONE A: Enemy header (compact, ~18% height) ── */}
+      <View style={styles.zoneA}>
+        <Pressable style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} testID="battle-close">
+          <Ionicons name="close" size={16} color={COLORS.onSurface} />
+        </Pressable>
+        <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">
+          <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
+        </Pressable>
+        <View style={styles.enemyHeaderRow}>
+          {getEnemySprite(enemy.id) && (
+            <View style={[styles.enemyPortraitWrap, { borderColor: ELEMENT_COLORS[enemy.primarySystem] + "AA" }]}>
+              <Image source={getEnemySprite(enemy.id)!} style={styles.enemyPortrait} resizeMode="cover" />
+            </View>
+          )}
+          <View style={{ flex: 1, gap: 2 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.enemyKicker} numberOfLines={1}>{enemy.realWorld.toUpperCase()}</Text>
+              {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
+            </View>
+            <Text style={styles.enemyName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{enemy.name}</Text>
+            <View style={styles.systemPills}>
+              <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
+                <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
               </View>
-            )}
-            <View style={{ flex: 1, gap: 4 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" }}>
-                <Text style={styles.enemyKicker}>{enemy.realWorld.toUpperCase()}</Text>
-                {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
-              </View>
-              <Text style={styles.enemyName}>{enemy.name}</Text>
-              <View style={styles.systemPills}>
-                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
-                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
+              {enemy.secondarySystem && (
+                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.secondarySystem] }]}>
+                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.secondarySystem] }]}>{enemy.secondarySystem}</Text>
                 </View>
-                {enemy.secondarySystem && (
-                  <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.secondarySystem] }]}>
-                    <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.secondarySystem] }]}>{enemy.secondarySystem}</Text>
-                  </View>
-                )}
-              </View>
+              )}
             </View>
           </View>
         </View>
+      </View>
 
-        {/* Bars */}
-        <View style={styles.barsBlock}>
-          <View style={styles.barRow}>
-            <Text style={styles.barLabel}>CORRUPTION</Text>
-            <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.error }]} /></View>
-            <Text style={styles.barVal}>{state.corruption}</Text>
-          </View>
-          <View style={styles.barRow}>
-            <Text style={styles.barLabel}>STABILITY</Text>
-            <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
-            <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}%</Text>
-          </View>
+      {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
+      <View style={styles.zoneB}>
+        <View style={styles.barRow}>
+          <Text style={styles.barLabel}>CORRUPT</Text>
+          <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.error }]} /></View>
+          <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
-
-        {/* Collapsed Codex guidance */}
+        <View style={styles.barRow}>
+          <Text style={styles.barLabel}>STABILITY</Text>
+          <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
+          <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}%</Text>
+        </View>
         <Pressable style={styles.codexCard} onPress={() => setCodexExpanded(!codexExpanded)} testID="battle-guidance">
-          <Ionicons name="book-outline" size={13} color={COLORS.brand} />
+          <Ionicons name="book-outline" size={11} color={COLORS.brand} />
           <Text style={styles.codexLabel} numberOfLines={codexExpanded ? undefined : 1}>
             {mentorAid ? "MENTOR'S AID: " : tacticalHint ? "MENTOR: " : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
             <Text style={styles.codexText}>
               {mentorAid ? `+10 Stability. ${hints.tactical}` : tacticalHint ? hints.tactical : gentleHint ? hints.gentle : `Match actions to the ${enemy.primarySystem} system.`}
             </Text>
           </Text>
-          <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"} size={13} color={COLORS.onSurfaceTertiary} />
+          <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"} size={11} color={COLORS.onSurfaceTertiary} />
         </Pressable>
-
-        {/* Compact clue row */}
-        <Text style={styles.sectionLbl}>CLUES</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clueRow}>
           {[...enemy.visibleClues, ...enemy.hiddenClues].map((c) => {
             const isVisible = state.visibleClues.includes(c.id);
@@ -326,7 +314,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                   </>
                 ) : (
                   <>
-                    <Ionicons name="help" size={16} color={COLORS.onSurfaceTertiary} />
+                    <Ionicons name="help" size={13} color={COLORS.onSurfaceTertiary} />
                     <Text style={styles.clueLabel}>HIDDEN</Text>
                   </>
                 )}
@@ -334,40 +322,26 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             );
           })}
         </ScrollView>
-      </ScrollView>
+      </View>
 
-      {/* Fixed bottom action bar */}
-      <View style={[styles.actionBar, { maxHeight: screenH * 0.58 }]}>
-        {/* Hero pills row — always one row, flex splits width evenly */}
-        <View style={[styles.heroRow, { paddingHorizontal: SPACING.sm }]}>
+      {/* ── ZONE C: Team + AP + Tabs (~16% height) ── */}
+      <View style={styles.zoneC}>
+        <View style={[styles.heroRow, { paddingHorizontal: SPACING.xs }]}>
           {team.map(h => {
             const acted = !!state.heroActionsUsed[h.id];
             const selected = state.selectedHeroId === h.id;
             const elementColor = ELEMENT_COLORS[h.element] || COLORS.brand;
-            const pillW = Math.floor((screenW - SPACING.sm * 2 - (team.length - 1) * 6) / team.length);
-            const spriteSize = Math.min(36, pillW - 16);
-            const onPick = () => {
-              if (acted) return;
-              setState(prev => selectHero(prev, h.id));
-            };
+            const pillW = Math.floor((screenW - SPACING.xs * 2 - (team.length - 1) * 5) / team.length);
             return (
               <Pressable
                 key={h.id}
-                onPress={onPick}
+                onPress={() => { if (!acted) setState(prev => selectHero(prev, h.id)); }}
                 hitSlop={6}
                 style={[styles.heroPill, { width: pillW }, selected && !acted && { borderColor: elementColor, backgroundColor: elementColor + "18" }, acted && styles.heroPillActed]}
                 testID={`hero-pill-${h.id}`}
                 accessibilityRole="button"
               >
-                {getHeroSprite(h.id) && (
-                  <Image source={getHeroSprite(h.id)!} style={[styles.heroPillSprite, { width: spriteSize, height: spriteSize }]} resizeMode="cover" />
-                )}
-                <Text
-                  style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.6}
-                >
+                <Text style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55}>
                   {h.name}
                 </Text>
                 <Text style={[styles.heroPillRole, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
@@ -377,10 +351,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             );
           })}
         </View>
-
         <View style={styles.apRow}>
-          <Text style={styles.apLabel}>ACTION POINTS</Text>
-          <View style={{ flexDirection: "row", gap: 4 }}>
+          <Text style={styles.apLabel}>AP</Text>
+          <View style={{ flexDirection: "row", gap: 4, flex: 1 }}>
             {Array.from({ length: state.apMax }).map((_, i) => (
               <View key={i} style={[styles.apDot, i < state.ap && styles.apDotOn]} />
             ))}
@@ -389,8 +362,6 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             <Text style={styles.endTxt}>END TURN</Text>
           </Pressable>
         </View>
-
-        {/* Tabs */}
         <View style={styles.tabs}>
           {(["actions", "items", "call", "team"] as Tab[]).map(t => (
             <Pressable key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)} testID={`tab-${t}`}>
@@ -398,214 +369,172 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             </Pressable>
           ))}
         </View>
-
         <Text style={styles.affordanceHint}>Tap to use · Long-press for details</Text>
-
-        {/* Tab content */}
-        <View style={styles.tabContent}>
-          {activeTab === "actions" && (
-            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
-              <View style={styles.grid}>
-                {state.temporaryActionIds.map((aid) => {
-                  const a = TEMP_ACTIONS[aid]; if (!a) return null;
-                  const preview = previewTempStatus(state, aid);
-                  const isLocked = preview.status === "locked";
-                  const selHero = state.team.find(h => h.id === state.selectedHeroId);
-                  const heroBlocked = !selHero || !!state.heroActionsUsed[selHero.id];
-                  const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing" || heroBlocked;
-                  return (
-                    <Pressable
-                      key={`tmp-${aid}`}
-                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
-                      onPress={() => disabled ? null : handleTempAction(aid)}
-                      onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })}
-                      delayLongPress={350}
-                      testID={`battle-temp-${aid}`}
-                    >
-                      <StatusBadge status={preview.status} />
-                      <View style={styles.actionHead}>
-                        <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1}>{a.name}</Text>
-                        <Text style={styles.apTag}>{a.costAP} AP</Text>
-                      </View>
-                      <Text style={styles.actionEffect} numberOfLines={2}>{a.shortEffect || a.description}</Text>
-                      <Text style={styles.actionHero} numberOfLines={1}>Team Support · {a.systemType || "Universal"}</Text>
-                    </Pressable>
-                  );
-                })}
-                {(() => {
-                  const selHero = state.team.find(h => h.id === state.selectedHeroId);
-                  if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above to select.</Text>;
-                  const acted = !!state.heroActionsUsed[selHero.id];
-                  if (acted) return <Text style={styles.emptyTab}>{selHero.name} has already acted. Pick another hero or end the turn.</Text>;
-                  const isBoss = (state.enemyClinical?.rewardBase || 0) >= 100;
-                  const careDmg = careAttemptDamage(state.chapter, isBoss);
-                  const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
-                  const careNode = (
-                    <Pressable
-                      key="care-attempt"
-                      style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]}
-                      onPress={() => careDisabled ? null : setState(prev => applyCareAttempt(prev).state)}
-                      testID="battle-care-attempt"
-                    >
-                      <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
-                      <View style={styles.actionHead}>
-                        <Text style={styles.actionName} numberOfLines={1}>Care Attempt</Text>
-                        <Text style={styles.apTag}>1 AP</Text>
-                      </View>
-                      <Text style={styles.actionEffect} numberOfLines={2}>Unfocused aid · −{careDmg} Corruption. Does not advance care chain.</Text>
-                      <Text style={styles.actionHero} numberOfLines={1}>Fallback only — targeted skills are stronger</Text>
-                    </Pressable>
-                  );
-                  const skillNodes = selHero.skills.map(skill => {
-                    const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
-                    let cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
-                    const airDisc = state.nextAirActionDiscount && skill.systemType === "Air";
-                    if (airDisc) cost = Math.max(1, cost - 1);
-                    const preview = previewSkillStatus(state, skill);
-                    const isLocked = preview.status === "locked";
-                    const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
-                    return (
-                      <Pressable
-                        key={`${selHero.id}-${skill.id}`}
-                        style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
-                        onPress={() => disabled ? null : handleSkill(selHero, skill)}
-                        onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })}
-                        delayLongPress={350}
-                        testID={`battle-skill-${skill.id}`}
-                      >
-                        <StatusBadge status={preview.status} />
-                        <View style={styles.actionHead}>
-                          <Text style={styles.actionName} numberOfLines={1}>{skill.name}</Text>
-                          <Text style={styles.apTag}>{cost} AP</Text>
-                        </View>
-                        <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
-                        <Text style={styles.actionHero} numberOfLines={1}>{sageDisc ? "Sage discount · " : ""}{airDisc ? "Air discount · " : ""}{skill.systemType || "Universal"}</Text>
-                      </Pressable>
-                    );
-                  });
-                  return [careNode, ...skillNodes];
-                })()}
-              </View>
-            </ScrollView>
-          )}
-          {activeTab === "items" && (
-            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
-              {(() => {
-                const selHero = state.team.find(h => h.id === state.selectedHeroId);
-                if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — items consume the chosen hero&apos;s action.</Text>;
-                if (state.heroActionsUsed[selHero.id]) return <Text style={styles.emptyTab}>{selHero.name} has already acted. Pick another hero to use an item.</Text>;
-                return null;
-              })()}
-              <View style={styles.grid}>
-                {ITEMS.map(item => {
-                  const qty = state.inventory[item.name] || 0;
-                  const preview = previewItemStatus(state, item);
-                  const isLocked = preview.status === "locked";
-                  const sel = state.team.find(h => h.id === state.selectedHeroId);
-                  const heroBlocked = !sel || !!state.heroActionsUsed[sel.id];
-                  const discounted = state.preparedItemDiscount === item.name;
-                  const cost = discounted ? Math.max(1, item.costAP - 1) : item.costAP;
-                  const disabled = isLocked || qty <= 0 || state.ap < cost || state.outcome !== "ongoing" || heroBlocked;
-                  return (
-                    <Pressable
-                      key={item.id}
-                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
-                      onPress={() => disabled ? null : handleUseItem(item)}
-                      onLongPress={() => setDetail({ kind: "item", item })}
-                      delayLongPress={350}
-                      testID={`battle-item-${item.id}`}
-                    >
-                      <StatusBadge status={preview.status} />
-                      <View style={styles.actionHead}>
-                        <Text style={styles.actionName} numberOfLines={1}>{item.displayName}</Text>
-                        <Text style={styles.apTag}>×{qty}</Text>
-                      </View>
-                      <Text style={styles.actionEffect} numberOfLines={2}>{item.shortEffect}</Text>
-                      <Text style={styles.actionHero} numberOfLines={1}>{discounted ? "Prepared · " : ""}{cost} AP</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          )}
-          {activeTab === "call" && (
-            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
-              {availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options match the situation yet.</Text>}
-              <View style={styles.grid}>
-                {availableCalls.map(opt => {
-                  const callKey: keyof BattleState["callsUsed"] | null =
-                    opt.id === "call_pharmacy" ? "pharmacy" :
-                    opt.id === "call_respiratory" ? "respiratory" :
-                    opt.id === "call_rapid" ? "rapidResponse" :
-                    opt.id === "call_infection" ? "infectionControl" : null;
-                  const alreadyUsed = !!(callKey && state.callsUsed[callKey]);
-                  const preview = previewCallStatus(state, opt.id);
-                  const isLocked = preview.status === "locked";
-                  const rapidGated = opt.id === "call_rapid" && state.stability > 30 && !state.dangerTriggerActive;
-                  const disabled = isLocked || alreadyUsed || rapidGated || state.ap < opt.costAP || state.outcome !== "ongoing";
-                  return (
-                    <Pressable
-                      key={opt.id}
-                      style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]}
-                      onPress={() => disabled ? null : handleCall(opt)}
-                      onLongPress={() => setDetail({ kind: "call", option: opt })}
-                      delayLongPress={350}
-                      testID={`call-opt-${opt.id}`}
-                    >
-                      <StatusBadge status={preview.status} />
-                      <View style={styles.actionHead}>
-                        <Text style={styles.actionName} numberOfLines={1}>{opt.name}</Text>
-                        <Text style={styles.apTag}>{opt.costAP} AP</Text>
-                      </View>
-                      <Text style={styles.actionEffect} numberOfLines={3}>{opt.description}</Text>
-                      {alreadyUsed && <Text style={styles.actionHero}>Already called</Text>}
-                      {rapidGated && !alreadyUsed && <Text style={styles.actionHero}>Reserved for Stability ≤ 30</Text>}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          )}
-          {activeTab === "team" && (
-            <ScrollView style={{ maxHeight: Math.max(150, screenH * 0.28) }} showsVerticalScrollIndicator={false}>
-              <View style={styles.teamList}>
-                {team.map(h => {
-                  const c = ELEMENT_COLORS[h.element];
-                  return (
-                    <View key={h.id} style={[styles.teamCard, { borderLeftColor: c }]} testID={`team-${h.id}`}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.teamName}>{h.name}</Text>
-                        <Text style={styles.teamRole}>{h.role} · {h.element}</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", gap: 1 }}>
-                        {Array.from({ length: h.rarity }).map((_, i) => (
-                          <Ionicons key={i} name="star" size={10} color={COLORS.brand} />
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })}
-                {player?.aptitude && (
-                  <View style={styles.passiveCard}>
-                    <Text style={styles.passiveLbl}>YOUR APTITUDE PASSIVE</Text>
-                    <Text style={styles.passiveTxt}>
-                      {player.aptitude === "guardian" && "🛡 Guardian's Vigil: -5 damage per enemy turn."}
-                      {player.aptitude === "sage" && "🔍 Sage's Eye: first Scout each battle costs -1 AP."}
-                      {player.aptitude === "warden" && "🔒 Warden's Watch: blocks one minor complication."}
-                      {player.aptitude === "weaver" && "⟡ Weaver's Eye: one hidden clue revealed at battle start."}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-          )}
-        </View>
       </View>
 
-      {/* First-battle coachmark */}
+      {/* ── ZONE D: Action area (flex 1, scrolls internally) ── */}
+      <View style={styles.zoneD}>
+        {activeTab === "actions" && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+            {state.temporaryActionIds.map((aid) => {
+              const a = TEMP_ACTIONS[aid]; if (!a) return null;
+              const preview = previewTempStatus(state, aid);
+              const isLocked = preview.status === "locked";
+              const selHero = state.team.find(h => h.id === state.selectedHeroId);
+              const heroBlocked = !selHero || !!state.heroActionsUsed[selHero.id];
+              const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing" || heroBlocked;
+              return (
+                <Pressable key={`tmp-${aid}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleTempAction(aid)} onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })} delayLongPress={350} testID={`battle-temp-${aid}`}>
+                  <StatusBadge status={preview.status} />
+                  <View style={styles.actionHead}>
+                    <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{a.name}</Text>
+                    <Text style={styles.apTag}>{a.costAP} AP</Text>
+                  </View>
+                  <Text style={styles.actionEffect} numberOfLines={2}>{a.shortEffect || a.description}</Text>
+                  <Text style={styles.actionHero} numberOfLines={1}>Team · {a.systemType || "Universal"}</Text>
+                </Pressable>
+              );
+            })}
+            {(() => {
+              const selHero = state.team.find(h => h.id === state.selectedHeroId);
+              if (!selHero) return [<Text key="pick" style={styles.emptyTab}>Tap a hero above to select.</Text>];
+              const acted = !!state.heroActionsUsed[selHero.id];
+              if (acted) return [<Text key="acted" style={styles.emptyTab}>{selHero.name} has already acted.</Text>];
+              const isBoss = (state.enemyClinical?.rewardBase || 0) >= 100;
+              const careDmg = careAttemptDamage(state.chapter, isBoss);
+              const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
+              const careNode = (
+                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => careDisabled ? null : setState(prev => applyCareAttempt(prev).state)} testID="battle-care-attempt">
+                  <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
+                  <View style={styles.actionHead}>
+                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
+                    <Text style={styles.apTag}>1 AP</Text>
+                  </View>
+                  <Text style={styles.actionEffect} numberOfLines={2}>Unfocused aid · −{careDmg} Corruption.</Text>
+                  <Text style={styles.actionHero} numberOfLines={1}>Fallback — targeted skills are stronger</Text>
+                </Pressable>
+              );
+              const skillNodes = selHero.skills.map(skill => {
+                const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
+                let cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
+                const airDisc = state.nextAirActionDiscount && skill.systemType === "Air";
+                if (airDisc) cost = Math.max(1, cost - 1);
+                const preview = previewSkillStatus(state, skill);
+                const isLocked = preview.status === "locked";
+                const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
+                return (
+                  <Pressable key={`${selHero.id}-${skill.id}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
+                    <StatusBadge status={preview.status} />
+                    <View style={styles.actionHead}>
+                      <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
+                      <Text style={styles.apTag}>{cost} AP</Text>
+                    </View>
+                    <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
+                    <Text style={styles.actionHero} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{skill.systemType || "Universal"}</Text>
+                  </Pressable>
+                );
+              });
+              return [careNode, ...skillNodes];
+            })()}
+          </ScrollView>
+        )}
+        {activeTab === "items" && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+            {(() => {
+              const selHero = state.team.find(h => h.id === state.selectedHeroId);
+              if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — items use the chosen hero's action.</Text>;
+              if (state.heroActionsUsed[selHero.id]) return <Text style={styles.emptyTab}>{selHero.name} has already acted.</Text>;
+              return null;
+            })()}
+            {ITEMS.map(item => {
+              const qty = state.inventory[item.name] || 0;
+              const preview = previewItemStatus(state, item);
+              const isLocked = preview.status === "locked";
+              const sel = state.team.find(h => h.id === state.selectedHeroId);
+              const heroBlocked = !sel || !!state.heroActionsUsed[sel.id];
+              const discounted = state.preparedItemDiscount === item.name;
+              const cost = discounted ? Math.max(1, item.costAP - 1) : item.costAP;
+              const disabled = isLocked || qty <= 0 || state.ap < cost || state.outcome !== "ongoing" || heroBlocked;
+              return (
+                <Pressable key={item.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleUseItem(item)} onLongPress={() => setDetail({ kind: "item", item })} delayLongPress={350} testID={`battle-item-${item.id}`}>
+                  <StatusBadge status={preview.status} />
+                  <View style={styles.actionHead}>
+                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{item.displayName}</Text>
+                    <Text style={styles.apTag}>×{qty}</Text>
+                  </View>
+                  <Text style={styles.actionEffect} numberOfLines={2}>{item.shortEffect}</Text>
+                  <Text style={styles.actionHero} numberOfLines={1}>{discounted ? "Prepared · " : ""}{cost} AP</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+        {activeTab === "call" && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+            {availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options available.</Text>}
+            {availableCalls.map(opt => {
+              const callKey: keyof BattleState["callsUsed"] | null =
+                opt.id === "call_pharmacy" ? "pharmacy" :
+                opt.id === "call_respiratory" ? "respiratory" :
+                opt.id === "call_rapid" ? "rapidResponse" :
+                opt.id === "call_infection" ? "infectionControl" : null;
+              const alreadyUsed = !!(callKey && state.callsUsed[callKey]);
+              const preview = previewCallStatus(state, opt.id);
+              const isLocked = preview.status === "locked";
+              const rapidGated = opt.id === "call_rapid" && state.stability > 30 && !state.dangerTriggerActive;
+              const disabled = isLocked || alreadyUsed || rapidGated || state.ap < opt.costAP || state.outcome !== "ongoing";
+              return (
+                <Pressable key={opt.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleCall(opt)} onLongPress={() => setDetail({ kind: "call", option: opt })} delayLongPress={350} testID={`call-opt-${opt.id}`}>
+                  <StatusBadge status={preview.status} />
+                  <View style={styles.actionHead}>
+                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{opt.name}</Text>
+                    <Text style={styles.apTag}>{opt.costAP} AP</Text>
+                  </View>
+                  <Text style={styles.actionEffect} numberOfLines={2}>{opt.description}</Text>
+                  {alreadyUsed && <Text style={styles.actionHero}>Already called</Text>}
+                  {rapidGated && !alreadyUsed && <Text style={styles.actionHero}>Reserved for Stability ≤ 30</Text>}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+        {activeTab === "team" && (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.teamList}>
+              {team.map(h => {
+                const c = ELEMENT_COLORS[h.element];
+                return (
+                  <View key={h.id} style={[styles.teamCard, { borderLeftColor: c }]} testID={`team-${h.id}`}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.teamName}>{h.name}</Text>
+                      <Text style={styles.teamRole}>{h.role} · {h.element}</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 1 }}>
+                      {Array.from({ length: h.rarity }).map((_, i) => (
+                        <Ionicons key={i} name="star" size={10} color={COLORS.brand} />
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+              {player?.aptitude && (
+                <View style={styles.passiveCard}>
+                  <Text style={styles.passiveLbl}>YOUR APTITUDE PASSIVE</Text>
+                  <Text style={styles.passiveTxt}>
+                    {player.aptitude === "guardian" && "🛡 Guardian's Vigil: -5 damage per enemy turn."}
+                    {player.aptitude === "sage" && "🔍 Sage's Eye: first Scout each battle costs -1 AP."}
+                    {player.aptitude === "warden" && "🔒 Warden's Watch: blocks one minor complication."}
+                    {player.aptitude === "weaver" && "⟡ Weaver's Eye: one hidden clue revealed at battle start."}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        )}
+      </View>
+
       <LongPressCoachmark visible={activeTab === "actions" && !detail && state.outcome === "ongoing"} />
 
-      {/* Detail modal */}
       {detail && (
         <Pressable style={styles.modalOverlay} onPress={() => setDetail(null)}>
           <Pressable style={styles.detailModal} onPress={(e) => e.stopPropagation()}>
@@ -625,11 +554,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       {state.outcome !== "ongoing" && (
         <View style={styles.modalOverlay}>
           <View style={styles.outcomeModal}>
-            <Ionicons
-              name={state.outcome === "win" ? "shield-checkmark" : "alert-circle"}
-              size={48}
-              color={state.outcome === "win" ? COLORS.success : COLORS.error}
-            />
+            <Ionicons name={state.outcome === "win" ? "shield-checkmark" : "alert-circle"} size={48} color={state.outcome === "win" ? COLORS.success : COLORS.error} />
             <Text style={styles.modalTitle}>{state.outcome === "win" ? "Purified" : "Patient Lost"}</Text>
             <Text style={styles.modalSub}>
               {state.outcome === "win"
@@ -737,101 +662,114 @@ function StatusBadge({ status }: { status: ActionStatus }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  content: { flex: 1 },
-  contentInner: { paddingBottom: SPACING.md },
 
-  enemyHeader: { padding: SPACING.lg, paddingBottom: SPACING.sm, gap: 4 },
-  enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md, paddingRight: 76 },
-  enemyPortraitWrap: { width: 72, height: 72, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary },
-  enemyPortrait: { width: "100%", height: "100%" },
-  closeBtn: { position: "absolute", right: SPACING.sm, top: SPACING.md, padding: 8, zIndex: 1 },
-  helpBtn: { position: "absolute", right: SPACING.sm + 36, top: SPACING.md, padding: 8, zIndex: 1 },
-  enemyKicker: { color: COLORS.error, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 8, paddingVertical: 1, borderRadius: RADIUS.pill },
-  trainingTxt: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
-  enemyName: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", lineHeight: 28 },
-  systemPills: { flexDirection: "row", gap: SPACING.sm, marginTop: 4 },
-  sysPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: RADIUS.pill, borderWidth: 1 },
-  sysTxt: { fontSize: 10, letterSpacing: 1, fontWeight: "700" },
-
-  barsBlock: { paddingHorizontal: SPACING.lg, gap: 6, marginBottom: SPACING.sm },
-  barRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1, fontWeight: "700", width: 72 },
-  barBg: { flex: 1, height: 7, backgroundColor: COLORS.surfaceTertiary, borderRadius: 4, overflow: "hidden" },
-  barFill: { height: "100%", borderRadius: 4 },
-  barVal: { color: COLORS.onSurface, fontSize: 11, fontWeight: "600", width: 40, textAlign: "right" },
-
-  codexCard: {
-    marginHorizontal: SPACING.lg, marginTop: SPACING.sm,
-    backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.brand + "30",
-    paddingHorizontal: SPACING.sm, paddingVertical: 10,
-    flexDirection: "row", alignItems: "center", gap: 6,
+  // ── Zone A: Enemy header ──
+  zoneA: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
   },
-  codexLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 0.5, flex: 1, lineHeight: 14 },
-  codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 11 },
+  closeBtn: { position: "absolute", right: SPACING.xs, top: SPACING.sm, padding: 8, zIndex: 2 },
+  helpBtn: { position: "absolute", right: SPACING.xs + 32, top: SPACING.sm, padding: 8, zIndex: 2 },
+  enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingRight: 68 },
+  enemyPortraitWrap: { width: 60, height: 60, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, flexShrink: 0 },
+  enemyPortrait: { width: "100%", height: "100%" },
+  enemyKicker: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700" },
+  trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: RADIUS.pill },
+  trainingTxt: { color: COLORS.brand, fontSize: 8, fontWeight: "700", letterSpacing: 1 },
+  enemyName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "300", lineHeight: 22 },
+  systemPills: { flexDirection: "row", gap: 4, marginTop: 2, flexWrap: "wrap" },
+  sysPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, borderWidth: 1 },
+  sysTxt: { fontSize: 9, letterSpacing: 1, fontWeight: "700" },
 
-  sectionLbl: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 2, fontWeight: "700", paddingHorizontal: SPACING.lg, marginTop: SPACING.md },
-  clueRow: { gap: SPACING.sm, paddingHorizontal: SPACING.lg, paddingTop: 6 },
-  clue: { width: 130, height: 78, padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, gap: 4, backgroundColor: COLORS.surfaceSecondary },
+  // ── Zone B: Meters + Codex + Clues ──
+  zoneB: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
+    gap: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  barRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 8, letterSpacing: 1, fontWeight: "700", width: 52 },
+  barBg: { flex: 1, height: 6, backgroundColor: COLORS.surfaceTertiary, borderRadius: 4, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: 4 },
+  barVal: { color: COLORS.onSurface, fontSize: 10, fontWeight: "600", width: 36, textAlign: "right" },
+  codexCard: {
+    backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: COLORS.brand + "30",
+    paddingHorizontal: SPACING.sm, paddingVertical: 6,
+    flexDirection: "row", alignItems: "center", gap: 5,
+  },
+  codexLabel: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 0.4, flex: 1, lineHeight: 13 },
+  codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 9 },
+  clueRow: { gap: SPACING.sm, paddingVertical: 2 },
+  clue: { width: 108, height: 60, padding: SPACING.xs, borderRadius: RADIUS.sm, borderWidth: 1, gap: 2, backgroundColor: COLORS.surfaceSecondary },
   clueVisible: { borderColor: COLORS.brand + "60" },
   clueHidden: { borderColor: COLORS.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
-  clueLabel: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600" },
-  clueDetail: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 13 },
+  clueLabel: { color: COLORS.onSurface, fontSize: 11, fontWeight: "600" },
+  clueDetail: { color: COLORS.onSurfaceTertiary, fontSize: 9, lineHeight: 11 },
 
-  actionBar: {
-    backgroundColor: COLORS.surfaceSecondary, borderTopWidth: 1, borderTopColor: COLORS.border,
-    paddingHorizontal: SPACING.md, paddingTop: SPACING.sm,
+  // ── Zone C: Team + AP + Tabs ──
+  zoneC: {
+    paddingHorizontal: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: SPACING.xs,
   },
-  apRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginBottom: SPACING.sm },
-  apLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 1, fontWeight: "700" },
-  apDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border },
+  heroRow: { flexDirection: "row", gap: 5 },
+  heroPill: { paddingHorizontal: 5, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, alignItems: "center", overflow: "hidden" },
+  heroPillActed: { opacity: 0.45 },
+  heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
+  heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "700", letterSpacing: 1, marginTop: 1 },
+  apRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  apLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
+  apDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border },
   apDotOn: { backgroundColor: COLORS.brand, borderColor: COLORS.brand },
-  endBtn: { marginLeft: "auto", paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.borderStrong },
-  endTxt: { color: COLORS.onSurfaceSecondary, fontSize: 10, letterSpacing: 1, fontWeight: "700" },
-
-  tabs: { flexDirection: "row", gap: 4, marginBottom: SPACING.sm },
-  tab: { flex: 1, paddingVertical: 6, alignItems: "center", borderRadius: RADIUS.sm, backgroundColor: COLORS.surfaceTertiary },
+  endBtn: { marginLeft: "auto", paddingHorizontal: 11, paddingVertical: 4, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.borderStrong },
+  endTxt: { color: COLORS.onSurfaceSecondary, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
+  tabs: { flexDirection: "row", gap: 4 },
+  tab: { flex: 1, paddingVertical: 5, alignItems: "center", borderRadius: RADIUS.sm, backgroundColor: COLORS.surfaceTertiary },
   tabActive: { backgroundColor: COLORS.brand },
-  tabTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  tabTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
   tabTxtActive: { color: COLORS.onBrand },
-  affordanceHint: { color: COLORS.onSurfaceTertiary, fontSize: 9, textAlign: "center", marginBottom: SPACING.xs, fontStyle: "italic", letterSpacing: 0.5 },
+  affordanceHint: { color: COLORS.onSurfaceTertiary, fontSize: 8, textAlign: "center", fontStyle: "italic", letterSpacing: 0.4 },
 
-  tabContent: { paddingBottom: SPACING.sm },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  // ── Zone D: Actions ──
+  zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm, overflow: "hidden" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, paddingBottom: SPACING.sm },
   actionBtn: {
-    width: "48.5%", minHeight: 64, padding: 8, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border,
-    gap: 2,
+    width: "48.5%", minHeight: 70, padding: 8, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border, gap: 2,
   },
   disabled: { opacity: 0.4 },
   actionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   actionName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", flex: 1 },
   actionEffect: { color: COLORS.onSurfaceSecondary, fontSize: 10, lineHeight: 12 },
-  actionHero: { color: COLORS.onSurfaceTertiary, fontSize: 9, marginTop: 2, fontStyle: "italic" },
+  actionHero: { color: COLORS.onSurfaceTertiary, fontSize: 8, marginTop: 2, fontStyle: "italic" },
   apTag: { color: COLORS.brand, fontSize: 10, fontWeight: "700", marginLeft: 4 },
-  statusBadge: { alignSelf: "flex-start", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, borderWidth: 1, marginBottom: 2, maxWidth: "100%" },
-  statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
-  basicTag: { alignSelf: "flex-start", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, borderWidth: 1, borderColor: COLORS.onSurfaceTertiary, backgroundColor: COLORS.onSurfaceTertiary + "20", marginBottom: 2 },
-  basicTagTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8, color: COLORS.onSurfaceTertiary },
-  heroRow: { flexDirection: "row", gap: 6, paddingBottom: 8 },
-  heroPill: { paddingHorizontal: 6, paddingTop: 5, paddingBottom: 5, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, alignItems: "center", overflow: "hidden" },
-  heroPillSprite: { borderRadius: 8, marginBottom: 3, backgroundColor: COLORS.bg },
-  heroPillActed: { opacity: 0.45 },
-  heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
-  heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1, marginTop: 2 },
-  emptyTab: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },
+  statusBadge: { alignSelf: "flex-start", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, borderWidth: 1, marginBottom: 2, maxWidth: "100%" },
+  statusBadgeTxt: { fontSize: 7, fontWeight: "800", letterSpacing: 0.7 },
+  basicTag: { alignSelf: "flex-start", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, borderWidth: 1, borderColor: COLORS.onSurfaceTertiary, backgroundColor: COLORS.onSurfaceTertiary + "20", marginBottom: 2 },
+  basicTagTxt: { fontSize: 7, fontWeight: "800", letterSpacing: 0.7, color: COLORS.onSurfaceTertiary },
+  emptyTab: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, width: "100%" },
 
-  teamList: { gap: SPACING.sm },
+  teamList: { gap: SPACING.sm, paddingBottom: SPACING.sm },
   teamCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surfaceTertiary, padding: SPACING.sm, borderRadius: RADIUS.md, borderLeftWidth: 4, borderWidth: 1, borderColor: COLORS.border },
   teamName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
   teamRole: { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 2 },
   passiveCard: { backgroundColor: COLORS.brand + "12", borderRadius: RADIUS.md, padding: SPACING.sm, borderColor: COLORS.brand + "40", borderWidth: 1, marginTop: SPACING.sm },
   passiveLbl: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
   passiveTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 4, lineHeight: 15 },
-
   helpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", padding: SPACING.md, fontStyle: "italic" },
 
+  // ── Modals ──
   modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", padding: SPACING.lg },
   detailModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, padding: SPACING.lg, gap: 6, borderWidth: 1, borderColor: COLORS.brandTertiary, width: "100%", maxWidth: 380, maxHeight: "80%" },
   detailKicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: "700" },
@@ -843,7 +781,6 @@ const styles = StyleSheet.create({
   useBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
   modalDismiss: { padding: SPACING.sm, alignItems: "center", marginTop: 4 },
   modalDismissTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 2 },
-
   outcomeModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, padding: SPACING.xl, alignItems: "center", gap: SPACING.md, borderWidth: 1, borderColor: COLORS.brandTertiary, width: "100%", maxWidth: 380 },
   modalTitle: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
   modalSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", lineHeight: 19 },

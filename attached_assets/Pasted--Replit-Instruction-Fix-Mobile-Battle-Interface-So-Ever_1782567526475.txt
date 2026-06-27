@@ -1,0 +1,636 @@
+# Replit Instruction: Fix Mobile Battle Interface So Everything Fits on One Screen
+
+## Goal
+
+The current mobile battle UI is too tall and important information is hidden behind scrolling. The first screenshot shows text being cut off and the action panel blocking the enemy/clue area. The second screenshot is closer to the desired look, but I still want the player to see the full battle state without needing to scroll.
+
+Fix the battle interface for mobile web in Replit.
+
+The player should be able to see these on one screen:
+
+```text
+Enemy name
+Enemy image
+Disease system
+Corruption bar
+Stability bar
+Codex or clue hint
+Selected team
+Action Points
+End Turn
+Tabs: Actions / Items / Call / Team
+Available actions
+```
+
+The user should not need to scroll up just to see vitals, hidden clue area, or core battle information.
+
+---
+
+# Current Problems
+
+Fix these issues:
+
+```text
+1. Enemy name wraps badly and gets cut off.
+2. Top enemy section is too tall.
+3. Action panel overlaps or blocks the Codex/clue section.
+4. Hero cards are too large.
+5. Action cards are too tall.
+6. Text inside buttons is truncated too aggressively.
+7. The screen requires scrolling to see important battle state.
+8. The selected hero/team section takes too much vertical space.
+```
+
+---
+
+# Main Layout Direction
+
+Use a compact mobile battle layout.
+
+The full battle screen should be divided into these compact zones:
+
+```text
+A. Enemy header: 20-25% screen height
+B. Meters + clue/codex row: 15-20%
+C. Team + AP row: 15-20%
+D. Action area: remaining space
+```
+
+Do not let any single section dominate the screen.
+
+---
+
+# Fix 1: Compact Enemy Header
+
+The enemy header should be horizontal and compact.
+
+Layout:
+
+```text
+[Enemy Image] [Condition label + Enemy name + System badge]
+```
+
+Enemy image should be small:
+
+```css
+.enemy-portrait {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+```
+
+Enemy name should not become huge or wrap awkwardly.
+
+Use:
+
+```css
+.enemy-title {
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+  line-height: 0.95;
+  max-width: 100%;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+```
+
+But limit it to 2 lines if possible:
+
+```css
+.enemy-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+```
+
+If the name is too long, reduce font size instead of letting it create a huge header.
+
+For “Air Sprite Corruption,” it should display cleanly as:
+
+```text
+Air Sprite
+Corruption
+```
+
+Not:
+
+```text
+Air Sprite
+Corruptio
+n
+```
+
+---
+
+# Fix 2: Reduce Top Padding and Spacing
+
+Reduce vertical padding in the battle screen.
+
+Use smaller gaps:
+
+```css
+.battle-screen {
+  padding: 12px 16px;
+  gap: 8px;
+}
+
+.enemy-section {
+  margin-bottom: 8px;
+}
+
+.battle-section {
+  gap: 8px;
+}
+```
+
+Avoid large empty vertical spaces.
+
+---
+
+# Fix 3: Compact Meter Section
+
+Corruption and Stability bars should be short and compact.
+
+Use:
+
+```css
+.meter-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.meter-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+}
+
+.meter-bar {
+  height: 12px;
+  border-radius: 999px;
+}
+
+.meter-value {
+  font-size: 0.9rem;
+  text-align: right;
+}
+```
+
+Do not allow the meter area to take too much vertical space.
+
+---
+
+# Fix 4: Codex / Clue Area Must Stay Visible
+
+The Codex/clue box should be compact and always visible above the action area.
+
+Make it a one-line collapsed card by default:
+
+```css
+.codex-card {
+  min-height: 42px;
+  max-height: 48px;
+  padding: 8px 12px;
+  overflow: hidden;
+}
+```
+
+Collapsed display:
+
+```text
+CODEX: Match actions to the Air system. ˅
+```
+
+If expanded, it can overlay or push slightly, but default should remain compact.
+
+Do not let the action panel cover it.
+
+---
+
+# Fix 5: Remove Blocking / Overlap From Action Panel
+
+The action area should not be a large fixed overlay that covers the upper battle content.
+
+Use one of these approaches:
+
+## Preferred: Normal flex layout
+
+Make the whole battle screen use CSS grid:
+
+```css
+.battle-page {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows:
+    auto   /* enemy header */
+    auto   /* meters */
+    auto   /* codex/clues */
+    auto   /* team/AP */
+    1fr;   /* actions */
+  overflow: hidden;
+}
+```
+
+Then the action area gets remaining space:
+
+```css
+.action-panel {
+  min-height: 0;
+  overflow: hidden;
+}
+```
+
+Do not use a huge `position: fixed` action panel unless absolutely necessary.
+
+## If fixed action panel is currently used
+
+Then reduce its height and add enough padding to the content, but do not let it cover the codex/team area.
+
+```css
+.action-panel {
+  max-height: 42vh;
+  overflow: hidden;
+}
+```
+
+---
+
+# Fix 6: Make Team Cards Smaller
+
+The current hero cards are too tall.
+
+Replace large hero cards with compact selectable hero chips/cards.
+
+Use:
+
+```css
+.hero-select-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hero-card {
+  min-height: 72px;
+  padding: 8px;
+  border-radius: 16px;
+}
+
+.hero-card img {
+  width: 42px;
+  height: 42px;
+}
+
+.hero-name {
+  font-size: 0.9rem;
+  line-height: 1.05;
+}
+
+.hero-system {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+```
+
+If there are three heroes, use a horizontal scroll row or three compact chips.
+
+Do not let hero cards consume half the screen.
+
+---
+
+# Fix 7: AP Row Should Be Compact
+
+The AP row should be one line:
+
+```text
+ACTION POINTS  ● ● ● ●       END TURN
+```
+
+Use:
+
+```css
+.ap-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.ap-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.ap-dot {
+  width: 20px;
+  height: 20px;
+}
+```
+
+End Turn button should be smaller:
+
+```css
+.end-turn-button {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+```
+
+---
+
+# Fix 8: Tabs Should Be Compact
+
+Tabs should fit in one row.
+
+```css
+.battle-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.battle-tab {
+  min-height: 44px;
+  padding: 8px 4px;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+}
+```
+
+---
+
+# Fix 9: Action Cards Need Less Height
+
+Action cards are too tall. Make them compact.
+
+Use:
+
+```css
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  overflow: hidden;
+}
+
+.action-card {
+  min-height: 88px;
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
+.action-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-card-title {
+  font-size: 1rem;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-card-cost {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.action-card-description {
+  font-size: 0.82rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.action-card-system {
+  font-size: 0.78rem;
+  line-height: 1;
+}
+```
+
+The card can truncate long descriptions, but the skill name and AP cost must remain visible.
+
+Long-press can still show details.
+
+---
+
+# Fix 10: Avoid Important Text Being Cut Off
+
+For skill names, use truncation only after a reasonable width.
+
+Bad:
+
+```text
+Breath of Da...
+```
+
+Better:
+
+```text
+Breath of Dawn
+```
+
+Use smaller text before truncating.
+
+```css
+.action-card-title {
+  font-size: clamp(0.9rem, 3.7vw, 1rem);
+}
+```
+
+For very long names like “Rapid Response,” show:
+
+```text
+Rapid Response
+```
+
+not:
+
+```text
+Rapid Respo...
+```
+
+Only truncate descriptions, not the core name if possible.
+
+---
+
+# Fix 11: Make Selected Hero Clear But Compact
+
+Selected hero should be obvious, but not huge.
+
+Use:
+
+```css
+.hero-card.selected {
+  border: 1.5px solid #56c78a;
+  background: rgba(86, 199, 138, 0.10);
+}
+```
+
+Do not use oversized selected cards.
+
+---
+
+# Fix 12: Mobile Height Rule
+
+The goal is to fit on an iPhone-sized screen.
+
+Use:
+
+```css
+@media (max-width: 480px) {
+  .battle-page {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .enemy-portrait {
+    width: 72px;
+    height: 72px;
+  }
+
+  .enemy-title {
+    font-size: clamp(1.5rem, 6.8vw, 2.1rem);
+    line-height: 0.95;
+  }
+
+  .codex-card {
+    min-height: 40px;
+    max-height: 44px;
+  }
+
+  .hero-card {
+    min-height: 68px;
+  }
+
+  .action-card {
+    min-height: 82px;
+  }
+}
+```
+
+Use `100dvh`, not only `100vh`, so mobile browser UI does not break the layout.
+
+---
+
+# Fix 13: One-Screen Priority
+
+On mobile, prioritize showing these without scrolling:
+
+```text
+Enemy
+Corruption/Stability
+Codex/clue hint
+Team
+AP
+Tabs
+At least 4 action cards
+```
+
+If space is tight, reduce these first:
+
+```text
+1. Enemy portrait size
+2. Hero card height
+3. Action card description lines
+4. Codex card height
+5. Margins/gaps
+```
+
+Do not hide the meters or clue/codex area behind the action panel.
+
+---
+
+# Fix 14: Use Long Press for Detail
+
+Since the screen is compact, keep only short info on cards.
+
+Card should show:
+
+```text
+Skill name
+AP cost
+Short effect
+System
+Label like BASIC / RECOMMENDED / LIMITED
+```
+
+Full details should appear on long press or tap-and-hold modal.
+
+Do not show long explanations directly inside the action card.
+
+---
+
+# Fix 15: Suggested Final Mobile Layout
+
+Target layout:
+
+```text
+[Enemy portrait]  ASTHMA EXACERBATION
+                  Air Sprite Corruption
+                  [Air]
+
+CORRUPTION   =========    80
+STABILITY    =====        65%
+
+[CODEX: Match actions to the Air system. ˅]
+
+[Novice Guardian] [Village Caretaker]
+
+ACTION POINTS  ● ● ● ●      [END TURN]
+
+[ACTIONS] [ITEMS] [CALL] [TEAM]
+
+[Care Attempt]       [Breath of Dawn]
+[Lantern of Clues]   [Rapid Response]
+```
+
+Everything above should fit on one phone screen similar to the second screenshot.
+
+---
+
+# Testing Checklist
+
+After making CSS/layout changes, test mobile web view.
+
+Use browser dev tools or Replit preview mobile size.
+
+Test at:
+
+```text
+390 x 844
+393 x 852
+375 x 812
+414 x 896
+```
+
+Confirm:
+
+```text
+1. Enemy name is not cut awkwardly.
+2. Corruption and Stability bars are visible.
+3. Codex/clue area is visible.
+4. Team cards are visible and compact.
+5. AP row and End Turn are visible.
+6. Tabs are visible.
+7. At least four action cards are visible.
+8. Action panel does not cover the Codex/clue area.
+9. No important battle information requires scrolling.
+10. Long skill descriptions are truncated, but names and AP costs remain readable.
+11. The layout still looks dark fantasy/medical and polished.
+```
+
+Do not change battle mechanics in this step. Only adjust the mobile battle interface/layout.
