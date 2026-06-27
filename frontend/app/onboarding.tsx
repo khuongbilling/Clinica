@@ -257,7 +257,7 @@ export default function Onboarding() {
 function Frame({ children }: { children: React.ReactNode }) {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>{children}</ScrollView>
+      <View style={styles.scroll}>{children}</View>
     </SafeAreaView>
   );
 }
@@ -273,8 +273,8 @@ function Cta({ label, onPress, disabled, testID }: { label: string; onPress: () 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  scroll: { padding: SPACING.lg, paddingBottom: SPACING.xxl, gap: SPACING.xl, minHeight: "100%" },
-  heroBlock: { gap: SPACING.sm, marginTop: SPACING.lg, flexGrow: 1 },
+  scroll: { flex: 1, padding: SPACING.lg, paddingBottom: SPACING.lg, gap: SPACING.lg, justifyContent: "space-between" },
+  heroBlock: { gap: SPACING.sm, flex: 1, justifyContent: "center" },
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 3, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 30, lineHeight: 36, fontWeight: "300" },
   titleXL: { color: COLORS.onSurface, fontSize: 42, lineHeight: 46, fontWeight: "300" },

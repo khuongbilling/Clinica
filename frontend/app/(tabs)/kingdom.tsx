@@ -99,7 +99,7 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: stri
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  hero: { height: 220 },
+  hero: { height: 160 },
   heroInner: { flex: 1, padding: SPACING.lg, justifyContent: "flex-end", gap: 4 },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 30, fontWeight: "300" },

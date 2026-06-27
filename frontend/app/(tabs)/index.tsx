@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   xpText: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 1 },
 
   bossCard: {
-    height: 280, borderRadius: RADIUS.lg, overflow: "hidden",
+    height: 210, borderRadius: RADIUS.lg, overflow: "hidden",
     borderWidth: 1, borderColor: COLORS.brandTertiary,
   },
   bossInner: { flex: 1, padding: SPACING.lg, justifyContent: "flex-end", gap: SPACING.sm },
