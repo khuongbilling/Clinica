@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   codexLabel: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 0.4, flex: 1, lineHeight: 13 },
   codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 9 },
   clueRow: { gap: SPACING.sm, paddingVertical: 2 },
-  clue: { width: 108, height: 60, padding: SPACING.xs, borderRadius: RADIUS.sm, borderWidth: 1, gap: 2, backgroundColor: COLORS.surfaceSecondary },
+  clue: { width: 90, height: 60, padding: SPACING.xs, borderRadius: RADIUS.sm, borderWidth: 1, gap: 2, backgroundColor: COLORS.surfaceSecondary },
   clueVisible: { borderColor: COLORS.brand + "60" },
   clueHidden: { borderColor: COLORS.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
   clueLabel: { color: COLORS.onSurface, fontSize: 11, fontWeight: "600" },

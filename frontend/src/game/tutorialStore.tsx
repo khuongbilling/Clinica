@@ -17,6 +17,7 @@ interface TutorialCtx {
   skipTutorial: () => void;
   markDone: (id: TutorialId) => Promise<void>;
   replayTutorial: (id: TutorialId) => Promise<void>;
+  resetTutorials: () => Promise<void>;
   isCompleted: (id: TutorialId) => boolean;
   onRequiredAction: (actionType: string) => void;
 }
@@ -94,6 +95,15 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     setStepIndex(0);
   }, []);
 
+  const resetTutorials = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    setCompleted({});
+    setActiveTutorialId(null);
+    setStepIndex(0);
+  }, []);
+
   const isCompleted = useCallback((id: TutorialId) => {
     return !!completed[id];
   }, [completed]);
@@ -128,10 +138,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     skipTutorial,
     markDone,
     replayTutorial,
+    resetTutorials,
     isCompleted,
     onRequiredAction,
   }), [completed, activeTutorialId, stepIndex, currentStep, totalSteps,
-    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, isCompleted, onRequiredAction]);
+    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials, isCompleted, onRequiredAction]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

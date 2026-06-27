@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const MASTERY_LABELS: Record<string, string> = {
@@ -19,6 +20,13 @@ const MASTERY_LABELS: Record<string, string> = {
 export default function ProfileScreen() {
   const router = useRouter();
   const { player, resetPlayer } = usePlayer();
+  const { resetTutorials } = useTutorial();
+
+  async function handleReset() {
+    await resetTutorials();
+    resetPlayer();
+  }
+
   if (!player) return null;
   const apt = APTITUDE_INFO[player.aptitude];
   const nextRank = RANKS[player.rank_index + 1];
@@ -77,7 +85,7 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
         </Pressable>
 
-        <Pressable style={styles.resetBtn} onPress={resetPlayer} testID="profile-reset-button">
+        <Pressable style={styles.resetBtn} onPress={handleReset} testID="profile-reset-button">
           <Ionicons name="refresh" size={14} color={COLORS.error} />
           <Text style={styles.resetTxt}>Reset Account (Start Over)</Text>
         </Pressable>
