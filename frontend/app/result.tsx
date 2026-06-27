@@ -13,10 +13,10 @@ import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type Lear
 export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
-  const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate } = useLocalSearchParams<{
+  const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; shards?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
-    consults?: string; emergency?: string; inappropriate?: string;
+    consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
   }>();
   const won = outcome === "win";
   const isTraining = training === "1";
@@ -25,6 +25,7 @@ export default function Result() {
   const consultsUsed = parseInt(consults || "0", 10);
   const emergencyCallsUsed = parseInt(emergency || "0", 10);
   const inappropriateConsultsUsed = parseInt(inappropriate || "0", 10);
+  const basicAidUses = parseInt(basicAid || "0", 10);
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -49,8 +50,9 @@ export default function Result() {
       consultsUsed,
       emergencyCallsUsed,
       inappropriateConsultsUsed,
+      basicAidUses,
     }, starRules);
-  }, [won, fullChainCompleted, unsafe, poorFit, turns, reassess, consultsUsed, emergencyCallsUsed, inappropriateConsultsUsed, starRules]);
+  }, [won, fullChainCompleted, unsafe, poorFit, turns, reassess, consultsUsed, emergencyCallsUsed, inappropriateConsultsUsed, basicAidUses, starRules]);
 
   const rewardBreakdown = won ? calculateRewards(baseShards, starResult.stars, fullChainCompleted) : null;
 
@@ -114,9 +116,12 @@ export default function Result() {
               </View>
             </View>
 
-            {(consultsUsed > 0 || emergencyCallsUsed > 0 || inappropriateConsultsUsed > 0) && (
+            {(consultsUsed > 0 || emergencyCallsUsed > 0 || inappropriateConsultsUsed > 0 || basicAidUses > 2) && (
               <View style={styles.consultCard} testID="result-consult-notes">
-                <Text style={styles.consultTitle}>CONSULT USE</Text>
+                <Text style={styles.consultTitle}>CLINICAL FORM</Text>
+                {basicAidUses > 2 && (
+                  <Text style={styles.consultWarn}>• {basicAidUses}× Care Attempt — efficiency star withheld. Targeted clinical skills are stronger.</Text>
+                )}
                 {consultsUsed === 1 && inappropriateConsultsUsed === 0 && emergencyCallsUsed === 0 && (
                   <Text style={styles.consultGood}>✓ One consult used appropriately — efficient teamwork.</Text>
                 )}

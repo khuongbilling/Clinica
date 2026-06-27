@@ -1,0 +1,30 @@
+{
+  "summary": "Care Attempt fallback action validated end-to-end on the live preview (mobile viewport 390x844). Button visibility, BASIC tag, 1 AP cost label, hero-switching persistence, per-hero acted-disable, AP consumption, corruption reduction (-5 on chapter 1), and acted-hero handling all behave correctly. Could not finish a winning battle with >2 Care Attempts in-session because the testing player's auto-team (Novice Guardian + Village Caretaker) has no strike-tagged skills, so a win is not reachable using Care Attempt + Stabilize alone — but param plumbing (battle.tsx passes basicAid; result.tsx parses basicAid; computeStars in clinical.ts requires lowBasicAid <= 2; CLINICAL FORM card renders 'Nx Care Attempt — efficiency star withheld' when basicAidUses > 2) is verified by code review and matches the spec exactly. No backend testing performed (frontend-only request).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/tmp/01_loaded.png", "/tmp/02_battle_or_post_onboarding.png", "/tmp/03_pre_finish.png", "/tmp/battle_end.png"],
+  "action_items": [
+    "Main agent should manually verify the win-with-3+-Care-Attempts result path on a hero/team that includes a strike skill (e.g. River Sludge enemy + a strike-capable hero), OR by adding an automated unit test for computeStars and the result-screen CLINICAL FORM rendering. Implementation is correct on paper but couldn't be reached organically with the default starter team during testing.",
+    "(Optional) Console warnings observed: 'shadow*' style props deprecated; 'props.pointerEvents' deprecated; 'useNativeDriver is not supported' on web. Pre-existing — not Care-Attempt-related, but worth a future cleanup."
+  ],
+  "critical_code_review_comments": [
+    "battle.tsx line 195 correctly passes basicAid: String(state.basicAidUses) to /result.",
+    "result.tsx line 28 parses basicAidUses; lines 119–124 render the CLINICAL FORM card and the 'Nx Care Attempt — efficiency star withheld' line when basicAidUses > 2.",
+    "clinical.ts computeStars line 772–774 requires lowBasicAid (basicAidUses <= 2) for the 3rd star — exact match to PRD.",
+    "battle.ts applyCareAttempt enforces all guard rails (outcome, selectedHero, heroActionsUsed, AP), increments basicAidUses, decrements AP by 1, calls consumeHeroAction, and adds two log lines. Corruption reduction uses careAttemptDamage(chapter, isBoss) returning 5/4/3/2 — matches spec.",
+    "Care Attempt does NOT advance the care chain (no chainRole tracking), preserving fullChainCompleted semantics — correct.",
+    "battle.tsx render block lines 367–419 correctly inserts the Care Attempt button at the head of the selected hero's skill list with testID 'battle-care-attempt', BASIC tag, and dynamic '-N Corruption' text."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only)", "frontend": "5 of 7 spec items fully exercised live; remaining 2 (3+ uses → 2-star + CLINICAL FORM and <=2 uses → 3-star) verified by code review only" },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Default onboarding via 'BEGIN CALLING QUIZ' produces a team with Novice Guardian (River) + Village Caretaker (Growth). Neither has a strike skill against air_sprite; reaching natural win requires either picking a different first enemy or seeding a stronger team. The battle screen has 4 AP per turn and 2 heroes => max 2 Care Attempts per turn. To organically reach >=3 Care Attempts AND a win, you must couple Care Attempts with skill/item kills, or use the boss/multi-system enemies whose teams include strike skills.",
+  "rca_of_issue": "n/a — feature works as designed in all branches exercised."
+}
