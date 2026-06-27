@@ -2,17 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
+
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, BOSS_LORD_IMBALANCE, ENEMIES, RANKS } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
+import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function RunHome() {
   const router = useRouter();
   const { player } = usePlayer();
+  const { logEvent } = useTestSession();
 
   const dailyShift = useMemo(() => {
     if (!player) return [];
@@ -34,6 +37,9 @@ export default function RunHome() {
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
 
   const launchEncounter = (enemyId: string) => {
+    if ((player?.runs_completed ?? 0) > 0) {
+      logEvent('second_battle_started', 'home', { meta: { enemyId, runsCompleted: player?.runs_completed } });
+    }
     router.push({ pathname: "/battle", params: { enemyId } });
   };
 

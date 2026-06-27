@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BUILDINGS } from "@/src/game/content";
 import { usePlayer } from "@/src/game/store";
+import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -47,9 +48,11 @@ const REGION_ELEMENT: Record<string, string> = {
 
 export default function KingdomScreen() {
   const { player } = usePlayer();
+  const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
 
   useEffect(() => {
+    logEvent('kingdom_screen_returned', 'kingdom');
     if (!isCompleted("firstKingdom")) {
       const t = setTimeout(() => startTutorial("firstKingdom"), 600);
       return () => clearTimeout(t);

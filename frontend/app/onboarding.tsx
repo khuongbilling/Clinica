@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO } from "@/src/game/content";
 import { APTITUDE_RESULT, CALLING_QUIZ, LEARNING_GOALS, scoreQuiz } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
+import { useTestSession } from "@/src/game/testSession";
 import type { Aptitude } from "@/src/game/types";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -16,6 +17,7 @@ type Step = "welcome" | "name" | "quiz" | "result" | "choose" | "goal" | "trial"
 export default function Onboarding() {
   const router = useRouter();
   const { createPlayer } = usePlayer();
+  const { logEvent, updateProfile } = useTestSession();
 
   const [step, setStep] = useState<Step>("welcome");
   const [name, setName] = useState("");
@@ -28,6 +30,18 @@ export default function Onboarding() {
 
   const recommended = useMemo<Aptitude | null>(() => (picks.length === CALLING_QUIZ.length ? scoreQuiz(picks) : null), [picks]);
   const aptitude = chosenAptitude || recommended;
+
+  useEffect(() => {
+    logEvent('game_opened', 'onboarding');
+    logEvent('opening_hook_viewed', 'onboarding');
+  }, []);
+
+  useEffect(() => {
+    if (learningGoalId) {
+      logEvent('learning_profile_selected', 'onboarding', { meta: { profile: learningGoalId } });
+      updateProfile(learningGoalId);
+    }
+  }, [learningGoalId]);
 
   const submit = async () => {
     if (!aptitude || !learningGoalId) return;

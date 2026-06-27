@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,10 +11,12 @@ import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
 import { getMission } from "@/src/game/missions";
+import { useTestSession } from "@/src/game/testSession";
 
 export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
+  const { logEvent } = useTestSession();
   const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; shards?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
@@ -58,6 +60,17 @@ export default function Result() {
   }, [won, fullChainCompleted, unsafe, poorFit, turns, reassess, consultsUsed, emergencyCallsUsed, inappropriateConsultsUsed, basicAidUses, starRules]);
 
   const rewardBreakdown = won ? calculateRewards(baseShards, starResult.stars, fullChainCompleted) : null;
+
+  useEffect(() => {
+    logEvent('victory_screen_viewed', 'result', {
+      meta: { won, enemyId: enemy?.id, stars: starResult.stars },
+    });
+    if (won) {
+      logEvent('stars_earned', 'result', { meta: { stars: starResult.stars, enemyId: enemy?.id } });
+      if (mission) logEvent('region_progress_updated', 'result', { meta: { region: mission.kingdomRegion } });
+    }
+  }, []);
+
 
   // After loss, current failure count was just incremented by battle.tsx
   const failureCount = enemy ? ((player?.failure_counts || {})[enemy.id] || 0) : 0;

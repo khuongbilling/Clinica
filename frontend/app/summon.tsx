@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FOUNDATION_BANNER, rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { usePlayer } from "@/src/game/store";
+import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -14,6 +15,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export default function SummonScreen() {
   const router = useRouter();
   const { player, summonOnce } = usePlayer();
+  const { logEvent } = useTestSession();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<{ entry: any; duplicate: boolean; message: string } | null>(null);
@@ -24,6 +26,8 @@ export default function SummonScreen() {
       return () => clearTimeout(t);
     }
   }, []);
+
+  useEffect(() => { logEvent('summon_screen_opened', 'summon'); }, []);
 
   if (!player) return null;
   const shards = player.codex_shards || 0;

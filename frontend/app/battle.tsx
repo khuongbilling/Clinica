@@ -12,6 +12,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
+import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { getHeroSprite } from "@/src/components/HeroSprites";
@@ -46,6 +47,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const router = useRouter();
   const { player, applyRewards, recordFailure } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
 
@@ -108,6 +110,8 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const prevHiddenCount = useRef(state.hiddenClueIds.length);
   const prevActionCount = useRef(state.turnsTaken);
   const prevTurn = useRef(state.turnsTaken);
+  const tsFirstAction = useRef(false);
+  const tsPrevClueCount = useRef(state.visibleClues.length);
   // Auto-start firstBattle tutorial on first visit
   useEffect(() => {
     if (!isCompleted("firstBattle")) {
@@ -160,6 +164,47 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const isFirstBattle = (player?.runs_completed ?? 0) === 0 && enemy.id === "air_sprite";
   const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
 
+  useEffect(() => {
+    logEvent('enemy_viewed', 'battle', { gameState: { enemy: enemy.id, stability: state.stability, corruption: state.corruption, ap: state.ap } });
+    logEvent('patient_stability_first_shown', 'battle', { gameState: { stability: state.stability } });
+    logEvent('disease_corruption_first_shown', 'battle', { gameState: { corruption: state.corruption } });
+    logEvent('mission_briefing_viewed', 'battle', { meta: { mission: mission?.missionTitle, enemy: enemy.id } });
+    updateBattleSummary({ enemy: enemy.name, result: 'in_progress' });
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'items') logEvent('item_tab_opened', 'battle', { gameState: { stability: state.stability, corruption: state.corruption } });
+    if (activeTab === 'call') logEvent('call_tab_opened', 'battle', { gameState: { stability: state.stability, corruption: state.corruption } });
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (state.outcome === 'win') {
+      logEvent('battle_won', 'battle', { gameState: { stability: state.stability, turn: state.turnsTaken } });
+      updateBattleSummary({ result: 'win', turns: state.turnsTaken, careChainCompleted: !!state.fullChainCompleted, careAttemptsUsed: state.basicAidUses ?? 0 });
+    } else if (state.outcome === 'loss') {
+      updateBattleSummary({ result: 'loss', turns: state.turnsTaken, careAttemptsUsed: state.basicAidUses ?? 0 });
+    }
+  }, [state.outcome]);
+
+  useEffect(() => {
+    const cur = state.visibleClues.length;
+    if (cur > tsPrevClueCount.current) {
+      logEvent('hidden_clue_revealed', 'battle', { gameState: { stability: state.stability, corruption: state.corruption } });
+      tsPrevClueCount.current = cur;
+    }
+  }, [state.visibleClues.length]);
+
+  useEffect(() => {
+    if ((state.basicAidUses ?? 0) > 0) {
+      logEvent('care_attempt_used', 'battle', { gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap } });
+    }
+  }, [state.basicAidUses]);
+
+  const dismissBriefing = () => {
+    setShowBriefing(false);
+    logEvent('first_battle_started', 'battle', { meta: { enemy: enemy.id, isFirstBattle } });
+  };
+
   const showFeedback = (actionType: string) => {
     if (!isNonmedical) return;
     const msg = getGuidedFeedback(enemy.id, actionType);
@@ -181,6 +226,22 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero).state);
     showFeedback(skill.type);
+    if (!tsFirstAction.current) {
+      tsFirstAction.current = true;
+      logEvent('first_action_used', 'battle', { playerAction: effective.type, gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap - effective.cost } });
+    }
+    const isBestCounter = enemy.bestCounters.includes(effective.type as any);
+    const evName =
+      effective.type === 'scout' ? 'scout_used' :
+      effective.type === 'stabilize' ? 'stabilize_used' :
+      effective.type === 'analyze' ? 'reassess_used' :
+      isBestCounter ? 'counter_used' : 'poor_fit_action_used';
+    logEvent(evName, 'battle', {
+      playerAction: effective.type,
+      actionQuality: (effective.type === 'scout' || isBestCounter) ? 'correct' : 'neutral',
+      gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap - effective.cost },
+      feedbackShown: isNonmedical ? (getGuidedFeedback(enemy.id, effective.type) ?? undefined) : undefined,
+    });
     setDetail(null);
   };
   const handleTempAction = (actionId: string) => {
@@ -594,7 +655,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       )}
 
       {showBriefing && (
-        <Pressable style={styles.briefingOverlay} onPress={() => setShowBriefing(false)}>
+        <Pressable style={styles.briefingOverlay} onPress={dismissBriefing}>
           <ScrollView contentContainerStyle={styles.briefingScroll} showsVerticalScrollIndicator={false}>
             <Pressable onPress={(e) => e.stopPropagation()}>
               {isFirstBattle && (
@@ -635,7 +696,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                   <Text style={styles.briefingGoalText}>{g}</Text>
                 </View>
               ))}
-              <Pressable style={styles.briefingEnterBtn} onPress={() => setShowBriefing(false)} testID="briefing-enter">
+              <Pressable style={styles.briefingEnterBtn} onPress={dismissBriefing} testID="briefing-enter">
                 <Text style={styles.briefingEnterTxt}>ENTER BATTLE</Text>
               </Pressable>
               <Text style={styles.briefingDismissHint}>Tap anywhere to dismiss</Text>

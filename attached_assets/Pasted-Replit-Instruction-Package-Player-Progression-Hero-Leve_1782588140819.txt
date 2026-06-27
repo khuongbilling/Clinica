@@ -1,0 +1,799 @@
+Replit Instruction Package: Player Progression, Hero Leveling, Duplicate Summons, Memory Shards, Star Rank, and Class Upgrade
+
+Goal
+
+Implement a long-term RPG progression system for Clinica.
+
+The game should support:
+
+1. Player Level
+2. Player EXP
+3. Stamina
+4. Hero Level
+5. Hero EXP
+6. Hero Star Rank
+7. Duplicate summon conversion into Hero Memory Shards
+8. Manual conversion of extra Memory Shards into general shard currency
+9. Future class upgrade after 5 stars
+
+Do not rebuild the battle system.
+
+Do not add payment yet.
+
+Do not make the game pay-to-win.
+
+Do not block tutorials or Codex learning with stamina.
+
+The purpose is to create a long-term RPG progression loop:
+
+Summon hero
+Use hero in battle
+Hero gains EXP
+Duplicate summons become Memory Shards
+Memory Shards rank up the hero
+Star rank unlocks passives and skill upgrades
+5-star heroes can later class upgrade
+Player level increases stamina and unlocks progression
+
+---
+
+Core Progression Philosophy
+
+Use three separate progression systems:
+
+1. Player Level = account growth, stamina, unlocks
+2. Hero Level = basic hero growth through use and EXP
+3. Hero Star Rank / Class = duplicate-based upgrades, passives, skill growth, evolution
+
+Important design rule:
+
+Base 1-star heroes must remain usable.
+Duplicates should improve heroes, not make early content impossible without them.
+Basic clinical learning should never be locked behind duplicate summons.
+
+---
+
+Part 1: Player Level
+
+Player Level is the player’s account level.
+
+Player gains EXP from:
+
+Completing battles
+Winning battles
+Completing care chains
+Winning with 3 stars
+Completing daily quests later
+Clearing region bosses
+
+Player Level should increase:
+
+Maximum stamina
+Daily reward quality later
+Access to harder regions later
+Access to advanced modes later
+
+Example unlocks:
+
+Player Level 1: 20 max stamina
+Player Level 2: 22 max stamina
+Player Level 3: 24 max stamina
+Player Level 5: Unlock Fire Ward
+Player Level 10: Unlock NCLEX Judgment Tower later
+
+Add or prepare player state:
+
+player.level = player.level || 1;
+player.exp = player.exp || 0;
+player.maxStamina = player.maxStamina || 20;
+player.currentStamina = player.currentStamina ?? player.maxStamina;
+
+When player levels up:
+
+Increase max stamina.
+Refill stamina.
+Show level-up message.
+
+Example level-up message:
+
+Healer Rank Increased!
+
+Player Level 3
+Max Stamina increased to 24.
+Stamina refilled.
+
+---
+
+Part 2: Stamina System
+
+Add stamina as a gentle pacing system.
+
+Do not make it punishing.
+
+Stamina rules:
+
+Tutorial battles cost 0 stamina.
+Practice battles cost 0 stamina but give reduced rewards.
+Normal battles cost 5 stamina.
+Boss battles cost 10 stamina.
+Codex, kingdom screen, tutorial replay, and summon screen cost 0 stamina.
+
+Stamina regeneration:
+
+Regenerate 1 stamina every 10 minutes.
+Level up refills stamina.
+
+Beginner-friendly rule:
+
+Chapter 1 tutorial battles should cost 0 stamina.
+Do not charge stamina for the first tutorial Air Sprite battle.
+
+If the player does not have enough stamina, show:
+
+Not enough stamina.
+
+You can:
+- Wait for stamina to recover
+- Play practice mode
+- Review the Codex
+- Return to the Kingdom
+
+Do not add paid stamina refills yet.
+
+Display stamina clearly:
+
+Stamina: 18 / 20
+
+---
+
+Part 3: Hero Level
+
+Hero Level is basic growth through use.
+
+Heroes gain EXP by:
+
+Participating in battle
+Winning battles
+Completing care chains
+Using role-appropriate skills
+Clearing region battles
+Using training materials later
+
+Hero Level improves clinical stats:
+
+Assessment
+Stabilization
+Treatment
+Coordination
+
+Example hero state:
+
+hero.level = hero.level || 1;
+hero.exp = hero.exp || 0;
+hero.starRank = hero.starRank || 1;
+hero.maxStarRank = hero.maxStarRank || 5;
+hero.memoryShards = hero.memoryShards || 0;
+hero.classTier = hero.classTier || 1;
+hero.maxClassTier = hero.maxClassTier || 2;
+
+Hero Level should provide gradual improvement, such as:
+
+Level 1: no bonus
+Level 10: +5% Treatment or +8% Stabilization depending on hero role
+Level 20: stronger role effectiveness
+
+Do not use Hero Level to replace clinical appropriateness. A strong hero using the wrong skill should still be less effective than the right hero using the right skill.
+
+---
+
+Part 4: Duplicate Summon Rule
+
+Currently, duplicate summons may automatically convert into summoning shards. Change this.
+
+New rule:
+
+Duplicate hero summon → Hero Memory Shards first
+
+Example:
+
+Duplicate Novice Guardian → Guardian Memory Shards
+
+Do not automatically convert all duplicates into general Summoning Shards.
+
+Duplicates should first help upgrade that specific hero.
+
+Duplicate summon amounts:
+
+Common duplicate: +20 Hero Memory Shards
+Rare duplicate: +40 Hero Memory Shards
+Epic duplicate: +80 Hero Memory Shards
+Legendary duplicate: +120 Hero Memory Shards
+
+If rarity is not implemented yet, use:
+
+Default duplicate: +20 Hero Memory Shards
+
+---
+
+Part 5: Duplicate Summon Result Screen
+
+After summoning a duplicate, show a clear result screen.
+
+Example:
+
+Duplicate Hero Found
+
+Novice Guardian duplicate converted into:
++20 Guardian Memory Shards
+
+Guardian Memory Shards:
+40 / 40
+
+Rank Up Available
+
+Buttons:
+
+View Hero
+Rank Up Now
+Continue Summoning
+
+If the hero is not ready to rank up:
+
+Duplicate Hero Found
+
+Novice Guardian duplicate converted into:
++20 Guardian Memory Shards
+
+Guardian Memory Shards:
+20 / 40
+
+Collect more Memory Shards to increase Star Rank.
+
+Buttons:
+
+View Hero
+Continue Summoning
+
+Duplicates should feel rewarding, not wasted.
+
+---
+
+Part 6: Hero Memory Shards
+
+Hero Memory Shards are hero-specific duplicate upgrade materials.
+
+Use them for:
+
+Star rank upgrades
+Skill upgrades
+Passive unlocks
+Class upgrade
+Future evolution
+
+Example:
+
+Guardian Memory Shards = used to upgrade Novice Guardian
+Lantern Memory Shards = used to upgrade Lantern Sage
+River Memory Shards = used to upgrade River Healer
+
+Do not mix Hero Memory Shards with summon currency.
+
+---
+
+Part 7: Hero Star Rank
+
+Heroes start at 1 star.
+
+Memory Shards are used to increase star rank.
+
+Suggested star costs:
+
+1 star → 2 star: 20 Memory Shards
+2 star → 3 star: 40 Memory Shards
+3 star → 4 star: 80 Memory Shards
+4 star → 5 star: 120 Memory Shards
+
+Star Rank benefits:
+
+1 Star:
+- Hero unlocked
+- Basic role kit available
+
+2 Star:
+- Small stat boost
+- Role skill improves slightly
+
+3 Star:
+- Unlock passive ability
+
+4 Star:
+- Upgrade one existing skill
+
+5 Star:
+- Unlock mastery passive or advanced role effect
+
+Example: Novice Guardian
+
+1 Star:
+Skills available:
+- Care Guard
+- Breath of Dawn
+- Airway Rune
+
+2 Star:
++5% Stabilization
+Airway Rune gains +5 Corruption reduction when an Air clue is revealed.
+
+3 Star:
+Unlock Passive: Steady Hands
+First Stabilize action each battle costs 1 less AP once.
+
+4 Star:
+Breath of Dawn also protects against the next small Stability loss.
+
+5 Star:
+Unlock Mastery: Guardian’s Vow
+If Patient Stability drops below 30, gain emergency shield once per battle.
+
+Do not lock essential beginner skills behind stars.
+
+Stars should improve depth, efficiency, and mastery.
+
+---
+
+Part 8: Rank Up Available State
+
+If the player has enough Memory Shards, show:
+
+Rank Up Available
+
+Show this in:
+
+Summon result screen
+Hero detail screen
+Hero roster
+Kingdom notification area if appropriate
+
+Rank-up confirmation should show:
+
+Rank Up Novice Guardian?
+
+Cost:
+20 Guardian Memory Shards
+
+Gain:
+2 Star Rank
++5% Stabilization
+Airway Rune improves when Air clues are revealed.
+
+Buttons:
+
+Cancel
+Rank Up
+
+---
+
+Part 9: Manual Conversion of Extra Memory Shards
+
+Add a manual conversion option.
+
+The player should be able to convert extra Hero Memory Shards into general shard currency only by choice.
+
+Do not force conversion.
+
+Recommended currency naming:
+
+Codex Shards = used for summoning
+Memory Shards = hero-specific duplicate upgrade material
+Essence Shards = general conversion currency from extra Memory Shards
+
+If the existing game already uses “Summoning Shards,” keep the current name but explain clearly.
+
+Recommended conversion:
+
+10 Hero Memory Shards → 1 Essence Shard
+
+or if the game uses Summoning Shards:
+
+10 Hero Memory Shards → 1 Summoning Shard
+
+Manual conversion prompt:
+
+Convert Guardian Memory Shards?
+
+Guardian Memory Shards can rank up or upgrade Novice Guardian.
+
+Only convert shards if you no longer need them for this hero.
+
+Convert rate:
+10 Guardian Memory Shards → 1 Essence Shard
+
+Buttons:
+
+Cancel
+Convert
+
+---
+
+Part 10: Conversion Safety Rules
+
+If the hero is not maxed, show a warning before conversion:
+
+Warning: This hero can still use these Memory Shards for rank up, skill upgrades, or class advancement.
+
+Are you sure you want to convert them?
+
+Require confirmation.
+
+If the hero is maxed, conversion can be easier:
+
+This hero is fully upgraded. Extra Memory Shards can be converted safely.
+
+A hero is considered maxed only when:
+
+Hero is at max star rank
+Hero is at max class tier
+Hero has no currently available shard-based upgrades
+
+Example logic:
+
+function isHeroShardMaxed(hero) {
+  return (
+    hero.starRank >= hero.maxStarRank &&
+    hero.classTier >= hero.maxClassTier &&
+    !hasAvailableShardUpgrade(hero)
+  );
+}
+
+If the hero is maxed and receives another duplicate:
+
+Duplicate hero → Hero Memory Shards first
+Then show option to convert extra shards.
+
+Do not auto-convert unless the player enables an optional setting later.
+
+---
+
+Part 11: Optional Auto-Convert Setting Later
+
+Add this later, not required immediately.
+
+Setting:
+
+Auto-convert duplicates for fully maxed heroes
+
+Default:
+
+Off
+
+If enabled:
+
+Duplicates for fully maxed heroes automatically convert extra Memory Shards into Essence Shards.
+
+Still show a result message:
+
+Maxed hero duplicate converted:
++20 Guardian Memory Shards
+Auto-converted extra shards into +2 Essence Shards
+
+Do not implement this before the manual system works.
+
+---
+
+Part 12: Class Upgrade After 5 Stars
+
+After a hero reaches 5 stars, allow future class upgrade.
+
+Class upgrade should require:
+
+Hero Level 30
+Hero at 5 Stars
+Enough Memory Shards
+Specific region material
+Related region boss defeated
+
+Example:
+
+Novice Guardian → Airward Guardian
+
+Requirements:
+Level 30
+5 Stars
+100 Guardian Memory Shards
+Air Crystal x3
+Defeat Air Temple Boss
+
+Class upgrade should:
+
+Change title/name
+Upgrade sprite/portrait later
+Increase level cap
+Unlock advanced skill or passive
+Keep original hero identity
+
+Example advanced skill:
+
+Windway Aegis
+
+Air + Protection skill.
+Reduces Air Corruption and blocks next respiratory deterioration.
+
+Do not build the full class upgrade system first if it risks breaking the app. Prepare the data structure now and implement class upgrades in a later phase if needed.
+
+---
+
+Part 13: Hero Detail Screen Additions
+
+Update the hero detail screen to show:
+
+Hero Level
+Hero EXP bar
+Star Rank
+Memory Shards
+Next Rank Requirement
+Class Tier
+Class Upgrade Requirement if eligible
+Skills
+Passives
+Rank Up button
+Convert Extra Shards button
+
+Example display:
+
+Novice Guardian
+Level 12
+★★☆☆☆
+Guardian Memory Shards: 40 / 40
+
+Rank Up Available
+
+Buttons:
+
+Rank Up
+Convert Extra Shards
+
+Only show Convert button if the player has Memory Shards.
+
+If the hero is maxed:
+
+Fully Awakened
+Extra Memory Shards can be converted safely.
+
+---
+
+Part 14: Currency Display
+
+Separate these currencies clearly:
+
+Codex Shards = used to summon heroes
+Memory Shards = hero-specific duplicate upgrade material
+Essence Shards = general currency from converting extra Memory Shards
+
+Avoid confusing the player with too many identical shard names.
+
+Recommended wording:
+
+Duplicate Novice Guardian converted into Guardian Memory Shards.
+Guardian Memory Shards can rank up Novice Guardian.
+Extra Memory Shards can later be converted into Essence Shards.
+
+---
+
+Part 15: Summon Screen Changes
+
+Summon screen should show:
+
+Codex Shards available
+Summon cost
+Possible duplicate result explanation
+New hero result
+Duplicate hero result
+Memory Shard gain
+Rank Up Available notice
+
+Add an info tooltip:
+
+Already own this hero?
+Duplicates become Memory Shards used to rank up that hero.
+Extra Memory Shards can later be converted manually.
+
+---
+
+Part 16: Stamina and Progression UI
+
+Add simple UI elements:
+
+Player Level
+Player EXP bar
+Stamina
+Hero Level
+Hero EXP
+Hero Star Rank
+Memory Shards
+
+Do not overcrowd battle screen.
+
+Recommended placements:
+
+Player Level + Stamina = top of Kingdom/Home screen
+Hero Level + Star Rank = hero roster and hero detail
+Memory Shards = hero detail and summon result
+Stamina warning = before entering battle
+
+Battle screen should stay focused on:
+
+Patient Stability
+Disease Corruption
+AP
+Clues
+Actions
+
+---
+
+Part 17: Rewards After Battle
+
+After battle, award:
+
+Player EXP
+Hero EXP for participating heroes
+Codex Shards
+Region Progress
+Optional materials later
+
+Example victory reward screen:
+
+Victory: Air Temple Restored
+
+Rewards:
+Player EXP +30
+Novice Guardian EXP +25
+Village Caretaker EXP +20
+Codex Shards +45
+Air Region Progress +1
+
+If player levels up:
+
+Player Level Up!
+Max Stamina increased.
+Stamina refilled.
+
+If hero levels up:
+
+Novice Guardian Level Up!
+Stabilization improved.
+
+---
+
+Part 18: Ethical Design Rules
+
+Because this is an educational medical/nursing game:
+
+Do not:
+
+Make duplicate upgrades required for early learning
+Block tutorials with stamina
+Block Codex with stamina
+Make wrong teams impossible in early game
+Create pay-to-win pressure
+Add paid stamina refills yet
+Add paid duplicate summons yet
+Use gambling-like pressure language
+
+Do:
+
+Make duplicates feel useful
+Let free players learn
+Use rank-ups for mastery and efficiency
+Use stamina as pacing, not punishment
+Keep practice mode available
+Make paid content later about depth, not basic access to learning
+
+---
+
+Part 19: Implementation Priority
+
+Implement this in phases.
+
+Phase 1
+
+Player level state
+Player EXP
+Hero level state
+Hero EXP
+Duplicate summon gives Hero Memory Shards
+Duplicate result screen
+Hero Memory Shard count
+Rank Up Available state
+
+Phase 2
+
+Hero star rank upgrades
+Rank-up confirmation UI
+Hero detail screen progression display
+Manual Memory Shard conversion
+Conversion warning
+Currency display cleanup
+
+Phase 3
+
+Stamina
+Stamina regeneration
+Stamina display
+Practice mode no-stamina rule
+Battle stamina cost
+Level-up stamina refill
+
+Phase 4
+
+Class upgrade requirements
+Class upgrade UI
+Advanced hero titles
+Advanced skills/passives
+Region materials
+Boss-gated evolution
+
+If Replit needs to start smaller, begin with:
+
+Duplicate summon → Hero Memory Shards
+Hero detail shows Memory Shards
+Rank Up Available message
+
+---
+
+Testing Checklist
+
+Test duplicate summon:
+
+1. Summon new hero.
+2. Hero is added to roster.
+3. Summon duplicate hero.
+4. Duplicate converts into that hero’s Memory Shards.
+5. Duplicate does not automatically become generic summon currency.
+6. Result screen explains what happened.
+7. Hero detail shows Memory Shards.
+8. If enough shards, Rank Up Available appears.
+9. Player can rank up hero with Memory Shards.
+10. Player can manually convert extra shards only after confirmation.
+
+Test player and hero progression:
+
+1. Complete battle.
+2. Player gains EXP.
+3. Hero gains EXP.
+4. Player can level up.
+5. Hero can level up.
+6. Level-up messages appear.
+7. Rewards screen is clear.
+
+Test stamina later:
+
+1. Tutorial battle costs 0 stamina.
+2. Normal battle costs 5 stamina.
+3. Boss battle costs 10 stamina.
+4. Not enough stamina prevents normal battle but allows practice/Codex.
+5. Stamina refills on player level-up.
+6. Stamina regenerates over time.
+
+Test safety:
+
+1. Codex does not require stamina.
+2. Tutorial replay does not require stamina.
+3. Practice mode is available without stamina.
+4. Early game is not blocked by duplicate requirements.
+5. Basic hero skills remain usable at 1 star.
+
+---
+
+Final Design Intent
+
+This progression system should make summoning and battles feel meaningful.
+
+The player should feel:
+
+I am leveling up as a healer.
+My heroes are growing stronger.
+Duplicates help me awaken my favorite heroes.
+I can choose whether to use or convert extra shards.
+Five-star heroes can eventually evolve into advanced classes.
+
+The system should support future monetization, but it should stay ethical and education-friendly.
