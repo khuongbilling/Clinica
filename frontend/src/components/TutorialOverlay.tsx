@@ -15,10 +15,9 @@ export function TutorialOverlay() {
   if (currentStep.requireAction) {
     return (
       <View
-        style={[StyleSheet.absoluteFillObject, styles.actionOverlay]}
-        pointerEvents="box-none"
+        style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { pointerEvents: 'box-none' }]}
       >
-        <View style={[styles.actionBanner, { marginTop: insets.top + SPACING.xs }]} pointerEvents="auto">
+        <View style={[styles.actionBanner, { marginTop: insets.top + SPACING.xs, pointerEvents: 'auto' }]}>
           <View style={styles.bannerRow}>
             <View style={styles.bannerIcon}>
               <Ionicons name="arrow-down" size={14} color={COLORS.onBrand} />

@@ -173,7 +173,7 @@ export function TipBubble({ tip, onDismiss }: { tip: TipDef | null; onDismiss: (
   const translateY = fade.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none" testID={`tip-${tip.id}`}>
+    <View style={[styles.wrap, { pointerEvents: 'box-none' }]} testID={`tip-${tip.id}`}>
       <Animated.View style={[styles.bubble, { opacity: fade, transform: [{ translateY }] }]}>
         <View style={styles.iconWrap}>
           <Ionicons name={tip.icon as any} size={18} color={COLORS.brand} />

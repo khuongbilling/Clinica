@@ -3,8 +3,10 @@ import { PlayerState } from '@/src/game/types';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants?.expoConfig?.extra as any)?.backendUrl || '').replace(/\/$/, '');
 const API = `${BASE_URL}/api`;
+const BACKEND_AVAILABLE = BASE_URL.length > 0;
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!BACKEND_AVAILABLE) throw new Error('Backend not configured');
   const res = await fetch(`${API}${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },

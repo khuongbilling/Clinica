@@ -47,7 +47,7 @@ export function LongPressCoachmark({ visible }: { visible: boolean }) {
   const arrowY = pulse.interpolate({ inputRange: [0, 1], outputRange: [0, 6] });
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none" testID="coachmark-longpress">
+    <View style={[styles.wrap, { pointerEvents: 'box-none' }]} testID="coachmark-longpress">
       <Animated.View style={[styles.bubble, { transform: [{ scale }], opacity }]}>
         <View style={styles.bubbleInner}>
           <Ionicons name="finger-print" size={16} color={COLORS.onBrand} />
