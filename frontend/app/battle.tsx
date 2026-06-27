@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -11,6 +11,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
+import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import type { Hero, HeroSkill } from "@/src/game/types";
@@ -93,6 +94,47 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
   const [detail, setDetail] = useState<DetailEntry | null>(null);
+
+  // ---- Contextual tutorial tips (one-shot, persisted) ----
+  const tips = useTipsQueue();
+  const prevHiddenCount = useRef(state.hiddenClueIds.length);
+  const prevActionCount = useRef(state.turnsTaken);
+  const prevTurn = useRef(state.turnsTaken);
+  // On mount: introduce the goal
+  useEffect(() => { tips.enqueue("battle.intro"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // First skill cast
+  useEffect(() => {
+    if (state.turnsTaken > prevActionCount.current) {
+      tips.enqueue("battle.firstSkill");
+    }
+    prevActionCount.current = state.turnsTaken;
+  }, [state.turnsTaken, tips]);
+  // Reveal of a hidden clue
+  useEffect(() => {
+    if (state.hiddenClueIds.length < prevHiddenCount.current) {
+      tips.enqueue("battle.clueReveal");
+    }
+    prevHiddenCount.current = state.hiddenClueIds.length;
+  }, [state.hiddenClueIds.length, tips]);
+  // Low AP nudge
+  useEffect(() => {
+    if (state.ap === 0 && state.outcome === "ongoing") {
+      tips.enqueue("battle.lowAp");
+    }
+  }, [state.ap, state.outcome, tips]);
+  // Full care chain just completed
+  useEffect(() => {
+    if (state.fullChainCompleted) {
+      tips.enqueue("battle.firstChain");
+    }
+  }, [state.fullChainCompleted, tips]);
+  // End-of-turn instability tip (after first turn passes)
+  useEffect(() => {
+    if (state.turn > 1 && state.turn !== prevTurn.current) {
+      tips.enqueue("battle.endTurn");
+    }
+    prevTurn.current = state.turn;
+  }, [state.turn, tips]);
 
   const stabilityColor = state.stability > 60 ? COLORS.success : state.stability > 30 ? COLORS.warning : COLORS.error;
   const corruptionPct = (state.corruption / enemy.corruption) * 100;
