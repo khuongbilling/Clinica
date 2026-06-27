@@ -32,7 +32,15 @@ export default function SummonScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn} testID="summon-close">
+        <Pressable
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/(tabs)/heroes");
+          }}
+          style={styles.closeBtn}
+          hitSlop={12}
+          testID="summon-close"
+        >
           <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>SUMMON HALL</Text>
@@ -104,8 +112,8 @@ export default function SummonScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  header: { padding: SPACING.lg, gap: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  closeBtn: { position: "absolute", left: SPACING.sm, top: SPACING.lg, padding: 6, zIndex: 1 },
+  header: { padding: SPACING.lg, paddingLeft: SPACING.lg + 36, gap: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  closeBtn: { position: "absolute", left: SPACING.sm, top: SPACING.lg, padding: 12, zIndex: 2, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 3, fontWeight: "700", marginTop: SPACING.lg },
   title: { color: COLORS.onSurface, fontSize: 30, fontWeight: "300", lineHeight: 34 },
   sub: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
