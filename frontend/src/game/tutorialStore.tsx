@@ -1,0 +1,143 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { TutorialId, TutorialStep, TUTORIALS } from "./tutorials";
+
+const STORAGE_KEY = "clinica.tutorials.v1";
+
+export type TutorialProgress = Partial<Record<TutorialId, boolean>>;
+
+interface TutorialCtx {
+  completed: TutorialProgress;
+  activeTutorialId: TutorialId | null;
+  stepIndex: number;
+  currentStep: TutorialStep | null;
+  totalSteps: number;
+  startTutorial: (id: TutorialId) => void;
+  advanceStep: () => void;
+  skipTutorial: () => void;
+  markDone: (id: TutorialId) => Promise<void>;
+  replayTutorial: (id: TutorialId) => Promise<void>;
+  isCompleted: (id: TutorialId) => boolean;
+  onRequiredAction: (actionType: string) => void;
+}
+
+const Ctx = createContext<TutorialCtx | null>(null);
+
+async function saveProgress(progress: TutorialProgress) {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  } catch {}
+}
+
+async function loadProgress(): Promise<TutorialProgress> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function TutorialProvider({ children }: { children: React.ReactNode }) {
+  const [completed, setCompleted] = useState<TutorialProgress>({});
+  const [activeTutorialId, setActiveTutorialId] = useState<TutorialId | null>(null);
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    loadProgress().then(setCompleted);
+  }, []);
+
+  const markDone = useCallback(async (id: TutorialId) => {
+    setCompleted(prev => {
+      const next = { ...prev, [id]: true };
+      saveProgress(next);
+      return next;
+    });
+  }, []);
+
+  const startTutorial = useCallback((id: TutorialId) => {
+    setActiveTutorialId(id);
+    setStepIndex(0);
+  }, []);
+
+  const doAdvance = useCallback((tutId: TutorialId, idx: number) => {
+    const steps = TUTORIALS[tutId];
+    const nextIdx = idx + 1;
+    if (nextIdx >= steps.length) {
+      markDone(tutId);
+      setActiveTutorialId(null);
+      setStepIndex(0);
+    } else {
+      setStepIndex(nextIdx);
+    }
+  }, [markDone]);
+
+  const advanceStep = useCallback(() => {
+    if (!activeTutorialId) return;
+    doAdvance(activeTutorialId, stepIndex);
+  }, [activeTutorialId, stepIndex, doAdvance]);
+
+  const skipTutorial = useCallback(() => {
+    if (!activeTutorialId) return;
+    markDone(activeTutorialId);
+    setActiveTutorialId(null);
+    setStepIndex(0);
+  }, [activeTutorialId, markDone]);
+
+  const replayTutorial = useCallback(async (id: TutorialId) => {
+    setCompleted(prev => {
+      const next = { ...prev, [id]: false };
+      saveProgress(next);
+      return next;
+    });
+    setActiveTutorialId(id);
+    setStepIndex(0);
+  }, []);
+
+  const isCompleted = useCallback((id: TutorialId) => {
+    return !!completed[id];
+  }, [completed]);
+
+  const onRequiredAction = useCallback((actionType: string) => {
+    if (!activeTutorialId) return;
+    const steps = TUTORIALS[activeTutorialId];
+    const step = steps[stepIndex];
+    if (!step?.requireAction) return;
+    if (step.requiredActionType && step.requiredActionType !== actionType) return;
+    doAdvance(activeTutorialId, stepIndex);
+  }, [activeTutorialId, stepIndex, doAdvance]);
+
+  const currentStep = useMemo<TutorialStep | null>(() => {
+    if (!activeTutorialId) return null;
+    return TUTORIALS[activeTutorialId][stepIndex] ?? null;
+  }, [activeTutorialId, stepIndex]);
+
+  const totalSteps = useMemo(() => {
+    if (!activeTutorialId) return 0;
+    return TUTORIALS[activeTutorialId].length;
+  }, [activeTutorialId]);
+
+  const value = useMemo<TutorialCtx>(() => ({
+    completed,
+    activeTutorialId,
+    stepIndex,
+    currentStep,
+    totalSteps,
+    startTutorial,
+    advanceStep,
+    skipTutorial,
+    markDone,
+    replayTutorial,
+    isCompleted,
+    onRequiredAction,
+  }), [completed, activeTutorialId, stepIndex, currentStep, totalSteps,
+    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, isCompleted, onRequiredAction]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useTutorial() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useTutorial must be used within TutorialProvider");
+  return ctx;
+}

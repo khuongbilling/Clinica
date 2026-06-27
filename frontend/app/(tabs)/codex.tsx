@@ -1,14 +1,31 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CODEX } from "@/src/game/content";
 import { DEPTH_INTRO, DEPTH_LABEL } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
+import { TUTORIAL_LABELS, TutorialId } from "@/src/game/tutorials";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+
+const TUTORIAL_IDS: TutorialId[] = ["firstBattle", "firstKingdom", "firstSummon"];
+
+const TUTORIAL_ICONS: Record<TutorialId, string> = {
+  firstBattle: "shield",
+  firstKingdom: "home",
+  firstSummon: "sparkles",
+};
+
+const TUTORIAL_DESC: Record<TutorialId, string> = {
+  firstBattle: "Learn Scout, Stabilize, and Counter — the care chain that wins battles.",
+  firstKingdom: "Explore your kingdom buildings and understand how the realm grows.",
+  firstSummon: "Spend Codex Shards to call new healers with unique clinical skills.",
+};
 
 export default function CodexScreen() {
   const { player } = usePlayer();
+  const { completed, replayTutorial } = useTutorial();
   if (!player) return null;
   const unlocked = new Set(player.codex_unlocked);
   const depth = player.codex_depth || "simple";
@@ -28,7 +45,53 @@ export default function CodexScreen() {
           </View>
         </View>
       </View>
+
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Tutorial Replay Section */}
+        <View style={styles.tutSection}>
+          <View style={styles.tutSectionHead}>
+            <Ionicons name="play-circle" size={16} color={COLORS.brand} />
+            <Text style={styles.tutSectionTitle}>TUTORIALS</Text>
+          </View>
+          <Text style={styles.tutSectionSub}>
+            Tutorials teach the first steps. Codex entries below explain the deeper clinical meaning.
+          </Text>
+          {TUTORIAL_IDS.map((id) => {
+            const isDone = !!completed[id];
+            return (
+              <View key={id} style={styles.tutCard} testID={`tutorial-card-${id}`}>
+                <View style={[styles.tutIcon, isDone && { backgroundColor: COLORS.brand + "20", borderColor: COLORS.brand + "40" }]}>
+                  <Ionicons name={TUTORIAL_ICONS[id] as any} size={18} color={isDone ? COLORS.brand : COLORS.onSurfaceTertiary} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={styles.tutCardHead}>
+                    <Text style={styles.tutName}>{TUTORIAL_LABELS[id]}</Text>
+                    {isDone && (
+                      <View style={styles.doneBadge}>
+                        <Ionicons name="checkmark" size={10} color={COLORS.brand} />
+                        <Text style={styles.doneTxt}>DONE</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.tutDesc}>{TUTORIAL_DESC[id]}</Text>
+                </View>
+                <Pressable
+                  onPress={() => replayTutorial(id)}
+                  style={styles.replayBtn}
+                  testID={`tutorial-replay-${id}`}
+                  hitSlop={8}
+                >
+                  <Ionicons name="refresh" size={14} color={COLORS.brand} />
+                  <Text style={styles.replayTxt}>REPLAY</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Codex Entries */}
+        <Text style={styles.section}>Codex Pages</Text>
         {CODEX.map((entry) => {
           const isUnlocked = unlocked.has(entry.id);
           const c = ELEMENT_COLORS[entry.system];
@@ -78,6 +141,43 @@ const styles = StyleSheet.create({
   depthLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
   depthIntro: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
   scroll: { padding: SPACING.lg, paddingTop: 0, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  section: { color: COLORS.onSurface, fontSize: 18, fontWeight: "400", marginTop: SPACING.sm },
+
+  tutSection: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  tutSectionHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  tutSectionTitle: { color: COLORS.brand, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
+  tutSectionSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15, marginBottom: SPACING.xs },
+  tutCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm,
+    padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.border,
+  },
+  tutIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  tutCardHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  tutName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  doneBadge: {
+    flexDirection: "row", alignItems: "center", gap: 2,
+    backgroundColor: COLORS.brand + "20", borderRadius: RADIUS.pill,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  doneTxt: { color: COLORS.brand, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  tutDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
+  replayBtn: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: SPACING.sm, paddingVertical: 6,
+    borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.brand + "50",
+    flexShrink: 0,
+  },
+  replayTxt: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
+
   card: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md,
     borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,

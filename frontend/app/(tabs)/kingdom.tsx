@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useEffect } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BUILDINGS } from "@/src/game/content";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const ICONS: Record<string, string> = {
@@ -16,11 +19,20 @@ const ICONS: Record<string, string> = {
 
 export default function KingdomScreen() {
   const { player } = usePlayer();
+  const { isCompleted, startTutorial } = useTutorial();
+
+  useEffect(() => {
+    if (!isCompleted("firstKingdom")) {
+      const t = setTimeout(() => startTutorial("firstKingdom"), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   if (!player) return null;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.hero}>
+      <View style={styles.hero} testID="kingdom-map">
         <Image
           source={{ uri: "https://images.pexels.com/photos/29672206/pexels-photo-29672206.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940" }}
           style={StyleSheet.absoluteFillObject}
@@ -69,6 +81,8 @@ export default function KingdomScreen() {
           );
         })}
       </ScrollView>
+
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }

@@ -12,10 +12,12 @@ import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 type Tab = "actions" | "items" | "call" | "team";
@@ -42,6 +44,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training }: { enemyId?: string; training?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure } = usePlayer();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
 
@@ -101,6 +104,14 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const prevHiddenCount = useRef(state.hiddenClueIds.length);
   const prevActionCount = useRef(state.turnsTaken);
   const prevTurn = useRef(state.turnsTaken);
+  // Auto-start firstBattle tutorial on first visit
+  useEffect(() => {
+    if (!isCompleted("firstBattle")) {
+      const t = setTimeout(() => startTutorial("firstBattle"), 800);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // On mount: introduce the goal
   useEffect(() => { tips.enqueue("battle.intro"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // First skill cast
@@ -150,6 +161,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       setSageScoutBonusUsed(true);
     }
     if (state.ap < effective.cost) return;
+    onRequiredAction(skill.type);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero).state);
     setDetail(null);
@@ -533,6 +545,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         )}
       </View>
 
+      <TutorialOverlay />
       <LongPressCoachmark visible={activeTab === "actions" && !detail && state.outcome === "ongoing"} />
 
       {detail && (

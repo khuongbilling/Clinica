@@ -1,25 +1,36 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FOUNDATION_BANNER, rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function SummonScreen() {
   const router = useRouter();
   const { player, summonOnce } = usePlayer();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<{ entry: any; duplicate: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!isCompleted("firstSummon")) {
+      const t = setTimeout(() => startTutorial("firstSummon"), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   if (!player) return null;
   const shards = player.codex_shards || 0;
   const canSummon = shards >= SUMMON_COST && !busy;
 
   const handleSummon = async () => {
+    onRequiredAction("summon");
     setBusy(true);
     try {
       const res = await summonOnce();
@@ -106,6 +117,8 @@ export default function SummonScreen() {
           );
         })}
       </ScrollView>
+
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }

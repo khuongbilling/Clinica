@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { PlayerProvider } from "@/src/game/store";
+import { TutorialProvider } from "@/src/game/tutorialStore";
 import { COLORS } from "@/src/theme/colors";
 
 LogBox.ignoreAllLogs(true);
@@ -27,14 +28,16 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.surface }}>
       <SafeAreaProvider>
         <PlayerProvider>
-          <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: COLORS.surface },
-              animation: "fade",
-            }}
-          />
+          <TutorialProvider>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: COLORS.surface },
+                animation: "fade",
+              }}
+            />
+          </TutorialProvider>
         </PlayerProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
