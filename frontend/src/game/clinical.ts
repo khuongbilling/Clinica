@@ -743,6 +743,7 @@ export interface BattleScoring {
   consultsUsed?: number;
   emergencyCallsUsed?: number;
   inappropriateConsultsUsed?: number;
+  basicAidUses?: number;
 }
 
 export function computeStars(scoring: BattleScoring, rules: StarRules): { stars: number; details: string[] } {
@@ -768,8 +769,9 @@ export function computeStars(scoring: BattleScoring, rules: StarRules): { stars:
   const consultsOk = (scoring.consultsUsed ?? 0) <= 1;
   const noEmergency = (scoring.emergencyCallsUsed ?? 0) === 0;
   const noInappropriate = (scoring.inappropriateConsultsUsed ?? 0) === 0;
+  const lowBasicAid = (scoring.basicAidUses ?? 0) <= 2;
 
-  if (scoring.won && efficient && safe && poorOk && reassessOk && consultsOk && noEmergency && noInappropriate) {
+  if (scoring.won && efficient && safe && poorOk && reassessOk && consultsOk && noEmergency && noInappropriate && lowBasicAid) {
     stars++;
     details.push('Efficient and safe care.');
   }

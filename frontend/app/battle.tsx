@@ -7,7 +7,7 @@ import * as Haptics from "expo-haptics";
 
 import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
-import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
+import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
@@ -192,6 +192,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         consults: String(state.consultsUsed),
         emergency: String(state.emergencyCallsUsed),
         inappropriate: String(state.inappropriateConsultsUsed),
+        basicAid: String(state.basicAidUses),
       },
     });
   };
@@ -368,7 +369,26 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                   if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above to select.</Text>;
                   const acted = !!state.heroActionsUsed[selHero.id];
                   if (acted) return <Text style={styles.emptyTab}>{selHero.name} has already acted. Pick another hero or end the turn.</Text>;
-                  return selHero.skills.map(skill => {
+                  const isBoss = (state.enemyClinical?.rewardBase || 0) >= 100;
+                  const careDmg = careAttemptDamage(state.chapter, isBoss);
+                  const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
+                  const careNode = (
+                    <Pressable
+                      key="care-attempt"
+                      style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]}
+                      onPress={() => careDisabled ? null : setState(prev => applyCareAttempt(prev).state)}
+                      testID="battle-care-attempt"
+                    >
+                      <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
+                      <View style={styles.actionHead}>
+                        <Text style={styles.actionName} numberOfLines={1}>Care Attempt</Text>
+                        <Text style={styles.apTag}>1 AP</Text>
+                      </View>
+                      <Text style={styles.actionEffect} numberOfLines={2}>Unfocused aid · −{careDmg} Corruption. Does not advance care chain.</Text>
+                      <Text style={styles.actionHero} numberOfLines={1}>Fallback only — targeted skills are stronger</Text>
+                    </Pressable>
+                  );
+                  const skillNodes = selHero.skills.map(skill => {
                     const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
                     let cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
                     const airDisc = state.nextAirActionDiscount && skill.systemType === "Air";
@@ -395,6 +415,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                       </Pressable>
                     );
                   });
+                  return [careNode, ...skillNodes];
                 })()}
               </View>
             </ScrollView>
@@ -719,6 +740,8 @@ const styles = StyleSheet.create({
   apTag: { color: COLORS.brand, fontSize: 10, fontWeight: "700", marginLeft: 4 },
   statusBadge: { position: "absolute", top: 4, right: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, maxWidth: "60%" },
   statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
+  basicTag: { position: "absolute", top: 4, right: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, borderColor: COLORS.onSurfaceTertiary, backgroundColor: COLORS.onSurfaceTertiary + "20" },
+  basicTagTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8, color: COLORS.onSurfaceTertiary },
   heroRow: { flexDirection: "row", paddingHorizontal: SPACING.lg, gap: 8, paddingBottom: 8, flexWrap: "wrap" },
   heroPill: { paddingHorizontal: 8, paddingTop: 6, paddingBottom: 6, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center", flexShrink: 1 },
   heroPillSprite: { width: 40, height: 40, borderRadius: 8, marginBottom: 4, backgroundColor: COLORS.bg },

@@ -79,6 +79,7 @@ export interface BattleState {
   emergencyCallsUsed: number;
   inappropriateConsultsUsed: number;
   blockNextSpread: boolean;
+  basicAidUses: number;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -167,6 +168,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     emergencyCallsUsed: 0,
     inappropriateConsultsUsed: 0,
     blockNextSpread: false,
+    basicAidUses: 0,
   };
 }
 
@@ -185,6 +187,52 @@ export function isHeroReady(s: BattleState, heroId: string): boolean {
 
 function consumeHeroAction(s: BattleState, heroId: string): BattleState {
   return { ...s, heroActionsUsed: { ...s.heroActionsUsed, [heroId]: true } };
+}
+
+// ============================================================
+// Care Attempt — universal basic action
+// ============================================================
+
+export function careAttemptDamage(chapter: number, isBoss: boolean): number {
+  if (isBoss) return 2;
+  if (chapter >= 3) return 3;
+  if (chapter >= 2) return 4;
+  return 5;
+}
+
+export function applyCareAttempt(s: BattleState): ApplyResult {
+  if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
+  const heroId = s.selectedHeroId;
+  if (!heroId) return { state: s, message: 'Select a hero first.', aborted: true };
+  if (s.heroActionsUsed[heroId]) {
+    const hero = s.team.find(h => h.id === heroId);
+    return { state: s, message: `${hero?.name || 'That hero'} has already acted this turn.`, aborted: true };
+  }
+  if (s.ap < 1) return { state: s, message: 'Not enough AP.', aborted: true };
+
+  const hero = s.team.find(h => h.id === heroId);
+  const isBoss = (s.enemyClinical?.rewardBase || 0) >= 100;
+  const damage = careAttemptDamage(s.chapter, isBoss);
+
+  let next: BattleState = consumeHeroAction({
+    ...s,
+    ap: s.ap - 1,
+    corruption: Math.max(0, s.corruption - damage),
+    turnsTaken: s.turnsTaken + 1,
+    basicAidUses: s.basicAidUses + 1,
+    log: [
+      ...s.log,
+      `${hero?.name || 'Hero'} → Care Attempt.`,
+      `Care Attempt reduced Disease Corruption by ${damage}. A targeted clinical action would be stronger.`,
+    ],
+  }, heroId);
+
+  if (next.corruption <= 0) {
+    next.log.push(`✨ The ${s.enemy.name} is purified! Stability holds at ${next.stability}%.`);
+    next.outcome = 'win';
+  }
+
+  return { state: next, message: `Care Attempt: -${damage} Corruption.`, status: 'weak' };
 }
 
 function revealHiddenClues(s: BattleState, count: number): BattleState {
