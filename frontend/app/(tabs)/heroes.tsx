@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
+import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -72,6 +73,9 @@ export default function HeroesScreen() {
               testID={`hero-card-${h.id}`}
             >
               <View style={styles.cardHead}>
+                {getHeroSprite(h.id) && (
+                  <Image source={getHeroSprite(h.id)!} style={styles.heroSprite} resizeMode="cover" />
+                )}
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={styles.heroName}>{h.name}</Text>
@@ -127,7 +131,8 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.lg, paddingTop: 0, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   helperText: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginBottom: SPACING.sm, fontStyle: "italic" },
   card: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderLeftWidth: 4, gap: SPACING.sm },
-  cardHead: { flexDirection: "row", alignItems: "flex-start" },
+  cardHead: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.md },
+  heroSprite: { width: 72, height: 92, borderRadius: RADIUS.sm, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
   heroName: { color: COLORS.onSurface, fontSize: 18, fontWeight: "500" },
   teamBadge: { flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: COLORS.brand, paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.pill },
   teamBadgeTxt: { color: COLORS.onBrand, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },

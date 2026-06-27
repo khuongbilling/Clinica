@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -11,6 +11,7 @@ import { applyCall, applySkill, applyTempAction, endPlayerTurn, initBattle, sele
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
+import { getHeroSprite } from "@/src/components/HeroSprites";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -294,6 +295,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                 testID={`hero-pill-${h.id}`}
                 accessibilityRole="button"
               >
+                {getHeroSprite(h.id) && (
+                  <Image source={getHeroSprite(h.id)!} style={styles.heroPillSprite} resizeMode="cover" />
+                )}
                 <Text style={[styles.heroPillName, selected && !acted && { color: elementColor }, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
                   {h.name}
                 </Text>
@@ -716,7 +720,8 @@ const styles = StyleSheet.create({
   statusBadge: { position: "absolute", top: 4, right: 4, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, maxWidth: "60%" },
   statusBadgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
   heroRow: { flexDirection: "row", paddingHorizontal: SPACING.lg, gap: 8, paddingBottom: 8, flexWrap: "wrap" },
-  heroPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center", flexShrink: 1 },
+  heroPill: { paddingHorizontal: 8, paddingTop: 6, paddingBottom: 6, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary, minWidth: 88, alignItems: "center", flexShrink: 1 },
+  heroPillSprite: { width: 40, height: 40, borderRadius: 8, marginBottom: 4, backgroundColor: COLORS.bg },
   heroPillActed: { opacity: 0.45 },
   heroPillName: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
   heroPillRole: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1, marginTop: 2 },

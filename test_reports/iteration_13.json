@@ -1,0 +1,37 @@
+{
+  "summary": "Sprite-portrait feature verified end-to-end on mobile viewport (390x844). BATTLE: hero pill row above AP indicator renders 40x40 portraits for Novice Guardian and Village Caretaker (both loaded at natural 1024x1024, src present, JS img element resolved). Tapping Village Caretaker pill correctly highlights it with element-color border AND switches the Actions tab to her skills (Guardian's Touch + Reassess) — confirmed via screenshot diff between selected states. HEROES TAB: all 10 hero cards render the 72x92 portrait. Verified rendered ids = novice_guardian, night_watcher, apprentice_seer, junior_warden, data_acolyte, village_caretaker, storm_runner, infection_warden, wound_sage, mindkeeper. Owned heroes (novice_guardian + village_caretaker after trial) appear at opacity=1; the other 8 unowned heroes at opacity=0.45 — sprites still render in dimmed state as required. ASSET CHECK: 10 PNG files present at /app/frontend/assets/heroes/. File sizes mostly within spec but 4 exceed 700KB upper bound (novice_guardian=735KB, infection_warden=771KB, junior_warden=805KB, apprentice_seer=727KB) — non-blocking, flagged as minor. REGRESSION: full v2 battle flow intact (clue strip, AP=4 dots, status pills, Actions/Items/Call/Team tabs, End Turn button all present and functional). Backend pytest 31/31 PASS. No page errors, no red-screen. Only pre-existing non-blocking deprecation warnings observed (shadow* props, useNativeDriver, pointerEvents).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "battle.tsx hero pills", "issues": ["Sprite is 1024x1024 source displayed at 40x40 — fine on web preview, but each pill image bundles ~700KB asset. On a real device this is wasteful. Consider downsizing the bundled PNGs to 128x128 or 256x256."]},
+      {"screen": "(tabs)/heroes.tsx cards", "issues": ["Same: 1024x1024 source displayed at 72x92."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/pytest/pytest_iteration13.xml",
+    "/app/backend/tests/test_player_api.py",
+    "/app/backend/tests/test_iteration3_fields.py",
+    "/app/backend/tests/test_iteration6_clinical_fields.py"
+  ],
+  "action_items": [
+    "OPTIONAL (perf): downscale the 10 hero PNGs from 1024x1024 to ~256x256 (or generate @1x/@2x variants). Current bundled sizes range 515KB–805KB per sprite; 4 of 10 exceed the 700KB spec ceiling. Total ~6.7MB added to the JS bundle for assets that are rendered at ≤72x92 in the UI.",
+    "OPTIONAL (consistency): HeroSprites.ts only maps the 10 currently generated heroes; getHeroSprite returns undefined for any future hero id. Both battle.tsx (line 298) and heroes.tsx (line 76) already guard with `getHeroSprite(h.id) && ...`, so this is safe — just worth a comment in HeroSprites.ts so future devs remember to add entries.",
+    "Pre-existing (not introduced by this change): non-blocking console warnings — `\"shadow*\" style props are deprecated. Use \"boxShadow\".` and `props.pointerEvents is deprecated. Use style.pointerEvents`. Worth a sweep next chore iteration."
+  ],
+  "critical_code_review_comments": [
+    "HeroSprites.ts uses static require() map — correct approach for Metro/React Native (dynamic require would fail). Good.",
+    "battle.tsx:298 and heroes.tsx:76 both call getHeroSprite(h.id) twice (once in the && guard, once as source). Trivial; could memoize, but not worth changing.",
+    "heroPillSprite (battle.tsx:724) uses width:40, height:40, borderRadius:8 — matches the ~40x40 spec. heroSprite (heroes.tsx:135) uses 72x92 with RADIUS.sm — matches the ~72x92 spec.",
+    "Both screens use resizeMode=\"cover\" which is correct for portrait crops."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (31/31)", "frontend": "100% (all sprite + regression assertions passed)" },
+  "seed_data_creation": "Onboarded one disposable test player 'TestRunner' (guardian aptitude, nonmedical goal) to reach the trial battle — required to test the live UI.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Playwright flow validated: onboarding → guardian aptitude → nonmedical goal → trial enters /battle?enemyId=air_sprite where 2 hero pills render with sprite Images. Heroes tab confirmed via direct nav to /heroes (the battle screen hides the tab bar — that is expected behavior). Use viewport 390x844. testIDs in use: welcome-begin, onboarding-name-input, onboarding-name-continue, quiz-q{1,2,3}-answer-{guardian|sage|warden|weaver}, result-accept, goal-{nonmedical|preNursing|nursingStudent|nclexPrep|healthcareProfessional}, goal-continue, trial-enter, hero-pill-{hero_id}, hero-card-{hero_id}, tab-heroes/tab-run/tab-codex/tab-kingdom/tab-profile. Backend pytest entry: `cd /app/backend && python -m pytest tests/ -v`.",
+  "rca_of_issue": "n/a — feature passes."
+}
