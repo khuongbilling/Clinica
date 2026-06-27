@@ -25,8 +25,20 @@ type DetailEntry =
 
 export default function Battle() {
   const { enemyId, training } = useLocalSearchParams<{ enemyId: string; training?: string }>();
+  const { player, loading } = usePlayer();
+  if (loading || !player) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.bg }}>
+        <Text style={{ color: COLORS.onSurfaceTertiary }}>Loading…</Text>
+      </View>
+    );
+  }
+  return <BattleInner enemyId={enemyId} training={training} />;
+}
+
+function BattleInner({ enemyId, training }: { enemyId?: string; training?: string }) {
   const router = useRouter();
-  const { player, loading, applyRewards, recordFailure } = usePlayer();
+  const { player, applyRewards, recordFailure } = usePlayer();
   const isTraining = training === "1";
 
   const enemy = useMemo(() => {
@@ -184,17 +196,6 @@ export default function Battle() {
   };
 
   // (Skills are filtered per selected hero in the Actions tab)
-
-  // Hydration guard — render-block until player loads so inventory seeds correctly on deep-links
-  if (loading || !player) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Text style={styles.detailKicker}>LOADING BATTLE…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>

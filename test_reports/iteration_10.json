@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 10 FINAL retest of B1 hero-pill switching after main agent split Battle() into outer-guard + BattleInner() so the useState lazy initializer only runs once player is fully loaded. Mobile 390x844 against https://med-adventure-2.preview.emergentagent.com. RESULT: ✅ B1 FULLY FIXED. Seeded TEST_b1final (guardian, nursingStudent) with active_team=[novice_guardian, village_caretaker, night_watcher]. All three hero pills render. Switching cycle NG → VC → NW → NG ALL succeed: VC tap now correctly switches the Actions tab to [battle-skill-guardians_touch, battle-skill-reassess] (was a no-op in iteration 9); NW tap switches to [vital_ward, rally_bell]; NG tap returns to [breath_of_dawn, lantern_of_clues, rapid_response]. The outer Battle() guard at battle.tsx:29-35 returns the Loading view while loading||!player, and BattleInner consumes a guaranteed-resolved player so initBattle() sees the correct team — confirmed by state.team and selectedHeroId now reflecting the active_team. The duplicate 'if (loading || !player)' guard inside BattleInner has been removed; no 'loading is not defined' runtime error observed in console. \n\nV2 FULL FLOW: (a) Lantern of Clues (NG) → 'Wheezing' clue revealed in clue row ✅. (b) Call tab — Rapid Response button RENDERS at stability=50% with opacity=0.4 (disabled) and the badge text 'Reserved for Stability ≤ 30' visible inside the card ✅ (B3 still fixed). (c) Call Pharmacy → after the call both Respiratory and Rapid Response remain listed in the Call tab ✅ (B2 still fixed). (d) Items tab shows the 'Prepared' label on the discounted item ✅. (e) Switched to VC and used Albuterol Mist (battle-item-I001) — corruption dropped from 80 toward target. (f) End-turn applied enemy damage: stability 50→43, AP refreshed, heroActionsUsed reset (VC pill became Ready again next turn). (g) On turn 2, tapped VC pill, Actions tab correctly showed [guardians_touch, reassess], used Reassess ✅. \n\nRAPID RESPONSE GATING: confirmed via DOM/CSS — element is visible, opacity computed=0.4, contains text 'LIMITED' + 'Reserved for Stability ≤ 30'. Spec satisfied. (Did not engineer stability ≤30 to verify the activation path live, but the engine guard at battle.ts:523 is correct and the disabled flag uses (state.stability > 30 && !state.dangerTriggerActive). \n\nBACKEND REGRESSION: 31/31 pytest pass in 5.37s (test_player_api 16/16, test_iteration3_fields 6/6, test_iteration6_clinical_fields 10/10). No backend regressions. \n\nNON-BLOCKING WARNINGS (carry-overs): useNativeDriver fallback, shadow* style deprecation, props.pointerEvents deprecation — all web-preview cosmetic. No new console errors introduced by the Battle/BattleInner refactor.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "Animated useNativeDriver", "issue": "Carry-over web-preview warning, non-blocking." },
+      { "component": "shadow* style props", "issue": "Carry-over deprecation warning, multiple files use legacy shadowColor/shadowOffset/etc. Non-blocking." },
+      { "component": "props.pointerEvents", "issue": "Carry-over deprecation warning. Non-blocking." }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_player_api.py",
+    "/app/backend/tests/test_iteration3_fields.py",
+    "/app/backend/tests/test_iteration6_clinical_fields.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/iteration_10.json"
+  ],
+  "action_items": [
+    "(Optional/Cosmetic) Clean up legacy state.callUsed in /app/frontend/src/game/battle.ts:537 — no UI consumers remain.",
+    "(Optional) Add a `key={player.id}` on BattleInner if you ever want to force a remount when the player swaps mid-session; not required today.",
+    "(Optional) Migrate shadow* → boxShadow and props.pointerEvents → style.pointerEvents for RN-Web 0.74+ compatibility."
+  ],
+  "critical_code_review_comments": [
+    "battle.tsx:26-37 — Outer Battle() guard is the correct fix for the state-init race. Returns a centered Loading view until usePlayer() resolves, then renders BattleInner with a guaranteed-loaded player. Clean.",
+    "battle.tsx:39-88 — BattleInner's useState lazy initializer now sees the real player.active_team via the outer `team` useMemo, so state.team and state.selectedHeroId are seeded correctly on first render.",
+    "battle.ts:167-170 — selectHero's team-membership guard is now correct because state.team matches the rendered pills. Consider adding a dev-mode console.warn for future regressions but not required.",
+    "battle.tsx:113-115 — `availableCalls` filter correctly uses per-consult `state.callsUsed[callKey]` (verified in iteration 8 fix; still correct here). Rapid Response always renders and lets the disabled+badge path handle gating.",
+    "battle.ts:537 — `callUsed: true` legacy flag is still set but no UI consumes it; safe to remove in a future cleanup."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_10.json",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {
+    "backend": "100% (31/31 pytest pass; 5.37s)",
+    "frontend": "100% on the requested verifications — B1 fully fixed (NG↔VC↔NW pill switching all work), v2 flow runs end-to-end (Lantern→clue reveal, Pharmacy preserves other calls + adds Prepared item, items tab shows Prepared label, Albuterol drops corruption, end-turn resets hero actions, Reassess usable on turn 2), Rapid Response correctly gated (visible-but-disabled with 'Reserved for Stability ≤ 30' badge at stability=50)."
+  },
+  "seed_data_creation": "Created TEST_b1final (id 1ae7cf8b-3032-43ac-8ede-8b51c3e18739, guardian/nursingStudent) with active_team=[novice_guardian, village_caretaker, night_watcher]. Not auto-cleaned; recommend periodic Mongo cleanup for name LIKE 'TEST_%'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "B1/B2/B3 all verified fixed and stable. Battle component refactor (outer-guard + BattleInner) is the correct architecture and resolves the state-init race that blocked Village Caretaker switching. Backend untouched, 31/31 pytest pass. No retest needed unless new features land.",
+  "rca_of_issue": "Original B1 RCA (now fixed): Battle's useState lazy initializer ran on first mount when player was still null, capturing the default HEROES.slice(0,3) team. After player loaded, the hero pills rendered the correct active_team, but state.team and selectedHeroId remained the stale defaults, so selectHero()'s team-membership guard silently rejected any hero outside the default slice (notably village_caretaker). The fix splits Battle into outer Battle() (returns Loading view while loading||!player) and inner BattleInner() (only mounts once player is resolved), so the lazy initializer always sees the real player and seeds state.team correctly. Verified live: tapping each of NG/VC/NW now switches the Actions tab to the correct hero's skills."
+}
