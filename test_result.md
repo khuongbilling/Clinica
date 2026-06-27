@@ -134,7 +134,45 @@ frontend:
               3. Star result on /result correctly drops the 3rd star when Care Attempt used 3+ times in a winning run.
               4. No regressions in skill/item/call buttons.
 
-  - task: "Hero-Based Battle System v2 (regression check)"
+  - task: "Enemy Sprites (AI-generated Suikoden-style portraits)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/scripts/generate_enemy_sprites.py, /app/frontend/src/components/EnemySprites.ts, /app/frontend/app/battle.tsx, /app/frontend/app/result.tsx, /app/frontend/app/(tabs)/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            Generated 11 AI Suikoden-style enemy portrait sprites (10 enemies + 1 boss) via Gemini Nano Banana
+            and Emergent LLM Key. PNGs saved to /app/frontend/assets/enemies/*.png, resized to 256x256, ~90KB each.
+
+            Each enemy is portrayed as a "Disease Corruption" creature/spirit (NOT a person), matching the disease theme:
+              - air_sprite: gasping air-elemental
+              - river_sludge: crimson sludge wraith
+              - energy_lock: trembling frostbound figure (hypoglycemia)
+              - fire_imp: infection imp
+              - septara_seed: thorned sepsis seedling
+              - cardion_echo: drowning heart spirit
+              - glycora_spark: sugar-crystal djinn (DKA)
+              - pulmora_wisp: smoky lung-spirit (COPD)
+              - electrox_flicker: lightning elemental (hyperK)
+              - mind_fog: hooded shadow (delirium)
+              - lord_imbalance: BOSS — multi-elemental dark lord with 4 cracked rune fragments
+
+            UI wiring:
+              1. Battle screen header: shows enemy portrait next to name + system pills.
+              2. Run tab (/(tabs)/index.tsx): Lord Imbalance sprite replaces pexels stock image as boss card background. Encounter card thumbnails replaced the color dot with a 56x56 portrait, system color used as border.
+              3. Result screen: round 96x96 enemy portrait with success/error badge replaces the lone Ionicon.
+
+            Helper: getEnemySprite(enemyId) returns ImageSourcePropType or undefined; UI falls back gracefully to icon/dot.
+
+            Please verify:
+              1. Run tab → encounter cards show small enemy portraits, boss card shows Lord Imbalance art with title overlay.
+              2. Tap an encounter → battle header shows the matching enemy portrait next to the name.
+              3. Win/lose a battle → result screen shows the enemy portrait with a check/alert badge.
+              4. No regression in skill/item/call buttons or hero pills.
     implemented: true
     working: true
     file: "/app/frontend/app/battle.tsx, /app/frontend/src/game/battle.ts"

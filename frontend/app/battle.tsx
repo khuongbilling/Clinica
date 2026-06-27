@@ -12,6 +12,7 @@ import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { getHeroSprite } from "@/src/components/HeroSprites";
+import { getEnemySprite } from "@/src/components/EnemySprites";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -208,20 +209,29 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           <Pressable style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} testID="battle-close">
             <Ionicons name="close" size={18} color={COLORS.onSurface} />
           </Pressable>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
-            <Text style={styles.enemyKicker}>{enemy.realWorld.toUpperCase()}</Text>
-            {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
-          </View>
-          <Text style={styles.enemyName}>{enemy.name}</Text>
-          <View style={styles.systemPills}>
-            <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
-              <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
-            </View>
-            {enemy.secondarySystem && (
-              <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.secondarySystem] }]}>
-                <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.secondarySystem] }]}>{enemy.secondarySystem}</Text>
+          <View style={styles.enemyHeaderRow}>
+            {getEnemySprite(enemy.id) && (
+              <View style={[styles.enemyPortraitWrap, { borderColor: ELEMENT_COLORS[enemy.primarySystem] + "AA" }]}>
+                <Image source={getEnemySprite(enemy.id)!} style={styles.enemyPortrait} resizeMode="cover" />
               </View>
             )}
+            <View style={{ flex: 1, gap: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" }}>
+                <Text style={styles.enemyKicker}>{enemy.realWorld.toUpperCase()}</Text>
+                {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
+              </View>
+              <Text style={styles.enemyName}>{enemy.name}</Text>
+              <View style={styles.systemPills}>
+                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
+                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
+                </View>
+                {enemy.secondarySystem && (
+                  <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.secondarySystem] }]}>
+                    <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.secondarySystem] }]}>{enemy.secondarySystem}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
           </View>
         </View>
 
@@ -673,6 +683,9 @@ const styles = StyleSheet.create({
   contentInner: { paddingBottom: SPACING.md },
 
   enemyHeader: { padding: SPACING.lg, paddingBottom: SPACING.sm, gap: 4 },
+  enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md, paddingRight: 32 },
+  enemyPortraitWrap: { width: 72, height: 72, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary },
+  enemyPortrait: { width: "100%", height: "100%" },
   closeBtn: { position: "absolute", right: SPACING.sm, top: SPACING.md, padding: 8, zIndex: 1 },
   enemyKicker: { color: COLORS.error, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 8, paddingVertical: 1, borderRadius: RADIUS.pill },

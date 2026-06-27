@@ -6,6 +6,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, BOSS_LORD_IMBALANCE, ENEMIES, RANKS } from "@/src/game/content";
+import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -66,9 +67,10 @@ export default function RunHome() {
           testID="run-boss-card"
         >
           <Image
-            source={{ uri: "https://images.pexels.com/photos/27987438/pexels-photo-27987438.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940" }}
+            source={getEnemySprite(BOSS_LORD_IMBALANCE.id) || { uri: "https://images.pexels.com/photos/27987438/pexels-photo-27987438.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940" }}
             style={StyleSheet.absoluteFillObject}
-            blurRadius={2}
+            blurRadius={1}
+            resizeMode="cover"
           />
           <LinearGradient
             colors={["rgba(17,19,21,0.2)", "rgba(17,19,21,0.95)"]}
@@ -118,7 +120,13 @@ export default function RunHome() {
             onPress={() => launchEncounter(e.id)}
             testID={`run-encounter-${e.id}`}
           >
-            <View style={[styles.encDot, { backgroundColor: ELEMENT_COLORS[e.primarySystem] }]} />
+            {getEnemySprite(e.id) ? (
+              <View style={[styles.encThumbWrap, { borderColor: ELEMENT_COLORS[e.primarySystem] + "AA" }]}>
+                <Image source={getEnemySprite(e.id)!} style={styles.encThumb} resizeMode="cover" />
+              </View>
+            ) : (
+              <View style={[styles.encDot, { backgroundColor: ELEMENT_COLORS[e.primarySystem] }]} />
+            )}
             <View style={{ flex: 1 }}>
               <Text style={styles.encName}>{e.name}</Text>
               <Text style={styles.encReal}>{e.realWorld}</Text>
@@ -187,6 +195,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   encDot: { width: 8, height: 56, borderRadius: 4 },
+  encThumbWrap: { width: 56, height: 56, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary },
+  encThumb: { width: "100%", height: "100%" },
   encName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "500" },
   encReal: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   encMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },

@@ -1,0 +1,35 @@
+{
+  "summary": "Enemy sprite integration validated end-to-end on the live web preview (mobile viewport 390x844). All 5 spec points pass: (1) Boss card on Run tab renders lord_imbalance.png as its full background image (1 <img> child of run-boss-card; LinearGradient overlay keeps the 'Lord Imbalance' title readable). (2) Each daily-shift encounter card has exactly 1 <img> portrait thumbnail (56x56 rendered) on the LEFT with a primary-system colored border — verified on river_sludge, energy_lock, electrox_flicker. (3) Battle screen header shows a 68x68 (border-box 72x72) enemy portrait next to the enemy name with system pills below — verified on River Sludge with a red 'RIVER' pill. (4) Result screen renders a 90x90 (border-box 96x96) circular enemy portrait with a circular success badge (green shield-checkmark for win on Lord Imbalance) or error badge (red alert-circle for loss on River Sludge). (5) Regression: hero pills still render their 40x40 hero sprites (Novice Guardian + Village Caretaker), Care Attempt button still present, ACTIONS/ITEMS/CALL/TEAM tabs functional. No backend testing (frontend-only request).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/tmp/01_run_tab.png",
+    "/tmp/02_battle_screen.png",
+    "/tmp/04_result_loss.png",
+    "/tmp/05_result_win_boss.png"
+  ],
+  "action_items": [
+    "(Optional) Pre-existing console warnings remain ('shadow*' style props deprecated, 'props.pointerEvents' deprecated, 'useNativeDriver is not supported' on web). Unrelated to sprites — future cleanup.",
+    "(Optional) The result-screen circular portrait CSS uses width/height 96 with 3px border so inner img renders at 90x90; spec said 96x96. Visually correct (border-box matches 96), but if you want exact 96 image area, switch the outer wrap to width/height 102 or apply border-box differently."
+  ],
+  "critical_code_review_comments": [
+    "EnemySprites.ts: static require map for all 11 PNG assets (10 enemies + lord_imbalance) — Metro will tree-shake correctly, 1322 modules bundled.",
+    "app/(tabs)/index.tsx L70: Boss card Image falls back to the Pexels URL if getEnemySprite returns undefined — defensive and matches PRD.",
+    "app/(tabs)/index.tsx L123-129: encounter thumb wrap (56x56, RADIUS.md, borderWidth 2, system-tinted color) renders only when getEnemySprite exists; otherwise the old colored bar is shown. Correct.",
+    "app/battle.tsx L213-217: enemyPortraitWrap (72x72) with primary-system colored border + Image with resizeMode='cover'. Renders only when sprite exists. Correct.",
+    "app/result.tsx L84-97: enemyResultPortrait (96x96 circle) with success/error border + absolute-positioned circular badge (32x32) bottom-right. Falls back to plain Ionicons when no sprite. Correct.",
+    "All three call sites correctly use BOSS_LORD_IMBALANCE.id which matches the SPRITES key 'lord_imbalance' — no name mismatch."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only)", "frontend": "5/5 spec items verified live" },
+  "seed_data_creation": "Created test player 630f06f0-a4ec-46b0-ae8e-f4a625d0bc61 (Guardian, runs_completed=1, onboarding_complete=true) so boss card is unlocked. Seeded via POST /api/player + PUT.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Player ID 630f06f0-a4ec-46b0-ae8e-f4a625d0bc61 has runs_completed=1 (boss unlocked) and can be reused. To skip onboarding in playwright, inject localStorage key 'clinica.playerId.v1' before navigation. Direct-link to result screen works via /result?outcome=win|loss&enemyId=...&stability=...&turns=...&unsafe=0&poorFit=0&consults=0&emergency=0&inappropriate=0&basicAid=0&reassess=0&fullChain=0&shards=0 — useful for testing the result UI without playing a full battle.",
+  "rca_of_issue": "n/a — feature works as designed."
+}

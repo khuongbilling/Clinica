@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BOSS_LORD_IMBALANCE, CODEX, ENEMIES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
+import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
@@ -80,11 +81,20 @@ export default function Result() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.head}>
-          <Ionicons
-            name={won ? "shield-checkmark" : "alert-circle"}
-            size={64}
-            color={won ? COLORS.success : COLORS.error}
-          />
+          {enemy && getEnemySprite(enemy.id) ? (
+            <View style={[styles.enemyResultPortrait, { borderColor: won ? COLORS.success : COLORS.error }]}>
+              <Image source={getEnemySprite(enemy.id)!} style={styles.enemyResultImg} resizeMode="cover" />
+              <View style={[styles.enemyResultBadge, { backgroundColor: won ? COLORS.success : COLORS.error }]}>
+                <Ionicons name={won ? "shield-checkmark" : "alert-circle"} size={22} color={COLORS.surface} />
+              </View>
+            </View>
+          ) : (
+            <Ionicons
+              name={won ? "shield-checkmark" : "alert-circle"}
+              size={64}
+              color={won ? COLORS.success : COLORS.error}
+            />
+          )}
           <Text style={styles.kicker}>{won ? "ENCOUNTER PURIFIED" : "PATIENT LOST"}</Text>
           <Text style={styles.title}>{enemy?.name}</Text>
           <Text style={styles.sub}>{enemy?.realWorld}{isTraining ? " · Training" : ""}</Text>
@@ -221,6 +231,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
   head: { alignItems: "center", gap: 6, marginTop: SPACING.xl },
+  enemyResultPortrait: { width: 96, height: 96, borderRadius: 48, borderWidth: 3, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, position: "relative", marginBottom: SPACING.xs },
+  enemyResultImg: { width: "100%", height: "100%" },
+  enemyResultBadge: { position: "absolute", right: -2, bottom: -2, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: COLORS.surface },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 3, fontWeight: "700", marginTop: SPACING.sm },
   title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
