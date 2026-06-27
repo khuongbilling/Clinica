@@ -1,0 +1,2082 @@
+Replit Instruction Package: Unified Clinica Identity, Adaptive Learning, Difficulty Layers, Anime RPG Draw, and Medical Education System
+
+Goal
+
+Improve Clinica into a stronger, more engaging, more marketable fantasy medical RPG.
+
+Clinica should appeal to:
+
+Nonmedical curious players
+Anime/RPG players
+High school health science students
+Pre-nursing students
+Nursing students
+NCLEX preparers
+Healthcare professionals
+Educators
+
+The game should not feel like a quiz app first.
+
+It should feel like:
+
+A fantasy healer RPG where the human body is a kingdom, disease corruption attacks each body-system region, and players summon healer heroes to restore the body through clinical reasoning.
+
+The medical learning should be real and visible, but the emotional hook should be:
+
+Restore the kingdom.
+Summon healer heroes.
+Fight disease spirits.
+Read clues.
+Save the patient.
+Unlock regions.
+Grow your team.
+Learn medicine through play.
+
+Do not rebuild the whole app.
+
+Do not remove the Codex.
+
+Do not remove medical terminology.
+
+Do not make separate games for each audience.
+
+Use one shared game with adaptive explanation layers and scalable difficulty.
+
+---
+
+Core Positioning
+
+Use this main tagline:
+
+Fight disease. Restore the body. Learn medicine through play.
+
+Use this subline where appropriate:
+
+Build a team of healer heroes and cleanse a kingdom shaped like the human body.
+
+For nursing or NCLEX-facing screens, use:
+
+Practice clinical judgment through fantasy RPG battles.
+
+For nonmedical/curious players, use:
+
+Learn how the body works by saving a living kingdom.
+
+---
+
+Main World Concept
+
+Clinica is a kingdom shaped like the human body.
+
+Each region represents a body system:
+
+Air Temple = respiratory system, airway, breathing, oxygenation
+River Gate = cardiovascular system, circulation, perfusion, blood pressure
+Fire Ward = infection, inflammation, fever, immune response
+Energy Shrine = glucose, metabolism, endocrine, nutrition
+Mind Tower = neuro, psych, mental status, safety
+Protection Wall = skin, safety, infection prevention, falls, barriers
+Storm Observatory = electrolytes, acid-base, rhythm
+Filter Basin = renal system, fluid balance, waste removal
+Forge Hall = musculoskeletal system, mobility, wounds, rehab
+Growth Garden = OB, pediatrics, newborns, development
+
+Disease corruption attacks these regions.
+
+The player leads healer heroes to restore each region.
+
+---
+
+Main Gameplay Explanation
+
+The player should understand this within the first 30 seconds:
+
+Patient Stability = how safe the patient is.
+Disease Corruption = how much control the disease has.
+Clues = information that helps avoid guessing.
+Care Chain = Scout → Stabilize → Counter → Reassess.
+Victory = keep Stability above 0 and reduce Disease Corruption to 0.
+Progress = restore body regions, earn shards, summon heroes, upgrade team.
+
+---
+
+Learning Profiles vs Difficulty
+
+Add two separate player settings:
+
+Learning Profile = changes how the game explains medical concepts.
+Difficulty = changes how much information is revealed and how hard battles are.
+
+Important:
+
+Do not mix these into one system.
+A player can choose NCLEX explanations with Guided difficulty.
+A player can choose Curious explanations with Clinical difficulty.
+
+Example:
+
+Curious + Guided = simple fantasy-first explanations with many clues visible.
+NCLEX + Guided = NCLEX terminology with more clues visible for teaching.
+Curious + Clinical = fantasy-first language but fewer clues and harder reasoning.
+NCLEX + NCLEX = clinical judgment language with all clues hidden.
+
+---
+
+Adaptive Learning Profiles
+
+At the beginning of the game, let the player choose their learning goal.
+
+Recommended choices:
+
+Curious Learner
+“I want to understand medicine in a fun way.”
+
+Medical Learner
+“I am learning anatomy, physiology, or healthcare basics.”
+
+Nursing Student
+“I want to practice clinical reasoning and patient care.”
+
+NCLEX Preparer
+“I want to practice NCLEX-style clinical judgment.”
+
+Healthcare Professional
+“I want a light review with deeper terminology.”
+
+Store in player state:
+
+player.learningProfile = player.learningProfile || "curious";
+
+Possible values:
+
+"curious"
+"medical_learner"
+"nursing_student"
+"nclex"
+"professional"
+
+Allow the player to change this later in settings:
+
+Learning Depth: Curious / Medical / Nursing / NCLEX / Professional
+
+Add note:
+
+You can change explanation depth anytime in Settings.
+
+---
+
+Difficulty Options
+
+Add difficulty settings:
+
+Guided
+Standard
+Clinical
+NCLEX
+Expert
+
+Store in player state:
+
+player.difficulty = player.difficulty || "standard";
+
+Possible values:
+
+"guided"
+"standard"
+"clinical"
+"nclex"
+"expert"
+
+Suggested descriptions:
+
+Guided:
+Best for nonmedical players. More clues are visible. The game gives stronger hints.
+
+Standard:
+Balanced RPG learning. Some clues are visible and some must be discovered.
+
+Clinical:
+For medical learners and nursing students. More clues are hidden. Wrong actions matter more.
+
+NCLEX:
+For NCLEX preparers. Most or all clues are hidden. Player must recognize cues, prioritize, act, and reassess.
+
+Expert:
+For later chapters or advanced players. Clues may be hidden, misleading, evolving, or revealed over time.
+
+---
+
+Recommended Default Difficulty by Learning Profile
+
+When the player first selects a learning profile, suggest a default difficulty.
+
+const DEFAULT_DIFFICULTY_BY_PROFILE = {
+  curious: "guided",
+  medical_learner: "standard",
+  nursing_student: "clinical",
+  nclex: "nclex",
+  professional: "clinical"
+};
+
+Important:
+
+This is only a recommendation.
+Player can change difficulty later.
+
+Show:
+
+Recommended difficulty selected based on your learning goal. You can change this anytime.
+
+---
+
+One Game, Different Explanation Layers
+
+Do not create separate game modes.
+
+The same battle should use different explanation depth.
+
+Use adaptive text layers:
+
+explanationLayers: {
+  fantasy: "",
+  simpleMedical: "",
+  nursing: "",
+  nclex: "",
+  professional: ""
+}
+
+Mapping:
+
+function getExplanationLayer(playerProfile) {
+  if (playerProfile === "curious") return "fantasy";
+  if (playerProfile === "medical_learner") return "simpleMedical";
+  if (playerProfile === "nursing_student") return "nursing";
+  if (playerProfile === "nclex") return "nclex";
+  if (playerProfile === "professional") return "professional";
+  return "simpleMedical";
+}
+
+---
+
+Important Language Rule
+
+Always preserve medical terminology, but introduce it gradually.
+
+Use this pattern:
+
+Fantasy image first.
+Plain explanation second.
+Medical term third.
+
+Example:
+
+The windways are tightening. This can happen when air passages narrow, which is called bronchospasm.
+
+Do not remove medical terms from Curious mode.
+
+Do not overload Curious mode with NCLEX-style language.
+
+Do not make NCLEX mode feel like a boring question bank.
+
+Clinica’s originality comes from connecting fantasy concepts to real medical concepts.
+
+---
+
+Visual Direction
+
+Use:
+
+Dark fantasy medical kingdom
+Pixel/anime healer portraits
+Pixel battle sprites
+Disease spirits
+Glowing body-system colors
+Clean readable medical HUD
+Hopeful healing energy
+
+Tone:
+
+Dark corruption, but hopeful healing.
+Not horror.
+Not gore.
+Not depressing.
+
+Use pixel/anime art for:
+
+Hero portraits
+Hero battle sprites
+Enemy sprites
+Body-system map regions
+Skill icons
+Summon animation
+Victory restoration effects
+Event banners
+
+Keep modern clean UI for:
+
+Patient Stability
+Disease Corruption
+AP
+Clues
+Action buttons
+Tutorial popups
+Mission briefing
+Victory summary
+Codex text
+
+Do not pixelate small text.
+
+Do not sacrifice readability for style.
+
+---
+
+Body-System Color Language
+
+Use consistent system colors:
+
+Air = pale blue
+River = cyan / blue
+Fire = red / orange
+Energy = gold / yellow
+Mind = purple
+Protection = green
+Storm = electric violet
+Forge = bronze
+Filter = aqua
+Growth = pink / green
+
+Medical fantasy UI language:
+
+Stability = life/healing glow
+Corruption = dark disease crystal energy
+AP = action runes
+Clues = Codex fragments
+Reassess = checking whether healing worked
+
+---
+
+Opening Hook
+
+Add or refine a short opening scene before the first battle or first main menu.
+
+Use this:
+
+The kingdom is alive.
+
+Air breathes.
+River circulates.
+Fire defends.
+Energy fuels.
+Mind guides.
+Protection guards.
+
+But disease corruption is spreading.
+
+Lead your healer team. Read the clues. Keep the patient stable. Restore the body one battle at a time.
+
+Button:
+
+Begin Healing
+
+The opening should feel like an RPG, not a textbook.
+
+---
+
+Core Clue System
+
+Each enemy should have a full clue set.
+
+Example Air Sprite / Asthma Exacerbation has 4 clues:
+
+1. Breathing Fast
+2. O2 Glow Dim
+3. Tripod Position
+4. Wheezing
+
+Difficulty determines how many clues are visible at battle start and how many must be revealed through Scout, Codex, Analyze, Reassess, or correct clinical actions.
+
+---
+
+Clue Visibility by Difficulty
+
+For enemies with 4 clues:
+
+Guided:
+3 clues visible at start, 1 hidden.
+
+Standard:
+2 clues visible at start, 2 hidden.
+
+Clinical:
+1 clue visible at start, 3 hidden.
+
+NCLEX:
+0 clues visible at start, all clues hidden.
+
+Expert:
+0 clues visible at start. Some clues may evolve, appear after turns, or require specific assessments.
+
+Example Air Sprite:
+
+Guided:
+Visible: Breathing Fast, O2 Glow Dim, Tripod Position
+Hidden: Wheezing
+
+Standard:
+Visible: Breathing Fast, O2 Glow Dim
+Hidden: Tripod Position, Wheezing
+
+Clinical:
+Visible: Breathing Fast
+Hidden: O2 Glow Dim, Tripod Position, Wheezing
+
+NCLEX:
+Visible: none
+Hidden: Breathing Fast, O2 Glow Dim, Tripod Position, Wheezing
+
+Expert:
+Visible: none
+Hidden: all clues
+Possible delayed clue: O2 Glow Dim worsens after turn 2 if not stabilized
+
+---
+
+Clue Type Categories
+
+Give each clue a type.
+
+Example:
+
+clues: [
+  {
+    id: "breathing_fast",
+    label: "Breathing Fast",
+    type: "visible",
+    importance: "early",
+    system: "Air"
+  },
+  {
+    id: "o2_glow_dim",
+    label: "O2 Glow Dim",
+    type: "vital",
+    importance: "priority",
+    system: "Air"
+  },
+  {
+    id: "tripod_position",
+    label: "Tripod Position",
+    type: "observation",
+    importance: "supporting",
+    system: "Air"
+  },
+  {
+    id: "wheezing",
+    label: "Wheezing",
+    type: "assessment",
+    importance: "key",
+    system: "Air"
+  }
+]
+
+Suggested clue types:
+
+visible = seen immediately in story/scene
+vital = vital sign or status clue
+observation = physical/behavioral clue
+assessment = discovered by Scout/assessment
+lab = discovered by lab/Codex/diagnostic action
+trend = appears after time or reassessment
+redFlag = critical clue
+misleading = possible distractor for advanced difficulty
+
+---
+
+Battle Data Model Recommendation
+
+Prepare enemy data to support clue reveal rules.
+
+Example:
+
+enemy.clues = [
+  {
+    id: "breathing_fast",
+    label: "Breathing Fast",
+    system: "Air",
+    category: "observation",
+    priority: "early",
+    revealWeight: 1
+  },
+  {
+    id: "o2_glow_dim",
+    label: "O2 Glow Dim",
+    system: "Air",
+    category: "vital",
+    priority: "priority",
+    revealWeight: 2
+  },
+  {
+    id: "tripod_position",
+    label: "Tripod Position",
+    system: "Air",
+    category: "observation",
+    priority: "supporting",
+    revealWeight: 3
+  },
+  {
+    id: "wheezing",
+    label: "Wheezing",
+    system: "Air",
+    category: "assessment",
+    priority: "key",
+    revealWeight: 4
+  }
+];
+
+At battle start:
+
+function getInitialVisibleClues(enemy, difficulty) {
+  const visibleCount = DIFFICULTY_MODIFIERS[difficulty].visibleClues;
+  return enemy.clues
+    .sort((a, b) => a.revealWeight - b.revealWeight)
+    .slice(0, visibleCount);
+}
+
+Hidden clues are the rest.
+
+Scout or assessment actions reveal hidden clues.
+
+---
+
+Difficulty Modifiers
+
+Difficulty should affect clue visibility, hint strength, enemy pressure, wrong-action penalty, and star requirements.
+
+Do not make difficulty only about bigger numbers.
+
+The main difficulty should come from information management and clinical reasoning.
+
+Suggested modifiers:
+
+const DIFFICULTY_MODIFIERS = {
+  guided: {
+    visibleClues: 3,
+    enemyDamageMultiplier: 0.75,
+    wrongActionPenalty: 0,
+    hintLevel: "strong",
+    careAttemptLimitFor3Star: 3,
+    starTurnBonus: 1
+  },
+  standard: {
+    visibleClues: 2,
+    enemyDamageMultiplier: 1.0,
+    wrongActionPenalty: 1,
+    hintLevel: "normal",
+    careAttemptLimitFor3Star: 2,
+    starTurnBonus: 0
+  },
+  clinical: {
+    visibleClues: 1,
+    enemyDamageMultiplier: 1.15,
+    wrongActionPenalty: 1.25,
+    hintLevel: "light",
+    careAttemptLimitFor3Star: 1,
+    starTurnBonus: -1
+  },
+  nclex: {
+    visibleClues: 0,
+    enemyDamageMultiplier: 1.25,
+    wrongActionPenalty: 1.5,
+    hintLevel: "minimal",
+    careAttemptLimitFor3Star: 0,
+    starTurnBonus: -1
+  },
+  expert: {
+    visibleClues: 0,
+    enemyDamageMultiplier: 1.4,
+    wrongActionPenalty: 2,
+    hintLevel: "minimal",
+    careAttemptLimitFor3Star: 0,
+    starTurnBonus: -2
+  }
+};
+
+Balance carefully.
+
+Do not make the first tutorial battle unfair.
+
+---
+
+Difficulty Hint Rules
+
+Guided
+
+Show direct hints.
+Show recommended roles.
+Show likely system.
+Show simple objective.
+Warn strongly before poor-fit actions.
+
+Example:
+
+This looks like an Air problem. Try revealing the hidden clue, then use an Air skill.
+
+Standard
+
+Show likely system and recommended roles.
+Give hints after wrong actions.
+
+Example:
+
+The clues point toward breathing difficulty. Air actions may help.
+
+Clinical
+
+Show fewer hints.
+Show likely system only after clue discovery or Scout.
+Wrong actions have stronger penalties.
+
+Example:
+
+Current cues suggest a respiratory pattern. Confirm with assessment.
+
+NCLEX
+
+Do not reveal the likely system at first.
+Use NCLEX-style clinical judgment labels.
+Require player to identify cues.
+Minimal hints unless the player fails or asks for help.
+
+Example:
+
+Recognize cues before selecting an intervention.
+
+Expert
+
+Add evolving clues, complications, distractors, and stricter star goals.
+May include mixed-system enemies.
+
+Example:
+
+The patient’s condition is changing. Reassess to detect the new priority.
+
+---
+
+Difficulty-Based Mission Briefing
+
+Mission briefing should adapt based on both learning profile and difficulty.
+
+Guided Difficulty
+
+Likely System: Air
+Visible Clues: Breathing Fast, O2 Glow Dim, Tripod Position
+Hidden Clue: 1 unknown
+Recommended Roles: Scout, Air Support, Stabilizer
+Hint: Reveal the hidden clue, then use an Air action.
+
+Standard Difficulty
+
+Likely System: Air
+Visible Clues: Breathing Fast, O2 Glow Dim
+Hidden Clues: 2 unknown
+Recommended Roles: Scout, Air Support, Stabilizer
+
+Clinical Difficulty
+
+Visible Clue: Breathing Fast
+Hidden Clues: 3 unknown
+Recommended Roles: Scout, Stabilizer, flexible counter
+Likely System may be shown only after Scout.
+
+NCLEX Difficulty
+
+Initial Report:
+Patient condition unstable. Assessment required.
+
+Visible Clues: none
+Hidden Clinical Data: 4
+Recommended Roles hidden or generalized:
+Assessment, Stabilization, Intervention, Reassessment
+
+No likely system shown until cues are recognized.
+
+Expert Difficulty
+
+Initial Report:
+Patient condition may evolve. Assessment and reassessment required.
+
+Visible Clues: none
+Hidden Clinical Data: unknown
+Possible complications: hidden
+No recommended system shown.
+
+---
+
+Air Sprite Mission Briefing by Learning Profile
+
+For Curious Learner:
+
+Mission: Restore the Air Temple
+
+The Air Temple is collapsing. A patient is breathing fast, sitting upright, and losing oxygen glow. Something is blocking the flow of air.
+
+Goal:
+Reveal clues, keep the patient stable, use an Air skill, and reassess.
+
+For Medical Learner:
+
+Mission: Restore the Air Temple
+
+This patient shows signs of breathing difficulty. Look for clues such as wheezing, low oxygen glow, and increased work of breathing.
+
+Medical Focus:
+Airway, breathing, oxygenation, bronchospasm.
+
+For Nursing Student:
+
+Mission: Restore the Air Temple
+
+The patient shows signs of respiratory distress. Prioritize airway and breathing, recognize cues, stabilize the patient, use an appropriate respiratory intervention, and reassess.
+
+For NCLEX Preparer:
+
+Mission: Restore the Air Temple
+
+Clinical Judgment Focus:
+Recognize cues of respiratory distress, analyze findings, prioritize airway and breathing, take appropriate action as ordered or per protocol, and reassess effectiveness.
+
+Likely Concepts:
+Impaired gas exchange
+Bronchospasm
+Oxygenation
+Airway/Breathing priority
+
+For Professional:
+
+Mission: Restore the Air Temple
+
+Cues suggest respiratory distress with likely bronchospasm or impaired ventilation. Prioritize airway/breathing, stabilize as needed, intervene appropriately, and reassess response.
+
+Always show or adapt based on difficulty:
+
+Enemy: Air Sprite Corruption
+Real Concept: Asthma Exacerbation / Bronchospasm
+Likely System: Air
+Visible Clues: depends on difficulty
+Hidden Clues: depends on difficulty
+Recommended Roles: depends on difficulty
+Care Chain: Scout → Stabilize → Counter → Reassess
+Win Condition: Keep Stability above 0 and reduce Corruption to 0
+
+---
+
+Battle Objective Strip
+
+Add a compact objective strip during battle.
+
+By Learning Profile
+
+Curious:
+
+Goal: Reveal clue → Stabilize → Use Air skill → Reassess
+
+Medical Learner:
+
+Goal: Identify breathing clues → Stabilize → Treat airway problem → Reassess
+
+Nursing Student:
+
+Care Chain: Recognize respiratory cues → Stabilize → Intervene → Reassess
+
+NCLEX:
+
+Clinical Judgment: Recognize Cues → Prioritize Airway/Breathing → Take Action → Evaluate Outcomes
+
+Professional:
+
+Priority: Airway/Breathing. Intervene based on cues, then reassess.
+
+By Difficulty
+
+Guided:
+
+Goal: Reveal clue → Stabilize → Use Air skill → Reassess
+
+Standard:
+
+Goal: Scout → Stabilize → Counter → Reassess
+
+Clinical:
+
+Goal: Recognize pattern → Stabilize if needed → Treat priority → Reassess
+
+NCLEX:
+
+Clinical Judgment: Recognize Cues → Prioritize → Take Action → Evaluate Outcomes
+
+Expert:
+
+Priority may change. Reassess trends and respond safely.
+
+Update objective as player progresses:
+
+Before Scout: Reveal the hidden clue.
+After Scout: Stabilize the patient.
+After Stabilize: Use an Air counter to lower Corruption.
+After Counter: Reassess the response.
+
+---
+
+NCLEX Clinical Judgment Mapping
+
+For NCLEX profile, subtly map gameplay to NCLEX clinical judgment.
+
+Use labels:
+
+Recognize Cues
+Analyze Cues
+Prioritize Hypotheses
+Generate Solutions
+Take Action
+Evaluate Outcomes
+
+Map to gameplay:
+
+Scout = Recognize Cues
+Codex / Analyze = Analyze Cues
+Objective Strip = Prioritize Hypotheses
+Counter / Item / Call = Take Action
+Reassess = Evaluate Outcomes
+
+Do not turn the whole game into a quiz bank.
+
+This should feel like an RPG that trains NCLEX thinking.
+
+---
+
+Hero Identity Upgrade
+
+Each hero should feel collectible, emotional, and useful.
+
+Each hero should have:
+
+Name
+Faction / region
+System affinity
+Role
+Short backstory
+Personality line / quote
+Signature skill
+Pixel/anime portrait
+Small battle sprite
+Best against
+Learning meaning
+Bond level later
+Star rank
+Memory shards
+Class upgrade path later
+
+Example:
+
+Novice Guardian
+
+Faction: Air Temple
+Role: Stabilizer / Air Support
+System: Air
+Quote: “Point me to the patient. I’ll hold the line.”
+Backstory: A young wardkeeper trained to protect the windways when breathing becomes unstable.
+Signature Skill: Airway Rune
+Best Against: Breathing problems, wheezing, narrowed airways
+Medical Meaning: Supports airway and breathing priority when respiratory cues appear.
+
+---
+
+Hero Descriptions by Learning Profile
+
+Hero descriptions should adapt.
+
+Example: Novice Guardian
+
+Curious:
+
+A young Air Temple wardkeeper who protects the windways when breathing becomes unstable.
+
+Medical Learner:
+
+An Air-focused healer who helps with breathing problems such as wheezing, narrowed airways, and low oxygen glow.
+
+Nursing Student:
+
+A stabilizer and Air support hero focused on respiratory distress, oxygenation, and reassessment.
+
+NCLEX:
+
+Best used when cues indicate airway/breathing priority, bronchospasm, or impaired ventilation. Supports stabilization, targeted action, and evaluation of response.
+
+Professional:
+
+Air-focused support for bronchospasm, impaired ventilation, oxygenation concerns, and post-intervention reassessment.
+
+---
+
+First Summon Cinematic
+
+Make the first summon feel magical and scripted.
+
+Flow:
+
+The Codex opens.
+A shard of the Air Temple glows.
+A summon circle appears.
+A hero silhouette forms.
+Novice Guardian joins your team.
+
+Result text:
+
+Novice Guardian joins your team.
+
+“Point me to the patient. I’ll hold the line.”
+
+Show:
+
+Role: Stabilizer / Air Support
+Best Against: Breathing problems
+Signature Skill: Airway Rune
+Medical Focus: Airway, breathing, oxygenation
+
+This makes summoning feel emotional and teaches the role.
+
+---
+
+Body-System Factions
+
+Create faction labels and use them in hero profiles, mission briefings, kingdom map, summon results, and events.
+
+Factions:
+
+Air Temple
+River Gate
+Fire Ward
+Energy Shrine
+Mind Tower
+Protection Wall
+Storm Observatory
+Filter Basin
+Forge Hall
+Growth Garden
+
+Examples:
+
+Air Temple healers guard breathing and oxygenation.
+River Gate healers protect circulation and perfusion.
+Fire Ward healers fight infection and inflammation.
+Energy Shrine healers restore glucose and metabolic balance.
+Protection Wall healers prevent harm, spread, wounds, and falls.
+
+---
+
+Enemy Personality and Medical Meaning
+
+Each disease enemy should have:
+
+Fantasy description
+Simple medical meaning
+Nursing reasoning
+NCLEX judgment meaning
+Professional meaning
+System weakness
+Clue list
+Care chain
+
+Example: Air Sprite Corruption
+
+Fantasy:
+
+A corrupted wind spirit is tightening the patient’s windways and stealing oxygen glow.
+
+Simple Medical:
+
+This represents asthma-like breathing difficulty where narrowed airways can cause wheezing and shortness of breath.
+
+Nursing:
+
+The patient shows signs of respiratory distress with possible bronchospasm. Prioritize airway, breathing, oxygenation, and reassessment.
+
+NCLEX:
+
+Recognize cues of impaired gas exchange and bronchospasm. Prioritize airway and breathing, take appropriate action as ordered or per protocol, monitor response, and reassess.
+
+Professional:
+
+Likely bronchospasm with impaired ventilation. Assess respiratory effort, oxygenation, response to intervention, and deterioration risk.
+
+---
+
+Clue Translation System
+
+Every clue should teach through fantasy and medical meaning.
+
+Example: Wheezing
+
+Fantasy:
+
+The windways whistle as air struggles to pass.
+
+Simple Medical:
+
+Wheezing can mean narrowed airways.
+
+Nursing:
+
+Wheezing is a respiratory cue that may indicate bronchospasm or airway narrowing.
+
+NCLEX:
+
+Wheezing supports impaired ventilation or bronchospasm. This should prompt airway/breathing prioritization and reassessment after intervention.
+
+Professional:
+
+Wheezing suggests airflow obstruction or bronchospasm. Interpret with oxygenation, work of breathing, and response to therapy.
+
+Example: O2 Glow Dim
+
+Fantasy:
+
+The patient’s oxygen glow is fading.
+
+Simple Medical:
+
+Oxygen may be low or the patient may not be breathing effectively.
+
+Nursing:
+
+This suggests possible decreased oxygenation or increased work of breathing.
+
+NCLEX:
+
+This is a cue related to oxygenation. Prioritize airway, breathing, respiratory effort, oxygen saturation, and response to intervention.
+
+Professional:
+
+Possible oxygenation concern. Correlate with respiratory effort, saturation, perfusion, and trend.
+
+---
+
+Skill Description System
+
+Each skill should include fantasy and medical meaning.
+
+Example structure:
+
+{
+  name: "Airway Rune",
+  fantasyDescription: "A focused rune opens the flow of breath and weakens Air corruption.",
+  simpleMedicalDescription: "Helps when the patient has trouble moving air, such as wheezing or narrowed airways.",
+  nursingDescription: "Represents targeted airway and breathing support for respiratory distress or bronchospasm.",
+  nclexDescription: "Prioritizes airway/breathing when cues suggest bronchospasm or impaired ventilation. Reassess after intervention.",
+  professionalDescription: "Air-focused intervention for bronchospasm or impaired ventilation cues. Follow with reassessment."
+}
+
+Do not use only fantasy language.
+
+Do not use only medical jargon.
+
+Use both.
+
+---
+
+Key Skill Examples
+
+Airway Rune
+
+Curious:
+
+Airway Rune opens the windways and weakens Air corruption. Best when breathing clues are present.
+
+Medical Learner:
+
+Airway Rune helps narrowed airways. Use it when clues like wheezing or fast breathing appear.
+
+Nursing Student:
+
+Airway Rune represents focused airway and breathing support for respiratory distress or bronchospasm.
+
+NCLEX:
+
+Airway Rune addresses airway/breathing priority when cues suggest bronchospasm or impaired ventilation. Reassess after intervention.
+
+Professional:
+
+Air-focused response to bronchospasm or impaired ventilation cues. Evaluate response after use.
+
+Breath of Dawn
+
+Curious:
+
+A healing breath steadies the patient and gives your team more time.
+
+Medical Learner:
+
+This improves Patient Stability, giving more time to treat the main breathing problem.
+
+Nursing Student:
+
+This represents stabilization before or during targeted intervention.
+
+NCLEX:
+
+Stabilization supports patient safety and preserves time for priority interventions. Stabilize, then address the underlying cause and reassess.
+
+Professional:
+
+Stabilization support. Does not replace targeted treatment of the underlying priority.
+
+Reassess
+
+Curious:
+
+The healer checks whether the corruption is truly fading.
+
+Medical Learner:
+
+After helping the patient, check if the action worked.
+
+Nursing Student:
+
+Reassessment confirms response to intervention and detects worsening or rebound.
+
+NCLEX:
+
+Reassessment evaluates intervention effectiveness and determines the next priority action.
+
+Professional:
+
+Evaluate response, trend stability, and determine next step.
+
+---
+
+Battle Feedback by Profile and Difficulty
+
+Feedback after actions should adapt by both learning profile and difficulty.
+
+After Scout
+
+Curious:
+
+You found a hidden clue. Clues help you avoid guessing.
+
+Medical Learner:
+
+You revealed wheezing. Wheezing can mean narrowed airways.
+
+Nursing Student:
+
+Wheezing is a respiratory cue. It supports an Air problem and helps guide the next intervention.
+
+NCLEX:
+
+Recognized cue: wheezing. This supports bronchospasm or impaired ventilation. Prioritize airway/breathing and reassess after intervention.
+
+Professional:
+
+Cue recognized: wheezing. Consider bronchospasm or airflow obstruction with airway/breathing priority.
+
+After Stabilize
+
+Curious:
+
+Stability improved. The patient has more time.
+
+Medical Learner:
+
+Patient Stability improved. A more stable patient gives the team time to treat the cause.
+
+Nursing Student:
+
+Stabilization supports patient safety while you prepare targeted care.
+
+NCLEX:
+
+Stabilization helps maintain safety and supports priority interventions. Continue to address the underlying respiratory problem.
+
+Professional:
+
+Stability improved. Continue targeted intervention and reassessment.
+
+After Counter
+
+Curious:
+
+Disease Corruption dropped. The illness is losing control.
+
+Medical Learner:
+
+Corruption dropped because the action matched the breathing problem.
+
+Nursing Student:
+
+The targeted Air intervention reduced the disease process because it matched the respiratory cues.
+
+NCLEX:
+
+Appropriate action selected based on cues. Intervention addressed the airway/breathing priority. Reassess to evaluate effectiveness.
+
+Professional:
+
+Appropriate system match. Corruption reduced. Reassess clinical response.
+
+Wrong Action by Difficulty
+
+Guided:
+
+This helped only a little. The clues point more toward breathing. Try revealing a clue or using an Air action.
+
+Standard:
+
+Limited effect. This action does not match the main pattern.
+
+Clinical:
+
+Poor clinical fit. Reassess the cues and identify the priority system.
+
+NCLEX:
+
+Intervention does not address the priority cues. Re-evaluate data before taking action.
+
+Expert:
+
+Unsafe or low-yield action. Patient condition may worsen if priority is missed.
+
+---
+
+Star Goals by Difficulty
+
+Star goals should scale with difficulty.
+
+Example Air Sprite:
+
+Guided
+
+★ Win
+★ Reveal hidden clue
+★ Complete care chain
+3-star turn target: 5 turns
+Care Attempt allowed: up to 3
+
+Standard
+
+★ Win
+★ Complete care chain
+★ Win within 4 turns with no unsafe actions and no more than 2 Care Attempts
+
+Clinical
+
+★ Win
+★ Complete care chain
+★ Win within 4 turns with no unsafe actions and no more than 1 Care Attempt
+
+NCLEX
+
+★ Win
+★ Correctly identify priority pattern before intervention
+★ Complete clinical judgment sequence with no Care Attempts and no unsafe actions
+
+Expert
+
+★ Win
+★ Complete advanced care chain
+★ Manage complication or trend change with no unsafe actions
+
+---
+
+Difficulty-Based Rewards
+
+Higher difficulty should reward more, but not so much that casual players feel punished.
+
+Suggested reward modifier:
+
+const DIFFICULTY_REWARD_MULTIPLIER = {
+  guided: 1.0,
+  standard: 1.1,
+  clinical: 1.25,
+  nclex: 1.4,
+  expert: 1.6
+};
+
+Rewards can include:
+
+Codex Shards
+Player EXP
+Hero EXP
+Region materials
+Advanced mastery badges
+
+Do not lock essential story progress behind high difficulty.
+
+---
+
+Difficulty Unlocks
+
+At launch, allow:
+
+Guided
+Standard
+Clinical
+NCLEX
+
+Expert can unlock later.
+
+Suggested unlock:
+
+Expert unlocks after completing Chapter 2 or after clearing a region boss.
+
+NCLEX difficulty can be available from the start if the player chooses NCLEX profile.
+
+---
+
+First Battle Balance
+
+For the first Air Sprite battle:
+
+Curious / Guided:
+3 clues visible, 1 hidden.
+Very clear guidance.
+Goal is teaching.
+
+Medical Learner / Standard:
+2 clues visible, 2 hidden.
+Balanced challenge.
+
+Nursing Student / Clinical:
+1 clue visible, 3 hidden.
+Requires assessment.
+
+NCLEX / NCLEX:
+0 clues visible.
+Must use Scout/assessment to recognize cues.
+No likely system shown until clues appear.
+
+However, do not make the first battle frustrating.
+
+For NCLEX first battle, allow tutorial guidance even if clues are hidden.
+
+Example:
+
+The tutorial can say:
+“Start by collecting data. Use Scout to recognize cues.”
+
+Do not immediately penalize the player harshly during the first tutorial battle.
+
+---
+
+Chapter Scaling
+
+As the game progresses, difficulty should increase naturally even if the player stays on Standard.
+
+Chapter 1: Foundation
+
+Mostly single-system enemies.
+2 to 4 clues.
+Clear system identity.
+Low penalty for wrong actions.
+Care chain is short.
+Goal: teach the loop.
+
+Examples:
+
+Air Sprite = asthma/bronchospasm
+Energy Lock = hypoglycemia
+Fire Imp = infection/wound infection
+Bonegnaw Sprain = injury/fall risk
+
+Chapter 2: Pattern Recognition
+
+More clues are hidden.
+Some enemies have related systems.
+Wrong actions matter more.
+Reassessment becomes more important.
+
+Examples:
+
+Pneumonia = Air + Fire
+Dehydration = River + Filter
+Hyperglycemia = Energy + River
+Pressure Injury = Protection + Fire
+
+Chapter 3: Priority Conflicts
+
+Two problems may be present.
+Player must decide priority.
+Some actions help one meter but worsen another.
+AP pressure increases.
+
+Examples:
+
+Heart failure fluid overload = River + Air
+Sepsis intro = Fire + River
+Delirium fall risk = Mind + Protection
+DKA intro = Energy + Storm + River
+
+Chapter 4: Evolving Conditions
+
+Clues change over time.
+Trends matter.
+Reassessment can reveal worsening or improvement.
+Delayed complications appear.
+
+Examples:
+
+Oxygenation worsens if Air problem ignored.
+Blood pressure drops if infection spreads.
+Confusion worsens if glucose remains low.
+
+Chapter 5: Advanced Clinical Judgment
+
+Mixed systems.
+Distractor clues.
+Prioritization required.
+Some treatments are unsafe in certain contexts.
+Boss battles require full care planning.
+
+Examples:
+
+COPD with infection
+Sepsis with hypotension
+Hypoglycemia with altered mental status
+Heart failure with fluid overload
+Electrolyte rhythm disturbance
+
+---
+
+Advanced Difficulty Mechanics for Later Chapters
+
+Prepare for these mechanics later. Do not implement all at once unless safe.
+
+1. Evolving Clues
+
+Clues appear or worsen after turns.
+
+Example:
+
+Turn 1: Breathing Fast
+Turn 2: O2 Glow Dim
+Turn 3: Exhaustion appears if not stabilized
+
+2. Trend Clues
+
+Reassessment reveals whether condition improves or worsens.
+
+Example:
+
+After Airway Rune:
+Wheezing improved.
+O2 Glow brighter.
+Stability recovering.
+
+or
+
+After wrong action:
+Breathing remains fast.
+O2 Glow worsens.
+
+3. Distractor Clues
+
+Advanced enemies may include clues that are real but not priority.
+
+Example:
+
+Mild anxiety appears during asthma, but airway/breathing remains priority.
+
+4. Unsafe Action Conditions
+
+Some actions become unsafe when certain clues are present.
+
+Example:
+
+River Bolus is helpful for low BP/hypovolemia.
+River Bolus is unsafe when Crackles, Leg Swelling, or BNP clue suggests fluid overload.
+
+5. Multi-System Enemies
+
+Enemy can have primary and secondary systems.
+
+Example:
+
+enemy.primarySystem = "Fire";
+enemy.secondarySystems = ["River"];
+
+For sepsis:
+
+Fire = infection source
+River = perfusion/BP risk
+
+6. Priority Shift
+
+Enemy priority can change mid-battle.
+
+Example:
+
+At first, infection source is priority.
+If Stability drops below 30, circulation becomes immediate priority.
+
+7. Limited Assessment Actions
+
+On higher difficulty, Scout may reveal only one clue at a time.
+
+Example:
+
+Guided Scout reveals key clue.
+Standard Scout reveals one hidden clue.
+Clinical Scout reveals one clue but not interpretation.
+NCLEX Scout reveals raw data only.
+Expert Scout may require choosing assessment type.
+
+---
+
+Future Assessment Types
+
+Prepare for future assessment choices, especially for NCLEX and Expert modes.
+
+Examples:
+
+Listen to Breath Sounds
+Check Oxygen Glow
+Check Pulse/River Flow
+Check Blood Sugar
+Inspect Wound
+Assess Mental Status
+Check Safety Risk
+Review Labs
+
+Example:
+
+Instead of “Scout” revealing any clue, the player chooses “Listen to Breath Sounds” to reveal Wheezing.
+
+Do not implement fully yet unless it fits cleanly.
+
+Prepare the data model.
+
+---
+
+Hero Bond / Affinity Preparation
+
+Prepare a simple Bond system for future retention.
+
+Add fields:
+
+hero.bondLevel = hero.bondLevel || 1;
+hero.bondExp = hero.bondExp || 0;
+
+Bond can increase from:
+
+Using hero in battle
+Completing that hero’s system battle
+Winning with full care chain
+Viewing hero story scenes
+Future gifts
+
+Bond rewards can include:
+
+Quote unlocks
+Short story scenes
+Small Memory Shards
+Cosmetic profile lines
+Minor non-power rewards
+
+Do not build a large bond system yet.
+
+Just prepare structure and display Bond Level on the hero detail screen if easy.
+
+---
+
+Hero Detail Screen Improvements
+
+Hero detail should feel collectible and educational.
+
+Show:
+
+Hero portrait or sprite
+Faction
+Role
+System affinity
+Quote
+Short backstory
+Best against
+Medical focus
+Hero level
+Hero EXP
+Star rank
+Memory Shards
+Bond level
+Skills
+Passives
+Class upgrade path later
+
+Example layout:
+
+Novice Guardian
+Air Temple
+Stabilizer / Air Support
+
+“Point me to the patient. I’ll hold the line.”
+
+Best Against:
+Breathing problems, wheezing, narrowed airways
+
+Medical Focus:
+Airway, breathing, oxygenation, bronchospasm
+
+Level 12
+★★☆☆☆
+Guardian Memory Shards: 40 / 40
+Bond Level 2
+
+---
+
+Codex Layer System
+
+Codex entries should include tabs or sections:
+
+Fantasy
+Medical Meaning
+Nursing Reasoning
+NCLEX Judgment
+Professional Notes
+
+Example Codex entry for Air Sprite:
+
+Fantasy:
+
+Air Sprite Corruption tightens the windways and steals oxygen glow.
+
+Medical Meaning:
+
+This represents asthma-like breathing difficulty where narrowed airways can cause wheezing and shortness of breath.
+
+Nursing Reasoning:
+
+Respiratory distress requires assessment of airway, breathing, oxygenation, respiratory effort, and response to intervention.
+
+NCLEX Judgment:
+
+Recognize cues, analyze findings, prioritize airway and breathing, take appropriate action, and reassess. This follows clinical judgment reasoning used in NCLEX-style questions.
+
+Professional Notes:
+
+Consider bronchospasm, oxygenation status, work of breathing, response to therapy, and worsening trends.
+
+---
+
+Victory Screen Adaptation
+
+Victory screen should explain what improved and adapt by profile.
+
+For Air Sprite:
+
+Curious
+
+Victory: Air Temple Restored
+
+You found the hidden clue, kept the patient stable, used an Air skill, and checked the response.
+
+The windways opened and the Air corruption weakened.
+
+Medical Learner
+
+Victory: Air Temple Restored
+
+You recognized breathing difficulty, revealed wheezing, improved Stability, used an Air intervention, and reassessed.
+
+Medical terms learned:
+Wheezing
+Oxygenation
+Bronchospasm
+Respiratory distress
+
+Nursing Student
+
+Victory: Air Temple Restored
+
+You recognized respiratory cues, supported patient stability, used a targeted intervention, and reassessed response.
+
+Clinical focus:
+Airway, breathing, oxygenation, respiratory distress, reassessment.
+
+NCLEX
+
+Victory: Air Temple Restored
+
+Clinical Judgment Summary:
+Recognized cues of respiratory distress.
+Prioritized airway and breathing.
+Took appropriate action based on cues.
+Evaluated response through reassessment.
+
+Concepts:
+Impaired ventilation
+Bronchospasm
+Oxygenation
+Airway/Breathing priority
+
+Professional
+
+Victory: Air Temple Restored
+
+Summary:
+Respiratory cues identified, stabilization supported, Air-targeted intervention applied, response reassessed.
+
+Concepts:
+Bronchospasm, oxygenation, respiratory effort, intervention response.
+
+Always show:
+
+Stars earned
+Codex Shards earned
+Player EXP
+Hero EXP
+Region progress
+Next mission
+
+Example:
+
+Air Region: 1/5 Restored
+
+---
+
+Kingdom Progression
+
+Make region restoration visible.
+
+Use region progress:
+
+player.regionProgress = player.regionProgress || {
+  Air: 0,
+  River: 0,
+  Fire: 0,
+  Energy: 0,
+  Protection: 0,
+  Mind: 0,
+  Storm: 0,
+  Forge: 0,
+  Filter: 0,
+  Growth: 0
+};
+
+Show:
+
+Air Temple
+Respiratory System
+1/5 Restored
+Next: Wheezing Woods
+
+Victory should increase progress:
+
+player.regionProgress.Air += 1;
+
+---
+
+Events Placeholder
+
+Prepare a future Events area on Kingdom/Home screen.
+
+Do not build complex live events yet.
+
+Placeholder event ideas:
+
+Winter Breath Festival
+Air region event: asthma, flu, pneumonia basics.
+
+Fire Ward Outbreak
+Infection-control event: isolation, fever, wound infection.
+
+Energy Moon Market
+Glucose and nutrition event.
+
+Protection Week
+Falls, skin, safety, PPE.
+
+NCLEX Judgment Tower Weekend
+Clinical judgment challenge floors.
+
+Show as Coming Soon if needed.
+
+---
+
+Cosmetic System Preparation
+
+Prepare the idea that heroes can have cosmetics later.
+
+Do not add payment yet.
+
+Cosmetic examples:
+
+Novice Guardian: Night Shift Cloak
+Fire Purifier: Festival Robe
+River Saint: Moonlit River Attire
+Mind Lantern: Dream Scholar Outfit
+
+Cosmetics should not affect battle power unless clearly labeled otherwise.
+
+Prefer cosmetic-only.
+
+---
+
+Three Audience Marketing Doors
+
+The same game can be marketed through different doors.
+
+Use these phrases where appropriate.
+
+Anime/RPG player:
+
+Build a team of healer heroes and cleanse a corrupted body kingdom.
+
+Curious learner:
+
+Learn how the body works through fantasy battles.
+
+Medical learner:
+
+Turn hard medical terms into visual RPG battles.
+
+Nursing student:
+
+Practice clinical reasoning through healer battles.
+
+NCLEX preparer:
+
+Train the thinking behind NCLEX before you face the question bank.
+
+Healthcare professional:
+
+A light clinical review wrapped in a fantasy RPG.
+
+---
+
+Ethical and Safety Language
+
+Because this is health education, include a simple disclaimer in Settings, Codex, or About.
+
+Use:
+
+Clinica is an educational game for learning body systems and clinical reasoning. It is not medical advice and does not replace professional training, clinical judgment, or licensed care.
+
+For medication-like or treatment-like actions, use safe wording:
+
+as ordered
+per protocol
+anticipate
+support
+monitor
+reassess
+
+Avoid unsafe wording that implies independent prescribing.
+
+---
+
+Do Not Do
+
+Do not:
+
+Create separate games for each profile.
+Remove medical terminology from Curious mode.
+Overload casual players with NCLEX language.
+Make NCLEX mode a boring quiz bank.
+Use only fantasy terms with no medical meaning.
+Use only medical jargon with no fantasy hook.
+Make difficulty only increase enemy HP.
+Hide all clues from casual players.
+Make the first battle impossible for NCLEX users.
+Lock story behind high difficulty.
+Remove explanations from harder modes.
+Punish learning too aggressively.
+Make every enemy multi-system in early chapters.
+Make wrong actions always cause instant failure.
+Oversexualize nurse or healer characters.
+Copy existing anime/game IP.
+Make early learning depend on rare summons.
+Require duplicates to complete beginner battles.
+Add payment now.
+Add paid power now.
+Add paid stamina refills now.
+Make the UI too dark or too pixelated to read.
+Hide the game purpose inside the Codex only.
+
+Do:
+
+Use clue visibility as the main difficulty lever.
+Use hints less as difficulty increases.
+Use enemy behavior more carefully in later chapters.
+Keep early game teachable.
+Let players change difficulty.
+Reward higher difficulty modestly.
+Let NCLEX players practice with all clues hidden if they choose.
+Keep fantasy and medicine connected.
+Keep vitals and clues readable.
+Keep the first-time experience clear.
+
+---
+
+Implementation Priority
+
+Implement in phases.
+
+Phase 1: Core Learning Profile and Difficulty Layer
+
+Add learning profile selection.
+Add difficulty selection.
+Add explanation layer helper.
+Add difficulty modifier helper.
+Add clue visibility by difficulty.
+Apply to Air Sprite first.
+Adapt Air Sprite mission briefing.
+Adapt battle objective strip.
+Adapt key action feedback.
+Adapt Airway Rune, Breath of Dawn, Reassess descriptions.
+
+Phase 2: RPG Draw and Hero Identity
+
+Add hero faction, quote, backstory, best-against, medical focus.
+Improve first summon cinematic.
+Add hero detail improvements.
+Add body-system faction labels.
+
+Phase 3: Codex and Victory Learning
+
+Add Codex layered tabs or sections.
+Adapt victory screen by profile.
+Show medical terms learned.
+Show NCLEX clinical judgment summary for NCLEX profile.
+Show difficulty-based rewards.
+Show region progress more clearly.
+
+Phase 4: Difficulty Feedback and Rewards
+
+Adjust hints by difficulty.
+Adjust wrong action feedback by difficulty.
+Add reward multiplier by difficulty.
+Adjust star goals by difficulty.
+Test all difficulties on Air Sprite.
+
+Phase 5: Chapter Scaling
+
+Add chapter-based difficulty assumptions.
+Chapter 1 single-system.
+Chapter 2 related systems.
+Chapter 3 priority conflicts.
+Chapter 4 evolving conditions.
+Chapter 5 advanced clinical judgment.
+
+Phase 6: Retention Preparation
+
+Prepare Bond Level fields.
+Show Bond Level on hero detail.
+Prepare Events placeholder.
+Prepare Cosmetic placeholder.
+
+Phase 7: Advanced Mechanics Later
+
+Evolving clues.
+Assessment type selection.
+Distractor clues.
+Mixed-system bosses.
+Priority shifts.
+Unsafe action conditions.
+
+---
+
+Testing Checklist
+
+Test Air Sprite battle for all learning profiles:
+
+Curious Learner sees fantasy-first language with gentle medical terms.
+Medical Learner sees basic medical explanations and definitions.
+Nursing Student sees clinical reasoning and patient care language.
+NCLEX Preparer sees clinical judgment steps and prioritization.
+Healthcare Professional sees concise clinical terminology.
+All profiles still play the same battle.
+Mission briefing changes correctly.
+Objective strip changes correctly.
+Skill descriptions change correctly.
+Action feedback changes correctly.
+Victory screen changes correctly.
+Codex has deeper layers.
+Player can change learning depth later.
+Medical terms are present but not overwhelming.
+Fantasy story remains visible.
+
+Test Air Sprite battle for all difficulty levels:
+
+Guided shows 3 clues at start.
+Standard shows 2 clues at start.
+Clinical shows 1 clue at start.
+NCLEX shows 0 clues at start.
+Expert shows 0 clues and can support future advanced mechanics.
+Scout reveals hidden clues.
+Mission briefing changes based on difficulty.
+Objective strip changes based on difficulty.
+Wrong-action feedback changes based on difficulty.
+Rewards scale modestly.
+First tutorial battle is still playable.
+Learning profile text still works separately from difficulty.
+
+Test combinations:
+
+Curious + Guided
+Curious + Clinical
+Medical Learner + Standard
+Nursing Student + Clinical
+NCLEX + Guided
+NCLEX + NCLEX
+Professional + Expert later
+
+Test anime/RPG draw:
+
+Hero profiles feel collectible.
+First summon feels meaningful.
+Faction names appear.
+Enemy descriptions feel like fantasy disease spirits.
+The game still teaches real medical concepts.
+
+Expected nonmedical result:
+
+This is a fantasy RPG where I summon healer heroes to restore a body kingdom, and the battles teach medicine.
+
+Expected NCLEX result:
+
+This helped me practice recognizing cues, prioritizing airway and breathing, taking action, and reassessing.
+
+Expected expert result:
+
+I must manage changing priorities like a real clinical scenario.
+
+---
+
+Final Design Intent
+
+Clinica should not choose between anime fantasy and medical education.
+
+It should combine them.
+
+The player should feel:
+
+I am playing a fantasy RPG.
+I am restoring a body kingdom.
+I am collecting healer heroes.
+I am learning real medical terms.
+I understand hard concepts because the game makes them visual and memorable.
+
+For NCLEX players, the game should feel like:
+
+I am practicing clinical judgment without staring at another question bank.
+
+For nonmedical players, the game should feel like:
+
+I am learning how the body works without feeling lost.
+
+For anime/RPG players, the game should feel like:
+
+I want to meet more healers, unlock new regions, and cleanse the next disease spirit.
+
+For expert players, the game should feel like:
+
+I need to assess, prioritize, intervene, and reassess as the patient condition changes.

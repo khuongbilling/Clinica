@@ -81,15 +81,130 @@ export const APTITUDE_RESULT: Record<Aptitude, { title: string; body: string; bo
 };
 
 // ---------- Learning Profiles ----------
-// Maps to the clinical-layer LearningProfile (clinical.ts).
-// `id` is used as `learning_profile`. `depth` is kept for codex copy compatibility.
-export const LEARNING_GOALS = [
-  { id: 'nonmedical', label: 'I want to learn how the body works.', sublabel: 'Guided lessons in plain language.', depth: 'simple' },
-  { id: 'preNursing', label: 'I am preparing for nursing or healthcare school.', sublabel: 'Foundational nursing concepts.', depth: 'foundation' },
-  { id: 'nursingStudent', label: 'I am in nursing school.', sublabel: 'Clinical judgment focus.', depth: 'clinical' },
-  { id: 'nclexPrep', label: 'I am preparing for NCLEX.', sublabel: 'NCLEX-lens with stricter feedback.', depth: 'nclex' },
-  { id: 'healthcareProfessional', label: 'I work in healthcare.', sublabel: 'Concise clinical synthesis.', depth: 'professional' },
-] as const;
+// Each profile captures who the player is and sets tone for Codex copy,
+// hint language, and mission briefings throughout the game.
+//
+// `tone`:
+//   'rpg'        — anime / RPG / cozy fantasy fans: fantasy flavor first, medicine second
+//   'curious'    — parents, teens, curious learners: plain language, wonder-driven
+//   'explorer'   — people interested in the body: anatomy + story blend
+//   'foundation' — pre-med / pre-nursing / health science students: concepts + basics
+//   'clinical'   — nursing students: clinical reasoning, cues, priorities
+//   'nclex'      — NCLEX learners: strict lens, high feedback
+//   'professional'— practicing nurses / healthcare workers: concise synthesis
+
+export interface LearningGoal {
+  id: string;
+  label: string;
+  sublabel: string;
+  depth: string;
+  tone: string;
+  icon: string;
+  // Short flavor text shown on the trial intro screen, tuned to this audience
+  trialIntro: string;
+  // One-line Codex voice — how hints and Codex pages open for this profile
+  codexVoice: string;
+}
+
+export const LEARNING_GOALS: LearningGoal[] = [
+  {
+    id: 'rpg',
+    label: "I'm here for the RPG — the medicine is a bonus.",
+    sublabel: 'Fantasy story, battles, and world-building first.',
+    depth: 'simple',
+    tone: 'rpg',
+    icon: 'game-controller',
+    trialIntro:
+      'A crystal corruption stirs in the Air Temple. Your healer team reads the signs, battles the disease, and restores the kingdom — one fight at a time. The Codex will explain what each clue means in plain language so the story always makes sense.',
+    codexVoice: 'The Codex whispers:',
+  },
+  {
+    id: 'cozy',
+    label: "I want a cozy fantasy world with gentle learning.",
+    sublabel: 'Low pressure, good vibes, body knowledge as lore.',
+    depth: 'simple',
+    tone: 'rpg',
+    icon: 'leaf',
+    trialIntro:
+      'The first corruption is gentle — a mist in the Air Temple. There is no rush. Read the clues at your pace, keep the patient stable, and the Codex will explain every step. This is your kingdom to restore.',
+    codexVoice: 'The Codex gently notes:',
+  },
+  {
+    id: 'curious',
+    label: "I'm curious about how the human body works.",
+    sublabel: 'Plain language, no prior knowledge needed.',
+    depth: 'simple',
+    tone: 'curious',
+    icon: 'bulb',
+    trialIntro:
+      'The Air system is the body\'s breathing kingdom — lungs, airways, oxygen. A corruption is blocking airflow. Your team will read clues like "oxygen saturation dropping" and choose actions that fix it. Every clue is explained in plain language.',
+    codexVoice: 'The Codex explains:',
+  },
+  {
+    id: 'teen',
+    label: "I'm a student exploring health and science.",
+    sublabel: 'Great for high school students or anyone starting out.',
+    depth: 'simple',
+    tone: 'curious',
+    icon: 'school',
+    trialIntro:
+      'This is your first battle in the kingdom — and the best way to learn is by doing. The Air Crystal needs you. Read the patient\'s clues, pick the right actions, and the Codex will explain the real science behind everything that happens.',
+    codexVoice: 'The Codex teaches:',
+  },
+  {
+    id: 'preNursing',
+    label: "I'm preparing for nursing or healthcare school.",
+    sublabel: 'Foundational nursing concepts and body systems.',
+    depth: 'foundation',
+    tone: 'foundation',
+    icon: 'heart',
+    trialIntro:
+      'The Air system maps to respiratory physiology — the lungs, airways, and oxygenation. Your first encounter introduces the Scout → Stabilize → Counter → Reassess care chain. Every action teaches a foundational concept you\'ll see again in school.',
+    codexVoice: 'The Codex notes:',
+  },
+  {
+    id: 'nursingStudent',
+    label: "I'm in nursing school right now.",
+    sublabel: 'Clinical judgment, SBAR, cue recognition.',
+    depth: 'clinical',
+    tone: 'clinical',
+    icon: 'medkit',
+    trialIntro:
+      'SpO₂ dropping. Respiratory rate elevated. A hidden clue — potentially wheeze — is not yet visible. Apply the clinical care chain: recognize cues → analyze → prioritize → intervene → evaluate. The Codex gives NCLEX-adjacent feedback after each battle.',
+    codexVoice: 'Clinical note:',
+  },
+  {
+    id: 'nclexPrep',
+    label: "I'm preparing for the NCLEX.",
+    sublabel: 'Strict clinical lens, prioritization, safety focus.',
+    depth: 'nclex',
+    tone: 'nclex',
+    icon: 'clipboard',
+    trialIntro:
+      'Apply NGN clinical judgment: recognize cues, analyze findings, prioritize hypotheses, generate solutions, take action, evaluate outcomes. This encounter tests respiratory cue recognition. The Codex provides post-battle NCLEX-style rationale.',
+    codexVoice: 'NCLEX lens:',
+  },
+  {
+    id: 'healthcareProfessional',
+    label: "I work in healthcare or nursing.",
+    sublabel: 'Concise clinical synthesis, professional framing.',
+    depth: 'professional',
+    tone: 'professional',
+    icon: 'pulse',
+    trialIntro:
+      'Respiratory presentation — likely acute bronchospasm or early decompensation. Triage visible findings, reveal the hidden clue, and apply the strongest targeted intervention. The Codex provides concise clinical synthesis without hand-holding.',
+    codexVoice: 'Clinically:',
+  },
+];
+
+// Map old profile IDs to new ones for backward compatibility
+export const PROFILE_ID_COMPAT: Record<string, string> = {
+  nonmedical: 'curious',
+  preNursing: 'preNursing',
+  nursingStudent: 'nursingStudent',
+  nclexPrep: 'nclexPrep',
+  healthcareProfessional: 'healthcareProfessional',
+};
 
 export const DEPTH_LABEL: Record<string, string> = {
   simple: 'General Reading',
@@ -105,6 +220,46 @@ export const DEPTH_INTRO: Record<string, string> = {
   clinical: 'Reading with clinical reasoning. Cues, priorities, interventions.',
   nclex: 'Reading through the NCLEX lens: recognize cues, analyze, prioritize, act, evaluate.',
   professional: 'Concise clinical synthesis for practicing professionals.',
+};
+
+// Tone guide for each profile — used by copy and hints throughout the game
+export const TONE_GUIDE: Record<string, { codexOpener: string; hintStyle: string; victoryLine: string; defeatLine: string }> = {
+  rpg: {
+    codexOpener: 'The Codex whispers:',
+    hintStyle: 'fantasy flavor → plain meaning',
+    victoryLine: 'The corruption is purified. The kingdom breathes again.',
+    defeatLine: 'The darkness held. But every healer learns from loss.',
+  },
+  curious: {
+    codexOpener: 'The Codex explains:',
+    hintStyle: 'plain language, body-first',
+    victoryLine: 'You understood the body and restored it. Well done.',
+    defeatLine: 'The body is complex. The Codex has more to teach.',
+  },
+  foundation: {
+    codexOpener: 'The Codex notes:',
+    hintStyle: 'nursing concepts, approachable',
+    victoryLine: 'Strong foundational care. The region is restored.',
+    defeatLine: 'Review the care chain and try again — this is how nurses learn.',
+  },
+  clinical: {
+    codexOpener: 'Clinical note:',
+    hintStyle: 'SBAR, cue recognition, priority framing',
+    victoryLine: 'Sound clinical judgment. Region restored.',
+    defeatLine: 'Reassess the cue priority order and retry.',
+  },
+  nclex: {
+    codexOpener: 'NCLEX lens:',
+    hintStyle: 'NGN format, recognize → analyze → prioritize → act → evaluate',
+    victoryLine: 'Correct prioritization and intervention. Region restored.',
+    defeatLine: 'Revisit the clinical priority hierarchy and re-enter.',
+  },
+  professional: {
+    codexOpener: 'Clinically:',
+    hintStyle: 'concise, no hand-holding',
+    victoryLine: 'Targeted intervention. Region restored.',
+    defeatLine: 'Suboptimal intervention sequence. Review and re-enter.',
+  },
 };
 
 // ---------- Mentor's Guidance Hints ----------

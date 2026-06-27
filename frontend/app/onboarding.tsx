@@ -30,6 +30,7 @@ export default function Onboarding() {
 
   const recommended = useMemo<Aptitude | null>(() => (picks.length === CALLING_QUIZ.length ? scoreQuiz(picks) : null), [picks]);
   const aptitude = chosenAptitude || recommended;
+  const selectedGoal = LEARNING_GOALS.find(g => g.id === learningGoalId) ?? null;
 
   useEffect(() => {
     logEvent('game_opened', 'onboarding');
@@ -44,8 +45,7 @@ export default function Onboarding() {
   }, [learningGoalId]);
 
   const submit = async () => {
-    if (!aptitude || !learningGoalId) return;
-    const goal = LEARNING_GOALS.find(g => g.id === learningGoalId)!;
+    if (!aptitude || !learningGoalId || !selectedGoal) return;
     setBusy(true);
     setError(null);
     try {
@@ -53,11 +53,10 @@ export default function Onboarding() {
         name: name.trim() || "Healer",
         aptitude,
         recommended_aptitude: recommended || undefined,
-        learning_goal: goal.label,
-        learning_profile: goal.id,
-        codex_depth: goal.depth,
+        learning_goal: selectedGoal.label,
+        learning_profile: selectedGoal.id,
+        codex_depth: selectedGoal.depth,
       });
-      // Send player directly into first trial battle
       router.replace({ pathname: "/battle", params: { enemyId: "air_sprite" } });
     } catch (e: any) {
       setError(e?.message || "Could not begin your journey.");
@@ -74,14 +73,32 @@ export default function Onboarding() {
           <Text style={styles.kicker}>CHAPTER I · THE FADING CORE</Text>
           <Text style={styles.titleXL}>The Kingdom{"\n"}is Alive</Text>
           <View style={styles.openingLines}>
-            {["Air breathes.", "River circulates.", "Fire defends.", "Energy fuels.", "Mind guides.", "Protection guards."].map((l) => (
+            {[
+              "Air breathes.", "River circulates.", "Fire defends.",
+              "Energy fuels.", "Mind guides.", "Protection guards.",
+            ].map((l) => (
               <Text key={l} style={styles.openingLine}>{l}</Text>
             ))}
           </View>
           <Text style={styles.lede}>
-            But disease corruption is spreading.{"\n\n"}Lead your healer team. Read the clues. Keep the patient stable. Restore the body one battle at a time.
+            But disease corruption is spreading.{"\n\n"}
+            Lead your healer team. Read the clues. Keep the patient stable. Restore the body one battle at a time.
           </Text>
           <Text style={styles.tagline}>Fight disease. Restore the body. Learn medicine through play.</Text>
+
+          <View style={styles.audienceRow}>
+            {[
+              { icon: "game-controller", label: "RPG fans" },
+              { icon: "heart",           label: "Nursing students" },
+              { icon: "bulb",            label: "Curious minds" },
+              { icon: "clipboard",       label: "NCLEX learners" },
+            ].map(({ icon, label }) => (
+              <View key={label} style={styles.audienceChip}>
+                <Ionicons name={icon as any} size={12} color={COLORS.brand} />
+                <Text style={styles.audienceChipTxt}>{label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
         <Cta testID="welcome-begin" label="BEGIN HEALING" onPress={() => setStep("name")} />
       </Frame>
@@ -213,25 +230,28 @@ export default function Onboarding() {
     );
   }
 
-  // ---------- LEARNING GOAL ----------
+  // ---------- LEARNING GOAL / AUDIENCE PROFILE ----------
   if (step === "goal") {
     return (
       <Frame>
-        <View style={styles.heroBlock}>
-          <Text style={styles.kicker}>BEFORE YOU ENTER</Text>
+        <View style={[styles.heroBlock, { flex: 0 }]}>
+          <Text style={styles.kicker}>STEP 3 OF 3 · YOUR CODEX VOICE</Text>
           <Text style={styles.title}>What brings you{"\n"}to Clinica?</Text>
-          <Text style={styles.lede}>The Codex will adjust its lessons to match your journey.</Text>
+          <Text style={styles.lede}>The Codex adjusts its language and lessons to match your journey.</Text>
         </View>
-        <View style={{ gap: SPACING.sm }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: SPACING.sm, paddingBottom: SPACING.lg }}>
           {LEARNING_GOALS.map((g) => {
             const selected = learningGoalId === g.id;
             return (
               <Pressable
                 key={g.id}
-                style={[styles.goalCard, selected && { borderColor: COLORS.brand, backgroundColor: COLORS.brand + "12" }]}
+                style={[styles.goalCard, selected && styles.goalCardSelected]}
                 onPress={() => setLearningGoalId(g.id)}
                 testID={`goal-${g.id}`}
               >
+                <View style={[styles.goalIconWrap, selected && { borderColor: COLORS.brand, backgroundColor: COLORS.brand + "18" }]}>
+                  <Ionicons name={g.icon as any} size={18} color={selected ? COLORS.brand : COLORS.onSurfaceTertiary} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.goalText, selected && { color: COLORS.brand }]}>{g.label}</Text>
                   <Text style={styles.goalSub}>{g.sublabel}</Text>
@@ -240,33 +260,47 @@ export default function Onboarding() {
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
         {error && <Text style={styles.error}>{error}</Text>}
         <Cta testID="goal-continue" label="CONTINUE" disabled={!learningGoalId} onPress={() => setStep("trial")} />
       </Frame>
     );
   }
 
-  // ---------- TRIAL INTRO ----------
+  // ---------- TRIAL INTRO (audience-aware) ----------
   if (step === "trial") {
+    const isRPG = selectedGoal?.tone === 'rpg';
+    const isClinical = selectedGoal?.tone === 'clinical' || selectedGoal?.tone === 'nclex' || selectedGoal?.tone === 'professional';
+
     return (
       <Frame>
         <View style={styles.heroBlock}>
           <View style={styles.clinicaCallout}>
             <Text style={styles.clinicaCalloutLabel}>ABOUT CLINICA</Text>
             <Text style={styles.clinicaCalloutText}>
-              Clinica is a kingdom shaped like the human body. Disease corruption is spreading through the body systems. Your healer team must read clues, keep Patient Stability above 0, reduce Disease Corruption to 0, and restore each region.
+              {isRPG
+                ? "Clinica is a dark fantasy kingdom shaped like the human body. Disease corruptions spread through its regions. Your healer team battles them back — reading clues, keeping the patient stable, and restoring each realm."
+                : isClinical
+                  ? "Clinica maps body systems to a fantasy kingdom. Each battle tests clinical judgment: recognize cues → analyze → prioritize → intervene → evaluate. Disease Corruption = pathological severity. Patient Stability = clinical status."
+                  : "Clinica is a kingdom shaped like the human body. Disease corruption is spreading through the body systems. Your healer team reads clues, keeps Patient Stability above 0, and restores each region by reducing Disease Corruption to 0."}
             </Text>
           </View>
           <Text style={styles.kicker}>FIRST TRIAL</Text>
-          <Text style={styles.titleXL}>The Air{"\n"}Crystal</Text>
+          <Text style={styles.titleXL}>
+            {isRPG ? "The Air\nCrystal" : isClinical ? "Respiratory\nPresentation" : "The Air\nTemple"}
+          </Text>
           <Text style={styles.lede}>
-            Your first corruption weakens the Air system. Watch the clues, reveal what is hidden, and restore Stability before the Air Crystal fades.
+            {selectedGoal?.trialIntro ?? "Your first encounter begins in the Air system. Read the clues, keep the patient stable, and restore the region."}
           </Text>
           <View style={styles.trialMeta}>
-            <View style={styles.trialPill}><Text style={styles.trialPillTxt}>AIR SYSTEM</Text></View>
-            <View style={styles.trialPill}><Text style={styles.trialPillTxt}>3 VISIBLE CLUES</Text></View>
-            <View style={styles.trialPill}><Text style={styles.trialPillTxt}>1 HIDDEN</Text></View>
+            {(isClinical
+              ? ["RESPIRATORY", "4 CLUES · 1 HIDDEN", "SCOUT → STABILIZE → COUNTER"]
+              : isRPG
+                ? ["AIR TEMPLE", "3 VISIBLE CLUES", "1 HIDDEN CLUE"]
+                : ["AIR SYSTEM", "3 VISIBLE CLUES", "1 HIDDEN"]
+            ).map(label => (
+              <View key={label} style={styles.trialPill}><Text style={styles.trialPillTxt}>{label}</Text></View>
+            ))}
           </View>
         </View>
         {error && <Text style={styles.error}>{error}</Text>}
@@ -340,7 +374,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1,
   },
-  pathIcon: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
+  pathIcon: { width: 40, height: 40, borderRadius: 4, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
   pathName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "600" },
   pathHero: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   pathBonus: { fontSize: 11, marginTop: 4, fontWeight: "500" },
@@ -348,26 +382,46 @@ const styles = StyleSheet.create({
   recBadgeTxt: { color: COLORS.onBrand, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
 
   goalCard: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.md, justifyContent: "space-between",
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md,
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: 4, padding: SPACING.md,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  goalText: { color: COLORS.onSurface, fontSize: 14, flex: 1 },
+  goalCardSelected: {
+    borderColor: COLORS.brand,
+    backgroundColor: COLORS.brand + "0E",
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.brand,
+  },
+  goalIconWrap: {
+    width: 36, height: 36, borderRadius: 4, borderWidth: 1, borderColor: COLORS.borderStrong,
+    backgroundColor: COLORS.surfaceTertiary, alignItems: "center", justifyContent: "center",
+  },
+  goalText: { color: COLORS.onSurface, fontSize: 14, lineHeight: 19 },
   goalSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 3 },
 
   openingLines: { gap: 2, marginVertical: SPACING.sm },
   openingLine: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontStyle: "italic", letterSpacing: 0.3 },
   tagline: { color: COLORS.brand, fontSize: 11, fontStyle: "italic", letterSpacing: 0.5, marginTop: SPACING.sm },
 
+  audienceRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, marginTop: SPACING.md },
+  audienceChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: COLORS.brand + "14", borderRadius: 4,
+    paddingHorizontal: SPACING.sm, paddingVertical: 4,
+    borderWidth: 1, borderColor: COLORS.brand + "40",
+  },
+  audienceChipTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "600", letterSpacing: 0.3 },
+
   clinicaCallout: {
-    backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,
+    backgroundColor: COLORS.brand + "10", borderRadius: 4,
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30",
+    borderLeftWidth: 3, borderLeftColor: COLORS.brand,
     marginBottom: SPACING.sm,
   },
   clinicaCalloutLabel: { color: COLORS.brand, fontSize: 9, letterSpacing: 2, fontWeight: "700", marginBottom: 4 },
   clinicaCalloutText: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
   trialMeta: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md, flexWrap: "wrap" },
-  trialPill: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
+  trialPill: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4 },
   trialPillTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
 
   error: { color: COLORS.error, fontSize: 13, textAlign: "center" },

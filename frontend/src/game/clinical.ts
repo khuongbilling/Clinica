@@ -16,11 +16,17 @@
 // ------------------------------------------------------------
 
 export type LearningProfile =
-  | 'nonmedical'
+  | 'nonmedical'           // legacy id — maps to curious
   | 'preNursing'
   | 'nursingStudent'
   | 'nclexPrep'
-  | 'healthcareProfessional';
+  | 'healthcareProfessional'
+  // new audience-specific profiles
+  | 'rpg'
+  | 'cozy'
+  | 'curious'
+  | 'teen'
+  | 'professional';       // alias for healthcareProfessional
 
 export type FeedbackLevel = 'guided' | 'supportive' | 'standard' | 'minimal' | 'expert';
 
@@ -28,10 +34,15 @@ export const FEEDBACK_ORDER: FeedbackLevel[] = ['guided', 'supportive', 'standar
 
 export function getInitialFeedbackLevel(profile: LearningProfile | undefined): FeedbackLevel {
   switch (profile) {
+    case 'rpg':
+    case 'cozy':
+    case 'curious':
+    case 'teen':
     case 'nonmedical': return 'guided';
     case 'preNursing': return 'supportive';
     case 'nursingStudent': return 'standard';
     case 'nclexPrep': return 'minimal';
+    case 'professional':
     case 'healthcareProfessional': return 'expert';
     default: return 'supportive';
   }
@@ -69,11 +80,16 @@ export interface Handicap {
 
 export function getStartingHandicap(profile: LearningProfile | undefined): Handicap {
   switch (profile) {
+    case 'rpg':
+    case 'cozy':
+    case 'curious':
+    case 'teen':
     case 'nonmedical':
       return { startingStabilityBonus: 15, enemyDamageReduction: 5, revealOneExtraClue: true, stricterStars: false };
     case 'preNursing':
       return { startingStabilityBonus: 10, enemyDamageReduction: 3, revealOneExtraClue: false, stricterStars: false };
     case 'nclexPrep':
+    case 'professional':
     case 'healthcareProfessional':
       return { startingStabilityBonus: 0, enemyDamageReduction: 0, revealOneExtraClue: false, stricterStars: true };
     default:
@@ -727,11 +743,16 @@ export interface StarRules {
 export function getStarRules(profile: LearningProfile | undefined, enemy: EnemyClinical | undefined): StarRules {
   const baseTurnLimit = enemy?.starTurnLimit || 5;
   switch (profile) {
+    case 'rpg':
+    case 'cozy':
+    case 'curious':
+    case 'teen':
     case 'nonmedical':
       return { turnLimit: baseTurnLimit + 2, allowOnePoorFit: true, requireFullChainForStar2: true };
     case 'preNursing':
       return { turnLimit: baseTurnLimit + 1, allowOnePoorFit: true, requireFullChainForStar2: true };
     case 'nclexPrep':
+    case 'professional':
     case 'healthcareProfessional':
       return { turnLimit: Math.max(3, baseTurnLimit - 1), allowOnePoorFit: false, requireFullChainForStar2: true, requireReassess: true };
     default:
@@ -911,17 +932,29 @@ export function buildRationale(status: ActionStatus, action: ActionClinical | un
 // ------------------------------------------------------------
 
 export const PROFILE_LABEL: Record<LearningProfile, string> = {
-  nonmedical: 'I want to learn how the body works.',
-  preNursing: 'I am preparing for nursing or healthcare school.',
-  nursingStudent: 'I am in nursing school.',
-  nclexPrep: 'I am preparing for NCLEX.',
-  healthcareProfessional: 'I work in healthcare.',
+  rpg: "I'm here for the RPG — the medicine is a bonus.",
+  cozy: "I want a cozy fantasy world with gentle learning.",
+  curious: "I'm curious about how the human body works.",
+  teen: "I'm a student exploring health and science.",
+  preNursing: "I'm preparing for nursing or healthcare school.",
+  nursingStudent: "I'm in nursing school right now.",
+  nclexPrep: "I'm preparing for the NCLEX.",
+  professional: "I work in healthcare or nursing.",
+  // legacy ids
+  nonmedical: "I want to learn how the body works.",
+  healthcareProfessional: "I work in healthcare.",
 };
 
 export const PROFILE_SUBLABEL: Record<LearningProfile, string> = {
+  rpg: 'Fantasy story, battles, and world-building first.',
+  cozy: 'Low pressure, good vibes, body knowledge as lore.',
+  curious: 'Plain language, no prior knowledge needed.',
+  teen: 'Great for high school students or anyone starting out.',
+  preNursing: 'Foundational nursing concepts and body systems.',
+  nursingStudent: 'Clinical judgment, SBAR, cue recognition.',
+  nclexPrep: 'Strict clinical lens, prioritization, safety focus.',
+  professional: 'Concise clinical synthesis, professional framing.',
+  // legacy ids
   nonmedical: 'Guided lessons in plain language.',
-  preNursing: 'Foundational nursing concepts.',
-  nursingStudent: 'Clinical judgment focus.',
-  nclexPrep: 'NCLEX-lens with stricter feedback.',
   healthcareProfessional: 'Concise clinical synthesis.',
 };
