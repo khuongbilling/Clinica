@@ -124,7 +124,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   breath_of_dawn: {
     clinicalTags: ['airway', 'oxygenation', 'respiratory', 'assessment'],
     appropriateForSystems: ['Air'],
-    chainRoles: ['Stabilize'],
+    chainRoles: ['Stabilize', 'Counter'],
   },
   lantern_of_clues: {
     clinicalTags: ['assessment'],
@@ -145,7 +145,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   pattern_sight: {
     clinicalTags: ['assessment', 'neurovascular assessment'],
-    chainRoles: ['Scout'],
+    chainRoles: ['Scout', 'Counter'],
   },
   focused_lens: {
     clinicalTags: ['assessment', 'reassessment'],
@@ -157,7 +157,8 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   isolation_seal: {
     clinicalTags: ['infection isolation', 'transmission prevention'],
-    chainRoles: ['Protect'],
+    appropriateForSystems: ['Fire', 'Protection'],
+    chainRoles: ['Protect', 'Counter'],
   },
   threadwatch: {
     clinicalTags: ['assessment', 'reassessment'],
@@ -165,11 +166,16 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   codex_link: {
     clinicalTags: ['assessment'],
-    chainRoles: ['Scout'],
+    chainRoles: ['Scout', 'Counter'],
   },
   guardians_touch: {
     clinicalTags: ['general support', 'comfort'],
-    chainRoles: ['Stabilize'],
+    chainRoles: ['Stabilize', 'Counter'],
+  },
+  mend: {
+    clinicalTags: ['skin integrity', 'wound care', 'protect'],
+    appropriateForSystems: ['Protection'],
+    chainRoles: ['Counter', 'Stabilize'],
   },
   reassess: {
     clinicalTags: ['reassessment', 'assessment'],
