@@ -217,8 +217,12 @@ export default function Result() {
                 <Text style={styles.statVal}>{stability}%</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statLbl}>XP EARNED</Text>
+                <Text style={styles.statLbl}>PLAYER XP</Text>
                 <Text style={styles.statVal}>+{Math.floor((enemy?.id === BOSS_LORD_IMBALANCE.id ? 150 : 35 + (enemy?.difficulty || 1) * 10) * (isTraining ? 0.5 : 1))}</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statLbl}>HERO XP</Text>
+                <Text style={styles.statVal}>+{Math.floor((enemy?.id === BOSS_LORD_IMBALANCE.id ? 100 : 20 + (enemy?.difficulty || 1) * 8) * (isTraining ? 0.5 : 1))}</Text>
               </View>
             </View>
 
@@ -237,11 +241,16 @@ export default function Result() {
             {mission && (
               <View style={styles.kingdomCard}>
                 <Ionicons name="globe-outline" size={16} color={COLORS.brand} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.kingdomTitle}>{mission.kingdomRegion}</Text>
-                  <Text style={styles.kingdomSub}>
-                    {Math.min((player?.runs_completed ?? 0), mission.kingdomMax)}/{mission.kingdomMax} restored
-                  </Text>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={styles.kingdomTitle}>{mission.kingdomRegion}</Text>
+                    <Text style={styles.kingdomSub}>
+                      {Math.min((player?.region_progress?.[mission.kingdomRegion] ?? 0), mission.kingdomMax)}/{mission.kingdomMax} restored
+                    </Text>
+                  </View>
+                  <View style={styles.regionBar}>
+                    <View style={[styles.regionFill, { width: `${Math.min(((player?.region_progress?.[mission.kingdomRegion] ?? 0) / mission.kingdomMax) * 100, 100)}%` as any }]} />
+                  </View>
                 </View>
               </View>
             )}
@@ -291,8 +300,14 @@ export default function Result() {
               <Text style={styles.primaryTxt}>TRY AGAIN</Text>
             </Pressable>
           )}
-          <Pressable style={won ? styles.primary : styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
-            <Text style={won ? styles.primaryTxt : styles.secondaryTxt}>RETURN TO SHIFT</Text>
+          {won && (
+            <Pressable style={styles.primary} onPress={() => router.replace("/shift")} testID="result-next-mission">
+              <Ionicons name="arrow-forward-circle" size={16} color={COLORS.onBrand} />
+              <Text style={styles.primaryTxt}>NEXT MISSION</Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
+            <Text style={styles.secondaryTxt}>RETURN TO KINGDOM</Text>
           </Pressable>
           <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)/codex")} testID="result-codex">
             <Text style={styles.secondaryTxt}>OPEN CODEX</Text>
@@ -326,7 +341,7 @@ const styles = StyleSheet.create({
   tipTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: "500" },
   tipBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
   actions: { gap: SPACING.sm, marginTop: SPACING.md },
-  primary: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
+  primary: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: SPACING.sm },
   training: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: SPACING.sm },
   primaryTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
   secondary: { borderWidth: 1, borderColor: COLORS.borderStrong, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
@@ -356,10 +371,12 @@ const styles = StyleSheet.create({
   diffRewardNote: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.brand + "10", borderRadius: 4, padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.brand + "20" },
   diffRewardText: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
   kingdomCard: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.md,
     backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30",
   },
   kingdomTitle: { color: COLORS.brand, fontSize: 13, fontWeight: "600" },
-  kingdomSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 2 },
+  kingdomSub: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
+  regionBar: { height: 4, borderRadius: 2, backgroundColor: COLORS.border, overflow: "hidden" },
+  regionFill: { height: "100%", backgroundColor: COLORS.brand, borderRadius: 2 },
 });

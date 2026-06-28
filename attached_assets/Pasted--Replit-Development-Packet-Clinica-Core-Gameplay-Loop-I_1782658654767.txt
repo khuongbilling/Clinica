@@ -1,0 +1,560 @@
+# Replit Development Packet: Clinica Core Gameplay Loop Inspection Follow-Up
+
+## Goal
+
+Improve Clinica by focusing on the highest-impact issues found during codebase inspection.
+
+Do not rebuild the app.
+
+Do not redesign the whole game.
+
+Do not change unrelated systems.
+
+Focus on making the existing game loop feel complete and playable.
+
+---
+
+# Current Codebase Summary
+
+Clinica currently has:
+
+```text
+Frontend:
+Expo / React Native / TypeScript
+
+Backend:
+Python FastAPI
+
+Local Save:
+AsyncStorage
+
+Cloud Save:
+MongoDB through backend when MONGO_URL is configured
+```
+
+Important game files:
+
+```text
+frontend/src/game/battle.ts
+Main battle logic, AP spending, turn math, care chain logic.
+
+frontend/src/game/clinical.ts
+Clinical appropriateness rules. This is the educational heart of the game.
+
+frontend/app/battle.tsx
+Battle screen UI.
+
+frontend/src/game/content.ts
+Heroes, enemies, enemy clues, skills, real-world condition mappings.
+
+frontend/src/game/items.ts
+Battle items.
+
+frontend/src/game/types.ts
+Player state and game data types.
+
+frontend/src/game/store.tsx
+Save/load/sync logic.
+```
+
+---
+
+# Main Finding
+
+The game has strong underlying systems, but the player-facing loop needs to be connected more clearly.
+
+Priority should be:
+
+```text
+Opening / mission selection
+→ encounter selection
+→ real battle
+→ victory rewards
+→ progression update
+→ summon / unlock
+→ return to kingdom
+```
+
+The goal is to make the first 5 minutes feel complete.
+
+---
+
+# Highest Priority Fixes
+
+## 1. Wire Encounter Cards Into Real Battles
+
+Current issue:
+
+```text
+The shift / encounter screen appears to show encounters, but tapping encounter cards may not reliably start a real battle.
+```
+
+Goal:
+
+```text
+When the player taps an encounter card, it should start the correct battle in battle.tsx using the selected enemy/encounter data.
+```
+
+Expected behavior:
+
+```text
+1. Player sees available encounters.
+2. Player taps Air Sprite or another encounter.
+3. App opens the battle screen.
+4. Battle screen loads the correct enemy.
+5. Enemy clues, HP/corruption, system type, and rewards match the selected encounter.
+```
+
+Do not hardcode only one enemy if the existing structure supports multiple enemies.
+
+If necessary, pass encounter ID or enemy ID through route params or existing state.
+
+---
+
+## 2. Connect Boss Battle Button to a Real Boss Fight
+
+Current issue:
+
+```text
+The boss screen appears to have lore and an Enter button, but it may not connect to an actual boss battle.
+```
+
+Goal:
+
+```text
+When the player taps Enter on the boss screen, the app should launch a real boss battle using existing battle.tsx logic.
+```
+
+Expected behavior:
+
+```text
+1. Player opens boss screen.
+2. Player sees boss briefing.
+3. Player taps Enter.
+4. Battle screen opens with boss enemy data.
+5. Boss has appropriate corruption/stability pressure, clues, rewards, and victory result.
+```
+
+Use existing battle systems rather than creating a separate boss battle engine.
+
+---
+
+## 3. Strengthen Victory Rewards and Progression Loop
+
+Current issue:
+
+```text
+Battle rewards and progression may not feel complete or visible enough.
+```
+
+Goal:
+
+```text
+After battle victory, show a clear reward/progression screen.
+```
+
+The victory screen should show:
+
+```text
+Victory title
+Enemy defeated
+Region restored progress
+Player EXP
+Hero EXP
+Codex Shards
+Items or materials if applicable
+Stars earned
+Next suggested action
+```
+
+Example:
+
+```text
+Victory: Air Temple Restored
+
+You recognized the breathing clues, stabilized the patient, used an Air intervention, and reassessed.
+
+Rewards:
+Player EXP +30
+Novice Guardian EXP +25
+Codex Shards +45
+Air Region Progress +1
+
+Air Temple: 1/5 Restored
+```
+
+Buttons:
+
+```text
+Continue
+View Codex
+Return to Kingdom
+Next Mission
+```
+
+Do not make the rewards overly complex yet.
+
+---
+
+## 4. Make Region Progress Visible
+
+Goal:
+
+```text
+Make the player clearly see that winning battles restores body-system regions.
+```
+
+Example:
+
+```text
+Air Temple
+Respiratory System
+1/5 Restored
+Next: Wheezing Woods
+```
+
+If region progress already exists in player state, use it.
+
+If not, prepare a simple region progress structure:
+
+```js
+player.regionProgress = player.regionProgress || {
+  Air: 0,
+  River: 0,
+  Fire: 0,
+  Energy: 0,
+  Protection: 0,
+  Mind: 0,
+  Storm: 0,
+  Forge: 0,
+  Filter: 0,
+  Growth: 0
+};
+```
+
+Do not overbuild the kingdom map yet. A simple progress display is enough.
+
+---
+
+## 5. Improve Codex Tab / Codex Review
+
+Goal:
+
+```text
+Create or improve a Codex screen where players can review unlocked conditions, clues, and medical meanings.
+```
+
+The Codex should help players understand what they learned after battle.
+
+For each condition, show:
+
+```text
+Fantasy name
+Real medical concept
+System region
+Common clues
+What the player should recognize
+Why certain actions worked
+```
+
+Example:
+
+```text
+Air Sprite Corruption
+
+Real Concept:
+Asthma Exacerbation / Bronchospasm
+
+System:
+Air / Respiratory
+
+Clues:
+Breathing Fast
+O2 Glow Dim
+Tripod Position
+Wheezing
+
+Medical Meaning:
+The airways are narrowed, making it harder to move air.
+
+Clinical Reasoning:
+Prioritize airway and breathing. Use appropriate Air actions and reassess response.
+```
+
+If unlocking logic is not ready, start by showing discovered conditions from battles completed.
+
+---
+
+## 6. Clean Up Known clinical.ts Issue
+
+Current issue:
+
+```text
+clinical.ts reportedly has a duplicate property TypeScript issue around line 208.
+```
+
+Goal:
+
+```text
+Inspect and clean up the duplicate property issue without changing clinical rules unless needed.
+```
+
+Important:
+
+```text
+Do not rewrite clinical.ts.
+Do not change the entire clinical grading system.
+Only fix the duplicate property/type issue if it is safe.
+```
+
+After fixing, confirm the app builds and battle logic still works.
+
+---
+
+# MongoDB / Backend Guidance
+
+MongoDB is not the top priority right now.
+
+Current understanding:
+
+```text
+AsyncStorage allows local/offline play.
+MongoDB is mainly for cloud save/cross-device sync.
+MONGO_URL may currently be missing.
+```
+
+For now:
+
+```text
+Do not block gameplay because MongoDB is missing.
+Keep local save working through AsyncStorage.
+If backend sync fails, fail gracefully without interrupting gameplay.
+```
+
+Later:
+
+```text
+Add MONGO_URL as a Replit Secret.
+Improve sync conflict handling.
+Move reward validation server-side if monetization becomes important.
+```
+
+Do not prioritize MongoDB over completing the first playable loop.
+
+---
+
+# Development Priorities
+
+Implement in this order.
+
+## Phase 1: Make Encounters Playable
+
+```text
+Wire encounter cards into battle.tsx.
+Pass selected enemy/encounter ID.
+Confirm correct enemy loads.
+Confirm battle can be won/lost.
+```
+
+## Phase 2: Make Boss Entry Work
+
+```text
+Connect boss Enter button to real battle.
+Use existing battle system.
+Confirm boss victory works.
+```
+
+## Phase 3: Add Clear Victory Rewards
+
+```text
+Show victory summary.
+Show player EXP.
+Show hero EXP if available.
+Show Codex Shards.
+Show stars earned.
+Show region progress.
+```
+
+## Phase 4: Show Region Progress
+
+```text
+Display Air Temple progress after first battle.
+Update progress after victory.
+Return player to kingdom/progression screen.
+```
+
+## Phase 5: Improve Codex Review
+
+```text
+Add or improve Codex tab.
+Show enemy condition, clues, and medical meaning.
+Use existing enemy data from content.ts if possible.
+```
+
+## Phase 6: Clean Technical Issue
+
+```text
+Fix duplicate property issue in clinical.ts.
+Verify TypeScript/build status.
+Make sure battle still works.
+```
+
+---
+
+# Do Not Do
+
+Do not:
+
+```text
+Rebuild the whole app.
+Replace the battle system.
+Rewrite clinical.ts completely.
+Add payment.
+Add paid stamina.
+Add complex MongoDB auth.
+Add a CMS.
+Add massive new features before the core loop works.
+Break local/offline saving.
+Remove existing heroes, enemies, items, or clues.
+```
+
+Do:
+
+```text
+Use existing files and systems.
+Make small focused changes.
+Test after each phase.
+Keep local save working.
+Keep battle mechanics stable.
+Improve player flow and clarity.
+```
+
+---
+
+# Expected First Playable Loop
+
+After this work, the first-time flow should feel like:
+
+```text
+Player opens game.
+Player selects or sees first encounter.
+Player enters Air Sprite battle.
+Player uses Scout, Stabilize, Counter, Reassess.
+Player wins.
+Victory screen explains what happened.
+Player receives rewards.
+Air Temple progress increases.
+Player returns to kingdom or next mission.
+```
+
+This should be the minimum playable foundation before adding more advanced systems like:
+
+```text
+Codex Awakening Quiz
+Adaptive learning profiles
+Difficulty layers
+Hero bond
+Class upgrades
+Advanced summoning
+NCLEX Judgment Tower
+Events
+Cosmetics
+Monetization
+```
+
+---
+
+# Testing Checklist
+
+## Encounter Test
+
+```text
+Tap each visible encounter card.
+Confirm battle screen opens.
+Confirm correct enemy appears.
+Confirm enemy clues match the selected encounter.
+Confirm battle can be completed.
+```
+
+## Boss Test
+
+```text
+Open boss screen.
+Tap Enter.
+Confirm boss battle starts.
+Confirm boss battle uses existing battle mechanics.
+Confirm victory or defeat works.
+```
+
+## Victory Test
+
+```text
+Win battle.
+Confirm reward screen appears.
+Confirm EXP appears.
+Confirm Codex Shards appear.
+Confirm stars appear.
+Confirm region progress appears.
+Confirm Continue button works.
+```
+
+## Save Test
+
+```text
+Win battle.
+Close app.
+Reopen app.
+Confirm local progress remains.
+Confirm app does not break if MongoDB is unavailable.
+```
+
+## Clinical Safety Test
+
+```text
+Use correct Air action against Air enemy.
+Confirm strong effect.
+Use wrong action.
+Confirm limited effect.
+Use Reassess after intervention.
+Confirm care chain progresses.
+```
+
+## Build Test
+
+```text
+Run the app.
+Confirm no TypeScript errors block launch.
+Confirm clinical.ts duplicate property issue is fixed if safe.
+Confirm no unrelated UI or battle systems broke.
+```
+
+---
+
+# Success Criteria
+
+This update is successful if:
+
+```text
+Encounter cards start real battles.
+Boss Enter starts a real boss battle.
+Victory rewards are visible and satisfying.
+Region progress updates after battle.
+Codex review is easier to access or improved.
+Local save still works.
+MongoDB absence does not block gameplay.
+The first 5-minute player loop feels more complete.
+```
+
+---
+
+# Final Instruction
+
+Focus on making Clinica feel playable before expanding.
+
+The most important improvement is not adding more systems yet.
+
+The most important improvement is connecting the systems already present into a clear loop:
+
+```text
+Choose encounter → Battle → Victory → Rewards → Region progress → Continue
+```

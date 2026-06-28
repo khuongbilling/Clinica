@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CODEX } from "@/src/game/content";
+import { CODEX, ENEMIES } from "@/src/game/content";
 import { DEPTH_INTRO, DEPTH_LABEL } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -95,6 +95,8 @@ export default function CodexScreen() {
         {CODEX.map((entry) => {
           const isUnlocked = unlocked.has(entry.id);
           const c = ELEMENT_COLORS[entry.system];
+          const linkedEnemies = ENEMIES.filter((e) => e.teaches.includes(entry.id));
+          const firstEnemy = linkedEnemies[0];
           return (
             <View key={entry.id} style={styles.card} testID={`codex-entry-${entry.id}`}>
               <View style={styles.cardHead}>
@@ -111,6 +113,33 @@ export default function CodexScreen() {
                 <>
                   <Text style={styles.entryTitle}>{entry.title}</Text>
                   <Text style={styles.entryBody}>{entry.body}</Text>
+
+                  {firstEnemy && (
+                    <View style={styles.clinicBox}>
+                      <Text style={styles.clinicLabel}>REAL CLINICAL CONCEPT</Text>
+                      <Text style={styles.clinicReal}>{firstEnemy.realWorld}</Text>
+
+                      {firstEnemy.visibleClues.length > 0 && (
+                        <>
+                          <Text style={[styles.clinicLabel, { marginTop: 8 }]}>CLUES TO RECOGNIZE</Text>
+                          <View style={styles.clueRow}>
+                            {firstEnemy.visibleClues.map((cl) => (
+                              <View key={cl.id} style={styles.cluePill}>
+                                <Text style={styles.clueTxt}>{cl.label}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </>
+                      )}
+
+                      {firstEnemy.dangerTrigger && (
+                        <>
+                          <Text style={[styles.clinicLabel, { marginTop: 8 }]}>DANGER TO WATCH FOR</Text>
+                          <Text style={styles.clinicDanger}>{firstEnemy.dangerTrigger}</Text>
+                        </>
+                      )}
+                    </View>
+                  )}
                 </>
               ) : (
                 <View style={styles.locked}>
@@ -192,4 +221,21 @@ const styles = StyleSheet.create({
   locked: { alignItems: "center", paddingVertical: SPACING.lg, gap: 6 },
   lockedTitle: { color: COLORS.onSurfaceTertiary, fontSize: 14, fontWeight: "500" },
   lockedSub: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", paddingHorizontal: SPACING.lg },
+
+  clinicBox: {
+    marginTop: SPACING.sm, padding: SPACING.sm,
+    backgroundColor: COLORS.surfaceTertiary,
+    borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
+    gap: 4,
+  },
+  clinicLabel: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  clinicReal: { color: COLORS.onSurface, fontSize: 13, fontWeight: "500", lineHeight: 18 },
+  clueRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  cluePill: {
+    backgroundColor: COLORS.brand + "14", borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: COLORS.brand + "30",
+  },
+  clueTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "600" },
+  clinicDanger: { color: COLORS.error, fontSize: 12, lineHeight: 17 },
 });

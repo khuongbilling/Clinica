@@ -189,7 +189,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     chainRoles: ['Stabilize', 'Counter'],
   },
   mend: {
-    clinicalTags: ['skin integrity', 'wound care', 'protect'],
+    clinicalTags: ['skin integrity', 'wound care', 'protect', 'general support', 'comfort'],
     appropriateForSystems: ['Protection'],
     chainRoles: ['Counter', 'Stabilize'],
   },
@@ -220,10 +220,6 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   skin_shield: {
     clinicalTags: ['skin integrity', 'protect'],
     chainRoles: ['Protect'],
-  },
-  mend: {
-    clinicalTags: ['general support', 'comfort'],
-    chainRoles: ['Stabilize'],
   },
   mind_anchor: {
     clinicalTags: ['orientation', 'therapeutic communication', 'neuro', 'comfort'],

@@ -1,0 +1,640 @@
+# Replit Fix Packet: Home Screen Hero Portrait Cropping + Gacha-Style Main Page Redesign
+
+## Goal
+
+Fix the home screen hero portrait issue and redesign the main Run/Home screen so it feels more like a gacha/RPG main lobby.
+
+Current issue:
+
+```text
+The selected lead hero portrait appears zoomed/cropped into the top-left corner on the main page.
+The full character is not visible.
+The image appears inside a horizontal banner area instead of being presented as the central hero.
+```
+
+Desired result:
+
+```text
+The main page should show a large full-body hero image centered on the screen, similar to gacha game home screens.
+The hero should not be cropped, zoomed, or anchored to the top-left.
+The character should be the visual focus.
+Event/feature icons should appear around the character.
+Bottom navigation should remain.
+```
+
+Do not rebuild the whole app.
+
+Do not change battle mechanics.
+
+Do not change hero data, battle data, or progression logic.
+
+Focus only on the main Run/Home screen layout and image rendering behavior.
+
+---
+
+# Likely Root Cause
+
+The hero portrait is probably being displayed using one or more of these patterns:
+
+```text
+resizeMode: "cover"
+ImageBackground
+absolute positioning
+overflow: hidden
+fixed small banner container
+negative margins or offsets
+image width/height larger than container
+top/left alignment instead of center alignment
+```
+
+This causes the full portrait to crop and zoom.
+
+The fix is:
+
+```text
+Use Image instead of ImageBackground for the central hero.
+Use resizeMode: "contain".
+Center the image horizontally and vertically.
+Use a large dedicated hero-stage area.
+Do not place the full-body portrait inside a short horizontal banner.
+Do not use cover for full-body character art.
+```
+
+---
+
+# Main Home Screen Redesign
+
+Change the Run/Home screen into a gacha-style lobby.
+
+## Desired Layout
+
+Use this vertical structure:
+
+```text
+Safe Area Top
+
+Top Header
+- Player rank/title
+- Player name
+- Help button
+- Dev badge if enabled
+- Small profile/settings icon if needed
+
+Center Hero Stage
+- Large full-body selected lead hero image
+- Hero name and class/title near bottom of stage
+- Hero element/system badge
+- XP or level bar
+- Tap hero to change lead
+
+Floating Feature Icons Around Hero
+- Event
+- Missions
+- Summon
+- Boss
+- Daily
+- Rewards
+- Codex shortcut if desired
+
+Primary Action Area
+- Large button: Start Shift / Begin Mission / Continue Run
+- Secondary: Boss / Challenge if unlocked
+
+Bottom Tab Navigation
+- Run
+- Heroes
+- Codex
+- Kingdom
+- Profile
+```
+
+The hero image should dominate the screen visually.
+
+---
+
+# Hero Image Rendering Rules
+
+For the selected lead hero image on the home screen:
+
+```text
+Use full-body portrait image.
+Use resizeMode: contain.
+Keep aspect ratio.
+Center the image.
+Do not crop.
+Do not stretch.
+Do not anchor to top-left.
+Do not use the portrait as a banner background.
+```
+
+The image container should behave like a character stage:
+
+```text
+height: approximately 40–50% of screen height
+width: 100%
+alignItems: center
+justifyContent: center
+overflow: visible if possible
+```
+
+The image itself should behave like:
+
+```text
+maxHeight: 100%
+maxWidth: 85–95% of screen width
+resizeMode: contain
+```
+
+If the image still appears too small, increase the stage height instead of switching to cover.
+
+---
+
+# Remove or Replace Current Banner Behavior
+
+Currently the home screen appears to use a wide blue-tinted banner behind the hero information, and the portrait is getting cropped within that area.
+
+Change this.
+
+Do not render the full-body hero portrait inside that short banner.
+
+Instead:
+
+```text
+The full-body hero portrait should be in the central stage.
+The hero name, title, system badge, and XP can be layered below or over a translucent panel near the bottom of the stage.
+```
+
+Use the banner only as a text panel if desired, not as the image container.
+
+---
+
+# Proposed Home Screen Visual Design
+
+## Top Header
+
+Example:
+
+```text
+SPROUT HEALER
+Cire
+
+Top-right:
+Help icon
+Dev badge only if dev mode enabled
+Small profile/settings icon
+```
+
+Keep this compact so the hero has room.
+
+---
+
+## Center Hero Stage
+
+Show:
+
+```text
+Large centered full-body image of selected lead hero
+Subtle magical glow/rune circle behind hero
+Dark fantasy background gradient
+Optional system-themed particles
+```
+
+For Novice Guardian:
+
+```text
+River/Air-style blue glow
+soft water/wind particles
+subtle character shadow
+```
+
+Important:
+
+```text
+The portrait must be fully visible from head to feet.
+Do not crop into the face, torso, or top-left corner.
+```
+
+---
+
+## Hero Info Overlay
+
+Place near bottom of hero stage:
+
+```text
+Novice Guardian
+Apprentice Stabilizer
+River badge
+Level / XP bar
+Tap to Change Hero
+```
+
+This should be readable but not block the full portrait too much.
+
+Use a translucent dark card.
+
+---
+
+## Floating Feature Icons
+
+Add circular or rounded-square icons around the central hero.
+
+Suggested icons:
+
+```text
+Top-left or mid-left: Events
+Left middle: Daily Tasks
+Right middle: Summon
+Top-right: Boss / Challenge
+Bottom-left above nav: Shift
+Bottom-right above nav: Rewards
+```
+
+Keep them small and readable.
+
+Example labels:
+
+```text
+Events
+Daily
+Summon
+Boss
+Shift
+Rewards
+```
+
+Locked features should show a lock and short text:
+
+```text
+Unlocks after 1 run
+```
+
+Do not clutter the screen. On small mobile screens, show only 4–5 icons.
+
+---
+
+# Main Action Button
+
+Add one large primary button near the bottom above the tab bar:
+
+```text
+START SHIFT
+```
+
+or
+
+```text
+CONTINUE RUN
+```
+
+If a boss is unlocked:
+
+```text
+FACE BOSS
+```
+
+But do not make boss the default action unless it is the next progression step.
+
+---
+
+# Bottom Navigation
+
+Keep the bottom navigation.
+
+Recommended labels:
+
+```text
+Run
+Heroes
+Codex
+Kingdom
+Profile
+```
+
+Make sure bottom navigation uses safe-area padding and does not overlap device home indicator.
+
+---
+
+# Fix Hero Selection Screen Too
+
+The hero selection screen already shows portraits mostly correctly, but optimize it.
+
+Current hero selection is better than the home screen because the full character appears inside a card.
+
+Keep this behavior:
+
+```text
+Hero cards should use contain, not cover.
+Portraits should stay centered.
+Cards can crop background, but not the character body.
+```
+
+Improve if possible:
+
+```text
+Make selected card clear.
+Keep large character art.
+Show system badge.
+Show role/title.
+Keep confirm button fixed near bottom.
+Use safe-area padding around notch and bottom.
+```
+
+---
+
+# Image Component Rules
+
+Search the home screen file for selected lead hero image rendering.
+
+Likely files to inspect:
+
+```text
+frontend/app/index.tsx
+frontend/app/(tabs)/index.tsx
+frontend/app/run.tsx
+frontend/app/(tabs)/run.tsx
+frontend/src/game/content.ts
+frontend/src/game/types.ts
+```
+
+The actual file may differ. Find the screen that renders:
+
+```text
+SPROUT HEALER
+Cire
+Novice Guardian
+Tap to Change Hero
+Shifting Ward
+Fading Core
+```
+
+Then update only that screen/component.
+
+Search for image usage around:
+
+```text
+selectedLead
+leadHero
+hero.portrait
+portrait
+image
+ImageBackground
+resizeMode
+cover
+```
+
+Replace problematic rendering with centered full-body `contain` rendering.
+
+---
+
+# Do Not Use These for Full-Body Hero Portrait
+
+Do not use:
+
+```text
+resizeMode: "cover"
+background-size cover behavior
+ImageBackground for the character portrait
+top: 0 and left: 0 anchoring
+negative translate values
+fixed banner height as the character image container
+overflow hidden if it cuts off the character
+```
+
+---
+
+# Use These Instead
+
+Use:
+
+```text
+resizeMode: "contain"
+centered image container
+aspect-ratio preserving display
+large hero stage
+translucent info card overlay
+safe-area padding
+responsive sizing based on screen height
+```
+
+---
+
+# Mobile Layout Requirements
+
+The design must work on iPhone-style screens with a notch/dynamic island.
+
+Use safe-area support:
+
+```text
+Top content should not collide with the notch.
+Bottom nav should not collide with home indicator.
+Dev badge should not overlap important UI.
+```
+
+On smaller screens:
+
+```text
+Reduce floating icon count.
+Keep hero image visible.
+Keep primary action visible.
+Keep bottom nav visible.
+```
+
+Priority order on small screens:
+
+```text
+1. Header
+2. Full-body hero
+3. Primary action
+4. Bottom nav
+5. Secondary icons
+```
+
+---
+
+# Suggested Home Screen Wireframe
+
+Use this as the target layout:
+
+```text
+┌─────────────────────────────┐
+│ SPROUT HEALER        ? DEV  │
+│ Cire                        │
+├─────────────────────────────┤
+│        Event      Boss      │
+│                             │
+│          [Large Full        │
+│           Body Hero]        │
+│                             │
+│  Daily              Summon  │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ Novice Guardian         │ │
+│ │ Apprentice Stabilizer   │ │
+│ │ River  Level/XP         │ │
+│ │ Tap to Change Hero      │ │
+│ └─────────────────────────┘ │
+├─────────────────────────────┤
+│        START SHIFT          │
+├─────────────────────────────┤
+│ Run Heroes Codex Kingdom Me │
+└─────────────────────────────┘
+```
+
+---
+
+# UX Improvement Details
+
+## Replace “Shifting Ward” and “Fading Core” Placement
+
+Currently, Shifting Ward and Fading Core take a lot of vertical space under the hero banner.
+
+Move them into the floating icon/action system.
+
+Example:
+
+```text
+Shifting Ward = main Start Shift button or mission icon
+Fading Core = locked boss/challenge icon
+```
+
+This frees space for the central character.
+
+---
+
+## Make “Tap to Change Hero” More Obvious
+
+Use:
+
+```text
+Tap Hero to Change Lead
+```
+
+or button:
+
+```text
+Change Lead
+```
+
+Place it on the hero info card.
+
+---
+
+## Dev Badge
+
+The Dev badge is large and visually distracting.
+
+Keep it only in dev mode, but make it smaller:
+
+```text
+Small pill at top-right
+Does not overlap hero selection content
+Does not cover buttons
+```
+
+If possible, put Dev badge in a corner or settings menu.
+
+---
+
+# Expected Result
+
+After update:
+
+```text
+The selected lead hero appears as a large centered full-body character on the home screen.
+The image is not cropped into the top-left corner.
+The home screen feels more like a gacha/RPG lobby.
+Feature icons surround the hero.
+The bottom navigation remains clear.
+The player can still change lead hero.
+The main action to start a run is obvious.
+```
+
+---
+
+# Testing Checklist
+
+Test on home screen:
+
+```text
+1. Novice Guardian full-body image is centered.
+2. Village Caretaker full-body image is centered.
+3. No portrait is cropped into the top-left corner.
+4. No portrait is zoomed unexpectedly.
+5. Portrait scales down on small screens instead of cropping.
+6. Hero name/title/badge remain readable.
+7. Tap to Change Hero still opens hero selection.
+8. Start Shift or main run button is visible.
+9. Floating icons do not overlap the hero badly.
+10. Bottom navigation remains usable.
+11. Dev badge does not block important UI.
+12. Screen respects notch/safe-area and bottom home indicator.
+```
+
+Test hero selection screen:
+
+```text
+1. Hero cards still show full character portraits.
+2. Selected lead marker appears correctly.
+3. Confirm button works.
+4. Back button works.
+5. Portraits do not crop incorrectly.
+```
+
+---
+
+# Implementation Priority
+
+## Phase 1: Fix Cropping
+
+```text
+Find the home screen selected hero image.
+Stop using cover/background/cropped banner behavior.
+Render full-body portrait with contain.
+Center it in a large hero-stage container.
+```
+
+## Phase 2: Redesign Home Layout
+
+```text
+Move full-body hero to center stage.
+Move hero text into translucent info card.
+Move Shifting Ward/Fading Core into action icons or primary button.
+Keep bottom tabs.
+```
+
+## Phase 3: Add Gacha-Style Lobby Feel
+
+```text
+Add floating feature icons around hero.
+Add subtle glow/rune background.
+Make primary action button prominent.
+Reduce Dev badge visual dominance.
+```
+
+## Phase 4: Polish Responsiveness
+
+```text
+Test with different phone sizes.
+Use safe-area padding.
+Make image responsive.
+Prevent overlap.
+```
+
+---
+
+# Final Instruction
+
+The main goal is not just to fix the image bug.
+
+The main goal is to turn the Run/Home screen into a gacha-style lobby:
+
+```text
+Large centered lead hero
+Feature icons around the hero
+Clear start-run button
+Bottom tab navigation
+No cropped portraits
+Readable mobile UI
+```
+
+Prioritize full-body character visibility and mobile readability.

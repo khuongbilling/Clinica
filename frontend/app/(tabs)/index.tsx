@@ -7,7 +7,7 @@ import {
   Animated, Image, Modal, Pressable, StyleSheet, Text, View,
 } from "react-native";
 
-import { APTITUDE_INFO, ENEMIES, HEROES, RANKS } from "@/src/game/content";
+import { APTITUDE_INFO, HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
@@ -64,11 +64,9 @@ export default function RunHome() {
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
   const bossColor = bossUnlocked ? COLORS.error : COLORS.onSurfaceTertiary;
 
-  const launchRandom = () => {
-    const pool = ENEMIES.filter((e) => e.difficulty <= 3);
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    logEvent("random_encounter_started", "home", { meta: { enemyId: pick.id } });
-    router.push({ pathname: "/battle", params: { enemyId: pick.id } });
+  const goToShift = () => {
+    logEvent("shifting_ward_opened", "home", {});
+    router.push("/shift");
   };
 
   return (
@@ -161,13 +159,13 @@ export default function RunHome() {
 
         <View style={styles.iconRow}>
 
-          {/* Shifting Ward — random encounter */}
-          <Pressable style={styles.iconBtn} onPress={launchRandom} testID="run-random-encounter">
+          {/* Shifting Ward — encounter selection */}
+          <Pressable style={styles.iconBtn} onPress={goToShift} testID="run-random-encounter">
             <View style={[styles.iconCircle, { backgroundColor: COLORS.mind + "22", borderColor: COLORS.mind + "55" }]}>
-              <Ionicons name="shuffle" size={26} color={COLORS.mind} />
+              <Ionicons name="medical" size={26} color={COLORS.mind} />
             </View>
             <Text style={styles.iconLabel}>Shifting Ward</Text>
-            <Text style={styles.iconSub}>Mystery encounter</Text>
+            <Text style={styles.iconSub}>Choose your case</Text>
           </Pressable>
 
           {/* Vertical rule */}
