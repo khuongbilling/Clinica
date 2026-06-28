@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
@@ -9,11 +10,11 @@ import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-function Stars({ rarity, color }: { rarity: number; color?: string }) {
+function Stars({ count, color }: { count: number; color: string }) {
   return (
     <View style={{ flexDirection: "row", gap: 2 }}>
-      {Array.from({ length: rarity }).map((_, i) => (
-        <Ionicons key={i} name="star" size={9} color={color || COLORS.brand} />
+      {Array.from({ length: count }).map((_, i) => (
+        <Ionicons key={i} name="star" size={9} color={color} />
       ))}
     </View>
   );
@@ -22,14 +23,14 @@ function Stars({ rarity, color }: { rarity: number; color?: string }) {
 export default function HeroesScreen() {
   const router = useRouter();
   const { player, saveActiveTeam } = usePlayer();
-  const [team, setTeam] = useState<string[]>(player?.active_team || []);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [team, setTeam] = useState<string[]>(player?.active_team ?? []);
 
   useEffect(() => {
-    if (player) setTeam(player.active_team || []);
+    if (player) setTeam(player.active_team ?? []);
   }, [player]);
 
   if (!player) return null;
+
   const owned = new Set(player.heroes_owned);
 
   const toggleTeam = async (heroId: string) => {
@@ -44,132 +45,115 @@ export default function HeroesScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      {/* Header */}
+
+      {/* ── HEADER ── */}
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.kicker}>HALL OF HEROES</Text>
-          <Text style={styles.title}>Your Healers</Text>
-          <Text style={styles.sub}>
-            {player.heroes_owned.length}/{HEROES.length} recruited · {team.length}/3 active
-          </Text>
-        </View>
-        <Pressable style={styles.summonBtn} onPress={() => router.push("/summon")} testID="heroes-summon-button">
-          <Ionicons name="diamond" size={14} color={COLORS.brand} />
-          <Text style={styles.summonTxt}>{player.codex_shards || 0}</Text>
-          <Text style={styles.summonLbl}>SUMMON</Text>
-        </Pressable>
+        <Text style={styles.kicker}>HALL OF HEROES</Text>
+        <Text style={styles.title}>Your Healers</Text>
+        <Text style={styles.sub}>
+          {player.heroes_owned.length}/{HEROES.length} recruited · {team.length}/3 active
+        </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Roster grid */}
-        <View style={styles.roster}>
+        <View style={styles.grid}>
           {HEROES.map((h) => {
-            const isOwned = owned.has(h.id);
-            const inTeam = team.includes(h.id);
-            const isExpanded = expanded === h.id;
-            const accent = ELEMENT_COLORS[h.element] ?? COLORS.brand;
-            const battleSprite = getHeroBattleSprite(h.id);
+            const isOwned  = owned.has(h.id);
+            const inTeam   = team.includes(h.id);
+            const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
+            const sprite   = getHeroBattleSprite(h.id);
             const teamSlot = team.indexOf(h.id) + 1;
 
             return (
               <Pressable
                 key={h.id}
-                style={styles.unitCardWrap}
+                style={styles.cardWrap}
                 onPress={() => {
-                  if (!isOwned) return;
-                  setExpanded(isExpanded ? null : h.id);
+                  if (isOwned) router.push(`/hero/${h.id}`);
                 }}
                 testID={`hero-card-${h.id}`}
               >
                 <View style={[
-                  styles.unitCard,
+                  styles.card,
                   { borderColor: inTeam ? accent : COLORS.border },
-                  !isOwned && styles.unitLocked,
-                  inTeam && { backgroundColor: accent + "14" },
+                  inTeam && { backgroundColor: accent + "10" },
+                  !isOwned && styles.cardLocked,
                 ]}>
-                  {/* Chibi battle sprite */}
-                  <View style={[styles.spriteWrap, { backgroundColor: accent + "18" }]}>
-                    {battleSprite ? (
+
+                  {/* Sprite area */}
+                  <View style={[styles.spriteBox, { backgroundColor: accent + "15" }]}>
+                    {sprite ? (
                       <Image
-                        source={battleSprite}
+                        source={sprite}
                         style={styles.sprite}
-                        resizeMode="contain"
+                        contentFit="contain"
+                        contentPosition="center"
                       />
                     ) : (
-                      <View style={styles.spritePlaceholder} />
+                      <View style={styles.spriteFallback} />
                     )}
+
                     {/* Team slot badge */}
                     {inTeam && (
-                      <View style={[styles.teamSlot, { backgroundColor: accent }]}>
-                        <Text style={styles.teamSlotTxt}>{teamSlot}</Text>
+                      <View style={[styles.slotBadge, { backgroundColor: accent }]}>
+                        <Text style={styles.slotTxt}>{teamSlot}</Text>
                       </View>
                     )}
+
                     {/* Lock overlay */}
                     {!isOwned && (
                       <View style={styles.lockOverlay}>
-                        <Ionicons name="lock-closed" size={18} color={COLORS.onSurfaceTertiary} />
+                        <Ionicons name="lock-closed" size={20} color={COLORS.onSurfaceTertiary} />
+                        <Text style={styles.lockTxt}>Locked</Text>
+                      </View>
+                    )}
+
+                    {/* Tap-to-view hint for owned heroes */}
+                    {isOwned && (
+                      <View style={styles.viewHint}>
+                        <Ionicons name="chevron-forward" size={10} color={accent + "BB"} />
                       </View>
                     )}
                   </View>
 
-                  {/* Info */}
-                  <View style={styles.unitInfo}>
-                    <Stars rarity={h.rarity} color={accent} />
-                    <Text style={[styles.unitName, !isOwned && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
-                      {h.name}
-                    </Text>
-                    <View style={[styles.elementTag, { borderColor: accent + "80" }]}>
-                      <Text style={[styles.elementTxt, { color: accent }]}>
-                        {h.element.toUpperCase()}
+                  {/* Info row */}
+                  <View style={styles.infoRow}>
+                    <View style={{ flex: 1 }}>
+                      <Stars count={h.rarity} color={accent} />
+                      <Text style={[styles.heroName, !isOwned && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
+                        {h.name}
                       </Text>
+                      <View style={[styles.elementTag, { borderColor: accent + "70" }]}>
+                        <Text style={[styles.elementTxt, { color: accent }]}>{h.element.toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.roleTag}>{h.role}</Text>
                     </View>
-                    <Text style={styles.roleTag}>{h.role}</Text>
-                  </View>
 
-                  {/* Active team toggle button */}
-                  {isOwned && (
-                    <Pressable
-                      style={[
-                        styles.toggleBtn,
-                        inTeam
-                          ? { backgroundColor: accent, borderColor: accent }
-                          : { borderColor: accent + "60" },
-                      ]}
-                      onPress={() => toggleTeam(h.id)}
-                      hitSlop={6}
-                      testID={`hero-toggle-${h.id}`}
-                    >
-                      <Ionicons
-                        name={inTeam ? "checkmark" : "add"}
-                        size={13}
-                        color={inTeam ? COLORS.surface : accent}
-                      />
-                    </Pressable>
-                  )}
+                    {/* Active team toggle */}
+                    {isOwned && (
+                      <Pressable
+                        style={[
+                          styles.toggleBtn,
+                          inTeam
+                            ? { backgroundColor: accent, borderColor: accent }
+                            : { borderColor: accent + "55", backgroundColor: "transparent" },
+                        ]}
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          toggleTeam(h.id);
+                        }}
+                        hitSlop={8}
+                        testID={`hero-toggle-${h.id}`}
+                      >
+                        <Ionicons
+                          name={inTeam ? "checkmark" : "add"}
+                          size={14}
+                          color={inTeam ? COLORS.surface : accent}
+                        />
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
-
-                {/* Expanded detail panel */}
-                {isExpanded && isOwned && (
-                  <View style={[styles.detailPanel, { borderColor: accent + "40" }]}>
-                    <Text style={[styles.detailQuote, { color: accent + "CC" }]}>
-                      {(h as any).quote ?? `"${h.description}"`}
-                    </Text>
-                    <Text style={styles.detailDesc}>{h.description}</Text>
-                    <View style={styles.skillsBlock}>
-                      {h.skills.map((s) => (
-                        <View key={s.id} style={styles.skillRow}>
-                          <View style={styles.skillLeft}>
-                            <Text style={styles.skillName}>{s.name}</Text>
-                            <Text style={styles.skillDesc} numberOfLines={2}>{s.description}</Text>
-                          </View>
-                          <View style={[styles.apBadge, { backgroundColor: COLORS.brandTertiary }]}>
-                            <Text style={styles.apTxt}>{s.cost}AP</Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
               </Pressable>
             );
           })}
@@ -180,87 +164,85 @@ export default function HeroesScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.surface },
+  root:   { flex: 1, backgroundColor: COLORS.surface },
+
   header: {
-    flexDirection: "row", alignItems: "flex-start",
-    padding: SPACING.lg, gap: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   kicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300", marginTop: 2 },
-  sub: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
-  summonBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand + "60",
-    borderWidth: 1, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-  },
-  summonTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "700" },
-  summonLbl: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  title:  { color: COLORS.onSurface, fontSize: 26, fontWeight: "300", marginTop: 2 },
+  sub:    { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
 
-  scroll: { padding: SPACING.md, paddingBottom: SPACING.xxxl },
-  roster: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  scroll: { padding: SPACING.md, paddingBottom: 120 },
+  grid:   { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
 
-  unitCardWrap: { width: "47%" },
+  cardWrap: { width: "47.5%" },
 
-  unitCard: {
+  card: {
     backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.lg, borderWidth: 2,
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
     overflow: "hidden",
   },
-  unitLocked: { opacity: 0.5 },
+  cardLocked: { opacity: 0.45 },
 
-  spriteWrap: {
-    width: "100%", aspectRatio: 1,
-    alignItems: "center", justifyContent: "center",
+  spriteBox: {
+    width: "100%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
     overflow: "hidden",
   },
-  sprite: { width: "95%", height: "95%" },
-  spritePlaceholder: { width: "80%", height: "80%", backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md },
-  teamSlot: {
+  sprite:        { width: "92%", height: "92%" },
+  spriteFallback: { width: "70%", height: "70%", backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md },
+
+  slotBadge: {
     position: "absolute", top: 6, left: 6,
     width: 20, height: 20, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
   },
-  teamSlotTxt: { color: COLORS.surface, fontSize: 11, fontWeight: "700" },
+  slotTxt: { color: COLORS.surface, fontSize: 11, fontWeight: "700" },
+
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(12,14,18,0.55)",
+    backgroundColor: "rgba(12,14,18,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  lockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 0.5 },
+
+  viewHint: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "rgba(12,14,18,0.5)",
+    borderRadius: RADIUS.pill,
+    width: 18, height: 18,
     alignItems: "center", justifyContent: "center",
   },
 
-  unitInfo: { padding: SPACING.sm, paddingTop: SPACING.xs, gap: 3 },
-  unitName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
-  elementTag: {
-    alignSelf: "flex-start", borderWidth: 1,
-    borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1,
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    padding: SPACING.sm,
+    paddingTop: SPACING.xs,
+    gap: SPACING.xs,
   },
+  heroName:   { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 },
+  elementTag: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 },
   elementTxt: { fontSize: 8, fontWeight: "700", letterSpacing: 1 },
-  roleTag: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
+  roleTag:    { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 1 },
 
   toggleBtn: {
-    position: "absolute", top: 6, right: 6,
-    width: 24, height: 24, borderRadius: 12,
-    borderWidth: 2, alignItems: "center", justifyContent: "center",
-    backgroundColor: "transparent",
+    width: 26, height: 26, borderRadius: 13,
+    borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: 2,
   },
-
-  detailPanel: {
-    backgroundColor: COLORS.surfaceTertiary,
-    borderRadius: RADIUS.md, borderWidth: 1,
-    padding: SPACING.md, marginTop: 2, gap: SPACING.sm,
-  },
-  detailQuote: { fontSize: 12, fontStyle: "italic", lineHeight: 18 },
-  detailDesc: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
-  skillsBlock: { gap: SPACING.xs },
-  skillRow: {
-    flexDirection: "row", alignItems: "flex-start",
-    gap: SPACING.sm, backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.sm, padding: SPACING.sm,
-  },
-  skillLeft: { flex: 1, gap: 2 },
-  skillName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
-  skillDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
-  apBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.pill },
-  apTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "700" },
 });
