@@ -34,8 +34,8 @@ export default function RunHome() {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2400, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2400, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 2600, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 2600, useNativeDriver: false }),
       ])
     ).start();
   }, []);
@@ -45,7 +45,7 @@ export default function RunHome() {
     setShowIntro(false);
   };
 
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.65] });
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.38] });
 
   if (!player) {
     return (
@@ -94,9 +94,9 @@ export default function RunHome() {
           ]}
         />
 
-        {/* Hero portrait — contain so the full donghua body is visible */}
+        {/* Hero portrait — cover fills the frame so the character is always visible */}
         {heroSprite ? (
-          <Image source={heroSprite} style={styles.portrait} resizeMode="contain" />
+          <Image source={heroSprite} style={styles.portrait} resizeMode="cover" />
         ) : (
           <View style={[styles.portrait, styles.portraitFallback]} />
         )}
@@ -127,7 +127,7 @@ export default function RunHome() {
         />
 
         {/* ── TOP BAR ── */}
-        <View style={[styles.topBar, { paddingTop: insets.top + SPACING.sm }]}>
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top + SPACING.md, 52) }]}>
           <View>
             <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
             <Text style={styles.playerName}>{player.name}</Text>
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
 
   /* ── PORTRAIT ── */
-  portraitSection: { flex: 8, position: "relative", overflow: "hidden" },
+  portraitSection: { flex: 6, position: "relative", overflow: "hidden" },
   elementBg: { ...StyleSheet.absoluteFillObject },
   elementGlow: {
     position: "absolute",
