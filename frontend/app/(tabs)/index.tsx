@@ -191,8 +191,83 @@ export default function RunHome() {
         <Text style={[styles.sceneLabel, { color: scene.accent }]}>{scene.name.toUpperCase()}</Text>
       </View>
 
-      {/* ── MAIN ARENA — side buttons + centered character ── */}
+      {/* ── MAIN ARENA — full-width scene + side buttons + hero ── */}
       <View style={styles.arena}>
+
+        {/* ════════════════════════════════════════════
+            FULL-WIDTH SCENE BACKGROUND (absolute, behind everything)
+            ════════════════════════════════════════════ */}
+
+        {/* 1 — Base sky gradient */}
+        <LinearGradient
+          colors={scene.sky}
+          locations={[0, 0.5, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        {/* 2 — Central glow portal (arch window behind hero) */}
+        <View style={styles.scenePortalRing}>
+          <View style={[styles.scenePortalInner, { backgroundColor: scene.orb1 + "18" }]} />
+        </View>
+        <View style={[styles.scenePortalGlow, { backgroundColor: scene.orb1 }]} />
+
+        {/* 3 — Upper ambient light rays fanning from center-top */}
+        <LinearGradient
+          colors={[scene.orb1 + "22", scene.orb1 + "00"]}
+          locations={[0, 1]}
+          style={styles.sceneRayLeft}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+        <LinearGradient
+          colors={[scene.orb1 + "22", scene.orb1 + "00"]}
+          locations={[0, 1]}
+          style={styles.sceneRayRight}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+
+        {/* 4 — Left pillar / edge shadow */}
+        <LinearGradient
+          colors={["rgba(6,8,12,0.75)", "rgba(6,8,12,0.0)"]}
+          locations={[0, 1]}
+          style={styles.scenePillarLeft}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        />
+
+        {/* 5 — Right pillar / edge shadow */}
+        <LinearGradient
+          colors={["rgba(6,8,12,0.0)", "rgba(6,8,12,0.75)"]}
+          locations={[0, 1]}
+          style={styles.scenePillarRight}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        />
+
+        {/* 6 — Floor wash */}
+        <LinearGradient
+          colors={[scene.mid + "00", scene.mid + "EE"]}
+          locations={[0, 1]}
+          style={styles.sceneFloor}
+        />
+
+        {/* 7 — Horizon line */}
+        <View style={[styles.sceneHorizon, { backgroundColor: scene.accent + "60" }]} />
+
+        {/* 8 — Glowing hero stage ellipse (breathing) */}
+        <Animated.View
+          style={[styles.sceneStage, { backgroundColor: scene.accent, opacity: floorOpacity }]}
+        />
+
+        {/* 9 — Top vignette so header text is always readable */}
+        <LinearGradient
+          colors={["rgba(6,8,12,0.80)", "rgba(6,8,12,0.0)"]}
+          locations={[0, 1]}
+          style={styles.sceneTopVignette}
+        />
+
+        {/* ══ SIDE COLUMNS + HERO sit on top of background ══ */}
 
         {/* LEFT COLUMN */}
         <View style={styles.sideCol}>
@@ -214,82 +289,12 @@ export default function RunHome() {
           />
         </View>
 
-        {/* CENTER — scenic background + hero portrait */}
+        {/* CENTER — hero only, background is the arena layer behind */}
         <Pressable
           style={styles.heroCenter}
           onPress={() => router.push("/hero-select")}
           testID="home-portrait-tap"
         >
-          {/* ── Sky gradient ── */}
-          <LinearGradient
-            colors={scene.sky}
-            locations={[0, 0.55, 1]}
-            style={StyleSheet.absoluteFillObject}
-          />
-
-          {/* ── Back-wall mid-tone band ── */}
-          <LinearGradient
-            colors={[scene.mid + "00", scene.mid + "CC", scene.mid + "00"]}
-            locations={[0, 0.5, 1]}
-            style={styles.bgMidBand}
-          />
-
-          {/* ── Large background orb — upper-left ── */}
-          <View
-            style={[
-              styles.bgOrb,
-              {
-                width: 180, height: 180,
-                top: "-15%", left: "-20%",
-                backgroundColor: scene.orb1 + "28",
-                borderRadius: 90,
-              },
-            ]}
-          />
-          {/* ── Large background orb — lower-right ── */}
-          <View
-            style={[
-              styles.bgOrb,
-              {
-                width: 160, height: 160,
-                bottom: "5%", right: "-18%",
-                backgroundColor: scene.orb2 + "22",
-                borderRadius: 80,
-              },
-            ]}
-          />
-          {/* ── Small accent orb — upper-right ── */}
-          <View
-            style={[
-              styles.bgOrb,
-              {
-                width: 80, height: 80,
-                top: "10%", right: "8%",
-                backgroundColor: scene.orb1 + "30",
-                borderRadius: 40,
-              },
-            ]}
-          />
-
-          {/* ── Horizontal horizon line ── */}
-          <View style={[styles.horizonLine, { backgroundColor: scene.accent + "50" }]} />
-
-          {/* ── Glowing floor ellipse (stage) ── */}
-          <Animated.View
-            style={[
-              styles.floorEllipse,
-              { backgroundColor: scene.accent, opacity: floorOpacity },
-            ]}
-          />
-
-          {/* ── Floor surface gradient ── */}
-          <LinearGradient
-            colors={[scene.accent + "00", scene.accent + "35"]}
-            locations={[0, 1]}
-            style={styles.floorSurface}
-          />
-
-          {/* ── HERO IMAGE (sits above background layers) ── */}
           {heroSprite ? (
             <Image
               source={heroSprite}
@@ -300,13 +305,6 @@ export default function RunHome() {
           ) : (
             <View style={styles.heroPlaceholder} />
           )}
-
-          {/* Top vignette so header reads cleanly */}
-          <LinearGradient
-            colors={["rgba(8,10,14,0.7)", "rgba(8,10,14,0.0)"]}
-            locations={[0, 1]}
-            style={[StyleSheet.absoluteFillObject, { height: "30%", pointerEvents: "none" } as any]}
-          />
 
           {/* Tap hint */}
           <Animated.View style={[styles.tapPulse, { opacity: pulseAnim }]}>
@@ -482,33 +480,93 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  /* Background scene layers */
-  bgMidBand: {
+  /* ── Full-width scene background layers ── */
+
+  /* Central glowing portal / arch behind hero */
+  scenePortalRing: {
     position: "absolute",
-    top: "20%", bottom: "20%",
-    left: 0, right: 0,
-  },
-  bgOrb: {
-    position: "absolute",
-  },
-  horizonLine: {
-    position: "absolute",
-    bottom: "28%",
-    left: "5%", right: "5%",
-    height: 1,
-  },
-  floorEllipse: {
-    position: "absolute",
-    bottom: "-14%",
-    left: "-30%", right: "-30%",
-    height: "42%",
+    alignSelf: "center",
+    top: "4%",
+    width: "55%",
+    aspectRatio: 0.75,
     borderRadius: 999,
-    opacity: 0.45,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    overflow: "hidden",
+    zIndex: 0,
   },
-  floorSurface: {
+  scenePortalInner: {
+    flex: 1,
+    borderRadius: 999,
+  },
+  scenePortalGlow: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "8%",
+    width: "40%",
+    aspectRatio: 0.8,
+    borderRadius: 999,
+    opacity: 0.09,
+    zIndex: 0,
+  },
+
+  /* Light rays fanning from portal */
+  sceneRayLeft: {
+    position: "absolute",
+    top: 0, left: 0,
+    width: "55%", height: "60%",
+    zIndex: 0,
+  },
+  sceneRayRight: {
+    position: "absolute",
+    top: 0, right: 0,
+    width: "55%", height: "60%",
+    zIndex: 0,
+  },
+
+  /* Edge pillar / depth shadows */
+  scenePillarLeft: {
+    position: "absolute",
+    top: 0, bottom: 0, left: 0,
+    width: "28%",
+    zIndex: 0,
+  },
+  scenePillarRight: {
+    position: "absolute",
+    top: 0, bottom: 0, right: 0,
+    width: "28%",
+    zIndex: 0,
+  },
+
+  /* Floor */
+  sceneFloor: {
     position: "absolute",
     bottom: 0, left: 0, right: 0,
-    height: "30%",
+    height: "38%",
+    zIndex: 0,
+  },
+  sceneHorizon: {
+    position: "absolute",
+    bottom: "38%",
+    left: 0, right: 0,
+    height: 1,
+    zIndex: 0,
+  },
+  sceneStage: {
+    position: "absolute",
+    bottom: "-12%",
+    left: "20%", right: "20%",
+    height: "28%",
+    borderRadius: 999,
+    zIndex: 0,
+  },
+
+  /* Top vignette */
+  sceneTopVignette: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+    height: "28%",
+    zIndex: 0,
   },
 
   heroImg: { flex: 1, width: "100%" },
