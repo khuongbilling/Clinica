@@ -22,94 +22,94 @@ const BG_KEY    = "clinica.arena.bg";
 const ARENA_SCENES: Record<string, {
   name: string;
   sky: readonly [string, string, string];
-  floor: string;
+  mid: string;
   accent: string;
-  particles: string[];
+  orb1: string;
+  orb2: string;
 }> = {
   River: {
     name: "Cardiac Ward",
-    sky: ["#061824", "#0a2d3e", "#061824"] as const,
-    floor: "#06B6D425",
+    sky: ["#061e30", "#0c3d58", "#071828"] as const,
+    mid: "#0a3248",
     accent: COLORS.river,
-    particles: ["#06B6D4", "#0891B2", "#22D3EE"],
+    orb1: "#06B6D4",
+    orb2: "#0e7490",
   },
   Air: {
     name: "Respiratory Spire",
-    sky: ["#0a1520", "#162436", "#0a1520"] as const,
-    floor: "#B0DEFF20",
+    sky: ["#0d1e30", "#162d46", "#0a1a28"] as const,
+    mid: "#142438",
     accent: COLORS.air,
-    particles: ["#B0DEFF", "#93C5FD", "#BAE6FD"],
+    orb1: "#B0DEFF",
+    orb2: "#60A5FA",
   },
   Fire: {
     name: "Immune Forge",
-    sky: ["#1a0a06", "#2a1508", "#1a0a06"] as const,
-    floor: "#F9731625",
+    sky: ["#200a04", "#3d1006", "#1a0804"] as const,
+    mid: "#2e0e06",
     accent: COLORS.fire,
-    particles: ["#F97316", "#EF4444", "#FB923C"],
+    orb1: "#F97316",
+    orb2: "#DC2626",
   },
   Mind: {
     name: "Neural Chamber",
-    sky: ["#0c0a1c", "#18103a", "#0c0a1c"] as const,
-    floor: "#A78BFA20",
+    sky: ["#100a22", "#1e1040", "#0e0a1e"] as const,
+    mid: "#180e32",
     accent: COLORS.mind,
-    particles: ["#A78BFA", "#8B5CF6", "#C4B5FD"],
+    orb1: "#A78BFA",
+    orb2: "#7C3AED",
   },
   Forge: {
     name: "Osseous Hall",
-    sky: ["#100e08", "#201a0c", "#100e08"] as const,
-    floor: "#D9770625",
+    sky: ["#181008", "#2e1e0a", "#140e06"] as const,
+    mid: "#241608",
     accent: COLORS.forge,
-    particles: ["#D97706", "#B45309", "#F59E0B"],
+    orb1: "#D97706",
+    orb2: "#92400E",
   },
   Energy: {
     name: "Metabolic Nexus",
-    sky: ["#141006", "#221a08", "#141006"] as const,
-    floor: "#FBBF2420",
+    sky: ["#181206", "#2c200a", "#141008"] as const,
+    mid: "#221a08",
     accent: COLORS.energy,
-    particles: ["#FBBF24", "#F59E0B", "#FDE68A"],
+    orb1: "#FBBF24",
+    orb2: "#D97706",
   },
   Storm: {
     name: "Sepsis Front",
-    sky: ["#0c0a18", "#18103a", "#0c0a18"] as const,
-    floor: "#8B5CF620",
+    sky: ["#0e0a20", "#1c1040", "#0c0a1c"] as const,
+    mid: "#160e30",
     accent: COLORS.storm,
-    particles: ["#8B5CF6", "#7C3AED", "#A78BFA"],
+    orb1: "#8B5CF6",
+    orb2: "#4C1D95",
   },
   Filter: {
     name: "Renal Depths",
-    sky: ["#051820", "#082838", "#051820"] as const,
-    floor: "#22D3EE20",
+    sky: ["#041620", "#083040", "#04121a"] as const,
+    mid: "#062030",
     accent: COLORS.filter,
-    particles: ["#22D3EE", "#06B6D4", "#67E8F9"],
+    orb1: "#22D3EE",
+    orb2: "#0891B2",
   },
   Protection: {
     name: "Healing Sanctuary",
-    sky: ["#061612", "#0a2420", "#061612"] as const,
-    floor: "#34D39920",
+    sky: ["#061410", "#0e2820", "#061210"] as const,
+    mid: "#0a1e18",
     accent: COLORS.protection,
-    particles: ["#34D399", "#10B981", "#6EE7B7"],
+    orb1: "#34D399",
+    orb2: "#059669",
   },
   Growth: {
     name: "Endocrine Garden",
-    sky: ["#160a12", "#26101e", "#160a12"] as const,
-    floor: "#F472B620",
+    sky: ["#180810", "#301020", "#140810"] as const,
+    mid: "#200c18",
     accent: COLORS.growth,
-    particles: ["#F472B6", "#EC4899", "#F9A8D4"],
+    orb1: "#F472B6",
+    orb2: "#BE185D",
   },
 };
 
 const FALLBACK_SCENE = ARENA_SCENES.River;
-
-/* Fixed floating particle positions (no random — SSR safe) */
-const PARTICLE_POS = [
-  { x: "15%", y: "18%", s: 3 },
-  { x: "72%", y: "12%", s: 2 },
-  { x: "88%", y: "38%", s: 4 },
-  { x: "8%",  y: "55%", s: 2 },
-  { x: "60%", y: "65%", s: 3 },
-  { x: "35%", y: "30%", s: 2 },
-  { x: "80%", y: "72%", s: 3 },
-];
 
 export default function RunHome() {
   const router  = useRouter();
@@ -220,48 +220,76 @@ export default function RunHome() {
           onPress={() => router.push("/hero-select")}
           testID="home-portrait-tap"
         >
-          {/* ── Scenic sky gradient ── */}
+          {/* ── Sky gradient ── */}
           <LinearGradient
             colors={scene.sky}
-            locations={[0, 0.5, 1]}
+            locations={[0, 0.55, 1]}
             style={StyleSheet.absoluteFillObject}
           />
 
-          {/* ── Atmospheric particles ── */}
-          {PARTICLE_POS.map((p, i) => (
-            <View
-              key={i}
-              style={[
-                styles.particle,
-                {
-                  left: p.x as any,
-                  top:  p.y as any,
-                  width:  p.s,
-                  height: p.s,
-                  borderRadius: p.s,
-                  backgroundColor: scene.particles[i % scene.particles.length] + "99",
-                },
-              ]}
-            />
-          ))}
+          {/* ── Back-wall mid-tone band ── */}
+          <LinearGradient
+            colors={[scene.mid + "00", scene.mid + "CC", scene.mid + "00"]}
+            locations={[0, 0.5, 1]}
+            style={styles.bgMidBand}
+          />
 
-          {/* ── Glowing floor line ── */}
+          {/* ── Large background orb — upper-left ── */}
+          <View
+            style={[
+              styles.bgOrb,
+              {
+                width: 180, height: 180,
+                top: "-15%", left: "-20%",
+                backgroundColor: scene.orb1 + "28",
+                borderRadius: 90,
+              },
+            ]}
+          />
+          {/* ── Large background orb — lower-right ── */}
+          <View
+            style={[
+              styles.bgOrb,
+              {
+                width: 160, height: 160,
+                bottom: "5%", right: "-18%",
+                backgroundColor: scene.orb2 + "22",
+                borderRadius: 80,
+              },
+            ]}
+          />
+          {/* ── Small accent orb — upper-right ── */}
+          <View
+            style={[
+              styles.bgOrb,
+              {
+                width: 80, height: 80,
+                top: "10%", right: "8%",
+                backgroundColor: scene.orb1 + "30",
+                borderRadius: 40,
+              },
+            ]}
+          />
+
+          {/* ── Horizontal horizon line ── */}
+          <View style={[styles.horizonLine, { backgroundColor: scene.accent + "50" }]} />
+
+          {/* ── Glowing floor ellipse (stage) ── */}
           <Animated.View
             style={[
-              styles.floorGlow,
+              styles.floorEllipse,
               { backgroundColor: scene.accent, opacity: floorOpacity },
             ]}
           />
-          <View style={[styles.floorLine, { backgroundColor: scene.accent + "30" }]} />
 
-          {/* Top vignette */}
+          {/* ── Floor surface gradient ── */}
           <LinearGradient
-            colors={["rgba(12,14,18,0.65)", "rgba(12,14,18,0.0)"]}
+            colors={[scene.accent + "00", scene.accent + "35"]}
             locations={[0, 1]}
-            style={[StyleSheet.absoluteFillObject, { height: "35%", pointerEvents: "none" } as any]}
+            style={styles.floorSurface}
           />
 
-          {/* ── HERO IMAGE ── */}
+          {/* ── HERO IMAGE (sits above background layers) ── */}
           {heroSprite ? (
             <Image
               source={heroSprite}
@@ -272,6 +300,13 @@ export default function RunHome() {
           ) : (
             <View style={styles.heroPlaceholder} />
           )}
+
+          {/* Top vignette so header reads cleanly */}
+          <LinearGradient
+            colors={["rgba(8,10,14,0.7)", "rgba(8,10,14,0.0)"]}
+            locations={[0, 1]}
+            style={[StyleSheet.absoluteFillObject, { height: "30%", pointerEvents: "none" } as any]}
+          />
 
           {/* Tap hint */}
           <Animated.View style={[styles.tapPulse, { opacity: pulseAnim }]}>
@@ -447,26 +482,33 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  /* Atmospheric particles */
-  particle: {
+  /* Background scene layers */
+  bgMidBand: {
+    position: "absolute",
+    top: "20%", bottom: "20%",
+    left: 0, right: 0,
+  },
+  bgOrb: {
     position: "absolute",
   },
-
-  /* Floor glow + line */
-  floorGlow: {
+  horizonLine: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 28,
-    opacity: 0.4,
-  },
-  floorLine: {
-    position: "absolute",
-    bottom: 28,
-    left: "10%",
-    right: "10%",
+    bottom: "28%",
+    left: "5%", right: "5%",
     height: 1,
+  },
+  floorEllipse: {
+    position: "absolute",
+    bottom: "-14%",
+    left: "-30%", right: "-30%",
+    height: "42%",
+    borderRadius: 999,
+    opacity: 0.45,
+  },
+  floorSurface: {
+    position: "absolute",
+    bottom: 0, left: 0, right: 0,
+    height: "30%",
   },
 
   heroImg: { flex: 1, width: "100%" },
