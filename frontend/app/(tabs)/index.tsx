@@ -421,8 +421,8 @@ const styles = StyleSheet.create({
   sceneDot:  { width: 5, height: 5, borderRadius: 3 },
   sceneLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 2 },
 
-  /* Arena row — fixed height to keep everything visible */
-  arena: { height: 230, flexDirection: "row", alignItems: "stretch" },
+  /* Arena row — fills remaining space between header and bottom bar */
+  arena: { flex: 1, flexDirection: "row", alignItems: "stretch" },
 
   /* Side columns */
   sideCol: {
