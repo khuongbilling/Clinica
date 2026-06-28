@@ -1,0 +1,685 @@
+# Replit Fix Packet: Home Screen Safe Area, Bottom Tab Cutoff, and Hero Portrait Cropping
+
+## Goal
+
+Fix three persistent UI problems on the Clinica Run/Home screen:
+
+```text
+1. Hero portrait is still too large and cropped.
+2. “SPROUT HEALER” is too high and collides with the notch/dynamic island area.
+3. Bottom navigation text, especially “PROFILE,” is being cut off at the lower right/bottom edge.
+```
+
+The current fix did not work because the hero image is still being rendered in a way that allows it to overflow or crop inside the home layout.
+
+Do not rebuild the app.
+
+Do not change battle mechanics.
+
+Do not change hero data.
+
+Focus only on the Run/Home screen layout, hero portrait display, and safe-area spacing.
+
+---
+
+# Main Required Fix
+
+Do not use the full-body hero portrait as a background image behind the hero text.
+
+Do not place the hero image inside the same horizontal banner as:
+
+```text
+Novice Guardian
+Apprentice Stabilizer
+XP bar
+Tap to Change Hero
+```
+
+Instead, create a dedicated **Hero Portrait Stage** / **Character Display Frame**.
+
+The home page should use this layout:
+
+```text
+Safe Area Top Padding
+
+Header
+Hero Portrait Stage
+Hero Info Card
+Main Action Button
+Bottom Navigation with Safe Area Padding
+```
+
+The image must live inside the Hero Portrait Stage only.
+
+---
+
+# Root Cause to Fix
+
+The portrait is likely still being displayed with one of these problems:
+
+```text
+resizeMode: cover
+ImageBackground
+absolute image positioning
+overflow hidden on a small banner
+negative margins
+top/left anchoring
+image larger than parent container
+hero image placed behind text panel
+```
+
+Replace that behavior with:
+
+```text
+resizeMode: contain
+centered Image component
+fixed-height portrait stage
+full image visible
+no crop
+no top-left anchor
+```
+
+---
+
+# Safe Area Requirements
+
+Use safe-area support on the main Run/Home screen.
+
+The screen must respect:
+
+```text
+Top notch / dynamic island
+Bottom home indicator
+Bottom tab bar height
+```
+
+Use SafeAreaView or useSafeAreaInsets.
+
+The home screen root should include top and bottom padding from safe area.
+
+Example behavior:
+
+```text
+Header starts below the notch.
+Bottom tab labels are fully visible.
+PROFILE is not cut off.
+No content overlaps the phone frame/home indicator.
+```
+
+If using `useSafeAreaInsets`, apply:
+
+```text
+paddingTop: insets.top + extra spacing
+paddingBottom: insets.bottom + extra spacing
+```
+
+Use at least:
+
+```text
+top extra spacing: 12–20
+bottom extra spacing: 10–20
+```
+
+---
+
+# Header Fix
+
+The “SPROUT HEALER” title is too high in the first screenshot.
+
+Move the header down.
+
+Target:
+
+```text
+SPROUT HEALER should appear clearly below the notch/dynamic island.
+It should look like the second screenshot, not the first.
+```
+
+Header area should be compact but safe.
+
+Suggested header behavior:
+
+```text
+Header container:
+paddingTop uses safe area.
+height should not be absolute unless safe-area is included.
+```
+
+Do not place header content at raw `top: 0`.
+
+Do not use negative margins near the top.
+
+---
+
+# Bottom Navigation Fix
+
+The bottom nav is being cut off.
+
+Especially:
+
+```text
+PROFILE
+```
+
+Fix by increasing bottom tab bar height and safe-area padding.
+
+Requirements:
+
+```text
+Bottom tab icons and labels must be fully visible.
+Bottom tab text must not touch the phone edge.
+Bottom nav must include safe-area bottom padding.
+```
+
+Recommended bottom tab behavior:
+
+```text
+tabBarStyle height should account for insets.bottom.
+paddingBottom should use insets.bottom or a minimum fallback.
+```
+
+If using a custom bottom nav, add:
+
+```text
+paddingBottom: insets.bottom + 8
+minHeight: 78 + insets.bottom
+```
+
+If using Expo Router tab bar, adjust tabBarStyle similarly.
+
+Make sure “KINGD...” truncation is intentional or use a shorter label like:
+
+```text
+Realm
+```
+
+Recommended bottom nav labels:
+
+```text
+Run
+Heroes
+Codex
+Realm
+Profile
+```
+
+Using “Realm” instead of “Kingdom” may prevent crowding.
+
+---
+
+# Hero Portrait Stage
+
+Create a dedicated central image area.
+
+This is the most important part.
+
+Use a portrait container like:
+
+```text
+HeroPortraitStage
+- width: 100%
+- height: approximately 260–330 depending on screen height
+- alignItems: center
+- justifyContent: center
+- overflow: hidden or visible depending on final look
+```
+
+Inside it:
+
+```text
+Image
+- resizeMode: contain
+- width: 90% of screen width
+- height: 100% of portrait stage
+```
+
+Important:
+
+```text
+Do not let the image exceed the portrait stage height.
+Do not let the image extend under the info card.
+Do not let the image be cropped by a small banner.
+Do not use cover.
+```
+
+If the image is still too large:
+
+```text
+Reduce image height.
+Do not crop it.
+```
+
+If the character appears too small:
+
+```text
+Increase stage height.
+Do not use cover.
+```
+
+---
+
+# Suggested Portrait Stage Dimensions
+
+Use responsive sizing based on screen height.
+
+Example logic:
+
+```text
+Small phone:
+portrait stage height = 240–260
+
+Normal phone:
+portrait stage height = 280–320
+
+Large phone:
+portrait stage height = 320–360
+```
+
+The hero should fit inside that stage.
+
+The full body should be visible.
+
+If full body cannot fit, show the character from head to knees at minimum, but do not crop randomly into the top-left corner.
+
+---
+
+# Add a Character Frame / Table Area
+
+Since the portrait keeps overflowing, place it inside a visible framed area.
+
+The frame can look like a gacha character display panel.
+
+Example:
+
+```text
+┌─────────────────────────┐
+│                         │
+│      Full Body Hero     │
+│                         │
+└─────────────────────────┘
+```
+
+Style:
+
+```text
+Dark translucent panel
+Thin system-colored border
+Subtle glow behind character
+Rounded corners
+No image clipping except within the frame
+```
+
+This makes the layout controlled and prevents the hero art from spilling into the info card or bottom button.
+
+Use this frame for the selected lead hero image.
+
+---
+
+# Revised Home Screen Layout
+
+Use this target layout:
+
+```text
+┌─────────────────────────────┐
+│ Safe top spacing            │
+│ SPROUT HEALER        ? DEV  │
+│ Cire                        │
+├─────────────────────────────┤
+│ Events              Boss    │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │                         │ │
+│ │    Full Body Hero       │ │
+│ │    centered/contained   │ │
+│ │                         │ │
+│ └─────────────────────────┘ │
+│ Daily              Summon   │
+├─────────────────────────────┤
+│ River                       │
+│ Novice Guardian             │
+│ Apprentice Stabilizer       │
+│ XP bar                      │
+│ Change Lead                 │
+├─────────────────────────────┤
+│ START SHIFT                 │
+├─────────────────────────────┤
+│ Run Heroes Codex Realm Me   │
+│ Safe bottom spacing         │
+└─────────────────────────────┘
+```
+
+Do not layer the hero image behind the name card anymore.
+
+The hero image should be above the info card or within its own frame.
+
+---
+
+# Hero Info Card
+
+Move the hero info into its own compact card.
+
+The card should show:
+
+```text
+System badge: River
+Hero name: Novice Guardian
+Title: Apprentice Stabilizer
+XP bar: 0 / 100 XP
+Button/link: Change Lead
+```
+
+This card should not contain the full-body portrait as a background.
+
+It may contain a small thumbnail if desired, but not the main full-body portrait.
+
+---
+
+# Main Action Button
+
+Keep the large button:
+
+```text
+START SHIFT
+```
+
+But ensure:
+
+```text
+It does not overlap the bottom nav.
+It has margin above the bottom nav.
+It remains visible on small phones.
+```
+
+If screen height is tight, reduce vertical spacing between sections instead of cutting bottom nav.
+
+---
+
+# Floating Icons
+
+The floating icons are good, but they need to stop competing with the hero and header.
+
+Recommended:
+
+```text
+Events and Boss near upper/mid area
+Daily and Summon near lower/mid area
+Do not let icons overlap the portrait frame
+Do not let icons overlap the header
+```
+
+If screen is small:
+
+```text
+Show only Events, Summon, Boss, Daily
+Hide secondary labels or reduce spacing
+```
+
+---
+
+# Dev Badge
+
+The Dev badge is still large and visually dominant.
+
+Make it smaller or move it.
+
+Recommended:
+
+```text
+DEV badge should be a small pill.
+It should not push the header down.
+It should not overlap help/profile icons.
+```
+
+Possible placement:
+
+```text
+Top-right under the shield icon
+Small orange pill, not large
+```
+
+Or:
+
+```text
+Place DEV badge inside settings/debug menu only
+```
+
+For now, reduce its size.
+
+---
+
+# Files to Inspect
+
+Find the file rendering the Run/Home screen with:
+
+```text
+SPROUT HEALER
+Cire
+Novice Guardian
+START SHIFT
+Events
+Summon
+Daily
+Boss
+```
+
+Likely files:
+
+```text
+frontend/app/index.tsx
+frontend/app/(tabs)/index.tsx
+frontend/app/run.tsx
+frontend/app/(tabs)/run.tsx
+```
+
+Also inspect any shared components for:
+
+```text
+Bottom tab navigation
+Hero image display
+Lead hero card
+Dev badge
+```
+
+Search for:
+
+```text
+SPROUT HEALER
+START SHIFT
+Tap to Change Hero
+Novice Guardian
+leadHero
+selectedLead
+portrait
+ImageBackground
+resizeMode
+cover
+absolute
+```
+
+---
+
+# Specific Image Rule
+
+Wherever the main selected hero portrait is rendered on the Run/Home screen:
+
+Replace any `cover` behavior with `contain`.
+
+Required behavior:
+
+```text
+The full portrait image must be visible within its frame.
+The portrait must be centered.
+The portrait must not be used as a background image.
+The portrait must not be positioned top-left.
+```
+
+If Replit cannot find the issue, search specifically for:
+
+```text
+ImageBackground
+resizeMode="cover"
+resizeMode: "cover"
+position: "absolute"
+top: 0
+left: 0
+overflow: "hidden"
+```
+
+These are likely causing the persistent crop.
+
+---
+
+# Responsive Screen Height Rule
+
+The total vertical layout must fit the phone.
+
+Use flex layout rather than large fixed margins.
+
+Suggested structure:
+
+```text
+root container
+  safe header
+  content container with flex: 1
+    icon/hero area
+    hero info card
+    start button
+  bottom tab bar with safe bottom padding
+```
+
+Avoid this:
+
+```text
+Huge fixed top margin
+Huge fixed bottom margin
+Absolute positioning for major layout sections
+Hero image overlapping sections
+```
+
+Use this:
+
+```text
+flex layout
+gap spacing
+safe-area padding
+fixed maximum heights for image frame
+```
+
+---
+
+# Bottom Tab Label Fix
+
+The right label is cut off.
+
+To fix:
+
+```text
+Increase tab bar height.
+Add bottom safe-area padding.
+Shorten labels if needed.
+```
+
+Recommended labels:
+
+```text
+RUN
+HEROES
+CODEX
+REALM
+ME
+```
+
+or:
+
+```text
+RUN
+HEROES
+CODEX
+REALM
+PROFILE
+```
+
+If “PROFILE” still cuts off, use:
+
+```text
+ME
+```
+
+This is common in mobile apps and saves space.
+
+---
+
+# Testing Checklist
+
+Test on the Run/Home screen:
+
+```text
+1. SPROUT HEALER appears below the notch/dynamic island.
+2. Player name Cire is readable and not too high.
+3. Help/shield/dev icons do not overlap header text.
+4. Hero portrait appears inside a dedicated frame/stage.
+5. Full hero is centered and contained.
+6. Hero portrait is not cropped into top-left.
+7. Hero image does not sit behind Novice Guardian text.
+8. Hero info card is readable.
+9. START SHIFT is visible and not cut off.
+10. Bottom tabs are fully visible.
+11. PROFILE or ME is not cut off.
+12. Bottom nav respects safe-area/home indicator.
+13. Hero selection still works.
+14. Changing lead hero updates the image without cropping.
+15. Small-screen layout still fits.
+```
+
+Test with both heroes:
+
+```text
+Novice Guardian
+Village Caretaker
+```
+
+Expected:
+
+```text
+Both portraits remain centered and contained.
+Neither portrait zooms into a corner.
+No text is clipped.
+```
+
+---
+
+# Success Criteria
+
+This fix is successful when:
+
+```text
+The top header is safely below the notch.
+The bottom nav is not cut off.
+The lead hero image is fully visible in a controlled frame.
+The portrait no longer appears as a cropped background behind the hero text.
+The home screen feels like a gacha/RPG lobby but remains readable.
+```
+
+---
+
+# Final Instruction
+
+The prior fix still allowed the image to behave like a background or overflowed banner image.
+
+This time, enforce the structure:
+
+```text
+Header
+Dedicated portrait frame with contain image
+Separate hero info card
+Start button
+Safe-area bottom tabs
+```
+
+Do not keep the full-body portrait inside the hero information banner.
+
+Do not use cover.
+
+Do not use ImageBackground for the lead hero portrait.
+
+Do not allow the selected lead hero image to overflow into other UI sections.

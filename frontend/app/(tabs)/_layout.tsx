@@ -1,8 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/src/theme/colors";
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 8);
+  const tabH = 50 + bottomPad;
+
   return (
     <Tabs
       screenOptions={{
@@ -13,9 +18,9 @@ export default function TabsLayout() {
           backgroundColor: COLORS.surfaceSecondary,
           borderTopColor: COLORS.border,
           borderTopWidth: 1,
-          height: 64,
+          height: tabH,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: bottomPad,
         },
         tabBarLabelStyle: { fontSize: 10, letterSpacing: 1, fontWeight: "600" },
       }}
@@ -47,7 +52,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="kingdom"
         options={{
-          title: "KINGDOM",
+          title: "REALM",
           tabBarButtonTestID: "tab-kingdom",
           tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} />,
         }}
