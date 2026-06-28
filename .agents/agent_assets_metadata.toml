@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "M-qBvjwrSo7uvw3raB5YO"
+uri = "file://frontend/assets/heroes/novice_guardian.png"
+type = "image"
+title = "novice guardian healer"
+
+[[generated]]
+id = "fvPXghVdE_4xc35rUY-h9"
+uri = "file://frontend/assets/heroes/night_watcher.png"
+type = "image"
+title = "night watcher healer"
+
+[[generated]]
+id = "hxY9IhxPJimAiwAaE6B0p"
+uri = "file://frontend/assets/heroes/apprentice_seer.png"
+type = "image"
+title = "apprentice seer mage"
+
+[[generated]]
+id = "p9Oy2W5zWG70QntA4Or1X"
+uri = "file://frontend/assets/heroes/junior_warden.png"
+type = "image"
+title = "junior warden guardian"
+
+[[generated]]
+id = "TELSpOXTM6G7YjmUPp3DF"
+uri = "file://frontend/assets/heroes/data_acolyte.png"
+type = "image"
+title = "data acolyte analyst"
+
+[[generated]]
+id = "jwv__WisPCwS6m_q5RFMI"
+uri = "file://frontend/assets/heroes/village_caretaker.png"
+type = "image"
+title = "village caretaker nurse"
+
+[[generated]]
+id = "cdBaHb4SZHKqLg0LX8U64"
+uri = "file://frontend/assets/heroes/storm_runner.png"
+type = "image"
+title = "storm runner ER healer"
+
+[[generated]]
+id = "0F06h3SjrZyfJxKOVO6pm"
+uri = "file://frontend/assets/heroes/infection_warden.png"
+type = "image"
+title = "infection warden sentinel"
+
+[[generated]]
+id = "z7kMTGa8oSLkd3JOFORYC"
+uri = "file://frontend/assets/heroes/wound_sage.png"
+type = "image"
+title = "wound sage mender"
+
+[[generated]]
+id = "4lJ7FHarRC4Bo7LonJsvT"
+uri = "file://frontend/assets/heroes/mindkeeper.png"
+type = "image"
+title = "mindkeeper neurologist"
