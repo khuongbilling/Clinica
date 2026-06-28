@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated, Image, Modal, Pressable, StyleSheet, Text,
-  useWindowDimensions, View,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,8 +22,10 @@ export default function RunHome() {
   const { player, loading } = usePlayer();
   const { logEvent } = useTestSession();
   const [showIntro, setShowIntro] = useState(false);
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  const { height: screenH } = useWindowDimensions();
+  const glowAnim  = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Capture stage pixel dimensions so RN Web can size the image correctly
+  const [stageDims, setStageDims] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((val) => {
@@ -32,10 +34,19 @@ export default function RunHome() {
   }, []);
 
   useEffect(() => {
+    // Slow element glow breathe
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2600, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2600, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 2800, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 2800, useNativeDriver: false }),
+      ])
+    ).start();
+    // Subtle tap-hint pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,   duration: 900, useNativeDriver: true }),
+        Animated.delay(1400),
       ])
     ).start();
   }, []);
@@ -45,31 +56,29 @@ export default function RunHome() {
     setShowIntro(false);
   };
 
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.14, 0.44] });
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.42] });
 
   if (!player || loading) {
     return <View style={{ flex: 1, backgroundColor: COLORS.surface }} />;
   }
 
-  const apt = APTITUDE_INFO[player.aptitude];
-  const nextRank = RANKS[player.rank_index + 1];
-  const progress = nextRank
-    ? Math.min(1, (player.xp - RANKS[player.rank_index].xpRequired) / (nextRank.xpRequired - RANKS[player.rank_index].xpRequired))
+  const apt       = APTITUDE_INFO[player.aptitude];
+  const nextRank  = RANKS[player.rank_index + 1];
+  const progress  = nextRank
+    ? Math.min(1, (player.xp - RANKS[player.rank_index].xpRequired) /
+                  (nextRank.xpRequired - RANKS[player.rank_index].xpRequired))
     : 1;
 
-  const leadHeroId = player.active_team?.[0] ?? "novice_guardian";
-  const leadHero = HEROES.find((h) => h.id === leadHeroId);
-  const heroSprite = getHeroSprite(leadHeroId);
+  const leadHeroId   = player.active_team?.[0] ?? "novice_guardian";
+  const leadHero     = HEROES.find((h) => h.id === leadHeroId);
+  const heroSprite   = getHeroSprite(leadHeroId);
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
-
-  // Responsive portrait height: taller on larger screens
-  const portraitH = screenH < 680 ? 200 : screenH < 780 ? 240 : screenH < 900 ? 278 : 310;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
 
-      {/* ── HEADER ── */}
+      {/* ── COMPACT HEADER ── */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
@@ -90,44 +99,34 @@ export default function RunHome() {
         )}
       </View>
 
-      {/* ── TOP ICON ROW: Events | Boss ── */}
-      <View style={styles.iconRowOuter}>
-        <FloatIcon
-          icon="calendar-outline"
-          label="Events"
-          color={COLORS.air}
-          locked
-          lockText="Soon"
-          onPress={() => {}}
-        />
-        <FloatIcon
-          icon={bossUnlocked ? "skull" : "lock-closed"}
-          label="Boss"
-          color={COLORS.error}
-          locked={!bossUnlocked}
-          lockText="1 run"
-          onPress={() => { if (bossUnlocked) router.push("/boss"); }}
-          testID="home-float-boss"
-        />
-      </View>
-
-      {/* ── PORTRAIT FRAME ── */}
+      {/* ── HERO STAGE (flex:1 — fills all remaining space above the button) ── */}
       <Pressable
-        style={[styles.portraitFrame, { height: portraitH, borderColor: elementColor + "40" }]}
+        style={styles.heroStage}
         onPress={() => router.push("/hero-select")}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          if (width > 0 && height > 0) setStageDims({ w: width, h: height });
+        }}
         testID="home-portrait-tap"
       >
-        {/* Dark background */}
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: COLORS.surfaceSecondary }]} />
+        {/* Dark stage background */}
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: COLORS.surfaceSecondary + "CC" }]} />
 
-        {/* Subtle gradient: darker at top and bottom edges */}
+        {/* Top-to-mid dark gradient (header bleed protection) */}
         <LinearGradient
-          colors={["rgba(12,14,18,0.6)", "rgba(12,14,18,0.0)", "rgba(12,14,18,0.55)"]}
-          locations={[0, 0.4, 1]}
-          style={StyleSheet.absoluteFillObject}
+          colors={["rgba(12,14,18,0.75)", "rgba(12,14,18,0.0)"]}
+          locations={[0, 0.28]}
+          style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
         />
 
-        {/* Element glow — bottom */}
+        {/* Bottom dark gradient (into info overlay) */}
+        <LinearGradient
+          colors={["rgba(12,14,18,0.0)", "rgba(12,14,18,0.72)", "rgba(12,14,18,0.97)"]}
+          locations={[0.45, 0.78, 1]}
+          style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+        />
+
+        {/* Element glow radial — bottom-center */}
         <Animated.View
           style={[
             styles.elementGlow,
@@ -135,52 +134,77 @@ export default function RunHome() {
           ]}
         />
 
-        {/* Full-body hero — centered, contain, fills frame */}
-        {heroSprite ? (
+        {/* ── HERO PORTRAIT — explicitly pixel-sized so RN Web centers correctly ── */}
+        {heroSprite && stageDims.h > 0 ? (
           <Image
             source={heroSprite}
-            style={styles.heroImage}
+            style={{
+              position: "absolute",
+              width:  stageDims.w,
+              height: stageDims.h,
+              // shift up slightly so feet don't hide behind info overlay
+              top: -stageDims.h * 0.04,
+            }}
             resizeMode="contain"
           />
         ) : (
-          <View style={styles.heroFallback} />
+          <View style={StyleSheet.absoluteFillObject} />
         )}
 
-        {/* Tap hint */}
-        <View style={styles.changeBadge}>
-          <Ionicons name="swap-horizontal" size={11} color={elementColor + "AA"} />
-          <Text style={[styles.changeTxt, { color: elementColor + "AA" }]}>TAP TO CHANGE HERO</Text>
+        {/* ── FLOATING ICONS — absolutely inside stage ── */}
+        {/* Events — top-left */}
+        <View style={[styles.floatPos, styles.floatTL]}>
+          <FloatIcon
+            icon="calendar-outline"
+            label="Events"
+            color={COLORS.air}
+            locked
+            lockText="Soon"
+            onPress={() => {}}
+          />
         </View>
-      </Pressable>
 
-      {/* ── BOTTOM ICON ROW: Daily | Summon ── */}
-      <View style={styles.iconRowOuter}>
-        <FloatIcon
-          icon="shield-checkmark-outline"
-          label="Daily"
-          color={COLORS.mind}
-          locked
-          lockText="Soon"
-          onPress={() => {}}
-        />
-        <FloatIcon
-          icon="sparkles"
-          label="Summon"
-          color={COLORS.brand}
-          onPress={() => router.push("/summon")}
-          testID="home-float-summon"
-        />
-      </View>
-
-      {/* ── HERO INFO CARD ── */}
-      <Pressable
-        style={[styles.heroCard, { borderColor: elementColor + "30" }]}
-        onPress={() => router.push("/hero-select")}
-      >
-        <View style={[styles.elementChip, { borderColor: elementColor + "70", backgroundColor: elementColor + "18" }]}>
-          <Text style={[styles.elementChipTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
+        {/* Boss — top-right */}
+        <View style={[styles.floatPos, styles.floatTR]}>
+          <FloatIcon
+            icon={bossUnlocked ? "skull" : "lock-closed"}
+            label="Boss"
+            color={COLORS.error}
+            locked={!bossUnlocked}
+            lockText="1 run"
+            onPress={() => { if (bossUnlocked) router.push("/boss"); }}
+            testID="home-float-boss"
+          />
         </View>
-        <View style={{ flex: 1 }}>
+
+        {/* Daily — mid-left */}
+        <View style={[styles.floatPos, styles.floatML]}>
+          <FloatIcon
+            icon="shield-checkmark-outline"
+            label="Daily"
+            color={COLORS.mind}
+            locked
+            lockText="Soon"
+            onPress={() => {}}
+          />
+        </View>
+
+        {/* Summon — mid-right */}
+        <View style={[styles.floatPos, styles.floatMR]}>
+          <FloatIcon
+            icon="sparkles"
+            label="Summon"
+            color={COLORS.brand}
+            onPress={() => router.push("/summon")}
+            testID="home-float-summon"
+          />
+        </View>
+
+        {/* ── HERO INFO OVERLAY — pinned to bottom of stage ── */}
+        <View style={[styles.heroInfoOverlay, { zIndex: 2 }]}>
+          <View style={[styles.elementChip, { borderColor: elementColor + "70", backgroundColor: elementColor + "18" }]}>
+            <Text style={[styles.elementChipTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
+          </View>
           <Text style={styles.heroName}>{leadHero?.name ?? "Your Hero"}</Text>
           <Text style={styles.heroTitle}>{leadHero?.title ?? apt?.title}</Text>
           <View style={styles.xpRow}>
@@ -188,15 +212,20 @@ export default function RunHome() {
               <View style={[styles.xpFill, { width: `${progress * 100}%` as any, backgroundColor: elementColor }]} />
             </View>
             <Text style={styles.xpTxt}>
-              {nextRank ? `${player.xp}/${nextRank.xpRequired}` : "MAX"}
+              {nextRank ? `${player.xp} / ${nextRank.xpRequired} XP` : "MAX RANK"}
             </Text>
           </View>
+          {/* Subtle tap hint — pulsing dot + tiny text, no color pop */}
+          <Animated.View style={[styles.tapHint, { opacity: pulseAnim }]}>
+            <View style={[styles.tapDot, { backgroundColor: elementColor + "90" }]} />
+            <Text style={styles.tapHintTxt}>tap portrait to change hero</Text>
+          </Animated.View>
         </View>
       </Pressable>
 
-      {/* ── PRIMARY ACTION ── */}
+      {/* ── PRIMARY ACTION BUTTON ── */}
       <Pressable
-        style={styles.startBtn}
+        style={[styles.startBtn, { borderColor: COLORS.brand + "50" }]}
         onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
         testID="run-random-encounter"
       >
@@ -219,11 +248,11 @@ export default function RunHome() {
             </Text>
             <View style={styles.introSystemRow}>
               {[
-                { name: "Air", desc: "Lungs", color: COLORS.air },
-                { name: "River", desc: "Heart", color: COLORS.river },
-                { name: "Fire", desc: "Immune", color: COLORS.fire },
-                { name: "Mind", desc: "Neuro", color: COLORS.mind },
-                { name: "Stone", desc: "Bone", color: COLORS.forge },
+                { name: "Air",   desc: "Lungs",  color: COLORS.air   },
+                { name: "River", desc: "Heart",  color: COLORS.river },
+                { name: "Fire",  desc: "Immune", color: COLORS.fire  },
+                { name: "Mind",  desc: "Neuro",  color: COLORS.mind  },
+                { name: "Stone", desc: "Bone",   color: COLORS.forge },
               ].map((s) => (
                 <View key={s.name} style={styles.introSysPill}>
                   <View style={[styles.introSysDot, { backgroundColor: s.color }]} />
@@ -242,6 +271,7 @@ export default function RunHome() {
   );
 }
 
+/* ── FloatIcon component ─────────────────────────────────────────── */
 function FloatIcon({
   icon, label, color, locked, lockText, onPress, testID,
 }: {
@@ -254,34 +284,42 @@ function FloatIcon({
       style={[styles.floatBtn, locked && styles.floatBtnLocked]}
       onPress={onPress}
       testID={testID}
-      hitSlop={6}
+      hitSlop={8}
     >
       <View style={[
         styles.floatCircle,
-        { borderColor: locked ? COLORS.border : color + "70", backgroundColor: locked ? COLORS.surfaceTertiary : color + "18" },
+        {
+          borderColor: locked ? COLORS.border : color + "70",
+          backgroundColor: locked ? "rgba(255,255,255,0.06)" : color + "20",
+        },
       ]}>
         <Ionicons name={icon as any} size={20} color={locked ? COLORS.onSurfaceTertiary : color} />
       </View>
-      <Text style={[styles.floatLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
-      {locked && lockText && <Text style={styles.floatLockTxt}>{lockText}</Text>}
+      <Text style={[styles.floatLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>
+        {label}
+      </Text>
+      {locked && lockText && (
+        <Text style={styles.floatLockTxt}>{lockText}</Text>
+      )}
     </Pressable>
   );
 }
 
+/* ── Styles ──────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
 
-  /* ── HEADER ── */
+  /* Header */
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xs ?? 4,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
   },
   rankKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  playerName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "300" },
+  playerName:  { color: COLORS.onSurface, fontSize: 20, fontWeight: "300" },
   topIconBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: COLORS.surfaceSecondary,
@@ -294,92 +332,73 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
   },
 
-  /* ── ICON ROWS (above & below portrait) ── */
-  iconRowOuter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.xs ?? 4,
-  },
-  floatBtn: { alignItems: "center", gap: 3 },
-  floatBtnLocked: { opacity: 0.6 },
-  floatCircle: {
-    width: 46, height: 46, borderRadius: 23,
-    borderWidth: 1.5,
-    alignItems: "center", justifyContent: "center",
-  },
-  floatLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
-  floatLockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9 },
-
-  /* ── PORTRAIT FRAME ── */
-  portraitFrame: {
-    marginHorizontal: SPACING.lg,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
+  /* Hero stage */
+  heroStage: {
+    flex: 1,
     overflow: "hidden",
+    position: "relative",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
-  },
-  heroImage: {
-    width: "100%",
-    height: "100%",
-  },
-  heroFallback: {
-    position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: COLORS.surfaceSecondary,
   },
   elementGlow: {
     position: "absolute",
-    bottom: -30,
-    left: "-20%",
-    right: "-20%",
-    height: "35%",
+    bottom: "5%",
+    left: "-30%",
+    right: "-30%",
+    height: "28%",
     borderRadius: 999,
-    transform: [{ scaleX: 1.6 }],
+    zIndex: 0,
   },
-  changeBadge: {
-    position: "absolute",
-    bottom: SPACING.sm,
-    right: SPACING.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "rgba(12,14,18,0.65)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.pill,
-  },
-  changeTxt: { fontSize: 8, letterSpacing: 1.2, fontWeight: "700" },
 
-  /* ── HERO INFO CARD ── */
-  heroCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.sm,
-    backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    borderWidth: 1,
+  /* Floating icon positions */
+  floatPos: { position: "absolute", zIndex: 10 },
+  floatTL:  { top: SPACING.lg,  left: SPACING.md  },
+  floatTR:  { top: SPACING.lg,  right: SPACING.md },
+  floatML:  { top: "42%",       left: SPACING.md  },
+  floatMR:  { top: "42%",       right: SPACING.md },
+  floatBtn: { alignItems: "center", gap: 3 },
+  floatBtnLocked: { opacity: 0.55 },
+  floatCircle: {
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
+    // frosted look
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  floatLabel:   { fontSize: 10, fontWeight: "700", letterSpacing: 0.5, textShadowColor: "rgba(0,0,0,0.8)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  floatLockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+
+  /* Hero info overlay */
+  heroInfoOverlay: {
+    position: "absolute",
+    bottom: 0, left: 0, right: 0,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    gap: 3,
   },
   elementChip: {
     borderWidth: 1, borderRadius: RADIUS.pill,
-    paddingHorizontal: 10, paddingVertical: 5,
-    alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 10, paddingVertical: 3,
+    alignSelf: "flex-start",
+    marginBottom: 2,
   },
   elementChipTxt: { fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
-  heroName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
-  heroTitle: { color: COLORS.onSurfaceSecondary, fontSize: 11, letterSpacing: 0.3, marginTop: 1 },
-  xpRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs ?? 4, marginTop: 5 },
-  xpBg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: COLORS.border, overflow: "hidden" },
-  xpFill: { height: "100%" },
-  xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.8, minWidth: 52, textAlign: "right" },
+  heroName:  { color: COLORS.onSurface,          fontSize: 18, fontWeight: "700", letterSpacing: 0.3 },
+  heroTitle: { color: COLORS.onSurfaceSecondary,  fontSize: 12, letterSpacing: 0.3 },
+  xpRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, marginTop: 4 },
+  xpBg:  { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
+  xpFill: { height: "100%", borderRadius: 2 },
+  xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.8, minWidth: 70, textAlign: "right" },
 
-  /* ── START SHIFT BUTTON ── */
+  /* Tap hint */
+  tapHint: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5 },
+  tapDot:  { width: 5, height: 5, borderRadius: 3 },
+  tapHintTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.8 },
+
+  /* Start button */
   startBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -387,14 +406,14 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     backgroundColor: COLORS.brand,
     marginHorizontal: SPACING.lg,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.sm,
+    marginVertical: SPACING.sm,
     borderRadius: RADIUS.md,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.md + 2,
+    borderWidth: 1,
   },
   startBtnTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700", letterSpacing: 2 },
 
-  /* ── INTRO MODAL ── */
+  /* Intro modal */
   introOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.88)", justifyContent: "flex-end" },
   introPanel: {
     backgroundColor: COLORS.surfaceSecondary,
@@ -406,13 +425,13 @@ const styles = StyleSheet.create({
   },
   introHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: "center", marginBottom: SPACING.sm },
   introKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  introTitle: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300", marginTop: -4 },
-  introBody: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22 },
-  introSystemRow: { flexDirection: "row", gap: SPACING.xs ?? 4, flexWrap: "wrap" },
-  introSysPill: { alignItems: "center", gap: 3, minWidth: 46 },
-  introSysDot: { width: 8, height: 8, borderRadius: 4 },
-  introSysName: { fontSize: 11, fontWeight: "700" },
-  introSysDesc: { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+  introTitle:  { color: COLORS.onSurface, fontSize: 28, fontWeight: "300", marginTop: -4 },
+  introBody:   { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22 },
+  introSystemRow: { flexDirection: "row", gap: SPACING.xs, flexWrap: "wrap" },
+  introSysPill:   { alignItems: "center", gap: 3, minWidth: 46 },
+  introSysDot:    { width: 8, height: 8, borderRadius: 4 },
+  introSysName:   { fontSize: 11, fontWeight: "700" },
+  introSysDesc:   { color: COLORS.onSurfaceTertiary, fontSize: 9 },
   introCta: {
     backgroundColor: COLORS.brand, borderRadius: RADIUS.md,
     paddingVertical: SPACING.md, alignItems: "center", marginTop: SPACING.sm,
