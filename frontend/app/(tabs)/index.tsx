@@ -16,14 +16,108 @@ import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const INTRO_KEY = "clinica.intro.seen";
+const BG_KEY    = "clinica.arena.bg";
+
+/* ── Arena scene definitions (collectable backgrounds) ── */
+const ARENA_SCENES: Record<string, {
+  name: string;
+  sky: readonly [string, string, string];
+  floor: string;
+  accent: string;
+  particles: string[];
+}> = {
+  River: {
+    name: "Cardiac Ward",
+    sky: ["#061824", "#0a2d3e", "#061824"] as const,
+    floor: "#06B6D425",
+    accent: COLORS.river,
+    particles: ["#06B6D4", "#0891B2", "#22D3EE"],
+  },
+  Air: {
+    name: "Respiratory Spire",
+    sky: ["#0a1520", "#162436", "#0a1520"] as const,
+    floor: "#B0DEFF20",
+    accent: COLORS.air,
+    particles: ["#B0DEFF", "#93C5FD", "#BAE6FD"],
+  },
+  Fire: {
+    name: "Immune Forge",
+    sky: ["#1a0a06", "#2a1508", "#1a0a06"] as const,
+    floor: "#F9731625",
+    accent: COLORS.fire,
+    particles: ["#F97316", "#EF4444", "#FB923C"],
+  },
+  Mind: {
+    name: "Neural Chamber",
+    sky: ["#0c0a1c", "#18103a", "#0c0a1c"] as const,
+    floor: "#A78BFA20",
+    accent: COLORS.mind,
+    particles: ["#A78BFA", "#8B5CF6", "#C4B5FD"],
+  },
+  Forge: {
+    name: "Osseous Hall",
+    sky: ["#100e08", "#201a0c", "#100e08"] as const,
+    floor: "#D9770625",
+    accent: COLORS.forge,
+    particles: ["#D97706", "#B45309", "#F59E0B"],
+  },
+  Energy: {
+    name: "Metabolic Nexus",
+    sky: ["#141006", "#221a08", "#141006"] as const,
+    floor: "#FBBF2420",
+    accent: COLORS.energy,
+    particles: ["#FBBF24", "#F59E0B", "#FDE68A"],
+  },
+  Storm: {
+    name: "Sepsis Front",
+    sky: ["#0c0a18", "#18103a", "#0c0a18"] as const,
+    floor: "#8B5CF620",
+    accent: COLORS.storm,
+    particles: ["#8B5CF6", "#7C3AED", "#A78BFA"],
+  },
+  Filter: {
+    name: "Renal Depths",
+    sky: ["#051820", "#082838", "#051820"] as const,
+    floor: "#22D3EE20",
+    accent: COLORS.filter,
+    particles: ["#22D3EE", "#06B6D4", "#67E8F9"],
+  },
+  Protection: {
+    name: "Healing Sanctuary",
+    sky: ["#061612", "#0a2420", "#061612"] as const,
+    floor: "#34D39920",
+    accent: COLORS.protection,
+    particles: ["#34D399", "#10B981", "#6EE7B7"],
+  },
+  Growth: {
+    name: "Endocrine Garden",
+    sky: ["#160a12", "#26101e", "#160a12"] as const,
+    floor: "#F472B620",
+    accent: COLORS.growth,
+    particles: ["#F472B6", "#EC4899", "#F9A8D4"],
+  },
+};
+
+const FALLBACK_SCENE = ARENA_SCENES.River;
+
+/* Fixed floating particle positions (no random — SSR safe) */
+const PARTICLE_POS = [
+  { x: "15%", y: "18%", s: 3 },
+  { x: "72%", y: "12%", s: 2 },
+  { x: "88%", y: "38%", s: 4 },
+  { x: "8%",  y: "55%", s: 2 },
+  { x: "60%", y: "65%", s: 3 },
+  { x: "35%", y: "30%", s: 2 },
+  { x: "80%", y: "72%", s: 3 },
+];
 
 export default function RunHome() {
-  const router     = useRouter();
+  const router  = useRouter();
   const { player, loading } = usePlayer();
   const { logEvent } = useTestSession();
   const [showIntro, setShowIntro] = useState(false);
-  const glowAnim  = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shimAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
@@ -31,13 +125,13 @@ export default function RunHome() {
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(glowAnim,  { toValue: 1, duration: 2800, useNativeDriver: false }),
-      Animated.timing(glowAnim,  { toValue: 0, duration: 2800, useNativeDriver: false }),
-    ])).start();
-    Animated.loop(Animated.sequence([
       Animated.timing(pulseAnim, { toValue: 0.25, duration: 850, useNativeDriver: false }),
       Animated.timing(pulseAnim, { toValue: 1,    duration: 850, useNativeDriver: false }),
       Animated.delay(1600),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(shimAnim, { toValue: 1, duration: 3200, useNativeDriver: false }),
+      Animated.timing(shimAnim, { toValue: 0, duration: 3200, useNativeDriver: false }),
     ])).start();
   }, []);
 
@@ -45,8 +139,6 @@ export default function RunHome() {
     await AsyncStorage.setItem(INTRO_KEY, "1");
     setShowIntro(false);
   };
-
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.38] });
 
   if (!player || loading) {
     return <View style={{ flex: 1, backgroundColor: COLORS.surface }} />;
@@ -64,6 +156,10 @@ export default function RunHome() {
   const heroSprite   = getHeroSprite(leadHeroId);
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
+
+  const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
+
+  const floorOpacity = shimAnim.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.7] });
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -89,10 +185,16 @@ export default function RunHome() {
         )}
       </View>
 
+      {/* ── ARENA SCENE LABEL ── */}
+      <View style={styles.sceneLabelRow}>
+        <View style={[styles.sceneDot, { backgroundColor: scene.accent }]} />
+        <Text style={[styles.sceneLabel, { color: scene.accent }]}>{scene.name.toUpperCase()}</Text>
+      </View>
+
       {/* ── MAIN ARENA — side buttons + centered character ── */}
       <View style={styles.arena}>
 
-        {/* LEFT COLUMN — Events (top) + Daily (bottom) */}
+        {/* LEFT COLUMN */}
         <View style={styles.sideCol}>
           <FeatureButton
             icon="calendar-outline"
@@ -112,30 +214,54 @@ export default function RunHome() {
           />
         </View>
 
-        {/* CENTER — hero portrait */}
+        {/* CENTER — scenic background + hero portrait */}
         <Pressable
           style={styles.heroCenter}
           onPress={() => router.push("/hero-select")}
           testID="home-portrait-tap"
         >
-          {/* Radial element glow — at feet level */}
+          {/* ── Scenic sky gradient ── */}
+          <LinearGradient
+            colors={scene.sky}
+            locations={[0, 0.5, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          {/* ── Atmospheric particles ── */}
+          {PARTICLE_POS.map((p, i) => (
+            <View
+              key={i}
+              style={[
+                styles.particle,
+                {
+                  left: p.x as any,
+                  top:  p.y as any,
+                  width:  p.s,
+                  height: p.s,
+                  borderRadius: p.s,
+                  backgroundColor: scene.particles[i % scene.particles.length] + "99",
+                },
+              ]}
+            />
+          ))}
+
+          {/* ── Glowing floor line ── */}
           <Animated.View
-            style={[styles.elementGlow, { backgroundColor: elementColor, opacity: glowOpacity }]}
+            style={[
+              styles.floorGlow,
+              { backgroundColor: scene.accent, opacity: floorOpacity },
+            ]}
+          />
+          <View style={[styles.floorLine, { backgroundColor: scene.accent + "30" }]} />
+
+          {/* Top vignette */}
+          <LinearGradient
+            colors={["rgba(12,14,18,0.65)", "rgba(12,14,18,0.0)"]}
+            locations={[0, 1]}
+            style={[StyleSheet.absoluteFillObject, { height: "35%", pointerEvents: "none" } as any]}
           />
 
-          {/* Top & bottom dark vignette */}
-          <LinearGradient
-            colors={["rgba(12,14,18,0.55)", "rgba(12,14,18,0.0)", "rgba(12,14,18,0.0)"]}
-            locations={[0, 0.25, 1]}
-            style={[StyleSheet.absoluteFillObject, { pointerEvents: "none" } as any]}
-          />
-          <LinearGradient
-            colors={["rgba(12,14,18,0.0)", "rgba(12,14,18,0.0)", "rgba(12,14,18,0.7)"]}
-            locations={[0, 0.65, 1]}
-            style={[StyleSheet.absoluteFillObject, { pointerEvents: "none" } as any]}
-          />
-
-          {/* ── HERO IMAGE via expo-image (contentFit handles web correctly) ── */}
+          {/* ── HERO IMAGE ── */}
           {heroSprite ? (
             <Image
               source={heroSprite}
@@ -147,14 +273,14 @@ export default function RunHome() {
             <View style={styles.heroPlaceholder} />
           )}
 
-          {/* Subtle tap pulse — bottom-right corner */}
+          {/* Tap hint */}
           <Animated.View style={[styles.tapPulse, { opacity: pulseAnim }]}>
             <View style={[styles.tapDot, { backgroundColor: elementColor }]} />
             <Text style={styles.tapLabel}>tap to change</Text>
           </Animated.View>
         </Pressable>
 
-        {/* RIGHT COLUMN — Boss (top) + Summon (bottom) */}
+        {/* RIGHT COLUMN */}
         <View style={styles.sideCol}>
           <FeatureButton
             icon={bossUnlocked ? "skull" : "lock-closed"}
@@ -284,19 +410,30 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
 
-  /* Arena row */
-  arena: { flex: 1, flexDirection: "row", alignItems: "stretch" },
+  /* Scene label row */
+  sceneLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: 4,
+  },
+  sceneDot:  { width: 5, height: 5, borderRadius: 3 },
+  sceneLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+
+  /* Arena row — fixed height to keep everything visible */
+  arena: { height: 230, flexDirection: "row", alignItems: "stretch" },
 
   /* Side columns */
   sideCol: {
     width: 72,
     justifyContent: "space-evenly",
     alignItems: "center",
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   featBtn:    { alignItems: "center", gap: 4 },
   featCircle: {
-    width: 50, height: 50, borderRadius: 25,
+    width: 48, height: 48, borderRadius: 24,
     borderWidth: 1.5, alignItems: "center", justifyContent: "center",
   },
   featLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textAlign: "center" },
@@ -306,23 +443,34 @@ const styles = StyleSheet.create({
   heroCenter: {
     flex: 1,
     overflow: "hidden",
+    borderRadius: RADIUS.lg,
     position: "relative",
   },
-  heroImg: {
-    /* expo-image fills its parent; contentFit=contain centers on web */
-    flex: 1,
-    width: "100%",
-  },
-  heroPlaceholder: { flex: 1, backgroundColor: COLORS.surfaceSecondary },
-  elementGlow: {
+
+  /* Atmospheric particles */
+  particle: {
     position: "absolute",
-    bottom: "8%",
-    left: "-40%",
-    right: "-40%",
-    height: "22%",
-    borderRadius: 999,
-    zIndex: 0,
   },
+
+  /* Floor glow + line */
+  floorGlow: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 28,
+    opacity: 0.4,
+  },
+  floorLine: {
+    position: "absolute",
+    bottom: 28,
+    left: "10%",
+    right: "10%",
+    height: 1,
+  },
+
+  heroImg: { flex: 1, width: "100%" },
+  heroPlaceholder: { flex: 1, backgroundColor: COLORS.surfaceSecondary },
 
   /* Tap hint */
   tapPulse: {
