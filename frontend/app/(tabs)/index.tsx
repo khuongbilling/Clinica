@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Animated, Image, Modal, Pressable, StyleSheet, Text, View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, ENEMIES, HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
@@ -20,8 +19,6 @@ export default function RunHome() {
   const router = useRouter();
   const { player, loading } = usePlayer();
   const { logEvent } = useTestSession();
-  const insets = useSafeAreaInsets();
-
   const [showIntro, setShowIntro] = useState(false);
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -112,7 +109,7 @@ export default function RunHome() {
         />
 
         {/* ── TOP BAR ── */}
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top + SPACING.md, 52) }]}>
+        <View style={[styles.topBar, { paddingTop: SPACING.lg }]}>
           <View>
             <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
             <Text style={styles.playerName}>{player.name}</Text>
@@ -157,7 +154,7 @@ export default function RunHome() {
       </Pressable>
 
       {/* ── NAV SECTION — two compact icon buttons ── */}
-      <View style={[styles.navSection, { paddingBottom: insets.bottom + SPACING.lg }]}>
+      <View style={styles.navSection}>
 
         {/* Subtle separator line */}
         <View style={[styles.navDivider, { backgroundColor: elementColor + "30" }]} />
@@ -303,9 +300,10 @@ const styles = StyleSheet.create({
   navSection: {
     flex: 3,
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.lg,
-    justifyContent: "flex-start",
-    gap: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    justifyContent: "center",
+    gap: SPACING.sm,
   },
   navDivider: { height: 1, borderRadius: 1, marginBottom: SPACING.xs },
   iconRow: {
