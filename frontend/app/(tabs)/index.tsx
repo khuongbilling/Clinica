@@ -72,8 +72,8 @@ export default function RunHome() {
 
   return (
     <View style={styles.root}>
-      {/* ── PORTRAIT SECTION (top ~55%) ── */}
-      <View style={styles.portraitSection}>
+      {/* ── PORTRAIT SECTION (top ~55%) — tappable to change lead ── */}
+      <Pressable style={styles.portraitSection} onPress={() => router.push("/hero-select")} testID="home-portrait-tap">
         {heroSprite ? (
           <Image source={heroSprite} style={styles.portrait} resizeMode="cover" />
         ) : (
@@ -127,8 +127,12 @@ export default function RunHome() {
               {nextRank ? `${player.xp} / ${nextRank.xpRequired} XP` : "MAX RANK"}
             </Text>
           </View>
+          <View style={styles.changeBadge}>
+            <Ionicons name="swap-horizontal" size={11} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.changeTxt}>TAP TO CHANGE HERO</Text>
+          </View>
         </View>
-      </View>
+      </Pressable>
 
       {/* ── NAV SECTION (bottom ~45%) ── */}
       <View style={[styles.navSection, { paddingBottom: insets.bottom + SPACING.md }]}>
@@ -253,6 +257,8 @@ const styles = StyleSheet.create({
   },
   heroName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "500" },
   heroTitle: { color: COLORS.onSurfaceSecondary, fontSize: 12, letterSpacing: 0.5 },
+  changeBadge: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
+  changeTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1.5, fontWeight: "600" },
   xpRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: 4 },
   xpBg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
   xpFill: { height: "100%", backgroundColor: COLORS.brand },

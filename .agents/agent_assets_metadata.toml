@@ -60,3 +60,63 @@ id = "4lJ7FHarRC4Bo7LonJsvT"
 uri = "file://frontend/assets/heroes/mindkeeper.png"
 type = "image"
 title = "mindkeeper neurologist"
+
+[[generated]]
+id = "MjtGNnu9ptqX2vJ4VDSmO"
+uri = "file://frontend/assets/heroes/battle/novice_guardian.png"
+type = "image"
+title = "novice guardian chibi battle"
+
+[[generated]]
+id = "TGDaYK2pp8qofqqVXRb2D"
+uri = "file://frontend/assets/heroes/battle/night_watcher.png"
+type = "image"
+title = "night watcher chibi battle"
+
+[[generated]]
+id = "q6tAxJrbFvIX-EIRLYSLE"
+uri = "file://frontend/assets/heroes/battle/apprentice_seer.png"
+type = "image"
+title = "apprentice seer chibi battle"
+
+[[generated]]
+id = "7uS0Do3fhmt2DpuFaBSxX"
+uri = "file://frontend/assets/heroes/battle/junior_warden.png"
+type = "image"
+title = "junior warden chibi battle"
+
+[[generated]]
+id = "kBheRseJ7F2-q3-atncyM"
+uri = "file://frontend/assets/heroes/battle/data_acolyte.png"
+type = "image"
+title = "data acolyte chibi battle"
+
+[[generated]]
+id = "8Fw1Ze7vPCXYJf0_Gy6Ju"
+uri = "file://frontend/assets/heroes/battle/village_caretaker.png"
+type = "image"
+title = "village caretaker chibi battle"
+
+[[generated]]
+id = "Em61ZoafXakIjcKs3B22Y"
+uri = "file://frontend/assets/heroes/battle/storm_runner.png"
+type = "image"
+title = "storm runner chibi battle"
+
+[[generated]]
+id = "MH4TOKB37jERJMNU31DXX"
+uri = "file://frontend/assets/heroes/battle/infection_warden.png"
+type = "image"
+title = "infection warden chibi battle"
+
+[[generated]]
+id = "9Vg9Gj2x6zopCvv6wrzLS"
+uri = "file://frontend/assets/heroes/battle/wound_sage.png"
+type = "image"
+title = "wound sage chibi battle"
+
+[[generated]]
+id = "_WXp1OXyX4rLnZEiTjtyH"
+uri = "file://frontend/assets/heroes/battle/mindkeeper.png"
+type = "image"
+title = "mindkeeper chibi battle"
