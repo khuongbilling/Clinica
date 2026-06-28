@@ -83,47 +83,32 @@ export default function RunHome() {
         onPress={() => router.push("/hero-select")}
         testID="home-portrait-tap"
       >
-        {/* Element-tinted backdrop */}
-        <View style={[styles.elementBg, { backgroundColor: elementColor + "18" }]} />
-
-        {/* Breathing glow layer — element-colored radial behind the hero */}
-        <Animated.View
-          style={[
-            styles.elementGlow,
-            { backgroundColor: elementColor + "55", opacity: glowOpacity },
-          ]}
-        />
-
-        {/* Hero portrait — cover fills the frame so the character is always visible */}
+        {/* Hero portrait — always on a pure dark bg for maximum contrast */}
         {heroSprite ? (
           <Image source={heroSprite} style={styles.portrait} resizeMode="cover" />
         ) : (
           <View style={[styles.portrait, styles.portraitFallback]} />
         )}
 
-        {/* Edge-to-edge gradient: dark top, clear middle, dark bottom */}
+        {/* Gradient: slight top fade (for top-bar readability) + strong bottom fade */}
         <LinearGradient
           colors={[
-            "rgba(12,14,18,0.72)",
+            "rgba(12,14,18,0.55)",
             "rgba(12,14,18,0.0)",
             "rgba(12,14,18,0.0)",
-            "rgba(12,14,18,0.72)",
-            "rgba(12,14,18,0.98)",
+            "rgba(12,14,18,0.60)",
+            "rgba(12,14,18,1.0)",
           ]}
-          locations={[0, 0.12, 0.55, 0.82, 1]}
+          locations={[0, 0.18, 0.55, 0.78, 1]}
           style={StyleSheet.absoluteFillObject}
         />
 
-        {/* Element-color bottom flush to blend into nav */}
-        <LinearGradient
-          colors={[
-            "transparent",
-            elementColor + "18",
-            elementColor + "08",
-            "rgba(12,14,18,1.0)",
+        {/* Bottom-edge element glow — sits at feet level, pulses softly */}
+        <Animated.View
+          style={[
+            styles.elementGlow,
+            { backgroundColor: elementColor, opacity: glowOpacity },
           ]}
-          locations={[0.5, 0.75, 0.88, 1]}
-          style={StyleSheet.absoluteFillObject}
         />
 
         {/* ── TOP BAR ── */}
@@ -260,15 +245,14 @@ const styles = StyleSheet.create({
 
   /* ── PORTRAIT ── */
   portraitSection: { flex: 6, position: "relative", overflow: "hidden" },
-  elementBg: { ...StyleSheet.absoluteFillObject },
   elementGlow: {
     position: "absolute",
-    bottom: "15%",
-    left: "15%",
-    right: "15%",
-    height: "50%",
+    bottom: -40,
+    left: "-30%",
+    right: "-30%",
+    height: "30%",
     borderRadius: 999,
-    transform: [{ scaleX: 2.2 }],
+    transform: [{ scaleX: 1.8 }],
   },
   portrait: {
     position: "absolute",
