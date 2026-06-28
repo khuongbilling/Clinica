@@ -83,9 +83,9 @@ export default function RunHome() {
         onPress={() => router.push("/hero-select")}
         testID="home-portrait-tap"
       >
-        {/* Hero portrait — always on a pure dark bg for maximum contrast */}
+        {/* Hero portrait — contain shows the full body; dark bg ensures contrast */}
         {heroSprite ? (
-          <Image source={heroSprite} style={styles.portrait} resizeMode="cover" />
+          <Image source={heroSprite} style={styles.portrait} resizeMode="contain" />
         ) : (
           <View style={[styles.portrait, styles.portraitFallback]} />
         )}
