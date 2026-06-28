@@ -404,7 +404,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           </Text>
           <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"} size={11} color={COLORS.onSurfaceTertiary} />
         </Pressable>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clueRow}>
+        <View style={styles.clueRow}>
           {[...enemy.visibleClues, ...enemy.hiddenClues].map((c) => {
             const isVisible = state.visibleClues.includes(c.id);
             return (
@@ -423,7 +423,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
               </View>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* ── ZONE C: Team + AP + Tabs (~16% height) ── */}
@@ -667,13 +667,19 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
       {showBriefing && (
         <Pressable style={styles.briefingOverlay} onPress={dismissBriefing}>
-          <ScrollView contentContainerStyle={styles.briefingScroll} showsVerticalScrollIndicator={false}>
-            <Pressable onPress={(e) => e.stopPropagation()}>
+          {/* Inner: non-scrollable flex column so Enter Battle is always visible */}
+          <Pressable style={styles.briefingPanel} onPress={(e) => e.stopPropagation()}>
+            {/* Scrollable content area */}
+            <ScrollView
+              contentContainerStyle={styles.briefingScroll}
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+            >
               {isFirstBattle && (
                 <View style={styles.briefingClinica}>
                   <Text style={styles.briefingClinicaKicker}>ABOUT CLINICA</Text>
                   <Text style={styles.briefingClinicaText}>
-                    Clinica is a kingdom shaped like the human body. Disease corruption is spreading through the body systems. Your healer team must read clues, keep Patient Stability above 0, reduce Disease Corruption to 0, and restore each region.
+                    Read clues, keep Stability above 0, reduce Corruption to 0, restore each body region.
                   </Text>
                 </View>
               )}
@@ -716,12 +722,15 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                   <Text style={styles.briefingGoalText}>{g}</Text>
                 </View>
               ))}
+            </ScrollView>
+            {/* Sticky footer — always visible */}
+            <View style={styles.briefingFooter}>
               <Pressable style={styles.briefingEnterBtn} onPress={dismissBriefing} testID="briefing-enter">
                 <Text style={styles.briefingEnterTxt}>ENTER BATTLE</Text>
               </Pressable>
-              <Text style={styles.briefingDismissHint}>Tap anywhere to dismiss</Text>
-            </Pressable>
-          </ScrollView>
+              <Text style={styles.briefingDismissHint}>Tap anywhere outside to dismiss</Text>
+            </View>
+          </Pressable>
         </Pressable>
       )}
 
@@ -882,8 +891,8 @@ const styles = StyleSheet.create({
   },
   codexLabel: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 0.4, flex: 1, lineHeight: 13 },
   codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 9 },
-  clueRow: { gap: SPACING.sm, paddingVertical: 2 },
-  clue: { width: 90, height: 60, padding: SPACING.xs, borderRadius: 4, borderWidth: 1, gap: 2, backgroundColor: COLORS.surface },
+  clueRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs, paddingVertical: 2 },
+  clue: { flex: 1, minWidth: 80, maxWidth: 140, height: 58, padding: SPACING.xs, borderRadius: 4, borderWidth: 1, gap: 2, backgroundColor: COLORS.surface },
   clueVisible: { borderColor: COLORS.brand + "80", borderTopWidth: 2, borderTopColor: COLORS.brand + "CC" },
   clueHidden: { borderColor: COLORS.borderStrong, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
   clueLabel: { color: COLORS.onSurface, fontSize: 11, fontWeight: "600" },
@@ -973,8 +982,10 @@ const styles = StyleSheet.create({
   },
   feedbackText: { color: COLORS.brand, fontSize: 10, lineHeight: 14, flex: 1 },
 
-  briefingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.93)", zIndex: 100 },
-  briefingScroll: { padding: SPACING.lg, paddingTop: SPACING.xl, paddingBottom: SPACING.xxl },
+  briefingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.93)", zIndex: 100, justifyContent: "flex-end" },
+  briefingPanel: { maxHeight: "90%", backgroundColor: COLORS.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, overflow: "hidden", borderTopWidth: 1, borderColor: COLORS.brand + "40" },
+  briefingScroll: { padding: SPACING.lg, paddingTop: SPACING.md },
+  briefingFooter: { padding: SPACING.md, paddingBottom: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 6 },
   briefingClinica: {
     backgroundColor: COLORS.brand + "14", borderRadius: RADIUS.md,
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: SPACING.lg,
@@ -999,7 +1010,7 @@ const styles = StyleSheet.create({
   briefingGoalsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1.5, fontWeight: "700", marginBottom: 8 },
   briefingGoalRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
   briefingGoalText: { color: COLORS.onSurface, fontSize: 13, flex: 1 },
-  briefingEnterBtn: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", marginTop: SPACING.xl },
+  briefingEnterBtn: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
   briefingEnterTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
   briefingDismissHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, textAlign: "center", marginTop: SPACING.sm, fontStyle: "italic" },
 });

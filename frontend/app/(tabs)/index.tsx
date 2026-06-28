@@ -114,7 +114,7 @@ export default function RunHome() {
               ) : (
                 <>
                   <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceSecondary} />
-                  <Text style={styles.bossCtaLockedText} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={styles.bossCtaLockedText}>
                     COMPLETE 1 SHIFT TO UNLOCK
                   </Text>
                 </>
