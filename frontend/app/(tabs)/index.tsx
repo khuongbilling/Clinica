@@ -42,9 +42,9 @@ export default function RunHome() {
     setShowIntro(false);
   };
 
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.38] });
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.14, 0.42] });
 
-  if (!player) {
+  if (!player || loading) {
     return (
       <View style={{ flex: 1, backgroundColor: COLORS.surface }} />
     );
@@ -62,75 +62,112 @@ export default function RunHome() {
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
 
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
-  const bossColor = bossUnlocked ? COLORS.error : COLORS.onSurfaceTertiary;
-
-  const goToShift = () => {
-    logEvent("shifting_ward_opened", "home", {});
-    router.push("/shift");
-  };
 
   return (
     <View style={styles.root}>
 
-      {/* ── PORTRAIT SECTION (~75% of screen) ── */}
+      {/* ── COMPACT HEADER ── */}
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
+          <Text style={styles.playerName}>{player.name}</Text>
+        </View>
+        <Pressable
+          style={styles.topIconBtn}
+          onPress={() => router.push("/tutorial")}
+          hitSlop={10}
+          testID="run-tutorial-button"
+        >
+          <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
+        </Pressable>
+        {apt && (
+          <View style={[styles.aptBadge, { borderColor: apt.color + "60" }]}>
+            <Ionicons name={apt.icon as any} size={18} color={apt.color} />
+          </View>
+        )}
+      </View>
+
+      {/* ── HERO STAGE ── */}
       <Pressable
-        style={styles.portraitSection}
+        style={styles.heroStage}
         onPress={() => router.push("/hero-select")}
         testID="home-portrait-tap"
       >
-        {/* Hero portrait — contain shows the full body; dark bg ensures contrast */}
-        {heroSprite ? (
-          <Image source={heroSprite} style={styles.portrait} resizeMode="contain" />
-        ) : (
-          <View style={[styles.portrait, styles.portraitFallback]} />
-        )}
-
-        {/* Gradient: slight top fade (for top-bar readability) + strong bottom fade */}
+        {/* Background gradient */}
         <LinearGradient
           colors={[
+            "rgba(12,14,18,0.7)",
+            "rgba(12,14,18,0.0)",
+            "rgba(12,14,18,0.0)",
             "rgba(12,14,18,0.55)",
-            "rgba(12,14,18,0.0)",
-            "rgba(12,14,18,0.0)",
-            "rgba(12,14,18,0.60)",
             "rgba(12,14,18,1.0)",
           ]}
-          locations={[0, 0.18, 0.55, 0.78, 1]}
-          style={StyleSheet.absoluteFillObject}
+          locations={[0, 0.15, 0.55, 0.78, 1]}
+          style={[StyleSheet.absoluteFillObject, { pointerEvents: "none" } as any]}
         />
 
-        {/* Bottom-edge element glow — sits at feet level, pulses softly */}
+        {/* Element glow — bottom center */}
         <Animated.View
-          style={[
-            styles.elementGlow,
-            { backgroundColor: elementColor, opacity: glowOpacity },
-          ]}
+          style={[styles.elementGlow, { backgroundColor: elementColor, opacity: glowOpacity, pointerEvents: "none" } as any]}
         />
 
-        {/* ── TOP BAR ── */}
-        <View style={[styles.topBar, { paddingTop: SPACING.lg }]}>
-          <View>
-            <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
-            <Text style={styles.playerName}>{player.name}</Text>
-          </View>
-          <View style={styles.topBarRight}>
-            <Pressable
-              style={styles.topIconBtn}
-              onPress={() => router.push("/tutorial")}
-              hitSlop={10}
-              testID="run-tutorial-button"
-            >
-              <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
-            </Pressable>
-            {apt && (
-              <View style={[styles.aptBadge, { borderColor: apt.color + "60" }]}>
-                <Ionicons name={apt.icon as any} size={18} color={apt.color} />
-              </View>
-            )}
-          </View>
+        {/* ── FULL-BODY HERO IMAGE — centered, contain ── */}
+        {heroSprite ? (
+          <Image
+            source={heroSprite}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={styles.heroFallback} />
+        )}
+
+        {/* ── FLOATING ICONS — top row ── */}
+        <View style={[styles.floatTopLeft, { pointerEvents: "box-none" } as any]}>
+          <FloatIcon
+            icon="calendar-outline"
+            label="Events"
+            color={COLORS.air}
+            locked
+            lockText="Soon"
+            onPress={() => {}}
+          />
+        </View>
+        <View style={[styles.floatTopRight, { pointerEvents: "box-none" } as any]}>
+          <FloatIcon
+            icon={bossUnlocked ? "skull" : "lock-closed"}
+            label="Boss"
+            color={COLORS.error}
+            locked={!bossUnlocked}
+            lockText="1 run"
+            onPress={() => { if (bossUnlocked) router.push("/boss"); }}
+            testID="home-float-boss"
+          />
         </View>
 
-        {/* ── PORTRAIT FOOTER: hero name + XP + change hint ── */}
-        <View style={styles.portraitBottom}>
+        {/* ── FLOATING ICONS — middle row ── */}
+        <View style={[styles.floatMidLeft, { pointerEvents: "box-none" } as any]}>
+          <FloatIcon
+            icon="shield-checkmark-outline"
+            label="Daily"
+            color={COLORS.mind}
+            locked
+            lockText="Soon"
+            onPress={() => {}}
+          />
+        </View>
+        <View style={[styles.floatMidRight, { pointerEvents: "box-none" } as any]}>
+          <FloatIcon
+            icon="sparkles"
+            label="Summon"
+            color={COLORS.brand}
+            onPress={() => router.push("/summon")}
+            testID="home-float-summon"
+          />
+        </View>
+
+        {/* ── HERO INFO OVERLAY — bottom of stage ── */}
+        <View style={[styles.heroInfoOverlay, { pointerEvents: "none" } as any]}>
           <View style={[styles.elementChip, { borderColor: elementColor + "70", backgroundColor: elementColor + "18" }]}>
             <Text style={[styles.elementChipTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
           </View>
@@ -151,52 +188,16 @@ export default function RunHome() {
         </View>
       </Pressable>
 
-      {/* ── NAV SECTION — two compact icon buttons ── */}
-      <View style={styles.navSection}>
-
-        {/* Subtle separator line */}
-        <View style={[styles.navDivider, { backgroundColor: elementColor + "30" }]} />
-
-        <View style={styles.iconRow}>
-
-          {/* Shifting Ward — encounter selection */}
-          <Pressable style={styles.iconBtn} onPress={goToShift} testID="run-random-encounter">
-            <View style={[styles.iconCircle, { backgroundColor: COLORS.mind + "22", borderColor: COLORS.mind + "55" }]}>
-              <Ionicons name="medical" size={26} color={COLORS.mind} />
-            </View>
-            <Text style={styles.iconLabel}>Shifting Ward</Text>
-            <Text style={styles.iconSub}>Choose your case</Text>
-          </Pressable>
-
-          {/* Vertical rule */}
-          <View style={styles.iconSep} />
-
-          {/* Fading Core — boss */}
-          <Pressable
-            style={[styles.iconBtn, !bossUnlocked && styles.iconBtnLocked]}
-            onPress={() => router.push("/boss")}
-            testID="run-boss-card"
-          >
-            <View style={[
-              styles.iconCircle,
-              { backgroundColor: bossColor + "22", borderColor: bossColor + "55" },
-            ]}>
-              <Ionicons
-                name={bossUnlocked ? "skull" : "lock-closed"}
-                size={26}
-                color={bossColor}
-              />
-            </View>
-            <Text style={[styles.iconLabel, !bossUnlocked && styles.iconLabelLocked]}>
-              Fading Core
-            </Text>
-            <Text style={styles.iconSub}>
-              {bossUnlocked ? "Chapter I boss" : "1 run to unlock"}
-            </Text>
-          </Pressable>
-
-        </View>
-      </View>
+      {/* ── PRIMARY ACTION BUTTON ── */}
+      <Pressable
+        style={styles.startBtn}
+        onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
+        testID="run-random-encounter"
+      >
+        <Ionicons name="medical" size={20} color={COLORS.onBrand} />
+        <Text style={styles.startBtnTxt}>START SHIFT</Text>
+        <Ionicons name="arrow-forward" size={18} color={COLORS.onBrand} />
+      </Pressable>
 
       {/* ── ABOUT CLINICA — one-time intro popup ── */}
       <Modal visible={showIntro} transparent animationType="slide" statusBarTranslucent>
@@ -235,11 +236,76 @@ export default function RunHome() {
   );
 }
 
+function FloatIcon({
+  icon, label, color, locked, lockText, onPress, testID,
+}: {
+  icon: string; label: string; color: string;
+  locked?: boolean; lockText?: string;
+  onPress: () => void; testID?: string;
+}) {
+  return (
+    <Pressable
+      style={[styles.floatBtn, locked && styles.floatBtnLocked]}
+      onPress={onPress}
+      testID={testID}
+      hitSlop={6}
+    >
+      <View style={[styles.floatCircle, { borderColor: (locked ? COLORS.border : color) + "80", backgroundColor: locked ? "rgba(12,14,18,0.75)" : color + "22" }]}>
+        <Ionicons name={icon as any} size={20} color={locked ? COLORS.onSurfaceTertiary : color} />
+      </View>
+      <Text style={[styles.floatLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
+      {locked && lockText && (
+        <Text style={styles.floatLock}>{lockText}</Text>
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
 
-  /* ── PORTRAIT ── */
-  portraitSection: { flex: 6, position: "relative", overflow: "hidden" },
+  /* ── HEADER ── */
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
+  rankKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  playerName: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", marginTop: 2 },
+  topIconBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "rgba(12,14,18,0.6)",
+    alignItems: "center", justifyContent: "center",
+  },
+  aptBadge: {
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(12,14,18,0.6)",
+  },
+
+  /* ── HERO STAGE ── */
+  heroStage: {
+    flex: 1,
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  heroImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroFallback: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+
   elementGlow: {
     position: "absolute",
     bottom: -40,
@@ -248,35 +314,34 @@ const styles = StyleSheet.create({
     height: "30%",
     borderRadius: 999,
     transform: [{ scaleX: 1.8 }],
+    zIndex: 0,
   },
-  portrait: {
+
+  /* ── FLOATING ICONS ── */
+  floatTopLeft: { position: "absolute", top: "14%", left: SPACING.lg, zIndex: 10 },
+  floatTopRight: { position: "absolute", top: "14%", right: SPACING.lg, zIndex: 10 },
+  floatMidLeft: { position: "absolute", top: "44%", left: SPACING.lg, zIndex: 10 },
+  floatMidRight: { position: "absolute", top: "44%", right: SPACING.lg, zIndex: 10 },
+
+  floatBtn: { alignItems: "center", gap: 4 },
+  floatBtnLocked: { opacity: 0.65 },
+  floatCircle: {
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(12,14,18,0.72)",
+  },
+  floatLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5, textAlign: "center" },
+  floatLock: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.3, textAlign: "center" },
+
+  /* ── HERO INFO OVERLAY ── */
+  heroInfoOverlay: {
     position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-  },
-  portraitFallback: { backgroundColor: COLORS.surfaceSecondary },
-
-  topBar: {
-    position: "absolute", top: 0, left: 0, right: 0,
-    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
-    paddingHorizontal: SPACING.lg,
-  },
-  rankKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  playerName: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", marginTop: 2 },
-  topBarRight: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  topIconBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: "rgba(12,14,18,0.6)",
-    alignItems: "center", justifyContent: "center",
-  },
-  aptBadge: {
-    width: 38, height: 38, borderRadius: 19, borderWidth: 1,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(12,14,18,0.6)",
-  },
-
-  portraitBottom: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    paddingHorizontal: SPACING.xl, paddingBottom: SPACING.xl, gap: 5,
+    bottom: 0, left: 0, right: 0,
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.lg,
+    gap: 5,
+    zIndex: 5,
   },
   elementChip: {
     alignSelf: "flex-start",
@@ -287,61 +352,26 @@ const styles = StyleSheet.create({
   elementChipTxt: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
   heroName: { color: COLORS.onSurface, fontSize: 24, fontWeight: "500" },
   heroTitle: { color: COLORS.onSurfaceSecondary, fontSize: 12, letterSpacing: 0.5 },
-  changeBadge: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  changeTxt: { fontSize: 9, letterSpacing: 1.5, fontWeight: "600" },
   xpRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: 4 },
   xpBg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
   xpFill: { height: "100%" },
   xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 1, minWidth: 70, textAlign: "right" },
+  changeBadge: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  changeTxt: { fontSize: 9, letterSpacing: 1.5, fontWeight: "600" },
 
-  /* ── NAV ── */
-  navSection: {
-    flex: 3,
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
+  /* ── PRIMARY ACTION ── */
+  startBtn: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
     gap: SPACING.sm,
+    backgroundColor: COLORS.brand,
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md + 2,
   },
-  navDivider: { height: 1, borderRadius: 1, marginBottom: SPACING.xs },
-  iconRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    gap: 0,
-  },
-  iconBtn: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: SPACING.sm,
-  },
-  iconBtnLocked: { opacity: 0.55 },
-  iconCircle: {
-    width: 64, height: 64,
-    borderRadius: 32,
-    borderWidth: 1.5,
-    alignItems: "center", justifyContent: "center",
-  },
-  iconLabel: {
-    color: COLORS.onSurface,
-    fontSize: 13, fontWeight: "600",
-    textAlign: "center",
-  },
-  iconLabelLocked: { color: COLORS.onSurfaceTertiary },
-  iconSub: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 15,
-  },
-  iconSep: {
-    width: 1,
-    height: 60,
-    backgroundColor: COLORS.border,
-    marginTop: SPACING.sm,
-    alignSelf: "center",
-  },
+  startBtnTxt: { color: COLORS.onBrand, fontSize: 15, fontWeight: "700", letterSpacing: 2 },
 
   /* ── INTRO MODAL ── */
   introOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.88)", justifyContent: "flex-end" },
