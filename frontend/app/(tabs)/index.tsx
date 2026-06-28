@@ -1,21 +1,39 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Image, Modal, Pressable, ScrollView, StyleSheet, Text, View,
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import { APTITUDE_INFO, BOSS_LORD_IMBALANCE, ENEMIES, RANKS } from "@/src/game/content";
-import { getEnemySprite } from "@/src/components/EnemySprites";
+import { APTITUDE_INFO, BOSS_LORD_IMBALANCE, ENEMIES, HEROES, RANKS } from "@/src/game/content";
+import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+
+const INTRO_KEY = "clinica.intro.seen";
 
 export default function RunHome() {
   const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
+  const insets = useSafeAreaInsets();
+
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(INTRO_KEY).then((val) => {
+      if (!val) setShowIntro(true);
+    });
+  }, []);
+
+  const dismissIntro = async () => {
+    await AsyncStorage.setItem(INTRO_KEY, "1");
+    setShowIntro(false);
+  };
 
   const dailyShift = useMemo(() => {
     if (!player) return [];
@@ -31,193 +49,267 @@ export default function RunHome() {
   }, [player]);
 
   if (!player) return null;
+
   const apt = APTITUDE_INFO[player.aptitude];
   const nextRank = RANKS[player.rank_index + 1];
-  const progress = nextRank ? Math.min(1, (player.xp - RANKS[player.rank_index].xpRequired) / (nextRank.xpRequired - RANKS[player.rank_index].xpRequired)) : 1;
-  const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
+  const progress = nextRank
+    ? Math.min(1, (player.xp - RANKS[player.rank_index].xpRequired) / (nextRank.xpRequired - RANKS[player.rank_index].xpRequired))
+    : 1;
 
-  const launchEncounter = (enemyId: string) => {
-    if ((player?.runs_completed ?? 0) > 0) {
-      logEvent('second_battle_started', 'home', { meta: { enemyId, runsCompleted: player?.runs_completed } });
-    }
-    router.push({ pathname: "/battle", params: { enemyId } });
+  const leadHeroId = player.active_team?.[0] ?? "novice_guardian";
+  const leadHero = HEROES.find((h) => h.id === leadHeroId);
+  const heroSprite = getHeroSprite(leadHeroId);
+
+  const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
+  const shiftsToday = dailyShift.length;
+
+  const launchRandom = () => {
+    const pool = ENEMIES.filter((e) => e.difficulty <= 3);
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    logEvent("random_encounter_started", "home", { meta: { enemyId: pick.id } });
+    router.push({ pathname: "/battle", params: { enemyId: pick.id } });
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Player header */}
-        <View style={styles.header}>
+    <View style={styles.root}>
+      {/* ── PORTRAIT SECTION (top ~55%) ── */}
+      <View style={styles.portraitSection}>
+        {heroSprite ? (
+          <Image source={heroSprite} style={styles.portrait} resizeMode="cover" />
+        ) : (
+          <View style={[styles.portrait, styles.portraitFallback]} />
+        )}
+
+        <LinearGradient
+          colors={[
+            "rgba(12,14,18,0.55)",
+            "rgba(12,14,18,0.0)",
+            "rgba(12,14,18,0.0)",
+            "rgba(12,14,18,0.80)",
+            "rgba(12,14,18,1.0)",
+          ]}
+          locations={[0, 0.15, 0.5, 0.80, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        {/* Top bar */}
+        <View style={[styles.topBar, { paddingTop: insets.top + SPACING.sm }]}>
           <View>
-            <Text style={styles.kicker}>{apt.title.toUpperCase()} · {player.rank.toUpperCase()}</Text>
-            <Text style={styles.welcome}>{player.name}</Text>
+            <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
+            <Text style={styles.playerName}>{player.name}</Text>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+          <View style={styles.topBarRight}>
             <Pressable
+              style={styles.iconBtn}
               onPress={() => router.push("/tutorial")}
-              style={styles.helpBtn}
               hitSlop={10}
               testID="run-tutorial-button"
             >
-              <Ionicons name="help-circle-outline" size={24} color={COLORS.onSurfaceSecondary} />
+              <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
             </Pressable>
-            <View style={[styles.aptBadge, { borderColor: apt.color }]}>
-              <Ionicons name={apt.icon as any} size={20} color={apt.color} />
-            </View>
-          </View>
-        </View>
-
-        {/* XP bar */}
-        <View style={styles.xpRow}>
-          <View style={styles.xpBarBg}>
-            <View style={[styles.xpBarFill, { width: `${progress * 100}%` }]} />
-          </View>
-          <Text style={styles.xpText}>{nextRank ? `${player.xp} / ${nextRank.xpRequired} XP` : "MAX RANK"}</Text>
-        </View>
-
-        {/* Boss card */}
-        <Pressable
-          style={styles.bossCard}
-          onPress={() => bossUnlocked && launchEncounter(BOSS_LORD_IMBALANCE.id)}
-          disabled={!bossUnlocked}
-          testID="run-boss-card"
-        >
-          <Image
-            source={getEnemySprite(BOSS_LORD_IMBALANCE.id) || { uri: "https://images.pexels.com/photos/27987438/pexels-photo-27987438.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940" }}
-            style={StyleSheet.absoluteFillObject}
-            blurRadius={1}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={["rgba(17,19,21,0.2)", "rgba(17,19,21,0.95)"]}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.bossInner}>
-            <Text style={styles.bossKicker}>CHAPTER I BOSS</Text>
-            <Text style={styles.bossName}>{BOSS_LORD_IMBALANCE.name}</Text>
-            <Text style={styles.bossDesc}>
-              Multi-system collapse. Air, River, Mind all faltering. Choose what matters most.
-            </Text>
-            <View style={styles.bossMeta}>
-              <View style={styles.metaPill}><Text style={styles.metaTxt}>★ {BOSS_LORD_IMBALANCE.difficulty}/5</Text></View>
-              <View style={styles.metaPill}><Text style={styles.metaTxt}>5 STAGES</Text></View>
-              <View style={[styles.metaPill, { backgroundColor: ELEMENT_COLORS[BOSS_LORD_IMBALANCE.primarySystem] + "30" }]}>
-                <Text style={[styles.metaTxt, { color: ELEMENT_COLORS[BOSS_LORD_IMBALANCE.primarySystem] }]}>{BOSS_LORD_IMBALANCE.primarySystem.toUpperCase()}</Text>
+            {apt && (
+              <View style={[styles.aptBadge, { borderColor: apt.color + "60" }]}>
+                <Ionicons name={apt.icon as any} size={18} color={apt.color} />
               </View>
-            </View>
-            <View style={[styles.bossCta, !bossUnlocked && styles.bossCtaLocked]}>
-              {bossUnlocked ? (
-                <>
-                  <Text style={styles.bossCtaText} numberOfLines={1}>ENTER THE FADING CORE</Text>
-                  <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
-                </>
-              ) : (
-                <>
-                  <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceSecondary} />
-                  <Text style={styles.bossCtaLockedText}>
-                    COMPLETE 1 SHIFT TO UNLOCK
-                  </Text>
-                </>
-              )}
-            </View>
+            )}
           </View>
+        </View>
+
+        {/* Bottom of portrait: hero label + XP */}
+        <View style={styles.portraitBottom}>
+          <Text style={styles.heroName}>{leadHero?.name ?? "Your Hero"}</Text>
+          <Text style={styles.heroTitle}>{leadHero?.title ?? apt?.title}</Text>
+          <View style={styles.xpRow}>
+            <View style={styles.xpBg}>
+              <View style={[styles.xpFill, { width: `${progress * 100}%` as any }]} />
+            </View>
+            <Text style={styles.xpTxt}>
+              {nextRank ? `${player.xp} / ${nextRank.xpRequired} XP` : "MAX RANK"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── NAV SECTION (bottom ~45%) ── */}
+      <View style={[styles.navSection, { paddingBottom: insets.bottom + SPACING.md }]}>
+
+        {/* Primary tile: Today's Shift */}
+        <Pressable style={styles.primaryTile} onPress={() => router.push("/shift")} testID="run-daily-shift">
+          <View style={[styles.primaryIconWrap, { borderColor: COLORS.brand + "40" }]}>
+            <Ionicons name="flame" size={30} color={COLORS.brand} />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.primaryKicker}>DAILY DUTY</Text>
+            <Text style={styles.primaryTitle}>Today's Shift</Text>
+            <Text style={styles.primarySub}>{shiftsToday} encounters · {player.runs_completed} runs completed</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.onSurfaceTertiary} />
         </Pressable>
 
-        {/* Daily shift */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{"Today's Shift"}</Text>
-          <Text style={styles.sectionSub}>3 encounters · {player.runs_completed} runs completed</Text>
-        </View>
+        {/* Secondary row: Random + Boss */}
+        <View style={styles.secondaryRow}>
 
-        {dailyShift.map((e, idx) => (
-          <Pressable
-            key={e.id + idx}
-            style={styles.encCard}
-            onPress={() => launchEncounter(e.id)}
-            testID={`run-encounter-${e.id}`}
-          >
-            {getEnemySprite(e.id) ? (
-              <View style={[styles.encThumbWrap, { borderColor: ELEMENT_COLORS[e.primarySystem] + "AA" }]}>
-                <Image source={getEnemySprite(e.id)!} style={styles.encThumb} resizeMode="cover" />
-              </View>
-            ) : (
-              <View style={[styles.encDot, { backgroundColor: ELEMENT_COLORS[e.primarySystem] }]} />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.encName}>{e.name}</Text>
-              <Text style={styles.encReal}>{e.realWorld}</Text>
-              <View style={styles.encMeta}>
-                <Text style={[styles.encSys, { color: ELEMENT_COLORS[e.primarySystem] }]}>{e.primarySystem.toUpperCase()}</Text>
-                {e.secondarySystem && (
-                  <>
-                    <Text style={styles.encDot2}>·</Text>
-                    <Text style={[styles.encSys, { color: ELEMENT_COLORS[e.secondarySystem] }]}>{e.secondarySystem.toUpperCase()}</Text>
-                  </>
-                )}
-                <Text style={styles.encDot2}>·</Text>
-                <Text style={styles.encDiff}>★{e.difficulty}</Text>
-              </View>
+          {/* Random encounter */}
+          <Pressable style={styles.secTile} onPress={launchRandom} testID="run-random-encounter">
+            <View style={[styles.secIconWrap, { backgroundColor: COLORS.mind + "18" }]}>
+              <Ionicons name="shuffle" size={22} color={COLORS.mind} />
             </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.secTitle}>Shifting Ward</Text>
+            <Text style={styles.secSub}>Mystery encounter</Text>
+            <View style={[styles.secTag, { borderColor: COLORS.mind + "40" }]}>
+              <Text style={[styles.secTagTxt, { color: COLORS.mind }]}>RANDOM</Text>
+            </View>
           </Pressable>
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+
+          {/* Boss */}
+          <Pressable
+            style={[styles.secTile, !bossUnlocked && styles.secTileLocked]}
+            onPress={() => router.push("/boss")}
+            testID="run-boss-card"
+          >
+            <View style={[
+              styles.secIconWrap,
+              { backgroundColor: bossUnlocked ? COLORS.error + "18" : COLORS.surfaceTertiary }
+            ]}>
+              <Ionicons
+                name={bossUnlocked ? "skull" : "lock-closed"}
+                size={22}
+                color={bossUnlocked ? COLORS.error : COLORS.onSurfaceTertiary}
+              />
+            </View>
+            <Text style={[styles.secTitle, !bossUnlocked && styles.lockedText]}>
+              Fading Core
+            </Text>
+            <Text style={styles.secSub}>
+              {bossUnlocked ? "Chapter I boss" : "1 shift to unlock"}
+            </Text>
+            {bossUnlocked && (
+              <View style={[styles.secTag, { borderColor: COLORS.error + "40" }]}>
+                <Text style={[styles.secTagTxt, { color: COLORS.error }]}>BOSS</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+      </View>
+
+      {/* ── ABOUT CLINICA — one-time intro popup ── */}
+      <Modal visible={showIntro} transparent animationType="slide" statusBarTranslucent>
+        <View style={styles.introOverlay}>
+          <View style={styles.introPanel}>
+            <View style={styles.introHandle} />
+            <Text style={styles.introKicker}>A KINGDOM SHAPED LIKE THE BODY</Text>
+            <Text style={styles.introTitle}>Welcome to Clinica</Text>
+            <Text style={styles.introBody}>
+              Five great regions — Air, River, Fire, Mind, Stone — each a living body system. Disease corruption spreads through them all.{"\n\n"}
+              Your healer team reads patient clues, keeps Stability above zero, and drives Corruption to zero.{"\n\n"}
+              <Text style={{ color: COLORS.brand }}>Fight disease. Restore the body. Learn medicine through play.</Text>
+            </Text>
+            <View style={styles.introSystemRow}>
+              {[
+                { name: "Air", desc: "Lungs", color: COLORS.air },
+                { name: "River", desc: "Heart", color: COLORS.river },
+                { name: "Fire", desc: "Immune", color: COLORS.fire },
+                { name: "Mind", desc: "Neuro", color: COLORS.mind },
+                { name: "Stone", desc: "Bone", color: COLORS.forge },
+              ].map((s) => (
+                <View key={s.name} style={styles.introSysPill}>
+                  <View style={[styles.introSysDot, { backgroundColor: s.color }]} />
+                  <Text style={[styles.introSysName, { color: s.color }]}>{s.name}</Text>
+                  <Text style={styles.introSysDesc}>{s.desc}</Text>
+                </View>
+              ))}
+            </View>
+            <Pressable style={styles.introCta} onPress={dismissIntro} testID="intro-dismiss">
+              <Text style={styles.introCtaTxt}>BEGIN THE JOURNEY</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.surface },
-  scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "600" },
-  welcome: { color: COLORS.onSurface, fontSize: 26, fontWeight: "400", marginTop: 4 },
-  aptBadge: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary },
-  helpBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: COLORS.surfaceSecondary },
-  xpRow: { gap: 6 },
-  xpBarBg: { height: 6, borderRadius: 3, backgroundColor: COLORS.surfaceSecondary, overflow: "hidden" },
-  xpBarFill: { height: "100%", backgroundColor: COLORS.brand },
-  xpText: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 1 },
+  root: { flex: 1, backgroundColor: COLORS.surface },
 
-  bossCard: {
-    height: 210, borderRadius: RADIUS.lg, overflow: "hidden",
-    borderWidth: 1, borderColor: COLORS.brandTertiary,
-  },
-  bossInner: { flex: 1, padding: SPACING.lg, justifyContent: "flex-end", gap: SPACING.sm },
-  bossKicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 3, fontWeight: "700" },
-  bossName: { color: COLORS.onSurface, fontSize: 30, fontWeight: "300" },
-  bossDesc: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18 },
-  bossMeta: { flexDirection: "row", gap: SPACING.sm, marginTop: 4 },
-  metaPill: { backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
-  metaTxt: { color: COLORS.onSurface, fontSize: 10, letterSpacing: 1, fontWeight: "600" },
-  bossCta: {
-    flexDirection: "row", backgroundColor: COLORS.brand, alignItems: "center", justifyContent: "center",
-    paddingVertical: 12, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, gap: SPACING.sm, marginTop: SPACING.sm,
-  },
-  bossCtaLocked: {
-    backgroundColor: COLORS.surfaceTertiary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  bossCtaText: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2, textAlign: "center", flexShrink: 1 },
-  bossCtaLockedText: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.5, textAlign: "center", flexShrink: 1 },
+  portraitSection: { flex: 6, position: "relative", overflow: "hidden" },
+  portrait: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  portraitFallback: { backgroundColor: COLORS.surfaceSecondary },
 
-  sectionHeader: { gap: 4, marginTop: SPACING.sm },
-  sectionTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "400" },
-  sectionSub: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  topBar: {
+    position: "absolute", top: 0, left: 0, right: 0,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
+    paddingHorizontal: SPACING.lg,
+  },
+  rankKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  playerName: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", marginTop: 2 },
+  topBarRight: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(12,14,18,0.6)", alignItems: "center", justifyContent: "center" },
+  aptBadge: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(12,14,18,0.6)" },
 
-  encCard: {
+  portraitBottom: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg, gap: 4,
+  },
+  heroName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "500" },
+  heroTitle: { color: COLORS.onSurfaceSecondary, fontSize: 12, letterSpacing: 0.5 },
+  xpRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: 4 },
+  xpBg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
+  xpFill: { height: "100%", backgroundColor: COLORS.brand },
+  xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 1, minWidth: 70, textAlign: "right" },
+
+  navSection: { flex: 5, paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, gap: SPACING.sm },
+
+  primaryTile: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.brand + "30",
+    borderLeftWidth: 3, borderLeftColor: COLORS.brand,
   },
-  encDot: { width: 8, height: 56, borderRadius: 4 },
-  encThumbWrap: { width: 56, height: 56, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary },
-  encThumb: { width: "100%", height: "100%" },
-  encName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "500" },
-  encReal: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
-  encMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
-  encSys: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
-  encDot2: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
-  encDiff: { color: COLORS.brand, fontSize: 10, fontWeight: "700" },
+  primaryIconWrap: { width: 52, height: 52, borderRadius: RADIUS.md, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.brand + "14" },
+  primaryKicker: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  primaryTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: "500" },
+  primarySub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
+
+  secondaryRow: { flexDirection: "row", gap: SPACING.sm, flex: 1 },
+
+  secTile: {
+    flex: 1, backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg, padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border,
+    gap: 4, justifyContent: "flex-start",
+  },
+  secTileLocked: { opacity: 0.6 },
+  secIconWrap: { width: 44, height: 44, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", marginBottom: 2 },
+  secTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "500" },
+  lockedText: { color: COLORS.onSurfaceTertiary },
+  secSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
+  secTag: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2, marginTop: 2 },
+  secTagTxt: { fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+
+  introOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.88)", justifyContent: "flex-end" },
+  introPanel: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: SPACING.xl,
+    paddingBottom: SPACING.xxxl,
+    borderTopWidth: 1, borderColor: COLORS.brand + "40",
+    gap: SPACING.md,
+  },
+  introHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: "center", marginBottom: SPACING.sm },
+  introKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  introTitle: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300", marginTop: -4 },
+  introBody: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22 },
+  introSystemRow: { flexDirection: "row", gap: SPACING.xs, flexWrap: "wrap" },
+  introSysPill: { alignItems: "center", gap: 3, minWidth: 46 },
+  introSysDot: { width: 8, height: 8, borderRadius: 4 },
+  introSysName: { fontSize: 11, fontWeight: "700" },
+  introSysDesc: { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+  introCta: {
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md, alignItems: "center", marginTop: SPACING.sm,
+  },
+  introCtaTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
 });

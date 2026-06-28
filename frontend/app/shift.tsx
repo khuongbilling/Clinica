@@ -1,0 +1,139 @@
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useMemo } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { ENEMIES } from "@/src/game/content";
+import { getEnemySprite } from "@/src/components/EnemySprites";
+import { usePlayer } from "@/src/game/store";
+import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+
+export default function ShiftPage() {
+  const router = useRouter();
+  const { player } = usePlayer();
+
+  const dailyShift = useMemo(() => {
+    if (!player) return [];
+    const starters = ENEMIES.filter((e) => e.difficulty <= 2);
+    const advanced = ENEMIES.filter((e) => e.difficulty >= 3);
+    const seed = (player.runs_completed || 0) % 5;
+    const seed2 = (seed + 2) % 5;
+    return [
+      starters[seed % starters.length],
+      starters[(seed + 1) % starters.length],
+      advanced[seed2 % advanced.length],
+    ];
+  }, [player]);
+
+  if (!player) return null;
+
+  const launchEncounter = (enemyId: string) => {
+    router.push({ pathname: "/battle", params: { enemyId } });
+  };
+
+  return (
+    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.kicker}>DAILY DUTY</Text>
+          <Text style={styles.title}>Today's Shift</Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={styles.lead}>
+          The ward calls. Three cases await — each one a disease to confront, a patient to stabilize. Choose your encounter.
+        </Text>
+
+        {dailyShift.map((e, idx) => {
+          const sprite = getEnemySprite(e.id);
+          const accent = ELEMENT_COLORS[e.primarySystem] ?? COLORS.brand;
+          return (
+            <Pressable
+              key={e.id + idx}
+              style={styles.card}
+              onPress={() => launchEncounter(e.id)}
+              testID={`shift-encounter-${e.id}`}
+            >
+              {sprite ? (
+                <View style={[styles.cardThumb, { borderColor: accent + "80" }]}>
+                  <Image source={sprite} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                  <LinearGradient
+                    colors={["transparent", "rgba(12,14,18,0.7)"]}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                </View>
+              ) : (
+                <View style={[styles.cardThumb, { backgroundColor: accent + "20", borderColor: accent + "60" }]}>
+                  <Ionicons name="medical" size={28} color={accent} />
+                </View>
+              )}
+              <View style={{ flex: 1, gap: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[styles.cardSys, { color: accent }]}>{e.primarySystem.toUpperCase()}</Text>
+                  {e.secondarySystem && (
+                    <Text style={[styles.cardSys, { color: ELEMENT_COLORS[e.secondarySystem] + "AA" }]}>
+                      · {e.secondarySystem.toUpperCase()}
+                    </Text>
+                  )}
+                  <View style={styles.diffRow}>
+                    {Array.from({ length: e.difficulty }).map((_, i) => (
+                      <Ionicons key={i} name="star" size={8} color={COLORS.brand} />
+                    ))}
+                  </View>
+                </View>
+                <Text style={styles.cardName}>{e.name}</Text>
+                <Text style={styles.cardReal}>{e.realWorld}</Text>
+              </View>
+              <View style={[styles.enterBtn, { borderColor: accent + "60" }]}>
+                <Ionicons name="enter-outline" size={18} color={accent} />
+              </View>
+            </Pressable>
+          );
+        })}
+
+        <View style={styles.footNote}>
+          <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
+          <Text style={styles.footNoteTxt}>
+            Shifts refresh as you complete runs. Complete all 3 to advance the kingdom.
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: COLORS.surface },
+  header: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.sm },
+  backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surfaceSecondary, alignItems: "center", justifyContent: "center" },
+  kicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
+  scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.sm },
+  card: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg, padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  cardThumb: {
+    width: 72, height: 80, borderRadius: RADIUS.md,
+    overflow: "hidden", borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: COLORS.surfaceTertiary,
+  },
+  cardSys: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  diffRow: { flexDirection: "row", gap: 2, marginLeft: 2 },
+  cardName: { color: COLORS.onSurface, fontSize: 17, fontWeight: "500" },
+  cardReal: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  enterBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
+  footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
+  footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },
+});
