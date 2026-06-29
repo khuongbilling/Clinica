@@ -117,7 +117,6 @@ export default function RunHome() {
   const { logEvent } = useTestSession();
   const [showIntro, setShowIntro] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const shimAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
@@ -128,10 +127,6 @@ export default function RunHome() {
       Animated.timing(pulseAnim, { toValue: 0.25, duration: 850, useNativeDriver: false }),
       Animated.timing(pulseAnim, { toValue: 1,    duration: 850, useNativeDriver: false }),
       Animated.delay(1600),
-    ])).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(shimAnim, { toValue: 1, duration: 3200, useNativeDriver: false }),
-      Animated.timing(shimAnim, { toValue: 0, duration: 3200, useNativeDriver: false }),
     ])).start();
   }, []);
 
@@ -159,7 +154,6 @@ export default function RunHome() {
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
-  const floorOpacity = shimAnim.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.7] });
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -198,7 +192,6 @@ export default function RunHome() {
         <SceneBg
           element={leadHero?.element ?? "River"}
           scene={scene}
-          floorOpacity={floorOpacity}
         />
 
         {/* ══ SIDE COLUMNS + HERO sit on top of background ══ */}
@@ -337,284 +330,350 @@ export default function RunHome() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SCENIC BACKGROUNDS — one per element
-   All shapes are absolute-positioned Views/LinearGradients.
+   SCENIC BACKGROUNDS — lore-themed environments (anime/donghua style)
+   Each scene is a distinct location: hospital ward, garden pavilion,
+   alchemical forge, neuro lab, ancient temple.
    ══════════════════════════════════════════════════════════ */
 
-type SceneProps = { o: string; a: string }; // orb1 color, accent color
+type SceneProps = { o: string; a: string };
 
-/** Cardiac Ward — Hospital Cathedral. Stone columns, gothic arch window. */
+/** Hospital Night Ward — modern clinic after dark. Cardiac monitors, city window, IV pole, bed. */
 function CardiacWardScene({ o, a }: SceneProps) {
-  const COL = "#030d18";
   return (
     <>
-      {/* Stone column — left */}
-      <View style={[sc.col, { left: 0, width: "19%" }]} />
-      <View style={{ position: "absolute", left: "19%", top: 0, bottom: 0, width: 1, backgroundColor: o + "35" }} />
-      {/* Stone column — right */}
-      <View style={[sc.col, { right: 0, width: "19%" }]} />
-      <View style={{ position: "absolute", right: "19%", top: 0, bottom: 0, width: 1, backgroundColor: o + "35" }} />
+      {/* Dark hospital wall */}
+      <LinearGradient colors={["#0a1624", "#0d1a2c", "#0a1420"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFillObject} />
+      {/* Dado rail stripe */}
+      <View style={{ position: "absolute", top: "62%", left: 0, right: 0, height: 1.5, backgroundColor: "#1e2d3e" }} />
+      <View style={{ position: "absolute", top: "62%", left: 0, right: 0, height: "8%", backgroundColor: "#080f1a" }} />
 
-      {/* Column capitals (wider top block) */}
-      <View style={{ position: "absolute", left: 0, top: 0, width: "22%", height: "6%", backgroundColor: COL + "CC" }} />
-      <View style={{ position: "absolute", right: 0, top: 0, width: "22%", height: "6%", backgroundColor: COL + "CC" }} />
+      {/* Ceiling fluorescent panels */}
+      <View style={{ position: "absolute", top: "3%", left: "18%", width: "30%", height: "2.5%", backgroundColor: "#b8dcee", borderRadius: 2, opacity: 0.85 }} />
+      <LinearGradient colors={["#b8dcee22", "#00000000"]} style={{ position: "absolute", top: "5.5%", left: "10%", width: "46%", height: "14%" }} />
+      <View style={{ position: "absolute", top: "3%", right: "16%", width: "22%", height: "2.5%", backgroundColor: "#b8dcee", borderRadius: 2, opacity: 0.7 }} />
+      <LinearGradient colors={["#b8dcee18", "#00000000"]} style={{ position: "absolute", top: "5.5%", right: "8%", width: "38%", height: "10%" }} />
 
-      {/* Gothic arch window — tall oval behind hero, element glow */}
-      <View style={[sc.archOuter, { backgroundColor: o + "14" }]} />
-      <View style={[sc.archInner, { backgroundColor: o + "0C" }]} />
+      {/* Window — left background, city at night */}
+      <View style={{ position: "absolute", left: "4%", top: "8%", width: "22%", height: "52%", borderWidth: 1.5, borderColor: "#283c50", borderRadius: 2, overflow: "hidden" }}>
+        <LinearGradient colors={["#08101e", "#0c1a30"]} style={{ flex: 1 }} />
+        {[
+          { t: "14%", l: "18%" }, { t: "28%", l: "58%" }, { t: "20%", l: "76%" },
+          { t: "48%", l: "28%" }, { t: "42%", l: "68%" }, { t: "62%", l: "12%" },
+          { t: "55%", l: "50%" }, { t: "22%", l: "42%" }, { t: "38%", l: "82%" },
+        ].map((d, i) => (
+          <View key={i} style={{ position: "absolute", top: d.t as any, left: d.l as any,
+            width: i % 2 === 0 ? 2 : 1.5, height: i % 2 === 0 ? 2 : 1.5, borderRadius: 2,
+            backgroundColor: i % 3 === 0 ? "#ffd06080" : i % 3 === 1 ? "#60a0ff80" : "#ffe08080" }} />
+        ))}
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "30%", backgroundColor: "#05090f" }} />
+        <View style={{ position: "absolute", bottom: "28%", left: "8%", width: "20%", height: "20%", backgroundColor: "#05090f" }} />
+        <View style={{ position: "absolute", bottom: "28%", right: "12%", width: "22%", height: "28%", backgroundColor: "#05090f" }} />
+      </View>
+      <View style={{ position: "absolute", left: "4%", top: "34%", width: "22%", height: 1, backgroundColor: "#283c50" }} />
+      <LinearGradient colors={["#1040a018", "#00000000"]} start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }}
+        style={{ position: "absolute", left: "4%", top: "60%", width: "30%", height: "20%" }} />
 
-      {/* Light beam strips fanning from arch top */}
-      <LinearGradient colors={[o + "1A", o + "00"]} locations={[0, 1]}
-        style={[sc.beam, { top: "6%",  left: "19%", right: "19%", height: "18%" }]} />
-      <LinearGradient colors={[o + "12", o + "00"]} locations={[0, 1]}
-        style={[sc.beam, { top: "20%", left: "22%", right: "22%", height: "20%" }]} />
+      {/* Heart monitor — right side */}
+      <View style={{ position: "absolute", right: "5%", top: "16%", width: "16%", height: "36%",
+        backgroundColor: "#0c1c2c", borderRadius: 4, borderWidth: 1, borderColor: "#1e3048" }}>
+        <View style={{ position: "absolute", top: "10%", left: "8%", right: "8%", height: "42%",
+          backgroundColor: "#060e10", borderRadius: 2 }}>
+          <View style={{ position: "absolute", top: "48%", left: 0, right: 0, height: 1, backgroundColor: o + "70" }} />
+          <LinearGradient colors={[o + "00", o + "35", o + "00"]} locations={[0, 0.5, 1]}
+            style={{ position: "absolute", top: "28%", left: 0, right: 0, height: "44%" }} />
+        </View>
+        <View style={{ position: "absolute", bottom: "14%", left: "18%", width: 3, height: 3, borderRadius: 2, backgroundColor: o + "CC" }} />
+        <View style={{ position: "absolute", bottom: "14%", right: "22%", width: 3, height: 3, borderRadius: 2, backgroundColor: "#22c55e90" }} />
+      </View>
+      <View style={{ position: "absolute", right: "12%", top: "52%", width: 2, height: "22%", backgroundColor: "#1e3048" }} />
+      <View style={{ position: "absolute", right: "9%", top: "73%", width: "9%", height: 3, borderRadius: 2, backgroundColor: "#1e3048" }} />
 
-      {/* Horizon wall cornice line */}
-      <View style={{ position: "absolute", bottom: "37%", left: "19%", right: "19%", height: 1, backgroundColor: o + "40" }} />
+      {/* IV pole */}
+      <View style={{ position: "absolute", left: "30%", top: 0, width: 2, height: "74%", backgroundColor: "#243648" }} />
+      <View style={{ position: "absolute", left: "28%", top: "3%", width: "5%", height: 2, borderRadius: 1, backgroundColor: "#243648" }} />
+      <View style={{ position: "absolute", left: "27%", top: "4%", width: "5%", height: "10%",
+        borderRadius: 4, backgroundColor: "#122840", borderWidth: 1, borderColor: o + "40" }}>
+        <LinearGradient colors={[o + "1a", o + "08"]} style={{ flex: 1, borderRadius: 4 }} />
+      </View>
+      <View style={{ position: "absolute", left: "30%", top: "14%", width: 1, height: "20%", backgroundColor: "#1e3460" }} />
 
-      {/* Floor: pulse crystal accents */}
-      <View style={{ position: "absolute", bottom: "33%", left: "27%", width: 3, height: 9,  borderRadius: 2, backgroundColor: o + "70" }} />
-      <View style={{ position: "absolute", bottom: "35%", left: "33%", width: 2, height: 6,  borderRadius: 1, backgroundColor: a + "90" }} />
-      <View style={{ position: "absolute", bottom: "32%", right: "27%", width: 3, height: 8, borderRadius: 2, backgroundColor: o + "60" }} />
-      <View style={{ position: "absolute", bottom: "34%", right: "33%", width: 2, height: 5, borderRadius: 1, backgroundColor: a + "70" }} />
+      {/* Bed silhouette */}
+      <View style={{ position: "absolute", bottom: "29%", left: "4%", width: "32%", height: "4.5%", backgroundColor: "#14202e", borderRadius: 2 }} />
+      <View style={{ position: "absolute", bottom: "33%", left: "4%", width: "32%", height: "7%", backgroundColor: "#0f1a28", borderRadius: 2 }} />
+      <View style={{ position: "absolute", bottom: "25%", left: "7%", width: 2, height: "4%", backgroundColor: "#14202e" }} />
+      <View style={{ position: "absolute", bottom: "25%", left: "31%", width: 2, height: "4%", backgroundColor: "#14202e" }} />
+
+      {/* Floor tiles */}
+      <LinearGradient colors={["#08101e", "#0c1622"]} style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "27%" }} />
+      <View style={{ position: "absolute", bottom: "23%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff09" }} />
+      <View style={{ position: "absolute", bottom: "17%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff07" }} />
+      <View style={{ position: "absolute", bottom: "11%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff05" }} />
     </>
   );
 }
 
-/** Respiratory Spire — Sky Sanctuary. Pointed spires, layered clouds, pale mist. */
+/** Healer's Garden Pavilion — dawn light, pointed arch window, hanging herbs, bamboo, incense. */
 function RespiratorySpireScene({ o, a }: SceneProps) {
   return (
     <>
-      {/* Left spire body */}
-      <View style={{ position: "absolute", left: "8%", top: 0, height: "72%", width: "7%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
-      {/* Left spire tip (narrower) */}
-      <View style={{ position: "absolute", left: "10%", top: "-6%", width: "3%", height: "15%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
-      {/* Left spire window slit */}
-      <View style={{ position: "absolute", left: "10.5%", top: "25%", width: "2%", height: "12%", borderRadius: 999, backgroundColor: o + "30" }} />
+      {/* Stone wall */}
+      <LinearGradient colors={["#0c1820", "#101c28", "#0e1a22"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFillObject} />
+      {[14, 28, 44, 60].map((t, i) => (
+        <View key={i} style={{ position: "absolute", top: `${t}%`, left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff06" }} />
+      ))}
 
-      {/* Right spire body */}
-      <View style={{ position: "absolute", right: "8%", top: 0, height: "72%", width: "7%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
-      {/* Right spire tip */}
-      <View style={{ position: "absolute", right: "10%", top: "-6%", width: "3%", height: "15%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
-      {/* Right spire window slit */}
-      <View style={{ position: "absolute", right: "10.5%", top: "25%", width: "2%", height: "12%", borderRadius: 999, backgroundColor: o + "30" }} />
+      {/* Tall pointed arch window — back center */}
+      <View style={{ position: "absolute", alignSelf: "center", top: "5%", width: "40%", height: "60%",
+        borderTopLeftRadius: 999, borderTopRightRadius: 999, borderWidth: 1.5, borderColor: "#2e4050", overflow: "hidden" }}>
+        <LinearGradient colors={["#e8c06020", "#90c8e028", "#6090b020"]} locations={[0, 0.5, 1]} style={{ flex: 1 }} />
+        <LinearGradient colors={[o + "22", "#00000000"]} style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: "65%" }} />
+        <LinearGradient colors={[o + "14", "#00000000"]} style={{ position: "absolute", top: 0, left: "35%", width: "50%", height: "80%" }} />
+      </View>
+      <View style={{ position: "absolute", alignSelf: "center", top: "39%", width: "40%", height: 1, backgroundColor: "#2e4050" }} />
+      <View style={{ position: "absolute", alignSelf: "center", top: "65%", width: "46%", height: "2%", backgroundColor: "#162430", borderRadius: 1 }} />
+      <LinearGradient colors={[o + "18", "#00000000"]} style={{ position: "absolute", alignSelf: "center", top: "5%", width: "60%", height: "40%", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
 
-      {/* Cloud layers — wide flat ovals at staggered heights */}
-      <View style={{ position: "absolute", top: "8%",  left: "-8%", right: "-8%", height: 22, borderRadius: 999, backgroundColor: o + "16" }} />
-      <View style={{ position: "absolute", top: "19%", left: "5%",  right: "5%",  height: 16, borderRadius: 999, backgroundColor: o + "12" }} />
-      <View style={{ position: "absolute", top: "30%", left: "-5%", right: "-5%", height: 14, borderRadius: 999, backgroundColor: o + "0E" }} />
-      <View style={{ position: "absolute", top: "43%", left: "10%", right: "10%", height: 12, borderRadius: 999, backgroundColor: o + "09" }} />
+      {/* LEFT — bamboo stalks */}
+      <View style={{ position: "absolute", left: "5%", top: 0, width: 3, height: "68%", backgroundColor: "#1a2e22", borderRadius: 2 }} />
+      <View style={{ position: "absolute", left: "9%", top: "4%", width: 2, height: "62%", backgroundColor: "#162818", borderRadius: 2 }} />
+      <View style={{ position: "absolute", left: "13%", top: "1%", width: 2.5, height: "58%", backgroundColor: "#1c3020", borderRadius: 2 }} />
+      {[12, 28, 44, 58].map((t, i) => (
+        <View key={i} style={{ position: "absolute", left: "4%", top: `${t}%`, width: "13%", height: 1.5, backgroundColor: "#223828" }} />
+      ))}
+      <View style={{ position: "absolute", left: "0%", top: "6%", width: "18%", height: "12%", borderRadius: 999, backgroundColor: "#1e3022", opacity: 0.55 }} />
+      <View style={{ position: "absolute", left: "3%", top: "20%", width: "13%", height: "9%", borderRadius: 999, backgroundColor: "#1c2e20", opacity: 0.45 }} />
 
-      {/* Floor mist */}
-      <LinearGradient colors={[o + "00", o + "20"]} locations={[0, 1]}
-        style={{ position: "absolute", bottom: "34%", left: 0, right: 0, height: "10%" }} />
+      {/* Hanging herb bundles */}
+      {[{ l: "28%" }, { l: "48%" }, { l: "66%" }].map((b, i) => (
+        <View key={i}>
+          <View style={{ position: "absolute", top: 0, left: b.l as any, width: 2, height: `${14 + i * 2}%`, backgroundColor: "#243420" }} />
+          <View style={{ position: "absolute", top: `${13 + i * 2}%`, left: b.l as any, marginLeft: -5, width: 12, height: 9, borderRadius: 999, backgroundColor: "#1e2c18", opacity: 0.75 }} />
+        </View>
+      ))}
+
+      {/* Incense burner */}
+      <View style={{ position: "absolute", bottom: "32%", alignSelf: "center", width: "10%", height: "3%", backgroundColor: "#182420", borderRadius: 2 }} />
+      <View style={{ position: "absolute", bottom: "35%", alignSelf: "center", width: "14%", height: "2%", borderRadius: 999, backgroundColor: "#1a2620" }} />
+      <LinearGradient colors={[o + "00", o + "18", o + "00"]} locations={[0, 0.4, 1]}
+        style={{ position: "absolute", bottom: "37%", alignSelf: "center", width: "5%", height: "28%", borderRadius: 999 }} />
+
+      {/* Stone floor */}
+      <LinearGradient colors={["#0c1620", "#101a28"]} style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "30%" }} />
+      <View style={{ position: "absolute", bottom: "26%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff0A" }} />
+      <View style={{ position: "absolute", bottom: "18%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff08" }} />
+      <View style={{ position: "absolute", bottom: "10%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff06" }} />
     </>
   );
 }
 
-/** Immune Forge — Volcanic Cavern. Dark jagged rocks, lava vent glow, embers. */
+/** Alchemical Forge — stone dungeon, torch sconces, potion shelves, central cauldron. */
 function ImmuneForgeScene({ o, a }: SceneProps) {
-  const ROCK = "#120604";
   return (
     <>
-      {/* Rock mass — bottom-left */}
-      <View style={{ position: "absolute", bottom: "28%", left: "-5%", width: "35%", height: "40%", borderRadius: 30, backgroundColor: ROCK }} />
-      <View style={{ position: "absolute", bottom: "38%", left: "0%",  width: "22%", height: "30%", borderRadius: 20, backgroundColor: ROCK }} />
-      <View style={{ position: "absolute", bottom: "48%", left: "5%",  width: "12%", height: "20%", borderRadius: 15, backgroundColor: ROCK }} />
-
-      {/* Rock mass — bottom-right */}
-      <View style={{ position: "absolute", bottom: "28%", right: "-5%", width: "35%", height: "40%", borderRadius: 30, backgroundColor: ROCK }} />
-      <View style={{ position: "absolute", bottom: "38%", right: "0%",  width: "22%", height: "30%", borderRadius: 20, backgroundColor: ROCK }} />
-      <View style={{ position: "absolute", bottom: "48%", right: "5%",  width: "12%", height: "20%", borderRadius: 15, backgroundColor: ROCK }} />
-
-      {/* Central forge vent — lava glow from floor gap */}
-      <View style={{ position: "absolute", bottom: "30%", left: "30%", right: "30%", height: "8%", borderRadius: 999, backgroundColor: o + "50" }} />
-      <LinearGradient colors={[o + "00", o + "35"]} locations={[0, 1]}
-        style={{ position: "absolute", bottom: "32%", left: "25%", right: "25%", height: "25%" }} />
-
-      {/* Ember sparks — fixed dot positions */}
-      {[
-        { t: "12%", l: "22%" }, { t: "8%",  l: "55%" }, { t: "18%", l: "70%" },
-        { t: "6%",  l: "38%" }, { t: "22%", l: "82%" }, { t: "15%", l: "15%" },
-        { t: "28%", r: "18%" }, { t: "10%", r: "35%" },
-      ].map((p, i) => (
-        <View key={i} style={{
-          position: "absolute", top: p.t as any,
-          left: (p as any).l as any, right: (p as any).r as any,
-          width: i % 3 === 0 ? 3 : 2, height: i % 3 === 0 ? 3 : 2,
-          borderRadius: 2, backgroundColor: o + "BB",
-        }} />
+      {/* Stone wall */}
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#100c08" }} />
+      {[10, 22, 35, 48, 62, 76].map((t, i) => (
+        <View key={i} style={{ position: "absolute", top: `${t}%`, left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff06" }} />
+      ))}
+      {[22, 48, 74].map((l, i) => (
+        <View key={i} style={{ position: "absolute", left: `${l}%`, top: 0, bottom: "28%", width: 0.5, backgroundColor: "#ffffff05" }} />
       ))}
 
-      {/* Heat haze band */}
-      <LinearGradient colors={[o + "00", o + "0C", o + "00"]} locations={[0, 0.5, 1]}
-        style={{ position: "absolute", top: "25%", left: 0, right: 0, height: "18%" }} />
+      {/* Stone arch framing */}
+      <View style={{ position: "absolute", left: "17%", top: 0, width: "6%", height: "28%", backgroundColor: "#0c0906" }} />
+      <View style={{ position: "absolute", right: "17%", top: 0, width: "6%", height: "28%", backgroundColor: "#0c0906" }} />
+      <View style={{ position: "absolute", alignSelf: "center", top: 0, width: "34%", height: "6%", backgroundColor: "#0c0906", borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }} />
+
+      {/* LEFT TORCH */}
+      <View style={{ position: "absolute", left: "7%", top: "24%", width: "8%", height: "3%", backgroundColor: "#28180e", borderRadius: 2 }} />
+      <View style={{ position: "absolute", left: "9.5%", top: "14%", width: 3, height: "12%", backgroundColor: "#382618" }} />
+      <View style={{ position: "absolute", left: "8%", top: "9%", width: "5%", height: "6%", borderRadius: 999, backgroundColor: o + "90" }} />
+      <LinearGradient colors={[o + "55", "#00000000"]} style={{ position: "absolute", left: "4%", top: "8%", width: "12%", height: "24%", borderRadius: 999 }} />
+
+      {/* RIGHT TORCH */}
+      <View style={{ position: "absolute", right: "7%", top: "24%", width: "8%", height: "3%", backgroundColor: "#28180e", borderRadius: 2 }} />
+      <View style={{ position: "absolute", right: "9.5%", top: "14%", width: 3, height: "12%", backgroundColor: "#382618" }} />
+      <View style={{ position: "absolute", right: "8%", top: "9%", width: "5%", height: "6%", borderRadius: 999, backgroundColor: o + "90" }} />
+      <LinearGradient colors={[o + "55", "#00000000"]} style={{ position: "absolute", right: "4%", top: "8%", width: "12%", height: "24%", borderRadius: 999 }} />
+
+      {/* SHELVES left */}
+      <View style={{ position: "absolute", left: "3%", top: "46%", width: "19%", height: 2, backgroundColor: "#28180e" }} />
+      <View style={{ position: "absolute", left: "4%", top: "37%", width: "5%", height: "10%", borderRadius: 3, backgroundColor: "#1a2810", borderWidth: 1, borderColor: o + "45" }} />
+      <View style={{ position: "absolute", left: "11%", top: "35%", width: "3.5%", height: "12%", borderRadius: 999, backgroundColor: "#2a1610", borderWidth: 1, borderColor: "#dc262650" }} />
+      <View style={{ position: "absolute", left: "16%", top: "38%", width: "4.5%", height: "9%", borderRadius: 3, backgroundColor: "#18201c", borderWidth: 1, borderColor: "#22c55e40" }} />
+
+      {/* CAULDRON */}
+      <View style={{ position: "absolute", bottom: "29%", alignSelf: "center", width: "26%", height: "15%", borderRadius: 32, backgroundColor: "#0c0804", borderWidth: 2, borderColor: "#261a0e" }} />
+      <View style={{ position: "absolute", bottom: "43%", alignSelf: "center", width: "30%", height: "3%", borderRadius: 999, backgroundColor: "#1a1008" }} />
+      <LinearGradient colors={[o + "50", "#00000000"]} style={{ position: "absolute", bottom: "44%", alignSelf: "center", width: "22%", height: "20%", borderRadius: 999, opacity: 0.7 }} />
+      <LinearGradient colors={[o + "30", o + "10", "#00000000"]} locations={[0, 0.5, 1]}
+        style={{ position: "absolute", bottom: "56%", alignSelf: "center", width: "12%", height: "22%", borderRadius: 999 }} />
+      {[{ t: "18%", l: "24%" }, { t: "10%", l: "58%" }, { t: "14%", r: "22%" }, { t: "22%", l: "72%" }, { t: "8%", l: "40%" }].map((p, i) => (
+        <View key={i} style={{ position: "absolute", top: p.t as any, left: (p as any).l as any, right: (p as any).r as any,
+          width: i % 2 === 0 ? 3 : 2, height: i % 2 === 0 ? 3 : 2, borderRadius: 2, backgroundColor: o + "AA" }} />
+      ))}
+
+      {/* Floor */}
+      <LinearGradient colors={["#0a0804", "#0e0c08"]} style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "27%" }} />
+      <View style={{ position: "absolute", bottom: "23%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff08" }} />
+      <View style={{ position: "absolute", bottom: "15%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff06" }} />
     </>
   );
 }
 
-/** Neural Chamber — Synaptic Void. Floating neuron orbs, connection threads. */
+/** Neuro Research Lab — holographic ring display, specimen jars, lab bench, wall monitors. */
 function NeuralChamberScene({ o, a }: SceneProps) {
-  const orbs = [
-    { t: "8%",  l: "20%", s: 52, op: "20" },
-    { t: "5%",  r: "15%", s: 36, op: "18" },
-    { t: "28%", l: "8%",  s: 28, op: "15" },
-    { t: "35%", r: "8%",  s: 40, op: "18" },
-    { t: "18%", l: "42%", s: 20, op: "22" },
-    { t: "48%", l: "25%", s: 16, op: "14" },
-    { t: "42%", r: "20%", s: 22, op: "16" },
-  ];
   return (
     <>
-      {/* Neuron cell bodies */}
-      {orbs.map((orb, i) => (
-        <View key={i} style={{
-          position: "absolute",
-          top: orb.t as any, left: (orb as any).l as any, right: (orb as any).r as any,
-          width: orb.s, height: orb.s,
-          borderRadius: orb.s / 2,
-          backgroundColor: o + orb.op,
-          borderWidth: 1,
-          borderColor: o + "30",
-        }} />
+      {/* Dark tech background */}
+      <LinearGradient colors={["#06040e", "#0a0818", "#060412"]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFillObject} />
+
+      {/* CENTRAL HOLOGRAPHIC RING */}
+      <View style={{ position: "absolute", alignSelf: "center", top: "4%", width: "56%", aspectRatio: 1,
+        borderRadius: 999, borderWidth: 1.5, borderColor: o + "30" }} />
+      <View style={{ position: "absolute", alignSelf: "center", top: "13%", width: "38%", aspectRatio: 1,
+        borderRadius: 999, borderWidth: 1, borderColor: o + "22" }} />
+      <View style={{ position: "absolute", alignSelf: "center", top: "4%", width: "56%", aspectRatio: 1, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ position: "absolute", left: "18%", right: "18%", height: 0.5, backgroundColor: o + "1e" }} />
+        <View style={{ position: "absolute", left: "8%", right: "8%", top: "22%", height: 0.5, backgroundColor: o + "14" }} />
+        <View style={{ position: "absolute", left: "8%", right: "8%", bottom: "22%", height: 0.5, backgroundColor: o + "14" }} />
+        <View style={{ position: "absolute", top: "18%", bottom: "18%", width: 0.5, backgroundColor: o + "1e" }} />
+      </View>
+      <View style={{ position: "absolute", alignSelf: "center", top: "22%", width: 8, height: 8, borderRadius: 4, backgroundColor: o + "90" }} />
+
+      {/* WALL MONITOR — left */}
+      <View style={{ position: "absolute", left: "2%", top: "14%", width: "15%", height: "32%",
+        borderWidth: 1, borderColor: o + "22", borderRadius: 2, overflow: "hidden" }}>
+        <LinearGradient colors={[o + "0a", "#00000000"]} style={{ flex: 1 }} />
+        {[18, 34, 50, 66, 82].map((t, i) => (
+          <View key={i} style={{ position: "absolute", top: `${t}%`, left: "10%", right: "10%", height: 0.5, backgroundColor: o + (i % 2 === 0 ? "1e" : "10") }} />
+        ))}
+      </View>
+      {/* WALL MONITOR — right */}
+      <View style={{ position: "absolute", right: "2%", top: "20%", width: "13%", height: "26%",
+        borderWidth: 1, borderColor: o + "22", borderRadius: 2, overflow: "hidden" }}>
+        <LinearGradient colors={[o + "08", "#00000000"]} style={{ flex: 1 }} />
+        {[22, 44, 66, 88].map((t, i) => (
+          <View key={i} style={{ position: "absolute", top: `${t}%`, left: "10%", right: "10%", height: 0.5, backgroundColor: o + "14" }} />
+        ))}
+      </View>
+
+      {/* LAB BENCH */}
+      <View style={{ position: "absolute", bottom: "29%", left: 0, right: 0, height: "4.5%", backgroundColor: "#100c1c" }} />
+      <View style={{ position: "absolute", bottom: "33%", left: 0, right: 0, height: 1.5, backgroundColor: o + "28" }} />
+      {[{ l: "20%", c: o }, { l: "34%", c: "#22c55e" }, { l: "50%", c: "#f97316" }, { l: "64%", c: o }, { l: "76%", c: "#ec4899" }].map((j, i) => (
+        <View key={i} style={{ position: "absolute", bottom: "33%", left: j.l as any, width: "6%", height: "11%",
+          borderRadius: 3, backgroundColor: "#0c0a18", borderWidth: 1, borderColor: j.c + "50" }}>
+          <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "38%", borderRadius: 3, backgroundColor: j.c + "22" }} />
+        </View>
+      ))}
+      {[{ t: "32%", l: "18%" }, { t: "22%", l: "74%" }, { t: "44%", r: "24%" }, { t: "16%", l: "38%" }, { t: "40%", l: "56%" }].map((p, i) => (
+        <View key={i} style={{ position: "absolute", top: p.t as any, left: (p as any).l as any, right: (p as any).r as any,
+          width: 2, height: 2, borderRadius: 1, backgroundColor: o + "60" }} />
       ))}
 
-      {/* Axon threads (thin connection lines) */}
-      <View style={{ position: "absolute", top: "14%",  left: "20%", right: "35%", height: 1, backgroundColor: o + "25" }} />
-      <View style={{ position: "absolute", top: "22%",  left: "12%", right: "10%", height: 1, backgroundColor: o + "18" }} />
-      <View style={{ position: "absolute", top: "32%",  left: "25%", right: "20%", height: 1, backgroundColor: o + "20" }} />
-      <View style={{ position: "absolute", top: "40%",  left: "15%", right: "28%", height: 1, backgroundColor: o + "15" }} />
-
-      {/* Central synaptic glow (behind hero) */}
-      <View style={[sc.archOuter, { backgroundColor: o + "10", top: "15%" }]} />
-
-      {/* Void depth rings */}
-      <View style={{ position: "absolute", alignSelf: "center", top: "10%", width: "70%", aspectRatio: 1, borderRadius: 999, borderWidth: 1, borderColor: o + "15" }} />
-      <View style={{ position: "absolute", alignSelf: "center", top: "5%",  width: "85%", aspectRatio: 1, borderRadius: 999, borderWidth: 1, borderColor: o + "08" }} />
+      {/* Floor */}
+      <LinearGradient colors={["#04020c", "#080614"]} style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "27%" }} />
     </>
   );
 }
 
-/** Default — Ancient Healing Hall. Simple stone pillars + ambient glow window. */
+/** Ancient Healing Temple — stone pillars, lanterns, tapestry arch, healing altar, steps. */
 function DefaultHallScene({ o, a }: SceneProps) {
-  const COL = "#0a0904";
   return (
     <>
-      <View style={[sc.col, { left: 0,  width: "16%", backgroundColor: COL }]} />
-      <View style={[sc.col, { right: 0, width: "16%", backgroundColor: COL }]} />
-      <View style={{ position: "absolute", left: "16%",  top: 0, bottom: 0, width: 1, backgroundColor: o + "28" }} />
-      <View style={{ position: "absolute", right: "16%", top: 0, bottom: 0, width: 1, backgroundColor: o + "28" }} />
-      <View style={[sc.archOuter, { backgroundColor: o + "12" }]} />
-      <View style={[sc.archInner, { backgroundColor: o + "08" }]} />
-      <LinearGradient colors={[o + "14", o + "00"]} locations={[0, 1]}
-        style={[sc.beam, { top: "6%", left: "16%", right: "16%", height: "20%" }]} />
+      {/* Stone background */}
+      <LinearGradient colors={["#0e0c0a", "#120e0a", "#100c08"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFillObject} />
+      {[10, 24, 38, 54, 68, 82].map((t, i) => (
+        <View key={i} style={{ position: "absolute", top: `${t}%`, left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff05" }} />
+      ))}
+
+      {/* LEFT PILLAR */}
+      <View style={{ position: "absolute", left: "7%", top: 0, bottom: 0, width: "10%", backgroundColor: "#0a0806" }} />
+      <View style={{ position: "absolute", left: "7%", top: 0, bottom: 0, width: 1.5, backgroundColor: o + "22" }} />
+      <View style={{ position: "absolute", left: "17%", top: 0, bottom: 0, width: 1, backgroundColor: o + "12" }} />
+      <View style={{ position: "absolute", left: "5%", top: 0, width: "14%", height: "5%", backgroundColor: "#090706" }} />
+      <View style={{ position: "absolute", left: "5%", bottom: "27%", width: "14%", height: "3%", backgroundColor: "#090706" }} />
+      <View style={{ position: "absolute", left: "9%", top: "22%", width: "5%", height: "9%",
+        borderRadius: 2, backgroundColor: "#18100a", borderWidth: 1, borderColor: o + "55" }}>
+        <LinearGradient colors={[o + "45", o + "10"]} style={{ flex: 1, borderRadius: 2 }} />
+      </View>
+      <LinearGradient colors={[o + "28", "#00000000"]} style={{ position: "absolute", left: "7%", top: "24%", width: "10%", height: "20%", borderRadius: 999 }} />
+
+      {/* RIGHT PILLAR */}
+      <View style={{ position: "absolute", right: "7%", top: 0, bottom: 0, width: "10%", backgroundColor: "#0a0806" }} />
+      <View style={{ position: "absolute", right: "7%", top: 0, bottom: 0, width: 1.5, backgroundColor: o + "22" }} />
+      <View style={{ position: "absolute", right: "17%", top: 0, bottom: 0, width: 1, backgroundColor: o + "12" }} />
+      <View style={{ position: "absolute", right: "5%", top: 0, width: "14%", height: "5%", backgroundColor: "#090706" }} />
+      <View style={{ position: "absolute", right: "5%", bottom: "27%", width: "14%", height: "3%", backgroundColor: "#090706" }} />
+      <View style={{ position: "absolute", right: "9%", top: "22%", width: "5%", height: "9%",
+        borderRadius: 2, backgroundColor: "#18100a", borderWidth: 1, borderColor: o + "55" }}>
+        <LinearGradient colors={[o + "45", o + "10"]} style={{ flex: 1, borderRadius: 2 }} />
+      </View>
+      <LinearGradient colors={[o + "28", "#00000000"]} style={{ position: "absolute", right: "7%", top: "24%", width: "10%", height: "20%", borderRadius: 999 }} />
+
+      {/* ARCH + TAPESTRY */}
+      <View style={{ position: "absolute", alignSelf: "center", top: "7%", width: "44%", height: "56%",
+        borderTopLeftRadius: 999, borderTopRightRadius: 999, borderWidth: 1.5, borderColor: o + "1e", overflow: "hidden" }}>
+        <LinearGradient colors={[o + "14", o + "08", "#00000000"]} locations={[0, 0.5, 1]} style={{ flex: 1 }} />
+        <View style={{ position: "absolute", alignSelf: "center", top: "18%", width: "5%", height: "30%", backgroundColor: o + "20" }} />
+        <View style={{ position: "absolute", alignSelf: "center", top: "28%", height: "10%", left: "28%", right: "28%", backgroundColor: o + "20" }} />
+      </View>
+      <LinearGradient colors={[o + "1c", "#00000000"]} style={{ position: "absolute", alignSelf: "center", top: "7%", width: "44%", height: "28%", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
+
+      {/* ALTAR */}
+      <View style={{ position: "absolute", bottom: "29%", alignSelf: "center", width: "38%", height: "4%",
+        backgroundColor: "#121008", borderRadius: 3, borderTopWidth: 1, borderColor: o + "38" }} />
+      <LinearGradient colors={[o + "30", "#00000000"]} style={{ position: "absolute", bottom: "33%", alignSelf: "center", width: "32%", height: "12%", borderRadius: 999 }} />
+      <View style={{ position: "absolute", bottom: "25%", alignSelf: "center", width: "44%", height: "2.5%", backgroundColor: "#100e08", borderRadius: 2 }} />
+      <View style={{ position: "absolute", bottom: "23%", alignSelf: "center", width: "52%", height: "2.5%", backgroundColor: "#0e0c06", borderRadius: 2 }} />
+
+      {/* Floor */}
+      <LinearGradient colors={["#080604", "#0c0a08"]} style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "25%" }} />
+      <View style={{ position: "absolute", bottom: "21%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff08" }} />
+      <View style={{ position: "absolute", bottom: "13%", left: 0, right: 0, height: 0.5, backgroundColor: "#ffffff06" }} />
     </>
   );
 }
 
-/** Wrapper — renders the correct scene + shared floor/shadow/vignette layers */
+/** Wrapper — sky base + element scene + edge shadows + top vignette */
 function SceneBg({
-  element, scene, floorOpacity,
+  element, scene,
 }: {
   element: string;
-  scene: { sky: readonly [string,string,string]; mid: string; accent: string; orb1: string; orb2: string };
-  floorOpacity: Animated.AnimatedInterpolation<number>;
+  scene: { sky: readonly [string, string, string]; mid: string; accent: string; orb1: string; orb2: string };
 }) {
   const o = scene.orb1;
   const a = scene.accent;
   return (
     <>
-      {/* 1 — Sky */}
+      {/* 1 — Sky base tint (each scene draws its own walls on top) */}
       <LinearGradient colors={scene.sky} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFillObject} />
 
-      {/* 2 — Element-specific room scene */}
-      {element === "River"                                    && <CardiacWardScene o={o} a={a} />}
-      {element === "Air"                                      && <RespiratorySpireScene o={o} a={a} />}
-      {element === "Fire"                                     && <ImmuneForgeScene o={o} a={a} />}
-      {element === "Mind"                                     && <NeuralChamberScene o={o} a={a} />}
-      {!["River","Air","Fire","Mind"].includes(element)       && <DefaultHallScene o={o} a={a} />}
+      {/* 2 — Element-specific scene environment */}
+      {element === "River"                              && <CardiacWardScene o={o} a={a} />}
+      {element === "Air"                                && <RespiratorySpireScene o={o} a={a} />}
+      {element === "Fire"                               && <ImmuneForgeScene o={o} a={a} />}
+      {element === "Mind"                               && <NeuralChamberScene o={o} a={a} />}
+      {!["River","Air","Fire","Mind"].includes(element) && <DefaultHallScene o={o} a={a} />}
 
-      {/* 3 — Floor gradient wash */}
-      <LinearGradient colors={[scene.mid + "00", scene.mid + "F0"]} locations={[0, 1]}
-        style={sc.floor} />
-
-      {/* 4 — Horizon line */}
-      <View style={[sc.horizon, { backgroundColor: a + "50" }]} />
-
-      {/* 5 — Stage glow (animated breathing) */}
-      <Animated.View style={[sc.stage, { backgroundColor: a, opacity: floorOpacity }]} />
-
-      {/* 6 — Edge depth shadows (left + right) */}
-      <LinearGradient colors={["rgba(4,6,10,0.82)", "rgba(4,6,10,0.0)"]}
+      {/* 3 — Edge depth vignette */}
+      <LinearGradient colors={["rgba(4,6,10,0.72)", "rgba(4,6,10,0.0)"]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={sc.edgeLeft} />
-      <LinearGradient colors={["rgba(4,6,10,0.0)", "rgba(4,6,10,0.82)"]}
+      <LinearGradient colors={["rgba(4,6,10,0.0)", "rgba(4,6,10,0.72)"]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={sc.edgeRight} />
 
-      {/* 7 — Top vignette */}
-      <LinearGradient colors={["rgba(4,6,10,0.85)", "rgba(4,6,10,0.0)"]} style={sc.topVignette} />
+      {/* 4 — Top vignette */}
+      <LinearGradient colors={["rgba(4,6,10,0.72)", "rgba(4,6,10,0.0)"]} style={sc.topVignette} />
     </>
   );
 }
 
-/** Shared shape styles for scene components */
+/** Shared structural styles */
 const sc = StyleSheet.create({
-  col: {
-    position: "absolute",
-    top: 0, bottom: 0,
-    backgroundColor: "#030d18",
-  },
-  archOuter: {
-    position: "absolute",
-    alignSelf: "center",
-    top: "2%",
-    width: "52%",
-    aspectRatio: 0.7,
-    borderRadius: 999,
-  },
-  archInner: {
-    position: "absolute",
-    alignSelf: "center",
-    top: "10%",
-    width: "38%",
-    aspectRatio: 0.75,
-    borderRadius: 999,
-  },
-  beam: {
-    position: "absolute",
-  },
-  floor: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
-    height: "40%",
-  },
-  horizon: {
-    position: "absolute",
-    bottom: "40%",
-    left: 0, right: 0,
-    height: 1,
-  },
-  stage: {
-    position: "absolute",
-    bottom: "-10%",
-    left: "22%", right: "22%",
-    height: "24%",
-    borderRadius: 999,
-  },
-  edgeLeft: {
-    position: "absolute",
-    top: 0, bottom: 0, left: 0,
-    width: "22%",
-  },
-  edgeRight: {
-    position: "absolute",
-    top: 0, bottom: 0, right: 0,
-    width: "22%",
-  },
-  topVignette: {
-    position: "absolute",
-    top: 0, left: 0, right: 0,
-    height: "25%",
-  },
+  edgeLeft:    { position: "absolute", top: 0, bottom: 0, left: 0,  width: "20%" },
+  edgeRight:   { position: "absolute", top: 0, bottom: 0, right: 0, width: "20%" },
+  topVignette: { position: "absolute", top: 0, left: 0, right: 0,  height: "22%" },
 });
 
 /* ── FeatureButton ── */
@@ -670,7 +729,7 @@ const styles = StyleSheet.create({
   sceneLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 2 },
 
   /* Arena row — fills remaining space between header and bottom bar */
-  arena: { flex: 1, flexDirection: "row", alignItems: "stretch" },
+  arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },
 
   /* Side columns */
   sideCol: {
@@ -687,11 +746,9 @@ const styles = StyleSheet.create({
   featLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textAlign: "center" },
   featLock:  { color: COLORS.onSurfaceTertiary, fontSize: 9 },
 
-  /* Hero center */
+  /* Hero center — plain transparent, no frame */
   heroCenter: {
     flex: 1,
-    overflow: "hidden",
-    borderRadius: RADIUS.lg,
     position: "relative",
   },
 
