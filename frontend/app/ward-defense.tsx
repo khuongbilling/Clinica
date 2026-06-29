@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -242,203 +242,37 @@ function calcRewards(won: boolean, stability: number, score: number) {
    individual components with real sprite sheets independently.
    ═══════════════════════════════════════════════════════════ */
 
-/* ── [ASSET: backgroundScene] Airway Ward Corridor
-   Atmosphere-first 2.5D design: sky-as-canvas, organic vault shapes,
-   radial bloom light sources, round orb lanterns.
-   Replace with a real parallax sprite sheet when art is ready. ── */
+/* ── [ASSET: backgroundScene] Airway Ward Corridor — illustrated scene
+   AI-generated 2.5D anime/donghua gothic ward corridor with stone arches,
+   glowing lanterns, rune floor, and brilliant far-arch portal.
+   Swap `source` for a higher-res sprite sheet when ready. ── */
 function WardCorridorScene() {
   return (
     <>
-      {/* ══ LAYER 1 — Deep sky atmosphere (background) ══ */}
-      <LinearGradient
-        colors={["#010610", "#020a1a", "#030c1e", "#020913"]}
+      {/* Illustrated scene — the actual ward corridor */}
+      <Image
+        source={require("../assets/images/ward_corridor_battle.png")}
         style={StyleSheet.absoluteFillObject}
+        resizeMode="cover"
       />
 
-      {/* Far ward sanctum bloom — life-light of the inner sanctum, visible through the arch */}
-      {/* Outermost halo — very diffuse, wide */}
+      {/* Left-edge soft vignette — helps hero + lantern readability */}
       <LinearGradient
-        colors={["#60A5FA22", "#3b82f614", "#00000000"]}
-        style={{ position: "absolute", top: "4%", left: "6%", right: "6%", height: "58%", borderRadius: 999 }}
-      />
-      {/* Mid bloom ring */}
-      <LinearGradient
-        colors={["#60A5FA55", "#3b82f630", "#00000000"]}
-        style={{ position: "absolute", top: "16%", left: "24%", right: "24%", height: "44%", borderRadius: 999 }}
-      />
-      {/* Inner bright bloom */}
-      <LinearGradient
-        colors={["#93C5FD99", "#60A5FA70", "#00000000"]}
-        style={{ position: "absolute", top: "26%", left: "36%", right: "36%", height: "28%", borderRadius: 999 }}
-      />
-      {/* Bright core — the ward's eye */}
-      <LinearGradient
-        colors={["#dbeafe", "#bfdbfebb", "#60A5FA55", "#00000000"]}
-        style={{ position: "absolute", top: "34%", left: "44%", right: "44%", height: 18, borderRadius: 999 }}
-      />
-
-      {/* ══ Far arch portal silhouette (behind the bloom) ══ */}
-      <View style={{
-        position: "absolute", left: "32%", top: "13%",
-        width: 10, height: "57%",
-        backgroundColor: "#010810",
-        borderTopLeftRadius: 5, borderTopRightRadius: 5,
-      }} />
-      <View style={{
-        position: "absolute", right: "32%", top: "13%",
-        width: 10, height: "57%",
-        backgroundColor: "#010810",
-        borderTopLeftRadius: 5, borderTopRightRadius: 5,
-      }} />
-      {/* Arch crown keystone */}
-      <View style={{
-        position: "absolute", top: "8%", left: "31%", right: "31%",
-        height: 30, borderTopLeftRadius: 999, borderTopRightRadius: 999,
-        backgroundColor: "#010810",
-      }} />
-
-      {/* ══ LAYER 2 — Vault ceiling (organic arch masses, NOT rectangles) ══ */}
-      {/* Left vault wing — large borderRadius creates organic stone arch shape */}
-      <View style={{
-        position: "absolute", top: 0, left: 0, width: "46%", height: "58%",
-        backgroundColor: "#020a1a", borderBottomRightRadius: 240,
-      }} />
-      {/* Right vault wing */}
-      <View style={{
-        position: "absolute", top: 0, right: 0, width: "46%", height: "58%",
-        backgroundColor: "#020a1a", borderBottomLeftRadius: 240,
-      }} />
-      {/* Centre cap — ensures the crown of the vault is solid */}
-      <View style={{
-        position: "absolute", top: 0, left: "32%", right: "32%", height: "18%",
-        backgroundColor: "#020a1a",
-      }} />
-
-      {/* Vault rib accent — cathedral rib emanating from each arch */}
-      <LinearGradient
-        colors={["#60A5FA18", "#00000000"]}
-        start={{ x: 1, y: 0.2 }} end={{ x: 0, y: 1 }}
-        style={{ position: "absolute", top: "28%", left: "36%", width: "14%", height: "32%", borderBottomRightRadius: 999 }}
-      />
-      <LinearGradient
-        colors={["#60A5FA18", "#00000000"]}
-        start={{ x: 0, y: 0.2 }} end={{ x: 1, y: 1 }}
-        style={{ position: "absolute", top: "28%", right: "36%", width: "14%", height: "32%", borderBottomLeftRadius: 999 }}
-      />
-
-      {/* ══ Side wall masses ══ */}
-      {/* Left wall (patient/core side) */}
-      <View style={{ position: "absolute", left: 0, top: "44%", bottom: 0, width: "7%", backgroundColor: "#020912" }} />
-      {/* Left wall inner glow (life-light reflected on near wall) */}
-      <LinearGradient
-        colors={["#60A5FA30", "#60A5FA14", "#00000000"]}
-        start={{ x: 1, y: 0 }} end={{ x: 0, y: 0 }}
-        style={{ position: "absolute", left: "7%", top: "44%", bottom: 0, width: "7%" }}
-      />
-      {/* Right wall (spawn/enemy side) */}
-      <View style={{ position: "absolute", right: 0, top: "40%", bottom: 0, width: "7%", backgroundColor: "#010810" }} />
-      {/* Right wall spawn shimmer */}
-      <LinearGradient
-        colors={["#F9731618", "#F9731610", "#00000000"]}
+        colors={["#01061088", "#00000000"]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        style={{ position: "absolute", right: "7%", top: "40%", bottom: 0, width: "7%" }}
+        style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "18%" }}
       />
-
-      {/* ══ Hanging lanterns — true round orbs ══ */}
-      {/* Lantern A — left (near core), pendant wire */}
-      <View style={{ position: "absolute", left: "10%", top: 0, width: 1, height: "34%", backgroundColor: "#0e2840" }} />
-      <View style={{
-        position: "absolute", left: "7.5%", top: "31%",
-        width: 22, height: 22, borderRadius: 11,
-        backgroundColor: "#091a30", borderWidth: 2, borderColor: "#93C5FD99",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#BAE6FDee" }} />
-      </View>
-      <LinearGradient colors={["#60A5FA60", "#60A5FA28", "#00000000"]}
-        style={{ position: "absolute", left: "3%", top: "24%", width: "18%", height: "26%", borderRadius: 999 }} />
-
-      {/* Lantern B — centre-left, slightly larger */}
-      <View style={{ position: "absolute", left: "35%", top: 0, width: 1, height: "30%", backgroundColor: "#0e2840" }} />
-      <View style={{
-        position: "absolute", left: "32%", top: "26%",
-        width: 26, height: 26, borderRadius: 13,
-        backgroundColor: "#091a30", borderWidth: 2, borderColor: "#BAE6FDbb",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#dbeafeee" }} />
-      </View>
-      <LinearGradient colors={["#93C5FD65", "#60A5FA30", "#00000000"]}
-        style={{ position: "absolute", left: "26%", top: "17%", width: "22%", height: "32%", borderRadius: 999 }} />
-
-      {/* Lantern C — centre-right */}
-      <View style={{ position: "absolute", right: "25%", top: 0, width: 1, height: "28%", backgroundColor: "#0e2840" }} />
-      <View style={{
-        position: "absolute", right: "22%", top: "24%",
-        width: 26, height: 26, borderRadius: 13,
-        backgroundColor: "#091a30", borderWidth: 2, borderColor: "#BAE6FDbb",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#dbeafeee" }} />
-      </View>
-      <LinearGradient colors={["#93C5FD65", "#60A5FA30", "#00000000"]}
-        style={{ position: "absolute", right: "14%", top: "15%", width: "22%", height: "32%", borderRadius: 999 }} />
-
-      {/* ══ LAYER 3 — Floor / lane pathway ══ */}
-      {/* Floor slab */}
+      {/* Bottom vignette — grounds the floor, improves card readability above */}
       <LinearGradient
-        colors={["#020c1c", "#030f24", "#060f20"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        style={{ position: "absolute", bottom: 0, left: "7%", right: "7%", height: "38%" }}
-      />
-      {/* Floor horizon — bright crease where wall meets floor */}
-      <View style={{ position: "absolute", bottom: "38%", left: "7%", right: "7%", height: 1.5, backgroundColor: "#60A5FA38" }} />
-      <LinearGradient
-        colors={["#60A5FA18", "#60A5FA55", "#93C5FD40", "#60A5FA18"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        style={{ position: "absolute", bottom: "37.5%", left: "7%", right: "7%", height: 1 }}
-      />
-      {/* Perspective lane lines — converge toward far arch */}
-      {[0.10, 0.26, 0.50, 0.74, 0.90].map((frac, i) => (
-        <View key={i} style={{
-          position: "absolute", bottom: 0,
-          left: `${7 + frac * 86}%` as any, width: 0.5, height: "38%",
-          backgroundColor: "#60A5FA16",
-        }} />
-      ))}
-      {/* Horizontal runework lines */}
-      <View style={{ position: "absolute", bottom: "28%", left: "7%", right: "7%", height: 0.5, backgroundColor: "#60A5FA28" }} />
-      <View style={{ position: "absolute", bottom: "19%", left: "7%", right: "7%", height: 0.5, backgroundColor: "#60A5FA20" }} />
-      <View style={{ position: "absolute", bottom: "10%", left: "7%", right: "7%", height: 0.5, backgroundColor: "#60A5FA14" }} />
-      {/* Floor rune circles (healing glyphs embedded in stone) */}
-      {[{l:"18%",b:"22%"},{l:"40%",b:"16%"},{l:"60%",b:"22%"},{l:"78%",b:"14%"}].map((p, i) => (
-        <View key={i} style={{
-          position: "absolute", left: p.l as any, bottom: p.b as any,
-          width: 18, height: 18, borderRadius: 9,
-          borderWidth: 0.5, borderColor: "#60A5FA35",
-        }} />
-      ))}
-
-      {/* Atmospheric motes — floating air particles */}
-      {[{t:"40%",l:"16%"},{t:"35%",l:"36%"},{t:"48%",l:"56%"},{t:"38%",l:"74%"},{t:"52%",l:"88%"}].map((p, i) => (
-        <View key={i} style={{
-          position: "absolute", top: p.t as any, left: p.l as any,
-          width: i % 2 === 0 ? 3 : 2, height: i % 2 === 0 ? 3 : 2, borderRadius: 2,
-          backgroundColor: i % 3 === 0 ? "#93C5FD65" : i % 3 === 1 ? "#60A5FA45" : "#BAE6FD38",
-        }} />
-      ))}
-
-      {/* Spawn-side warm shimmer — enemies enter from right */}
-      <LinearGradient
-        colors={["#00000000", "#F9731618"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "22%" }}
-      />
-      {/* Bottom ground vignette */}
-      <LinearGradient
-        colors={["#00000000", "#010810bb"]}
+        colors={["#00000000", "#010610aa"]}
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "20%" }}
+        style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "28%" }}
+      />
+      {/* Right spawn-edge tint — signals enemy entry side */}
+      <LinearGradient
+        colors={["#00000000", "#F9731622"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "20%" }}
       />
     </>
   );
@@ -1297,47 +1131,19 @@ export default function WardDefense() {
 function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => void }) {
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
-      {/* ── Lobby atmospheric background — full ward corridor scene ── */}
-      <LinearGradient colors={["#010610", "#020a1a", "#030c1e", "#020913"]} style={StyleSheet.absoluteFillObject} />
-      {/* Central sanctum bloom */}
-      <LinearGradient colors={["#60A5FA28", "#3b82f618", "#00000000"]}
-        style={{ position: "absolute", top: "3%", left: "8%", right: "8%", height: "50%", borderRadius: 999 }} />
-      <LinearGradient colors={["#93C5FD55", "#60A5FA30", "#00000000"]}
-        style={{ position: "absolute", top: "10%", left: "26%", right: "26%", height: "32%", borderRadius: 999 }} />
-      <LinearGradient colors={["#bfdbfeaa", "#60A5FA55", "#00000000"]}
-        style={{ position: "absolute", top: "18%", left: "40%", right: "40%", height: "18%", borderRadius: 999 }} />
-      {/* Far arch silhouette */}
-      <View style={{ position: "absolute", left: "32%", top: "6%", width: 9, height: "40%",
-        backgroundColor: "#010810", borderTopLeftRadius: 5, borderTopRightRadius: 5 }} />
-      <View style={{ position: "absolute", right: "32%", top: "6%", width: 9, height: "40%",
-        backgroundColor: "#010810", borderTopLeftRadius: 5, borderTopRightRadius: 5 }} />
-      <View style={{ position: "absolute", top: "3%", left: "31%", right: "31%", height: 26,
-        borderTopLeftRadius: 999, borderTopRightRadius: 999, backgroundColor: "#010810" }} />
-      {/* Organic vault ceiling — left and right wings */}
-      <View style={{ position: "absolute", top: 0, left: 0, width: "44%", height: "44%",
-        backgroundColor: "#020a1a", borderBottomRightRadius: 200 }} />
-      <View style={{ position: "absolute", top: 0, right: 0, width: "44%", height: "44%",
-        backgroundColor: "#020a1a", borderBottomLeftRadius: 200 }} />
-      <View style={{ position: "absolute", top: 0, left: "32%", right: "32%", height: "14%",
-        backgroundColor: "#020a1a" }} />
-      {/* Left orb lantern */}
-      <View style={{ position: "absolute", left: "9%", top: 0, width: 1, height: "26%", backgroundColor: "#0e2840" }} />
-      <View style={{ position: "absolute", left: "6.5%", top: "23%", width: 22, height: 22, borderRadius: 11,
-        backgroundColor: "#091a30", borderWidth: 2, borderColor: "#93C5FD99",
-        alignItems: "center", justifyContent: "center" }}>
-        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#BAE6FDee" }} />
-      </View>
-      <LinearGradient colors={["#60A5FA50", "#60A5FA22", "#00000000"]}
-        style={{ position: "absolute", left: "2%", top: "16%", width: "16%", height: "22%", borderRadius: 999 }} />
-      {/* Right orb lantern */}
-      <View style={{ position: "absolute", right: "9%", top: 0, width: 1, height: "24%", backgroundColor: "#0e2840" }} />
-      <View style={{ position: "absolute", right: "6.5%", top: "21%", width: 22, height: 22, borderRadius: 11,
-        backgroundColor: "#091a30", borderWidth: 2, borderColor: "#93C5FD99",
-        alignItems: "center", justifyContent: "center" }}>
-        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#BAE6FDee" }} />
-      </View>
-      <LinearGradient colors={["#60A5FA50", "#60A5FA22", "#00000000"]}
-        style={{ position: "absolute", right: "2%", top: "14%", width: "16%", height: "22%", borderRadius: 999 }} />
+      {/* ── Lobby illustrated background — ward corridor hall ── */}
+      <Image
+        source={require("../assets/images/ward_corridor_lobby.png")}
+        style={StyleSheet.absoluteFillObject}
+        resizeMode="cover"
+      />
+      {/* Gradient overlay — top transparent so the corridor is fully visible,
+          fades to dark in the lower half so lobby text cards are readable */}
+      <LinearGradient
+        colors={["#00000000", "#00000000", "#010610cc", "#010610f0"]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
 
       <ScrollView contentContainerStyle={s.lobbyContent} showsVerticalScrollIndicator={false}>
 

@@ -120,3 +120,15 @@ id = "_WXp1OXyX4rLnZEiTjtyH"
 uri = "file://frontend/assets/heroes/battle/mindkeeper.png"
 type = "image"
 title = "mindkeeper chibi battle"
+
+[[generated]]
+id = "qGUb-0G4rLDySfMiGe3kL"
+uri = "file://frontend/assets/images/ward_corridor_battle.png"
+type = "image"
+title = "ward_corridor_battle_bg"
+
+[[generated]]
+id = "Q6m_AXN62SsHjxUqvhNWr"
+uri = "file://frontend/assets/images/ward_corridor_lobby.png"
+type = "image"
+title = "ward_corridor_lobby_bg"
