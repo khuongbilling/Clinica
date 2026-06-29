@@ -292,6 +292,23 @@ export default function RunHome() {
         <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
       </Pressable>
 
+      {/* ── WARD DEFENSE ENTRY ── */}
+      <Pressable
+        style={styles.wardDefBtn}
+        onPress={() => router.push("/ward-defense")}
+        testID="home-ward-defense"
+      >
+        <View style={styles.wardDefLeft}>
+          <Text style={styles.wardDefNew}>NEW</Text>
+          <Text style={styles.wardDefTitle}>Ward Defense</Text>
+          <Text style={styles.wardDefSub}>Airway Rush · 5 waves + boss</Text>
+        </View>
+        <View style={styles.wardDefRight}>
+          <Text style={{ fontSize: 28 }}>🐲</Text>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.air + "80"} />
+        </View>
+      </Pressable>
+
       {/* ── INTRO MODAL ── */}
       <Modal visible={showIntro} transparent animationType="slide" statusBarTranslucent>
         <View style={styles.introOverlay}>
@@ -802,11 +819,26 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     backgroundColor: COLORS.brand,
     marginHorizontal: SPACING.md,
-    marginTop: SPACING.sm, marginBottom: SPACING.sm,
+    marginTop: SPACING.sm, marginBottom: SPACING.xs,
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.md + 2,
   },
   startTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700", letterSpacing: 2 },
+
+  /* Ward Defense entry card */
+  wardDefBtn: {
+    flexDirection: "row", alignItems: "center",
+    marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: COLORS.air + "40",
+    backgroundColor: COLORS.surfaceSecondary,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  wardDefLeft:  { flex: 1, gap: 2 },
+  wardDefNew:   { color: COLORS.air, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  wardDefTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
+  wardDefSub:   { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  wardDefRight: { flexDirection: "row", alignItems: "center", gap: 4 },
 
   /* Intro modal */
   introOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.88)", justifyContent: "flex-end" },
