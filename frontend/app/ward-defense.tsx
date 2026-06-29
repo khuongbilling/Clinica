@@ -2,27 +2,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
+const { width: SW } = Dimensions.get("window");
+
 /* ═══════════════════════════════════════════════════════════
-   WARD DEFENSE: CORRUPTION RUSH
-   Airway Ward — Bronchospasm Rush (Prototype v1)
+   WARD DEFENSE: AIRWAY CODE RUSH — Bronchospasm Siege
    ═══════════════════════════════════════════════════════════ */
 
+/* ── Constants (UNCHANGED) ── */
 const TICK_MS         = 650;
 const LANE_STEPS      = 14;
 const MAX_STABILITY   = 100;
 const MAX_AP          = 10;
 const INIT_AP         = 5;
-const AP_REGEN_TICKS  = 3;   // 1 AP per 3 ticks (~2 s)
-const WAVE_PAUSE_TICKS = 5;  // pause ticks between waves
-const SPAWN_GAP_TICKS  = 4;  // ticks between each enemy entering the lane
+const AP_REGEN_TICKS  = 3;
+const WAVE_PAUSE_TICKS = 5;
+const SPAWN_GAP_TICKS  = 4;
 
-/* ── Enemy catalogue ── */
+/* ── Enemy catalogue (UNCHANGED) ── */
 type EnemyDef = {
   name: string; icon: string; maxHp: number;
   speed: number; damage: number; color: string;
@@ -69,44 +73,44 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
   },
 };
 
-/* ── Card catalogue ── */
+/* ── Card catalogue (UNCHANGED) ── */
 type CardDef = {
   name: string; icon: string; desc: string;
   apCost: number; damage: number; color: string;
-  feedback: string; aoe: boolean;
+  feedback: string; aoe: boolean; category: string;
 };
 
 const CARD_DATA: Record<string, CardDef> = {
   breath_sound_scout: {
     name: "Breath Sound Scout", icon: "🔊", desc: "Assess & disrupt",
-    apCost: 2, damage: 22, color: "#60A5FA", aoe: false,
+    apCost: 2, damage: 22, color: "#60A5FA", aoe: false, category: "ASSESS",
     feedback: "Wheezing suggests narrowed airways — a hallmark of bronchospasm.",
   },
   oxygen_ward: {
     name: "Oxygen Ward", icon: "🫁", desc: "Boost oxygenation",
-    apCost: 3, damage: 28, color: "#34D399", aoe: false,
+    apCost: 3, damage: 28, color: "#34D399", aoe: false, category: "SUPPORT",
     feedback: "O₂ improves saturation but may not treat the underlying cause.",
   },
   bronchodilator_mist: {
     name: "Bronchodilator Mist", icon: "💨", desc: "Relax airway spasm",
-    apCost: 4, damage: 44, color: "#F59E0B", aoe: false,
+    apCost: 4, damage: 44, color: "#F59E0B", aoe: false, category: "TREAT",
     feedback: "Bronchodilators relax smooth muscle — the direct treatment for bronchospasm.",
   },
   positioning_charm: {
     name: "Positioning Charm", icon: "🛌", desc: "Upright position",
-    apCost: 2, damage: 20, color: "#A78BFA", aoe: true,
+    apCost: 2, damage: 20, color: "#A78BFA", aoe: true, category: "SUPPORT",
     feedback: "Upright positioning reduces work of breathing and aids lung expansion.",
   },
   reassess_breath: {
     name: "Reassess Breath", icon: "🔄", desc: "Verify response",
-    apCost: 3, damage: 32, color: "#EC4899", aoe: false,
+    apCost: 3, damage: 32, color: "#EC4899", aoe: false, category: "ASSESS",
     feedback: "Reassessment confirms whether your intervention improved the patient.",
   },
 };
 
 const HAND = Object.keys(CARD_DATA);
 
-/* ── Wave definitions ── */
+/* ── Wave definitions (UNCHANGED) ── */
 type WaveDef = { spawns: string[]; isBoss?: boolean };
 const WAVES: WaveDef[] = [
   { spawns: ["breathless_wisp", "breathless_wisp"] },
@@ -117,15 +121,15 @@ const WAVES: WaveDef[] = [
   { spawns: ["bronchospasm_drake"], isBoss: true },
 ];
 
-/* ── State types ── */
+/* ── State types (UNCHANGED) ── */
 type ActiveEnemy = {
   uid: string; typeId: string;
   hp: number; maxHp: number;
-  progress: number;   // LANE_STEPS → 0 (core)
-  hitFlash: number;   // ticks of white flash on hit
+  progress: number;
+  hitFlash: number;
 };
 
-type Feedback = { id: string; text: string; color: string; ticks: number };
+type Feedback = { id: string; text: string; color: string; quality: "strong"|"partial"|"weak"; ticks: number };
 
 type Phase = "lobby" | "playing" | "wave_pause" | "won" | "lost";
 
@@ -144,7 +148,7 @@ type GS = {
   uidSeed: number;
 };
 
-/* ── Helpers ── */
+/* ── Helpers (UNCHANGED) ── */
 function freshState(): GS {
   return {
     phase: "lobby", wave: 0,
@@ -175,12 +179,11 @@ function getMatchQuality(cardId: string, enemy: ActiveEnemy): "strong" | "partia
 
 function applyCard(cardId: string, enemies: ActiveEnemy[]): {
   enemies: ActiveEnemy[]; dmgDealt: number;
-  feedback: string; fColor: string;
+  feedback: string; fColor: string; quality: "strong"|"partial"|"weak";
 } {
-  if (enemies.length === 0) return { enemies, dmgDealt: 0, feedback: "", fColor: "" };
+  if (enemies.length === 0) return { enemies, dmgDealt: 0, feedback: "", fColor: "", quality: "weak" };
 
   const card = CARD_DATA[cardId];
-  // Target = most advanced enemy (lowest progress, closest to core)
   const sorted = [...enemies].sort((a, b) => a.progress - b.progress);
   const target = sorted[0];
   const quality = getMatchQuality(cardId, target);
@@ -207,17 +210,17 @@ function applyCard(cardId: string, enemies: ActiveEnemy[]): {
   let feedback: string;
   let fColor: string;
   if (quality === "strong") {
-    feedback = `✓ Effective vs ${targetName}! ${card.feedback}`;
+    feedback = `✦ Effective! ${card.feedback}`;
     fColor = COLORS.success;
   } else if (quality === "partial") {
-    feedback = `~ Partial: ${card.feedback}`;
+    feedback = `◈ Partial match. ${card.feedback}`;
     fColor = COLORS.warning;
   } else {
-    feedback = `Weak match. Try a more targeted card. ${card.feedback}`;
+    feedback = `◌ Weak match. Try a more targeted order. ${card.feedback}`;
     fColor = COLORS.onSurfaceTertiary;
   }
 
-  return { enemies: newEnemies, dmgDealt: totalDmg, feedback, fColor };
+  return { enemies: newEnemies, dmgDealt: totalDmg, feedback, fColor, quality };
 }
 
 function calcRewards(won: boolean, stability: number, score: number) {
@@ -234,8 +237,575 @@ function calcRewards(won: boolean, stability: number, score: number) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MAIN COMPONENT
+   ASSET COMPONENTS
+   Each block is clearly separated so future art can replace
+   individual components with real sprite sheets independently.
    ═══════════════════════════════════════════════════════════ */
+
+/* ── [ASSET: backgroundScene] Airway Ward Corridor
+   Fantasy-medical ward inside the Air Kingdom living body.
+   Replace this component with a parallax image sprite sheet. ── */
+function WardCorridorScene() {
+  return (
+    <>
+      {/* Ceiling — deep indigo night sky of the ward */}
+      <LinearGradient colors={["#040c1c", "#06101e", "#050e1a"]} style={StyleSheet.absoluteFillObject} />
+
+      {/* Ceiling arch — perspective convergence toward left (far) */}
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: "34%",
+        backgroundColor: "#050d1a" }} />
+      {/* Ceiling edge line */}
+      <View style={{ position: "absolute", top: "34%", left: 0, right: 0, height: 1.5,
+        backgroundColor: "#1a3050" }} />
+      {/* Ceiling vein lines (organic anatomy texture) */}
+      <LinearGradient colors={["#0a1e3430", "#1a4a7830", "#0a1e3430"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{ position: "absolute", top: "10%", left: 0, right: 0, height: 1 }} />
+      <LinearGradient colors={["#0a1e3420", "#1a4a7820", "#0a1e3420"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{ position: "absolute", top: "22%", left: 0, right: 0, height: 1 }} />
+
+      {/* Walls — stone corridor, perspective narrows toward left (far end) */}
+      {/* Left wall (far - smaller, darker) */}
+      <View style={{ position: "absolute", left: 0, top: "34%", bottom: 0, width: "6%",
+        backgroundColor: "#060e1c" }} />
+      {/* Right wall (near - larger, brighter) */}
+      <View style={{ position: "absolute", right: 0, top: "30%", bottom: 0, width: "9%",
+        backgroundColor: "#081220" }} />
+      <View style={{ position: "absolute", right: "9%", top: "30%", bottom: 0, width: 1.5,
+        backgroundColor: "#1a3050" }} />
+
+      {/* LEFT lantern (far end near core) — small, pale blue */}
+      <View style={{ position: "absolute", left: "7%", top: "28%", width: 10, height: 14,
+        borderRadius: 3, backgroundColor: "#0e2040", borderWidth: 1, borderColor: "#60A5FA40" }}>
+        <LinearGradient colors={["#60A5FA60", "#60A5FA20"]} style={{ flex: 1, borderRadius: 3 }} />
+      </View>
+      <LinearGradient colors={["#60A5FA22", "#00000000"]}
+        style={{ position: "absolute", left: "5%", top: "26%", width: "14%", height: "22%", borderRadius: 999 }} />
+      <View style={{ position: "absolute", left: "10%", top: "26%", width: 1, height: "8%",
+        backgroundColor: "#1a3050" }} />
+
+      {/* CENTER-LEFT lantern — medium, slightly brighter */}
+      <View style={{ position: "absolute", left: "30%", top: "26%", width: 13, height: 18,
+        borderRadius: 3, backgroundColor: "#0e2040", borderWidth: 1, borderColor: "#60A5FA55" }}>
+        <LinearGradient colors={["#60A5FA70", "#60A5FA25"]} style={{ flex: 1, borderRadius: 3 }} />
+      </View>
+      <LinearGradient colors={["#60A5FA28", "#00000000"]}
+        style={{ position: "absolute", left: "27%", top: "22%", width: "18%", height: "28%", borderRadius: 999 }} />
+      <View style={{ position: "absolute", left: "33%", top: "24%", width: 1, height: "10%",
+        backgroundColor: "#1a3050" }} />
+
+      {/* CENTER-RIGHT lantern — larger, near side */}
+      <View style={{ position: "absolute", right: "28%", top: "24%", width: 16, height: 22,
+        borderRadius: 3, backgroundColor: "#0e2040", borderWidth: 1.5, borderColor: "#60A5FA65" }}>
+        <LinearGradient colors={["#60A5FA80", "#60A5FA30"]} style={{ flex: 1, borderRadius: 3 }} />
+      </View>
+      <LinearGradient colors={["#60A5FA30", "#00000000"]}
+        style={{ position: "absolute", right: "23%", top: "18%", width: "22%", height: "34%", borderRadius: 999 }} />
+      <View style={{ position: "absolute", right: "32%", top: "22%", width: 1, height: "12%",
+        backgroundColor: "#1a3050" }} />
+
+      {/* Floor — perspective tiled runework path */}
+      <LinearGradient colors={["#06101e", "#0a1830", "#0c1e38"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "34%" }} />
+      {/* Floor horizon glow */}
+      <LinearGradient colors={["#60A5FA14", "#60A5FA2e", "#93C5FD18", "#60A5FA14"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{ position: "absolute", top: "65%", left: 0, right: 0, height: 2 }} />
+      {/* Floor tile lines — converge toward left */}
+      {[0.18, 0.34, 0.5, 0.66, 0.82].map((frac, i) => (
+        <View key={i} style={{
+          position: "absolute", bottom: 0,
+          left: `${6 + frac * 88}%` as any, width: 0.5, height: "34%",
+          backgroundColor: "#60A5FA12",
+        }} />
+      ))}
+      {/* Floor horizontal runework lines */}
+      <View style={{ position: "absolute", bottom: "26%", left: "6%", right: "9%", height: 0.5, backgroundColor: "#60A5FA18" }} />
+      <View style={{ position: "absolute", bottom: "18%", left: "6%", right: "9%", height: 0.5, backgroundColor: "#60A5FA12" }} />
+      <View style={{ position: "absolute", bottom: "10%", left: "6%", right: "9%", height: 0.5, backgroundColor: "#60A5FA10" }} />
+
+      {/* Rune glyphs on floor (decorative) */}
+      {[{l:"20%",b:"20%"},{l:"40%",b:"16%"},{l:"60%",b:"22%"},{l:"76%",b:"15%"}].map((p, i) => (
+        <View key={i} style={{
+          position: "absolute", left: p.l as any, bottom: p.b as any,
+          width: 14, height: 14, borderRadius: 7,
+          borderWidth: 0.5, borderColor: "#60A5FA22",
+        }} />
+      ))}
+
+      {/* Atmospheric motes (floating air particles) */}
+      {[{t:"42%",l:"15%"},{t:"50%",l:"38%"},{t:"38%",l:"58%"},{t:"55%",l:"72%"},{t:"44%",l:"85%"}].map((p, i) => (
+        <View key={i} style={{
+          position: "absolute", top: p.t as any, left: p.l as any,
+          width: 3, height: 3, borderRadius: 2,
+          backgroundColor: "#93C5FD" + (i % 2 === 0 ? "55" : "35"),
+        }} />
+      ))}
+
+      {/* Spawn edge shimmer (right wall) */}
+      <LinearGradient colors={["#00000000", "#f9731618"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "20%" }} />
+    </>
+  );
+}
+
+/* ── [ASSET: effectAsset] Card cast effect burst ── */
+function CardEffectBurst({
+  animVal, color, quality,
+}: { animVal: Animated.Value; color: string; quality: "strong"|"partial"|"weak" }) {
+  const scale = animVal.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.3, 1.4, 0.6] });
+  const opacity = animVal.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.85, 0] });
+  const ringScale = animVal.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.2] });
+  const ringOpacity = animVal.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 0.3, 0] });
+
+  if (quality === "weak") {
+    return (
+      <Animated.View style={{
+        position: "absolute", top: "30%", left: "38%",
+        width: 48, height: 48, alignItems: "center", justifyContent: "center",
+        opacity, transform: [{ scale }],
+      }}>
+        {/* Dull dim spark for weak/wrong */}
+        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#6b7280" + "44",
+          borderWidth: 1.5, borderColor: "#6b7280" }} />
+        <View style={{ position: "absolute", width: 12, height: 12, borderRadius: 6,
+          backgroundColor: "#9ca3af" + "55" }} />
+      </Animated.View>
+    );
+  }
+
+  return (
+    <>
+      {/* Expanding ring */}
+      <Animated.View style={{
+        position: "absolute", top: "20%", left: "35%",
+        width: 60, height: 60, borderRadius: 30,
+        borderWidth: 2, borderColor: color,
+        opacity: ringOpacity,
+        transform: [{ scale: ringScale }],
+      }} />
+      {/* Core burst */}
+      <Animated.View style={{
+        position: "absolute", top: "28%", left: "41%",
+        width: 46, height: 46, borderRadius: 23,
+        backgroundColor: color + "45",
+        opacity, transform: [{ scale }],
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: color + "90" }} />
+      </Animated.View>
+      {/* Star sparks (strong only) */}
+      {quality === "strong" && [
+        {dx:-18,dy:-12},{dx:18,dy:-12},{dx:-16,dy:8},{dx:16,dy:8},{dx:0,dy:-22},
+      ].map((p, i) => (
+        <Animated.View key={i} style={{
+          position: "absolute", top: "34%", left: "46%",
+          width: 6, height: 6, borderRadius: 3, backgroundColor: color,
+          opacity, transform: [{ translateX: p.dx * (animVal as any) }, { translateY: p.dy * (animVal as any) }],
+        }} />
+      ))}
+    </>
+  );
+}
+
+/* ── [ASSET: enemySprite] Semi-chibi 2.5D enemy sprites (pure RN Views)
+   Replace each function below with a real sprite Image when art is ready.
+   Asset IDs: breathless_wisp | wheeze_sprite | mucus_slime | hypoxia_wraith | bronchospasm_drake ── */
+
+type SpriteProps = { hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> };
+
+function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
+  const c = hitFlash ? "#ffffff" : "#93C5FD";
+  const bg = hitFlash ? "#60A5FA66" : "#60A5FA22";
+  return (
+    <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* [ASSET: enemySprite: breathless_wisp] Pale blue gasping wind spirit */}
+      {/* Upper wisps */}
+      <View style={{ flexDirection: "row", gap: 5, marginBottom: -4 }}>
+        {[-6, 0, 6].map((rot, i) => (
+          <View key={i} style={{ width: 2.5, height: 8 + (i === 1 ? 4 : 0), borderRadius: 2,
+            backgroundColor: "#60A5FA70", transform: [{ rotate: `${rot}deg` }] }} />
+        ))}
+      </View>
+      {/* Main oval body */}
+      <View style={{ width: 34, height: 42, borderRadius: 999,
+        backgroundColor: bg, borderWidth: 1.5, borderColor: c,
+        alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        {/* Inner glow */}
+        <View style={{ position: "absolute", top: "15%", left: "20%", width: "60%", height: "40%",
+          borderRadius: 999, backgroundColor: "#e0f2fe44" }} />
+        {/* Eyes — wide and gasping */}
+        <View style={{ flexDirection: "row", gap: 9, marginTop: -6 }}>
+          <View style={{ width: 6, height: 7, borderRadius: 4, backgroundColor: "#1e3a5f" }} />
+          <View style={{ width: 6, height: 7, borderRadius: 4, backgroundColor: "#1e3a5f" }} />
+        </View>
+        {/* Gasping O mouth */}
+        <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 1.5,
+          borderColor: "#1e3a5f", marginTop: 5 }} />
+      </View>
+      {/* Bottom wisps */}
+      <View style={{ flexDirection: "row", gap: 4, marginTop: -3 }}>
+        {[{h:12,rot:-8},{h:16,rot:0},{h:12,rot:8}].map((t, i) => (
+          <View key={i} style={{ width: 3, height: t.h, borderRadius: 3,
+            backgroundColor: "#60A5FA55", transform: [{ rotate: `${t.rot}deg` }] }} />
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+function WheezeSpriteSprite({ hitFlash, bobY }: SpriteProps) {
+  const c = hitFlash ? "#ffffff" : "#6EE7B7";
+  const bg = hitFlash ? "#34D39966" : "#34D39920";
+  return (
+    <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* [ASSET: enemySprite: wheeze_sprite] Twisted whistling air spirit */}
+      {/* Top spike rings */}
+      <View style={{ flexDirection: "row", gap: 3, marginBottom: -6 }}>
+        {[{h:8,rot:-18},{h:12,rot:-6},{h:10,rot:8},{h:7,rot:20}].map((sp, i) => (
+          <View key={i} style={{ width: 2.5, height: sp.h, borderRadius: 2,
+            backgroundColor: "#34D39960", transform: [{ rotate: `${sp.rot}deg` }] }} />
+        ))}
+      </View>
+      {/* Twisted body — wider on one side */}
+      <View style={{ width: 38, height: 44, borderRadius: 16,
+        borderTopLeftRadius: 999, borderTopRightRadius: 8, borderBottomRightRadius: 999, borderBottomLeftRadius: 12,
+        backgroundColor: bg, borderWidth: 1.5, borderColor: c,
+        alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        {/* Swirl lines */}
+        <View style={{ position: "absolute", top: "18%", left: "8%", right: "8%", height: 1,
+          backgroundColor: "#34D39940", transform: [{ rotate: "-12deg" }] }} />
+        <View style={{ position: "absolute", top: "40%", left: "8%", right: "8%", height: 1,
+          backgroundColor: "#34D39940", transform: [{ rotate: "8deg" }] }} />
+        <View style={{ position: "absolute", top: "62%", left: "8%", right: "8%", height: 1,
+          backgroundColor: "#34D39930", transform: [{ rotate: "-6deg" }] }} />
+        {/* Slanted angry eyes */}
+        <View style={{ flexDirection: "row", gap: 8, marginTop: -8, transform: [{ rotate: "-6deg" }] }}>
+          <View style={{ width: 8, height: 4, borderRadius: 2, backgroundColor: "#065f46",
+            transform: [{ rotate: "10deg" }] }} />
+          <View style={{ width: 8, height: 4, borderRadius: 2, backgroundColor: "#065f46",
+            transform: [{ rotate: "-10deg" }] }} />
+        </View>
+        {/* Narrow whistle mouth */}
+        <View style={{ width: 14, height: 3, borderRadius: 2, backgroundColor: "#065f46", marginTop: 6 }} />
+      </View>
+      {/* Wind vent lines */}
+      <View style={{ flexDirection: "row", gap: 3, marginTop: -2 }}>
+        {[-6, 0, 4].map((rot, i) => (
+          <View key={i} style={{ width: 2, height: 8, borderRadius: 2,
+            backgroundColor: "#6EE7B744", transform: [{ rotate: `${rot}deg` }] }} />
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+function MucusSlimeSprite({ hitFlash, bobY }: SpriteProps) {
+  const c = hitFlash ? "#ffffff" : "#86EFAC";
+  const bg = hitFlash ? "#86EFAC88" : "#86EFAC30";
+  return (
+    <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* [ASSET: enemySprite: mucus_slime] Translucent blue-green bubble slime */}
+      {/* Main blob body */}
+      <View style={{ width: 42, height: 38, borderRadius: 999,
+        backgroundColor: bg, borderWidth: 1.5, borderColor: c,
+        alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        {/* Shiny highlight */}
+        <View style={{ position: "absolute", top: "12%", right: "18%", width: 10, height: 8,
+          borderRadius: 999, backgroundColor: "#ffffff35" }} />
+        {/* Smaller inner bubble */}
+        <View style={{ position: "absolute", top: "30%", left: "12%", width: 8, height: 7,
+          borderRadius: 999, backgroundColor: "#86EFAC22", borderWidth: 1, borderColor: "#86EFAC50" }} />
+        {/* Dot eyes */}
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
+          <View style={{ width: 5, height: 6, borderRadius: 3, backgroundColor: "#065f46" }} />
+          <View style={{ width: 5, height: 6, borderRadius: 3, backgroundColor: "#065f46" }} />
+        </View>
+        {/* Wide smile */}
+        <View style={{ marginTop: 3, flexDirection: "row", gap: 1 }}>
+          {[2, 3, 3, 2].map((h, i) => (
+            <View key={i} style={{ width: 3, height: h, borderRadius: 2, backgroundColor: "#065f46" }} />
+          ))}
+        </View>
+      </View>
+      {/* Blobby bottom drip */}
+      <View style={{ flexDirection: "row", gap: 3, marginTop: -4 }}>
+        {[{w:12,h:9},{w:16,h:12},{w:10,h:7}].map((d, i) => (
+          <View key={i} style={{ width: d.w, height: d.h, borderRadius: 999,
+            backgroundColor: bg, borderWidth: 1, borderColor: c + "80" }} />
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
+  const c = hitFlash ? "#ffffff" : "#A78BFA";
+  const bg = hitFlash ? "#A78BFA55" : "#A78BFA15";
+  return (
+    <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* [ASSET: enemySprite: hypoxia_wraith] Dim blue oxygen-draining ghost */}
+      {/* Ghostly tall body */}
+      <View style={{ width: 30, height: 52, borderTopLeftRadius: 999, borderTopRightRadius: 999,
+        borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
+        backgroundColor: bg, borderWidth: 1.5, borderColor: c + "90",
+        alignItems: "center", overflow: "hidden" }}>
+        {/* Dim inner fade */}
+        <LinearGradient colors={["#A78BFA18", "#00000000"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, height: "60%" }} />
+        {/* Hollow empty eyes */}
+        <View style={{ flexDirection: "row", gap: 7, marginTop: 10 }}>
+          <View style={{ width: 7, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: "#3b0764" }} />
+          <View style={{ width: 7, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: "#3b0764" }} />
+        </View>
+        {/* Wisping mouth */}
+        <View style={{ width: 10, height: 2, borderRadius: 1, backgroundColor: "#3b0764", marginTop: 6 }} />
+        {/* Oxygen drain vortex lines */}
+        <View style={{ position: "absolute", bottom: "18%", left: "10%", right: "10%", height: 1,
+          backgroundColor: "#A78BFA35" }} />
+        <View style={{ position: "absolute", bottom: "28%", left: "14%", right: "14%", height: 0.5,
+          backgroundColor: "#A78BFA25" }} />
+      </View>
+      {/* Tattered bottom — 3 phantom wisps */}
+      <View style={{ flexDirection: "row", gap: 4, marginTop: -6 }}>
+        {[{h:12,rot:-14},{h:10,rot:0},{h:13,rot:12}].map((t, i) => (
+          <View key={i} style={{ width: 6, height: t.h, borderRadius: 999,
+            backgroundColor: "#A78BFA22", borderWidth: 1, borderColor: c + "40",
+            transform: [{ rotate: `${t.rot}deg` }] }} />
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
+  const c = hitFlash ? "#ffffff" : "#F97316";
+  const bg = hitFlash ? "#F9731688" : "#F9731630";
+  return (
+    <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* [ASSET: enemySprite: bronchospasm_drake] BOSS — constricting wind-ring dragon */}
+      {/* Outer wind ring halos */}
+      <View style={{ position: "absolute", top: -6, alignSelf: "center",
+        width: 72, height: 72, borderRadius: 36, borderWidth: 1.5, borderColor: "#F9731628" }} />
+      <View style={{ position: "absolute", top: 4, alignSelf: "center",
+        width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: "#F9731640" }} />
+      {/* Dark corruption crystal clusters (bottom) */}
+      <View style={{ flexDirection: "row", gap: 3, marginBottom: -5, zIndex: 2 }}>
+        {[{w:6,h:14,rot:-18},{w:8,h:18,rot:-6},{w:10,h:22,rot:0},{w:8,h:16,rot:6},{w:6,h:12,rot:18}].map((cr, i) => (
+          <View key={i} style={{ width: cr.w, height: cr.h, borderRadius: 2,
+            backgroundColor: i === 2 ? "#1e3a78" : "#162860",
+            borderWidth: 1, borderColor: "#60A5FA55",
+            transform: [{ rotate: `${cr.rot}deg` }] }} />
+        ))}
+      </View>
+      {/* Main drake body */}
+      <View style={{ width: 52, height: 52, borderRadius: 14,
+        backgroundColor: bg, borderWidth: 2, borderColor: c,
+        alignItems: "center", justifyContent: "center", zIndex: 3 }}>
+        {/* Scales texture */}
+        <View style={{ position: "absolute", top: "18%", left: "10%", right: "10%", height: 1,
+          backgroundColor: "#F9731640" }} />
+        <View style={{ position: "absolute", top: "36%", left: "10%", right: "10%", height: 1,
+          backgroundColor: "#F9731630" }} />
+        <View style={{ position: "absolute", top: "54%", left: "10%", right: "10%", height: 1,
+          backgroundColor: "#F9731625" }} />
+        {/* Drake eyes — fierce */}
+        <View style={{ flexDirection: "row", gap: 14, marginTop: -8 }}>
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#7c2d12",
+            borderWidth: 1.5, borderColor: "#fbbf24" }} />
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#7c2d12",
+            borderWidth: 1.5, borderColor: "#fbbf24" }} />
+        </View>
+        {/* Snout */}
+        <View style={{ width: 18, height: 8, borderRadius: 4,
+          backgroundColor: "#7c2d1288", borderWidth: 1, borderColor: c, marginTop: 5 }}>
+          {/* Nostrils */}
+          <View style={{ flexDirection: "row", justifyContent: "space-around", paddingTop: 2 }}>
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#431407" }} />
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#431407" }} />
+          </View>
+        </View>
+        {/* Crown/horns */}
+        <View style={{ position: "absolute", top: -6, flexDirection: "row", gap: 12 }}>
+          <View style={{ width: 5, height: 10, borderRadius: 3, backgroundColor: "#1e40af",
+            transform: [{ rotate: "-14deg" }] }} />
+          <View style={{ width: 7, height: 14, borderRadius: 3, backgroundColor: "#1d4ed8" }} />
+          <View style={{ width: 5, height: 10, borderRadius: 3, backgroundColor: "#1e40af",
+            transform: [{ rotate: "14deg" }] }} />
+        </View>
+      </View>
+      {/* HP label for boss */}
+    </Animated.View>
+  );
+}
+
+function EnemySprite({ typeId, hitFlash, bobY }: { typeId: string; hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> }) {
+  switch (typeId) {
+    case "breathless_wisp":    return <BreathlessWispSprite hitFlash={hitFlash} bobY={bobY} />;
+    case "wheeze_sprite":      return <WheezeSpriteSprite   hitFlash={hitFlash} bobY={bobY} />;
+    case "mucus_slime":        return <MucusSlimeSprite     hitFlash={hitFlash} bobY={bobY} />;
+    case "hypoxia_wraith":     return <HypoxiaWraithSprite  hitFlash={hitFlash} bobY={bobY} />;
+    case "bronchospasm_drake": return <BronchospasmDrakeSprite hitFlash={hitFlash} bobY={bobY} />;
+    default: return <View style={{ width: 36, height: 48, borderRadius: 8, backgroundColor: "#334155" }} />;
+  }
+}
+
+/* ── [ASSET: heroBattleSprite] Semi-chibi healer defending the core
+   Replace with a real sprite Image when art is ready. ── */
+function HeroBattleSprite({ bob }: { bob: Animated.Value }) {
+  const bobY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
+  return (
+    <Animated.View style={[s.heroBattlePos, { transform: [{ translateY: bobY }] }]}>
+      {/* [ASSET: heroBattleSprite] Healer chibi defending patient core */}
+      {/* Staff */}
+      <View style={{ position: "absolute", right: -4, top: -4, width: 3, height: 52,
+        backgroundColor: "#c4b5fd", borderRadius: 2 }}>
+        <View style={{ position: "absolute", top: -4, left: -3, width: 9, height: 9,
+          borderRadius: 5, backgroundColor: "#7c3aed", borderWidth: 1.5, borderColor: "#ddd6fe" }} />
+        {/* Staff glow */}
+        <LinearGradient colors={["#a78bfa40", "#00000000"]}
+          style={{ position: "absolute", top: -8, left: -6, width: 15, height: 20, borderRadius: 999 }} />
+      </View>
+      {/* Cloak/body */}
+      <View style={{ width: 34, height: 40, borderRadius: 10,
+        borderTopLeftRadius: 4, borderTopRightRadius: 4,
+        backgroundColor: "#1e3a5f", borderWidth: 1.5, borderColor: "#60A5FA80",
+        alignItems: "center", overflow: "hidden" }}>
+        {/* Cloak trim */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6,
+          backgroundColor: "#1d4ed8" }} />
+        {/* Medical cross on chest */}
+        <View style={{ marginTop: 12, alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 10, height: 3, borderRadius: 1, backgroundColor: "#60A5FA" }} />
+          <View style={{ position: "absolute", width: 3, height: 10, borderRadius: 1, backgroundColor: "#60A5FA" }} />
+        </View>
+        {/* Collar line */}
+        <View style={{ position: "absolute", top: 6, left: "25%", right: "25%", height: 1,
+          backgroundColor: "#93C5FD40" }} />
+      </View>
+      {/* Head */}
+      <View style={{ position: "absolute", top: -20, left: 4, width: 26, height: 24,
+        borderRadius: 999, backgroundColor: "#fde68a",
+        borderWidth: 1.5, borderColor: "#d97706",
+        alignItems: "center", justifyContent: "center" }}>
+        {/* Eyes */}
+        <View style={{ flexDirection: "row", gap: 7, marginTop: -2 }}>
+          <View style={{ width: 4, height: 5, borderRadius: 3, backgroundColor: "#1e3a5f" }} />
+          <View style={{ width: 4, height: 5, borderRadius: 3, backgroundColor: "#1e3a5f" }} />
+        </View>
+        {/* Determined mouth */}
+        <View style={{ width: 7, height: 2, borderRadius: 1, backgroundColor: "#92400e", marginTop: 3 }} />
+        {/* Healer cap */}
+        <View style={{ position: "absolute", top: -7, left: -2, right: -2, height: 10,
+          backgroundColor: "#1d4ed8", borderRadius: 5 }}>
+          <View style={{ position: "absolute", top: 2, left: "25%", right: "25%", alignItems: "center" }}>
+            <View style={{ width: 8, height: 2, borderRadius: 1, backgroundColor: "#60A5FA" }} />
+            <View style={{ position: "absolute", width: 2, height: 6, borderRadius: 1, backgroundColor: "#60A5FA" }} />
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+/* ── Vital Lantern (Patient Core) ── */
+function VitalLantern({ stability }: { stability: number }) {
+  const glow = stability > 60 ? "#34D399" : stability > 30 ? "#FBBF24" : "#F87171";
+  return (
+    <View style={s.vitalLanternPos}>
+      {/* Glow aura */}
+      <LinearGradient colors={[glow + "40", "#00000000"]}
+        style={{ position: "absolute", top: -18, left: -18, width: 70, height: 70, borderRadius: 35 }} />
+      {/* Lantern body */}
+      <View style={{ width: 30, height: 36, borderRadius: 4, backgroundColor: "#0a1830",
+        borderWidth: 2, borderColor: glow, alignItems: "center", justifyContent: "center",
+        overflow: "hidden" }}>
+        <LinearGradient colors={[glow + "70", glow + "28"]} style={{ flex: 1, width: "100%", alignItems: "center" }}>
+          {/* Medical cross */}
+          <View style={{ marginTop: 6, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 12, height: 3.5, borderRadius: 2, backgroundColor: "#fff" }} />
+            <View style={{ position: "absolute", width: 3.5, height: 12, borderRadius: 2, backgroundColor: "#fff" }} />
+          </View>
+        </LinearGradient>
+      </View>
+      {/* Hang wire */}
+      <View style={{ position: "absolute", top: -8, left: 12, width: 1.5, height: 8,
+        backgroundColor: "#1a3050" }} />
+      {/* Stability micro bar */}
+      <View style={{ width: 34, height: 4, borderRadius: 2, backgroundColor: "#0a1428",
+        marginTop: 4, overflow: "hidden" }}>
+        <View style={{ width: `${stability}%` as any, height: "100%", borderRadius: 2, backgroundColor: glow }} />
+      </View>
+    </View>
+  );
+}
+
+/* ── [ASSET: cardIcon] Clinical Talisman Card ── */
+function TalismanCard({
+  cardId, canAfford, hasTargets, isPlaying, onPress,
+}: {
+  cardId: string; canAfford: boolean; hasTargets: boolean;
+  isPlaying: boolean; onPress: () => void;
+}) {
+  const card = CARD_DATA[cardId];
+  const active = canAfford && hasTargets && isPlaying;
+  const c = active ? card.color : COLORS.onSurfaceTertiary;
+
+  return (
+    <Pressable
+      style={[s.talismanCard, {
+        borderColor: active ? card.color + "80" : COLORS.border,
+        backgroundColor: active ? "#080e18" : "#060a12",
+        opacity: active ? 1 : 0.42,
+      }]}
+      onPress={onPress}
+      disabled={!active}
+    >
+      {/* Category badge top */}
+      <View style={[s.cardCatBadge, { backgroundColor: active ? card.color + "28" : "transparent" }]}>
+        <Text style={[s.cardCatTxt, { color: c }]}>{card.category}</Text>
+        {card.aoe && <Text style={[s.cardCatTxt, { color: c }]}> · AoE</Text>}
+      </View>
+
+      {/* Icon circle — the talisman rune */}
+      <View style={[s.cardIconCircle, {
+        borderColor: active ? card.color + "70" : COLORS.border,
+        backgroundColor: active ? card.color + "18" : COLORS.surfaceTertiary,
+      }]}>
+        <Text style={s.cardIconEmoji}>{card.icon}</Text>
+        {/* Corner rune marks */}
+        <View style={{ position: "absolute", top: 2, left: 2, width: 4, height: 4,
+          borderTopWidth: 1, borderLeftWidth: 1, borderColor: c + "60" }} />
+        <View style={{ position: "absolute", top: 2, right: 2, width: 4, height: 4,
+          borderTopWidth: 1, borderRightWidth: 1, borderColor: c + "60" }} />
+        <View style={{ position: "absolute", bottom: 2, left: 2, width: 4, height: 4,
+          borderBottomWidth: 1, borderLeftWidth: 1, borderColor: c + "60" }} />
+        <View style={{ position: "absolute", bottom: 2, right: 2, width: 4, height: 4,
+          borderBottomWidth: 1, borderRightWidth: 1, borderColor: c + "60" }} />
+      </View>
+
+      {/* Card name */}
+      <Text style={[s.cardNameTxt, { color: active ? card.color : COLORS.onSurfaceTertiary }]}
+        numberOfLines={2}>
+        {card.name}
+      </Text>
+
+      {/* AP rune cost */}
+      <View style={[s.apRune, { backgroundColor: active ? card.color + "25" : "transparent",
+        borderColor: active ? card.color + "60" : COLORS.border }]}>
+        <Text style={[s.apRuneTxt, { color: c }]}>{card.apCost}</Text>
+        <Text style={[s.apRuneLabel, { color: c + "CC" }]}>AP</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   MAIN COMPONENT (game logic UNCHANGED — visual layer only)
+   ══════════════════════════════════════════════════════════ */
 export default function WardDefense() {
   const router = useRouter();
   const { player, applyRewards } = usePlayer();
@@ -248,7 +818,33 @@ export default function WardDefense() {
 
   function set(next: GS) { gsRef.current = next; bump(t => t + 1); }
 
-  /* ── Game tick ── */
+  /* ── Idle bob animation (shared across all enemy sprites) ── */
+  const bobAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(bobAnim, { toValue: 1, duration: 900, useNativeDriver: false }),
+      Animated.timing(bobAnim, { toValue: 0, duration: 900, useNativeDriver: false }),
+    ])).start();
+  }, []);
+
+  /* ── Card cast effect ── */
+  const effectAnim = useRef(new Animated.Value(0)).current;
+  const effectColorRef = useRef("#60A5FA");
+  const effectQualRef  = useRef<"strong"|"partial"|"weak">("weak");
+  const [showEffect, setShowEffect] = useState(false);
+
+  function triggerEffect(color: string, quality: "strong"|"partial"|"weak") {
+    effectColorRef.current = color;
+    effectQualRef.current  = quality;
+    setShowEffect(true);
+    effectAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(effectAnim, { toValue: 1, duration: 280, useNativeDriver: false }),
+      Animated.timing(effectAnim, { toValue: 0, duration: 420, useNativeDriver: false }),
+    ]).start(() => setShowEffect(false));
+  }
+
+  /* ── Game tick (UNCHANGED logic) ── */
   useEffect(() => {
     const iv = setInterval(() => {
       const s = gsRef.current;
@@ -269,7 +865,6 @@ export default function WardDefense() {
 
       let ns: GS = { ...s, tickCount: s.tickCount + 1 };
 
-      // AP regen
       const at = ns.apTimer - 1;
       if (at <= 0 && ns.ap < MAX_AP) {
         ns = { ...ns, ap: ns.ap + 1, apTimer: AP_REGEN_TICKS };
@@ -277,7 +872,6 @@ export default function WardDefense() {
         ns = { ...ns, apTimer: Math.max(0, at) };
       }
 
-      // Spawn queue
       let { spawnQueue, spawnTimer, enemies, uidSeed } = ns;
       spawnTimer -= 1;
       if (spawnTimer <= 0 && spawnQueue.length > 0) {
@@ -293,7 +887,6 @@ export default function WardDefense() {
       }
       ns = { ...ns, spawnQueue, spawnTimer, enemies, uidSeed };
 
-      // Move enemies + check core
       const reached: ActiveEnemy[] = [];
       const alive: ActiveEnemy[] = [];
       for (const e of ns.enemies) {
@@ -323,7 +916,7 @@ export default function WardDefense() {
     return () => clearInterval(iv);
   }, []);
 
-  /* ── Apply rewards once on end ── */
+  /* ── Apply rewards (UNCHANGED) ── */
   useEffect(() => {
     if ((gs.phase === "won" || gs.phase === "lost") && !rewardsApplied.current && player) {
       rewardsApplied.current = true;
@@ -332,13 +925,13 @@ export default function WardDefense() {
     }
   }, [gs.phase, player]);
 
-  /* ── Start / replay ── */
+  /* ── Start / replay (UNCHANGED) ── */
   function startGame() {
     rewardsApplied.current = false;
     set(beginWave({ ...freshState(), stability: MAX_STABILITY, ap: INIT_AP, apTimer: AP_REGEN_TICKS }, 0));
   }
 
-  /* ── Play a card ── */
+  /* ── Play a card (UNCHANGED logic + effect trigger) ── */
   function playCard(cardId: string) {
     const s = gsRef.current;
     if (s.phase !== "playing") return;
@@ -347,12 +940,13 @@ export default function WardDefense() {
     const activeEnemies = s.enemies.filter(e => e.progress < LANE_STEPS);
     if (activeEnemies.length === 0) return;
 
-    const { enemies: newEnemies, dmgDealt, feedback, fColor } = applyCard(cardId, s.enemies);
+    const { enemies: newEnemies, dmgDealt, feedback, fColor, quality } = applyCard(cardId, s.enemies);
     const fid = String(Date.now());
     const feedbacks: Feedback[] = feedback
-      ? [{ id: fid, text: feedback, color: fColor, ticks: 7 }, ...s.feedbacks.slice(0, 1)]
+      ? [{ id: fid, text: feedback, color: fColor, quality, ticks: 8 }, ...s.feedbacks.slice(0, 1)]
       : s.feedbacks;
 
+    triggerEffect(card.color, quality);
     set({ ...s, ap: s.ap - card.apCost, enemies: newEnemies, feedbacks, score: s.score + dmgDealt });
   }
 
@@ -379,248 +973,308 @@ export default function WardDefense() {
     );
   }
 
-  /* ── Active game ── */
+  /* ── Active game screen — 2.5D visual ── */
   const hasActiveEnemies = gs.enemies.some(e => e.progress < LANE_STEPS);
+  const stabilityColor = gs.stability > 60 ? COLORS.success : gs.stability > 30 ? COLORS.warning : COLORS.error;
+
+  const bobY = bobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
 
-      {/* ── HEADER ── */}
-      <View style={s.header}>
-        <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={18} color={COLORS.onSurfaceSecondary} />
+      {/* ══ HUD STRIP ══ */}
+      <View style={s.hud}>
+        {/* Back */}
+        <Pressable style={s.hudBack} onPress={() => router.back()} hitSlop={10}>
+          <Ionicons name="arrow-back" size={16} color={COLORS.onSurface} />
         </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={s.modeKicker}>AIRWAY WARD DEFENSE</Text>
+
+        {/* Wave label */}
+        <View style={s.hudWave}>
+          <Text style={s.hudKicker}>AIRWAY WARD</Text>
           {gs.phase === "wave_pause" ? (
-            <Text style={[s.waveLabel, { color: COLORS.success }]}>
-              Wave {gs.wave + 1} cleared — next wave incoming…
-            </Text>
+            <Text style={[s.hudWaveTxt, { color: COLORS.air }]}>↺ Next wave…</Text>
           ) : waveDef.isBoss ? (
-            <Text style={[s.waveLabel, { color: COLORS.error }]}>⚠ BOSS WAVE</Text>
+            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ BOSS</Text>
           ) : (
-            <Text style={s.waveLabel}>Wave {gs.wave + 1} / {WAVES.length}</Text>
+            <Text style={s.hudWaveTxt}>Wave {gs.wave + 1} / {WAVES.length}</Text>
           )}
         </View>
-        <Text style={s.scoreTag}>{gs.score} dmg</Text>
-      </View>
 
-      {/* ── STATUS BARS ── */}
-      <View style={s.statusRow}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <View style={s.barRow}>
-            <Text style={s.barLbl}>❤️ STABILITY</Text>
-            <Text style={[s.barVal, {
-              color: gs.stability > 60 ? COLORS.success : gs.stability > 30 ? COLORS.warning : COLORS.error,
-            }]}>{gs.stability}</Text>
+        {/* Stability bar */}
+        <View style={s.hudStability}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+            <Text style={s.hudBarLabel}>STABILITY</Text>
+            <Text style={[s.hudBarVal, { color: stabilityColor }]}>{gs.stability}</Text>
           </View>
-          <View style={s.barBg}>
-            <View style={[s.barFill, {
-              width: `${gs.stability}%` as any,
-              backgroundColor: gs.stability > 60 ? COLORS.success : gs.stability > 30 ? COLORS.warning : COLORS.error,
+          <View style={s.hudStabilityBg}>
+            <View style={[s.hudStabilityFill, {
+              width: `${gs.stability}%` as any, backgroundColor: stabilityColor,
             }]} />
           </View>
         </View>
-        <View style={s.apBlock}>
-          <Text style={s.barLbl}>⚡ AP {gs.ap}/{MAX_AP}</Text>
-          <View style={s.gemRow}>
+
+        {/* AP gems */}
+        <View style={s.hudAp}>
+          <Text style={s.hudBarLabel}>AP {gs.ap}</Text>
+          <View style={s.hudGemRow}>
             {Array.from({ length: MAX_AP }).map((_, i) => (
-              <View key={i} style={[s.gem, { backgroundColor: i < gs.ap ? COLORS.runeGold : COLORS.surfaceTertiary }]} />
+              <View key={i} style={[s.hudGem, {
+                backgroundColor: i < gs.ap ? COLORS.runeGold : COLORS.surfaceTertiary,
+              }]} />
             ))}
           </View>
         </View>
       </View>
 
-      {/* ── LANE ── */}
-      <View style={s.lane}>
-        <LinearGradient colors={["#0a1422", "#0c1a32", "#0a1222"]} style={StyleSheet.absoluteFillObject} />
+      {/* ══ WARD SCENE ══ */}
+      <View style={s.ward}>
+        {/* [ASSET: backgroundScene] */}
+        <WardCorridorScene />
 
-        {/* Track path */}
-        <View style={s.trackPath} />
+        {/* Vital Lantern — patient core, left/far end */}
+        <VitalLantern stability={gs.stability} />
 
-        {/* Patient core icon */}
-        <View style={s.coreIcon}>
-          <Text style={{ fontSize: 24 }}>🏥</Text>
-          <View style={[s.coreBar, {
-            width: `${gs.stability}%` as any,
-            backgroundColor: gs.stability > 60 ? COLORS.success : COLORS.error,
-          }]} />
-        </View>
+        {/* Hero battle sprite — guarding the core */}
+        <HeroBattleSprite bob={bobAnim} />
 
-        {/* Spawn indicator */}
-        <View style={s.spawnEdge}>
-          <Text style={{ fontSize: 12, color: COLORS.error + "90" }}>⚠</Text>
-        </View>
-
-        {/* Enemies */}
-        {gs.enemies.map(e => {
+        {/* Enemies on lane */}
+        {gs.enemies.map((e) => {
           const def = ENEMY_DATA[e.typeId];
           const pct = Math.max(0, Math.min(1, (e.progress - 0.5) / (LANE_STEPS - 1)));
-          const leftPct = 12 + pct * 70;
-          const hpPct = Math.round((e.hp / e.maxHp) * 100);
+          // 2.5D: enemies scale up as they approach core (left), shrink as they spawn (right)
+          const scale = 0.72 + (1 - pct) * 0.28;
+          const leftPct = 14 + pct * 64;
+          const topPct  = 30 + (1 - pct) * 20;
+          const hpPct   = Math.round((e.hp / e.maxHp) * 100);
+
           return (
-            <View key={e.uid} style={[
-              s.enemyToken,
-              def.isBoss && s.bossToken,
-              {
-                left: `${leftPct}%` as any,
-                borderColor: e.hitFlash > 0 ? "#fff" : def.color,
-                backgroundColor: e.hitFlash > 0 ? def.color + "55" : def.color + "18",
-              },
-            ]}>
-              <Text style={[s.enemyIcon, def.isBoss && { fontSize: 22 }]}>{def.icon}</Text>
-              <View style={s.enemyHpBg}>
-                <View style={[s.enemyHpFill, { width: `${hpPct}%` as any, backgroundColor: def.color }]} />
-              </View>
+            <View key={e.uid} style={{
+              position: "absolute",
+              left: `${leftPct}%` as any,
+              top: `${topPct}%` as any,
+              transform: [{ scale }],
+              alignItems: "center",
+              zIndex: Math.round((1 - pct) * 10),
+            }}>
+              {/* Boss HP number above sprite */}
               {def.isBoss && (
-                <Text style={[s.bossHpTxt, { color: def.color }]}>{e.hp}</Text>
+                <Text style={{ color: def.color, fontSize: 9, fontWeight: "700",
+                  marginBottom: 2, textShadowColor: "#000", textShadowRadius: 3 }}>
+                  {e.hp} HP
+                </Text>
+              )}
+
+              {/* Enemy sprite */}
+              <EnemySprite
+                typeId={e.typeId}
+                hitFlash={e.hitFlash > 0}
+                bobY={bobY}
+              />
+
+              {/* HP bar below sprite */}
+              <View style={{ width: def.isBoss ? 64 : 40, height: 4, borderRadius: 2,
+                backgroundColor: "#0a1428", marginTop: 3, overflow: "hidden" }}>
+                <View style={{ width: `${hpPct}%` as any, height: "100%",
+                  borderRadius: 2, backgroundColor: def.color }} />
+              </View>
+
+              {/* Name chip — show on boss */}
+              {def.isBoss && (
+                <View style={{ marginTop: 3, backgroundColor: "#0a1428cc",
+                  borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                  <Text style={{ color: def.color, fontSize: 8, fontWeight: "700", letterSpacing: 0.5 }}>
+                    BOSS
+                  </Text>
+                </View>
               )}
             </View>
           );
         })}
 
+        {/* Spawn edge warning */}
+        {gs.spawnQueue.length > 0 && (
+          <View style={s.spawnEdge}>
+            <Text style={s.spawnTxt}>⚠ {gs.spawnQueue.length}</Text>
+          </View>
+        )}
+
+        {/* [ASSET: effectAsset] Card cast burst */}
+        {showEffect && (
+          <CardEffectBurst
+            animVal={effectAnim}
+            color={effectColorRef.current}
+            quality={effectQualRef.current}
+          />
+        )}
+
         {/* Wave pause overlay */}
         {gs.phase === "wave_pause" && (
           <View style={s.pauseOverlay}>
-            <Text style={s.pauseTxt}>
+            <LinearGradient colors={["rgba(6,10,20,0.85)", "rgba(6,10,20,0.95)"]} style={StyleSheet.absoluteFillObject} />
+            <Text style={s.pauseWaveTxt}>
               {gs.wave + 1 < WAVES.length
-                ? (WAVES[gs.wave + 1]?.isBoss ? "⚠ BOSS WAVE INCOMING" : `WAVE ${gs.wave + 2} INCOMING`)
-                : "PROCESSING…"
-              }
+                ? (WAVES[gs.wave + 1]?.isBoss ? "⚠  BOSS WAVE INCOMING" : `WAVE ${gs.wave + 2} INCOMING`)
+                : "PROCESSING…"}
             </Text>
+            <Text style={s.pauseSubTxt}>Ward stabilizing…</Text>
           </View>
         )}
       </View>
 
-      {/* ── FEEDBACK ── */}
-      <View style={s.feedbackArea}>
-        {gs.feedbacks.slice(0, 2).map(f => (
-          <Text key={f.id} style={[s.feedbackTxt, { color: f.color }]} numberOfLines={2}>
-            {f.text}
-          </Text>
+      {/* ══ FEEDBACK PANEL ══ */}
+      <View style={s.feedbackPanel}>
+        {gs.feedbacks.slice(0, 1).map(f => (
+          <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color }]}>
+            <Text style={[s.feedbackTxt, { color: f.color }]} numberOfLines={2}>{f.text}</Text>
+          </View>
+        ))}
+        {gs.feedbacks.length === 0 && (
+          <Text style={s.feedbackHint}>Select a clinical order to intervene.</Text>
+        )}
+      </View>
+
+      {/* ══ CARD HAND — Clinical Talismans ══ */}
+      <View style={s.hand}>
+        {HAND.map(cardId => (
+          <TalismanCard
+            key={cardId}
+            cardId={cardId}
+            canAfford={gs.ap >= CARD_DATA[cardId].apCost}
+            hasTargets={hasActiveEnemies}
+            isPlaying={gs.phase === "playing"}
+            onPress={() => playCard(cardId)}
+          />
         ))}
       </View>
 
-      {/* ── ACTIVE ENEMIES ROSTER ── */}
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        style={s.roster} contentContainerStyle={{ gap: 6, paddingHorizontal: SPACING.md }}
-      >
-        {gs.enemies.map(e => {
-          const def = ENEMY_DATA[e.typeId];
-          return (
-            <View key={e.uid} style={[s.rosterChip, { borderColor: def.color + "50" }]}>
-              <Text style={{ fontSize: 11 }}>{def.icon}</Text>
-              <Text style={[s.rosterName, { color: def.color }]}>{def.name.split(" ")[0]}</Text>
-              <Text style={[s.rosterHp, { color: def.color }]}>{e.hp}</Text>
-            </View>
-          );
-        })}
-        {gs.spawnQueue.length > 0 && (
-          <View style={[s.rosterChip, { borderColor: COLORS.border }]}>
-            <Text style={{ fontSize: 11 }}>⏳</Text>
-            <Text style={s.rosterName}>{gs.spawnQueue.length} incoming</Text>
-          </View>
-        )}
-        {gs.enemies.length === 0 && gs.spawnQueue.length === 0 && gs.phase === "playing" && (
-          <View style={[s.rosterChip, { borderColor: COLORS.success + "50" }]}>
-            <Text style={[s.rosterName, { color: COLORS.success }]}>Lane clear</Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* ── CARD HAND ── */}
-      <View style={s.hand}>
-        {HAND.map(cardId => {
-          const card = CARD_DATA[cardId];
-          const canAfford = gs.ap >= card.apCost;
-          const disabled = !canAfford || !hasActiveEnemies || gs.phase !== "playing";
-          return (
-            <Pressable
-              key={cardId}
-              style={[
-                s.card,
-                { borderColor: canAfford && hasActiveEnemies ? card.color + "70" : COLORS.border },
-                disabled && s.cardOff,
-              ]}
-              onPress={() => playCard(cardId)}
-              disabled={disabled}
-            >
-              <Text style={s.cardIcon}>{card.icon}</Text>
-              <Text
-                style={[s.cardName, { color: canAfford && hasActiveEnemies ? card.color : COLORS.onSurfaceTertiary }]}
-                numberOfLines={2}
-              >
-                {card.name}
-              </Text>
-              <View style={[s.apPill, { backgroundColor: canAfford ? card.color + "28" : COLORS.surfaceTertiary }]}>
-                <Text style={[s.apPillTxt, { color: canAfford ? card.color : COLORS.onSurfaceTertiary }]}>
-                  {card.apCost} AP
-                </Text>
-              </View>
-              {card.aoe && <Text style={[s.aoeTag, { color: card.color }]}>AoE</Text>}
-            </Pressable>
-          );
-        })}
-      </View>
     </SafeAreaView>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LOBBY SCREEN
-   ═══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   LOBBY SCREEN — atmospheric Airway Ward
+   ══════════════════════════════════════════════════════════ */
 function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => void }) {
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
-      <LinearGradient colors={["#08121e", "#0c1a32", "#08101a"]} style={StyleSheet.absoluteFillObject} />
+      {/* Atmospheric background */}
+      <LinearGradient colors={["#040c1c", "#06101e", "#040c18"]} style={StyleSheet.absoluteFillObject} />
+      {/* Ward corridor suggestion in background */}
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: "38%",
+        backgroundColor: "#050d1a" }} />
+      <LinearGradient colors={["#60A5FA18", "#00000000"]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={{ position: "absolute", top: "38%", left: 0, right: 0, height: 3 }} />
+      {/* Lantern glow suggestions */}
+      <LinearGradient colors={["#60A5FA14", "#00000000"]}
+        style={{ position: "absolute", top: "10%", left: "8%", width: "22%", height: "30%", borderRadius: 999 }} />
+      <LinearGradient colors={["#60A5FA14", "#00000000"]}
+        style={{ position: "absolute", top: "8%", right: "6%", width: "26%", height: "35%", borderRadius: 999 }} />
+
       <ScrollView contentContainerStyle={s.lobbyContent} showsVerticalScrollIndicator={false}>
 
-        <Pressable style={s.backBtn} onPress={onBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={18} color={COLORS.onSurfaceSecondary} />
+        <Pressable style={s.hudBack} onPress={onBack} hitSlop={10}>
+          <Ionicons name="arrow-back" size={16} color={COLORS.onSurface} />
         </Pressable>
 
-        <View style={s.lobbyHero}>
-          <Text style={{ fontSize: 52 }}>🏥</Text>
-          <Text style={s.lobbyKicker}>WARD DEFENSE · PROTOTYPE</Text>
-          <Text style={s.lobbyTitle}>Airway Rush</Text>
-          <Text style={s.lobbySubtitle}>Bronchospasm Corruption · 5 Waves + Boss</Text>
+        {/* Hero art area */}
+        <View style={s.lobbyHeroArea}>
+          {/* Simple ward emblem */}
+          <View style={s.lobbyEmblem}>
+            <LinearGradient colors={["#0e2040", "#081828"]} style={StyleSheet.absoluteFillObject} />
+            <View style={{ width: 48, height: 14, borderRadius: 2, backgroundColor: "#60A5FA" }} />
+            <View style={{ position: "absolute", width: 14, height: 48, borderRadius: 2, backgroundColor: "#60A5FA" }} />
+            {/* Corner accents */}
+            {[{t:4,l:4},{t:4,r:4},{b:4,l:4},{b:4,r:4}].map((p, i) => (
+              <View key={i} style={{
+                position: "absolute",
+                top: (p as any).t, bottom: (p as any).b,
+                left: (p as any).l, right: (p as any).r,
+                width: 8, height: 8,
+                borderTopWidth: (p as any).t !== undefined ? 1.5 : 0,
+                borderBottomWidth: (p as any).b !== undefined ? 1.5 : 0,
+                borderLeftWidth: (p as any).l !== undefined ? 1.5 : 0,
+                borderRightWidth: (p as any).r !== undefined ? 1.5 : 0,
+                borderColor: "#60A5FA80",
+              }} />
+            ))}
+          </View>
+          <Text style={s.lobbyKicker}>WARD DEFENSE · AIRWAY CODE RUSH</Text>
+          <Text style={s.lobbyTitle}>Bronchospasm Siege</Text>
+          <Text style={s.lobbySubtitle}>5 Waves + Boss · Airway Ward</Text>
+          {/* Difficulty indicator */}
+          <View style={{ flexDirection: "row", gap: 5, marginTop: 4 }}>
+            {["⬡","⬡","⬡","⬡","◎"].map((d, i) => (
+              <Text key={i} style={{ color: i < 3 ? COLORS.air : i < 4 ? COLORS.warning : COLORS.error, fontSize: 11 }}>{d}</Text>
+            ))}
+            <Text style={{ color: COLORS.onSurfaceTertiary, fontSize: 10 }}> Moderate</Text>
+          </View>
         </View>
 
-        <View style={s.card2}>
-          <Text style={s.cardSectionTitle}>⚕ MISSION</Text>
-          <Text style={s.bodyTxt}>
-            Bronchospasm corruption is spreading through Airway Ward. Enemies march toward your patient's core.
-            {"\n\n"}Use clinical cards to stop them before <Text style={{ color: COLORS.error }}>Patient Stability</Text> reaches zero. Correct card choices deal more damage and unlock deeper nursing feedback.
+        {/* Mission */}
+        <View style={s.lobbyCard}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.air }} />
+            <Text style={s.lobbySectionTitle}>MISSION</Text>
+          </View>
+          <Text style={s.lobbyBodyTxt}>
+            Bronchospasm corruption spreads through the Airway Ward. Disease-spirits march toward the
+            <Text style={{ color: COLORS.air }}> Vital Lantern</Text> — your patient's life core.
+          </Text>
+          <Text style={[s.lobbyBodyTxt, { marginTop: 8 }]}>
+            Play clinical orders to counter each spirit. Correct interventions deal full damage and unlock
+            nursing insight. Mismatched orders still act but at reduced power.
           </Text>
         </View>
 
-        <View style={s.card2}>
-          <Text style={s.cardSectionTitle}>🃏 CLINICAL CARDS</Text>
-          {Object.entries(CARD_DATA).map(([, card]) => (
-            <View key={card.name} style={s.listRow}>
-              <Text style={{ fontSize: 18, width: 26 }}>{card.icon}</Text>
+        {/* Enemy roster */}
+        <View style={s.lobbyCard}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.error }} />
+            <Text style={s.lobbySectionTitle}>DISEASE SPIRITS</Text>
+          </View>
+          {Object.entries(ENEMY_DATA).map(([, def]) => (
+            <View key={def.name} style={s.lobbyListRow}>
+              <View style={[s.lobbyEnemyChip, { borderColor: def.color + "55", backgroundColor: def.color + "12" }]}>
+                <Text style={{ fontSize: 16 }}>{def.icon}</Text>
+              </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={[s.listName, { color: card.color }]}>{card.name}</Text>
-                  <View style={[s.apPill, { backgroundColor: card.color + "22" }]}>
-                    <Text style={[s.apPillTxt, { color: card.color }]}>{card.apCost} AP{card.aoe ? " · AoE" : ""}</Text>
-                  </View>
+                  <Text style={[s.lobbyListName, { color: def.color }]}>{def.name}</Text>
+                  {def.isBoss && (
+                    <View style={{ backgroundColor: COLORS.error + "22", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                      <Text style={{ color: COLORS.error, fontSize: 8, fontWeight: "700" }}>BOSS</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={s.listDesc}>{card.feedback}</Text>
+                <Text style={s.lobbyListDesc}>{def.flavor}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={s.card2}>
-          <Text style={s.cardSectionTitle}>🩺 ENEMIES</Text>
-          {Object.entries(ENEMY_DATA).map(([, def]) => (
-            <View key={def.name} style={s.listRow}>
-              <Text style={{ fontSize: 18, width: 26 }}>{def.icon}</Text>
+        {/* Clinical orders */}
+        <View style={s.lobbyCard}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.brand }} />
+            <Text style={s.lobbySectionTitle}>CLINICAL ORDERS</Text>
+          </View>
+          {Object.entries(CARD_DATA).map(([, card]) => (
+            <View key={card.name} style={s.lobbyListRow}>
+              <View style={[s.lobbyEnemyChip, { borderColor: card.color + "55", backgroundColor: card.color + "12" }]}>
+                <Text style={{ fontSize: 14 }}>{card.icon}</Text>
+              </View>
               <View style={{ flex: 1 }}>
-                <Text style={[s.listName, { color: def.color }]}>{def.name}{def.isBoss ? " 👑 BOSS" : ""}</Text>
-                <Text style={s.listDesc}>{def.flavor}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[s.lobbyListName, { color: card.color }]}>{card.name}</Text>
+                  <View style={{ backgroundColor: card.color + "20", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                    <Text style={{ color: card.color, fontSize: 8, fontWeight: "700" }}>
+                      {card.apCost} AP{card.aoe ? " · AoE" : ""}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={s.lobbyListDesc}>{card.feedback}</Text>
               </View>
             </View>
           ))}
@@ -637,9 +1291,9 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    RESULT SCREEN
-   ═══════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════ */
 function ResultScreen({
   won, wave, stability, score, rewards, onReplay, onBack,
 }: {
@@ -650,23 +1304,31 @@ function ResultScreen({
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <LinearGradient
-        colors={won ? ["#061c12", "#0a2a1c", "#061210"] : ["#180608", "#28090d", "#120406"]}
+        colors={won ? ["#041c10", "#062a18", "#041410"] : ["#180608", "#26090c", "#120406"]}
         style={StyleSheet.absoluteFillObject}
+      />
+      {/* Atmospheric rays */}
+      <LinearGradient
+        colors={won ? ["#34D39920", "#00000000"] : ["#F8717120", "#00000000"]}
+        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "45%" }}
       />
       <ScrollView contentContainerStyle={s.resultContent} showsVerticalScrollIndicator={false}>
         <Text style={s.resultEmoji}>{won ? "🏆" : "💔"}</Text>
         <Text style={[s.resultTitle, { color: won ? COLORS.success : COLORS.error }]}>
-          {won ? "WARD DEFENDED!" : "PATIENT DESTABILIZED"}
+          {won ? "WARD DEFENDED!" : "VITAL LANTERN DIMMED"}
         </Text>
         <Text style={s.resultSub}>
           {won
             ? `All ${WAVES.length} waves cleared · ${stability} Stability remaining`
-            : `Fell on Wave ${wave + 1} of ${WAVES.length}`
-          }
+            : `Fell on Wave ${wave + 1} of ${WAVES.length}`}
         </Text>
 
         <View style={s.rewardBox}>
-          <Text style={s.cardSectionTitle}>REWARDS EARNED</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.brand }} />
+            <Text style={s.lobbySectionTitle}>REWARDS EARNED</Text>
+          </View>
           {[
             { label: "Codex Shards", icon: "📖", val: rewards.codexShards },
             { label: "Player XP",    icon: "⭐", val: rewards.playerXp },
@@ -683,7 +1345,7 @@ function ResultScreen({
           ))}
         </View>
 
-        <Text style={s.scoreLine}>Total damage dealt: {score}</Text>
+        <Text style={s.scoreLine}>Total clinical impact: {score}</Text>
 
         <Pressable style={s.enterBtn} onPress={onReplay}>
           <Ionicons name="refresh" size={18} color={COLORS.onBrand} />
@@ -692,139 +1354,151 @@ function ResultScreen({
         <Pressable style={s.exitBtn} onPress={onBack}>
           <Text style={s.exitBtnTxt}>RETURN HOME</Text>
         </Pressable>
-
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    STYLES
-   ═══════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════ */
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.surface },
+  root: { flex: 1, backgroundColor: "#040c18" },
 
-  /* Header */
-  header: {
+  /* ── HUD ── */
+  hud: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
-    borderBottomWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs,
+    backgroundColor: "#040c18",
+    borderBottomWidth: 1, borderColor: "#1a3050",
   },
-  backBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: COLORS.surfaceSecondary,
-    borderWidth: 1, borderColor: COLORS.border,
+  hudBack: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: "#0a1828", borderWidth: 1, borderColor: "#1a3050",
     alignItems: "center", justifyContent: "center",
   },
-  modeKicker: { color: COLORS.air, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
-  waveLabel:  { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
-  scoreTag:   { color: COLORS.brand, fontSize: 11, fontWeight: "700" },
+  hudWave:   { width: 76 },
+  hudKicker: { color: COLORS.air, fontSize: 8, fontWeight: "700", letterSpacing: 1.5 },
+  hudWaveTxt:{ color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
 
-  /* Status bars */
-  statusRow: {
-    flexDirection: "row", gap: SPACING.md, alignItems: "center",
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    borderBottomWidth: 1, borderColor: COLORS.border,
-  },
-  barRow:  { flexDirection: "row", justifyContent: "space-between", marginBottom: 3 },
-  barLbl:  { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
-  barVal:  { fontSize: 11, fontWeight: "700" },
-  barBg:   { height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill, overflow: "hidden" },
-  barFill: { height: "100%", borderRadius: RADIUS.pill },
-  apBlock: { width: 96 },
-  gemRow:  { flexDirection: "row", flexWrap: "wrap", gap: 3, marginTop: 4 },
-  gem:     { width: 7, height: 7, borderRadius: 4 },
+  hudStability: { flex: 1 },
+  hudBarLabel:  { color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "700", letterSpacing: 1.5 },
+  hudBarVal:    { fontSize: 9, fontWeight: "700" },
+  hudStabilityBg:   { height: 7, backgroundColor: "#0a1428", borderRadius: 4, overflow: "hidden" },
+  hudStabilityFill: { height: "100%", borderRadius: 4 },
 
-  /* Lane */
-  lane: {
-    flex: 1, overflow: "hidden",
-    marginHorizontal: SPACING.md, marginVertical: SPACING.xs,
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
-    minHeight: 110,
-  },
-  trackPath: {
-    position: "absolute", top: "54%", left: "8%", right: "8%",
-    height: 2, backgroundColor: COLORS.air + "28", borderRadius: 1,
-  },
-  coreIcon: {
-    position: "absolute", left: 8, top: "28%", alignItems: "center", gap: 3,
-  },
-  coreBar: { height: 3, borderRadius: RADIUS.pill, maxWidth: 34 },
-  spawnEdge: { position: "absolute", right: 8, top: "40%" },
+  hudAp:    { width: 72 },
+  hudGemRow:{ flexDirection: "row", flexWrap: "wrap", gap: 2, marginTop: 3 },
+  hudGem:   { width: 6, height: 6, borderRadius: 3 },
 
-  enemyToken: {
-    position: "absolute", top: "22%",
-    width: 46, height: 58, borderRadius: RADIUS.md, borderWidth: 1.5,
-    alignItems: "center", justifyContent: "center", gap: 3,
-  },
-  bossToken: { width: 58, height: 68, top: "15%" },
-  enemyIcon: { fontSize: 20 },
-  enemyHpBg: {
-    width: "80%", height: 4,
-    backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden",
-  },
-  enemyHpFill: { height: "100%", borderRadius: 2 },
-  bossHpTxt: { fontSize: 9, fontWeight: "700" },
+  /* ── Ward scene ── */
+  ward: { flex: 1, overflow: "hidden", position: "relative" },
 
+  /* Vital Lantern position (left side, vertically centered-ish) */
+  vitalLanternPos: {
+    position: "absolute", left: 8, top: "50%",
+    marginTop: -28, alignItems: "center",
+    zIndex: 5,
+  },
+
+  /* Hero battle sprite position */
+  heroBattlePos: {
+    position: "absolute", left: 36, top: "40%",
+    marginTop: -30, zIndex: 4,
+  },
+
+  /* Spawn edge warning */
+  spawnEdge: {
+    position: "absolute", right: 10, top: "42%",
+    backgroundColor: "#2c0a0a",
+    borderRadius: 6, borderWidth: 1, borderColor: COLORS.error + "60",
+    paddingHorizontal: 6, paddingVertical: 3,
+  },
+  spawnTxt: { color: COLORS.error, fontSize: 10, fontWeight: "700" },
+
+  /* Wave pause */
   pauseOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center", justifyContent: "center", gap: 6,
+  },
+  pauseWaveTxt: { color: COLORS.air, fontSize: 16, fontWeight: "700", letterSpacing: 2 },
+  pauseSubTxt:  { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+
+  /* ── Feedback panel ── */
+  feedbackPanel: {
+    minHeight: 44, paddingHorizontal: SPACING.md,
+    justifyContent: "center", backgroundColor: "#040c18",
+    borderTopWidth: 1, borderColor: "#0e2040",
+  },
+  feedbackRow: {
+    borderLeftWidth: 2, paddingLeft: SPACING.sm,
+  },
+  feedbackTxt:  { fontSize: 11, lineHeight: 16, fontWeight: "500" },
+  feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic" },
+
+  /* ── Talisman card hand ── */
+  hand: {
+    flexDirection: "row", gap: 4,
+    paddingHorizontal: SPACING.sm, paddingBottom: SPACING.sm,
+    paddingTop: SPACING.xs,
+    backgroundColor: "#040c18",
+    borderTopWidth: 1, borderColor: "#0e2040",
+  },
+  talismanCard: {
+    flex: 1, alignItems: "center", gap: 3,
+    paddingVertical: SPACING.sm, paddingTop: 5,
+    borderRadius: RADIUS.md, borderWidth: 1.5,
+    minHeight: 118,
+  },
+  cardCatBadge: {
+    flexDirection: "row", borderRadius: 3,
+    paddingHorizontal: 4, paddingVertical: 1.5,
+    marginBottom: 1,
+  },
+  cardCatTxt: { fontSize: 7, fontWeight: "700", letterSpacing: 1 },
+  cardIconCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    borderWidth: 1.5, alignItems: "center", justifyContent: "center",
+  },
+  cardIconEmoji: { fontSize: 18 },
+  cardNameTxt: { fontSize: 8.5, fontWeight: "700", textAlign: "center", lineHeight: 12, paddingHorizontal: 2 },
+  apRune: {
+    flexDirection: "row", alignItems: "center", gap: 2,
+    borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 7, paddingVertical: 2.5,
+    marginTop: 1,
+  },
+  apRuneTxt:   { fontSize: 12, fontWeight: "700" },
+  apRuneLabel: { fontSize: 7, fontWeight: "700", letterSpacing: 0.5, marginTop: 1 },
+
+  /* ── Lobby ── */
+  lobbyContent: { padding: SPACING.lg, gap: SPACING.lg },
+
+  lobbyHeroArea: { alignItems: "center", gap: 8, paddingVertical: SPACING.md },
+  lobbyEmblem: {
+    width: 72, height: 72, borderRadius: 12,
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
+    borderWidth: 1.5, borderColor: "#60A5FA40", marginBottom: 8,
+  },
+  lobbyKicker:   { color: COLORS.air, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  lobbyTitle:    { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
+  lobbySubtitle: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
+
+  lobbyCard: {
+    backgroundColor: "#080e1c", borderRadius: RADIUS.md,
+    padding: SPACING.md, borderWidth: 1, borderColor: "#1a3050",
+  },
+  lobbySectionTitle: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  lobbyBodyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+
+  lobbyListRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginBottom: 10 },
+  lobbyEnemyChip: {
+    width: 36, height: 36, borderRadius: 8, borderWidth: 1,
     alignItems: "center", justifyContent: "center",
   },
-  pauseTxt: { color: COLORS.air, fontSize: 15, fontWeight: "700", letterSpacing: 2 },
-
-  /* Feedback */
-  feedbackArea: { minHeight: 42, paddingHorizontal: SPACING.md, justifyContent: "center", gap: 2 },
-  feedbackTxt:  { fontSize: 11, lineHeight: 16, fontWeight: "500" },
-
-  /* Roster */
-  roster: { maxHeight: 34, marginBottom: SPACING.xs },
-  rosterChip: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: SPACING.sm, paddingVertical: 4,
-    borderRadius: RADIUS.pill, borderWidth: 1,
-    backgroundColor: COLORS.surfaceSecondary,
-  },
-  rosterName: { color: COLORS.onSurfaceSecondary, fontSize: 10, fontWeight: "600" },
-  rosterHp:   { fontSize: 10, fontWeight: "700" },
-
-  /* Card hand */
-  hand: {
-    flexDirection: "row", gap: 5,
-    paddingHorizontal: SPACING.sm, paddingBottom: SPACING.sm,
-  },
-  card: {
-    flex: 1, alignItems: "center", gap: 3,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md, borderWidth: 1.5,
-    backgroundColor: COLORS.surfaceSecondary,
-  },
-  cardOff: { opacity: 0.38 },
-  cardIcon: { fontSize: 20 },
-  cardName: { fontSize: 9, fontWeight: "700", textAlign: "center", letterSpacing: 0.2 },
-  apPill:   { borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 2 },
-  apPillTxt:{ fontSize: 8, fontWeight: "700" },
-  aoeTag:   { fontSize: 8, fontWeight: "700", letterSpacing: 1 },
-
-  /* Lobby */
-  lobbyContent: { padding: SPACING.lg, gap: SPACING.lg },
-  lobbyHero:    { alignItems: "center", gap: 4, paddingVertical: SPACING.md },
-  lobbyKicker:  { color: COLORS.air, fontSize: 10, fontWeight: "700", letterSpacing: 3 },
-  lobbyTitle:   { color: COLORS.onSurface, fontSize: 30, fontWeight: "300" },
-  lobbySubtitle:{ color: COLORS.onSurfaceSecondary, fontSize: 13 },
-
-  card2: {
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,
-  },
-  cardSectionTitle: {
-    color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2, marginBottom: 2,
-  },
-  bodyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 21 },
-  listRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
-  listName: { fontSize: 12, fontWeight: "700" },
-  listDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 17, marginTop: 1 },
+  lobbyListName: { fontSize: 12, fontWeight: "700" },
+  lobbyListDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16, marginTop: 2 },
 
   enterBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
@@ -833,22 +1507,24 @@ const s = StyleSheet.create({
   },
   enterBtnTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700", letterSpacing: 2 },
 
-  /* Result */
+  /* ── Result ── */
   resultContent: { padding: SPACING.xl, alignItems: "center", gap: SPACING.md },
   resultEmoji:   { fontSize: 64, marginTop: SPACING.xl },
   resultTitle:   { fontSize: 24, fontWeight: "700", letterSpacing: 2, textAlign: "center" },
   resultSub:     { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center" },
+
   rewardBox: {
-    width: "100%", backgroundColor: COLORS.surfaceSecondary,
+    width: "100%", backgroundColor: "#08101c",
     borderRadius: RADIUS.md, padding: SPACING.lg,
-    borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,
+    borderWidth: 1, borderColor: "#1a3050",
   },
-  rewardRow:   { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  rewardLbl:   { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 14 },
-  rewardVal:   { fontSize: 18, fontWeight: "700" },
-  scoreLine:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  rewardRow:  { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  rewardLbl:  { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 14 },
+  rewardVal:  { fontSize: 18, fontWeight: "700" },
+  scoreLine:  { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+
   exitBtn: {
-    width: "100%", borderWidth: 1, borderColor: COLORS.border,
+    width: "100%", borderWidth: 1, borderColor: "#1a3050",
     borderRadius: RADIUS.md, paddingVertical: SPACING.md, alignItems: "center",
   },
   exitBtnTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600" },
