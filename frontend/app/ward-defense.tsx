@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -250,10 +251,10 @@ function WardCorridorScene() {
   return (
     <>
       {/* Illustrated scene — the actual ward corridor */}
-      <Image
-        source={require("../assets/images/ward_corridor_battle.png")}
+      <ExpoImage
+        source={require("../assets/images/ward_battle_bg.png")}
         style={StyleSheet.absoluteFillObject}
-        resizeMode="cover"
+        contentFit="cover"
       />
 
       {/* Left-edge soft vignette — helps hero + lantern readability */}
@@ -1133,7 +1134,7 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       {/* ── Lobby illustrated background — ward corridor hall ── */}
       <Image
-        source={require("../assets/images/ward_corridor_lobby.png")}
+        source={require("../assets/images/ward_lobby_bg.png")}
         style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
       />

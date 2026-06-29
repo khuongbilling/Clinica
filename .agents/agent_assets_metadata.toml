@@ -132,3 +132,21 @@ id = "Q6m_AXN62SsHjxUqvhNWr"
 uri = "file://frontend/assets/images/ward_corridor_lobby.png"
 type = "image"
 title = "ward_corridor_lobby_bg"
+
+[[generated]]
+id = "xI7XRh7VbWHOFeN7UhWsv"
+uri = "file://frontend/assets/images/ward_battle_bg.png"
+type = "image"
+title = "ward battle scene bg"
+
+[[generated]]
+id = "jg9LzDJp3JfZsHOHkUDQD"
+uri = "file://frontend/assets/images/ward_lobby_bg.png"
+type = "image"
+title = "ward lobby healer sanctuary bg"
+
+[[generated]]
+id = "Hk11B9fjdeLh2blcgIac2"
+uri = "file://frontend/assets/images/home_hub_bg.png"
+type = "image"
+title = "home hub kingdom bg"
