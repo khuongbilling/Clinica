@@ -194,77 +194,11 @@ export default function RunHome() {
       {/* ── MAIN ARENA — full-width scene + side buttons + hero ── */}
       <View style={styles.arena}>
 
-        {/* ════════════════════════════════════════════
-            FULL-WIDTH SCENE BACKGROUND (absolute, behind everything)
-            ════════════════════════════════════════════ */}
-
-        {/* 1 — Base sky gradient */}
-        <LinearGradient
-          colors={scene.sky}
-          locations={[0, 0.5, 1]}
-          style={StyleSheet.absoluteFillObject}
-        />
-
-        {/* 2 — Central glow portal (arch window behind hero) */}
-        <View style={styles.scenePortalRing}>
-          <View style={[styles.scenePortalInner, { backgroundColor: scene.orb1 + "18" }]} />
-        </View>
-        <View style={[styles.scenePortalGlow, { backgroundColor: scene.orb1 }]} />
-
-        {/* 3 — Upper ambient light rays fanning from center-top */}
-        <LinearGradient
-          colors={[scene.orb1 + "22", scene.orb1 + "00"]}
-          locations={[0, 1]}
-          style={styles.sceneRayLeft}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        />
-        <LinearGradient
-          colors={[scene.orb1 + "22", scene.orb1 + "00"]}
-          locations={[0, 1]}
-          style={styles.sceneRayRight}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-
-        {/* 4 — Left pillar / edge shadow */}
-        <LinearGradient
-          colors={["rgba(6,8,12,0.75)", "rgba(6,8,12,0.0)"]}
-          locations={[0, 1]}
-          style={styles.scenePillarLeft}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        />
-
-        {/* 5 — Right pillar / edge shadow */}
-        <LinearGradient
-          colors={["rgba(6,8,12,0.0)", "rgba(6,8,12,0.75)"]}
-          locations={[0, 1]}
-          style={styles.scenePillarRight}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        />
-
-        {/* 6 — Floor wash */}
-        <LinearGradient
-          colors={[scene.mid + "00", scene.mid + "EE"]}
-          locations={[0, 1]}
-          style={styles.sceneFloor}
-        />
-
-        {/* 7 — Horizon line */}
-        <View style={[styles.sceneHorizon, { backgroundColor: scene.accent + "60" }]} />
-
-        {/* 8 — Glowing hero stage ellipse (breathing) */}
-        <Animated.View
-          style={[styles.sceneStage, { backgroundColor: scene.accent, opacity: floorOpacity }]}
-        />
-
-        {/* 9 — Top vignette so header text is always readable */}
-        <LinearGradient
-          colors={["rgba(6,8,12,0.80)", "rgba(6,8,12,0.0)"]}
-          locations={[0, 1]}
-          style={styles.sceneTopVignette}
+        {/* ── FULL-WIDTH SCENIC BACKGROUND ── */}
+        <SceneBg
+          element={leadHero?.element ?? "River"}
+          scene={scene}
+          floorOpacity={floorOpacity}
         />
 
         {/* ══ SIDE COLUMNS + HERO sit on top of background ══ */}
@@ -402,6 +336,287 @@ export default function RunHome() {
   );
 }
 
+/* ══════════════════════════════════════════════════════════
+   SCENIC BACKGROUNDS — one per element
+   All shapes are absolute-positioned Views/LinearGradients.
+   ══════════════════════════════════════════════════════════ */
+
+type SceneProps = { o: string; a: string }; // orb1 color, accent color
+
+/** Cardiac Ward — Hospital Cathedral. Stone columns, gothic arch window. */
+function CardiacWardScene({ o, a }: SceneProps) {
+  const COL = "#030d18";
+  return (
+    <>
+      {/* Stone column — left */}
+      <View style={[sc.col, { left: 0, width: "19%" }]} />
+      <View style={{ position: "absolute", left: "19%", top: 0, bottom: 0, width: 1, backgroundColor: o + "35" }} />
+      {/* Stone column — right */}
+      <View style={[sc.col, { right: 0, width: "19%" }]} />
+      <View style={{ position: "absolute", right: "19%", top: 0, bottom: 0, width: 1, backgroundColor: o + "35" }} />
+
+      {/* Column capitals (wider top block) */}
+      <View style={{ position: "absolute", left: 0, top: 0, width: "22%", height: "6%", backgroundColor: COL + "CC" }} />
+      <View style={{ position: "absolute", right: 0, top: 0, width: "22%", height: "6%", backgroundColor: COL + "CC" }} />
+
+      {/* Gothic arch window — tall oval behind hero, element glow */}
+      <View style={[sc.archOuter, { backgroundColor: o + "14" }]} />
+      <View style={[sc.archInner, { backgroundColor: o + "0C" }]} />
+
+      {/* Light beam strips fanning from arch top */}
+      <LinearGradient colors={[o + "1A", o + "00"]} locations={[0, 1]}
+        style={[sc.beam, { top: "6%",  left: "19%", right: "19%", height: "18%" }]} />
+      <LinearGradient colors={[o + "12", o + "00"]} locations={[0, 1]}
+        style={[sc.beam, { top: "20%", left: "22%", right: "22%", height: "20%" }]} />
+
+      {/* Horizon wall cornice line */}
+      <View style={{ position: "absolute", bottom: "37%", left: "19%", right: "19%", height: 1, backgroundColor: o + "40" }} />
+
+      {/* Floor: pulse crystal accents */}
+      <View style={{ position: "absolute", bottom: "33%", left: "27%", width: 3, height: 9,  borderRadius: 2, backgroundColor: o + "70" }} />
+      <View style={{ position: "absolute", bottom: "35%", left: "33%", width: 2, height: 6,  borderRadius: 1, backgroundColor: a + "90" }} />
+      <View style={{ position: "absolute", bottom: "32%", right: "27%", width: 3, height: 8, borderRadius: 2, backgroundColor: o + "60" }} />
+      <View style={{ position: "absolute", bottom: "34%", right: "33%", width: 2, height: 5, borderRadius: 1, backgroundColor: a + "70" }} />
+    </>
+  );
+}
+
+/** Respiratory Spire — Sky Sanctuary. Pointed spires, layered clouds, pale mist. */
+function RespiratorySpireScene({ o, a }: SceneProps) {
+  return (
+    <>
+      {/* Left spire body */}
+      <View style={{ position: "absolute", left: "8%", top: 0, height: "72%", width: "7%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
+      {/* Left spire tip (narrower) */}
+      <View style={{ position: "absolute", left: "10%", top: "-6%", width: "3%", height: "15%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
+      {/* Left spire window slit */}
+      <View style={{ position: "absolute", left: "10.5%", top: "25%", width: "2%", height: "12%", borderRadius: 999, backgroundColor: o + "30" }} />
+
+      {/* Right spire body */}
+      <View style={{ position: "absolute", right: "8%", top: 0, height: "72%", width: "7%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
+      {/* Right spire tip */}
+      <View style={{ position: "absolute", right: "10%", top: "-6%", width: "3%", height: "15%", backgroundColor: "#0a1520", borderTopLeftRadius: 999, borderTopRightRadius: 999 }} />
+      {/* Right spire window slit */}
+      <View style={{ position: "absolute", right: "10.5%", top: "25%", width: "2%", height: "12%", borderRadius: 999, backgroundColor: o + "30" }} />
+
+      {/* Cloud layers — wide flat ovals at staggered heights */}
+      <View style={{ position: "absolute", top: "8%",  left: "-8%", right: "-8%", height: 22, borderRadius: 999, backgroundColor: o + "16" }} />
+      <View style={{ position: "absolute", top: "19%", left: "5%",  right: "5%",  height: 16, borderRadius: 999, backgroundColor: o + "12" }} />
+      <View style={{ position: "absolute", top: "30%", left: "-5%", right: "-5%", height: 14, borderRadius: 999, backgroundColor: o + "0E" }} />
+      <View style={{ position: "absolute", top: "43%", left: "10%", right: "10%", height: 12, borderRadius: 999, backgroundColor: o + "09" }} />
+
+      {/* Floor mist */}
+      <LinearGradient colors={[o + "00", o + "20"]} locations={[0, 1]}
+        style={{ position: "absolute", bottom: "34%", left: 0, right: 0, height: "10%" }} />
+    </>
+  );
+}
+
+/** Immune Forge — Volcanic Cavern. Dark jagged rocks, lava vent glow, embers. */
+function ImmuneForgeScene({ o, a }: SceneProps) {
+  const ROCK = "#120604";
+  return (
+    <>
+      {/* Rock mass — bottom-left */}
+      <View style={{ position: "absolute", bottom: "28%", left: "-5%", width: "35%", height: "40%", borderRadius: 30, backgroundColor: ROCK }} />
+      <View style={{ position: "absolute", bottom: "38%", left: "0%",  width: "22%", height: "30%", borderRadius: 20, backgroundColor: ROCK }} />
+      <View style={{ position: "absolute", bottom: "48%", left: "5%",  width: "12%", height: "20%", borderRadius: 15, backgroundColor: ROCK }} />
+
+      {/* Rock mass — bottom-right */}
+      <View style={{ position: "absolute", bottom: "28%", right: "-5%", width: "35%", height: "40%", borderRadius: 30, backgroundColor: ROCK }} />
+      <View style={{ position: "absolute", bottom: "38%", right: "0%",  width: "22%", height: "30%", borderRadius: 20, backgroundColor: ROCK }} />
+      <View style={{ position: "absolute", bottom: "48%", right: "5%",  width: "12%", height: "20%", borderRadius: 15, backgroundColor: ROCK }} />
+
+      {/* Central forge vent — lava glow from floor gap */}
+      <View style={{ position: "absolute", bottom: "30%", left: "30%", right: "30%", height: "8%", borderRadius: 999, backgroundColor: o + "50" }} />
+      <LinearGradient colors={[o + "00", o + "35"]} locations={[0, 1]}
+        style={{ position: "absolute", bottom: "32%", left: "25%", right: "25%", height: "25%" }} />
+
+      {/* Ember sparks — fixed dot positions */}
+      {[
+        { t: "12%", l: "22%" }, { t: "8%",  l: "55%" }, { t: "18%", l: "70%" },
+        { t: "6%",  l: "38%" }, { t: "22%", l: "82%" }, { t: "15%", l: "15%" },
+        { t: "28%", r: "18%" }, { t: "10%", r: "35%" },
+      ].map((p, i) => (
+        <View key={i} style={{
+          position: "absolute", top: p.t as any,
+          left: (p as any).l as any, right: (p as any).r as any,
+          width: i % 3 === 0 ? 3 : 2, height: i % 3 === 0 ? 3 : 2,
+          borderRadius: 2, backgroundColor: o + "BB",
+        }} />
+      ))}
+
+      {/* Heat haze band */}
+      <LinearGradient colors={[o + "00", o + "0C", o + "00"]} locations={[0, 0.5, 1]}
+        style={{ position: "absolute", top: "25%", left: 0, right: 0, height: "18%" }} />
+    </>
+  );
+}
+
+/** Neural Chamber — Synaptic Void. Floating neuron orbs, connection threads. */
+function NeuralChamberScene({ o, a }: SceneProps) {
+  const orbs = [
+    { t: "8%",  l: "20%", s: 52, op: "20" },
+    { t: "5%",  r: "15%", s: 36, op: "18" },
+    { t: "28%", l: "8%",  s: 28, op: "15" },
+    { t: "35%", r: "8%",  s: 40, op: "18" },
+    { t: "18%", l: "42%", s: 20, op: "22" },
+    { t: "48%", l: "25%", s: 16, op: "14" },
+    { t: "42%", r: "20%", s: 22, op: "16" },
+  ];
+  return (
+    <>
+      {/* Neuron cell bodies */}
+      {orbs.map((orb, i) => (
+        <View key={i} style={{
+          position: "absolute",
+          top: orb.t as any, left: (orb as any).l as any, right: (orb as any).r as any,
+          width: orb.s, height: orb.s,
+          borderRadius: orb.s / 2,
+          backgroundColor: o + orb.op,
+          borderWidth: 1,
+          borderColor: o + "30",
+        }} />
+      ))}
+
+      {/* Axon threads (thin connection lines) */}
+      <View style={{ position: "absolute", top: "14%",  left: "20%", right: "35%", height: 1, backgroundColor: o + "25" }} />
+      <View style={{ position: "absolute", top: "22%",  left: "12%", right: "10%", height: 1, backgroundColor: o + "18" }} />
+      <View style={{ position: "absolute", top: "32%",  left: "25%", right: "20%", height: 1, backgroundColor: o + "20" }} />
+      <View style={{ position: "absolute", top: "40%",  left: "15%", right: "28%", height: 1, backgroundColor: o + "15" }} />
+
+      {/* Central synaptic glow (behind hero) */}
+      <View style={[sc.archOuter, { backgroundColor: o + "10", top: "15%" }]} />
+
+      {/* Void depth rings */}
+      <View style={{ position: "absolute", alignSelf: "center", top: "10%", width: "70%", aspectRatio: 1, borderRadius: 999, borderWidth: 1, borderColor: o + "15" }} />
+      <View style={{ position: "absolute", alignSelf: "center", top: "5%",  width: "85%", aspectRatio: 1, borderRadius: 999, borderWidth: 1, borderColor: o + "08" }} />
+    </>
+  );
+}
+
+/** Default — Ancient Healing Hall. Simple stone pillars + ambient glow window. */
+function DefaultHallScene({ o, a }: SceneProps) {
+  const COL = "#0a0904";
+  return (
+    <>
+      <View style={[sc.col, { left: 0,  width: "16%", backgroundColor: COL }]} />
+      <View style={[sc.col, { right: 0, width: "16%", backgroundColor: COL }]} />
+      <View style={{ position: "absolute", left: "16%",  top: 0, bottom: 0, width: 1, backgroundColor: o + "28" }} />
+      <View style={{ position: "absolute", right: "16%", top: 0, bottom: 0, width: 1, backgroundColor: o + "28" }} />
+      <View style={[sc.archOuter, { backgroundColor: o + "12" }]} />
+      <View style={[sc.archInner, { backgroundColor: o + "08" }]} />
+      <LinearGradient colors={[o + "14", o + "00"]} locations={[0, 1]}
+        style={[sc.beam, { top: "6%", left: "16%", right: "16%", height: "20%" }]} />
+    </>
+  );
+}
+
+/** Wrapper — renders the correct scene + shared floor/shadow/vignette layers */
+function SceneBg({
+  element, scene, floorOpacity,
+}: {
+  element: string;
+  scene: { sky: readonly [string,string,string]; mid: string; accent: string; orb1: string; orb2: string };
+  floorOpacity: Animated.AnimatedInterpolation<number>;
+}) {
+  const o = scene.orb1;
+  const a = scene.accent;
+  return (
+    <>
+      {/* 1 — Sky */}
+      <LinearGradient colors={scene.sky} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFillObject} />
+
+      {/* 2 — Element-specific room scene */}
+      {element === "River"                                    && <CardiacWardScene o={o} a={a} />}
+      {element === "Air"                                      && <RespiratorySpireScene o={o} a={a} />}
+      {element === "Fire"                                     && <ImmuneForgeScene o={o} a={a} />}
+      {element === "Mind"                                     && <NeuralChamberScene o={o} a={a} />}
+      {!["River","Air","Fire","Mind"].includes(element)       && <DefaultHallScene o={o} a={a} />}
+
+      {/* 3 — Floor gradient wash */}
+      <LinearGradient colors={[scene.mid + "00", scene.mid + "F0"]} locations={[0, 1]}
+        style={sc.floor} />
+
+      {/* 4 — Horizon line */}
+      <View style={[sc.horizon, { backgroundColor: a + "50" }]} />
+
+      {/* 5 — Stage glow (animated breathing) */}
+      <Animated.View style={[sc.stage, { backgroundColor: a, opacity: floorOpacity }]} />
+
+      {/* 6 — Edge depth shadows (left + right) */}
+      <LinearGradient colors={["rgba(4,6,10,0.82)", "rgba(4,6,10,0.0)"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={sc.edgeLeft} />
+      <LinearGradient colors={["rgba(4,6,10,0.0)", "rgba(4,6,10,0.82)"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={sc.edgeRight} />
+
+      {/* 7 — Top vignette */}
+      <LinearGradient colors={["rgba(4,6,10,0.85)", "rgba(4,6,10,0.0)"]} style={sc.topVignette} />
+    </>
+  );
+}
+
+/** Shared shape styles for scene components */
+const sc = StyleSheet.create({
+  col: {
+    position: "absolute",
+    top: 0, bottom: 0,
+    backgroundColor: "#030d18",
+  },
+  archOuter: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "2%",
+    width: "52%",
+    aspectRatio: 0.7,
+    borderRadius: 999,
+  },
+  archInner: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "10%",
+    width: "38%",
+    aspectRatio: 0.75,
+    borderRadius: 999,
+  },
+  beam: {
+    position: "absolute",
+  },
+  floor: {
+    position: "absolute",
+    bottom: 0, left: 0, right: 0,
+    height: "40%",
+  },
+  horizon: {
+    position: "absolute",
+    bottom: "40%",
+    left: 0, right: 0,
+    height: 1,
+  },
+  stage: {
+    position: "absolute",
+    bottom: "-10%",
+    left: "22%", right: "22%",
+    height: "24%",
+    borderRadius: 999,
+  },
+  edgeLeft: {
+    position: "absolute",
+    top: 0, bottom: 0, left: 0,
+    width: "22%",
+  },
+  edgeRight: {
+    position: "absolute",
+    top: 0, bottom: 0, right: 0,
+    width: "22%",
+  },
+  topVignette: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+    height: "25%",
+  },
+});
+
 /* ── FeatureButton ── */
 function FeatureButton({
   icon, label, color, locked, lockText, onPress, testID,
@@ -478,95 +693,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: RADIUS.lg,
     position: "relative",
-  },
-
-  /* ── Full-width scene background layers ── */
-
-  /* Central glowing portal / arch behind hero */
-  scenePortalRing: {
-    position: "absolute",
-    alignSelf: "center",
-    top: "4%",
-    width: "55%",
-    aspectRatio: 0.75,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    overflow: "hidden",
-    zIndex: 0,
-  },
-  scenePortalInner: {
-    flex: 1,
-    borderRadius: 999,
-  },
-  scenePortalGlow: {
-    position: "absolute",
-    alignSelf: "center",
-    top: "8%",
-    width: "40%",
-    aspectRatio: 0.8,
-    borderRadius: 999,
-    opacity: 0.09,
-    zIndex: 0,
-  },
-
-  /* Light rays fanning from portal */
-  sceneRayLeft: {
-    position: "absolute",
-    top: 0, left: 0,
-    width: "55%", height: "60%",
-    zIndex: 0,
-  },
-  sceneRayRight: {
-    position: "absolute",
-    top: 0, right: 0,
-    width: "55%", height: "60%",
-    zIndex: 0,
-  },
-
-  /* Edge pillar / depth shadows */
-  scenePillarLeft: {
-    position: "absolute",
-    top: 0, bottom: 0, left: 0,
-    width: "28%",
-    zIndex: 0,
-  },
-  scenePillarRight: {
-    position: "absolute",
-    top: 0, bottom: 0, right: 0,
-    width: "28%",
-    zIndex: 0,
-  },
-
-  /* Floor */
-  sceneFloor: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
-    height: "38%",
-    zIndex: 0,
-  },
-  sceneHorizon: {
-    position: "absolute",
-    bottom: "38%",
-    left: 0, right: 0,
-    height: 1,
-    zIndex: 0,
-  },
-  sceneStage: {
-    position: "absolute",
-    bottom: "-12%",
-    left: "20%", right: "20%",
-    height: "28%",
-    borderRadius: 999,
-    zIndex: 0,
-  },
-
-  /* Top vignette */
-  sceneTopVignette: {
-    position: "absolute",
-    top: 0, left: 0, right: 0,
-    height: "28%",
-    zIndex: 0,
   },
 
   heroImg: { flex: 1, width: "100%" },
