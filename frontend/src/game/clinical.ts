@@ -149,7 +149,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   rapid_response: {
     clinicalTags: ['escalation', 'acute deterioration', 'emergency'],
     chainRoles: ['Command', 'Stabilize'],
-    conditionalRequiresLowStability: 40,
+    conditionalRequiresLowStability: 50,
   },
   vital_ward: {
     clinicalTags: ['assessment', 'reassessment', 'general support'],
@@ -196,6 +196,11 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   reassess: {
     clinicalTags: ['reassessment', 'assessment'],
     chainRoles: ['Reassess', 'Scout'],
+  },
+  glucose_round: {
+    clinicalTags: ['glucose replacement', 'hypoglycemia', 'assessment', 'monitoring'],
+    appropriateForSystems: ['Energy'],
+    chainRoles: ['Counter', 'Scout'],
   },
   critical_response: {
     clinicalTags: ['escalation', 'acute deterioration', 'emergency'],
@@ -360,7 +365,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
   energy_lock: {
     clinicalCategory: 'Endocrine',
     diseaseTags: ['hypoglycemia', 'low glucose'],
-    allowedActionTags: ['glucose replacement', 'hypoglycemia', 'assessment', 'reassessment', 'escalation'],
+    allowedActionTags: ['glucose replacement', 'hypoglycemia', 'assessment', 'reassessment', 'escalation', 'general support', 'monitoring', 'comfort'],
     strongActionTags: ['glucose replacement', 'hypoglycemia'],
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['bronchospasm', 'antimicrobial', 'fluid resuscitation', 'infection isolation', 'skin integrity', 'fall prevention'],
@@ -392,7 +397,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
   mind_fog: {
     clinicalCategory: 'Neuro',
     diseaseTags: ['delirium', 'altered mental status', 'fall risk'],
-    allowedActionTags: ['orientation', 'therapeutic communication', 'safety', 'fall prevention', 'neuro', 'assessment', 'reassessment'],
+    allowedActionTags: ['orientation', 'therapeutic communication', 'safety', 'fall prevention', 'neuro', 'assessment', 'reassessment', 'escalation', 'emergency', 'general support', 'comfort'],
     strongActionTags: ['orientation', 'therapeutic communication', 'fall prevention'],
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'fluid resuscitation', 'antimicrobial'],
