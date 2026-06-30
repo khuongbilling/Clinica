@@ -33,6 +33,7 @@ type EnemyDef = {
   speed: number; damage: number; color: string;
   weakness: string[]; partial: string[];
   isBoss?: boolean; flavor: string;
+  clue: string;
 };
 
 const ENEMY_DATA: Record<string, EnemyDef> = {
@@ -42,6 +43,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: ["breath_sound_scout", "bronchodilator_mist"],
     partial:  ["reassess_breath"],
     flavor: "Restricts airflow — early assessment reveals its pattern.",
+    clue: "Dyspnea",
   },
   wheeze_sprite: {
     name: "Wheeze Sprite", icon: "🌀",
@@ -49,6 +51,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: ["bronchodilator_mist", "reassess_breath"],
     partial:  ["breath_sound_scout"],
     flavor: "Tight airways create the wheezing audible on auscultation.",
+    clue: "Wheezing",
   },
   mucus_slime: {
     name: "Mucus Slime", icon: "🫧",
@@ -56,6 +59,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: ["positioning_charm", "breath_sound_scout"],
     partial:  ["bronchodilator_mist"],
     flavor: "Secretion buildup — positioning aids drainage.",
+    clue: "Secretions",
   },
   hypoxia_wraith: {
     name: "Hypoxia Wraith", icon: "👻",
@@ -63,6 +67,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: ["oxygen_ward", "reassess_breath"],
     partial:  ["positioning_charm"],
     flavor: "Oxygen deprivation — supplemental O₂ is the direct counter.",
+    clue: "Cyanosis",
   },
   bronchospasm_drake: {
     name: "Bronchospasm Drake", icon: "🐲",
@@ -71,6 +76,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     partial:  ["oxygen_ward", "reassess_breath"],
     isBoss: true,
     flavor: "Severe bronchospasm incarnate. Bronchodilators are essential.",
+    clue: "Bronchospasm",
   },
 };
 
@@ -79,6 +85,7 @@ type CardDef = {
   name: string; icon: string; desc: string;
   apCost: number; damage: number; color: string;
   feedback: string; aoe: boolean; category: string;
+  concept: string;
 };
 
 const CARD_DATA: Record<string, CardDef> = {
@@ -86,26 +93,31 @@ const CARD_DATA: Record<string, CardDef> = {
     name: "Breath Sound Scout", icon: "🔊", desc: "Assess & disrupt",
     apCost: 2, damage: 22, color: "#60A5FA", aoe: false, category: "ASSESS",
     feedback: "Wheezing suggests narrowed airways — a hallmark of bronchospasm.",
+    concept: "Early auscultation identifies the pattern — assess before you treat.",
   },
   oxygen_ward: {
     name: "Oxygen Ward", icon: "🫁", desc: "Boost oxygenation",
     apCost: 3, damage: 28, color: "#34D399", aoe: false, category: "SUPPORT",
     feedback: "O₂ improves saturation but may not treat the underlying cause.",
+    concept: "Supplemental O₂ corrects hypoxemia directly — essential for cyanosis.",
   },
   bronchodilator_mist: {
     name: "Bronchodilator Mist", icon: "💨", desc: "Relax airway spasm",
     apCost: 4, damage: 44, color: "#F59E0B", aoe: false, category: "TREAT",
     feedback: "Bronchodilators relax smooth muscle — the direct treatment for bronchospasm.",
+    concept: "Bronchodilators relax airway smooth muscle — first-line for bronchospasm and wheezing.",
   },
   positioning_charm: {
     name: "Positioning Charm", icon: "🛌", desc: "Upright position",
     apCost: 2, damage: 20, color: "#A78BFA", aoe: true, category: "SUPPORT",
     feedback: "Upright positioning reduces work of breathing and aids lung expansion.",
+    concept: "Upright (High Fowler's) positioning aids lung expansion and secretion drainage.",
   },
   reassess_breath: {
     name: "Reassess Breath", icon: "🔄", desc: "Verify response",
     apCost: 3, damage: 32, color: "#EC4899", aoe: false, category: "ASSESS",
     feedback: "Reassessment confirms whether your intervention improved the patient.",
+    concept: "Reassess after every intervention — close the clinical loop to confirm response.",
   },
 };
 
@@ -134,6 +146,15 @@ type Feedback = { id: string; text: string; color: string; quality: "strong"|"pa
 
 type Phase = "lobby" | "playing" | "wave_pause" | "won" | "lost";
 
+type EnemyMasteryEntry = { defeated: boolean; correctDefeated: boolean };
+
+type LearningStats = {
+  strongMatches: number; partialMatches: number; weakMatches: number;
+  peakCareChain: number; reassessAfterTreat: number;
+  learnedConcepts: string[];
+  enemyMastery: Record<string, EnemyMasteryEntry>;
+};
+
 type GS = {
   phase: Phase;
   wave: number;
@@ -147,9 +168,26 @@ type GS = {
   score: number;
   tickCount: number;
   uidSeed: number;
+  /* ── learning retention ── */
+  careChain: number;
+  peakCareChain: number;
+  strongMatches: number;
+  partialMatches: number;
+  weakMatches: number;
+  reassessUses: number;
+  reassessAfterTreat: number;
+  learnedConcepts: string[];
+  enemyMastery: Record<string, EnemyMasteryEntry>;
+  lastMatchQuality: "strong" | "partial" | "weak" | null;
 };
 
-/* ── Helpers (UNCHANGED) ── */
+/* ── Helpers ── */
+function freshMastery(): Record<string, EnemyMasteryEntry> {
+  const m: Record<string, EnemyMasteryEntry> = {};
+  Object.keys(ENEMY_DATA).forEach(k => { m[k] = { defeated: false, correctDefeated: false }; });
+  return m;
+}
+
 function freshState(): GS {
   return {
     phase: "lobby", wave: 0,
@@ -158,7 +196,43 @@ function freshState(): GS {
     enemies: [], spawnQueue: [], spawnTimer: 0,
     wavePauseTicks: 0, feedbacks: [],
     score: 0, tickCount: 0, uidSeed: 0,
+    careChain: 0, peakCareChain: 0,
+    strongMatches: 0, partialMatches: 0, weakMatches: 0,
+    reassessUses: 0, reassessAfterTreat: 0,
+    learnedConcepts: [], enemyMastery: freshMastery(),
+    lastMatchQuality: null,
   };
+}
+
+/* ── Contextual match label (specific clinical feedback per combo) ── */
+function getFeedbackLabel(cardId: string, enemyId: string, quality: "strong"|"partial"|"weak"): string {
+  if (quality === "strong") {
+    if (cardId === "bronchodilator_mist" && (enemyId === "wheeze_sprite" || enemyId === "breathless_wisp"))
+      return "Good Match — narrowed airway targeted";
+    if (cardId === "bronchodilator_mist" && enemyId === "bronchospasm_drake")
+      return "Good Match — bronchospasm directly treated";
+    if (cardId === "oxygen_ward" && enemyId === "hypoxia_wraith")
+      return "Good Match — O₂ saturation restored";
+    if (cardId === "positioning_charm" && (enemyId === "mucus_slime" || enemyId === "bronchospasm_drake"))
+      return "Good Match — drainage and lung expansion aided";
+    if (cardId === "breath_sound_scout")
+      return "Good Match — pattern identified, airways disrupted";
+    if (cardId === "reassess_breath")
+      return "Good Match — response confirmed";
+    return "Good Match — direct intervention";
+  }
+  if (quality === "partial") {
+    if (cardId === "oxygen_ward" && (enemyId === "wheeze_sprite" || enemyId === "breathless_wisp"))
+      return "Partial Match — supports oxygen but airway cause remains";
+    if (cardId === "bronchodilator_mist" && enemyId === "mucus_slime")
+      return "Partial Match — reduces spasm but secretions need drainage";
+    if (cardId === "positioning_charm" && enemyId === "hypoxia_wraith")
+      return "Partial Match — positioning helps but O₂ source still needed";
+    if (cardId === "reassess_breath")
+      return "Partial Match — some benefit, verify the cause";
+    return "Partial Match — some benefit, cause not directly addressed";
+  }
+  return "Weak Match — this doesn't target the current problem";
 }
 
 function beginWave(gs: GS, waveIdx: number): GS {
@@ -181,8 +255,9 @@ function getMatchQuality(cardId: string, enemy: ActiveEnemy): "strong" | "partia
 function applyCard(cardId: string, enemies: ActiveEnemy[]): {
   enemies: ActiveEnemy[]; dmgDealt: number;
   feedback: string; fColor: string; quality: "strong"|"partial"|"weak";
+  targetTypeId: string;
 } {
-  if (enemies.length === 0) return { enemies, dmgDealt: 0, feedback: "", fColor: "", quality: "weak" };
+  if (enemies.length === 0) return { enemies, dmgDealt: 0, feedback: "", fColor: "", quality: "weak", targetTypeId: "" };
 
   const card = CARD_DATA[cardId];
   const sorted = [...enemies].sort((a, b) => a.progress - b.progress);
@@ -207,21 +282,21 @@ function applyCard(cardId: string, enemies: ActiveEnemy[]): {
       .filter(e => e.hp > 0);
   }
 
-  const targetName = ENEMY_DATA[target.typeId].name;
+  const label = getFeedbackLabel(cardId, target.typeId, quality);
   let feedback: string;
   let fColor: string;
   if (quality === "strong") {
-    feedback = `✦ Effective! ${card.feedback}`;
+    feedback = `✦ ${label}`;
     fColor = COLORS.success;
   } else if (quality === "partial") {
-    feedback = `◈ Partial match. ${card.feedback}`;
+    feedback = `◈ ${label}`;
     fColor = COLORS.warning;
   } else {
-    feedback = `◌ Weak match. Try a more targeted order. ${card.feedback}`;
+    feedback = `◌ ${label}`;
     fColor = COLORS.onSurfaceTertiary;
   }
 
-  return { enemies: newEnemies, dmgDealt: totalDmg, feedback, fColor, quality };
+  return { enemies: newEnemies, dmgDealt: totalDmg, feedback, fColor, quality, targetTypeId: target.typeId };
 }
 
 function calcRewards(won: boolean, stability: number, score: number) {
@@ -905,7 +980,7 @@ export default function WardDefense() {
     set(beginWave({ ...freshState(), stability: MAX_STABILITY, ap: INIT_AP, apTimer: AP_REGEN_TICKS }, 0));
   }
 
-  /* ── Play a card (UNCHANGED logic + effect trigger) ── */
+  /* ── Play a card ── */
   function playCard(cardId: string) {
     const s = gsRef.current;
     if (s.phase !== "playing") return;
@@ -914,14 +989,89 @@ export default function WardDefense() {
     const activeEnemies = s.enemies.filter(e => e.progress < LANE_STEPS);
     if (activeEnemies.length === 0) return;
 
-    const { enemies: newEnemies, dmgDealt, feedback, fColor, quality } = applyCard(cardId, s.enemies);
+    const { enemies: newEnemies, dmgDealt, feedback, fColor, quality } =
+      applyCard(cardId, s.enemies);
+
     const fid = String(Date.now());
-    const feedbacks: Feedback[] = feedback
+    let newFeedbacks: Feedback[] = feedback
       ? [{ id: fid, text: feedback, color: fColor, quality, ticks: 8 }, ...s.feedbacks.slice(0, 1)]
       : s.feedbacks;
 
+    /* ── Learning counters ── */
+    let newAp        = s.ap - card.apCost;
+    let newStability = s.stability;
+    const newCareChain    = quality === "strong" ? s.careChain + 1 : 0;
+    const newPeakChain    = Math.max(s.peakCareChain, newCareChain);
+    const newStrongMatches  = s.strongMatches  + (quality === "strong"  ? 1 : 0);
+    const newPartialMatches = s.partialMatches + (quality === "partial" ? 1 : 0);
+    const newWeakMatches    = s.weakMatches    + (quality === "weak"    ? 1 : 0);
+    let newReassessUses      = s.reassessUses;
+    let newReassessAfterTreat = s.reassessAfterTreat;
+
+    /* Learned concepts (unique card IDs used with strong match) */
+    const newLearnedConcepts = quality === "strong" && !s.learnedConcepts.includes(cardId)
+      ? [...s.learnedConcepts, cardId]
+      : s.learnedConcepts;
+
+    /* Enemy mastery — which enemies were killed by this card */
+    const killedTypeIds = s.enemies
+      .filter(e => !newEnemies.find(ne => ne.uid === e.uid))
+      .map(e => e.typeId);
+    const newEnemyMastery = { ...s.enemyMastery };
+    for (const typeId of killedTypeIds) {
+      const prev = newEnemyMastery[typeId] ?? { defeated: false, correctDefeated: false };
+      newEnemyMastery[typeId] = {
+        defeated: true,
+        correctDefeated: prev.correctDefeated || quality === "strong",
+      };
+    }
+
+    /* ── Care Chain bonus: ≥2 consecutive strong matches → +1 AP ── */
+    if (newCareChain >= 2 && newAp < MAX_AP) {
+      newAp = Math.min(MAX_AP, newAp + 1);
+      newFeedbacks = [
+        {
+          id: `chain_${fid}`, ticks: 7, quality: "strong" as const,
+          text: `⛓ Care Chain ×${newCareChain}! +1 AP`,
+          color: COLORS.runeGold,
+        },
+        ...newFeedbacks.slice(0, 1),
+      ];
+    }
+
+    /* ── Reassess bonus: reassess_breath after a strong match → +5 Stability ── */
+    if (cardId === "reassess_breath") {
+      newReassessUses += 1;
+      if (s.lastMatchQuality === "strong") {
+        newStability = Math.min(MAX_STABILITY, newStability + 5);
+        newReassessAfterTreat += 1;
+        newFeedbacks = [
+          {
+            id: `reassess_${fid}`, ticks: 9, quality: "strong" as const,
+            text: "✦ Reassess Bonus — response confirmed. +5 Stability",
+            color: COLORS.success,
+          },
+          ...newFeedbacks.slice(0, 1),
+        ];
+      }
+    }
+
     triggerEffect(card.color, quality);
-    set({ ...s, ap: s.ap - card.apCost, enemies: newEnemies, feedbacks, score: s.score + dmgDealt });
+    set({
+      ...s,
+      ap: newAp, stability: newStability,
+      enemies: newEnemies, feedbacks: newFeedbacks,
+      score: s.score + dmgDealt,
+      careChain: newCareChain, peakCareChain: newPeakChain,
+      strongMatches: newStrongMatches,
+      partialMatches: newPartialMatches,
+      weakMatches: newWeakMatches,
+      reassessUses: newReassessUses,
+      reassessAfterTreat: newReassessAfterTreat,
+      learnedConcepts: newLearnedConcepts,
+      enemyMastery: newEnemyMastery,
+      lastMatchQuality: quality,
+    });
   }
 
   const waveDef = WAVES[gs.wave] ?? WAVES[WAVES.length - 1];
@@ -934,6 +1084,15 @@ export default function WardDefense() {
 
   /* ── Result ── */
   if (gs.phase === "won" || gs.phase === "lost") {
+    const learningStats: LearningStats = {
+      strongMatches: gs.strongMatches,
+      partialMatches: gs.partialMatches,
+      weakMatches: gs.weakMatches,
+      peakCareChain: gs.peakCareChain,
+      reassessAfterTreat: gs.reassessAfterTreat,
+      learnedConcepts: gs.learnedConcepts,
+      enemyMastery: gs.enemyMastery,
+    };
     return (
       <ResultScreen
         won={gs.phase === "won"}
@@ -941,6 +1100,7 @@ export default function WardDefense() {
         stability={gs.stability}
         score={gs.score}
         rewards={rewards}
+        learningStats={learningStats}
         onReplay={startGame}
         onBack={() => router.back()}
       />
@@ -1031,6 +1191,18 @@ export default function WardDefense() {
               alignItems: "center",
               zIndex: Math.round((1 - pct) * 10),
             }}>
+              {/* Clue badge — symptom hint for clinical matching */}
+              <View style={{
+                backgroundColor: def.color + "18",
+                borderWidth: 1, borderColor: def.color + "60",
+                borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1.5,
+                marginBottom: 2, alignSelf: "center",
+              }}>
+                <Text style={{ color: def.color, fontSize: 7, fontWeight: "700", letterSpacing: 0.5 }}>
+                  {def.clue}
+                </Text>
+              </View>
+
               {/* Boss HP number above sprite */}
               {def.isBoss && (
                 <Text style={{ color: def.color, fontSize: 9, fontWeight: "700",
@@ -1098,8 +1270,8 @@ export default function WardDefense() {
 
       {/* ══ FEEDBACK PANEL ══ */}
       <View style={s.feedbackPanel}>
-        {gs.feedbacks.slice(0, 1).map(f => (
-          <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color }]}>
+        {gs.feedbacks.slice(0, 2).map((f, idx) => (
+          <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color, marginTop: idx > 0 ? 3 : 0 }]}>
             <Text style={[s.feedbackTxt, { color: f.color }]} numberOfLines={2}>{f.text}</Text>
           </View>
         ))}
@@ -1269,19 +1441,23 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
    RESULT SCREEN
    ══════════════════════════════════════════════════════════ */
 function ResultScreen({
-  won, wave, stability, score, rewards, onReplay, onBack,
+  won, wave, stability, score, rewards, learningStats, onReplay, onBack,
 }: {
   won: boolean; wave: number; stability: number; score: number;
   rewards: ReturnType<typeof calcRewards>;
+  learningStats: LearningStats;
   onReplay: () => void; onBack: () => void;
 }) {
+  const totalCards = learningStats.strongMatches + learningStats.partialMatches + learningStats.weakMatches;
+  const masteredEnemies = Object.entries(learningStats.enemyMastery)
+    .filter(([, m]) => m.correctDefeated);
+
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <LinearGradient
         colors={won ? ["#041c10", "#062a18", "#041410"] : ["#180608", "#26090c", "#120406"]}
         style={StyleSheet.absoluteFillObject}
       />
-      {/* Atmospheric rays */}
       <LinearGradient
         colors={won ? ["#34D39920", "#00000000"] : ["#F8717120", "#00000000"]}
         start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
@@ -1298,6 +1474,7 @@ function ResultScreen({
             : `Fell on Wave ${wave + 1} of ${WAVES.length}`}
         </Text>
 
+        {/* ── Rewards ── */}
         <View style={s.rewardBox}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
             <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.brand }} />
@@ -1318,6 +1495,106 @@ function ResultScreen({
             </View>
           ))}
         </View>
+
+        {/* ── Clinical Insights (learning summary) ── */}
+        {totalCards > 0 && (
+          <View style={[s.rewardBox, { gap: 0 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+              <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.air }} />
+              <Text style={s.lobbySectionTitle}>CLINICAL INSIGHTS</Text>
+            </View>
+
+            {/* Match quality breakdown */}
+            <View style={{ flexDirection: "row", gap: 6, marginBottom: 12 }}>
+              {[
+                { count: learningStats.strongMatches,  label: "STRONG",  color: COLORS.success, sym: "✦" },
+                { count: learningStats.partialMatches, label: "PARTIAL", color: COLORS.warning, sym: "◈" },
+                { count: learningStats.weakMatches,    label: "WEAK",    color: COLORS.onSurfaceTertiary, sym: "◌" },
+              ].map(m => (
+                <View key={m.label} style={{
+                  flex: 1, alignItems: "center", gap: 2,
+                  backgroundColor: m.color + "12", borderRadius: 8,
+                  borderWidth: 1, borderColor: m.color + "30",
+                  paddingVertical: 8,
+                }}>
+                  <Text style={{ color: m.color, fontSize: 18, fontWeight: "700" }}>{m.count}</Text>
+                  <Text style={{ color: m.color, fontSize: 7, fontWeight: "700", letterSpacing: 0.8 }}>
+                    {m.sym} {m.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Care Chain peak */}
+            {learningStats.peakCareChain >= 2 && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Text style={{ fontSize: 14 }}>⛓</Text>
+                <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 }}>
+                  Best Care Chain
+                </Text>
+                <Text style={{ color: COLORS.runeGold, fontSize: 13, fontWeight: "700" }}>
+                  ×{learningStats.peakCareChain}
+                </Text>
+              </View>
+            )}
+
+            {/* Reassess bonuses */}
+            {learningStats.reassessAfterTreat > 0 && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Text style={{ fontSize: 14 }}>🔄</Text>
+                <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 }}>
+                  Reassess Bonus
+                </Text>
+                <Text style={{ color: COLORS.success, fontSize: 13, fontWeight: "700" }}>
+                  ×{learningStats.reassessAfterTreat}
+                </Text>
+              </View>
+            )}
+
+            {/* Learned concepts */}
+            {learningStats.learnedConcepts.length > 0 && (
+              <View style={{ marginTop: 4, borderTopWidth: 1, borderColor: "#1a3050", paddingTop: 10 }}>
+                <Text style={[s.lobbySectionTitle, { marginBottom: 8 }]}>LEARNED</Text>
+                {learningStats.learnedConcepts.slice(0, 3).map(cardId => (
+                  <View key={cardId} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start", marginBottom: 6 }}>
+                    <Text style={{ color: COLORS.air, fontSize: 11, marginTop: 1 }}>✦</Text>
+                    <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, flex: 1 }}>
+                      {CARD_DATA[cardId]?.concept}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Enemy mastery */}
+            {masteredEnemies.length > 0 && (
+              <View style={{ marginTop: 4, borderTopWidth: 1, borderColor: "#1a3050", paddingTop: 10 }}>
+                <Text style={[s.lobbySectionTitle, { marginBottom: 8 }]}>ENEMY MASTERY</Text>
+                {Object.entries(ENEMY_DATA).map(([typeId, def]) => {
+                  const m = learningStats.enemyMastery[typeId];
+                  if (!m?.defeated) return null;
+                  return (
+                    <View key={typeId} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <Text style={{ fontSize: 14 }}>{def.icon}</Text>
+                      <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 11, flex: 1 }}>{def.name}</Text>
+                      <View style={{
+                        backgroundColor: (m.correctDefeated ? COLORS.success : COLORS.onSurfaceTertiary) + "18",
+                        borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2,
+                      }}>
+                        <Text style={{
+                          color: m.correctDefeated ? COLORS.success : COLORS.onSurfaceTertiary,
+                          fontSize: 8, fontWeight: "700",
+                        }}>
+                          {m.correctDefeated ? "✦ CORRECT" : "◌ MATCHED"}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
 
         <Text style={s.scoreLine}>Total clinical impact: {score}</Text>
 
@@ -1401,7 +1678,7 @@ const s = StyleSheet.create({
 
   /* ── Feedback panel ── */
   feedbackPanel: {
-    minHeight: 44, paddingHorizontal: SPACING.md,
+    minHeight: 52, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
     justifyContent: "center", backgroundColor: "#040c18",
     borderTopWidth: 1, borderColor: "#0e2040",
   },
