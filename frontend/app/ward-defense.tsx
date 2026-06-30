@@ -26,7 +26,7 @@ const AP_REGEN_TICKS   = 3;
 const WAVE_PAUSE_TICKS = 10;
 const SPAWN_GAP_TICKS  = 7;
 const KILL_AP_BONUS    = 2;
-const ROAD_W           = 28;   /* visual road width in px */
+const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
 /* ── Board: path waypoints as [fracX, fracY] (0=top-left, 1=bottom-right) ──
@@ -336,133 +336,211 @@ function findMergePair(units: DeployedUnit[]): [DeployedUnit, DeployedUnit] | nu
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   BOARD GRID — subtle cell-line overlay making the board read as a
-   tactical game field rather than a scenic background
+   ARENA FLOOR — stone courtyard tiles replacing the blueprint grid
    ═══════════════════════════════════════════════════════════════════ */
-function BoardGrid({ aw, ah }: { aw: number; ah: number }) {
+function ArenaFloor({ aw, ah }: { aw: number; ah: number }) {
   if (aw < 20 || ah < 20) return null;
-  const CELL = 30;
-  const cols = Math.ceil(aw / CELL) + 1;
-  const rows = Math.ceil(ah / CELL) + 1;
+  const SW = 54, SH = 40;
+  const cols = Math.ceil(aw / SW) + 2;
+  const rows = Math.ceil(ah / SH) + 2;
   return (
     <>
-      {Array.from({ length: rows }, (_, i) => (
-        <View key={`h${i}`} style={{
-          position: "absolute", left: 0, top: i * CELL,
-          width: aw, height: 1,
-          backgroundColor: "#4a88c8", opacity: 0.10, zIndex: 0,
-        }} />
-      ))}
-      {Array.from({ length: cols }, (_, i) => (
-        <View key={`v${i}`} style={{
-          position: "absolute", top: 0, left: i * CELL,
-          width: 1, height: ah,
-          backgroundColor: "#4a88c8", opacity: 0.10, zIndex: 0,
-        }} />
-      ))}
-      {/* Corner accent dots at every other intersection */}
-      {Array.from({ length: Math.ceil(rows / 2) }, (_, r) =>
-        Array.from({ length: Math.ceil(cols / 2) }, (_, c) => (
-          <View key={`d${r}_${c}`} style={{
-            position: "absolute",
-            left: c * CELL * 2 - 1, top: r * CELL * 2 - 1,
-            width: 2.5, height: 2.5, borderRadius: 1.5,
-            backgroundColor: "#4a88c8", opacity: 0.22, zIndex: 0,
-          }} />
-        ))
+      {/* Stone floor tiles — warm dark amber-stone in brick-offset pattern */}
+      {Array.from({ length: rows }, (_, r) =>
+        Array.from({ length: cols }, (_, c) => {
+          const offsetX = r % 2 === 0 ? 0 : SW / 2;
+          const variant = (r * 3 + c * 7) % 6;
+          const bg = variant < 2 ? "#0b0905" : variant < 4 ? "#0d0b07" : "#0f0d08";
+          return (
+            <View key={`s${r}_${c}`} style={{
+              position: "absolute",
+              left: c * SW - offsetX - SW / 2,
+              top: r * SH - SH / 2,
+              width: SW - 1.5,
+              height: SH - 1.5,
+              backgroundColor: bg,
+              borderWidth: 0.5,
+              borderColor: "#1a1408",
+              zIndex: 0,
+            }} />
+          );
+        })
       )}
+      {/* Ambient clinical rune glows scattered across the arena floor */}
+      {([
+        [0.22, 0.20, "#22d3ee", 18],
+        [0.70, 0.15, "#a78bfa", 13],
+        [0.40, 0.56, "#34d399", 15],
+        [0.82, 0.68, "#22d3ee", 11],
+        [0.16, 0.74, "#a78bfa", 10],
+        [0.58, 0.36, "#fbbf24", 8],
+        [0.50, 0.80, "#34d399", 9],
+      ] as [number, number, string, number][]).map(([fx, fy, col, r], i) => (
+        <View key={`rg${i}`} style={{
+          position: "absolute",
+          left: fx * aw - r,
+          top: fy * ah - r,
+          width: r * 2,
+          height: r * 2,
+          borderRadius: r,
+          backgroundColor: col + "07",
+          borderWidth: 0.5,
+          borderColor: col + "1a",
+          zIndex: 0,
+        }} />
+      ))}
+      {/* Decorative pillar shadows at four corners — gives arena depth */}
+      {([[0, 0], [1, 0], [0, 1], [1, 1]] as [number, number][]).map(([cx, cy], i) => (
+        <View key={`pillar${i}`} style={{
+          position: "absolute",
+          left: cx === 0 ? 0 : aw - 22,
+          top: cy === 0 ? 0 : ah - 22,
+          width: 22, height: 22,
+          backgroundColor: "#00000060",
+          zIndex: 0,
+        }} />
+      ))}
     </>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   PATH TILE ROAD — S-curve rendered as individual paving-stone tiles
-   giving a board-game "road" feel rather than a painted corridor
+   STONE LANE ROAD — wide paved stone path with visible 3D edges,
+   material mortar joints, and embedded clinical rune center-stripe
    ═══════════════════════════════════════════════════════════════════ */
 function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
   if (aw < 20 || ah < 20) return null;
 
-  const TILE_ALONG = 22;
-  const TILE_GAP   = 5;
-  const STEP = TILE_ALONG + TILE_GAP;
+  const ROAD_VIS  = ROAD_W;       /* full road width */
+  const TILE_LONG = 30;           /* paving slab length along path */
+  const TILE_GAP  = 3;
+  const STEP      = TILE_LONG + TILE_GAP;
 
-  const tiles: { cx: number; cy: number; angle: number; seg: number }[] = [];
+  const tiles: { cx: number; cy: number; angle: number; seg: number; idx: number }[] = [];
   for (let seg = 0; seg < N_SEGS; seg++) {
     const from = PATH_WPS[seg], to = PATH_WPS[seg + 1];
     const x1 = from[0] * aw, y1 = from[1] * ah;
     const x2 = to[0] * aw,   y2 = to[1] * ah;
     const dx = x2 - x1, dy = y2 - y1;
     const segLen = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const angle  = Math.atan2(dy, dx) * (180 / Math.PI);
     const n = Math.max(1, Math.floor(segLen / STEP));
     for (let i = 0; i < n; i++) {
       const t = (i + 0.5) / n;
-      tiles.push({ cx: x1 + dx * t, cy: y1 + dy * t, angle, seg });
+      tiles.push({ cx: x1 + dx * t, cy: y1 + dy * t, angle, seg, idx: i });
     }
   }
 
   return (
     <>
-      {/* Dark road base per segment (solid fill behind tiles) */}
+      {/* ── Drop-shadow beneath road (depth) ── */}
       {PATH_WPS.slice(0, -1).map((wp, seg) => {
         const to = PATH_WPS[seg + 1];
         const x1 = wp[0] * aw, y1 = wp[1] * ah;
         const x2 = to[0] * aw, y2 = to[1] * ah;
-        const dx = x2 - x1, dy = y2 - y1;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
         return (
-          <View key={`base${seg}`} style={{
+          <View key={`shd${seg}`} style={{
             position: "absolute",
             left: (x1 + x2) / 2 - len / 2,
-            top:  (y1 + y2) / 2 - (ROAD_W + 2) / 2,
-            width: len, height: ROAD_W + 2,
-            backgroundColor: "#040c18",
+            top:  (y1 + y2) / 2 - (ROAD_VIS + 10) / 2,
+            width: len, height: ROAD_VIS + 10,
+            backgroundColor: "#00000075",
             transform: [{ rotate: `${angle}deg` }], zIndex: 1,
           }} />
         );
       })}
-      {/* Corner junction fillers */}
+      {/* ── Corner junction drop-shadows ── */}
       {PATH_WPS.slice(1, -1).map(([fx, fy], i) => (
-        <View key={`corner${i}`} style={{
+        <View key={`cshd${i}`} style={{
           position: "absolute",
-          left: fx * aw - (ROAD_W + 2) / 2,
-          top:  fy * ah - (ROAD_W + 2) / 2,
-          width: ROAD_W + 2, height: ROAD_W + 2, borderRadius: (ROAD_W + 2) / 2,
-          backgroundColor: "#040c18", zIndex: 1,
+          left: fx * aw - (ROAD_VIS + 10) / 2,
+          top:  fy * ah - (ROAD_VIS + 10) / 2,
+          width: ROAD_VIS + 10, height: ROAD_VIS + 10, borderRadius: (ROAD_VIS + 10) / 2,
+          backgroundColor: "#00000075", zIndex: 1,
         }} />
       ))}
-      {/* Individual paving-stone tiles */}
-      {tiles.map((tile, i) => (
-        <View key={`tile${i}`} style={{
-          position: "absolute",
-          left: tile.cx - TILE_ALONG / 2,
-          top:  tile.cy - ROAD_W / 2,
-          width: TILE_ALONG, height: ROAD_W,
-          backgroundColor: tile.seg % 2 === 0 ? "#0d1e36" : "#0c1c32",
-          borderWidth: 1,
-          borderColor: "#2a5070",
-          borderRadius: 3,
-          transform: [{ rotate: `${tile.angle}deg` }], zIndex: 2,
-        }} />
-      ))}
-      {/* Center glow line per segment — directional visual cue */}
+      {/* ── Stone road base per segment ── */}
       {PATH_WPS.slice(0, -1).map((wp, seg) => {
         const to = PATH_WPS[seg + 1];
         const x1 = wp[0] * aw, y1 = wp[1] * ah;
         const x2 = to[0] * aw, y2 = to[1] * ah;
-        const dx = x2 - x1, dy = y2 - y1;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        const glowColor = seg % 2 === 0 ? "#60A5FA" : "#34D399";
+        const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
         return (
-          <View key={`glow${seg}`} style={{
+          <View key={`base${seg}`} style={{
+            position: "absolute",
+            left: (x1 + x2) / 2 - len / 2,
+            top:  (y1 + y2) / 2 - ROAD_VIS / 2,
+            width: len, height: ROAD_VIS,
+            backgroundColor: "#1a1208",
+            borderTopWidth: 1.5, borderBottomWidth: 1.5,
+            borderColor: "#2e2010",
+            transform: [{ rotate: `${angle}deg` }], zIndex: 2,
+          }} />
+        );
+      })}
+      {/* ── Corner junction stone caps ── */}
+      {PATH_WPS.slice(1, -1).map(([fx, fy], i) => (
+        <View key={`corner${i}`} style={{
+          position: "absolute",
+          left: fx * aw - ROAD_VIS / 2,
+          top:  fy * ah - ROAD_VIS / 2,
+          width: ROAD_VIS, height: ROAD_VIS, borderRadius: ROAD_VIS / 2,
+          backgroundColor: "#1a1208", zIndex: 2,
+        }} />
+      ))}
+      {/* ── Individual paving slabs ── */}
+      {tiles.map((tile, i) => {
+        const isAlt = (tile.idx + tile.seg) % 2 === 0;
+        return (
+          <View key={`tile${i}`} style={{
+            position: "absolute",
+            left: tile.cx - TILE_LONG / 2,
+            top:  tile.cy - (ROAD_VIS - 8) / 2,
+            width: TILE_LONG, height: ROAD_VIS - 8,
+            backgroundColor: isAlt ? "#252010" : "#1e1a0c",
+            borderWidth: 1,
+            borderColor: "#3a2c10",
+            borderRadius: 3,
+            transform: [{ rotate: `${tile.angle}deg` }], zIndex: 3,
+          }} />
+        );
+      })}
+      {/* ── Clinical rune stripe — embedded directional glow ── */}
+      {PATH_WPS.slice(0, -1).map((wp, seg) => {
+        const to = PATH_WPS[seg + 1];
+        const x1 = wp[0] * aw, y1 = wp[1] * ah;
+        const x2 = to[0] * aw, y2 = to[1] * ah;
+        const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        return (
+          <View key={`rune${seg}`} style={{
             position: "absolute",
             left: (x1 + x2) / 2 - len / 2,
             top:  (y1 + y2) / 2 - 1.5,
             width: len, height: 3,
-            backgroundColor: glowColor + "40",
-            transform: [{ rotate: `${angle}deg` }], zIndex: 3,
+            backgroundColor: "#22d3ee30",
+            transform: [{ rotate: `${angle}deg` }], zIndex: 4,
+          }} />
+        );
+      })}
+      {/* ── Edge highlight strip (top edge per segment) — raises road ── */}
+      {PATH_WPS.slice(0, -1).map((wp, seg) => {
+        const to = PATH_WPS[seg + 1];
+        const x1 = wp[0] * aw, y1 = wp[1] * ah;
+        const x2 = to[0] * aw, y2 = to[1] * ah;
+        const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        return (
+          <View key={`hi${seg}`} style={{
+            position: "absolute",
+            left: (x1 + x2) / 2 - len / 2,
+            top:  (y1 + y2) / 2 - ROAD_VIS / 2,
+            width: len, height: 1.5,
+            backgroundColor: "#4a3818",
+            transform: [{ rotate: `${angle}deg` }], zIndex: 4,
           }} />
         );
       })}
@@ -473,45 +551,146 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
 /* ═══════════════════════════════════════════════════════════════════
    BOARD ENDPOINTS
    ═══════════════════════════════════════════════════════════════════ */
-function CorruptionGate({ aw, ah }: { aw: number; ah: number }) {
+
+/* CORRUPTION PORTAL — dramatic void-breach replacing the small X gate */
+function CorruptionPortal({ aw, ah }: { aw: number; ah: number }) {
   const [fx, fy] = PATH_WPS[0];
   const px = fx * aw, py = fy * ah;
   return (
-    <View style={{ position: "absolute", left: px - 20, top: py - 22, alignItems: "center", zIndex: 3 }}>
-      <Text style={{ color: "#EF444488", fontSize: 6.5, fontWeight: "700", letterSpacing: 0.5 }}>GATE</Text>
-      <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#1a0608",
-        borderWidth: 2, borderColor: "#EF4444", alignItems: "center", justifyContent: "center" }}>
-        <LinearGradient colors={["#3b0a10", "#200508"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16 }} />
-        <Text style={{ color: "#EF4444", fontSize: 14, lineHeight: 16, fontWeight: "700" }}>✕</Text>
+    <View style={{ position: "absolute", left: px - 36, top: py - 60, alignItems: "center", zIndex: 8 }}>
+      {/* Label */}
+      <Text style={{ color: "#f87171", fontSize: 6, fontWeight: "700", letterSpacing: 0.8, marginBottom: 2 }}>BREACH</Text>
+      {/* Fixed-size 80×80 container — spikes + circle all anchored here */}
+      <View style={{ width: 80, height: 80, alignItems: "center", justifyContent: "center" }}>
+        {/* Outer halo */}
+        <View style={{ position: "absolute", width: 80, height: 80, borderRadius: 40,
+          backgroundColor: "#ef44440d" }} />
+        {/* 8 spike diamonds around the portal — positioned relative to this 80×80 box */}
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => {
+          const rr = 37;
+          const rad = deg * Math.PI / 180;
+          const sx = 40 + Math.sin(rad) * rr - 3.5;
+          const sy = 40 - Math.cos(rad) * rr - 3.5;
+          return (
+            <View key={i} style={{
+              position: "absolute", left: sx, top: sy,
+              width: i % 2 === 0 ? 7 : 5, height: i % 2 === 0 ? 7 : 5,
+              borderRadius: 1,
+              backgroundColor: i % 2 === 0 ? "#ef4444cc" : "#7c1d35aa",
+              transform: [{ rotate: "45deg" }],
+            }} />
+          );
+        })}
+        {/* Portal frame — 64px circle, centered */}
+        <View style={{ width: 64, height: 64, borderRadius: 32,
+          backgroundColor: "#0d0008",
+          borderWidth: 2.5, borderColor: "#ef4444",
+          alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          {/* Void gradient interior */}
+          <LinearGradient colors={["#2d0318", "#180010", "#050008"]}
+            start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          {/* Inner corruption ring */}
+          <View style={{ position: "absolute", width: 48, height: 48, borderRadius: 24,
+            borderWidth: 1.5, borderColor: "#7c1d3560" }} />
+          {/* Second inner ring */}
+          <View style={{ position: "absolute", width: 32, height: 32, borderRadius: 16,
+            borderWidth: 1, borderColor: "#ef444430" }} />
+          {/* Void symbol — broken cross */}
+          <View style={{ alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 16, height: 2.5, borderRadius: 1.5, backgroundColor: "#ef444480" }} />
+            <View style={{ position: "absolute", width: 2.5, height: 16, borderRadius: 1.5, backgroundColor: "#ef444450" }} />
+          </View>
+        </View>
       </View>
-      {/* Outer ring pulse */}
-      <View style={{ position: "absolute", top: 12, width: 40, height: 40, borderRadius: 20,
-        borderWidth: 1, borderColor: "#EF444430" }} />
+      {/* Crack lines at base */}
+      <View style={{ flexDirection: "row", gap: 5, marginTop: 3 }}>
+        {[-1, 0, 1].map((d, i) => (
+          <View key={i} style={{ width: 1.5, height: 6 + Math.abs(d) * 3,
+            borderRadius: 1, backgroundColor: "#ef444430",
+            transform: [{ rotate: `${d * 18}deg` }] }} />
+        ))}
+      </View>
     </View>
   );
 }
 
-function VitalLanternBoard({ stability, aw, ah }: { stability: number; aw: number; ah: number }) {
+/* VITAL LANTERN SHRINE — large sacred lantern as the protected base */
+function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: number; ah: number }) {
   const [fx, fy] = PATH_WPS[PATH_WPS.length - 1];
   const px = fx * aw, py = fy * ah;
-  const glow = stability > 60 ? "#34D399" : stability > 30 ? "#FBBF24" : "#F87171";
+  const glow  = stability > 60 ? "#34D399" : stability > 30 ? "#FBBF24" : "#F87171";
+  const glow60 = glow + "60";
+  const glow30 = glow + "30";
+  const glow15 = glow + "15";
   return (
-    <View style={{ position: "absolute", left: px - 20, top: py - 30, alignItems: "center", zIndex: 6 }}>
-      <LinearGradient colors={[glow + "35", "#00000000"]}
-        style={{ position: "absolute", top: -12, left: -12, width: 60, height: 60, borderRadius: 30 }} />
-      <Text style={{ color: glow, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.5, marginBottom: 2 }}>LANTERN</Text>
-      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#081625",
-        borderWidth: 2, borderColor: glow, alignItems: "center", justifyContent: "center" }}>
-        <LinearGradient colors={[glow + "90", glow + "40"]}
-          style={{ position: "absolute", top: 2, left: 2, right: 2, bottom: 2, borderRadius: 999 }} />
-        <View style={{ alignItems: "center", justifyContent: "center" }}>
-          <View style={{ width: 11, height: 2.5, borderRadius: 2, backgroundColor: "#fff" }} />
-          <View style={{ position: "absolute", width: 2.5, height: 11, borderRadius: 2, backgroundColor: "#fff" }} />
-        </View>
+    <View style={{ position: "absolute", left: px - 36, top: py - 96, alignItems: "center", zIndex: 9 }}>
+      {/* Wide outer glow halo */}
+      <View style={{ position: "absolute", top: 8, width: 90, height: 90, borderRadius: 45,
+        backgroundColor: glow15 }} />
+      <View style={{ position: "absolute", top: 20, width: 64, height: 64, borderRadius: 32,
+        backgroundColor: glow + "20" }} />
+      {/* Label */}
+      <Text style={{ color: glow, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.8, marginBottom: 3 }}>VITAL LANTERN</Text>
+      {/* Lantern cap — decorative top bar */}
+      <View style={{ width: 46, height: 7, borderRadius: 3,
+        backgroundColor: "#2e2212", borderWidth: 1, borderColor: glow60, marginBottom: 1 }}>
+        <LinearGradient colors={["#4a3820", "#2a1e10"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 3 }} />
       </View>
-      <View style={{ width: 34, height: 4, borderRadius: 2, backgroundColor: "#0a1428", marginTop: 4, overflow: "hidden" }}>
-        <View style={{ width: `${stability}%` as any, height: "100%", borderRadius: 2, backgroundColor: glow }} />
+      {/* Lantern body */}
+      <View style={{ width: 58, height: 46, borderRadius: 9,
+        backgroundColor: "#0c0e0a",
+        borderWidth: 2, borderColor: glow60,
+        alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <LinearGradient colors={[glow + "45", glow + "18", glow + "38"]}
+          start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        {/* Vertical ribs */}
+        {[-18, -9, 0, 9, 18].map((x, i) => (
+          <View key={i} style={{ position: "absolute", left: 29 + x - 0.5, top: 0,
+            width: 1, height: 46, backgroundColor: glow + "22" }} />
+        ))}
+        {/* Clinical cross — Clinica emblem */}
+        <View style={{ width: 18, height: 3.5, borderRadius: 2, backgroundColor: glow + "dd" }} />
+        <View style={{ position: "absolute", width: 3.5, height: 18, borderRadius: 2, backgroundColor: glow + "dd" }} />
+        {/* Inner glow core */}
+        <View style={{ position: "absolute", width: 26, height: 26, borderRadius: 13,
+          backgroundColor: glow + "18" }} />
+      </View>
+      {/* Lantern base cap */}
+      <View style={{ width: 38, height: 6, borderRadius: 3, marginTop: 1,
+        backgroundColor: "#2e2212", borderWidth: 1, borderColor: glow + "70" }}>
+        <LinearGradient colors={["#2a1e10", "#1e1608"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 3 }} />
+      </View>
+      {/* Tassels */}
+      <View style={{ flexDirection: "row", gap: 14, marginTop: 1 }}>
+        {[0, 1].map(i => (
+          <View key={i} style={{ alignItems: "center" }}>
+            <View style={{ width: 1.5, height: 14, backgroundColor: glow60, borderRadius: 1 }} />
+            <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: glow }} />
+          </View>
+        ))}
+      </View>
+      {/* Pole connecting to pedestal */}
+      <View style={{ width: 3, height: 8, backgroundColor: "#3a2c14",
+        borderLeftWidth: 0.5, borderRightWidth: 0.5, borderColor: glow + "40" }} />
+      {/* Stone pedestal */}
+      <View style={{ width: 60, height: 16, borderRadius: 5,
+        backgroundColor: "#201808", borderWidth: 1.5, borderColor: "#3a2c14",
+        alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <LinearGradient colors={["#3a2c14", "#201808", "#140e04"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        {/* Pedestal rune mark */}
+        <View style={{ width: 20, height: 1, backgroundColor: glow + "50", borderRadius: 1 }} />
+      </View>
+      {/* Stability crystal bar */}
+      <View style={{ width: 64, height: 6, borderRadius: 3,
+        backgroundColor: "#1a1208", borderWidth: 1, borderColor: "#2e2010",
+        marginTop: 4, overflow: "hidden" }}>
+        <View style={{ width: `${stability}%` as any, height: "100%",
+          borderRadius: 3, backgroundColor: glow }} />
       </View>
     </View>
   );
@@ -1557,62 +1736,75 @@ function DeploymentTileView({
       {isFirstInZone && (
         <View style={{
           position: "absolute",
-          left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2 - 13,
+          left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2 - 14,
           zIndex: 5,
         }}>
-          <Text style={{ color: "#2a5888", fontSize: 6.5, fontWeight: "700", letterSpacing: 1.5 }}>
-            {isZoneA ? "ZONE A" : "ZONE B"}
+          <Text style={{ color: "#4a3818", fontSize: 6, fontWeight: "700", letterSpacing: 1.2 }}>
+            {isZoneA ? "WARD-A" : "WARD-B"}
           </Text>
         </View>
       )}
 
-      {/* The tile cell */}
+      {/* Summon pad — circular rune platform */}
       <Pressable
         style={{
           position: "absolute",
           left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2,
           width: TILE_SIZE, height: TILE_SIZE,
-          borderRadius: 7,
+          borderRadius: TILE_SIZE / 2,
           backgroundColor: isOccupied
-            ? unitColor + "22"
+            ? unitColor + "1a"
             : canAfford
-              ? "#0d1e36"
-              : "#080e1c",
+              ? "#1c1808"
+              : "#100e06",
           borderWidth: isOccupied ? 2 : 1.5,
           borderColor: isOccupied
-            ? unitColor + "99"
+            ? unitColor + "cc"
             : canAfford
-              ? selColor + "77"
-              : "#1e3a5a",
+              ? selColor + "99"
+              : "#2e2210",
           alignItems: "center", justifyContent: "center", zIndex: 4,
         }}
         onPress={onPress}
       >
-        {/* Corner accent markers — makes it read as a distinct board cell */}
-        {[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([dy, dx], i) => (
-          <View key={i} style={{
-            position: "absolute",
-            top:    dy < 0 ? 3 : undefined,
-            bottom: dy > 0 ? 3 : undefined,
-            left:   dx < 0 ? 3 : undefined,
-            right:  dx > 0 ? 3 : undefined,
-            width: 5, height: 5, borderRadius: 1.5,
-            backgroundColor: cornerColor,
-            opacity: isOccupied ? 0.6 : canAfford ? 0.55 : 0.25,
-          }} />
-        ))}
+        {/* Stone pad base gradient */}
+        <LinearGradient
+          colors={isOccupied
+            ? [unitColor + "18", unitColor + "08"]
+            : canAfford
+              ? ["#2a2010", "#141008"]
+              : ["#161208", "#0c0a06"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: TILE_SIZE / 2 }}
+        />
+        {/* Inner rune ring */}
+        <View style={{ position: "absolute", width: TILE_SIZE - 12, height: TILE_SIZE - 12,
+          borderRadius: (TILE_SIZE - 12) / 2, borderWidth: 1,
+          borderColor: isOccupied ? unitColor + "60" : canAfford ? selColor + "45" : "#2a1e08" }} />
+        {/* 6 rune point diamonds at pad edge */}
+        {[0, 60, 120, 180, 240, 300].map((deg, i) => {
+          const rr = (TILE_SIZE - 10) / 2;
+          const bx = TILE_SIZE / 2 + Math.sin(deg * Math.PI / 180) * rr - 2.5;
+          const by = TILE_SIZE / 2 - Math.cos(deg * Math.PI / 180) * rr - 2.5;
+          return (
+            <View key={i} style={{ position: "absolute", left: bx, top: by,
+              width: 5, height: 5, borderRadius: 1,
+              backgroundColor: isOccupied ? unitColor : canAfford ? selColor : "#2e2210",
+              opacity: isOccupied ? 0.75 : canAfford ? 0.65 : 0.28,
+              transform: [{ rotate: "45deg" }] }} />
+          );
+        })}
 
         {isOccupied ? (
           <>
             {/* Merge candidate golden pulse ring */}
             {isMergeCandidate && (
               <View style={{ position: "absolute", top: -4, left: -4, right: -4, bottom: -4,
-                borderRadius: 11, borderWidth: 2, borderColor: "#FFD70088" }} />
+                borderRadius: TILE_SIZE / 2 + 4, borderWidth: 2, borderColor: "#FFD70088" }} />
             )}
             {/* Merge flash golden fill */}
             {(unit!.mergeFlash ?? 0) > 0 && (
               <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-                borderRadius: 7, backgroundColor: "#FFD70018" }} />
+                borderRadius: TILE_SIZE / 2, backgroundColor: "#FFD70018" }} />
             )}
             {/* Level badge top-left */}
             {(unit!.level ?? 1) > 1 && (
@@ -1644,15 +1836,15 @@ function DeploymentTileView({
               backgroundColor: unitColor + "04", zIndex: -1 }} />
           </>
         ) : (
-          /* Empty tile: rune cross + tap hint */
+          /* Empty pad: clinical rune cross */
           <View style={{ alignItems: "center", justifyContent: "center" }}>
-            <View style={{ width: 13, height: 3, borderRadius: 2,
-              backgroundColor: canAfford ? selColor + "60" : "#1e3a5a" }} />
-            <View style={{ position: "absolute", width: 3, height: 13, borderRadius: 2,
-              backgroundColor: canAfford ? selColor + "60" : "#1e3a5a" }} />
+            <View style={{ width: 14, height: 3, borderRadius: 2,
+              backgroundColor: canAfford ? selColor + "75" : "#2e2010" }} />
+            <View style={{ position: "absolute", width: 3, height: 14, borderRadius: 2,
+              backgroundColor: canAfford ? selColor + "75" : "#2e2010" }} />
             {canAfford && (
               <View style={{ position: "absolute", width: 26, height: 26, borderRadius: 13,
-                borderWidth: 1, borderColor: selColor + "22" }} />
+                borderWidth: 1, borderColor: selColor + "30" }} />
             )}
           </View>
         )}
@@ -2220,35 +2412,35 @@ export default function WardDefense() {
         const { width, height } = e.nativeEvent.layout;
         setArena({ w: width, h: height });
       }}>
-        {/* Board surface: dark tactical game field */}
+        {/* Board surface: warm dark stone arena */}
         <LinearGradient
-          colors={["#060d1c", "#050b16", "#07101f"]}
+          colors={["#0c0a06", "#0a0804", "#0d0b07"]}
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* Subtle cell grid — board reads as a tactical grid */}
-        <BoardGrid aw={arena.w} ah={arena.h} />
-        {/* Ward scene art: narrow horizon strip only, fading into board */}
+        {/* Stone floor tile grid — ward arena diorama */}
+        <ArenaFloor aw={arena.w} ah={arena.h} />
+        {/* Ward scene art: full-board ambient backdrop at low opacity */}
         <View style={s.sceneStrip}>
           <ExpoImage
             source={require("../assets/images/ward_battle_bg.png")}
-            style={[StyleSheet.absoluteFillObject, { opacity: 0.38 }]}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.12 }]}
             contentFit="cover"
           />
           <LinearGradient
-            colors={["#00000000", "#060d1c"]}
+            colors={["#00000000", "#0a080430", "#0a080470"]}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
         </View>
         {/* Board frame */}
         <View style={s.boardFrame} pointerEvents="none" />
 
-        {/* Path road S-curve */}
+        {/* Stone lane path — S-curve */}
         <PathTileRoad aw={arena.w} ah={arena.h} />
 
         {/* Board endpoints */}
-        <CorruptionGate aw={arena.w} ah={arena.h} />
-        <VitalLanternBoard stability={gs.stability} aw={arena.w} ah={arena.h} />
+        <CorruptionPortal aw={arena.w} ah={arena.h} />
+        <VitalLanternShrine stability={gs.stability} aw={arena.w} ah={arena.h} />
 
         {/* Deployment tiles */}
         {(() => {
@@ -3140,15 +3332,15 @@ const s = StyleSheet.create({
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060d1c" },
+  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#0a0804" },
   sceneStrip: {
-    position: "absolute", top: 0, left: 0, right: 0, height: 58,
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     overflow: "hidden", zIndex: 0,
   },
   boardFrame: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-    borderWidth: 1.5, borderColor: "#1e4070",
-    opacity: 0.35, zIndex: 0,
+    borderWidth: 1.5, borderColor: "#3a2c14",
+    opacity: 0.45, zIndex: 0,
   },
   spawnEdge: {
     position: "absolute", right: 10, top: "40%",
