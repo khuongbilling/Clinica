@@ -2,13 +2,14 @@
  * Ward Defense V2 — Lotus Healing Sanctum
  *
  * RENDERING APPROACH — IMAGE-FIRST:
- *   The board background, all unit sprites, and all enemy sprites are now
- *   actual PNG image assets generated as illustrated artwork.  No more
- *   CSS-rectangle "sticker" art.  React Native Views are used only for
- *   interactive overlays (deploy pads, health bars, HUD badges, projectiles).
+ *   Board background, unit sprites, and enemy sprites are all illustrated PNGs.
+ *   CSS Views are used only for interactive overlays (HP bars, badges, pads, projectiles).
  *
- * Enemy movement: positions computed from pathIndex + pathProgress
- * Projectiles:    positions computed from fromFx / toFx / progress
+ * FRAMING FIX:
+ *   Board image is 9:16 portrait. resizeMode="contain" keeps the full scene visible
+ *   with scenic margins. All overlay positions (portal, lantern, tiles, enemies) are
+ *   computed from the image's actual pixel-level rendering bounds so they stay perfectly
+ *   aligned with the background art at any board size.
  */
 import React from "react";
 import {
@@ -33,8 +34,7 @@ const DEPLOY_TILES: [number, number][] = [
 ];
 
 /* ── Illustrated image assets ─────────────────────────────────────────────── */
-/* These are AI-generated PNGs — NOT CSS shapes */
-const IMG_BOARD   = require("../assets/images/ward_board_scene.png");
+const IMG_BOARD = require("../assets/images/ward_board_scene.png");
 const IMG_UNITS: Record<string, any> = {
   ward_scout:  require("../assets/images/sprite_ward_scout.png"),
   mist_caster: require("../assets/images/sprite_mist_caster.png"),
@@ -48,7 +48,7 @@ const IMG_ENEMIES: Record<string, any> = {
   bronchospasm_drake: require("../assets/images/enemy_bronchospasm_drake.png"),
 };
 
-/* ── Enemy accent colors (for HP bars / cue badges) ──────────────────────── */
+/* ── Enemy accent colors ──────────────────────────────────────────────────── */
 const ENEMY_COLOR: Record<string, string> = {
   breathless_wisp:    "#93c5fd",
   wheeze_sprite:      "#34d399",
@@ -88,36 +88,60 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
   return [lp(from[0], to[0], e.pathProgress), lp(from[1], to[1], e.pathProgress)];
 }
 
+/* ── Image-bounds alignment system ───────────────────────────────────────────
+   The board image is 9:16 portrait; resizeMode="contain" letterboxes it inside
+   the View. These helpers compute the image's actual rendered rectangle so every
+   CSS overlay (portal, lantern, tiles, enemies) aligns precisely with the art.
+─────────────────────────────────────────────────────────────────────────────── */
+const IMG_AR_W = 9, IMG_AR_H = 16; /* portrait aspect ratio */
+
+type ImgBounds = { iw: number; ih: number; ox: number; oy: number };
+
+function getImgBounds(aw: number, ah: number): ImgBounds {
+  const scale = Math.min(aw / IMG_AR_W, ah / IMG_AR_H);
+  const iw = IMG_AR_W * scale;
+  const ih = IMG_AR_H * scale;
+  return { iw, ih, ox: (aw - iw) / 2, oy: (ah - ih) / 2 };
+}
+
+/** Convert fractional [0..1, 0..1] image coordinates → absolute view pixels */
+function imgPx(fx: number, fy: number, b: ImgBounds): [number, number] {
+  return [b.ox + fx * b.iw, b.oy + fy * b.ih];
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
-   BOARD SCENE — illustrated PNG background + thin directional guide overlay
+   BOARD SCENE — illustrated PNG (contained) + directional arrow guides
 ════════════════════════════════════════════════════════════════════════════ */
-function BoardScene({ aw, ah }: { aw: number; ah: number }) {
-  /* Direction arrows along path midpoints */
+function BoardScene({ aw, ah, imgBounds: b }: { aw: number; ah: number; imgBounds: ImgBounds }) {
   const arrows: { cx: number; cy: number; deg: number }[] = [];
   for (let seg = 0; seg < PATH_WPS.length - 1; seg++) {
     const [ax, ay] = PATH_WPS[seg];
     const [bx, by] = PATH_WPS[seg + 1];
-    const cx = (ax + bx) / 2 * aw;
-    const cy = (ay + by) / 2 * ah;
+    const [cx, cy] = imgPx((ax + bx) / 2, (ay + by) / 2, b);
     const deg = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
     arrows.push({ cx, cy, deg });
   }
 
   return (
     <>
-      {/* Illustrated board background */}
+      {/* Dark atmospheric background — fills board behind letterboxed image */}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#040c14" }]} />
+
+      {/* Subtle vignette at top and bottom edges */}
+      <LinearGradient
+        colors={["#00000055", "#00000000", "#00000000", "#00000060"]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]}
+      />
+
+      {/* Illustrated board background — CONTAIN keeps full scene visible */}
       <Image
         source={IMG_BOARD}
         style={StyleSheet.absoluteFillObject}
-        resizeMode="cover"
+        resizeMode="contain"
       />
-      {/* Subtle darkening overlay at edges — improves sprite/UI readability */}
-      <LinearGradient
-        colors={["#00000040", "#00000000", "#00000000", "#00000050"]}
-        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        style={[StyleSheet.absoluteFillObject, { pointerEvents: "none" } as any]}
-      />
-      {/* Path direction arrows — subtle guide over the illustrated path */}
+
+      {/* Path direction arrows — aligned to image content */}
       {aw > 20 && arrows.map((a, i) => (
         <View key={i} style={{
           position: "absolute",
@@ -125,8 +149,7 @@ function BoardScene({ aw, ah }: { aw: number; ah: number }) {
           width: 20, height: 20,
           alignItems: "center", justifyContent: "center",
           transform: [{ rotate: `${a.deg}deg` }],
-          zIndex: 2,
-          opacity: 0.55,
+          zIndex: 4, opacity: 0.60,
         }}>
           <View style={{ width: 0, height: 0,
             borderTopWidth: 6, borderBottomWidth: 6, borderLeftWidth: 10,
@@ -140,18 +163,16 @@ function BoardScene({ aw, ah }: { aw: number; ah: number }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   DISEASE PORTAL — purple void gate overlay at PATH_WPS[0]
+   DISEASE PORTAL — positioned at PATH_WPS[0] in image-aligned coordinates
 ════════════════════════════════════════════════════════════════════════════ */
-function DiseasePortal({ aw, ah }: { aw: number; ah: number }) {
-  const [fx, fy] = PATH_WPS[0];
-  const px = fx * aw, py = fy * ah;
+function DiseasePortal({ imgBounds: b, aw }: { imgBounds: ImgBounds; aw: number }) {
+  const [px, py] = imgPx(PATH_WPS[0][0], PATH_WPS[0][1], b);
   return (
     <View style={{
       position: "absolute",
-      left: Math.min(px - 38, aw - 84), top: Math.max(2, py - 44),
+      left: Math.min(px - 38, aw - 84), top: Math.max(2, py - 46),
       alignItems: "center", zIndex: 20,
     }}>
-      {/* Label */}
       <View style={{
         backgroundColor: "#3b0764e8", borderRadius: 6,
         paddingHorizontal: 7, paddingVertical: 2, marginBottom: 4,
@@ -161,7 +182,6 @@ function DiseasePortal({ aw, ah }: { aw: number; ah: number }) {
           DISEASE GATE
         </Text>
       </View>
-      {/* Portal ring */}
       <View style={{
         width: 54, height: 54, borderRadius: 27,
         backgroundColor: "#2e1065d0",
@@ -186,7 +206,6 @@ function DiseasePortal({ aw, ah }: { aw: number; ah: number }) {
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#a855f7ee" }}/>
         </View>
       </View>
-      {/* Spike accents */}
       <View style={{ flexDirection: "row", gap: 5, marginTop: 3 }}>
         {[0, 1, 2].map(i => (
           <View key={i} style={{
@@ -201,11 +220,10 @@ function DiseasePortal({ aw, ah }: { aw: number; ah: number }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   VITAL LANTERN — glowing healing core at PATH_WPS[last]
+   VITAL LANTERN — positioned at PATH_WPS[last] in image-aligned coordinates
 ════════════════════════════════════════════════════════════════════════════ */
-function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah: number }) {
-  const [fx, fy] = PATH_WPS[PATH_WPS.length - 1];
-  const px = fx * aw, py = fy * ah;
+function VitalLantern({ stability, imgBounds: b, ah }: { stability: number; imgBounds: ImgBounds; ah: number }) {
+  const [px, py] = imgPx(PATH_WPS[PATH_WPS.length - 1][0], PATH_WPS[PATH_WPS.length - 1][1], b);
   const pct  = cl(stability, 0, 100);
   const glow = pct > 60 ? "#22d3ee" : pct > 30 ? "#facc15" : "#ef4444";
 
@@ -215,7 +233,6 @@ function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah
       left: Math.max(2, px - 40), top: Math.min(ah - 120, py - 88),
       alignItems: "center", zIndex: 20,
     }}>
-      {/* Label */}
       <View style={{
         backgroundColor: "#0c2a2ae8", borderRadius: 6,
         paddingHorizontal: 7, paddingVertical: 2, marginBottom: 3,
@@ -225,7 +242,6 @@ function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah
           VITAL LANTERN
         </Text>
       </View>
-      {/* Stability bar */}
       <View style={{
         width: 64, height: 5, backgroundColor: "#0d202070",
         borderRadius: 3, marginBottom: 4, overflow: "hidden",
@@ -234,12 +250,10 @@ function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah
         <View style={{ width: `${pct}%` as any, height: "100%",
           backgroundColor: glow, borderRadius: 3 }}/>
       </View>
-      {/* Outer glow */}
       <View style={{
         position: "absolute", top: 26, left: 0, width: 78, height: 78, borderRadius: 39,
         backgroundColor: glow + "0e", borderWidth: 1.5, borderColor: glow + "25",
       }}/>
-      {/* Shrine pillar */}
       <View style={{
         width: 12, height: 26, backgroundColor: "#1a3a2a",
         borderRadius: 3, borderWidth: 1.5, borderColor: glow + "50",
@@ -247,7 +261,6 @@ function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah
       }}>
         <View style={{ width: 2, height: 16, backgroundColor: glow + "60", borderRadius: 1 }}/>
       </View>
-      {/* Lantern body */}
       <View style={{
         width: 56, height: 56, borderRadius: 12,
         backgroundColor: "#081a14", borderWidth: 2.5, borderColor: glow,
@@ -271,7 +284,6 @@ function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah
           <Text style={{ fontSize: 10 }}>✦</Text>
         </View>
       </View>
-      {/* Pedestal */}
       <View style={{
         width: 66, height: 10, borderRadius: 5,
         backgroundColor: "#1a3a2a", borderWidth: 1.5, borderColor: glow + "50", marginTop: -2,
@@ -281,26 +293,25 @@ function VitalLantern({ stability, aw, ah }: { stability: number; aw: number; ah
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   DEPLOY PAD — transparent pressable zone over the illustrated platform
-   Shows a subtle glow ring when empty, the unit image sprite when occupied
+   DEPLOY PAD — transparent pressable zone at image-aligned tile position
 ════════════════════════════════════════════════════════════════════════════ */
 interface DPProps {
   tileIdx: number; unit: any;
   selectedUnit: string | null; canAfford: boolean;
   isMergeCandidate: boolean; onPress: () => void;
-  aw: number; ah: number;
+  imgBounds: ImgBounds;
   unitColors: Record<string, string>;
   bobY: Animated.AnimatedInterpolation<number>;
 }
 
-function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, onPress, aw, ah, unitColors, bobY }: DPProps) {
-  const [fx, fy]   = DEPLOY_TILES[tileIdx];
-  const px = fx * aw, py = fy * ah;
+function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, onPress, imgBounds: b, unitColors, bobY }: DPProps) {
+  const [fx, fy]  = DEPLOY_TILES[tileIdx];
+  const [px, py]  = imgPx(fx, fy, b);
   const isOccupied = !!unit;
-  const padColor   = isOccupied
+  const padColor  = isOccupied
     ? (unitColors[unit.typeId] ?? "#60a5fa")
     : canAfford ? "#22d3ee" : "#64748b";
-  const SZ = 58; /* tile hit zone */
+  const SZ = 58;
 
   return (
     <Pressable
@@ -312,14 +323,13 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
         alignItems: "center", zIndex: 15,
       }}
     >
-      {/* Unit image sprite — stands above the tile */}
+      {/* Unit image sprite standing above the tile */}
       {isOccupied && (
         <Animated.View style={{
           marginBottom: -4,
           transform: [{ translateY: bobY }],
           zIndex: 16,
         }}>
-          {/* Level badge */}
           {(unit.level ?? 1) > 1 && (
             <View style={{
               position: "absolute", top: -4, right: -4, zIndex: 17,
@@ -331,14 +341,12 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
               </Text>
             </View>
           )}
-          {/* Cast flash ring */}
           {(unit.castFlash ?? 0) > 0 && (
             <View style={{
               position: "absolute", top: -5, left: -5, right: -5, bottom: -5,
               borderRadius: 40, borderWidth: 2.5, borderColor: padColor + "aa", zIndex: 15,
             }}/>
           )}
-          {/* Merge glow */}
           {isMergeCandidate && (
             <View style={{
               position: "absolute", top: -8, left: -8, right: -8, bottom: -8,
@@ -346,13 +354,12 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
               backgroundColor: "#FFD70015", zIndex: 15,
             }}/>
           )}
-          {/* The illustrated unit sprite image */}
+          {/* Deployed board sprite — illustrated chibi character image */}
           <Image
             source={IMG_UNITS[unit.typeId] ?? IMG_UNITS.ward_scout}
             style={{ width: 54, height: 66 }}
             resizeMode="contain"
           />
-          {/* Ground shadow under sprite */}
           <View style={{
             width: 40, height: 6, borderRadius: 20,
             backgroundColor: "#000000aa", alignSelf: "center", marginTop: -4,
@@ -360,7 +367,7 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
         </Animated.View>
       )}
 
-      {/* Tile interactive zone */}
+      {/* Tile hit zone */}
       <View style={{
         width: SZ, height: SZ, borderRadius: 12,
         backgroundColor: isOccupied ? padColor + "12" : canAfford ? "#22d3ee10" : "#00000025",
@@ -374,7 +381,6 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
               : "#64748b50",
         alignItems: "center", justifyContent: "center",
       }}>
-        {/* Empty pad — "+" deploy indicator */}
         {!isOccupied && (
           <View style={{ alignItems: "center", justifyContent: "center" }}>
             <View style={{
@@ -388,7 +394,6 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
             }}/>
           </View>
         )}
-        {/* Occupied — unit category label strip */}
         {isOccupied && (
           <View style={{
             position: "absolute", bottom: 3,
@@ -407,15 +412,13 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ENEMY ON PATH — illustrated disease-spirit image with HP bar + cue badge
-   Position is computed from pathIndex + pathProgress (FIXED — not enemy.x)
+   ENEMY ON PATH — illustrated sprite at image-aligned path position
 ════════════════════════════════════════════════════════════════════════════ */
 function EnemyOnPath({
-  enemy, bobY, aw, ah,
-}: { enemy: any; bobY: Animated.AnimatedInterpolation<number>; aw: number; ah: number }) {
+  enemy, bobY, imgBounds: b,
+}: { enemy: any; bobY: Animated.AnimatedInterpolation<number>; imgBounds: ImgBounds }) {
   const [fx, fy] = getEnemyFrac(enemy);
-  const px = fx * aw;
-  const py = fy * ah;
+  const [px, py] = imgPx(fx, fy, b);
 
   const hpPct    = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
   const barColor = hpPct > 0.6 ? "#22c55e" : hpPct > 0.3 ? "#facc15" : "#ef4444";
@@ -461,14 +464,13 @@ function EnemyOnPath({
         </Text>
       </View>
 
-      {/* Boss HP number */}
       {isBoss && (
         <Text style={{ color: accentC, fontSize: 8, fontWeight: "700", marginBottom: 1 }}>
           {enemy.hp}
         </Text>
       )}
 
-      {/* Hit flash overlay */}
+      {/* Hit-flash overlay */}
       {isFlash && (
         <View style={{
           position: "absolute", top: 22, left: 0, right: 0, bottom: 6,
@@ -476,7 +478,6 @@ function EnemyOnPath({
         }}/>
       )}
 
-      {/* Slow indicator */}
       {(enemy.slowTicks ?? 0) > 0 && (
         <View style={{
           position: "absolute", top: 18, right: -10,
@@ -486,15 +487,10 @@ function EnemyOnPath({
         </View>
       )}
 
-      {/* ILLUSTRATED enemy sprite image */}
+      {/* Illustrated enemy sprite */}
       {img ? (
-        <Image
-          source={img}
-          style={{ width: sprW, height: sprH }}
-          resizeMode="contain"
-        />
+        <Image source={img} style={{ width: sprW, height: sprH }} resizeMode="contain" />
       ) : (
-        /* Fallback — plain tinted circle if image missing */
         <View style={{
           width: sprW, height: sprH, borderRadius: sprW / 2,
           backgroundColor: accentC + "33", borderWidth: 2, borderColor: accentC,
@@ -519,11 +515,12 @@ function EnemyOnPath({
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   PROJECTILE — glowing healing orb in flight (position FIXED from fromFx/toFx)
+   PROJECTILE — image-aligned glowing orb in flight
 ════════════════════════════════════════════════════════════════════════════ */
-function ProjectileDot({ p, aw, ah }: { p: any; aw: number; ah: number }) {
-  const px  = lp(p.fromFx, p.toFx, p.progress) * aw;
-  const py  = lp(p.fromFy, p.toFy, p.progress) * ah;
+function ProjectileDot({ p, imgBounds: b }: { p: any; imgBounds: ImgBounds }) {
+  const fx  = lp(p.fromFx, p.toFx, p.progress);
+  const fy  = lp(p.fromFy, p.toFy, p.progress);
+  const [px, py] = imgPx(fx, fy, b);
   const col = p.color ?? "#22d3ee";
   return (
     <View style={{
@@ -568,6 +565,8 @@ function WavePauseOverlay({ wave }: { wave: number }) {
 
 /* ════════════════════════════════════════════════════════════════════════════
    MAIN BOARD EXPORT — used by ward-defense.tsx
+   All overlay positions computed from image rendering bounds (imgBounds) so
+   they stay aligned with the art at every board size / letterbox amount.
 ════════════════════════════════════════════════════════════════════════════ */
 export function WardBoardV2({
   aw, ah, onLayout,
@@ -576,21 +575,24 @@ export function WardBoardV2({
   selectedUnit, bobY,
   spawnQueueLen, mergeTileSet, onTilePress, canAfford, unitColors,
 }: WardBoardV2Props) {
+  /* Image rendering bounds — recomputed whenever board size changes */
+  const imgBounds = getImgBounds(aw > 20 ? aw : 360, ah > 20 ? ah : 500);
+
   return (
     <View
-      style={{ flex: 1, position: "relative", overflow: "hidden" }}
+      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#040c14" }}
       onLayout={onLayout}
     >
-      {/* ── 1. Illustrated board scene (background image + arrow guides) ── */}
-      <BoardScene aw={aw} ah={ah} />
+      {/* 1. Illustrated board scene (contain — full image always visible) */}
+      <BoardScene aw={aw} ah={ah} imgBounds={imgBounds} />
 
-      {/* ── 2. Disease Portal overlay (top-right, enemy spawn) ── */}
-      {aw > 20 && <DiseasePortal aw={aw} ah={ah} />}
+      {/* 2. Disease Portal overlay */}
+      {aw > 20 && <DiseasePortal imgBounds={imgBounds} aw={aw} />}
 
-      {/* ── 3. Vital Lantern overlay (bottom-left, objective) ── */}
-      {aw > 20 && <VitalLantern stability={stability} aw={aw} ah={ah} />}
+      {/* 3. Vital Lantern overlay */}
+      {aw > 20 && <VitalLantern stability={stability} imgBounds={imgBounds} ah={ah} />}
 
-      {/* ── 4. Deploy pads — transparent touch zones over illustrated platform ── */}
+      {/* 4. Deploy pads — image-aligned touch zones */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (
         <DeployPad
           key={i} tileIdx={i}
@@ -599,23 +601,23 @@ export function WardBoardV2({
           canAfford={canAfford}
           isMergeCandidate={mergeTileSet.has(i)}
           onPress={() => onTilePress(i)}
-          aw={aw} ah={ah}
+          imgBounds={imgBounds}
           unitColors={unitColors}
           bobY={bobY}
         />
       ))}
 
-      {/* ── 5. Projectiles ── */}
+      {/* 5. Projectiles — image-aligned */}
       {projectiles.map((p: any) => (
-        <ProjectileDot key={p.uid} p={p} aw={aw} ah={ah} />
+        <ProjectileDot key={p.uid} p={p} imgBounds={imgBounds} />
       ))}
 
-      {/* ── 6. Enemy sprites (illustrated disease creatures) ── */}
+      {/* 6. Enemy sprites — image-aligned, move along path */}
       {enemies.map((e: any) => (
-        <EnemyOnPath key={e.uid} enemy={e} bobY={bobY} aw={aw} ah={ah} />
+        <EnemyOnPath key={e.uid} enemy={e} bobY={bobY} imgBounds={imgBounds} />
       ))}
 
-      {/* ── 7. Spawn queue warning ── */}
+      {/* 7. Spawn queue warning */}
       {spawnQueueLen > 0 && (
         <View style={{
           position: "absolute", top: 6, left: 6,
@@ -629,7 +631,7 @@ export function WardBoardV2({
         </View>
       )}
 
-      {/* ── 8. Wave pause overlay ── */}
+      {/* 8. Wave pause overlay */}
       {phase === "wave_pause" && <WavePauseOverlay wave={wave} />}
     </View>
   );

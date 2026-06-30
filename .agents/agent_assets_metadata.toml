@@ -155,7 +155,7 @@ title = "home hub kingdom bg"
 id = "cJr3ug5lXbgwZJu39nYZO"
 uri = "file://frontend/assets/images/ward_board_scene.png"
 type = "image"
-title = "lotus ward defense board scene"
+title = "lotus ward defense board portrait"
 
 [[generated]]
 id = "vWeQhxCiFf8sDaHYZW9Xq"
@@ -204,3 +204,21 @@ id = "HXUb_WH3ysuQUE0i7iIJ4"
 uri = "file://frontend/assets/images/enemy_bronchospasm_drake.png"
 type = "image"
 title = "bronchospasm drake boss sprite"
+
+[[generated]]
+id = "Q5iw9XycjF2sDm92coVxB"
+uri = "file://frontend/assets/images/card_ward_scout.png"
+type = "image"
+title = "ward scout card portrait"
+
+[[generated]]
+id = "IRm9zB94pYWaPj5bJzIPm"
+uri = "file://frontend/assets/images/card_mist_caster.png"
+type = "image"
+title = "mist caster card portrait"
+
+[[generated]]
+id = "dQ5M61j4mSrwjI5qIHhcr"
+uri = "file://frontend/assets/images/card_o2_healer.png"
+type = "image"
+title = "o2 healer card portrait"

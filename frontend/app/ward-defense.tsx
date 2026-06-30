@@ -16,6 +16,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WardBoardV2 } from "./ward-defense-v2";
 
+/* ── Card portrait images — rendered chibi art for the bottom deploy dock ── */
+const CARD_PORTRAITS: Record<string, any> = {
+  ward_scout:  require("../assets/images/card_ward_scout.png"),
+  mist_caster: require("../assets/images/card_mist_caster.png"),
+  o2_healer:   require("../assets/images/card_o2_healer.png"),
+};
+
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -1960,7 +1967,26 @@ function HandPanel({
                 <Text style={[s.cardCatBadge, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>
                   {u.category}
                 </Text>
-                <UnitSprite typeId={typeId} castFlash={false} />
+                {/* Card portrait — rendered chibi art, not the old sticker UnitSprite */}
+                <View style={{
+                  width: 64, height: 64, borderRadius: 10,
+                  overflow: "hidden", marginVertical: 2,
+                  backgroundColor: u.color + "12",
+                  borderWidth: 1, borderColor: isSelected ? u.color + "60" : u.color + "22",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Image
+                    source={CARD_PORTRAITS[typeId]}
+                    style={{ width: 72, height: 72 }}
+                    resizeMode="contain"
+                  />
+                  {!canAfford && (
+                    <View style={{
+                      ...StyleSheet.absoluteFillObject as any,
+                      backgroundColor: "#00000060",
+                    }}/>
+                  )}
+                </View>
                 <Text style={[s.unitCardName, { color: isSelected ? u.color : canAfford ? u.color + "CC" : COLORS.onSurfaceTertiary }]}
                   numberOfLines={2}>{u.name}</Text>
                 <View style={[s.apRune, { borderColor: canAfford ? u.color + "70" : COLORS.border,
