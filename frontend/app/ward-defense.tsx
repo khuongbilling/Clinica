@@ -16,11 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WardBoardV2 } from "./ward-defense-v2";
 
-/* ── Card portrait images — hero portraits for the bottom deploy dock ── */
+/* ── Card portrait images — chibi 2.5D rendered sprites for bottom dock ── */
 const CARD_PORTRAITS: Record<string, any> = {
-  ward_scout:  require("../assets/heroes/novice_guardian.png"),
-  mist_caster: require("../assets/heroes/apprentice_seer.png"),
-  o2_healer:   require("../assets/heroes/village_caretaker.png"),
+  ward_scout:  require("../assets/images/sprite_ward_scout.png"),
+  mist_caster: require("../assets/images/sprite_mist_caster.png"),
+  o2_healer:   require("../assets/images/sprite_o2_healer.png"),
 };
 
 import { usePlayer } from "@/src/game/store";
@@ -38,23 +38,22 @@ const KILL_AP_BONUS    = 2;
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
-/* ── Board: path waypoints as [fracX, fracY] (0=top-left, 1=bottom-right) ──
-   Perimeter loop: Corruption Gate (top-right) sweeps across top, down left,
-   across bottom, up right side, then converges to Vital Lantern at center. */
+/* ── Board: U-path — Disease Gate top-LEFT, Vital Lantern top-RIGHT ──
+   Enemies enter top-left, sweep DOWN the left side, ACROSS the bottom,
+   then UP the right side to reach the Vital Lantern shrine at top-right.
+   The 2×3 deployment platform sits in the open center of the U. */
 const PATH_WPS: [number, number][] = [
-  [0.86, 0.10],   /* 0 — Corruption Gate entry (top-right) */
-  [0.14, 0.10],   /* 1 — top-left corner */
-  [0.14, 0.82],   /* 2 — bottom-left corner */
-  [0.86, 0.82],   /* 3 — bottom-right corner */
-  [0.86, 0.46],   /* 4 — right-middle (up right side) */
-  [0.50, 0.46],   /* 5 — Vital Lantern (center of arena) */
+  [0.14, 0.10],   /* 0 — Disease Gate entry (top-left) */
+  [0.14, 0.82],   /* 1 — bottom-left corner */
+  [0.86, 0.82],   /* 2 — bottom-right corner */
+  [0.86, 0.10],   /* 3 — Vital Lantern (top-right) */
 ];
-const N_SEGS = PATH_WPS.length - 1;   /* 5 segments */
+const N_SEGS = PATH_WPS.length - 1;   /* 3 segments */
 
-/* ── Deployment tiles: 2×3 center grid flanking the Vital Lantern ── */
+/* ── Deployment tiles: 2×3 stone platform centered inside the U-path ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.33, 0.27], [0.50, 0.27], [0.67, 0.27],  /* top row — above lantern */
-  [0.33, 0.63], [0.50, 0.63], [0.67, 0.63],  /* bottom row — below lantern */
+  [0.33, 0.32], [0.50, 0.32], [0.67, 0.32],  /* top row */
+  [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  /* bottom row */
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1968,24 +1967,24 @@ function HandPanel({
                 <Text style={[s.cardCatBadge, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>
                   {u.category}
                 </Text>
-                {/* Card portrait — rendered chibi art, not the old sticker UnitSprite */}
+                {/* Chibi sprite frame — tall, shows full body */}
                 <View style={{
-                  width: 64, height: 64, borderRadius: 10,
+                  width: 62, height: 80, borderRadius: 10,
                   overflow: "hidden", marginVertical: 2,
-                  backgroundColor: u.color + "12",
-                  borderWidth: 1, borderColor: isSelected ? u.color + "60" : u.color + "22",
-                  alignItems: "center", justifyContent: "center",
+                  alignItems: "center", justifyContent: "flex-end",
                 }}>
+                  <LinearGradient
+                    colors={[u.color + "08", u.color + "28"]}
+                    start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
                   <Image
                     source={CARD_PORTRAITS[typeId]}
-                    style={{ width: 72, height: 72 }}
+                    style={{ width: 66, height: 86 }}
                     resizeMode="contain"
                   />
                   {!canAfford && (
-                    <View style={{
-                      ...StyleSheet.absoluteFillObject as any,
-                      backgroundColor: "#00000060",
-                    }}/>
+                    <View style={{ ...StyleSheet.absoluteFillObject as any, backgroundColor: "#00000065" }}/>
                   )}
                 </View>
                 <Text style={[s.unitCardName, { color: isSelected ? u.color : canAfford ? u.color + "CC" : COLORS.onSurfaceTertiary }]}
@@ -2065,6 +2064,7 @@ export default function WardDefense() {
   /* Hand mode + selected unit (UI state) */
   const [handMode, setHandMode] = useState<"deploy" | "abilities">("deploy");
   const [selectedUnit, setSelectedUnit] = useState("ward_scout");
+  const [cqAnswered, setCqAnswered] = useState<{ wave: number; correct: boolean } | null>(null);
 
   /* Shared idle bob animation */
   const bobAnim = useRef(new Animated.Value(0)).current;
@@ -2075,6 +2075,19 @@ export default function WardDefense() {
     ])).start();
   }, []);
   const bobY = bobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -4] });
+
+  /* ── Clinical question AP bonus — shown during wave prep pauses ── */
+  function answerClinQ(optIdx: number) {
+    if (cqAnswered?.wave === gs.wave) return;
+    const q = CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length];
+    const correct = optIdx === q.correct;
+    setCqAnswered({ wave: gs.wave, correct });
+    if (correct) {
+      const s = gsRef.current;
+      set({ ...s, ap: Math.min(s.ap + 2, MAX_AP),
+        feedbacks: [{ id: String(Date.now()), text: "+2 AP · Clinical reasoning! ⚕", color: "#22d3ee", quality: "bonus" as any, ticks: 8 }, ...s.feedbacks.slice(0, 1)] });
+    }
+  }
 
   /* ── Game tick ── */
   useEffect(() => {
@@ -2479,6 +2492,15 @@ export default function WardDefense() {
             />
           );
         })()}
+        {/* Clinical question panel — floats over board during wave prep */}
+        {gs.phase === "wave_pause" && (
+          <ClinicalQuestionPanel
+            question={CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length]}
+            onAnswer={answerClinQ}
+            answered={cqAnswered?.wave === gs.wave}
+            answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
+          />
+        )}
       </View>
 
       {/* Feedback strip */}
@@ -2504,6 +2526,126 @@ export default function WardDefense() {
       />
 
     </SafeAreaView>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLINICAL QUESTION PANEL — mid-battle NCLEX cues with AP reward
+   ═══════════════════════════════════════════════════════════════════ */
+const CLINICAL_QUESTIONS = [
+  {
+    q: "Patient: SpO₂ 91%, accessory muscle use, audible wheeze. PRIORITY intervention?",
+    opts: ["Nebulized bronchodilator", "Chest X-ray", "Blood cultures", "Oral steroids"],
+    correct: 0,
+    rationale: "Acute bronchospasm → bronchodilator relieves airway narrowing first.",
+  },
+  {
+    q: "BEST sign of improving oxygenation after bronchodilator therapy?",
+    opts: ["Decreased work of breathing", "Increased heart rate", "Louder wheeze", "Higher temperature"],
+    correct: 0,
+    rationale: "Reduced WOB = decreased airway resistance = effective treatment.",
+  },
+  {
+    q: "COPD patient, 2L O₂/NC: RR 28, SpO₂ 89%. FIRST nursing action?",
+    opts: ["Reposition upright (HOB↑)", "Notify provider", "Increase O₂ flow", "Document and monitor"],
+    correct: 0,
+    rationale: "Upright positioning optimizes lung expansion — quick, safe, first action.",
+  },
+  {
+    q: "Bronchospasm is BEST characterized by:",
+    opts: ["Expiratory wheeze + air trapping", "Inspiratory stridor only", "Productive cough + fever", "Low RR + deep breaths"],
+    correct: 0,
+    rationale: "Narrowed lower airways = expiratory wheeze + air trapping.",
+  },
+  {
+    q: "Albuterol 2.5 mg nebulized PRN wheeze. When do you administer?",
+    opts: ["Patient reports chest tightness + wheeze", "SpO₂ 96%, resting comfortably", "Every 4h on schedule", "Fever > 38°C is present"],
+    correct: 0,
+    rationale: "PRN = give for symptoms (wheeze/chest tightness), not on a fixed schedule.",
+  },
+  {
+    q: "Which finding is MOST consistent with respiratory distress requiring immediate action?",
+    opts: ["Nasal flaring + tripod positioning", "SpO₂ 97% on room air", "RR 16 with clear breath sounds", "Mild cough, afebrile"],
+    correct: 0,
+    rationale: "Nasal flaring + tripod position = significant accessory muscle use = respiratory distress.",
+  },
+];
+
+function ClinicalQuestionPanel({
+  question, onAnswer, answered, answeredCorrect,
+}: {
+  question: typeof CLINICAL_QUESTIONS[0];
+  onAnswer: (idx: number) => void;
+  answered: boolean;
+  answeredCorrect: boolean | null;
+}) {
+  return (
+    <View style={{
+      position: "absolute", left: 10, right: 10, top: "25%" as any,
+      borderRadius: 16, overflow: "hidden", zIndex: 30,
+    }}>
+      <LinearGradient
+        colors={["#040f1af0", "#081424f0"]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <View style={{ borderRadius: 16, borderWidth: 1.5, borderColor: "#22d3ee40",
+        padding: 14 }}>
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: "#22d3ee" }}/>
+          <Text style={{ color: "#22d3ee", fontSize: 8, fontWeight: "800", letterSpacing: 1.2 }}>
+            CLINICAL CUE
+          </Text>
+          <View style={{ flex: 1 }}/>
+          <View style={{ backgroundColor: "#22d3ee22", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
+            borderWidth: 1, borderColor: "#22d3ee55" }}>
+            <Text style={{ color: "#22d3ee", fontSize: 7.5, fontWeight: "800" }}>+2 AP</Text>
+          </View>
+        </View>
+
+        {/* Question */}
+        <Text style={{ color: "#e2f8ff", fontSize: 11, fontWeight: "700", lineHeight: 15.5, marginBottom: 10 }}>
+          {question.q}
+        </Text>
+
+        {answered ? (
+          <View style={{
+            backgroundColor: answeredCorrect ? "#03150e" : "#180404",
+            borderRadius: 10, padding: 10,
+            borderWidth: 1, borderColor: answeredCorrect ? "#22d3ee55" : "#ef444455",
+          }}>
+            <Text style={{ color: answeredCorrect ? "#34d399" : "#f87171",
+              fontSize: 10, fontWeight: "800", marginBottom: 3 }}>
+              {answeredCorrect ? "✓  Correct! +2 AP earned." : "✗  Not quite — review below."}
+            </Text>
+            <Text style={{ color: "#94a3b8", fontSize: 9.5, lineHeight: 13.5 }}>
+              {question.rationale}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 6 }}>
+            {question.opts.map((opt, i) => (
+              <Pressable key={i} onPress={() => onAnswer(i)} style={{
+                flexDirection: "row", alignItems: "center", gap: 9,
+                backgroundColor: "#071828", borderRadius: 9, padding: 9,
+                borderWidth: 1, borderColor: "#1a3050",
+              }}>
+                <View style={{
+                  width: 22, height: 22, borderRadius: 11,
+                  backgroundColor: "#0d2040", borderWidth: 1.5, borderColor: "#22d3ee55",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Text style={{ color: "#22d3ee", fontSize: 8.5, fontWeight: "800" }}>
+                    {["A","B","C","D"][i]}
+                  </Text>
+                </View>
+                <Text style={{ color: "#cbd5e1", fontSize: 10.5, flex: 1, lineHeight: 14 }}>{opt}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -3331,7 +3473,7 @@ const s = StyleSheet.create({
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060402" },
+  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060402", aspectRatio: 3/4, alignSelf: "center" },
   sceneStrip: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     overflow: "hidden", zIndex: 0,

@@ -20,26 +20,25 @@ import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
 /* ── Path + tile constants — must mirror ward-defense.tsx ─────────────────── */
+/* U-path: Disease Gate top-LEFT → down left → across bottom → up right → Vital Lantern top-RIGHT */
 const PATH_WPS: [number, number][] = [
-  [0.86, 0.10],   /* Disease Gate (top-right) */
-  [0.14, 0.10],   /* top-left corner */
+  [0.14, 0.10],   /* Disease Gate (top-left) */
   [0.14, 0.82],   /* bottom-left corner */
   [0.86, 0.82],   /* bottom-right corner */
-  [0.86, 0.46],   /* right-middle (up right side) */
-  [0.50, 0.46],   /* Vital Lantern (center) */
+  [0.86, 0.10],   /* Vital Lantern (top-right) */
 ];
 
 const DEPLOY_TILES: [number, number][] = [
-  [0.33, 0.27], [0.50, 0.27], [0.67, 0.27],  /* top row — above lantern */
-  [0.33, 0.63], [0.50, 0.63], [0.67, 0.63],  /* bottom row — below lantern */
+  [0.33, 0.32], [0.50, 0.32], [0.67, 0.32],  /* top row */
+  [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  /* bottom row */
 ];
 
 /* ── Illustrated image assets ─────────────────────────────────────────────── */
 const IMG_BOARD = require("../assets/images/ward_board_scene.png");
 const IMG_UNITS: Record<string, any> = {
-  ward_scout:  require("../assets/heroes/battle/novice_guardian.png"),
-  mist_caster: require("../assets/heroes/battle/apprentice_seer.png"),
-  o2_healer:   require("../assets/heroes/battle/village_caretaker.png"),
+  ward_scout:  require("../assets/images/sprite_ward_scout.png"),
+  mist_caster: require("../assets/images/sprite_mist_caster.png"),
+  o2_healer:   require("../assets/images/sprite_o2_healer.png"),
 };
 const IMG_ENEMIES: Record<string, any> = {
   breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),
@@ -94,7 +93,7 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
    the View. These helpers compute the image's actual rendered rectangle so every
    CSS overlay (portal, lantern, tiles, enemies) aligns precisely with the art.
 ─────────────────────────────────────────────────────────────────────────────── */
-const IMG_AR_W = 896, IMG_AR_H = 1280; /* actual image pixel dimensions → 7:10 portrait */
+const IMG_AR_W = 3, IMG_AR_H = 4; /* 3:4 portrait — matches generated map aspect ratio */
 
 type ImgBounds = { iw: number; ih: number; ox: number; oy: number };
 
@@ -142,6 +141,30 @@ function BoardScene({ aw, ah, imgBounds: b }: { aw: number; ah: number; imgBound
         contentFit="contain"
         contentPosition="center"
       />
+
+      {/* Enemy path corridor strips — show the route enemies walk */}
+      {aw > 20 && PATH_WPS.slice(0, -1).map((wp, seg) => {
+        const [ax, ay] = imgPx(wp[0], wp[1], b);
+        const to = PATH_WPS[seg + 1];
+        const [bx2, by2] = imgPx(to[0], to[1], b);
+        const dx = bx2 - ax, dy = by2 - ay;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        const cx = (ax + bx2) / 2, cy = (ay + by2) / 2;
+        const RW = 22;
+        return (
+          <View key={`road-${seg}`} style={{
+            position: "absolute",
+            left: cx - len / 2, top: cy - RW / 2,
+            width: len, height: RW,
+            backgroundColor: "#7c3aed14",
+            borderTopWidth: 1, borderBottomWidth: 1,
+            borderColor: "#a855f730",
+            transform: [{ rotate: `${angle}deg` }],
+            zIndex: 3,
+          }}/>
+        );
+      })}
 
       {/* Path direction arrows — aligned to image content */}
       {aw > 20 && arrows.map((a, i) => (
@@ -302,7 +325,7 @@ function VitalLantern({ stability, imgBounds: b, ah }: { stability: number; imgB
   return (
     <View style={{
       position: "absolute",
-      left: Math.max(2, px - 40), top: Math.min(ah - 120, py - 88),
+      left: Math.max(2, px - 40), top: Math.max(4, Math.min(ah - 130, py - 10)),
       alignItems: "center", zIndex: 20,
     }}>
       <View style={{
@@ -333,32 +356,24 @@ function VitalLantern({ stability, imgBounds: b, ah }: { stability: number; imgB
       }}>
         <View style={{ width: 2, height: 16, backgroundColor: glow + "60", borderRadius: 1 }}/>
       </View>
-      <View style={{
-        width: 56, height: 56, borderRadius: 12,
-        backgroundColor: "#081a14", borderWidth: 2.5, borderColor: glow,
-        alignItems: "center", justifyContent: "center",
-        overflow: "hidden", marginTop: -3,
-      }}>
-        <LinearGradient
-          colors={[glow + "45", "#0a1e16", "#040e0a"]}
-          start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <View style={{ position: "absolute", width: 42, height: 42, borderRadius: 21,
-          borderWidth: 1.5, borderColor: glow + "55" }}/>
-        <View style={{ position: "absolute", width: 26, height: 26, borderRadius: 13,
-          borderWidth: 1, borderColor: glow + "80" }}/>
-        <View style={{
-          width: 18, height: 18, borderRadius: 9,
-          backgroundColor: glow + "35", borderWidth: 2, borderColor: glow + "cc",
+      {/* Shrine disc — circular, not square */}
+      <LinearGradient
+        colors={[glow + "55", "#0e2a1e", "#071612"]}
+        start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
+        style={{
+          width: 52, height: 52, borderRadius: 26,
+          borderWidth: 2.5, borderColor: glow,
           alignItems: "center", justifyContent: "center",
-        }}>
-          <Text style={{ fontSize: 10 }}>✦</Text>
-        </View>
-      </View>
+          overflow: "hidden", marginTop: -3,
+        }}
+      >
+        <View style={{ position: "absolute", width: 38, height: 38, borderRadius: 19,
+          borderWidth: 1, borderColor: glow + "60" }}/>
+        <Text style={{ fontSize: 14, color: glow }}>✦</Text>
+      </LinearGradient>
       <View style={{
-        width: 66, height: 10, borderRadius: 5,
-        backgroundColor: "#1a3a2a", borderWidth: 1.5, borderColor: glow + "50", marginTop: -2,
+        width: 62, height: 9, borderRadius: 5,
+        backgroundColor: "#0a1e14", borderWidth: 1, borderColor: glow + "55", marginTop: -2,
       }}/>
     </View>
   );
@@ -439,92 +454,91 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
         </Animated.View>
       )}
 
-      {/* ── Platform tile ── */}
-      <View style={{
-        width: SZ, height: SZ, borderRadius: 14,
-        backgroundColor: isOccupied
-          ? padColor + "1a"
-          : canAfford ? "#22d3ee14" : "#0d2a2280",
-        borderWidth: isOccupied ? 2.5 : 1.5,
-        borderColor: isOccupied
-          ? padColor + "dd"
-          : isMergeCandidate
-            ? "#FFD700bb"
-            : canAfford
-              ? "#22d3ee90"
-              : "#2d5a4860",
-        alignItems: "center", justifyContent: "center",
-        overflow: "hidden",
-      }}>
-        {/* Inner ring — decorative platform inlay */}
+      {/* ── Stone platform surface — solid gradient, not transparent glass ── */}
+      <LinearGradient
+        colors={isOccupied
+          ? [padColor + "55", padColor + "28", "#0c1e18"]
+          : canAfford ? ["#1e5040", "#0f2d22", "#071812"] : ["#1a2d25", "#101e18", "#0a1410"]}
+        start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
+        style={{
+          width: SZ, height: SZ, borderRadius: 10,
+          borderWidth: isOccupied ? 2.5 : 1.5,
+          borderColor: isOccupied
+            ? padColor + "ee"
+            : isMergeCandidate ? "#FFD700cc"
+            : canAfford ? "#34d399aa" : "#2a4a3878",
+          overflow: "hidden",
+          alignItems: "center", justifyContent: "center",
+        }}
+      >
+        {/* Engraved inner ring */}
         <View style={{
           position: "absolute",
-          width: SZ - 12, height: SZ - 12, borderRadius: 10,
+          width: SZ - 14, height: SZ - 14, borderRadius: 7,
           borderWidth: 1,
-          borderColor: isOccupied
-            ? padColor + "55"
-            : canAfford ? "#22d3ee35" : "#2d5a4840",
+          borderColor: isOccupied ? padColor + "66" : canAfford ? "#34d39950" : "#2a4a3840",
         }}/>
 
-        {/* Corner lotus accents (4 petals) */}
+        {/* Corner rivets */}
         {[[-1,-1],[1,-1],[-1,1],[1,1]].map(([cx,cy],i) => (
           <View key={i} style={{
             position: "absolute",
-            left: cx < 0 ? 5 : undefined,
-            right: cx > 0 ? 5 : undefined,
-            top: cy < 0 ? 5 : undefined,
-            bottom: cy > 0 ? 5 : undefined,
-            width: 6, height: 6, borderRadius: 3,
-            backgroundColor: isOccupied
-              ? padColor + "55"
-              : canAfford ? "#22d3ee45" : "#2d5a4850",
+            left: cx < 0 ? 6 : undefined,
+            right: cx > 0 ? 6 : undefined,
+            top: cy < 0 ? 6 : undefined,
+            bottom: cy > 0 ? 6 : undefined,
+            width: 5, height: 5, borderRadius: 2.5,
+            backgroundColor: isOccupied ? padColor + "aa" : canAfford ? "#34d39977" : "#2a4a3870",
           }}/>
         ))}
 
-        {/* Empty pad: deploy cross icon */}
+        {/* Empty pad: lotus rune circle + cross */}
         {!isOccupied && (
           <View style={{ alignItems: "center", justifyContent: "center" }}>
             <View style={{
-              width: 20, height: 2, borderRadius: 1,
-              backgroundColor: canAfford ? "#22d3ee80" : "#4a7a6860",
-            }}/>
-            <View style={{
-              width: 2, height: 20, borderRadius: 1,
-              position: "absolute",
-              backgroundColor: canAfford ? "#22d3ee80" : "#4a7a6860",
-            }}/>
-            {canAfford && (
+              width: 24, height: 24, borderRadius: 12,
+              borderWidth: 1.5, borderColor: canAfford ? "#34d39960" : "#2a4a3860",
+              alignItems: "center", justifyContent: "center",
+            }}>
               <View style={{
-                position: "absolute", width: 30, height: 30, borderRadius: 15,
-                borderWidth: 1, borderColor: "#22d3ee30",
+                width: 1.5, height: 16, borderRadius: 1,
+                backgroundColor: canAfford ? "#34d39970" : "#2a4a3870",
+                position: "absolute",
               }}/>
-            )}
+              <View style={{
+                width: 16, height: 1.5, borderRadius: 1,
+                backgroundColor: canAfford ? "#34d39970" : "#2a4a3870",
+              }}/>
+            </View>
           </View>
         )}
 
-        {/* Occupied pad: role badge */}
+        {/* Occupied: role badge */}
         {isOccupied && (
           <View style={{
-            position: "absolute", bottom: 4,
-            backgroundColor: padColor + "30", borderRadius: 4,
+            position: "absolute", bottom: 5,
+            backgroundColor: padColor + "44", borderRadius: 4,
             paddingHorizontal: 5, paddingVertical: 1,
-            borderWidth: 1, borderColor: padColor + "55",
+            borderWidth: 1, borderColor: padColor + "88",
           }}>
-            <Text style={{ color: padColor, fontSize: 6, fontWeight: "800", letterSpacing: 0.3 }}>
+            <Text style={{ color: "#eee", fontSize: 6, fontWeight: "800", letterSpacing: 0.3 }}>
               {unit.typeId === "ward_scout" ? "ASSESS"
                 : unit.typeId === "mist_caster" ? "TREAT" : "SUPPORT"}
             </Text>
           </View>
         )}
-      </View>
+      </LinearGradient>
 
-      {/* ── Stone pedestal base — renders below tile in flex column ── */}
-      <View style={{
-        width: SZ + 6, height: 8, borderRadius: 4,
-        marginTop: -3, alignSelf: "center",
-        backgroundColor: "#071410e8",
-        borderWidth: 1, borderColor: isOccupied ? padColor + "44" : "#1e4030",
-      }}/>
+      {/* ── Stepped stone base pedestal ── */}
+      <LinearGradient
+        colors={["#050d0a", "#0a1410"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={{
+          width: SZ + 8, height: 9, borderRadius: 5,
+          marginTop: -3, alignSelf: "center",
+          borderWidth: 1, borderColor: isOccupied ? padColor + "55" : "#1a3028",
+        }}
+      />
     </Pressable>
   );
 }
@@ -703,9 +717,6 @@ export function WardBoardV2({
     >
       {/* 1. Illustrated board scene (contain — full image always visible) */}
       <BoardScene aw={aw} ah={ah} imgBounds={imgBounds} />
-
-      {/* 2. Center healing zone frame — subtle ring + label around the 2×3 deploy grid */}
-      {aw > 20 && <CenterZoneOverlay imgBounds={imgBounds} />}
 
       {/* 3. Disease Portal overlay */}
       {aw > 20 && <DiseasePortal imgBounds={imgBounds} aw={aw} />}
