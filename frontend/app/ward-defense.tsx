@@ -204,6 +204,8 @@ type ActiveEnemy = {
 type DeployedUnit = {
   uid: string; typeId: string; tileIndex: number;
   cooldown: number; castFlash: number;
+  level: number;      /* 1 | 2 | 3  — Care Synthesis level */
+  mergeFlash: number; /* ticks of golden merge-ascension glow */
 };
 
 type Projectile = {
@@ -311,6 +313,26 @@ function calcRewards(won: boolean, stability: number) {
     return { codexShards: 22 + b * 4, playerXp: 70 + b * 8, heroXp: 25 + b * 3, airCatalyst: b + 1 };
   }
   return { codexShards: 6, playerXp: 18, heroXp: 8, airCatalyst: 0 };
+}
+
+/* ── Care Synthesis helpers ── */
+function getScaledStats(def: UnitDef, level: number) {
+  const dmgMult = level === 1 ? 1.0 : level === 2 ? 1.65 : 2.8;
+  return {
+    damage:      Math.round(def.damage * dmgMult),
+    attackSpeed: Math.max(1, def.attackSpeed - (level - 1)),
+    range:       def.range + (level - 1) * 0.045,
+  };
+}
+
+function findMergePair(units: DeployedUnit[]): [DeployedUnit, DeployedUnit] | null {
+  for (let i = 0; i < units.length; i++) {
+    for (let j = i + 1; j < units.length; j++) {
+      const a = units[i], b = units[j];
+      if (a.typeId === b.typeId && a.level === b.level && a.level < 3) return [a, b];
+    }
+  }
+  return null;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -496,35 +518,50 @@ function VitalLanternBoard({ stability, aw, ah }: { stability: number; aw: numbe
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   ENEMY SPRITES — 2.5D chibi disease spirits
+   ENEMY SPRITES — chibi anime disease spirits
+   Proportions: big expressive head, distinct silhouette, monster feel
    ═══════════════════════════════════════════════════════════════════ */
 type SpriteProps = { hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> };
 
 function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
   const c = hitFlash ? "#ffffff" : "#93C5FD";
-  const bg = hitFlash ? "#60A5FA66" : "#60A5FA22";
+  const fill = hitFlash ? "#60A5FA88" : "#1e3a8a20";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      <View style={{ flexDirection: "row", gap: 5, marginBottom: -4 }}>
-        {[-6, 0, 6].map((rot, i) => (
-          <View key={i} style={{ width: 2.5, height: 8 + (i === 1 ? 4 : 0), borderRadius: 2,
-            backgroundColor: "#60A5FA70", transform: [{ rotate: `${rot}deg` }] }} />
+      {/* Wind streaks trailing above */}
+      <View style={{ flexDirection: "row", gap: 3, marginBottom: -3 }}>
+        {[{w:14,r:-18},{w:9,r:-5},{w:18,r:6}].map((s,i)=>(
+          <View key={i} style={{width:s.w,height:2.5,borderRadius:2,
+            backgroundColor:"#60A5FA60",transform:[{rotate:`${s.r}deg`}]}}/>
         ))}
       </View>
-      <View style={{ width: 34, height: 42, borderRadius: 999, backgroundColor: bg,
-        borderWidth: 1.5, borderColor: c, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <View style={{ position: "absolute", top: "15%", left: "20%", width: "60%", height: "40%",
-          borderRadius: 999, backgroundColor: "#e0f2fe44" }} />
-        <View style={{ flexDirection: "row", gap: 9, marginTop: -6 }}>
-          <View style={{ width: 6, height: 7, borderRadius: 4, backgroundColor: "#1e3a5f" }} />
-          <View style={{ width: 6, height: 7, borderRadius: 4, backgroundColor: "#1e3a5f" }} />
+      {/* Ghost head/body — round top, flared bottom */}
+      <View style={{width:36,height:40,borderRadius:999,borderBottomLeftRadius:10,
+        borderBottomRightRadius:10,backgroundColor:fill,borderWidth:1.5,
+        borderColor:c,alignItems:"center",overflow:"hidden"}}>
+        {/* Inner glow shimmer */}
+        <View style={{position:"absolute",top:4,left:6,width:14,height:9,
+          borderRadius:6,backgroundColor:"#bfdbfe30"}}/>
+        {/* Hollow ring eyes — classic wisp look */}
+        <View style={{flexDirection:"row",gap:8,marginTop:10}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{width:9,height:10,borderRadius:5,borderWidth:2,
+              borderColor:"#1e3a5f",backgroundColor:"transparent",
+              alignItems:"center",justifyContent:"center"}}>
+              <View style={{width:3.5,height:3.5,borderRadius:2,backgroundColor:"#1e3a5f"}}/>
+            </View>
+          ))}
         </View>
-        <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 1.5, borderColor: "#1e3a5f", marginTop: 5 }} />
+        {/* O-mouth shocked expression */}
+        <View style={{width:8,height:7,borderRadius:4,borderWidth:1.5,
+          borderColor:"#1e3a5f",backgroundColor:"#1e3a5f30",marginTop:5}}/>
       </View>
-      <View style={{ flexDirection: "row", gap: 4, marginTop: -3 }}>
-        {[{h:12,rot:-8},{h:16,rot:0},{h:12,rot:8}].map((t, i) => (
-          <View key={i} style={{ width: 3, height: t.h, borderRadius: 3,
-            backgroundColor: "#60A5FA55", transform: [{ rotate: `${t.rot}deg` }] }} />
+      {/* Phantom tail — 3 rounded wisps */}
+      <View style={{flexDirection:"row",gap:3,marginTop:-5}}>
+        {[{h:14,r:-10},{h:18,r:0},{h:13,r:10}].map((t,i)=>(
+          <View key={i} style={{width:9,height:t.h,borderRadius:999,
+            backgroundColor:fill,borderWidth:1,borderColor:c+"55",
+            transform:[{rotate:`${t.r}deg`}]}}/>
         ))}
       </View>
     </Animated.View>
@@ -533,32 +570,35 @@ function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
 
 function WheezeSpriteSprite({ hitFlash, bobY }: SpriteProps) {
   const c = hitFlash ? "#ffffff" : "#6EE7B7";
-  const bg = hitFlash ? "#34D39966" : "#34D39920";
+  const fill = hitFlash ? "#34D39966" : "#064e3b28";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      <View style={{ flexDirection: "row", gap: 3, marginBottom: -6 }}>
-        {[{h:8,rot:-18},{h:12,rot:-6},{h:10,rot:8},{h:7,rot:20}].map((sp, i) => (
-          <View key={i} style={{ width: 2.5, height: sp.h, borderRadius: 2,
-            backgroundColor: "#34D39960", transform: [{ rotate: `${sp.rot}deg` }] }} />
-        ))}
+      {/* Speed lines left side */}
+      <View style={{position:"absolute",top:14,left:-12,gap:2}}>
+        {[10,7,13].map((w,i)=>(<View key={i} style={{width:w,height:1.5,borderRadius:1,
+          backgroundColor:"#34D39966",marginBottom:2}}/>))}
       </View>
-      <View style={{ width: 38, height: 44, borderRadius: 16, borderTopLeftRadius: 999,
-        borderTopRightRadius: 8, borderBottomRightRadius: 999, borderBottomLeftRadius: 12,
-        backgroundColor: bg, borderWidth: 1.5, borderColor: c,
-        alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <View style={{ position: "absolute", top: "18%", left: "8%", right: "8%", height: 1, backgroundColor: "#34D39940", transform: [{ rotate: "-12deg" }] }} />
-        <View style={{ position: "absolute", top: "40%", left: "8%", right: "8%", height: 1, backgroundColor: "#34D39940", transform: [{ rotate: "8deg" }] }} />
-        <View style={{ flexDirection: "row", gap: 8, marginTop: -8, transform: [{ rotate: "-6deg" }] }}>
-          <View style={{ width: 8, height: 4, borderRadius: 2, backgroundColor: "#065f46", transform: [{ rotate: "10deg" }] }} />
-          <View style={{ width: 8, height: 4, borderRadius: 2, backgroundColor: "#065f46", transform: [{ rotate: "-10deg" }] }} />
+      {/* Cyclone body */}
+      <View style={{width:40,height:44,borderRadius:20,borderTopRightRadius:8,
+        backgroundColor:fill,borderWidth:1.5,borderColor:c,
+        alignItems:"center",justifyContent:"center"}}>
+        {/* Swirl rings */}
+        <View style={{width:28,height:28,borderRadius:14,borderWidth:1,borderColor:c+"50"}}/>
+        <View style={{position:"absolute",width:16,height:16,borderRadius:8,borderWidth:1,borderColor:c+"30"}}/>
+        {/* Angry slanted eyes */}
+        <View style={{position:"absolute",top:11,flexDirection:"row",gap:9}}>
+          <View style={{width:10,height:5,borderRadius:2,backgroundColor:"#065f46",
+            transform:[{rotate:"-15deg"},{skewX:"-8deg"}]}}/>
+          <View style={{width:10,height:5,borderRadius:2,backgroundColor:"#065f46",
+            transform:[{rotate:"15deg"},{skewX:"8deg"}]}}/>
         </View>
-        <View style={{ width: 14, height: 3, borderRadius: 2, backgroundColor: "#065f46", marginTop: 6 }} />
+        {/* Set mouth */}
+        <View style={{position:"absolute",bottom:11,width:13,height:3,borderRadius:2,backgroundColor:"#065f46"}}/>
       </View>
-      <View style={{ flexDirection: "row", gap: 3, marginTop: -2 }}>
-        {[-6, 0, 4].map((rot, i) => (
-          <View key={i} style={{ width: 2, height: 8, borderRadius: 2,
-            backgroundColor: "#6EE7B744", transform: [{ rotate: `${rot}deg` }] }} />
-        ))}
+      {/* Wind tail wisps */}
+      <View style={{flexDirection:"row",gap:2,marginTop:-3}}>
+        {[6,10,7].map((h,i)=>(<View key={i} style={{width:7,height:h,borderRadius:3,
+          backgroundColor:fill,borderWidth:1,borderColor:c+"50"}}/>))}
       </View>
     </Animated.View>
   );
@@ -566,26 +606,38 @@ function WheezeSpriteSprite({ hitFlash, bobY }: SpriteProps) {
 
 function MucusSlimeSprite({ hitFlash, bobY }: SpriteProps) {
   const c = hitFlash ? "#ffffff" : "#86EFAC";
-  const bg = hitFlash ? "#86EFAC88" : "#86EFAC30";
+  const fill = hitFlash ? "#86EFAC88" : "#14532d28";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      <View style={{ width: 42, height: 38, borderRadius: 999, backgroundColor: bg,
-        borderWidth: 1.5, borderColor: c, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <View style={{ position: "absolute", top: "12%", right: "18%", width: 10, height: 8, borderRadius: 999, backgroundColor: "#ffffff35" }} />
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
-          <View style={{ width: 5, height: 6, borderRadius: 3, backgroundColor: "#065f46" }} />
-          <View style={{ width: 5, height: 6, borderRadius: 3, backgroundColor: "#065f46" }} />
-        </View>
-        <View style={{ marginTop: 3, flexDirection: "row", gap: 1 }}>
-          {[2, 3, 3, 2].map((h, i) => (
-            <View key={i} style={{ width: 3, height: h, borderRadius: 2, backgroundColor: "#065f46" }} />
+      {/* Wide blob body */}
+      <View style={{width:44,height:36,borderRadius:22,borderBottomLeftRadius:10,
+        borderBottomRightRadius:14,backgroundColor:fill,borderWidth:1.5,borderColor:c,
+        alignItems:"center",justifyContent:"center"}}>
+        {/* Shine highlight */}
+        <View style={{position:"absolute",top:5,left:8,width:11,height:7,borderRadius:5,backgroundColor:"#ffffff28"}}/>
+        {/* Heavy-brow angry eyes */}
+        <View style={{flexDirection:"row",gap:10,marginTop:-2}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{alignItems:"center"}}>
+              <View style={{width:12,height:2.5,borderRadius:1,backgroundColor:"#065f46",
+                transform:[{rotate:i===0?"-12deg":"12deg"}]}}/>
+              <View style={{width:8,height:9,borderRadius:4,backgroundColor:"#065f46",marginTop:1,
+                alignItems:"center",justifyContent:"center"}}>
+                <View style={{width:3.5,height:3.5,borderRadius:2,backgroundColor:"#bbf7d0"}}/>
+              </View>
+            </View>
           ))}
         </View>
+        {/* Ooze grin teeth */}
+        <View style={{flexDirection:"row",gap:1,marginTop:3}}>
+          {[3,4,4,3].map((h,i)=>(<View key={i} style={{width:4,height:h,borderRadius:999,backgroundColor:"#e0fce7"}}/>))}
+        </View>
       </View>
-      <View style={{ flexDirection: "row", gap: 3, marginTop: -4 }}>
-        {[{w:12,h:9},{w:16,h:12},{w:10,h:7}].map((d, i) => (
-          <View key={i} style={{ width: d.w, height: d.h, borderRadius: 999,
-            backgroundColor: bg, borderWidth: 1, borderColor: c + "80" }} />
+      {/* Gooey drips */}
+      <View style={{flexDirection:"row",gap:4,marginTop:-2}}>
+        {[{w:10,h:8},{w:6,h:14},{w:9,h:9},{w:5,h:6}].map((d,i)=>(
+          <View key={i} style={{width:d.w,height:d.h,borderRadius:999,
+            backgroundColor:fill,borderWidth:1,borderColor:c+"60",marginTop:i%2===1?3:0}}/>
         ))}
       </View>
     </Animated.View>
@@ -593,27 +645,43 @@ function MucusSlimeSprite({ hitFlash, bobY }: SpriteProps) {
 }
 
 function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#A78BFA";
-  const bg = hitFlash ? "#A78BFA55" : "#A78BFA15";
+  const c = hitFlash ? "#ffffff" : "#C4B5FD";
+  const fill = hitFlash ? "#A78BFA55" : "#2e1065 14";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      <View style={{ width: 30, height: 52, borderTopLeftRadius: 999, borderTopRightRadius: 999,
-        borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
-        backgroundColor: bg, borderWidth: 1.5, borderColor: c + "90",
-        alignItems: "center", overflow: "hidden" }}>
-        <LinearGradient colors={["#A78BFA18", "#00000000"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, height: "60%" }} />
-        <View style={{ flexDirection: "row", gap: 7, marginTop: 10 }}>
-          <View style={{ width: 7, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: "#3b0764" }} />
-          <View style={{ width: 7, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: "#3b0764" }} />
+      {/* Outer aura ring */}
+      <View style={{position:"absolute",top:-2,width:42,height:42,borderRadius:21,
+        borderWidth:1,borderColor:"#A78BFA28"}}/>
+      {/* Hood top */}
+      <View style={{width:28,height:9,borderRadius:999,borderBottomLeftRadius:0,
+        borderBottomRightRadius:0,backgroundColor:"#3b0764",borderWidth:1,
+        borderColor:c+"60",marginBottom:-2}}/>
+      {/* Cloak body */}
+      <View style={{width:32,height:42,borderRadius:10,borderTopLeftRadius:0,
+        borderTopRightRadius:0,borderBottomLeftRadius:14,borderBottomRightRadius:14,
+        backgroundColor:"#1a004022",borderWidth:1.5,borderColor:c+"80",
+        alignItems:"center",overflow:"hidden"}}>
+        <LinearGradient colors={["#4c1d9530","#00000000"]}
+          style={{position:"absolute",top:0,left:0,right:0,height:"50%"}}/>
+        {/* Hollow eye sockets */}
+        <View style={{flexDirection:"row",gap:8,marginTop:8}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{width:9,height:11,borderRadius:5,
+              backgroundColor:"#1a0040",borderWidth:1.5,borderColor:"#7c3aed",
+              alignItems:"center",justifyContent:"center"}}>
+              <View style={{width:3,height:3,borderRadius:2,backgroundColor:"#7c3aed88"}}/>
+            </View>
+          ))}
         </View>
-        <View style={{ width: 10, height: 2, borderRadius: 1, backgroundColor: "#3b0764", marginTop: 6 }} />
+        {/* Thin grim mouth */}
+        <View style={{width:14,height:2,borderRadius:1,backgroundColor:"#3b0764",marginTop:8}}/>
       </View>
-      <View style={{ flexDirection: "row", gap: 4, marginTop: -6 }}>
-        {[{h:12,rot:-14},{h:10,rot:0},{h:13,rot:12}].map((t, i) => (
-          <View key={i} style={{ width: 6, height: t.h, borderRadius: 999,
-            backgroundColor: "#A78BFA22", borderWidth: 1, borderColor: c + "40",
-            transform: [{ rotate: `${t.rot}deg` }] }} />
+      {/* Phantom tail */}
+      <View style={{flexDirection:"row",gap:4,marginTop:-5}}>
+        {[{w:8,h:13,r:-8},{w:6,h:17,r:0},{w:8,h:11,r:9}].map((t,i)=>(
+          <View key={i} style={{width:t.w,height:t.h,borderRadius:999,
+            backgroundColor:"#A78BFA15",borderWidth:1,borderColor:c+"30",
+            transform:[{rotate:`${t.r}deg`}]}}/>
         ))}
       </View>
     </Animated.View>
@@ -621,45 +689,66 @@ function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
 }
 
 function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#F97316";
-  const bg = hitFlash ? "#F9731688" : "#F9731630";
+  const c = hitFlash ? "#ffffff" : "#FB923C";
+  const fill = hitFlash ? "#F9731688" : "#7c2d1228";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      <View style={{ position: "absolute", top: -6, alignSelf: "center",
-        width: 72, height: 72, borderRadius: 36, borderWidth: 1.5, borderColor: "#F9731628" }} />
-      <View style={{ position: "absolute", top: 4, alignSelf: "center",
-        width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: "#F9731640" }} />
-      <View style={{ flexDirection: "row", gap: 3, marginBottom: -5, zIndex: 2 }}>
-        {[{w:6,h:14,rot:-18},{w:8,h:18,rot:-6},{w:10,h:22,rot:0},{w:8,h:16,rot:6},{w:6,h:12,rot:18}].map((cr, i) => (
-          <View key={i} style={{ width: cr.w, height: cr.h, borderRadius: 2,
-            backgroundColor: i === 2 ? "#1e3a78" : "#162860",
-            borderWidth: 1, borderColor: "#60A5FA55",
-            transform: [{ rotate: `${cr.rot}deg` }] }} />
+      {/* Boss aura rings */}
+      <View style={{position:"absolute",top:0,width:74,height:74,borderRadius:37,
+        borderWidth:1.5,borderColor:"#F9731628"}}/>
+      <View style={{position:"absolute",top:8,width:58,height:58,borderRadius:29,
+        borderWidth:1,borderColor:"#F9731445"}}/>
+      {/* Dragon horns */}
+      <View style={{flexDirection:"row",gap:24,marginBottom:-4,zIndex:4}}>
+        {[-18,18].map((rot,i)=>(
+          <View key={i} style={{width:9,height:19,borderRadius:4,backgroundColor:"#431407",
+            borderWidth:1,borderColor:c+"70",transform:[{rotate:`${rot}deg`}]}}/>
         ))}
       </View>
-      <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: bg,
-        borderWidth: 2, borderColor: c, alignItems: "center", justifyContent: "center", zIndex: 3 }}>
-        <View style={{ position: "absolute", top: "18%", left: "10%", right: "10%", height: 1, backgroundColor: "#F9731640" }} />
-        <View style={{ position: "absolute", top: "36%", left: "10%", right: "10%", height: 1, backgroundColor: "#F9731630" }} />
-        <View style={{ flexDirection: "row", gap: 14, marginTop: -8 }}>
-          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#7c2d12", borderWidth: 1.5, borderColor: "#fbbf24" }} />
-          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#7c2d12", borderWidth: 1.5, borderColor: "#fbbf24" }} />
+      {/* Dragon head */}
+      <View style={{width:54,height:50,borderRadius:16,borderTopLeftRadius:22,
+        borderTopRightRadius:22,backgroundColor:fill,borderWidth:2,borderColor:c,
+        alignItems:"center",justifyContent:"center",zIndex:3}}>
+        {/* Scale texture */}
+        <View style={{position:"absolute",top:"22%",left:"10%",right:"10%",height:1,backgroundColor:"#F9731440"}}/>
+        <View style={{position:"absolute",top:"42%",left:"10%",right:"10%",height:1,backgroundColor:"#F9731430"}}/>
+        {/* Fierce slit eyes */}
+        <View style={{flexDirection:"row",gap:14,marginTop:-8}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{width:10,height:10,borderRadius:5,backgroundColor:"#7c2d12",
+              borderWidth:2,borderColor:"#fbbf24",alignItems:"center",justifyContent:"center"}}>
+              <View style={{width:3,height:7,borderRadius:2,backgroundColor:"#fbbf24"}}/>
+            </View>
+          ))}
         </View>
-        <View style={{ width: 18, height: 8, borderRadius: 4, backgroundColor: "#7c2d1288", borderWidth: 1, borderColor: c, marginTop: 5 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-around", paddingTop: 2 }}>
-            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#431407" }} />
-            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#431407" }} />
-          </View>
-        </View>
-        <View style={{ position: "absolute", top: -6, flexDirection: "row", gap: 12 }}>
-          <View style={{ width: 5, height: 10, borderRadius: 3, backgroundColor: "#1e40af", transform: [{ rotate: "-14deg" }] }} />
-          <View style={{ width: 7, height: 14, borderRadius: 3, backgroundColor: "#1d4ed8" }} />
-          <View style={{ width: 5, height: 10, borderRadius: 3, backgroundColor: "#1e40af", transform: [{ rotate: "14deg" }] }} />
+        {/* Jaw with teeth */}
+        <View style={{width:24,height:10,borderRadius:4,borderTopLeftRadius:2,
+          borderTopRightRadius:2,backgroundColor:"#7c2d12cc",borderWidth:1.5,
+          borderColor:c,marginTop:5,flexDirection:"row",justifyContent:"space-around",
+          alignItems:"flex-start",paddingTop:1,paddingHorizontal:3}}>
+          {[0,1,2].map(i=>(<View key={i} style={{width:4,height:6,borderRadius:1,
+            borderBottomLeftRadius:3,borderBottomRightRadius:3,backgroundColor:"#fde68a"}}/>))}
         </View>
       </View>
+      {/* Wing stubs */}
+      <View style={{position:"absolute",top:24,left:-14,width:19,height:28,borderRadius:999,
+        borderTopLeftRadius:4,backgroundColor:fill,borderWidth:1.5,borderColor:c+"80",
+        transform:[{rotate:"-22deg"}]}}/>
+      <View style={{position:"absolute",top:24,right:-14,width:19,height:28,borderRadius:999,
+        borderTopRightRadius:4,backgroundColor:fill,borderWidth:1.5,borderColor:c+"80",
+        transform:[{rotate:"22deg"}]}}/>
+      {/* Flame breath */}
+      {!hitFlash && (
+        <View style={{flexDirection:"row",gap:2,marginTop:3}}>
+          {[{h:6,c2:"#f97316"},{h:10,c2:"#fbbf24"},{h:7,c2:"#f97316"}].map((fl,i)=>(
+            <View key={i} style={{width:6,height:fl.h,borderRadius:999,backgroundColor:fl.c2+"70"}}/>
+          ))}
+        </View>
+      )}
     </Animated.View>
   );
 }
+
 
 function EnemySprite({ typeId, hitFlash, bobY }: { typeId: string; hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> }) {
   switch (typeId) {
@@ -673,41 +762,63 @@ function EnemySprite({ typeId, hitFlash, bobY }: { typeId: string; hitFlash: boo
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   UNIT SPRITES — deployable healer units (compact 36px designs)
+   UNIT SPRITES — chibi anime healer characters
+   Chibi proportions: big head (~45% of height), expressive face,
+   distinct outfit, stubby arm stubs, cast visual feedback
    ═══════════════════════════════════════════════════════════════════ */
 function WardScoutSprite({ castFlash }: { castFlash: boolean }) {
   const c = castFlash ? "#fff" : "#60A5FA";
-  const bg = castFlash ? "#60A5FA99" : "#60A5FA28";
+  const bg = castFlash ? "#60A5FA99" : "#1e40af22";
   return (
     <View style={{ alignItems: "center" }}>
-      {/* Outer glow ring when casting */}
       {castFlash && (
-        <View style={{ position: "absolute", top: -2, width: 42, height: 42, borderRadius: 21,
-          borderWidth: 1.5, borderColor: "#60A5FA55", zIndex: -1 }} />
+        <View style={{position:"absolute",top:-4,width:46,height:52,borderRadius:14,
+          borderWidth:1.5,borderColor:"#60A5FA50",zIndex:-1}}/>
       )}
-      {/* Head */}
-      <View style={{ width: 18, height: 16, borderRadius: 999, backgroundColor: "#fde68a",
-        borderWidth: 1, borderColor: "#d97706", alignItems: "center", justifyContent: "center" }}>
-        <View style={{ flexDirection: "row", gap: 4 }}>
-          <View style={{ width: 3, height: 3.5, borderRadius: 2, backgroundColor: "#1e3a5f" }} />
-          <View style={{ width: 3, height: 3.5, borderRadius: 2, backgroundColor: "#1e3a5f" }} />
-        </View>
-        {/* Stethoscope headband */}
-        <View style={{ position: "absolute", top: -4, left: -2, right: -2, height: 5,
-          borderRadius: 3, borderWidth: 1.5, borderColor: c + "80", borderBottomWidth: 0 }} />
+      {/* Nurse cap with red cross */}
+      <View style={{width:26,height:8,borderRadius:4,borderBottomLeftRadius:0,
+        borderBottomRightRadius:0,backgroundColor:"#e0f2fe",borderWidth:1,
+        borderColor:c+"80",marginBottom:-3,alignItems:"center",justifyContent:"center"}}>
+        <View style={{width:10,height:2.5,borderRadius:1,backgroundColor:"#ef4444"}}/>
+        <View style={{position:"absolute",width:2.5,height:8,borderRadius:1,backgroundColor:"#ef4444"}}/>
       </View>
-      {/* Body */}
-      <View style={{ width: 24, height: 22, borderRadius: 8, backgroundColor: bg,
-        borderWidth: 1.5, borderColor: c, alignItems: "center", justifyContent: "center", marginTop: -3 }}>
-        <View style={{ width: 9, height: 2.5, borderRadius: 1, backgroundColor: c }} />
-        <View style={{ position: "absolute", width: 2.5, height: 9, borderRadius: 1, backgroundColor: c }} />
-      </View>
-      {/* Assessment sound waves when casting */}
-      {castFlash && (
-        <View style={{ position: "absolute", right: -8, top: 16, gap: 2 }}>
-          {[3, 5, 7].map((h, i) => (
-            <View key={i} style={{ width: 1.5, height: h, borderRadius: 1, backgroundColor: "#60A5FA70", marginBottom: 1 }} />
+      {/* Chibi head — large oval */}
+      <View style={{width:24,height:22,borderRadius:999,backgroundColor:"#fde68a",
+        borderWidth:1.5,borderColor:"#d97706",alignItems:"center",justifyContent:"center"}}>
+        <View style={{position:"absolute",top:9,left:2,width:6,height:4,borderRadius:3,backgroundColor:"#fca5a560"}}/>
+        <View style={{position:"absolute",top:9,right:2,width:6,height:4,borderRadius:3,backgroundColor:"#fca5a560"}}/>
+        {/* Large almond eyes with catchlight */}
+        <View style={{flexDirection:"row",gap:5,marginTop:-3}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{width:6,height:7,borderRadius:3,backgroundColor:"#1e3a5f",
+              alignItems:"center"}}>
+              <View style={{width:2,height:2,borderRadius:1,backgroundColor:"#fff",marginTop:1}}/>
+            </View>
           ))}
+        </View>
+        <View style={{width:8,height:3,borderRadius:999,borderBottomWidth:2,borderColor:"#d97706",marginTop:2}}/>
+      </View>
+      {/* Medical coat body */}
+      <View style={{width:26,height:24,borderRadius:8,borderTopLeftRadius:3,
+        borderTopRightRadius:3,backgroundColor:bg,borderWidth:1.5,borderColor:c,
+        alignItems:"center",justifyContent:"center",marginTop:-2}}>
+        <View style={{width:9,height:2.5,borderRadius:1,backgroundColor:c}}/>
+        <View style={{position:"absolute",width:2.5,height:9,borderRadius:1,backgroundColor:c}}/>
+        {/* Pocket detail */}
+        <View style={{position:"absolute",bottom:4,left:4,width:6,height:5,borderRadius:2,
+          borderWidth:1,borderColor:c+"60"}}/>
+      </View>
+      {/* Arm stubs */}
+      <View style={{position:"absolute",top:28,left:-5,width:7,height:12,borderRadius:4,
+        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"12deg"}]}}/>
+      <View style={{position:"absolute",top:28,right:-5,width:7,height:12,borderRadius:4,
+        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"-12deg"}]}}/>
+      {/* Stethoscope line */}
+      <View style={{position:"absolute",top:32,width:14,height:2,borderRadius:1,backgroundColor:c+"88"}}/>
+      {/* Cast: assessment waveform to the right */}
+      {castFlash && (
+        <View style={{position:"absolute",right:-15,top:20,flexDirection:"row",gap:1,alignItems:"flex-end"}}>
+          {[4,7,5,9,5].map((h,i)=>(<View key={i} style={{width:2,height:h,borderRadius:1,backgroundColor:c+"88"}}/>))}
         </View>
       )}
     </View>
@@ -716,80 +827,137 @@ function WardScoutSprite({ castFlash }: { castFlash: boolean }) {
 
 function MistCasterSprite({ castFlash }: { castFlash: boolean }) {
   const c = castFlash ? "#fff" : "#F59E0B";
-  const bg = castFlash ? "#F59E0B99" : "#F59E0B28";
+  const bg = castFlash ? "#F59E0B99" : "#78350f22";
   return (
     <View style={{ alignItems: "center" }}>
       {castFlash && (
-        <View style={{ position: "absolute", top: -2, width: 44, height: 48, borderRadius: 12,
-          borderWidth: 1.5, borderColor: "#F59E0B55", zIndex: -1 }} />
+        <View style={{position:"absolute",top:-4,width:48,height:56,borderRadius:14,
+          borderWidth:1.5,borderColor:"#F59E0B50",zIndex:-1}}/>
       )}
-      {/* Conical hat */}
-      <View style={{ width: 22, height: 7, borderRadius: 4, backgroundColor: "#1e3a5f",
-        borderWidth: 1, borderColor: c + "70", marginBottom: -2 }} />
-      {/* Head */}
-      <View style={{ width: 16, height: 14, borderRadius: 999, backgroundColor: "#fde68a",
-        borderWidth: 1, borderColor: "#d97706", alignItems: "center", justifyContent: "center" }}>
-        <View style={{ flexDirection: "row", gap: 3 }}>
-          <View style={{ width: 2.5, height: 3, borderRadius: 2, backgroundColor: "#1e3a5f" }} />
-          <View style={{ width: 2.5, height: 3, borderRadius: 2, backgroundColor: "#1e3a5f" }} />
+      {/* Conical mage hat + brim */}
+      <View style={{alignItems:"center",marginBottom:-4}}>
+        <View style={{width:5,height:14,borderRadius:3,backgroundColor:"#1e3a5f",
+          borderWidth:1,borderColor:c+"60"}}/>
+        <View style={{width:22,height:6,borderRadius:4,borderBottomLeftRadius:2,
+          borderBottomRightRadius:2,backgroundColor:"#1e3a5f",borderWidth:1,
+          borderColor:c+"70",marginTop:-1,alignItems:"center"}}>
+          {/* Star on brim */}
+          <View style={{position:"absolute",right:3,top:0,width:4,height:4,borderRadius:2,backgroundColor:c+"80"}}/>
         </View>
       </View>
-      {/* Robe body */}
-      <View style={{ width: 22, height: 26, borderRadius: 9, borderTopLeftRadius: 4,
-        borderTopRightRadius: 4, backgroundColor: bg, borderWidth: 1.5, borderColor: c,
-        alignItems: "center", justifyContent: "center", marginTop: -3 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 3.5, borderWidth: 1.5, borderColor: c }} />
-        {/* Mist effect when casting */}
-        {castFlash && [0, 6, 12].map((top, i) => (
-          <View key={i} style={{ position: "absolute", top, right: -6, width: 5, height: 1.5,
-            borderRadius: 1, backgroundColor: c + "88" }} />
+      {/* Chibi head */}
+      <View style={{width:22,height:20,borderRadius:999,backgroundColor:"#fde68a",
+        borderWidth:1.5,borderColor:"#d97706",alignItems:"center",justifyContent:"center"}}>
+        <View style={{position:"absolute",top:7,left:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
+        <View style={{position:"absolute",top:7,right:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
+        {/* Half-closed knowing eyes */}
+        <View style={{flexDirection:"row",gap:4,marginTop:-2}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{width:5,height:5,borderRadius:2,backgroundColor:"#1e3a5f",
+              alignItems:"center"}}>
+              <View style={{width:1.5,height:1.5,borderRadius:1,backgroundColor:"#fff",marginTop:1}}/>
+            </View>
+          ))}
+        </View>
+        <View style={{width:6,height:2,borderRadius:1,backgroundColor:"#d97706",marginTop:2}}/>
+      </View>
+      {/* Alchemist robe */}
+      <View style={{width:24,height:28,borderRadius:10,borderTopLeftRadius:3,
+        borderTopRightRadius:3,backgroundColor:bg,borderWidth:1.5,borderColor:c,
+        alignItems:"center",paddingTop:5,marginTop:-2}}>
+        {/* Glowing potion orb */}
+        <View style={{width:13,height:13,borderRadius:7,borderWidth:2,borderColor:c,
+          backgroundColor:c+"35",alignItems:"center",justifyContent:"center"}}>
+          <View style={{width:4,height:4,borderRadius:2,backgroundColor:castFlash?"#fff":c+"90"}}/>
+        </View>
+        {castFlash && [0,5,10].map((top,i)=>(
+          <View key={i} style={{position:"absolute",top:top+8,right:-9,width:8,height:2,
+            borderRadius:1,backgroundColor:c+"70"}}/>
         ))}
       </View>
+      {/* Robe sleeves */}
+      <View style={{position:"absolute",top:30,left:-7,width:9,height:14,borderRadius:4,
+        backgroundColor:bg,borderWidth:1,borderColor:c+"70"}}/>
+      <View style={{position:"absolute",top:30,right:-7,width:9,height:14,borderRadius:4,
+        backgroundColor:bg,borderWidth:1,borderColor:c+"70"}}/>
     </View>
   );
 }
 
 function O2HealerSprite({ castFlash }: { castFlash: boolean }) {
   const c = castFlash ? "#fff" : "#34D399";
-  const bg = castFlash ? "#34D39999" : "#34D39928";
+  const bg = castFlash ? "#34D39999" : "#064e3b22";
   return (
     <View style={{ alignItems: "center" }}>
       {castFlash && (
-        <View style={{ position: "absolute", top: -4, width: 46, height: 46, borderRadius: 23,
-          borderWidth: 1.5, borderColor: "#34D39950", zIndex: -1 }} />
+        <View style={{position:"absolute",top:-6,width:50,height:50,borderRadius:25,
+          borderWidth:1.5,borderColor:"#34D39950",zIndex:-1}}/>
       )}
-      {/* Head with O₂ label */}
-      <View style={{ width: 18, height: 16, borderRadius: 999, backgroundColor: "#fde68a",
-        borderWidth: 1, borderColor: "#d97706", alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: c, fontSize: 5.5, fontWeight: "700", marginTop: -1 }}>O₂</Text>
-        <View style={{ flexDirection: "row", gap: 4, marginTop: 1 }}>
-          <View style={{ width: 2.5, height: 3, borderRadius: 2, backgroundColor: "#1e3a5f" }} />
-          <View style={{ width: 2.5, height: 3, borderRadius: 2, backgroundColor: "#1e3a5f" }} />
+      {/* Medical headband */}
+      <View style={{width:24,height:5,borderRadius:3,backgroundColor:"#065f46",
+        borderWidth:1,borderColor:c+"70",marginBottom:-2}}/>
+      {/* Chibi head */}
+      <View style={{width:22,height:20,borderRadius:999,backgroundColor:"#fde68a",
+        borderWidth:1.5,borderColor:"#d97706",alignItems:"center",justifyContent:"center"}}>
+        <View style={{position:"absolute",top:7,left:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
+        <View style={{position:"absolute",top:7,right:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
+        {/* Eyes */}
+        <View style={{flexDirection:"row",gap:4,marginTop:-3}}>
+          {[0,1].map(i=>(
+            <View key={i} style={{width:5,height:6,borderRadius:3,backgroundColor:"#1e3a5f",
+              alignItems:"center"}}>
+              <View style={{width:1.5,height:1.5,borderRadius:1,backgroundColor:"#fff",marginTop:1}}/>
+            </View>
+          ))}
         </View>
+        {/* O₂ mask over lower face */}
+        <View style={{width:14,height:6,borderRadius:3,backgroundColor:c+"88",
+          borderWidth:1,borderColor:c,marginTop:2}}/>
       </View>
-      {/* Round body */}
-      <View style={{ width: 24, height: 22, borderRadius: 999, backgroundColor: bg,
-        borderWidth: 1.5, borderColor: c, alignItems: "center", justifyContent: "center", marginTop: -4 }}>
-        {/* O₂ canister */}
-        <View style={{ width: 8, height: 12, borderRadius: 4, backgroundColor: "#0a1428",
-          borderWidth: 1, borderColor: c + "90" }} />
-        {/* AoE ring when casting */}
+      {/* Vest body */}
+      <View style={{width:26,height:26,borderRadius:8,backgroundColor:bg,
+        borderWidth:1.5,borderColor:c,alignItems:"center",justifyContent:"center",marginTop:-2}}>
+        {/* O₂ cylinder */}
+        <View style={{width:8,height:14,borderRadius:4,borderWidth:1.5,borderColor:c,
+          backgroundColor:"#0a1428",alignItems:"center",paddingTop:1}}>
+          <Text style={{color:c,fontSize:5,fontWeight:"700"}}>O₂</Text>
+        </View>
         {castFlash && (
-          <View style={{ position: "absolute", width: 36, height: 36, borderRadius: 18,
-            borderWidth: 1, borderColor: c + "55" }} />
+          <View style={{position:"absolute",width:40,height:40,borderRadius:20,
+            borderWidth:1,borderColor:c+"55"}}/>
         )}
       </View>
+      {/* Arms spread in support gesture */}
+      <View style={{position:"absolute",top:30,left:-10,width:12,height:8,borderRadius:4,
+        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"30deg"}]}}/>
+      <View style={{position:"absolute",top:30,right:-10,width:12,height:8,borderRadius:4,
+        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"-30deg"}]}}/>
     </View>
   );
 }
 
-function UnitSprite({ typeId, castFlash }: { typeId: string; castFlash: boolean }) {
+function UnitSprite({ typeId, castFlash, level = 1 }: { typeId: string; castFlash: boolean; level?: number }) {
+  let sprite: React.ReactElement;
   switch (typeId) {
-    case "ward_scout":  return <WardScoutSprite castFlash={castFlash} />;
-    case "mist_caster": return <MistCasterSprite castFlash={castFlash} />;
-    case "o2_healer":   return <O2HealerSprite castFlash={castFlash} />;
+    case "ward_scout":  sprite = <WardScoutSprite castFlash={castFlash} />; break;
+    case "mist_caster": sprite = <MistCasterSprite castFlash={castFlash} />; break;
+    case "o2_healer":   sprite = <O2HealerSprite castFlash={castFlash} />; break;
     default: return <View style={{ width: 22, height: 28, borderRadius: 6, backgroundColor: "#334155" }} />;
   }
+  return (
+    <View style={{ alignItems: "center" }}>
+      {/* Level 3: gold crown accent */}
+      {level >= 3 && (
+        <View style={{ position: "absolute", top: -2, flexDirection: "row", gap: 3, zIndex: 10 }}>
+          {[0,1,2].map(i => (
+            <View key={i} style={{ width: 3.5, height: i === 1 ? 6 : 4, borderRadius: 2,
+              backgroundColor: "#FFD700", opacity: 0.9 }} />
+          ))}
+        </View>
+      )}
+      {sprite}
+    </View>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -856,10 +1024,11 @@ function EnemyOnPath({
 }
 
 function DeploymentTileView({
-  tileIdx, unit, selectedUnit, canAfford, onPress, aw, ah,
+  tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, onPress, aw, ah,
 }: {
   tileIdx: number; unit: DeployedUnit | undefined;
   selectedUnit: string; canAfford: boolean;
+  isMergeCandidate?: boolean;
   onPress: () => void; aw: number; ah: number;
 }) {
   const [fx, fy] = DEPLOY_TILES[tileIdx];
@@ -924,7 +1093,27 @@ function DeploymentTileView({
 
         {isOccupied ? (
           <>
-            {/* Category badge */}
+            {/* Merge candidate golden pulse ring */}
+            {isMergeCandidate && (
+              <View style={{ position: "absolute", top: -4, left: -4, right: -4, bottom: -4,
+                borderRadius: 11, borderWidth: 2, borderColor: "#FFD70088" }} />
+            )}
+            {/* Merge flash golden fill */}
+            {(unit!.mergeFlash ?? 0) > 0 && (
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                borderRadius: 7, backgroundColor: "#FFD70018" }} />
+            )}
+            {/* Level badge top-left */}
+            {(unit!.level ?? 1) > 1 && (
+              <View style={{ position: "absolute", top: 3, left: 3, borderRadius: 3,
+                backgroundColor: (unit!.level ?? 1) >= 3 ? "#FFD700" : "#a78bfa",
+                paddingHorizontal: 3, paddingVertical: 1 }}>
+                <Text style={{ color: "#0a0a1a", fontSize: 5, fontWeight: "800" }}>
+                  Lv.{unit!.level}
+                </Text>
+              </View>
+            )}
+            {/* Category badge top-right */}
             <View style={{ position: "absolute", top: 3, right: 3,
               backgroundColor: unitColor + "35", borderRadius: 3, paddingHorizontal: 3 }}>
               <Text style={{ color: unitColor, fontSize: 5.5, fontWeight: "700" }}>
@@ -934,7 +1123,7 @@ function DeploymentTileView({
             {/* Drop shadow beneath sprite — grounds unit on tile */}
             <View style={{ position: "absolute", bottom: 5, width: TILE_SIZE - 16, height: 5,
               borderRadius: 3, backgroundColor: "#00000070" }} />
-            <UnitSprite typeId={unit!.typeId} castFlash={unit!.castFlash > 0} />
+            <UnitSprite typeId={unit!.typeId} castFlash={unit!.castFlash > 0} level={unit!.level ?? 1} />
             {/* Attack range ring */}
             <View style={{ position: "absolute",
               width: UNIT_DATA[unit!.typeId].range * 2 * aw,
@@ -987,6 +1176,7 @@ function ProjectileView({
    ═══════════════════════════════════════════════════════════════════ */
 function HandPanel({
   mode, setMode, selectedUnit, onSelectUnit, onUseAbility, ap, isPlaying,
+  hasMerge, onSynthesize,
 }: {
   mode: "deploy" | "abilities";
   setMode: (m: "deploy" | "abilities") => void;
@@ -995,6 +1185,8 @@ function HandPanel({
   onUseAbility: (id: string) => void;
   ap: number;
   isPlaying: boolean;
+  hasMerge: boolean;
+  onSynthesize: () => void;
 }) {
   return (
     <View style={s.handArea}>
@@ -1018,7 +1210,31 @@ function HandPanel({
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.handCards}>
         {mode === "deploy" ? (
-          UNIT_TYPES.map(typeId => {
+          <>
+            {/* Synthesize card — shown when a merge pair exists */}
+            {hasMerge && (
+              <Pressable onPress={onSynthesize}
+                style={[s.unitCard, { borderColor: "#FFD700", backgroundColor: "#1a1000",
+                  borderWidth: 2, justifyContent: "center", alignItems: "center" }]}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 2,
+                  borderColor: "#FFD700", backgroundColor: "#FFD70020",
+                  alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+                  {[0,1,2].map(i=>(
+                    <View key={i} style={{ position: "absolute", width: 3, height: i===1?10:7,
+                      borderRadius: 2, backgroundColor: "#FFD700",
+                      transform: [{ rotate: `${i*60}deg` }] }} />
+                  ))}
+                </View>
+                <Text style={{ color: "#FFD700", fontSize: 6.5, fontWeight: "800",
+                  letterSpacing: 1, textAlign: "center" }}>CARE{"\n"}SYNTHESIS</Text>
+                <View style={[s.apRune, { borderColor: "#FFD700", backgroundColor: "#FFD70022",
+                  marginTop: 4 }]}>
+                  <Text style={[s.apRuneTxt, { color: "#FFD700" }]}>✦</Text>
+                  <Text style={[s.apRuneLabel, { color: "#FFD700CC" }]}>FREE</Text>
+                </View>
+              </Pressable>
+            )}
+          {UNIT_TYPES.map(typeId => {
             const u = UNIT_DATA[typeId];
             const canAfford = ap >= u.apCost;
             const isSelected = selectedUnit === typeId;
@@ -1040,7 +1256,8 @@ function HandPanel({
                 </View>
               </Pressable>
             );
-          })
+          })}
+          </>
         ) : (
           ABILITIES.map(id => {
             const ab = ABILITY_DATA[id];
@@ -1180,15 +1397,17 @@ export default function WardDefense() {
       const updatedUnits = s.deployedUnits.map(u => {
         const cd = Math.max(0, u.cooldown - 1);
         const cf = Math.max(0, u.castFlash - 1);
-        if (cd > 0) return { ...u, cooldown: cd, castFlash: cf };
+        const mf = Math.max(0, (u.mergeFlash ?? 0) - 1);
+        if (cd > 0) return { ...u, cooldown: cd, castFlash: cf, mergeFlash: mf };
         const uPos = getUnitPosFrac(u.tileIndex);
         const uDef = UNIT_DATA[u.typeId];
+        const scaled = getScaledStats(uDef, u.level ?? 1);
         let tgt: ActiveEnemy | null = null, minD = Infinity;
         for (const e of movedEnemies) {
           const d = distFrac(uPos, getEnemyPosFrac(e));
-          if (d <= uDef.range && d < minD) { minD = d; tgt = e; }
+          if (d <= scaled.range && d < minD) { minD = d; tgt = e; }
         }
-        if (!tgt) return { ...u, cooldown: 0, castFlash: cf };
+        if (!tgt) return { ...u, cooldown: 0, castFlash: cf, mergeFlash: mf };
         const ePos = getEnemyPosFrac(tgt);
         newProjectiles = [...newProjectiles, {
           uid: `p${s.tickCount}_${u.uid}`,
@@ -1196,9 +1415,9 @@ export default function WardDefense() {
           fromFx: uPos.x, fromFy: uPos.y,
           toFx: ePos.x, toFy: ePos.y,
           progress: 0, color: uDef.color,
-          damage: uDef.damage, unitTypeId: u.typeId,
+          damage: scaled.damage, unitTypeId: u.typeId,
         }];
-        return { ...u, cooldown: uDef.attackSpeed, castFlash: 2 };
+        return { ...u, cooldown: scaled.attackSpeed, castFlash: 2, mergeFlash: mf };
       });
 
       /* Move projectiles → collect hits */
@@ -1334,9 +1553,34 @@ export default function WardDefense() {
     set({
       ...s,
       ap: s.ap - uDef.apCost,
-      deployedUnits: [...s.deployedUnits, { uid: `u${s.uidSeed}`, typeId: selectedUnit, tileIndex: tileIdx, cooldown: 0, castFlash: 0 }],
+      deployedUnits: [...s.deployedUnits, { uid: `u${s.uidSeed}`, typeId: selectedUnit, tileIndex: tileIdx, cooldown: 0, castFlash: 0, level: 1, mergeFlash: 0 }],
       uidSeed: s.uidSeed + 1,
       feedbacks: [{ id: fid, text: `${uDef.name} deployed — ${uDef.flavor}`, color: uDef.color, quality: "bonus" as any, ticks: 5 }, ...s.feedbacks.slice(0, 1)],
+    });
+  }
+
+  /* ── Care Synthesis — merge two same-type same-level units → Lv+1 ── */
+  function handleSynthesize() {
+    const s = gsRef.current;
+    const pair = findMergePair(s.deployedUnits);
+    if (!pair) return;
+    const [a, b] = pair;
+    const newLevel = a.level + 1;
+    const uName = UNIT_DATA[a.typeId].name;
+    const fid = String(Date.now());
+    set({
+      ...s,
+      deployedUnits: [
+        ...s.deployedUnits.filter(u => u.uid !== a.uid && u.uid !== b.uid),
+        { uid: `u${s.uidSeed}`, typeId: a.typeId, tileIndex: a.tileIndex,
+          cooldown: 0, castFlash: 2, level: newLevel, mergeFlash: 5 },
+      ],
+      uidSeed: s.uidSeed + 1,
+      feedbacks: [{
+        id: fid,
+        text: `✦ Care Synthesis — ${uName} ascended to Lv.${newLevel}!`,
+        color: "#FFD700", quality: "bonus" as any, ticks: 8,
+      }, ...s.feedbacks.slice(0, 1)],
     });
   }
 
@@ -1496,16 +1740,23 @@ export default function WardDefense() {
         <VitalLanternBoard stability={gs.stability} aw={arena.w} ah={arena.h} />
 
         {/* Deployment tiles */}
-        {DEPLOY_TILES.map((_, i) => (
-          <DeploymentTileView
-            key={i} tileIdx={i}
-            unit={gs.deployedUnits.find(u => u.tileIndex === i)}
-            selectedUnit={selectedUnit}
-            canAfford={gs.ap >= UNIT_DATA[selectedUnit]?.apCost}
-            onPress={() => deployUnit(i)}
-            aw={arena.w} ah={arena.h}
-          />
-        ))}
+        {(() => {
+          const mergePair = findMergePair(gs.deployedUnits);
+          const mergeTileSet = mergePair
+            ? new Set([mergePair[0].tileIndex, mergePair[1].tileIndex])
+            : new Set<number>();
+          return DEPLOY_TILES.map((_, i) => (
+            <DeploymentTileView
+              key={i} tileIdx={i}
+              unit={gs.deployedUnits.find(u => u.tileIndex === i)}
+              selectedUnit={selectedUnit}
+              canAfford={gs.ap >= UNIT_DATA[selectedUnit]?.apCost}
+              isMergeCandidate={mergeTileSet.has(i)}
+              onPress={() => deployUnit(i)}
+              aw={arena.w} ah={arena.h}
+            />
+          ));
+        })()}
 
         {/* Projectiles */}
         {gs.projectiles.map(p => (
@@ -1546,6 +1797,8 @@ export default function WardDefense() {
         selectedUnit={selectedUnit} onSelectUnit={setSelectedUnit}
         onUseAbility={useAbility}
         ap={gs.ap} isPlaying={gs.phase === "playing"}
+        hasMerge={findMergePair(gs.deployedUnits) !== null}
+        onSynthesize={handleSynthesize}
       />
 
     </SafeAreaView>
