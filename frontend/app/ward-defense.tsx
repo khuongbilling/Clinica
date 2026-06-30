@@ -518,50 +518,72 @@ function VitalLanternBoard({ stability, aw, ah }: { stability: number; aw: numbe
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   ENEMY SPRITES — chibi anime disease spirits
-   Proportions: big expressive head, distinct silhouette, monster feel
+   ENEMY SPRITES — 2.5D Rush Royale-style chibi monsters
+   Each: shield gem backing card + large character + pupils/catchlights
    ═══════════════════════════════════════════════════════════════════ */
 type SpriteProps = { hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> };
 
+/* shared eye helper for unit sprites */
+function ChibiEye({ color, size = 8 }: { color: string; size?: number }) {
+  return (
+    <View style={{ width: size, height: size + 1, borderRadius: size / 2,
+      backgroundColor: "#0f172a", alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: size * 0.38, height: size * 0.38, borderRadius: size, backgroundColor: color }} />
+      <View style={{ position: "absolute", top: 1, right: 1, width: size * 0.28, height: size * 0.28,
+        borderRadius: size, backgroundColor: "#fff" }} />
+    </View>
+  );
+}
+
 function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#93C5FD";
-  const fill = hitFlash ? "#60A5FA88" : "#1e3a8a20";
+  const c    = hitFlash ? "#fff" : "#93C5FD";
+  const fill = hitFlash ? "#60A5FA99" : "#bfdbfe18";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      {/* Wind streaks trailing above */}
-      <View style={{ flexDirection: "row", gap: 3, marginBottom: -3 }}>
-        {[{w:14,r:-18},{w:9,r:-5},{w:18,r:6}].map((s,i)=>(
-          <View key={i} style={{width:s.w,height:2.5,borderRadius:2,
-            backgroundColor:"#60A5FA60",transform:[{rotate:`${s.r}deg`}]}}/>
-        ))}
+      {/* Shield gem card backing */}
+      <View style={{ position:"absolute", bottom:-2, width:58, height:34,
+        borderRadius:8, borderBottomLeftRadius:30, borderBottomRightRadius:30,
+        backgroundColor:"#1e3a8a", borderWidth:2, borderColor:"#0f172a" }}>
+        <View style={{ position:"absolute", top:4, left:10, right:10, height:6,
+          borderRadius:3, backgroundColor:"#93C5FD28" }} />
       </View>
-      {/* Ghost head/body — round top, flared bottom */}
-      <View style={{width:36,height:40,borderRadius:999,borderBottomLeftRadius:10,
-        borderBottomRightRadius:10,backgroundColor:fill,borderWidth:1.5,
-        borderColor:c,alignItems:"center",overflow:"hidden"}}>
-        {/* Inner glow shimmer */}
-        <View style={{position:"absolute",top:4,left:6,width:14,height:9,
-          borderRadius:6,backgroundColor:"#bfdbfe30"}}/>
-        {/* Hollow ring eyes — classic wisp look */}
-        <View style={{flexDirection:"row",gap:8,marginTop:10}}>
+      {/* Wind arms — sweep outward */}
+      {[{s:"left",rot:20},{s:"right",rot:-20}].map((arm,i)=>(
+        <View key={i} style={{ position:"absolute", top:22, [arm.s]:-14,
+          width:16, height:9, borderRadius:8,
+          backgroundColor:fill, borderWidth:1.5, borderColor:c+"80",
+          transform:[{rotate:`${arm.rot}deg`}] }} />
+      ))}
+      {/* Ghost body */}
+      <View style={{ width:48, height:56, borderRadius:999,
+        borderBottomLeftRadius:10, borderBottomRightRadius:10,
+        backgroundColor:fill, borderWidth:2, borderColor:c, alignItems:"center", overflow:"hidden" }}>
+        <LinearGradient colors={[c+"50","transparent"]}
+          style={{ position:"absolute", top:0, left:0, right:0, height:28 }} />
+        <View style={{ position:"absolute", top:5, left:8, width:16, height:10,
+          borderRadius:8, backgroundColor:"#ffffff25" }} />
+        {/* Large hollow ring eyes */}
+        <View style={{ flexDirection:"row", gap:11, marginTop:14 }}>
           {[0,1].map(i=>(
-            <View key={i} style={{width:9,height:10,borderRadius:5,borderWidth:2,
-              borderColor:"#1e3a5f",backgroundColor:"transparent",
-              alignItems:"center",justifyContent:"center"}}>
-              <View style={{width:3.5,height:3.5,borderRadius:2,backgroundColor:"#1e3a5f"}}/>
+            <View key={i} style={{ width:14, height:16, borderRadius:8,
+              borderWidth:2.5, borderColor:"#0f172a",
+              backgroundColor:"#dbeafe20", alignItems:"center", justifyContent:"center" }}>
+              <View style={{ width:5, height:5, borderRadius:3, backgroundColor:"#0f172a" }} />
+              <View style={{ position:"absolute", top:2, left:2, width:3.5, height:3.5,
+                borderRadius:2, backgroundColor:"#93C5FD90" }} />
             </View>
           ))}
         </View>
-        {/* O-mouth shocked expression */}
-        <View style={{width:8,height:7,borderRadius:4,borderWidth:1.5,
-          borderColor:"#1e3a5f",backgroundColor:"#1e3a5f30",marginTop:5}}/>
+        {/* O-mouth */}
+        <View style={{ width:11, height:10, borderRadius:6, borderWidth:2,
+          borderColor:"#0f172a", marginTop:7 }} />
       </View>
-      {/* Phantom tail — 3 rounded wisps */}
-      <View style={{flexDirection:"row",gap:3,marginTop:-5}}>
-        {[{h:14,r:-10},{h:18,r:0},{h:13,r:10}].map((t,i)=>(
-          <View key={i} style={{width:9,height:t.h,borderRadius:999,
-            backgroundColor:fill,borderWidth:1,borderColor:c+"55",
-            transform:[{rotate:`${t.r}deg`}]}}/>
+      {/* Ghost tail wisps */}
+      <View style={{ flexDirection:"row", gap:2, marginTop:-7 }}>
+        {[{w:13,h:19,r:-11},{w:10,h:23,r:0},{w:13,h:18,r:11}].map((t,i)=>(
+          <View key={i} style={{ width:t.w, height:t.h, borderRadius:999,
+            backgroundColor:fill, borderWidth:1.5, borderColor:c+"60",
+            transform:[{rotate:`${t.r}deg`}] }} />
         ))}
       </View>
     </Animated.View>
@@ -569,75 +591,113 @@ function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
 }
 
 function WheezeSpriteSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#6EE7B7";
-  const fill = hitFlash ? "#34D39966" : "#064e3b28";
+  const c    = hitFlash ? "#fff" : "#6EE7B7";
+  const fill = hitFlash ? "#34D39960" : "#064e3b1a";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      {/* Speed lines left side */}
-      <View style={{position:"absolute",top:14,left:-12,gap:2}}>
-        {[10,7,13].map((w,i)=>(<View key={i} style={{width:w,height:1.5,borderRadius:1,
-          backgroundColor:"#34D39966",marginBottom:2}}/>))}
+      {/* Shield gem backing */}
+      <View style={{ position:"absolute", bottom:-2, width:58, height:34,
+        borderRadius:8, borderBottomLeftRadius:30, borderBottomRightRadius:30,
+        backgroundColor:"#065f46", borderWidth:2, borderColor:"#022c22" }}>
+        <View style={{ position:"absolute", top:4, left:10, right:10, height:6,
+          borderRadius:3, backgroundColor:"#34D39928" }} />
       </View>
+      {/* Speed lines left */}
+      <View style={{ position:"absolute", left:-22, top:20, gap:3 }}>
+        {[14,10,16,9].map((w,i)=>(
+          <View key={i} style={{ width:w, height:1.5, borderRadius:1, backgroundColor:"#34D39960" }} />
+        ))}
+      </View>
+      {/* Wind arms extending */}
+      {[{s:"left",rot:25},{s:"right",rot:-25}].map((arm,i)=>(
+        <View key={i} style={{ position:"absolute", top:20, [arm.s]:-14,
+          width:18, height:10, borderRadius:8,
+          backgroundColor:fill, borderWidth:2, borderColor:c+"80",
+          transform:[{rotate:`${arm.rot}deg`}] }} />
+      ))}
       {/* Cyclone body */}
-      <View style={{width:40,height:44,borderRadius:20,borderTopRightRadius:8,
-        backgroundColor:fill,borderWidth:1.5,borderColor:c,
-        alignItems:"center",justifyContent:"center"}}>
-        {/* Swirl rings */}
-        <View style={{width:28,height:28,borderRadius:14,borderWidth:1,borderColor:c+"50"}}/>
-        <View style={{position:"absolute",width:16,height:16,borderRadius:8,borderWidth:1,borderColor:c+"30"}}/>
-        {/* Angry slanted eyes */}
-        <View style={{position:"absolute",top:11,flexDirection:"row",gap:9}}>
-          <View style={{width:10,height:5,borderRadius:2,backgroundColor:"#065f46",
-            transform:[{rotate:"-15deg"},{skewX:"-8deg"}]}}/>
-          <View style={{width:10,height:5,borderRadius:2,backgroundColor:"#065f46",
-            transform:[{rotate:"15deg"},{skewX:"8deg"}]}}/>
+      <View style={{ width:50, height:54, borderRadius:25, borderTopRightRadius:10,
+        backgroundColor:fill, borderWidth:2, borderColor:c,
+        alignItems:"center", justifyContent:"center" }}>
+        <View style={{ width:36, height:36, borderRadius:18, borderWidth:1.5, borderColor:c+"55" }} />
+        <View style={{ position:"absolute", width:22, height:22, borderRadius:11,
+          borderWidth:1, borderColor:c+"30" }} />
+        {/* Angry slant brows + eyes */}
+        <View style={{ position:"absolute", top:14, flexDirection:"row", gap:12 }}>
+          <View style={{ width:13, height:6, borderRadius:3, backgroundColor:"#065f46",
+            transform:[{rotate:"-18deg"},{skewX:"-8deg"}] }} />
+          <View style={{ width:13, height:6, borderRadius:3, backgroundColor:"#065f46",
+            transform:[{rotate:"18deg"},{skewX:"8deg"}] }} />
         </View>
-        {/* Set mouth */}
-        <View style={{position:"absolute",bottom:11,width:13,height:3,borderRadius:2,backgroundColor:"#065f46"}}/>
+        <View style={{ position:"absolute", bottom:14, width:16, height:3.5,
+          borderRadius:2, backgroundColor:"#065f46" }} />
       </View>
-      {/* Wind tail wisps */}
-      <View style={{flexDirection:"row",gap:2,marginTop:-3}}>
-        {[6,10,7].map((h,i)=>(<View key={i} style={{width:7,height:h,borderRadius:3,
-          backgroundColor:fill,borderWidth:1,borderColor:c+"50"}}/>))}
+      {/* Tail wisps */}
+      <View style={{ flexDirection:"row", gap:2, marginTop:-5 }}>
+        {[8,13,9].map((h,i)=>(
+          <View key={i} style={{ width:10, height:h, borderRadius:5,
+            backgroundColor:fill, borderWidth:1.5, borderColor:c+"60" }} />
+        ))}
       </View>
     </Animated.View>
   );
 }
 
 function MucusSlimeSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#86EFAC";
-  const fill = hitFlash ? "#86EFAC88" : "#14532d28";
+  const c    = hitFlash ? "#fff" : "#86EFAC";
+  const fill = hitFlash ? "#4ade8088" : "#14532d1a";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* Shield gem backing — widest enemy */}
+      <View style={{ position:"absolute", bottom:-2, width:68, height:36,
+        borderRadius:8, borderBottomLeftRadius:34, borderBottomRightRadius:34,
+        backgroundColor:"#14532d", borderWidth:2, borderColor:"#052e16" }}>
+        <View style={{ position:"absolute", top:4, left:12, right:12, height:6,
+          borderRadius:3, backgroundColor:"#86EFAC28" }} />
+      </View>
+      {/* Blob arm stubs */}
+      {[{s:"left",rot:30},{s:"right",rot:-30}].map((arm,i)=>(
+        <View key={i} style={{ position:"absolute", top:14, [arm.s]:-12,
+          width:16, height:12, borderRadius:8,
+          backgroundColor:fill, borderWidth:1.5, borderColor:c+"80",
+          transform:[{rotate:`${arm.rot}deg`}] }} />
+      ))}
       {/* Wide blob body */}
-      <View style={{width:44,height:36,borderRadius:22,borderBottomLeftRadius:10,
-        borderBottomRightRadius:14,backgroundColor:fill,borderWidth:1.5,borderColor:c,
-        alignItems:"center",justifyContent:"center"}}>
-        {/* Shine highlight */}
-        <View style={{position:"absolute",top:5,left:8,width:11,height:7,borderRadius:5,backgroundColor:"#ffffff28"}}/>
+      <View style={{ width:62, height:44, borderRadius:31, borderBottomLeftRadius:12,
+        borderBottomRightRadius:16, backgroundColor:fill, borderWidth:2, borderColor:c,
+        alignItems:"center", justifyContent:"center" }}>
+        <View style={{ position:"absolute", top:5, left:12, width:16, height:10,
+          borderRadius:8, backgroundColor:"#ffffff30" }} />
         {/* Heavy-brow angry eyes */}
-        <View style={{flexDirection:"row",gap:10,marginTop:-2}}>
+        <View style={{ flexDirection:"row", gap:13, marginTop:-4 }}>
           {[0,1].map(i=>(
-            <View key={i} style={{alignItems:"center"}}>
-              <View style={{width:12,height:2.5,borderRadius:1,backgroundColor:"#065f46",
-                transform:[{rotate:i===0?"-12deg":"12deg"}]}}/>
-              <View style={{width:8,height:9,borderRadius:4,backgroundColor:"#065f46",marginTop:1,
-                alignItems:"center",justifyContent:"center"}}>
-                <View style={{width:3.5,height:3.5,borderRadius:2,backgroundColor:"#bbf7d0"}}/>
+            <View key={i} style={{ alignItems:"center" }}>
+              <View style={{ width:15, height:3.5, borderRadius:2, backgroundColor:"#065f46",
+                transform:[{rotate:`${i===0?-15:15}deg`}], marginBottom:1 }} />
+              <View style={{ width:12, height:14, borderRadius:6, backgroundColor:"#065f46",
+                alignItems:"center", justifyContent:"center" }}>
+                <View style={{ width:5, height:5, borderRadius:3, backgroundColor:"#bbf7d0" }} />
+                <View style={{ position:"absolute", top:2, left:2, width:2.5, height:2.5,
+                  borderRadius:2, backgroundColor:"#fff" }} />
               </View>
             </View>
           ))}
         </View>
-        {/* Ooze grin teeth */}
-        <View style={{flexDirection:"row",gap:1,marginTop:3}}>
-          {[3,4,4,3].map((h,i)=>(<View key={i} style={{width:4,height:h,borderRadius:999,backgroundColor:"#e0fce7"}}/>))}
+        {/* Fanged grin */}
+        <View style={{ flexDirection:"row", gap:1, marginTop:5, alignItems:"flex-start" }}>
+          {[{h:7,bright:false},{h:10,bright:true},{h:7,bright:false},{h:10,bright:true},{h:7,bright:false}].map((t,i)=>(
+            <View key={i} style={{ width:6, height:t.h, borderRadius:1,
+              borderBottomLeftRadius:4, borderBottomRightRadius:4,
+              backgroundColor:t.bright?"#e0fce7":"#065f46", marginHorizontal:0.5 }} />
+          ))}
         </View>
       </View>
       {/* Gooey drips */}
-      <View style={{flexDirection:"row",gap:4,marginTop:-2}}>
-        {[{w:10,h:8},{w:6,h:14},{w:9,h:9},{w:5,h:6}].map((d,i)=>(
-          <View key={i} style={{width:d.w,height:d.h,borderRadius:999,
-            backgroundColor:fill,borderWidth:1,borderColor:c+"60",marginTop:i%2===1?3:0}}/>
+      <View style={{ flexDirection:"row", gap:4, marginTop:-4 }}>
+        {[{w:14,h:11},{w:8,h:18},{w:12,h:13},{w:7,h:9}].map((d,i)=>(
+          <View key={i} style={{ width:d.w, height:d.h, borderRadius:999,
+            backgroundColor:fill, borderWidth:1.5, borderColor:c+"60",
+            marginTop:i%2===1?5:0 }} />
         ))}
       </View>
     </Animated.View>
@@ -645,43 +705,61 @@ function MucusSlimeSprite({ hitFlash, bobY }: SpriteProps) {
 }
 
 function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#C4B5FD";
-  const fill = hitFlash ? "#A78BFA55" : "#2e1065 14";
+  const c    = hitFlash ? "#fff" : "#C4B5FD";
+  const fill = hitFlash ? "#7c3aed88" : "#12002e18";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
-      {/* Outer aura ring */}
-      <View style={{position:"absolute",top:-2,width:42,height:42,borderRadius:21,
-        borderWidth:1,borderColor:"#A78BFA28"}}/>
-      {/* Hood top */}
-      <View style={{width:28,height:9,borderRadius:999,borderBottomLeftRadius:0,
-        borderBottomRightRadius:0,backgroundColor:"#3b0764",borderWidth:1,
-        borderColor:c+"60",marginBottom:-2}}/>
+      {/* Shield gem backing */}
+      <View style={{ position:"absolute", bottom:-2, width:54, height:32,
+        borderRadius:8, borderBottomLeftRadius:27, borderBottomRightRadius:27,
+        backgroundColor:"#3b0764", borderWidth:2, borderColor:"#1a0040" }}>
+        <View style={{ position:"absolute", top:4, left:8, right:8, height:6,
+          borderRadius:3, backgroundColor:"#A78BFA28" }} />
+      </View>
+      {/* Outer aura */}
+      <View style={{ position:"absolute", top:0, width:54, height:54, borderRadius:27,
+        borderWidth:1.5, borderColor:"#A78BFA25" }} />
+      {/* Dark tendrils extending from cloak */}
+      {[{s:"left",rot:18},{s:"right",rot:-18}].map((t,i)=>(
+        <View key={i} style={{ position:"absolute", top:18, [t.s]:-12,
+          width:14, height:34, borderRadius:7,
+          backgroundColor:"#3b076440", borderWidth:1, borderColor:"#7c3aed40",
+          transform:[{rotate:`${t.rot}deg`}] }} />
+      ))}
+      {/* Hood */}
+      <View style={{ width:36, height:12, borderRadius:999, borderBottomLeftRadius:0,
+        borderBottomRightRadius:0, backgroundColor:"#3b0764",
+        borderWidth:2, borderColor:c+"70", marginBottom:-3 }} />
       {/* Cloak body */}
-      <View style={{width:32,height:42,borderRadius:10,borderTopLeftRadius:0,
-        borderTopRightRadius:0,borderBottomLeftRadius:14,borderBottomRightRadius:14,
-        backgroundColor:"#1a004022",borderWidth:1.5,borderColor:c+"80",
-        alignItems:"center",overflow:"hidden"}}>
-        <LinearGradient colors={["#4c1d9530","#00000000"]}
-          style={{position:"absolute",top:0,left:0,right:0,height:"50%"}}/>
-        {/* Hollow eye sockets */}
-        <View style={{flexDirection:"row",gap:8,marginTop:8}}>
+      <View style={{ width:40, height:54, borderRadius:10, borderTopLeftRadius:0,
+        borderTopRightRadius:0, borderBottomLeftRadius:20, borderBottomRightRadius:20,
+        backgroundColor:"#1a004020", borderWidth:2, borderColor:c+"80",
+        alignItems:"center", overflow:"hidden" }}>
+        <LinearGradient colors={["#4c1d9540","transparent"]}
+          style={{ position:"absolute", top:0, left:0, right:0, height:"55%" }} />
+        {/* Deep hollow sockets */}
+        <View style={{ flexDirection:"row", gap:10, marginTop:11 }}>
           {[0,1].map(i=>(
-            <View key={i} style={{width:9,height:11,borderRadius:5,
-              backgroundColor:"#1a0040",borderWidth:1.5,borderColor:"#7c3aed",
-              alignItems:"center",justifyContent:"center"}}>
-              <View style={{width:3,height:3,borderRadius:2,backgroundColor:"#7c3aed88"}}/>
+            <View key={i} style={{ width:12, height:14, borderRadius:7,
+              backgroundColor:"#120030", borderWidth:2, borderColor:"#7c3aed",
+              alignItems:"center", justifyContent:"center" }}>
+              <View style={{ width:4, height:4, borderRadius:2, backgroundColor:"#7c3aed" }} />
+              <View style={{ position:"absolute", top:2, left:2, width:3, height:3,
+                borderRadius:2, backgroundColor:"#c4b5fd60" }} />
             </View>
           ))}
         </View>
-        {/* Thin grim mouth */}
-        <View style={{width:14,height:2,borderRadius:1,backgroundColor:"#3b0764",marginTop:8}}/>
+        <View style={{ width:18, height:3, borderRadius:2,
+          backgroundColor:"#2e1065", marginTop:10 }} />
+        <View style={{ position:"absolute", bottom:6, left:10, right:10,
+          height:1, backgroundColor:"#7c3aed30" }} />
       </View>
       {/* Phantom tail */}
-      <View style={{flexDirection:"row",gap:4,marginTop:-5}}>
-        {[{w:8,h:13,r:-8},{w:6,h:17,r:0},{w:8,h:11,r:9}].map((t,i)=>(
-          <View key={i} style={{width:t.w,height:t.h,borderRadius:999,
-            backgroundColor:"#A78BFA15",borderWidth:1,borderColor:c+"30",
-            transform:[{rotate:`${t.r}deg`}]}}/>
+      <View style={{ flexDirection:"row", gap:4, marginTop:-6 }}>
+        {[{w:10,h:16,r:-8},{w:8,h:21,r:0},{w:10,h:15,r:9}].map((t,i)=>(
+          <View key={i} style={{ width:t.w, height:t.h, borderRadius:999,
+            backgroundColor:"#A78BFA12", borderWidth:1.5, borderColor:c+"30",
+            transform:[{rotate:`${t.r}deg`}] }} />
         ))}
       </View>
     </Animated.View>
@@ -689,59 +767,79 @@ function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
 }
 
 function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
-  const c = hitFlash ? "#ffffff" : "#FB923C";
-  const fill = hitFlash ? "#F9731688" : "#7c2d1228";
+  const c    = hitFlash ? "#fff" : "#FB923C";
+  const fill = hitFlash ? "#ea580c88" : "#7c2d1220";
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ translateY: bobY }] }}>
+      {/* Boss gem card — larger than others */}
+      <View style={{ position:"absolute", bottom:-2, width:76, height:42,
+        borderRadius:10, borderBottomLeftRadius:38, borderBottomRightRadius:38,
+        backgroundColor:"#7c2d12", borderWidth:2.5, borderColor:"#431407" }}>
+        <View style={{ position:"absolute", top:5, left:12, right:12, height:7,
+          borderRadius:4, backgroundColor:"#fbbf2430" }} />
+      </View>
       {/* Boss aura rings */}
-      <View style={{position:"absolute",top:0,width:74,height:74,borderRadius:37,
-        borderWidth:1.5,borderColor:"#F9731628"}}/>
-      <View style={{position:"absolute",top:8,width:58,height:58,borderRadius:29,
-        borderWidth:1,borderColor:"#F9731445"}}/>
-      {/* Dragon horns */}
-      <View style={{flexDirection:"row",gap:24,marginBottom:-4,zIndex:4}}>
-        {[-18,18].map((rot,i)=>(
-          <View key={i} style={{width:9,height:19,borderRadius:4,backgroundColor:"#431407",
-            borderWidth:1,borderColor:c+"70",transform:[{rotate:`${rot}deg`}]}}/>
+      <View style={{ position:"absolute", top:4, width:82, height:82, borderRadius:41,
+        borderWidth:1.5, borderColor:"#F9731628" }} />
+      <View style={{ position:"absolute", top:12, width:64, height:64, borderRadius:32,
+        borderWidth:1, borderColor:"#F9731445" }} />
+      {/* Wing stubs */}
+      {[{s:"left",rot:-24},{s:"right",rot:24}].map((w,i)=>(
+        <View key={i} style={{ position:"absolute", top:28, [w.s]:-18,
+          width:26, height:36, borderRadius:999,
+          [i===0?"borderTopLeftRadius":"borderTopRightRadius"]:5,
+          backgroundColor:fill, borderWidth:2, borderColor:c+"80",
+          transform:[{rotate:`${w.rot}deg`}] }} />
+      ))}
+      {/* Dual horns */}
+      <View style={{ flexDirection:"row", gap:30, marginBottom:-6, zIndex:5 }}>
+        {[-22,22].map((rot,i)=>(
+          <View key={i} style={{ width:11, height:24, borderRadius:5,
+            backgroundColor:"#431407", borderWidth:2, borderColor:c+"80",
+            transform:[{rotate:`${rot}deg`}] }} />
         ))}
       </View>
       {/* Dragon head */}
-      <View style={{width:54,height:50,borderRadius:16,borderTopLeftRadius:22,
-        borderTopRightRadius:22,backgroundColor:fill,borderWidth:2,borderColor:c,
-        alignItems:"center",justifyContent:"center",zIndex:3}}>
-        {/* Scale texture */}
-        <View style={{position:"absolute",top:"22%",left:"10%",right:"10%",height:1,backgroundColor:"#F9731440"}}/>
-        <View style={{position:"absolute",top:"42%",left:"10%",right:"10%",height:1,backgroundColor:"#F9731430"}}/>
-        {/* Fierce slit eyes */}
-        <View style={{flexDirection:"row",gap:14,marginTop:-8}}>
+      <View style={{ width:66, height:62, borderRadius:20, borderTopLeftRadius:28,
+        borderTopRightRadius:28, backgroundColor:fill, borderWidth:2.5, borderColor:c,
+        alignItems:"center", justifyContent:"center", zIndex:4 }}>
+        <LinearGradient colors={[c+"35","transparent"]}
+          style={{ position:"absolute", top:0, left:0, right:0, height:28 }} />
+        <View style={{ position:"absolute", top:"22%", left:"8%", right:"8%",
+          height:1.5, backgroundColor:"#F9731450" }} />
+        <View style={{ position:"absolute", top:"42%", left:"8%", right:"8%",
+          height:1, backgroundColor:"#F9731435" }} />
+        {/* Slit-pupil fierce eyes */}
+        <View style={{ flexDirection:"row", gap:18, marginTop:-10 }}>
           {[0,1].map(i=>(
-            <View key={i} style={{width:10,height:10,borderRadius:5,backgroundColor:"#7c2d12",
-              borderWidth:2,borderColor:"#fbbf24",alignItems:"center",justifyContent:"center"}}>
-              <View style={{width:3,height:7,borderRadius:2,backgroundColor:"#fbbf24"}}/>
+            <View key={i} style={{ width:14, height:14, borderRadius:7,
+              backgroundColor:"#7c2d12", borderWidth:2.5, borderColor:"#fbbf24",
+              alignItems:"center", justifyContent:"center" }}>
+              <View style={{ width:4, height:10, borderRadius:2, backgroundColor:"#fbbf24" }} />
+              <View style={{ position:"absolute", top:1, right:2, width:3, height:3,
+                borderRadius:2, backgroundColor:"#fff" }} />
             </View>
           ))}
         </View>
-        {/* Jaw with teeth */}
-        <View style={{width:24,height:10,borderRadius:4,borderTopLeftRadius:2,
-          borderTopRightRadius:2,backgroundColor:"#7c2d12cc",borderWidth:1.5,
-          borderColor:c,marginTop:5,flexDirection:"row",justifyContent:"space-around",
-          alignItems:"flex-start",paddingTop:1,paddingHorizontal:3}}>
-          {[0,1,2].map(i=>(<View key={i} style={{width:4,height:6,borderRadius:1,
-            borderBottomLeftRadius:3,borderBottomRightRadius:3,backgroundColor:"#fde68a"}}/>))}
+        {/* Jaw + 4 fangs */}
+        <View style={{ width:34, height:14, borderRadius:5, borderTopLeftRadius:2,
+          borderTopRightRadius:2, backgroundColor:"#7c2d12dd",
+          borderWidth:2, borderColor:c, marginTop:7,
+          flexDirection:"row", justifyContent:"space-around",
+          alignItems:"flex-start", paddingTop:1, paddingHorizontal:3 }}>
+          {[0,1,2,3].map(i=>(
+            <View key={i} style={{ width:5, height:9, borderRadius:1,
+              borderBottomLeftRadius:4, borderBottomRightRadius:4,
+              backgroundColor:"#fde68a" }} />
+          ))}
         </View>
       </View>
-      {/* Wing stubs */}
-      <View style={{position:"absolute",top:24,left:-14,width:19,height:28,borderRadius:999,
-        borderTopLeftRadius:4,backgroundColor:fill,borderWidth:1.5,borderColor:c+"80",
-        transform:[{rotate:"-22deg"}]}}/>
-      <View style={{position:"absolute",top:24,right:-14,width:19,height:28,borderRadius:999,
-        borderTopRightRadius:4,backgroundColor:fill,borderWidth:1.5,borderColor:c+"80",
-        transform:[{rotate:"22deg"}]}}/>
       {/* Flame breath */}
       {!hitFlash && (
-        <View style={{flexDirection:"row",gap:2,marginTop:3}}>
-          {[{h:6,c2:"#f97316"},{h:10,c2:"#fbbf24"},{h:7,c2:"#f97316"}].map((fl,i)=>(
-            <View key={i} style={{width:6,height:fl.h,borderRadius:999,backgroundColor:fl.c2+"70"}}/>
+        <View style={{ flexDirection:"row", gap:2, marginTop:3 }}>
+          {[{h:7,col:"#f97316"},{h:13,col:"#fbbf24"},{h:9,col:"#ef4444"},{h:13,col:"#fbbf24"},{h:7,col:"#f97316"}].map((fl,i)=>(
+            <View key={i} style={{ width:8, height:fl.h, borderRadius:999,
+              backgroundColor:fl.col+"75" }} />
           ))}
         </View>
       )}
@@ -762,63 +860,81 @@ function EnemySprite({ typeId, hitFlash, bobY }: { typeId: string; hitFlash: boo
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   UNIT SPRITES — chibi anime healer characters
-   Chibi proportions: big head (~45% of height), expressive face,
-   distinct outfit, stubby arm stubs, cast visual feedback
+   UNIT SPRITES — 2.5D Rush Royale-style chibi healers
+   Each: gem card backing + large chibi body + visible arms + props
    ═══════════════════════════════════════════════════════════════════ */
 function WardScoutSprite({ castFlash }: { castFlash: boolean }) {
-  const c = castFlash ? "#fff" : "#60A5FA";
-  const bg = castFlash ? "#60A5FA99" : "#1e40af22";
+  const c  = castFlash ? "#fff" : "#60A5FA";
+  const bg = castFlash ? "#3b82f680" : "#1e40af18";
   return (
     <View style={{ alignItems: "center" }}>
-      {castFlash && (
-        <View style={{position:"absolute",top:-4,width:46,height:52,borderRadius:14,
-          borderWidth:1.5,borderColor:"#60A5FA50",zIndex:-1}}/>
-      )}
-      {/* Nurse cap with red cross */}
-      <View style={{width:26,height:8,borderRadius:4,borderBottomLeftRadius:0,
-        borderBottomRightRadius:0,backgroundColor:"#e0f2fe",borderWidth:1,
-        borderColor:c+"80",marginBottom:-3,alignItems:"center",justifyContent:"center"}}>
-        <View style={{width:10,height:2.5,borderRadius:1,backgroundColor:"#ef4444"}}/>
-        <View style={{position:"absolute",width:2.5,height:8,borderRadius:1,backgroundColor:"#ef4444"}}/>
+      {/* Gem card backing */}
+      <View style={{ position:"absolute", bottom:-2, width:64, height:36,
+        borderRadius:8, borderBottomLeftRadius:32, borderBottomRightRadius:32,
+        backgroundColor:"#1e3a8a", borderWidth:2, borderColor:"#0f172a" }}>
+        <View style={{ position:"absolute", top:4, left:10, right:10, height:6,
+          borderRadius:3, backgroundColor:"#60A5FA28" }} />
       </View>
-      {/* Chibi head — large oval */}
-      <View style={{width:24,height:22,borderRadius:999,backgroundColor:"#fde68a",
-        borderWidth:1.5,borderColor:"#d97706",alignItems:"center",justifyContent:"center"}}>
-        <View style={{position:"absolute",top:9,left:2,width:6,height:4,borderRadius:3,backgroundColor:"#fca5a560"}}/>
-        <View style={{position:"absolute",top:9,right:2,width:6,height:4,borderRadius:3,backgroundColor:"#fca5a560"}}/>
-        {/* Large almond eyes with catchlight */}
-        <View style={{flexDirection:"row",gap:5,marginTop:-3}}>
-          {[0,1].map(i=>(
-            <View key={i} style={{width:6,height:7,borderRadius:3,backgroundColor:"#1e3a5f",
-              alignItems:"center"}}>
-              <View style={{width:2,height:2,borderRadius:1,backgroundColor:"#fff",marginTop:1}}/>
-            </View>
-          ))}
+      {castFlash && (
+        <View style={{ position:"absolute", top:-6, width:64, height:70,
+          borderRadius:16, borderWidth:2, borderColor:"#60A5FA60", zIndex:-1 }} />
+      )}
+      {/* Nurse cap */}
+      <View style={{ width:34, height:11, borderRadius:6, borderBottomLeftRadius:0,
+        borderBottomRightRadius:0, backgroundColor:"#e0f2fe",
+        borderWidth:2, borderColor:c+"90", marginBottom:-4,
+        alignItems:"center", justifyContent:"center" }}>
+        <View style={{ width:14, height:3, borderRadius:2, backgroundColor:"#ef4444" }} />
+        <View style={{ position:"absolute", width:3, height:11, borderRadius:2, backgroundColor:"#ef4444" }} />
+      </View>
+      {/* Large chibi head */}
+      <View style={{ width:32, height:30, borderRadius:999, backgroundColor:"#fde68a",
+        borderWidth:2, borderColor:"#d97706", alignItems:"center", justifyContent:"center" }}>
+        <View style={{ position:"absolute", top:13, left:3, width:8, height:5,
+          borderRadius:4, backgroundColor:"#fca5a560" }} />
+        <View style={{ position:"absolute", top:13, right:3, width:8, height:5,
+          borderRadius:4, backgroundColor:"#fca5a560" }} />
+        {/* Large eyes with colored iris + catchlight */}
+        <View style={{ flexDirection:"row", gap:5, marginTop:-4 }}>
+          <ChibiEye color="#7dd3fc" size={9} />
+          <ChibiEye color="#7dd3fc" size={9} />
         </View>
-        <View style={{width:8,height:3,borderRadius:999,borderBottomWidth:2,borderColor:"#d97706",marginTop:2}}/>
+        {/* Smile */}
+        <View style={{ width:12, height:4, borderRadius:999,
+          borderBottomWidth:2.5, borderColor:"#d97706", marginTop:3 }} />
       </View>
       {/* Medical coat body */}
-      <View style={{width:26,height:24,borderRadius:8,borderTopLeftRadius:3,
-        borderTopRightRadius:3,backgroundColor:bg,borderWidth:1.5,borderColor:c,
-        alignItems:"center",justifyContent:"center",marginTop:-2}}>
-        <View style={{width:9,height:2.5,borderRadius:1,backgroundColor:c}}/>
-        <View style={{position:"absolute",width:2.5,height:9,borderRadius:1,backgroundColor:c}}/>
-        {/* Pocket detail */}
-        <View style={{position:"absolute",bottom:4,left:4,width:6,height:5,borderRadius:2,
-          borderWidth:1,borderColor:c+"60"}}/>
+      <View style={{ width:36, height:32, borderRadius:10, borderTopLeftRadius:4,
+        borderTopRightRadius:4, backgroundColor:bg,
+        borderWidth:2, borderColor:c, alignItems:"center", justifyContent:"center", marginTop:-3 }}>
+        {/* Cross emblem */}
+        <View style={{ width:13, height:3.5, borderRadius:2, backgroundColor:c }} />
+        <View style={{ position:"absolute", width:3.5, height:13, borderRadius:2, backgroundColor:c }} />
+        {/* Pocket */}
+        <View style={{ position:"absolute", bottom:6, left:5, width:8, height:7,
+          borderRadius:3, borderWidth:1.5, borderColor:c+"60" }} />
+        {/* Left lapel */}
+        <View style={{ position:"absolute", top:4, left:8, width:5, height:12,
+          borderRadius:3, backgroundColor:c+"25" }} />
       </View>
-      {/* Arm stubs */}
-      <View style={{position:"absolute",top:28,left:-5,width:7,height:12,borderRadius:4,
-        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"12deg"}]}}/>
-      <View style={{position:"absolute",top:28,right:-5,width:7,height:12,borderRadius:4,
-        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"-12deg"}]}}/>
-      {/* Stethoscope line */}
-      <View style={{position:"absolute",top:32,width:14,height:2,borderRadius:1,backgroundColor:c+"88"}}/>
-      {/* Cast: assessment waveform to the right */}
+      {/* Arms — left holds stethoscope, right waves */}
+      <View style={{ position:"absolute", top:37, left:-12, width:12, height:18,
+        borderRadius:6, backgroundColor:bg, borderWidth:2, borderColor:c+"90",
+        transform:[{rotate:"18deg"}] }} />
+      <View style={{ position:"absolute", top:37, right:-12, width:12, height:18,
+        borderRadius:6, backgroundColor:bg, borderWidth:2, borderColor:c+"90",
+        transform:[{rotate:"-18deg"}] }} />
+      {/* Stethoscope drape */}
+      <View style={{ position:"absolute", top:42, width:22, height:3,
+        borderRadius:2, backgroundColor:c+"99" }} />
+      {/* Cast: waveform */}
       {castFlash && (
-        <View style={{position:"absolute",right:-15,top:20,flexDirection:"row",gap:1,alignItems:"flex-end"}}>
-          {[4,7,5,9,5].map((h,i)=>(<View key={i} style={{width:2,height:h,borderRadius:1,backgroundColor:c+"88"}}/>))}
+        <View style={{ position:"absolute", right:-20, top:28,
+          flexDirection:"row", gap:2, alignItems:"flex-end" }}>
+          {[6,10,7,13,8,6].map((h,i)=>(
+            <View key={i} style={{ width:2.5, height:h, borderRadius:1,
+              backgroundColor:c+"90" }} />
+          ))}
         </View>
       )}
     </View>
@@ -826,112 +942,173 @@ function WardScoutSprite({ castFlash }: { castFlash: boolean }) {
 }
 
 function MistCasterSprite({ castFlash }: { castFlash: boolean }) {
-  const c = castFlash ? "#fff" : "#F59E0B";
-  const bg = castFlash ? "#F59E0B99" : "#78350f22";
+  const c  = castFlash ? "#fff" : "#F59E0B";
+  const bg = castFlash ? "#d9770680" : "#78350f18";
   return (
     <View style={{ alignItems: "center" }}>
+      {/* Gem card */}
+      <View style={{ position:"absolute", bottom:-2, width:64, height:36,
+        borderRadius:8, borderBottomLeftRadius:32, borderBottomRightRadius:32,
+        backgroundColor:"#451a03", borderWidth:2, borderColor:"#1c0a00" }}>
+        <View style={{ position:"absolute", top:4, left:10, right:10, height:6,
+          borderRadius:3, backgroundColor:"#F59E0B28" }} />
+      </View>
       {castFlash && (
-        <View style={{position:"absolute",top:-4,width:48,height:56,borderRadius:14,
-          borderWidth:1.5,borderColor:"#F59E0B50",zIndex:-1}}/>
+        <View style={{ position:"absolute", top:-6, width:68, height:80,
+          borderRadius:16, borderWidth:2, borderColor:"#F59E0B50", zIndex:-1 }} />
       )}
-      {/* Conical mage hat + brim */}
-      <View style={{alignItems:"center",marginBottom:-4}}>
-        <View style={{width:5,height:14,borderRadius:3,backgroundColor:"#1e3a5f",
-          borderWidth:1,borderColor:c+"60"}}/>
-        <View style={{width:22,height:6,borderRadius:4,borderBottomLeftRadius:2,
-          borderBottomRightRadius:2,backgroundColor:"#1e3a5f",borderWidth:1,
-          borderColor:c+"70",marginTop:-1,alignItems:"center"}}>
-          {/* Star on brim */}
-          <View style={{position:"absolute",right:3,top:0,width:4,height:4,borderRadius:2,backgroundColor:c+"80"}}/>
+      {/* Staff — extends up on right side */}
+      <View style={{ position:"absolute", right:-6, top:-12, width:7, height:72,
+        borderRadius:4, backgroundColor:"#3c1a00", borderWidth:1.5, borderColor:c+"70" }}>
+        {/* Orb on staff */}
+        <View style={{ position:"absolute", top:-7, left:-8, width:22, height:22,
+          borderRadius:11, borderWidth:3, borderColor:c,
+          backgroundColor:castFlash?"#fff340":c+"40",
+          alignItems:"center", justifyContent:"center" }}>
+          <View style={{ width:7, height:7, borderRadius:4,
+            backgroundColor:castFlash?"#fff":c }} />
+          <View style={{ position:"absolute", top:3, left:3, width:4, height:4,
+            borderRadius:2, backgroundColor:"#ffffff50" }} />
         </View>
+      </View>
+      {/* Conical hat tip */}
+      <View style={{ width:7, height:20, borderRadius:4, borderTopLeftRadius:2,
+        borderTopRightRadius:2, backgroundColor:"#1e1b4b",
+        borderWidth:1.5, borderColor:c+"70", marginBottom:-5 }} />
+      {/* Hat brim */}
+      <View style={{ width:30, height:9, borderRadius:5, borderBottomLeftRadius:3,
+        borderBottomRightRadius:3, backgroundColor:"#1e1b4b",
+        borderWidth:2, borderColor:c+"70", alignItems:"center" }}>
+        <View style={{ position:"absolute", right:5, top:1, width:6, height:6,
+          borderRadius:3, backgroundColor:c+"90" }} />
+        <View style={{ position:"absolute", left:6, top:2, width:4, height:4,
+          borderRadius:2, backgroundColor:c+"60" }} />
       </View>
       {/* Chibi head */}
-      <View style={{width:22,height:20,borderRadius:999,backgroundColor:"#fde68a",
-        borderWidth:1.5,borderColor:"#d97706",alignItems:"center",justifyContent:"center"}}>
-        <View style={{position:"absolute",top:7,left:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
-        <View style={{position:"absolute",top:7,right:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
-        {/* Half-closed knowing eyes */}
-        <View style={{flexDirection:"row",gap:4,marginTop:-2}}>
-          {[0,1].map(i=>(
-            <View key={i} style={{width:5,height:5,borderRadius:2,backgroundColor:"#1e3a5f",
-              alignItems:"center"}}>
-              <View style={{width:1.5,height:1.5,borderRadius:1,backgroundColor:"#fff",marginTop:1}}/>
-            </View>
-          ))}
+      <View style={{ width:28, height:26, borderRadius:999, backgroundColor:"#fde68a",
+        borderWidth:2, borderColor:"#d97706", alignItems:"center", justifyContent:"center" }}>
+        <View style={{ position:"absolute", top:10, left:3, width:7, height:5,
+          borderRadius:4, backgroundColor:"#fca5a560" }} />
+        <View style={{ position:"absolute", top:10, right:3, width:7, height:5,
+          borderRadius:4, backgroundColor:"#fca5a560" }} />
+        {/* Half-lidded mage eyes */}
+        <View style={{ flexDirection:"row", gap:5, marginTop:-3 }}>
+          <ChibiEye color="#F59E0B" size={8} />
+          <ChibiEye color="#F59E0B" size={8} />
         </View>
-        <View style={{width:6,height:2,borderRadius:1,backgroundColor:"#d97706",marginTop:2}}/>
+        <View style={{ width:9, height:3, borderRadius:2, backgroundColor:"#d97706", marginTop:3 }} />
       </View>
-      {/* Alchemist robe */}
-      <View style={{width:24,height:28,borderRadius:10,borderTopLeftRadius:3,
-        borderTopRightRadius:3,backgroundColor:bg,borderWidth:1.5,borderColor:c,
-        alignItems:"center",paddingTop:5,marginTop:-2}}>
-        {/* Glowing potion orb */}
-        <View style={{width:13,height:13,borderRadius:7,borderWidth:2,borderColor:c,
-          backgroundColor:c+"35",alignItems:"center",justifyContent:"center"}}>
-          <View style={{width:4,height:4,borderRadius:2,backgroundColor:castFlash?"#fff":c+"90"}}/>
+      {/* Robe body */}
+      <View style={{ width:34, height:36, borderRadius:12, borderTopLeftRadius:4,
+        borderTopRightRadius:4, backgroundColor:bg, borderWidth:2, borderColor:c,
+        alignItems:"center", paddingTop:6, marginTop:-4 }}>
+        {/* Potion orb in hands */}
+        <View style={{ width:18, height:18, borderRadius:9, borderWidth:3, borderColor:c,
+          backgroundColor:c+"38", alignItems:"center", justifyContent:"center" }}>
+          <View style={{ width:6, height:6, borderRadius:3,
+            backgroundColor:castFlash?"#fff":c }} />
+          <View style={{ position:"absolute", top:3, left:3, width:4, height:4,
+            borderRadius:2, backgroundColor:"#ffffff45" }} />
         </View>
-        {castFlash && [0,5,10].map((top,i)=>(
-          <View key={i} style={{position:"absolute",top:top+8,right:-9,width:8,height:2,
-            borderRadius:1,backgroundColor:c+"70"}}/>
+        {/* Robe trim line */}
+        <View style={{ position:"absolute", bottom:5, left:7, right:7, height:2.5,
+          borderRadius:1.5, backgroundColor:c+"55" }} />
+        {/* Mist cast effect */}
+        {castFlash && [0,8,16].map((top,i)=>(
+          <View key={i} style={{ position:"absolute", top:top+6, left:-12,
+            width:11, height:2.5, borderRadius:1.5, backgroundColor:c+"70" }} />
         ))}
       </View>
-      {/* Robe sleeves */}
-      <View style={{position:"absolute",top:30,left:-7,width:9,height:14,borderRadius:4,
-        backgroundColor:bg,borderWidth:1,borderColor:c+"70"}}/>
-      <View style={{position:"absolute",top:30,right:-7,width:9,height:14,borderRadius:4,
-        backgroundColor:bg,borderWidth:1,borderColor:c+"70"}}/>
+      {/* Sleeves */}
+      <View style={{ position:"absolute", top:40, left:-12, width:14, height:20,
+        borderRadius:7, backgroundColor:bg, borderWidth:1.5, borderColor:c+"80" }} />
+      <View style={{ position:"absolute", top:40, right:-6, width:14, height:20,
+        borderRadius:7, backgroundColor:bg, borderWidth:1.5, borderColor:c+"80" }} />
     </View>
   );
 }
 
 function O2HealerSprite({ castFlash }: { castFlash: boolean }) {
-  const c = castFlash ? "#fff" : "#34D399";
-  const bg = castFlash ? "#34D39999" : "#064e3b22";
+  const c  = castFlash ? "#fff" : "#34D399";
+  const bg = castFlash ? "#05966080" : "#064e3b18";
   return (
     <View style={{ alignItems: "center" }}>
+      {/* Gem card */}
+      <View style={{ position:"absolute", bottom:-2, width:64, height:36,
+        borderRadius:8, borderBottomLeftRadius:32, borderBottomRightRadius:32,
+        backgroundColor:"#064e3b", borderWidth:2, borderColor:"#022c22" }}>
+        <View style={{ position:"absolute", top:4, left:10, right:10, height:6,
+          borderRadius:3, backgroundColor:"#34D39928" }} />
+      </View>
       {castFlash && (
-        <View style={{position:"absolute",top:-6,width:50,height:50,borderRadius:25,
-          borderWidth:1.5,borderColor:"#34D39950",zIndex:-1}}/>
+        <View style={{ position:"absolute", top:-6, width:64, height:64,
+          borderRadius:32, borderWidth:2, borderColor:"#34D39950", zIndex:-1 }} />
       )}
-      {/* Medical headband */}
-      <View style={{width:24,height:5,borderRadius:3,backgroundColor:"#065f46",
-        borderWidth:1,borderColor:c+"70",marginBottom:-2}}/>
-      {/* Chibi head */}
-      <View style={{width:22,height:20,borderRadius:999,backgroundColor:"#fde68a",
-        borderWidth:1.5,borderColor:"#d97706",alignItems:"center",justifyContent:"center"}}>
-        <View style={{position:"absolute",top:7,left:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
-        <View style={{position:"absolute",top:7,right:2,width:5,height:3,borderRadius:2,backgroundColor:"#fca5a560"}}/>
-        {/* Eyes */}
-        <View style={{flexDirection:"row",gap:4,marginTop:-3}}>
-          {[0,1].map(i=>(
-            <View key={i} style={{width:5,height:6,borderRadius:3,backgroundColor:"#1e3a5f",
-              alignItems:"center"}}>
-              <View style={{width:1.5,height:1.5,borderRadius:1,backgroundColor:"#fff",marginTop:1}}/>
-            </View>
-          ))}
+      {/* O₂ tank on left side */}
+      <View style={{ position:"absolute", left:-14, top:28, width:12, height:34,
+        borderRadius:6, backgroundColor:"#0a1428",
+        borderWidth:2, borderColor:c, alignItems:"center", paddingTop:3 }}>
+        <Text style={{ color:c, fontSize:5.5, fontWeight:"800" }}>O₂</Text>
+        {/* Gauge */}
+        <View style={{ position:"absolute", bottom:2, width:10, height:6,
+          borderRadius:3, backgroundColor:"#065f46",
+          borderWidth:1, borderColor:c+"60" }} />
+        {/* Tank top */}
+        <View style={{ position:"absolute", top:-3, width:10, height:5,
+          borderRadius:3, backgroundColor:"#1e3a5f" }} />
+      </View>
+      {/* Medical headband / visor */}
+      <View style={{ width:32, height:8, borderRadius:5, backgroundColor:"#065f46",
+        borderWidth:2, borderColor:c+"80", marginBottom:-3,
+        alignItems:"center", justifyContent:"center" }}>
+        <View style={{ width:10, height:4, borderRadius:3, borderWidth:1.5,
+          borderColor:c+"70", backgroundColor:"#00000030" }} />
+      </View>
+      {/* Large chibi head */}
+      <View style={{ width:30, height:28, borderRadius:999, backgroundColor:"#fde68a",
+        borderWidth:2, borderColor:"#d97706", alignItems:"center", justifyContent:"center" }}>
+        <View style={{ position:"absolute", top:11, left:3, width:8, height:5,
+          borderRadius:4, backgroundColor:"#fca5a560" }} />
+        <View style={{ position:"absolute", top:11, right:3, width:8, height:5,
+          borderRadius:4, backgroundColor:"#fca5a560" }} />
+        {/* Focused eyes */}
+        <View style={{ flexDirection:"row", gap:5, marginTop:-4 }}>
+          <ChibiEye color="#6ee7b7" size={9} />
+          <ChibiEye color="#6ee7b7" size={9} />
         </View>
         {/* O₂ mask over lower face */}
-        <View style={{width:14,height:6,borderRadius:3,backgroundColor:c+"88",
-          borderWidth:1,borderColor:c,marginTop:2}}/>
+        <View style={{ width:20, height:8, borderRadius:4, backgroundColor:c+"88",
+          borderWidth:2, borderColor:c, marginTop:3,
+          alignItems:"center", justifyContent:"center" }}>
+          <View style={{ width:10, height:2, borderRadius:1, backgroundColor:"#ffffff40" }} />
+        </View>
       </View>
       {/* Vest body */}
-      <View style={{width:26,height:26,borderRadius:8,backgroundColor:bg,
-        borderWidth:1.5,borderColor:c,alignItems:"center",justifyContent:"center",marginTop:-2}}>
-        {/* O₂ cylinder */}
-        <View style={{width:8,height:14,borderRadius:4,borderWidth:1.5,borderColor:c,
-          backgroundColor:"#0a1428",alignItems:"center",paddingTop:1}}>
-          <Text style={{color:c,fontSize:5,fontWeight:"700"}}>O₂</Text>
+      <View style={{ width:36, height:34, borderRadius:10, backgroundColor:bg,
+        borderWidth:2, borderColor:c, alignItems:"center", justifyContent:"center", marginTop:-3 }}>
+        {/* Vest O₂ detail panel */}
+        <View style={{ width:12, height:20, borderRadius:6, borderWidth:2, borderColor:c,
+          backgroundColor:"#0a1428", alignItems:"center", paddingTop:2 }}>
+          <Text style={{ color:c, fontSize:5, fontWeight:"700" }}>O₂</Text>
         </View>
+        {/* Gauge top right */}
+        <View style={{ position:"absolute", top:5, right:5, width:8, height:8,
+          borderRadius:4, borderWidth:2, borderColor:c+"70" }} />
         {castFlash && (
-          <View style={{position:"absolute",width:40,height:40,borderRadius:20,
-            borderWidth:1,borderColor:c+"55"}}/>
+          <View style={{ position:"absolute", width:52, height:52, borderRadius:26,
+            borderWidth:1.5, borderColor:c+"55" }} />
         )}
       </View>
-      {/* Arms spread in support gesture */}
-      <View style={{position:"absolute",top:30,left:-10,width:12,height:8,borderRadius:4,
-        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"30deg"}]}}/>
-      <View style={{position:"absolute",top:30,right:-10,width:12,height:8,borderRadius:4,
-        backgroundColor:bg,borderWidth:1,borderColor:c+"80",transform:[{rotate:"-30deg"}]}}/>
+      {/* Arms wide in support gesture */}
+      <View style={{ position:"absolute", top:40, left:-14, width:16, height:12,
+        borderRadius:6, backgroundColor:bg, borderWidth:2, borderColor:c+"90",
+        transform:[{rotate:"35deg"}] }} />
+      <View style={{ position:"absolute", top:40, right:-14, width:16, height:12,
+        borderRadius:6, backgroundColor:bg, borderWidth:2, borderColor:c+"90",
+        transform:[{rotate:"-35deg"}] }} />
+      {/* O₂ hose from mask to tank */}
+      <View style={{ position:"absolute", top:32, left:8, width:2.5, height:20,
+        borderRadius:1.5, backgroundColor:c+"60", transform:[{rotate:"20deg"}] }} />
     </View>
   );
 }
