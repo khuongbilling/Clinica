@@ -39,21 +39,22 @@ const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
 /* ── Board: path waypoints as [fracX, fracY] (0=top-left, 1=bottom-right) ──
-   S-curve: Corruption Gate (top-right) → Vital Lantern (bottom-left)      */
+   Perimeter loop: Corruption Gate (top-right) sweeps across top, down left,
+   across bottom, up right side, then converges to Vital Lantern at center. */
 const PATH_WPS: [number, number][] = [
-  [0.88, 0.09],   /* 0 — Corruption Gate entry */
-  [0.14, 0.09],   /* 1 — top-left corner */
-  [0.14, 0.47],   /* 2 — mid-left corner */
-  [0.86, 0.47],   /* 3 — mid-right corner */
-  [0.86, 0.88],   /* 4 — bottom-right corner */
-  [0.11, 0.88],   /* 5 — Vital Lantern (exit) */
+  [0.86, 0.10],   /* 0 — Corruption Gate entry (top-right) */
+  [0.14, 0.10],   /* 1 — top-left corner */
+  [0.14, 0.82],   /* 2 — bottom-left corner */
+  [0.86, 0.82],   /* 3 — bottom-right corner */
+  [0.86, 0.46],   /* 4 — right-middle (up right side) */
+  [0.50, 0.46],   /* 5 — Vital Lantern (center of arena) */
 ];
 const N_SEGS = PATH_WPS.length - 1;   /* 5 segments */
 
-/* ── Deployment tiles: two interior zones between path rows ── */
+/* ── Deployment tiles: 2×3 center grid flanking the Vital Lantern ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.38, 0.27], [0.55, 0.27], [0.72, 0.27],  /* top zone */
-  [0.30, 0.67], [0.50, 0.67], [0.70, 0.67],  /* bottom zone */
+  [0.33, 0.27], [0.50, 0.27], [0.67, 0.27],  /* top row — above lantern */
+  [0.33, 0.63], [0.50, 0.63], [0.67, 0.63],  /* bottom row — below lantern */
 ];
 
 /* ═══════════════════════════════════════════════════════════════════

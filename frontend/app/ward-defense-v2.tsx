@@ -21,17 +21,17 @@ import { LinearGradient } from "expo-linear-gradient";
 
 /* ── Path + tile constants — must mirror ward-defense.tsx ─────────────────── */
 const PATH_WPS: [number, number][] = [
-  [0.88, 0.09],
-  [0.14, 0.09],
-  [0.14, 0.47],
-  [0.86, 0.47],
-  [0.86, 0.88],
-  [0.11, 0.88],
+  [0.86, 0.10],   /* Disease Gate (top-right) */
+  [0.14, 0.10],   /* top-left corner */
+  [0.14, 0.82],   /* bottom-left corner */
+  [0.86, 0.82],   /* bottom-right corner */
+  [0.86, 0.46],   /* right-middle (up right side) */
+  [0.50, 0.46],   /* Vital Lantern (center) */
 ];
 
 const DEPLOY_TILES: [number, number][] = [
-  [0.38, 0.27], [0.55, 0.27], [0.72, 0.27],
-  [0.30, 0.67], [0.50, 0.67], [0.70, 0.67],
+  [0.33, 0.27], [0.50, 0.27], [0.67, 0.27],  /* top row — above lantern */
+  [0.33, 0.63], [0.50, 0.63], [0.67, 0.63],  /* bottom row — below lantern */
 ];
 
 /* ── Illustrated image assets ─────────────────────────────────────────────── */
@@ -160,6 +160,76 @@ function BoardScene({ aw, ah, imgBounds: b }: { aw: number; ah: number; imgBound
           }}/>
         </View>
       ))}
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CENTER ZONE OVERLAY — glowing ring + label framing the 2×3 deploy grid
+   Renders between the board art and all interactive overlays.
+════════════════════════════════════════════════════════════════════════════ */
+function CenterZoneOverlay({ imgBounds: b }: { imgBounds: ImgBounds }) {
+  /* Zone bounds (fractional image coords, with padding around the 2×3 grid) */
+  const ZONE_X1 = 0.22, ZONE_X2 = 0.78;
+  const ZONE_Y1 = 0.17, ZONE_Y2 = 0.73;
+
+  const [x1, y1] = imgPx(ZONE_X1, ZONE_Y1, b);
+  const [x2, y2] = imgPx(ZONE_X2, ZONE_Y2, b);
+  const zw = x2 - x1, zh = y2 - y1;
+
+  /* Label position — centered at top edge of zone */
+  const labelX = (x1 + x2) / 2;
+  const labelY = y1 + 4;
+
+  return (
+    <>
+      {/* Faint glowing zone rectangle */}
+      <View style={{
+        position: "absolute",
+        left: x1, top: y1, width: zw, height: zh,
+        borderRadius: 18,
+        borderWidth: 1.5, borderColor: "#34d39940",
+        backgroundColor: "#10b98108",
+        zIndex: 3,
+      }}/>
+
+      {/* Inner inset ring — creates depth/framing */}
+      <View style={{
+        position: "absolute",
+        left: x1 + 6, top: y1 + 6, width: zw - 12, height: zh - 12,
+        borderRadius: 13,
+        borderWidth: 1, borderColor: "#6ee7b720",
+        zIndex: 3,
+      }}/>
+
+      {/* Corner accents — four lotus-petal dots */}
+      {[[x1 + 10, y1 + 10], [x2 - 10, y1 + 10],
+        [x1 + 10, y2 - 10], [x2 - 10, y2 - 10]].map(([cx, cy], i) => (
+        <View key={i} style={{
+          position: "absolute",
+          left: cx - 4, top: cy - 4, width: 8, height: 8, borderRadius: 4,
+          backgroundColor: "#34d39940", borderWidth: 1, borderColor: "#6ee7b760",
+          zIndex: 3,
+        }}/>
+      ))}
+
+      {/* "HEALING ZONE" label — floats at top-center of zone */}
+      <View style={{
+        position: "absolute",
+        left: labelX - 42, top: labelY - 9,
+        width: 84, height: 18, borderRadius: 9,
+        backgroundColor: "#071a1280",
+        borderWidth: 1, borderColor: "#34d39950",
+        alignItems: "center", justifyContent: "center",
+        zIndex: 4,
+      }}>
+        <Text style={{
+          color: "#6ee7b7cc", fontSize: 6.5, fontWeight: "800",
+          letterSpacing: 1.2, textAlign: "center",
+        }}>
+          ✦  HEALING ZONE  ✦
+        </Text>
+      </View>
     </>
   );
 }
@@ -369,38 +439,76 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
         </Animated.View>
       )}
 
-      {/* Tile hit zone */}
+      {/* ── Platform tile ── */}
       <View style={{
-        width: SZ, height: SZ, borderRadius: 12,
-        backgroundColor: isOccupied ? padColor + "12" : canAfford ? "#22d3ee10" : "#00000025",
-        borderWidth: isOccupied ? 2 : 1.5,
+        width: SZ, height: SZ, borderRadius: 14,
+        backgroundColor: isOccupied
+          ? padColor + "1a"
+          : canAfford ? "#22d3ee14" : "#0d2a2280",
+        borderWidth: isOccupied ? 2.5 : 1.5,
         borderColor: isOccupied
-          ? padColor + "cc"
+          ? padColor + "dd"
           : isMergeCandidate
-            ? "#FFD700aa"
+            ? "#FFD700bb"
             : canAfford
-              ? "#22d3ee80"
-              : "#64748b50",
+              ? "#22d3ee90"
+              : "#2d5a4860",
         alignItems: "center", justifyContent: "center",
+        overflow: "hidden",
       }}>
+        {/* Inner ring — decorative platform inlay */}
+        <View style={{
+          position: "absolute",
+          width: SZ - 12, height: SZ - 12, borderRadius: 10,
+          borderWidth: 1,
+          borderColor: isOccupied
+            ? padColor + "55"
+            : canAfford ? "#22d3ee35" : "#2d5a4840",
+        }}/>
+
+        {/* Corner lotus accents (4 petals) */}
+        {[[-1,-1],[1,-1],[-1,1],[1,1]].map(([cx,cy],i) => (
+          <View key={i} style={{
+            position: "absolute",
+            left: cx < 0 ? 5 : undefined,
+            right: cx > 0 ? 5 : undefined,
+            top: cy < 0 ? 5 : undefined,
+            bottom: cy > 0 ? 5 : undefined,
+            width: 6, height: 6, borderRadius: 3,
+            backgroundColor: isOccupied
+              ? padColor + "55"
+              : canAfford ? "#22d3ee45" : "#2d5a4850",
+          }}/>
+        ))}
+
+        {/* Empty pad: deploy cross icon */}
         {!isOccupied && (
           <View style={{ alignItems: "center", justifyContent: "center" }}>
             <View style={{
-              width: 24, height: 2.5, borderRadius: 1.5,
-              backgroundColor: canAfford ? "#22d3ee60" : "#64748b40",
+              width: 20, height: 2, borderRadius: 1,
+              backgroundColor: canAfford ? "#22d3ee80" : "#4a7a6860",
             }}/>
             <View style={{
-              width: 2.5, height: 24, borderRadius: 1.5,
+              width: 2, height: 20, borderRadius: 1,
               position: "absolute",
-              backgroundColor: canAfford ? "#22d3ee60" : "#64748b40",
+              backgroundColor: canAfford ? "#22d3ee80" : "#4a7a6860",
             }}/>
+            {canAfford && (
+              <View style={{
+                position: "absolute", width: 30, height: 30, borderRadius: 15,
+                borderWidth: 1, borderColor: "#22d3ee30",
+              }}/>
+            )}
           </View>
         )}
+
+        {/* Occupied pad: role badge */}
         {isOccupied && (
           <View style={{
-            position: "absolute", bottom: 3,
-            backgroundColor: padColor + "22", borderRadius: 4,
+            position: "absolute", bottom: 4,
+            backgroundColor: padColor + "30", borderRadius: 4,
             paddingHorizontal: 5, paddingVertical: 1,
+            borderWidth: 1, borderColor: padColor + "55",
           }}>
             <Text style={{ color: padColor, fontSize: 6, fontWeight: "800", letterSpacing: 0.3 }}>
               {unit.typeId === "ward_scout" ? "ASSESS"
@@ -409,6 +517,14 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
           </View>
         )}
       </View>
+
+      {/* ── Stone pedestal base — renders below tile in flex column ── */}
+      <View style={{
+        width: SZ + 6, height: 8, borderRadius: 4,
+        marginTop: -3, alignSelf: "center",
+        backgroundColor: "#071410e8",
+        borderWidth: 1, borderColor: isOccupied ? padColor + "44" : "#1e4030",
+      }}/>
     </Pressable>
   );
 }
@@ -588,7 +704,10 @@ export function WardBoardV2({
       {/* 1. Illustrated board scene (contain — full image always visible) */}
       <BoardScene aw={aw} ah={ah} imgBounds={imgBounds} />
 
-      {/* 2. Disease Portal overlay */}
+      {/* 2. Center healing zone frame — subtle ring + label around the 2×3 deploy grid */}
+      {aw > 20 && <CenterZoneOverlay imgBounds={imgBounds} />}
+
+      {/* 3. Disease Portal overlay */}
       {aw > 20 && <DiseasePortal imgBounds={imgBounds} aw={aw} />}
 
       {/* 3. Vital Lantern overlay */}
