@@ -150,3 +150,57 @@ id = "Hk11B9fjdeLh2blcgIac2"
 uri = "file://frontend/assets/images/home_hub_bg.png"
 type = "image"
 title = "home hub kingdom bg"
+
+[[generated]]
+id = "cJr3ug5lXbgwZJu39nYZO"
+uri = "file://frontend/assets/images/ward_board_scene.png"
+type = "image"
+title = "lotus ward defense board scene"
+
+[[generated]]
+id = "vWeQhxCiFf8sDaHYZW9Xq"
+uri = "file://frontend/assets/images/sprite_ward_scout.png"
+type = "image"
+title = "ward scout chibi sprite"
+
+[[generated]]
+id = "nMPvHc-9TVQWx2kQ_U26U"
+uri = "file://frontend/assets/images/sprite_mist_caster.png"
+type = "image"
+title = "mist caster chibi sprite"
+
+[[generated]]
+id = "9XJb61S-1xBuJCz5H5h_d"
+uri = "file://frontend/assets/images/sprite_o2_healer.png"
+type = "image"
+title = "o2 healer chibi sprite"
+
+[[generated]]
+id = "nBc70QBItaxBK62WCgEQN"
+uri = "file://frontend/assets/images/enemy_breathless_wisp.png"
+type = "image"
+title = "breathless wisp enemy sprite"
+
+[[generated]]
+id = "w6Bq1OF01AUez4GOegcEl"
+uri = "file://frontend/assets/images/enemy_wheeze_sprite.png"
+type = "image"
+title = "wheeze sprite enemy"
+
+[[generated]]
+id = "kMczwFFFIgXBzQtBY3U89"
+uri = "file://frontend/assets/images/enemy_mucus_slime.png"
+type = "image"
+title = "mucus slime enemy sprite"
+
+[[generated]]
+id = "eJVFuqITRZmc-0NcwT-9X"
+uri = "file://frontend/assets/images/enemy_hypoxia_wraith.png"
+type = "image"
+title = "hypoxia wraith enemy sprite"
+
+[[generated]]
+id = "HXUb_WH3ysuQUE0i7iIJ4"
+uri = "file://frontend/assets/images/enemy_bronchospasm_drake.png"
+type = "image"
+title = "bronchospasm drake boss sprite"
