@@ -345,12 +345,12 @@ function ArenaFloor({ aw, ah }: { aw: number; ah: number }) {
   const rows = Math.ceil(ah / SH) + 2;
   return (
     <>
-      {/* Stone floor tiles — warm dark amber-stone in brick-offset pattern */}
+      {/* Stone floor tiles — very dark, creates strong contrast with bright stone lane */}
       {Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => {
           const offsetX = r % 2 === 0 ? 0 : SW / 2;
           const variant = (r * 3 + c * 7) % 6;
-          const bg = variant < 2 ? "#0b0905" : variant < 4 ? "#0d0b07" : "#0f0d08";
+          const bg = variant < 2 ? "#050403" : variant < 4 ? "#060504" : "#070605";
           return (
             <View key={`s${r}_${c}`} style={{
               position: "absolute",
@@ -360,7 +360,7 @@ function ArenaFloor({ aw, ah }: { aw: number; ah: number }) {
               height: SH - 1.5,
               backgroundColor: bg,
               borderWidth: 0.5,
-              borderColor: "#1a1408",
+              borderColor: "#0e0c08",
               zIndex: 0,
             }} />
           );
@@ -461,7 +461,7 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
           backgroundColor: "#00000075", zIndex: 1,
         }} />
       ))}
-      {/* ── Stone road base per segment ── */}
+      {/* ── SOLID STONE LANE BASE — warm golden stone, clearly lighter than floor ── */}
       {PATH_WPS.slice(0, -1).map((wp, seg) => {
         const to = PATH_WPS[seg + 1];
         const x1 = wp[0] * aw, y1 = wp[1] * ah;
@@ -474,9 +474,7 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
             left: (x1 + x2) / 2 - len / 2,
             top:  (y1 + y2) / 2 - ROAD_VIS / 2,
             width: len, height: ROAD_VIS,
-            backgroundColor: "#1a1208",
-            borderTopWidth: 1.5, borderBottomWidth: 1.5,
-            borderColor: "#2e2010",
+            backgroundColor: "#6a5030",
             transform: [{ rotate: `${angle}deg` }], zIndex: 2,
           }} />
         );
@@ -488,10 +486,10 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
           left: fx * aw - ROAD_VIS / 2,
           top:  fy * ah - ROAD_VIS / 2,
           width: ROAD_VIS, height: ROAD_VIS, borderRadius: ROAD_VIS / 2,
-          backgroundColor: "#1a1208", zIndex: 2,
+          backgroundColor: "#6a5030", zIndex: 2,
         }} />
       ))}
-      {/* ── Individual paving slabs ── */}
+      {/* ── Individual paving slabs — visible texture on bright base ── */}
       {tiles.map((tile, i) => {
         const isAlt = (tile.idx + tile.seg) % 2 === 0;
         return (
@@ -500,15 +498,15 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
             left: tile.cx - TILE_LONG / 2,
             top:  tile.cy - (ROAD_VIS - 8) / 2,
             width: TILE_LONG, height: ROAD_VIS - 8,
-            backgroundColor: isAlt ? "#252010" : "#1e1a0c",
+            backgroundColor: isAlt ? "#7a6038" : "#604820",
             borderWidth: 1,
-            borderColor: "#3a2c10",
+            borderColor: "#9a7a40",
             borderRadius: 3,
             transform: [{ rotate: `${tile.angle}deg` }], zIndex: 3,
           }} />
         );
       })}
-      {/* ── Clinical rune stripe — embedded directional glow ── */}
+      {/* ── Clinical rune center stripe — directional glow ── */}
       {PATH_WPS.slice(0, -1).map((wp, seg) => {
         const to = PATH_WPS[seg + 1];
         const x1 = wp[0] * aw, y1 = wp[1] * ah;
@@ -521,12 +519,12 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
             left: (x1 + x2) / 2 - len / 2,
             top:  (y1 + y2) / 2 - 1.5,
             width: len, height: 3,
-            backgroundColor: "#22d3ee30",
+            backgroundColor: "#22d3ee55",
             transform: [{ rotate: `${angle}deg` }], zIndex: 4,
           }} />
         );
       })}
-      {/* ── Edge highlight strip (top edge per segment) — raises road ── */}
+      {/* ── Bright top-edge highlight strip — raises road visually ── */}
       {PATH_WPS.slice(0, -1).map((wp, seg) => {
         const to = PATH_WPS[seg + 1];
         const x1 = wp[0] * aw, y1 = wp[1] * ah;
@@ -538,8 +536,8 @@ function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
             position: "absolute",
             left: (x1 + x2) / 2 - len / 2,
             top:  (y1 + y2) / 2 - ROAD_VIS / 2,
-            width: len, height: 1.5,
-            backgroundColor: "#4a3818",
+            width: len, height: 2,
+            backgroundColor: "#b09050",
             transform: [{ rotate: `${angle}deg` }], zIndex: 4,
           }} />
         );
@@ -557,7 +555,7 @@ function CorruptionPortal({ aw, ah }: { aw: number; ah: number }) {
   const [fx, fy] = PATH_WPS[0];
   const px = fx * aw, py = fy * ah;
   return (
-    <View style={{ position: "absolute", left: px - 36, top: py - 60, alignItems: "center", zIndex: 8 }}>
+    <View style={{ position: "absolute", left: px - 40, top: py < 50 ? 4 : py - 30, alignItems: "center", zIndex: 8 }}>
       {/* Label */}
       <Text style={{ color: "#f87171", fontSize: 6, fontWeight: "700", letterSpacing: 0.8, marginBottom: 2 }}>BREACH</Text>
       {/* Fixed-size 80×80 container — spikes + circle all anchored here */}
@@ -596,10 +594,11 @@ function CorruptionPortal({ aw, ah }: { aw: number; ah: number }) {
           {/* Second inner ring */}
           <View style={{ position: "absolute", width: 32, height: 32, borderRadius: 16,
             borderWidth: 1, borderColor: "#ef444430" }} />
-          {/* Void symbol — broken cross */}
-          <View style={{ alignItems: "center", justifyContent: "center" }}>
-            <View style={{ width: 16, height: 2.5, borderRadius: 1.5, backgroundColor: "#ef444480" }} />
-            <View style={{ position: "absolute", width: 2.5, height: 16, borderRadius: 1.5, backgroundColor: "#ef444450" }} />
+          {/* Void eye — single pulsing oval, not a cross */}
+          <View style={{ width: 20, height: 14, borderRadius: 10, backgroundColor: "#ef444422",
+            borderWidth: 1.5, borderColor: "#ef4444bb",
+            alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#ef4444dd" }} />
           </View>
         </View>
       </View>
@@ -624,7 +623,7 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
   const glow30 = glow + "30";
   const glow15 = glow + "15";
   return (
-    <View style={{ position: "absolute", left: px - 36, top: py - 96, alignItems: "center", zIndex: 9 }}>
+    <View style={{ position: "absolute", left: px < 40 ? 2 : px - 36, top: py - 96, alignItems: "center", zIndex: 9 }}>
       {/* Wide outer glow halo */}
       <View style={{ position: "absolute", top: 8, width: 90, height: 90, borderRadius: 45,
         backgroundColor: glow15 }} />
@@ -633,64 +632,70 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
       {/* Label */}
       <Text style={{ color: glow, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.8, marginBottom: 3 }}>VITAL LANTERN</Text>
       {/* Lantern cap — decorative top bar */}
-      <View style={{ width: 46, height: 7, borderRadius: 3,
-        backgroundColor: "#2e2212", borderWidth: 1, borderColor: glow60, marginBottom: 1 }}>
-        <LinearGradient colors={["#4a3820", "#2a1e10"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 3 }} />
+      <View style={{ width: 56, height: 8, borderRadius: 4,
+        backgroundColor: "#2e2212", borderWidth: 1.5, borderColor: glow60, marginBottom: 1 }}>
+        <LinearGradient colors={["#5a4820", "#3a2c10"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 4 }} />
+        {/* Cap bead dots */}
+        {[-14, -7, 0, 7, 14].map((x, i) => (
+          <View key={i} style={{ position: "absolute", left: 28 + x - 2, top: 2,
+            width: 4, height: 4, borderRadius: 2, backgroundColor: glow + "88" }} />
+        ))}
       </View>
-      {/* Lantern body */}
-      <View style={{ width: 58, height: 46, borderRadius: 9,
+      {/* Lantern body — larger for readability */}
+      <View style={{ width: 68, height: 56, borderRadius: 10,
         backgroundColor: "#0c0e0a",
-        borderWidth: 2, borderColor: glow60,
+        borderWidth: 2.5, borderColor: glow60,
         alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <LinearGradient colors={[glow + "45", glow + "18", glow + "38"]}
+        <LinearGradient colors={[glow + "55", glow + "22", glow + "44"]}
           start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         {/* Vertical ribs */}
-        {[-18, -9, 0, 9, 18].map((x, i) => (
-          <View key={i} style={{ position: "absolute", left: 29 + x - 0.5, top: 0,
-            width: 1, height: 46, backgroundColor: glow + "22" }} />
+        {[-22, -11, 0, 11, 22].map((x, i) => (
+          <View key={i} style={{ position: "absolute", left: 34 + x - 0.5, top: 0,
+            width: 1, height: 56, backgroundColor: glow + "30" }} />
         ))}
-        {/* Clinical cross — Clinica emblem */}
-        <View style={{ width: 18, height: 3.5, borderRadius: 2, backgroundColor: glow + "dd" }} />
-        <View style={{ position: "absolute", width: 3.5, height: 18, borderRadius: 2, backgroundColor: glow + "dd" }} />
-        {/* Inner glow core */}
-        <View style={{ position: "absolute", width: 26, height: 26, borderRadius: 13,
-          backgroundColor: glow + "18" }} />
+        {/* Glowing diamond core — sacred healing crystal */}
+        <View style={{ width: 22, height: 22, borderRadius: 3,
+          backgroundColor: glow + "ee",
+          transform: [{ rotate: "45deg" }] }} />
+        {/* Inner glow halo */}
+        <View style={{ position: "absolute", width: 38, height: 38, borderRadius: 19,
+          backgroundColor: glow + "28" }} />
       </View>
       {/* Lantern base cap */}
-      <View style={{ width: 38, height: 6, borderRadius: 3, marginTop: 1,
-        backgroundColor: "#2e2212", borderWidth: 1, borderColor: glow + "70" }}>
+      <View style={{ width: 46, height: 7, borderRadius: 3, marginTop: 1,
+        backgroundColor: "#2e2212", borderWidth: 1, borderColor: glow + "80" }}>
         <LinearGradient colors={["#2a1e10", "#1e1608"]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 3 }} />
       </View>
       {/* Tassels */}
-      <View style={{ flexDirection: "row", gap: 14, marginTop: 1 }}>
+      <View style={{ flexDirection: "row", gap: 20, marginTop: 2 }}>
         {[0, 1].map(i => (
           <View key={i} style={{ alignItems: "center" }}>
-            <View style={{ width: 1.5, height: 14, backgroundColor: glow60, borderRadius: 1 }} />
-            <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: glow }} />
+            <View style={{ width: 2, height: 18, backgroundColor: glow60, borderRadius: 1 }} />
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: glow }} />
           </View>
         ))}
       </View>
       {/* Pole connecting to pedestal */}
-      <View style={{ width: 3, height: 8, backgroundColor: "#3a2c14",
-        borderLeftWidth: 0.5, borderRightWidth: 0.5, borderColor: glow + "40" }} />
+      <View style={{ width: 4, height: 10, backgroundColor: "#4a3c1c",
+        borderLeftWidth: 0.5, borderRightWidth: 0.5, borderColor: glow + "50" }} />
       {/* Stone pedestal */}
-      <View style={{ width: 60, height: 16, borderRadius: 5,
-        backgroundColor: "#201808", borderWidth: 1.5, borderColor: "#3a2c14",
+      <View style={{ width: 72, height: 18, borderRadius: 6,
+        backgroundColor: "#201808", borderWidth: 1.5, borderColor: "#4a3c18",
         alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <LinearGradient colors={["#3a2c14", "#201808", "#140e04"]}
+        <LinearGradient colors={["#4a3c18", "#2e2410", "#1a1208"]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         {/* Pedestal rune mark */}
-        <View style={{ width: 20, height: 1, backgroundColor: glow + "50", borderRadius: 1 }} />
+        <View style={{ width: 28, height: 1.5, backgroundColor: glow + "60", borderRadius: 1 }} />
       </View>
       {/* Stability crystal bar */}
-      <View style={{ width: 64, height: 6, borderRadius: 3,
-        backgroundColor: "#1a1208", borderWidth: 1, borderColor: "#2e2010",
-        marginTop: 4, overflow: "hidden" }}>
+      <View style={{ width: 72, height: 7, borderRadius: 3.5,
+        backgroundColor: "#1a1208", borderWidth: 1, borderColor: "#3a2c10",
+        marginTop: 5, overflow: "hidden" }}>
         <View style={{ width: `${stability}%` as any, height: "100%",
-          borderRadius: 3, backgroundColor: glow }} />
+          borderRadius: 3.5, backgroundColor: glow }} />
       </View>
     </View>
   );
@@ -1660,7 +1665,7 @@ function EnemyOnPath({
   const fpos = getEnemyPosFrac(enemy);
   const px = fpos.x * aw, py = fpos.y * ah;
   const isBoss = !!def.isBoss;
-  const spriteScale = isBoss ? 0.82 : 0.68;
+  const spriteScale = isBoss ? 1.05 : 0.86;
   const hpPct = Math.round((enemy.hp / enemy.maxHp) * 100);
   const HP_BAR_W = isBoss ? 54 : 36;
 
@@ -1739,13 +1744,13 @@ function DeploymentTileView({
           left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2 - 14,
           zIndex: 5,
         }}>
-          <Text style={{ color: "#4a3818", fontSize: 6, fontWeight: "700", letterSpacing: 1.2 }}>
+          <Text style={{ color: "#d4a840", fontSize: 7, fontWeight: "700", letterSpacing: 1.2 }}>
             {isZoneA ? "WARD-A" : "WARD-B"}
           </Text>
         </View>
       )}
 
-      {/* Summon pad — circular rune platform */}
+      {/* Summon pad — raised stone rune platform, clearly visible */}
       <Pressable
         style={{
           position: "absolute",
@@ -1753,33 +1758,33 @@ function DeploymentTileView({
           width: TILE_SIZE, height: TILE_SIZE,
           borderRadius: TILE_SIZE / 2,
           backgroundColor: isOccupied
-            ? unitColor + "1a"
+            ? unitColor + "33"
             : canAfford
-              ? "#1c1808"
-              : "#100e06",
-          borderWidth: isOccupied ? 2 : 1.5,
+              ? "#5a4828"
+              : "#3a2e18",
+          borderWidth: isOccupied ? 2.5 : 2,
           borderColor: isOccupied
-            ? unitColor + "cc"
+            ? unitColor + "ee"
             : canAfford
-              ? selColor + "99"
-              : "#2e2210",
+              ? selColor + "cc"
+              : "#6a5428",
           alignItems: "center", justifyContent: "center", zIndex: 4,
         }}
         onPress={onPress}
       >
-        {/* Stone pad base gradient */}
+        {/* Stone pad base gradient — warm raised platform look */}
         <LinearGradient
           colors={isOccupied
-            ? [unitColor + "18", unitColor + "08"]
+            ? [unitColor + "40", unitColor + "18"]
             : canAfford
-              ? ["#2a2010", "#141008"]
-              : ["#161208", "#0c0a06"]}
+              ? ["#7a6030", "#4a3820"]
+              : ["#4a3c1c", "#2e2412"]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: TILE_SIZE / 2 }}
         />
         {/* Inner rune ring */}
         <View style={{ position: "absolute", width: TILE_SIZE - 12, height: TILE_SIZE - 12,
-          borderRadius: (TILE_SIZE - 12) / 2, borderWidth: 1,
-          borderColor: isOccupied ? unitColor + "60" : canAfford ? selColor + "45" : "#2a1e08" }} />
+          borderRadius: (TILE_SIZE - 12) / 2, borderWidth: 1.5,
+          borderColor: isOccupied ? unitColor + "cc" : canAfford ? selColor + "aa" : "#c8a05060" }} />
         {/* 6 rune point diamonds at pad edge */}
         {[0, 60, 120, 180, 240, 300].map((deg, i) => {
           const rr = (TILE_SIZE - 10) / 2;
@@ -1788,8 +1793,8 @@ function DeploymentTileView({
           return (
             <View key={i} style={{ position: "absolute", left: bx, top: by,
               width: 5, height: 5, borderRadius: 1,
-              backgroundColor: isOccupied ? unitColor : canAfford ? selColor : "#2e2210",
-              opacity: isOccupied ? 0.75 : canAfford ? 0.65 : 0.28,
+              backgroundColor: isOccupied ? unitColor : canAfford ? selColor : "#c8a050",
+              opacity: isOccupied ? 0.92 : canAfford ? 0.88 : 0.60,
               transform: [{ rotate: "45deg" }] }} />
           );
         })}
@@ -1836,16 +1841,20 @@ function DeploymentTileView({
               backgroundColor: unitColor + "04", zIndex: -1 }} />
           </>
         ) : (
-          /* Empty pad: clinical rune cross */
-          <View style={{ alignItems: "center", justifyContent: "center" }}>
-            <View style={{ width: 14, height: 3, borderRadius: 2,
-              backgroundColor: canAfford ? selColor + "75" : "#2e2010" }} />
-            <View style={{ position: "absolute", width: 3, height: 14, borderRadius: 2,
-              backgroundColor: canAfford ? selColor + "75" : "#2e2010" }} />
-            {canAfford && (
-              <View style={{ position: "absolute", width: 26, height: 26, borderRadius: 13,
-                borderWidth: 1, borderColor: selColor + "30" }} />
-            )}
+          /* Empty pad: rune spiral rings — ward summoning circle, no plus symbol */
+          <View style={{ alignItems: "center", justifyContent: "center", width: TILE_SIZE, height: TILE_SIZE }}>
+            {/* Outer glow ring */}
+            <View style={{ position: "absolute", width: TILE_SIZE - 4, height: TILE_SIZE - 4,
+              borderRadius: (TILE_SIZE - 4) / 2,
+              borderWidth: 1.5, borderColor: canAfford ? selColor + "88" : "#c8a05055",
+              borderStyle: "dashed" as any }} />
+            {/* Middle ring */}
+            <View style={{ position: "absolute", width: TILE_SIZE - 14, height: TILE_SIZE - 14,
+              borderRadius: (TILE_SIZE - 14) / 2,
+              borderWidth: 1, borderColor: canAfford ? selColor + "55" : "#c8a05033" }} />
+            {/* Center glow dot */}
+            <View style={{ width: 6, height: 6, borderRadius: 3,
+              backgroundColor: canAfford ? selColor + "cc" : "#c8a050aa" }} />
           </View>
         )}
       </Pressable>
@@ -2412,23 +2421,23 @@ export default function WardDefense() {
         const { width, height } = e.nativeEvent.layout;
         setArena({ w: width, h: height });
       }}>
-        {/* Board surface: warm dark stone arena */}
+        {/* Board surface: near-black arena floor — creates maximum contrast with bright stone lane */}
         <LinearGradient
-          colors={["#0c0a06", "#0a0804", "#0d0b07"]}
+          colors={["#060402", "#050302", "#070503"]}
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
         {/* Stone floor tile grid — ward arena diorama */}
         <ArenaFloor aw={arena.w} ah={arena.h} />
-        {/* Ward scene art: full-board ambient backdrop at low opacity */}
+        {/* Ward scene art: full-board ambient backdrop */}
         <View style={s.sceneStrip}>
           <ExpoImage
             source={require("../assets/images/ward_battle_bg.png")}
-            style={[StyleSheet.absoluteFillObject, { opacity: 0.12 }]}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.20 }]}
             contentFit="cover"
           />
           <LinearGradient
-            colors={["#00000000", "#0a080430", "#0a080470"]}
+            colors={["#00000000", "#06040220", "#06040260"]}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
         </View>
@@ -3332,7 +3341,7 @@ const s = StyleSheet.create({
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#0a0804" },
+  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060402" },
   sceneStrip: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     overflow: "hidden", zIndex: 0,
