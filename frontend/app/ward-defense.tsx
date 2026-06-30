@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { WardBoardV2 } from "./ward-defense-v2";
+
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -2416,79 +2418,40 @@ export default function WardDefense() {
         </View>
       </View>
 
-      {/* Arena board — the board IS the scene, ward art only frames it */}
-      <View style={s.ward} onLayout={e => {
-        const { width, height } = e.nativeEvent.layout;
-        setArena({ w: width, h: height });
-      }}>
-        {/* Board surface: near-black arena floor — creates maximum contrast with bright stone lane */}
-        <LinearGradient
-          colors={["#060402", "#050302", "#070503"]}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        {/* Stone floor tile grid — ward arena diorama */}
-        <ArenaFloor aw={arena.w} ah={arena.h} />
-        {/* Ward scene art: full-board ambient backdrop */}
-        <View style={s.sceneStrip}>
-          <ExpoImage
-            source={require("../assets/images/ward_battle_bg.png")}
-            style={[StyleSheet.absoluteFillObject, { opacity: 0.20 }]}
-            contentFit="cover"
-          />
-          <LinearGradient
-            colors={["#00000000", "#06040220", "#06040260"]}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-        </View>
-        {/* Board frame */}
-        <View style={s.boardFrame} pointerEvents="none" />
-
-        {/* Stone lane path — S-curve */}
-        <PathTileRoad aw={arena.w} ah={arena.h} />
-
-        {/* Board endpoints */}
-        <CorruptionPortal aw={arena.w} ah={arena.h} />
-        <VitalLanternShrine stability={gs.stability} aw={arena.w} ah={arena.h} />
-
-        {/* Deployment tiles */}
+      {/* ── Ward Defense V2 Board — Lotus Healing Sanctum ── */}
+      <View style={s.ward}>
         {(() => {
           const mergePair = findMergePair(gs.deployedUnits);
           const mergeTileSet = mergePair
             ? new Set([mergePair[0].tileIndex, mergePair[1].tileIndex])
             : new Set<number>();
-          return DEPLOY_TILES.map((_, i) => (
-            <DeploymentTileView
-              key={i} tileIdx={i}
-              unit={gs.deployedUnits.find(u => u.tileIndex === i)}
-              selectedUnit={selectedUnit}
-              canAfford={gs.ap >= UNIT_DATA[selectedUnit]?.apCost}
-              isMergeCandidate={mergeTileSet.has(i)}
-              onPress={() => deployUnit(i)}
+          const unitColors = Object.fromEntries(
+            Object.entries(UNIT_DATA).map(([k, v]) => [k, v.color])
+          );
+          return (
+            <WardBoardV2
               aw={arena.w} ah={arena.h}
+              onLayout={e => {
+                const { width, height } = e.nativeEvent.layout;
+                setArena({ w: width, h: height });
+              }}
+              enemies={gs.enemies}
+              deployedUnits={gs.deployedUnits}
+              projectiles={gs.projectiles}
+              stability={gs.stability}
+              phase={gs.phase}
+              wave={gs.wave}
+              selectedUnit={selectedUnit}
+              ap={gs.ap}
+              bobY={bobY}
+              spawnQueueLen={gs.spawnQueue.length}
+              mergeTileSet={mergeTileSet}
+              onTilePress={deployUnit}
+              canAfford={gs.ap >= (UNIT_DATA[selectedUnit ?? ""]?.apCost ?? 999)}
+              unitColors={unitColors}
             />
-          ));
+          );
         })()}
-
-        {/* Projectiles */}
-        {gs.projectiles.map(p => (
-          <ProjectileView key={p.uid} p={p} aw={arena.w} ah={arena.h} />
-        ))}
-
-        {/* Enemies on path */}
-        {gs.enemies.map(e => (
-          <EnemyOnPath key={e.uid} enemy={e} bobY={bobY} aw={arena.w} ah={arena.h} />
-        ))}
-
-        {/* Spawn queue warning */}
-        {gs.spawnQueue.length > 0 && (
-          <View style={s.spawnEdge}>
-            <Text style={s.spawnTxt}>⚠ {gs.spawnQueue.length}</Text>
-          </View>
-        )}
-
-        {/* Wave pause overlay */}
-        {gs.phase === "wave_pause" && <WavePauseOverlay wave={gs.wave} />}
       </View>
 
       {/* Feedback strip */}
