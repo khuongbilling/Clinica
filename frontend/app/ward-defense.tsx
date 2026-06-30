@@ -707,19 +707,19 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
    ═══════════════════════════════════════════════════════════════════ */
 type SpriteProps = { hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> };
 
-/* ─── ENEMY SPRITES ─────────────────────────────────────────────────────────
-   Design principles:
-   • Face LEFT (toward healers/board entrance)
-   • Non-circular monster silhouettes — each enemy has a DIFFERENT shape
-   • Directional reaching limbs toward victims
-   • Hollow/sunken/grotesque eyes — NOT cute round emoji eyes
-   • Speed trail on the right (trailing edge)
+/* ─── DISEASE ORGANISM SPRITES ───────────────────────────────────────────────
+   Visual brief: round blob pathogen creatures from image-4 medical fantasy.
+   Each sprite = a spiky/blobby round organism, NOT a humanoid.
+   • All built on a centered 60×60 spike-container with an inner orb
+   • Spikes placed with Math.sin/cos around the orb perimeter
+   • Linear gradient gives the orb volume (highlight top-left → dark bottom-right)
+   • Small cute-but-menacing faces on every orb
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* BREATHLESS WISP — spectral speed spirit: tall teardrop body, hollow sockets, mist tail */
+/* BREATHLESS WISP — silver hollow orb, wispy exhale trails, gasping hollow eyes */
 function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
-  const c    = hitFlash ? "#fff" : "#93c5fd";
-  const dark = "#1e3a8a";
+  const c    = hitFlash ? "#ffffff" : "#bfdbfe";
+  const dark = "#0f2a4a";
   return (
     <Animated.View style={{ alignItems:"center", transform:[{translateY:bobY}] }}>
       {/* SPEED TRAIL — right (trailing edge as it rushes left) */}
