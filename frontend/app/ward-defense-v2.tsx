@@ -36,9 +36,9 @@ const DEPLOY_TILES: [number, number][] = [
 /* ── Illustrated image assets ─────────────────────────────────────────────── */
 const IMG_BOARD = require("../assets/images/ward_board_scene.png");
 const IMG_UNITS: Record<string, any> = {
-  ward_scout:  require("../assets/images/sprite_ward_scout.png"),
-  mist_caster: require("../assets/images/sprite_mist_caster.png"),
-  o2_healer:   require("../assets/images/sprite_o2_healer.png"),
+  ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
+  mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
+  o2_healer:   require("../assets/heroes/battle/novice_guardian.png"),
 };
 const IMG_ENEMIES: Record<string, any> = {
   breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),

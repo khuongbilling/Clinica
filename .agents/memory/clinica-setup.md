@@ -46,17 +46,28 @@ N_SEGS = 3 (4 waypoints - 1)
 [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  // bottom row
 ```
 
-### Sprite assets (all in assets/images/)
-- `sprite_ward_scout.png`, `sprite_mist_caster.png`, `sprite_o2_healer.png` — chibi 2.5D unit sprites
-  - Used for BOTH CARD_PORTRAITS (bottom dock) AND IMG_UNITS (deployed on board) — must stay in sync
-- `enemy_mucus_slime.png`, `enemy_hypoxia_wraith.png`, `enemy_bronchospasm_drake.png`, `enemy_breathless_wisp.png` — disease-spirit enemies
-- `enemy_wheeze_sprite.png` — still used, references old asset/images path
+### Hero identity — Hall of Heroes as source of truth
+- Ward Defense unit slots map to actual Hall of Heroes characters (sprites from `assets/heroes/battle/`):
+  - `ward_scout` → **Apprentice Seer** (Mind/purple `#A78BFA`) — `battle/apprentice_seer.png`
+  - `mist_caster` → **Village Caretaker** (Growth/pink `#F472B6`) — `battle/village_caretaker.png`
+  - `o2_healer` → **Novice Guardian** (River/cyan `#06B6D4`) — `battle/novice_guardian.png`
+- CARD_PORTRAITS and IMG_UNITS both point to `../assets/heroes/battle/*.png` (same path, must stay in sync)
+- Old `sprite_ward_scout/mist_caster/o2_healer.png` in assets/images/ are superseded — do NOT revert
+- **Why:** User requires sprite consistency with Hall of Heroes character identity across all minigames
+- Enemy sprites still in assets/images/ (mucus_slime, hypoxia_wraith, bronchospasm_drake, breathless_wisp, wheeze_sprite)
+
+### AP economy (current values)
+- `INIT_AP = 3`, `MAX_AP = 15`, `AP_REGEN_TICKS = 20` (1 AP per 10 s — passive is secondary)
+- `WAVE_PAUSE_TICKS = 40` (20 s question phase), `KILL_AP_BONUS = 2`, `PREWAVE_AP_BONUS = 8`
+- **Pre-wave NCLEX question is the PRIMARY AP source** — correct answer gives +8 AP
+- Wrong answer gives 0 AP bonus and shows an encouraging error feedback strip
+- **Why:** Educational mechanic must gate deployment; passive AP would let players ignore questions
 
 ### Clinical question panel
 - `CLINICAL_QUESTIONS[]` array of 6 NCLEX airway questions, defined at module level
 - `ClinicalQuestionPanel` component shows during `gs.phase === "wave_pause"` inside `s.ward` View
 - `cqAnswered` state in WardDefense tracks `{ wave, correct }` for current wave's answer
-- Correct answer → +2 AP via `set({ ...s, ap: min(ap+2, MAX_AP), feedbacks: [...] })`
+- Correct answer → +`PREWAVE_AP_BONUS` AP via answerClinQ(); wrong answer → feedback only, no AP
 
 ### VitalLantern positioning
 - Must use `Math.max(4, Math.min(ah - 130, py - 10))` for top — prevents going offscreen when lantern is at top-right (py = small value)

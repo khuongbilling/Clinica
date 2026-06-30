@@ -16,11 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WardBoardV2 } from "./ward-defense-v2";
 
-/* ── Card portrait images — chibi 2.5D rendered sprites for bottom dock ── */
+/* ── Card portrait images — Hall of Heroes battle sprites for bottom dock ── */
 const CARD_PORTRAITS: Record<string, any> = {
-  ward_scout:  require("../assets/images/sprite_ward_scout.png"),
-  mist_caster: require("../assets/images/sprite_mist_caster.png"),
-  o2_healer:   require("../assets/images/sprite_o2_healer.png"),
+  ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
+  mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
+  o2_healer:   require("../assets/heroes/battle/novice_guardian.png"),
 };
 
 import { usePlayer } from "@/src/game/store";
@@ -29,12 +29,13 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 /* ── Tick speed ── */
 const TICK_MS          = 500;
 const MAX_STABILITY    = 100;
-const MAX_AP           = 12;
-const INIT_AP          = 5;
-const AP_REGEN_TICKS   = 3;
-const WAVE_PAUSE_TICKS = 10;
+const MAX_AP           = 15;
+const INIT_AP          = 3;
+const AP_REGEN_TICKS   = 20;   /* 1 AP per 10 s — passive is secondary */
+const WAVE_PAUSE_TICKS = 40;   /* 20 s for pre-wave question phase */
 const SPAWN_GAP_TICKS  = 7;
 const KILL_AP_BONUS    = 2;
+const PREWAVE_AP_BONUS = 8;    /* AP granted for correct pre-wave NCLEX answer */
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
@@ -125,31 +126,31 @@ type UnitDef = {
 
 const UNIT_DATA: Record<string, UnitDef> = {
   ward_scout: {
-    name: "Ward Scout", color: "#60A5FA",
+    name: "Apprentice Seer", color: "#A78BFA",
     apCost: 3, damage: 19, attackSpeed: 2, range: 0.31,
     aoe: false, category: "ASSESS",
     strong: ["breathless_wisp", "wheeze_sprite"],
     weak:   ["mucus_slime", "bronchospasm_drake"],
     concept: "Auscultation identifies respiratory cues — assess before treating.",
-    flavor: "Quick-eyed healer trained to spot airway patterns early.",
+    flavor: "Mind-element assessor who reads vital signs with uncanny clarity.",
   },
   mist_caster: {
-    name: "Mist Caster", color: "#F59E0B",
+    name: "Village Caretaker", color: "#F472B6",
     apCost: 5, damage: 38, attackSpeed: 4, range: 0.25,
     aoe: false, category: "TREAT",
     strong: ["wheeze_sprite", "bronchospasm_drake"],
     weak:   ["hypoxia_wraith", "mucus_slime"],
     concept: "Bronchodilators relax airway smooth muscle — first-line for bronchospasm.",
-    flavor: "Pharmacist-mage who conjures targeted bronchodilator mist.",
+    flavor: "Growth-element educator who soothes airway spirits with healing mist.",
   },
   o2_healer: {
-    name: "O₂ Healer", color: "#34D399",
+    name: "Novice Guardian", color: "#06B6D4",
     apCost: 4, damage: 22, attackSpeed: 3, range: 0.29,
     aoe: true, category: "SUPPORT",
     strong: ["hypoxia_wraith", "mucus_slime"],
     weak:   ["breathless_wisp", "bronchospasm_drake"],
     concept: "O₂ corrects hypoxemia; positioning aids secretion drainage.",
-    flavor: "Oxygenation and positioning specialist.",
+    flavor: "River-element stabilizer whose oxygenation aura shields the whole ward.",
   },
 };
 const UNIT_TYPES = Object.keys(UNIT_DATA);
@@ -2082,10 +2083,13 @@ export default function WardDefense() {
     const q = CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length];
     const correct = optIdx === q.correct;
     setCqAnswered({ wave: gs.wave, correct });
+    const s = gsRef.current;
     if (correct) {
-      const s = gsRef.current;
-      set({ ...s, ap: Math.min(s.ap + 2, MAX_AP),
-        feedbacks: [{ id: String(Date.now()), text: "+2 AP · Clinical reasoning! ⚕", color: "#22d3ee", quality: "bonus" as any, ticks: 8 }, ...s.feedbacks.slice(0, 1)] });
+      set({ ...s, ap: Math.min(s.ap + PREWAVE_AP_BONUS, MAX_AP),
+        feedbacks: [{ id: String(Date.now()), text: `+${PREWAVE_AP_BONUS} AP · Clinical reasoning! ⚕`, color: "#22d3ee", quality: "bonus" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
+    } else {
+      set({ ...s,
+        feedbacks: [{ id: String(Date.now()), text: "✗ Study the rationale — no AP bonus.", color: "#f87171", quality: "weak" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
     }
   }
 
@@ -2432,7 +2436,7 @@ export default function WardDefense() {
         <View style={s.hudWave}>
           <Text style={s.hudKicker}>AIRWAY WARD</Text>
           {gs.phase === "wave_pause" ? (
-            <Text style={[s.hudWaveTxt, { color: COLORS.air }]}>↺ Prep…</Text>
+            <Text style={[s.hudWaveTxt, { color: COLORS.air }]}>⚕ Answer → Earn AP</Text>
           ) : waveDef.isBoss ? (
             <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ BOSS</Text>
           ) : (
@@ -2591,15 +2595,21 @@ function ClinicalQuestionPanel({
       <View style={{ borderRadius: 16, borderWidth: 1.5, borderColor: "#22d3ee40",
         padding: 14 }}>
         {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
           <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: "#22d3ee" }}/>
-          <Text style={{ color: "#22d3ee", fontSize: 8, fontWeight: "800", letterSpacing: 1.2 }}>
-            CLINICAL CUE
-          </Text>
+          <View>
+            <Text style={{ color: "#22d3ee", fontSize: 8, fontWeight: "800", letterSpacing: 1.2 }}>
+              PRE-WAVE CLINICAL QUESTION
+            </Text>
+            <Text style={{ color: "#64748b", fontSize: 7, fontWeight: "600", letterSpacing: 0.5, marginTop: 1 }}>
+              Answer correctly to earn deployment AP for this wave
+            </Text>
+          </View>
           <View style={{ flex: 1 }}/>
-          <View style={{ backgroundColor: "#22d3ee22", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
-            borderWidth: 1, borderColor: "#22d3ee55" }}>
-            <Text style={{ color: "#22d3ee", fontSize: 7.5, fontWeight: "800" }}>+2 AP</Text>
+          <View style={{ backgroundColor: "#22d3ee22", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
+            borderWidth: 1.5, borderColor: "#22d3ee88", alignItems: "center" }}>
+            <Text style={{ color: "#22d3ee", fontSize: 11, fontWeight: "900" }}>+8</Text>
+            <Text style={{ color: "#22d3ee99", fontSize: 6.5, fontWeight: "700", letterSpacing: 0.5 }}>AP</Text>
           </View>
         </View>
 
@@ -2616,7 +2626,7 @@ function ClinicalQuestionPanel({
           }}>
             <Text style={{ color: answeredCorrect ? "#34d399" : "#f87171",
               fontSize: 10, fontWeight: "800", marginBottom: 3 }}>
-              {answeredCorrect ? "✓  Correct! +2 AP earned." : "✗  Not quite — review below."}
+              {answeredCorrect ? `✓  Correct! +${PREWAVE_AP_BONUS} AP earned for this wave.` : "✗  Not quite — no AP bonus. Review below."}
             </Text>
             <Text style={{ color: "#94a3b8", fontSize: 9.5, lineHeight: 13.5 }}>
               {question.rationale}
