@@ -16,11 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WardBoardV2 } from "./ward-defense-v2";
 
-/* ── Card portrait images — rendered chibi art for the bottom deploy dock ── */
+/* ── Card portrait images — hero portraits for the bottom deploy dock ── */
 const CARD_PORTRAITS: Record<string, any> = {
-  ward_scout:  require("../assets/images/card_ward_scout.png"),
-  mist_caster: require("../assets/images/card_mist_caster.png"),
-  o2_healer:   require("../assets/images/card_o2_healer.png"),
+  ward_scout:  require("../assets/heroes/novice_guardian.png"),
+  mist_caster: require("../assets/heroes/apprentice_seer.png"),
+  o2_healer:   require("../assets/heroes/village_caretaker.png"),
 };
 
 import { usePlayer } from "@/src/game/store";

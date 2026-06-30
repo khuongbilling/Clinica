@@ -13,9 +13,10 @@
  */
 import React from "react";
 import {
-  View, Text, Image, Animated, Pressable,
+  View, Text, Animated, Pressable,
   StyleSheet, LayoutChangeEvent,
 } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
 /* ── Path + tile constants — must mirror ward-defense.tsx ─────────────────── */
@@ -36,9 +37,9 @@ const DEPLOY_TILES: [number, number][] = [
 /* ── Illustrated image assets ─────────────────────────────────────────────── */
 const IMG_BOARD = require("../assets/images/ward_board_scene.png");
 const IMG_UNITS: Record<string, any> = {
-  ward_scout:  require("../assets/images/sprite_ward_scout.png"),
-  mist_caster: require("../assets/images/sprite_mist_caster.png"),
-  o2_healer:   require("../assets/images/sprite_o2_healer.png"),
+  ward_scout:  require("../assets/heroes/battle/novice_guardian.png"),
+  mist_caster: require("../assets/heroes/battle/apprentice_seer.png"),
+  o2_healer:   require("../assets/heroes/battle/village_caretaker.png"),
 };
 const IMG_ENEMIES: Record<string, any> = {
   breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),
@@ -134,11 +135,12 @@ function BoardScene({ aw, ah, imgBounds: b }: { aw: number; ah: number; imgBound
         style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]}
       />
 
-      {/* Illustrated board background — CONTAIN keeps full scene visible */}
-      <Image
+      {/* Illustrated board background — expo-image contentFit="contain" is reliable on web */}
+      <ExpoImage
         source={IMG_BOARD}
         style={StyleSheet.absoluteFillObject}
-        resizeMode="contain"
+        contentFit="contain"
+        contentPosition="center"
       />
 
       {/* Path direction arrows — aligned to image content */}
@@ -354,11 +356,11 @@ function DeployPad({ tileIdx, unit, selectedUnit, canAfford, isMergeCandidate, o
               backgroundColor: "#FFD70015", zIndex: 15,
             }}/>
           )}
-          {/* Deployed board sprite — illustrated chibi character image */}
-          <Image
+          {/* Deployed board sprite — hero battle sprite */}
+          <ExpoImage
             source={IMG_UNITS[unit.typeId] ?? IMG_UNITS.ward_scout}
             style={{ width: 54, height: 66 }}
-            resizeMode="contain"
+            contentFit="contain"
           />
           <View style={{
             width: 40, height: 6, borderRadius: 20,
@@ -489,7 +491,7 @@ function EnemyOnPath({
 
       {/* Illustrated enemy sprite */}
       {img ? (
-        <Image source={img} style={{ width: sprW, height: sprH }} resizeMode="contain" />
+        <ExpoImage source={img} style={{ width: sprW, height: sprH }} contentFit="contain" />
       ) : (
         <View style={{
           width: sprW, height: sprH, borderRadius: sprW / 2,
