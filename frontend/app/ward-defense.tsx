@@ -314,57 +314,136 @@ function calcRewards(won: boolean, stability: number) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   PATH ROAD — renders the S-curve enemy corridor on the board
+   BOARD GRID — subtle cell-line overlay making the board read as a
+   tactical game field rather than a scenic background
    ═══════════════════════════════════════════════════════════════════ */
-function PathRoad({ aw, ah }: { aw: number; ah: number }) {
+function BoardGrid({ aw, ah }: { aw: number; ah: number }) {
+  if (aw < 20 || ah < 20) return null;
+  const CELL = 30;
+  const cols = Math.ceil(aw / CELL) + 1;
+  const rows = Math.ceil(ah / CELL) + 1;
+  return (
+    <>
+      {Array.from({ length: rows }, (_, i) => (
+        <View key={`h${i}`} style={{
+          position: "absolute", left: 0, top: i * CELL,
+          width: aw, height: 1,
+          backgroundColor: "#4a88c8", opacity: 0.10, zIndex: 0,
+        }} />
+      ))}
+      {Array.from({ length: cols }, (_, i) => (
+        <View key={`v${i}`} style={{
+          position: "absolute", top: 0, left: i * CELL,
+          width: 1, height: ah,
+          backgroundColor: "#4a88c8", opacity: 0.10, zIndex: 0,
+        }} />
+      ))}
+      {/* Corner accent dots at every other intersection */}
+      {Array.from({ length: Math.ceil(rows / 2) }, (_, r) =>
+        Array.from({ length: Math.ceil(cols / 2) }, (_, c) => (
+          <View key={`d${r}_${c}`} style={{
+            position: "absolute",
+            left: c * CELL * 2 - 1, top: r * CELL * 2 - 1,
+            width: 2.5, height: 2.5, borderRadius: 1.5,
+            backgroundColor: "#4a88c8", opacity: 0.22, zIndex: 0,
+          }} />
+        ))
+      )}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PATH TILE ROAD — S-curve rendered as individual paving-stone tiles
+   giving a board-game "road" feel rather than a painted corridor
+   ═══════════════════════════════════════════════════════════════════ */
+function PathTileRoad({ aw, ah }: { aw: number; ah: number }) {
   if (aw < 20 || ah < 20) return null;
 
-  const segs = PATH_WPS.slice(0, -1).map((wp, i) => {
-    const [x1, y1] = [wp[0] * aw, wp[1] * ah];
-    const [x2, y2] = [PATH_WPS[i + 1][0] * aw, PATH_WPS[i + 1][1] * ah];
+  const TILE_ALONG = 22;
+  const TILE_GAP   = 5;
+  const STEP = TILE_ALONG + TILE_GAP;
+
+  const tiles: { cx: number; cy: number; angle: number; seg: number }[] = [];
+  for (let seg = 0; seg < N_SEGS; seg++) {
+    const from = PATH_WPS[seg], to = PATH_WPS[seg + 1];
+    const x1 = from[0] * aw, y1 = from[1] * ah;
+    const x2 = to[0] * aw,   y2 = to[1] * ah;
     const dx = x2 - x1, dy = y2 - y1;
-    const len = Math.sqrt(dx * dx + dy * dy);
+    const segLen = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    return { cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, len, angle };
-  });
+    const n = Math.max(1, Math.floor(segLen / STEP));
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      tiles.push({ cx: x1 + dx * t, cy: y1 + dy * t, angle, seg });
+    }
+  }
 
   return (
     <>
-      {/* Road fill */}
-      {segs.map((seg, i) => (
-        <View key={`r${i}`} style={{
-          position: "absolute",
-          left: seg.cx - seg.len / 2, top: seg.cy - ROAD_W / 2,
-          width: seg.len, height: ROAD_W,
-          backgroundColor: "#06121e",
-          borderTopWidth: 1.5, borderBottomWidth: 1.5,
-          borderColor: "#60A5FA25",
-          transform: [{ rotate: `${seg.angle}deg` }],
-          zIndex: 1,
-        }} />
-      ))}
-      {/* Glow tint alternating */}
-      {segs.map((seg, i) => (
-        <View key={`g${i}`} style={{
-          position: "absolute",
-          left: seg.cx - seg.len / 2, top: seg.cy - ROAD_W / 2,
-          width: seg.len, height: ROAD_W,
-          backgroundColor: i % 2 === 0 ? "#60A5FA07" : "#34D39907",
-          transform: [{ rotate: `${seg.angle}deg` }],
-          zIndex: 1,
-        }} />
-      ))}
-      {/* Corner joints at interior waypoints */}
+      {/* Dark road base per segment (solid fill behind tiles) */}
+      {PATH_WPS.slice(0, -1).map((wp, seg) => {
+        const to = PATH_WPS[seg + 1];
+        const x1 = wp[0] * aw, y1 = wp[1] * ah;
+        const x2 = to[0] * aw, y2 = to[1] * ah;
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        return (
+          <View key={`base${seg}`} style={{
+            position: "absolute",
+            left: (x1 + x2) / 2 - len / 2,
+            top:  (y1 + y2) / 2 - (ROAD_W + 2) / 2,
+            width: len, height: ROAD_W + 2,
+            backgroundColor: "#040c18",
+            transform: [{ rotate: `${angle}deg` }], zIndex: 1,
+          }} />
+        );
+      })}
+      {/* Corner junction fillers */}
       {PATH_WPS.slice(1, -1).map(([fx, fy], i) => (
-        <View key={`c${i}`} style={{
+        <View key={`corner${i}`} style={{
           position: "absolute",
-          left: fx * aw - ROAD_W / 2, top: fy * ah - ROAD_W / 2,
-          width: ROAD_W, height: ROAD_W, borderRadius: ROAD_W / 2,
-          backgroundColor: "#06121e",
-          borderWidth: 1.5, borderColor: "#60A5FA28",
-          zIndex: 1,
+          left: fx * aw - (ROAD_W + 2) / 2,
+          top:  fy * ah - (ROAD_W + 2) / 2,
+          width: ROAD_W + 2, height: ROAD_W + 2, borderRadius: (ROAD_W + 2) / 2,
+          backgroundColor: "#040c18", zIndex: 1,
         }} />
       ))}
+      {/* Individual paving-stone tiles */}
+      {tiles.map((tile, i) => (
+        <View key={`tile${i}`} style={{
+          position: "absolute",
+          left: tile.cx - TILE_ALONG / 2,
+          top:  tile.cy - ROAD_W / 2,
+          width: TILE_ALONG, height: ROAD_W,
+          backgroundColor: tile.seg % 2 === 0 ? "#0d1e36" : "#0c1c32",
+          borderWidth: 1,
+          borderColor: "#2a5070",
+          borderRadius: 3,
+          transform: [{ rotate: `${tile.angle}deg` }], zIndex: 2,
+        }} />
+      ))}
+      {/* Center glow line per segment — directional visual cue */}
+      {PATH_WPS.slice(0, -1).map((wp, seg) => {
+        const to = PATH_WPS[seg + 1];
+        const x1 = wp[0] * aw, y1 = wp[1] * ah;
+        const x2 = to[0] * aw, y2 = to[1] * ah;
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        const glowColor = seg % 2 === 0 ? "#60A5FA" : "#34D399";
+        return (
+          <View key={`glow${seg}`} style={{
+            position: "absolute",
+            left: (x1 + x2) / 2 - len / 2,
+            top:  (y1 + y2) / 2 - 1.5,
+            width: len, height: 3,
+            backgroundColor: glowColor + "40",
+            transform: [{ rotate: `${angle}deg` }], zIndex: 3,
+          }} />
+        );
+      })}
     </>
   );
 }
@@ -760,6 +839,11 @@ function EnemyOnPath({
         marginTop: 2, overflow: "hidden" }}>
         <View style={{ width: `${hpPct}%` as any, height: "100%", borderRadius: 2, backgroundColor: def.color }} />
       </View>
+      {/* Ground shadow — anchors enemy visually on the board surface */}
+      <View style={{
+        width: isBoss ? 46 : 28, height: 5, borderRadius: 3,
+        backgroundColor: "#000000aa", marginTop: 1,
+      }} />
       {/* Slow indicator */}
       {enemy.slowTicks > 0 && (
         <View style={{ position: "absolute", top: -4, right: -8,
@@ -783,39 +867,97 @@ function DeploymentTileView({
   const selColor = UNIT_DATA[selectedUnit]?.color ?? "#60A5FA";
   const isOccupied = !!unit;
   const unitColor = isOccupied ? UNIT_DATA[unit!.typeId].color : selColor;
+  const isZoneA = tileIdx < 3;
+  const isFirstInZone = tileIdx === 0 || tileIdx === 3;
+  const cornerColor = isOccupied ? unitColor : canAfford ? selColor : "#2a4a6a";
 
   return (
-    <Pressable
-      style={{
-        position: "absolute",
-        left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2,
-        width: TILE_SIZE, height: TILE_SIZE,
-        borderRadius: 10,
-        backgroundColor: isOccupied ? unitColor + "18" : canAfford ? selColor + "14" : "#0a182888",
-        borderWidth: isOccupied ? 2 : 1.5,
-        borderColor: isOccupied ? unitColor + "70" : canAfford ? selColor + "55" : "#1a3050",
-        alignItems: "center", justifyContent: "center", zIndex: 4,
-      }}
-      onPress={onPress}
-    >
-      {isOccupied ? (
-        <>
-          <UnitSprite typeId={unit!.typeId} castFlash={unit!.castFlash > 0} />
-          {/* Range ring (faint) */}
-          <View style={{ position: "absolute", width: UNIT_DATA[unit!.typeId].range * 2 * aw,
-            height: UNIT_DATA[unit!.typeId].range * 2 * aw,
-            borderRadius: UNIT_DATA[unit!.typeId].range * aw,
-            borderWidth: 1, borderColor: unitColor + "15",
-            backgroundColor: unitColor + "05", zIndex: -1 }} />
-        </>
-      ) : (
-        <View style={{ alignItems: "center", justifyContent: "center" }}>
-          {/* Tile rune cross */}
-          <View style={{ width: 10, height: 2.5, borderRadius: 1.5, backgroundColor: selColor + (canAfford ? "45" : "20") }} />
-          <View style={{ position: "absolute", width: 2.5, height: 10, borderRadius: 1.5, backgroundColor: selColor + (canAfford ? "45" : "20") }} />
+    <>
+      {/* Zone label — first tile of each zone only */}
+      {isFirstInZone && (
+        <View style={{
+          position: "absolute",
+          left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2 - 13,
+          zIndex: 5,
+        }}>
+          <Text style={{ color: "#2a5888", fontSize: 6.5, fontWeight: "700", letterSpacing: 1.5 }}>
+            {isZoneA ? "ZONE A" : "ZONE B"}
+          </Text>
         </View>
       )}
-    </Pressable>
+
+      {/* The tile cell */}
+      <Pressable
+        style={{
+          position: "absolute",
+          left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2,
+          width: TILE_SIZE, height: TILE_SIZE,
+          borderRadius: 7,
+          backgroundColor: isOccupied
+            ? unitColor + "22"
+            : canAfford
+              ? "#0d1e36"
+              : "#080e1c",
+          borderWidth: isOccupied ? 2 : 1.5,
+          borderColor: isOccupied
+            ? unitColor + "99"
+            : canAfford
+              ? selColor + "77"
+              : "#1e3a5a",
+          alignItems: "center", justifyContent: "center", zIndex: 4,
+        }}
+        onPress={onPress}
+      >
+        {/* Corner accent markers — makes it read as a distinct board cell */}
+        {[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([dy, dx], i) => (
+          <View key={i} style={{
+            position: "absolute",
+            top:    dy < 0 ? 3 : undefined,
+            bottom: dy > 0 ? 3 : undefined,
+            left:   dx < 0 ? 3 : undefined,
+            right:  dx > 0 ? 3 : undefined,
+            width: 5, height: 5, borderRadius: 1.5,
+            backgroundColor: cornerColor,
+            opacity: isOccupied ? 0.6 : canAfford ? 0.55 : 0.25,
+          }} />
+        ))}
+
+        {isOccupied ? (
+          <>
+            {/* Category badge */}
+            <View style={{ position: "absolute", top: 3, right: 3,
+              backgroundColor: unitColor + "35", borderRadius: 3, paddingHorizontal: 3 }}>
+              <Text style={{ color: unitColor, fontSize: 5.5, fontWeight: "700" }}>
+                {UNIT_DATA[unit!.typeId].category.slice(0, 3)}
+              </Text>
+            </View>
+            {/* Drop shadow beneath sprite — grounds unit on tile */}
+            <View style={{ position: "absolute", bottom: 5, width: TILE_SIZE - 16, height: 5,
+              borderRadius: 3, backgroundColor: "#00000070" }} />
+            <UnitSprite typeId={unit!.typeId} castFlash={unit!.castFlash > 0} />
+            {/* Attack range ring */}
+            <View style={{ position: "absolute",
+              width: UNIT_DATA[unit!.typeId].range * 2 * aw,
+              height: UNIT_DATA[unit!.typeId].range * 2 * aw,
+              borderRadius: UNIT_DATA[unit!.typeId].range * aw,
+              borderWidth: 1, borderColor: unitColor + "18",
+              backgroundColor: unitColor + "04", zIndex: -1 }} />
+          </>
+        ) : (
+          /* Empty tile: rune cross + tap hint */
+          <View style={{ alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 13, height: 3, borderRadius: 2,
+              backgroundColor: canAfford ? selColor + "60" : "#1e3a5a" }} />
+            <View style={{ position: "absolute", width: 3, height: 13, borderRadius: 2,
+              backgroundColor: canAfford ? selColor + "60" : "#1e3a5a" }} />
+            {canAfford && (
+              <View style={{ position: "absolute", width: 26, height: 26, borderRadius: 13,
+                borderWidth: 1, borderColor: selColor + "22" }} />
+            )}
+          </View>
+        )}
+      </Pressable>
+    </>
   );
 }
 
@@ -827,12 +969,16 @@ function ProjectileView({
   return (
     <View style={{
       position: "absolute",
-      left: cx - 4, top: cy - 4,
-      width: 8, height: 8, borderRadius: 4,
-      backgroundColor: p.color,
-      opacity: 0.9 + p.progress * 0.1,
+      left: cx - 7, top: cy - 7,
+      width: 14, height: 14, borderRadius: 7,
+      backgroundColor: p.color + "55",
+      borderWidth: 1.5, borderColor: p.color,
+      alignItems: "center", justifyContent: "center",
       zIndex: 10,
-    }} />
+    }}>
+      {/* Bright core */}
+      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#ffffff" }} />
+    </View>
   );
 }
 
@@ -1314,25 +1460,36 @@ export default function WardDefense() {
         </View>
       </View>
 
-      {/* Arena board */}
+      {/* Arena board — the board IS the scene, ward art only frames it */}
       <View style={s.ward} onLayout={e => {
         const { width, height } = e.nativeEvent.layout;
         setArena({ w: width, h: height });
       }}>
-        {/* Illustrated background */}
-        <ExpoImage
-          source={require("../assets/images/ward_battle_bg.png")}
-          style={StyleSheet.absoluteFillObject}
-          contentFit="cover"
-        />
-        {/* Dark board overlay for readability */}
+        {/* Board surface: dark tactical game field */}
         <LinearGradient
-          colors={["#00000045", "#00000028"]}
+          colors={["#060d1c", "#050b16", "#07101f"]}
+          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
+        {/* Subtle cell grid — board reads as a tactical grid */}
+        <BoardGrid aw={arena.w} ah={arena.h} />
+        {/* Ward scene art: narrow horizon strip only, fading into board */}
+        <View style={s.sceneStrip}>
+          <ExpoImage
+            source={require("../assets/images/ward_battle_bg.png")}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.38 }]}
+            contentFit="cover"
+          />
+          <LinearGradient
+            colors={["#00000000", "#060d1c"]}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+        </View>
+        {/* Board frame */}
+        <View style={s.boardFrame} pointerEvents="none" />
 
         {/* Path road S-curve */}
-        <PathRoad aw={arena.w} ah={arena.h} />
+        <PathTileRoad aw={arena.w} ah={arena.h} />
 
         {/* Board endpoints */}
         <CorruptionGate aw={arena.w} ah={arena.h} />
@@ -1690,7 +1847,16 @@ const s = StyleSheet.create({
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, overflow: "hidden", position: "relative" },
+  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060d1c" },
+  sceneStrip: {
+    position: "absolute", top: 0, left: 0, right: 0, height: 58,
+    overflow: "hidden", zIndex: 0,
+  },
+  boardFrame: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    borderWidth: 1.5, borderColor: "#1e4070",
+    opacity: 0.35, zIndex: 0,
+  },
   spawnEdge: {
     position: "absolute", right: 10, top: "40%",
     backgroundColor: "#2c0a0a", borderRadius: 6,
