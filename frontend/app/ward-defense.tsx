@@ -2287,7 +2287,8 @@ const WINDWAY_CASE = {
 
 /* ── Roadmap data ──────────────────────────────────────────────────────────── */
 const ROADMAP_ITEMS = [
-  { status: "next",   icon: "📜", label: "Post-battle Clinical Translation Summary",  desc: "Translate each defeated enemy into a plain clinical concept after battle." },
+  { status: "done",   icon: "📜", label: "Post-battle Clinical Translation Summary",  desc: "Connects the fantasy battle back to medical learning — cues, priority threat, correct matches, reassessment, common trap, codex progress." },
+  { status: "done",   icon: "🌀", label: "Translation Codex + Case Intro (Step 1)",  desc: "Windway Curse codex entry and 'The Windway Curse' case briefing before battle." },
   { status: "next",   icon: "🏰", label: "Ward Realm Framing",                       desc: "Each ward becomes a fantasy realm — Airway Ward, Cardiac Citadel, Neuro Spire." },
   { status: "coming", icon: "🦸", label: "Hero Learning Roles",                       desc: "Unlock specialisations: Airway Sentinel, Medication Alchemist, Neuro Scout." },
   { status: "coming", icon: "⚗️",  label: "Apothecary Lab Preview",                  desc: "Craft care items from battle drops. Combine materials into ability upgrades." },
@@ -2568,13 +2569,18 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
           {mapExpanded && (
             <View style={{ marginTop:14, gap:8 }}>
               {ROADMAP_ITEMS.map((item, i) => {
-                const statusColor = item.status === "next" ? "#34d399"
-                  : item.status === "coming" ? "#f59e0b" : "#475569";
-                const statusLabel = item.status === "next" ? "UP NEXT"
-                  : item.status === "coming" ? "COMING SOON" : "LOCKED";
+                const statusColor =
+                  item.status === "done"   ? "#60a5fa" :
+                  item.status === "next"   ? "#34d399" :
+                  item.status === "coming" ? "#f59e0b" : "#475569";
+                const statusLabel =
+                  item.status === "done"   ? "✦ SHIPPED" :
+                  item.status === "next"   ? "UP NEXT"   :
+                  item.status === "coming" ? "COMING SOON" : "LOCKED";
                 return (
                   <View key={i} style={{ flexDirection:"row", gap:10, alignItems:"flex-start",
-                    backgroundColor:"#0a1628", borderRadius:10, padding:12,
+                    backgroundColor: item.status === "done" ? "#070f1e" : "#0a1628",
+                    borderRadius:10, padding:12,
                     borderWidth:1, borderColor:statusColor+"28",
                     opacity: item.status === "locked" ? 0.6 : 1 }}>
                     <Text style={{ fontSize:18, marginTop:1 }}>{item.icon}</Text>
@@ -2757,6 +2763,8 @@ function ResultScreen({
           </View>
         )}
 
+        <ClinicalTranslationSummary learningStats={learningStats} won={won} />
+
         <Text style={s.scoreLine}>Total clinical impact: {score}</Text>
 
         <Pressable style={s.enterBtn} onPress={onReplay}>
@@ -2769,6 +2777,258 @@ function ResultScreen({
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLINICAL TRANSLATION SUMMARY
+   Connects the fantasy battle back to medical learning.
+   Appears after every Ward Defense run (win or lose).
+   Safe educational wording throughout — no prescribing guidance.
+   ═══════════════════════════════════════════════════════════════════ */
+function ClinicalTranslationSummary({
+  learningStats, won,
+}: { learningStats: LearningStats; won: boolean }) {
+  const [open, setOpen] = useState(true);
+
+  /* ── Derive what happened from learningStats ─────────────────── */
+  const m = learningStats.enemyMastery;
+
+  /* Which airway-narrowing enemies were defeated correctly */
+  const wheezeCorrect = m.wheeze_sprite?.correctDefeated ?? false;
+  const drakeCorrect  = m.bronchospasm_drake?.correctDefeated ?? false;
+  const hypoxiaHit    = m.hypoxia_wraith?.defeated ?? false;
+  const hypoxiaCorrect= m.hypoxia_wraith?.correctDefeated ?? false;
+
+  /* Codex mastery score 0–4 */
+  const masteryScore =
+    (wheezeCorrect ? 1 : 0) +
+    (drakeCorrect  ? 1 : 0) +
+    (hypoxiaCorrect ? 1 : 0) +
+    (learningStats.reassessUses > 0 ? 1 : 0);
+
+  const codexLabel =
+    masteryScore >= 4 ? "MASTERED" :
+    masteryScore >= 2 ? "PROGRESSING" :
+    masteryScore >= 1 ? "UNLOCKED"  : "ENCOUNTERED";
+
+  const codexColor =
+    masteryScore >= 4 ? "#34d399" :
+    masteryScore >= 2 ? "#f59e0b" :
+    masteryScore >= 1 ? "#a78bfa" : "#475569";
+
+  /* Build correct-match sentences dynamically */
+  const matchLines: { icon: string; text: string; color: string }[] = [];
+  if (wheezeCorrect || drakeCorrect) {
+    const targets = [
+      wheezeCorrect && "Wheeze Sprite",
+      drakeCorrect  && "Bronchospasm Drake",
+    ].filter(Boolean).join(" and ");
+    matchLines.push({
+      icon: "🌀",
+      color: "#f59e0b",
+      text: `Mist Caster's Bronchodilator Mist matched well against ${targets} — in this simulation, those spirits represent airway-narrowing patterns.`,
+    });
+  }
+  if (hypoxiaCorrect) {
+    matchLines.push({
+      icon: "💧",
+      color: "#34d399",
+      text: "O₂ Healer matched Hypoxia Wraith — in this simulation, that spirit represents oxygenation concern.",
+    });
+  }
+  if (matchLines.length === 0) {
+    /* Generic fallback if no correct defeats */
+    matchLines.push({
+      icon: "💡",
+      color: "#60a5fa",
+      text: "In this simulation, Mist Caster's Bronchodilator Mist works best against airway-narrowing spirits (Wheeze Sprite, Bronchospasm Drake). O₂ Healer supports oxygenation threats.",
+    });
+  }
+
+  /* ── Section content ─────────────────────────────────────────── */
+  const sections = [
+    {
+      key: "cues",
+      icon: "👁",
+      label: "CUES RECOGNIZED",
+      color: "#60a5fa",
+      bg: "#0a1e36",
+      border: "#1e3a6e",
+      body: (
+        <View style={{ flexDirection:"row", flexWrap:"wrap", gap:5, marginTop:5 }}>
+          {[
+            "Wheezing",
+            "Fast breathing",
+            "Anxious posture",
+            "Dim oxygen glow",
+            "Oxygenation concern",
+          ].map(cue => (
+            <View key={cue} style={{ backgroundColor:"#60a5fa20", borderRadius:5,
+              paddingHorizontal:8, paddingVertical:3 }}>
+              <Text style={{ color:"#93c5fd", fontSize:10.5, fontWeight:"600" }}>{cue}</Text>
+            </View>
+          ))}
+        </View>
+      ),
+    },
+    {
+      key: "priority",
+      icon: "⚠️",
+      label: "PRIORITY THREAT",
+      color: "#c4b5fd",
+      bg: "#130a2a",
+      border: "#3b1d8a",
+      body: (
+        <Text style={{ color:"#94a3b8", fontSize:11.5, lineHeight:18, marginTop:5 }}>
+          {hypoxiaHit
+            ? "The Hypoxia Wraith threatened the Vital Lantern and represents oxygenation risk in this simulation. Oxygenation threats prioritised — recognised."
+            : "The Hypoxia Wraith represents oxygenation risk. In future runs, prioritise oxygenation threats to protect the Vital Lantern."}
+        </Text>
+      ),
+    },
+    {
+      key: "matches",
+      icon: "✦",
+      label: "CORRECT MATCHES",
+      color: "#34d399",
+      bg: "#071a12",
+      border: "#134d34",
+      body: (
+        <View style={{ gap:7, marginTop:5 }}>
+          {matchLines.map((ml, i) => (
+            <View key={i} style={{ flexDirection:"row", gap:8, alignItems:"flex-start" }}>
+              <Text style={{ fontSize:13, marginTop:1 }}>{ml.icon}</Text>
+              <Text style={{ color:"#94a3b8", fontSize:11, lineHeight:17, flex:1 }}>
+                <Text style={{ color:ml.color, fontWeight:"700" }}>Match — </Text>
+                {ml.text}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ),
+    },
+    {
+      key: "reassess",
+      icon: "🔄",
+      label: "REASSESSMENT",
+      color: "#ec4899",
+      bg: "#1a0820",
+      border: "#6d1f54",
+      body: (
+        <Text style={{ color:"#94a3b8", fontSize:11.5, lineHeight:18, marginTop:5 }}>
+          {learningStats.reassessUses > 0
+            ? `You reassessed ×${learningStats.reassessUses} — evaluating whether breathing effort, wheeze, or oxygen glow improved after each care action. Reassessment closes the clinical loop.`
+            : "Reassessment wasn't used this run. After each care action, reassess whether breathing effort, wheeze, or oxygen glow improved — that's how the loop closes."}
+        </Text>
+      ),
+    },
+    {
+      key: "trap",
+      icon: "⚡",
+      label: "COMMON TRAP",
+      color: "#f97316",
+      bg: "#1a0c04",
+      border: "#7c3412",
+      body: (
+        <Text style={{ color:"#fdba74", fontSize:11.5, lineHeight:18, marginTop:5 }}>
+          Oxygen supports stability, but may not resolve airway narrowing on its own. In this simulation, the Bronchodilator Mist is the targeted match for airway-narrowing spirits — pairing both covers more of the clinical picture.
+        </Text>
+      ),
+    },
+  ] as const;
+
+  /* ── Render ──────────────────────────────────────────────────── */
+  return (
+    <View style={{ marginHorizontal:16, marginBottom:16 }}>
+      {/* Header — tap to collapse */}
+      <Pressable
+        onPress={() => setOpen(v => !v)}
+        style={{ flexDirection:"row", alignItems:"center", gap:8,
+          backgroundColor:"#0a1628", borderRadius:12,
+          borderWidth:1.5, borderColor:"#1e3a5f",
+          paddingHorizontal:14, paddingVertical:10,
+          borderBottomLeftRadius: open ? 0 : 12,
+          borderBottomRightRadius: open ? 0 : 12 }}>
+        <Text style={{ fontSize:16 }}>📜</Text>
+        <View style={{ flex:1 }}>
+          <Text style={{ color:"#a78bfa", fontSize:8, fontWeight:"700",
+            letterSpacing:1.2 }}>WINDWAY CURSE · AIRWAY TRANSLATION</Text>
+          <Text style={{ color:"#e2e8f0", fontSize:13, fontWeight:"800", marginTop:1 }}>
+            Clinical Translation Summary
+          </Text>
+        </View>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={14} color="#475569" />
+      </Pressable>
+
+      {open && (
+        <View style={{ backgroundColor:"#060f1e", borderWidth:1.5, borderTopWidth:0,
+          borderColor:"#1e3a5f", borderBottomLeftRadius:12, borderBottomRightRadius:12,
+          padding:12, gap:10 }}>
+
+          {/* Narrative intro */}
+          <Text style={{ color:"#475569", fontSize:11, lineHeight:17,
+            borderBottomWidth:1, borderColor:"#0f1f38", paddingBottom:10 }}>
+            {won
+              ? "The Ward was defended. Here is what the battle translated into — connecting the fantasy action to the clinical concepts it represents."
+              : "The Vital Lantern dimmed, but the learning remains. Here is what the battle translated into — each spirit represented a clinical concept worth recognising."}
+          </Text>
+
+          {/* Six sections */}
+          {sections.map(sec => (
+            <View key={sec.key} style={{ backgroundColor:sec.bg, borderRadius:10,
+              borderWidth:1, borderColor:sec.border, padding:11 }}>
+              <View style={{ flexDirection:"row", alignItems:"center", gap:6 }}>
+                <Text style={{ fontSize:13 }}>{sec.icon}</Text>
+                <Text style={{ color:sec.color, fontSize:9, fontWeight:"700",
+                  letterSpacing:1 }}>{sec.label}</Text>
+              </View>
+              {sec.body}
+            </View>
+          ))}
+
+          {/* Codex progress */}
+          <View style={{ backgroundColor:"#0d0818", borderRadius:10,
+            borderWidth:1.5, borderColor:codexColor+"50", padding:12 }}>
+            <View style={{ flexDirection:"row", alignItems:"center", gap:8, marginBottom:8 }}>
+              <Text style={{ fontSize:16 }}>🌀</Text>
+              <View style={{ flex:1 }}>
+                <Text style={{ color:"#94a3b8", fontSize:10, fontWeight:"700",
+                  letterSpacing:0.8 }}>CODEX PROGRESS</Text>
+                <Text style={{ color:"#e2e8f0", fontSize:12, fontWeight:"700", marginTop:1 }}>
+                  Windway Curse — Airway Translation
+                </Text>
+              </View>
+              <View style={{ backgroundColor:codexColor+"22", borderRadius:6,
+                paddingHorizontal:8, paddingVertical:3 }}>
+                <Text style={{ color:codexColor, fontSize:8.5, fontWeight:"700" }}>
+                  {codexLabel}
+                </Text>
+              </View>
+            </View>
+            {/* Progress bar */}
+            <View style={{ height:6, backgroundColor:"#1e293b", borderRadius:3, overflow:"hidden" }}>
+              <View style={{ height:"100%", borderRadius:3,
+                backgroundColor:codexColor,
+                width:`${Math.min(100, (masteryScore / 4) * 100)}%` as any }} />
+            </View>
+            <Text style={{ color:"#475569", fontSize:10, marginTop:6 }}>
+              {masteryScore}/4 mastery points · {
+                masteryScore >= 4 ? "Full clinical loop complete — cues, action, match, reassessment." :
+                masteryScore >= 2 ? "Keep practising. Try reassessing after each care action." :
+                "Next run: try matching Mist Caster to wheeze spirits and reassessing the result."
+              }
+            </Text>
+          </View>
+
+          {/* Footer note */}
+          <Text style={{ color:"#334155", fontSize:9.5, textAlign:"center", lineHeight:14 }}>
+            This is a fantasy-medical simulation for learning purposes only.{"\n"}
+            It does not represent real clinical guidance or prescribing advice.
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 
