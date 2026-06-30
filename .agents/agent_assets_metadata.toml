@@ -155,7 +155,7 @@ title = "home hub kingdom bg"
 id = "cJr3ug5lXbgwZJu39nYZO"
 uri = "file://frontend/assets/images/ward_board_scene.png"
 type = "image"
-title = "lotus ward defense battle map exact platforms"
+title = "lotus sanctuary battle arena board"
 
 [[generated]]
 id = "vWeQhxCiFf8sDaHYZW9Xq"
@@ -179,7 +179,7 @@ title = "o2-healer-chibi-sprite"
 id = "nBc70QBItaxBK62WCgEQN"
 uri = "file://frontend/assets/images/enemy_breathless_wisp.png"
 type = "image"
-title = "breathless-wisp-enemy-sprite"
+title = "breathless wisp enemy sprite"
 
 [[generated]]
 id = "w6Bq1OF01AUez4GOegcEl"
@@ -191,19 +191,19 @@ title = "wheeze sprite enemy"
 id = "kMczwFFFIgXBzQtBY3U89"
 uri = "file://frontend/assets/images/enemy_mucus_slime.png"
 type = "image"
-title = "mucus-slime-enemy-sprite"
+title = "mucus slime enemy sprite"
 
 [[generated]]
 id = "eJVFuqITRZmc-0NcwT-9X"
 uri = "file://frontend/assets/images/enemy_hypoxia_wraith.png"
 type = "image"
-title = "hypoxia-wraith-enemy-sprite"
+title = "hypoxia wraith enemy sprite"
 
 [[generated]]
 id = "HXUb_WH3ysuQUE0i7iIJ4"
 uri = "file://frontend/assets/images/enemy_bronchospasm_drake.png"
 type = "image"
-title = "bronchospasm-drake-enemy-sprite"
+title = "bronchospasm drake boss sprite"
 
 [[generated]]
 id = "Q5iw9XycjF2sDm92coVxB"

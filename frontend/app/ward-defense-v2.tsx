@@ -24,19 +24,22 @@ import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
 /* ── Path + tile constants — must mirror ward-defense.tsx exactly ─────────── */
+/* U-shaped enemy lane: Disease Gate on LEFT WALL → down-left → across bottom
+   → up-right → Vital Lantern on RIGHT WALL.  All fy > 0.22 so both endpoints
+   remain visible even after cover-mode vertical cropping on wide web screens. */
 const PATH_WPS: [number, number][] = [
-  [0.14, 0.09],   /* Disease Gate — upper-left */
-  [0.14, 0.83],   /* bottom-left corner */
-  [0.86, 0.83],   /* bottom-right corner */
-  [0.86, 0.09],   /* Vital Lantern — upper-right */
+  [0.12, 0.30],   /* Disease Gate — left wall, upper portion */
+  [0.12, 0.82],   /* bottom-left corner */
+  [0.88, 0.82],   /* bottom-right corner */
+  [0.88, 0.30],   /* Vital Lantern — right wall, upper portion */
 ];
 
-/* Six deployment tiles — 2 rows × 3 columns centered inside the U-path.
-   These align with the stone medallion positions in the background art.
-   Calibrated from screenshot analysis: platform centers ≈ fy=0.43 and fy=0.62. */
+/* Six deployment tiles — 2×3 stone platform cluster in the center of the U.
+   Positions calibrated for the lotus sanctuary art (left/right path corridors
+   at fx≈0.12 and fx≈0.88; center arena fx=0.20-0.80). */
 const DEPLOY_TILES: [number, number][] = [
-  [0.30, 0.42], [0.50, 0.42], [0.70, 0.42],   /* top row    */
-  [0.30, 0.61], [0.50, 0.61], [0.70, 0.61],   /* bottom row */
+  [0.32, 0.43], [0.50, 0.43], [0.68, 0.43],   /* top row    */
+  [0.32, 0.62], [0.50, 0.62], [0.68, 0.62],   /* bottom row */
 ];
 
 /* ── Illustrated assets ───────────────────────────────────────────────────── */
@@ -96,7 +99,8 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
 }
 
 /* ── Image-bounds — COVER mode fills board edge-to-edge ──────────────────── */
-const IMG_AR_W = 3, IMG_AR_H = 4;
+/* 896×1280 = 7:10 actual image ratio — use exact values for accurate overlays */
+const IMG_AR_W = 7, IMG_AR_H = 10;
 type ImgBounds = { iw: number; ih: number; ox: number; oy: number };
 
 function getImgBounds(aw: number, ah: number): ImgBounds {
@@ -140,11 +144,11 @@ function BoardScene({ aw, ah }: { aw: number; ah: number }) {
    DISEASE PORTAL — minimal floating label above the gate arch in the art
 ════════════════════════════════════════════════════════════════════════════ */
 function DiseasePortal({
-  imgBounds: b, aw, spawnQueueLen,
-}: { imgBounds: ImgBounds; aw: number; spawnQueueLen: number }) {
+  imgBounds: b, aw, ah, spawnQueueLen,
+}: { imgBounds: ImgBounds; aw: number; ah: number; spawnQueueLen: number }) {
   const [px, py] = imgPx(PATH_WPS[0][0], PATH_WPS[0][1], b);
   const left = cl(px - 34, 4, aw - 80);
-  const top  = cl(py - 30, 4, 120);
+  const top  = cl(py - 36, 4, ah * 0.45);
 
   return (
     <View style={{ position: "absolute", left, top, zIndex: 22, alignItems: "flex-start" }}>
@@ -322,17 +326,27 @@ function DeployPad({
           }}/>
         </Animated.View>
       ) : (
-        /* ── Empty: tiny affordance indicator ONLY when a unit is selected ── */
+        /* ── Empty: lotus-ring pad indicator when a unit is selected ──────── */
+        /* Shows a 64×64 circle centered on the art's stone platform position,
+           giving a clear tap target that visually matches the art's platform. */
         selectedUnit && (
           <View style={{
             position: "absolute",
-            left: HIT_W / 2 - 5,
-            top:  SPRITE_H + PLATFORM_OFFSET - 6,
-            width: 10, height: 10, borderRadius: 5,
-            backgroundColor: canAfford ? "#22d3ee90" : "#33415555",
-            borderWidth: 1,
-            borderColor: canAfford ? "#22d3ee" : "#334155",
-          }}/>
+            left: HIT_W / 2 - 32,       /* center on platform fx  */
+            top:  SPRITE_H + PLATFORM_OFFSET - 32,  /* center on platform fy */
+            width: 64, height: 64, borderRadius: 32,
+            backgroundColor: canAfford ? "#22d3ee16" : "#33415510",
+            borderWidth: 2.5,
+            borderColor: canAfford ? "#22d3eecc" : "#47556966",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            {/* Inner concentric ring — lotus medallion feel */}
+            <View style={{
+              width: 38, height: 38, borderRadius: 19,
+              borderWidth: 1.5,
+              borderColor: canAfford ? "#22d3ee77" : "#47556944",
+            }}/>
+          </View>
         )
       )}
     </Pressable>
@@ -490,7 +504,7 @@ export function WardBoardV2({
 
       {/* 3. Disease gate label */}
       {aw > 20 && (
-        <DiseasePortal imgBounds={imgBounds} aw={aw} spawnQueueLen={spawnQueueLen} />
+        <DiseasePortal imgBounds={imgBounds} aw={aw} ah={ah} spawnQueueLen={spawnQueueLen} />
       )}
 
       {/* 4. Vital lantern stability display */}
