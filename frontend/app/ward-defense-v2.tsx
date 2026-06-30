@@ -1,10 +1,19 @@
 /**
  * Ward Defense V2 — Lotus Healing Sanctum
  *
- * RENDERING APPROACH — IMAGE-FIRST:
- *   The background PNG contains the path, gate, and lantern architecture baked in.
- *   CSS overlays are polish only: subtle glow dots, deployment pads, HP bars.
- *   No CSS "road strips" — the art carries the path narrative.
+ * ART-FIRST RENDERING PHILOSOPHY:
+ *   The background image contains the full environment — stone path, platforms,
+ *   disease gate arch, vital lantern shrine. CSS overlays are:
+ *   - Hero sprites placed exactly on top of the art's stone platform positions
+ *   - Tiny dot indicators when a pad is selectable and empty
+ *   - HP bars, cue badges on enemies
+ *   - Projectile glows
+ *   NOTHING ELSE. No CSS platform discs. No glowing underlay. No floating rings.
+ *
+ * COORDINATE SYSTEM — IMAGE-FIRST COVER MODE:
+ *   getImgBounds uses Math.MAX (cover) so image always fills the board edge-to-edge.
+ *   All overlay positions computed from imgPx(fx, fy, b) which maps [0..1, 0..1]
+ *   fractions to absolute pixel positions within the rendered image bounds.
  */
 import React from "react";
 import {
@@ -14,26 +23,31 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
-/* ── Path + tile constants — must mirror ward-defense.tsx ─────────────────── */
+/* ── Path + tile constants — must mirror ward-defense.tsx exactly ─────────── */
 const PATH_WPS: [number, number][] = [
-  [0.14, 0.10],   /* Disease Gate (top-left) */
-  [0.14, 0.82],   /* bottom-left corner */
-  [0.86, 0.82],   /* bottom-right corner */
-  [0.86, 0.10],   /* Vital Lantern (top-right) */
+  [0.14, 0.09],   /* Disease Gate — upper-left */
+  [0.14, 0.83],   /* bottom-left corner */
+  [0.86, 0.83],   /* bottom-right corner */
+  [0.86, 0.09],   /* Vital Lantern — upper-right */
 ];
 
+/* Six deployment tiles — 2 rows × 3 columns centered inside the U-path.
+   These align with the stone medallion positions in the background art.
+   Calibrated from screenshot analysis: platform centers ≈ fy=0.43 and fy=0.62. */
 const DEPLOY_TILES: [number, number][] = [
-  [0.33, 0.38], [0.50, 0.38], [0.67, 0.38],  /* top row */
-  [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  /* bottom row */
+  [0.30, 0.42], [0.50, 0.42], [0.70, 0.42],   /* top row    */
+  [0.30, 0.61], [0.50, 0.61], [0.70, 0.61],   /* bottom row */
 ];
 
-/* ── Illustrated image assets ─────────────────────────────────────────────── */
+/* ── Illustrated assets ───────────────────────────────────────────────────── */
 const IMG_BOARD = require("../assets/images/ward_board_scene.png");
+
 const IMG_UNITS: Record<string, any> = {
   ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
   mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
   o2_healer:   require("../assets/heroes/battle/novice_guardian.png"),
 };
+
 const IMG_ENEMIES: Record<string, any> = {
   breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),
   wheeze_sprite:      require("../assets/images/enemy_wheeze_sprite.png"),
@@ -42,7 +56,6 @@ const IMG_ENEMIES: Record<string, any> = {
   bronchospasm_drake: require("../assets/images/enemy_bronchospasm_drake.png"),
 };
 
-/* ── Enemy accent colors ──────────────────────────────────────────────────── */
 const ENEMY_COLOR: Record<string, string> = {
   breathless_wisp:    "#93c5fd",
   wheeze_sprite:      "#34d399",
@@ -51,7 +64,7 @@ const ENEMY_COLOR: Record<string, string> = {
   bronchospasm_drake: "#fb923c",
 };
 
-/* ── Prop interface ───────────────────────────────────────────────────────── */
+/* ── Props ────────────────────────────────────────────────────────────────── */
 export interface WardBoardV2Props {
   aw: number; ah: number;
   onLayout: (e: LayoutChangeEvent) => void;
@@ -71,7 +84,7 @@ export interface WardBoardV2Props {
   unitColors: Record<string, string>;
 }
 
-/* ── Pure helpers ─────────────────────────────────────────────────────────── */
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
 function cl(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 function lp(a: number, b: number, t: number)   { return a + (b - a) * cl(t, 0, 1); }
 
@@ -82,15 +95,15 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
   return [lp(from[0], to[0], e.pathProgress), lp(from[1], to[1], e.pathProgress)];
 }
 
-/* ── Image-bounds alignment — contain mode ────────────────────────────────── */
+/* ── Image-bounds — COVER mode fills board edge-to-edge ──────────────────── */
 const IMG_AR_W = 3, IMG_AR_H = 4;
-
 type ImgBounds = { iw: number; ih: number; ox: number; oy: number };
 
 function getImgBounds(aw: number, ah: number): ImgBounds {
-  const scale = Math.min(aw / IMG_AR_W, ah / IMG_AR_H);
-  const iw = IMG_AR_W * scale;
-  const ih = IMG_AR_H * scale;
+  /* Cover: scale so the LARGER dimension fills the container */
+  const scale = Math.max(aw / IMG_AR_W, ah / IMG_AR_H);
+  const iw    = IMG_AR_W * scale;
+  const ih    = IMG_AR_H * scale;
   return { iw, ih, ox: (aw - iw) / 2, oy: (ah - ih) / 2 };
 }
 
@@ -99,231 +112,123 @@ function imgPx(fx: number, fy: number, b: ImgBounds): [number, number] {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   BOARD SCENE — art-first, CSS is polish only
+   BOARD SCENE — explicit pixel dimensions are the only approach proven to
+   work reliably in RN-web nested flex containers. Negative `top` (cover mode)
+   is handled by the parent's overflow:hidden clipping.
 ════════════════════════════════════════════════════════════════════════════ */
-function BoardScene({ aw, ah, imgBounds: b }: { aw: number; ah: number; imgBounds: ImgBounds }) {
-  /* Subtle directional diamonds along path midpoints */
-  const dots: { x: number; y: number; deg: number }[] = [];
-  for (let seg = 0; seg < PATH_WPS.length - 1; seg++) {
-    const [ax, ay] = PATH_WPS[seg];
-    const [bx, by] = PATH_WPS[seg + 1];
-    /* Place 2 dots along each segment at 33% and 66% */
-    for (const t of [0.33, 0.66]) {
-      const [px, py] = imgPx(ax + (bx - ax) * t, ay + (by - ay) * t, b);
-      const deg = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
-      dots.push({ x: px, y: py, deg });
-    }
-  }
+function BoardScene({ aw, ah }: { aw: number; ah: number }) {
+  const w     = aw > 10 ? aw : 360;
+  const h     = ah > 10 ? ah : 540;
+  const scale = Math.max(w / IMG_AR_W, h / IMG_AR_H);
+  const iw    = IMG_AR_W * scale;
+  const ih    = IMG_AR_H * scale;
+  const left  = (w - iw) / 2;
+  const top   = (h - ih) / 2;
 
   return (
-    <>
-      {/* Dark fill behind letterboxed image */}
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#050a12" }]} />
-
-      {/* Vignette — top and bottom atmospheric fade */}
-      <LinearGradient
-        colors={["#00000070", "#00000000", "#00000000", "#00000070"]}
-        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]}
-      />
-
-      {/* Illustrated board — contains full lotus sanctuary scene */}
-      <ExpoImage
-        source={IMG_BOARD}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="contain"
-        contentPosition="center"
-      />
-
-      {/* Subtle path diamonds — gentle direction hints, not road strips */}
-      {aw > 20 && dots.map((d, i) => (
-        <View key={i} style={{
-          position: "absolute",
-          left: d.x - 5, top: d.y - 5,
-          width: 10, height: 10,
-          transform: [{ rotate: `${d.deg + 45}deg` }],
-          zIndex: 3, opacity: 0.35,
-        }}>
-          <View style={{
-            width: 7, height: 7, margin: 1.5,
-            backgroundColor: "#fde68a",
-            borderWidth: 0.5, borderColor: "#f59e0b",
-          }}/>
-        </View>
-      ))}
-    </>
+    <ExpoImage
+      key={`board-${Math.round(iw)}-${Math.round(ih)}`}
+      source={IMG_BOARD}
+      style={{ position: "absolute", left, top, width: iw, height: ih }}
+      contentFit="fill"
+      cachePolicy="none"
+    />
   );
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   HEALING ZONE FRAME — subtle border + label around the 2×3 grid
-════════════════════════════════════════════════════════════════════════════ */
-function HealingZoneFrame({ imgBounds: b }: { imgBounds: ImgBounds }) {
-  const PAD = 0.06;
-  const [x1, y1] = imgPx(0.33 - PAD, 0.32 - PAD, b);
-  const [x2, y2] = imgPx(0.67 + PAD, 0.58 + PAD, b);
-  const zw = x2 - x1, zh = y2 - y1;
-  const labelX = (x1 + x2) / 2;
-
-  return (
-    <>
-      {/* Outer glow ring */}
-      <View style={{
-        position: "absolute",
-        left: x1 - 4, top: y1 - 4,
-        width: zw + 8, height: zh + 8,
-        borderRadius: 20,
-        borderWidth: 1, borderColor: "#22d3ee18",
-        backgroundColor: "#10b98105",
-        zIndex: 3,
-      }}/>
-
-      {/* Corner lotus petal accents */}
-      {[[x1, y1], [x2, y1], [x1, y2], [x2, y2]].map(([cx, cy], i) => (
-        <View key={i} style={{
-          position: "absolute",
-          left: cx - 5, top: cy - 5,
-          width: 10, height: 10, borderRadius: 5,
-          backgroundColor: "#34d39928",
-          borderWidth: 1, borderColor: "#34d39960",
-          zIndex: 4,
-        }}/>
-      ))}
-
-      {/* HEALING ZONE label */}
-      <View style={{
-        position: "absolute",
-        left: labelX - 44, top: y1 - 12,
-        height: 15, width: 88, borderRadius: 7,
-        backgroundColor: "#071a1290",
-        borderWidth: 1, borderColor: "#22d3ee35",
-        alignItems: "center", justifyContent: "center",
-        zIndex: 5,
-      }}>
-        <Text style={{ color: "#6ee7b7bb", fontSize: 6, fontWeight: "800", letterSpacing: 1.5 }}>
-          ✦  HEALING ZONE  ✦
-        </Text>
-      </View>
-    </>
-  );
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   DISEASE PORTAL — label badge + pulsing ring over gate position
+   DISEASE PORTAL — minimal floating label above the gate arch in the art
 ════════════════════════════════════════════════════════════════════════════ */
 function DiseasePortal({
   imgBounds: b, aw, spawnQueueLen,
 }: { imgBounds: ImgBounds; aw: number; spawnQueueLen: number }) {
   const [px, py] = imgPx(PATH_WPS[0][0], PATH_WPS[0][1], b);
+  const left = cl(px - 34, 4, aw - 80);
+  const top  = cl(py - 30, 4, 120);
 
   return (
-    <View style={{
-      position: "absolute",
-      left: cl(px - 36, 4, aw - 84), top: cl(py - 44, 4, 200),
-      alignItems: "center", zIndex: 20,
-    }}>
-      {/* Spawn warning badge */}
+    <View style={{ position: "absolute", left, top, zIndex: 22, alignItems: "flex-start" }}>
       {spawnQueueLen > 0 && (
         <View style={{
-          backgroundColor: "#4c1d95ee",
-          borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-          borderWidth: 1.5, borderColor: "#a855f7",
-          marginBottom: 4,
+          backgroundColor: "#3b0764ee",
+          borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
+          borderWidth: 1, borderColor: "#a855f7",
+          marginBottom: 3,
         }}>
-          <Text style={{ color: "#e9d5ff", fontSize: 8, fontWeight: "800" }}>
-            ⚡ {spawnQueueLen} incoming
+          <Text style={{ color: "#e9d5ff", fontSize: 7.5, fontWeight: "800" }}>
+            ⚡ {spawnQueueLen}
           </Text>
         </View>
       )}
-
-      {/* Label tag */}
       <View style={{
-        backgroundColor: "#1e0535cc",
-        borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
-        borderWidth: 1, borderColor: "#7c3aed",
+        backgroundColor: "#160828dd",
+        borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2,
+        borderWidth: 1, borderColor: "#7c3aed88",
       }}>
-        <Text style={{ color: "#c4b5fd", fontSize: 7, fontWeight: "800", letterSpacing: 0.8 }}>
+        <Text style={{ color: "#c4b5fd", fontSize: 6.5, fontWeight: "800", letterSpacing: 1 }}>
           DISEASE GATE
         </Text>
       </View>
-
-      {/* Pulsing threat ring */}
-      <View style={{
-        width: 32, height: 32, borderRadius: 16,
-        borderWidth: 2, borderColor: "#a855f760",
-        backgroundColor: "#3b076418",
-        alignItems: "center", justifyContent: "center",
-        marginTop: 4,
-      }}>
-        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#7c3aed" }}/>
-      </View>
     </View>
   );
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   VITAL LANTERN — stability display at the shrine position
+   VITAL LANTERN — minimal stability display above the shrine arch in the art
 ════════════════════════════════════════════════════════════════════════════ */
 function VitalLantern({
-  stability, imgBounds: b, ah,
-}: { stability: number; imgBounds: ImgBounds; ah: number }) {
+  stability, imgBounds: b, aw, ah,
+}: { stability: number; imgBounds: ImgBounds; aw: number; ah: number }) {
   const [px, py] = imgPx(PATH_WPS[PATH_WPS.length - 1][0], PATH_WPS[PATH_WPS.length - 1][1], b);
   const pct   = cl(stability, 0, 100);
   const glow  = pct > 60 ? "#22d3ee" : pct > 30 ? "#facc15" : "#ef4444";
-  const top   = cl(py - 44, 4, ah - 110);
-  const left  = cl(px - 36, 4, 9999);
+  const right = cl(aw - px - 34, 4, aw - 4);
+  const top   = cl(py - 30, 4, ah - 60);
 
   return (
-    <View style={{
-      position: "absolute",
-      left, top, alignItems: "flex-end", zIndex: 20,
-    }}>
-      {/* Label */}
+    <View style={{ position: "absolute", right, top, zIndex: 22, alignItems: "flex-end" }}>
       <View style={{
-        backgroundColor: "#061e1ecc",
-        borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
-        borderWidth: 1, borderColor: glow + "90",
+        backgroundColor: "#061a1add",
+        borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2,
+        borderWidth: 1, borderColor: glow + "88",
         marginBottom: 3,
       }}>
-        <Text style={{ color: "#a7f3d0", fontSize: 7, fontWeight: "800", letterSpacing: 0.5 }}>
+        <Text style={{ color: "#a7f3d0", fontSize: 6.5, fontWeight: "800", letterSpacing: 1 }}>
           VITAL LANTERN
         </Text>
       </View>
-
       {/* Stability bar */}
       <View style={{
-        width: 72, height: 8, backgroundColor: "#0a1c1c88",
-        borderRadius: 4, overflow: "hidden",
-        borderWidth: 1, borderColor: glow + "55",
-        marginBottom: 3,
+        width: 64, height: 6, backgroundColor: "#00000060",
+        borderRadius: 3, overflow: "hidden",
+        borderWidth: 1, borderColor: glow + "60",
       }}>
         <View style={{
           width: `${pct}%` as any, height: "100%",
-          backgroundColor: glow, borderRadius: 4,
+          backgroundColor: glow, borderRadius: 3,
         }}/>
       </View>
-
-      {/* Glow orb */}
-      <View style={{
-        width: 30, height: 30, borderRadius: 15,
-        borderWidth: 2, borderColor: glow,
-        backgroundColor: glow + "25",
-        alignSelf: "flex-end",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <Text style={{ fontSize: 11, color: glow }}>✦</Text>
-      </View>
+      <Text style={{ color: glow, fontSize: 7, fontWeight: "700", marginTop: 2 }}>
+        {pct}%
+      </Text>
     </View>
   );
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   DEPLOY PAD — circular stone platform at image-aligned tile position
+   DEPLOY PAD — COMPLETELY TRANSPARENT touch zone
+   The art's stone platform IS the visual platform. This component only:
+   • Shows the hero sprite when occupied (standing on the art platform)
+   • Shows a tiny green dot when empty + unit selected + can afford
+   • Never renders any background, border, shadow or gradient overlay
 ════════════════════════════════════════════════════════════════════════════ */
 interface DPProps {
-  tileIdx: number; unit: any;
-  selectedUnit: string | null; canAfford: boolean;
-  isMergeCandidate: boolean; onPress: () => void;
+  tileIdx: number;
+  unit: any;
+  selectedUnit: string | null;
+  canAfford: boolean;
+  isMergeCandidate: boolean;
+  onPress: () => void;
   imgBounds: ImgBounds;
   unitColors: Record<string, string>;
   bobY: Animated.AnimatedInterpolation<number>;
@@ -337,16 +242,16 @@ function DeployPad({
   const [px, py]   = imgPx(fx, fy, b);
   const isOccupied = !!unit;
 
-  const padColor = isOccupied
-    ? (unitColors[unit.typeId] ?? "#60a5fa")
-    : isMergeCandidate ? "#FFD700"
-    : canAfford ? "#34d399" : "#334155";
+  /* Hero sprite sits above the art platform. The art platform top surface is
+     approximately 12px above the coordinate centre (isometric perspective). */
+  const SPRITE_W  = 58;
+  const SPRITE_H  = 72;
+  const PLATFORM_OFFSET = 14;   /* px above py where platform top surface is */
+  const HIT_W     = 72;
+  const HIT_H     = SPRITE_H + PLATFORM_OFFSET + 24;
 
-  const PLATFORM_D = 64;  /* diameter of stone platform disc */
-  const SPRITE_W   = 60;
-  const SPRITE_H   = 74;
-  const HIT_W      = PLATFORM_D + 16;
-  const HIT_H      = SPRITE_H + PLATFORM_D + 8;
+  const heroImg   = IMG_UNITS[unit?.typeId] ?? IMG_UNITS.ward_scout;
+  const unitColor = isOccupied ? (unitColors[unit.typeId] ?? "#60a5fa") : null;
 
   return (
     <Pressable
@@ -354,24 +259,45 @@ function DeployPad({
       style={{
         position: "absolute",
         left: px - HIT_W / 2,
-        top:  py - SPRITE_H - PLATFORM_D / 2 - 4,
-        width: HIT_W, height: HIT_H,
+        top:  py - SPRITE_H - PLATFORM_OFFSET,
+        width: HIT_W,
+        height: HIT_H,
         alignItems: "center",
         zIndex: 15,
+        /* TRANSPARENT — no background, no border, no shadow */
       }}
     >
-      {/* ── Hero sprite — floats above the platform ── */}
-      {isOccupied && (
+      {isOccupied ? (
+        /* ── Occupied: hero sprite floating slightly above art platform ── */
         <Animated.View style={{
           transform: [{ translateY: bobY }],
           alignItems: "center",
-          marginBottom: -8,
-          zIndex: 17,
         }}>
+          {/* Merge gold halo ring */}
+          {isMergeCandidate && (
+            <View style={{
+              position: "absolute",
+              top: -8, left: -8, right: -8, bottom: -8,
+              borderRadius: 50,
+              borderWidth: 2, borderColor: "#FFD700cc",
+              backgroundColor: "#FFD70010",
+            }}/>
+          )}
+
+          {/* Cast flash ring */}
+          {(unit.castFlash ?? 0) > 0 && (
+            <View style={{
+              position: "absolute",
+              top: -5, left: -5, right: -5, bottom: -5,
+              borderRadius: 48,
+              borderWidth: 2.5, borderColor: (unitColor ?? "#22d3ee") + "cc",
+            }}/>
+          )}
+
           {/* Level badge */}
           {(unit.level ?? 1) > 1 && (
             <View style={{
-              position: "absolute", top: -4, right: -6, zIndex: 18,
+              position: "absolute", top: 0, right: -8, zIndex: 18,
               backgroundColor: (unit.level ?? 1) >= 3 ? "#FFD700" : "#a78bfa",
               borderRadius: 5, paddingHorizontal: 4, paddingVertical: 1,
             }}>
@@ -381,102 +307,40 @@ function DeployPad({
             </View>
           )}
 
-          {/* Cast flash ring */}
-          {(unit.castFlash ?? 0) > 0 && (
-            <View style={{
-              position: "absolute", top: -6, left: -6, right: -6, bottom: -6,
-              borderRadius: 48, borderWidth: 3, borderColor: padColor + "cc", zIndex: 16,
-            }}/>
-          )}
-
-          {/* Merge candidate golden halo */}
-          {isMergeCandidate && (
-            <View style={{
-              position: "absolute", top: -10, left: -10, right: -10, bottom: -10,
-              borderRadius: 52, borderWidth: 2.5, borderColor: "#FFD700aa",
-              backgroundColor: "#FFD70012", zIndex: 16,
-            }}/>
-          )}
-
-          {/* Hero battle sprite — same asset as bottom card */}
+          {/* Hero battle sprite — same art as bottom hand card */}
           <ExpoImage
-            source={IMG_UNITS[unit.typeId] ?? IMG_UNITS.ward_scout}
+            source={heroImg}
             style={{ width: SPRITE_W, height: SPRITE_H }}
             contentFit="contain"
           />
 
-          {/* Ground shadow */}
+          {/* Soft ground shadow */}
           <View style={{
-            width: 44, height: 6, borderRadius: 22,
-            backgroundColor: "#00000088", marginTop: -6, alignSelf: "center",
+            width: 40, height: 5, borderRadius: 20,
+            backgroundColor: "#00000075",
+            marginTop: -5,
           }}/>
         </Animated.View>
+      ) : (
+        /* ── Empty: tiny affordance indicator ONLY when a unit is selected ── */
+        selectedUnit && (
+          <View style={{
+            position: "absolute",
+            left: HIT_W / 2 - 5,
+            top:  SPRITE_H + PLATFORM_OFFSET - 6,
+            width: 10, height: 10, borderRadius: 5,
+            backgroundColor: canAfford ? "#22d3ee90" : "#33415555",
+            borderWidth: 1,
+            borderColor: canAfford ? "#22d3ee" : "#334155",
+          }}/>
+        )
       )}
-
-      {/* ── Circular stone platform disc ── */}
-      <LinearGradient
-        colors={isOccupied
-          ? [padColor + "60", padColor + "30", "#0c1e1a"]
-          : isMergeCandidate ? ["#FFD70040", "#8b5c0020", "#0a150f"]
-          : canAfford  ? ["#22d3ee28", "#0d3a2888", "#071610"]
-          :              ["#1a2d2588", "#0f1e1880", "#090d0c"]}
-        start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
-        style={{
-          width: PLATFORM_D, height: PLATFORM_D, borderRadius: PLATFORM_D / 2,
-          borderWidth: isOccupied ? 2.5 : canAfford ? 1.5 : 1,
-          borderColor: isOccupied
-            ? padColor + "dd"
-            : isMergeCandidate ? "#FFD700bb"
-            : canAfford ? "#22d3ee90" : "#2a4035aa",
-          alignItems: "center", justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        {/* Inner ring — engraved lotus */}
-        <View style={{
-          width: PLATFORM_D - 18, height: PLATFORM_D - 18,
-          borderRadius: (PLATFORM_D - 18) / 2,
-          borderWidth: 1,
-          borderColor: isOccupied ? padColor + "50"
-            : canAfford ? "#22d3ee40" : "#2a403560",
-        }}/>
-
-        {/* Empty: lotus cross symbol */}
-        {!isOccupied && (
-          <>
-            <View style={{
-              position: "absolute",
-              width: 1.5, height: PLATFORM_D - 28,
-              backgroundColor: canAfford ? "#22d3ee55" : "#2a403555",
-              borderRadius: 1,
-            }}/>
-            <View style={{
-              position: "absolute",
-              width: PLATFORM_D - 28, height: 1.5,
-              backgroundColor: canAfford ? "#22d3ee55" : "#2a403555",
-              borderRadius: 1,
-            }}/>
-          </>
-        )}
-      </LinearGradient>
-
-      {/* ── Stepped stone pedestal under the disc ── */}
-      <LinearGradient
-        colors={["#0c1a14", "#071210"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        style={{
-          width: PLATFORM_D + 8, height: 8, borderRadius: 4,
-          marginTop: -3, alignSelf: "center",
-          borderWidth: 1,
-          borderColor: isOccupied ? padColor + "40" : "#1a3028",
-        }}
-      />
     </Pressable>
   );
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ENEMY ON PATH — illustrated sprite with HP bar
+   ENEMY ON PATH
 ════════════════════════════════════════════════════════════════════════════ */
 function EnemyOnPath({
   enemy, bobY, imgBounds: b,
@@ -488,9 +352,9 @@ function EnemyOnPath({
   const barColor = hpPct > 0.6 ? "#22c55e" : hpPct > 0.3 ? "#facc15" : "#ef4444";
   const isFlash  = (enemy.hitFlash ?? 0) > 0;
   const isBoss   = enemy.typeId === "bronchospasm_drake";
-  const sprW     = isBoss ? 72 : 52;
-  const sprH     = isBoss ? 72 : 52;
-  const barW     = isBoss ? 64 : 46;
+  const sprW     = isBoss ? 70 : 52;
+  const sprH     = isBoss ? 70 : 52;
+  const barW     = isBoss ? 62 : 46;
   const accentC  = ENEMY_COLOR[enemy.typeId] ?? "#94a3b8";
   const img      = IMG_ENEMIES[enemy.typeId];
 
@@ -498,7 +362,7 @@ function EnemyOnPath({
     <Animated.View style={{
       position: "absolute",
       left: px - sprW / 2,
-      top:  py - sprH - 30,
+      top:  py - sprH - 28,
       alignItems: "center",
       zIndex: 14,
       transform: [{ translateY: bobY }],
@@ -517,9 +381,9 @@ function EnemyOnPath({
 
       {/* Clinical cue badge */}
       <View style={{
-        backgroundColor: accentC + "25", borderRadius: 4,
+        backgroundColor: accentC + "22", borderRadius: 4,
         paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3,
-        borderWidth: 0.5, borderColor: accentC + "77",
+        borderWidth: 0.5, borderColor: accentC + "70",
         maxWidth: barW + 16,
       }}>
         <Text
@@ -530,22 +394,19 @@ function EnemyOnPath({
         </Text>
       </View>
 
-      {/* Boss HP number */}
       {isBoss && (
         <Text style={{ color: accentC, fontSize: 8, fontWeight: "700", marginBottom: 1 }}>
           {enemy.hp}
         </Text>
       )}
 
-      {/* Hit-flash overlay */}
       {isFlash && (
         <View style={{
           position: "absolute", top: 20, left: 0, right: 0, bottom: 5,
-          backgroundColor: "#ffffff30", borderRadius: 10, zIndex: 15,
+          backgroundColor: "#ffffff28", borderRadius: 10, zIndex: 15,
         }}/>
       )}
 
-      {/* Slow indicator */}
       {(enemy.slowTicks ?? 0) > 0 && (
         <View style={{
           position: "absolute", top: 16, right: -10,
@@ -555,7 +416,6 @@ function EnemyOnPath({
         </View>
       )}
 
-      {/* Illustrated enemy sprite */}
       {img ? (
         <ExpoImage source={img} style={{ width: sprW, height: sprH }} contentFit="contain" />
       ) : (
@@ -567,15 +427,13 @@ function EnemyOnPath({
           <Text style={{ fontSize: isBoss ? 24 : 18 }}>
             {enemy.typeId === "bronchospasm_drake" ? "🐉"
               : enemy.typeId === "hypoxia_wraith" ? "👻"
-              : enemy.typeId === "mucus_slime" ? "🫧"
-              : "💨"}
+              : enemy.typeId === "mucus_slime" ? "🫧" : "💨"}
           </Text>
         </View>
       )}
 
-      {/* Ground shadow */}
       <View style={{
-        width: isBoss ? 52 : 38, height: 5, borderRadius: 25,
+        width: isBoss ? 50 : 36, height: 5, borderRadius: 25,
         backgroundColor: "#000000a0", marginTop: -3,
       }}/>
     </Animated.View>
@@ -593,12 +451,12 @@ function ProjectileDot({ p, imgBounds: b }: { p: any; imgBounds: ImgBounds }) {
   return (
     <View style={{
       position: "absolute",
-      left: px - 7, top: py - 7,
-      width: 14, height: 14, borderRadius: 7,
+      left: px - 6, top: py - 6,
+      width: 12, height: 12, borderRadius: 6,
       backgroundColor: col + "50", borderWidth: 2, borderColor: col,
       alignItems: "center", justifyContent: "center", zIndex: 13,
     }}>
-      <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#fff" }}/>
+      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#fff" }}/>
     </View>
   );
 }
@@ -617,24 +475,30 @@ export function WardBoardV2({
 
   return (
     <View
-      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#050a12" }}
+      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#050912" }}
       onLayout={onLayout}
     >
-      {/* 1. Illustrated board scene */}
-      <BoardScene aw={aw} ah={ah} imgBounds={imgBounds} />
+      {/* 1. Background art — explicit pixel dimensions, cover-mode crop, cachePolicy:none */}
+      <BoardScene aw={aw > 10 ? aw : 360} ah={ah > 10 ? ah : 540} />
 
-      {/* 2. Healing zone frame around deployment grid */}
-      {aw > 20 && <HealingZoneFrame imgBounds={imgBounds} />}
+      {/* 2. Vignette — subtle atmospheric darkening at edges */}
+      <LinearGradient
+        colors={["#00000055", "#00000000", "#00000000", "#00000055"]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFillObject, { zIndex: 1, pointerEvents: "none" }]}
+      />
 
-      {/* 3. Disease portal label */}
+      {/* 3. Disease gate label */}
       {aw > 20 && (
         <DiseasePortal imgBounds={imgBounds} aw={aw} spawnQueueLen={spawnQueueLen} />
       )}
 
       {/* 4. Vital lantern stability display */}
-      {aw > 20 && <VitalLantern stability={stability} imgBounds={imgBounds} ah={ah} />}
+      {aw > 20 && (
+        <VitalLantern stability={stability} imgBounds={imgBounds} aw={aw} ah={ah} />
+      )}
 
-      {/* 5. Deploy pads */}
+      {/* 5. Deployment pads — transparent zones with hero sprites */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (
         <DeployPad
           key={i} tileIdx={i}
@@ -654,15 +518,15 @@ export function WardBoardV2({
         <ProjectileDot key={p.uid} p={p} imgBounds={imgBounds} />
       ))}
 
-      {/* 7. Enemy sprites */}
+      {/* 7. Enemy sprites — float along path */}
       {enemies.map((e: any) => (
         <EnemyOnPath key={e.uid} enemy={e} bobY={bobY} imgBounds={imgBounds} />
       ))}
 
-      {/* 8. Wave-pause atmospheric overlay — dim board, ClinicalPanel shown above in parent */}
+      {/* 8. Wave-pause dim — dark overlay so clinical panel reads clearly */}
       {phase === "wave_pause" && (
         <View style={[StyleSheet.absoluteFillObject, {
-          backgroundColor: "#00000040", zIndex: 25,
+          backgroundColor: "#00000055", zIndex: 28,
         }]}/>
       )}
     </View>

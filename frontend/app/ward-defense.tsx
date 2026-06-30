@@ -44,17 +44,17 @@ const TILE_SIZE        = 46;   /* deployment tile size in px */
    then UP the right side to reach the Vital Lantern shrine at top-right.
    The 2×3 deployment platform sits in the open center of the U. */
 const PATH_WPS: [number, number][] = [
-  [0.14, 0.10],   /* 0 — Disease Gate entry (top-left) */
-  [0.14, 0.82],   /* 1 — bottom-left corner */
-  [0.86, 0.82],   /* 2 — bottom-right corner */
-  [0.86, 0.10],   /* 3 — Vital Lantern (top-right) */
+  [0.14, 0.09],   /* 0 — Disease Gate entry (top-left) */
+  [0.14, 0.83],   /* 1 — bottom-left corner */
+  [0.86, 0.83],   /* 2 — bottom-right corner */
+  [0.86, 0.09],   /* 3 — Vital Lantern (top-right) */
 ];
 const N_SEGS = PATH_WPS.length - 1;   /* 3 segments */
 
 /* ── Deployment tiles: 2×3 stone platform centered inside the U-path ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.33, 0.38], [0.50, 0.38], [0.67, 0.38],  /* top row */
-  [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  /* bottom row */
+  [0.30, 0.42], [0.50, 0.42], [0.70, 0.42],  /* top row */
+  [0.30, 0.61], [0.50, 0.61], [0.70, 0.61],  /* bottom row */
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -3500,7 +3500,7 @@ const s = StyleSheet.create({
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060402", aspectRatio: 3/4, alignSelf: "center", maxWidth: "100%" },
+  ward: { flex: 1, width: "100%", maxWidth: 520, alignSelf: "center", overflow: "hidden", position: "relative", backgroundColor: "#050912" },
   sceneStrip: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     overflow: "hidden", zIndex: 0,
