@@ -2241,13 +2241,130 @@ export default function WardDefense() {
 /* ═══════════════════════════════════════════════════════════════════
    LOBBY SCREEN
    ═══════════════════════════════════════════════════════════════════ */
+/* ── Translation Codex data ────────────────────────────────────────────────── */
+const TRANSLATION_CODEX = [
+  {
+    fantasyName: "Windway Curse",
+    icon: "🌀",
+    accentColor: "#6ee7b7",
+    medicalMeaning: "Narrowed airway / bronchospasm pattern",
+    cues: ["Wheezing", "Fast breathing", "Anxious posture", "Dim oxygen glow"],
+    battleMeaning: "Wheeze Sprite and Bronchospasm Drake represent airway narrowing",
+    bestMatches: [
+      "Bronchodilator Mist (Mist Caster) — targets narrowed airway spirits directly",
+      "Oxygen Ward (O₂ Healer) — supports oxygenation, stabilises the Vital Lantern",
+    ],
+    reassessCue: "Breathing effort · audible wheeze · oxygen glow brightness",
+    commonTrap: "Oxygen supports stability, but may not resolve airway narrowing alone — pair it with bronchodilator.",
+  },
+] as const;
+
+/* ── Case intro data ───────────────────────────────────────────────────────── */
+const WINDWAY_CASE = {
+  title: "The Windway Curse",
+  kicker: "AIRWAY CODE RUSH · CASE BRIEFING",
+  story:
+    "A courier collapses at the clinic gate. The local healer says wind spirits have knotted his breath-channels.",
+  findings: ["Fast, laboured breathing", "Audible wheeze on approach", "Anxious posture, gripping the gate", "Vital Lantern flickering dim"],
+  sections: [
+    {
+      label: "FANTASY BELIEF",
+      color: "#a78bfa",
+      body: "Wind spirits tied invisible knots through the courier's breath channels, strangling the sacred airflow.",
+    },
+    {
+      label: "CLINICAL CUES",
+      color: "#6ee7b7",
+      body: "↑ RR · audible wheeze · accessory muscle use · SpO₂ trending down · anxious affect",
+    },
+    {
+      label: "OBJECTIVE",
+      color: "#60a5fa",
+      body: "Defend the Vital Lantern. Match care cards to the right disease spirits. Reassess breathing effort and wheeze after each intervention.",
+    },
+  ],
+} as const;
+
+/* ── Roadmap data ──────────────────────────────────────────────────────────── */
+const ROADMAP_ITEMS = [
+  { status: "next",   icon: "📜", label: "Post-battle Clinical Translation Summary",  desc: "Translate each defeated enemy into a plain clinical concept after battle." },
+  { status: "next",   icon: "🏰", label: "Ward Realm Framing",                       desc: "Each ward becomes a fantasy realm — Airway Ward, Cardiac Citadel, Neuro Spire." },
+  { status: "coming", icon: "🦸", label: "Hero Learning Roles",                       desc: "Unlock specialisations: Airway Sentinel, Medication Alchemist, Neuro Scout." },
+  { status: "coming", icon: "⚗️",  label: "Apothecary Lab Preview",                  desc: "Craft care items from battle drops. Combine materials into ability upgrades." },
+  { status: "locked", icon: "⚔️",  label: "Arena (Locked Preview)",                  desc: "Challenge curated ward setups from Clinica scholars. Coming after Ward Realm." },
+  { status: "locked", icon: "🎓", label: "Scholarly Arena Duel Prototype",           desc: "Turn-based PvE duel using clinical reasoning vs opponent ward builds." },
+] as const;
+
 function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => void }) {
+  const [caseVisible,   setCaseVisible]   = useState(false);
+  const [codexExpanded, setCodexExpanded] = useState(false);
+  const [mapExpanded,   setMapExpanded]   = useState(false);
+
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <Image source={require("../assets/images/ward_lobby_bg.png")}
         style={StyleSheet.absoluteFillObject} resizeMode="cover" />
       <LinearGradient colors={["#00000000", "#00000000", "#010610cc", "#010610f0"]}
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFillObject} />
+
+      {/* ── CASE INTRO MODAL ─────────────────────────────────────────── */}
+      {caseVisible && (
+        <View style={{ position:"absolute", inset:0, zIndex:99, backgroundColor:"#00000090",
+          justifyContent:"center", alignItems:"center", padding:16 }}>
+          <View style={{ backgroundColor:"#0a1628", borderRadius:16, borderWidth:1.5,
+            borderColor:"#1e3a5f", maxWidth:480, width:"100%", overflow:"hidden" }}>
+            {/* Header */}
+            <LinearGradient colors={["#0e2a4a","#081828"]}
+              style={{ padding:18, paddingBottom:14 }}>
+              <Text style={{ color:"#60a5fa", fontSize:9, fontWeight:"700",
+                letterSpacing:1.4, marginBottom:4 }}>{WINDWAY_CASE.kicker}</Text>
+              <Text style={{ color:"#f0f9ff", fontSize:20, fontWeight:"800",
+                letterSpacing:0.3 }}>{WINDWAY_CASE.title}</Text>
+            </LinearGradient>
+            <ScrollView style={{ maxHeight:480 }} contentContainerStyle={{ padding:16, gap:12 }}
+              showsVerticalScrollIndicator={false}>
+              {/* Story + findings */}
+              <Text style={{ color:"#94a3b8", fontSize:12.5, lineHeight:19 }}>
+                {WINDWAY_CASE.story}
+              </Text>
+              <View style={{ backgroundColor:"#0f1f38", borderRadius:10, padding:12,
+                borderLeftWidth:3, borderColor:"#60a5fa" }}>
+                <Text style={{ color:"#60a5fa", fontSize:9, fontWeight:"700",
+                  letterSpacing:1, marginBottom:6 }}>YOU NOTICE</Text>
+                {WINDWAY_CASE.findings.map((f,i) => (
+                  <View key={i} style={{ flexDirection:"row", gap:8, marginBottom:4 }}>
+                    <Text style={{ color:"#60a5fa", fontSize:12 }}>·</Text>
+                    <Text style={{ color:"#cbd5e1", fontSize:12, lineHeight:18 }}>{f}</Text>
+                  </View>
+                ))}
+              </View>
+              {/* Three sections */}
+              {WINDWAY_CASE.sections.map(sec => (
+                <View key={sec.label} style={{ backgroundColor:"#0d1b30", borderRadius:10,
+                  padding:12, borderLeftWidth:3, borderColor:sec.color }}>
+                  <Text style={{ color:sec.color, fontSize:9, fontWeight:"700",
+                    letterSpacing:1, marginBottom:5 }}>{sec.label}</Text>
+                  <Text style={{ color:"#94a3b8", fontSize:12, lineHeight:18 }}>{sec.body}</Text>
+                </View>
+              ))}
+              {/* Begin button */}
+              <Pressable onPress={() => { setCaseVisible(false); onStart(); }}
+                style={{ backgroundColor:"#1d4ed8", borderRadius:12, padding:14,
+                  alignItems:"center", flexDirection:"row", justifyContent:"center", gap:8,
+                  marginTop:4 }}>
+                <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                <Text style={{ color:"#fff", fontSize:14, fontWeight:"800",
+                  letterSpacing:0.5 }}>BEGIN DEFENSE</Text>
+              </Pressable>
+              <Pressable onPress={() => setCaseVisible(false)}
+                style={{ alignItems:"center", paddingVertical:8 }}>
+                <Text style={{ color:"#475569", fontSize:11 }}>← Back to Briefing</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={s.lobbyContent} showsVerticalScrollIndicator={false}>
         <Pressable style={s.hudBack} onPress={onBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={16} color={COLORS.onSurface} />
@@ -2278,6 +2395,100 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
             <Text style={{ color: COLORS.air }}>NCLEX Clinical Judgment:</Text> Recognize cues on each enemy · Prioritize threats · Deploy the right unit · Evaluate with Reassess.
           </Text>
         </View>
+
+        {/* ── TRANSLATION CODEX ──────────────────────────────────────── */}
+        <Pressable style={[s.lobbyCard, { gap:0 }]} onPress={() => setCodexExpanded(v => !v)}>
+          <View style={{ flexDirection:"row", alignItems:"center", gap:6 }}>
+            <View style={{ width:3, height:14, borderRadius:2, backgroundColor:"#a78bfa" }}/>
+            <Text style={s.lobbySectionTitle}>TRANSLATION CODEX</Text>
+            <View style={{ flex:1 }}/>
+            <View style={{ backgroundColor:"#a78bfa22", borderRadius:6,
+              paddingHorizontal:7, paddingVertical:2 }}>
+              <Text style={{ color:"#a78bfa", fontSize:8, fontWeight:"700" }}>
+                {TRANSLATION_CODEX.length} ENTRY{TRANSLATION_CODEX.length !== 1 ? "S" : ""}
+              </Text>
+            </View>
+            <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"}
+              size={14} color="#64748b" />
+          </View>
+          {!codexExpanded && (
+            <Text style={{ color:"#475569", fontSize:11, marginTop:6 }}>
+              Translate fantasy illnesses into plain medical concepts.
+            </Text>
+          )}
+          {codexExpanded && TRANSLATION_CODEX.map((entry, i) => (
+            <View key={i} style={{ marginTop:14, gap:10 }}>
+              {/* Entry header */}
+              <View style={{ flexDirection:"row", alignItems:"center", gap:8 }}>
+                <Text style={{ fontSize:18 }}>{entry.icon}</Text>
+                <View>
+                  <Text style={{ color:"#a78bfa", fontSize:13, fontWeight:"800" }}>
+                    {entry.fantasyName}
+                  </Text>
+                  <Text style={{ color:"#94a3b8", fontSize:11, marginTop:1 }}>
+                    {entry.medicalMeaning}
+                  </Text>
+                </View>
+              </View>
+              {/* Recognize cues */}
+              <View style={{ backgroundColor:"#0d1b30", borderRadius:8, padding:10,
+                borderLeftWidth:2.5, borderColor:entry.accentColor }}>
+                <Text style={{ color:entry.accentColor, fontSize:8.5, fontWeight:"700",
+                  letterSpacing:0.9, marginBottom:5 }}>RECOGNIZE CUES</Text>
+                <View style={{ flexDirection:"row", flexWrap:"wrap", gap:5 }}>
+                  {entry.cues.map((cue,j) => (
+                    <View key={j} style={{ backgroundColor:entry.accentColor+"20",
+                      borderRadius:5, paddingHorizontal:7, paddingVertical:2 }}>
+                      <Text style={{ color:entry.accentColor, fontSize:10, fontWeight:"600" }}>
+                        {cue}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              {/* Battle meaning */}
+              <View style={{ backgroundColor:"#130820", borderRadius:8, padding:10,
+                borderLeftWidth:2.5, borderColor:"#7c3aed" }}>
+                <Text style={{ color:"#a78bfa", fontSize:8.5, fontWeight:"700",
+                  letterSpacing:0.9, marginBottom:4 }}>BATTLE MEANING</Text>
+                <Text style={{ color:"#94a3b8", fontSize:11, lineHeight:17 }}>
+                  {entry.battleMeaning}
+                </Text>
+              </View>
+              {/* Best matches */}
+              <View style={{ backgroundColor:"#081c14", borderRadius:8, padding:10,
+                borderLeftWidth:2.5, borderColor:"#34d399" }}>
+                <Text style={{ color:"#34d399", fontSize:8.5, fontWeight:"700",
+                  letterSpacing:0.9, marginBottom:5 }}>BEST MATCHES</Text>
+                {entry.bestMatches.map((m,j) => (
+                  <View key={j} style={{ flexDirection:"row", gap:6, marginBottom:3 }}>
+                    <Text style={{ color:"#34d399", fontSize:11 }}>✦</Text>
+                    <Text style={{ color:"#94a3b8", fontSize:11, lineHeight:17, flex:1 }}>{m}</Text>
+                  </View>
+                ))}
+              </View>
+              {/* Reassess + trap */}
+              <View style={{ flexDirection:"row", gap:8 }}>
+                <View style={{ flex:1, backgroundColor:"#0e1f10", borderRadius:8, padding:9,
+                  borderWidth:1, borderColor:"#166534" }}>
+                  <Text style={{ color:"#6ee7b7", fontSize:8, fontWeight:"700",
+                    letterSpacing:0.8, marginBottom:3 }}>REASSESS</Text>
+                  <Text style={{ color:"#86efac", fontSize:10.5, lineHeight:16 }}>
+                    {entry.reassessCue}
+                  </Text>
+                </View>
+                <View style={{ flex:1, backgroundColor:"#1a0e0a", borderRadius:8, padding:9,
+                  borderWidth:1, borderColor:"#7c3412" }}>
+                  <Text style={{ color:"#f97316", fontSize:8, fontWeight:"700",
+                    letterSpacing:0.8, marginBottom:3 }}>COMMON TRAP</Text>
+                  <Text style={{ color:"#fdba74", fontSize:10.5, lineHeight:16 }}>
+                    {entry.commonTrap}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </Pressable>
 
         {/* Healer units */}
         <View style={s.lobbyCard}>
@@ -2336,7 +2547,65 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
           ))}
         </View>
 
-        <Pressable style={s.enterBtn} onPress={onStart}>
+        {/* ── ROADMAP ────────────────────────────────────────────────── */}
+        <Pressable style={[s.lobbyCard, { gap:0 }]} onPress={() => setMapExpanded(v => !v)}>
+          <View style={{ flexDirection:"row", alignItems:"center", gap:6 }}>
+            <View style={{ width:3, height:14, borderRadius:2, backgroundColor:"#f59e0b" }}/>
+            <Text style={s.lobbySectionTitle}>CLINICA ROADMAP</Text>
+            <View style={{ flex:1 }}/>
+            <View style={{ backgroundColor:"#f59e0b22", borderRadius:6,
+              paddingHorizontal:7, paddingVertical:2 }}>
+              <Text style={{ color:"#f59e0b", fontSize:8, fontWeight:"700" }}>IN DEVELOPMENT</Text>
+            </View>
+            <Ionicons name={mapExpanded ? "chevron-up" : "chevron-down"}
+              size={14} color="#64748b" />
+          </View>
+          {!mapExpanded && (
+            <Text style={{ color:"#475569", fontSize:11, marginTop:6 }}>
+              What's coming next for Clinica.
+            </Text>
+          )}
+          {mapExpanded && (
+            <View style={{ marginTop:14, gap:8 }}>
+              {ROADMAP_ITEMS.map((item, i) => {
+                const statusColor = item.status === "next" ? "#34d399"
+                  : item.status === "coming" ? "#f59e0b" : "#475569";
+                const statusLabel = item.status === "next" ? "UP NEXT"
+                  : item.status === "coming" ? "COMING SOON" : "LOCKED";
+                return (
+                  <View key={i} style={{ flexDirection:"row", gap:10, alignItems:"flex-start",
+                    backgroundColor:"#0a1628", borderRadius:10, padding:12,
+                    borderWidth:1, borderColor:statusColor+"28",
+                    opacity: item.status === "locked" ? 0.6 : 1 }}>
+                    <Text style={{ fontSize:18, marginTop:1 }}>{item.icon}</Text>
+                    <View style={{ flex:1, gap:3 }}>
+                      <View style={{ flexDirection:"row", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                        <Text style={{ color:"#e2e8f0", fontSize:12, fontWeight:"700", flex:1 }}>
+                          {item.label}
+                        </Text>
+                        <View style={{ backgroundColor:statusColor+"20", borderRadius:4,
+                          paddingHorizontal:5, paddingVertical:1 }}>
+                          <Text style={{ color:statusColor, fontSize:7, fontWeight:"700" }}>
+                            {statusLabel}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={{ color:"#64748b", fontSize:11, lineHeight:16 }}>
+                        {item.desc}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <Text style={{ color:"#334155", fontSize:10, textAlign:"center", marginTop:4 }}>
+                Roadmap is informational — items may shift as development progresses.
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
+        {/* Enter button — opens case intro first */}
+        <Pressable style={s.enterBtn} onPress={() => setCaseVisible(true)}>
           <Ionicons name="shield-checkmark" size={20} color={COLORS.onBrand} />
           <Text style={s.enterBtnTxt}>ENTER AIRWAY WARD</Text>
         </Pressable>
