@@ -39,23 +39,22 @@ const PREWAVE_AP_BONUS = 8;    /* AP granted for correct pre-wave NCLEX answer *
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
-/* ── Board: U-path — Disease Gate LEFT WALL, Vital Lantern RIGHT WALL ──
-   Enemies enter left-wall gate, sweep DOWN the left corridor, ACROSS the
-   bottom, then UP the right corridor to reach the Vital Lantern shrine.
-   Gate/lantern at fy=0.30 keeps them visible after cover-mode web cropping.
-   The 2×3 deployment platform cluster sits in the open center of the U. */
+/* ── Board layout — MUST match ward-defense-v2.tsx exactly ─────────────────
+   Lane: LX=0.18, RX=0.82, TY=0.22, BY=0.76
+   Enemy centerline runs through mid-x of each corridor.
+   Center platform (hero territory): x LX→RX, y 0→BY                      */
 const PATH_WPS: [number, number][] = [
-  [0.12, 0.30],   /* 0 — Disease Gate (left wall) */
-  [0.12, 0.82],   /* 1 — bottom-left corner */
-  [0.88, 0.82],   /* 2 — bottom-right corner */
-  [0.88, 0.30],   /* 3 — Vital Lantern (right wall) */
+  [0.09, 0.30],   /* 0 — Disease Gate entry  (left corridor centre) */
+  [0.09, 0.83],   /* 1 — bottom-left corner  */
+  [0.91, 0.83],   /* 2 — bottom-right corner */
+  [0.91, 0.30],   /* 3 — Vital Lantern exit  (right corridor centre) */
 ];
 const N_SEGS = PATH_WPS.length - 1;   /* 3 segments */
 
-/* ── Deployment tiles: 2×3 stone platform cluster centered inside the U ── */
+/* ── Six deploy pads — 2 rows × 3 cols, centered inside the platform ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.32, 0.43], [0.50, 0.43], [0.68, 0.43],  /* top row */
-  [0.32, 0.62], [0.50, 0.62], [0.68, 0.62],  /* bottom row */
+  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],  /* top row    */
+  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],  /* bottom row */
 ];
 
 /* ═══════════════════════════════════════════════════════════════════

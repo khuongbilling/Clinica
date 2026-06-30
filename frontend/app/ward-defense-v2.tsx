@@ -1,48 +1,62 @@
 /**
- * Ward Defense V2 — Lotus Healing Sanctum
+ * Ward Defense V2 — Lotus Healing Sanctum (Layer-Based Fixed Layout)
  *
- * ART-FIRST RENDERING PHILOSOPHY:
- *   The background image contains the full environment — stone path, platforms,
- *   disease gate arch, vital lantern shrine. CSS overlays are:
- *   - Hero sprites placed exactly on top of the art's stone platform positions
- *   - Tiny dot indicators when a pad is selectable and empty
- *   - HP bars, cue badges on enemies
- *   - Projectile glows
- *   NOTHING ELSE. No CSS platform discs. No glowing underlay. No floating rings.
+ * RENDERING PHILOSOPHY — strict layout replication:
+ *   Every visual element is a declared CSS layer at exact board-fraction coords.
+ *   Nothing relies on the background image having a path in the right place.
  *
- * COORDINATE SYSTEM — IMAGE-FIRST COVER MODE:
- *   getImgBounds uses Math.MAX (cover) so image always fills the board edge-to-edge.
- *   All overlay positions computed from imgPx(fx, fy, b) which maps [0..1, 0..1]
- *   fractions to absolute pixel positions within the rendered image bounds.
+ *   Layer 1  bg    — background art (atmosphere only, contentFit="cover")
+ *   Layer 2  plat  — center platform block (stone arena where heroes stand)
+ *   Layer 3  lane  — U-shaped stone walkway (left strip + bottom strip + right strip)
+ *   Layer 4  pads  — 6 stone medallion deploy pads (2×3 centered in platform)
+ *   Layer 5  gate  — Disease Gate portal (left lane entry, top-left block)
+ *   Layer 6  lant  — Vital Lantern shrine (right lane exit, top-right block)
+ *   Layer 7  vig   — edge vignette
+ *   Layer 8  hero  — hero sprites standing on pads (Animated, above pads)
+ *   Layer 9  proj  — projectiles
+ *   Layer 10 enemy — enemy sprites walking on lane (Animated)
+ *
+ * COORDINATE SYSTEM: px = fx * aw,  py = fy * ah   (direct board fractions)
+ * No cover-mode math. No imgPx. No offset calculations.
  */
 import React from "react";
 import {
-  View, Text, Animated, Pressable,
-  StyleSheet, LayoutChangeEvent,
+  View, Text, Animated, Pressable, StyleSheet, LayoutChangeEvent,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
-/* ── Path + tile constants — must mirror ward-defense.tsx exactly ─────────── */
-/* U-shaped enemy lane: Disease Gate on LEFT WALL → down-left → across bottom
-   → up-right → Vital Lantern on RIGHT WALL.  All fy > 0.22 so both endpoints
-   remain visible even after cover-mode vertical cropping on wide web screens. */
-const PATH_WPS: [number, number][] = [
-  [0.12, 0.30],   /* Disease Gate — left wall, upper portion */
-  [0.12, 0.82],   /* bottom-left corner */
-  [0.88, 0.82],   /* bottom-right corner */
-  [0.88, 0.30],   /* Vital Lantern — right wall, upper portion */
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT CONSTANTS  (board-fraction units, 0–1)
+   ─────────────────────────────────────────────────────────────────────────
+   Lane geometry — U-shape:
+     • Left corridor:   x  0  →  LX,  y  TY → BY
+     • Bottom corridor: x  0  →  1,   y  BY → 1
+     • Right corridor:  x  RX →  1,   y  TY → BY
+     • Center platform: x  LX →  RX,  y   0 → BY   (heroes deployed here)
+
+   Enemy walk centerline runs through the mid-x of each corridor.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const LX = 0.18;   /* inner edge of left corridor  */
+const RX = 0.82;   /* inner edge of right corridor */
+const TY = 0.22;   /* top y — gate / lantern openings start here */
+const BY = 0.76;   /* top y of bottom corridor     */
+
+/* Enemy path waypoints — centerline of the stone lane */
+export const PATH_WPS: [number, number][] = [
+  [0.09, 0.30],   /* Disease Gate entry  (left corridor center) */
+  [0.09, 0.83],   /* bottom-left corner  */
+  [0.91, 0.83],   /* bottom-right corner */
+  [0.91, 0.30],   /* Vital Lantern exit  (right corridor center) */
 ];
 
-/* Six deployment tiles — 2×3 stone platform cluster in the center of the U.
-   Positions calibrated for the lotus sanctuary art (left/right path corridors
-   at fx≈0.12 and fx≈0.88; center arena fx=0.20-0.80). */
-const DEPLOY_TILES: [number, number][] = [
-  [0.32, 0.43], [0.50, 0.43], [0.68, 0.43],   /* top row    */
-  [0.32, 0.62], [0.50, 0.62], [0.68, 0.62],   /* bottom row */
+/* Six deploy pads — 2 rows × 3 cols, centered inside the platform */
+export const DEPLOY_TILES: [number, number][] = [
+  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],   /* top row    */
+  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],   /* bottom row */
 ];
 
-/* ── Illustrated assets ───────────────────────────────────────────────────── */
+/* ─── Assets ────────────────────────────────────────────────────────────── */
 const IMG_BOARD = require("../assets/images/ward_board_scene.png");
 
 const IMG_UNITS: Record<string, any> = {
@@ -67,7 +81,7 @@ const ENEMY_COLOR: Record<string, string> = {
   bronchospasm_drake: "#fb923c",
 };
 
-/* ── Props ────────────────────────────────────────────────────────────────── */
+/* ─── Props ─────────────────────────────────────────────────────────────── */
 export interface WardBoardV2Props {
   aw: number; ah: number;
   onLayout: (e: LayoutChangeEvent) => void;
@@ -87,9 +101,9 @@ export interface WardBoardV2Props {
   unitColors: Record<string, string>;
 }
 
-/* ── Helpers ──────────────────────────────────────────────────────────────── */
-function cl(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
-function lp(a: number, b: number, t: number)   { return a + (b - a) * cl(t, 0, 1); }
+/* ─── Helpers ───────────────────────────────────────────────────────────── */
+const cl = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const lp = (a: number, b: number, t: number)   => a + (b - a) * cl(t, 0, 1);
 
 function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, number] {
   const pi   = cl(e.pathIndex, 0, PATH_WPS.length - 2);
@@ -98,376 +112,424 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
   return [lp(from[0], to[0], e.pathProgress), lp(from[1], to[1], e.pathProgress)];
 }
 
-/* ── Image-bounds — COVER mode fills board edge-to-edge ──────────────────── */
-/* 896×1280 = 7:10 actual image ratio — use exact values for accurate overlays */
-const IMG_AR_W = 7, IMG_AR_H = 10;
-type ImgBounds = { iw: number; ih: number; ox: number; oy: number };
-
-function getImgBounds(aw: number, ah: number): ImgBounds {
-  /* Cover: scale so the LARGER dimension fills the container */
-  const scale = Math.max(aw / IMG_AR_W, ah / IMG_AR_H);
-  const iw    = IMG_AR_W * scale;
-  const ih    = IMG_AR_H * scale;
-  return { iw, ih, ox: (aw - iw) / 2, oy: (ah - ih) / 2 };
-}
-
-function imgPx(fx: number, fy: number, b: ImgBounds): [number, number] {
-  return [b.ox + fx * b.iw, b.oy + fy * b.ih];
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   BOARD SCENE — explicit pixel dimensions are the only approach proven to
-   work reliably in RN-web nested flex containers. Negative `top` (cover mode)
-   is handled by the parent's overflow:hidden clipping.
-════════════════════════════════════════════════════════════════════════════ */
-function BoardScene({ aw, ah }: { aw: number; ah: number }) {
-  const w     = aw > 10 ? aw : 360;
-  const h     = ah > 10 ? ah : 540;
-  const scale = Math.max(w / IMG_AR_W, h / IMG_AR_H);
-  const iw    = IMG_AR_W * scale;
-  const ih    = IMG_AR_H * scale;
-  const left  = (w - iw) / 2;
-  const top   = (h - ih) / 2;
-
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 2 — CENTER PLATFORM
+   Dark stone block that fills the inner arena (between the two corridors).
+   Enemies NEVER walk here — this is the heroes' territory.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function CenterPlatform({ aw, ah }: { aw: number; ah: number }) {
   return (
-    <ExpoImage
-      key={`board-${Math.round(iw)}-${Math.round(ih)}`}
-      source={IMG_BOARD}
-      style={{ position: "absolute", left, top, width: iw, height: ih }}
-      contentFit="fill"
-      cachePolicy="none"
+    <LinearGradient
+      colors={["#1A1408", "#211A0A", "#1A1408"]}
+      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      style={{
+        position: "absolute",
+        left: LX * aw, top: 0,
+        width: (RX - LX) * aw,
+        height: BY * ah,
+        zIndex: 2,
+        borderLeftWidth: 2.5,
+        borderRightWidth: 2.5,
+        borderBottomWidth: 2.5,
+        borderColor: "#0D0904",
+      }}
     />
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   DISEASE PORTAL — minimal floating label above the gate arch in the art
-════════════════════════════════════════════════════════════════════════════ */
-function DiseasePortal({
-  imgBounds: b, aw, ah, spawnQueueLen,
-}: { imgBounds: ImgBounds; aw: number; ah: number; spawnQueueLen: number }) {
-  const [px, py] = imgPx(PATH_WPS[0][0], PATH_WPS[0][1], b);
-  const left = cl(px - 34, 4, aw - 80);
-  const top  = cl(py - 36, 4, ah * 0.45);
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 3 — STONE LANE  (U-shaped enemy walkway)
+   Three overlapping View strips: left vertical + bottom horizontal + right vertical.
+   The strips share the corner squares naturally through z-stacking.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Stone palette */
+const S_DARK   = "#0D0904";
+const S_BASE   = "#2A2010";
+const S_MID    = "#3D3018";
+const S_LIGHT  = "#574830";
+const S_BORDER = "#0D0904";
+
+function LaneStrip({
+  left, top, w, h, horizontal,
+}: { left: number; top: number; w: number; h: number; horizontal: boolean }) {
   return (
-    <View style={{ position: "absolute", left, top, zIndex: 22, alignItems: "flex-start" }}>
-      {spawnQueueLen > 0 && (
-        <View style={{
-          backgroundColor: "#3b0764ee",
-          borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
-          borderWidth: 1, borderColor: "#a855f7",
-          marginBottom: 3,
-        }}>
-          <Text style={{ color: "#e9d5ff", fontSize: 7.5, fontWeight: "800" }}>
-            ⚡ {spawnQueueLen}
-          </Text>
-        </View>
-      )}
-      <View style={{
-        backgroundColor: "#160828dd",
-        borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2,
-        borderWidth: 1, borderColor: "#7c3aed88",
-      }}>
-        <Text style={{ color: "#c4b5fd", fontSize: 6.5, fontWeight: "800", letterSpacing: 1 }}>
-          DISEASE GATE
-        </Text>
-      </View>
-    </View>
+    <LinearGradient
+      colors={horizontal
+        ? [S_DARK, S_MID, S_LIGHT, S_MID, S_DARK]   /* top→bottom for horiz strip */
+        : [S_DARK, S_MID, S_LIGHT, S_MID, S_DARK]}   /* left→right for vert strip */
+      start={horizontal ? { x: 0, y: 0 } : { x: 0, y: 0.5 }}
+      end={horizontal   ? { x: 0, y: 1 } : { x: 1, y: 0.5 }}
+      style={{
+        position: "absolute",
+        left, top, width: w, height: h,
+        zIndex: 3,
+        borderColor: S_BORDER,
+      }}
+    />
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   VITAL LANTERN — minimal stability display above the shrine arch in the art
-════════════════════════════════════════════════════════════════════════════ */
-function VitalLantern({
-  stability, imgBounds: b, aw, ah,
-}: { stability: number; imgBounds: ImgBounds; aw: number; ah: number }) {
-  const [px, py] = imgPx(PATH_WPS[PATH_WPS.length - 1][0], PATH_WPS[PATH_WPS.length - 1][1], b);
-  const pct   = cl(stability, 0, 100);
-  const glow  = pct > 60 ? "#22d3ee" : pct > 30 ? "#facc15" : "#ef4444";
-  const right = cl(aw - px - 34, 4, aw - 4);
-  const top   = cl(py - 30, 4, ah - 60);
+function StoneLane({ aw, ah }: { aw: number; ah: number }) {
+  const leftW  = LX * aw;               /* left corridor width        */
+  const rightX = RX * aw;               /* right corridor left edge   */
+  const rightW = (1 - RX) * aw;         /* right corridor width        */
+  const corrT  = TY * ah;               /* top of vertical corridors  */
+  const corrH  = (BY - TY) * ah;        /* height of vertical corr.   */
+  const botT   = BY * ah;               /* top of bottom corridor     */
+  const botH   = (1 - BY) * ah;         /* height of bottom corridor  */
 
   return (
-    <View style={{ position: "absolute", right, top, zIndex: 22, alignItems: "flex-end" }}>
-      <View style={{
-        backgroundColor: "#061a1add",
-        borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2,
-        borderWidth: 1, borderColor: glow + "88",
-        marginBottom: 3,
-      }}>
-        <Text style={{ color: "#a7f3d0", fontSize: 6.5, fontWeight: "800", letterSpacing: 1 }}>
-          VITAL LANTERN
-        </Text>
-      </View>
-      {/* Stability bar */}
-      <View style={{
-        width: 64, height: 6, backgroundColor: "#00000060",
-        borderRadius: 3, overflow: "hidden",
-        borderWidth: 1, borderColor: glow + "60",
-      }}>
-        <View style={{
-          width: `${pct}%` as any, height: "100%",
-          backgroundColor: glow, borderRadius: 3,
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: 3, pointerEvents: "none" }]}>
+      {/* Left vertical corridor */}
+      <LaneStrip left={0} top={corrT} w={leftW}  h={corrH} horizontal={false} />
+      {/* Right vertical corridor */}
+      <LaneStrip left={rightX} top={corrT} w={rightW} h={corrH} horizontal={false} />
+      {/* Bottom horizontal corridor — full width */}
+      <LaneStrip left={0} top={botT}  w={aw}    h={botH}  horizontal={true}  />
+
+      {/* Stone tile seam lines in left corridor */}
+      {[0.33, 0.55, 0.77].map(yf => (
+        <View key={`lts-${yf}`} style={{
+          position: "absolute", zIndex: 4,
+          left: 3, top: corrT + yf * corrH,
+          width: leftW - 6, height: 1,
+          backgroundColor: S_DARK + "aa",
         }}/>
-      </View>
-      <Text style={{ color: glow, fontSize: 7, fontWeight: "700", marginTop: 2 }}>
-        {pct}%
-      </Text>
+      ))}
+      {/* Stone tile seam lines in right corridor */}
+      {[0.33, 0.55, 0.77].map(yf => (
+        <View key={`rts-${yf}`} style={{
+          position: "absolute", zIndex: 4,
+          left: rightX + 3, top: corrT + yf * corrH,
+          width: rightW - 6, height: 1,
+          backgroundColor: S_DARK + "aa",
+        }}/>
+      ))}
+      {/* Stone tile seam lines in bottom corridor (vertical dividers) */}
+      {[0.20, 0.40, 0.60, 0.80].map(xf => (
+        <View key={`bts-${xf}`} style={{
+          position: "absolute", zIndex: 4,
+          left: xf * aw, top: botT + 3,
+          width: 1, height: botH - 6,
+          backgroundColor: S_DARK + "aa",
+        }}/>
+      ))}
+
+      {/* Edge borders */}
+      <View style={{ position: "absolute", zIndex: 4, left: leftW - 1, top: corrT, width: 2, height: corrH + botH, backgroundColor: S_BORDER }}/>
+      <View style={{ position: "absolute", zIndex: 4, left: rightX - 1, top: corrT, width: 2, height: corrH + botH, backgroundColor: S_BORDER }}/>
+      <View style={{ position: "absolute", zIndex: 4, left: 0, top: corrT - 1, width: leftW, height: 2, backgroundColor: S_BORDER }}/>
+      <View style={{ position: "absolute", zIndex: 4, left: rightX, top: corrT - 1, width: rightW, height: 2, backgroundColor: S_BORDER }}/>
     </View>
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   DEPLOY PAD — COMPLETELY TRANSPARENT touch zone
-   The art's stone platform IS the visual platform. This component only:
-   • Shows the hero sprite when occupied (standing on the art platform)
-   • Shows a tiny green dot when empty + unit selected + can afford
-   • Never renders any background, border, shadow or gradient overlay
-════════════════════════════════════════════════════════════════════════════ */
-interface DPProps {
-  tileIdx: number;
-  unit: any;
-  selectedUnit: string | null;
-  canAfford: boolean;
-  isMergeCandidate: boolean;
-  onPress: () => void;
-  imgBounds: ImgBounds;
-  unitColors: Record<string, string>;
-  bobY: Animated.AnimatedInterpolation<number>;
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 4 — STONE MEDALLION DEPLOY PADS
+   Each pad is a proper stone circle at its exact (fx, fy) board position.
+   The Pressable wraps a visual medallion + tap affordance.
+   ═══════════════════════════════════════════════════════════════════════════ */
+interface StonePadProps {
+  aw: number; ah: number; tileIdx: number;
+  occupied: boolean; selected: boolean; canAfford: boolean;
+  isMergeCandidate: boolean; onPress: () => void;
 }
 
-function DeployPad({
-  tileIdx, unit, selectedUnit, canAfford, isMergeCandidate,
-  onPress, imgBounds: b, unitColors, bobY,
-}: DPProps) {
-  const [fx, fy]   = DEPLOY_TILES[tileIdx];
-  const [px, py]   = imgPx(fx, fy, b);
-  const isOccupied = !!unit;
+function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandidate, onPress }: StonePadProps) {
+  const [fx, fy] = DEPLOY_TILES[tileIdx];
+  const cx = fx * aw;
+  const cy = fy * ah;
+  /* Pad radius scales with the shorter board dimension */
+  const R = cl(Math.min(aw, ah) * 0.073, 24, 44);
 
-  /* Hero sprite sits above the art platform. The art platform top surface is
-     approximately 12px above the coordinate centre (isometric perspective). */
-  const SPRITE_W  = 58;
-  const SPRITE_H  = 72;
-  const PLATFORM_OFFSET = 14;   /* px above py where platform top surface is */
-  const HIT_W     = 72;
-  const HIT_H     = SPRITE_H + PLATFORM_OFFSET + 24;
-
-  const heroImg   = IMG_UNITS[unit?.typeId] ?? IMG_UNITS.ward_scout;
-  const unitColor = isOccupied ? (unitColors[unit.typeId] ?? "#60a5fa") : null;
+  /* Only show selection affordance on UNOCCUPIED pads */
+  const accentC = isMergeCandidate
+    ? "#facc15"
+    : (!occupied && selected && canAfford)  ? "#22d3ee"
+    : (!occupied && selected && !canAfford) ? "#64748b"
+    : null;
 
   return (
     <Pressable
       onPress={onPress}
       style={{
         position: "absolute",
-        left: px - HIT_W / 2,
-        top:  py - SPRITE_H - PLATFORM_OFFSET,
-        width: HIT_W,
-        height: HIT_H,
-        alignItems: "center",
-        zIndex: 15,
-        /* TRANSPARENT — no background, no border, no shadow */
+        left: cx - R - 10, top: cy - R - 10,
+        width: (R + 10) * 2, height: (R + 10) * 2,
+        alignItems: "center", justifyContent: "center",
+        zIndex: 6,
       }}
     >
-      {isOccupied ? (
-        /* ── Occupied: hero sprite floating slightly above art platform ── */
-        <Animated.View style={{
-          transform: [{ translateY: bobY }],
-          alignItems: "center",
-        }}>
-          {/* Merge gold halo ring */}
-          {isMergeCandidate && (
-            <View style={{
-              position: "absolute",
-              top: -8, left: -8, right: -8, bottom: -8,
-              borderRadius: 50,
-              borderWidth: 2, borderColor: "#FFD700cc",
-              backgroundColor: "#FFD70010",
-            }}/>
-          )}
-
-          {/* Cast flash ring */}
-          {(unit.castFlash ?? 0) > 0 && (
-            <View style={{
-              position: "absolute",
-              top: -5, left: -5, right: -5, bottom: -5,
-              borderRadius: 48,
-              borderWidth: 2.5, borderColor: (unitColor ?? "#22d3ee") + "cc",
-            }}/>
-          )}
-
-          {/* Level badge */}
-          {(unit.level ?? 1) > 1 && (
-            <View style={{
-              position: "absolute", top: 0, right: -8, zIndex: 18,
-              backgroundColor: (unit.level ?? 1) >= 3 ? "#FFD700" : "#a78bfa",
-              borderRadius: 5, paddingHorizontal: 4, paddingVertical: 1,
-            }}>
-              <Text style={{ color: "#0a0a1a", fontSize: 5.5, fontWeight: "900" }}>
-                Lv.{unit.level}
-              </Text>
-            </View>
-          )}
-
-          {/* Hero battle sprite — same art as bottom hand card */}
-          <ExpoImage
-            source={heroImg}
-            style={{ width: SPRITE_W, height: SPRITE_H }}
-            contentFit="contain"
-          />
-
-          {/* Soft ground shadow */}
-          <View style={{
-            width: 40, height: 5, borderRadius: 20,
-            backgroundColor: "#00000075",
-            marginTop: -5,
-          }}/>
-        </Animated.View>
-      ) : (
-        /* ── Empty: lotus-ring pad indicator when a unit is selected ──────── */
-        /* Shows a 64×64 circle centered on the art's stone platform position,
-           giving a clear tap target that visually matches the art's platform. */
-        selectedUnit && (
-          <View style={{
-            position: "absolute",
-            left: HIT_W / 2 - 32,       /* center on platform fx  */
-            top:  SPRITE_H + PLATFORM_OFFSET - 32,  /* center on platform fy */
-            width: 64, height: 64, borderRadius: 32,
-            backgroundColor: canAfford ? "#22d3ee16" : "#33415510",
-            borderWidth: 2.5,
-            borderColor: canAfford ? "#22d3eecc" : "#47556966",
-            alignItems: "center", justifyContent: "center",
-          }}>
-            {/* Inner concentric ring — lotus medallion feel */}
-            <View style={{
-              width: 38, height: 38, borderRadius: 19,
-              borderWidth: 1.5,
-              borderColor: canAfford ? "#22d3ee77" : "#47556944",
-            }}/>
-          </View>
-        )
+      {/* Outer glow halo when selected */}
+      {accentC && (
+        <View style={{
+          position: "absolute",
+          width: R * 2 + 20, height: R * 2 + 20,
+          borderRadius: R + 10,
+          borderWidth: 2.5,
+          borderColor: accentC + "66",
+        }}/>
       )}
+      {/* Shadow ring */}
+      <View style={{
+        width: R * 2 + 8, height: R * 2 + 8, borderRadius: R + 4,
+        backgroundColor: "#000000aa",
+        alignItems: "center", justifyContent: "center",
+      }}>
+        {/* Stone border ring */}
+        <View style={{
+          width: R * 2, height: R * 2, borderRadius: R,
+          borderWidth: 3,
+          borderColor: accentC ?? "#1A1408",
+          overflow: "hidden",
+          alignItems: "center", justifyContent: "center",
+        }}>
+          {/* Stone surface — warm stone gradient */}
+          <LinearGradient
+            colors={["#9C876A", "#7A6248", "#5C4A32", "#4A3A24"]}
+            start={{ x: 0.25, y: 0 }} end={{ x: 0.75, y: 1 }}
+            style={{ position: "absolute", left: 0, top: 0, width: R * 2, height: R * 2 }}
+          />
+          {/* Carved inner circle */}
+          <View style={{
+            width: R - 8, height: R - 8, borderRadius: R,
+            borderWidth: 1.5,
+            borderColor: accentC ? accentC + "99" : "#2A1E0A",
+            backgroundColor: "transparent",
+          }}/>
+          {/* Affordance symbol */}
+          {selected && !occupied && (
+            <Text style={{
+              position: "absolute",
+              color: canAfford ? "#22d3ee" : "#475569",
+              fontSize: R * 0.40, fontWeight: "800",
+            }}>
+              {canAfford ? "+" : "—"}
+            </Text>
+          )}
+          {isMergeCandidate && (
+            <Text style={{ position: "absolute", color: "#facc15", fontSize: R * 0.45, fontWeight: "800" }}>
+              ★
+            </Text>
+          )}
+        </View>
+      </View>
     </Pressable>
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   ENEMY ON PATH
-════════════════════════════════════════════════════════════════════════════ */
-function EnemyOnPath({
-  enemy, bobY, imgBounds: b,
-}: { enemy: any; bobY: Animated.AnimatedInterpolation<number>; imgBounds: ImgBounds }) {
-  const [fx, fy] = getEnemyFrac(enemy);
-  const [px, py] = imgPx(fx, fy, b);
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 5 — DISEASE GATE PORTAL  (left wall, top-left block)
+   Fills the left corridor above the enemy entry point.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function GatePortal({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
+  const w = LX * aw;
+  const h = TY * ah;
 
-  const hpPct    = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
-  const barColor = hpPct > 0.6 ? "#22c55e" : hpPct > 0.3 ? "#facc15" : "#ef4444";
-  const isFlash  = (enemy.hitFlash ?? 0) > 0;
-  const isBoss   = enemy.typeId === "bronchospasm_drake";
-  const sprW     = isBoss ? 70 : 52;
-  const sprH     = isBoss ? 70 : 52;
-  const barW     = isBoss ? 62 : 46;
-  const accentC  = ENEMY_COLOR[enemy.typeId] ?? "#94a3b8";
-  const img      = IMG_ENEMIES[enemy.typeId];
+  return (
+    <View style={{
+      position: "absolute",
+      left: 0, top: 0, width: w, height: h + 4,
+      zIndex: 8, overflow: "hidden",
+    }}>
+      <LinearGradient
+        colors={["#1A0828", "#240C38", "#1A0828"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 4 }}
+      >
+        {/* Portal eye orb */}
+        <View style={{
+          width: w * 0.68, height: w * 0.68, borderRadius: w * 0.34,
+          backgroundColor: "#2D0A50",
+          borderWidth: 2, borderColor: "#8B5CF6",
+          alignItems: "center", justifyContent: "center",
+          marginBottom: 4,
+        }}>
+          <View style={{
+            width: w * 0.30, height: w * 0.30, borderRadius: w * 0.15,
+            backgroundColor: "#6D28D9",
+            borderWidth: 1.5, borderColor: "#A78BFA",
+          }}/>
+        </View>
+
+        {spawnQueueLen > 0 && (
+          <View style={{
+            backgroundColor: "#3B0764EE", borderRadius: 4,
+            paddingHorizontal: 4, paddingVertical: 1,
+            borderWidth: 1, borderColor: "#A855F7",
+            marginBottom: 2,
+          }}>
+            <Text style={{ color: "#E9D5FF", fontSize: 6.5, fontWeight: "800" }}>
+              ⚡ {spawnQueueLen}
+            </Text>
+          </View>
+        )}
+
+        <Text style={{ color: "#C4B5FD", fontSize: 5.5, fontWeight: "800", letterSpacing: 0.8, textAlign: "center" }}>
+          DISEASE{"\n"}GATE
+        </Text>
+      </LinearGradient>
+
+      {/* Bottom border joining the lane */}
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2.5, backgroundColor: S_BORDER }}/>
+    </View>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 6 — VITAL LANTERN SHRINE  (right wall, top-right block)
+   Fills the right corridor above the enemy exit point, with stability bar.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function LanternShrine({ aw, ah, stability }: { aw: number; ah: number; stability: number }) {
+  const w    = (1 - RX) * aw;
+  const h    = TY * ah;
+  const pct  = cl(stability, 0, 100);
+  const glow = pct > 60 ? "#22D3EE" : pct > 30 ? "#FACC15" : "#EF4444";
+
+  return (
+    <View style={{
+      position: "absolute",
+      right: 0, top: 0, width: w, height: h + 4,
+      zIndex: 8, overflow: "hidden",
+    }}>
+      <LinearGradient
+        colors={["#041818", "#062424", "#041818"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 4 }}
+      >
+        {/* Lantern orb */}
+        <View style={{
+          width: w * 0.68, height: w * 0.68, borderRadius: w * 0.34,
+          backgroundColor: "#051E1E",
+          borderWidth: 2, borderColor: glow,
+          alignItems: "center", justifyContent: "center",
+          marginBottom: 4,
+        }}>
+          <View style={{
+            width: w * 0.30, height: w * 0.30, borderRadius: w * 0.15,
+            backgroundColor: glow + "60",
+            borderWidth: 1.5, borderColor: glow,
+          }}/>
+        </View>
+
+        {/* Stability bar */}
+        <View style={{
+          width: w * 0.82, height: 5, backgroundColor: "#00000070",
+          borderRadius: 3, overflow: "hidden",
+          borderWidth: 0.5, borderColor: glow + "60",
+          marginBottom: 2,
+        }}>
+          <View style={{
+            width: `${pct}%` as any, height: "100%",
+            backgroundColor: glow, borderRadius: 3,
+          }}/>
+        </View>
+
+        <Text style={{ color: "#A7F3D0", fontSize: 5, fontWeight: "800", letterSpacing: 0.5, textAlign: "center" }}>
+          VITAL{"\n"}LANTERN
+        </Text>
+        <Text style={{ color: glow, fontSize: 7, fontWeight: "700" }}>{pct}%</Text>
+      </LinearGradient>
+
+      {/* Bottom border joining the lane */}
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2.5, backgroundColor: S_BORDER }}/>
+    </View>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 8 — HERO SPRITE ON PAD
+   Separate from the Pressable (StonePad) so the sprite can be Animated.
+   Feet rest just above the pad center.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const HERO_W = 52, HERO_H = 66;
+
+function HeroOnPad({
+  aw, ah, tileIdx, unit, bobY, unitColors,
+}: {
+  aw: number; ah: number; tileIdx: number;
+  unit: any; bobY: Animated.AnimatedInterpolation<number>; unitColors: Record<string, string>;
+}) {
+  if (!unit) return null;
+  const [fx, fy] = DEPLOY_TILES[tileIdx];
+  const cx  = fx * aw;
+  const cy  = fy * ah;
+  const img = IMG_UNITS[unit.typeId];
+  const col = unitColors[unit.typeId] ?? "#22d3ee";
+  const hpPct  = cl(unit.hp / unit.maxHp, 0, 1);
+  const isFlash = (unit.castFlash ?? 0) > 0 || (unit.mergeFlash ?? 0) > 0;
 
   return (
     <Animated.View style={{
       position: "absolute",
-      left: px - sprW / 2,
-      top:  py - sprH - 28,
+      left: cx - HERO_W / 2,
+      top:  cy - HERO_H - 4,   /* feet 4px above pad centre */
+      width: HERO_W,
       alignItems: "center",
-      zIndex: 14,
+      zIndex: 10,
       transform: [{ translateY: bobY }],
     }}>
-      {/* HP bar */}
-      <View style={{
-        width: barW, height: 5, backgroundColor: "#00000090",
-        borderRadius: 3, marginBottom: 2, overflow: "hidden",
-        borderWidth: 0.5, borderColor: "#ffffff20",
-      }}>
+      {/* HP bar — only when damaged */}
+      {hpPct < 0.99 && (
         <View style={{
-          width: `${hpPct * 100}%` as any, height: "100%",
-          backgroundColor: barColor, borderRadius: 3,
-        }}/>
-      </View>
-
-      {/* Clinical cue badge */}
-      <View style={{
-        backgroundColor: accentC + "22", borderRadius: 4,
-        paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3,
-        borderWidth: 0.5, borderColor: accentC + "70",
-        maxWidth: barW + 16,
-      }}>
-        <Text
-          style={{ color: accentC, fontSize: 6, fontWeight: "700", textAlign: "center" }}
-          numberOfLines={1}
-        >
-          {enemy.clue ?? enemy.name ?? "?"}
-        </Text>
-      </View>
-
-      {isBoss && (
-        <Text style={{ color: accentC, fontSize: 8, fontWeight: "700", marginBottom: 1 }}>
-          {enemy.hp}
-        </Text>
-      )}
-
-      {isFlash && (
-        <View style={{
-          position: "absolute", top: 20, left: 0, right: 0, bottom: 5,
-          backgroundColor: "#ffffff28", borderRadius: 10, zIndex: 15,
-        }}/>
-      )}
-
-      {(enemy.slowTicks ?? 0) > 0 && (
-        <View style={{
-          position: "absolute", top: 16, right: -10,
-          backgroundColor: "#A78BFA22", borderRadius: 4, paddingHorizontal: 3,
+          width: 38, height: 4, backgroundColor: "#00000090",
+          borderRadius: 2, marginBottom: 2, overflow: "hidden",
         }}>
-          <Text style={{ color: "#A78BFA", fontSize: 6 }}>↓</Text>
+          <View style={{
+            width: `${hpPct * 100}%` as any, height: "100%",
+            backgroundColor: hpPct > 0.5 ? "#22C55E" : hpPct > 0.25 ? "#FACC15" : "#EF4444",
+          }}/>
         </View>
       )}
 
       {img ? (
-        <ExpoImage source={img} style={{ width: sprW, height: sprH }} contentFit="contain" />
+        <ExpoImage
+          source={img}
+          style={{ width: HERO_W, height: HERO_H }}
+          contentFit="contain"
+          cachePolicy="none"
+        />
       ) : (
         <View style={{
-          width: sprW, height: sprH, borderRadius: sprW / 2,
-          backgroundColor: accentC + "33", borderWidth: 2, borderColor: accentC,
+          width: HERO_W, height: HERO_H, borderRadius: 8,
+          backgroundColor: col + "33", borderWidth: 2, borderColor: col,
           alignItems: "center", justifyContent: "center",
         }}>
-          <Text style={{ fontSize: isBoss ? 24 : 18 }}>
-            {enemy.typeId === "bronchospasm_drake" ? "🐉"
-              : enemy.typeId === "hypoxia_wraith" ? "👻"
-              : enemy.typeId === "mucus_slime" ? "🫧" : "💨"}
-          </Text>
+          <Text style={{ fontSize: 28 }}>🧙</Text>
         </View>
       )}
 
+      {isFlash && (
+        <View style={{
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "#FFFFFF30", borderRadius: 6, zIndex: 1,
+        }}/>
+      )}
+      {/* Foot shadow on pad */}
       <View style={{
-        width: isBoss ? 50 : 36, height: 5, borderRadius: 25,
-        backgroundColor: "#000000a0", marginTop: -3,
+        width: 30, height: 4, borderRadius: 15,
+        backgroundColor: "#00000080", marginTop: -3,
       }}/>
     </Animated.View>
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   PROJECTILE
-════════════════════════════════════════════════════════════════════════════ */
-function ProjectileDot({ p, imgBounds: b }: { p: any; imgBounds: ImgBounds }) {
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 9 — PROJECTILE
+   ═══════════════════════════════════════════════════════════════════════════ */
+function ProjectileDot({ aw, ah, p }: { aw: number; ah: number; p: any }) {
   const fx  = lp(p.fromFx, p.toFx, p.progress);
   const fy  = lp(p.fromFy, p.toFy, p.progress);
-  const [px, py] = imgPx(fx, fy, b);
+  const px  = fx * aw;
+  const py  = fy * ah;
   const col = p.color ?? "#22d3ee";
   return (
     <View style={{
       position: "absolute",
       left: px - 6, top: py - 6,
       width: 12, height: 12, borderRadius: 6,
-      backgroundColor: col + "50", borderWidth: 2, borderColor: col,
+      backgroundColor: col + "55", borderWidth: 2, borderColor: col,
       alignItems: "center", justifyContent: "center", zIndex: 13,
     }}>
       <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#fff" }}/>
@@ -475,9 +537,113 @@ function ProjectileDot({ p, imgBounds: b }: { p: any; imgBounds: ImgBounds }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 10 — ENEMY ON LANE
+   Positioned at the enemy's lane coordinate (fx*aw, fy*ah) with sprite above.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function EnemyOnPath({
+  aw, ah, enemy, bobY,
+}: { aw: number; ah: number; enemy: any; bobY: Animated.AnimatedInterpolation<number> }) {
+  const [fx, fy] = getEnemyFrac(enemy);
+  const px = fx * aw;
+  const py = fy * ah;
+
+  const hpPct   = cl(enemy.hp / enemy.maxHp, 0, 1);
+  const barCol  = hpPct > 0.6 ? "#22C55E" : hpPct > 0.3 ? "#FACC15" : "#EF4444";
+  const isFlash = (enemy.hitFlash ?? 0) > 0;
+  const isBoss  = enemy.typeId === "bronchospasm_drake";
+  const sprW    = isBoss ? 66 : 48;
+  const sprH    = isBoss ? 66 : 48;
+  const barW    = isBoss ? 58 : 42;
+  const accent  = ENEMY_COLOR[enemy.typeId] ?? "#94a3b8";
+  const img     = IMG_ENEMIES[enemy.typeId];
+
+  return (
+    <Animated.View style={{
+      position: "absolute",
+      left: px - sprW / 2,
+      top:  py - sprH - 22,   /* sprite hovers above its lane point */
+      alignItems: "center",
+      zIndex: 14,
+      transform: [{ translateY: bobY }],
+    }}>
+      {/* HP bar */}
+      <View style={{
+        width: barW, height: 4, backgroundColor: "#00000090",
+        borderRadius: 2, marginBottom: 2, overflow: "hidden",
+        borderWidth: 0.5, borderColor: "#FFFFFF20",
+      }}>
+        <View style={{
+          width: `${hpPct * 100}%` as any, height: "100%",
+          backgroundColor: barCol, borderRadius: 2,
+        }}/>
+      </View>
+
+      {/* Clinical cue badge */}
+      <View style={{
+        backgroundColor: accent + "22", borderRadius: 3,
+        paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3,
+        borderWidth: 0.5, borderColor: accent + "70",
+        maxWidth: barW + 10,
+      }}>
+        <Text style={{ color: accent, fontSize: 5.5, fontWeight: "700", textAlign: "center" }} numberOfLines={1}>
+          {enemy.clue ?? enemy.name ?? "?"}
+        </Text>
+      </View>
+
+      {isBoss && (
+        <Text style={{ color: accent, fontSize: 7.5, fontWeight: "700", marginBottom: 1 }}>
+          {enemy.hp}
+        </Text>
+      )}
+
+      {/* Sprite */}
+      {img ? (
+        <ExpoImage source={img} style={{ width: sprW, height: sprH }} contentFit="contain" />
+      ) : (
+        <View style={{
+          width: sprW, height: sprH, borderRadius: sprW / 2,
+          backgroundColor: accent + "33", borderWidth: 2, borderColor: accent,
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <Text style={{ fontSize: isBoss ? 22 : 16 }}>
+            {enemy.typeId === "bronchospasm_drake" ? "🐉"
+              : enemy.typeId === "hypoxia_wraith"  ? "👻"
+              : enemy.typeId === "mucus_slime"     ? "🫧" : "💨"}
+          </Text>
+        </View>
+      )}
+
+      {/* Hit flash overlay */}
+      {isFlash && (
+        <View style={{
+          position: "absolute", top: 14, left: 0, right: 0, bottom: 4,
+          backgroundColor: "#FFFFFF28", borderRadius: 10, zIndex: 15,
+        }}/>
+      )}
+      {(enemy.slowTicks ?? 0) > 0 && (
+        <View style={{
+          position: "absolute", top: 12, right: -8,
+          backgroundColor: "#A78BFA22", borderRadius: 3, paddingHorizontal: 2,
+        }}>
+          <Text style={{ color: "#A78BFA", fontSize: 5 }}>↓</Text>
+        </View>
+      )}
+
+      {/* Foot shadow on lane */}
+      <View style={{
+        width: isBoss ? 46 : 32, height: 4, borderRadius: 24,
+        backgroundColor: "#000000A0", marginTop: -2,
+      }}/>
+    </Animated.View>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    MAIN BOARD EXPORT
-════════════════════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════════ */
+export default function WardDefenseV2Screen() { return null; } /* satisfies Expo router */
+
 export function WardBoardV2({
   aw, ah, onLayout,
   enemies, deployedUnits, projectiles,
@@ -485,66 +651,73 @@ export function WardBoardV2({
   selectedUnit, bobY,
   spawnQueueLen, mergeTileSet, onTilePress, canAfford, unitColors,
 }: WardBoardV2Props) {
-  const imgBounds = getImgBounds(aw > 20 ? aw : 360, ah > 20 ? ah : 500);
+  const W = aw > 20 ? aw : 360;
+  const H = ah > 20 ? ah : 480;
 
   return (
     <View
-      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#050912" }}
+      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#0D0A06" }}
       onLayout={onLayout}
     >
-      {/* 1. Background art — explicit pixel dimensions, cover-mode crop, cachePolicy:none */}
-      <BoardScene aw={aw > 10 ? aw : 360} ah={ah > 10 ? ah : 540} />
-
-      {/* 2. Vignette — subtle atmospheric darkening at edges */}
-      <LinearGradient
-        colors={["#00000055", "#00000000", "#00000000", "#00000055"]}
-        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        style={[StyleSheet.absoluteFillObject, { zIndex: 1, pointerEvents: "none" }]}
+      {/* ── L1: Background art — atmosphere & texture ── */}
+      <ExpoImage
+        key={`board-${Math.round(W)}-${Math.round(H)}`}
+        source={IMG_BOARD}
+        style={[StyleSheet.absoluteFillObject, { opacity: 0.70 }]}
+        contentFit="cover"
+        cachePolicy="none"
       />
 
-      {/* 3. Disease gate label */}
-      {aw > 20 && (
-        <DiseasePortal imgBounds={imgBounds} aw={aw} ah={ah} spawnQueueLen={spawnQueueLen} />
-      )}
+      {/* ── L2: Center platform block ── */}
+      {aw > 20 && <CenterPlatform aw={W} ah={H} />}
 
-      {/* 4. Vital lantern stability display */}
-      {aw > 20 && (
-        <VitalLantern stability={stability} imgBounds={imgBounds} aw={aw} ah={ah} />
-      )}
+      {/* ── L3: Stone U-lane strips ── */}
+      {aw > 20 && <StoneLane aw={W} ah={H} />}
 
-      {/* 5. Deployment pads — transparent zones with hero sprites */}
+      {/* ── L4: Six stone medallion deploy pads ── */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (
-        <DeployPad
-          key={i} tileIdx={i}
-          unit={deployedUnits.find((u: any) => u.tileIndex === i)}
-          selectedUnit={selectedUnit}
+        <StonePad
+          key={i}
+          aw={W} ah={H} tileIdx={i}
+          occupied={deployedUnits.some((u: any) => u.tileIndex === i)}
+          selected={!!selectedUnit}
           canAfford={canAfford}
           isMergeCandidate={mergeTileSet.has(i)}
           onPress={() => onTilePress(i)}
-          imgBounds={imgBounds}
-          unitColors={unitColors}
-          bobY={bobY}
         />
       ))}
 
-      {/* 6. Projectiles */}
+      {/* ── L5: Gate portal (left) + Lantern shrine (right) ── */}
+      {aw > 20 && <GatePortal aw={W} ah={H} spawnQueueLen={spawnQueueLen} />}
+      {aw > 20 && <LanternShrine aw={W} ah={H} stability={stability} />}
+
+      {/* ── L7: Edge vignette ── */}
+      <LinearGradient
+        colors={["#00000060", "#00000000", "#00000000", "#00000060"]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFillObject, { zIndex: 7, pointerEvents: "none" }]}
+      />
+
+      {/* ── L8: Hero sprites standing on pads ── */}
+      {aw > 20 && DEPLOY_TILES.map((_, i) => (
+        <HeroOnPad
+          key={i}
+          aw={W} ah={H} tileIdx={i}
+          unit={deployedUnits.find((u: any) => u.tileIndex === i)}
+          bobY={bobY}
+          unitColors={unitColors}
+        />
+      ))}
+
+      {/* ── L9: Projectiles ── */}
       {projectiles.map((p: any) => (
-        <ProjectileDot key={p.uid} p={p} imgBounds={imgBounds} />
+        <ProjectileDot key={p.uid} aw={W} ah={H} p={p} />
       ))}
 
-      {/* 7. Enemy sprites — float along path */}
+      {/* ── L10: Enemy sprites walking on lane ── */}
       {enemies.map((e: any) => (
-        <EnemyOnPath key={e.uid} enemy={e} bobY={bobY} imgBounds={imgBounds} />
+        <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} bobY={bobY} />
       ))}
-
-      {/* 8. Wave-pause dim — dark overlay so clinical panel reads clearly */}
-      {phase === "wave_pause" && (
-        <View style={[StyleSheet.absoluteFillObject, {
-          backgroundColor: "#00000055", zIndex: 28,
-        }]}/>
-      )}
     </View>
   );
 }
-
-export default WardBoardV2;

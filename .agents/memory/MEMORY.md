@@ -1,3 +1,4 @@
 - [Clinica setup](clinica-setup.md) — Expo 54 web on port 5000 (CI=1 flag required); backend FastAPI port 8000; emergentintegrations removed; yarn fails use npm.
 - [Clinica adaptive system](clinica-adaptive-system.md) — two-axis: LearningProfile→ExplanationLayer (depth/language) + DifficultyLevel (clue visibility); fully independent axes.
 - [Clinica image rendering](clinica-image-rendering.md) — use expo-image (ExpoImage + contentFit) for scene backgrounds in nested flex containers; RN Image fails silently on web inside ward-defense battle View.
+- [Ward Defense board layout](ward-defense-board-layout.md) — layer-based fixed-coordinate approach; CSS strips draw the visible lane; never rely on background image to show the path.
