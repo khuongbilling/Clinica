@@ -20,6 +20,19 @@ description: Key environment and startup quirks for the Clinica: Kingdom of Heal
 - Backend requires two env vars: `MONGO_URL` (secret) and `DB_NAME` (set to "clinica").
 - The entire battle system is frontend-only — MongoDB is only needed for player profile persistence.
 
+## Ward Defense V2 board system (current state — full visual polish applied)
+
+### Key design decisions (this session)
+- `ward-defense-v2.tsx` fully rewritten: NO CSS road strips; circular stone pads 64px diameter; `DeployPad` uses `LinearGradient` circle with lotus cross engraving when empty
+- `HealingZoneFrame` component draws a subtle teal border + "HEALING ZONE" label around the 2×3 grid
+- `DiseasePortal` = floating badge label only — no layered circles; art shows the gate
+- `VitalLantern` = badge + stability bar + glow orb — no shrine disc; art shows the lantern
+- `WavePauseOverlay` removed — `ClinicalQuestionPanel` (rendered in parent) takes its place; board just dims with `#00000040` overlay
+- HUD redesigned: `LinearGradient` wrapper on HUD bar, numeric AP display "3/15" (not tiny gem dots), stability bar uses `LinearGradient` fill
+- `ward_board_scene.png` regenerated — detailed isometric lotus sanctuary with U-path, disease gate arch (top-left), vital lantern shrine (top-right), 6 octagonal stone platforms in center, red lanterns + lotus water pools
+- `s.ward` style: added `maxWidth: "100%"` to prevent overflow on narrow mobile screens
+- Dev bypass pattern: change `freshState() { return { phase: "lobby"... } }` → `return beginWave({ ... }, 0)` and add pre-deployed units as needed; revert before final commit
+
 ## Ward Defense V2 board system (current state after full visual replacement)
 
 ### Map composition
@@ -42,9 +55,12 @@ N_SEGS = 3 (4 waypoints - 1)
 
 ### DEPLOY_TILES (both files must match)
 ```
-[0.33, 0.32], [0.50, 0.32], [0.67, 0.32],  // top row
+[0.33, 0.38], [0.50, 0.38], [0.67, 0.38],  // top row
 [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  // bottom row
 ```
+- Top row was moved from y=0.32 → y=0.38 to align hero sprites with the stone platform area in the art
+- Hero sprites float ~110px above the platform center point (due to SPRITE_H=60, PLATFORM_D=64 offset formula)
+- On mobile (450×600 board): hero top appears at ~118px from board top — keeps heroes well within map bounds
 
 ### Hero identity — Hall of Heroes as source of truth
 - Ward Defense unit slots map to actual Hall of Heroes characters (sprites from `assets/heroes/battle/`):

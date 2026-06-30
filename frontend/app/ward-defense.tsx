@@ -53,7 +53,7 @@ const N_SEGS = PATH_WPS.length - 1;   /* 3 segments */
 
 /* ── Deployment tiles: 2×3 stone platform centered inside the U-path ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.33, 0.32], [0.50, 0.32], [0.67, 0.32],  /* top row */
+  [0.33, 0.38], [0.50, 0.38], [0.67, 0.38],  /* top row */
   [0.33, 0.58], [0.50, 0.58], [0.67, 0.58],  /* bottom row */
 ];
 
@@ -2428,39 +2428,56 @@ export default function WardDefense() {
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
 
-      {/* HUD */}
-      <View style={s.hud}>
-        <Pressable style={s.hudBack} onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={16} color={COLORS.onSurface} />
+      {/* ── Premium HUD bar ── */}
+      <LinearGradient
+        colors={["#060e1aff", "#040c14f0"]}
+        style={s.hud}
+      >
+        {/* Back button */}
+        <Pressable style={s.hudBack} onPress={() => router.back()} hitSlop={12}>
+          <Ionicons name="arrow-back" size={15} color={COLORS.onSurface} />
         </Pressable>
+
+        {/* Ward name + wave */}
         <View style={s.hudWave}>
           <Text style={s.hudKicker}>AIRWAY WARD</Text>
           {gs.phase === "wave_pause" ? (
-            <Text style={[s.hudWaveTxt, { color: COLORS.air }]}>⚕ Answer → Earn AP</Text>
+            <Text style={[s.hudWaveTxt, { color: "#22d3ee", fontSize: 10 }]}>⚕ ANSWER TO EARN AP</Text>
           ) : waveDef.isBoss ? (
-            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ BOSS</Text>
+            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ BOSS WAVE</Text>
           ) : (
-            <Text style={s.hudWaveTxt}>Wave {gs.wave + 1}/{WAVES.length}</Text>
+            <Text style={s.hudWaveTxt}>WAVE {gs.wave + 1} / {WAVES.length}</Text>
           )}
         </View>
+
+        {/* Stability bar */}
         <View style={s.hudStability}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
             <Text style={s.hudBarLabel}>STABILITY</Text>
-            <Text style={[s.hudBarVal, { color: stabilityColor }]}>{gs.stability}</Text>
+            <Text style={[s.hudBarVal, { color: stabilityColor }]}>{gs.stability}%</Text>
           </View>
           <View style={s.hudStabilityBg}>
-            <View style={[s.hudStabilityFill, { width: `${gs.stability}%` as any, backgroundColor: stabilityColor }]} />
+            <LinearGradient
+              colors={[stabilityColor + "cc", stabilityColor]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={[s.hudStabilityFill, { width: `${gs.stability}%` as any }]}
+            />
           </View>
         </View>
+
+        {/* AP display — numeric since max is 15 */}
         <View style={s.hudAp}>
-          <Text style={s.hudBarLabel}>AP</Text>
-          <View style={s.hudGemRow}>
-            {Array.from({ length: MAX_AP }).map((_, i) => (
-              <View key={i} style={[s.hudGem, { backgroundColor: i < gs.ap ? COLORS.runeGold : COLORS.surfaceTertiary }]} />
-            ))}
+          <Text style={s.hudBarLabel}>ACTION POINTS</Text>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3, marginTop: 2 }}>
+            <Text style={{ color: COLORS.runeGold, fontSize: 20, fontWeight: "800", lineHeight: 22 }}>
+              {gs.ap}
+            </Text>
+            <Text style={{ color: COLORS.runeGold + "60", fontSize: 9, fontWeight: "700" }}>
+              / {MAX_AP}
+            </Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* ── Ward Defense V2 Board — Lotus Healing Sanctum ── */}
       <View style={s.ward}>
@@ -3462,28 +3479,28 @@ const s = StyleSheet.create({
   /* HUD */
   hud: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs,
-    backgroundColor: "#040c18", borderBottomWidth: 1, borderColor: "#1a3050",
+    paddingHorizontal: SPACING.sm, paddingVertical: 7,
+    borderBottomWidth: 1, borderColor: "#1a3050",
   },
   hudBack: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: "#0a1828", borderWidth: 1, borderColor: "#1a3050",
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: "#0d1e30", borderWidth: 1, borderColor: "#1e3a5a",
     alignItems: "center", justifyContent: "center",
   },
-  hudWave: { width: 70 },
-  hudKicker: { color: COLORS.air, fontSize: 7.5, fontWeight: "700", letterSpacing: 1.5 },
-  hudWaveTxt: { color: COLORS.onSurface, fontSize: 11.5, fontWeight: "700" },
+  hudWave: { width: 90 },
+  hudKicker: { color: COLORS.air, fontSize: 7, fontWeight: "800", letterSpacing: 1.8 },
+  hudWaveTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
   hudStability: { flex: 1 },
-  hudBarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 7.5, fontWeight: "700", letterSpacing: 1.5 },
-  hudBarVal: { fontSize: 8.5, fontWeight: "700" },
-  hudStabilityBg: { height: 7, backgroundColor: "#0a1428", borderRadius: 4, overflow: "hidden" },
-  hudStabilityFill: { height: "100%", borderRadius: 4 },
-  hudAp: { width: 68 },
+  hudBarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
+  hudBarVal: { fontSize: 9, fontWeight: "800" },
+  hudStabilityBg: { height: 8, backgroundColor: "#0a1428", borderRadius: 5, overflow: "hidden" },
+  hudStabilityFill: { height: "100%", borderRadius: 5 },
+  hudAp: { width: 58, alignItems: "flex-end" },
   hudGemRow: { flexDirection: "row", flexWrap: "wrap", gap: 2, marginTop: 3 },
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060402", aspectRatio: 3/4, alignSelf: "center" },
+  ward: { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#060402", aspectRatio: 3/4, alignSelf: "center", maxWidth: "100%" },
   sceneStrip: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     overflow: "hidden", zIndex: 0,
