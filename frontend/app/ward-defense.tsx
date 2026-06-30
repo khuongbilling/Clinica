@@ -702,8 +702,8 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   ENEMY SPRITES — 2.5D Rush Royale-style chibi monsters
-   Each: shield gem backing card + large character + pupils/catchlights
+   DISEASE ORGANISM SPRITES — image-4 style: round blob/virus creatures
+   Each is a distinct disease pathogen silhouette, not a humanoid
    ═══════════════════════════════════════════════════════════════════ */
 type SpriteProps = { hitFlash: boolean; bobY: Animated.AnimatedInterpolation<number> };
 
