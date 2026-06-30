@@ -94,7 +94,7 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
    the View. These helpers compute the image's actual rendered rectangle so every
    CSS overlay (portal, lantern, tiles, enemies) aligns precisely with the art.
 ─────────────────────────────────────────────────────────────────────────────── */
-const IMG_AR_W = 9, IMG_AR_H = 16; /* portrait aspect ratio */
+const IMG_AR_W = 896, IMG_AR_H = 1280; /* actual image pixel dimensions → 7:10 portrait */
 
 type ImgBounds = { iw: number; ih: number; ox: number; oy: number };
 
