@@ -43,29 +43,29 @@ const TILE_SIZE        = 46;   /* deployment tile size in px */
 /* Enemy route — traces the illustrated stone walkway in the reference map.
    MUST stay identical to ward-defense-v2.tsx.                              */
 const PATH_WPS: [number, number][] = [
-  [0.14, 0.13],  /*  0  Disease Gate spawn        */
-  [0.14, 0.26],  /*  1  left lane upper           */
-  [0.13, 0.40],  /*  2  left lane                 */
-  [0.13, 0.54],  /*  3  left lane                 */
-  [0.15, 0.68],  /*  4  left lane lower           */
-  [0.20, 0.78],  /*  5  bottom-left curve         */
-  [0.34, 0.83],  /*  6  bottom lane left          */
-  [0.50, 0.84],  /*  7  bottom lane center        */
-  [0.66, 0.83],  /*  8  bottom lane right         */
-  [0.80, 0.78],  /*  9  bottom-right curve        */
-  [0.86, 0.68],  /* 10  right lane lower          */
-  [0.87, 0.54],  /* 11  right lane               */
-  [0.87, 0.40],  /* 12  right lane               */
-  [0.85, 0.26],  /* 13  right lane upper          */
-  [0.80, 0.13],  /* 14  Vital Lantern exit        */
+  [0.16, 0.150], /*  0  Disease Gate spawn (top-left)  */
+  [0.13, 0.280], /*  1  left lane upper                */
+  [0.12, 0.420], /*  2  left lane                      */
+  [0.12, 0.560], /*  3  left lane                      */
+  [0.13, 0.700], /*  4  left lane lower                */
+  [0.17, 0.800], /*  5  bottom-left curve              */
+  [0.30, 0.855], /*  6  bottom lane left               */
+  [0.50, 0.860], /*  7  bottom lane center             */
+  [0.70, 0.855], /*  8  bottom lane right               */
+  [0.83, 0.800], /*  9  bottom-right curve             */
+  [0.87, 0.700], /* 10  right lane lower               */
+  [0.88, 0.560], /* 11  right lane                     */
+  [0.88, 0.420], /* 12  right lane                     */
+  [0.87, 0.280], /* 13  right lane upper               */
+  [0.84, 0.150], /* 14  Vital Lantern exit (top-right) */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 
-/* ── Six deploy pads — aligned onto the drawn cross pedestals (2 cols × 3 rows) ── */
+/* ── Nine deploy pads — aligned onto the drawn glowing pedestals (3 cols × 3 rows) ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.394, 0.350], [0.629, 0.350],
-  [0.394, 0.493], [0.629, 0.493],
-  [0.394, 0.626], [0.629, 0.626],
+  [0.377, 0.380], [0.500, 0.380], [0.623, 0.380],
+  [0.377, 0.490], [0.500, 0.490], [0.623, 0.490],
+  [0.377, 0.600], [0.500, 0.600], [0.623, 0.600],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════

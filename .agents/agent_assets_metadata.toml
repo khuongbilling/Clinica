@@ -228,3 +228,27 @@ id = "uLccbEjh3DE7GehcvQGdv"
 uri = "file://frontend/assets/ward-defense/lotus-healing-ward-map-portrait.png"
 type = "image"
 title = "lotus healing ward portrait map clean grid"
+
+[[generated]]
+id = "R83kQcurRrmKB0Eac98m0"
+uri = "file://attached_assets/generated_images/ward_map_3x3_v1.png"
+type = "image"
+title = "ward map 3x3 grid"
+
+[[generated]]
+id = "jErwP9iKg3HUOwKzw_dDn"
+uri = "file://attached_assets/generated_images/ward_map_3x3_v2.png"
+type = "image"
+title = "ward map 3x3 spaced"
+
+[[generated]]
+id = "hdKi2W50SiouNXeKy_9B-"
+uri = "file://attached_assets/generated_images/ward_map_3x3_v3.png"
+type = "image"
+title = "ward map 3x3 three rows"
+
+[[generated]]
+id = "auaBGkEl-V2KSHsCpcQgC"
+uri = "file://attached_assets/generated_images/ward_map_3x3_v4.png"
+type = "image"
+title = "ward map 3x3 square"

@@ -2,14 +2,14 @@
  * Ward Defense V2 — Lotus Healing Sanctum
  *
  * INTERACTIVE MAP — the illustrated reference asset IS the battlefield.
- * Background: assets/ward-defense/lotus-healing-ward-map-portrait.png (portrait
- * 9:16 — Disease Gate top-left, Vital Lantern top-right, six cross-platforms
- * center, U-shaped stone walkway).  Image fills the full board via
- * contentFit="cover"; overlay coordinates are fractions of the onLayout size.
+ * Background: assets/ward-defense/lotus-healing-ward-map-portrait.png (square
+ * 1:1, 1024×1024 — Disease Gate top-left, Vital Lantern top-right, nine glowing
+ * pedestals in a 3×3 grid, perimeter stone walkway loop).  The board is sized
+ * to the image ratio exactly; overlay coordinates are fractions of that size.
  *
  * Layer order (zIndex):
- *   0  <ExpoImage IMG_MAP>  — portrait battle map (contentFit="cover", fills board)
- *   6  StonePad × 6         — fully invisible tap targets (gold star on merge only)
+ *   0  <ExpoImage IMG_MAP>  — square battle map (fills the fitted board)
+ *   6  StonePad × 9         — fully invisible tap targets (gold star on merge only)
  *  22  GateBadge            — spawn-queue count over the drawn gate
  *  10  HeroOnPad            — deployed hero sprites (centered on platforms)
  *  13  ProjectileDot
@@ -21,38 +21,37 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
-/* Enemy route — traces the illustrated stone walkway in the portrait map:
+/* Enemy route — traces the illustrated stone walkway in the square (1:1) map:
    Disease Gate (upper-left, purple portal) → down left side → across bottom →
-   up right side → Vital Lantern (upper-right, golden pagoda).
-   U-shaped path in portrait (9:16) orientation.
-   Fractions map onto the board's measured size (onLayout) — image fills via
-   contentFit="cover" so coordinates stay valid regardless of screen size.
+   up right side → Vital Lantern (upper-right, golden pagoda) — a perimeter loop.
+   Fractions map onto the board's measured size (onLayout) — board matches the
+   image ratio exactly so coordinates stay valid regardless of screen size.
    MUST stay identical to ward-defense.tsx.                              */
 export const PATH_WPS: [number, number][] = [
-  [0.14, 0.13],  /*  0  Disease Gate spawn        */
-  [0.14, 0.26],  /*  1  left lane upper           */
-  [0.13, 0.40],  /*  2  left lane                 */
-  [0.13, 0.54],  /*  3  left lane                 */
-  [0.15, 0.68],  /*  4  left lane lower           */
-  [0.20, 0.78],  /*  5  bottom-left curve         */
-  [0.34, 0.83],  /*  6  bottom lane left          */
-  [0.50, 0.84],  /*  7  bottom lane center        */
-  [0.66, 0.83],  /*  8  bottom lane right         */
-  [0.80, 0.78],  /*  9  bottom-right curve        */
-  [0.86, 0.68],  /* 10  right lane lower          */
-  [0.87, 0.54],  /* 11  right lane               */
-  [0.87, 0.40],  /* 12  right lane               */
-  [0.85, 0.26],  /* 13  right lane upper          */
-  [0.80, 0.13],  /* 14  Vital Lantern exit        */
+  [0.16, 0.150], /*  0  Disease Gate spawn (top-left)  */
+  [0.13, 0.280], /*  1  left lane upper                */
+  [0.12, 0.420], /*  2  left lane                      */
+  [0.12, 0.560], /*  3  left lane                      */
+  [0.13, 0.700], /*  4  left lane lower                */
+  [0.17, 0.800], /*  5  bottom-left curve              */
+  [0.30, 0.855], /*  6  bottom lane left               */
+  [0.50, 0.860], /*  7  bottom lane center             */
+  [0.70, 0.855], /*  8  bottom lane right              */
+  [0.83, 0.800], /*  9  bottom-right curve             */
+  [0.87, 0.700], /* 10  right lane lower               */
+  [0.88, 0.560], /* 11  right lane                     */
+  [0.88, 0.420], /* 12  right lane                     */
+  [0.87, 0.280], /* 13  right lane upper               */
+  [0.84, 0.150], /* 14  Vital Lantern exit (top-right) */
 ];
 
-/* Six deploy pads — aligned onto the six cross pedestals drawn in the
-   portrait map (2 cols × 3 rows, centered inside the U-shaped walkway loop).
+/* Nine deploy pads — aligned onto the nine glowing pedestals drawn in the
+   square map (3 cols × 3 rows, centered inside the perimeter walkway loop).
    MUST stay identical to ward-defense.tsx.                              */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.394, 0.350], [0.629, 0.350],
-  [0.394, 0.493], [0.629, 0.493],
-  [0.394, 0.626], [0.629, 0.626],
+  [0.377, 0.380], [0.500, 0.380], [0.623, 0.380],
+  [0.377, 0.490], [0.500, 0.490], [0.623, 0.490],
+  [0.377, 0.600], [0.500, 0.600], [0.623, 0.600],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
@@ -339,15 +338,15 @@ export function WardBoardV2({
   bobY,
   spawnQueueLen, mergeTileSet, onTilePress, unitColors,
 }: WardBoardV2Props) {
-  /* Measure the AVAILABLE area (outer container) and fit the whole 768×1408 map
+  /* Measure the AVAILABLE area (outer container) and fit the whole 1024×1024 map
      inside it, preserving aspect. This guarantees the entry (Disease Gate) and
      exit (Vital Lantern) at the top of the map are NEVER cropped, while keeping
      overlays perfectly aligned (board size == image ratio → contentFit exact). */
   const availW = aw > 20 ? aw : 360;
   const availH = ah > 20 ? ah : 480;
-  const scale  = Math.min(availW / 768, availH / 1408);
-  const W = 768 * scale;
-  const H = 1408 * scale;
+  const scale  = Math.min(availW / 1024, availH / 1024);
+  const W = 1024 * scale;
+  const H = 1024 * scale;
 
   return (
     <View
@@ -363,8 +362,8 @@ export function WardBoardV2({
         backgroundColor: "#07121A",
       }}
     >
-      {/* L0: Portrait battle map, sized to fit fully inside the available area.
-          Board size matches the image's 768×1408 ratio exactly, so contentFit
+      {/* L0: Square battle map, sized to fit fully inside the available area.
+          Board size matches the image's 1024×1024 ratio exactly, so contentFit
           shows the WHOLE map (gate + lantern included) with zero crop, and
           overlay fractions (PATH_WPS / DEPLOY_TILES) sit EXACTLY on features. */}
       <ExpoImage
