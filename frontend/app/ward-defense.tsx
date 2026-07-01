@@ -1911,118 +1911,117 @@ function HandPanel({
 }) {
   return (
     <View style={s.handArea}>
-      {/* Tabs */}
-      <View style={s.handTabs}>
-        {(["deploy", "abilities"] as const).map(m => (
-          <Pressable key={m} style={[s.handTabBtn, mode === m && s.handTabActive]} onPress={() => setMode(m)}>
-            <Text style={[s.handTabTxt, { color: mode === m ? COLORS.air : COLORS.onSurfaceTertiary }]}>
-              {m === "deploy" ? "⚔ DEPLOY" : "⚡ ABILITIES"}
-            </Text>
+      <View style={s.handRow}>
+        {/* Cards area — flex row, fills space */}
+        <View style={s.handCards}>
+          {mode === "deploy" ? (
+            <>
+              {hasMerge && (
+                <Pressable onPress={onSynthesize}
+                  style={[s.unitCard, { borderColor: "#FFD700", backgroundColor: "#1a1000",
+                    borderWidth: 2, justifyContent: "center", alignItems: "center" }]}>
+                  <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2,
+                    borderColor: "#FFD700", backgroundColor: "#FFD70020",
+                    alignItems: "center", justifyContent: "center", marginBottom: 3 }}>
+                    {[0,1,2].map(i=>(
+                      <View key={i} style={{ position: "absolute", width: 2.5, height: i===1?9:6,
+                        borderRadius: 2, backgroundColor: "#FFD700",
+                        transform: [{ rotate: `${i*60}deg` }] }} />
+                    ))}
+                  </View>
+                  <Text style={{ color: "#FFD700", fontSize: 6, fontWeight: "800",
+                    letterSpacing: 0.8, textAlign: "center" }}>CARE{"\n"}SYNTHESIS</Text>
+                  <View style={[s.apRune, { borderColor: "#FFD700", backgroundColor: "#FFD70022", marginTop: 3 }]}>
+                    <Text style={[s.apRuneTxt, { color: "#FFD700" }]}>✦</Text>
+                    <Text style={[s.apRuneLabel, { color: "#FFD700CC" }]}>FREE</Text>
+                  </View>
+                </Pressable>
+              )}
+              {UNIT_TYPES.map(typeId => {
+                const u = UNIT_DATA[typeId];
+                const canAfford = ap >= u.apCost;
+                const isSelected = selectedUnit === typeId;
+                return (
+                  <Pressable key={typeId}
+                    style={[s.unitCard, { borderColor: isSelected ? u.color : canAfford ? u.color + "55" : COLORS.border,
+                      backgroundColor: isSelected ? u.color + "20" : canAfford ? "#080e18" : "#060a12" }]}
+                    onPress={() => onSelectUnit(typeId)}>
+                    <Text style={[s.cardCatBadge, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>
+                      {u.category}
+                    </Text>
+                    <View style={{
+                      width: "100%", minHeight: 72, borderRadius: 8,
+                      overflow: "hidden", marginVertical: 2,
+                      alignItems: "center", justifyContent: "flex-end",
+                    }}>
+                      <LinearGradient
+                        colors={[u.color + "0a", u.color + "30"]}
+                        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                      <Image
+                        source={CARD_PORTRAITS[typeId]}
+                        style={{ width: 60, height: 78 }}
+                        resizeMode="contain"
+                      />
+                      {!canAfford && (
+                        <View style={{ ...StyleSheet.absoluteFillObject as any, backgroundColor: "#00000060" }}/>
+                      )}
+                    </View>
+                    <Text style={[s.unitCardName, { color: isSelected ? u.color : canAfford ? u.color + "CC" : COLORS.onSurfaceTertiary }]}
+                      numberOfLines={1}>{u.name}</Text>
+                    <View style={[s.apRune, { borderColor: canAfford ? u.color + "70" : COLORS.border,
+                      backgroundColor: canAfford ? u.color + "22" : "transparent" }]}>
+                      <Text style={[s.apRuneTxt, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>{u.apCost}</Text>
+                      <Text style={[s.apRuneLabel, { color: canAfford ? u.color + "CC" : COLORS.onSurfaceTertiary }]}>AP</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </>
+          ) : (
+            ABILITIES.map(id => {
+              const ab = ABILITY_DATA[id];
+              const canAfford = ap >= ab.apCost && isPlaying;
+              return (
+                <Pressable key={id}
+                  style={[s.abilityCard, { borderColor: canAfford ? ab.color + "70" : COLORS.border,
+                    backgroundColor: canAfford ? "#080e18" : "#060a12", opacity: canAfford ? 1 : 0.45 }]}
+                  onPress={() => onUseAbility(id)} disabled={!canAfford}>
+                  <Text style={{ fontSize: 7.5, fontWeight: "700", color: canAfford ? ab.color : COLORS.onSurfaceTertiary, letterSpacing: 0.8 }}>
+                    {ab.category}
+                  </Text>
+                  <Text style={{ fontSize: 20, marginVertical: 3 }}>{ab.icon}</Text>
+                  <Text style={[s.unitCardName, { color: canAfford ? ab.color : COLORS.onSurfaceTertiary }]}
+                    numberOfLines={2}>{ab.name}</Text>
+                  <View style={[s.apRune, { borderColor: canAfford ? ab.color + "70" : COLORS.border,
+                    backgroundColor: canAfford ? ab.color + "22" : "transparent" }]}>
+                    <Text style={[s.apRuneTxt, { color: canAfford ? ab.color : COLORS.onSurfaceTertiary }]}>{ab.apCost}</Text>
+                    <Text style={[s.apRuneLabel, { color: canAfford ? ab.color + "CC" : COLORS.onSurfaceTertiary }]}>AP</Text>
+                  </View>
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+
+        {/* Right sidebar */}
+        <View style={s.handSidebar}>
+          <Pressable style={s.handSideBtn}
+            onPress={() => setMode(mode === "deploy" ? "abilities" : "deploy")}>
+            <Text style={{ fontSize: 13 }}>{mode === "deploy" ? "⚡" : "⚔"}</Text>
+            <Text style={s.handSideBtnTxt}>{mode === "deploy" ? "SKILLS" : "UNITS"}</Text>
           </Pressable>
-        ))}
-        {/* AP display */}
-        <View style={s.handApBadge}>
-          <Text style={s.handApTxt}>{ap}</Text>
-          <Text style={s.handApLabel}>AP</Text>
+          <View style={s.handItemsBadge}>
+            <Text style={s.handItemsNum}>2</Text>
+            <Text style={s.handItemsLabel}>ITEMS</Text>
+          </View>
+          <View style={s.handPauseBtn}>
+            <Text style={{ fontSize: 11 }}>✿</Text>
+            <Text style={s.handPauseTxt}>PAUSE</Text>
+          </View>
         </View>
       </View>
-
-      {/* Cards */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.handCards}>
-        {mode === "deploy" ? (
-          <>
-            {/* Synthesize card — shown when a merge pair exists */}
-            {hasMerge && (
-              <Pressable onPress={onSynthesize}
-                style={[s.unitCard, { borderColor: "#FFD700", backgroundColor: "#1a1000",
-                  borderWidth: 2, justifyContent: "center", alignItems: "center" }]}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 2,
-                  borderColor: "#FFD700", backgroundColor: "#FFD70020",
-                  alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
-                  {[0,1,2].map(i=>(
-                    <View key={i} style={{ position: "absolute", width: 3, height: i===1?10:7,
-                      borderRadius: 2, backgroundColor: "#FFD700",
-                      transform: [{ rotate: `${i*60}deg` }] }} />
-                  ))}
-                </View>
-                <Text style={{ color: "#FFD700", fontSize: 6.5, fontWeight: "800",
-                  letterSpacing: 1, textAlign: "center" }}>CARE{"\n"}SYNTHESIS</Text>
-                <View style={[s.apRune, { borderColor: "#FFD700", backgroundColor: "#FFD70022",
-                  marginTop: 4 }]}>
-                  <Text style={[s.apRuneTxt, { color: "#FFD700" }]}>✦</Text>
-                  <Text style={[s.apRuneLabel, { color: "#FFD700CC" }]}>FREE</Text>
-                </View>
-              </Pressable>
-            )}
-          {UNIT_TYPES.map(typeId => {
-            const u = UNIT_DATA[typeId];
-            const canAfford = ap >= u.apCost;
-            const isSelected = selectedUnit === typeId;
-            return (
-              <Pressable key={typeId}
-                style={[s.unitCard, { borderColor: isSelected ? u.color : canAfford ? u.color + "44" : COLORS.border,
-                  backgroundColor: isSelected ? u.color + "18" : canAfford ? "#080e18" : "#060a12" }]}
-                onPress={() => onSelectUnit(typeId)}>
-                <Text style={[s.cardCatBadge, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>
-                  {u.category}
-                </Text>
-                {/* Chibi sprite frame — tall, shows full body */}
-                <View style={{
-                  width: 62, height: 80, borderRadius: 10,
-                  overflow: "hidden", marginVertical: 2,
-                  alignItems: "center", justifyContent: "flex-end",
-                }}>
-                  <LinearGradient
-                    colors={[u.color + "08", u.color + "28"]}
-                    start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <Image
-                    source={CARD_PORTRAITS[typeId]}
-                    style={{ width: 66, height: 86 }}
-                    resizeMode="contain"
-                  />
-                  {!canAfford && (
-                    <View style={{ ...StyleSheet.absoluteFillObject as any, backgroundColor: "#00000065" }}/>
-                  )}
-                </View>
-                <Text style={[s.unitCardName, { color: isSelected ? u.color : canAfford ? u.color + "CC" : COLORS.onSurfaceTertiary }]}
-                  numberOfLines={2}>{u.name}</Text>
-                <View style={[s.apRune, { borderColor: canAfford ? u.color + "70" : COLORS.border,
-                  backgroundColor: canAfford ? u.color + "22" : "transparent" }]}>
-                  <Text style={[s.apRuneTxt, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>{u.apCost}</Text>
-                  <Text style={[s.apRuneLabel, { color: canAfford ? u.color + "CC" : COLORS.onSurfaceTertiary }]}>AP</Text>
-                </View>
-              </Pressable>
-            );
-          })}
-          </>
-        ) : (
-          ABILITIES.map(id => {
-            const ab = ABILITY_DATA[id];
-            const canAfford = ap >= ab.apCost && isPlaying;
-            return (
-              <Pressable key={id}
-                style={[s.abilityCard, { borderColor: canAfford ? ab.color + "70" : COLORS.border,
-                  backgroundColor: canAfford ? "#080e18" : "#060a12", opacity: canAfford ? 1 : 0.45 }]}
-                onPress={() => onUseAbility(id)} disabled={!canAfford}>
-                <Text style={{ fontSize: 8, fontWeight: "700", color: canAfford ? ab.color : COLORS.onSurfaceTertiary, letterSpacing: 1 }}>
-                  {ab.category}
-                </Text>
-                <Text style={{ fontSize: 22, marginVertical: 4 }}>{ab.icon}</Text>
-                <Text style={[s.unitCardName, { color: canAfford ? ab.color : COLORS.onSurfaceTertiary }]}
-                  numberOfLines={2}>{ab.name}</Text>
-                <View style={[s.apRune, { borderColor: canAfford ? ab.color + "70" : COLORS.border,
-                  backgroundColor: canAfford ? ab.color + "22" : "transparent" }]}>
-                  <Text style={[s.apRuneTxt, { color: canAfford ? ab.color : COLORS.onSurfaceTertiary }]}>{ab.apCost}</Text>
-                  <Text style={[s.apRuneLabel, { color: canAfford ? ab.color + "CC" : COLORS.onSurfaceTertiary }]}>AP</Text>
-                </View>
-              </Pressable>
-            );
-          })
-        )}
-      </ScrollView>
     </View>
   );
 }
@@ -2427,7 +2426,7 @@ export default function WardDefense() {
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
 
-      {/* ── Premium HUD bar ── */}
+      {/* ── HUD bar ── */}
       <LinearGradient
         colors={["#060e1aff", "#040c14f0"]}
         style={s.hud}
@@ -2437,23 +2436,24 @@ export default function WardDefense() {
           <Ionicons name="arrow-back" size={15} color={COLORS.onSurface} />
         </Pressable>
 
-        {/* Ward name + wave */}
+        {/* Ward title + wave */}
         <View style={s.hudWave}>
-          <Text style={s.hudKicker}>AIRWAY WARD</Text>
+          <Text style={s.hudTitle}>Lotus Healing Ward</Text>
           {gs.phase === "wave_pause" ? (
-            <Text style={[s.hudWaveTxt, { color: "#22d3ee", fontSize: 10 }]}>⚕ ANSWER TO EARN AP</Text>
+            <Text style={s.hudWaveTxt}>⚕ Answer to earn AP</Text>
           ) : waveDef.isBoss ? (
-            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ BOSS WAVE</Text>
+            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ Boss Wave {gs.wave + 1}/{WAVES.length}</Text>
           ) : (
-            <Text style={s.hudWaveTxt}>WAVE {gs.wave + 1} / {WAVES.length}</Text>
+            <Text style={s.hudWaveTxt}>Wave {gs.wave + 1}/{WAVES.length} 💀</Text>
           )}
         </View>
 
         {/* Stability bar */}
         <View style={s.hudStability}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={s.hudBarLabel}>STABILITY</Text>
-            <Text style={[s.hudBarVal, { color: stabilityColor }]}>{gs.stability}%</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 3 }}>
+            <Text style={s.hudBarLabel}>Stability</Text>
+            <Text style={{ fontSize: 9 }}>❤️</Text>
+            <Text style={[s.hudBarVal, { color: stabilityColor, marginLeft: "auto" as any }]}>{gs.stability}%</Text>
           </View>
           <View style={s.hudStabilityBg}>
             <LinearGradient
@@ -2464,18 +2464,23 @@ export default function WardDefense() {
           </View>
         </View>
 
-        {/* AP display — numeric since max is 15 */}
+        {/* AP display */}
         <View style={s.hudAp}>
-          <Text style={s.hudBarLabel}>ACTION POINTS</Text>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3, marginTop: 2 }}>
-            <Text style={{ color: COLORS.runeGold, fontSize: 20, fontWeight: "800", lineHeight: 22 }}>
+          <Text style={s.hudBarLabel}>AP</Text>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 2, marginTop: 1 }}>
+            <Text style={{ color: "#60A5FA", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>
               {gs.ap}
             </Text>
-            <Text style={{ color: COLORS.runeGold + "60", fontSize: 9, fontWeight: "700" }}>
-              / {MAX_AP}
+            <Text style={{ color: "#60A5FA60", fontSize: 9, fontWeight: "700" }}>
+              /{MAX_AP}
             </Text>
           </View>
         </View>
+
+        {/* Settings */}
+        <Pressable style={s.hudBack} hitSlop={12}>
+          <Ionicons name="settings-outline" size={15} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
       </LinearGradient>
 
       {/* ── Ward Defense V2 Board — Lotus Healing Sanctum ── */}
@@ -2512,28 +2517,29 @@ export default function WardDefense() {
             />
           );
         })()}
-        {/* Clinical question panel — floats over board during wave prep */}
-        {gs.phase === "wave_pause" && (
-          <ClinicalQuestionPanel
-            question={CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length]}
-            onAnswer={answerClinQ}
-            answered={cqAnswered?.wave === gs.wave}
-            answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
-          />
-        )}
       </View>
 
-      {/* Feedback strip */}
-      <View style={s.feedbackPanel}>
-        {gs.feedbacks.slice(0, 2).map((f, idx) => (
-          <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color, marginTop: idx > 0 ? 2 : 0 }]}>
-            <Text style={[s.feedbackTxt, { color: f.color }]} numberOfLines={1}>{f.text}</Text>
-          </View>
-        ))}
-        {gs.feedbacks.length === 0 && (
-          <Text style={s.feedbackHint}>Select a unit → tap a tile to deploy. Use abilities anytime.</Text>
-        )}
-      </View>
+      {/* Clinical Cue Check section OR feedback strip */}
+      {gs.phase === "wave_pause" ? (
+        <ClinicalQuestionPanel
+          question={CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length]}
+          onAnswer={answerClinQ}
+          answered={cqAnswered?.wave === gs.wave}
+          answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
+          wave={gs.wave}
+        />
+      ) : (
+        <View style={s.feedbackPanel}>
+          {gs.feedbacks.slice(0, 2).map((f, idx) => (
+            <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color, marginTop: idx > 0 ? 2 : 0 }]}>
+              <Text style={[s.feedbackTxt, { color: f.color }]} numberOfLines={1}>{f.text}</Text>
+            </View>
+          ))}
+          {gs.feedbacks.length === 0 && (
+            <Text style={s.feedbackHint}>Select a unit → tap a tile to deploy.</Text>
+          )}
+        </View>
+      )}
 
       {/* Hand */}
       <HandPanel
@@ -2554,10 +2560,10 @@ export default function WardDefense() {
    ═══════════════════════════════════════════════════════════════════ */
 const CLINICAL_QUESTIONS = [
   {
-    q: "Patient: SpO₂ 91%, accessory muscle use, audible wheeze. PRIORITY intervention?",
-    opts: ["Nebulized bronchodilator", "Chest X-ray", "Blood cultures", "Oral steroids"],
-    correct: 0,
-    rationale: "Acute bronchospasm → bronchodilator relieves airway narrowing first.",
+    q: "A patient has wheezing, tachypnea, and SpO₂ 88%. Which action is priority?",
+    opts: ["Increase IV fluids", "Administer oxygen", "Encourage ambulation", "Give antipyretic"],
+    correct: 1,
+    rationale: "SpO₂ 88% = hypoxemia. Administer supplemental oxygen immediately to correct life-threatening desaturation.",
   },
   {
     q: "BEST sign of improving oxygenation after bronchodilator therapy?",
@@ -2592,86 +2598,102 @@ const CLINICAL_QUESTIONS = [
 ];
 
 function ClinicalQuestionPanel({
-  question, onAnswer, answered, answeredCorrect,
+  question, onAnswer, answered, answeredCorrect, wave,
 }: {
   question: typeof CLINICAL_QUESTIONS[0];
   onAnswer: (idx: number) => void;
   answered: boolean;
   answeredCorrect: boolean | null;
+  wave: number;
 }) {
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [chosen, setChosen] = useState<number | null>(null);
+
+  useEffect(() => { setTimeLeft(30); setChosen(null); }, [wave]);
+
+  useEffect(() => {
+    if (answered || timeLeft <= 0) return;
+    const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [answered, timeLeft]);
+
+  function handleAnswer(i: number) {
+    if (answered) return;
+    setChosen(i);
+    onAnswer(i);
+  }
+
   return (
-    <View style={{
-      position: "absolute", left: 10, right: 10, top: "25%" as any,
-      borderRadius: 16, overflow: "hidden", zIndex: 30,
-    }}>
-      <LinearGradient
-        colors={["#040f1af0", "#081424f0"]}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <View style={{ borderRadius: 16, borderWidth: 1.5, borderColor: "#22d3ee40",
-        padding: 14 }}>
-        {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
-          <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: "#22d3ee" }}/>
-          <View>
-            <Text style={{ color: "#22d3ee", fontSize: 8, fontWeight: "800", letterSpacing: 1.2 }}>
-              PRE-WAVE CLINICAL QUESTION
-            </Text>
-            <Text style={{ color: "#64748b", fontSize: 7, fontWeight: "600", letterSpacing: 0.5, marginTop: 1 }}>
-              Answer correctly to earn deployment AP for this wave
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}/>
-          <View style={{ backgroundColor: "#22d3ee22", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-            borderWidth: 1.5, borderColor: "#22d3ee88", alignItems: "center" }}>
-            <Text style={{ color: "#22d3ee", fontSize: 11, fontWeight: "900" }}>+8</Text>
-            <Text style={{ color: "#22d3ee99", fontSize: 6.5, fontWeight: "700", letterSpacing: 0.5 }}>AP</Text>
-          </View>
+    <LinearGradient colors={["#0c1a2e", "#060f1e"]} style={s.clinicalPanel}>
+      {/* Header row */}
+      <View style={s.clinicalHeaderRow}>
+        <View style={s.clinicalBadge}>
+          <Text style={s.clinicalBadgeTxt}>🩺  CLINICAL CUE CHECK</Text>
         </View>
-
-        {/* Question */}
-        <Text style={{ color: "#e2f8ff", fontSize: 11, fontWeight: "700", lineHeight: 15.5, marginBottom: 10 }}>
-          {question.q}
-        </Text>
-
-        {answered ? (
-          <View style={{
-            backgroundColor: answeredCorrect ? "#03150e" : "#180404",
-            borderRadius: 10, padding: 10,
-            borderWidth: 1, borderColor: answeredCorrect ? "#22d3ee55" : "#ef444455",
-          }}>
-            <Text style={{ color: answeredCorrect ? "#34d399" : "#f87171",
-              fontSize: 10, fontWeight: "800", marginBottom: 3 }}>
-              {answeredCorrect ? `✓  Correct! +${PREWAVE_AP_BONUS} AP earned for this wave.` : "✗  Not quite — no AP bonus. Review below."}
-            </Text>
-            <Text style={{ color: "#94a3b8", fontSize: 9.5, lineHeight: 13.5 }}>
-              {question.rationale}
-            </Text>
-          </View>
-        ) : (
-          <View style={{ gap: 6 }}>
-            {question.opts.map((opt, i) => (
-              <Pressable key={i} onPress={() => onAnswer(i)} style={{
-                flexDirection: "row", alignItems: "center", gap: 9,
-                backgroundColor: "#071828", borderRadius: 9, padding: 9,
-                borderWidth: 1, borderColor: "#1a3050",
-              }}>
-                <View style={{
-                  width: 22, height: 22, borderRadius: 11,
-                  backgroundColor: "#0d2040", borderWidth: 1.5, borderColor: "#22d3ee55",
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <Text style={{ color: "#22d3ee", fontSize: 8.5, fontWeight: "800" }}>
-                    {["A","B","C","D"][i]}
-                  </Text>
-                </View>
-                <Text style={{ color: "#cbd5e1", fontSize: 10.5, flex: 1, lineHeight: 14 }}>{opt}</Text>
-              </Pressable>
-            ))}
+        <View style={{ flex: 1 }} />
+        {!answered && (
+          <View style={s.clinicalTimerBadge}>
+            <Text style={s.clinicalTimerTxt}>🕐 {timeLeft}s</Text>
           </View>
         )}
+        {answered && answeredCorrect && (
+          <Text style={{ color: "#34d399", fontSize: 9, fontWeight: "800" }}>✓ +{PREWAVE_AP_BONUS} AP earned</Text>
+        )}
       </View>
-    </View>
+
+      {/* Main row: question+answers | lotus sidebar */}
+      <View style={{ flexDirection: "row", gap: 8, flex: 1 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.clinicalQ} numberOfLines={2}>{question.q}</Text>
+          {answered ? (
+            <View style={[s.clinicalResult, {
+              borderColor: answeredCorrect ? "#22d3ee55" : "#ef444455",
+              backgroundColor: answeredCorrect ? "#021810" : "#180404",
+            }]}>
+              <Text style={{ color: answeredCorrect ? "#34d399" : "#f87171",
+                fontSize: 9, fontWeight: "800", marginBottom: 2 }}>
+                {answeredCorrect
+                  ? "✓ Correct! Great clinical judgment."
+                  : `✗ Correct answer: ${question.opts[question.correct]}`}
+              </Text>
+              <Text style={{ color: "#94a3b8", fontSize: 8, lineHeight: 11.5 }}>
+                {question.rationale}
+              </Text>
+            </View>
+          ) : (
+            <View style={s.clinicalGrid}>
+              {question.opts.map((opt, i) => (
+                <Pressable key={i} onPress={() => handleAnswer(i)}
+                  style={[s.clinicalBtn,
+                    answered && i === question.correct ? { borderColor: "#22d3ee", backgroundColor: "#082030" } :
+                    answered && i === chosen ? { borderColor: "#ef4444", backgroundColor: "#1a0404" } : {}
+                  ]}>
+                  <View style={s.clinicalLetter}>
+                    <Text style={s.clinicalLetterTxt}>{["A","B","C","D"][i]}</Text>
+                  </View>
+                  <Text style={s.clinicalOptTxt} numberOfLines={2}>{opt}</Text>
+                  {answered && i === question.correct && (
+                    <Text style={{ color: "#22d3ee", fontSize: 11, marginLeft: 2 }}>✓</Text>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Right lotus badge */}
+        <View style={s.clinicalLotus}>
+          <LinearGradient
+            colors={["#2d1500", "#6b3800", "#c8700040"]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={s.clinicalLotusBg}
+          >
+            <Text style={{ fontSize: 18, textAlign: "center" }}>✿</Text>
+            <Text style={s.clinicalLotusLabel}>+{PREWAVE_AP_BONUS}{"\n"}AP</Text>
+          </LinearGradient>
+        </View>
+      </View>
+    </LinearGradient>
   );
 }
 
@@ -3486,15 +3508,16 @@ const s = StyleSheet.create({
     backgroundColor: "#0d1e30", borderWidth: 1, borderColor: "#1e3a5a",
     alignItems: "center", justifyContent: "center",
   },
-  hudWave: { width: 90 },
+  hudWave: { flex: 1 },
+  hudTitle: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800", letterSpacing: 0.2 },
   hudKicker: { color: COLORS.air, fontSize: 7, fontWeight: "800", letterSpacing: 1.8 },
-  hudWaveTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
-  hudStability: { flex: 1 },
-  hudBarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
+  hudWaveTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
+  hudStability: { flex: 1.4 },
+  hudBarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 7, fontWeight: "700", letterSpacing: 0.8 },
   hudBarVal: { fontSize: 9, fontWeight: "800" },
   hudStabilityBg: { height: 8, backgroundColor: "#0a1428", borderRadius: 5, overflow: "hidden" },
   hudStabilityFill: { height: "100%", borderRadius: 5 },
-  hudAp: { width: 58, alignItems: "flex-end" },
+  hudAp: { width: 52, alignItems: "flex-end" },
   hudGemRow: { flexDirection: "row", flexWrap: "wrap", gap: 2, marginTop: 3 },
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
@@ -3525,16 +3548,74 @@ const s = StyleSheet.create({
 
   /* Feedback */
   feedbackPanel: {
-    minHeight: 50, paddingHorizontal: SPACING.md, paddingVertical: 5,
+    minHeight: 36, paddingHorizontal: SPACING.md, paddingVertical: 5,
     justifyContent: "center", backgroundColor: "#040c18",
     borderTopWidth: 1, borderColor: "#0e2040",
   },
   feedbackRow: { borderLeftWidth: 2, paddingLeft: SPACING.sm },
-  feedbackTxt: { fontSize: 11, lineHeight: 16, fontWeight: "500" },
-  feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 10.5, fontStyle: "italic" },
+  feedbackTxt: { fontSize: 10, lineHeight: 14, fontWeight: "500" },
+  feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic" },
+
+  /* Clinical cue check panel */
+  clinicalPanel: {
+    paddingHorizontal: 10, paddingVertical: 8,
+    borderTopWidth: 1, borderColor: "#1a3050",
+    minHeight: 110,
+  },
+  clinicalHeaderRow: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 5,
+  },
+  clinicalBadge: {
+    backgroundColor: "#0f2040", borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: "#22d3ee40",
+  },
+  clinicalBadgeTxt: {
+    color: "#22d3ee", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.8,
+  },
+  clinicalTimerBadge: {
+    backgroundColor: "#1a1200", borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: "#fbbf2440",
+  },
+  clinicalTimerTxt: { color: "#fbbf24", fontSize: 9, fontWeight: "800" },
+  clinicalQ: {
+    color: "#e2f0ff", fontSize: 10, fontWeight: "700", lineHeight: 14,
+    marginBottom: 6,
+  },
+  clinicalResult: {
+    borderRadius: 8, padding: 8, borderWidth: 1,
+  },
+  clinicalGrid: {
+    flexDirection: "row", flexWrap: "wrap", gap: 4,
+  },
+  clinicalBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    width: "48%" as any,
+    backgroundColor: "#071828", borderRadius: 8, padding: 7,
+    borderWidth: 1, borderColor: "#1a3050",
+  },
+  clinicalLetter: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "#0d2040", borderWidth: 1.5, borderColor: "#22d3ee55",
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  clinicalLetterTxt: { color: "#22d3ee", fontSize: 8, fontWeight: "900" },
+  clinicalOptTxt: { color: "#cbd5e1", fontSize: 9, flex: 1, lineHeight: 12 },
+  clinicalLotus: { width: 48, alignItems: "center", justifyContent: "center" },
+  clinicalLotusBg: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: "#c8700060",
+  },
+  clinicalLotusLabel: {
+    color: "#fbbf24", fontSize: 7.5, fontWeight: "800",
+    textAlign: "center", marginTop: 2, lineHeight: 10,
+  },
 
   /* Hand */
   handArea: { backgroundColor: "#040c18", borderTopWidth: 1, borderColor: "#0e2040" },
+  handRow: { flexDirection: "row", padding: 5, gap: 5 },
   handTabs: {
     flexDirection: "row", borderBottomWidth: 1, borderColor: "#0e2040",
     paddingHorizontal: SPACING.sm,
@@ -3548,20 +3629,43 @@ const s = StyleSheet.create({
   },
   handApTxt: { color: COLORS.runeGold, fontSize: 14, fontWeight: "700" },
   handApLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
-  handCards: { padding: SPACING.xs, gap: 5, flexDirection: "row" },
+  handCards: { flex: 1, flexDirection: "row", gap: 5 },
+  handSidebar: {
+    width: 52, alignItems: "center", justifyContent: "space-around",
+    paddingVertical: 4, gap: 4,
+  },
+  handSideBtn: {
+    alignItems: "center", justifyContent: "center",
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: "#0d1e30", borderWidth: 1, borderColor: "#1e3a5a",
+  },
+  handSideBtnTxt: {
+    color: COLORS.onSurfaceTertiary, fontSize: 6, fontWeight: "700",
+    letterSpacing: 0.4, marginTop: 1,
+  },
+  handItemsBadge: {
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#080e18", borderRadius: 8,
+    borderWidth: 1, borderColor: "#1a3050",
+    paddingHorizontal: 6, paddingVertical: 4,
+  },
+  handItemsNum: { color: COLORS.onSurface, fontSize: 13, fontWeight: "800" },
+  handItemsLabel: { color: COLORS.onSurfaceTertiary, fontSize: 6, fontWeight: "700", letterSpacing: 0.5 },
+  handPauseBtn: { alignItems: "center" },
+  handPauseTxt: { color: COLORS.onSurfaceTertiary, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
   unitCard: {
-    width: 76, alignItems: "center", gap: 3,
-    paddingVertical: 6, paddingTop: 5,
+    flex: 1, alignItems: "center", gap: 3,
+    paddingVertical: 5, paddingTop: 5, paddingHorizontal: 4,
     borderRadius: RADIUS.md, borderWidth: 1.5,
-    minHeight: 112,
+    minHeight: 108,
   },
   abilityCard: {
-    width: 72, alignItems: "center", gap: 2,
-    paddingVertical: 6,
+    flex: 1, alignItems: "center", gap: 2,
+    paddingVertical: 5,
     borderRadius: RADIUS.md, borderWidth: 1.5,
     minHeight: 105,
   },
-  cardCatBadge: { fontSize: 7, fontWeight: "700", letterSpacing: 1 },
+  cardCatBadge: { fontSize: 7.5, fontWeight: "800", letterSpacing: 0.8 },
   unitCardName: { fontSize: 8, fontWeight: "700", textAlign: "center", lineHeight: 11, paddingHorizontal: 3 },
   apRune: {
     flexDirection: "row", alignItems: "center", gap: 2,
