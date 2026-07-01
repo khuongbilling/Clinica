@@ -115,82 +115,101 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
    creating a single unbroken stone walkway around the center platform zone.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const LANE_FILL   = "rgba(195, 165, 95,  0.50)";
-const LANE_BORDER = "rgba(80,  55,  15,  0.82)";
+/* Stone lane palette — strong enough to read over the illustrated background */
+const LANE_STONE  = "rgba(210, 180, 115, 0.82)";  /* warm parchment stone, 82% opaque */
+const LANE_EDGE   = "rgba(55,  35,   8, 0.96)";   /* near-opaque dark seam            */
+const LANE_INNER  = "rgba(235, 205, 150, 0.60)";  /* lighter inner highlight          */
 
 function WaypointLane({ aw, ah }: { aw: number; ah: number }) {
-  const LANE_W = Math.max(20, aw * 0.082);   /* ~8.2% of board width */
-  const JR     = LANE_W / 2 + 1;             /* junction circle radius */
+  const LANE_W = Math.max(24, aw * 0.090);  /* ~9% of board width */
+  const JR     = LANE_W / 2 + 2;           /* junction circle radius */
+  const BW     = 2.5;                       /* border line thickness  */
+
+  /* Helper: segment geometry from two fraction-coord waypoints */
+  function seg(fx1: number, fy1: number, fx2: number, fy2: number) {
+    const px1 = fx1 * aw, py1 = fy1 * ah;
+    const px2 = fx2 * aw, py2 = fy2 * ah;
+    const cx  = (px1 + px2) / 2, cy = (py1 + py2) / 2;
+    const dx  = px2 - px1, dy = py2 - py1;
+    return {
+      cx, cy, angle: Math.atan2(dy, dx) * (180 / Math.PI),
+      len: Math.sqrt(dx * dx + dy * dy) + 3,
+    };
+  }
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: 3, pointerEvents: "none" }]}>
-      {/* Segments — one per consecutive waypoint pair */}
+
+      {/* Pass 1 — wide dark border strips (rendered first, behind fill) */}
       {PATH_WPS.slice(0, -1).map(([fx1, fy1], i) => {
         const [fx2, fy2] = PATH_WPS[i + 1];
-        const px1 = fx1 * aw, py1 = fy1 * ah;
-        const px2 = fx2 * aw, py2 = fy2 * ah;
-        const cx  = (px1 + px2) / 2;
-        const cy  = (py1 + py2) / 2;
-        const dx  = px2 - px1, dy = py2 - py1;
-        const segLen = Math.sqrt(dx * dx + dy * dy) + 2;
-        const angle  = Math.atan2(dy, dx) * (180 / Math.PI);
+        const { cx, cy, angle, len } = seg(fx1, fy1, fx2, fy2);
+        const W = LANE_W + BW * 2;
         return (
-          <View
-            key={i}
-            style={{
-              position: "absolute",
-              left:   cx - segLen / 2,
-              top:    cy - LANE_W / 2,
-              width:  segLen,
-              height: LANE_W,
-              transform: [{ rotate: `${angle}deg` }],
-              backgroundColor: LANE_FILL,
-            }}
-          />
+          <View key={`dk${i}`} style={{
+            position: "absolute",
+            left: cx - len / 2, top: cy - W / 2,
+            width: len, height: W,
+            transform: [{ rotate: `${angle}deg` }],
+            backgroundColor: LANE_EDGE,
+          }} />
         );
       })}
 
-      {/* Junction filled circles at every waypoint — seals corner gaps */}
-      {PATH_WPS.map(([fx, fy], i) => (
-        <View
-          key={`j${i}`}
-          style={{
+      {/* Pass 1b — border junction circles */}
+      {PATH_WPS.map(([fx, fy], i) => {
+        const r = JR + BW;
+        return (
+          <View key={`djc${i}`} style={{
             position: "absolute",
-            left: fx * aw - JR,
-            top:  fy * ah - JR,
-            width: JR * 2, height: JR * 2, borderRadius: JR,
-            backgroundColor: LANE_FILL,
-          }}
-        />
+            left: fx * aw - r, top: fy * ah - r,
+            width: r * 2, height: r * 2, borderRadius: r,
+            backgroundColor: LANE_EDGE,
+          }} />
+        );
+      })}
+
+      {/* Pass 2 — warm stone fill strips */}
+      {PATH_WPS.slice(0, -1).map(([fx1, fy1], i) => {
+        const [fx2, fy2] = PATH_WPS[i + 1];
+        const { cx, cy, angle, len } = seg(fx1, fy1, fx2, fy2);
+        return (
+          <View key={`st${i}`} style={{
+            position: "absolute",
+            left: cx - len / 2, top: cy - LANE_W / 2,
+            width: len, height: LANE_W,
+            transform: [{ rotate: `${angle}deg` }],
+            backgroundColor: LANE_STONE,
+          }} />
+        );
+      })}
+
+      {/* Pass 2b — stone fill junction circles */}
+      {PATH_WPS.map(([fx, fy], i) => (
+        <View key={`jc${i}`} style={{
+          position: "absolute",
+          left: fx * aw - JR, top: fy * ah - JR,
+          width: JR * 2, height: JR * 2, borderRadius: JR,
+          backgroundColor: LANE_STONE,
+        }} />
       ))}
 
-      {/* Outer border — drawn as a thin stroke over the fill */}
+      {/* Pass 3 — centre highlight line (lighter inner stripe for 3D depth) */}
       {PATH_WPS.slice(0, -1).map(([fx1, fy1], i) => {
         const [fx2, fy2] = PATH_WPS[i + 1];
-        const px1 = fx1 * aw, py1 = fy1 * ah;
-        const px2 = fx2 * aw, py2 = fy2 * ah;
-        const cx  = (px1 + px2) / 2;
-        const cy  = (py1 + py2) / 2;
-        const dx  = px2 - px1, dy = py2 - py1;
-        const segLen = Math.sqrt(dx * dx + dy * dy) + 2;
-        const angle  = Math.atan2(dy, dx) * (180 / Math.PI);
+        const { cx, cy, angle, len } = seg(fx1, fy1, fx2, fy2);
+        const HW = LANE_W * 0.30;
         return (
-          <View
-            key={`b${i}`}
-            style={{
-              position: "absolute",
-              left:   cx - segLen / 2,
-              top:    cy - LANE_W / 2,
-              width:  segLen,
-              height: LANE_W,
-              transform: [{ rotate: `${angle}deg` }],
-              borderTopWidth: 1.5,
-              borderBottomWidth: 1.5,
-              borderColor: LANE_BORDER,
-            }}
-          />
+          <View key={`hl${i}`} style={{
+            position: "absolute",
+            left: cx - len / 2, top: cy - HW / 2,
+            width: len, height: HW,
+            transform: [{ rotate: `${angle}deg` }],
+            backgroundColor: LANE_INNER,
+          }} />
         );
       })}
+
     </View>
   );
 }
