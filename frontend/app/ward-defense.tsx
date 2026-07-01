@@ -42,26 +42,27 @@ const TILE_SIZE        = 46;   /* deployment tile size in px */
 /* Enemy route — traces the illustrated stone walkway in the reference map.
    MUST stay identical to ward-defense-v2.tsx.                              */
 const PATH_WPS: [number, number][] = [
-  [0.15, 0.22],  /*  0  Disease Gate spawn        */
-  [0.19, 0.30],  /*  1  enter left lane           */
-  [0.22, 0.42],  /*  2  left lane upper           */
-  [0.24, 0.56],  /*  3  left lane lower           */
-  [0.28, 0.68],  /*  4  bottom-left curve         */
-  [0.37, 0.78],  /*  5  bottom lane left          */
-  [0.50, 0.82],  /*  6  bottom lane center        */
-  [0.63, 0.78],  /*  7  bottom lane right         */
-  [0.72, 0.68],  /*  8  bottom-right curve        */
-  [0.77, 0.56],  /*  9  right lane lower          */
-  [0.79, 0.42],  /* 10  right lane upper          */
-  [0.82, 0.30],  /* 11  right lane top            */
-  [0.86, 0.22],  /* 12  Vital Lantern exit        */
+  [0.17, 0.09],  /*  0  Disease Gate spawn        */
+  [0.12, 0.20],  /*  1  left side top             */
+  [0.10, 0.33],  /*  2  left lane upper           */
+  [0.10, 0.47],  /*  3  left lane middle          */
+  [0.12, 0.60],  /*  4  left lane lower           */
+  [0.20, 0.72],  /*  5  bottom-left curve         */
+  [0.38, 0.80],  /*  6  bottom lane left          */
+  [0.54, 0.83],  /*  7  bottom lane center        */
+  [0.70, 0.80],  /*  8  bottom lane right         */
+  [0.82, 0.70],  /*  9  bottom-right curve        */
+  [0.87, 0.55],  /* 10  right lane lower          */
+  [0.87, 0.40],  /* 11  right lane middle         */
+  [0.84, 0.25],  /* 12  right lane upper          */
+  [0.78, 0.10],  /* 13  Vital Lantern exit        */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 
 /* ── Six deploy pads — aligned onto the drawn blue cross-platforms ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.360, 0.460], [0.510, 0.460], [0.655, 0.460],
-  [0.360, 0.655], [0.510, 0.655], [0.655, 0.655],
+  [0.28, 0.30], [0.50, 0.30], [0.72, 0.30],
+  [0.28, 0.48], [0.50, 0.48], [0.72, 0.48],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -3528,7 +3529,7 @@ const s = StyleSheet.create({
   hudGem: { width: 5.5, height: 5.5, borderRadius: 3 },
 
   /* Arena */
-  ward: { flex: 1, width: "100%", maxWidth: 520, alignSelf: "center", overflow: "hidden", position: "relative", backgroundColor: "#050912" },
+  ward: { flex: 1, width: "100%", overflow: "hidden", position: "relative", backgroundColor: "#050912" },
   sceneStrip: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     overflow: "hidden", zIndex: 0,

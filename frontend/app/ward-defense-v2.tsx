@@ -2,14 +2,13 @@
  * Ward Defense V2 — Lotus Healing Sanctum
  *
  * INTERACTIVE MAP — the illustrated reference asset IS the battlefield.
- * Background: assets/ward-defense/lotus-healing-ward-map.png (the drawn
- * Disease Gate, Vital Lantern, stone walkway, and six blue cross-platforms
- * all live in this image). Gameplay elements are transparent overlays whose
- * coordinates (PATH_WPS, DEPLOY_TILES) are mapped onto image features.
+ * Background: assets/ward-defense/lotus-healing-ward-map-portrait.png (portrait
+ * 9:16 — Disease Gate top-left, Vital Lantern top-right, six cross-platforms
+ * center, U-shaped stone walkway).  Image fills the full board via
+ * contentFit="cover"; overlay coordinates are fractions of the onLayout size.
  *
  * Layer order (zIndex):
- *   0  <ExpoImage IMG_MAP>  — illustrated battle map (contentFit="cover",
- *                            board locked to the image's native 3:2 aspect ratio)
+ *   0  <ExpoImage IMG_MAP>  — portrait battle map (contentFit="cover", fills board)
  *   6  StonePad × 6         — fully invisible tap targets (gold star on merge only)
  *  22  GateBadge            — spawn-queue count over the drawn gate
  *  10  HeroOnPad            — deployed hero sprites (centered on platforms)
@@ -22,38 +21,40 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
-/* Enemy route — traces the illustrated stone walkway in the reference map:
-   Disease Gate (upper-left) → down the left lane → around the bottom →
-   up the right lane → Vital Lantern (upper-right).
-   Fractions map directly onto the background image (contentFit="cover",
-   aspect-locked 3:2 container so the art is never distorted).
+/* Enemy route — traces the illustrated stone walkway in the portrait map:
+   Disease Gate (upper-left, purple portal) → down left side → across bottom →
+   up right side → Vital Lantern (upper-right, golden pagoda).
+   U-shaped path in portrait (9:16) orientation.
+   Fractions map onto the board's measured size (onLayout) — image fills via
+   contentFit="cover" so coordinates stay valid regardless of screen size.
    MUST stay identical to ward-defense.tsx.                              */
 export const PATH_WPS: [number, number][] = [
-  [0.15, 0.22],  /*  0  Disease Gate spawn        */
-  [0.19, 0.30],  /*  1  enter left lane           */
-  [0.22, 0.42],  /*  2  left lane upper           */
-  [0.24, 0.56],  /*  3  left lane lower           */
-  [0.28, 0.68],  /*  4  bottom-left curve         */
-  [0.37, 0.78],  /*  5  bottom lane left          */
-  [0.50, 0.82],  /*  6  bottom lane center        */
-  [0.63, 0.78],  /*  7  bottom lane right         */
-  [0.72, 0.68],  /*  8  bottom-right curve        */
-  [0.77, 0.56],  /*  9  right lane lower          */
-  [0.79, 0.42],  /* 10  right lane upper          */
-  [0.82, 0.30],  /* 11  right lane top            */
-  [0.86, 0.22],  /* 12  Vital Lantern exit        */
+  [0.17, 0.09],  /*  0  Disease Gate spawn        */
+  [0.12, 0.20],  /*  1  left side top             */
+  [0.10, 0.33],  /*  2  left lane upper           */
+  [0.10, 0.47],  /*  3  left lane middle          */
+  [0.12, 0.60],  /*  4  left lane lower           */
+  [0.20, 0.72],  /*  5  bottom-left curve         */
+  [0.38, 0.80],  /*  6  bottom lane left          */
+  [0.54, 0.83],  /*  7  bottom lane center        */
+  [0.70, 0.80],  /*  8  bottom lane right         */
+  [0.82, 0.70],  /*  9  bottom-right curve        */
+  [0.87, 0.55],  /* 10  right lane lower          */
+  [0.87, 0.40],  /* 11  right lane middle         */
+  [0.84, 0.25],  /* 12  right lane upper          */
+  [0.78, 0.10],  /* 13  Vital Lantern exit        */
 ];
 
 /* Six deploy pads — aligned onto the six blue cross-platforms drawn in
-   the reference map (2 rows × 3 cols).
+   the portrait map (2 rows × 3 cols, inside the U-shaped path).
    MUST stay identical to ward-defense.tsx.                              */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.360, 0.460], [0.510, 0.460], [0.655, 0.460],
-  [0.360, 0.655], [0.510, 0.655], [0.655, 0.655],
+  [0.28, 0.30], [0.50, 0.30], [0.72, 0.30],
+  [0.28, 0.48], [0.50, 0.48], [0.72, 0.48],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
-const IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map.png");
+const IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map-portrait.png");
 const IMG_UNITS: Record<string, any> = {
   ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
   mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
@@ -307,21 +308,13 @@ export function WardBoardV2({
   const H = ah > 20 ? ah : 480;
 
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}>
     <View
-      style={{
-        width: "100%",
-        aspectRatio: 1536 / 1024,
-        maxHeight: "100%",
-        position: "relative",
-        overflow: "hidden",
-        backgroundColor: "#07121A",
-      }}
+      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#07121A" }}
       onLayout={onLayout}
     >
-      {/* L0: Illustrated lotus sanctuary battle map (reference asset).
-          Container is locked to the image's native 3:2 aspect ratio so the
-          art is never stretched; overlay coordinates map onto this box. */}
+      {/* L0: Portrait battle map — fills the full board area. contentFit="cover"
+          crops minimally if the phone aspect ratio differs from 9:16. Overlay
+          fractions map onto the onLayout-measured board size. */}
       <ExpoImage
         source={IMG_MAP}
         style={StyleSheet.absoluteFillObject}
@@ -358,7 +351,6 @@ export function WardBoardV2({
       {enemies.map((e: any) => (
         <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} bobY={bobY} />
       ))}
-    </View>
     </View>
   );
 }

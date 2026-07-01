@@ -6,19 +6,19 @@ description: How the battle board is rendered — the illustrated reference imag
 ## CRITICAL — the illustrated map IS the background
 The board is NOT drawn with React Native components. The approved illustrated
 asset is rendered as the literal battle-map background:
-`frontend/assets/ward-defense/lotus-healing-ward-map.png` (1536×1024, 3:2).
+`frontend/assets/ward-defense/lotus-healing-ward-map-portrait.png` (portrait 9:16 AI-generated).
 ```
-IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map.png")
-// board wrapper is aspect-locked so the art is never stretched:
-<View style={{flex:1, alignItems:"center", justifyContent:"center"}}>
-  <View onLayout={onLayout} style={{width:"100%", aspectRatio:1536/1024, maxHeight:"100%"}}>
-    <ExpoImage source={IMG_MAP} contentFit="cover" />  // overlays go here
+IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map-portrait.png")
+// Board fills ALL available space — no aspect-ratio constraint:
+<View style={{flex:1, position:"relative", overflow:"hidden"}} onLayout={onLayout}>
+  <ExpoImage source={IMG_MAP} style={StyleSheet.absoluteFillObject} contentFit="cover" />
 ```
-**Why aspect-lock:** with `contentFit="fill"` the 3:2 image squished badly inside
-the tall portrait board. Locking the container to the image's native aspect ratio
-means fill/cover/contain are all equivalent (no distortion) AND overlay fractions
-stay valid because onLayout measures the aspect-locked box. Do NOT go back to a
-free-flex board + contentFit="fill".
+**Why no aspect-ratio lock:** the new image is portrait (9:16), designed to fill
+the mobile board area. `contentFit="cover"` handles any minor ratio mismatch
+with minimal cropping. Overlay fractions (PATH_WPS / DEPLOY_TILES) map onto the
+onLayout-measured board size, so they work regardless of exact screen dimensions.
+Do NOT add `maxWidth` to `s.ward` in ward-defense.tsx — that re-creates the black-bars problem.
+The old landscape 1536×1024 image (lotus-healing-ward-map.png) is kept as a backup but is no longer used.
 **Why:** user explicitly rejected the CSS/RN-drawn scene ("The reference map was
 not used"). The drawn Disease Gate, Vital Lantern, stone walkway, and 6 blue
 cross-platforms all live INSIDE the image. Gameplay elements are transparent

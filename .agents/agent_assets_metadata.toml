@@ -222,3 +222,9 @@ id = "dQ5M61j4mSrwjI5qIHhcr"
 uri = "file://frontend/assets/images/card_o2_healer.png"
 type = "image"
 title = "o2 healer card portrait"
+
+[[generated]]
+id = "uLccbEjh3DE7GehcvQGdv"
+uri = "file://frontend/assets/ward-defense/lotus-healing-ward-map-portrait.png"
+type = "image"
+title = "lotus healing ward portrait map"
