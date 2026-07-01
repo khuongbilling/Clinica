@@ -8,8 +8,9 @@
  * coordinates (PATH_WPS, DEPLOY_TILES) are mapped onto image features.
  *
  * Layer order (zIndex):
- *   0  <ExpoImage IMG_MAP>  — illustrated battle map (contentFit="fill")
- *   6  StonePad × 6         — invisible tap targets + selection glow only
+ *   0  <ExpoImage IMG_MAP>  — illustrated battle map (contentFit="cover",
+ *                            board locked to the image's native 3:2 aspect ratio)
+ *   6  StonePad × 6         — fully invisible tap targets (gold star on merge only)
  *  22  GateBadge            — spawn-queue count over the drawn gate
  *  10  HeroOnPad            — deployed hero sprites (centered on platforms)
  *  13  ProjectileDot
@@ -24,7 +25,8 @@ import { Image as ExpoImage } from "expo-image";
 /* Enemy route — traces the illustrated stone walkway in the reference map:
    Disease Gate (upper-left) → down the left lane → around the bottom →
    up the right lane → Vital Lantern (upper-right).
-   Fractions map directly onto the background image (contentFit="fill").
+   Fractions map directly onto the background image (contentFit="cover",
+   aspect-locked 3:2 container so the art is never distorted).
    MUST stay identical to ward-defense.tsx.                              */
 export const PATH_WPS: [number, number][] = [
   [0.15, 0.22],  /*  0  Disease Gate spawn        */
@@ -78,10 +80,9 @@ export interface WardBoardV2Props {
   onLayout: (e: LayoutChangeEvent) => void;
   enemies: any[]; deployedUnits: any[]; projectiles: any[];
   stability: number; phase: string; wave: number;
-  selectedUnit: string | null; ap: number;
   bobY: Animated.AnimatedInterpolation<number>;
   spawnQueueLen: number; mergeTileSet: Set<number>;
-  onTilePress: (i: number) => void; canAfford: boolean;
+  onTilePress: (i: number) => void;
   unitColors: Record<string, string>;
 }
 
@@ -103,11 +104,10 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
    ═══════════════════════════════════════════════════════════════════════════ */
 interface StonePadProps {
   aw: number; ah: number; tileIdx: number;
-  occupied: boolean; selected: boolean; canAfford: boolean;
   isMergeCandidate: boolean; onPress: () => void;
 }
 
-function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandidate, onPress }: StonePadProps) {
+function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress }: StonePadProps) {
   const [fx, fy] = DEPLOY_TILES[tileIdx];
   const cx = fx * aw;
   const cy = fy * ah;
@@ -115,12 +115,8 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
   const HIT = cl(Math.min(aw, ah) * 0.15, 56, 96);
   const R   = HIT / 2;
 
-  const isTargetable = !occupied && selected && canAfford;
-  const isBlocked    = !occupied && selected && !canAfford;
-  const isMerge      = isMergeCandidate;
-
-  const glowColor = isMerge ? "#FFD700" : isBlocked ? "#E0555A" : "#6EE7B7";
-  const ringSize  = HIT * 0.92;
+  const isMerge  = isMergeCandidate;
+  const ringSize = HIT * 0.92;
 
   return (
     <Pressable
@@ -133,24 +129,21 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
         zIndex: 6,
       }}
     >
-      {/* Selection glow — only shown while a unit is selected or a merge is possible.
-          The platform art itself lives in the background image. */}
-      {(isTargetable || isBlocked || isMerge) && (
+      {/* Fully transparent tap target — the drawn platform art lives in the
+          background image. The only overlay is a gold star marking a merge. */}
+      {isMerge && (
         <View style={{
           width: ringSize, height: ringSize,
           borderRadius: ringSize / 2,
-          borderWidth: 2,
-          borderColor: glowColor + (isBlocked ? "88" : "CC"),
-          backgroundColor: glowColor + (isBlocked ? "10" : "22"),
+          borderWidth: 2, borderColor: "#FFD700CC",
+          backgroundColor: "transparent",
           alignItems: "center", justifyContent: "center",
-          ...({ boxShadow: `0 0 18px ${glowColor}${isBlocked ? "40" : "80"}` } as any),
+          ...({ boxShadow: "0 0 14px #FFD70080" } as any),
         }}>
-          {isMerge && (
-            <Text style={{
-              color: "#FFD700", fontSize: ringSize * 0.30, fontWeight: "800",
-              ...({ textShadow: "0 0 12px #FFD70099" } as any),
-            }}>★</Text>
-          )}
+          <Text style={{
+            color: "#FFD700", fontSize: ringSize * 0.30, fontWeight: "800",
+            ...({ textShadow: "0 0 12px #FFD70099" } as any),
+          }}>★</Text>
         </View>
       )}
     </Pressable>
@@ -307,22 +300,32 @@ export function WardBoardV2({
   aw, ah, onLayout,
   enemies, deployedUnits, projectiles,
   stability, phase, wave,
-  selectedUnit, bobY,
-  spawnQueueLen, mergeTileSet, onTilePress, canAfford, unitColors,
+  bobY,
+  spawnQueueLen, mergeTileSet, onTilePress, unitColors,
 }: WardBoardV2Props) {
   const W = aw > 20 ? aw : 360;
   const H = ah > 20 ? ah : 480;
 
   return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}>
     <View
-      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#07121A" }}
+      style={{
+        width: "100%",
+        aspectRatio: 1536 / 1024,
+        maxHeight: "100%",
+        position: "relative",
+        overflow: "hidden",
+        backgroundColor: "#07121A",
+      }}
       onLayout={onLayout}
     >
-      {/* L0: Illustrated lotus sanctuary battle map (reference asset) */}
+      {/* L0: Illustrated lotus sanctuary battle map (reference asset).
+          Container is locked to the image's native 3:2 aspect ratio so the
+          art is never stretched; overlay coordinates map onto this box. */}
       <ExpoImage
         source={IMG_MAP}
         style={StyleSheet.absoluteFillObject}
-        contentFit="fill"
+        contentFit="cover"
         cachePolicy="memory-disk"
       />
 
@@ -330,8 +333,6 @@ export function WardBoardV2({
       {W > 20 && DEPLOY_TILES.map((_, i) => (
         <StonePad
           key={i} aw={W} ah={H} tileIdx={i}
-          occupied={deployedUnits.some((u: any) => u.tileIndex === i)}
-          selected={!!selectedUnit} canAfford={canAfford}
           isMergeCandidate={mergeTileSet.has(i)}
           onPress={() => onTilePress(i)}
         />
@@ -357,6 +358,7 @@ export function WardBoardV2({
       {enemies.map((e: any) => (
         <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} bobY={bobY} />
       ))}
+    </View>
     </View>
   );
 }

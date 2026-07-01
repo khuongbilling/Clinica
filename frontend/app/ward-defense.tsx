@@ -2515,13 +2515,10 @@ export default function WardDefense() {
               stability={gs.stability}
               phase={gs.phase}
               wave={gs.wave}
-              selectedUnit={selectedUnit}
-              ap={gs.ap}
               bobY={bobY}
               spawnQueueLen={gs.spawnQueue.length}
               mergeTileSet={mergeTileSet}
               onTilePress={deployUnit}
-              canAfford={gs.ap >= (UNIT_DATA[selectedUnit ?? ""]?.apCost ?? 999)}
               unitColors={unitColors}
             />
           );
@@ -2651,7 +2648,7 @@ function ClinicalQuestionPanel({
       </View>
 
       {/* Main row: question+answers | lotus sidebar */}
-      <View style={{ flexDirection: "row", gap: 8, flex: 1 }}>
+      <View style={{ flexDirection: "row", gap: 8, alignItems: "stretch" }}>
         <View style={{ flex: 1 }}>
           <Text style={s.clinicalQ} numberOfLines={2}>{question.q}</Text>
           {answered ? (
