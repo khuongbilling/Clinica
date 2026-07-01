@@ -1971,10 +1971,11 @@ function HandPanel({
                         start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
                         style={StyleSheet.absoluteFillObject}
                       />
-                      <Image
+                      <ExpoImage
                         source={CARD_PORTRAITS[typeId]}
                         style={{ width: 60, height: 78 }}
-                        resizeMode="contain"
+                        contentFit="contain"
+                        cachePolicy="none"
                       />
                       {!canAfford && (
                         <View style={{ ...StyleSheet.absoluteFillObject as any, backgroundColor: "#00000060" }}/>

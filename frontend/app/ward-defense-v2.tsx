@@ -530,7 +530,7 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
   const [fx, fy] = DEPLOY_TILES[tileIdx];
   const cx = fx * aw;
   const cy = fy * ah;
-  const SIZE = cl(Math.min(aw, ah) * 0.154, 52, 90); /* total octagon diameter */
+  const SIZE = cl(Math.min(aw, ah) * 0.108, 40, 56); /* total octagon diameter */
   const R    = SIZE / 2;
 
   const isTargetable = !occupied && selected && canAfford;
@@ -948,7 +948,7 @@ function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors }: {
   return (
     <Animated.View style={{
       position: "absolute",
-      left: cx - HERO_W / 2, top: cy - HERO_H - 4,
+      left: cx - HERO_W / 2, top: cy - HERO_H / 2,
       width: HERO_W, alignItems: "center", zIndex: 10,
       transform: [{ translateY: bobY }],
     }}>
