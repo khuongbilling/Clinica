@@ -186,9 +186,8 @@ function StoneLane({ aw, ah }: { aw: number; ah: number }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 3 — STONE MEDALLION DEPLOY PADS
-   Solid warm-stone circles anchored at exact deploy tile positions.
-   Show selection affordance ring on unoccupied pads when a unit is selected.
+   LAYER 3 — HEXAGONAL DEPLOY PADS  (matches reference: dark hex frame +
+   glowing inner circle with "+" cross — always visible, brighter when active)
    ═══════════════════════════════════════════════════════════════════════════ */
 interface StonePadProps {
   aw: number; ah: number; tileIdx: number;
@@ -200,107 +199,184 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
   const [fx, fy] = DEPLOY_TILES[tileIdx];
   const cx = fx * aw;
   const cy = fy * ah;
-  const R  = cl(Math.min(aw, ah) * 0.072, 22, 42);
+  const R  = cl(Math.min(aw, ah) * 0.076, 24, 44);
 
-  const accentC = isMergeCandidate
-    ? "#facc15"
-    : (!occupied && selected && canAfford)  ? "#22d3ee"
-    : (!occupied && selected && !canAfford) ? "#64748b"
-    : null;
+  const isTargetable = !occupied && selected && canAfford;
+  const isBlocked    = !occupied && selected && !canAfford;
+  const isMerge      = isMergeCandidate;
+
+  /* Accent colours */
+  const frameC  = isMerge ? "#f59e0b" : isTargetable ? "#22d3ee" : isBlocked ? "#475569" : "#1e6fa8";
+  const glowC   = isMerge ? "#fde047" : isTargetable ? "#7de8ff" : "#3aabe0";
+  const innerBg : [string,string,string] = isMerge
+    ? ["#1a1200", "#1a1200", "#0d0d00"]
+    : ["#041624", "#061e30", "#020e1a"];
+
+  const barLen = R * 0.60;
+  const barThk = R * 0.17;
 
   return (
     <Pressable
       onPress={onPress}
       style={{
         position: "absolute",
-        left: cx - R - 10, top: cy - R - 10,
-        width: (R + 10) * 2, height: (R + 10) * 2,
+        left: cx - R - 14, top: cy - R - 14,
+        width: (R + 14) * 2, height: (R + 14) * 2,
         alignItems: "center", justifyContent: "center",
         zIndex: 6,
       }}
     >
-      {/* Glow halo — only when selected/merge-candidate */}
-      {accentC && (
+      {/* Outer glow halo (active state) */}
+      {(isTargetable || isMerge) && (
         <View style={{
           position: "absolute",
-          width: R * 2 + 18, height: R * 2 + 18, borderRadius: R + 9,
-          borderWidth: 2, borderColor: accentC + "66",
+          width: R * 2 + 24, height: R * 2 + 24, borderRadius: R + 12,
+          backgroundColor: frameC + "18",
+          borderWidth: 1.5, borderColor: frameC + "55",
         }}/>
       )}
 
-      {/* Drop shadow */}
+      {/* Hexagonal outer frame — dark stone with accent border */}
       <View style={{
-        width: R * 2 + 6, height: R * 2 + 6, borderRadius: R + 3,
-        backgroundColor: "#00000055",
+        width: R * 2 + 10, height: R * 2 + 10,
+        borderRadius: R * 0.28,           /* slight corner rounding → octagon feel */
+        backgroundColor: "#0b1820ee",
+        borderWidth: 2.5, borderColor: frameC,
         alignItems: "center", justifyContent: "center",
+        ...(isTargetable && {
+          /* CSS box-shadow for web glow */
+          boxShadow: `0 0 16px ${frameC}80, 0 0 6px ${frameC}50` as any,
+        } as any),
       }}>
-        {/* Stone ring */}
+        {/* Gold accent corner notches — four diagonal fills emulating chamfers */}
         <View style={{
-          width: R * 2, height: R * 2, borderRadius: R,
-          borderWidth: 2.5,
-          borderColor: accentC ?? "#4A3820",
-          overflow: "hidden",
-          alignItems: "center", justifyContent: "center",
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          borderRadius: R * 0.28, overflow: "hidden",
         }}>
-          {/* Warm stone surface */}
           <LinearGradient
-            colors={["#B09878", "#8C7A58", "#6B5840", "#544430"]}
-            start={{ x: 0.25, y: 0 }} end={{ x: 0.75, y: 1 }}
-            style={{ position: "absolute", left: 0, top: 0, width: R * 2, height: R * 2 }}
+            colors={["#c8860022", "#00000000", "#c8860022"]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
           />
-          {/* Carved inner ring */}
-          <View style={{
-            width: R - 7, height: R - 7, borderRadius: R,
-            borderWidth: 1.5,
-            borderColor: accentC ? accentC + "88" : "#2E2010",
-          }}/>
-          {/* Symbol on empty selected pad */}
-          {selected && !occupied && (
-            <Text style={{
-              position: "absolute",
-              color: canAfford ? "#22d3ee" : "#475569",
-              fontSize: R * 0.38, fontWeight: "800",
-            }}>
-              {canAfford ? "+" : "—"}
-            </Text>
-          )}
-          {isMergeCandidate && (
-            <Text style={{ position: "absolute", color: "#facc15", fontSize: R * 0.42, fontWeight: "800" }}>
-              ★
-            </Text>
-          )}
         </View>
+
+        {/* Inner glowing circle */}
+        <LinearGradient
+          colors={innerBg}
+          start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
+          style={{
+            width: R * 2 - 2, height: R * 2 - 2, borderRadius: R - 1,
+            alignItems: "center", justifyContent: "center",
+            borderWidth: 1.5, borderColor: glowC + "70",
+            overflow: "hidden",
+          }}
+        >
+          {/* Subtle radial sheen */}
+          <LinearGradient
+            colors={[glowC + "25", "#00000000"]}
+            start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+            style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
+          />
+
+          {/* "+" cross bars — always visible on empty pads */}
+          {!occupied && !isMerge && (
+            <>
+              <View style={{
+                position: "absolute",
+                width: barLen, height: barThk,
+                backgroundColor: glowC,
+                borderRadius: barThk / 2,
+                opacity: isTargetable ? 1.0 : 0.55,
+              }}/>
+              <View style={{
+                position: "absolute",
+                width: barThk, height: barLen,
+                backgroundColor: glowC,
+                borderRadius: barThk / 2,
+                opacity: isTargetable ? 1.0 : 0.55,
+              }}/>
+            </>
+          )}
+
+          {/* Merge star */}
+          {isMerge && (
+            <Text style={{ color: "#fde047", fontSize: R * 0.55, fontWeight: "800" }}>★</Text>
+          )}
+
+          {/* Occupied dim glow (hero standing here — sprite covers this) */}
+          {occupied && (
+            <View style={{
+              width: R * 0.55, height: R * 0.55, borderRadius: R * 0.3,
+              backgroundColor: glowC + "20",
+            }}/>
+          )}
+        </LinearGradient>
       </View>
     </Pressable>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 4 — DISEASE GATE BADGE  (floating pill at left corridor entry)
+   LAYER 4 — DISEASE GATE PORTAL
+   Glowing purple swirling portal in the upper-left corridor, matching the
+   reference image: purple orb with dark vortex centre + floating label.
    ═══════════════════════════════════════════════════════════════════════════ */
-function GateBadge({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
-  const cy = PATH_WPS[0][1] * ah;
+function GatePortal({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
+  const corridorW = LX * aw;
+  const orbR      = cl(corridorW * 0.48, 18, 36);
+  /* position portal just above the enemy path entry point */
+  const orbCX     = PATH_WPS[0][0] * aw;
+  const orbCY     = PATH_WPS[0][1] * ah - orbR * 2.2;
+
   return (
-    <View style={{
-      position: "absolute", left: 3, top: cy - 40,
-      zIndex: 22, alignItems: "flex-start",
-    }}>
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: 22, pointerEvents: "none" }]}>
+      {/* Purple portal orb */}
+      <View style={{
+        position: "absolute",
+        left: orbCX - orbR, top: orbCY - orbR,
+        width: orbR * 2, height: orbR * 2, borderRadius: orbR,
+        alignItems: "center", justifyContent: "center",
+        ...({ boxShadow: `0 0 ${orbR}px #a855f7cc, 0 0 ${orbR*1.8}px #7c3aed88` } as any),
+      }}>
+        <LinearGradient
+          colors={["#1a0030", "#4c0080", "#7c3aed", "#a855f7", "#7c3aed", "#1a0030"]}
+          start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
+          style={{ width: orbR * 2, height: orbR * 2, borderRadius: orbR,
+                   borderWidth: 2, borderColor: "#c084fc",
+                   alignItems: "center", justifyContent: "center" }}
+        >
+          {/* Dark vortex centre */}
+          <View style={{
+            width: orbR * 0.7, height: orbR * 0.7, borderRadius: orbR * 0.35,
+            backgroundColor: "#05000a",
+            borderWidth: 1.5, borderColor: "#a855f788",
+          }}/>
+        </LinearGradient>
+      </View>
+
+      {/* Queue badge */}
       {spawnQueueLen > 0 && (
         <View style={{
-          backgroundColor: "#3B0764EE", borderRadius: 5,
-          paddingHorizontal: 6, paddingVertical: 2,
-          borderWidth: 1, borderColor: "#A855F7",
-          marginBottom: 2,
+          position: "absolute",
+          left: orbCX + orbR - 6, top: orbCY - orbR - 4,
+          backgroundColor: "#7c3aed", borderRadius: 8,
+          paddingHorizontal: 5, paddingVertical: 1,
+          borderWidth: 1, borderColor: "#c084fc",
+          zIndex: 23,
         }}>
-          <Text style={{ color: "#E9D5FF", fontSize: 7, fontWeight: "800" }}>⚡ {spawnQueueLen}</Text>
+          <Text style={{ color: "#fff", fontSize: 7, fontWeight: "900" }}>⚡{spawnQueueLen}</Text>
         </View>
       )}
+
+      {/* Label */}
       <View style={{
-        backgroundColor: "#160828DD", borderRadius: 5,
-        paddingHorizontal: 6, paddingVertical: 3,
-        borderWidth: 1, borderColor: "#7C3AED88",
+        position: "absolute",
+        left: Math.max(1, orbCX - 28), top: orbCY - orbR - 16,
+        backgroundColor: "#160828CC",
+        paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4,
+        borderWidth: 1, borderColor: "#7c3aed88",
       }}>
-        <Text style={{ color: "#C4B5FD", fontSize: 6.5, fontWeight: "800", letterSpacing: 0.8 }}>
+        <Text style={{ color: "#e9d5ff", fontSize: 6, fontWeight: "800", letterSpacing: 0.7 }}>
           DISEASE GATE
         </Text>
       </View>
@@ -309,38 +385,77 @@ function GateBadge({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQue
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 5 — VITAL LANTERN BADGE  (floating pill + stability bar, right side)
+   LAYER 5 — VITAL LANTERN SHRINE
+   Golden glowing orb/shrine in the upper-right corridor + stability bar.
    ═══════════════════════════════════════════════════════════════════════════ */
-function LanternBadge({ aw, ah, stability }: { aw: number; ah: number; stability: number }) {
-  const cy  = PATH_WPS[3][1] * ah;
-  const pct = cl(stability, 0, 100);
-  const glow = pct > 60 ? "#22D3EE" : pct > 30 ? "#FACC15" : "#EF4444";
+function LanternShrine({ aw, ah, stability }: { aw: number; ah: number; stability: number }) {
+  const corridorW = (1 - RX) * aw;
+  const orbR      = cl(corridorW * 0.48, 18, 36);
+  const orbCX     = PATH_WPS[3][0] * aw;
+  const orbCY     = PATH_WPS[3][1] * ah - orbR * 2.2;
+  const pct       = cl(stability, 0, 100);
+  const glowC     = pct > 60 ? "#fbbf24" : pct > 30 ? "#f59e0b" : "#ef4444";
+  const glowShadow = pct > 60 ? "#fbbf24" : pct > 30 ? "#f59e0b" : "#ef4444";
+
   return (
-    <View style={{
-      position: "absolute", right: 3, top: cy - 52,
-      zIndex: 22, alignItems: "flex-end",
-    }}>
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: 22, pointerEvents: "none" }]}>
+      {/* Golden shrine orb */}
       <View style={{
-        backgroundColor: "#061A1ADD", borderRadius: 5,
-        paddingHorizontal: 6, paddingVertical: 3,
-        borderWidth: 1, borderColor: glow + "88",
-        marginBottom: 3,
+        position: "absolute",
+        left: orbCX - orbR, top: orbCY - orbR,
+        width: orbR * 2, height: orbR * 2, borderRadius: orbR,
+        alignItems: "center", justifyContent: "center",
+        ...({ boxShadow: `0 0 ${orbR}px ${glowShadow}cc, 0 0 ${orbR*1.8}px ${glowShadow}66` } as any),
       }}>
-        <Text style={{ color: "#A7F3D0", fontSize: 6.5, fontWeight: "800", letterSpacing: 0.8 }}>
+        <LinearGradient
+          colors={["#3d1f00", "#8b4500", glowC, "#fde68a", glowC, "#6b3200"]}
+          start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
+          style={{ width: orbR * 2, height: orbR * 2, borderRadius: orbR,
+                   borderWidth: 2, borderColor: "#fde68a",
+                   alignItems: "center", justifyContent: "center" }}
+        >
+          {/* Lotus inner glyph */}
+          <View style={{
+            width: orbR * 0.65, height: orbR * 0.65, borderRadius: orbR * 0.33,
+            backgroundColor: "#fffbeb33",
+            borderWidth: 1.5, borderColor: "#fde68a",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Text style={{ fontSize: orbR * 0.38, color: "#fde68a" }}>✦</Text>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Label */}
+      <View style={{
+        position: "absolute",
+        left: orbCX - 30, top: orbCY - orbR - 16,
+        backgroundColor: "#06180eCC",
+        paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4,
+        borderWidth: 1, borderColor: glowC + "88",
+      }}>
+        <Text style={{ color: "#fef3c7", fontSize: 6, fontWeight: "800", letterSpacing: 0.7 }}>
           VITAL LANTERN
         </Text>
       </View>
+
+      {/* Stability bar — positioned below the orb */}
       <View style={{
-        width: 64, height: 5, backgroundColor: "#00000060",
-        borderRadius: 3, overflow: "hidden",
-        borderWidth: 0.5, borderColor: glow + "60",
+        position: "absolute",
+        left: orbCX - 32, top: orbCY + orbR + 3,
+        width: 64,
       }}>
         <View style={{
-          width: `${pct}%` as any, height: "100%",
-          backgroundColor: glow, borderRadius: 3,
-        }}/>
+          width: 64, height: 5, backgroundColor: "#00000060",
+          borderRadius: 3, overflow: "hidden",
+          borderWidth: 0.5, borderColor: glowC + "70",
+        }}>
+          <View style={{ width: `${pct}%` as any, height: "100%", backgroundColor: glowC, borderRadius: 3 }}/>
+        </View>
+        <Text style={{ color: glowC, fontSize: 6.5, fontWeight: "700", marginTop: 1, textAlign: "center" }}>
+          {pct}%
+        </Text>
       </View>
-      <Text style={{ color: glow, fontSize: 7, fontWeight: "700", marginTop: 2 }}>{pct}%</Text>
     </View>
   );
 }
@@ -579,8 +694,8 @@ export function WardBoardV2({
       ))}
 
       {/* ── L4 / L5: Disease Gate + Vital Lantern floating badges ── */}
-      {aw > 20 && <GateBadge aw={W} ah={H} spawnQueueLen={spawnQueueLen} />}
-      {aw > 20 && <LanternBadge aw={W} ah={H} stability={stability} />}
+      {aw > 20 && <GatePortal aw={W} ah={H} spawnQueueLen={spawnQueueLen} />}
+      {aw > 20 && <LanternShrine aw={W} ah={H} stability={stability} />}
 
       {/* ── L6: Subtle edge vignette ── */}
       <LinearGradient
