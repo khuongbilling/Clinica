@@ -40,21 +40,20 @@ const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
 /* ── Board layout — MUST match ward-defense-v2.tsx exactly ─────────────────
-   Lane: LX=0.18, RX=0.82, TY=0.22, BY=0.76
-   Enemy centerline runs through mid-x of each corridor.
-   Center platform (hero territory): x LX→RX, y 0→BY                      */
+   Lane: LX=0.17, RX=0.83, BY=0.77
+   Enemy centerline at mid-x of each corridor (0.085 / 0.915).             */
 const PATH_WPS: [number, number][] = [
-  [0.09, 0.30],   /* 0 — Disease Gate entry  (left corridor centre) */
-  [0.09, 0.83],   /* 1 — bottom-left corner  */
-  [0.91, 0.83],   /* 2 — bottom-right corner */
-  [0.91, 0.30],   /* 3 — Vital Lantern exit  (right corridor centre) */
+  [0.085, 0.30],  /* 0 — Disease Gate entry  */
+  [0.085, 0.83],  /* 1 — bottom-left corner  */
+  [0.915, 0.83],  /* 2 — bottom-right corner */
+  [0.915, 0.30],  /* 3 — Vital Lantern exit  */
 ];
-const N_SEGS = PATH_WPS.length - 1;   /* 3 segments */
+const N_SEGS = PATH_WPS.length - 1;
 
-/* ── Six deploy pads — 2 rows × 3 cols, centered inside the platform ── */
+/* ── Six deploy pads — 2×3 centered in the platform zone ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],  /* top row    */
-  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],  /* bottom row */
+  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],
+  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════

@@ -1,23 +1,21 @@
 /**
- * Ward Defense V2 — Lotus Healing Sanctum (Layer-Based Fixed Layout)
+ * Ward Defense V2 — Lotus Healing Sanctum
  *
- * RENDERING PHILOSOPHY — strict layout replication:
- *   Every visual element is a declared CSS layer at exact board-fraction coords.
- *   Nothing relies on the background image having a path in the right place.
+ * ART-FIRST HYBRID APPROACH (v4):
+ *   The illustrated lotus-sanctuary image is the map. CSS layers sit on top.
  *
- *   Layer 1  bg    — background art (atmosphere only, contentFit="cover")
- *   Layer 2  plat  — center platform block (stone arena where heroes stand)
- *   Layer 3  lane  — U-shaped stone walkway (left strip + bottom strip + right strip)
- *   Layer 4  pads  — 6 stone medallion deploy pads (2×3 centered in platform)
- *   Layer 5  gate  — Disease Gate portal (left lane entry, top-left block)
- *   Layer 6  lant  — Vital Lantern shrine (right lane exit, top-right block)
- *   Layer 7  vig   — edge vignette
- *   Layer 8  hero  — hero sprites standing on pads (Animated, above pads)
- *   Layer 9  proj  — projectiles
- *   Layer 10 enemy — enemy sprites walking on lane (Animated)
+ *   Layer 1  bg      — illustrated art, 100% opacity (background fills the board)
+ *   Layer 2  lane    — pale warm-stone semi-transparent overlay forming the U-path
+ *                       (cream/beige tint brightens corridor areas above the art)
+ *   Layer 3  pads    — six stone medallion Pressables (solid, embedded look)
+ *   Layer 4  gate    — floating Disease Gate pill badge at left corridor entry
+ *   Layer 5  lantern — floating Vital Lantern pill badge at right corridor entry
+ *   Layer 6  vignette
+ *   Layer 7  heroes  — Animated hero sprites on pads
+ *   Layer 8  proj    — projectile dots
+ *   Layer 9  enemies — Animated enemy sprites on lane
  *
  * COORDINATE SYSTEM: px = fx * aw,  py = fy * ah   (direct board fractions)
- * No cover-mode math. No imgPx. No offset calculations.
  */
 import React from "react";
 import {
@@ -26,34 +24,28 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   LAYOUT CONSTANTS  (board-fraction units, 0–1)
-   ─────────────────────────────────────────────────────────────────────────
-   Lane geometry — U-shape:
-     • Left corridor:   x  0  →  LX,  y  TY → BY
-     • Bottom corridor: x  0  →  1,   y  BY → 1
-     • Right corridor:  x  RX →  1,   y  TY → BY
-     • Center platform: x  LX →  RX,  y   0 → BY   (heroes deployed here)
+/* ─── Lane geometry — board-fraction units ──────────────────────────────────
+   U-shaped stone lane:
+     Left corridor  : x  0  → LX,  y  0 → BY
+     Bottom corridor: x  0  → 1,   y BY → 1
+     Right corridor : x RX  → 1,   y  0 → BY
+   Center zone (heroes): x LX → RX, y 0 → BY                               */
+const LX = 0.17;
+const RX = 0.83;
+const BY = 0.77;
 
-   Enemy walk centerline runs through the mid-x of each corridor.
-   ═══════════════════════════════════════════════════════════════════════════ */
-const LX = 0.18;   /* inner edge of left corridor  */
-const RX = 0.82;   /* inner edge of right corridor */
-const TY = 0.22;   /* top y — gate / lantern openings start here */
-const BY = 0.76;   /* top y of bottom corridor     */
-
-/* Enemy path waypoints — centerline of the stone lane */
+/* Enemy walk centerline (mid-x of each corridor) */
 export const PATH_WPS: [number, number][] = [
-  [0.09, 0.30],   /* Disease Gate entry  (left corridor center) */
-  [0.09, 0.83],   /* bottom-left corner  */
-  [0.91, 0.83],   /* bottom-right corner */
-  [0.91, 0.30],   /* Vital Lantern exit  (right corridor center) */
+  [0.085, 0.30],  /* Disease Gate entry  */
+  [0.085, 0.83],  /* bottom-left corner  */
+  [0.915, 0.83],  /* bottom-right corner */
+  [0.915, 0.30],  /* Vital Lantern exit  */
 ];
 
-/* Six deploy pads — 2 rows × 3 cols, centered inside the platform */
+/* Six deploy pads — 2 rows × 3 cols, centered in the platform area */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],   /* top row    */
-  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],   /* bottom row */
+  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],
+  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
@@ -113,122 +105,90 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 2 — CENTER PLATFORM
-   Dark stone block that fills the inner arena (between the two corridors).
-   Enemies NEVER walk here — this is the heroes' territory.
-   ═══════════════════════════════════════════════════════════════════════════ */
-function CenterPlatform({ aw, ah }: { aw: number; ah: number }) {
-  return (
-    <LinearGradient
-      colors={["#1A1408", "#211A0A", "#1A1408"]}
-      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      style={{
-        position: "absolute",
-        left: LX * aw, top: 0,
-        width: (RX - LX) * aw,
-        height: BY * ah,
-        zIndex: 2,
-        borderLeftWidth: 2.5,
-        borderRightWidth: 2.5,
-        borderBottomWidth: 2.5,
-        borderColor: "#0D0904",
-      }}
-    />
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 3 — STONE LANE  (U-shaped enemy walkway)
-   Three overlapping View strips: left vertical + bottom horizontal + right vertical.
-   The strips share the corner squares naturally through z-stacking.
+   LAYER 2 — PALE STONE LANE OVERLAY
+   A warm cream/stone semi-transparent tint brightens the corridor areas,
+   making the walkway read as lighter stone vs the darker lotus/water zones.
+   The borders are warm amber lines that define the path edges precisely.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Stone palette */
-const S_DARK   = "#0D0904";
-const S_BASE   = "#2A2010";
-const S_MID    = "#3D3018";
-const S_LIGHT  = "#574830";
-const S_BORDER = "#0D0904";
+/* Palette — pale warm stone  (stronger for visual clarity) */
+const LANE_FILL   = "rgba(195, 165, 95,  0.44)";  /* warm amber at 44%       */
+const LANE_EDGE_L = "rgba(145, 110, 48,  0.68)";  /* deeper amber edge       */
+const LANE_EDGE_R = "rgba(145, 110, 48,  0.68)";
+const LANE_BORDER = "rgba(80,  55,  15,  0.88)";  /* near-opaque dark seam   */
 
 function LaneStrip({
-  left, top, w, h, horizontal,
-}: { left: number; top: number; w: number; h: number; horizontal: boolean }) {
+  left, top, width, height, dir,
+}: {
+  left: number; top: number; width: number; height: number;
+  dir: "horiz" | "vert";
+}) {
+  const colorsH: [string, string, string] = [LANE_EDGE_L, LANE_FILL, LANE_EDGE_R];
+  const colorsV: [string, string, string] = [LANE_EDGE_L, LANE_FILL, LANE_EDGE_R];
   return (
     <LinearGradient
-      colors={horizontal
-        ? [S_DARK, S_MID, S_LIGHT, S_MID, S_DARK]   /* top→bottom for horiz strip */
-        : [S_DARK, S_MID, S_LIGHT, S_MID, S_DARK]}   /* left→right for vert strip */
-      start={horizontal ? { x: 0, y: 0 } : { x: 0, y: 0.5 }}
-      end={horizontal   ? { x: 0, y: 1 } : { x: 1, y: 0.5 }}
-      style={{
-        position: "absolute",
-        left, top, width: w, height: h,
-        zIndex: 3,
-        borderColor: S_BORDER,
-      }}
+      colors={dir === "vert" ? colorsH : colorsV}
+      start={dir === "vert" ? { x: 0, y: 0.5 } : { x: 0.5, y: 0 }}
+      end={dir === "vert"   ? { x: 1, y: 0.5 } : { x: 0.5, y: 1 }}
+      style={{ position: "absolute", left, top, width, height }}
     />
   );
 }
 
 function StoneLane({ aw, ah }: { aw: number; ah: number }) {
-  const leftW  = LX * aw;               /* left corridor width        */
-  const rightX = RX * aw;               /* right corridor left edge   */
-  const rightW = (1 - RX) * aw;         /* right corridor width        */
-  const corrT  = TY * ah;               /* top of vertical corridors  */
-  const corrH  = (BY - TY) * ah;        /* height of vertical corr.   */
-  const botT   = BY * ah;               /* top of bottom corridor     */
-  const botH   = (1 - BY) * ah;         /* height of bottom corridor  */
+  const leftW  = LX * aw;
+  const rightX = RX * aw;
+  const rightW = (1 - RX) * aw;
+  const corrH  = BY * ah;
+  const botT   = BY * ah;
+  const botH   = (1 - BY) * ah;
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: 3, pointerEvents: "none" }]}>
-      {/* Left vertical corridor */}
-      <LaneStrip left={0} top={corrT} w={leftW}  h={corrH} horizontal={false} />
+      {/* Left vertical corridor — pale stone tint */}
+      <LaneStrip left={0} top={0} width={leftW} height={corrH} dir="vert" />
       {/* Right vertical corridor */}
-      <LaneStrip left={rightX} top={corrT} w={rightW} h={corrH} horizontal={false} />
-      {/* Bottom horizontal corridor — full width */}
-      <LaneStrip left={0} top={botT}  w={aw}    h={botH}  horizontal={true}  />
+      <LaneStrip left={rightX} top={0} width={rightW} height={corrH} dir="vert" />
+      {/* Bottom horizontal corridor */}
+      <LaneStrip left={0} top={botT} width={aw} height={botH} dir="horiz" />
 
-      {/* Stone tile seam lines in left corridor */}
-      {[0.33, 0.55, 0.77].map(yf => (
-        <View key={`lts-${yf}`} style={{
-          position: "absolute", zIndex: 4,
-          left: 3, top: corrT + yf * corrH,
-          width: leftW - 6, height: 1,
-          backgroundColor: S_DARK + "aa",
-        }}/>
-      ))}
-      {/* Stone tile seam lines in right corridor */}
-      {[0.33, 0.55, 0.77].map(yf => (
-        <View key={`rts-${yf}`} style={{
-          position: "absolute", zIndex: 4,
-          left: rightX + 3, top: corrT + yf * corrH,
-          width: rightW - 6, height: 1,
-          backgroundColor: S_DARK + "aa",
-        }}/>
-      ))}
-      {/* Stone tile seam lines in bottom corridor (vertical dividers) */}
-      {[0.20, 0.40, 0.60, 0.80].map(xf => (
-        <View key={`bts-${xf}`} style={{
-          position: "absolute", zIndex: 4,
-          left: xf * aw, top: botT + 3,
-          width: 1, height: botH - 6,
-          backgroundColor: S_DARK + "aa",
-        }}/>
-      ))}
+      {/* Inner-edge border lines — amber, 72% opaque, clearly define the path */}
+      <View style={{ position:"absolute", left:leftW-1.5,  top:0, width:3, height:corrH+botH, backgroundColor:LANE_BORDER }}/>
+      <View style={{ position:"absolute", left:rightX-1.5, top:0, width:3, height:corrH+botH, backgroundColor:LANE_BORDER }}/>
+      <View style={{ position:"absolute", left:0, top:botT-1.5, width:aw, height:3, backgroundColor:LANE_BORDER }}/>
 
-      {/* Edge borders */}
-      <View style={{ position: "absolute", zIndex: 4, left: leftW - 1, top: corrT, width: 2, height: corrH + botH, backgroundColor: S_BORDER }}/>
-      <View style={{ position: "absolute", zIndex: 4, left: rightX - 1, top: corrT, width: 2, height: corrH + botH, backgroundColor: S_BORDER }}/>
-      <View style={{ position: "absolute", zIndex: 4, left: 0, top: corrT - 1, width: leftW, height: 2, backgroundColor: S_BORDER }}/>
-      <View style={{ position: "absolute", zIndex: 4, left: rightX, top: corrT - 1, width: rightW, height: 2, backgroundColor: S_BORDER }}/>
+      {/* Subtle stone-tile seam lines inside left corridor */}
+      {[0.25, 0.50, 0.72].map(yf => (
+        <View key={`l${yf}`} style={{
+          position:"absolute", left:3, top:yf*corrH,
+          width:leftW-6, height:1.5,
+          backgroundColor:"rgba(140,105,45,0.35)",
+        }}/>
+      ))}
+      {/* Seam lines inside right corridor */}
+      {[0.25, 0.50, 0.72].map(yf => (
+        <View key={`r${yf}`} style={{
+          position:"absolute", left:rightX+3, top:yf*corrH,
+          width:rightW-6, height:1.5,
+          backgroundColor:"rgba(140,105,45,0.35)",
+        }}/>
+      ))}
+      {/* Seam lines inside bottom corridor */}
+      {[0.25, 0.50, 0.75].map(xf => (
+        <View key={`b${xf}`} style={{
+          position:"absolute", left:xf*aw, top:botT+3,
+          width:1.5, height:botH-6,
+          backgroundColor:"rgba(140,105,45,0.35)",
+        }}/>
+      ))}
     </View>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 4 — STONE MEDALLION DEPLOY PADS
-   Each pad is a proper stone circle at its exact (fx, fy) board position.
-   The Pressable wraps a visual medallion + tap affordance.
+   LAYER 3 — STONE MEDALLION DEPLOY PADS
+   Solid warm-stone circles anchored at exact deploy tile positions.
+   Show selection affordance ring on unoccupied pads when a unit is selected.
    ═══════════════════════════════════════════════════════════════════════════ */
 interface StonePadProps {
   aw: number; ah: number; tileIdx: number;
@@ -240,10 +200,8 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
   const [fx, fy] = DEPLOY_TILES[tileIdx];
   const cx = fx * aw;
   const cy = fy * ah;
-  /* Pad radius scales with the shorter board dimension */
-  const R = cl(Math.min(aw, ah) * 0.073, 24, 44);
+  const R  = cl(Math.min(aw, ah) * 0.072, 22, 42);
 
-  /* Only show selection affordance on UNOCCUPIED pads */
   const accentC = isMergeCandidate
     ? "#facc15"
     : (!occupied && selected && canAfford)  ? "#22d3ee"
@@ -261,55 +219,53 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
         zIndex: 6,
       }}
     >
-      {/* Outer glow halo when selected */}
+      {/* Glow halo — only when selected/merge-candidate */}
       {accentC && (
         <View style={{
           position: "absolute",
-          width: R * 2 + 20, height: R * 2 + 20,
-          borderRadius: R + 10,
-          borderWidth: 2.5,
-          borderColor: accentC + "66",
+          width: R * 2 + 18, height: R * 2 + 18, borderRadius: R + 9,
+          borderWidth: 2, borderColor: accentC + "66",
         }}/>
       )}
-      {/* Shadow ring */}
+
+      {/* Drop shadow */}
       <View style={{
-        width: R * 2 + 8, height: R * 2 + 8, borderRadius: R + 4,
-        backgroundColor: "#000000aa",
+        width: R * 2 + 6, height: R * 2 + 6, borderRadius: R + 3,
+        backgroundColor: "#00000055",
         alignItems: "center", justifyContent: "center",
       }}>
-        {/* Stone border ring */}
+        {/* Stone ring */}
         <View style={{
           width: R * 2, height: R * 2, borderRadius: R,
-          borderWidth: 3,
-          borderColor: accentC ?? "#1A1408",
+          borderWidth: 2.5,
+          borderColor: accentC ?? "#4A3820",
           overflow: "hidden",
           alignItems: "center", justifyContent: "center",
         }}>
-          {/* Stone surface — warm stone gradient */}
+          {/* Warm stone surface */}
           <LinearGradient
-            colors={["#9C876A", "#7A6248", "#5C4A32", "#4A3A24"]}
+            colors={["#B09878", "#8C7A58", "#6B5840", "#544430"]}
             start={{ x: 0.25, y: 0 }} end={{ x: 0.75, y: 1 }}
             style={{ position: "absolute", left: 0, top: 0, width: R * 2, height: R * 2 }}
           />
-          {/* Carved inner circle */}
+          {/* Carved inner ring */}
           <View style={{
-            width: R - 8, height: R - 8, borderRadius: R,
+            width: R - 7, height: R - 7, borderRadius: R,
             borderWidth: 1.5,
-            borderColor: accentC ? accentC + "99" : "#2A1E0A",
-            backgroundColor: "transparent",
+            borderColor: accentC ? accentC + "88" : "#2E2010",
           }}/>
-          {/* Affordance symbol */}
+          {/* Symbol on empty selected pad */}
           {selected && !occupied && (
             <Text style={{
               position: "absolute",
               color: canAfford ? "#22d3ee" : "#475569",
-              fontSize: R * 0.40, fontWeight: "800",
+              fontSize: R * 0.38, fontWeight: "800",
             }}>
               {canAfford ? "+" : "—"}
             </Text>
           )}
           {isMergeCandidate && (
-            <Text style={{ position: "absolute", color: "#facc15", fontSize: R * 0.45, fontWeight: "800" }}>
+            <Text style={{ position: "absolute", color: "#facc15", fontSize: R * 0.42, fontWeight: "800" }}>
               ★
             </Text>
           )}
@@ -320,128 +276,77 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 5 — DISEASE GATE PORTAL  (left wall, top-left block)
-   Fills the left corridor above the enemy entry point.
+   LAYER 4 — DISEASE GATE BADGE  (floating pill at left corridor entry)
    ═══════════════════════════════════════════════════════════════════════════ */
-function GatePortal({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
-  const w = LX * aw;
-  const h = TY * ah;
-
+function GateBadge({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
+  const cy = PATH_WPS[0][1] * ah;
   return (
     <View style={{
-      position: "absolute",
-      left: 0, top: 0, width: w, height: h + 4,
-      zIndex: 8, overflow: "hidden",
+      position: "absolute", left: 3, top: cy - 40,
+      zIndex: 22, alignItems: "flex-start",
     }}>
-      <LinearGradient
-        colors={["#1A0828", "#240C38", "#1A0828"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 4 }}
-      >
-        {/* Portal eye orb */}
+      {spawnQueueLen > 0 && (
         <View style={{
-          width: w * 0.68, height: w * 0.68, borderRadius: w * 0.34,
-          backgroundColor: "#2D0A50",
-          borderWidth: 2, borderColor: "#8B5CF6",
-          alignItems: "center", justifyContent: "center",
-          marginBottom: 4,
-        }}>
-          <View style={{
-            width: w * 0.30, height: w * 0.30, borderRadius: w * 0.15,
-            backgroundColor: "#6D28D9",
-            borderWidth: 1.5, borderColor: "#A78BFA",
-          }}/>
-        </View>
-
-        {spawnQueueLen > 0 && (
-          <View style={{
-            backgroundColor: "#3B0764EE", borderRadius: 4,
-            paddingHorizontal: 4, paddingVertical: 1,
-            borderWidth: 1, borderColor: "#A855F7",
-            marginBottom: 2,
-          }}>
-            <Text style={{ color: "#E9D5FF", fontSize: 6.5, fontWeight: "800" }}>
-              ⚡ {spawnQueueLen}
-            </Text>
-          </View>
-        )}
-
-        <Text style={{ color: "#C4B5FD", fontSize: 5.5, fontWeight: "800", letterSpacing: 0.8, textAlign: "center" }}>
-          DISEASE{"\n"}GATE
-        </Text>
-      </LinearGradient>
-
-      {/* Bottom border joining the lane */}
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2.5, backgroundColor: S_BORDER }}/>
-    </View>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 6 — VITAL LANTERN SHRINE  (right wall, top-right block)
-   Fills the right corridor above the enemy exit point, with stability bar.
-   ═══════════════════════════════════════════════════════════════════════════ */
-function LanternShrine({ aw, ah, stability }: { aw: number; ah: number; stability: number }) {
-  const w    = (1 - RX) * aw;
-  const h    = TY * ah;
-  const pct  = cl(stability, 0, 100);
-  const glow = pct > 60 ? "#22D3EE" : pct > 30 ? "#FACC15" : "#EF4444";
-
-  return (
-    <View style={{
-      position: "absolute",
-      right: 0, top: 0, width: w, height: h + 4,
-      zIndex: 8, overflow: "hidden",
-    }}>
-      <LinearGradient
-        colors={["#041818", "#062424", "#041818"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 4 }}
-      >
-        {/* Lantern orb */}
-        <View style={{
-          width: w * 0.68, height: w * 0.68, borderRadius: w * 0.34,
-          backgroundColor: "#051E1E",
-          borderWidth: 2, borderColor: glow,
-          alignItems: "center", justifyContent: "center",
-          marginBottom: 4,
-        }}>
-          <View style={{
-            width: w * 0.30, height: w * 0.30, borderRadius: w * 0.15,
-            backgroundColor: glow + "60",
-            borderWidth: 1.5, borderColor: glow,
-          }}/>
-        </View>
-
-        {/* Stability bar */}
-        <View style={{
-          width: w * 0.82, height: 5, backgroundColor: "#00000070",
-          borderRadius: 3, overflow: "hidden",
-          borderWidth: 0.5, borderColor: glow + "60",
+          backgroundColor: "#3B0764EE", borderRadius: 5,
+          paddingHorizontal: 6, paddingVertical: 2,
+          borderWidth: 1, borderColor: "#A855F7",
           marginBottom: 2,
         }}>
-          <View style={{
-            width: `${pct}%` as any, height: "100%",
-            backgroundColor: glow, borderRadius: 3,
-          }}/>
+          <Text style={{ color: "#E9D5FF", fontSize: 7, fontWeight: "800" }}>⚡ {spawnQueueLen}</Text>
         </View>
-
-        <Text style={{ color: "#A7F3D0", fontSize: 5, fontWeight: "800", letterSpacing: 0.5, textAlign: "center" }}>
-          VITAL{"\n"}LANTERN
+      )}
+      <View style={{
+        backgroundColor: "#160828DD", borderRadius: 5,
+        paddingHorizontal: 6, paddingVertical: 3,
+        borderWidth: 1, borderColor: "#7C3AED88",
+      }}>
+        <Text style={{ color: "#C4B5FD", fontSize: 6.5, fontWeight: "800", letterSpacing: 0.8 }}>
+          DISEASE GATE
         </Text>
-        <Text style={{ color: glow, fontSize: 7, fontWeight: "700" }}>{pct}%</Text>
-      </LinearGradient>
-
-      {/* Bottom border joining the lane */}
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2.5, backgroundColor: S_BORDER }}/>
+      </View>
     </View>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 8 — HERO SPRITE ON PAD
-   Separate from the Pressable (StonePad) so the sprite can be Animated.
-   Feet rest just above the pad center.
+   LAYER 5 — VITAL LANTERN BADGE  (floating pill + stability bar, right side)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function LanternBadge({ aw, ah, stability }: { aw: number; ah: number; stability: number }) {
+  const cy  = PATH_WPS[3][1] * ah;
+  const pct = cl(stability, 0, 100);
+  const glow = pct > 60 ? "#22D3EE" : pct > 30 ? "#FACC15" : "#EF4444";
+  return (
+    <View style={{
+      position: "absolute", right: 3, top: cy - 52,
+      zIndex: 22, alignItems: "flex-end",
+    }}>
+      <View style={{
+        backgroundColor: "#061A1ADD", borderRadius: 5,
+        paddingHorizontal: 6, paddingVertical: 3,
+        borderWidth: 1, borderColor: glow + "88",
+        marginBottom: 3,
+      }}>
+        <Text style={{ color: "#A7F3D0", fontSize: 6.5, fontWeight: "800", letterSpacing: 0.8 }}>
+          VITAL LANTERN
+        </Text>
+      </View>
+      <View style={{
+        width: 64, height: 5, backgroundColor: "#00000060",
+        borderRadius: 3, overflow: "hidden",
+        borderWidth: 0.5, borderColor: glow + "60",
+      }}>
+        <View style={{
+          width: `${pct}%` as any, height: "100%",
+          backgroundColor: glow, borderRadius: 3,
+        }}/>
+      </View>
+      <Text style={{ color: glow, fontSize: 7, fontWeight: "700", marginTop: 2 }}>{pct}%</Text>
+    </View>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 7 — HERO SPRITE ON PAD
    ═══════════════════════════════════════════════════════════════════════════ */
 const HERO_W = 52, HERO_H = 66;
 
@@ -464,16 +369,15 @@ function HeroOnPad({
     <Animated.View style={{
       position: "absolute",
       left: cx - HERO_W / 2,
-      top:  cy - HERO_H - 4,   /* feet 4px above pad centre */
+      top:  cy - HERO_H - 4,
       width: HERO_W,
       alignItems: "center",
       zIndex: 10,
       transform: [{ translateY: bobY }],
     }}>
-      {/* HP bar — only when damaged */}
       {hpPct < 0.99 && (
         <View style={{
-          width: 38, height: 4, backgroundColor: "#00000090",
+          width: 36, height: 4, backgroundColor: "#00000090",
           borderRadius: 2, marginBottom: 2, overflow: "hidden",
         }}>
           <View style={{
@@ -482,7 +386,6 @@ function HeroOnPad({
           }}/>
         </View>
       )}
-
       {img ? (
         <ExpoImage
           source={img}
@@ -496,27 +399,25 @@ function HeroOnPad({
           backgroundColor: col + "33", borderWidth: 2, borderColor: col,
           alignItems: "center", justifyContent: "center",
         }}>
-          <Text style={{ fontSize: 28 }}>🧙</Text>
+          <Text style={{ fontSize: 26 }}>🧙</Text>
         </View>
       )}
-
       {isFlash && (
         <View style={{
           position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: "#FFFFFF30", borderRadius: 6, zIndex: 1,
         }}/>
       )}
-      {/* Foot shadow on pad */}
       <View style={{
-        width: 30, height: 4, borderRadius: 15,
-        backgroundColor: "#00000080", marginTop: -3,
+        width: 28, height: 4, borderRadius: 14,
+        backgroundColor: "#00000070", marginTop: -2,
       }}/>
     </Animated.View>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 9 — PROJECTILE
+   LAYER 8 — PROJECTILE
    ═══════════════════════════════════════════════════════════════════════════ */
 function ProjectileDot({ aw, ah, p }: { aw: number; ah: number; p: any }) {
   const fx  = lp(p.fromFx, p.toFx, p.progress);
@@ -527,19 +428,18 @@ function ProjectileDot({ aw, ah, p }: { aw: number; ah: number; p: any }) {
   return (
     <View style={{
       position: "absolute",
-      left: px - 6, top: py - 6,
-      width: 12, height: 12, borderRadius: 6,
+      left: px - 5, top: py - 5,
+      width: 10, height: 10, borderRadius: 5,
       backgroundColor: col + "55", borderWidth: 2, borderColor: col,
       alignItems: "center", justifyContent: "center", zIndex: 13,
     }}>
-      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#fff" }}/>
+      <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: "#fff" }}/>
     </View>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 10 — ENEMY ON LANE
-   Positioned at the enemy's lane coordinate (fx*aw, fy*ah) with sprite above.
+   LAYER 9 — ENEMY ON LANE
    ═══════════════════════════════════════════════════════════════════════════ */
 function EnemyOnPath({
   aw, ah, enemy, bobY,
@@ -552,9 +452,9 @@ function EnemyOnPath({
   const barCol  = hpPct > 0.6 ? "#22C55E" : hpPct > 0.3 ? "#FACC15" : "#EF4444";
   const isFlash = (enemy.hitFlash ?? 0) > 0;
   const isBoss  = enemy.typeId === "bronchospasm_drake";
-  const sprW    = isBoss ? 66 : 48;
-  const sprH    = isBoss ? 66 : 48;
-  const barW    = isBoss ? 58 : 42;
+  const sprW    = isBoss ? 64 : 48;
+  const sprH    = isBoss ? 64 : 48;
+  const barW    = isBoss ? 56 : 42;
   const accent  = ENEMY_COLOR[enemy.typeId] ?? "#94a3b8";
   const img     = IMG_ENEMIES[enemy.typeId];
 
@@ -562,12 +462,11 @@ function EnemyOnPath({
     <Animated.View style={{
       position: "absolute",
       left: px - sprW / 2,
-      top:  py - sprH - 22,   /* sprite hovers above its lane point */
+      top:  py - sprH - 20,
       alignItems: "center",
       zIndex: 14,
       transform: [{ translateY: bobY }],
     }}>
-      {/* HP bar */}
       <View style={{
         width: barW, height: 4, backgroundColor: "#00000090",
         borderRadius: 2, marginBottom: 2, overflow: "hidden",
@@ -579,7 +478,6 @@ function EnemyOnPath({
         }}/>
       </View>
 
-      {/* Clinical cue badge */}
       <View style={{
         backgroundColor: accent + "22", borderRadius: 3,
         paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3,
@@ -592,12 +490,11 @@ function EnemyOnPath({
       </View>
 
       {isBoss && (
-        <Text style={{ color: accent, fontSize: 7.5, fontWeight: "700", marginBottom: 1 }}>
+        <Text style={{ color: accent, fontSize: 7, fontWeight: "700", marginBottom: 1 }}>
           {enemy.hp}
         </Text>
       )}
 
-      {/* Sprite */}
       {img ? (
         <ExpoImage source={img} style={{ width: sprW, height: sprH }} contentFit="contain" />
       ) : (
@@ -606,7 +503,7 @@ function EnemyOnPath({
           backgroundColor: accent + "33", borderWidth: 2, borderColor: accent,
           alignItems: "center", justifyContent: "center",
         }}>
-          <Text style={{ fontSize: isBoss ? 22 : 16 }}>
+          <Text style={{ fontSize: isBoss ? 20 : 15 }}>
             {enemy.typeId === "bronchospasm_drake" ? "🐉"
               : enemy.typeId === "hypoxia_wraith"  ? "👻"
               : enemy.typeId === "mucus_slime"     ? "🫧" : "💨"}
@@ -614,25 +511,22 @@ function EnemyOnPath({
         </View>
       )}
 
-      {/* Hit flash overlay */}
       {isFlash && (
         <View style={{
-          position: "absolute", top: 14, left: 0, right: 0, bottom: 4,
+          position: "absolute", top: 12, left: 0, right: 0, bottom: 4,
           backgroundColor: "#FFFFFF28", borderRadius: 10, zIndex: 15,
         }}/>
       )}
       {(enemy.slowTicks ?? 0) > 0 && (
         <View style={{
-          position: "absolute", top: 12, right: -8,
+          position: "absolute", top: 10, right: -8,
           backgroundColor: "#A78BFA22", borderRadius: 3, paddingHorizontal: 2,
         }}>
           <Text style={{ color: "#A78BFA", fontSize: 5 }}>↓</Text>
         </View>
       )}
-
-      {/* Foot shadow on lane */}
       <View style={{
-        width: isBoss ? 46 : 32, height: 4, borderRadius: 24,
+        width: isBoss ? 44 : 30, height: 4, borderRadius: 22,
         backgroundColor: "#000000A0", marginTop: -2,
       }}/>
     </Animated.View>
@@ -642,7 +536,7 @@ function EnemyOnPath({
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN BOARD EXPORT
    ═══════════════════════════════════════════════════════════════════════════ */
-export default function WardDefenseV2Screen() { return null; } /* satisfies Expo router */
+export default function WardDefenseV2Screen() { return null; }
 
 export function WardBoardV2({
   aw, ah, onLayout,
@@ -656,25 +550,22 @@ export function WardBoardV2({
 
   return (
     <View
-      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#0D0A06" }}
+      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#0D1A0E" }}
       onLayout={onLayout}
     >
-      {/* ── L1: Background art — atmosphere & texture ── */}
+      {/* ── L1: Full illustrated lotus-sanctuary art — 100% opacity ── */}
       <ExpoImage
         key={`board-${Math.round(W)}-${Math.round(H)}`}
         source={IMG_BOARD}
-        style={[StyleSheet.absoluteFillObject, { opacity: 0.70 }]}
+        style={StyleSheet.absoluteFillObject}
         contentFit="cover"
         cachePolicy="none"
       />
 
-      {/* ── L2: Center platform block ── */}
-      {aw > 20 && <CenterPlatform aw={W} ah={H} />}
-
-      {/* ── L3: Stone U-lane strips ── */}
+      {/* ── L2: Pale stone lane overlay — cream/amber tint marks the path ── */}
       {aw > 20 && <StoneLane aw={W} ah={H} />}
 
-      {/* ── L4: Six stone medallion deploy pads ── */}
+      {/* ── L3: Six stone medallion deploy pads ── */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (
         <StonePad
           key={i}
@@ -687,18 +578,18 @@ export function WardBoardV2({
         />
       ))}
 
-      {/* ── L5: Gate portal (left) + Lantern shrine (right) ── */}
-      {aw > 20 && <GatePortal aw={W} ah={H} spawnQueueLen={spawnQueueLen} />}
-      {aw > 20 && <LanternShrine aw={W} ah={H} stability={stability} />}
+      {/* ── L4 / L5: Disease Gate + Vital Lantern floating badges ── */}
+      {aw > 20 && <GateBadge aw={W} ah={H} spawnQueueLen={spawnQueueLen} />}
+      {aw > 20 && <LanternBadge aw={W} ah={H} stability={stability} />}
 
-      {/* ── L7: Edge vignette ── */}
+      {/* ── L6: Subtle edge vignette ── */}
       <LinearGradient
-        colors={["#00000060", "#00000000", "#00000000", "#00000060"]}
+        colors={["#00000050", "#00000000", "#00000000", "#00000050"]}
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
         style={[StyleSheet.absoluteFillObject, { zIndex: 7, pointerEvents: "none" }]}
       />
 
-      {/* ── L8: Hero sprites standing on pads ── */}
+      {/* ── L7: Hero sprites standing on pads ── */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (
         <HeroOnPad
           key={i}
@@ -709,12 +600,12 @@ export function WardBoardV2({
         />
       ))}
 
-      {/* ── L9: Projectiles ── */}
+      {/* ── L8: Projectiles ── */}
       {projectiles.map((p: any) => (
         <ProjectileDot key={p.uid} aw={W} ah={H} p={p} />
       ))}
 
-      {/* ── L10: Enemy sprites walking on lane ── */}
+      {/* ── L9: Enemy sprites walking on lane ── */}
       {enemies.map((e: any) => (
         <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} bobY={bobY} />
       ))}
