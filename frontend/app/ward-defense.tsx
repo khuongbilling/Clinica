@@ -39,33 +39,29 @@ const PREWAVE_AP_BONUS = 8;    /* AP granted for correct pre-wave NCLEX answer *
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
-/* ── Board layout — MUST match ward-defense-v2.tsx exactly ─────────────────
-   Clockwise loop: Disease Gate (upper-left) → top lane → right lane →
-   bottom lane → left lane → inner top lane → Vital Lantern (upper-right). */
+/* Enemy route — traces the illustrated stone walkway in the reference map.
+   MUST stay identical to ward-defense-v2.tsx.                              */
 const PATH_WPS: [number, number][] = [
-  [0.13, 0.18],  /*  0  Disease Gate spawn       */
-  [0.18, 0.22],  /*  1  upper-left turn          */
-  [0.32, 0.22],  /*  2  top lane left            */
-  [0.50, 0.22],  /*  3  top lane center          */
-  [0.70, 0.22],  /*  4  top lane right           */
-  [0.82, 0.32],  /*  5  right turn               */
-  [0.82, 0.48],  /*  6  right lane               */
-  [0.72, 0.60],  /*  7  bottom-right turn        */
-  [0.50, 0.64],  /*  8  bottom lane center       */
-  [0.28, 0.60],  /*  9  bottom-left turn         */
-  [0.18, 0.48],  /* 10  left lane                */
-  [0.18, 0.34],  /* 11  left-top                 */
-  [0.30, 0.24],  /* 12  inner top-left           */
-  [0.58, 0.24],  /* 13  inner top-right          */
-  [0.80, 0.22],  /* 14  final approach           */
-  [0.88, 0.18],  /* 15  Vital Lantern exit       */
+  [0.15, 0.22],  /*  0  Disease Gate spawn        */
+  [0.19, 0.30],  /*  1  enter left lane           */
+  [0.22, 0.42],  /*  2  left lane upper           */
+  [0.24, 0.56],  /*  3  left lane lower           */
+  [0.28, 0.68],  /*  4  bottom-left curve         */
+  [0.37, 0.78],  /*  5  bottom lane left          */
+  [0.50, 0.82],  /*  6  bottom lane center        */
+  [0.63, 0.78],  /*  7  bottom lane right         */
+  [0.72, 0.68],  /*  8  bottom-right curve        */
+  [0.77, 0.56],  /*  9  right lane lower          */
+  [0.79, 0.42],  /* 10  right lane upper          */
+  [0.82, 0.30],  /* 11  right lane top            */
+  [0.86, 0.22],  /* 12  Vital Lantern exit        */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 
-/* ── Six deploy pads — 2×3 centered in the platform zone ── */
+/* ── Six deploy pads — aligned onto the drawn blue cross-platforms ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.36, 0.36], [0.50, 0.36], [0.64, 0.36],
-  [0.36, 0.51], [0.50, 0.51], [0.64, 0.51],
+  [0.360, 0.460], [0.510, 0.460], [0.655, 0.460],
+  [0.360, 0.655], [0.510, 0.655], [0.655, 0.655],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
