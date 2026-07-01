@@ -1,73 +1,57 @@
 ---
 name: Ward Defense board layout
-description: How the battle board is rendered — the illustrated reference image IS the background, with transparent gameplay overlays mapped onto its drawn features.
+description: How the battle board is rendered — the illustrated reference image IS the background, with transparent gameplay overlays mapped onto its drawn features. Board must be aspect-locked to the image's EXACT native pixel ratio.
 ---
 
 ## CRITICAL — the illustrated map IS the background
 The board is NOT drawn with React Native components. The approved illustrated
 asset is rendered as the literal battle-map background:
-`frontend/assets/ward-defense/lotus-healing-ward-map-portrait.png` (portrait 9:16 AI-generated).
-```
-IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map-portrait.png")
-// Board fills ALL available space — no aspect-ratio constraint:
-<View style={{flex:1, position:"relative", overflow:"hidden"}} onLayout={onLayout}>
-  <ExpoImage source={IMG_MAP} style={StyleSheet.absoluteFillObject} contentFit="cover" />
-```
-**Why no aspect-ratio lock:** the new image is portrait (9:16), designed to fill
-the mobile board area. `contentFit="cover"` handles any minor ratio mismatch
-with minimal cropping. Overlay fractions (PATH_WPS / DEPLOY_TILES) map onto the
-onLayout-measured board size, so they work regardless of exact screen dimensions.
-Do NOT add `maxWidth` to `s.ward` in ward-defense.tsx — that re-creates the black-bars problem.
-The old landscape 1536×1024 image (lotus-healing-ward-map.png) is kept as a backup but is no longer used.
-**Why:** user explicitly rejected the CSS/RN-drawn scene ("The reference map was
-not used"). The drawn Disease Gate, Vital Lantern, stone walkway, and 6 blue
-cross-platforms all live INSIDE the image. Gameplay elements are transparent
-overlays whose coordinates map onto image features.
-- Use `expo-image` (ExpoImage), NOT RN `Image`.
+`frontend/assets/ward-defense/lotus-healing-ward-map-portrait.png`.
+Gameplay elements (enemy lane, deploy pads, sprites) are transparent overlays
+whose fractional coordinates map onto features drawn INSIDE the image.
+**Why:** user explicitly rejected any CSS/RN-drawn scene. The Disease Gate,
+Vital Lantern, walkway loop, and 6 cross pedestals all live in the image.
+- Use `expo-image` (ExpoImage), NOT RN `Image`. Use `boxShadow`, not `shadow*`.
 - `frontend/public/` assets 404 on Expo web — `require()` is mandatory, not a URL.
-- The PNG is ~3.5MB: screenshots taken right after load show a blank board +
-  glow rings before the image decodes. Re-screenshot to confirm before assuming breakage.
+- The PNG is large: the first screenshot right after a restart shows a blank
+  board (decode lag). ALWAYS re-screenshot before assuming breakage.
 
-## Overlay coordinates (fractions of board w/h; MUST be identical in ward-defense.tsx AND ward-defense-v2.tsx)
-PATH_WPS — enemy route tracing the drawn walkway (Disease Gate upper-left → down
-left → around bottom → up right → Vital Lantern upper-right):
+## CRITICAL — aspect-lock the board to the image's EXACT native ratio
+For overlay fractions to sit EXACTLY on drawn features with zero crop, the board
+container MUST be aspect-locked to the image's real pixel ratio, and the image
+uses `contentFit="cover"` (cover == contain when ratios match, so no crop/shift):
 ```
-[0.15,0.22][0.19,0.30][0.22,0.42][0.24,0.56][0.28,0.68][0.37,0.78][0.50,0.82]
-[0.63,0.78][0.72,0.68][0.77,0.56][0.79,0.42][0.82,0.30][0.86,0.22]
+<View style={{flex:1, alignItems:"center", justifyContent:"center", overflow:"hidden"}}>
+  <View style={{height:"100%", aspectRatio: 768/1408, maxWidth:"100%", position:"relative", overflow:"hidden"}} onLayout={onLayout}>
+    <ExpoImage source={IMG_MAP} style={StyleSheet.absoluteFillObject} contentFit="cover" />
 ```
-DEPLOY_TILES — 6 pads centered on the drawn blue crosses:
-```
-[0.360,0.460][0.510,0.460][0.655,0.460]
-[0.360,0.655][0.510,0.655][0.655,0.655]
-```
+**Why:** a `flex:1` board with `cover` and NO aspect-lock crops the image
+whenever the board ratio != image ratio (badly on landscape web, subtly on
+phones), so overlays drift off the drawn crosses — user reported "totally off".
+Aspect-locking to the image ratio fills the portrait screen height with only
+negligible side margins AND guarantees alignment. Do NOT guess the ratio: the
+portrait map is 768×1408 = 6:11 (≈0.545), NOT 9:16 (0.5625). Read the real PNG
+header before setting `aspectRatio`.
+**How to apply:** if you swap the map image, re-check its pixel dimensions and
+update `aspectRatio` to width/height of the NEW file, then re-verify overlays.
 
-## Overlay components (ward-defense-v2.tsx)
-- StonePad × 6 — FULLY INVISIBLE tap target (Pressable). Renders nothing except
-  a gold ★ ring when the tile is a merge candidate. The old green "targetable"
-  and red "blocked" selection rings were removed (user: "deployment circles …
-  make it transparent"). StonePadProps only needs {tileIdx, isMergeCandidate,
-  onPress}. Uses DEPLOY_TILES.
-- GateBadge — spawn-queue count badge positioned over the drawn gate.
-- HeroOnPad — hero sprite centered on pad: `top: cy - HERO_H/2` (HERO_W=52, HERO_H=66).
-- EnemyOnPath — walks PATH_WPS. ProjectileDot — projectiles.
+## Measure overlay coordinates from pixels, not by eye
+DEPLOY_TILES were derived by decoding the PNG with `pngjs` in code_execution,
+collecting the bright-cyan cross-glow pixels, k-means clustering into 6 blobs,
+and taking centroid fractions. This is far more reliable than eyeballing a
+screenshot (esp. on the cover-cropped landscape web preview).
+Current values (fractions of board w/h): columns 0.394 / 0.629; rows 0.350 /
+0.493 / 0.626. PATH_WPS traces the U-walkway loop (gate top-left → down left →
+across bottom ~0.83 → up right → lantern top-right), 15 waypoints.
 
-## ClinicalQuestionPanel — must size to content
-The panel's main row (`flexDirection:"row"` holding the 2×2 answer grid + lotus
-sidebar) must NOT have `flex:1`. With `flex:1` the panel collapses to its
-`minHeight` and the C/D answer row gets clipped on tall/narrow phones. Use
-`alignItems:"stretch"` (no flex) so the panel grows to fit all four options.
+## Both files must stay in sync (drift hazard)
+PATH_WPS + DEPLOY_TILES are duplicated: exported consts in `ward-defense-v2.tsx`
+(render/gameplay) and local consts in `ward-defense.tsx`. They MUST be identical.
+StonePad tap targets and HeroOnPad sprites both center on the tile fraction
+(`left: cx - size/2`). Merge logic is unit-type based (findMergePair by
+tileIndex), NOT grid adjacency, so changing the tile layout is safe.
 
-## Layout order (ward-defense.tsx main return)
-1. SafeAreaView → LinearGradient HUD bar
-2. View s.ward → board (flex:1, contains WardBoardV2)
-3. ClinicalQuestionPanel (wave_pause only) — below board in normal flow
-4. HandPanel (unit cards + right sidebar); card portraits also use ExpoImage.
-
-## Dev bypass pattern — ALWAYS REVERT
-`if (gs.phase === "lobby") { startGame(); return null; }` before the real lobby
-return (~line 2413) to skip the lobby for screenshots. Revert before finalizing.
-
-## Build notes
-- ward-defense-v2.tsx MUST have `export default function WardDefenseV2Screen() { return null; }` for Expo Router.
-- Metro CI mode (CI=1): must restart "Start application" workflow after code changes.
-- boxShadow not shadow* (deprecated on Expo web).
+## Dev testing note
+To reach the board past the lobby, temporarily add
+`if (gs.phase==="lobby") { startGame(); return null; }` above the real lobby
+return in `ward-defense.tsx`. ALWAYS revert this before finishing.

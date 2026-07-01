@@ -42,27 +42,29 @@ const TILE_SIZE        = 46;   /* deployment tile size in px */
 /* Enemy route — traces the illustrated stone walkway in the reference map.
    MUST stay identical to ward-defense-v2.tsx.                              */
 const PATH_WPS: [number, number][] = [
-  [0.17, 0.09],  /*  0  Disease Gate spawn        */
-  [0.12, 0.20],  /*  1  left side top             */
-  [0.10, 0.33],  /*  2  left lane upper           */
-  [0.10, 0.47],  /*  3  left lane middle          */
-  [0.12, 0.60],  /*  4  left lane lower           */
-  [0.20, 0.72],  /*  5  bottom-left curve         */
-  [0.38, 0.80],  /*  6  bottom lane left          */
-  [0.54, 0.83],  /*  7  bottom lane center        */
-  [0.70, 0.80],  /*  8  bottom lane right         */
-  [0.82, 0.70],  /*  9  bottom-right curve        */
-  [0.87, 0.55],  /* 10  right lane lower          */
-  [0.87, 0.40],  /* 11  right lane middle         */
-  [0.84, 0.25],  /* 12  right lane upper          */
-  [0.78, 0.10],  /* 13  Vital Lantern exit        */
+  [0.14, 0.13],  /*  0  Disease Gate spawn        */
+  [0.14, 0.26],  /*  1  left lane upper           */
+  [0.13, 0.40],  /*  2  left lane                 */
+  [0.13, 0.54],  /*  3  left lane                 */
+  [0.15, 0.68],  /*  4  left lane lower           */
+  [0.20, 0.78],  /*  5  bottom-left curve         */
+  [0.34, 0.83],  /*  6  bottom lane left          */
+  [0.50, 0.84],  /*  7  bottom lane center        */
+  [0.66, 0.83],  /*  8  bottom lane right         */
+  [0.80, 0.78],  /*  9  bottom-right curve        */
+  [0.86, 0.68],  /* 10  right lane lower          */
+  [0.87, 0.54],  /* 11  right lane               */
+  [0.87, 0.40],  /* 12  right lane               */
+  [0.85, 0.26],  /* 13  right lane upper          */
+  [0.80, 0.13],  /* 14  Vital Lantern exit        */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 
-/* ── Six deploy pads — aligned onto the drawn blue cross-platforms ── */
+/* ── Six deploy pads — aligned onto the drawn cross pedestals (2 cols × 3 rows) ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.28, 0.30], [0.50, 0.30], [0.72, 0.30],
-  [0.28, 0.48], [0.50, 0.48], [0.72, 0.48],
+  [0.394, 0.350], [0.629, 0.350],
+  [0.394, 0.493], [0.629, 0.493],
+  [0.394, 0.626], [0.629, 0.626],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════

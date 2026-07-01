@@ -29,28 +29,30 @@ import { Image as ExpoImage } from "expo-image";
    contentFit="cover" so coordinates stay valid regardless of screen size.
    MUST stay identical to ward-defense.tsx.                              */
 export const PATH_WPS: [number, number][] = [
-  [0.17, 0.09],  /*  0  Disease Gate spawn        */
-  [0.12, 0.20],  /*  1  left side top             */
-  [0.10, 0.33],  /*  2  left lane upper           */
-  [0.10, 0.47],  /*  3  left lane middle          */
-  [0.12, 0.60],  /*  4  left lane lower           */
-  [0.20, 0.72],  /*  5  bottom-left curve         */
-  [0.38, 0.80],  /*  6  bottom lane left          */
-  [0.54, 0.83],  /*  7  bottom lane center        */
-  [0.70, 0.80],  /*  8  bottom lane right         */
-  [0.82, 0.70],  /*  9  bottom-right curve        */
-  [0.87, 0.55],  /* 10  right lane lower          */
-  [0.87, 0.40],  /* 11  right lane middle         */
-  [0.84, 0.25],  /* 12  right lane upper          */
-  [0.78, 0.10],  /* 13  Vital Lantern exit        */
+  [0.14, 0.13],  /*  0  Disease Gate spawn        */
+  [0.14, 0.26],  /*  1  left lane upper           */
+  [0.13, 0.40],  /*  2  left lane                 */
+  [0.13, 0.54],  /*  3  left lane                 */
+  [0.15, 0.68],  /*  4  left lane lower           */
+  [0.20, 0.78],  /*  5  bottom-left curve         */
+  [0.34, 0.83],  /*  6  bottom lane left          */
+  [0.50, 0.84],  /*  7  bottom lane center        */
+  [0.66, 0.83],  /*  8  bottom lane right         */
+  [0.80, 0.78],  /*  9  bottom-right curve        */
+  [0.86, 0.68],  /* 10  right lane lower          */
+  [0.87, 0.54],  /* 11  right lane               */
+  [0.87, 0.40],  /* 12  right lane               */
+  [0.85, 0.26],  /* 13  right lane upper          */
+  [0.80, 0.13],  /* 14  Vital Lantern exit        */
 ];
 
-/* Six deploy pads — aligned onto the six blue cross-platforms drawn in
-   the portrait map (2 rows × 3 cols, inside the U-shaped path).
+/* Six deploy pads — aligned onto the six cross pedestals drawn in the
+   portrait map (2 cols × 3 rows, centered inside the U-shaped walkway loop).
    MUST stay identical to ward-defense.tsx.                              */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.28, 0.30], [0.50, 0.30], [0.72, 0.30],
-  [0.28, 0.48], [0.50, 0.48], [0.72, 0.48],
+  [0.394, 0.350], [0.629, 0.350],
+  [0.394, 0.493], [0.629, 0.493],
+  [0.394, 0.626], [0.629, 0.626],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
@@ -308,13 +310,22 @@ export function WardBoardV2({
   const H = ah > 20 ? ah : 480;
 
   return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}>
     <View
-      style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#07121A" }}
+      style={{
+        height: "100%",
+        aspectRatio: 768 / 1408,
+        maxWidth: "100%",
+        position: "relative",
+        overflow: "hidden",
+        backgroundColor: "#07121A",
+      }}
       onLayout={onLayout}
     >
-      {/* L0: Portrait battle map — fills the full board area. contentFit="cover"
-          crops minimally if the phone aspect ratio differs from 9:16. Overlay
-          fractions map onto the onLayout-measured board size. */}
+      {/* L0: Portrait battle map. Board is aspect-locked to the image's EXACT
+          native ratio (768x1408) so overlay fractions (PATH_WPS / DEPLOY_TILES)
+          sit EXACTLY on the drawn walkway + cross pedestals with zero crop.
+          Fills the full portrait screen height; negligible side margins. */}
       <ExpoImage
         source={IMG_MAP}
         style={StyleSheet.absoluteFillObject}
@@ -351,6 +362,7 @@ export function WardBoardV2({
       {enemies.map((e: any) => (
         <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} bobY={bobY} />
       ))}
+    </View>
     </View>
   );
 }
