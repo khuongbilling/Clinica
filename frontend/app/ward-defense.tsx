@@ -28,6 +28,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 /* ── Tick speed ── */
 const TICK_MS          = 500;
+const ENEMY_SPEED_BOOST = 1.3;   /* global multiplier — enemies advance a little faster */
 const MAX_STABILITY    = 100;
 const MAX_AP           = 15;
 const INIT_AP          = 3;
@@ -2074,6 +2075,7 @@ export default function WardDefense() {
 
   /* Hand mode + selected unit (UI state) */
   const [handMode, setHandMode] = useState<"deploy" | "abilities">("deploy");
+  const [speedMul, setSpeedMul] = useState(1);   /* 1× or 2× game speed */
   const [selectedUnit, setSelectedUnit] = useState("ward_scout");
   const [cqAnswered, setCqAnswered] = useState<{ wave: number; correct: boolean } | null>(null);
 
@@ -2147,7 +2149,7 @@ export default function WardDefense() {
       const reachedLantern: ActiveEnemy[] = [];
       const movedEnemies: ActiveEnemy[] = [];
       for (const e of spawnedEnemies) {
-        const spd = ENEMY_DATA[e.typeId].speed * (e.slowTicks > 0 ? 0.45 : 1.0);
+        const spd = ENEMY_DATA[e.typeId].speed * ENEMY_SPEED_BOOST * (e.slowTicks > 0 ? 0.45 : 1.0);
         let pi = e.pathIndex, pp = e.pathProgress + spd;
         let sl = Math.max(0, e.slowTicks - 1);
         let hf = Math.max(0, e.hitFlash - 1);
@@ -2282,9 +2284,9 @@ export default function WardDefense() {
         return;
       }
       set(ns);
-    }, TICK_MS);
+    }, TICK_MS / speedMul);
     return () => clearInterval(iv);
-  }, []);
+  }, [speedMul]);
 
   /* ── Apply rewards on game end ── */
   useEffect(() => {
@@ -2489,9 +2491,18 @@ export default function WardDefense() {
           </View>
         </View>
 
-        {/* Settings */}
-        <Pressable style={s.hudBack} hitSlop={12}>
-          <Ionicons name="settings-outline" size={15} color={COLORS.onSurfaceTertiary} />
+        {/* Game-speed toggle */}
+        <Pressable
+          style={[s.hudSpeed, speedMul === 2 && s.hudSpeedActive]}
+          hitSlop={10}
+          onPress={() => setSpeedMul(m => (m === 1 ? 2 : 1))}
+        >
+          <Ionicons
+            name={speedMul === 2 ? "play-forward" : "play"}
+            size={11}
+            color={speedMul === 2 ? "#0a0e14" : COLORS.onSurface}
+          />
+          <Text style={[s.hudSpeedTxt, speedMul === 2 && { color: "#0a0e14" }]}>{speedMul}×</Text>
         </Pressable>
       </LinearGradient>
 
@@ -3517,6 +3528,13 @@ const s = StyleSheet.create({
     backgroundColor: "#0d1e30", borderWidth: 1, borderColor: "#1e3a5a",
     alignItems: "center", justifyContent: "center",
   },
+  hudSpeed: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2,
+    height: 32, paddingHorizontal: 8, borderRadius: 16,
+    backgroundColor: "#0d1e30", borderWidth: 1, borderColor: "#1e3a5a",
+  },
+  hudSpeedActive: { backgroundColor: "#facc15", borderColor: "#fde047" },
+  hudSpeedTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800" },
   hudWave: { flex: 1 },
   hudTitle: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800", letterSpacing: 0.2 },
   hudKicker: { color: COLORS.air, fontSize: 7, fontWeight: "800", letterSpacing: 1.8 },

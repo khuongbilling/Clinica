@@ -15,9 +15,9 @@
  *  13  ProjectileDot
  *  14  EnemyOnPath          — enemies walking the (invisible) mapped lane
  */
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
-  View, Text, Animated, Pressable, StyleSheet, LayoutChangeEvent,
+  View, Text, Animated, Pressable, StyleSheet, LayoutChangeEvent, Easing,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
@@ -75,6 +75,15 @@ const ENEMY_COLOR: Record<string, string> = {
   mucus_slime:        "#86efac",
   hypoxia_wraith:     "#c4b5fd",
   bronchospasm_drake: "#fb923c",
+};
+
+/* Locomotion style — ethereal spirits hover/float, corporeal ones step/hop */
+const ENEMY_LOCO: Record<string, "walk" | "float"> = {
+  breathless_wisp:    "float",
+  wheeze_sprite:      "float",
+  mucus_slime:        "walk",
+  hypoxia_wraith:     "float",
+  bronchospasm_drake: "walk",
 };
 
 /* ─── Props ─────────────────────────────────────────────────────────────── */
@@ -245,7 +254,7 @@ function ProjectileDot({ aw, ah, p }: { aw: number; ah: number; p: any }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYER 8 — ENEMY ON LANE
    ═══════════════════════════════════════════════════════════════════════════ */
-function EnemyOnPath({ aw, ah, enemy, bobY }: { aw: number; ah: number; enemy: any; bobY: Animated.AnimatedInterpolation<number> }) {
+function EnemyOnPath({ aw, ah, enemy }: { aw: number; ah: number; enemy: any }) {
   const [fx, fy] = getEnemyFrac(enemy);
   const hpPct  = cl(enemy.hp / enemy.maxHp, 0, 1);
   const barCol = hpPct > 0.6 ? "#22C55E" : hpPct > 0.3 ? "#FACC15" : "#EF4444";
@@ -254,6 +263,30 @@ function EnemyOnPath({ aw, ah, enemy, bobY }: { aw: number; ah: number; enemy: a
   const sprW = isBoss ? 64 : 48, sprH = isBoss ? 64 : 48;
   const accent = ENEMY_COLOR[enemy.typeId] ?? "#94a3b8";
   const img    = IMG_ENEMIES[enemy.typeId];
+  const loco   = ENEMY_LOCO[enemy.typeId] ?? "float";
+
+  /* Per-enemy locomotion: walkers hop (grounded bounce + squash/stretch),
+     floaters hover (slow vertical drift + gentle breathing scale). */
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const dur = loco === "walk" ? 300 : 1500;
+    const upEase   = loco === "walk" ? Easing.out(Easing.quad) : Easing.inOut(Easing.sin);
+    const downEase = loco === "walk" ? Easing.in(Easing.quad)  : Easing.inOut(Easing.sin);
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(anim, { toValue: 1, duration: dur, easing: upEase,   useNativeDriver: false }),
+      Animated.timing(anim, { toValue: 0, duration: dur, easing: downEase, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [loco, anim]);
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: loco === "walk" ? [0, -7] : [-5, 5],
+  });
+  const wobble = loco === "walk"
+    ? { scaleY: anim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.05] }) }
+    : { scale:  anim.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.04] }) };
 
   const fallbackEmoji = enemy.typeId === "bronchospasm_drake" ? "🐲"
     : enemy.typeId === "hypoxia_wraith"  ? "👻"
@@ -265,7 +298,7 @@ function EnemyOnPath({ aw, ah, enemy, bobY }: { aw: number; ah: number; enemy: a
       position: "absolute",
       left: fx * aw - sprW / 2, top: fy * ah - sprH - 18,
       alignItems: "center", zIndex: 14,
-      transform: [{ translateY: bobY }],
+      transform: [{ translateY }, wobble],
     }}>
       <View style={{ width: sprW + 8, height: 4, backgroundColor: "#00000090", borderRadius: 2, marginBottom: 2, overflow: "hidden" }}>
         <View style={{ width: `${hpPct * 100}%` as any, height: "100%", backgroundColor: barCol, borderRadius: 2 }} />
@@ -368,7 +401,7 @@ export function WardBoardV2({
 
       {/* L8: Enemies walking the lane */}
       {enemies.map((e: any) => (
-        <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} bobY={bobY} />
+        <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} />
       ))}
     </View>
     </View>
