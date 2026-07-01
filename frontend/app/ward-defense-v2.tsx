@@ -306,26 +306,34 @@ export function WardBoardV2({
   bobY,
   spawnQueueLen, mergeTileSet, onTilePress, unitColors,
 }: WardBoardV2Props) {
-  const W = aw > 20 ? aw : 360;
-  const H = ah > 20 ? ah : 480;
+  /* Measure the AVAILABLE area (outer container) and fit the whole 768×1408 map
+     inside it, preserving aspect. This guarantees the entry (Disease Gate) and
+     exit (Vital Lantern) at the top of the map are NEVER cropped, while keeping
+     overlays perfectly aligned (board size == image ratio → contentFit exact). */
+  const availW = aw > 20 ? aw : 360;
+  const availH = ah > 20 ? ah : 480;
+  const scale  = Math.min(availW / 768, availH / 1408);
+  const W = 768 * scale;
+  const H = 1408 * scale;
 
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}>
+    <View
+      style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}
+      onLayout={onLayout}
+    >
     <View
       style={{
-        height: "100%",
-        aspectRatio: 768 / 1408,
-        maxWidth: "100%",
+        width: W,
+        height: H,
         position: "relative",
         overflow: "hidden",
         backgroundColor: "#07121A",
       }}
-      onLayout={onLayout}
     >
-      {/* L0: Portrait battle map. Board is aspect-locked to the image's EXACT
-          native ratio (768x1408) so overlay fractions (PATH_WPS / DEPLOY_TILES)
-          sit EXACTLY on the drawn walkway + cross pedestals with zero crop.
-          Fills the full portrait screen height; negligible side margins. */}
+      {/* L0: Portrait battle map, sized to fit fully inside the available area.
+          Board size matches the image's 768×1408 ratio exactly, so contentFit
+          shows the WHOLE map (gate + lantern included) with zero crop, and
+          overlay fractions (PATH_WPS / DEPLOY_TILES) sit EXACTLY on features. */}
       <ExpoImage
         source={IMG_MAP}
         style={StyleSheet.absoluteFillObject}
