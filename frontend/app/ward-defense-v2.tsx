@@ -24,28 +24,33 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
-/* ─── Lane geometry — board-fraction units ──────────────────────────────────
-   U-shaped stone lane:
-     Left corridor  : x  0  → LX,  y  0 → BY
-     Bottom corridor: x  0  → 1,   y BY → 1
-     Right corridor : x RX  → 1,   y  0 → BY
-   Center zone (heroes): x LX → RX, y 0 → BY                               */
-const LX = 0.17;
-const RX = 0.83;
-const BY = 0.77;
-
-/* Enemy walk centerline (mid-x of each corridor) */
+/* ─── Path — clockwise loop around 2×3 center platform cluster ─────────────
+   Enemies spawn at Disease Gate (upper-left), travel clockwise around the
+   six-pad center zone, and exit at Vital Lantern (upper-right).
+   All coordinates are board fractions: 0,0 = top-left, 1,1 = bottom-right. */
 export const PATH_WPS: [number, number][] = [
-  [0.085, 0.30],  /* Disease Gate entry  */
-  [0.085, 0.83],  /* bottom-left corner  */
-  [0.915, 0.83],  /* bottom-right corner */
-  [0.915, 0.30],  /* Vital Lantern exit  */
+  [0.13, 0.18],  /*  0  Disease Gate spawn       */
+  [0.18, 0.22],  /*  1  upper-left turn          */
+  [0.32, 0.22],  /*  2  top lane left            */
+  [0.50, 0.22],  /*  3  top lane center          */
+  [0.70, 0.22],  /*  4  top lane right           */
+  [0.82, 0.32],  /*  5  right turn               */
+  [0.82, 0.48],  /*  6  right lane               */
+  [0.72, 0.60],  /*  7  bottom-right turn        */
+  [0.50, 0.64],  /*  8  bottom lane center       */
+  [0.28, 0.60],  /*  9  bottom-left turn         */
+  [0.18, 0.48],  /* 10  left lane                */
+  [0.18, 0.34],  /* 11  left-top                 */
+  [0.30, 0.24],  /* 12  inner top-left           */
+  [0.58, 0.24],  /* 13  inner top-right          */
+  [0.80, 0.22],  /* 14  final approach           */
+  [0.88, 0.18],  /* 15  Vital Lantern exit       */
 ];
 
-/* Six deploy pads — 2 rows × 3 cols, centered in the platform area */
+/* Six deploy pads — 2 rows × 3 cols, centered in the platform zone */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],
-  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],
+  [0.36, 0.36], [0.50, 0.36], [0.64, 0.36],
+  [0.36, 0.51], [0.50, 0.51], [0.64, 0.51],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
@@ -105,82 +110,87 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYER 2 — PALE STONE LANE OVERLAY
-   A warm cream/stone semi-transparent tint brightens the corridor areas,
-   making the walkway read as lighter stone vs the darker lotus/water zones.
-   The borders are warm amber lines that define the path edges precisely.
+   LAYER 2 — CONTINUOUS STONE LANE  (follows clockwise PATH_WPS exactly)
+   Each segment between consecutive waypoints is a rotated amber strip,
+   creating a single unbroken stone walkway around the center platform zone.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Palette — pale warm stone  (stronger for visual clarity) */
-const LANE_FILL   = "rgba(195, 165, 95,  0.44)";  /* warm amber at 44%       */
-const LANE_EDGE_L = "rgba(145, 110, 48,  0.68)";  /* deeper amber edge       */
-const LANE_EDGE_R = "rgba(145, 110, 48,  0.68)";
-const LANE_BORDER = "rgba(80,  55,  15,  0.88)";  /* near-opaque dark seam   */
+const LANE_FILL   = "rgba(195, 165, 95,  0.50)";
+const LANE_BORDER = "rgba(80,  55,  15,  0.82)";
 
-function LaneStrip({
-  left, top, width, height, dir,
-}: {
-  left: number; top: number; width: number; height: number;
-  dir: "horiz" | "vert";
-}) {
-  const colorsH: [string, string, string] = [LANE_EDGE_L, LANE_FILL, LANE_EDGE_R];
-  const colorsV: [string, string, string] = [LANE_EDGE_L, LANE_FILL, LANE_EDGE_R];
-  return (
-    <LinearGradient
-      colors={dir === "vert" ? colorsH : colorsV}
-      start={dir === "vert" ? { x: 0, y: 0.5 } : { x: 0.5, y: 0 }}
-      end={dir === "vert"   ? { x: 1, y: 0.5 } : { x: 0.5, y: 1 }}
-      style={{ position: "absolute", left, top, width, height }}
-    />
-  );
-}
-
-function StoneLane({ aw, ah }: { aw: number; ah: number }) {
-  const leftW  = LX * aw;
-  const rightX = RX * aw;
-  const rightW = (1 - RX) * aw;
-  const corrH  = BY * ah;
-  const botT   = BY * ah;
-  const botH   = (1 - BY) * ah;
+function WaypointLane({ aw, ah }: { aw: number; ah: number }) {
+  const LANE_W = Math.max(20, aw * 0.082);   /* ~8.2% of board width */
+  const JR     = LANE_W / 2 + 1;             /* junction circle radius */
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: 3, pointerEvents: "none" }]}>
-      {/* Left vertical corridor — pale stone tint */}
-      <LaneStrip left={0} top={0} width={leftW} height={corrH} dir="vert" />
-      {/* Right vertical corridor */}
-      <LaneStrip left={rightX} top={0} width={rightW} height={corrH} dir="vert" />
-      {/* Bottom horizontal corridor */}
-      <LaneStrip left={0} top={botT} width={aw} height={botH} dir="horiz" />
+      {/* Segments — one per consecutive waypoint pair */}
+      {PATH_WPS.slice(0, -1).map(([fx1, fy1], i) => {
+        const [fx2, fy2] = PATH_WPS[i + 1];
+        const px1 = fx1 * aw, py1 = fy1 * ah;
+        const px2 = fx2 * aw, py2 = fy2 * ah;
+        const cx  = (px1 + px2) / 2;
+        const cy  = (py1 + py2) / 2;
+        const dx  = px2 - px1, dy = py2 - py1;
+        const segLen = Math.sqrt(dx * dx + dy * dy) + 2;
+        const angle  = Math.atan2(dy, dx) * (180 / Math.PI);
+        return (
+          <View
+            key={i}
+            style={{
+              position: "absolute",
+              left:   cx - segLen / 2,
+              top:    cy - LANE_W / 2,
+              width:  segLen,
+              height: LANE_W,
+              transform: [{ rotate: `${angle}deg` }],
+              backgroundColor: LANE_FILL,
+            }}
+          />
+        );
+      })}
 
-      {/* Inner-edge border lines — amber, 72% opaque, clearly define the path */}
-      <View style={{ position:"absolute", left:leftW-1.5,  top:0, width:3, height:corrH+botH, backgroundColor:LANE_BORDER }}/>
-      <View style={{ position:"absolute", left:rightX-1.5, top:0, width:3, height:corrH+botH, backgroundColor:LANE_BORDER }}/>
-      <View style={{ position:"absolute", left:0, top:botT-1.5, width:aw, height:3, backgroundColor:LANE_BORDER }}/>
+      {/* Junction filled circles at every waypoint — seals corner gaps */}
+      {PATH_WPS.map(([fx, fy], i) => (
+        <View
+          key={`j${i}`}
+          style={{
+            position: "absolute",
+            left: fx * aw - JR,
+            top:  fy * ah - JR,
+            width: JR * 2, height: JR * 2, borderRadius: JR,
+            backgroundColor: LANE_FILL,
+          }}
+        />
+      ))}
 
-      {/* Subtle stone-tile seam lines inside left corridor */}
-      {[0.25, 0.50, 0.72].map(yf => (
-        <View key={`l${yf}`} style={{
-          position:"absolute", left:3, top:yf*corrH,
-          width:leftW-6, height:1.5,
-          backgroundColor:"rgba(140,105,45,0.35)",
-        }}/>
-      ))}
-      {/* Seam lines inside right corridor */}
-      {[0.25, 0.50, 0.72].map(yf => (
-        <View key={`r${yf}`} style={{
-          position:"absolute", left:rightX+3, top:yf*corrH,
-          width:rightW-6, height:1.5,
-          backgroundColor:"rgba(140,105,45,0.35)",
-        }}/>
-      ))}
-      {/* Seam lines inside bottom corridor */}
-      {[0.25, 0.50, 0.75].map(xf => (
-        <View key={`b${xf}`} style={{
-          position:"absolute", left:xf*aw, top:botT+3,
-          width:1.5, height:botH-6,
-          backgroundColor:"rgba(140,105,45,0.35)",
-        }}/>
-      ))}
+      {/* Outer border — drawn as a thin stroke over the fill */}
+      {PATH_WPS.slice(0, -1).map(([fx1, fy1], i) => {
+        const [fx2, fy2] = PATH_WPS[i + 1];
+        const px1 = fx1 * aw, py1 = fy1 * ah;
+        const px2 = fx2 * aw, py2 = fy2 * ah;
+        const cx  = (px1 + px2) / 2;
+        const cy  = (py1 + py2) / 2;
+        const dx  = px2 - px1, dy = py2 - py1;
+        const segLen = Math.sqrt(dx * dx + dy * dy) + 2;
+        const angle  = Math.atan2(dy, dx) * (180 / Math.PI);
+        return (
+          <View
+            key={`b${i}`}
+            style={{
+              position: "absolute",
+              left:   cx - segLen / 2,
+              top:    cy - LANE_W / 2,
+              width:  segLen,
+              height: LANE_W,
+              transform: [{ rotate: `${angle}deg` }],
+              borderTopWidth: 1.5,
+              borderBottomWidth: 1.5,
+              borderColor: LANE_BORDER,
+            }}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -236,10 +246,10 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
         }}/>
       )}
 
-      {/* Hexagonal outer frame — dark stone with accent border */}
+      {/* Circular outer frame — fully round stone platform */}
       <View style={{
         width: R * 2 + 10, height: R * 2 + 10,
-        borderRadius: R * 0.28,           /* slight corner rounding → octagon feel */
+        borderRadius: R + 5,              /* fully circular stone platform */
         backgroundColor: "#0b1820ee",
         borderWidth: 2.5, borderColor: frameC,
         alignItems: "center", justifyContent: "center",
@@ -248,10 +258,10 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
           boxShadow: `0 0 16px ${frameC}80, 0 0 6px ${frameC}50` as any,
         } as any),
       }}>
-        {/* Gold accent corner notches — four diagonal fills emulating chamfers */}
+        {/* Subtle radial sheen on the circular frame */}
         <View style={{
           position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-          borderRadius: R * 0.28, overflow: "hidden",
+          borderRadius: R + 5, overflow: "hidden",
         }}>
           <LinearGradient
             colors={["#c8860022", "#00000000", "#c8860022"]}
@@ -322,11 +332,9 @@ function StonePad({ aw, ah, tileIdx, occupied, selected, canAfford, isMergeCandi
    reference image: purple orb with dark vortex centre + floating label.
    ═══════════════════════════════════════════════════════════════════════════ */
 function GatePortal({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
-  const corridorW = LX * aw;
-  const orbR      = cl(corridorW * 0.48, 18, 36);
-  /* position portal just above the enemy path entry point */
-  const orbCX     = PATH_WPS[0][0] * aw;
-  const orbCY     = PATH_WPS[0][1] * ah - orbR * 2.2;
+  const orbR  = cl(Math.min(aw, ah) * 0.062, 20, 40);
+  const orbCX = PATH_WPS[0][0] * aw;
+  const orbCY = PATH_WPS[0][1] * ah;
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: 22, pointerEvents: "none" }]}>
@@ -389,10 +397,10 @@ function GatePortal({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQu
    Golden glowing orb/shrine in the upper-right corridor + stability bar.
    ═══════════════════════════════════════════════════════════════════════════ */
 function LanternShrine({ aw, ah, stability }: { aw: number; ah: number; stability: number }) {
-  const corridorW = (1 - RX) * aw;
-  const orbR      = cl(corridorW * 0.48, 18, 36);
-  const orbCX     = PATH_WPS[3][0] * aw;
-  const orbCY     = PATH_WPS[3][1] * ah - orbR * 2.2;
+  const orbR  = cl(Math.min(aw, ah) * 0.062, 20, 40);
+  const lastWP = PATH_WPS[PATH_WPS.length - 1];
+  const orbCX  = lastWP[0] * aw;
+  const orbCY  = lastWP[1] * ah;
   const pct       = cl(stability, 0, 100);
   const glowC     = pct > 60 ? "#fbbf24" : pct > 30 ? "#f59e0b" : "#ef4444";
   const glowShadow = pct > 60 ? "#fbbf24" : pct > 30 ? "#f59e0b" : "#ef4444";
@@ -677,8 +685,8 @@ export function WardBoardV2({
         cachePolicy="none"
       />
 
-      {/* ── L2: Pale stone lane overlay — cream/amber tint marks the path ── */}
-      {aw > 20 && <StoneLane aw={W} ah={H} />}
+      {/* ── L2: Continuous waypoint-following stone lane ── */}
+      {aw > 20 && <WaypointLane aw={W} ah={H} />}
 
       {/* ── L3: Six stone medallion deploy pads ── */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (

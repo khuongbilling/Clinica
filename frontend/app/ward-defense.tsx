@@ -40,20 +40,32 @@ const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
 /* ── Board layout — MUST match ward-defense-v2.tsx exactly ─────────────────
-   Lane: LX=0.17, RX=0.83, BY=0.77
-   Enemy centerline at mid-x of each corridor (0.085 / 0.915).             */
+   Clockwise loop: Disease Gate (upper-left) → top lane → right lane →
+   bottom lane → left lane → inner top lane → Vital Lantern (upper-right). */
 const PATH_WPS: [number, number][] = [
-  [0.085, 0.30],  /* 0 — Disease Gate entry  */
-  [0.085, 0.83],  /* 1 — bottom-left corner  */
-  [0.915, 0.83],  /* 2 — bottom-right corner */
-  [0.915, 0.30],  /* 3 — Vital Lantern exit  */
+  [0.13, 0.18],  /*  0  Disease Gate spawn       */
+  [0.18, 0.22],  /*  1  upper-left turn          */
+  [0.32, 0.22],  /*  2  top lane left            */
+  [0.50, 0.22],  /*  3  top lane center          */
+  [0.70, 0.22],  /*  4  top lane right           */
+  [0.82, 0.32],  /*  5  right turn               */
+  [0.82, 0.48],  /*  6  right lane               */
+  [0.72, 0.60],  /*  7  bottom-right turn        */
+  [0.50, 0.64],  /*  8  bottom lane center       */
+  [0.28, 0.60],  /*  9  bottom-left turn         */
+  [0.18, 0.48],  /* 10  left lane                */
+  [0.18, 0.34],  /* 11  left-top                 */
+  [0.30, 0.24],  /* 12  inner top-left           */
+  [0.58, 0.24],  /* 13  inner top-right          */
+  [0.80, 0.22],  /* 14  final approach           */
+  [0.88, 0.18],  /* 15  Vital Lantern exit       */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 
 /* ── Six deploy pads — 2×3 centered in the platform zone ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.35, 0.40], [0.50, 0.40], [0.65, 0.40],
-  [0.35, 0.59], [0.50, 0.59], [0.65, 0.59],
+  [0.36, 0.36], [0.50, 0.36], [0.64, 0.36],
+  [0.36, 0.51], [0.50, 0.51], [0.64, 0.51],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2624,7 +2636,7 @@ function ClinicalQuestionPanel({
   }
 
   return (
-    <LinearGradient colors={["#0c1a2e", "#060f1e"]} style={s.clinicalPanel}>
+    <LinearGradient colors={["#e8d5a8", "#d4b870"]} style={s.clinicalPanel}>
       {/* Header row */}
       <View style={s.clinicalHeaderRow}>
         <View style={s.clinicalBadge}>
@@ -2637,7 +2649,7 @@ function ClinicalQuestionPanel({
           </View>
         )}
         {answered && answeredCorrect && (
-          <Text style={{ color: "#34d399", fontSize: 9, fontWeight: "800" }}>✓ +{PREWAVE_AP_BONUS} AP earned</Text>
+          <Text style={{ color: "#155a38", fontSize: 9, fontWeight: "800" }}>✓ +{PREWAVE_AP_BONUS} AP earned</Text>
         )}
       </View>
 
@@ -2647,8 +2659,8 @@ function ClinicalQuestionPanel({
           <Text style={s.clinicalQ} numberOfLines={2}>{question.q}</Text>
           {answered ? (
             <View style={[s.clinicalResult, {
-              borderColor: answeredCorrect ? "#22d3ee55" : "#ef444455",
-              backgroundColor: answeredCorrect ? "#021810" : "#180404",
+              borderColor: answeredCorrect ? "#22d3ee88" : "#ef444488",
+              backgroundColor: answeredCorrect ? "#0a3020e0" : "#3a0a0ae0",
             }]}>
               <Text style={{ color: answeredCorrect ? "#34d399" : "#f87171",
                 fontSize: 9, fontWeight: "800", marginBottom: 2 }}>
@@ -2656,7 +2668,7 @@ function ClinicalQuestionPanel({
                   ? "✓ Correct! Great clinical judgment."
                   : `✗ Correct answer: ${question.opts[question.correct]}`}
               </Text>
-              <Text style={{ color: "#94a3b8", fontSize: 8, lineHeight: 11.5 }}>
+              <Text style={{ color: answeredCorrect ? "#a7f3d0" : "#fca5a5", fontSize: 8, lineHeight: 11.5 }}>
                 {question.rationale}
               </Text>
             </View>
@@ -2665,8 +2677,8 @@ function ClinicalQuestionPanel({
               {question.opts.map((opt, i) => (
                 <Pressable key={i} onPress={() => handleAnswer(i)}
                   style={[s.clinicalBtn,
-                    answered && i === question.correct ? { borderColor: "#22d3ee", backgroundColor: "#082030" } :
-                    answered && i === chosen ? { borderColor: "#ef4444", backgroundColor: "#1a0404" } : {}
+                    answered && i === question.correct ? { borderColor: "#22d3ee", backgroundColor: "#0a3020" } :
+                    answered && i === chosen ? { borderColor: "#ef4444", backgroundColor: "#3a0a0a" } : {}
                   ]}>
                   <View style={s.clinicalLetter}>
                     <Text style={s.clinicalLetterTxt}>{["A","B","C","D"][i]}</Text>
@@ -3556,35 +3568,35 @@ const s = StyleSheet.create({
   feedbackTxt: { fontSize: 10, lineHeight: 14, fontWeight: "500" },
   feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic" },
 
-  /* Clinical cue check panel */
+  /* Clinical cue check panel — parchment/teal style matching reference */
   clinicalPanel: {
     paddingHorizontal: 10, paddingVertical: 8,
-    borderTopWidth: 1, borderColor: "#1a3050",
+    borderTopWidth: 2, borderColor: "#6b4118",
     minHeight: 110,
   },
   clinicalHeaderRow: {
     flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 5,
   },
   clinicalBadge: {
-    backgroundColor: "#0f2040", borderRadius: 6,
+    backgroundColor: "#0d5c52", borderRadius: 6,
     paddingHorizontal: 8, paddingVertical: 3,
-    borderWidth: 1, borderColor: "#22d3ee40",
+    borderWidth: 1, borderColor: "#22d3ee60",
   },
   clinicalBadgeTxt: {
-    color: "#22d3ee", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.8,
+    color: "#e0fffa", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.8,
   },
   clinicalTimerBadge: {
-    backgroundColor: "#1a1200", borderRadius: 6,
+    backgroundColor: "#5a2e00cc", borderRadius: 6,
     paddingHorizontal: 7, paddingVertical: 3,
-    borderWidth: 1, borderColor: "#fbbf2440",
+    borderWidth: 1, borderColor: "#c8700060",
   },
   clinicalTimerTxt: { color: "#fbbf24", fontSize: 9, fontWeight: "800" },
   clinicalQ: {
-    color: "#e2f0ff", fontSize: 10, fontWeight: "700", lineHeight: 14,
+    color: "#2d1200", fontSize: 10, fontWeight: "700", lineHeight: 14,
     marginBottom: 6,
   },
   clinicalResult: {
-    borderRadius: 8, padding: 8, borderWidth: 1,
+    borderRadius: 8, padding: 8, borderWidth: 1.5,
   },
   clinicalGrid: {
     flexDirection: "row", flexWrap: "wrap", gap: 4,
@@ -3592,16 +3604,16 @@ const s = StyleSheet.create({
   clinicalBtn: {
     flexDirection: "row", alignItems: "center", gap: 6,
     width: "48%" as any,
-    backgroundColor: "#071828", borderRadius: 8, padding: 7,
-    borderWidth: 1, borderColor: "#1a3050",
+    backgroundColor: "#c8a06088", borderRadius: 8, padding: 7,
+    borderWidth: 1.5, borderColor: "#8b5e3c",
   },
   clinicalLetter: {
     width: 20, height: 20, borderRadius: 10,
-    backgroundColor: "#0d2040", borderWidth: 1.5, borderColor: "#22d3ee55",
+    backgroundColor: "#6b3200", borderWidth: 1.5, borderColor: "#c8700080",
     alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  clinicalLetterTxt: { color: "#22d3ee", fontSize: 8, fontWeight: "900" },
-  clinicalOptTxt: { color: "#cbd5e1", fontSize: 9, flex: 1, lineHeight: 12 },
+  clinicalLetterTxt: { color: "#fde68a", fontSize: 8, fontWeight: "900" },
+  clinicalOptTxt: { color: "#2d1200", fontSize: 9, flex: 1, lineHeight: 12 },
   clinicalLotus: { width: 48, alignItems: "center", justifyContent: "center" },
   clinicalLotusBg: {
     width: 44, height: 44, borderRadius: 22,
@@ -3609,7 +3621,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: "#c8700060",
   },
   clinicalLotusLabel: {
-    color: "#fbbf24", fontSize: 7.5, fontWeight: "800",
+    color: "#6b3200", fontSize: 7.5, fontWeight: "800",
     textAlign: "center", marginTop: 2, lineHeight: 10,
   },
 

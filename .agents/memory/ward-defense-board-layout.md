@@ -4,75 +4,87 @@ description: How the battle board is rendered — layer order, coordinate system
 ---
 
 ## Visual reference
-`frontend/assets/references/ward_defense_target.png` — approved target image (saved July 2026):
+`frontend/assets/references/ward_defense_target.png` — approved target image (July 2026):
 - HUD: "Lotus Healing Ward" title + "Wave 1/6 💀" | Stability ❤️ green bar | AP X/Y blue | ⚙️ gear
-- Board: purple Disease Gate portal (upper-left), golden Vital Lantern shrine (upper-right),
-  6 hexagonal dark "+" deploy pads (2×3 center), rich isometric lotus sanctuary
-- Below board: "🩺 CLINICAL CUE CHECK" panel (during wave_pause) with 2-col A/B/C/D grid + timer + lotus badge
+- Board: purple Disease Gate portal (upper-left, x≈0.13, y≈0.18), golden Vital Lantern shrine (upper-right, x≈0.88, y≈0.18),
+  6 perfectly circular dark "+" deploy pads (2×3 center), rich isometric lotus sanctuary background
+- Below board: "🩺 CLINICAL CUE CHECK" panel (during wave_pause) with parchment/tan body + teal header
 - Bottom: Three bordered unit cards (ASSESS/TREAT/SUPPORT role labels) + right sidebar (SKILLS/ITEMS/PAUSE)
 
+## PATH_WPS — clockwise enemy route (MUST be identical in ward-defense.tsx AND ward-defense-v2.tsx)
+```
+[0.13,0.18], [0.18,0.22], [0.32,0.22], [0.50,0.22], [0.70,0.22],
+[0.82,0.32], [0.82,0.48],
+[0.72,0.60], [0.50,0.64], [0.28,0.60],
+[0.18,0.48], [0.18,0.34],
+[0.30,0.24], [0.58,0.24], [0.80,0.22], [0.88,0.18]
+```
+Enemies travel: Gate (upper-left) → right along top → down right side → left along bottom → up left side → right inner top lane → Lantern (upper-right).
+
+## DEPLOY_TILES — six pad positions (MUST be identical in both files)
+```
+[0.36,0.36], [0.50,0.36], [0.64,0.36],
+[0.36,0.51], [0.50,0.51], [0.64,0.51]
+```
+
 ## Layout order (ward-defense.tsx main return)
-1. SafeAreaView
-2. LinearGradient HUD bar
-3. View s.ward — the board (flex:1, contains WardBoardV2)
-4. ClinicalQuestionPanel (during wave_pause) OR feedbackPanel (during playing)
-5. HandPanel (unit cards + right sidebar)
+1. SafeAreaView → LinearGradient HUD bar
+2. View s.ward → the board (flex:1, contains WardBoardV2)
+3. ClinicalQuestionPanel (during wave_pause only) — placed below board in normal flow
+4. HandPanel (unit cards + right sidebar)
 
 ## Layer order inside WardBoardV2 (ward-defense-v2.tsx)
 1. Background image (100% opacity, contentFit="cover") — illustrated lotus sanctuary
-2. StoneLane — three LinearGradient strips forming U-walkway (pale amber tint at 44%)
-3. StonePad × 6 — hexagonal dark frame + glowing inner circle + "+" cross bars
-4. GatePortal — purple radial-gradient orb with dark vortex center + label + queue badge
-5. LanternShrine — golden radial-gradient orb + lotus glyph + label + stability bar
+2. WaypointLane — three render passes: fill segments → junction circles → border segments
+3. StonePad × 6 — fully circular (borderRadius: R+5), dark with glowing "+" center
+4. GatePortal — purple radial-gradient orb at PATH_WPS[0]; orbR = min(aw,ah)*0.062
+5. LanternShrine — golden orb at PATH_WPS[last]; orbR = min(aw,ah)*0.062
 6. Edge vignette
 7. HeroOnPad — Animated hero sprites (feet anchored at pad center)
 8. ProjectileDot
-9. EnemyOnPath — Animated enemy sprites walking the corridor centerline
+9. EnemyOnPath — Animated enemy sprites with health bars + cue labels
 
-## Coordinate system
-`px = fx * aw,  py = fy * ah` — direct board fractions, no cover-mode math ever.
-
-## Layout constants (must stay identical in ward-defense.tsx and ward-defense-v2.tsx)
-- LX = 0.17 (inner edge left corridor)
-- RX = 0.83 (inner edge right corridor)
-- BY = 0.77 (top of bottom corridor)
-- PATH_WPS: [0.085,0.30] → [0.085,0.83] → [0.915,0.83] → [0.915,0.30]
-- DEPLOY_TILES: [0.35,0.40] [0.50,0.40] [0.65,0.40] / [0.35,0.59] [0.50,0.59] [0.65,0.59]
+## WaypointLane rendering approach
+For each segment (wp[i] → wp[i+1]):
+- cx,cy = midpoint; segLen = euclidean pixel distance + 2px overlap
+- angle = atan2(dy*ah, dx*aw) in degrees → transform rotate
+- Three passes: (1) fill Views, (2) junction circles at every waypoint (radius = LANE_W/2+1), (3) border Views with top/bottom borderWidth
+- LANE_W = max(20, aw * 0.082); LANE_FILL = "rgba(195,165,95,0.50)"; LANE_BORDER = "rgba(80,55,15,0.82)"
 
 ## StonePad design
-- Outer frame: rounded rectangle (borderRadius ≈ R*0.28) → octagon feel
+- Outer frame: borderRadius = R + 5 → fully circular stone platform (NOT rounded rectangle)
 - Frame color: cyan (#22d3ee) when targetable, amber when merge, dark blue default
-- Inner circle: LinearGradient dark navy; "+" cross bars always visible on empty pads
-- CSS boxShadow on web for glow effect: `...(condition && { boxShadow: "..." } as any)` — THREE dots required
+- Inner circle: LinearGradient dark navy with "+" cross bars visible on empty pads
+- CSS boxShadow on web (THREE dots for spread): `...(condition && { boxShadow: "..." } as any)`
+- R = cl(min(aw,ah) * 0.076, 24, 44)
 
 ## GatePortal (purple swirling orb)
-- orbCX = PATH_WPS[0][0]*aw, orbCY = PATH_WPS[0][1]*ah - orbR*2.2
+- orbCX = PATH_WPS[0][0]*aw, orbCY = PATH_WPS[0][1]*ah (centered AT the waypoint)
+- orbR = cl(min(aw,ah)*0.062, 20, 40) — NOT based on corridor width
 - LinearGradient: dark purple → bright purple → dark purple
 
 ## LanternShrine (golden radiant orb)
-- orbCX = PATH_WPS[3][0]*aw, orbCY = PATH_WPS[3][1]*ah - orbR*2.2
+- lastWP = PATH_WPS[PATH_WPS.length - 1]; orbCX = lastWP[0]*aw, orbCY = lastWP[1]*ah
+- orbR = cl(min(aw,ah)*0.062, 20, 40) — NOT based on corridor width
 - LinearGradient: deep amber → #fbbf24 → amber
 
 ## ClinicalQuestionPanel (wave_pause only)
 - NOT position:absolute — placed below the ward View in normal flow
-- Header: "🩺 CLINICAL CUE CHECK" cyan badge + 🕐 Xs countdown timer (amber) + lotus ✿ badge on right
-- 2-column A/B/C/D answer grid (clinicalGrid style with flexWrap)
-- Answered state: correct option highlighted cyan, wrong option highlighted red
-- Timer resets on wave change via useEffect([wave])
-- Receives `wave` prop to drive timer reset
-
-## HandPanel
-- No tab bar at top — flex row layout with right sidebar
-- handRow: flex row containing handCards (flex:1) + handSidebar (width:52)
-- Cards are flex:1 each (not fixed width) — fills available space in 3 equal columns
-- Right sidebar: ⚡/⚔ SKILLS/UNITS toggle, ITEMS count badge, ✿ PAUSE
-- ABILITIES mode: replaces card area with abilities display when mode === "abilities"
+- LinearGradient wrapper: ["#e8d5a8", "#d4b870"] (parchment/tan)
+- Header badge: backgroundColor "#0d5c52" (dark teal), text "#e0fffa" (teal-white)
+- Timer badge: backgroundColor "#5a2e00cc" (dark amber), text "#fbbf24"
+- Question text: "#2d1200" (dark brown for readability on parchment)
+- Answer buttons: backgroundColor "#c8a06088", borderColor "#8b5e3c"
+- Letter circles: backgroundColor "#6b3200", text "#fde68a"
+- Option text: "#2d1200" (dark brown)
+- Answered correct: green bg "#0a3020e0" / incorrect: red bg "#3a0a0ae0"
 
 ## Dev bypass pattern
-Add to lobby render: `if (gs.phase === "lobby") { startGame(); return null; }`
-ALWAYS revert before committing/publishing.
+`if (gs.phase === "lobby") { startGame(); return null; }` — ALWAYS revert before committing.
+Do NOT try to directly set state to wave_pause via setTimeout — deployedUnits will be undefined.
 
 ## Build notes
 - ward-defense-v2.tsx MUST have `export default function WardDefenseV2Screen() { return null; }` for Expo Router.
 - Spread with conditional CSS props: `...(condition && { boxShadow: "..." } as any)` — THREE dots (not two).
-- Metro CI mode (CI=1) does not push hot-reloads to browser; must restart workflow to see changes.
+- Metro CI mode (CI=1): must restart workflow to see changes — no hot-reload.
+- No LX/RX/BY constants anywhere — those were the old 3-strip approach. Use PATH_WPS directly.
