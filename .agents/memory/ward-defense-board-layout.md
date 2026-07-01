@@ -7,9 +7,13 @@ description: How the battle board is rendered — layer order, coordinate system
 `frontend/assets/references/ward_defense_target.png` — approved target image (July 2026):
 - HUD: "Lotus Healing Ward" title + "Wave 1/6 💀" | Stability ❤️ green bar | AP X/Y blue | ⚙️ gear
 - Board: purple Disease Gate portal (upper-left, x≈0.13, y≈0.18), golden Vital Lantern shrine (upper-right, x≈0.88, y≈0.18),
-  6 perfectly circular dark "+" deploy pads (2×3 center), rich isometric lotus sanctuary background
+  6 octagonal-style dark stone "+" deploy pads (2×3 center), drawn lotus sanctuary background
 - Below board: "🩺 CLINICAL CUE CHECK" panel (during wave_pause) with parchment/tan body + teal header
 - Bottom: Three bordered unit cards (ASSESS/TREAT/SUPPORT role labels) + right sidebar (SKILLS/ITEMS/PAUSE)
+
+## CRITICAL — No screenshot background
+The board is built ENTIRELY from drawn React Native components. `ward_map_garden.png` exists but MUST NOT
+be used as a battle board background. The drawn `SanctuaryBackground` component replaced ExpoImage background.
 
 ## PATH_WPS — clockwise enemy route (MUST be identical in ward-defense.tsx AND ward-defense-v2.tsx)
 ```
@@ -34,49 +38,55 @@ Enemies travel: Gate (upper-left) → right along top → down right side → le
 4. HandPanel (unit cards + right sidebar)
 
 ## Layer order inside WardBoardV2 (ward-defense-v2.tsx)
-1. Background image (100% opacity, contentFit="cover") — illustrated lotus sanctuary
-2. WaypointLane — three render passes: fill segments → junction circles → border segments
-3. StonePad × 6 — fully circular (borderRadius: R+5), dark with glowing "+" center
-4. GatePortal — purple radial-gradient orb at PATH_WPS[0]; orbR = min(aw,ah)*0.062
-5. LanternShrine — golden orb at PATH_WPS[last]; orbR = min(aw,ah)*0.062
-6. Edge vignette
-7. HeroOnPad — Animated hero sprites (feet anchored at pad center)
-8. ProjectileDot
-9. EnemyOnPath — Animated enemy sprites with health bars + cue labels
+0. SanctuaryBackground — drawn garden scene: LinearGradient base + foliage blobs + stone platform + lotus pond + lanterns + stone arches for gate/pagoda areas
+1. WaypointLane — THREE render passes per segment: (1) dark LANE_EDGE border, (2) solid LANE_STONE fill, (3) LANE_INNER highlight stripe. ALL colors fully opaque (no rgba transparency).
+2. StonePad × 6 — octagonal-style platform: warm stone outer frame + dark inner circle + medical cross (no floating overlay ring when targetable — subtle pulse border only)
+3. GatePortal — purple orb with stone arch backdrop at PATH_WPS[0]
+4. LanternShrine — golden orb with pagoda backdrop at PATH_WPS[last]
+5. Edge vignette (LinearGradient)
+6. HeroOnPad — Animated hero sprites (feet anchored at pad center)
+7. ProjectileDot
+8. EnemyOnPath — Animated enemy sprites with health bars + cue labels
 
-## WaypointLane rendering approach
-For each segment (wp[i] → wp[i+1]):
-- cx,cy = midpoint; segLen = euclidean pixel distance + 2px overlap
-- angle = atan2(dy*ah, dx*aw) in degrees → transform rotate
-- Three passes: (1) fill Views, (2) junction circles at every waypoint (radius = LANE_W/2+1), (3) border Views with top/bottom borderWidth
-- LANE_W = max(20, aw * 0.082); LANE_FILL = "rgba(195,165,95,0.50)"; LANE_BORDER = "rgba(80,55,15,0.82)"
+## WaypointLane rendering approach — SOLID OPAQUE COLORS
+```
+LANE_STONE = "#C0A050"  // warm sandy stone — fully opaque
+LANE_EDGE  = "#3A1E04"  // dark brown border — fully opaque
+LANE_INNER = "#D4B868"  // lighter center highlight — fully opaque
+LANE_W     = max(24, aw * 0.090)
+JR         = LANE_W / 2 + 2   // junction circle radius
+```
+Three passes: (1) wide border Views in LANE_EDGE, (2) fill Views in LANE_STONE, (3) narrow center stripe in LANE_INNER.
+Each pass also draws junction circles at every waypoint to cap the segments cleanly.
 
-## StonePad design
-- Outer frame: borderRadius = R + 5 → fully circular stone platform (NOT rounded rectangle)
-- Frame color: cyan (#22d3ee) when targetable, amber when merge, dark blue default
-- Inner circle: LinearGradient dark navy with "+" cross bars visible on empty pads
-- CSS boxShadow on web (THREE dots for spread): `...(condition && { boxShadow: "..." } as any)`
-- R = cl(min(aw,ah) * 0.076, 24, 44)
+## StonePad design (stone-embedded, not sci-fi floating overlay)
+- Outer octagonal frame: warm earth tones (#1C2A20 bg, stoneRim border)
+- Inner circle: dark teal healing atmosphere (#0E1E16), with healing-colored innerEdge border
+- Medical cross: barLen = R*0.58, barThk = R*0.16, cream/green color (crossCol)
+- Targetable state: subtle pulse ring (borderWidth:1.5, boxShadow with green tint)
+- Do NOT render a large glow halo ring — it looks like a floating overlay
+- isMerge → amber/gold; isTargetable → healing green; default → muted grey-green
 
-## GatePortal (purple swirling orb)
-- orbCX = PATH_WPS[0][0]*aw, orbCY = PATH_WPS[0][1]*ah (centered AT the waypoint)
-- orbR = cl(min(aw,ah)*0.062, 20, 40) — NOT based on corridor width
-- LinearGradient: dark purple → bright purple → dark purple
+## GatePortal — stone arch integrated
+- orbCX = PATH_WPS[0][0]*aw, orbCY = PATH_WPS[0][1]*ah
+- orbR = cl(min(aw,ah)*0.072, 24, 46)
+- Stone arch backdrop View behind the orb (borderTopLeftRadius + borderTopRightRadius for arch shape)
+- Purple LinearGradient orb with vortex center
+- Label: carved into stone (dark bg, teal text, borderColor purple)
 
-## LanternShrine (golden radiant orb)
+## LanternShrine — pagoda integrated
 - lastWP = PATH_WPS[PATH_WPS.length - 1]; orbCX = lastWP[0]*aw, orbCY = lastWP[1]*ah
-- orbR = cl(min(aw,ah)*0.062, 20, 40) — NOT based on corridor width
-- LinearGradient: deep amber → #fbbf24 → amber
+- orbR = cl(min(aw,ah)*0.072, 24, 46)
+- Pagoda arch backdrop + 3 tier roof decorations
+- Golden LinearGradient orb; glowC changes with stability (green > 60%, amber > 30%, red otherwise)
+- Stability bar + % text below the orb
 
 ## ClinicalQuestionPanel (wave_pause only)
 - NOT position:absolute — placed below the ward View in normal flow
 - LinearGradient wrapper: ["#e8d5a8", "#d4b870"] (parchment/tan)
 - Header badge: backgroundColor "#0d5c52" (dark teal), text "#e0fffa" (teal-white)
 - Timer badge: backgroundColor "#5a2e00cc" (dark amber), text "#fbbf24"
-- Question text: "#2d1200" (dark brown for readability on parchment)
-- Answer buttons: backgroundColor "#c8a06088", borderColor "#8b5e3c"
-- Letter circles: backgroundColor "#6b3200", text "#fde68a"
-- Option text: "#2d1200" (dark brown)
+- Answer grid: flexDirection "row", flexWrap "wrap", each button width "48%" → 2×2 layout
 - Answered correct: green bg "#0a3020e0" / incorrect: red bg "#3a0a0ae0"
 
 ## Dev bypass pattern
@@ -88,3 +98,4 @@ Do NOT try to directly set state to wave_pause via setTimeout — deployedUnits 
 - Spread with conditional CSS props: `...(condition && { boxShadow: "..." } as any)` — THREE dots (not two).
 - Metro CI mode (CI=1): must restart workflow to see changes — no hot-reload.
 - No LX/RX/BY constants anywhere — those were the old 3-strip approach. Use PATH_WPS directly.
+- shadow* style props are deprecated on Expo web — always use `boxShadow` via `({ boxShadow: "..." } as any)`.
