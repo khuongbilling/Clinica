@@ -54,7 +54,7 @@ export const DEPLOY_TILES: [number, number][] = [
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
-const IMG_BOARD = require("../assets/images/ward_board_scene.png");
+const IMG_BOARD = require("../assets/images/ward_map_garden.png");
 
 const IMG_UNITS: Record<string, any> = {
   ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
@@ -695,17 +695,15 @@ export function WardBoardV2({
       style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: "#0D1A0E" }}
       onLayout={onLayout}
     >
-      {/* ── L1: Full illustrated lotus-sanctuary art — 100% opacity ── */}
+      {/* ── L1: Reference map art — top-aligned so the map area fills the board ── */}
       <ExpoImage
         key={`board-${Math.round(W)}-${Math.round(H)}`}
         source={IMG_BOARD}
         style={StyleSheet.absoluteFillObject}
         contentFit="cover"
+        contentPosition="top"
         cachePolicy="none"
       />
-
-      {/* ── L2: Continuous waypoint-following stone lane ── */}
-      {aw > 20 && <WaypointLane aw={W} ah={H} />}
 
       {/* ── L3: Six stone medallion deploy pads ── */}
       {aw > 20 && DEPLOY_TILES.map((_, i) => (
