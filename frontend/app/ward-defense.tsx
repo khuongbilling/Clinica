@@ -37,6 +37,7 @@ const WAVE_PAUSE_TICKS = 40;   /* 20 s for pre-wave question phase */
 const SPAWN_GAP_TICKS  = 7;
 const KILL_AP_BONUS    = 2;
 const PREWAVE_AP_BONUS = 8;    /* AP granted for correct pre-wave NCLEX answer */
+const CLINICAL_CHAIN_WINDOW = 40; /* ticks after an Assess hit that a Treat/Stabilize hit still combos */
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
@@ -69,6 +70,22 @@ const DEPLOY_TILES: [number, number][] = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
+   CLINICAL WEAKNESS TYPES — the "clinical problem" each enemy embodies.
+   Game-friendly wording (not dry medical text); drives matchup bonuses.
+   ═══════════════════════════════════════════════════════════════════ */
+type WeaknessId = "airway" | "oxygenation" | "secretion" | "infection" | "perfusion" | "panic" | "corruption";
+type WeaknessDef = { label: string; icon: string; color: string };
+const WEAKNESS_TYPES: Record<WeaknessId, WeaknessDef> = {
+  panic:       { label: "Panic Surge",        icon: "😨", color: "#93C5FD" },
+  airway:      { label: "Airway Narrowing",   icon: "🌀", color: "#34D399" },
+  secretion:   { label: "Secretion Block",    icon: "🫧", color: "#86EFAC" },
+  oxygenation: { label: "Oxygenation Threat", icon: "👻", color: "#C4B5FD" },
+  infection:   { label: "Inflamed Core",      icon: "🔥", color: "#FCA5A5" },
+  perfusion:   { label: "Perfusion Threat",   icon: "⚡", color: "#FCD34D" },
+  corruption:  { label: "Protective Corruption", icon: "🐲", color: "#F97316" },
+};
+
+/* ═══════════════════════════════════════════════════════════════════
    ENEMY CATALOGUE
    ═══════════════════════════════════════════════════════════════════ */
 type EnemyDef = {
@@ -77,6 +94,7 @@ type EnemyDef = {
   weakUnits: string[];   /* unit type IDs that deal full damage */
   strongUnits: string[]; /* unit type IDs that deal extra damage */
   clue: string; flavor: string; isBoss?: boolean;
+  weakness: WeaknessId;
 };
 
 const ENEMY_DATA: Record<string, EnemyDef> = {
@@ -87,6 +105,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     strongUnits: [],
     clue: "Dyspnea",
     flavor: "Restricts airflow — early assessment reveals its pattern.",
+    weakness: "panic",
   },
   wheeze_sprite: {
     name: "Wheeze Sprite", icon: "🌀",
@@ -95,6 +114,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     strongUnits: [],
     clue: "Wheezing",
     flavor: "Tight airways — wheeze audible on auscultation.",
+    weakness: "airway",
   },
   mucus_slime: {
     name: "Mucus Slime", icon: "🫧",
@@ -103,6 +123,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     strongUnits: [],
     clue: "Secretions",
     flavor: "Secretion buildup — positioning aids drainage.",
+    weakness: "secretion",
   },
   hypoxia_wraith: {
     name: "Hypoxia Wraith", icon: "👻",
@@ -111,6 +132,25 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     strongUnits: [],
     clue: "Cyanosis",
     flavor: "Oxygen deprivation — supplemental O₂ is the direct counter.",
+    weakness: "oxygenation",
+  },
+  fever_imp: {
+    name: "Fever Imp", icon: "🔥",
+    maxHp: 90, speed: 0.060, damage: 12, color: "#FCA5A5",
+    weakUnits: ["mist_caster"],
+    strongUnits: [],
+    clue: "Fever",
+    flavor: "Inflammatory heat spirit — best handled after cue recognition, then treated.",
+    weakness: "infection",
+  },
+  shock_shade: {
+    name: "Shock Shade", icon: "⚡",
+    maxHp: 115, speed: 0.050, damage: 18, color: "#FCD34D",
+    weakUnits: ["o2_healer"],
+    strongUnits: [],
+    clue: "Hypotension",
+    flavor: "Circulatory collapse spirit — prioritize stabilization before it reaches the lantern.",
+    weakness: "perfusion",
   },
   bronchospasm_drake: {
     name: "Bronchospasm Drake", icon: "🐲",
@@ -120,6 +160,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     isBoss: true,
     clue: "Bronchospasm",
     flavor: "Severe bronchospasm incarnate — bronchodilators essential.",
+    weakness: "corruption",
   },
 };
 
@@ -129,39 +170,54 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
 type UnitDef = {
   name: string; color: string; apCost: number;
   damage: number; attackSpeed: number; range: number; aoe: boolean;
-  category: string;
+  category: string; role: RoleId;
   strong: string[];   /* enemy type IDs = full damage */
   weak: string[];     /* enemy type IDs = reduced damage */
   concept: string; flavor: string;
+  artsName: string;   /* Clinical Arts attack name shown in feedback */
+};
+
+/* ── Clinical Arts roles — each hero's tactical identity ── */
+type RoleId = "ASSESS" | "TREAT" | "STABILIZE" | "PROTECT" | "REASSESS";
+type RoleDef = { label: string; icon: string; color: string; desc: string };
+const ROLE_DATA: Record<RoleId, RoleDef> = {
+  ASSESS:    { label: "Assess",    icon: "🔍", color: "#A78BFA", desc: "Reveals enemy weaknesses; enables follow-up bonus damage." },
+  TREAT:     { label: "Treat",     icon: "💊", color: "#F472B6", desc: "Deals stronger damage when it matches the enemy's clinical problem." },
+  STABILIZE: { label: "Stabilize", icon: "🌊", color: "#06B6D4", desc: "Protects the Vital Lantern and restores stability." },
+  PROTECT:   { label: "Protect",   icon: "🛡", color: "#34D399", desc: "Shields or slows threats to the lane." },
+  REASSESS:  { label: "Reassess",  icon: "🔄", color: "#EC4899", desc: "Confirms response — grants bonus AP or extra effects." },
 };
 
 const UNIT_DATA: Record<string, UnitDef> = {
   ward_scout: {
     name: "Apprentice Seer", color: "#A78BFA",
     apCost: 3, damage: 19, attackSpeed: 2, range: 0.31,
-    aoe: false, category: "ASSESS",
+    aoe: false, category: "ASSESS", role: "ASSESS",
     strong: ["breathless_wisp", "wheeze_sprite"],
     weak:   ["mucus_slime", "bronchospasm_drake"],
     concept: "Auscultation identifies respiratory cues — assess before treating.",
     flavor: "Mind-element assessor who reads vital signs with uncanny clarity.",
+    artsName: "Moonlit Assessment Pulse",
   },
   mist_caster: {
     name: "Village Caretaker", color: "#F472B6",
     apCost: 5, damage: 38, attackSpeed: 4, range: 0.25,
-    aoe: false, category: "TREAT",
-    strong: ["wheeze_sprite", "bronchospasm_drake"],
-    weak:   ["hypoxia_wraith", "mucus_slime"],
+    aoe: false, category: "TREAT", role: "TREAT",
+    strong: ["wheeze_sprite", "bronchospasm_drake", "fever_imp"],
+    weak:   ["hypoxia_wraith", "mucus_slime", "shock_shade"],
     concept: "Bronchodilators relax airway smooth muscle — first-line for bronchospasm.",
     flavor: "Growth-element educator who soothes airway spirits with healing mist.",
+    artsName: "Bronchodilator Mist",
   },
   o2_healer: {
     name: "Novice Guardian", color: "#06B6D4",
     apCost: 4, damage: 22, attackSpeed: 3, range: 0.29,
-    aoe: true, category: "SUPPORT",
-    strong: ["hypoxia_wraith", "mucus_slime"],
-    weak:   ["breathless_wisp", "bronchospasm_drake"],
+    aoe: true, category: "STABILIZE", role: "STABILIZE",
+    strong: ["hypoxia_wraith", "mucus_slime", "shock_shade"],
+    weak:   ["breathless_wisp", "bronchospasm_drake", "fever_imp"],
     concept: "O₂ corrects hypoxemia; positioning aids secretion drainage.",
     flavor: "River-element stabilizer whose oxygenation aura shields the whole ward.",
+    artsName: "Lotus Oxygen Ward",
   },
 };
 const UNIT_TYPES = Object.keys(UNIT_DATA);
@@ -183,19 +239,19 @@ const ABILITY_DATA: Record<string, AbilityDef> = {
   },
   emergency_o2: {
     name: "Emergency O₂", icon: "🆘", color: "#34D399", apCost: 3,
-    category: "CRISIS",
+    category: "STABILIZE",
     concept: "Emergency supplemental O₂ addresses immediate hypoxemia.",
     flavor: "Restore +15 Stability instantly.",
   },
   positioning_order: {
     name: "Positioning", icon: "🛌", color: "#A78BFA", apCost: 2,
-    category: "SUPPORT",
+    category: "PROTECT",
     concept: "Upright positioning reduces work of breathing and aids drainage.",
     flavor: "Slow all enemies 50% for 6 ticks.",
   },
   reassess_protocol: {
     name: "Reassess", icon: "🔄", color: "#EC4899", apCost: 3,
-    category: "ASSESS",
+    category: "REASSESS",
     concept: "Reassessment closes the clinical loop — confirms interventions work.",
     flavor: "+5 Stability if correct units are deployed. Reveals cues.",
   },
@@ -207,9 +263,9 @@ type WaveDef = { spawns: string[]; isBoss?: boolean };
 const WAVES: WaveDef[] = [
   { spawns: ["breathless_wisp", "breathless_wisp", "breathless_wisp"] },
   { spawns: ["breathless_wisp", "wheeze_sprite", "breathless_wisp", "wheeze_sprite"] },
-  { spawns: ["wheeze_sprite", "mucus_slime", "wheeze_sprite"] },
-  { spawns: ["hypoxia_wraith", "mucus_slime", "wheeze_sprite", "hypoxia_wraith"] },
-  { spawns: ["hypoxia_wraith", "wheeze_sprite", "hypoxia_wraith", "mucus_slime"] },
+  { spawns: ["wheeze_sprite", "mucus_slime", "fever_imp", "wheeze_sprite"] },
+  { spawns: ["hypoxia_wraith", "mucus_slime", "fever_imp", "wheeze_sprite", "hypoxia_wraith"] },
+  { spawns: ["hypoxia_wraith", "shock_shade", "wheeze_sprite", "shock_shade", "hypoxia_wraith", "mucus_slime"] },
   { spawns: ["bronchospasm_drake"], isBoss: true },
 ];
 
@@ -220,6 +276,9 @@ type ActiveEnemy = {
   uid: string; typeId: string; hp: number; maxHp: number;
   pathIndex: number; pathProgress: number;
   hitFlash: number; slowTicks: number;
+  revealed: boolean;   /* weakness cue discovered by an Assess hit */
+  assessTick: number;  /* tick of most recent Assess hit — Clinical Chain window */
+  chainFlash: number;  /* ticks of gold Clinical Chain hit-flash */
 };
 
 type DeployedUnit = {
@@ -266,6 +325,8 @@ type GS = {
   reassessUses: number; learnedConcepts: string[];
   enemyMastery: Record<string, EnemyMasteryEntry>;
   lastKillQuality: "strong" | "partial" | "weak" | null;
+  /* Clinical Arts Stage 1 */
+  cueBonusReady: boolean; /* correct Clinical Cue answer primes next strong hit */
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -288,6 +349,7 @@ function freshState(): GS {
     strongMatches: 0, partialMatches: 0, weakMatches: 0,
     reassessUses: 0, learnedConcepts: [], enemyMastery: freshMastery(),
     lastKillQuality: null,
+    cueBonusReady: false,
   };
 }
 
@@ -1074,6 +1136,117 @@ function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
   );
 }
 
+/* FEVER IMP — small fiery infection sprite: flickering ember body, mischievous grin */
+function FeverImpSprite({ hitFlash, bobY }: SpriteProps) {
+  const c    = hitFlash ? "#fff" : "#f87171";
+  const mid  = "#b91c1c";
+  const dark = "#450a0a";
+  return (
+    <Animated.View style={{ alignItems:"center", transform:[{translateY:bobY}] }}>
+      {/* HEAT WISPS — rising above head */}
+      <View style={{ position:"absolute", top:-14, left:6, gap:2 }}>
+        {[{w:5,h:8,l:0},{w:4,h:6,l:10}].map((d,i)=>(
+          <View key={i} style={{ position:"absolute", left:d.l, width:d.w, height:d.h,
+            borderRadius:999, backgroundColor:c+"60" }}/>
+        ))}
+      </View>
+      {/* CLAWED ARM — reaching left */}
+      <View style={{ position:"absolute", top:16, left:-16, zIndex:4 }}>
+        <View style={{ width:16, height:8, borderRadius:4,
+          backgroundColor:mid, borderWidth:1.5, borderColor:c,
+          transform:[{rotate:"-10deg"}]}}/>
+      </View>
+      {/* OFFSET DROP SHADOW */}
+      <View style={{ width:34, height:34, borderRadius:16,
+        borderTopLeftRadius:8, borderTopRightRadius:20,
+        backgroundColor:"#0a0a0a80", position:"absolute", top:3, left:3 }}/>
+      {/* EMBER BODY */}
+      <View style={{ width:34, height:34, borderRadius:16,
+        borderTopLeftRadius:8, borderTopRightRadius:20,
+        borderWidth:2, borderColor:c, overflow:"hidden", backgroundColor:mid }}>
+        <LinearGradient colors={[c+"70", mid, dark]}
+          start={{x:0.2,y:0}} end={{x:0.8,y:1}}
+          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+        {/* Cracked ember lines */}
+        <View style={{ position:"absolute", top:6, left:14, width:10, height:1.5,
+          backgroundColor:c+"90", transform:[{rotate:"25deg"}]}}/>
+        {/* GLOWING EYES */}
+        <View style={{ position:"absolute", top:10, left:5, right:5,
+          flexDirection:"row", justifyContent:"space-between" }}>
+          {[0,1].map(i=>(
+            <View key={i} style={{ width:6, height:6, borderRadius:3,
+              backgroundColor:"#fef08a", borderWidth:1, borderColor:c }}/>
+          ))}
+        </View>
+        {/* Grin */}
+        <View style={{ position:"absolute", bottom:6, left:10, width:14, height:4,
+          borderRadius:2, backgroundColor:dark, borderWidth:1, borderColor:c+"60" }}/>
+      </View>
+      {/* Tiny horns */}
+      <View style={{ flexDirection:"row", gap:14, marginTop:-32, marginBottom:14, zIndex:5 }}>
+        {[-18,18].map((rot,i)=>(
+          <View key={i} style={{ width:5, height:9, borderRadius:2,
+            backgroundColor:mid, borderWidth:1, borderColor:c,
+            transform:[{rotate:`${rot}deg`}]}}/>
+        ))}
+      </View>
+      {/* Ground shadow */}
+      <View style={{ width:22, height:4, borderRadius:12,
+        backgroundColor:"#00000090", marginTop:-2 }}/>
+    </Animated.View>
+  );
+}
+
+/* SHOCK SHADE — perfusion-weak wraith flickering with faint blue pulse (weak circulation) */
+function ShockShadeSprite({ hitFlash, bobY }: SpriteProps) {
+  const c    = hitFlash ? "#fff" : "#7dd3fc";
+  const body = "#0c2d48";
+  const dark = "#041220";
+  return (
+    <Animated.View style={{ alignItems:"center", transform:[{translateY:bobY}] }}>
+      {/* PULSE RINGS — faint circulation flicker */}
+      <View style={{ position:"absolute", top:10, left:-8, width:56, height:36,
+        borderRadius:18, borderWidth:1.5, borderColor:c+"35" }}/>
+      {/* SKELETAL HAND — reaching left */}
+      <View style={{ position:"absolute", top:18, left:-20, zIndex:5 }}>
+        <View style={{ width:11, height:9, borderRadius:4,
+          backgroundColor:"#94a3b8", borderWidth:1.2, borderColor:c }}/>
+      </View>
+      {/* OFFSET DROP SHADOW */}
+      <View style={{ width:36, height:52, borderRadius:8,
+        borderTopLeftRadius:3, borderTopRightRadius:18,
+        borderBottomLeftRadius:6, borderBottomRightRadius:14,
+        backgroundColor:"#0a0a0a80", position:"absolute", top:4, left:4 }}/>
+      {/* FLICKERING SHADE FORM */}
+      <View style={{ width:36, height:52, borderRadius:8,
+        borderTopLeftRadius:3, borderTopRightRadius:18,
+        borderBottomLeftRadius:6, borderBottomRightRadius:14,
+        borderWidth:2, borderColor:c+"85", overflow:"hidden", backgroundColor:body }}>
+        <LinearGradient colors={[c+"30", body, dark]}
+          start={{x:0.2,y:0}} end={{x:0.8,y:1}}
+          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+        {/* Faint pulse vein */}
+        <View style={{ position:"absolute", top:8, bottom:8, left:"48%", width:1.5,
+          backgroundColor:c+"40" }}/>
+        {/* DIM FLICKERING EYES — weak signal */}
+        <View style={{ position:"absolute", top:10, left:6, right:6,
+          flexDirection:"row", justifyContent:"space-between" }}>
+          {[0,1].map(i=>(
+            <View key={i} style={{ width:7, height:7, borderRadius:3.5,
+              backgroundColor:"#1e3a5f", borderWidth:1.3, borderColor:c+"90",
+              alignItems:"center", justifyContent:"center" }}>
+              <View style={{ width:2.5, height:2.5, borderRadius:1.5, backgroundColor:c }}/>
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* Ground shadow */}
+      <View style={{ width:26, height:4, borderRadius:13,
+        backgroundColor:"#00000090", marginTop:-3 }}/>
+    </Animated.View>
+  );
+}
+
 /* BRONCHOSPASM DRAKE — boss dragon: wings spread, standing on claws, flame breath */
 function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
   const c   = hitFlash ? "#fff" : "#fb923c";
@@ -1223,6 +1396,8 @@ function EnemySprite({ typeId, hitFlash, bobY }: { typeId: string; hitFlash: boo
     case "mucus_slime":        return <MucusSlimeSprite     hitFlash={hitFlash} bobY={bobY} />;
     case "hypoxia_wraith":     return <HypoxiaWraithSprite  hitFlash={hitFlash} bobY={bobY} />;
     case "bronchospasm_drake": return <BronchospasmDrakeSprite hitFlash={hitFlash} bobY={bobY} />;
+    case "fever_imp":          return <FeverImpSprite         hitFlash={hitFlash} bobY={bobY} />;
+    case "shock_shade":        return <ShockShadeSprite       hitFlash={hitFlash} bobY={bobY} />;
     default: return <View style={{ width: 34, height: 44, borderRadius: 8, backgroundColor: "#334155" }} />;
   }
 }
@@ -1707,6 +1882,17 @@ function EnemyOnPath({
           {def.clue}
         </Text>
       </View>
+      {/* Weakness badge — revealed by an Assess hit */}
+      {enemy.revealed && (
+        <View style={{
+          position: "absolute", top: 13, right: -10, zIndex: 9,
+          backgroundColor: WEAKNESS_TYPES[def.weakness].color + "30", borderWidth: 1,
+          borderColor: WEAKNESS_TYPES[def.weakness].color, borderRadius: 8,
+          width: 15, height: 15, alignItems: "center", justifyContent: "center",
+        }}>
+          <Text style={{ fontSize: 8 }}>{WEAKNESS_TYPES[def.weakness].icon}</Text>
+        </View>
+      )}
       {/* Boss HP counter */}
       {isBoss && (
         <Text style={{ color: def.color, fontSize: 8, fontWeight: "700",
@@ -1714,8 +1900,14 @@ function EnemyOnPath({
           {enemy.hp}
         </Text>
       )}
-      {/* Enemy sprite (scaled for board) */}
-      <View style={{ transform: [{ scale: spriteScale }] }}>
+      {/* Enemy sprite (scaled for board) — golden ring flash on Clinical Chain hit */}
+      <View style={{
+        transform: [{ scale: spriteScale }],
+        ...(enemy.chainFlash > 0 ? {
+          borderRadius: 999, borderWidth: 2, borderColor: COLORS.runeGold + "cc",
+          shadowColor: COLORS.runeGold, shadowOpacity: 0.9, shadowRadius: 8,
+        } : {}),
+      }}>
         <EnemySprite typeId={enemy.typeId} hitFlash={enemy.hitFlash > 0} bobY={bobY} />
       </View>
       {/* HP bar */}
@@ -2097,8 +2289,8 @@ export default function WardDefense() {
     setCqAnswered({ wave: gs.wave, correct });
     const s = gsRef.current;
     if (correct) {
-      set({ ...s, ap: Math.min(s.ap + PREWAVE_AP_BONUS, MAX_AP),
-        feedbacks: [{ id: String(Date.now()), text: `+${PREWAVE_AP_BONUS} AP · Clinical reasoning! ⚕`, color: "#22d3ee", quality: "bonus" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
+      set({ ...s, ap: Math.min(s.ap + PREWAVE_AP_BONUS, MAX_AP), cueBonusReady: true,
+        feedbacks: [{ id: String(Date.now()), text: `+${PREWAVE_AP_BONUS} AP · Clinical reasoning! ⚕ Next strong hit empowered.`, color: "#22d3ee", quality: "bonus" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
     } else {
       set({ ...s,
         feedbacks: [{ id: String(Date.now()), text: "✗ Study the rationale — no AP bonus.", color: "#f87171", quality: "weak" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
@@ -2129,6 +2321,8 @@ export default function WardDefense() {
       if (apTimer <= 0 && ap < MAX_AP) { ap++; apTimer = AP_REGEN_TICKS; }
       else apTimer = Math.max(0, apTimer);
 
+      let feedbacks = s.feedbacks.map(f => ({ ...f, ticks: f.ticks - 1 })).filter(f => f.ticks > 0);
+
       /* Spawn enemies */
       let { spawnQueue, spawnTimer, uidSeed } = s;
       spawnTimer = Math.max(0, spawnTimer - 1);
@@ -2139,10 +2333,15 @@ export default function WardDefense() {
           uid: `e${uidSeed}`, typeId,
           hp: ENEMY_DATA[typeId].maxHp, maxHp: ENEMY_DATA[typeId].maxHp,
           pathIndex: 0, pathProgress: 0, hitFlash: 0, slowTicks: 0,
+          revealed: false, assessTick: -999, chainFlash: 0,
         }];
         spawnQueue = spawnQueue.slice(1);
         spawnTimer = SPAWN_GAP_TICKS;
         uidSeed++;
+        if (ENEMY_DATA[typeId].isBoss) {
+          feedbacks = [{ id: `boss${uidSeed}`, text: `⚠ Priority Target — ${ENEMY_DATA[typeId].name} incoming!`,
+            color: ENEMY_DATA[typeId].color, quality: "bonus" as any, ticks: 8 }, ...feedbacks.slice(0, 1)];
+        }
       }
 
       /* Move enemies along path */
@@ -2153,9 +2352,10 @@ export default function WardDefense() {
         let pi = e.pathIndex, pp = e.pathProgress + spd;
         let sl = Math.max(0, e.slowTicks - 1);
         let hf = Math.max(0, e.hitFlash - 1);
+        let cf = Math.max(0, e.chainFlash - 1);
         while (pp >= 1.0 && pi < N_SEGS) { pp -= 1.0; pi++; }
         if (pi >= N_SEGS) reachedLantern.push(e);
-        else movedEnemies.push({ ...e, pathIndex: pi, pathProgress: pp, slowTicks: sl, hitFlash: hf });
+        else movedEnemies.push({ ...e, pathIndex: pi, pathProgress: pp, slowTicks: sl, hitFlash: hf, chainFlash: cf });
       }
 
       /* Lantern damage */
@@ -2191,9 +2391,12 @@ export default function WardDefense() {
       });
 
       /* Move projectiles → collect hits */
-      type HitRec = { dmg: number; quality: "strong"|"partial"|"weak"; unitTypeId: string };
+      type HitRec = { dmg: number; quality: "strong"|"partial"|"weak"; unitTypeId: string; chain?: boolean; cueBonus?: boolean };
       const hitMap: Record<string, HitRec[]> = {};
+      const revealMap: Record<string, boolean> = {};
       const aliveProj: Projectile[] = [];
+      let cueBonusReady = s.cueBonusReady;
+      let cueBonusFeedback: string | null = null;
       for (const p of newProjectiles) {
         const te = movedEnemies.find(e => e.uid === p.toEnemyUid);
         if (!te) continue;
@@ -2201,8 +2404,24 @@ export default function WardDefense() {
         const np = p.progress + 0.38;
         if (np >= 1.0) {
           const q = getMatchQuality(p.unitTypeId, te.typeId);
-          const dmg = applyDmg(p.damage, q);
-          (hitMap[te.uid] ??= []).push({ dmg, quality: q, unitTypeId: p.unitTypeId });
+          let dmg = applyDmg(p.damage, q);
+          const uRole = UNIT_DATA[p.unitTypeId]?.role;
+          let chain = false;
+          if (uRole === "ASSESS") {
+            revealMap[te.uid] = true;
+          } else if ((uRole === "TREAT" || uRole === "STABILIZE") && te.revealed
+            && (s.tickCount - te.assessTick) <= CLINICAL_CHAIN_WINDOW) {
+            dmg = Math.round(dmg * 1.25);
+            chain = true;
+          }
+          let cueBonus = false;
+          if (cueBonusReady && q === "strong") {
+            dmg = Math.round(dmg * 1.2);
+            cueBonus = true;
+            cueBonusReady = false;
+            cueBonusFeedback = `✚ Response Improved — Clinical Cue bonus applied!`;
+          }
+          (hitMap[te.uid] ??= []).push({ dmg, quality: q, unitTypeId: p.unitTypeId, chain, cueBonus });
         } else {
           aliveProj.push({ ...p, toFx: ePos.x, toFy: ePos.y, progress: np });
         }
@@ -2216,7 +2435,11 @@ export default function WardDefense() {
       let enemyMastery = { ...s.enemyMastery };
       let lastKillQuality = s.lastKillQuality;
       let score = s.score;
-      let feedbacks = s.feedbacks.map(f => ({ ...f, ticks: f.ticks - 1 })).filter(f => f.ticks > 0);
+
+      if (cueBonusFeedback) {
+        feedbacks = [{ id: `cue${s.tickCount}`, text: cueBonusFeedback,
+          color: "#22d3ee", quality: "bonus" as any, ticks: 6 }, ...feedbacks.slice(0, 1)];
+      }
 
       const survEnemies: ActiveEnemy[] = [];
       for (const e of movedEnemies) {
@@ -2225,10 +2448,22 @@ export default function WardDefense() {
         const totalDmg = hits.reduce((sum, h) => sum + h.dmg, 0);
         const quality: "strong"|"partial"|"weak" = hits.some(h => h.quality === "strong") ? "strong"
           : hits.some(h => h.quality === "partial") ? "partial" : "weak";
+        const gotChain = hits.some(h => h.chain);
+        const nowRevealed = e.revealed || !!revealMap[e.uid];
         if (quality === "strong") strongMatches++;
         else if (quality === "partial") partialMatches++;
         else weakMatches++;
         score += totalDmg;
+
+        if (!e.revealed && revealMap[e.uid]) {
+          const wk = WEAKNESS_TYPES[ENEMY_DATA[e.typeId].weakness];
+          feedbacks = [{ id: `rv${e.uid}`, text: `🔍 Cue Revealed — ${wk.icon} ${wk.label}`,
+            color: wk.color, quality: "bonus" as any, ticks: 5 }, ...feedbacks.slice(0, 1)];
+        }
+        if (gotChain) {
+          feedbacks = [{ id: `cc${e.uid}`, text: `⚡ Clinical Chain — Cause Addressed!`,
+            color: COLORS.runeGold, quality: "bonus" as any, ticks: 5 }, ...feedbacks.slice(0, 1)];
+        }
 
         const newHp = e.hp - totalDmg;
         if (newHp <= 0) {
@@ -2259,7 +2494,12 @@ export default function WardDefense() {
               color: COLORS.warning, quality: "partial", ticks: 4 }, ...feedbacks.slice(0, 1)];
           }
         } else {
-          survEnemies.push({ ...e, hp: newHp, hitFlash: 3 });
+          survEnemies.push({
+            ...e, hp: newHp, hitFlash: 3,
+            revealed: nowRevealed,
+            assessTick: revealMap[e.uid] ? s.tickCount : e.assessTick,
+            chainFlash: gotChain ? 4 : e.chainFlash,
+          });
         }
       }
 
@@ -2274,6 +2514,7 @@ export default function WardDefense() {
         careChain, peakCareChain, priorityActions,
         strongMatches, partialMatches, weakMatches,
         learnedConcepts, enemyMastery, lastKillQuality,
+        cueBonusReady,
       };
 
       if (ns.stability <= 0) { set({ ...ns, phase: "lost" }); return; }
