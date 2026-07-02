@@ -43,29 +43,29 @@ const TILE_SIZE        = 46;   /* deployment tile size in px */
 /* Enemy route — traces the illustrated stone walkway in the reference map.
    MUST stay identical to ward-defense-v2.tsx.                              */
 const PATH_WPS: [number, number][] = [
-  [0.14, 0.13],  /*  0  Disease Gate spawn        */
-  [0.14, 0.26],  /*  1  left lane upper           */
-  [0.13, 0.40],  /*  2  left lane                 */
-  [0.13, 0.54],  /*  3  left lane                 */
-  [0.15, 0.68],  /*  4  left lane lower           */
-  [0.20, 0.78],  /*  5  bottom-left curve         */
-  [0.34, 0.83],  /*  6  bottom lane left          */
-  [0.50, 0.84],  /*  7  bottom lane center        */
-  [0.66, 0.83],  /*  8  bottom lane right         */
-  [0.80, 0.78],  /*  9  bottom-right curve        */
-  [0.86, 0.68],  /* 10  right lane lower          */
-  [0.87, 0.54],  /* 11  right lane                */
-  [0.87, 0.40],  /* 12  right lane                */
-  [0.85, 0.26],  /* 13  right lane upper          */
-  [0.80, 0.13],  /* 14  Vital Lantern exit        */
+  [0.122, 0.13], /*  0  Disease Gate spawn        */
+  [0.122, 0.26], /*  1  left lane upper           */
+  [0.114, 0.40], /*  2  left lane                 */
+  [0.114, 0.54], /*  3  left lane                 */
+  [0.131, 0.68], /*  4  left lane lower           */
+  [0.175, 0.78], /*  5  bottom-left curve         */
+  [0.297, 0.83], /*  6  bottom lane left          */
+  [0.510, 0.84], /*  7  bottom lane center        */
+  [0.703, 0.83], /*  8  bottom lane right         */
+  [0.825, 0.78], /*  9  bottom-right curve        */
+  [0.877, 0.68], /* 10  right lane lower          */
+  [0.886, 0.54], /* 11  right lane                */
+  [0.886, 0.40], /* 12  right lane                */
+  [0.869, 0.26], /* 13  right lane upper          */
+  [0.825, 0.13], /* 14  Vital Lantern exit        */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 
-/* ── Six deploy pads — aligned onto the drawn cross pedestals (2 cols × 3 rows) ── */
+/* ── Nine deploy pads — aligned onto the drawn cross pedestals (3 cols × 3 rows) ── */
 const DEPLOY_TILES: [number, number][] = [
-  [0.394, 0.350], [0.629, 0.350],
-  [0.394, 0.493], [0.629, 0.493],
-  [0.394, 0.626], [0.629, 0.626],
+  [0.345, 0.350], [0.510, 0.350], [0.675, 0.350],
+  [0.345, 0.493], [0.510, 0.493], [0.675, 0.493],
+  [0.345, 0.626], [0.510, 0.626], [0.675, 0.626],
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -281,9 +281,7 @@ function freshState(): GS {
   return {
     phase: "lobby", wave: 0,
     stability: MAX_STABILITY, ap: INIT_AP, apTimer: AP_REGEN_TICKS,
-    /* DEV SEED — remove: units on all 6 pads for alignment check */
-    deployedUnits: [0,1,2,3,4,5].map(i => ({ uid: `dev${i}`, typeId: ["ward_scout","mist_caster","o2_healer"][i%3], tileIndex: i, cooldown: 0, castFlash: 0, level: 1, mergeFlash: 0 })) as any,
-    enemies: [], projectiles: [],
+    deployedUnits: [], enemies: [], projectiles: [],
     spawnQueue: [], spawnTimer: 0, wavePauseTicks: 0, feedbacks: [],
     score: 0, tickCount: 0, uidSeed: 0,
     careChain: 0, peakCareChain: 0, priorityActions: 0,
@@ -2416,7 +2414,6 @@ export default function WardDefense() {
 
   /* ── Lobby ── */
   if (gs.phase === "lobby") {
-    startGame(); return null; /* DEV BYPASS — remove */
     return <LobbyScreen onStart={startGame} onBack={() => router.back()} />;
   }
 

@@ -10,9 +10,9 @@ asset is rendered as the literal battle-map background:
 Gameplay elements (enemy lane, deploy pads, sprites) are transparent overlays
 whose fractional coordinates map onto features drawn INSIDE the image.
 **Why:** user explicitly rejected any CSS/RN-drawn scene. The Disease Gate,
-Vital Lantern, perimeter walkway loop, and 9 glowing pedestals (3×3 grid) all
-live in the image. (Filename still says "portrait" but the art is now square —
-kept unchanged so every `require()` stays valid.)
+Vital Lantern, oval walkway loop, and 9 cross pedestals (3×3 grid) all
+live in the image (Buddhist-garden portrait design, now 878×1408 after a
+surgical widening — see "Widening the map art" below).
 - Use `expo-image` (ExpoImage), NOT RN `Image`. Use `boxShadow`, not `shadow*`.
 - `frontend/public/` assets 404 on Expo web — `require()` is mandatory, not a URL.
 - The PNG is large: the first screenshot right after a restart shows a blank
@@ -23,13 +23,14 @@ For overlay fractions to sit EXACTLY on drawn features with zero crop, the board
 size MUST match the image's real pixel ratio. Current implementation measures the
 available area (onLayout) and fits the whole image inside it, preserving aspect:
 ```
-const scale = Math.min(availW / 1024, availH / 1024);
-const W = 1024 * scale, H = 1024 * scale;   // board == image ratio → no crop
+const scale = Math.min(availW / 878, availH / 1408);
+const W = 878 * scale, H = 1408 * scale;   // board == image ratio → no crop
 <ExpoImage source={IMG_MAP} style={StyleSheet.absoluteFillObject} contentFit=... />
 ```
-The current map is **square 1024×1024 (1:1)**. (It was previously portrait
-768×1408 = 6:11; the model refused to produce a clean 3×3 in a 3:4 canvas and
-kept adding a 4th row, so the art was regenerated at 1:1 to get a true 3×3.)
+The current map is **portrait 878×1408**. History: original portrait 768×1408
+(6 pedestals) → AI-regenerated square 1024×1024 3×3 (user REJECTED: wanted the
+original Buddhist-garden design kept) → original restored from git and widened
+programmatically to 878×1408 with a 3rd pedestal column (user approved).
 **Why:** if the board ratio != image ratio, `cover` crops and overlays drift off
 the drawn features — user reported "totally off". Matching board size to the
 image ratio guarantees alignment with zero crop.
@@ -46,10 +47,25 @@ EROSION first (keep only dense disc cores where a ~14px window is >72% glow),
 which drops the thin connector lines, THEN cluster + regularize to a clean grid.
 Always overlay the result back onto the art (draw dots on a PNG copy and view)
 before committing. Far more reliable than eyeballing a screenshot.
-Current values (fractions of board w/h, 3×3 grid): columns 0.377 / 0.500 /
-0.623; rows 0.380 / 0.490 / 0.600. DEPLOY_TILES is row-major (9 tiles). PATH_WPS
-traces the perimeter walkway loop (gate top-left → down left → across bottom
-~0.86 → up right → lantern top-right), 15 waypoints.
+Current values (fractions of 878×1408 board, 3×3 grid): columns 0.345 / 0.510 /
+0.675; rows 0.350 / 0.493 / 0.626. DEPLOY_TILES is row-major (9 tiles). PATH_WPS
+traces the oval walkway loop (gate top-left → down left → across bottom ~0.84 →
+up right → lantern top-right), 15 waypoints. Sprites "stand on" a pedestal when
+centered on its glowing TOP FACE (fy is top-face center; the dark hex base
+drawn below the sprite is correct art, not misalignment).
+
+## Widening the map art programmatically (approved technique)
+To fit more pedestal columns WITHOUT changing the drawn design (user demand:
+"only add on"), widen the canvas via a center-line insertion, not AI regen:
+insert a vertical band (110px) at the pond's center x, filling it by ping-pong
+tiling per-row "clean" source windows (plank/sky rows, water rows, dock-rung
+rows each get their own feature-free window so fences, pier, and walkway extend
+seamlessly), then clone an existing pedestal column patch (with glow, ~14px
+feathered alpha) into the inserted region. Update: fit divisors, DEPLOY_TILES
+(new width denominators), and PATH_WPS x-fractions (left of cut: px/newW;
+right of cut: (px+ins)/newW). Verify with a half-scale preview PNG + dev-seeded
+units on all pads. **Why:** AI image generation cannot edit-with-reference here
+and regenerating loses the approved design.
 
 ## Both files must stay in sync (drift hazard)
 PATH_WPS + DEPLOY_TILES are duplicated: exported consts in `ward-defense-v2.tsx`
@@ -65,12 +81,14 @@ flank it with two decorative "wing" images inside a flexDirection:"row"
 container (wings flex:1, height:H, contentFit:"cover", contentPosition anchored
 toward the seam). Wings collapse to 0 on narrow/portrait screens — no mobile
 regression — and overlay fractions/fit math stay untouched.
-**Wing texture recipe (programmatic, from the map's own art):** take the outer
-~88px pure-fog band (wider strips leak gate/pedestals/label text into the wing),
-ping-pong mirror-tile it outward from the seam (mirror ⇒ pixel-perfect seam
-continuity), then apply progressive box blur + darkening past the first tile —
-raw tiling shows obvious repeated "totem" blobs; blur turns them into natural
-mist. Files: assets/ward-defense/map-wing-left/right.png (528×1024).
+**Wing texture recipe (programmatic, from the map's own art):** measure the
+pure-fog edge band first (sample per-column saturation; ~48px on the portrait
+map — wider strips leak drawn features into the wing), ping-pong mirror-tile it
+outward from the seam (mirror ⇒ pixel-perfect seam continuity), then apply
+progressive box blur + darkening past the first tile — raw tiling shows obvious
+repeated "totem" blobs; blur turns them into natural mist. Regenerate wings
+whenever the map asset changes. Files:
+assets/ward-defense/map-wing-left/right.png (384×1408).
 
 ## Enemy locomotion + game-speed toggle
 Enemies walk OR float by type via an `ENEMY_LOCO` map: `EnemyOnPath` owns a

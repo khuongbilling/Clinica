@@ -2,13 +2,13 @@
  * Ward Defense V2 — Lotus Healing Sanctum
  *
  * INTERACTIVE MAP — the illustrated reference asset IS the battlefield.
- * Background: assets/ward-defense/lotus-healing-ward-map-portrait.png (square
- * 1:1, 1024×1024 — Disease Gate top-left, Vital Lantern top-right, nine glowing
- * pedestals in a 3×3 grid, perimeter stone walkway loop).  The board is sized
+ * Background: assets/ward-defense/lotus-healing-ward-map-portrait.png (portrait
+ * 878×1408 — Disease Gate top-left, Vital Lantern top-right, nine cross
+ * pedestals in a 3×3 grid, oval stone walkway loop).  The board is sized
  * to the image ratio exactly; overlay coordinates are fractions of that size.
  *
  * Layer order (zIndex):
- *   0  <ExpoImage IMG_MAP>  — square battle map (fills the fitted board)
+ *   0  <ExpoImage IMG_MAP>  — portrait battle map (fills the fitted board)
  *   6  StonePad × 9         — fully invisible tap targets (gold star on merge only)
  *  22  GateBadge            — spawn-queue count over the drawn gate
  *  10  HeroOnPad            — deployed hero sprites (centered on platforms)
@@ -28,30 +28,30 @@ import { Image as ExpoImage } from "expo-image";
    image ratio exactly so coordinates stay valid regardless of screen size.
    MUST stay identical to ward-defense.tsx.                              */
 export const PATH_WPS: [number, number][] = [
-  [0.14, 0.13],  /*  0  Disease Gate spawn        */
-  [0.14, 0.26],  /*  1  left lane upper           */
-  [0.13, 0.40],  /*  2  left lane                 */
-  [0.13, 0.54],  /*  3  left lane                 */
-  [0.15, 0.68],  /*  4  left lane lower           */
-  [0.20, 0.78],  /*  5  bottom-left curve         */
-  [0.34, 0.83],  /*  6  bottom lane left          */
-  [0.50, 0.84],  /*  7  bottom lane center        */
-  [0.66, 0.83],  /*  8  bottom lane right         */
-  [0.80, 0.78],  /*  9  bottom-right curve        */
-  [0.86, 0.68],  /* 10  right lane lower          */
-  [0.87, 0.54],  /* 11  right lane                */
-  [0.87, 0.40],  /* 12  right lane                */
-  [0.85, 0.26],  /* 13  right lane upper          */
-  [0.80, 0.13],  /* 14  Vital Lantern exit        */
+  [0.122, 0.13], /*  0  Disease Gate spawn        */
+  [0.122, 0.26], /*  1  left lane upper           */
+  [0.114, 0.40], /*  2  left lane                 */
+  [0.114, 0.54], /*  3  left lane                 */
+  [0.131, 0.68], /*  4  left lane lower           */
+  [0.175, 0.78], /*  5  bottom-left curve         */
+  [0.297, 0.83], /*  6  bottom lane left          */
+  [0.510, 0.84], /*  7  bottom lane center        */
+  [0.703, 0.83], /*  8  bottom lane right         */
+  [0.825, 0.78], /*  9  bottom-right curve        */
+  [0.877, 0.68], /* 10  right lane lower          */
+  [0.886, 0.54], /* 11  right lane                */
+  [0.886, 0.40], /* 12  right lane                */
+  [0.869, 0.26], /* 13  right lane upper          */
+  [0.825, 0.13], /* 14  Vital Lantern exit        */
 ];
 
-/* Six deploy pads — aligned onto the six cross pedestals drawn in the
-   portrait map (2 cols × 3 rows, centered inside the U-shaped walkway loop).
+/* Nine deploy pads — aligned onto the nine cross pedestals drawn in the
+   widened portrait map (3 cols × 3 rows, inside the walkway loop).
    MUST stay identical to ward-defense.tsx.                              */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.394, 0.350], [0.629, 0.350],
-  [0.394, 0.493], [0.629, 0.493],
-  [0.394, 0.626], [0.629, 0.626],
+  [0.345, 0.350], [0.510, 0.350], [0.675, 0.350],
+  [0.345, 0.493], [0.510, 0.493], [0.675, 0.493],
+  [0.345, 0.626], [0.510, 0.626], [0.675, 0.626],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
@@ -344,15 +344,15 @@ export function WardBoardV2({
   bobY,
   spawnQueueLen, mergeTileSet, onTilePress, unitColors,
 }: WardBoardV2Props) {
-  /* Measure the AVAILABLE area (outer container) and fit the whole 768×1408
+  /* Measure the AVAILABLE area (outer container) and fit the whole 878×1408
      portrait map inside it, preserving aspect. This guarantees the entry
      (Disease Gate) and exit (Vital Lantern) at the top of the map are NEVER
      cropped, while keeping overlays perfectly aligned
      (board size == image ratio → contentFit exact). */
   const availW = aw > 20 ? aw : 360;
   const availH = ah > 20 ? ah : 480;
-  const scale  = Math.min(availW / 768, availH / 1408);
-  const W = 768 * scale;
+  const scale  = Math.min(availW / 878, availH / 1408);
+  const W = 878 * scale;
   const H = 1408 * scale;
 
   return (
@@ -378,7 +378,7 @@ export function WardBoardV2({
       }}
     >
       {/* L0: Portrait battle map, sized to fit fully inside the available area.
-          Board size matches the image's 768×1408 ratio exactly, so contentFit
+          Board size matches the image's 878×1408 ratio exactly, so contentFit
           shows the WHOLE map (gate + lantern included) with zero crop, and
           overlay fractions (PATH_WPS / DEPLOY_TILES) sit EXACTLY on features. */}
       <ExpoImage
@@ -388,7 +388,7 @@ export function WardBoardV2({
         cachePolicy="memory-disk"
       />
 
-      {/* L2: Six invisible tap targets aligned onto the drawn platforms */}
+      {/* L2: Nine invisible tap targets aligned onto the drawn pedestals */}
       {W > 20 && DEPLOY_TILES.map((_, i) => (
         <StonePad
           key={i} aw={W} ah={H} tileIdx={i}
