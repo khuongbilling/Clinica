@@ -56,6 +56,12 @@ export const DEPLOY_TILES: [number, number][] = [
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
 const IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map-portrait.png");
+/* Fog "wings" — mirrored strips of the map's own outer edges. They extend the
+   scenery horizontally so the map spans the FULL screen width on wide displays
+   without cropping or altering the square gameplay board. Mirroring guarantees
+   pixel-perfect seam continuity at the board edges. */
+const IMG_WING_L = require("../assets/ward-defense/map-wing-left.png");
+const IMG_WING_R = require("../assets/ward-defense/map-wing-right.png");
 const IMG_UNITS: Record<string, any> = {
   ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
   mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
@@ -350,9 +356,17 @@ export function WardBoardV2({
 
   return (
     <View
-      style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}
+      style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#07121A", overflow: "hidden" }}
       onLayout={onLayout}
     >
+    {/* Left fog wing — fills any leftover width, seam matches the map's left edge */}
+    <ExpoImage
+      source={IMG_WING_L}
+      style={{ flex: 1, height: H, alignSelf: "center" }}
+      contentFit="cover"
+      contentPosition="right center"
+      cachePolicy="memory-disk"
+    />
     <View
       style={{
         width: W,
@@ -403,6 +417,14 @@ export function WardBoardV2({
         <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} />
       ))}
     </View>
+    {/* Right fog wing — fills any leftover width, seam matches the map's right edge */}
+    <ExpoImage
+      source={IMG_WING_R}
+      style={{ flex: 1, height: H, alignSelf: "center" }}
+      contentFit="cover"
+      contentPosition="left center"
+      cachePolicy="memory-disk"
+    />
     </View>
   );
 }

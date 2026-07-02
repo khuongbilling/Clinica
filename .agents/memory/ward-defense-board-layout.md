@@ -58,6 +58,20 @@ StonePad tap targets (9 of them) and HeroOnPad sprites both center on the tile
 fraction (`left: cx - size/2`). Merge logic is unit-type based (findMergePair by
 tileIndex), NOT grid adjacency, so changing the tile count/layout is safe.
 
+## Full-width scenery via fog "wings" (don't widen the map art itself)
+User wanted the map to span the full screen width horizontally WITHOUT cropping
+or changing the theme. Solution: keep the square gameplay board untouched and
+flank it with two decorative "wing" images inside a flexDirection:"row"
+container (wings flex:1, height:H, contentFit:"cover", contentPosition anchored
+toward the seam). Wings collapse to 0 on narrow/portrait screens — no mobile
+regression — and overlay fractions/fit math stay untouched.
+**Wing texture recipe (programmatic, from the map's own art):** take the outer
+~88px pure-fog band (wider strips leak gate/pedestals/label text into the wing),
+ping-pong mirror-tile it outward from the seam (mirror ⇒ pixel-perfect seam
+continuity), then apply progressive box blur + darkening past the first tile —
+raw tiling shows obvious repeated "totem" blobs; blur turns them into natural
+mist. Files: assets/ward-defense/map-wing-left/right.png (528×1024).
+
 ## Enemy locomotion + game-speed toggle
 Enemies walk OR float by type via an `ENEMY_LOCO` map: `EnemyOnPath` owns a
 per-enemy `Animated.loop` (walk = hop+squash; float = drift+scale), NOT a shared
