@@ -28,30 +28,30 @@ import { Image as ExpoImage } from "expo-image";
    image ratio exactly so coordinates stay valid regardless of screen size.
    MUST stay identical to ward-defense.tsx.                              */
 export const PATH_WPS: [number, number][] = [
-  [0.16, 0.150], /*  0  Disease Gate spawn (top-left)  */
-  [0.13, 0.280], /*  1  left lane upper                */
-  [0.12, 0.420], /*  2  left lane                      */
-  [0.12, 0.560], /*  3  left lane                      */
-  [0.13, 0.700], /*  4  left lane lower                */
-  [0.17, 0.800], /*  5  bottom-left curve              */
-  [0.30, 0.855], /*  6  bottom lane left               */
-  [0.50, 0.860], /*  7  bottom lane center             */
-  [0.70, 0.855], /*  8  bottom lane right              */
-  [0.83, 0.800], /*  9  bottom-right curve             */
-  [0.87, 0.700], /* 10  right lane lower               */
-  [0.88, 0.560], /* 11  right lane                     */
-  [0.88, 0.420], /* 12  right lane                     */
-  [0.87, 0.280], /* 13  right lane upper               */
-  [0.84, 0.150], /* 14  Vital Lantern exit (top-right) */
+  [0.14, 0.13],  /*  0  Disease Gate spawn        */
+  [0.14, 0.26],  /*  1  left lane upper           */
+  [0.13, 0.40],  /*  2  left lane                 */
+  [0.13, 0.54],  /*  3  left lane                 */
+  [0.15, 0.68],  /*  4  left lane lower           */
+  [0.20, 0.78],  /*  5  bottom-left curve         */
+  [0.34, 0.83],  /*  6  bottom lane left          */
+  [0.50, 0.84],  /*  7  bottom lane center        */
+  [0.66, 0.83],  /*  8  bottom lane right         */
+  [0.80, 0.78],  /*  9  bottom-right curve        */
+  [0.86, 0.68],  /* 10  right lane lower          */
+  [0.87, 0.54],  /* 11  right lane                */
+  [0.87, 0.40],  /* 12  right lane                */
+  [0.85, 0.26],  /* 13  right lane upper          */
+  [0.80, 0.13],  /* 14  Vital Lantern exit        */
 ];
 
-/* Nine deploy pads — aligned onto the nine glowing pedestals drawn in the
-   square map (3 cols × 3 rows, centered inside the perimeter walkway loop).
+/* Six deploy pads — aligned onto the six cross pedestals drawn in the
+   portrait map (2 cols × 3 rows, centered inside the U-shaped walkway loop).
    MUST stay identical to ward-defense.tsx.                              */
 export const DEPLOY_TILES: [number, number][] = [
-  [0.377, 0.380], [0.500, 0.380], [0.623, 0.380],
-  [0.377, 0.490], [0.500, 0.490], [0.623, 0.490],
-  [0.377, 0.600], [0.500, 0.600], [0.623, 0.600],
+  [0.394, 0.350], [0.629, 0.350],
+  [0.394, 0.493], [0.629, 0.493],
+  [0.394, 0.626], [0.629, 0.626],
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
@@ -344,15 +344,16 @@ export function WardBoardV2({
   bobY,
   spawnQueueLen, mergeTileSet, onTilePress, unitColors,
 }: WardBoardV2Props) {
-  /* Measure the AVAILABLE area (outer container) and fit the whole 1024×1024 map
-     inside it, preserving aspect. This guarantees the entry (Disease Gate) and
-     exit (Vital Lantern) at the top of the map are NEVER cropped, while keeping
-     overlays perfectly aligned (board size == image ratio → contentFit exact). */
+  /* Measure the AVAILABLE area (outer container) and fit the whole 768×1408
+     portrait map inside it, preserving aspect. This guarantees the entry
+     (Disease Gate) and exit (Vital Lantern) at the top of the map are NEVER
+     cropped, while keeping overlays perfectly aligned
+     (board size == image ratio → contentFit exact). */
   const availW = aw > 20 ? aw : 360;
   const availH = ah > 20 ? ah : 480;
-  const scale  = Math.min(availW / 1024, availH / 1024);
-  const W = 1024 * scale;
-  const H = 1024 * scale;
+  const scale  = Math.min(availW / 768, availH / 1408);
+  const W = 768 * scale;
+  const H = 1408 * scale;
 
   return (
     <View
@@ -376,8 +377,8 @@ export function WardBoardV2({
         backgroundColor: "#07121A",
       }}
     >
-      {/* L0: Square battle map, sized to fit fully inside the available area.
-          Board size matches the image's 1024×1024 ratio exactly, so contentFit
+      {/* L0: Portrait battle map, sized to fit fully inside the available area.
+          Board size matches the image's 768×1408 ratio exactly, so contentFit
           shows the WHOLE map (gate + lantern included) with zero crop, and
           overlay fractions (PATH_WPS / DEPLOY_TILES) sit EXACTLY on features. */}
       <ExpoImage
