@@ -141,6 +141,9 @@ export interface PlayerState {
   inventory: Record<string, number>;
   codex_shards: number;
   crowns: number;
+  owned_skins?: string[];
+  equipped_skin?: string;
+  owned_upgrades?: string[];
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   enemy_mastery?: Record<string, number>;
   chapter_progress?: number;

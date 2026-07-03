@@ -97,6 +97,10 @@ class Player(BaseModel):
     failure_counts: Dict[str, int] = Field(default_factory=dict)
     inventory: Dict[str, int] = Field(default_factory=dict)
     codex_shards: int = 0
+    crowns: int = 0
+    owned_skins: List[str] = Field(default_factory=list)
+    equipped_skin: str = ""
+    owned_upgrades: List[str] = Field(default_factory=list)
     summon_history: List[Dict[str, Any]] = Field(default_factory=list)
     enemy_mastery: Dict[str, int] = Field(default_factory=dict)
     chapter_progress: int = 1
@@ -129,6 +133,10 @@ class PlayerUpdate(BaseModel):
     failure_counts: Optional[Dict[str, int]] = None
     inventory: Optional[Dict[str, int]] = None
     codex_shards: Optional[int] = None
+    crowns: Optional[int] = None
+    owned_skins: Optional[List[str]] = None
+    equipped_skin: Optional[str] = None
+    owned_upgrades: Optional[List[str]] = None
     summon_history: Optional[List[Dict[str, Any]]] = None
     enemy_mastery: Optional[Dict[str, int]] = None
     chapter_progress: Optional[int] = None

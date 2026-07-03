@@ -38,6 +38,14 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.crowns == null) {
     out = { ...out, crowns: 0 };
   }
+  if (!out.owned_skins || !out.owned_upgrades || out.equipped_skin == null) {
+    out = {
+      ...out,
+      owned_skins: out.owned_skins || [],
+      equipped_skin: out.equipped_skin || '',
+      owned_upgrades: out.owned_upgrades || [],
+    };
+  }
   return out;
 }
 
@@ -130,6 +138,9 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     },
     codex_shards: 50,
     crowns: 0,
+    owned_skins: [],
+    equipped_skin: '',
+    owned_upgrades: [],
     summon_history: [],
     enemy_mastery: {},
     chapter_progress: 1,
