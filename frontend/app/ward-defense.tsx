@@ -18,9 +18,30 @@ import { WardBoardV2 } from "./ward-defense-v2";
 
 /* ── Card portrait images — Hall of Heroes battle sprites for bottom dock ── */
 const CARD_PORTRAITS: Record<string, any> = {
-  ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
-  mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
-  o2_healer:   require("../assets/heroes/battle/novice_guardian.png"),
+  ward_scout:      require("../assets/heroes/battle/apprentice_seer.png"),
+  reassess_sage:   require("../assets/heroes/battle/mindkeeper.png"),
+  mist_caster:     require("../assets/heroes/battle/village_caretaker.png"),
+  herbal_chemist:  require("../assets/heroes/battle/wound_sage.png"),
+  o2_healer:       require("../assets/heroes/battle/novice_guardian.png"),
+  guardian:        require("../assets/heroes/battle/junior_warden.png"),
+  rhythm_medic:    require("../assets/heroes/battle/storm_runner.png"),
+  lantern_scribe:  require("../assets/heroes/battle/data_acolyte.png"),
+  fever_warden:    require("../assets/heroes/battle/infection_warden.png"),
+  airway_sentinel: require("../assets/heroes/battle/night_watcher.png"),
+};
+
+/* ── Disease-spirit portrait images — donghua sprites for the lobby bestiary ── */
+const ENEMY_PORTRAITS: Record<string, any> = {
+  breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),
+  wheeze_sprite:      require("../assets/images/enemy_wheeze_sprite.png"),
+  mucus_slime:        require("../assets/images/enemy_mucus_slime.png"),
+  hypoxia_wraith:     require("../assets/images/enemy_hypoxia_wraith.png"),
+  panic_imp:          require("../assets/images/enemy_panic_imp.png"),
+  fever_imp:          require("../assets/images/enemy_fever_imp.png"),
+  shock_shade:        require("../assets/images/enemy_shock_shade.png"),
+  stun_toad:          require("../assets/images/enemy_stun_toad.png"),
+  corruption_leech:   require("../assets/images/enemy_corruption_leech.png"),
+  bronchospasm_drake: require("../assets/images/enemy_bronchospasm_drake.png"),
 };
 
 import { usePlayer } from "@/src/game/store";
@@ -38,6 +59,7 @@ const SPAWN_GAP_TICKS  = 7;
 const KILL_AP_BONUS    = 2;
 const PREWAVE_AP_BONUS = 8;    /* AP granted for correct pre-wave NCLEX answer */
 const CLINICAL_CHAIN_WINDOW = 40; /* ticks after an Assess hit that a Treat/Stabilize hit still combos */
+const BOSS_UNREVEALED_RESIST = 0.2; /* Bronchospasm Drake shrugs off damage until an Assess reveals its weakness */
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
@@ -88,15 +110,16 @@ const DEPLOY_TILES: [number, number][] = [
    CLINICAL WEAKNESS TYPES — the "clinical problem" each enemy embodies.
    Game-friendly wording (not dry medical text); drives matchup bonuses.
    ═══════════════════════════════════════════════════════════════════ */
-type WeaknessId = "airway" | "oxygenation" | "secretion" | "infection" | "perfusion" | "panic" | "corruption";
+type WeaknessId = "airway" | "oxygenation" | "secretion" | "infection" | "perfusion" | "panic" | "neuro" | "corruption";
 type WeaknessDef = { label: string; icon: string; color: string };
 const WEAKNESS_TYPES: Record<WeaknessId, WeaknessDef> = {
   panic:       { label: "Panic Surge",        icon: "😨", color: "#93C5FD" },
-  airway:      { label: "Airway Narrowing",   icon: "🌀", color: "#34D399" },
+  airway:      { label: "Airway Narrowing",   icon: "🌀", color: "#F472B6" },
   secretion:   { label: "Secretion Block",    icon: "🫧", color: "#86EFAC" },
   oxygenation: { label: "Oxygenation Threat", icon: "👻", color: "#C4B5FD" },
   infection:   { label: "Inflamed Core",      icon: "🔥", color: "#FCA5A5" },
   perfusion:   { label: "Perfusion Threat",   icon: "⚡", color: "#FCD34D" },
+  neuro:       { label: "Altered Neuro",      icon: "💫", color: "#8B5CF6" },
   corruption:  { label: "Protective Corruption", icon: "🐲", color: "#F97316" },
 };
 
@@ -114,77 +137,114 @@ type EnemyDef = {
   corruptionPressure: number; /* Corruption added per tick while this enemy is alive on the path */
   corruptionOnLeak: number;   /* Corruption spike when this enemy reaches the Vital Lantern */
   isPriority?: boolean;       /* priority threats add more Corruption + reward bigger "Priority Controlled" cleanse */
+  /* ── distinct lane behaviours (all optional / additive) ── */
+  selfHealPerTick?: number;   /* Corruption Leech regenerates HP while alive */
+  speedBurstChance?: number;  /* Shock Shade — chance per tick to lurch forward at double speed */
+  stunOnPass?: boolean;       /* Stun Toad — briefly disables the nearest deployed unit it passes */
 };
 
 const ENEMY_DATA: Record<string, EnemyDef> = {
   breathless_wisp: {
-    name: "Breathless Wisp", icon: "💨",
+    name: "Dyspnea Wisp", icon: "💨",
     maxHp: 55, speed: 0.058, damage: 8, color: "#60A5FA",
     weakUnits: ["ward_scout"],
     strongUnits: [],
     clue: "Dyspnea",
-    flavor: "Restricts airflow — early assessment reveals its pattern.",
+    flavor: "A restless wisp that steals breath — early assessment reveals its pattern.",
     weakness: "panic",
     corruptionPressure: 0.12, corruptionOnLeak: 6,
   },
   wheeze_sprite: {
-    name: "Wheeze Sprite", icon: "🌀",
-    maxHp: 80, speed: 0.065, damage: 10, color: "#34D399",
-    weakUnits: ["ward_scout", "mist_caster"],
+    name: "Wheeze Spirit", icon: "🌀",
+    maxHp: 80, speed: 0.065, damage: 10, color: "#F472B6",
+    weakUnits: ["mist_caster", "airway_sentinel"],
     strongUnits: [],
     clue: "Wheezing",
-    flavor: "Tight airways — wheeze audible on auscultation.",
+    flavor: "Tightens airways — a wheeze audible on auscultation. Mist and suction clear it.",
     weakness: "airway",
     corruptionPressure: 0.15, corruptionOnLeak: 8,
   },
   mucus_slime: {
     name: "Mucus Slime", icon: "🫧",
     maxHp: 95, speed: 0.042, damage: 14, color: "#86EFAC",
-    weakUnits: ["o2_healer"],
+    weakUnits: ["herbal_chemist", "airway_sentinel"],
     strongUnits: [],
     clue: "Secretions",
-    flavor: "Secretion buildup — positioning aids drainage.",
+    flavor: "A slow secretion blob — suction and drainage break it apart.",
     weakness: "secretion",
     corruptionPressure: 0.18, corruptionOnLeak: 8,
   },
   hypoxia_wraith: {
     name: "Hypoxia Wraith", icon: "👻",
     maxHp: 105, speed: 0.070, damage: 16, color: "#C4B5FD",
-    weakUnits: ["o2_healer"],
+    weakUnits: ["o2_healer", "rhythm_medic"],
     strongUnits: [],
     clue: "Cyanosis",
-    flavor: "Oxygen deprivation — supplemental O₂ is the direct counter.",
+    flavor: "Oxygen-starving spirit that drains the ward — supplemental O₂ is the direct counter.",
     weakness: "oxygenation",
     corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
+  },
+  panic_imp: {
+    name: "Panic Imp", icon: "😱",
+    maxHp: 58, speed: 0.086, damage: 9, color: "#93C5FD",
+    weakUnits: ["ward_scout", "reassess_sage", "lantern_scribe"],
+    strongUnits: [],
+    clue: "Agitation",
+    flavor: "A frantic imp that darts down the lane — calm assessment and reassurance settle it.",
+    weakness: "panic",
+    corruptionPressure: 0.16, corruptionOnLeak: 7,
   },
   fever_imp: {
     name: "Fever Imp", icon: "🔥",
     maxHp: 90, speed: 0.060, damage: 12, color: "#FCA5A5",
-    weakUnits: ["mist_caster"],
+    weakUnits: ["herbal_chemist", "fever_warden"],
     strongUnits: [],
     clue: "Fever",
-    flavor: "Inflammatory heat spirit — best handled after cue recognition, then treated.",
+    flavor: "Inflammatory heat spirit — recognise the cue, then cool and treat the source.",
     weakness: "infection",
     corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
   },
   shock_shade: {
     name: "Shock Shade", icon: "⚡",
-    maxHp: 115, speed: 0.050, damage: 18, color: "#FCD34D",
-    weakUnits: ["o2_healer"],
+    maxHp: 115, speed: 0.050, damage: 18, color: "#7DD3FC",
+    weakUnits: ["o2_healer", "rhythm_medic", "reassess_sage"],
     strongUnits: [],
     clue: "Hypotension",
-    flavor: "Circulatory collapse spirit — prioritize stabilization before it reaches the lantern.",
+    flavor: "Circulatory-collapse shade that lurches forward in bursts — stabilise it fast.",
     weakness: "perfusion",
     corruptionPressure: 0.36, corruptionOnLeak: 14, isPriority: true,
+    speedBurstChance: 0.28,
+  },
+  stun_toad: {
+    name: "Stun Toad", icon: "😵",
+    maxHp: 130, speed: 0.044, damage: 15, color: "#8B5CF6",
+    weakUnits: ["guardian", "lantern_scribe"],
+    strongUnits: [],
+    clue: "Altered LOC",
+    flavor: "A dazing toad that briefly stuns the nearest healer it lumbers past — shield the line.",
+    weakness: "neuro",
+    corruptionPressure: 0.30, corruptionOnLeak: 13, isPriority: true,
+    stunOnPass: true,
+  },
+  corruption_leech: {
+    name: "Corruption Leech", icon: "🪱",
+    maxHp: 150, speed: 0.038, damage: 16, color: "#EA580C",
+    weakUnits: ["herbal_chemist", "guardian", "fever_warden"],
+    strongUnits: [],
+    clue: "Rising Corruption",
+    flavor: "A self-mending parasite that floods the lane with corruption — burn it down quickly.",
+    weakness: "corruption",
+    corruptionPressure: 0.5, corruptionOnLeak: 16, isPriority: true,
+    selfHealPerTick: 2,
   },
   bronchospasm_drake: {
     name: "Bronchospasm Drake", icon: "🐲",
-    maxHp: 260, speed: 0.028, damage: 30, color: "#F97316",
+    maxHp: 300, speed: 0.028, damage: 30, color: "#F97316",
     weakUnits: ["mist_caster"],
     strongUnits: [],
     isBoss: true,
     clue: "Bronchospasm",
-    flavor: "Severe bronchospasm incarnate — bronchodilators essential.",
+    flavor: "Severe bronchospasm incarnate — Assess to expose its weakness, then hit it with bronchodilator mist. It shrugs off damage until revealed.",
     weakness: "corruption",
     corruptionPressure: 0.9, corruptionOnLeak: 30, isPriority: true,
   },
@@ -216,34 +276,104 @@ const ROLE_DATA: Record<RoleId, RoleDef> = {
 
 const UNIT_DATA: Record<string, UnitDef> = {
   ward_scout: {
-    name: "Apprentice Seer", color: "#A78BFA",
-    apCost: 3, damage: 19, attackSpeed: 2, range: 0.31,
+    name: "Ward Scout", color: "#A78BFA",
+    apCost: 3, damage: 18, attackSpeed: 2, range: 0.33,
     aoe: false, category: "ASSESS", role: "ASSESS",
-    strong: ["breathless_wisp", "wheeze_sprite"],
-    weak:   ["mucus_slime", "bronchospasm_drake"],
+    strong: ["breathless_wisp", "panic_imp"],
+    weak:   ["mucus_slime", "corruption_leech", "bronchospasm_drake"],
     concept: "Auscultation identifies respiratory cues — assess before treating.",
-    flavor: "Mind-element assessor who reads vital signs with uncanny clarity.",
+    flavor: "Mind-element scout who reads vital signs with uncanny clarity.",
     artsName: "Moonlit Assessment Pulse",
   },
+  reassess_sage: {
+    name: "Reassess Sage", color: "#F0ABFC",
+    apCost: 4, damage: 21, attackSpeed: 3, range: 0.30,
+    aoe: false, category: "REASSESS", role: "REASSESS",
+    strong: ["panic_imp", "shock_shade"],
+    weak:   ["mucus_slime", "bronchospasm_drake"],
+    concept: "Reassessment catches deterioration early and confirms the response.",
+    flavor: "Memory-element sage who rewinds the moment to catch what changed.",
+    artsName: "Recursive Insight",
+  },
   mist_caster: {
-    name: "Village Caretaker", color: "#F472B6",
-    apCost: 5, damage: 38, attackSpeed: 4, range: 0.25,
+    name: "Mist Caster", color: "#F472B6",
+    apCost: 5, damage: 38, attackSpeed: 4, range: 0.26,
     aoe: false, category: "TREAT", role: "TREAT",
-    strong: ["wheeze_sprite", "bronchospasm_drake", "fever_imp"],
+    strong: ["wheeze_sprite", "bronchospasm_drake"],
     weak:   ["hypoxia_wraith", "mucus_slime", "shock_shade"],
     concept: "Bronchodilators relax airway smooth muscle — first-line for bronchospasm.",
     flavor: "Growth-element educator who soothes airway spirits with healing mist.",
     artsName: "Bronchodilator Mist",
   },
+  herbal_chemist: {
+    name: "Herbal Chemist", color: "#A3E635",
+    apCost: 5, damage: 26, attackSpeed: 4, range: 0.24,
+    aoe: true, category: "TREAT", role: "TREAT",
+    strong: ["mucus_slime", "fever_imp", "corruption_leech"],
+    weak:   ["hypoxia_wraith", "shock_shade"],
+    concept: "Compounded remedies splash multiple threats — antibiotics and mucolytics.",
+    flavor: "Alchemy-element healer who lobs volatile flasks over a cluster of spirits.",
+    artsName: "Volatile Remedy Flask",
+  },
   o2_healer: {
-    name: "Novice Guardian", color: "#06B6D4",
+    name: "O₂ Healer", color: "#22D3EE",
     apCost: 4, damage: 22, attackSpeed: 3, range: 0.29,
     aoe: true, category: "STABILIZE", role: "STABILIZE",
-    strong: ["hypoxia_wraith", "mucus_slime", "shock_shade"],
-    weak:   ["breathless_wisp", "bronchospasm_drake", "fever_imp"],
+    strong: ["hypoxia_wraith", "shock_shade"],
+    weak:   ["wheeze_sprite", "bronchospasm_drake", "fever_imp"],
     concept: "O₂ corrects hypoxemia; positioning aids secretion drainage.",
     flavor: "River-element stabilizer whose oxygenation aura shields the whole ward.",
     artsName: "Lotus Oxygen Ward",
+  },
+  guardian: {
+    name: "Novice Guardian", color: "#34D399",
+    apCost: 4, damage: 20, attackSpeed: 3, range: 0.28,
+    aoe: false, category: "PROTECT", role: "PROTECT",
+    strong: ["stun_toad", "corruption_leech"],
+    weak:   ["hypoxia_wraith", "breathless_wisp"],
+    concept: "Positioning and barrier care shield the lane from disabling threats.",
+    flavor: "Stone-element warden who braces the line with a shield bash.",
+    artsName: "Aegis Bash",
+  },
+  rhythm_medic: {
+    name: "Rhythm Medic", color: "#FBBF24",
+    apCost: 5, damage: 30, attackSpeed: 4, range: 0.27,
+    aoe: false, category: "STABILIZE", role: "STABILIZE",
+    strong: ["shock_shade", "hypoxia_wraith"],
+    weak:   ["wheeze_sprite", "fever_imp"],
+    concept: "Perfusion support and rhythm control restore circulatory stability.",
+    flavor: "Storm-element medic who jolts collapsing spirits back into rhythm.",
+    artsName: "Defib Surge",
+  },
+  lantern_scribe: {
+    name: "Lantern Scribe", color: "#FDE047",
+    apCost: 3, damage: 16, attackSpeed: 2, range: 0.34,
+    aoe: false, category: "REASSESS", role: "REASSESS",
+    strong: ["panic_imp", "stun_toad"],
+    weak:   ["corruption_leech", "bronchospasm_drake"],
+    concept: "Documentation and orientation cut through confusion and agitation.",
+    flavor: "Light-element scribe whose lantern flare sweeps clarity down the lane.",
+    artsName: "Lantern Flare Sweep",
+  },
+  fever_warden: {
+    name: "Fever Warden", color: "#FB7185",
+    apCost: 5, damage: 34, attackSpeed: 4, range: 0.26,
+    aoe: false, category: "TREAT", role: "TREAT",
+    strong: ["fever_imp", "corruption_leech"],
+    weak:   ["shock_shade", "hypoxia_wraith"],
+    concept: "Antipyretics and source control quench inflammatory heat.",
+    flavor: "Flame-element warden who smothers fevers with a cooling wave.",
+    artsName: "Cooling Ward Wave",
+  },
+  airway_sentinel: {
+    name: "Airway Sentinel", color: "#818CF8",
+    apCost: 4, damage: 24, attackSpeed: 3, range: 0.28,
+    aoe: false, category: "PROTECT", role: "PROTECT",
+    strong: ["mucus_slime", "wheeze_sprite"],
+    weak:   ["shock_shade", "fever_imp"],
+    concept: "Suction and airway positioning clear secretions and open the airway.",
+    flavor: "Night-element sentinel who draws obstructions out with a suction pull.",
+    artsName: "Suction Pull Strike",
   },
 };
 const UNIT_TYPES = Object.keys(UNIT_DATA);
@@ -287,11 +417,12 @@ const ABILITIES = Object.keys(ABILITY_DATA);
 /* ── Wave definitions ── */
 type WaveDef = { spawns: string[]; isBoss?: boolean };
 const WAVES: WaveDef[] = [
-  { spawns: ["breathless_wisp", "breathless_wisp", "breathless_wisp"] },
-  { spawns: ["breathless_wisp", "wheeze_sprite", "breathless_wisp", "wheeze_sprite"] },
-  { spawns: ["wheeze_sprite", "mucus_slime", "fever_imp", "wheeze_sprite"] },
-  { spawns: ["hypoxia_wraith", "mucus_slime", "fever_imp", "wheeze_sprite", "hypoxia_wraith"] },
-  { spawns: ["hypoxia_wraith", "shock_shade", "wheeze_sprite", "shock_shade", "hypoxia_wraith", "mucus_slime"] },
+  { spawns: ["breathless_wisp", "panic_imp", "breathless_wisp"] },
+  { spawns: ["breathless_wisp", "wheeze_sprite", "panic_imp", "wheeze_sprite"] },
+  { spawns: ["wheeze_sprite", "mucus_slime", "fever_imp", "panic_imp"] },
+  { spawns: ["hypoxia_wraith", "mucus_slime", "fever_imp", "stun_toad", "hypoxia_wraith"] },
+  { spawns: ["shock_shade", "stun_toad", "wheeze_sprite", "shock_shade", "corruption_leech", "mucus_slime"] },
+  { spawns: ["hypoxia_wraith", "corruption_leech", "fever_imp", "shock_shade", "stun_toad", "corruption_leech", "panic_imp"] },
   { spawns: ["bronchospasm_drake"], isBoss: true },
 ];
 
@@ -312,6 +443,8 @@ type DeployedUnit = {
   cooldown: number; castFlash: number;
   level: number;      /* 1 | 2 | 3  — Care Synthesis level */
   mergeFlash: number; /* ticks of golden merge-ascension glow */
+  atkDx?: number; atkDy?: number; /* normalized direction to last target — drives lunge choreography */
+  stunTicks?: number; /* ticks this unit is disabled by a Stun Toad passing */
 };
 
 type Projectile = {
@@ -2397,14 +2530,20 @@ export default function WardDefense() {
       const reachedLantern: ActiveEnemy[] = [];
       const movedEnemies: ActiveEnemy[] = [];
       for (const e of spawnedEnemies) {
-        const spd = ENEMY_DATA[e.typeId].speed * ENEMY_SPEED_BOOST * (e.slowTicks > 0 ? 0.45 : 1.0);
+        const eDef = ENEMY_DATA[e.typeId];
+        /* Shock Shade lurches forward in sudden bursts; slow effect still applies */
+        const burst = eDef.speedBurstChance && Math.random() < eDef.speedBurstChance ? 2.0 : 1.0;
+        const spd = eDef.speed * ENEMY_SPEED_BOOST * (e.slowTicks > 0 ? 0.45 : 1.0) * burst;
         let pi = e.pathIndex, pp = e.pathProgress + spd;
         let sl = Math.max(0, e.slowTicks - 1);
         let hf = Math.max(0, e.hitFlash - 1);
         let cf = Math.max(0, e.chainFlash - 1);
+        /* Corruption Leech mends itself while alive */
+        let hp = e.hp;
+        if (eDef.selfHealPerTick && hp < e.maxHp) hp = Math.min(e.maxHp, hp + eDef.selfHealPerTick);
         while (pp >= 1.0 && pi < N_SEGS) { pp -= 1.0; pi++; }
         if (pi >= N_SEGS) reachedLantern.push(e);
-        else movedEnemies.push({ ...e, pathIndex: pi, pathProgress: pp, slowTicks: sl, hitFlash: hf, chainFlash: cf });
+        else movedEnemies.push({ ...e, hp, pathIndex: pi, pathProgress: pp, slowTicks: sl, hitFlash: hf, chainFlash: cf });
       }
 
       /* Shield decay (Positioning — halves incoming Stability loss while active) */
@@ -2431,8 +2570,16 @@ export default function WardDefense() {
         const cd = Math.max(0, u.cooldown - 1);
         const cf = Math.max(0, u.castFlash - 1);
         const mf = Math.max(0, (u.mergeFlash ?? 0) - 1);
-        if (cd > 0) return { ...u, cooldown: cd, castFlash: cf, mergeFlash: mf };
         const uPos = getUnitPosFrac(u.tileIndex);
+        /* Stun Toad disables the nearest healer it lumbers past */
+        let stunTicks = Math.max(0, (u.stunTicks ?? 0) - 1);
+        for (const e of movedEnemies) {
+          if (ENEMY_DATA[e.typeId].stunOnPass && distFrac(uPos, getEnemyPosFrac(e)) < 0.06) {
+            stunTicks = 4; break;
+          }
+        }
+        if (stunTicks > 0) return { ...u, cooldown: Math.max(cd, 1), castFlash: cf, mergeFlash: mf, stunTicks };
+        if (cd > 0) return { ...u, cooldown: cd, castFlash: cf, mergeFlash: mf, stunTicks };
         const uDef = UNIT_DATA[u.typeId];
         const scaled = getScaledStats(uDef, u.level ?? 1);
         let tgt: ActiveEnemy | null = null, minD = Infinity;
@@ -2440,8 +2587,11 @@ export default function WardDefense() {
           const d = distFrac(uPos, getEnemyPosFrac(e));
           if (d <= scaled.range && d < minD) { minD = d; tgt = e; }
         }
-        if (!tgt) return { ...u, cooldown: 0, castFlash: cf, mergeFlash: mf };
+        if (!tgt) return { ...u, cooldown: 0, castFlash: cf, mergeFlash: mf, stunTicks };
         const ePos = getEnemyPosFrac(tgt);
+        /* Lunge direction toward the target — drives the per-unit attack choreography */
+        const ddx = ePos.x - uPos.x, ddy = ePos.y - uPos.y;
+        const dmag = Math.hypot(ddx, ddy) || 1;
         newProjectiles = [...newProjectiles, {
           uid: `p${s.tickCount}_${u.uid}`,
           toEnemyUid: tgt.uid,
@@ -2450,7 +2600,8 @@ export default function WardDefense() {
           progress: 0, color: uDef.color,
           damage: scaled.damage, unitTypeId: u.typeId,
         }];
-        return { ...u, cooldown: scaled.attackSpeed, castFlash: 2, mergeFlash: mf };
+        return { ...u, cooldown: scaled.attackSpeed, castFlash: 2, mergeFlash: mf, stunTicks,
+          atkDx: ddx / dmag, atkDy: ddy / dmag };
       });
 
       /* Move projectiles → collect hits */
@@ -2483,6 +2634,13 @@ export default function WardDefense() {
             cueBonus = true;
             cueBonusReady = false;
             cueBonusFeedback = `✚ Response Improved — Clinical Cue bonus applied!`;
+          }
+          /* Boss resistance: the Bronchospasm Drake shrugs off nearly all damage
+             until its weakness is revealed (Assess/Reassess). Reveal is applied
+             later this tick, so the drake stays resistant through the reveal hit
+             itself, then takes full matchup damage from the next hit onward. */
+          if (te.typeId === "bronchospasm_drake" && !te.revealed) {
+            dmg = Math.max(1, Math.round(dmg * BOSS_UNREVEALED_RESIST));
           }
           (hitMap[te.uid] ??= []).push({ dmg, quality: q, unitTypeId: p.unitTypeId, chain, cueBonus });
         } else {
@@ -3349,8 +3507,13 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
             const u = UNIT_DATA[typeId];
             return (
               <View key={typeId} style={s.lobbyListRow}>
-                <View style={[s.lobbyEnemyChip, { borderColor: u.color + "55", backgroundColor: u.color + "18" }]}>
-                  <UnitSprite typeId={typeId} castFlash={false} />
+                <View style={[s.lobbyEnemyChip, { borderColor: u.color + "55", backgroundColor: u.color + "18", overflow: "hidden" }]}>
+                  <ExpoImage
+                    source={CARD_PORTRAITS[typeId]}
+                    style={{ width: "128%", height: "128%" }}
+                    contentFit="contain"
+                    cachePolicy="none"
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -3373,10 +3536,19 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
             <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.error }} />
             <Text style={s.lobbySectionTitle}>DISEASE SPIRITS — RECOGNIZE CUES</Text>
           </View>
-          {Object.entries(ENEMY_DATA).map(([, def]) => (
+          {Object.entries(ENEMY_DATA).map(([eid, def]) => (
             <View key={def.name} style={s.lobbyListRow}>
-              <View style={[s.lobbyEnemyChip, { borderColor: def.color + "55", backgroundColor: def.color + "12" }]}>
-                <Text style={{ fontSize: 18 }}>{def.icon}</Text>
+              <View style={[s.lobbyEnemyChip, { borderColor: def.color + "55", backgroundColor: def.color + "12", overflow: "hidden" }]}>
+                {ENEMY_PORTRAITS[eid] ? (
+                  <ExpoImage
+                    source={ENEMY_PORTRAITS[eid]}
+                    style={{ width: "120%", height: "120%" }}
+                    contentFit="contain"
+                    cachePolicy="none"
+                  />
+                ) : (
+                  <Text style={{ fontSize: 18 }}>{def.icon}</Text>
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

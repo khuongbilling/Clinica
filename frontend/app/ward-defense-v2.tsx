@@ -63,15 +63,27 @@ const IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map-portrait.
 const IMG_WING_L = require("../assets/ward-defense/map-wing-left.png");
 const IMG_WING_R = require("../assets/ward-defense/map-wing-right.png");
 const IMG_UNITS: Record<string, any> = {
-  ward_scout:  require("../assets/heroes/battle/apprentice_seer.png"),
-  mist_caster: require("../assets/heroes/battle/village_caretaker.png"),
-  o2_healer:   require("../assets/heroes/battle/novice_guardian.png"),
+  ward_scout:      require("../assets/heroes/battle/apprentice_seer.png"),
+  reassess_sage:   require("../assets/heroes/battle/mindkeeper.png"),
+  mist_caster:     require("../assets/heroes/battle/village_caretaker.png"),
+  herbal_chemist:  require("../assets/heroes/battle/wound_sage.png"),
+  o2_healer:       require("../assets/heroes/battle/novice_guardian.png"),
+  guardian:        require("../assets/heroes/battle/junior_warden.png"),
+  rhythm_medic:    require("../assets/heroes/battle/storm_runner.png"),
+  lantern_scribe:  require("../assets/heroes/battle/data_acolyte.png"),
+  fever_warden:    require("../assets/heroes/battle/infection_warden.png"),
+  airway_sentinel: require("../assets/heroes/battle/night_watcher.png"),
 };
 const IMG_ENEMIES: Record<string, any> = {
   breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),
   wheeze_sprite:      require("../assets/images/enemy_wheeze_sprite.png"),
   mucus_slime:        require("../assets/images/enemy_mucus_slime.png"),
   hypoxia_wraith:     require("../assets/images/enemy_hypoxia_wraith.png"),
+  panic_imp:          require("../assets/images/enemy_panic_imp.png"),
+  fever_imp:          require("../assets/images/enemy_fever_imp.png"),
+  shock_shade:        require("../assets/images/enemy_shock_shade.png"),
+  stun_toad:          require("../assets/images/enemy_stun_toad.png"),
+  corruption_leech:   require("../assets/images/enemy_corruption_leech.png"),
   bronchospasm_drake: require("../assets/images/enemy_bronchospasm_drake.png"),
 };
 const ENEMY_COLOR: Record<string, string> = {
@@ -79,6 +91,11 @@ const ENEMY_COLOR: Record<string, string> = {
   wheeze_sprite:      "#34d399",
   mucus_slime:        "#86efac",
   hypoxia_wraith:     "#c4b5fd",
+  panic_imp:          "#fca5a5",
+  fever_imp:          "#fb7185",
+  shock_shade:        "#fcd34d",
+  stun_toad:          "#a3e635",
+  corruption_leech:   "#c084fc",
   bronchospasm_drake: "#fb923c",
 };
 
@@ -88,7 +105,31 @@ const ENEMY_LOCO: Record<string, "walk" | "float"> = {
   wheeze_sprite:      "float",
   mucus_slime:        "walk",
   hypoxia_wraith:     "float",
+  panic_imp:          "float",
+  fever_imp:          "walk",
+  shock_shade:        "float",
+  stun_toad:          "walk",
+  corruption_leech:   "walk",
   bronchospasm_drake: "walk",
+};
+
+/* ─── Per-unit attack choreography ─────────────────────────────────────────
+   Each healer has a signature cast: how far it lunges toward its target, the
+   colour of its aura flash, and the shape of the projectile it hurls. Purely
+   presentational — driven by the unit's atkDx/atkDy set in the game loop.   */
+type ProjShape = "orb" | "bolt" | "ring" | "spark" | "leaf" | "wave" | "star" | "shard" | "flame" | "gust";
+interface UnitFx { lunge: number; aura: string; proj: ProjShape; }
+const UNIT_FX: Record<string, UnitFx> = {
+  ward_scout:      { lunge: 6,  aura: "#38bdf8", proj: "spark" },
+  reassess_sage:   { lunge: 4,  aura: "#a78bfa", proj: "star"  },
+  mist_caster:     { lunge: 5,  aura: "#5eead4", proj: "wave"  },
+  herbal_chemist:  { lunge: 5,  aura: "#84cc16", proj: "leaf"  },
+  o2_healer:       { lunge: 7,  aura: "#22d3ee", proj: "ring"  },
+  guardian:        { lunge: 9,  aura: "#f59e0b", proj: "orb"   },
+  rhythm_medic:    { lunge: 10, aura: "#f472b6", proj: "bolt"  },
+  lantern_scribe:  { lunge: 4,  aura: "#fbbf24", proj: "shard" },
+  fever_warden:    { lunge: 8,  aura: "#fb7185", proj: "flame" },
+  airway_sentinel: { lunge: 8,  aura: "#f472b6", proj: "gust"  },
 };
 
 /* ─── Props ─────────────────────────────────────────────────────────────── */
@@ -200,29 +241,61 @@ function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors }: {
   aw: number; ah: number; tileIdx: number;
   unit: any; bobY: Animated.AnimatedInterpolation<number>; unitColors: Record<string, string>;
 }) {
+  const lunge = useRef(new Animated.Value(0)).current;
+  const isCast = (unit?.castFlash ?? 0) > 0;
+
+  /* Lunge pulse: on each cast, snap forward then ease back to rest — the amount
+     and direction come from the unit's signature UNIT_FX + last-target vector. */
+  useEffect(() => {
+    if (!isCast) return;
+    lunge.setValue(0);
+    Animated.sequence([
+      Animated.timing(lunge, { toValue: 1, duration: 90,  easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.timing(lunge, { toValue: 0, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+    ]).start();
+  }, [isCast, unit?.castFlash, lunge]);
+
   if (!unit) return null;
   const [fx, fy] = DEPLOY_TILES[tileIdx];
   const cx  = fx * aw;
   const cy  = fy * ah;
   const img = IMG_UNITS[unit.typeId];
   const col = unitColors[unit.typeId] ?? "#22d3ee";
+  const fxDef = UNIT_FX[unit.typeId] ?? { lunge: 5, aura: col, proj: "orb" as ProjShape };
   const hpPct   = cl(unit.hp / unit.maxHp, 0, 1);
-  const isFlash = (unit.castFlash ?? 0) > 0 || (unit.mergeFlash ?? 0) > 0;
+  const isFlash = isCast || (unit.mergeFlash ?? 0) > 0;
+  const isStunned = (unit.stunTicks ?? 0) > 0;
+
+  /* Hero sprites natively face LEFT — flip to face the target's side */
+  const faceRight = (unit.atkDx ?? -1) > 0;
+  const dx = unit.atkDx ?? 0, dy = unit.atkDy ?? 0;
+  const lungeX = lunge.interpolate({ inputRange: [0, 1], outputRange: [0, dx * fxDef.lunge] });
+  const lungeY = lunge.interpolate({ inputRange: [0, 1], outputRange: [0, dy * fxDef.lunge] });
+  const auraScale = lunge.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.35] });
+  const auraOpacity = lunge.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.85, 0] });
 
   return (
     <Animated.View style={{
       position: "absolute",
       left: cx - HERO_W / 2, top: cy - HERO_H / 2,
       width: HERO_W, alignItems: "center", zIndex: 10,
-      transform: [{ translateY: bobY }],
+      transform: [{ translateY: bobY }, { translateX: lungeX }, { translateY: lungeY }],
     }}>
       {hpPct < 0.99 && (
         <View style={{ width: 36, height: 4, backgroundColor: "#00000090", borderRadius: 2, marginBottom: 2, overflow: "hidden" }}>
           <View style={{ width: `${hpPct * 100}%` as any, height: "100%", backgroundColor: hpPct > 0.5 ? "#22C55E" : hpPct > 0.25 ? "#FACC15" : "#EF4444" }} />
         </View>
       )}
+      {/* Signature cast aura — swells and fades on each attack, tinted per unit */}
+      <Animated.View style={{
+        position: "absolute", top: HERO_H * 0.28, width: HERO_W * 0.9, height: HERO_W * 0.9,
+        borderRadius: HERO_W, backgroundColor: fxDef.aura + "44",
+        borderWidth: 2, borderColor: fxDef.aura,
+        opacity: auraOpacity, transform: [{ scale: auraScale }], zIndex: 0,
+        ...({ boxShadow: `0 0 12px ${fxDef.aura}` } as any),
+      }} />
       {img ? (
-        <ExpoImage source={img} style={{ width: HERO_W, height: HERO_H }} contentFit="contain" cachePolicy="none" />
+        <ExpoImage source={img} style={{ width: HERO_W, height: HERO_H, transform: [{ scaleX: faceRight ? -1 : 1 }] }} contentFit="contain" cachePolicy="none" />
       ) : (
         <View style={{ width: HERO_W, height: HERO_H, borderRadius: 8, backgroundColor: col + "33", borderWidth: 2, borderColor: col, alignItems: "center", justifyContent: "center" }}>
           <Text style={{ fontSize: 26 }}>🧙</Text>
@@ -230,6 +303,11 @@ function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors }: {
       )}
       {isFlash && (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#FFFFFF30", borderRadius: 6, zIndex: 1 }} />
+      )}
+      {isStunned && (
+        <View style={{ position: "absolute", top: -4, backgroundColor: "#0b1220CC", borderRadius: 6, paddingHorizontal: 3, zIndex: 2 }}>
+          <Text style={{ fontSize: 11 }}>💫</Text>
+        </View>
       )}
       <View style={{ width: 28, height: 4, borderRadius: 14, backgroundColor: "#00000070", marginTop: -2 }} />
     </Animated.View>
@@ -242,18 +320,45 @@ function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors }: {
 function ProjectileDot({ aw, ah, p }: { aw: number; ah: number; p: any }) {
   const fx  = lp(p.fromFx, p.toFx, p.progress);
   const fy  = lp(p.fromFy, p.toFy, p.progress);
-  const col = p.color ?? "#88C060";
-  return (
+  const shape: ProjShape = (UNIT_FX[p.unitTypeId]?.proj) ?? "orb";
+  const col = UNIT_FX[p.unitTypeId]?.aura ?? p.color ?? "#88C060";
+  /* Heading of travel — orients directional projectiles (bolt/shard/gust/leaf) */
+  const ang = Math.atan2(p.toFy - p.fromFy, p.toFx - p.fromFx) * 180 / Math.PI;
+  const left = fx * aw, top = fy * ah;
+  const wrap = (children: React.ReactNode, w: number, h: number, rot = 0) => (
     <View style={{
-      position: "absolute",
-      left: fx * aw - 5, top: fy * ah - 5,
-      width: 10, height: 10, borderRadius: 5,
-      backgroundColor: col + "55", borderWidth: 2, borderColor: col,
-      alignItems: "center", justifyContent: "center", zIndex: 13,
-    }}>
-      <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: "#fff" }} />
-    </View>
+      position: "absolute", left: left - w / 2, top: top - h / 2,
+      width: w, height: h, alignItems: "center", justifyContent: "center",
+      zIndex: 13, transform: [{ rotate: `${rot}deg` }],
+    }}>{children}</View>
   );
+  const glow = (extra: any) => ({ ...({ boxShadow: `0 0 8px ${col}` } as any), ...extra });
+
+  switch (shape) {
+    case "bolt": /* rhythm_medic — a fast dash streak */
+      return wrap(<View style={glow({ width: 16, height: 3, borderRadius: 2, backgroundColor: col })} />, 20, 6, ang);
+    case "shard": /* lantern_scribe — a sharp diamond */
+      return wrap(<View style={glow({ width: 8, height: 8, backgroundColor: col, transform: [{ rotate: "45deg" }] })} />, 14, 14, ang);
+    case "gust": /* airway_sentinel — a swept crescent of air */
+      return wrap(<View style={glow({ width: 14, height: 8, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, borderRightWidth: 0, borderWidth: 2, borderColor: col, backgroundColor: col + "33" })} />, 18, 12, ang);
+    case "leaf": /* herbal_chemist — an oval herbal mote */
+      return wrap(<View style={glow({ width: 8, height: 12, borderRadius: 6, backgroundColor: col + "88", borderWidth: 1.5, borderColor: col })} />, 14, 16, ang + 45);
+    case "flame": /* fever_warden — a hot teardrop */
+      return wrap(<View style={glow({ width: 9, height: 11, borderRadius: 6, borderTopLeftRadius: 2, backgroundColor: col + "AA", borderWidth: 1, borderColor: "#fff7ed" })} />, 14, 16, ang + 45);
+    case "ring": /* o2_healer — a hollow oxygen ring */
+      return wrap(<View style={glow({ width: 12, height: 12, borderRadius: 6, borderWidth: 2.5, borderColor: col, backgroundColor: "transparent" })} />, 16, 16);
+    case "wave": /* mist_caster — a soft misty puff */
+      return wrap(<View style={glow({ width: 13, height: 9, borderRadius: 6, backgroundColor: col + "66", borderWidth: 1, borderColor: col })} />, 16, 12);
+    case "star": /* reassess_sage — a bright insight spark */
+      return wrap(<Text style={{ color: col, fontSize: 13, fontWeight: "900", ...({ textShadow: `0 0 8px ${col}` } as any) }}>✦</Text>, 16, 16);
+    case "spark": /* ward_scout — a tiny quick pip */
+      return wrap(<View style={glow({ width: 7, height: 7, borderRadius: 4, backgroundColor: "#fff", borderWidth: 2, borderColor: col })} />, 12, 12);
+    default: /* orb — guardian & fallback */
+      return wrap(
+        <View style={glow({ width: 10, height: 10, borderRadius: 5, backgroundColor: col + "55", borderWidth: 2, borderColor: col, alignItems: "center", justifyContent: "center" })}>
+          <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: "#fff" }} />
+        </View>, 14, 14);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -298,6 +403,15 @@ function EnemyOnPath({ aw, ah, enemy }: { aw: number; ah: number; enemy: any }) 
     : enemy.typeId === "mucus_slime"     ? "🫧"
     : enemy.typeId === "wheeze_sprite"   ? "🌀" : "💨";
 
+  /* Face the direction of travel, derived from the instantaneous movement vector
+     of the CURRENT path segment (not a fixed lane threshold). Enemies moving
+     rightward — the whole bottom traverse and the lower right curve — flip to
+     face right; leftward/near-vertical legs keep the base LEFT-facing art.
+     Base enemy art faces LEFT → apply scaleX:-1 only when heading right. */
+  const seg   = cl(enemy.pathIndex, 0, PATH_WPS.length - 2);
+  const segDx = PATH_WPS[seg + 1][0] - PATH_WPS[seg][0];
+  const faceRight = segDx > 0.01;
+
   return (
     <Animated.View style={{
       position: "absolute",
@@ -315,7 +429,7 @@ function EnemyOnPath({ aw, ah, enemy }: { aw: number; ah: number; enemy: any }) 
       </View>
       {isBoss && <Text style={{ color: accent, fontSize: 7, fontWeight: "700", marginBottom: 1 }}>{enemy.hp}</Text>}
       {img ? (
-        <ExpoImage source={img} style={{ width: sprW, height: sprH }} contentFit="contain" />
+        <ExpoImage source={img} style={{ width: sprW, height: sprH, transform: [{ scaleX: faceRight ? -1 : 1 }] }} contentFit="contain" />
       ) : (
         <View style={{ width: sprW, height: sprH, borderRadius: sprW / 2, backgroundColor: accent + "33", borderWidth: 2, borderColor: accent, alignItems: "center", justifyContent: "center" }}>
           <Text style={{ fontSize: isBoss ? 22 : 16 }}>{fallbackEmoji}</Text>
@@ -325,6 +439,11 @@ function EnemyOnPath({ aw, ah, enemy }: { aw: number; ah: number; enemy: any }) 
       {(enemy.slowTicks ?? 0) > 0 && (
         <View style={{ position: "absolute", top: 10, right: -8, backgroundColor: "#A78BFA22", borderRadius: 3, paddingHorizontal: 2 }}>
           <Text style={{ color: "#A78BFA", fontSize: 5 }}>↓</Text>
+        </View>
+      )}
+      {isBoss && !enemy.revealed && (
+        <View style={{ position: "absolute", top: 22, backgroundColor: "#0b1220D0", borderRadius: 4, paddingHorizontal: 3, paddingVertical: 1, borderWidth: 0.5, borderColor: accent + "AA", zIndex: 16 }}>
+          <Text style={{ color: accent, fontSize: 6, fontWeight: "800" }}>🛡 RESIST</Text>
         </View>
       )}
       <View style={{ width: isBoss ? 44 : 30, height: 4, borderRadius: 22, backgroundColor: "#000000A0", marginTop: -2 }} />

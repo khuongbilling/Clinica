@@ -378,3 +378,33 @@ id = "8vm8phR5a8c0YC546lYK_"
 uri = "file://frontend/assets/images/battle_bg/growth.png"
 type = "image"
 title = "growth battle background"
+
+[[generated]]
+id = "Qv-5eS15bsgZjL5JDS5f-"
+uri = "file://frontend/assets/images/enemy_panic_imp.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "2zLjsops1Me-b21cOPu_N"
+uri = "file://frontend/assets/images/enemy_fever_imp.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "raO2TXm71Er7ko-0ur40k"
+uri = "file://frontend/assets/images/enemy_shock_shade.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "hM95scxCyfoSVo4GjzepJ"
+uri = "file://frontend/assets/images/enemy_stun_toad.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SJEw1JG96rOYuUGsnAyeM"
+uri = "file://frontend/assets/images/enemy_corruption_leech.png"
+type = "image"
+title = "generated_image"
