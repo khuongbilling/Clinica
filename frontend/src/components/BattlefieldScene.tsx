@@ -64,6 +64,38 @@ const HERO_MOVE: Record<ActionType, HeroMove> = {
   analyze: { lungeX: 5, lift: -12, scale: 1.05, spin: false, aura: "#F5C542" },
 };
 
+/* Per-attack HERO illustrated attack sequence: the projectile/effect that launches
+   from the hero toward the enemy. Each action type has its own icon + motion. */
+type AttackVisual = {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  color: string;
+  particles: number;
+  flyX: number;   // horizontal travel toward the enemy (right)
+  flyY: number;   // vertical drift
+  rot: number;    // total rotation in degrees over the flight
+  scaleTo: number;
+  size: number;
+  duration: number;
+};
+const ATTACK_FX: Record<ActionType, AttackVisual> = {
+  // Fierce single sword slash that rockets across the arena.
+  strike:    { icon: "sword",             color: "#FF7043", particles: 1, flyX: 250, flyY: -6,  rot: -40, scaleTo: 1.35, size: 32, duration: 560 },
+  // A swirling spray of cleansing water droplets.
+  cleanse:   { icon: "water",             color: "#38E1D6", particles: 3, flyX: 180, flyY: -10, rot: 320, scaleTo: 1.1,  size: 20, duration: 640 },
+  // A steady healing heartbeat pulse that drifts up and forward.
+  stabilize: { icon: "heart-pulse",       color: "#37D399", particles: 1, flyX: 210, flyY: -20, rot: 0,   scaleTo: 1.3,  size: 28, duration: 640 },
+  // Gentle twin care-hearts floating outward.
+  support:   { icon: "hand-heart",        color: "#37D399", particles: 2, flyX: 150, flyY: -28, rot: 0,   scaleTo: 1.15, size: 22, duration: 680 },
+  // A protective ward that blooms in place around the caster.
+  shield:    { icon: "shield-plus",       color: "#4DA3FF", particles: 1, flyX: 0,   flyY: -6,  rot: 0,   scaleTo: 1.8,  size: 36, duration: 620 },
+  // A rallying burst of command stars fanning toward the foe.
+  command:   { icon: "star-four-points",  color: "#C792EA", particles: 3, flyX: 200, flyY: -14, rot: 140, scaleTo: 1.2,  size: 22, duration: 600 },
+  // A scanning lens sweeping across to reveal the enemy.
+  scout:     { icon: "magnify-scan",      color: "#F5C542", particles: 1, flyX: 240, flyY: -16, rot: 0,   scaleTo: 1.25, size: 28, duration: 640 },
+  // Analytic data glyph projected onto the target.
+  analyze:   { icon: "chart-box-outline", color: "#F5C542", particles: 1, flyX: 220, flyY: -12, rot: 0,   scaleTo: 1.25, size: 26, duration: 640 },
+};
+
 /* Per-attack ENEMY reaction signature. */
 type EnemyReact = { shake: number; flash: boolean; ring: string; scan: boolean; settle: boolean };
 const ENEMY_REACT: Record<ActionType, EnemyReact> = {
@@ -162,6 +194,7 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
 }) {
   const bob = useRef(new Animated.Value(0)).current;
   const cast = useRef(new Animated.Value(0)).current;
+  const proj = useRef(new Animated.Value(0)).current;
   const combat = useRef(new Animated.Value(0)).current;
   const defeat = useRef(new Animated.Value(0)).current;
   const hurt = useRef(new Animated.Value(0)).current;
@@ -202,7 +235,15 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
       Animated.timing(cast, { toValue: 1, duration: 150, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
       Animated.timing(cast, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
     ]).start();
-  }, [castTs, castAction, cast]);
+    // Unique illustrated attack sequence — projectile/effect flying toward the enemy.
+    proj.setValue(0);
+    Animated.timing(proj, {
+      toValue: 1,
+      duration: (ATTACK_FX[kind] ?? ATTACK_FX.strike).duration,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [castTs, castAction, cast, proj]);
 
   useEffect(() => {
     Animated.timing(defeat, { toValue: teamDefeated ? 1 : 0, duration: 500, useNativeDriver: true }).start();
@@ -231,6 +272,11 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
   const defeatOpacity = defeat.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] });
   const defeatTranslate = defeat.interpolate({ inputRange: [0, 1], outputRange: [0, 12] });
   const castGlow = cast.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] });
+  const atk = ATTACK_FX[castKind] ?? ATTACK_FX.strike;
+  const projX = proj.interpolate({ inputRange: [0, 1], outputRange: [0, atk.flyX] });
+  const projRot = proj.interpolate({ inputRange: [0, 1], outputRange: ["0deg", `${atk.rot}deg`] });
+  const projScale = proj.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.4, 1, atk.scaleTo] });
+  const projOpacity = proj.interpolate({ inputRange: [0, 0.12, 0.72, 1], outputRange: [0, 1, 1, 0] });
   // Recoil: heroes are on the left facing right, so a hit knocks them further left (−X).
   const hurtX = hurt.interpolate({ inputRange: [0, 1], outputRange: [0, hurtFx.recoil] });
   const hurtShakeX = hurt.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -hurtFx.heroShake, hurtFx.heroShake, -hurtFx.heroShake * 0.6, 0] });
@@ -271,6 +317,27 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
         )}
         <Animated.View pointerEvents="none" style={[styles.heroHitFlash, { backgroundColor: hurtFx.heroFlash, opacity: flashOpacity }]} />
       </Animated.View>
+
+      {/* Unique illustrated attack sequence — launches toward the enemy on the right. */}
+      <View pointerEvents="none" style={styles.attackFxLayer}>
+        {Array.from({ length: atk.particles }).map((_, i) => {
+          const spread = i - (atk.particles - 1) / 2;
+          const py = proj.interpolate({ inputRange: [0, 1], outputRange: [spread * 13, atk.flyY + spread * 13] });
+          return (
+            <Animated.View
+              key={i}
+              style={{
+                position: "absolute",
+                opacity: projOpacity,
+                transform: [{ translateX: projX }, { translateY: py }, { rotate: projRot }, { scale: projScale }],
+              }}
+            >
+              <MaterialCommunityIcons name={atk.icon} size={atk.size} color={atk.color} />
+            </Animated.View>
+          );
+        })}
+      </View>
+
       <Text style={[styles.heroUnitName, selected && !acted && { color }]} numberOfLines={1}>
         {acted ? "Acted" : hero.name.split(" ")[0]}
       </Text>
@@ -486,10 +553,11 @@ const styles = StyleSheet.create({
     position: "absolute", left: 0, right: 0, bottom: 38, height: 1,
     backgroundColor: COLORS.borderStrong, opacity: 0.5,
   },
-  heroSide: { flexDirection: "row", gap: 12, alignItems: "flex-end" },
+  heroSide: { flexDirection: "row", gap: 12, alignItems: "flex-end", zIndex: 7 },
   heroUnitWrap: { alignItems: "center", width: 56 },
   heroUnitInner: { alignItems: "center", justifyContent: "flex-end", width: 56, height: 82 },
-  heroSprite: { width: 56, height: 82 },
+  heroSprite: { width: 56, height: 82, transform: [{ scaleX: -1 }] },
+  attackFxLayer: { position: "absolute", left: 40, top: 24, width: 20, height: 20, zIndex: 20 },
   heroFallback: { width: 48, height: 64, borderRadius: 8, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   heroGlowRing: {
     position: "absolute", bottom: -3, width: 40, height: 12, borderRadius: 20,
