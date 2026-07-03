@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -17,8 +17,6 @@ import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
-import { getHeroSprite } from "@/src/components/HeroSprites";
-import { getEnemySprite } from "@/src/components/EnemySprites";
 import { BattlefieldScene, type BattleFx } from "@/src/components/BattlefieldScene";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
@@ -369,11 +367,6 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={styles.enemyHeaderRow}>
-          {getEnemySprite(enemy.id) && (
-            <View style={[styles.enemyPortraitWrap, { borderColor: ELEMENT_COLORS[enemy.primarySystem] + "AA" }]}>
-              <Image source={getEnemySprite(enemy.id)!} style={styles.enemyPortrait} resizeMode="cover" />
-            </View>
-          )}
           <View style={{ flex: 1, gap: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text style={styles.enemyKicker} numberOfLines={1}>{enemy.realWorld.toUpperCase()}</Text>
@@ -396,7 +389,17 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
       {/* ── ZONE A2: Battlefield — live hero + enemy sprites ── */}
       <BattlefieldScene
-        enemy={{ id: enemy.id, name: enemy.name, primarySystem: enemy.primarySystem }}
+        enemy={{
+          id: enemy.id,
+          name: enemy.name,
+          realWorld: enemy.realWorld,
+          primarySystem: enemy.primarySystem,
+          secondarySystem: enemy.secondarySystem,
+          weakSystem: enemy.weakSystem,
+          dangerTrigger: enemy.dangerTrigger,
+          bestCounters: enemy.bestCounters,
+          visibleClues: enemy.visibleClues,
+        }}
         team={team}
         selectedHeroId={state.selectedHeroId}
         heroActionsUsed={state.heroActionsUsed}
@@ -881,8 +884,6 @@ const styles = StyleSheet.create({
   closeBtn: { position: "absolute", right: SPACING.xs, top: SPACING.xs, padding: 8, zIndex: 2 },
   helpBtn: { position: "absolute", right: SPACING.xs + 32, top: SPACING.xs, padding: 8, zIndex: 2 },
   enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingRight: 68 },
-  enemyPortraitWrap: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, flexShrink: 0 },
-  enemyPortrait: { width: "100%", height: "100%" },
   enemyKicker: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700" },
   trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: RADIUS.pill },
   trainingTxt: { color: COLORS.brand, fontSize: 8, fontWeight: "700", letterSpacing: 1 },
