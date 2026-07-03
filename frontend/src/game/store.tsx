@@ -5,6 +5,7 @@ import { PlayerState } from './types';
 import { RANKS } from './content';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
 import { MAX_STAMINA, ENCOUNTER_COST, regen } from './stamina';
+import { defaultWellnessState, resolveWellnessLog, WellnessLogInput, WellnessResult } from './wellness';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -30,6 +31,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
       stamina: out.stamina ?? MAX_STAMINA,
       stamina_updated_at: out.stamina_updated_at || new Date().toISOString(),
     };
+  }
+  if (!out.wellness) {
+    out = { ...out, wellness: defaultWellnessState() };
   }
   return out;
 }
@@ -58,6 +62,7 @@ type Ctx = {
   summonOnce: () => Promise<{ entry: any; duplicate: boolean; message: string } | null>;
   evolveHero: (heroId: string) => Promise<{ ok: boolean; message: string; star?: number }>;
   spendStamina: (cost?: number) => Promise<boolean>;
+  logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -126,6 +131,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     region_progress: {},
     stamina: MAX_STAMINA,
     stamina_updated_at: new Date().toISOString(),
+    wellness: defaultWellnessState(),
   };
 }
 
@@ -335,6 +341,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [updateState]);
 
+  const logWellnessActivity = useCallback(async (input: WellnessLogInput) => {
+    // Off-shift only: never touches stamina, shift time, or combat systems.
+    // Synchronous ref-based critical section mirrors spendStamina so rapid
+    // double-taps can't double-credit daily/weekly Lotus Gem caps.
+    const base = playerRef.current;
+    if (!base) return null;
+    const wellness = base.wellness ?? defaultWellnessState();
+    const result = resolveWellnessLog(input, wellness);
+    const next = { ...base, wellness: result.nextWellness };
+    playerRef.current = next;
+    await updateState(next);
+    return result;
+  }, [updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
@@ -342,8 +362,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

@@ -46,6 +46,34 @@ class MasteryStats(BaseModel):
     systems: int = 0
 
 
+class WellnessGarden(BaseModel):
+    hydration: int = 0
+    fiber: int = 0
+    protein: int = 0
+    heart: int = 0
+
+
+class WellnessDaily(BaseModel):
+    date: str = Field(default_factory=lambda: now_iso()[:10])
+    gems_earned: int = 0
+    signatures: List[str] = Field(default_factory=list)
+
+
+class WellnessWeekly(BaseModel):
+    week_key: str = ""
+    gems_earned: int = 0
+
+
+class WellnessState(BaseModel):
+    nourishment_petals: int = 0
+    lotus_gems: int = 0
+    garden: WellnessGarden = Field(default_factory=WellnessGarden)
+    lessons_completed: List[str] = Field(default_factory=list)
+    logs_completed: int = 0
+    daily: WellnessDaily = Field(default_factory=WellnessDaily)
+    weekly: WellnessWeekly = Field(default_factory=WellnessWeekly)
+
+
 class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -74,6 +102,7 @@ class Player(BaseModel):
     chapter_progress: int = 1
     stamina: int = 5
     stamina_updated_at: str = Field(default_factory=now_iso)
+    wellness: WellnessState = Field(default_factory=WellnessState)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -105,6 +134,7 @@ class PlayerUpdate(BaseModel):
     chapter_progress: Optional[int] = None
     stamina: Optional[int] = None
     stamina_updated_at: Optional[str] = None
+    wellness: Optional[WellnessState] = None
 
 
 # ---------- Routes ----------

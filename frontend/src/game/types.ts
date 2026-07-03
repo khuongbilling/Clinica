@@ -146,4 +146,5 @@ export interface PlayerState {
   region_progress?: Record<string, number>;
   stamina?: number;
   stamina_updated_at?: string;
+  wellness?: import('./wellness').WellnessState;
 }

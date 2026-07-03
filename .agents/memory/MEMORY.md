@@ -13,3 +13,4 @@
 - [Clinica Clinical Cue bonus lifecycle](clinica-cue-bonus-lifecycle.md) — cueBonusStabilize (+8) empowers ALL stabilizing actions this turn (4 sites: skill/item/card/temp), cleared only at endPlayerTurn.
 - [Clinica skill balance](clinica-skill-balance.md) — per-AP value budget for hero skills; base values amplified ~3x by combineFinalEffect; always sync embedded numbers in description/shortEffect text.
 - [Clinica skill/mechanic honesty](clinica-skill-mechanic-honesty.md) — skill text must map to a real consumed effect field (reveal/stabilize/strike/shield/blockSpread/risk); no status system so cleanse is dead; mechanics go in always-visible BATTLE_MECHANICS, not CODEX (locked).
+- [Lotus Plate Journal](lotus-plate-journal.md) — off-shift wellness features need own isolated PlayerState slice; two-currency cap+dedup design; capped currencies must stay strictly cosmetic even in placeholder copy.

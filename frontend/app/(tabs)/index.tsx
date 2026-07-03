@@ -238,6 +238,23 @@ export default function RunHome() {
         </View>
       </Pressable>
 
+      {/* ── LOTUS PLATE JOURNAL ENTRY (off-shift, no stamina cost) ── */}
+      <Pressable
+        style={styles.lotusBtn}
+        onPress={() => router.push("/lotus-journal")}
+        testID="home-lotus-journal"
+      >
+        <View style={styles.wardDefLeft}>
+          <Text style={styles.lotusNew}>OFF-SHIFT</Text>
+          <Text style={styles.wardDefTitle}>Lotus Plate Journal</Text>
+          <Text style={styles.wardDefSub}>Log meals & wellness · grow your Nutrition Garden</Text>
+        </View>
+        <View style={styles.wardDefRight}>
+          <Text style={{ fontSize: 28 }}>🪷</Text>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.growth + "80"} />
+        </View>
+      </Pressable>
+
       {/* ── INTRO MODAL ── */}
       <Modal visible={showIntro} transparent animationType="slide" statusBarTranslucent>
         <View style={styles.introOverlay}>
@@ -445,6 +462,17 @@ const styles = StyleSheet.create({
   wardDefTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
   wardDefSub:   { color: COLORS.onSurfaceTertiary, fontSize: 11 },
   wardDefRight: { flexDirection: "row", alignItems: "center", gap: 4 },
+
+  /* Lotus Plate Journal card */
+  lotusBtn: {
+    flexDirection: "row", alignItems: "center",
+    marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: COLORS.growth + "40",
+    backgroundColor: COLORS.surfaceSecondary,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  lotusNew: { color: COLORS.growth, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
 
   /* Intro modal */
   introOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.88)", justifyContent: "flex-end" },
