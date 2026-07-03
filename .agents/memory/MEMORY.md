@@ -2,6 +2,7 @@
 - [Clinica adaptive system](clinica-adaptive-system.md) — two-axis: LearningProfile→ExplanationLayer (depth/language) + DifficultyLevel (clue visibility); fully independent axes.
 - [Ward Defense board layout](ward-defense-board-layout.md) — map PNG IS the background; board MUST aspect-lock to image's EXACT pixel ratio (768/1408, not 9:16) or overlays drift; measure tile coords from pixels.
 - [Clinica image rendering](clinica-image-rendering.md) — use expo-image (ExpoImage + contentFit) for scene backgrounds in nested flex containers; RN Image fails silently on web inside ward-defense battle View.
+- [Clinica battle scene FX](clinica-battle-scene-fx.md) — animated overlays must be invisible at Animated rest value (0), not just anim end; per-system bg map keyed by enemy.primarySystem; stability diminishing-returns via getStabilityGainModifier.
 - [Clinica battle sprites](clinica-battle-sprites.md) — hero battle PNGs natively face LEFT (need scaleX:-1 to face right); per-action FX via 3 in-sync maps HERO_MOVE/ENEMY_REACT/ATTACK_FX; eyeball art before flipping.
 - [Clinica enemy signature attacks](clinica-enemy-signature-attacks.md) — per-ElementSystem end-turn attacks (assault/spread/hex); spread MUST honor+consume blockNextSpread (Infection Control) or the call is a no-op.
 - [Clinica battle timed/gated mechanics](clinica-battle-timed-mechanics.md) — thread new action modifiers (cast quality, buffs) into the existing apply* pipeline, not a parallel effect path, or Care Chain/grading breaks.

@@ -759,6 +759,16 @@ export function getStabilizationModifier(corruption: number): number {
   return 1.0;
 }
 
+// Diminishing returns on stabilizing: the closer the patient is to fully stable,
+// the less each stabilizing action adds. Keeps 100% Stability hard to reach and
+// sustain, so Stability stays a meaningful resource instead of being pinned at max.
+export function getStabilityGainModifier(stability: number): number {
+  if (stability >= 85) return 0.25;
+  if (stability >= 70) return 0.45;
+  if (stability >= 50) return 0.7;
+  return 1.0;
+}
+
 export function getEnemyDamage(corruption: number, baseInstability: number): number {
   // Scales the enemy's base instability with corruption pressure
   if (corruption >= 70) return Math.round(baseInstability * 1.5);

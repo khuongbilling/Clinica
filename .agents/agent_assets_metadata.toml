@@ -318,3 +318,63 @@ id = "Rvo9MnxNlQ8Ox800sf8g9"
 uri = "file://frontend/assets/enemies/lord_imbalance.png"
 type = "image"
 title = "lord_imbalance disease spirit sprite"
+
+[[generated]]
+id = "5Ywrj_qic_-sV9eblNS2B"
+uri = "file://frontend/assets/images/battle_bg/air.png"
+type = "image"
+title = "air battle background"
+
+[[generated]]
+id = "BIHfhT1OtLwWcdSzRwgSd"
+uri = "file://frontend/assets/images/battle_bg/river.png"
+type = "image"
+title = "river battle background"
+
+[[generated]]
+id = "urqhWsthPir5lPfCUFb0I"
+uri = "file://frontend/assets/images/battle_bg/fire.png"
+type = "image"
+title = "fire battle background"
+
+[[generated]]
+id = "FKPy3_rX4Pl4WhSyEsaBh"
+uri = "file://frontend/assets/images/battle_bg/energy.png"
+type = "image"
+title = "energy battle background"
+
+[[generated]]
+id = "thumQZ3JTnI-2kw-2AIIe"
+uri = "file://frontend/assets/images/battle_bg/storm.png"
+type = "image"
+title = "storm battle background"
+
+[[generated]]
+id = "4Iv9t_NcfzBNHchOytBGa"
+uri = "file://frontend/assets/images/battle_bg/mind.png"
+type = "image"
+title = "mind battle background"
+
+[[generated]]
+id = "hXMrsWRVwlRNG8K5GVT98"
+uri = "file://frontend/assets/images/battle_bg/filter.png"
+type = "image"
+title = "filter battle background"
+
+[[generated]]
+id = "zImGa6Rbn55Gysg1UWTGP"
+uri = "file://frontend/assets/images/battle_bg/forge.png"
+type = "image"
+title = "forge battle background"
+
+[[generated]]
+id = "LgvSeZCoYvZgt4Iwp4WLp"
+uri = "file://frontend/assets/images/battle_bg/protection.png"
+type = "image"
+title = "protection battle background"
+
+[[generated]]
+id = "8vm8phR5a8c0YC546lYK_"
+uri = "file://frontend/assets/images/battle_bg/growth.png"
+type = "image"
+title = "growth battle background"

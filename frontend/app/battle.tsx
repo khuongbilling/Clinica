@@ -113,6 +113,17 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const [timingSkill, setTimingSkill] = useState<{ hero: Hero; skill: HeroSkill } | null>(null);
   const [timingProgress, setTimingProgress] = useState(0);
   const timingAnim = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [cueFeedback, setCueFeedback] = useState<{
+    cue: NonNullable<BattleState["pendingCue"]>;
+    chosenIndex: number;
+    isCorrect: boolean;
+  } | null>(null);
+  const cueTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissCueFeedback = () => {
+    if (cueTimer.current) { clearTimeout(cueTimer.current); cueTimer.current = null; }
+    setCueFeedback(null);
+  };
+  useEffect(() => () => { if (cueTimer.current) clearTimeout(cueTimer.current); }, []);
   const [actionFx, setActionFx] = useState<BattleFx>(null);
   const [enemyFxTs, setEnemyFxTs] = useState(0);
   const [enemyFxAction, setEnemyFxAction] = useState<ActionType | null>(null);
@@ -332,8 +343,18 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   };
 
   const handleCueAnswer = (optionIndex: number) => {
+    const cue = state.pendingCue;
+    if (!cue) return;
+    const isCorrect = !!cue.options[optionIndex]?.correct;
     const res = answerClinicalCue(state, optionIndex);
     setState(res.state);
+    if (isCorrect) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setCueFeedback({ cue, chosenIndex: optionIndex, isCorrect });
+    if (cueTimer.current) clearTimeout(cueTimer.current);
+    cueTimer.current = setTimeout(() => {
+      cueTimer.current = null;
+      setCueFeedback(null);
+    }, 3000);
   };
 
   const handleTempAction = (actionId: string) => {
@@ -833,7 +854,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         </Pressable>
       )}
 
-      {state.pendingCue && !showBriefing && state.outcome === "ongoing" && (
+      {state.pendingCue && !cueFeedback && !showBriefing && state.outcome === "ongoing" && (
         <View style={styles.modalOverlay}>
           <View style={styles.cueModal} testID="clinical-cue-modal">
             <Text style={styles.cueKicker}>CLINICAL CUE</Text>
@@ -843,6 +864,55 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                 <Text style={styles.cueOptionTxt}>{opt.text}</Text>
               </Pressable>
             ))}
+          </View>
+        </View>
+      )}
+
+      {cueFeedback && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.cueModal} testID="clinical-cue-feedback">
+            <Text style={[styles.cueKicker, { color: cueFeedback.isCorrect ? COLORS.success : COLORS.error }]}>
+              {cueFeedback.isCorrect ? "✓ CORRECT" : "✗ NOT QUITE"}
+            </Text>
+            <Text style={styles.cuePrompt}>{cueFeedback.cue.prompt}</Text>
+            {cueFeedback.cue.options.map((opt, idx) => {
+              const isRight = opt.correct;
+              const isChosenWrong = idx === cueFeedback.chosenIndex && !opt.correct;
+              return (
+                <View
+                  key={idx}
+                  style={[
+                    styles.cueOption,
+                    isRight && styles.cueOptionCorrect,
+                    isChosenWrong && styles.cueOptionWrong,
+                  ]}
+                >
+                  <Text style={styles.cueOptionTxt}>
+                    {isRight ? "✓ " : isChosenWrong ? "✗ " : ""}{opt.text}
+                  </Text>
+                </View>
+              );
+            })}
+            <View style={styles.cueRationaleBox}>
+              <Text style={styles.cueRationaleLabel}>WHY</Text>
+              <Text style={styles.cueRationaleTxt}>{cueFeedback.cue.rationale}</Text>
+            </View>
+            <View style={styles.cueRewardBox}>
+              <Text style={styles.cueRewardLabel}>{cueFeedback.isCorrect ? "REWARDS" : "NO BONUS THIS TIME"}</Text>
+              {cueFeedback.isCorrect ? (
+                <>
+                  <Text style={styles.cueRewardTxt}>⚡ +1 Action Point</Text>
+                  <Text style={styles.cueRewardTxt}>✚ Next stabilizing action empowered (+8)</Text>
+                  <Text style={styles.cueRewardTxt}>★ +15 Ultimate charge</Text>
+                </>
+              ) : (
+                <Text style={styles.cueRewardTxt}>Answer clinical cues correctly to earn AP, stabilize boosts, and ultimate charge.</Text>
+              )}
+            </View>
+            <Pressable style={styles.cueContinueBtn} onPress={dismissCueFeedback} testID="cue-continue">
+              <Text style={styles.cueContinueTxt}>CONTINUE</Text>
+            </Pressable>
+            <Text style={styles.cueAutoHint}>Auto-continues in 3s</Text>
           </View>
         </View>
       )}
@@ -1189,6 +1259,17 @@ const styles = StyleSheet.create({
   cuePrompt: { color: COLORS.onSurface, fontSize: 15, lineHeight: 21, marginBottom: 4 },
   cueOption: { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
   cueOptionTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
+  cueOptionCorrect: { borderColor: COLORS.success, backgroundColor: COLORS.success + "1F" },
+  cueOptionWrong: { borderColor: COLORS.error, backgroundColor: COLORS.error + "1F" },
+  cueRationaleBox: { marginTop: 6, backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: SPACING.md, borderLeftWidth: 3, borderLeftColor: COLORS.runeGold },
+  cueRationaleLabel: { color: COLORS.runeGold, fontSize: 9, letterSpacing: 1.5, fontWeight: "700", marginBottom: 3 },
+  cueRationaleTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
+  cueRewardBox: { marginTop: 4, backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: SPACING.md, gap: 3 },
+  cueRewardLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1.5, fontWeight: "700", marginBottom: 2 },
+  cueRewardTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
+  cueContinueBtn: { marginTop: 8, backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: SPACING.md, alignItems: "center" },
+  cueContinueTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "800", letterSpacing: 1 },
+  cueAutoHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, textAlign: "center", marginTop: 2 },
 
   // ── Perfect Cast timing modal ──
   timingModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 10, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, alignItems: "center" },

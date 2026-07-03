@@ -6,6 +6,20 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const BATTLE_BG = require("@/assets/images/ward_battle_bg.png");
 
+// Thematic battle stage per enemy body system — chosen by enemy.primarySystem.
+const SYSTEM_BG: Record<string, ReturnType<typeof require>> = {
+  Air: require("@/assets/images/battle_bg/air.png"),
+  River: require("@/assets/images/battle_bg/river.png"),
+  Fire: require("@/assets/images/battle_bg/fire.png"),
+  Energy: require("@/assets/images/battle_bg/energy.png"),
+  Storm: require("@/assets/images/battle_bg/storm.png"),
+  Mind: require("@/assets/images/battle_bg/mind.png"),
+  Filter: require("@/assets/images/battle_bg/filter.png"),
+  Forge: require("@/assets/images/battle_bg/forge.png"),
+  Protection: require("@/assets/images/battle_bg/protection.png"),
+  Growth: require("@/assets/images/battle_bg/growth.png"),
+};
+
 import { getHeroBattleSprite } from "./HeroBattleSprites";
 import { getEnemySprite } from "./EnemySprites";
 import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
@@ -141,15 +155,23 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
     setInfoOpen(false);
   }, [enemy.id]);
 
+  const sceneBg = SYSTEM_BG[enemy.primarySystem] ?? BATTLE_BG;
+  const accent = ELEMENT_COLORS[enemy.primarySystem] || COLORS.brand;
+
   return (
     <View style={styles.arena} testID="battlefield-scene">
-      <ExpoImage source={BATTLE_BG} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <ExpoImage source={sceneBg} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} />
       <LinearGradient
         colors={["#0C0E1233", "#0C0E12b3"]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
       />
-      <View style={styles.groundLine} />
+      <LinearGradient
+        colors={["transparent", accent + "00", accent + "3A"]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+      />
+      <View style={[styles.groundLine, { backgroundColor: accent, opacity: 0.4 }]} />
 
       {infoOpen && (
         <Pressable style={styles.backdrop} onPress={() => setInfoOpen(false)} testID="battlefield-info-backdrop" />
@@ -351,6 +373,7 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
   attackTs: number; attackKind?: EnemyAttackKind | null; purified: boolean; infoOpen: boolean; onToggleInfo: () => void;
 }) {
   const breathe = useRef(new Animated.Value(0)).current;
+  const bob = useRef(new Animated.Value(0)).current;
   const shake = useRef(new Animated.Value(0)).current;
   const flash = useRef(new Animated.Value(0)).current;
   const burst = useRef(new Animated.Value(0)).current;
@@ -381,6 +404,17 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
     loop.start();
     return () => loop.stop();
   }, [breathe]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: 1, duration: 1550, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 1550, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bob]);
 
   useEffect(() => {
     if (!hitTs) return;
@@ -444,12 +478,13 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
   }, [attackTs, attackKind, attack]);
 
   const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] });
+  const idleY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, 4] });
   const settleScale = settle.interpolate({ inputRange: [0, 1], outputRange: [1, 0.93] });
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-react.shake, react.shake] });
   const purifyScale = purify.interpolate({ inputRange: [0, 1], outputRange: [1, 0.15] });
   const purifyOpacity = purify.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
-  const burstScale = burst.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.6] });
-  const burstOpacity = burst.interpolate({ inputRange: [0, 1], outputRange: [0.75, 0] });
+  const burstScale = burst.interpolate({ inputRange: [0, 0.001, 1], outputRange: [0.6, 0.6, 1.6] });
+  const burstOpacity = burst.interpolate({ inputRange: [0, 0.001, 1], outputRange: [0, 0.85, 0] });
   const scanX = scan.interpolate({ inputRange: [0, 1], outputRange: [-6, 108] });
   const scanOpacity = scan.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 0.9, 0.9, 0] });
   const entranceX = entrance.interpolate({ inputRange: [0, 1], outputRange: [90, 0] });
@@ -510,7 +545,7 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
           </View>
           <Animated.View
             style={{
-              transform: [{ translateX: shakeX }, { scale: Animated.multiply(Animated.multiply(breatheScale, settleScale), purifyScale) }],
+              transform: [{ translateX: shakeX }, { translateY: idleY }, { scale: Animated.multiply(Animated.multiply(breatheScale, settleScale), purifyScale) }],
               opacity: purifyOpacity,
             }}
           >

@@ -26,6 +26,7 @@ import {
   getEnemyDamage,
   getRandomClinicalCue,
   getStabilizationModifier,
+  getStabilityGainModifier,
   getSystemMatchModifier,
   getTreatmentStabilityModifier,
   getTurnAP,
@@ -517,8 +518,9 @@ function applyResolutionToState(
       next.chain = { ...next.chain, completed: true };
       next.fullChainCompleted = true;
       next.corruption = Math.max(0, next.corruption - CHAIN_BONUSES.fullChainCorruptionDamage);
-      next.stability = clamp(next.stability + CHAIN_BONUSES.fullChainStabilityBonus, 0, 100);
-      next.log.push(`✨ Complete Care Chain: -${CHAIN_BONUSES.fullChainCorruptionDamage} corruption, +${CHAIN_BONUSES.fullChainStabilityBonus} stability.`);
+      const chainStab = Math.round(CHAIN_BONUSES.fullChainStabilityBonus * getStabilityGainModifier(next.stability));
+      next.stability = clamp(next.stability + chainStab, 0, 100);
+      next.log.push(`✨ Complete Care Chain: -${CHAIN_BONUSES.fullChainCorruptionDamage} corruption, +${chainStab} stability.`);
     }
   }
 
@@ -594,7 +596,8 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     effectType = 'clue';
   }
   if (skill.stabilize) {
-    const amt = Math.max(0, stabEff(skill.stabilize)) + next.cueBonusStabilize;
+    const rawAmt = Math.max(0, stabEff(skill.stabilize)) + next.cueBonusStabilize;
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
     next.cueBonusStabilize = 0;
     effectAmount = Math.max(effectAmount, amt);
@@ -699,7 +702,8 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     effectAmount = amt; effectType = 'corruption';
   }
   if (item.target === 'stability') {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
+    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
     next.cueBonusStabilize = 0;
     effectAmount = amt; effectType = 'stability';
@@ -761,7 +765,8 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
 
   let next: BattleState = consumeHeroAction({ ...post, ap: s.ap - a.costAP, turnsTaken: post.turnsTaken + 1, log: [...post.log, `${hero?.name || 'Hero'} → ${a.name}.`] }, heroId);
   if (a.stabilize) {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }));
+    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }));
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
   }
   if (a.strike) {
@@ -815,7 +820,8 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
 
   if (card.reveal) { next = revealHiddenClues(next, card.reveal); next.reboundArmed = false; effectType = 'clue'; }
   if (card.stabilize) {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: card.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
+    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: card.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
     next.cueBonusStabilize = 0;
     effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
