@@ -144,4 +144,6 @@ export interface PlayerState {
   enemy_mastery?: Record<string, number>;
   chapter_progress?: number;
   region_progress?: Record<string, number>;
+  stamina?: number;
+  stamina_updated_at?: string;
 }

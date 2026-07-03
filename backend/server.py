@@ -72,6 +72,8 @@ class Player(BaseModel):
     summon_history: List[Dict[str, Any]] = Field(default_factory=list)
     enemy_mastery: Dict[str, int] = Field(default_factory=dict)
     chapter_progress: int = 1
+    stamina: int = 5
+    stamina_updated_at: str = Field(default_factory=now_iso)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -101,6 +103,8 @@ class PlayerUpdate(BaseModel):
     summon_history: Optional[List[Dict[str, Any]]] = None
     enemy_mastery: Optional[Dict[str, int]] = None
     chapter_progress: Optional[int] = None
+    stamina: Optional[int] = None
+    stamina_updated_at: Optional[str] = None
 
 
 # ---------- Routes ----------

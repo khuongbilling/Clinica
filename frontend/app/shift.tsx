@@ -1,18 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ENEMIES } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
+import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
+import { ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function ShiftPage() {
   const router = useRouter();
-  const { player } = usePlayer();
+  const { player, spendStamina } = usePlayer();
+  const { stamina, msUntilNext } = useLiveStamina(player);
+  const [blocked, setBlocked] = useState(false);
+  const launchingRef = useRef(false);
+  const canPlay = stamina >= ENCOUNTER_COST;
 
   const dailyShift = useMemo(() => {
     if (!player) return [];
@@ -29,8 +35,18 @@ export default function ShiftPage() {
 
   if (!player) return null;
 
-  const launchEncounter = (enemyId: string) => {
+  const launchEncounter = async (enemyId: string) => {
+    if (launchingRef.current) return;
+    launchingRef.current = true;
+    const ok = await spendStamina();
+    if (!ok) {
+      setBlocked(true);
+      launchingRef.current = false;
+      return;
+    }
+    setBlocked(false);
     router.push({ pathname: "/battle", params: { enemyId } });
+    setTimeout(() => { launchingRef.current = false; }, 1000);
   };
 
   return (
@@ -44,6 +60,7 @@ export default function ShiftPage() {
           <Text style={styles.kicker}>DAILY DUTY</Text>
           <Text style={styles.title}>Today's Shift</Text>
         </View>
+        <StaminaPill player={player} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -51,13 +68,29 @@ export default function ShiftPage() {
           The ward calls. Three cases await — each one a disease to confront, a patient to stabilize. Choose your encounter.
         </Text>
 
+        {!canPlay && (
+          <View style={styles.staminaWarn}>
+            <Ionicons name="flash-off-outline" size={16} color={COLORS.error} />
+            <Text style={styles.staminaWarnTxt}>
+              You're out of shift energy. Each case costs {ENCOUNTER_COST}. Next point in{" "}
+              {formatCountdown(msUntilNext)} — rest and return.
+            </Text>
+          </View>
+        )}
+        {canPlay && blocked && (
+          <View style={styles.staminaWarn}>
+            <Ionicons name="flash-off-outline" size={16} color={COLORS.error} />
+            <Text style={styles.staminaWarnTxt}>Not enough shift energy for that case.</Text>
+          </View>
+        )}
+
         {dailyShift.map((e, idx) => {
           const sprite = getEnemySprite(e.id);
           const accent = ELEMENT_COLORS[e.primarySystem] ?? COLORS.brand;
           return (
             <Pressable
               key={e.id + idx}
-              style={styles.card}
+              style={[styles.card, !canPlay && { opacity: 0.45 }]}
               onPress={() => launchEncounter(e.id)}
               testID={`shift-encounter-${e.id}`}
             >
@@ -117,6 +150,13 @@ const styles = StyleSheet.create({
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.sm },
+  staminaWarn: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.error + "18",
+    borderWidth: 1, borderColor: COLORS.error + "50",
+    borderRadius: RADIUS.md, padding: SPACING.md,
+  },
+  staminaWarnTxt: { color: COLORS.onSurface, fontSize: 12, lineHeight: 18, flex: 1 },
   card: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary,

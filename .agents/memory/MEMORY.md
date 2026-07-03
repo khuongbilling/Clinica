@@ -7,6 +7,7 @@
 - [Clinica battle sprites](clinica-battle-sprites.md) — hero battle PNGs natively face LEFT (need scaleX:-1 to face right); per-action FX via 3 in-sync maps HERO_MOVE/ENEMY_REACT/ATTACK_FX; eyeball art before flipping.
 - [Clinica enemy signature attacks](clinica-enemy-signature-attacks.md) — per-ElementSystem end-turn attacks (assault/spread/hex); spread MUST honor+consume blockNextSpread (Infection Control) or the call is a no-op.
 - [Clinica battle timed/gated mechanics](clinica-battle-timed-mechanics.md) — thread new action modifiers (cast quality, buffs) into the existing apply* pipeline, not a parallel effect path, or Care Chain/grading breaks.
+- [Clinica shift stamina](clinica-stamina.md) — lazy time-regen energy limiting encounters; spend must use synchronous playerRef critical section (not captured state) or rapid taps overspend; new player fields need both backend models.
 - [Clinica hero evolution](clinica-hero-evolution.md) — dupe→copy star system; ANY new PlayerState field must be added to backend Player+PlayerUpdate or refresh's normalize wipes it.
 - [Clinica difficulty levers](clinica-difficulty-levers.md) — corruption HP uncapped (floor 0 only, 4 sites); hidden per-enemy stabilityResistance dampens ALL stability-gain sites, cap 0.8; scripted +30/+15 heals intentionally bypass it.
 - [Clinica Clinical Cue bonus lifecycle](clinica-cue-bonus-lifecycle.md) — cueBonusStabilize (+8) empowers ALL stabilizing actions this turn (4 sites: skill/item/card/temp), cleared only at endPlayerTurn.

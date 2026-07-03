@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
+import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -94,6 +95,7 @@ export default function RunHome() {
           <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
           <Text style={styles.playerName}>{player.name}</Text>
         </View>
+        <StaminaPill player={player} />
         <Pressable
           style={styles.headerBtn}
           onPress={() => router.push("/tutorial")}

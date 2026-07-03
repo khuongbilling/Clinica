@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/src/api/client';
 import { PlayerState } from './types';
 import { RANKS } from './content';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
+import { MAX_STAMINA, ENCOUNTER_COST, regen } from './stamina';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -22,7 +23,15 @@ function normalizeProgression(p: PlayerState): PlayerState {
   for (const id of p.heroes_owned || []) {
     if (!prog[id]) { prog[id] = defaultProgress(); changed = true; }
   }
-  return changed ? { ...p, hero_progression: prog } : p;
+  let out = changed ? { ...p, hero_progression: prog } : p;
+  if (out.stamina == null || !out.stamina_updated_at) {
+    out = {
+      ...out,
+      stamina: out.stamina ?? MAX_STAMINA,
+      stamina_updated_at: out.stamina_updated_at || new Date().toISOString(),
+    };
+  }
+  return out;
 }
 
 type CreatePlayerArgs = {
@@ -48,6 +57,7 @@ type Ctx = {
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
   summonOnce: () => Promise<{ entry: any; duplicate: boolean; message: string } | null>;
   evolveHero: (heroId: string) => Promise<{ ok: boolean; message: string; star?: number }>;
+  spendStamina: (cost?: number) => Promise<boolean>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -114,6 +124,8 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     enemy_mastery: {},
     chapter_progress: 1,
     region_progress: {},
+    stamina: MAX_STAMINA,
+    stamina_updated_at: new Date().toISOString(),
   };
 }
 
@@ -143,6 +155,10 @@ async function trySyncToBackend(p: PlayerState): Promise<PlayerState> {
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [player, setPlayer] = useState<PlayerState | null>(null);
   const [loading, setLoading] = useState(true);
+  // Mirror of the latest player used for atomic, synchronous spends (e.g.
+  // stamina) so concurrent calls in the same tick can't read stale state.
+  const playerRef = useRef<PlayerState | null>(null);
+  useEffect(() => { playerRef.current = player; }, [player]);
 
   const refresh = useCallback(async () => {
     try {
@@ -179,6 +195,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateState = useCallback(async (next: PlayerState) => {
+    playerRef.current = next;
     setPlayer(next);
     await saveLocal(next);
     trySyncToBackend(next);
@@ -296,6 +313,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Evolved to ★${nextProg.star}!`, star: nextProg.star };
   }, [player, updateState]);
 
+  const spendStamina = useCallback(async (cost: number = ENCOUNTER_COST) => {
+    // Read + decrement synchronously against the ref (single-threaded critical
+    // section) BEFORE any await, so two rapid taps can't both spend the same point.
+    const base = playerRef.current;
+    if (!base) return false;
+    const now = Date.now();
+    const cur = regen(base.stamina ?? MAX_STAMINA, base.stamina_updated_at ?? new Date(now).toISOString(), now);
+    if (cur.stamina < cost) {
+      // Not enough — still persist the regenerated value so the display is fresh.
+      if (cur.stamina !== base.stamina || cur.updatedAt !== base.stamina_updated_at) {
+        const next = { ...base, stamina: cur.stamina, stamina_updated_at: cur.updatedAt };
+        playerRef.current = next;
+        await updateState(next);
+      }
+      return false;
+    }
+    const next = { ...base, stamina: cur.stamina - cost, stamina_updated_at: cur.updatedAt };
+    playerRef.current = next; // commit synchronously before awaiting persistence
+    await updateState(next);
+    return true;
+  }, [updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
@@ -303,8 +342,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
