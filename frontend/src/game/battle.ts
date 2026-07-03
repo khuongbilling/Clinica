@@ -22,6 +22,7 @@ import {
   generateBattleMessage,
   getActiveFeedbackLevel,
   getChapterForgiveness,
+  getCorruptionOutcome,
   getDangerLevel,
   getEnemyDamage,
   getRandomClinicalCue,
@@ -518,11 +519,18 @@ function applyResolutionToState(
   let next = { ...s, log: [...s.log] };
   if (res.status === 'unsafe') {
     next.unsafeActionsUsed = next.unsafeActionsUsed + 1;
+    const outcome = getCorruptionOutcome('unsafe');
     next.stability = clamp(next.stability - 10, 0, 100);
-    next.log.push(`⚠ Unsafe: ${actionName}. Stability -10.`);
+    if (outcome.worsenBase > 0) next.corruption = clamp(next.corruption + outcome.worsenBase, 0, 100);
+    next.log.push(`⚠ Unsafe: ${actionName}. Stability -10${outcome.worsenBase > 0 ? `, symptoms worsen (Corruption +${outcome.worsenBase})` : ''}.`);
   }
   if (res.status === 'inappropriate') {
     next.poorFitActionsUsed = next.poorFitActionsUsed + 1;
+    // Totally unrelated treatment: no help, actively harms the patient.
+    const outcome = getCorruptionOutcome('inappropriate');
+    if (outcome.stabilityPenalty > 0) next.stability = clamp(next.stability - outcome.stabilityPenalty, 0, 100);
+    if (outcome.worsenBase > 0) next.corruption = clamp(next.corruption + outcome.worsenBase, 0, 100);
+    next.log.push(`✗ ${actionName} doesn't fit this disease — Stability -${outcome.stabilityPenalty}, symptoms worsen (Corruption +${outcome.worsenBase}).`);
   }
 
   // Track chain progress
@@ -596,7 +604,9 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   // Treatment stability modifier — corruption damage scales with how stable the patient is
   const treatMod = getTreatmentStabilityModifier(next.stability);
   const castMult = CAST_QUALITY_MULTIPLIER[castQuality];
-  const eff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, chapterModifier: treatMod }) * castMult);
+  const corrOutcome = getCorruptionOutcome(res.status);
+  // Corruption reduction scales with how well the treatment correlates with the disease.
+  const corrEff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier, chapterModifier: treatMod }) * castMult);
   const stabEff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }) * castMult);
   if (castQuality !== 'normal') {
     next.log = [...next.log, castQuality === 'perfect' ? '✨ Perfect Cast! Effect amplified.' : '⭐ Good Cast — effect boosted.'];
@@ -619,7 +629,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   }
   if (skill.strike) {
     const bonus = s.enemy.weakSystem && hero.element === s.enemy.weakSystem ? Math.floor(skill.strike * 0.3) : 0;
-    const amt = Math.max(0, eff(skill.strike + bonus));
+    const amt = Math.max(0, corrEff(skill.strike + bonus));
     next.corruption = Math.max(0, next.corruption - amt);
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : (effectType === 'stability' ? 'mixed' : 'corruption');
@@ -706,12 +716,13 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
 
   const stabMod = getStabilizationModifier(next.corruption);
   const treatMod = getTreatmentStabilityModifier(next.stability);
+  const corrOutcome = getCorruptionOutcome(res.status);
 
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
   if (item.target === 'corruption') {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, chapterModifier: treatMod }));
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier, chapterModifier: treatMod }));
     next.corruption = Math.max(0, next.corruption - amt);
     effectAmount = amt; effectType = 'corruption';
   }
@@ -784,7 +795,8 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
     next.stability = clamp(next.stability + amt, 0, 100);
   }
   if (a.strike) {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: a.strike, clinicalMod: res.modifier, systemMod: res.systemModifier }));
+    const corrOutcome = getCorruptionOutcome(res.status);
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: a.strike, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
     next.corruption = Math.max(0, next.corruption - amt);
   }
   if (a.shield) next.shieldNext = Math.max(next.shieldNext, a.shield);
@@ -829,6 +841,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   }, heroId);
 
   const stabMod = getStabilizationModifier(next.corruption);
+  const corrOutcome = getCorruptionOutcome(res.status);
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
@@ -841,7 +854,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
   if (card.strike) {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: card.strike, clinicalMod: res.modifier, systemMod: res.systemModifier }));
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: card.strike, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
     next.corruption = Math.max(0, next.corruption - amt);
     effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'stability' || effectType === 'clue' ? 'mixed' : 'corruption';
   }

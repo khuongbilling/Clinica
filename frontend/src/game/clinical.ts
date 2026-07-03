@@ -776,10 +776,42 @@ export function getStabilityGainModifier(stability: number): number {
 }
 
 export function getEnemyDamage(corruption: number, baseInstability: number): number {
-  // Scales the enemy's base instability with corruption pressure
-  if (corruption >= 70) return Math.round(baseInstability * 1.5);
-  if (corruption >= 40) return Math.round(baseInstability * 1.15);
-  return baseInstability;
+  // Higher Disease Corruption accelerates stability loss — the sicker the patient,
+  // the harder each enemy assault lands.
+  let mult = 1.0;
+  if (corruption >= 85) mult = 1.8;
+  else if (corruption >= 70) mult = 1.55;
+  else if (corruption >= 55) mult = 1.35;
+  else if (corruption >= 40) mult = 1.2;
+  else if (corruption >= 25) mult = 1.08;
+  return Math.round(baseInstability * mult);
+}
+
+// ------------------------------------------------------------
+// TREATMENT ↔ DISEASE CORRELATION → CORRUPTION OUTCOME
+// ------------------------------------------------------------
+// How well a treatment matches the disease decides its effect on Disease Corruption:
+//  - Recommended / correlated (strong): cuts corruption hard.
+//  - Correct (appropriate): solid corruption reduction.
+//  - Related but off-target (weak): minimal corruption reduction.
+//  - Totally unrelated (inappropriate): no reduction — actively worsens symptoms
+//    (Corruption rises) and destabilizes the patient (Stability drops).
+//  - Contraindicated (unsafe): no reduction and worsens the disease.
+export interface CorruptionOutcome {
+  reductionMult: number;    // multiplier applied to a treatment's corruption-reduction power
+  worsenBase: number;       // flat Corruption increase inflicted by a mismatched treatment
+  stabilityPenalty: number; // flat Stability loss inflicted by a mismatched treatment
+}
+
+export function getCorruptionOutcome(status: ActionStatus): CorruptionOutcome {
+  switch (status) {
+    case 'strong':        return { reductionMult: 1.6, worsenBase: 0, stabilityPenalty: 0 };
+    case 'appropriate':   return { reductionMult: 1.0, worsenBase: 0, stabilityPenalty: 0 };
+    case 'weak':          return { reductionMult: 0.3, worsenBase: 0, stabilityPenalty: 0 };
+    case 'inappropriate': return { reductionMult: 0, worsenBase: 8, stabilityPenalty: 6 };
+    case 'unsafe':        return { reductionMult: 0, worsenBase: 6, stabilityPenalty: 0 };
+    default:              return { reductionMult: 0, worsenBase: 0, stabilityPenalty: 0 };
+  }
 }
 
 // ------------------------------------------------------------
