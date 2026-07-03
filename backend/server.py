@@ -61,6 +61,7 @@ class Player(BaseModel):
     mastery: MasteryStats = Field(default_factory=MasteryStats)
     codex_unlocked: List[str] = Field(default_factory=list)
     heroes_owned: List[str] = Field(default_factory=list)
+    hero_progression: Dict[str, Dict[str, int]] = Field(default_factory=dict)
     active_team: List[str] = Field(default_factory=list)
     kingdom_levels: Dict[str, int] = Field(default_factory=dict)
     runs_completed: int = 0
@@ -89,6 +90,7 @@ class PlayerUpdate(BaseModel):
     mastery: Optional[MasteryStats] = None
     codex_unlocked: Optional[List[str]] = None
     heroes_owned: Optional[List[str]] = None
+    hero_progression: Optional[Dict[str, Dict[str, int]]] = None
     active_team: Optional[List[str]] = None
     kingdom_levels: Optional[Dict[str, int]] = None
     runs_completed: Optional[int] = None

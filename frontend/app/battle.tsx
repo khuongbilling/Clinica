@@ -20,6 +20,7 @@ import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
 import type { ActionType, Hero, HeroSkill } from "@/src/game/types";
+import { applyStarToHero, getProgress } from "@/src/game/evolution";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -62,7 +63,13 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const team = useMemo(() => {
     if (!player) return HEROES.slice(0, 3);
     const teamIds = (player.active_team && player.active_team.length > 0) ? player.active_team : player.heroes_owned;
-    const fromTeam = teamIds.map(id => HEROES.find(h => h.id === id)).filter(Boolean) as typeof HEROES;
+    const fromTeam = teamIds
+      .map(id => {
+        const base = HEROES.find(h => h.id === id);
+        if (!base) return null;
+        return applyStarToHero(base, getProgress(player.hero_progression, id));
+      })
+      .filter(Boolean) as Hero[];
     if (fromTeam.length >= 1) return fromTeam.slice(0, 3);
     return HEROES.slice(0, 3);
   }, [player]);

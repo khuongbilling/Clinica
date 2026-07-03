@@ -49,6 +49,8 @@ export interface Hero {
   medicalFocus?: string;
   bondLevel?: number;
   bondExp?: number;
+  // Evolution overlay — set when a hero is materialized with its owner's star progression.
+  star?: number;
 }
 
 export interface ClueCard {
@@ -128,6 +130,7 @@ export interface PlayerState {
   };
   codex_unlocked: string[];
   heroes_owned: string[];
+  hero_progression?: Record<string, { star: number; copies: number }>;
   active_team: string[];
   kingdom_levels: Record<string, number>;
   runs_completed: number;

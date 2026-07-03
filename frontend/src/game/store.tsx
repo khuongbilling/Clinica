@@ -3,8 +3,27 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { api } from '@/src/api/client';
 import { PlayerState } from './types';
 import { RANKS } from './content';
+import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
 
 const STORAGE_KEY = 'clinica.player.v2';
+
+// Backfill hero_progression so every owned hero has a star/copies entry,
+// and clamp any malformed values. Keeps older/remote saves compatible.
+function normalizeProgression(p: PlayerState): PlayerState {
+  const src = p.hero_progression || {};
+  const prog: Record<string, { star: number; copies: number }> = {};
+  let changed = !p.hero_progression;
+  for (const [id, raw] of Object.entries(src)) {
+    const star = Math.min(MAX_STAR, Math.max(1, Math.round(Number(raw?.star) || 1)));
+    const copies = Math.max(0, Math.round(Number(raw?.copies) || 0));
+    prog[id] = { star, copies };
+    if (star !== raw?.star || copies !== raw?.copies) changed = true;
+  }
+  for (const id of p.heroes_owned || []) {
+    if (!prog[id]) { prog[id] = defaultProgress(); changed = true; }
+  }
+  return changed ? { ...p, hero_progression: prog } : p;
+}
 
 type CreatePlayerArgs = {
   name: string;
@@ -28,6 +47,7 @@ type Ctx = {
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
   summonOnce: () => Promise<{ entry: any; duplicate: boolean; message: string } | null>;
+  evolveHero: (heroId: string) => Promise<{ ok: boolean; message: string; star?: number }>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -128,10 +148,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     try {
       const local = await loadLocal();
       if (!local) { setPlayer(null); setLoading(false); return; }
-      setPlayer(local);
+      setPlayer(normalizeProgression(local));
 
       try {
-        const remote = await api.getPlayer(local.id);
+        const remote = normalizeProgression(await api.getPlayer(local.id));
         setPlayer(remote);
         await saveLocal(remote);
       } catch {
@@ -150,9 +170,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const createPlayer = useCallback(async (args: CreatePlayerArgs) => {
     let p: PlayerState;
     try {
-      p = await api.createPlayer(args);
+      p = normalizeProgression(await api.createPlayer(args));
     } catch {
-      p = defaultPlayer(args, makeLocalId());
+      p = normalizeProgression(defaultPlayer(args, makeLocalId()));
     }
     await saveLocal(p);
     setPlayer(p);
@@ -182,6 +202,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     if (rewards.heroes) {
       next.heroes_owned = Array.from(new Set([...next.heroes_owned, ...rewards.heroes]));
+      const prog = { ...(next.hero_progression || {}) };
+      for (const id of rewards.heroes) {
+        if (!prog[id]) prog[id] = defaultProgress();
+      }
+      next.hero_progression = prog;
     }
     if (rewards.buildings) {
       next.kingdom_levels = { ...next.kingdom_levels, ...rewards.buildings };
@@ -231,19 +256,44 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const summonOnce = useCallback(async () => {
     if (!player) return null;
-    const { summonOnce: roll, SUMMON_COST, DUPLICATE_REFUND } = await import('./gacha');
+    const { summonOnce: roll, SUMMON_COST } = await import('./gacha');
     if ((player.codex_shards || 0) < SUMMON_COST) {
       return { entry: null as any, duplicate: false, message: 'Not enough Codex Shards.' };
     }
     const result = roll(player.heroes_owned);
-    const nextShards = (player.codex_shards || 0) - SUMMON_COST + (result.duplicate ? DUPLICATE_REFUND : 0);
-    const nextHeroes = result.duplicate ? player.heroes_owned : [...player.heroes_owned, result.entry.heroId];
+    let nextShards = (player.codex_shards || 0) - SUMMON_COST;
+    let nextHeroes = player.heroes_owned;
+    const prog = { ...(player.hero_progression || {}) };
+    let message = result.message;
+    if (result.duplicate) {
+      // Duplicate → +1 evolution copy toward that hero, plus a small shard bonus.
+      nextShards += DUP_SHARD_BONUS;
+      const cur = prog[result.entry.heroId] || defaultProgress();
+      prog[result.entry.heroId] = { ...cur, copies: cur.copies + 1 };
+      message = `${result.entry.name} duplicate → +1 evolution copy (+${DUP_SHARD_BONUS} shards)`;
+    } else {
+      nextHeroes = [...player.heroes_owned, result.entry.heroId];
+      if (!prog[result.entry.heroId]) prog[result.entry.heroId] = defaultProgress();
+    }
     const nextHistory = [
       ...(player.summon_history || []),
       { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.duplicate, date: new Date().toISOString() },
     ];
-    await updateState({ ...player, codex_shards: nextShards, heroes_owned: nextHeroes, summon_history: nextHistory });
-    return result;
+    await updateState({ ...player, codex_shards: nextShards, heroes_owned: nextHeroes, hero_progression: prog, summon_history: nextHistory });
+    return { ...result, message };
+  }, [player, updateState]);
+
+  const evolveHero = useCallback(async (heroId: string) => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    if (!player.heroes_owned.includes(heroId)) return { ok: false, message: 'Hero not owned.' };
+    const cur = getProgress(player.hero_progression, heroId);
+    if (!canEvolve(cur)) return { ok: false, message: 'Not enough copies to evolve.' };
+    const nextProg = evolveProgress(cur);
+    await updateState({
+      ...player,
+      hero_progression: { ...(player.hero_progression || {}), [heroId]: nextProg },
+    });
+    return { ok: true, message: `Evolved to ★${nextProg.star}!`, star: nextProg.star };
   }, [player, updateState]);
 
   const resetPlayer = useCallback(async () => {
@@ -253,8 +303,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

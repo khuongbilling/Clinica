@@ -11,6 +11,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
+import {
+  MAX_STAR,
+  canEvolve,
+  copiesForNextStar,
+  getProgress,
+  nextAbilityPreview,
+  starPowerBonusPct,
+  unlockedAbilityPreviews,
+} from "@/src/game/evolution";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const TABS = ["Details", "Skills", "Upgrade", "Bond", "Lore"] as const;
@@ -401,8 +410,7 @@ export default function HeroProfile() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.tabContent}>
         {activeTab === "Details"  && <DetailsTab  hero={hero} accent={accent} />}
         {activeTab === "Skills"   && <SkillsTab   hero={hero} accent={accent} />}
-        {activeTab === "Upgrade"  && <PlaceholderTab label="Upgrade" accent={accent} icon="trending-up-outline"
-            message="Hero upgrades unlock at Clinical Guardian rank. Continue earning XP to power up your team." />}
+        {activeTab === "Upgrade"  && <EvolveTab hero={hero} accent={accent} isOwned={isOwned} />}
         {activeTab === "Bond"     && <PlaceholderTab label="Bond" accent={accent} icon="heart-outline"
             message="Bond stories deepen as you use this hero in shifts. Build trust to unlock hidden abilities." />}
         {activeTab === "Lore"     && <LoreTab hero={hero} accent={accent} />}
@@ -514,6 +522,136 @@ function PlaceholderTab({ label, accent, icon, message }: { label: string; accen
       <Ionicons name={icon as any} size={40} color={accent + "55"} />
       <Text style={[styles.placeholderTitle, { color: accent }]}>{label}</Text>
       <Text style={styles.placeholderMsg}>{message}</Text>
+    </View>
+  );
+}
+
+function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwned: boolean }) {
+  const { player, evolveHero } = usePlayer();
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  if (!isOwned) {
+    return (
+      <PlaceholderTab
+        label="Evolve"
+        accent={accent}
+        icon="trending-up-outline"
+        message="Recruit this hero to begin their evolution. Duplicate summons become evolution copies you can spend to raise their star."
+      />
+    );
+  }
+
+  const prog = getProgress(player?.hero_progression, hero.id);
+  const atMax = prog.star >= MAX_STAR;
+  const needed = copiesForNextStar(prog.star);
+  const ready = canEvolve(prog);
+  const pct = atMax ? 1 : Math.min(1, prog.copies / needed);
+  const unlocked = unlockedAbilityPreviews(hero.role, prog.star);
+  const nextAbility = nextAbilityPreview(hero.role, prog.star);
+  const curBonus = starPowerBonusPct(prog.star);
+  const nextBonus = starPowerBonusPct(prog.star + 1);
+
+  const onEvolve = async () => {
+    if (!ready || busy) return;
+    setBusy(true);
+    const res = await evolveHero(hero.id);
+    setFeedback(res.message);
+    setBusy(false);
+  };
+
+  return (
+    <View style={{ gap: SPACING.lg }}>
+      {/* Star status */}
+      <View style={[styles.evolveStar, { borderColor: accent + "40" }]}>
+        <Text style={styles.evolveStarLabel}>EVOLUTION</Text>
+        <View style={styles.evolveStarRow}>
+          {Array.from({ length: MAX_STAR }).map((_, i) => (
+            <Ionicons
+              key={i}
+              name={i < prog.star ? "star" : "star-outline"}
+              size={20}
+              color={i < prog.star ? COLORS.brand : COLORS.onSurfaceTertiary}
+            />
+          ))}
+        </View>
+        <Text style={[styles.evolveStarNum, { color: accent }]}>★{prog.star}{atMax ? " · MAX" : ` / ${MAX_STAR}`}</Text>
+        <Text style={styles.evolveBonus}>Skill power +{curBonus}%</Text>
+      </View>
+
+      {/* Copies progress */}
+      <View style={styles.detailSection}>
+        <SectionHeader title="Evolution Copies" icon="layers-outline" accent={accent} />
+        {atMax ? (
+          <Text style={styles.evolveMsg}>Fully evolved — this hero has reached maximum star.</Text>
+        ) : (
+          <>
+            <View style={styles.evolveBarTrack}>
+              <View style={[styles.evolveBarFill, { width: `${pct * 100}%`, backgroundColor: accent }]} />
+            </View>
+            <Text style={styles.evolveCopiesTxt}>
+              {prog.copies} / {needed} copies to reach ★{prog.star + 1}
+            </Text>
+            <Text style={styles.evolveHint}>
+              Earn copies by summoning duplicates of {hero.name}.
+            </Text>
+          </>
+        )}
+      </View>
+
+      {/* Unlocked abilities */}
+      {unlocked.length > 0 && (
+        <View style={styles.detailSection}>
+          <SectionHeader title="Unlocked Abilities" icon="sparkles-outline" accent={accent} />
+          {unlocked.map((a) => (
+            <View key={a.name} style={[styles.abilityRow, { borderColor: accent + "30" }]}>
+              <Ionicons name="checkmark-circle" size={16} color={accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.abilityName}>{a.name}</Text>
+                <Text style={styles.abilityEffect}>{a.shortEffect}</Text>
+              </View>
+              <View style={[styles.abilityStar, { borderColor: accent + "50" }]}>
+                <Text style={[styles.abilityStarTxt, { color: accent }]}>★{a.minStar}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Next unlock preview */}
+      {!atMax && (
+        <View style={styles.detailSection}>
+          <SectionHeader title="Next Star Preview" icon="arrow-up-circle-outline" accent={accent} />
+          <View style={[styles.previewBox, { borderLeftColor: accent + "60" }]}>
+            <Text style={styles.previewLine}>★{prog.star + 1}: skill power rises to +{nextBonus}%</Text>
+            {nextAbility && nextAbility.minStar === prog.star + 1 ? (
+              <Text style={styles.previewLine}>Unlocks <Text style={{ color: accent }}>{nextAbility.name}</Text> ({nextAbility.shortEffect})</Text>
+            ) : nextAbility ? (
+              <Text style={styles.previewLine}>Next ability <Text style={{ color: accent }}>{nextAbility.name}</Text> unlocks at ★{nextAbility.minStar}</Text>
+            ) : null}
+          </View>
+        </View>
+      )}
+
+      {/* Evolve button */}
+      {!atMax && (
+        <Pressable
+          onPress={onEvolve}
+          disabled={!ready || busy}
+          style={[
+            styles.evolveBtn,
+            ready ? { backgroundColor: accent } : { backgroundColor: COLORS.surfaceTertiary },
+          ]}
+          testID="hero-evolve-btn"
+        >
+          <Ionicons name="arrow-up-circle" size={18} color={ready ? COLORS.surface : COLORS.onSurfaceTertiary} />
+          <Text style={[styles.evolveBtnTxt, { color: ready ? COLORS.surface : COLORS.onSurfaceTertiary }]}>
+            {ready ? `Evolve to ★${prog.star + 1}` : `Need ${needed - prog.copies} more copies`}
+          </Text>
+        </Pressable>
+      )}
+
+      {feedback && <Text style={[styles.evolveFeedback, { color: accent }]}>{feedback}</Text>}
     </View>
   );
 }
@@ -692,4 +830,37 @@ const styles = StyleSheet.create({
   placeholderTab: { alignItems: "center", gap: SPACING.md, paddingVertical: SPACING.xxxl },
   placeholderTitle: { fontSize: 18, fontWeight: "700" },
   placeholderMsg: { color: COLORS.onSurfaceTertiary, fontSize: 13, textAlign: "center", lineHeight: 20 },
+
+  /* Evolve tab */
+  evolveStar: {
+    alignItems: "center", gap: 6,
+    borderWidth: 1, borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.lg, paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  evolveStarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  evolveStarRow: { flexDirection: "row", gap: 3 },
+  evolveStarNum: { fontSize: 18, fontWeight: "800", marginTop: 2 },
+  evolveBonus: { color: COLORS.onSurfaceSecondary, fontSize: 12 },
+  evolveMsg: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+  evolveBarTrack: { height: 10, borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden" },
+  evolveBarFill: { height: "100%", borderRadius: RADIUS.pill },
+  evolveCopiesTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", marginTop: 6 },
+  evolveHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  abilityRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.sm,
+  },
+  abilityName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  abilityEffect: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 1 },
+  abilityStar: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1 },
+  abilityStarTxt: { fontSize: 10, fontWeight: "800" },
+  previewBox: { borderLeftWidth: 3, paddingLeft: SPACING.sm, gap: 3 },
+  previewLine: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  evolveBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    borderRadius: RADIUS.md, paddingVertical: SPACING.md,
+  },
+  evolveBtnTxt: { fontSize: 14, fontWeight: "700" },
+  evolveFeedback: { fontSize: 13, fontWeight: "600", textAlign: "center" },
 });

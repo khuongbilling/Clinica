@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import { usePlayer } from "@/src/game/store";
+import { canEvolve, getProgress } from "@/src/game/evolution";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 function Stars({ count, color }: { count: number; color: string }) {
@@ -63,6 +64,8 @@ export default function HeroesScreen() {
             const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
             const sprite   = getHeroBattleSprite(h.id);
             const teamSlot = team.indexOf(h.id) + 1;
+            const prog     = getProgress(player.hero_progression, h.id);
+            const evolveReady = isOwned && canEvolve(prog);
 
             return (
               <Pressable
@@ -75,7 +78,7 @@ export default function HeroesScreen() {
               >
                 <View style={[
                   styles.card,
-                  { borderColor: inTeam ? accent : COLORS.border },
+                  { borderColor: evolveReady ? COLORS.brand : inTeam ? accent : COLORS.border },
                   inTeam && { backgroundColor: accent + "10" },
                   !isOwned && styles.cardLocked,
                 ]}>
@@ -97,6 +100,21 @@ export default function HeroesScreen() {
                     {inTeam && (
                       <View style={[styles.slotBadge, { backgroundColor: accent }]}>
                         <Text style={styles.slotTxt}>{teamSlot}</Text>
+                      </View>
+                    )}
+
+                    {/* Evolution star badge */}
+                    {isOwned && (
+                      <View style={styles.starBadge}>
+                        <Ionicons name="star" size={9} color={COLORS.brand} />
+                        <Text style={styles.starBadgeTxt}>{prog.star}</Text>
+                      </View>
+                    )}
+
+                    {/* Evolve-ready indicator */}
+                    {evolveReady && (
+                      <View style={styles.evolveBadge}>
+                        <Ionicons name="arrow-up-circle" size={16} color={COLORS.surface} />
                       </View>
                     )}
 
@@ -207,6 +225,22 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   slotTxt: { color: COLORS.surface, fontSize: 11, fontWeight: "700" },
+
+  starBadge: {
+    position: "absolute", top: 6, right: 6,
+    flexDirection: "row", alignItems: "center", gap: 1,
+    backgroundColor: "rgba(12,14,18,0.72)",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 5, paddingVertical: 2,
+  },
+  starBadgeTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "800" },
+
+  evolveBadge: {
+    position: "absolute", bottom: 6, left: 6,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: COLORS.brand,
+    alignItems: "center", justifyContent: "center",
+  },
 
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
