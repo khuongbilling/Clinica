@@ -9,6 +9,7 @@ import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import { usePlayer } from "@/src/game/store";
 import { canEvolve, getProgress } from "@/src/game/evolution";
+import { findSkin } from "@/src/game/shop";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 function Stars({ count, color }: { count: number; color: string }) {
@@ -33,6 +34,7 @@ export default function HeroesScreen() {
   if (!player) return null;
 
   const owned = new Set(player.heroes_owned);
+  const equippedSkin = findSkin(player.equipped_skin || "");
 
   const toggleTeam = async (heroId: string) => {
     if (!owned.has(heroId)) return;
@@ -80,11 +82,19 @@ export default function HeroesScreen() {
                   styles.card,
                   { borderColor: evolveReady ? COLORS.brand : inTeam ? accent : COLORS.border },
                   inTeam && { backgroundColor: accent + "10" },
+                  isOwned && equippedSkin && { borderColor: equippedSkin.accentColor },
                   !isOwned && styles.cardLocked,
                 ]}>
 
                   {/* Sprite area */}
-                  <View style={[styles.spriteBox, { backgroundColor: accent + "15" }]}>
+                  <View style={[
+                    styles.spriteBox,
+                    { backgroundColor: accent + "15" },
+                    isOwned && equippedSkin && { backgroundColor: equippedSkin.auraColor + "22" },
+                  ]}>
+                    {isOwned && equippedSkin && (
+                      <View style={[styles.skinAura, { backgroundColor: equippedSkin.auraColor + "44" }]} pointerEvents="none" />
+                    )}
                     {sprite ? (
                       <Image
                         source={sprite}
@@ -215,6 +225,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
     overflow: "hidden",
+  },
+  skinAura: {
+    position: "absolute",
+    width: "70%",
+    aspectRatio: 1,
+    borderRadius: 999,
+    top: "12%",
+    opacity: 0.9,
   },
   sprite:        { width: "92%", height: "92%" },
   spriteFallback: { width: "70%", height: "70%", backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md },

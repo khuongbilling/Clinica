@@ -269,6 +269,36 @@ export const ITEM_CLINICAL: Record<string, ActionClinical> = {
     clinicalTags: ['assessment'],
     chainRoles: ['Scout'],
   },
+  'Antipyretic Draught': {
+    clinicalTags: ['fever', 'antipyretic', 'inflammation', 'infection'],
+    appropriateForSystems: ['Fire'],
+    chainRoles: ['Counter'],
+  },
+  'Oxygen Sigil': {
+    clinicalTags: ['oxygenation', 'hypoxia', 'respiratory', 'airway'],
+    appropriateForSystems: ['Air'],
+    chainRoles: ['Stabilize'],
+  },
+  'Calming Elixir': {
+    clinicalTags: ['anxiety', 'panic', 'de-escalation'],
+    appropriateForSystems: ['Mind'],
+    chainRoles: ['Stabilize'],
+  },
+  'Analgesic Balm': {
+    clinicalTags: ['pain', 'analgesia', 'comfort'],
+    appropriateForSystems: ['Mind'],
+    chainRoles: ['Stabilize'],
+  },
+  'Rhythm Elixir': {
+    clinicalTags: ['dysrhythmia', 'heart rate', 'rhythm'],
+    appropriateForSystems: ['Storm'],
+    chainRoles: ['Stabilize'],
+  },
+  'Antiemetic Charm': {
+    clinicalTags: ['nausea', 'vomiting', 'antiemetic', 'hydration'],
+    appropriateForSystems: ['Filter'],
+    chainRoles: ['Counter'],
+  },
 };
 
 // --- Temp action metadata ---

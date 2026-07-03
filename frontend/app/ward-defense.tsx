@@ -45,6 +45,7 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 };
 
 import { usePlayer } from "@/src/game/store";
+import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 /* ── Tick speed ── */
@@ -516,10 +517,12 @@ function freshMastery(): Record<string, EnemyMasteryEntry> {
   return m;
 }
 
-function freshState(): GS {
+function freshState(boost?: { startAP?: number; startShield?: number }): GS {
+  const startAp = cl(INIT_AP + (boost?.startAP || 0), 0, MAX_AP);
+  const startShieldTicks = boost?.startShield ? Math.round(boost.startShield) : 0;
   return {
     phase: "lobby", wave: 0,
-    stability: MAX_STABILITY, ap: INIT_AP, apTimer: AP_REGEN_TICKS,
+    stability: MAX_STABILITY, ap: startAp, apTimer: AP_REGEN_TICKS,
     deployedUnits: [], enemies: [], projectiles: [],
     spawnQueue: [], spawnTimer: 0, wavePauseTicks: 0, feedbacks: [],
     score: 0, tickCount: 0, uidSeed: 0,
@@ -528,7 +531,7 @@ function freshState(): GS {
     reassessUses: 0, learnedConcepts: [], enemyMastery: freshMastery(),
     lastKillQuality: null,
     cueBonusReady: false,
-    corruption: 0, stabilityPulse: 0, corruptionPulse: 0, shieldTicks: 0,
+    corruption: 0, stabilityPulse: 0, corruptionPulse: 0, shieldTicks: startShieldTicks,
     abilityCooldowns: {}, stabilizeUsesThisWave: 0,
   };
 }
@@ -2447,7 +2450,8 @@ function WavePauseOverlay({ wave }: { wave: number }) {
    ═══════════════════════════════════════════════════════════════════ */
 export default function WardDefense() {
   const router = useRouter();
-  const { player, applyRewards } = usePlayer();
+  const { player, applyRewards, syncInventory } = usePlayer();
+  const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
 
   const gsRef = useRef<GS>(freshState());
   const [, bump] = useState(0);
@@ -2805,7 +2809,28 @@ export default function WardDefense() {
   function startGame() {
     rewardsApplied.current = false;
     setSelectedUnit("ward_scout"); setHandMode("deploy");
-    set(beginWave(freshState(), 0));
+
+    // Apply + consume any activated Ward Defense boosts from inventory.
+    const boostEffect: { startAP: number; startShield: number } = {
+      startAP: 0, startShield: 0,
+    };
+    if (player && pendingBoosts.length > 0) {
+      const inv = { ...(player.inventory || {}) };
+      let consumedAny = false;
+      pendingBoosts.forEach((id) => {
+        const boost = findWardBoost(id);
+        if (!boost) return;
+        if ((inv[boost.name] || 0) <= 0) return;
+        inv[boost.name] = inv[boost.name] - 1;
+        if (inv[boost.name] <= 0) delete inv[boost.name];
+        boostEffect.startAP += boost.effect.startAP || 0;
+        boostEffect.startShield += boost.effect.startShield || 0;
+        consumedAny = true;
+      });
+      if (consumedAny) syncInventory(inv).catch(() => {});
+    }
+    setPendingBoosts([]);
+    set(beginWave(freshState(boostEffect), 0));
   }
 
   /* ── Deploy a unit on a tile ── */
@@ -2933,7 +2958,19 @@ export default function WardDefense() {
 
   /* ── Lobby ── */
   if (gs.phase === "lobby") {
-    return <LobbyScreen onStart={startGame} onBack={() => router.back()} />;
+    return (
+      <LobbyScreen
+        onStart={startGame}
+        onBack={() => router.back()}
+        inventory={player?.inventory || {}}
+        pendingBoosts={pendingBoosts}
+        onToggleBoost={(id) =>
+          setPendingBoosts((prev) =>
+            prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+          )
+        }
+      />
+    );
   }
 
   /* ── Result ── */
@@ -3314,10 +3351,24 @@ const ROADMAP_ITEMS = [
   { status: "locked", icon: "🎓", label: "Scholarly Arena Duel Prototype",           desc: "Turn-based PvE duel using clinical reasoning vs opponent ward builds." },
 ] as const;
 
-function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => void }) {
+function LobbyScreen({
+  onStart,
+  onBack,
+  inventory,
+  pendingBoosts,
+  onToggleBoost,
+}: {
+  onStart: () => void;
+  onBack: () => void;
+  inventory: Record<string, number>;
+  pendingBoosts: string[];
+  onToggleBoost: (id: string) => void;
+}) {
   const [caseVisible,   setCaseVisible]   = useState(false);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [mapExpanded,   setMapExpanded]   = useState(false);
+
+  const ownedBoosts = WARD_BOOSTS.filter((b) => (inventory[b.name] || 0) > 0);
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
@@ -3414,6 +3465,49 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
             <Text style={{ color: COLORS.air }}>NCLEX Clinical Judgment:</Text> Recognize cues on each enemy · Prioritize threats · Deploy the right unit · Evaluate with Reassess.
           </Text>
         </View>
+
+        {/* ── WARD BOOSTS (from the Apothecary Market) ─────────────────── */}
+        {ownedBoosts.length > 0 && (
+          <View style={s.lobbyCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.energy }} />
+              <Text style={s.lobbySectionTitle}>WARD BOOSTS</Text>
+            </View>
+            <Text style={[s.lobbyBodyTxt, { marginBottom: 10 }]}>
+              Activate boosts from your Apothecary supplies. Selected boosts are consumed when this run begins.
+            </Text>
+            {ownedBoosts.map((b) => {
+              const active = pendingBoosts.includes(b.id);
+              const qty = inventory[b.name] || 0;
+              return (
+                <Pressable
+                  key={b.id}
+                  onPress={() => onToggleBoost(b.id)}
+                  testID={`ward-boost-${b.id}`}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 10,
+                    backgroundColor: active ? COLORS.energy + "22" : "#0d1b30",
+                    borderRadius: 10, padding: 10, marginBottom: 8,
+                    borderWidth: 1, borderColor: active ? COLORS.energy : "#1e3a5f",
+                  }}
+                >
+                  <Ionicons name={b.icon as any} size={20} color={active ? COLORS.energy : "#94a3b8"} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#f0f9ff", fontSize: 13, fontWeight: "700" }}>
+                      {b.name} <Text style={{ color: "#64748b", fontWeight: "500" }}>×{qty}</Text>
+                    </Text>
+                    <Text style={{ color: "#94a3b8", fontSize: 11, marginTop: 2 }}>{b.subtitle}</Text>
+                  </View>
+                  <Ionicons
+                    name={active ? "checkmark-circle" : "ellipse-outline"}
+                    size={20}
+                    color={active ? COLORS.energy : "#475569"}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── TRANSLATION CODEX ──────────────────────────────────────── */}
         <Pressable style={[s.lobbyCard, { gap:0 }]} onPress={() => setCodexExpanded(v => !v)}>

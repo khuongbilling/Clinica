@@ -129,6 +129,7 @@ export interface InitBattleOptions {
   revealOneExtraClue?: boolean;
   difficulty?: string;
   additionalEnemies?: Enemy[];
+  apBonus?: number;
 }
 
 // ============================================================
@@ -224,7 +225,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   const combinedDamageReduction = (opts.enemyDamageReduction || 0) + diffDamageEffect;
 
   const corruption = enemy.corruption;
-  const turnAp = getTurnAP(stability, corruption, chapter, {});
+  const turnAp = getTurnAP(stability, corruption, chapter, {}) + (opts.apBonus || 0);
 
   const log: string[] = [`The ${enemy.name} corrupts the patient. Stability ${stability}%.`];
   log.push(apMessage(turnAp));

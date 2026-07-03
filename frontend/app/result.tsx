@@ -240,10 +240,11 @@ export default function Result() {
             )}
 
             {crownsEarned > 0 && (
-              <View style={styles.crownsCard} testID="result-crowns">
+              <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push("/shop")}>
                 <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
                 <Text style={styles.crownsTxt}>+{crownsEarned} Crowns earned — spend them at the Apothecary Market.</Text>
-              </View>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.energy} />
+              </Pressable>
             )}
 
             {mission && (

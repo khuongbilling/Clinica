@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useEffect } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BUILDINGS } from "@/src/game/content";
@@ -47,6 +48,7 @@ const REGION_ELEMENT: Record<string, string> = {
 };
 
 export default function KingdomScreen() {
+  const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
@@ -125,8 +127,15 @@ export default function KingdomScreen() {
 
         {BUILDINGS.map((b) => {
           const lvl = player.kingdom_levels[b.id] || 0;
+          const isShop = b.id === "apothecary";
+          const CardTag: any = isShop ? Pressable : View;
           return (
-            <View key={b.id} style={styles.bCard} testID={`kingdom-building-${b.id}`}>
+            <CardTag
+              key={b.id}
+              style={[styles.bCard, isShop && styles.bCardActive]}
+              testID={`kingdom-building-${b.id}`}
+              {...(isShop ? { onPress: () => router.push("/shop") } : {})}
+            >
               <View style={[styles.bIcon, { borderColor: COLORS.brand }]}>
                 <Ionicons name={(ICONS[b.id] as any) || "business"} size={24} color={COLORS.brand} />
               </View>
@@ -137,13 +146,20 @@ export default function KingdomScreen() {
                 </View>
                 <Text style={styles.bDesc}>{b.description}</Text>
                 <Text style={styles.bUnlock}>{b.unlocks}</Text>
+                {isShop && (
+                  <View style={styles.shopHint}>
+                    <Ionicons name="diamond" size={12} color={COLORS.brand} />
+                    <Text style={styles.shopHintTxt}>{player.crowns || 0} Crowns — tap to open the Apothecary Market</Text>
+                    <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
+                  </View>
+                )}
                 <View style={styles.lvlBar}>
                   {Array.from({ length: b.maxLevel }).map((_, i) => (
                     <View key={i} style={[styles.lvlSeg, i < lvl && { backgroundColor: COLORS.brand }]} />
                   ))}
                 </View>
               </View>
-            </View>
+            </CardTag>
           );
         })}
       </ScrollView>
@@ -202,6 +218,9 @@ const styles = StyleSheet.create({
     flexDirection: "row", gap: SPACING.md, backgroundColor: COLORS.surfaceSecondary,
     borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
   },
+  bCardActive: { borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandTertiary + "33" },
+  shopHint: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },
+  shopHintTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "700", flex: 1 },
   bIcon: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
   bName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "500" },
   bLvl: { color: COLORS.brand, fontSize: 11, fontWeight: "700" },

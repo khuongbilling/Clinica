@@ -12,6 +12,7 @@ import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBA
 import { OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
+import { aggregateUpgradeEffects } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
 import { getStartingHandicap, statusColor, statusLabel, ULTIMATE_BY_ROLE, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
@@ -85,14 +86,16 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
     const handicap = getStartingHandicap(profile);
     const mentorAid = failureCount >= 3;
+    const upgrades = aggregateUpgradeEffects(player?.owned_upgrades);
     const base = initBattle(enemy, team, {
       inventory: player?.inventory || {},
       profile,
       enemyMastery: player?.enemy_mastery,
       chapter: player?.chapter_progress,
-      startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0),
-      enemyDamageReduction: handicap.enemyDamageReduction,
-      revealOneExtraClue: handicap.revealOneExtraClue || isTraining,
+      startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0) + upgrades.startingStabilityBonus,
+      enemyDamageReduction: handicap.enemyDamageReduction + upgrades.enemyDamageReduction,
+      revealOneExtraClue: handicap.revealOneExtraClue || isTraining || upgrades.revealOneExtraClue,
+      apBonus: upgrades.apBonus,
       difficulty: player?.difficulty || undefined,
       additionalEnemies: getWaveAdditionalEnemies(enemy.id),
     });

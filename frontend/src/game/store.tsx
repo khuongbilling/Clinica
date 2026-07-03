@@ -68,6 +68,10 @@ type Ctx = {
   createPlayer: (args: CreatePlayerArgs) => Promise<void>;
   applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; crowns?: number; inventoryDelta?: Record<string, number>; enemyName?: string }) => Promise<void>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
+  purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
+  equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
+  purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
+  refillStamina: (price: number, amount: number) => Promise<{ ok: boolean; message: string }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -394,15 +398,85 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Purchased ${qty}× ${itemName} for ${cost} Crowns.` };
   }, [updateState]);
 
+  const purchaseSkin = useCallback(async (skinId: string, price: number) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const owned = base.owned_skins || [];
+    if (owned.includes(skinId)) return { ok: false, message: 'Already owned.' };
+    const cost = Math.max(0, Math.round(price));
+    if ((base.crowns || 0) < cost) return { ok: false, message: 'Not enough Crowns.' };
+    const next = {
+      ...base,
+      crowns: (base.crowns || 0) - cost,
+      owned_skins: [...owned, skinId],
+      equipped_skin: skinId, // auto-equip on purchase
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Unlocked and equipped for ${cost} Crowns.` };
+  }, [updateState]);
+
+  const equipSkin = useCallback(async (skinId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    // Empty string clears the equipped skin (default look).
+    if (skinId && !(base.owned_skins || []).includes(skinId)) {
+      return { ok: false, message: 'Skin not owned.' };
+    }
+    const next = { ...base, equipped_skin: skinId };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: skinId ? 'Equipped.' : 'Reverted to default look.' };
+  }, [updateState]);
+
+  const purchaseUpgrade = useCallback(async (upgradeId: string, price: number) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const owned = base.owned_upgrades || [];
+    if (owned.includes(upgradeId)) return { ok: false, message: 'Already owned.' };
+    const cost = Math.max(0, Math.round(price));
+    if ((base.crowns || 0) < cost) return { ok: false, message: 'Not enough Crowns.' };
+    const next = {
+      ...base,
+      crowns: (base.crowns || 0) - cost,
+      owned_upgrades: [...owned, upgradeId],
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Permanent upgrade acquired for ${cost} Crowns.` };
+  }, [updateState]);
+
+  const refillStamina = useCallback(async (price: number, amount: number) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const now = Date.now();
+    const cur = regen(base.stamina ?? MAX_STAMINA, base.stamina_updated_at ?? new Date(now).toISOString(), now);
+    if (cur.stamina >= MAX_STAMINA) {
+      return { ok: false, message: 'Stamina is already full.' };
+    }
+    const cost = Math.max(0, Math.round(price));
+    if ((base.crowns || 0) < cost) return { ok: false, message: 'Not enough Crowns.' };
+    const restored = Math.min(MAX_STAMINA, cur.stamina + amount);
+    const next = {
+      ...base,
+      crowns: (base.crowns || 0) - cost,
+      stamina: restored,
+      stamina_updated_at: cur.updatedAt,
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Restored ${restored - cur.stamina} Stamina for ${cost} Crowns.` };
+  }, [updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
   }, []);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

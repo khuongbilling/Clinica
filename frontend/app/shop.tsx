@@ -1,0 +1,375 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useMemo, useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { usePlayer } from "@/src/game/store";
+import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { ITEMS } from "@/src/game/items";
+import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
+import { MAX_STAMINA, regen } from "@/src/game/stamina";
+
+type TabId = "consumables" | "ward" | "upgrades" | "skins" | "refills";
+
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: "consumables", label: "Consumables", icon: "flask" },
+  { id: "ward", label: "Ward Defense", icon: "shield-half" },
+  { id: "upgrades", label: "Upgrades", icon: "sparkles" },
+  { id: "skins", label: "Skins", icon: "color-palette" },
+  { id: "refills", label: "Refills", icon: "battery-charging" },
+];
+
+export default function Shop() {
+  const router = useRouter();
+  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina } = usePlayer();
+  const [tab, setTab] = useState<TabId>("consumables");
+  const [banner, setBanner] = useState<{ ok: boolean; msg: string } | null>(null);
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const crowns = player?.crowns || 0;
+
+  const staminaNow = useMemo(() => {
+    if (!player) return 0;
+    const now = Date.now();
+    return regen(player.stamina ?? MAX_STAMINA, player.stamina_updated_at ?? new Date(now).toISOString(), now).stamina;
+  }, [player]);
+
+  function flash(ok: boolean, msg: string) {
+    setBanner({ ok, msg });
+    if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    bannerTimer.current = setTimeout(() => setBanner(null), 2600);
+  }
+
+  if (!player) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.empty}>Loading market…</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backBtn} testID="shop-back">
+          <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Apothecary Market</Text>
+          <Text style={styles.subtitle}>Spend your Crowns on supplies, boosts & regalia</Text>
+        </View>
+        <View style={styles.crownsPill} testID="shop-crowns">
+          <Ionicons name="diamond" size={14} color={COLORS.brand} />
+          <Text style={styles.crownsTxt}>{crowns}</Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => setTab(t.id)}
+                style={[styles.tab, active && styles.tabActive]}
+                testID={`shop-tab-${t.id}`}
+              >
+                <Ionicons name={t.icon as any} size={14} color={active ? COLORS.onBrand : COLORS.onSurfaceSecondary} />
+                <Text style={[styles.tabTxt, active && styles.tabTxtActive]}>{t.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {banner && (
+        <View style={[styles.banner, { borderColor: banner.ok ? COLORS.success : COLORS.error }]}>
+          <Ionicons name={banner.ok ? "checkmark-circle" : "alert-circle"} size={16} color={banner.ok ? COLORS.success : COLORS.error} />
+          <Text style={[styles.bannerTxt, { color: banner.ok ? COLORS.success : COLORS.error }]}>{banner.msg}</Text>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {tab === "consumables" && (
+          <>
+            <Text style={styles.blurb}>Battle items are added to your inventory and used during encounters.</Text>
+            {ITEMS.map((it) => {
+              const owned = player.inventory?.[it.name] || 0;
+              const afford = crowns >= it.price;
+              return (
+                <View key={it.id} style={styles.card} testID={`shop-item-${it.id}`}>
+                  <View style={styles.cardMain}>
+                    <View style={styles.cardHead}>
+                      <Text style={styles.cardName}>{it.displayName}</Text>
+                      {owned > 0 && <Text style={styles.ownedTag}>×{owned}</Text>}
+                    </View>
+                    <Text style={styles.cardSub}>{it.rpgSubtitle}</Text>
+                    <Text style={styles.cardEffect}>{it.shortEffect}</Text>
+                    <Text style={styles.cardDesc}>{it.beginnerExplanation}</Text>
+                  </View>
+                  <BuyButton
+                    price={it.price}
+                    disabled={!afford}
+                    onPress={async () => { const r = await purchaseItem(it.name, it.price); flash(r.ok, r.message); }}
+                    testID={`shop-buy-${it.id}`}
+                  />
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {tab === "ward" && (
+          <>
+            <Text style={styles.blurb}>Ward Defense boosts sit in your inventory. Activate them in the Ward Defense lobby before a run — each is consumed on use.</Text>
+            {WARD_BOOSTS.map((w) => {
+              const owned = player.inventory?.[w.name] || 0;
+              const afford = crowns >= w.price;
+              return (
+                <View key={w.id} style={styles.card} testID={`shop-ward-${w.id}`}>
+                  <View style={[styles.iconBadge, { borderColor: COLORS.river }]}>
+                    <Ionicons name={w.icon as any} size={20} color={COLORS.river} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <View style={styles.cardHead}>
+                      <Text style={styles.cardName}>{w.name}</Text>
+                      {owned > 0 && <Text style={styles.ownedTag}>×{owned}</Text>}
+                    </View>
+                    <Text style={styles.cardEffect}>{w.subtitle}</Text>
+                    <Text style={styles.cardDesc}>{w.description}</Text>
+                  </View>
+                  <BuyButton
+                    price={w.price}
+                    disabled={!afford}
+                    onPress={async () => { const r = await purchaseItem(w.name, w.price); flash(r.ok, r.message); }}
+                    testID={`shop-buy-${w.id}`}
+                  />
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {tab === "upgrades" && (
+          <>
+            <Text style={styles.blurb}>Permanent upgrades are one-time, premium purchases. Once bought, they apply to every standard battle forever.</Text>
+            {UPGRADES.map((u) => {
+              const owned = (player.owned_upgrades || []).includes(u.id);
+              const afford = crowns >= u.price;
+              return (
+                <View key={u.id} style={[styles.card, styles.premiumCard]} testID={`shop-upg-${u.id}`}>
+                  <View style={[styles.iconBadge, { borderColor: COLORS.brand }]}>
+                    <Ionicons name={u.icon as any} size={20} color={COLORS.brand} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <Text style={styles.cardName}>{u.name}</Text>
+                    <Text style={[styles.cardEffect, { color: COLORS.brand }]}>{u.subtitle}</Text>
+                    <Text style={styles.cardDesc}>{u.description}</Text>
+                  </View>
+                  {owned ? (
+                    <View style={styles.ownedBadge} testID={`shop-owned-${u.id}`}>
+                      <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+                      <Text style={styles.ownedBadgeTxt}>Owned</Text>
+                    </View>
+                  ) : (
+                    <BuyButton
+                      price={u.price}
+                      disabled={!afford}
+                      onPress={async () => { const r = await purchaseUpgrade(u.id, u.price); flash(r.ok, r.message); }}
+                      testID={`shop-buy-${u.id}`}
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {tab === "skins" && (
+          <>
+            <Text style={styles.blurb}>Skins are purely cosmetic auras for your heroes — they never change stats or battle outcomes.</Text>
+            {/* Default look option */}
+            <View style={styles.card}>
+              <View style={[styles.auraSwatch, { backgroundColor: COLORS.surfaceTertiary, borderColor: COLORS.borderStrong }]}>
+                <Ionicons name="person" size={20} color={COLORS.onSurfaceSecondary} />
+              </View>
+              <View style={styles.cardMain}>
+                <Text style={styles.cardName}>Default Look</Text>
+                <Text style={styles.cardDesc}>No aura — your heroes' original appearance.</Text>
+              </View>
+              {(player.equipped_skin || "") === "" ? (
+                <View style={styles.ownedBadge}><Ionicons name="checkmark-circle" size={16} color={COLORS.success} /><Text style={styles.ownedBadgeTxt}>Equipped</Text></View>
+              ) : (
+                <Pressable style={styles.equipBtn} onPress={async () => { const r = await equipSkin(""); flash(r.ok, r.message); }} testID="shop-skin-default">
+                  <Text style={styles.equipBtnTxt}>Use</Text>
+                </Pressable>
+              )}
+            </View>
+            {SKINS.map((s) => {
+              const owned = (player.owned_skins || []).includes(s.id);
+              const equipped = player.equipped_skin === s.id;
+              const afford = crowns >= s.price;
+              return (
+                <View key={s.id} style={styles.card} testID={`shop-skin-${s.id}`}>
+                  <View style={[styles.auraSwatch, { backgroundColor: s.auraColor + "33", borderColor: s.accentColor }]}>
+                    <Ionicons name={s.icon as any} size={20} color={s.accentColor} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <Text style={styles.cardName}>{s.name}</Text>
+                    <Text style={[styles.cardEffect, { color: s.accentColor }]}>{s.subtitle} • Cosmetic</Text>
+                    <Text style={styles.cardDesc}>{s.description}</Text>
+                  </View>
+                  {!owned ? (
+                    <BuyButton
+                      price={s.price}
+                      disabled={!afford}
+                      onPress={async () => { const r = await purchaseSkin(s.id, s.price); flash(r.ok, r.message); }}
+                      testID={`shop-buy-${s.id}`}
+                    />
+                  ) : equipped ? (
+                    <View style={styles.ownedBadge}><Ionicons name="checkmark-circle" size={16} color={COLORS.success} /><Text style={styles.ownedBadgeTxt}>Equipped</Text></View>
+                  ) : (
+                    <Pressable style={styles.equipBtn} onPress={async () => { const r = await equipSkin(s.id); flash(r.ok, r.message); }} testID={`shop-equip-${s.id}`}>
+                      <Text style={styles.equipBtnTxt}>Equip</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {tab === "refills" && (
+          <>
+            <View style={styles.staminaCard}>
+              <Ionicons name="flash" size={18} color={COLORS.energy} />
+              <Text style={styles.staminaTxt}>Stamina {staminaNow} / {MAX_STAMINA}</Text>
+            </View>
+            <Text style={styles.blurb}>Out of energy? Spend Crowns to refill your Stamina and keep working shifts.</Text>
+            {STAMINA_PACKS.map((p) => {
+              const afford = crowns >= p.price;
+              const full = staminaNow >= MAX_STAMINA;
+              return (
+                <View key={p.id} style={styles.card} testID={`shop-stam-${p.id}`}>
+                  <View style={[styles.iconBadge, { borderColor: COLORS.energy }]}>
+                    <Ionicons name={p.icon as any} size={20} color={COLORS.energy} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <Text style={styles.cardName}>{p.name}</Text>
+                    <Text style={[styles.cardEffect, { color: COLORS.energy }]}>{p.subtitle}</Text>
+                    <Text style={styles.cardDesc}>{p.description}</Text>
+                  </View>
+                  <BuyButton
+                    price={p.price}
+                    disabled={!afford || full}
+                    onPress={async () => { const r = await refillStamina(p.price, p.amount); flash(r.ok, r.message); }}
+                    testID={`shop-buy-${p.id}`}
+                  />
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        <View style={{ height: SPACING.xxl }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function BuyButton({ price, disabled, onPress, testID }: { price: number; disabled?: boolean; onPress: () => void; testID?: string }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.buyBtn, disabled && styles.buyBtnDisabled]}
+      testID={testID}
+    >
+      <Ionicons name="diamond" size={12} color={disabled ? COLORS.onSurfaceTertiary : COLORS.onBrand} />
+      <Text style={[styles.buyBtnTxt, disabled && styles.buyBtnTxtDisabled]}>{price}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.surface },
+  empty: { color: COLORS.onSurfaceSecondary, textAlign: "center", marginTop: 80 },
+  header: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  backBtn: { padding: 2 },
+  title: { color: COLORS.onSurface, fontSize: 20, fontWeight: "800" },
+  subtitle: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 1 },
+  crownsPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.brandTertiary, borderColor: COLORS.brandSecondary, borderWidth: 1,
+    paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: RADIUS.pill,
+  },
+  crownsTxt: { color: COLORS.brand, fontWeight: "800", fontSize: 15 },
+  tabsWrap: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  tabs: { flexDirection: "row", gap: SPACING.sm, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },
+  tab: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  tabActive: { backgroundColor: COLORS.brand, borderColor: COLORS.brand },
+  tabTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600" },
+  tabTxtActive: { color: COLORS.onBrand, fontWeight: "800" },
+  banner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginHorizontal: SPACING.lg, marginTop: SPACING.sm,
+    padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1, backgroundColor: COLORS.surfaceSecondary,
+  },
+  bannerTxt: { fontSize: 13, fontWeight: "600", flex: 1 },
+  scroll: { padding: SPACING.lg, gap: SPACING.md },
+  blurb: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, marginBottom: SPACING.xs },
+  card: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border, borderWidth: 1,
+    borderRadius: RADIUS.md, padding: SPACING.md,
+  },
+  premiumCard: { borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandTertiary + "40" },
+  cardMain: { flex: 1, gap: 2 },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  cardName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
+  cardSub: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  cardEffect: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
+  cardDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 16, marginTop: 1 },
+  ownedTag: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
+  iconBadge: {
+    width: 40, height: 40, borderRadius: RADIUS.md, borderWidth: 1,
+    alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary,
+  },
+  auraSwatch: {
+    width: 44, height: 44, borderRadius: RADIUS.pill, borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+  },
+  buyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.brand, paddingHorizontal: SPACING.md, paddingVertical: 9,
+    borderRadius: RADIUS.pill, minWidth: 62, justifyContent: "center",
+  },
+  buyBtnDisabled: { backgroundColor: COLORS.surfaceTertiary },
+  buyBtnTxt: { color: COLORS.onBrand, fontWeight: "800", fontSize: 14 },
+  buyBtnTxtDisabled: { color: COLORS.onSurfaceTertiary },
+  equipBtn: {
+    backgroundColor: COLORS.surfaceTertiary, borderColor: COLORS.borderStrong, borderWidth: 1,
+    paddingHorizontal: SPACING.md, paddingVertical: 9, borderRadius: RADIUS.pill, minWidth: 62, alignItems: "center",
+  },
+  equipBtnTxt: { color: COLORS.onSurface, fontWeight: "700", fontSize: 13 },
+  ownedBadge: { flexDirection: "row", alignItems: "center", gap: 4, minWidth: 62, justifyContent: "center" },
+  ownedBadgeTxt: { color: COLORS.success, fontWeight: "700", fontSize: 12 },
+  staminaCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border, borderWidth: 1,
+    borderRadius: RADIUS.md, padding: SPACING.md,
+  },
+  staminaTxt: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
+});
