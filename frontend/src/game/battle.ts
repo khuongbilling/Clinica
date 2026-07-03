@@ -45,6 +45,10 @@ export interface WaveMember {
   defeated: boolean;
 }
 
+// Hard ceiling for AP granted by bonuses (e.g. correct Clinical Cues) that stack
+// above the normal per-turn limit. Keeps bonus AP meaningful without runaway stacking.
+const AP_BONUS_CEILING = 9;
+
 export interface BattleState {
   enemy: Enemy;
   enemyClinical: EnemyClinical | undefined;
@@ -318,7 +322,14 @@ export function isHeroReady(s: BattleState, heroId: string): boolean {
 }
 
 function consumeHeroAction(s: BattleState, heroId: string): BattleState {
-  return { ...s, heroActionsUsed: { ...s.heroActionsUsed, [heroId]: true } };
+  const heroActionsUsed = { ...s.heroActionsUsed, [heroId]: true };
+  // Auto-advance to the next hero who hasn't acted yet this turn.
+  const nextReady = s.team.find(h => !heroActionsUsed[h.id]);
+  return {
+    ...s,
+    heroActionsUsed,
+    selectedHeroId: nextReady ? nextReady.id : s.selectedHeroId,
+  };
 }
 
 // ============================================================
@@ -367,6 +378,9 @@ export function applyUltimate(s: BattleState, heroId: string): ApplyResult {
       next.team.forEach(h => { heroActionsUsed[h.id] = false; });
       heroActionsUsed[heroId] = true; // the caster has still acted
       next.heroActionsUsed = heroActionsUsed;
+      // Refresh the team's turn — point at the next hero who can now act again.
+      const ready = next.team.find(h => !heroActionsUsed[h.id]);
+      if (ready) next.selectedHeroId = ready.id;
       break;
     }
     case 'Educator':
@@ -879,8 +893,9 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
       pendingCue: null,
       cuesAnswered,
       cueBonusStabilize: s.cueBonusStabilize + 8,
-      ap: Math.min(s.apMax + 1, s.ap + 1),
-      log: [...s.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 AP, next stabilizing action empowered)`],
+      // Bonus AP stacks ABOVE the normal per-turn limit (hard-capped to avoid runaway).
+      ap: Math.min(s.ap + 1, AP_BONUS_CEILING),
+      log: [...s.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, next stabilizing action empowered)`],
     };
     next = addUltimateCharge(next, heroId, 15);
     return { state: next, message: 'Correct! +1 AP and a power boost.', status: 'appropriate' };

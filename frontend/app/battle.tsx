@@ -617,9 +617,19 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         <View style={styles.apRow}>
           <Text style={styles.apLabel}>AP</Text>
           <View style={{ flexDirection: "row", gap: 4, flex: 1 }}>
-            {Array.from({ length: state.apMax }).map((_, i) => (
-              <View key={i} style={[styles.apDot, i < state.ap && styles.apDotOn]} />
-            ))}
+            {Array.from({ length: Math.max(state.apMax, state.ap) }).map((_, i) => {
+              const isBonus = i >= state.apMax;
+              return (
+                <View
+                  key={i}
+                  style={[
+                    styles.apDot,
+                    i < state.ap && styles.apDotOn,
+                    isBonus && i < state.ap && styles.apDotBonus,
+                  ]}
+                />
+              );
+            })}
           </View>
           <Pressable onPress={handleEndTurn} style={styles.endBtn} disabled={state.outcome !== "ongoing"} testID="battle-end-turn">
             <Text style={styles.endTxt}>END TURN</Text>
@@ -1192,6 +1202,7 @@ const styles = StyleSheet.create({
   apLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
   apDot: { width: 10, height: 10, borderRadius: 2, backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.borderStrong },
   apDotOn: { backgroundColor: COLORS.runeGold, borderColor: COLORS.runeGold },
+  apDotBonus: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   endBtn: { marginLeft: "auto", paddingHorizontal: 11, paddingVertical: 4, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.borderStrong },
   endTxt: { color: COLORS.onSurfaceSecondary, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
   tabs: { flexDirection: "row", gap: 4 },

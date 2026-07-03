@@ -722,20 +722,26 @@ export function getTreatmentStabilityModifier(stability: number): number {
 }
 
 // Dynamic AP each turn based on patient state.
+// Base AP scales across stability checkpoints (10 / 25 / 50 / 75 / 100): a healthier
+// patient lets the team coordinate more actions, a crashing one limits them.
 export function getTurnAP(stability: number, corruption: number, chapter: number, modifiers: { allowHighStabilityBonus?: boolean; preventNextAPLoss?: boolean } = {}): number {
-  let ap = 4;
-  if (stability >= 80 && modifiers.allowHighStabilityBonus) ap += 1;
-  if (stability < 40) ap -= 1;
-  if (stability < 20) ap -= 1;
+  let ap: number;
+  if (stability >= 100) ap = 6;
+  else if (stability >= 75) ap = 5;
+  else if (stability >= 50) ap = 4;
+  else if (stability >= 25) ap = 3;
+  else ap = 2; // 10-24, and the sub-10 critical floor
+  if (stability >= 75 && modifiers.allowHighStabilityBonus) ap += 1;
   if (chapter >= 2 && corruption >= 80) ap -= 1;
   if (modifiers.preventNextAPLoss) {
     ap = Math.max(ap, 4);
     modifiers.preventNextAPLoss = false;
   }
-  return Math.max(2, Math.min(ap, 5));
+  return Math.max(2, Math.min(ap, 7));
 }
 
 export function apMessage(ap: number): string {
+  if (ap >= 6) return 'The patient is thriving — the team moves in perfect sync. 6 AP available.';
   if (ap >= 5) return 'The patient is stable and the team is well coordinated. 5 AP available.';
   if (ap >= 4) return 'The team has full coordination. 4 AP available.';
   if (ap >= 3) return 'The situation is unstable. The team has less time. 3 AP available.';
