@@ -69,6 +69,44 @@ export function getDifficultyModifier(level: DifficultyLevel | undefined): Diffi
   return DIFFICULTY_MODIFIERS[level ?? 'standard'];
 }
 
+// ------------------------------------------------------------
+// CORRUPTION INTENSITY MODE
+// ------------------------------------------------------------
+// A coarse "how brutal is the disease" tier layered on top of the learning
+// difficulty. Normal keeps the base tuning; Hard escalates and Chaos pushes it
+// further — mismatched treatments punish harder and high corruption drains
+// stability faster. These map from the existing difficulty levels, so the
+// player's chosen difficulty already selects the mode (no separate selector).
+export type CorruptionMode = 'normal' | 'hard' | 'chaos';
+
+export const CORRUPTION_MODE_BY_DIFFICULTY: Record<DifficultyLevel, CorruptionMode> = {
+  guided: 'normal',
+  standard: 'normal',
+  clinical: 'hard',
+  nclex: 'hard',
+  expert: 'chaos',
+};
+
+export const CORRUPTION_MODE_MULTIPLIER: Record<CorruptionMode, number> = {
+  normal: 1.0,
+  hard: 1.3,
+  chaos: 1.55,
+};
+
+export const CORRUPTION_MODE_LABEL: Record<CorruptionMode, string> = {
+  normal: 'Normal',
+  hard: 'Hard',
+  chaos: 'Chaos',
+};
+
+export function getCorruptionMode(level: DifficultyLevel | string | undefined): CorruptionMode {
+  return CORRUPTION_MODE_BY_DIFFICULTY[(level as DifficultyLevel) ?? 'standard'] ?? 'normal';
+}
+
+export function getCorruptionModeMultiplier(level: DifficultyLevel | string | undefined): number {
+  return CORRUPTION_MODE_MULTIPLIER[getCorruptionMode(level)];
+}
+
 export const DEFAULT_DIFFICULTY_BY_PROFILE: Record<string, DifficultyLevel> = {
   // New quiz IDs
   curious: 'guided',

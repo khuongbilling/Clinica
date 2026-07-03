@@ -23,6 +23,7 @@ import {
   getActiveFeedbackLevel,
   getChapterForgiveness,
   getCorruptionOutcome,
+  getCorruptionPenaltyScale,
   getDangerLevel,
   getEnemyDamage,
   getRandomClinicalCue,
@@ -517,9 +518,12 @@ function applyResolutionToState(
   }
 
   let next = { ...s, log: [...s.log] };
+  // Harshness of a wrong treatment scales with chapter progression + difficulty mode
+  // (gentle in Chapter 1, brutal on Chaos).
+  const penaltyScale = getCorruptionPenaltyScale(s.chapter, s.difficulty);
   if (res.status === 'unsafe') {
     next.unsafeActionsUsed = next.unsafeActionsUsed + 1;
-    const outcome = getCorruptionOutcome('unsafe');
+    const outcome = getCorruptionOutcome('unsafe', penaltyScale);
     next.stability = clamp(next.stability - 10, 0, 100);
     if (outcome.worsenBase > 0) next.corruption = clamp(next.corruption + outcome.worsenBase, 0, 100);
     next.log.push(`⚠ Unsafe: ${actionName}. Stability -10${outcome.worsenBase > 0 ? `, symptoms worsen (Corruption +${outcome.worsenBase})` : ''}.`);
@@ -527,7 +531,7 @@ function applyResolutionToState(
   if (res.status === 'inappropriate') {
     next.poorFitActionsUsed = next.poorFitActionsUsed + 1;
     // Totally unrelated treatment: no help, actively harms the patient.
-    const outcome = getCorruptionOutcome('inappropriate');
+    const outcome = getCorruptionOutcome('inappropriate', penaltyScale);
     if (outcome.stabilityPenalty > 0) next.stability = clamp(next.stability - outcome.stabilityPenalty, 0, 100);
     if (outcome.worsenBase > 0) next.corruption = clamp(next.corruption + outcome.worsenBase, 0, 100);
     next.log.push(`✗ ${actionName} doesn't fit this disease — Stability -${outcome.stabilityPenalty}, symptoms worsen (Corruption +${outcome.worsenBase}).`);
@@ -1081,8 +1085,9 @@ export function endPlayerTurn(s: BattleState): BattleState {
   if (s.outcome !== 'ongoing') return s;
   const log = [...s.log];
 
-  // Enemy turn — shielded by Rapid Response or shieldNext
-  const baseDmg = getEnemyDamage(s.corruption, s.enemy.instability);
+  // Enemy turn — shielded by Rapid Response or shieldNext.
+  // Corruption's grip on stability scales with chapter + difficulty mode (soft in Ch.1, harsh on Chaos).
+  const baseDmg = getEnemyDamage(s.corruption, s.enemy.instability, getCorruptionPenaltyScale(s.chapter, s.difficulty));
   const damageMultiplier = getChapterForgiveness(s.chapter).enemyDamageMultiplier;
   const waveMultiplier = getWaveDamageMultiplier(s.wave);
   const reductionAfterShield = Math.floor(baseDmg * (1 - s.shieldNext / 100) * damageMultiplier * waveMultiplier);

@@ -11,6 +11,8 @@
  * existing data flows.
  */
 
+import { getCorruptionModeMultiplier } from './difficulty';
+
 // ------------------------------------------------------------
 // LEARNING PROFILE
 // ------------------------------------------------------------
@@ -775,16 +777,40 @@ export function getStabilityGainModifier(stability: number): number {
   return 1.0;
 }
 
-export function getEnemyDamage(corruption: number, baseInstability: number): number {
+export function getEnemyDamage(corruption: number, baseInstability: number, accelScale: number = 1): number {
   // Higher Disease Corruption accelerates stability loss — the sicker the patient,
-  // the harder each enemy assault lands.
+  // the harder each enemy assault lands. accelScale (chapter + difficulty mode) tunes
+  // HOW steeply corruption amplifies the hit: gentle in Chapter 1, brutal on Chaos.
   let mult = 1.0;
   if (corruption >= 85) mult = 1.8;
   else if (corruption >= 70) mult = 1.55;
   else if (corruption >= 55) mult = 1.35;
   else if (corruption >= 40) mult = 1.2;
   else if (corruption >= 25) mult = 1.08;
-  return Math.round(baseInstability * mult);
+  // Only the corruption-driven EXTRA portion scales; base damage is untouched.
+  const scaledMult = 1 + (mult - 1) * accelScale;
+  return Math.round(baseInstability * scaledMult);
+}
+
+// ------------------------------------------------------------
+// CORRUPTION HARSHNESS SCALING (chapter progression + difficulty mode)
+// ------------------------------------------------------------
+// Chapter 1 is deliberately gentle so new players can learn without spiraling;
+// the disease grows more punishing as the story escalates.
+export function getChapterCorruptionScale(chapter: number): number {
+  if (chapter <= 1) return 0.6;
+  if (chapter === 2) return 0.85;
+  if (chapter === 3) return 1.0;
+  if (chapter === 4) return 1.1;
+  return 1.2;
+}
+
+// Single harshness knob for the corruption algorithm: story progression times
+// the difficulty mode (Normal 1.0 / Hard 1.3 / Chaos 1.55). Clamped so the
+// early game never becomes unwinnable and the late game never trivial.
+export function getCorruptionPenaltyScale(chapter: number, difficulty?: string): number {
+  const raw = getChapterCorruptionScale(chapter) * getCorruptionModeMultiplier(difficulty);
+  return Math.min(1.8, Math.max(0.5, raw));
 }
 
 // ------------------------------------------------------------
@@ -803,15 +829,26 @@ export interface CorruptionOutcome {
   stabilityPenalty: number; // flat Stability loss inflicted by a mismatched treatment
 }
 
-export function getCorruptionOutcome(status: ActionStatus): CorruptionOutcome {
+export function getCorruptionOutcome(status: ActionStatus, penaltyScale: number = 1): CorruptionOutcome {
+  let base: CorruptionOutcome;
   switch (status) {
-    case 'strong':        return { reductionMult: 1.6, worsenBase: 0, stabilityPenalty: 0 };
-    case 'appropriate':   return { reductionMult: 1.0, worsenBase: 0, stabilityPenalty: 0 };
-    case 'weak':          return { reductionMult: 0.3, worsenBase: 0, stabilityPenalty: 0 };
-    case 'inappropriate': return { reductionMult: 0, worsenBase: 8, stabilityPenalty: 6 };
-    case 'unsafe':        return { reductionMult: 0, worsenBase: 6, stabilityPenalty: 0 };
-    default:              return { reductionMult: 0, worsenBase: 0, stabilityPenalty: 0 };
+    case 'strong':        base = { reductionMult: 1.6, worsenBase: 0, stabilityPenalty: 0 }; break;
+    case 'appropriate':   base = { reductionMult: 1.0, worsenBase: 0, stabilityPenalty: 0 }; break;
+    case 'weak':          base = { reductionMult: 0.3, worsenBase: 0, stabilityPenalty: 0 }; break;
+    case 'inappropriate': base = { reductionMult: 0, worsenBase: 8, stabilityPenalty: 6 }; break;
+    case 'unsafe':        base = { reductionMult: 0, worsenBase: 6, stabilityPenalty: 0 }; break;
+    default:              base = { reductionMult: 0, worsenBase: 0, stabilityPenalty: 0 }; break;
   }
+  if (penaltyScale === 1) return base;
+  // Only the punishing side (worsening + destabilization) scales with harshness;
+  // the reward for correct treatment (reductionMult) stays consistent so the game
+  // remains fair. A penalty that exists at all never rounds away to zero.
+  const scaleFlat = (n: number) => (n > 0 ? Math.max(1, Math.round(n * penaltyScale)) : 0);
+  return {
+    reductionMult: base.reductionMult,
+    worsenBase: scaleFlat(base.worsenBase),
+    stabilityPenalty: scaleFlat(base.stabilityPenalty),
+  };
 }
 
 // ------------------------------------------------------------
