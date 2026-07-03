@@ -141,6 +141,8 @@ type EnemyDef = {
   selfHealPerTick?: number;   /* Corruption Leech regenerates HP while alive */
   speedBurstChance?: number;  /* Shock Shade — chance per tick to lurch forward at double speed */
   stunOnPass?: boolean;       /* Stun Toad — briefly disables the nearest deployed unit it passes */
+  /* Player-facing ability blurb — MUST describe the spirit's real mechanical behaviour */
+  ability: { name: string; desc: string };
 };
 
 const ENEMY_DATA: Record<string, EnemyDef> = {
@@ -153,6 +155,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "A restless wisp that steals breath — early assessment reveals its pattern.",
     weakness: "panic",
     corruptionPressure: 0.12, corruptionOnLeak: 6,
+    ability: { name: "Fleeting Breath", desc: "Fragile and low-health — falls quickly to a well-matched healer, but slips forward if ignored." },
   },
   wheeze_sprite: {
     name: "Wheeze Spirit", icon: "🌀",
@@ -163,6 +166,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Tightens airways — a wheeze audible on auscultation. Mist and suction clear it.",
     weakness: "airway",
     corruptionPressure: 0.15, corruptionOnLeak: 8,
+    ability: { name: "Airway Constrict", desc: "Steady mid-tier threat; Mist Caster and Airway Sentinel cut it down fastest." },
   },
   mucus_slime: {
     name: "Mucus Slime", icon: "🫧",
@@ -173,6 +177,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "A slow secretion blob — suction and drainage break it apart.",
     weakness: "secretion",
     corruptionPressure: 0.18, corruptionOnLeak: 8,
+    ability: { name: "Sticky Mass", desc: "Slow but high-health and hard-hitting — Herbal Chemist and Airway Sentinel break it apart." },
   },
   hypoxia_wraith: {
     name: "Hypoxia Wraith", icon: "👻",
@@ -183,6 +188,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Oxygen-starving spirit that drains the ward — supplemental O₂ is the direct counter.",
     weakness: "oxygenation",
     corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
+    ability: { name: "Oxygen Drain · Priority", desc: "Priority threat — moves fast and floods the lane with corruption; answer it with O₂ units first." },
   },
   panic_imp: {
     name: "Panic Imp", icon: "😱",
@@ -193,6 +199,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "A frantic imp that darts down the lane — calm assessment and reassurance settle it.",
     weakness: "panic",
     corruptionPressure: 0.16, corruptionOnLeak: 7,
+    ability: { name: "Frantic Dash", desc: "The fastest spirit on the lane — reaches the Vital Lantern quickly unless intercepted early." },
   },
   fever_imp: {
     name: "Fever Imp", icon: "🔥",
@@ -203,6 +210,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Inflammatory heat spirit — recognise the cue, then cool and treat the source.",
     weakness: "infection",
     corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
+    ability: { name: "Inflamed Heat · Priority", desc: "Priority threat — steadily raises corruption; cool it with Fever Warden or Herbal Chemist." },
   },
   shock_shade: {
     name: "Shock Shade", icon: "⚡",
@@ -214,6 +222,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: "perfusion",
     corruptionPressure: 0.36, corruptionOnLeak: 14, isPriority: true,
     speedBurstChance: 0.28,
+    ability: { name: "Shock Surge", desc: "Randomly lurches forward in sudden speed bursts — a priority threat that's hard to time; stabilise it fast." },
   },
   stun_toad: {
     name: "Stun Toad", icon: "😵",
@@ -225,6 +234,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: "neuro",
     corruptionPressure: 0.30, corruptionOnLeak: 13, isPriority: true,
     stunOnPass: true,
+    ability: { name: "Dazing Pass", desc: "Briefly stuns the nearest deployed healer it passes, disabling its attacks — shield or space out your line." },
   },
   corruption_leech: {
     name: "Corruption Leech", icon: "🪱",
@@ -236,6 +246,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     weakness: "corruption",
     corruptionPressure: 0.5, corruptionOnLeak: 16, isPriority: true,
     selfHealPerTick: 2,
+    ability: { name: "Self-Mending", desc: "Regenerates its own health every moment — focus heavy, matched damage to burn it down before it heals back." },
   },
   bronchospasm_drake: {
     name: "Bronchospasm Drake", icon: "🐲",
@@ -247,6 +258,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Severe bronchospasm incarnate — Assess to expose its weakness, then hit it with bronchodilator mist. It shrugs off damage until revealed.",
     weakness: "corruption",
     corruptionPressure: 0.9, corruptionOnLeak: 30, isPriority: true,
+    ability: { name: "Hardened Hide", desc: "Shrugs off most damage until an Assess exposes its weakness — reveal it first, then hit with bronchodilator mist." },
   },
 };
 
@@ -3563,6 +3575,19 @@ function LobbyScreen({ onStart, onBack }: { onStart: () => void; onBack: () => v
                   )}
                 </View>
                 <Text style={s.lobbyListDesc}>{def.flavor}</Text>
+                <View style={{
+                  flexDirection: "row", alignItems: "flex-start", gap: 5, marginTop: 4,
+                  backgroundColor: def.color + "10", borderRadius: 6,
+                  borderLeftWidth: 2, borderLeftColor: def.color + "88",
+                  paddingVertical: 4, paddingHorizontal: 6,
+                }}>
+                  <Text style={{ color: def.color, fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 }}>
+                    {def.ability.name.toUpperCase()}
+                  </Text>
+                  <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 9, flex: 1, lineHeight: 12 }}>
+                    {def.ability.desc}
+                  </Text>
+                </View>
               </View>
             </View>
           ))}
