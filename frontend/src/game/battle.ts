@@ -1,6 +1,7 @@
 import { getDifficultyModifier } from './difficulty';
 import { ElementSystem, Enemy, Hero, HeroSkill } from './types';
 import { CallOption, Item, ITEMS, TEMP_ACTIONS } from './items';
+import { CARD_CLINICAL, CARD_POOL, drawCards, getCard, SkillCard } from './cards';
 import {
   ActionClinical,
   ActionStatus,
@@ -12,6 +13,7 @@ import {
   ChainRole,
   ChainState,
   CHAIN_BONUSES,
+  ClinicalCueQuestion,
   combineFinalEffect,
   emptyChain,
   ENEMY_CLINICAL,
@@ -22,6 +24,7 @@ import {
   getChapterForgiveness,
   getDangerLevel,
   getEnemyDamage,
+  getRandomClinicalCue,
   getStabilizationModifier,
   getSystemMatchModifier,
   getTreatmentStabilityModifier,
@@ -31,11 +34,21 @@ import {
   SKILL_CLINICAL,
   statusLabel,
   TEMP_CLINICAL,
+  ULTIMATE_BY_ROLE,
+  ULTIMATE_CHARGE_MAX,
 } from './clinical';
+
+export interface WaveMember {
+  enemy: Enemy;
+  corruption: number;
+  defeated: boolean;
+}
 
 export interface BattleState {
   enemy: Enemy;
   enemyClinical: EnemyClinical | undefined;
+  wave: WaveMember[];
+  activeEnemyId: string;
   team: Hero[];
   stability: number;
   corruption: number;
@@ -82,6 +95,18 @@ export interface BattleState {
   inappropriateConsultsUsed: number;
   blockNextSpread: boolean;
   basicAidUses: number;
+
+  // Active skill cards (hand/tray)
+  hand: string[];
+
+  // Question-to-power (Clinical Cue)
+  pendingCue: ClinicalCueQuestion | null;
+  cuesAnswered: string[];
+  cueBonusStabilize: number; // stacked bonus from correct cue answers, consumed by next player action
+
+  // Clinical Arts ultimates
+  heroUltimateCharge: Record<string, number>;
+  ultimateUsedCount: Record<string, number>;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -95,6 +120,77 @@ export interface InitBattleOptions {
   enemyDamageReduction?: number;
   revealOneExtraClue?: boolean;
   difficulty?: string;
+  additionalEnemies?: Enemy[];
+}
+
+// ============================================================
+// Wave (multi-enemy) helpers
+// ============================================================
+
+/** Behavior pressure applied by companion/affliction enemies still alive in the wave, each enemy turn. */
+export function getWaveBehaviorPressure(wave: WaveMember[]): { stabilityDrain: number; urgent: boolean; log: string[] } {
+  let stabilityDrain = 0;
+  let urgent = false;
+  const log: string[] = [];
+  for (const m of wave) {
+    if (m.defeated) continue;
+    if (m.enemy.behaviorTag === 'hypoxia') {
+      stabilityDrain += 6;
+      log.push(`${m.enemy.name} chokes off oxygen further. Stability -6.`);
+    } else if (m.enemy.behaviorTag === 'shock') {
+      stabilityDrain += 8;
+      urgent = true;
+      log.push(`${m.enemy.name} destabilizes perfusion. Stability -8.`);
+    }
+  }
+  return { stabilityDrain, urgent, log };
+}
+
+/** Damage multiplier applied to the active enemy's signature attack from panic-type companions. */
+export function getWaveDamageMultiplier(wave: WaveMember[]): number {
+  let mult = 1;
+  for (const m of wave) {
+    if (m.defeated) continue;
+    if (m.enemy.behaviorTag === 'panic') mult *= 1.15;
+  }
+  return mult;
+}
+
+/** Defensive pressure reduction — some wave members shield each other from the same treatments. */
+export function getWaveDefenseModifier(target: Enemy, wave: WaveMember[]): number {
+  let mod = 1;
+  for (const m of wave) {
+    if (m.defeated || m.enemy.id === target.id) continue;
+    if (m.enemy.behaviorTag === 'wheeze' && target.primarySystem === 'Air') mod *= 0.5;
+    if (m.enemy.behaviorTag === 'mucus' && target.id === m.enemy.id) mod *= 0.4;
+  }
+  if (target.behaviorTag === 'mucus') mod *= 0.6;
+  return mod;
+}
+
+/** After any corruption change to the active enemy: mark defeat, advance to next alive member, or win. */
+function syncWaveAndCheckVictory(s: BattleState): BattleState {
+  let next = { ...s, wave: s.wave.map(m => m.enemy.id === s.activeEnemyId ? { ...m, corruption: s.corruption } : m) };
+  if (next.corruption > 0) return next;
+
+  // Active enemy defeated
+  next.wave = next.wave.map(m => m.enemy.id === next.activeEnemyId ? { ...m, corruption: 0, defeated: true } : m);
+  const defeatedEnemy = next.wave.find(m => m.enemy.id === next.activeEnemyId)?.enemy;
+  const nextAlive = next.wave.find(m => !m.defeated);
+
+  if (!nextAlive) {
+    next.log = [...next.log, `✨ The ${defeatedEnemy?.name || s.enemy.name} is purified! Stability holds at ${next.stability}%.`];
+    next.outcome = 'win';
+    return next;
+  }
+
+  // Advance to the next enemy in the wave
+  next.log = [...next.log, `✨ ${defeatedEnemy?.name} is purified! ${nextAlive.enemy.name} presses the attack.`];
+  next.enemy = nextAlive.enemy;
+  next.enemyClinical = ENEMY_CLINICAL[nextAlive.enemy.id];
+  next.activeEnemyId = nextAlive.enemy.id;
+  next.corruption = nextAlive.corruption;
+  return next;
 }
 
 export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions = {}): BattleState {
@@ -137,9 +233,24 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   const heroActionsUsed: Record<string, boolean> = {};
   team.forEach(h => { heroActionsUsed[h.id] = false; });
 
+  const waveList = [enemy, ...(opts.additionalEnemies || [])];
+  const wave: WaveMember[] = waveList.map(e => ({ enemy: e, corruption: e.corruption, defeated: false }));
+  if (waveList.length > 1) {
+    log.push(`⚔ A wave of ${waveList.length} spirits assails the ward — defeat ${enemy.name} first.`);
+  }
+
+  const heroUltimateCharge: Record<string, number> = {};
+  const ultimateUsedCount: Record<string, number> = {};
+  team.forEach(h => { heroUltimateCharge[h.id] = 0; ultimateUsedCount[h.id] = 0; });
+
+  const hand = drawCards(3);
+  const pendingCue = getRandomClinicalCue();
+
   return {
     enemy,
     enemyClinical,
+    wave,
+    activeEnemyId: enemy.id,
     team,
     stability,
     corruption,
@@ -181,6 +292,14 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     inappropriateConsultsUsed: 0,
     blockNextSpread: false,
     basicAidUses: 0,
+
+    hand,
+    pendingCue,
+    cuesAnswered: [],
+    cueBonusStabilize: 0,
+
+    heroUltimateCharge,
+    ultimateUsedCount,
   };
 }
 
@@ -199,6 +318,67 @@ export function isHeroReady(s: BattleState, heroId: string): boolean {
 
 function consumeHeroAction(s: BattleState, heroId: string): BattleState {
   return { ...s, heroActionsUsed: { ...s.heroActionsUsed, [heroId]: true } };
+}
+
+// ============================================================
+// Clinical Arts — ultimate charge
+// ============================================================
+
+function addUltimateCharge(s: BattleState, heroId: string | null, amount: number): BattleState {
+  if (!heroId) return s;
+  const current = s.heroUltimateCharge[heroId] ?? 0;
+  const next = clamp(current + amount, 0, ULTIMATE_CHARGE_MAX);
+  return { ...s, heroUltimateCharge: { ...s.heroUltimateCharge, [heroId]: next } };
+}
+
+export function isUltimateReady(s: BattleState, heroId: string): boolean {
+  return (s.heroUltimateCharge[heroId] ?? 0) >= ULTIMATE_CHARGE_MAX;
+}
+
+export function applyUltimate(s: BattleState, heroId: string): ApplyResult {
+  if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
+  const hero = s.team.find(h => h.id === heroId);
+  if (!hero) return { state: s, message: 'Hero not found.', aborted: true };
+  if (!isUltimateReady(s, heroId)) return { state: s, message: `${hero.name}'s Clinical Art is not ready.`, aborted: true };
+  if (s.heroActionsUsed[heroId]) return { state: s, message: `${hero.name} has already acted this turn.`, aborted: true };
+
+  const ult = ULTIMATE_BY_ROLE[hero.role];
+  let next: BattleState = consumeHeroAction({
+    ...s,
+    heroUltimateCharge: { ...s.heroUltimateCharge, [heroId]: 0 },
+    ultimateUsedCount: { ...s.ultimateUsedCount, [heroId]: (s.ultimateUsedCount[heroId] || 0) + 1 },
+    turnsTaken: s.turnsTaken + 1,
+    log: [...s.log, `✦ Clinical Art: ${hero.name} unleashes ${ult.name}! ${ult.description}`],
+  }, heroId);
+
+  switch (hero.role) {
+    case 'Assessor':
+      next = revealHiddenClues(next, next.hiddenClueIds.length);
+      break;
+    case 'Stabilizer':
+      next.stability = clamp(next.stability + 30, 0, 100);
+      break;
+    case 'Analyst':
+      next.corruption = Math.max(0, next.corruption - 25);
+      break;
+    case 'Coordinator': {
+      const heroActionsUsed: Record<string, boolean> = {};
+      next.team.forEach(h => { heroActionsUsed[h.id] = false; });
+      heroActionsUsed[heroId] = true; // the caster has still acted
+      next.heroActionsUsed = heroActionsUsed;
+      break;
+    }
+    case 'Educator':
+      next = revealHiddenClues(next, 2);
+      next.shieldNext = Math.max(next.shieldNext, 30);
+      break;
+    case 'Specialist':
+      next.corruption = Math.max(0, next.corruption - 30);
+      break;
+  }
+
+  next = syncWaveAndCheckVictory(next);
+  return { state: next, message: `${ult.name} unleashed!`, status: 'appropriate' };
 }
 
 // ============================================================
@@ -239,10 +419,8 @@ export function applyCareAttempt(s: BattleState): ApplyResult {
     ],
   }, heroId);
 
-  if (next.corruption <= 0) {
-    next.log.push(`✨ The ${s.enemy.name} is purified! Stability holds at ${next.stability}%.`);
-    next.outcome = 'win';
-  }
+  next = addUltimateCharge(next, heroId, 8);
+  next = syncWaveAndCheckVictory(next);
 
   return { state: next, message: `Care Attempt: -${damage} Corruption.`, status: 'weak' };
 }
@@ -353,7 +531,20 @@ function applyResolutionToState(
 
 export interface ApplyResult { state: BattleState; message: string; status?: ActionStatus; aborted?: boolean }
 
-export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyResult {
+export type CastQuality = 'perfect' | 'good' | 'normal';
+
+export const CAST_QUALITY_MULTIPLIER: Record<CastQuality, number> = {
+  perfect: 1.3,
+  good: 1.12,
+  normal: 1,
+};
+
+/** Skills that support the Perfect Cast timing prompt — those with a meaningful strike or stabilize payload. */
+export function skillSupportsCastTiming(skill: HeroSkill): boolean {
+  return !!(skill.strike || skill.stabilize);
+}
+
+export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQuality: CastQuality = 'normal'): ApplyResult {
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
 
   // Hero must be the selected hero, and ready
@@ -388,8 +579,12 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyR
 
   // Treatment stability modifier — corruption damage scales with how stable the patient is
   const treatMod = getTreatmentStabilityModifier(next.stability);
-  const eff = (n: number) => combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, chapterModifier: treatMod });
-  const stabEff = (n: number) => combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) });
+  const castMult = CAST_QUALITY_MULTIPLIER[castQuality];
+  const eff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, chapterModifier: treatMod }) * castMult);
+  const stabEff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }) * castMult);
+  if (castQuality !== 'normal') {
+    next.log = [...next.log, castQuality === 'perfect' ? '✨ Perfect Cast! Effect amplified.' : '⭐ Good Cast — effect boosted.'];
+  }
 
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
@@ -399,8 +594,9 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyR
     effectType = 'clue';
   }
   if (skill.stabilize) {
-    const amt = Math.max(0, stabEff(skill.stabilize));
+    const amt = Math.max(0, stabEff(skill.stabilize)) + next.cueBonusStabilize;
     next.stability = clamp(next.stability + amt, 0, 100);
+    next.cueBonusStabilize = 0;
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
@@ -450,10 +646,8 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero): ApplyR
   });
   if (msg) next.log.push(msg);
 
-  if (next.corruption <= 0) {
-    next.log.push(`✨ The ${s.enemy.name} is purified! Stability holds at ${next.stability}%.`);
-    next.outcome = 'win';
-  }
+  next = addUltimateCharge(next, hero.id, res.chainAdvanced ? 20 : 12);
+  next = syncWaveAndCheckVictory(next);
 
   return { state: next, message: msg || `${skill.name} resolved.`, status: res.status };
 }
@@ -505,8 +699,9 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     effectAmount = amt; effectType = 'corruption';
   }
   if (item.target === 'stability') {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod }));
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
     next.stability = clamp(next.stability + amt, 0, 100);
+    next.cueBonusStabilize = 0;
     effectAmount = amt; effectType = 'stability';
   }
   if (item.target === 'shield') {
@@ -540,7 +735,8 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   });
   if (msg) next.log.push(msg);
 
-  if (next.corruption <= 0) { next.log.push(`✨ Purified!`); next.outcome = 'win'; }
+  next = addUltimateCharge(next, hero?.id || heroId, res.chainAdvanced ? 18 : 10);
+  next = syncWaveAndCheckVictory(next);
   return { state: next, message: msg, status: res.status };
 }
 
@@ -573,8 +769,130 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
     next.corruption = Math.max(0, next.corruption - amt);
   }
   if (a.shield) next.shieldNext = Math.max(next.shieldNext, a.shield);
-  if (next.corruption <= 0) { next.log.push(`✨ Purified!`); next.outcome = 'win'; }
+  next = addUltimateCharge(next, heroId, 8);
+  next = syncWaveAndCheckVictory(next);
   return { state: next, message: `${a.name} resolved.`, status: res.status };
+}
+
+// ============================================================
+// Active skill cards (hand/tray)
+// ============================================================
+
+export function applyCard(s: BattleState, cardId: string): ApplyResult {
+  if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
+  if (!s.hand.includes(cardId)) return { state: s, message: 'That card is not in hand.', aborted: true };
+  const card = getCard(cardId);
+  if (!card) return { state: s, message: 'Card not found.', aborted: true };
+  if (s.ap < card.costAP) return { state: s, message: 'Not enough AP.', aborted: true };
+  const heroId = s.selectedHeroId;
+  if (!heroId) return { state: s, message: 'Select a hero to play this card.', aborted: true };
+  if (s.heroActionsUsed[heroId]) {
+    const hero = s.team.find(h => h.id === heroId);
+    return { state: s, message: `${hero?.name || 'That hero'} has already acted this turn.`, aborted: true };
+  }
+  const hero = s.team.find(h => h.id === heroId);
+
+  const action = CARD_CLINICAL[cardId];
+  const res = resolveAction(action, card.systemType, s);
+
+  const { state: post, aborted } = applyResolutionToState(s, res, card.name);
+  if (aborted) return { state: post, message: `${card.name} is locked.`, status: 'locked', aborted: true };
+
+  const handAfterPlay = post.hand.filter((id, idx) => !(id === cardId && idx === post.hand.indexOf(cardId)));
+  const [redrawn] = drawCards(1, handAfterPlay);
+
+  let next: BattleState = consumeHeroAction({
+    ...post,
+    ap: post.ap - card.costAP,
+    turnsTaken: post.turnsTaken + 1,
+    hand: [...handAfterPlay, redrawn],
+    log: [...post.log, `${hero?.name || 'Hero'} plays ${card.name}.`],
+  }, heroId);
+
+  const stabMod = getStabilizationModifier(next.corruption);
+  let effectAmount = 0;
+  let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
+
+  if (card.reveal) { next = revealHiddenClues(next, card.reveal); next.reboundArmed = false; effectType = 'clue'; }
+  if (card.stabilize) {
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: card.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
+    next.stability = clamp(next.stability + amt, 0, 100);
+    next.cueBonusStabilize = 0;
+    effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
+  }
+  if (card.strike) {
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: card.strike, clinicalMod: res.modifier, systemMod: res.systemModifier }));
+    next.corruption = Math.max(0, next.corruption - amt);
+    effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'stability' || effectType === 'clue' ? 'mixed' : 'corruption';
+  }
+  if (card.shield) {
+    next.shieldNext = Math.max(next.shieldNext, card.shield);
+    effectAmount = Math.max(effectAmount, card.shield); effectType = effectType === 'mixed' ? 'mixed' : 'shield';
+  }
+
+  if ((action?.chainRoles || []).includes('Reassess')) {
+    next.reassessUsed = true;
+    next.reassessUsedAnytime = true;
+    next.reboundArmed = false;
+  }
+
+  const msg = generateBattleMessage({
+    feedbackLevel: next.feedbackLevel,
+    actionName: card.name,
+    status: res.status,
+    systemModifier: res.systemModifier,
+    effectAmount,
+    effectType,
+    chainAdvanced: res.chainAdvanced,
+    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] || null,
+    fullChainCompleted: next.fullChainCompleted,
+    rationale: res.rationale,
+  });
+  if (msg) next.log.push(msg);
+
+  next = addUltimateCharge(next, heroId, res.chainAdvanced ? 16 : 9);
+  next = syncWaveAndCheckVictory(next);
+  return { state: next, message: msg || `${card.name} resolved.`, status: res.status };
+}
+
+// ============================================================
+// Question-to-power (Clinical Cue)
+// ============================================================
+
+export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyResult {
+  const cue = s.pendingCue;
+  if (!cue) return { state: s, message: 'No question pending.', aborted: true };
+  const option = cue.options[optionIndex];
+  const cuesAnswered = [...s.cuesAnswered, cue.id];
+  if (!option) return { state: { ...s, pendingCue: null, cuesAnswered }, message: 'No answer selected.', aborted: true };
+
+  if (option.correct) {
+    const heroId = s.selectedHeroId;
+    let next: BattleState = {
+      ...s,
+      pendingCue: null,
+      cuesAnswered,
+      cueBonusStabilize: s.cueBonusStabilize + 8,
+      ap: Math.min(s.apMax + 1, s.ap + 1),
+      log: [...s.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 AP, next stabilizing action empowered)`],
+    };
+    next = addUltimateCharge(next, heroId, 15);
+    return { state: next, message: 'Correct! +1 AP and a power boost.', status: 'appropriate' };
+  }
+
+  const next: BattleState = {
+    ...s,
+    pendingCue: null,
+    cuesAnswered,
+    log: [...s.log, `❌ Clinical Cue missed: ${cue.rationale}`],
+  };
+  return { state: next, message: 'Not quite — no bonus this time.', status: 'weak' };
+}
+
+export function maybeTriggerClinicalCue(s: BattleState): BattleState {
+  if (s.pendingCue) return s;
+  if (s.cuesAnswered.length >= 4) return s;
+  return { ...s, pendingCue: getRandomClinicalCue(s.cuesAnswered) };
 }
 
 export function applyCall(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {
@@ -732,8 +1050,14 @@ export function endPlayerTurn(s: BattleState): BattleState {
   // Enemy turn — shielded by Rapid Response or shieldNext
   const baseDmg = getEnemyDamage(s.corruption, s.enemy.instability);
   const damageMultiplier = getChapterForgiveness(s.chapter).enemyDamageMultiplier;
-  const reductionAfterShield = Math.floor(baseDmg * (1 - s.shieldNext / 100) * damageMultiplier);
+  const waveMultiplier = getWaveDamageMultiplier(s.wave);
+  const reductionAfterShield = Math.floor(baseDmg * (1 - s.shieldNext / 100) * damageMultiplier * waveMultiplier);
   let reduced = Math.max(0, reductionAfterShield - s.enemyDamageReduction);
+
+  // Companion affliction pressure — wisps/spikes still alive in the wave drain stability every turn
+  const wavePressure = getWaveBehaviorPressure(s.wave);
+  reduced += wavePressure.stabilityDrain;
+  log.push(...wavePressure.log);
 
   // Rebound: corruption dropped below 40 without reassess this turn
   if (s.reboundArmed && !s.reassessUsed) {
@@ -796,7 +1120,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
   const danger = getDangerLevel(stability, corruption);
   const dangerTriggerActive = danger === 'critical';
 
-  return {
+  let next: BattleState = {
     ...s,
     stability,
     corruption,
@@ -813,6 +1137,13 @@ export function endPlayerTurn(s: BattleState): BattleState {
     selectedHeroId: s.team.find(h => !heroActionsUsed[h.id])?.id || s.selectedHeroId,
     dangerTriggerActive,
   };
+
+  // Clinical Cue — a fresh question every couple of turns to keep power tied to knowledge
+  if (next.turn % 2 === 0) {
+    next = maybeTriggerClinicalCue(next);
+  }
+
+  return next;
 }
 
 export function flatSkills(team: Hero[]): { hero: Hero; skill: import('./types').HeroSkill }[] {

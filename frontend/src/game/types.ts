@@ -58,6 +58,8 @@ export interface ClueCard {
   hidden: boolean;
 }
 
+export type EnemyBehaviorTag = 'hypoxia' | 'mucus' | 'panic' | 'wheeze' | 'shock';
+
 export interface Enemy {
   id: string;
   name: string;
@@ -74,6 +76,9 @@ export interface Enemy {
   startingStability: number; // patient starting stability %
   corruption: number; // enemy HP equivalent
   teaches: string[]; // codex ids unlocked on victory
+  // Multi-enemy wave pressure archetype (affliction adds that ride alongside a primary enemy)
+  behaviorTag?: EnemyBehaviorTag;
+  isAffliction?: boolean; // small companion enemy, not a standalone encounter
 }
 
 export interface CodexEntry {

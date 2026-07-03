@@ -413,6 +413,129 @@ export const ENEMIES: Enemy[] = [
   },
 ];
 
+// ---------- WAVE AFFLICTIONS (small companion enemies that ride alongside a primary enemy) ----------
+export const AFFLICTION_ENEMIES: Enemy[] = [
+  {
+    id: 'hypoxia_wisp',
+    name: 'Hypoxia Wisp',
+    realWorld: 'Worsening oxygen desaturation',
+    primarySystem: 'Air',
+    difficulty: 2,
+    startingStability: 100,
+    instability: 0,
+    corruption: 30,
+    weakSystem: 'Air',
+    behaviorTag: 'hypoxia',
+    isAffliction: true,
+    visibleClues: [
+      { id: 'c1', label: 'SpO₂ Dropping', detail: 'Saturation trending down each turn.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Accessory Muscle Use', detail: 'Working harder to breathe.', hidden: true },
+    ],
+    dangerTrigger: 'Silent hypoxia',
+    bestCounters: ['stabilize', 'scout'],
+    teaches: [],
+  },
+  {
+    id: 'mucus_wisp',
+    name: 'Mucus Wisp',
+    realWorld: 'Airway obstruction from secretions',
+    primarySystem: 'Air',
+    difficulty: 2,
+    startingStability: 100,
+    instability: 0,
+    corruption: 25,
+    weakSystem: 'Air',
+    behaviorTag: 'mucus',
+    isAffliction: true,
+    visibleClues: [
+      { id: 'c1', label: 'Thick Secretions', detail: 'Airway partially clogged.', hidden: false },
+    ],
+    hiddenClues: [],
+    dangerTrigger: 'Airway obstruction',
+    bestCounters: ['cleanse', 'stabilize'],
+    teaches: [],
+  },
+  {
+    id: 'panic_wraith',
+    name: 'Panic Wraith',
+    realWorld: 'Anxiety-driven tachypnea',
+    primarySystem: 'Mind',
+    difficulty: 2,
+    startingStability: 100,
+    instability: 0,
+    corruption: 20,
+    weakSystem: 'Mind',
+    behaviorTag: 'panic',
+    isAffliction: true,
+    visibleClues: [
+      { id: 'c1', label: 'Racing Thoughts', detail: 'Fear amplifies every symptom.', hidden: false },
+    ],
+    hiddenClues: [],
+    dangerTrigger: 'Panic spiral',
+    bestCounters: ['cleanse', 'support'],
+    teaches: [],
+  },
+  {
+    id: 'wheeze_guard',
+    name: 'Wheeze Guard',
+    realWorld: 'Bronchospasm shielding the primary lesion',
+    primarySystem: 'Air',
+    difficulty: 2,
+    startingStability: 100,
+    instability: 0,
+    corruption: 28,
+    weakSystem: 'Air',
+    behaviorTag: 'wheeze',
+    isAffliction: true,
+    visibleClues: [
+      { id: 'c1', label: 'Diffuse Wheeze', detail: 'Bronchospasm across both fields.', hidden: false },
+    ],
+    hiddenClues: [],
+    dangerTrigger: 'Bronchospasm cascade',
+    bestCounters: ['stabilize', 'strike'],
+    teaches: [],
+  },
+  {
+    id: 'shock_spike',
+    name: 'Shock Spike',
+    realWorld: 'Acute hemodynamic instability',
+    primarySystem: 'River',
+    difficulty: 3,
+    startingStability: 100,
+    instability: 0,
+    corruption: 35,
+    weakSystem: 'River',
+    behaviorTag: 'shock',
+    isAffliction: true,
+    visibleClues: [
+      { id: 'c1', label: 'BP Crashing', detail: 'Pressure falling turn over turn.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Cap Refill >3s', detail: 'Poor peripheral perfusion.', hidden: true },
+    ],
+    dangerTrigger: 'Hemodynamic collapse',
+    bestCounters: ['stabilize', 'strike'],
+    teaches: [],
+  },
+];
+
+// Only these primary enemies spawn with wave companions — all others remain single-enemy encounters.
+export const WAVE_COMPANIONS: Record<string, string[]> = {
+  septara_seed: ['shock_spike'],
+  cardion_echo: ['hypoxia_wisp'],
+  pulmora_wisp: ['mucus_wisp'],
+  air_sprite: ['panic_wraith'],
+  electrox_flicker: ['wheeze_guard'],
+};
+
+export function getWaveAdditionalEnemies(enemyId: string): Enemy[] {
+  const ids = WAVE_COMPANIONS[enemyId];
+  if (!ids || ids.length === 0) return [];
+  return ids.map(id => AFFLICTION_ENEMIES.find(e => e.id === id)).filter((e): e is Enemy => !!e);
+}
+
 // ---------- CHAPTER 1 BOSS ----------
 export const BOSS_LORD_IMBALANCE: Enemy = {
   id: 'lord_imbalance',

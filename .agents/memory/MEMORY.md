@@ -4,3 +4,4 @@
 - [Clinica image rendering](clinica-image-rendering.md) — use expo-image (ExpoImage + contentFit) for scene backgrounds in nested flex containers; RN Image fails silently on web inside ward-defense battle View.
 - [Clinica battle sprites](clinica-battle-sprites.md) — hero battle PNGs natively face LEFT (need scaleX:-1 to face right); per-action FX via 3 in-sync maps HERO_MOVE/ENEMY_REACT/ATTACK_FX; eyeball art before flipping.
 - [Clinica enemy signature attacks](clinica-enemy-signature-attacks.md) — per-ElementSystem end-turn attacks (assault/spread/hex); spread MUST honor+consume blockNextSpread (Infection Control) or the call is a no-op.
+- [Clinica battle timed/gated mechanics](clinica-battle-timed-mechanics.md) — thread new action modifiers (cast quality, buffs) into the existing apply* pipeline, not a parallel effect path, or Care Chain/grading breaks.

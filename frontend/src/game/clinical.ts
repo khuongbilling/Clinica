@@ -506,6 +506,86 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     rewardBase: 100,
     chapter: 3,
   },
+  hypoxia_wisp: {
+    clinicalCategory: 'Respiratory',
+    diseaseTags: ['hypoxia', 'desaturation', 'respiratory distress'],
+    allowedActionTags: ['airway', 'oxygenation', 'respiratory', 'assessment', 'reassessment', 'escalation', 'general support'],
+    strongActionTags: ['oxygenation', 'airway'],
+    weakActionTags: ['general support', 'comfort'],
+    inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
+    unsafeActionTags: [],
+    treatmentChain: ['Stabilize', 'Reassess'],
+    preferredChainTags: ['oxygenation', 'reassessment'],
+    weaknesses: ['Air'],
+    resistances: [],
+    starTurnLimit: 4,
+    rewardBase: 12,
+    chapter: 2,
+  },
+  mucus_wisp: {
+    clinicalCategory: 'Respiratory',
+    diseaseTags: ['airway obstruction', 'secretions'],
+    allowedActionTags: ['airway', 'oxygenation', 'respiratory', 'assessment', 'reassessment', 'escalation', 'general support'],
+    strongActionTags: ['airway', 'oxygenation'],
+    weakActionTags: ['general support', 'comfort'],
+    inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
+    unsafeActionTags: [],
+    treatmentChain: ['Stabilize', 'Reassess'],
+    preferredChainTags: ['airway', 'reassessment'],
+    weaknesses: ['Air'],
+    resistances: [],
+    starTurnLimit: 4,
+    rewardBase: 12,
+    chapter: 2,
+  },
+  panic_wraith: {
+    clinicalCategory: 'Mental Health',
+    diseaseTags: ['anxiety', 'panic', 'agitation'],
+    allowedActionTags: ['orientation', 'assessment', 'reassessment', 'escalation', 'general support', 'comfort'],
+    strongActionTags: ['comfort', 'orientation'],
+    weakActionTags: ['general support'],
+    inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial', 'fluid resuscitation'],
+    unsafeActionTags: [],
+    treatmentChain: ['Stabilize', 'Reassess'],
+    preferredChainTags: ['comfort', 'reassessment'],
+    weaknesses: ['Mind'],
+    resistances: [],
+    starTurnLimit: 4,
+    rewardBase: 10,
+    chapter: 2,
+  },
+  wheeze_guard: {
+    clinicalCategory: 'Respiratory',
+    diseaseTags: ['bronchospasm', 'wheezing'],
+    allowedActionTags: ['airway', 'oxygenation', 'respiratory', 'bronchospasm', 'wheezing', 'assessment', 'reassessment', 'escalation', 'general support'],
+    strongActionTags: ['wheezing', 'bronchospasm', 'oxygenation'],
+    weakActionTags: ['general support', 'comfort'],
+    inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
+    unsafeActionTags: [],
+    treatmentChain: ['Stabilize', 'Reassess'],
+    preferredChainTags: ['bronchospasm', 'reassessment'],
+    weaknesses: ['Air'],
+    resistances: [],
+    starTurnLimit: 4,
+    rewardBase: 13,
+    chapter: 2,
+  },
+  shock_spike: {
+    clinicalCategory: 'Circulatory',
+    diseaseTags: ['shock', 'hypoperfusion'],
+    allowedActionTags: ['circulation', 'fluid resuscitation', 'assessment', 'reassessment', 'escalation', 'general support'],
+    strongActionTags: ['circulation', 'fluid resuscitation', 'escalation'],
+    weakActionTags: ['general support', 'comfort'],
+    inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
+    unsafeActionTags: [],
+    treatmentChain: ['Stabilize', 'Reassess'],
+    preferredChainTags: ['circulation', 'reassessment'],
+    weaknesses: ['River'],
+    resistances: [],
+    starTurnLimit: 4,
+    rewardBase: 15,
+    chapter: 2,
+  },
 };
 
 // ------------------------------------------------------------
@@ -959,3 +1039,123 @@ export const PROFILE_SUBLABEL: Record<LearningProfile, string> = {
   nonmedical: 'Guided lessons in plain language.',
   healthcareProfessional: 'Concise clinical synthesis.',
 };
+
+// ------------------------------------------------------------
+// CLINICAL CUE — question-to-power
+// ------------------------------------------------------------
+
+export interface ClinicalCueOption {
+  text: string;
+  correct: boolean;
+}
+
+export interface ClinicalCueQuestion {
+  id: string;
+  prompt: string;
+  options: ClinicalCueOption[];
+  rationale: string;
+}
+
+export const CLINICAL_CUES: ClinicalCueQuestion[] = [
+  {
+    id: 'cue_priority',
+    prompt: 'A patient shows a new symptom. What comes first?',
+    options: [
+      { text: 'Assess before treating', correct: true },
+      { text: 'Treat immediately, assess later', correct: false },
+      { text: 'Wait for the doctor to arrive', correct: false },
+    ],
+    rationale: 'Assessment (gathering data) always precedes intervention — you must know what you are treating.',
+  },
+  {
+    id: 'cue_abc',
+    prompt: 'Which comes first when prioritizing patient needs?',
+    options: [
+      { text: 'Airway', correct: true },
+      { text: 'Circulation', correct: false },
+      { text: 'Comfort', correct: false },
+    ],
+    rationale: 'Airway, Breathing, Circulation (ABC) — airway always comes first.',
+  },
+  {
+    id: 'cue_rebound',
+    prompt: 'Corruption is dropping fast without reassessment. What is the risk?',
+    options: [
+      { text: 'A rebound worsening if the cause is not confirmed', correct: true },
+      { text: 'No risk — lower corruption is always safe', correct: false },
+      { text: 'The patient becomes immune to further disease', correct: false },
+    ],
+    rationale: 'Rapid improvement without reassessment can mask a worsening underlying cause — always confirm with reassessment.',
+  },
+  {
+    id: 'cue_chain',
+    prompt: 'What is the correct order of the Care Chain?',
+    options: [
+      { text: 'Scout \u2192 Stabilize \u2192 Counter \u2192 Reassess', correct: true },
+      { text: 'Counter \u2192 Scout \u2192 Stabilize \u2192 Reassess', correct: false },
+      { text: 'Reassess \u2192 Counter \u2192 Scout \u2192 Stabilize', correct: false },
+    ],
+    rationale: 'Gather data (Scout), support the patient (Stabilize), treat the cause (Counter), then confirm (Reassess).',
+  },
+  {
+    id: 'cue_unsafe',
+    prompt: 'An action is flagged unsafe for this patient. What should you do?',
+    options: [
+      { text: 'Avoid it and pick a safer action', correct: true },
+      { text: 'Use it anyway for a faster win', correct: false },
+      { text: 'Use it twice to be sure', correct: false },
+    ],
+    rationale: 'Unsafe actions can actively harm the patient — always choose the safer, clinically appropriate path.',
+  },
+];
+
+export function getRandomClinicalCue(excludeIds: string[] = []): ClinicalCueQuestion {
+  const pool = CLINICAL_CUES.filter(c => !excludeIds.includes(c.id));
+  const source = pool.length > 0 ? pool : CLINICAL_CUES;
+  return source[Math.floor(Math.random() * source.length)];
+}
+
+// ------------------------------------------------------------
+// CLINICAL ARTS — role ultimates
+// ------------------------------------------------------------
+
+export interface UltimateDef {
+  name: string;
+  rpgFlavor: string;
+  description: string;
+}
+
+export const ULTIMATE_BY_ROLE: Record<import('./types').HeroRole, UltimateDef> = {
+  Assessor: {
+    name: "Seer's Revelation",
+    rpgFlavor: 'The Assessor pierces every veil at once, laying the full truth bare.',
+    description: 'Reveals all remaining hidden clues.',
+  },
+  Stabilizer: {
+    name: 'Ward of Renewal',
+    rpgFlavor: 'A pulse of restorative light steadies the patient to their core.',
+    description: 'Stability +30.',
+  },
+  Analyst: {
+    name: "Diagnostic Cascade",
+    rpgFlavor: "The Analyst's insight strikes the corruption at its root.",
+    description: 'Corruption -25 with full clinical bonuses.',
+  },
+  Coordinator: {
+    name: 'Rally of the Ward',
+    rpgFlavor: 'The Coordinator\u2019s call refreshes every hero for one more action.',
+    description: 'Resets all hero actions for this turn.',
+  },
+  Educator: {
+    name: "Lantern of Understanding",
+    rpgFlavor: 'The Educator\u2019s lantern illuminates the safest path forward.',
+    description: 'Reveals 2 hidden clues and grants a shield.',
+  },
+  Specialist: {
+    name: 'Precision Strike',
+    rpgFlavor: 'The Specialist channels every ounce of expertise into one perfect strike.',
+    description: 'Corruption -30, ignoring resistance.',
+  },
+};
+
+export const ULTIMATE_CHARGE_MAX = 100;

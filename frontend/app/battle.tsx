@@ -5,14 +5,15 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
-import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES } from "@/src/game/content";
+import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES, getWaveAdditionalEnemies } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBACK, STABILIZE_FEEDBACK, COUNTER_FEEDBACK, REASSESS_FEEDBACK } from "@/src/game/explanationLayers";
 import { OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
-import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
+import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
-import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
+import { getCard } from "@/src/game/cards";
+import { getStartingHandicap, statusColor, statusLabel, ULTIMATE_BY_ROLE, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
@@ -23,7 +24,7 @@ import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-type Tab = "actions" | "items" | "call" | "team";
+type Tab = "actions" | "items" | "cards" | "call" | "team";
 
 type DetailEntry =
   | { kind: "skill"; hero: Hero; skill: HeroSkill }
@@ -36,7 +37,7 @@ export default function Battle() {
   const { player, loading } = usePlayer();
   if (loading || !player) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.bg }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface }}>
         <Text style={{ color: COLORS.onSurfaceTertiary }}>Loading…</Text>
       </View>
     );
@@ -86,6 +87,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       enemyDamageReduction: handicap.enemyDamageReduction,
       revealOneExtraClue: handicap.revealOneExtraClue || isTraining,
       difficulty: player?.difficulty || undefined,
+      additionalEnemies: getWaveAdditionalEnemies(enemy.id),
     });
     let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
@@ -108,6 +110,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
   const [detail, setDetail] = useState<DetailEntry | null>(null);
+  const [timingSkill, setTimingSkill] = useState<{ hero: Hero; skill: HeroSkill } | null>(null);
+  const [timingProgress, setTimingProgress] = useState(0);
+  const timingAnim = useRef<ReturnType<typeof setInterval> | null>(null);
   const [actionFx, setActionFx] = useState<BattleFx>(null);
   const [enemyFxTs, setEnemyFxTs] = useState(0);
   const [enemyFxAction, setEnemyFxAction] = useState<ActionType | null>(null);
@@ -239,7 +244,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 3500);
   };
 
-  const handleSkill = (hero: Hero, skill: HeroSkill) => {
+  const handleSkill = (hero: Hero, skill: HeroSkill, castQuality: CastQuality = "normal") => {
     if (state.outcome !== "ongoing") return;
     let effective = skill;
     if (sageDiscount && skill.type === "scout" && skill.cost > 0) {
@@ -247,9 +252,13 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       setSageScoutBonusUsed(true);
     }
     if (state.ap < effective.cost) return;
+    if (castQuality === "normal" && skillSupportsCastTiming(effective) && state.outcome === "ongoing") {
+      openTimingPrompt(hero, effective);
+      return;
+    }
     onRequiredAction(skill.type);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setState((s) => applySkill(s, effective, hero).state);
+    setState((s) => applySkill(s, effective, hero, castQuality).state);
     triggerFx(hero.id, effective.type);
     showFeedback(skill.type);
     if (!tsFirstAction.current) {
@@ -270,6 +279,63 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     });
     setDetail(null);
   };
+  useEffect(() => () => { if (timingAnim.current) clearInterval(timingAnim.current); }, []);
+
+  const openTimingPrompt = (hero: Hero, skill: HeroSkill) => {
+    if (timingAnim.current) clearInterval(timingAnim.current);
+    setTimingSkill({ hero, skill });
+    setTimingProgress(0);
+    let v = 0;
+    let dir = 1;
+    timingAnim.current = setInterval(() => {
+      v += dir * 4;
+      if (v >= 100) { v = 100; dir = -1; }
+      if (v <= 0) { v = 0; dir = 1; }
+      setTimingProgress(v);
+    }, 16);
+  };
+
+  const stopTimingAndCast = () => {
+    if (timingAnim.current) { clearInterval(timingAnim.current); timingAnim.current = null; }
+    const ts = timingSkill;
+    const progress = timingProgress;
+    setTimingSkill(null);
+    if (!ts) return;
+    const dist = Math.abs(progress - 50);
+    const quality: CastQuality = dist <= 8 ? "perfect" : dist <= 22 ? "good" : "normal";
+    handleSkill(ts.hero, ts.skill, quality);
+  };
+
+  const skipTiming = () => {
+    if (timingAnim.current) { clearInterval(timingAnim.current); timingAnim.current = null; }
+    const ts = timingSkill;
+    setTimingSkill(null);
+    if (ts) handleSkill(ts.hero, ts.skill, "normal");
+  };
+
+  const handleCard = (cardId: string) => {
+    if (state.outcome !== "ongoing") return;
+    const res = applyCard(state, cardId);
+    if (res.aborted) return;
+    setState(res.state);
+    triggerFx(state.selectedHeroId ?? undefined, "support");
+    setDetail(null);
+  };
+
+  const handleUltimate = (hero: Hero) => {
+    if (state.outcome !== "ongoing") return;
+    const res = applyUltimate(state, hero.id);
+    if (res.aborted) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    setState(res.state);
+    triggerFx(hero.id, "support");
+  };
+
+  const handleCueAnswer = (optionIndex: number) => {
+    const res = answerClinicalCue(state, optionIndex);
+    setState(res.state);
+  };
+
   const handleTempAction = (actionId: string) => {
     const res = applyTempAction(state, actionId);
     setState(res.state);
@@ -392,6 +458,26 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                 </View>
               )}
             </View>
+            {state.wave.length > 1 && (
+              <View style={styles.waveRow} testID="battle-wave-row">
+                <Text style={styles.waveLabel}>WAVE</Text>
+                {state.wave.map((m) => (
+                  <View
+                    key={m.enemy.id}
+                    style={[
+                      styles.wavePip,
+                      m.defeated && styles.wavePipDefeated,
+                      m.enemy.id === state.activeEnemyId && styles.wavePipActive,
+                    ]}
+                    testID={`wave-pip-${m.enemy.id}`}
+                  >
+                    <Text style={styles.wavePipTxt} numberOfLines={1}>
+                      {m.defeated ? "✓" : m.enemy.name.split(" ")[0]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -472,6 +558,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             const selected = state.selectedHeroId === h.id;
             const elementColor = ELEMENT_COLORS[h.element] || COLORS.brand;
             const pillW = Math.floor((screenW - SPACING.xs * 2 - (team.length - 1) * 5) / team.length);
+            const charge = state.heroUltimateCharge[h.id] ?? 0;
+            const ultReady = isUltimateReady(state, h.id) && !acted && state.outcome === "ongoing";
+            const ult = ULTIMATE_BY_ROLE[h.role];
             return (
               <Pressable
                 key={h.id}
@@ -487,6 +576,19 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                 <Text style={[styles.heroPillRole, acted && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
                   {acted ? "ACTED" : h.element.toUpperCase()}
                 </Text>
+                <View style={styles.ultBarBg}>
+                  <View style={[styles.ultBarFill, { width: `${Math.min(100, charge)}%`, backgroundColor: ultReady ? COLORS.runeGold : elementColor }]} />
+                </View>
+                {ultReady ? (
+                  <Pressable
+                    onPress={(e) => { e.stopPropagation(); handleUltimate(h); }}
+                    style={styles.ultBtn}
+                    testID={`hero-ultimate-${h.id}`}
+                  >
+                    <Ionicons name="sparkles" size={9} color="#1A1200" />
+                    <Text style={styles.ultBtnTxt} numberOfLines={1}>{ult.name}</Text>
+                  </Pressable>
+                ) : null}
               </Pressable>
             );
           })}
@@ -503,7 +605,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           </Pressable>
         </View>
         <View style={styles.tabs}>
-          {(["actions", "items", "call", "team"] as Tab[]).map(t => (
+          {(["actions", "items", "cards", "call", "team"] as Tab[]).map(t => (
             <Pressable key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)} testID={`tab-${t}`}>
               <Text style={[styles.tabTxt, activeTab === t && styles.tabTxtActive]}>{t.toUpperCase()}</Text>
             </Pressable>
@@ -620,6 +722,34 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             })}
           </ScrollView>
         )}
+        {activeTab === "cards" && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+            {(() => {
+              const selHero = state.team.find(h => h.id === state.selectedHeroId);
+              if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — skill cards use the chosen hero's action.</Text>;
+              if (state.heroActionsUsed[selHero.id]) return <Text style={styles.emptyTab}>{selHero.name} has already acted.</Text>;
+              return null;
+            })()}
+            {state.hand.map((cardId, idx) => {
+              const card = getCard(cardId);
+              if (!card) return null;
+              const sel = state.team.find(h => h.id === state.selectedHeroId);
+              const heroBlocked = !sel || !!state.heroActionsUsed[sel.id];
+              const disabled = state.ap < card.costAP || state.outcome !== "ongoing" || heroBlocked;
+              return (
+                <Pressable key={`${cardId}-${idx}`} style={[styles.actionBtn, { borderColor: COLORS.runeGold }, disabled && styles.disabled]} onPress={() => disabled ? null : handleCard(cardId)} testID={`battle-card-${cardId}`}>
+                  <View style={styles.basicTag}><Text style={styles.basicTagTxt}>CARD</Text></View>
+                  <View style={styles.actionHead}>
+                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{card.name}</Text>
+                    <Text style={styles.apTag}>{card.costAP} AP</Text>
+                  </View>
+                  <Text style={styles.actionEffect} numberOfLines={2}>{card.shortEffect}</Text>
+                  <Text style={styles.actionHero} numberOfLines={1}>{card.systemType || "Universal"}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
         {activeTab === "call" && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
             {availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options available.</Text>}
@@ -701,6 +831,39 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             </Pressable>
           </Pressable>
         </Pressable>
+      )}
+
+      {state.pendingCue && !showBriefing && state.outcome === "ongoing" && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.cueModal} testID="clinical-cue-modal">
+            <Text style={styles.cueKicker}>CLINICAL CUE</Text>
+            <Text style={styles.cuePrompt}>{state.pendingCue.prompt}</Text>
+            {state.pendingCue.options.map((opt, idx) => (
+              <Pressable key={idx} style={styles.cueOption} onPress={() => handleCueAnswer(idx)} testID={`cue-option-${idx}`}>
+                <Text style={styles.cueOptionTxt}>{opt.text}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {timingSkill && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.timingModal} testID="perfect-cast-modal">
+            <Text style={styles.cueKicker}>PERFECT CAST</Text>
+            <Text style={styles.cuePrompt}>{timingSkill.skill.name} — tap when the marker hits the gold zone!</Text>
+            <View style={styles.timingTrack}>
+              <View style={styles.timingPerfectZone} />
+              <View style={[styles.timingMarker, { left: `${timingProgress}%` }]} />
+            </View>
+            <Pressable style={styles.timingTapBtn} onPress={stopTimingAndCast} testID="timing-tap-button">
+              <Text style={styles.timingTapTxt}>TAP!</Text>
+            </Pressable>
+            <Pressable style={styles.modalDismiss} onPress={skipTiming} testID="timing-skip">
+              <Text style={styles.modalDismissTxt}>SKIP (Normal Cast)</Text>
+            </Pressable>
+          </View>
+        </View>
       )}
 
       {showBriefing && (
@@ -903,6 +1066,12 @@ const styles = StyleSheet.create({
   systemPills: { flexDirection: "row", gap: 4, marginTop: 2, flexWrap: "wrap" },
   sysPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, borderWidth: 1 },
   sysTxt: { fontSize: 9, letterSpacing: 1, fontWeight: "700" },
+  waveRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, flexWrap: "wrap" },
+  waveLabel: { color: COLORS.onSurfaceTertiary, fontSize: 8, letterSpacing: 1.5, fontWeight: "700" },
+  wavePip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceSecondary },
+  wavePipActive: { borderColor: COLORS.error, backgroundColor: COLORS.error + "20" },
+  wavePipDefeated: { borderColor: COLORS.success, backgroundColor: COLORS.success + "18", opacity: 0.6 },
+  wavePipTxt: { color: COLORS.onSurfaceSecondary, fontSize: 8, fontWeight: "700" },
 
   // ── Zone B: Meters + Codex + Clues ──
   zoneB: {
@@ -1007,6 +1176,27 @@ const styles = StyleSheet.create({
   modalSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", lineHeight: 19 },
   continueBtn: { backgroundColor: COLORS.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.pill, marginTop: SPACING.sm },
   continueBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
+
+  // ── Ultimate charge meter (hero pill) ──
+  ultBarBg: { width: "100%", height: 3, borderRadius: 2, backgroundColor: COLORS.surface, marginTop: 3, overflow: "hidden" },
+  ultBarFill: { height: "100%", borderRadius: 2 },
+  ultBtn: { flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: COLORS.runeGold, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 2, marginTop: 3, alignSelf: "stretch", justifyContent: "center" },
+  ultBtnTxt: { color: "#1A1200", fontSize: 8, fontWeight: "700" },
+
+  // ── Clinical Cue modal ──
+  cueModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 8, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380 },
+  cueKicker: { color: COLORS.runeGold, fontSize: 10, letterSpacing: 1.5, fontWeight: "700" },
+  cuePrompt: { color: COLORS.onSurface, fontSize: 15, lineHeight: 21, marginBottom: 4 },
+  cueOption: { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  cueOptionTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
+
+  // ── Perfect Cast timing modal ──
+  timingModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 10, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, alignItems: "center" },
+  timingTrack: { width: "100%", height: 18, borderRadius: 9, backgroundColor: COLORS.surface, overflow: "hidden", justifyContent: "center" },
+  timingPerfectZone: { position: "absolute", left: "38%", width: "24%", height: "100%", backgroundColor: COLORS.runeGold + "50" },
+  timingMarker: { position: "absolute", width: 4, height: "100%", backgroundColor: COLORS.onSurface, borderRadius: 2 },
+  timingTapBtn: { backgroundColor: COLORS.runeGold, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.pill, marginTop: SPACING.sm, alignSelf: "stretch", alignItems: "center" },
+  timingTapTxt: { color: "#1A1200", fontSize: 14, fontWeight: "700", letterSpacing: 2 },
 
   objectiveStrip: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 3, marginBottom: 3 },
   objectiveText: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.4, fontStyle: "italic" },
