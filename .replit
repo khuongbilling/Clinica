@@ -69,3 +69,7 @@ externalPort = 8000
 deploymentTarget = "autoscale"
 run = ["sh", "-c", "cd frontend && npx expo export --platform web --output-dir dist && npx serve dist -p 5000"]
 build = ["sh", "-c", "cd frontend && npx expo export --platform web --output-dir dist"]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000
