@@ -92,7 +92,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     if (player?.aptitude === "weaver" && hiddenClueIds.length > 0) {
       const revealed = hiddenClueIds.shift()!;
       visibleClues = [...visibleClues, revealed];
-      const clue = enemy.hiddenClues.find(c => c.id === revealed);
+      const clue = [...enemy.visibleClues, ...enemy.hiddenClues].find(c => c.id === revealed);
       if (clue) revealedLabels = [...revealedLabels, clue.label];
       log = [...log, `⟡ Weaver's Eye: one hidden clue revealed at battle start.`];
     }
@@ -407,7 +407,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           weakSystem: enemy.weakSystem,
           dangerTrigger: enemy.dangerTrigger,
           bestCounters: enemy.bestCounters,
-          visibleClues: enemy.visibleClues,
+          visibleClues: [...enemy.visibleClues, ...enemy.hiddenClues].filter((c) => state.visibleClues.includes(c.id)),
         }}
         team={team}
         selectedHeroId={state.selectedHeroId}

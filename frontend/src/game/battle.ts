@@ -106,7 +106,8 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   // allClues ordered: visibleClues first (priority), then hiddenClues
   const allClues = [...enemy.visibleClues, ...enemy.hiddenClues];
   const diffMod = getDifficultyModifier(opts.difficulty as any);
-  const targetVisible = Math.min(diffMod.visibleClues, allClues.length);
+  // All clues start hidden — revealed only through Scout skills during battle.
+  const targetVisible = 0;
   const finalVisible = allClues.slice(0, targetVisible).map(c => c.id);
   const finalHidden = allClues.slice(targetVisible).map(c => c.id);
   const finalRevealedLabels = allClues.slice(0, targetVisible).map(c => c.label);
@@ -253,10 +254,11 @@ function revealHiddenClues(s: BattleState, count: number): BattleState {
   const visibleClues = [...s.visibleClues];
   const revealedLabels = [...s.revealedLabels];
   const log = [...s.log];
+  const cluePool = [...s.enemy.visibleClues, ...s.enemy.hiddenClues];
   for (let i = 0; i < reveal; i++) {
     const id = hiddenClueIds.shift()!;
     visibleClues.push(id);
-    const clue = s.enemy.hiddenClues.find(c => c.id === id);
+    const clue = cluePool.find(c => c.id === id);
     if (clue) {
       revealedLabels.push(clue.label);
       log.push(`Hidden clue revealed: ${clue.label}.`);

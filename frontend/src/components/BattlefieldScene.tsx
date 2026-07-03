@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+const BATTLE_BG = require("@/assets/images/ward_battle_bg.png");
 
 import { getHeroBattleSprite } from "./HeroBattleSprites";
 import { getEnemySprite } from "./EnemySprites";
@@ -108,10 +111,11 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
 
   return (
     <View style={styles.arena} testID="battlefield-scene">
+      <ExpoImage source={BATTLE_BG} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
-        colors={["#161A1Fdd", "#0C0E12f5"]}
+        colors={["#0C0E1233", "#0C0E12b3"]}
         style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.4 }}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
       />
       <View style={styles.groundLine} />
 
@@ -497,7 +501,7 @@ const styles = StyleSheet.create({
   heroUnitName: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", marginTop: 3 },
   enemySide: { alignItems: "center", justifyContent: "flex-end", zIndex: 6 },
   enemyUnitWrap: { width: 116, minHeight: 130, alignItems: "center", justifyContent: "flex-end" },
-  enemySprite: { width: 108, height: 118, transform: [{ scaleX: -1 }] },
+  enemySprite: { width: 108, height: 118 },
   enemyFallback: { width: 92, height: 100, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   enemyFlash: {
     ...StyleSheet.absoluteFillObject, backgroundColor: "#FFFFFF", borderRadius: 10,
