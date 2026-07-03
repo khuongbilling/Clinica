@@ -912,7 +912,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
               {cueFeedback.isCorrect ? (
                 <>
                   <Text style={styles.cueRewardTxt}>⚡ +1 Action Point</Text>
-                  <Text style={styles.cueRewardTxt}>✚ Next stabilizing action empowered (+8)</Text>
+                  <Text style={styles.cueRewardTxt}>✚ All stabilizing actions this turn empowered (+8)</Text>
                   <Text style={styles.cueRewardTxt}>★ +15 Ultimate charge</Text>
                 </>
               ) : (

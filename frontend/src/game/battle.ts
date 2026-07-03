@@ -109,7 +109,7 @@ export interface BattleState {
   // Question-to-power (Clinical Cue)
   pendingCue: ClinicalCueQuestion | null;
   cuesAnswered: string[];
-  cueBonusStabilize: number; // stacked bonus from correct cue answers, consumed by next player action
+  cueBonusStabilize: number; // bonus from correct cue answers; boosts every stabilizing action this turn, cleared at end of turn
 
   // Clinical Arts ultimates
   heroUltimateCharge: Record<string, number>;
@@ -627,7 +627,6 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     const rawAmt = Math.max(0, stabEff(skill.stabilize)) + next.cueBonusStabilize;
     const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
-    next.cueBonusStabilize = 0;
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
@@ -734,7 +733,6 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
     const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
-    next.cueBonusStabilize = 0;
     effectAmount = amt; effectType = 'stability';
   }
   if (item.target === 'shield') {
@@ -794,7 +792,7 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
 
   let next: BattleState = consumeHeroAction({ ...post, ap: s.ap - a.costAP, turnsTaken: post.turnsTaken + 1, log: [...post.log, `${hero?.name || 'Hero'} → ${a.name}.`] }, heroId);
   if (a.stabilize) {
-    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }));
+    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) })) + next.cueBonusStabilize;
     const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
   }
@@ -854,7 +852,6 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: card.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
     const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
     next.stability = clamp(next.stability + amt, 0, 100);
-    next.cueBonusStabilize = 0;
     effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
   if (card.strike) {
@@ -912,7 +909,7 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
       cueBonusStabilize: s.cueBonusStabilize + 8,
       // Bonus AP stacks ABOVE the normal per-turn limit (hard-capped to avoid runaway).
       ap: Math.min(s.ap + 1, AP_BONUS_CEILING),
-      log: [...s.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, next stabilizing action empowered)`],
+      log: [...s.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered)`],
     };
     next = addUltimateCharge(next, heroId, 15);
     return { state: next, message: 'Correct! +1 AP and a power boost.', status: 'appropriate' };
@@ -1172,6 +1169,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
     reassessUsed: false,
     reboundArmed: false,
     rapidResponseActive: false,
+    cueBonusStabilize: 0,
     heroActionsUsed,
     selectedHeroId: s.team.find(h => !heroActionsUsed[h.id])?.id || s.selectedHeroId,
     dangerTriggerActive,
