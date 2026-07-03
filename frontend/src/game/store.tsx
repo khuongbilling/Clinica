@@ -35,6 +35,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.wellness) {
     out = { ...out, wellness: defaultWellnessState() };
   }
+  if (out.crowns == null) {
+    out = { ...out, crowns: 0 };
+  }
   return out;
 }
 
@@ -55,7 +58,8 @@ type Ctx = {
   player: PlayerState | null;
   loading: boolean;
   createPlayer: (args: CreatePlayerArgs) => Promise<void>;
-  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; inventoryDelta?: Record<string, number>; enemyName?: string }) => Promise<void>;
+  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; crowns?: number; inventoryDelta?: Record<string, number>; enemyName?: string }) => Promise<void>;
+  purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -125,6 +129,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
       'Lab Token': 2,
     },
     codex_shards: 50,
+    crowns: 0,
     summon_history: [],
     enemy_mastery: {},
     chapter_progress: 1,
@@ -239,6 +244,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     if (rewards.codexShards) {
       next.codex_shards = (next.codex_shards || 0) + rewards.codexShards;
+    }
+    if (rewards.crowns) {
+      next.crowns = (next.crowns || 0) + rewards.crowns;
     }
     if (rewards.inventoryDelta) {
       next.inventory = { ...(next.inventory || {}) };
@@ -355,15 +363,35 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return result;
   }, [updateState]);
 
+  const purchaseItem = useCallback(async (itemName: string, price: number, qty: number = 1) => {
+    // Synchronous ref-based critical section (mirrors spendStamina) so rapid
+    // double-taps can't spend the same Crowns twice or over-buy.
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const cost = Math.max(0, Math.round(price)) * qty;
+    const balance = base.crowns || 0;
+    if (balance < cost) {
+      return { ok: false, message: 'Not enough Crowns.' };
+    }
+    const next = {
+      ...base,
+      crowns: balance - cost,
+      inventory: { ...(base.inventory || {}), [itemName]: ((base.inventory || {})[itemName] || 0) + qty },
+    };
+    playerRef.current = next; // commit synchronously before awaiting persistence
+    await updateState(next);
+    return { ok: true, message: `Purchased ${qty}× ${itemName} for ${cost} Crowns.` };
+  }, [updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
   }, []);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

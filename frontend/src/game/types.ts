@@ -140,6 +140,7 @@ export interface PlayerState {
   failure_counts: Record<string, number>;
   inventory: Record<string, number>;
   codex_shards: number;
+  crowns: number;
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   enemy_mastery?: Record<string, number>;
   chapter_progress?: number;

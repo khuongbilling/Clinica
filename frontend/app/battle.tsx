@@ -415,6 +415,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       const baseShards = isTraining ? 10 : (isBoss ? 100 : 25);
       const chainBonus = state.fullChainCompleted ? 10 : 0;
       const shards = baseShards + chainBonus;
+      const crowns = isTraining ? 8 : (isBoss ? 80 : 20 + enemy.difficulty * 5);
       const startingInventory = player?.inventory || {};
       const inventoryDelta: Record<string, number> = {};
       for (const [k, v] of Object.entries(state.inventory)) {
@@ -422,7 +423,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         if (diff !== 0) inventoryDelta[k] = diff;
       }
       await applyRewards({
-        xp, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, inventoryDelta,
+        xp, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, inventoryDelta,
         mastery: enemy.bestCounters.reduce((acc, c) => {
           const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", cleanse: "judgment", command: "command", analyze: "systems", support: "stabilization" };
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
@@ -435,6 +436,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     }
     const isBoss2 = enemy.id === BOSS_LORD_IMBALANCE.id;
     const baseShards = state.outcome === "win" ? (isTraining ? 10 : (isBoss2 ? 100 : 25)) : 0;
+    const crownsEarned = state.outcome === "win" ? (isTraining ? 8 : (isBoss2 ? 80 : 20 + enemy.difficulty * 5)) : 0;
     router.replace({
       pathname: "/result",
       params: {
@@ -443,6 +445,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         stability: String(state.stability),
         training: isTraining ? "1" : "0",
         shards: String(baseShards),
+        crowns: String(crownsEarned),
         fullChain: state.fullChainCompleted ? "1" : "0",
         unsafe: String(state.unsafeActionsUsed),
         poorFit: String(state.poorFitActionsUsed),

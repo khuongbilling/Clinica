@@ -19,14 +19,15 @@ export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
-  const { outcome, enemyId, stability, training, shards, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid } = useLocalSearchParams<{
-    outcome: string; enemyId: string; stability: string; training?: string; shards?: string;
+  const { outcome, enemyId, stability, training, shards, crowns, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid } = useLocalSearchParams<{
+    outcome: string; enemyId: string; stability: string; training?: string; shards?: string; crowns?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
   }>();
   const won = outcome === "win";
   const isTraining = training === "1";
   const baseShards = parseInt(shards || "0", 10);
+  const crownsEarned = parseInt(crowns || "0", 10);
   const fullChainCompleted = fullChain === "1";
   const consultsUsed = parseInt(consults || "0", 10);
   const emergencyCallsUsed = parseInt(emergency || "0", 10);
@@ -238,6 +239,13 @@ export default function Result() {
               </View>
             )}
 
+            {crownsEarned > 0 && (
+              <View style={styles.crownsCard} testID="result-crowns">
+                <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
+                <Text style={styles.crownsTxt}>+{crownsEarned} Crowns earned — spend them at the Apothecary Market.</Text>
+              </View>
+            )}
+
             {mission && (
               <View style={styles.kingdomCard}>
                 <Ionicons name="globe-outline" size={16} color={COLORS.brand} />
@@ -348,6 +356,8 @@ const styles = StyleSheet.create({
   secondaryTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
   shardsCard: { flexDirection: "column", gap: 6, backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
   shardsTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600" },
+  crownsCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.energy + "14", borderColor: COLORS.energy + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
+  crownsTxt: { color: COLORS.energy, fontSize: 14, fontWeight: "600", flex: 1 },
   shardsBreakdown: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
   starsCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 3, borderTopColor: COLORS.brand, alignItems: "center", gap: 4 },
   starsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },

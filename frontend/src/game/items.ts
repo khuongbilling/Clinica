@@ -18,6 +18,7 @@ export interface Item {
   description: string;
   beginnerExplanation: string;
   clinicalExplanation: string;
+  price: number;
 }
 
 export const ITEMS: Item[] = [
@@ -39,6 +40,7 @@ export const ITEMS: Item[] = [
     description: 'Opens narrowed airflow when wheezing is present.',
     beginnerExplanation: 'This helps open tight airways.',
     clinicalExplanation: 'Represents a bronchodilator-type intervention such as albuterol for bronchospasm/wheezing — anticipate or administer as ordered or per protocol.',
+    price: 40,
   },
   {
     id: 'I002',
@@ -58,6 +60,7 @@ export const ITEMS: Item[] = [
     description: 'Treats energy deficit directly when low glucose is confirmed.',
     beginnerExplanation: 'Glucose directly fixes the low blood sugar causing the problem.',
     clinicalExplanation: 'Glucose replacement directly treats hypoglycemia — administering glucose per protocol resolves the underlying energy deficit and reduces the disease burden.',
+    price: 30,
   },
   {
     id: 'I003',
@@ -77,6 +80,7 @@ export const ITEMS: Item[] = [
     description: 'Supports circulation when low blood pressure is revealed.',
     beginnerExplanation: 'This helps restore circulation.',
     clinicalExplanation: 'Represents fluid support for hypotension/perfusion concerns when appropriate and ordered/protocol-based.',
+    price: 35,
   },
   {
     id: 'I004',
@@ -96,6 +100,7 @@ export const ITEMS: Item[] = [
     description: 'Reduces infection spread.',
     beginnerExplanation: 'This helps stop germs from spreading.',
     clinicalExplanation: 'Represents PPE, isolation precautions, and transmission prevention.',
+    price: 30,
   },
   {
     id: 'I005',
@@ -115,6 +120,7 @@ export const ITEMS: Item[] = [
     description: 'Reveal one hidden clue.',
     beginnerExplanation: 'This helps you find what is wrong.',
     clinicalExplanation: 'Represents obtaining additional clinical data to clarify the problem.',
+    price: 15,
   },
 ];
 
