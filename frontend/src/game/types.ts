@@ -76,7 +76,8 @@ export interface Enemy {
   weakSystem?: ElementSystem; // taking action in this system deals extra
   instability: number; // stability decay per enemy turn
   startingStability: number; // patient starting stability %
-  corruption: number; // enemy HP equivalent
+  corruption: number; // enemy HP equivalent (no upper limit — bosses can exceed 100)
+  stabilityResistance?: number; // hidden 0..0.8: bosses/elites shrug off stabilization, so the patient recovers LESS than a skill's listed number (0 = normal enemy)
   teaches: string[]; // codex ids unlocked on victory
   // Multi-enemy wave pressure archetype (affliction adds that ride alongside a primary enemy)
   behaviorTag?: EnemyBehaviorTag;

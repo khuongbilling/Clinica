@@ -29,6 +29,7 @@ import {
   getRandomClinicalCue,
   getStabilizationModifier,
   getStabilityGainModifier,
+  stabilityResistanceMultiplier,
   getSystemMatchModifier,
   getTreatmentStabilityModifier,
   getTurnAP,
@@ -525,7 +526,7 @@ function applyResolutionToState(
     next.unsafeActionsUsed = next.unsafeActionsUsed + 1;
     const outcome = getCorruptionOutcome('unsafe', penaltyScale);
     next.stability = clamp(next.stability - 10, 0, 100);
-    if (outcome.worsenBase > 0) next.corruption = clamp(next.corruption + outcome.worsenBase, 0, 100);
+    if (outcome.worsenBase > 0) next.corruption = Math.max(0, next.corruption + outcome.worsenBase);
     next.log.push(`⚠ Unsafe: ${actionName}. Stability -10${outcome.worsenBase > 0 ? `, symptoms worsen (Corruption +${outcome.worsenBase})` : ''}.`);
   }
   if (res.status === 'inappropriate') {
@@ -533,7 +534,7 @@ function applyResolutionToState(
     // Totally unrelated treatment: no help, actively harms the patient.
     const outcome = getCorruptionOutcome('inappropriate', penaltyScale);
     if (outcome.stabilityPenalty > 0) next.stability = clamp(next.stability - outcome.stabilityPenalty, 0, 100);
-    if (outcome.worsenBase > 0) next.corruption = clamp(next.corruption + outcome.worsenBase, 0, 100);
+    if (outcome.worsenBase > 0) next.corruption = Math.max(0, next.corruption + outcome.worsenBase);
     next.log.push(`✗ ${actionName} doesn't fit this disease — Stability -${outcome.stabilityPenalty}, symptoms worsen (Corruption +${outcome.worsenBase}).`);
   }
 
@@ -544,7 +545,7 @@ function applyResolutionToState(
       next.chain = { ...next.chain, completed: true };
       next.fullChainCompleted = true;
       next.corruption = Math.max(0, next.corruption - CHAIN_BONUSES.fullChainCorruptionDamage);
-      const chainStab = Math.round(CHAIN_BONUSES.fullChainStabilityBonus * getStabilityGainModifier(next.stability));
+      const chainStab = Math.round(CHAIN_BONUSES.fullChainStabilityBonus * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
       next.stability = clamp(next.stability + chainStab, 0, 100);
       next.log.push(`✨ Complete Care Chain: -${CHAIN_BONUSES.fullChainCorruptionDamage} corruption, +${chainStab} stability.`);
     }
@@ -625,7 +626,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   }
   if (skill.stabilize) {
     const rawAmt = Math.max(0, stabEff(skill.stabilize)) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
     next.stability = clamp(next.stability + amt, 0, 100);
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : 'stability';
@@ -731,7 +732,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   }
   if (item.target === 'stability') {
     const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
     next.stability = clamp(next.stability + amt, 0, 100);
     effectAmount = amt; effectType = 'stability';
   }
@@ -793,7 +794,7 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
   let next: BattleState = consumeHeroAction({ ...post, ap: s.ap - a.costAP, turnsTaken: post.turnsTaken + 1, log: [...post.log, `${hero?.name || 'Hero'} → ${a.name}.`] }, heroId);
   if (a.stabilize) {
     const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) })) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
     next.stability = clamp(next.stability + amt, 0, 100);
   }
   if (a.strike) {
@@ -850,7 +851,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   if (card.reveal) { next = revealHiddenClues(next, card.reveal); next.reboundArmed = false; effectType = 'clue'; }
   if (card.stabilize) {
     const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: card.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability));
+    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
     next.stability = clamp(next.stability + amt, 0, 100);
     effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
@@ -1121,9 +1122,9 @@ export function endPlayerTurn(s: BattleState): BattleState {
   let stability = clamp(s.stability - reduced, 0, 100);
   let corruption = s.corruption;
   if (s.reboundArmed && !s.reassessUsed) {
-    corruption = Math.min(100, corruption + 10);
+    corruption = Math.max(0, corruption + 10);
   }
-  corruption = Math.min(100, corruption + corruptionRegrow);
+  corruption = Math.max(0, corruption + corruptionRegrow);
 
   const shieldTag = s.shieldNext ? ' (shielded)' : '';
   if (attack.kind === 'spread') {

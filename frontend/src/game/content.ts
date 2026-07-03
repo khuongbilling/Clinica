@@ -547,6 +547,7 @@ export const BOSS_LORD_IMBALANCE: Enemy = {
   startingStability: 40,
   instability: 9,
   corruption: 180,
+  stabilityResistance: 0.3, // hidden: Lord Imbalance shrugs off 30% of stabilization — the patient is hard to hold steady
   visibleClues: [
     { id: 'c1', label: 'Air Faltering', detail: 'SpO₂ trending down, RR 26.', hidden: false },
     { id: 'c2', label: 'River Weakening', detail: 'BP 96/60, HR 118.', hidden: false },

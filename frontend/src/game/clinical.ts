@@ -777,6 +777,17 @@ export function getStabilityGainModifier(stability: number): number {
   return 1.0;
 }
 
+// Hidden per-enemy stat. Bosses and later elite enemies resist stabilization, so
+// the patient recovers LESS than a skill's listed number. 0 = no resistance
+// (normal enemies), 0.3 = 30% of every stabilization is shrugged off. Capped at
+// 0.8 so a resistant enemy can never make stabilizing worthless. Never surfaced
+// in the UI — the listed skill number still shows, the delivered gain is quietly
+// dampened, which the player feels as "healing isn't sticking on this boss."
+export function stabilityResistanceMultiplier(enemy?: { stabilityResistance?: number }): number {
+  const r = enemy?.stabilityResistance ?? 0;
+  return 1 - Math.max(0, Math.min(0.8, r));
+}
+
 export function getEnemyDamage(corruption: number, baseInstability: number, accelScale: number = 1): number {
   // Higher Disease Corruption accelerates stability loss — the sicker the patient,
   // the harder each enemy assault lands. accelScale (chapter + difficulty mode) tunes

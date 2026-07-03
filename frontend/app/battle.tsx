@@ -199,7 +199,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   }, [state.turn, tips]);
 
   const stabilityColor = state.stability > 60 ? COLORS.success : state.stability > 30 ? COLORS.warning : COLORS.error;
-  const corruptionPct = (state.corruption / enemy.corruption) * 100;
+  const corruptionPct = Math.min(100, (state.corruption / enemy.corruption) * 100);
   const hints = getEnemyHint(enemy.id);
   const mission = getMission(enemy.id);
   const adaptiveMission = MISSION_BRIEFINGS[enemy.id]?.[explanationLayer];
