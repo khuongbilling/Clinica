@@ -25,6 +25,7 @@ export interface HeroSkill {
   strike?: number;
   cleanse?: boolean;
   shield?: number;
+  blockSpread?: boolean; // stops the next enemy 'spread' attack once (e.g. Isolation Seal)
   risk?: {
     ifSystem?: ElementSystem;
     penalty?: number;

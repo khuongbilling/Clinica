@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CODEX, ENEMIES } from "@/src/game/content";
+import { BATTLE_MECHANICS, CODEX, ENEMIES } from "@/src/game/content";
 import { DEPTH_INTRO, DEPTH_LABEL } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -89,6 +89,18 @@ export default function CodexScreen() {
             );
           })}
         </View>
+
+        {/* Battle Mechanics — always visible */}
+        <Text style={styles.section}>Battle Mechanics</Text>
+        {BATTLE_MECHANICS.map((m) => (
+          <View key={m.id} style={styles.card} testID={`mechanic-${m.id}`}>
+            <View style={styles.mechHead}>
+              <Ionicons name={m.icon as any} size={16} color={COLORS.brand} />
+              <Text style={styles.mechTitle}>{m.title}</Text>
+            </View>
+            <Text style={styles.entryBody}>{m.body}</Text>
+          </View>
+        ))}
 
         {/* Codex Entries */}
         <Text style={styles.section}>Codex Pages</Text>
@@ -218,6 +230,8 @@ const styles = StyleSheet.create({
   lvlDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.surfaceTertiary },
   entryTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "400" },
   entryBody: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21 },
+  mechHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  mechTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "600" },
   locked: { alignItems: "center", paddingVertical: SPACING.lg, gap: 6 },
   lockedTitle: { color: COLORS.onSurfaceTertiary, fontSize: 14, fontWeight: "500" },
   lockedSub: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", paddingHorizontal: SPACING.lg },

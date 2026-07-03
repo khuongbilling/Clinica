@@ -643,6 +643,10 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     effectAmount = Math.max(effectAmount, skill.shield);
     effectType = effectType === 'mixed' ? 'mixed' : 'shield';
   }
+  if (skill.blockSpread) {
+    next.blockNextSpread = true;
+    next.log.push(`🛡 Spread contained — the next spread attack is blocked.`);
+  }
   if (skill.risk?.ifSystem && (skill.risk.ifSystem === s.enemy.primarySystem || skill.risk.ifSystem === s.enemy.secondarySystem)) {
     const pen = skill.risk.penalty || 15;
     next.stability = clamp(next.stability - pen, 0, 100);

@@ -11,3 +11,4 @@
 - [Clinica difficulty levers](clinica-difficulty-levers.md) — corruption HP uncapped (floor 0 only, 4 sites); hidden per-enemy stabilityResistance dampens ALL stability-gain sites, cap 0.8; scripted +30/+15 heals intentionally bypass it.
 - [Clinica Clinical Cue bonus lifecycle](clinica-cue-bonus-lifecycle.md) — cueBonusStabilize (+8) empowers ALL stabilizing actions this turn (4 sites: skill/item/card/temp), cleared only at endPlayerTurn.
 - [Clinica skill balance](clinica-skill-balance.md) — per-AP value budget for hero skills; base values amplified ~3x by combineFinalEffect; always sync embedded numbers in description/shortEffect text.
+- [Clinica skill/mechanic honesty](clinica-skill-mechanic-honesty.md) — skill text must map to a real consumed effect field (reveal/stabilize/strike/shield/blockSpread/risk); no status system so cleanse is dead; mechanics go in always-visible BATTLE_MECHANICS, not CODEX (locked).
