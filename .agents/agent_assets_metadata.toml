@@ -252,3 +252,69 @@ id = "auaBGkEl-V2KSHsCpcQgC"
 uri = "file://attached_assets/generated_images/ward_map_3x3_v4.png"
 type = "image"
 title = "ward map 3x3 square"
+
+[[generated]]
+id = "2Xy6ltuZcFVXJG84cfJsR"
+uri = "file://frontend/assets/enemies/air_sprite.png"
+type = "image"
+title = "air_sprite disease spirit sprite"
+
+[[generated]]
+id = "VsJiQrKH20E-MuTkhSHoa"
+uri = "file://frontend/assets/enemies/river_sludge.png"
+type = "image"
+title = "river_sludge disease spirit sprite"
+
+[[generated]]
+id = "OpdmekTOphefW_L1XQXfa"
+uri = "file://frontend/assets/enemies/energy_lock.png"
+type = "image"
+title = "energy_lock disease spirit sprite"
+
+[[generated]]
+id = "dkh3xivaPw7adn7vd3CPa"
+uri = "file://frontend/assets/enemies/fire_imp.png"
+type = "image"
+title = "fire_imp disease spirit sprite"
+
+[[generated]]
+id = "RA7CiRNpIM7Jw-JyDd3dK"
+uri = "file://frontend/assets/enemies/septara_seed.png"
+type = "image"
+title = "septara_seed disease spirit sprite"
+
+[[generated]]
+id = "IQrZ_9hCNnoKsvMFd_5Hy"
+uri = "file://frontend/assets/enemies/cardion_echo.png"
+type = "image"
+title = "cardion_echo disease spirit sprite"
+
+[[generated]]
+id = "NEGI4eUToTSXjvGXqgXDk"
+uri = "file://frontend/assets/enemies/glycora_spark.png"
+type = "image"
+title = "glycora_spark disease spirit sprite"
+
+[[generated]]
+id = "BFRhW4o4gYP9kIUvUAogE"
+uri = "file://frontend/assets/enemies/pulmora_wisp.png"
+type = "image"
+title = "pulmora_wisp disease spirit sprite"
+
+[[generated]]
+id = "hiwZDljUlqAl9NaP3y2W9"
+uri = "file://frontend/assets/enemies/electrox_flicker.png"
+type = "image"
+title = "electrox_flicker disease spirit sprite"
+
+[[generated]]
+id = "FqdhgRAPsXgvuoobxLfm2"
+uri = "file://frontend/assets/enemies/mind_fog.png"
+type = "image"
+title = "mind_fog disease spirit sprite"
+
+[[generated]]
+id = "Rvo9MnxNlQ8Ox800sf8g9"
+uri = "file://frontend/assets/enemies/lord_imbalance.png"
+type = "image"
+title = "lord_imbalance disease spirit sprite"

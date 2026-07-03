@@ -35,7 +35,7 @@ export default function BossPage() {
         {/* Boss portrait */}
         <View style={styles.portraitWrap}>
           {sprite ? (
-            <Image source={sprite} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            <Image source={sprite} style={StyleSheet.absoluteFillObject} resizeMode="contain" />
           ) : (
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: COLORS.surfaceSecondary }]} />
           )}

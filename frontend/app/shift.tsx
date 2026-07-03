@@ -63,7 +63,7 @@ export default function ShiftPage() {
             >
               {sprite ? (
                 <View style={[styles.cardThumb, { borderColor: accent + "80" }]}>
-                  <Image source={sprite} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                  <Image source={sprite} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
                   <LinearGradient
                     colors={["transparent", "rgba(12,14,18,0.7)"]}
                     style={StyleSheet.absoluteFillObject}

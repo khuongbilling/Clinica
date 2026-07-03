@@ -103,7 +103,7 @@ export default function Result() {
         <View style={styles.head}>
           {enemy && getEnemySprite(enemy.id) ? (
             <View style={[styles.enemyResultPortrait, { borderColor: won ? COLORS.success : COLORS.error }]}>
-              <Image source={getEnemySprite(enemy.id)!} style={styles.enemyResultImg} resizeMode="cover" />
+              <Image source={getEnemySprite(enemy.id)!} style={styles.enemyResultImg} resizeMode="contain" />
               <View style={[styles.enemyResultBadge, { backgroundColor: won ? COLORS.success : COLORS.error }]}>
                 <Ionicons name={won ? "shield-checkmark" : "alert-circle"} size={22} color={COLORS.surface} />
               </View>
