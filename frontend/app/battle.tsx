@@ -18,7 +18,7 @@ import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { BattlefieldScene, type BattleFx } from "@/src/components/BattlefieldScene";
-import type { Hero, HeroSkill } from "@/src/game/types";
+import type { ActionType, Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -110,9 +110,11 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const [detail, setDetail] = useState<DetailEntry | null>(null);
   const [actionFx, setActionFx] = useState<BattleFx>(null);
   const [enemyFxTs, setEnemyFxTs] = useState(0);
-  const triggerFx = (actorId?: string) => {
+  const [enemyFxAction, setEnemyFxAction] = useState<ActionType | null>(null);
+  const triggerFx = (actorId?: string, action?: ActionType) => {
     const ts = Date.now();
-    if (actorId) setActionFx({ actorId, ts });
+    if (actorId) setActionFx({ actorId, ts, action });
+    setEnemyFxAction(action ?? null);
     setEnemyFxTs(ts);
   };
 
@@ -242,7 +244,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     onRequiredAction(skill.type);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero).state);
-    triggerFx(hero.id);
+    triggerFx(hero.id, effective.type);
     showFeedback(skill.type);
     if (!tsFirstAction.current) {
       tsFirstAction.current = true;
@@ -265,13 +267,13 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const handleTempAction = (actionId: string) => {
     const res = applyTempAction(state, actionId);
     setState(res.state);
-    triggerFx(state.selectedHeroId ?? undefined);
+    triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
   };
   const handleUseItem = (item: Item) => {
     const res = applyItem(state, item);
     setState(res.state);
-    triggerFx(state.selectedHeroId ?? undefined);
+    triggerFx(state.selectedHeroId ?? undefined, "stabilize");
     setDetail(null);
   };
   const decideCallItem = () => {
@@ -287,7 +289,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     const itemName = opt.effect === "addRelevantItem" ? decideCallItem() : undefined;
     const res = applyCall(state, opt, itemName);
     setState(res.state);
-    triggerFx(state.selectedHeroId ?? undefined);
+    triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
   };
 
@@ -406,6 +408,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         outcome={state.outcome}
         actionFx={actionFx}
         enemyFxTs={enemyFxTs}
+        enemyFxAction={enemyFxAction}
       />
 
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
