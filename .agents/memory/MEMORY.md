@@ -2,3 +2,4 @@
 - [Clinica adaptive system](clinica-adaptive-system.md) — two-axis: LearningProfile→ExplanationLayer (depth/language) + DifficultyLevel (clue visibility); fully independent axes.
 - [Ward Defense board layout](ward-defense-board-layout.md) — map PNG IS the background; board MUST aspect-lock to image's EXACT pixel ratio (768/1408, not 9:16) or overlays drift; measure tile coords from pixels.
 - [Clinica image rendering](clinica-image-rendering.md) — use expo-image (ExpoImage + contentFit) for scene backgrounds in nested flex containers; RN Image fails silently on web inside ward-defense battle View.
+- [Clinica enemy signature attacks](clinica-enemy-signature-attacks.md) — per-ElementSystem end-turn attacks (assault/spread/hex); spread MUST honor+consume blockNextSpread (Infection Control) or the call is a no-op.

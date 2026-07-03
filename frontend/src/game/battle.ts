@@ -1,5 +1,5 @@
 import { getDifficultyModifier } from './difficulty';
-import { Enemy, Hero, HeroSkill } from './types';
+import { ElementSystem, Enemy, Hero, HeroSkill } from './types';
 import { CallOption, Item, ITEMS, TEMP_ACTIONS } from './items';
 import {
   ActionClinical,
@@ -690,6 +690,39 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
   return { state: next, message: 'Support called.', status: res.status };
 }
 
+// ============================================================
+// Enemy signature attacks — each disease-spirit strikes its own way
+// ============================================================
+export type EnemyAttackKind = 'assault' | 'spread' | 'hex';
+
+export interface EnemySignatureAttack {
+  name: string;
+  kind: EnemyAttackKind;
+}
+
+// assault → raw stability damage (full).
+// spread  → trades half the stability damage for spreading corruption back.
+// hex     → trades half the stability damage for hampering next-turn actions.
+const SIGNATURE_ATTACKS: Record<ElementSystem, EnemySignatureAttack> = {
+  Air: { name: 'Bronchial Clamp', kind: 'assault' },
+  River: { name: 'Arrhythmic Surge', kind: 'assault' },
+  Fire: { name: 'Fever Bloom', kind: 'spread' },
+  Energy: { name: 'Glucose Crash', kind: 'hex' },
+  Storm: { name: 'Nerve Static', kind: 'hex' },
+  Mind: { name: 'Fog of Confusion', kind: 'hex' },
+  Filter: { name: 'Fluid Overload', kind: 'assault' },
+  Forge: { name: 'Bone Grind', kind: 'assault' },
+  Protection: { name: 'Immune Collapse', kind: 'spread' },
+  Growth: { name: 'Malignant Bloom', kind: 'spread' },
+};
+
+const SPREAD_CORRUPTION_REGROW = 5;
+
+export function getEnemySignatureAttack(enemy: Enemy): EnemySignatureAttack {
+  if (enemy.id === 'lord_imbalance') return { name: 'Cascade of Imbalance', kind: 'spread' };
+  return SIGNATURE_ATTACKS[enemy.primarySystem] ?? { name: 'Corrupting Surge', kind: 'assault' };
+}
+
 export function endPlayerTurn(s: BattleState): BattleState {
   if (s.outcome !== 'ongoing') return s;
   const log = [...s.log];
@@ -706,13 +739,43 @@ export function endPlayerTurn(s: BattleState): BattleState {
     log.push(`⚠ Rebound Bronchospasm: the disease surges back. Stability and Corruption worsen.`);
   }
 
+  // ── Signature attack: shape the enemy turn by the spirit's nature ──
+  const attack = getEnemySignatureAttack(s.enemy);
+  let corruptionRegrow = 0;
+  let apPenalty = 0;
+  let spreadBlocked = false;
+  if (attack.kind === 'spread') {
+    reduced = Math.ceil(reduced * 0.5);
+    if (s.blockNextSpread) {
+      spreadBlocked = true;
+    } else {
+      corruptionRegrow = SPREAD_CORRUPTION_REGROW;
+    }
+  } else if (attack.kind === 'hex') {
+    reduced = Math.ceil(reduced * 0.5);
+    apPenalty = 1;
+  }
+
   let stability = clamp(s.stability - reduced, 0, 100);
   let corruption = s.corruption;
   if (s.reboundArmed && !s.reassessUsed) {
     corruption = Math.min(100, corruption + 10);
   }
+  corruption = Math.min(100, corruption + corruptionRegrow);
 
-  log.push(`The ${s.enemy.name} surges. Stability -${reduced}%${s.shieldNext ? ' (shielded)' : ''}.`);
+  const shieldTag = s.shieldNext ? ' (shielded)' : '';
+  if (attack.kind === 'spread') {
+    if (spreadBlocked) {
+      log.push(`🧫 Isolation Seal contains ${attack.name}. The spread is blocked — Corruption holds. Stability -${reduced}%${shieldTag}.`);
+    } else {
+      log.push(`🦠 ${s.enemy.name} unleashes ${attack.name}. Corruption +${corruptionRegrow}, Stability -${reduced}%${shieldTag}.`);
+    }
+  } else if (attack.kind === 'hex') {
+    log.push(`💫 ${s.enemy.name} unleashes ${attack.name}. Your team is hindered — 1 fewer action next turn. Stability -${reduced}%${shieldTag}.`);
+  } else {
+    log.push(`🩸 ${s.enemy.name} unleashes ${attack.name}. Stability -${reduced}%${shieldTag}.`);
+  }
+
   if (stability <= 0) {
     log.push(`💀 ${s.enemy.dangerTrigger}. The patient is lost.`);
     return { ...s, stability: 0, corruption, shieldNext: 0, log, outcome: 'loss' };
@@ -720,6 +783,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
 
   // Next-turn AP — dynamic based on patient state
   let nextAp = getTurnAP(stability, corruption, s.chapter, {});
+  if (apPenalty > 0) nextAp = Math.max(1, nextAp - apPenalty);
   log.push(apMessage(nextAp));
 
   // Reset hero action map
@@ -739,6 +803,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
     apMax: nextAp,
     turn: s.turn + 1,
     log,
+    blockNextSpread: attack.kind === 'spread' ? false : s.blockNextSpread,
     reassessUsed: false,
     reboundArmed: false,
     rapidResponseActive: false,

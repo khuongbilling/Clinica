@@ -9,6 +9,18 @@ import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
 import type { ActionType, ClueCard, ElementSystem, Hero } from "@/src/game/types";
 
 export type BattleFx = { actorId: string; ts: number; action?: ActionType } | null;
+export type EnemyAttackKind = "assault" | "spread" | "hex";
+
+/* Per-kind enemy-attack signature: how the enemy lunges + how the heroes recoil. */
+type EnemyAttackFx = { lunge: number; aura: string; recoil: number; heroShake: number; heroFlash: string; wobble: boolean };
+const ENEMY_ATTACK_FX: Record<EnemyAttackKind, EnemyAttackFx> = {
+  // Raw hit — enemy drives in hard, heroes get knocked back with a red impact flash.
+  assault: { lunge: -34, aura: "#FF5252", recoil: -12, heroShake: 6, heroFlash: "#FF5252", wobble: false },
+  // Disease spreads — enemy swells forward, sickly violet mist washes over the heroes.
+  spread: { lunge: -20, aura: "#B06CF0", recoil: -6, heroShake: 3, heroFlash: "#B06CF0", wobble: false },
+  // Curse/confusion — enemy pulses, heroes wobble and dim as their focus falters.
+  hex: { lunge: -14, aura: "#7EA8FF", recoil: -4, heroShake: 2, heroFlash: "#7EA8FF", wobble: true },
+};
 
 type SystemIconInfo = { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string };
 
@@ -83,9 +95,11 @@ interface BattlefieldSceneProps {
   actionFx: BattleFx;
   enemyFxTs: number;
   enemyFxAction?: ActionType | null;
+  enemyAttackTs?: number;
+  enemyAttackKind?: EnemyAttackKind | null;
 }
 
-export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed, outcome, actionFx, enemyFxTs, enemyFxAction }: BattlefieldSceneProps) {
+export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed, outcome, actionFx, enemyFxTs, enemyFxAction, enemyAttackTs = 0, enemyAttackKind }: BattlefieldSceneProps) {
   const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
@@ -114,6 +128,8 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
             acted={!!heroActionsUsed[h.id]}
             castTs={actionFx?.actorId === h.id ? actionFx.ts : 0}
             castAction={actionFx?.actorId === h.id ? actionFx.action : undefined}
+            hitTs={enemyAttackTs}
+            hitKind={enemyAttackKind}
             teamDefeated={outcome === "loss"}
           />
         ))}
@@ -124,6 +140,8 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
           enemy={enemy}
           hitTs={enemyFxTs}
           hitAction={enemyFxAction}
+          attackTs={enemyAttackTs}
+          attackKind={enemyAttackKind}
           purified={outcome === "win"}
           infoOpen={infoOpen}
           onToggleInfo={() => setInfoOpen((v) => !v)}
@@ -134,14 +152,17 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
 }
 
 /* ── Hero battlefield sprite ── */
-function HeroUnit({ hero, selected, acted, castTs, castAction, teamDefeated }: {
-  hero: Hero; selected: boolean; acted: boolean; castTs: number; castAction?: ActionType; teamDefeated: boolean;
+function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, teamDefeated }: {
+  hero: Hero; selected: boolean; acted: boolean; castTs: number; castAction?: ActionType;
+  hitTs: number; hitKind?: EnemyAttackKind | null; teamDefeated: boolean;
 }) {
   const bob = useRef(new Animated.Value(0)).current;
   const cast = useRef(new Animated.Value(0)).current;
   const combat = useRef(new Animated.Value(0)).current;
   const defeat = useRef(new Animated.Value(0)).current;
+  const hurt = useRef(new Animated.Value(0)).current;
   const [castKind, setCastKind] = useState<ActionType>("strike");
+  const [hurtFx, setHurtFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
   const sprite = getHeroBattleSprite(hero.id);
   const color = ELEMENT_COLORS[hero.element] || COLORS.brand;
   const move = HERO_MOVE[castKind] ?? HERO_MOVE.strike;
@@ -183,6 +204,18 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, teamDefeated }: {
     Animated.timing(defeat, { toValue: teamDefeated ? 1 : 0, duration: 500, useNativeDriver: true }).start();
   }, [teamDefeated, defeat]);
 
+  // Enemy attack landed — recoil / flinch keyed by attack kind.
+  useEffect(() => {
+    if (!hitTs) return;
+    const fx = ENEMY_ATTACK_FX[hitKind ?? "assault"] ?? ENEMY_ATTACK_FX.assault;
+    setHurtFx(fx);
+    hurt.setValue(0);
+    Animated.sequence([
+      Animated.timing(hurt, { toValue: 1, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(hurt, { toValue: 0, duration: 440, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]).start();
+  }, [hitTs, hitKind, hurt]);
+
   const idleY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
   const combatLean = combat.interpolate({ inputRange: [0, 1], outputRange: [0, 6] });
   const combatDip = combat.interpolate({ inputRange: [0, 1], outputRange: [0, 2] });
@@ -194,12 +227,18 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, teamDefeated }: {
   const defeatOpacity = defeat.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] });
   const defeatTranslate = defeat.interpolate({ inputRange: [0, 1], outputRange: [0, 12] });
   const castGlow = cast.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] });
+  // Recoil: heroes are on the left facing right, so a hit knocks them further left (−X).
+  const hurtX = hurt.interpolate({ inputRange: [0, 1], outputRange: [0, hurtFx.recoil] });
+  const hurtShakeX = hurt.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -hurtFx.heroShake, hurtFx.heroShake, -hurtFx.heroShake * 0.6, 0] });
+  const hurtRotate = hurt.interpolate({ inputRange: [0, 1], outputRange: ["0deg", hurtFx.wobble ? "-10deg" : "0deg"] });
+  const hurtOpacity = hurt.interpolate({ inputRange: [0, 1], outputRange: [1, hurtFx.wobble ? 0.5 : 0.85] });
+  const flashOpacity = hurt.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 0.6, 0] });
 
   return (
     <Animated.View
       style={[
         styles.heroUnitWrap,
-        { opacity: Animated.multiply(acted ? 0.55 : 1, defeatOpacity) },
+        { opacity: Animated.multiply(Animated.multiply(acted ? 0.55 : 1, defeatOpacity), hurtOpacity) },
       ]}
       testID={`battlefield-hero-${hero.id}`}
     >
@@ -208,9 +247,10 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, teamDefeated }: {
           styles.heroUnitInner,
           {
             transform: [
-              { translateX: Animated.add(combatLean, castX) },
+              { translateX: Animated.add(Animated.add(combatLean, castX), Animated.add(hurtX, hurtShakeX)) },
               { translateY: Animated.add(Animated.add(idleY, combatDip), Animated.add(castY, defeatTranslate)) },
               { rotate: castRotate },
+              { rotate: hurtRotate },
               { scale: Animated.multiply(combatScale, castScale) },
             ],
           },
@@ -225,6 +265,7 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, teamDefeated }: {
             <Text style={{ color, fontWeight: "800", fontSize: 16 }}>{hero.name[0]}</Text>
           </View>
         )}
+        <Animated.View pointerEvents="none" style={[styles.heroHitFlash, { backgroundColor: hurtFx.heroFlash, opacity: flashOpacity }]} />
       </Animated.View>
       <Text style={[styles.heroUnitName, selected && !acted && { color }]} numberOfLines={1}>
         {acted ? "Acted" : hero.name.split(" ")[0]}
@@ -234,8 +275,9 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, teamDefeated }: {
 }
 
 /* ── Enemy battlefield sprite ── */
-function EnemyUnit({ enemy, hitTs, hitAction, purified, infoOpen, onToggleInfo }: {
-  enemy: BattleEnemyInfo; hitTs: number; hitAction?: ActionType | null; purified: boolean; infoOpen: boolean; onToggleInfo: () => void;
+function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, infoOpen, onToggleInfo }: {
+  enemy: BattleEnemyInfo; hitTs: number; hitAction?: ActionType | null;
+  attackTs: number; attackKind?: EnemyAttackKind | null; purified: boolean; infoOpen: boolean; onToggleInfo: () => void;
 }) {
   const breathe = useRef(new Animated.Value(0)).current;
   const shake = useRef(new Animated.Value(0)).current;
@@ -245,7 +287,9 @@ function EnemyUnit({ enemy, hitTs, hitAction, purified, infoOpen, onToggleInfo }
   const settle = useRef(new Animated.Value(0)).current;
   const purify = useRef(new Animated.Value(0)).current;
   const entrance = useRef(new Animated.Value(0)).current;
+  const attack = useRef(new Animated.Value(0)).current;
   const [react, setReact] = useState<EnemyReact>(ENEMY_REACT.strike);
+  const [atkFx, setAtkFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
   const sprite = getEnemySprite(enemy.id);
   const color = ELEMENT_COLORS[enemy.primarySystem] || COLORS.error;
   const primaryIcon = SYSTEM_ICONS[enemy.primarySystem];
@@ -315,6 +359,19 @@ function EnemyUnit({ enemy, hitTs, hitAction, purified, infoOpen, onToggleInfo }
     Animated.timing(purify, { toValue: purified ? 1 : 0, duration: 650, easing: Easing.in(Easing.quad), useNativeDriver: true }).start();
   }, [purified, purify]);
 
+  // Enemy signature attack — wind up, then lunge toward the heroes (left).
+  useEffect(() => {
+    if (!attackTs) return;
+    const fx = ENEMY_ATTACK_FX[attackKind ?? "assault"] ?? ENEMY_ATTACK_FX.assault;
+    setAtkFx(fx);
+    attack.setValue(0);
+    Animated.sequence([
+      Animated.timing(attack, { toValue: -0.35, duration: 160, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(attack, { toValue: 1, duration: 130, easing: Easing.in(Easing.back(2)), useNativeDriver: true }),
+      Animated.timing(attack, { toValue: 0, duration: 360, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  }, [attackTs, attackKind, attack]);
+
   const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] });
   const settleScale = settle.interpolate({ inputRange: [0, 1], outputRange: [1, 0.93] });
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-react.shake, react.shake] });
@@ -326,6 +383,10 @@ function EnemyUnit({ enemy, hitTs, hitAction, purified, infoOpen, onToggleInfo }
   const scanOpacity = scan.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 0.9, 0.9, 0] });
   const entranceX = entrance.interpolate({ inputRange: [0, 1], outputRange: [90, 0] });
   const entranceOpacity = entrance;
+  const attackX = attack.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [12, 0, atkFx.lunge] });
+  const attackScale = attack.interpolate({ inputRange: [-0.35, 0, 1], outputRange: [1.04, 1, 1.12] });
+  const attackAuraOpacity = attack.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 0.7, 0] });
+  const attackAuraScale = attack.interpolate({ inputRange: [-0.35, 1], outputRange: [0.7, 1.5] });
 
   return (
     <View style={styles.enemyUnitWrap} testID={`battlefield-enemy-${enemy.id}`}>
@@ -354,12 +415,16 @@ function EnemyUnit({ enemy, hitTs, hitAction, purified, infoOpen, onToggleInfo }
         pointerEvents="none"
         style={[styles.enemyBurst, { borderColor: react.ring, opacity: burstOpacity, transform: [{ scale: burstScale }] }]}
       />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.enemyAttackAura, { backgroundColor: atkFx.aura + "33", borderColor: atkFx.aura, opacity: attackAuraOpacity, transform: [{ scale: attackAuraScale }] }]}
+      />
 
       <Pressable onPress={onToggleInfo} testID="battlefield-enemy-tap" hitSlop={6}>
         <Animated.View
           style={{
             opacity: entranceOpacity,
-            transform: [{ translateX: entranceX }],
+            transform: [{ translateX: Animated.add(entranceX, attackX) }, { scale: attackScale }],
           }}
         >
           <View style={styles.systemBadgeRow}>
@@ -444,6 +509,12 @@ const styles = StyleSheet.create({
   },
   enemyBurst: {
     position: "absolute", bottom: 4, width: 84, height: 84, borderRadius: 42, borderWidth: 2,
+  },
+  enemyAttackAura: {
+    position: "absolute", bottom: 8, width: 96, height: 96, borderRadius: 48, borderWidth: 2,
+  },
+  heroHitFlash: {
+    ...StyleSheet.absoluteFillObject, borderRadius: 10,
   },
   systemBadgeRow: {
     position: "absolute", top: -6, right: -4, zIndex: 3, flexDirection: "row", gap: 3,

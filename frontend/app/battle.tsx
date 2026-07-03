@@ -10,14 +10,14 @@ import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBACK, STABILIZE_FEEDBACK, COUNTER_FEEDBACK, REASSESS_FEEDBACK } from "@/src/game/explanationLayers";
 import { OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
-import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
+import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, type BattleState } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { getStartingHandicap, statusColor, statusLabel, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
-import { BattlefieldScene, type BattleFx } from "@/src/components/BattlefieldScene";
+import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
 import type { ActionType, Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -111,11 +111,17 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const [actionFx, setActionFx] = useState<BattleFx>(null);
   const [enemyFxTs, setEnemyFxTs] = useState(0);
   const [enemyFxAction, setEnemyFxAction] = useState<ActionType | null>(null);
+  const [enemyAttackTs, setEnemyAttackTs] = useState(0);
+  const [enemyAttackKind, setEnemyAttackKind] = useState<EnemyAttackKind | null>(null);
   const triggerFx = (actorId?: string, action?: ActionType) => {
     const ts = Date.now();
     if (actorId) setActionFx({ actorId, ts, action });
     setEnemyFxAction(action ?? null);
     setEnemyFxTs(ts);
+  };
+  const triggerEnemyAttack = (kind: EnemyAttackKind) => {
+    setEnemyAttackKind(kind);
+    setEnemyAttackTs(Date.now());
   };
 
   // ---- Contextual tutorial tips (one-shot, persisted) ----
@@ -296,6 +302,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const handleEndTurn = () => {
     if (state.outcome !== "ongoing") return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    triggerEnemyAttack(getEnemySignatureAttack(enemy).kind);
     setState((s) => {
       let next = endPlayerTurn(s);
       if (player?.aptitude === "guardian" && s.outcome === "ongoing" && next.outcome === "ongoing" && next.stability < s.stability) {
@@ -409,6 +416,8 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         actionFx={actionFx}
         enemyFxTs={enemyFxTs}
         enemyFxAction={enemyFxAction}
+        enemyAttackTs={enemyAttackTs}
+        enemyAttackKind={enemyAttackKind}
       />
 
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
