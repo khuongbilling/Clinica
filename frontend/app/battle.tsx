@@ -19,6 +19,7 @@ import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { getEnemySprite } from "@/src/components/EnemySprites";
+import { BattlefieldScene, type BattleFx } from "@/src/components/BattlefieldScene";
 import type { Hero, HeroSkill } from "@/src/game/types";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -109,6 +110,13 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
   const [detail, setDetail] = useState<DetailEntry | null>(null);
+  const [actionFx, setActionFx] = useState<BattleFx>(null);
+  const [enemyFxTs, setEnemyFxTs] = useState(0);
+  const triggerFx = (actorId?: string) => {
+    const ts = Date.now();
+    if (actorId) setActionFx({ actorId, ts });
+    setEnemyFxTs(ts);
+  };
 
   // ---- Contextual tutorial tips (one-shot, persisted) ----
   const tips = useTipsQueue();
@@ -236,6 +244,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     onRequiredAction(skill.type);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero).state);
+    triggerFx(hero.id);
     showFeedback(skill.type);
     if (!tsFirstAction.current) {
       tsFirstAction.current = true;
@@ -258,11 +267,13 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const handleTempAction = (actionId: string) => {
     const res = applyTempAction(state, actionId);
     setState(res.state);
+    triggerFx(state.selectedHeroId ?? undefined);
     setDetail(null);
   };
   const handleUseItem = (item: Item) => {
     const res = applyItem(state, item);
     setState(res.state);
+    triggerFx(state.selectedHeroId ?? undefined);
     setDetail(null);
   };
   const decideCallItem = () => {
@@ -278,6 +289,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     const itemName = opt.effect === "addRelevantItem" ? decideCallItem() : undefined;
     const res = applyCall(state, opt, itemName);
     setState(res.state);
+    triggerFx(state.selectedHeroId ?? undefined);
     setDetail(null);
   };
 
@@ -362,7 +374,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
               <Image source={getEnemySprite(enemy.id)!} style={styles.enemyPortrait} resizeMode="cover" />
             </View>
           )}
-          <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flex: 1, gap: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text style={styles.enemyKicker} numberOfLines={1}>{enemy.realWorld.toUpperCase()}</Text>
               {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
@@ -381,6 +393,17 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
           </View>
         </View>
       </View>
+
+      {/* ── ZONE A2: Battlefield — live hero + enemy sprites ── */}
+      <BattlefieldScene
+        enemy={{ id: enemy.id, name: enemy.name, primarySystem: enemy.primarySystem }}
+        team={team}
+        selectedHeroId={state.selectedHeroId}
+        heroActionsUsed={state.heroActionsUsed}
+        outcome={state.outcome}
+        actionFx={actionFx}
+        enemyFxTs={enemyFxTs}
+      />
 
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
       <View style={styles.zoneB}>
@@ -517,7 +540,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
               const careDmg = careAttemptDamage(state.chapter, isBoss);
               const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
               const careNode = (
-                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => careDisabled ? null : setState(prev => applyCareAttempt(prev).state)} testID="battle-care-attempt">
+                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
                   <View style={styles.actionHead}>
                     <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
@@ -849,21 +872,21 @@ const styles = StyleSheet.create({
   // ── Zone A: Enemy header ──
   zoneA: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.sm,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
     backgroundColor: COLORS.surfaceSecondary,
   },
-  closeBtn: { position: "absolute", right: SPACING.xs, top: SPACING.sm, padding: 8, zIndex: 2 },
-  helpBtn: { position: "absolute", right: SPACING.xs + 32, top: SPACING.sm, padding: 8, zIndex: 2 },
+  closeBtn: { position: "absolute", right: SPACING.xs, top: SPACING.xs, padding: 8, zIndex: 2 },
+  helpBtn: { position: "absolute", right: SPACING.xs + 32, top: SPACING.xs, padding: 8, zIndex: 2 },
   enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingRight: 68 },
-  enemyPortraitWrap: { width: 64, height: 64, borderRadius: 4, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, flexShrink: 0 },
+  enemyPortraitWrap: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, overflow: "hidden", backgroundColor: COLORS.surfaceTertiary, flexShrink: 0 },
   enemyPortrait: { width: "100%", height: "100%" },
   enemyKicker: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700" },
   trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: RADIUS.pill },
   trainingTxt: { color: COLORS.brand, fontSize: 8, fontWeight: "700", letterSpacing: 1 },
-  enemyName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "300", lineHeight: 22 },
+  enemyName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "300", lineHeight: 18 },
   systemPills: { flexDirection: "row", gap: 4, marginTop: 2, flexWrap: "wrap" },
   sysPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, borderWidth: 1 },
   sysTxt: { fontSize: 9, letterSpacing: 1, fontWeight: "700" },

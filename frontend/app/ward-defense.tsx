@@ -41,6 +41,21 @@ const CLINICAL_CHAIN_WINDOW = 40; /* ticks after an Assess hit that a Treat/Stab
 const ROAD_W           = 40;   /* visual road width in px */
 const TILE_SIZE        = 46;   /* deployment tile size in px */
 
+/* ── Stability ⇄ Corruption pressure loop (risk/loss system) ── */
+const MAX_CORRUPTION          = 100;
+const CORRUPTION_DRAIN_START  = 50;   /* corruption above this begins passively draining Stability */
+const CORRUPTION_DRAIN_RATE   = 0.03; /* Stability lost per tick, per point of corruption over the threshold */
+const CORRUPTION_MAX_PENALTY  = 3;    /* extra flat Stability/tick drain once Corruption is fully maxed */
+const CORRUPTION_DAMPEN_MAX   = 0.4;  /* at full Stability, incoming corruption pressure is cut by this much */
+const CORRUPTION_CLEANSE_MAX  = 0.5;  /* at full Stability, cleanse effects are boosted by this much */
+const PULSE_TICKS             = 6;    /* how long the HUD danger pulses stay visible */
+/* Ability cooldowns (ticks) — prevents spamming Stabilize/Protect/Reassess for free safety */
+const ABILITY_COOLDOWN_TICKS: Record<string, number> = {
+  broncho_burst: 14, emergency_o2: 16, positioning_order: 12, reassess_protocol: 10,
+};
+const STABILIZE_DIMINISH = 0.55; /* each repeat Emergency O₂ use this wave heals less */
+const PROTECT_SHIELD_TICKS = 6;  /* Positioning halves incoming Stability loss for this many ticks */
+
 /* Enemy route — traces the illustrated stone walkway in the reference map.
    MUST stay identical to ward-defense-v2.tsx.                              */
 const PATH_WPS: [number, number][] = [
@@ -95,6 +110,10 @@ type EnemyDef = {
   strongUnits: string[]; /* unit type IDs that deal extra damage */
   clue: string; flavor: string; isBoss?: boolean;
   weakness: WeaknessId;
+  /* Stability ⇄ Corruption pressure loop */
+  corruptionPressure: number; /* Corruption added per tick while this enemy is alive on the path */
+  corruptionOnLeak: number;   /* Corruption spike when this enemy reaches the Vital Lantern */
+  isPriority?: boolean;       /* priority threats add more Corruption + reward bigger "Priority Controlled" cleanse */
 };
 
 const ENEMY_DATA: Record<string, EnemyDef> = {
@@ -106,6 +125,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Dyspnea",
     flavor: "Restricts airflow — early assessment reveals its pattern.",
     weakness: "panic",
+    corruptionPressure: 0.12, corruptionOnLeak: 6,
   },
   wheeze_sprite: {
     name: "Wheeze Sprite", icon: "🌀",
@@ -115,6 +135,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Wheezing",
     flavor: "Tight airways — wheeze audible on auscultation.",
     weakness: "airway",
+    corruptionPressure: 0.15, corruptionOnLeak: 8,
   },
   mucus_slime: {
     name: "Mucus Slime", icon: "🫧",
@@ -124,6 +145,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Secretions",
     flavor: "Secretion buildup — positioning aids drainage.",
     weakness: "secretion",
+    corruptionPressure: 0.18, corruptionOnLeak: 8,
   },
   hypoxia_wraith: {
     name: "Hypoxia Wraith", icon: "👻",
@@ -133,6 +155,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Cyanosis",
     flavor: "Oxygen deprivation — supplemental O₂ is the direct counter.",
     weakness: "oxygenation",
+    corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
   },
   fever_imp: {
     name: "Fever Imp", icon: "🔥",
@@ -142,6 +165,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Fever",
     flavor: "Inflammatory heat spirit — best handled after cue recognition, then treated.",
     weakness: "infection",
+    corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
   },
   shock_shade: {
     name: "Shock Shade", icon: "⚡",
@@ -151,6 +175,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Hypotension",
     flavor: "Circulatory collapse spirit — prioritize stabilization before it reaches the lantern.",
     weakness: "perfusion",
+    corruptionPressure: 0.36, corruptionOnLeak: 14, isPriority: true,
   },
   bronchospasm_drake: {
     name: "Bronchospasm Drake", icon: "🐲",
@@ -161,6 +186,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Bronchospasm",
     flavor: "Severe bronchospasm incarnate — bronchodilators essential.",
     weakness: "corruption",
+    corruptionPressure: 0.9, corruptionOnLeak: 30, isPriority: true,
   },
 };
 
@@ -327,6 +353,13 @@ type GS = {
   lastKillQuality: "strong" | "partial" | "weak" | null;
   /* Clinical Arts Stage 1 */
   cueBonusReady: boolean; /* correct Clinical Cue answer primes next strong hit */
+  /* Stability ⇄ Corruption pressure loop */
+  corruption: number;
+  stabilityPulse: number;   /* ticks remaining on the red/orange "Stability dropped" HUD flash */
+  corruptionPulse: number;  /* ticks remaining on the purple "Corruption rising" HUD flash */
+  shieldTicks: number;      /* Positioning shield — halves incoming Stability loss while active */
+  abilityCooldowns: Record<string, number>;
+  stabilizeUsesThisWave: number; /* diminishing returns for repeated Emergency O₂ casts */
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -350,6 +383,8 @@ function freshState(): GS {
     reassessUses: 0, learnedConcepts: [], enemyMastery: freshMastery(),
     lastKillQuality: null,
     cueBonusReady: false,
+    corruption: 0, stabilityPulse: 0, corruptionPulse: 0, shieldTicks: 0,
+    abilityCooldowns: {}, stabilizeUsesThisWave: 0,
   };
 }
 
@@ -359,6 +394,7 @@ function beginWave(gs: GS, waveIdx: number): GS {
     spawnQueue: [...WAVES[waveIdx].spawns],
     spawnTimer: 0, enemies: [], projectiles: [],
     feedbacks: [], wavePauseTicks: 0,
+    stabilizeUsesThisWave: 0,
   };
 }
 
@@ -2101,7 +2137,7 @@ function ProjectileView({
    ═══════════════════════════════════════════════════════════════════ */
 function HandPanel({
   mode, setMode, selectedUnit, onSelectUnit, onUseAbility, ap, isPlaying,
-  hasMerge, onSynthesize,
+  hasMerge, onSynthesize, abilityCooldowns,
 }: {
   mode: "deploy" | "abilities";
   setMode: (m: "deploy" | "abilities") => void;
@@ -2112,6 +2148,7 @@ function HandPanel({
   isPlaying: boolean;
   hasMerge: boolean;
   onSynthesize: () => void;
+  abilityCooldowns: Record<string, number>;
 }) {
   return (
     <View style={s.handArea}>
@@ -2187,7 +2224,9 @@ function HandPanel({
           ) : (
             ABILITIES.map(id => {
               const ab = ABILITY_DATA[id];
-              const canAfford = ap >= ab.apCost && isPlaying;
+              const cooldown = abilityCooldowns[id] ?? 0;
+              const onCooldown = cooldown > 0;
+              const canAfford = ap >= ab.apCost && isPlaying && !onCooldown;
               return (
                 <Pressable key={id}
                   style={[s.abilityCard, { borderColor: canAfford ? ab.color + "70" : COLORS.border,
@@ -2204,6 +2243,16 @@ function HandPanel({
                     <Text style={[s.apRuneTxt, { color: canAfford ? ab.color : COLORS.onSurfaceTertiary }]}>{ab.apCost}</Text>
                     <Text style={[s.apRuneLabel, { color: canAfford ? ab.color + "CC" : COLORS.onSurfaceTertiary }]}>AP</Text>
                   </View>
+                  {onCooldown && (
+                    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: "#00000090", borderRadius: 10,
+                      alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="time-outline" size={14} color="#FBBF24" />
+                      <Text style={{ color: "#FBBF24", fontSize: 11, fontWeight: "800", marginTop: 2 }}>
+                        {Math.ceil(cooldown / 2)}s
+                      </Text>
+                    </View>
+                  )}
                 </Pressable>
               );
             })
@@ -2358,9 +2407,23 @@ export default function WardDefense() {
         else movedEnemies.push({ ...e, pathIndex: pi, pathProgress: pp, slowTicks: sl, hitFlash: hf, chainFlash: cf });
       }
 
-      /* Lantern damage */
+      /* Shield decay (Positioning — halves incoming Stability loss while active) */
+      const shieldMul = s.shieldTicks > 0 ? 0.5 : 1.0;
+      const shieldTicks = Math.max(0, s.shieldTicks - 1);
+      const abilityCooldowns: Record<string, number> = {};
+      for (const [k, v] of Object.entries(s.abilityCooldowns)) {
+        const nv = v - 1; if (nv > 0) abilityCooldowns[k] = nv;
+      }
+
+      /* Lantern leaks — direct Stability damage + a Corruption spike (an uncontrolled threat got through) */
       let stability = s.stability;
-      for (const e of reachedLantern) stability = Math.max(0, stability - ENEMY_DATA[e.typeId].damage);
+      let corruption = s.corruption;
+      let leakCorruption = 0;
+      for (const e of reachedLantern) {
+        stability = Math.max(0, stability - Math.round(ENEMY_DATA[e.typeId].damage * shieldMul));
+        leakCorruption += ENEMY_DATA[e.typeId].corruptionOnLeak;
+      }
+      corruption = cl(corruption + leakCorruption, 0, MAX_CORRUPTION);
 
       /* Units: decay cooldown → fire projectiles */
       let newProjectiles = [...s.projectiles];
@@ -2435,6 +2498,7 @@ export default function WardDefense() {
       let enemyMastery = { ...s.enemyMastery };
       let lastKillQuality = s.lastKillQuality;
       let score = s.score;
+      let corruptionCleanse = 0; /* correct matchups push Corruption back down */
 
       if (cueBonusFeedback) {
         feedbacks = [{ id: `cue${s.tickCount}`, text: cueBonusFeedback,
@@ -2450,8 +2514,8 @@ export default function WardDefense() {
           : hits.some(h => h.quality === "partial") ? "partial" : "weak";
         const gotChain = hits.some(h => h.chain);
         const nowRevealed = e.revealed || !!revealMap[e.uid];
-        if (quality === "strong") strongMatches++;
-        else if (quality === "partial") partialMatches++;
+        if (quality === "strong") { strongMatches++; corruptionCleanse += gotChain ? 2.5 : 1.5; }
+        else if (quality === "partial") { partialMatches++; corruptionCleanse += 0.4; }
         else weakMatches++;
         score += totalDmg;
 
@@ -2477,8 +2541,15 @@ export default function WardDefense() {
             priorityActions++; lastKillQuality = "strong";
             const sUnit = hits.find(h => h.quality === "strong")!.unitTypeId;
             if (!learnedConcepts.includes(sUnit)) learnedConcepts = [...learnedConcepts, sUnit];
-            feedbacks = [{ id: `k${e.uid}`, text: `✦ Priority Action — ${ENEMY_DATA[e.typeId].name} neutralized`,
-              color: COLORS.success, quality: "strong", ticks: 6 }, ...feedbacks.slice(0, 1)];
+            if (ENEMY_DATA[e.typeId].isPriority) {
+              corruptionCleanse += 5;
+              feedbacks = [{ id: `pc${e.uid}`, text: `✦ Priority Controlled — ${ENEMY_DATA[e.typeId].name} neutralized`,
+                color: COLORS.success, quality: "strong", ticks: 6 }, ...feedbacks.slice(0, 1)];
+            } else {
+              corruptionCleanse += 2;
+              feedbacks = [{ id: `k${e.uid}`, text: `✦ Priority Action — ${ENEMY_DATA[e.typeId].name} neutralized`,
+                color: COLORS.success, quality: "strong", ticks: 6 }, ...feedbacks.slice(0, 1)];
+            }
             if (careChain >= 2) {
               ap = Math.min(MAX_AP, ap + 1);
               feedbacks = [{ id: `ch${s.tickCount}`, text: `⛓ Care Chain ×${careChain}! +1 AP`,
@@ -2503,6 +2574,27 @@ export default function WardDefense() {
         }
       }
 
+      /* Corruption pressure from active threats, dampened by current Stability —
+         a healthier ward resists disease pressure better. */
+      const dampen = 1 - (cl(stability, 0, 100) / 100) * CORRUPTION_DAMPEN_MAX;
+      let corruptionGain = 0;
+      for (const e of survEnemies) corruptionGain += ENEMY_DATA[e.typeId].corruptionPressure * dampen;
+      const cleanseMul = 1 + (cl(stability, 0, 100) / 100) * CORRUPTION_CLEANSE_MAX;
+      corruption = cl(corruption + corruptionGain - corruptionCleanse * cleanseMul, 0, MAX_CORRUPTION);
+
+      /* Corruption ⇄ Stability feedback — high Corruption actively drains Stability;
+         once Corruption is maxed out, the drain becomes severe. */
+      let corruptionDrain = 0;
+      if (corruption > CORRUPTION_DRAIN_START) corruptionDrain += (corruption - CORRUPTION_DRAIN_START) * CORRUPTION_DRAIN_RATE;
+      if (corruption >= MAX_CORRUPTION) corruptionDrain += CORRUPTION_MAX_PENALTY;
+      if (corruptionDrain > 0) stability = cl(stability - corruptionDrain * shieldMul, 0, MAX_STABILITY);
+
+      /* HUD danger pulses */
+      let stabilityPulse = Math.max(0, s.stabilityPulse - 1);
+      if (stability < s.stability) stabilityPulse = PULSE_TICKS;
+      let corruptionPulse = Math.max(0, s.corruptionPulse - 1);
+      if (corruption > s.corruption || corruption >= CORRUPTION_DRAIN_START) corruptionPulse = PULSE_TICKS;
+
       const ns: GS = {
         ...s,
         ap: Math.min(MAX_AP, ap), apTimer,
@@ -2515,6 +2607,7 @@ export default function WardDefense() {
         strongMatches, partialMatches, weakMatches,
         learnedConcepts, enemyMastery, lastKillQuality,
         cueBonusReady,
+        corruption, stabilityPulse, corruptionPulse, shieldTicks, abilityCooldowns,
       };
 
       if (ns.stability <= 0) { set({ ...ns, phase: "lost" }); return; }
@@ -2601,10 +2694,14 @@ export default function WardDefense() {
     if (s.phase !== "playing") return;
     const ab = ABILITY_DATA[abilityId];
     if (s.ap < ab.apCost) return;
+    if ((s.abilityCooldowns[abilityId] ?? 0) > 0) return; /* on cooldown — no free spam-safety */
 
     let newEnemies = s.enemies;
     let newStability = s.stability;
+    let newCorruption = s.corruption;
     let newReassessUses = s.reassessUses;
+    let newShieldTicks = s.shieldTicks;
+    let newStabilizeUses = s.stabilizeUsesThisWave;
     let feedbackText = "", feedbackColor = ab.color;
 
     switch (abilityId) {
@@ -2612,19 +2709,27 @@ export default function WardDefense() {
         const dmgd = newEnemies.map(e => ({ ...e, hp: e.hp - 30, hitFlash: 3 }));
         const killed = dmgd.filter(e => e.hp <= 0).length;
         newEnemies = dmgd.filter(e => e.hp > 0);
+        const cleanse = 3 + killed * 4;
+        newCorruption = cl(s.corruption - cleanse, 0, MAX_CORRUPTION);
         feedbackText = killed > 0
-          ? `💨 Broncho Burst — ${killed} spirit${killed !== 1 ? "s" : ""} defeated!`
-          : "💨 Broncho Burst — 30 damage to all enemies";
+          ? `💨 Broncho Burst — ${killed} spirit${killed !== 1 ? "s" : ""} defeated! Corruption Cleansed -${cleanse}`
+          : `💨 Broncho Burst — 30 dmg to all · Corruption Cleansed -${cleanse}`;
         break;
       }
-      case "emergency_o2":
-        newStability = Math.min(MAX_STABILITY, s.stability + 15);
-        feedbackText = "🆘 Emergency O₂ — +15 Stability";
+      case "emergency_o2": {
+        const restore = Math.max(4, Math.round(15 * Math.pow(STABILIZE_DIMINISH, newStabilizeUses)));
+        newStability = Math.min(MAX_STABILITY, s.stability + restore);
+        newStabilizeUses = s.stabilizeUsesThisWave + 1;
+        feedbackText = newStabilizeUses > 1
+          ? `🆘 Stabilized +${restore} — diminishing returns this wave`
+          : `🆘 Stabilized +${restore} Stability`;
         feedbackColor = COLORS.success;
         break;
+      }
       case "positioning_order":
         newEnemies = s.enemies.map(e => ({ ...e, slowTicks: 6 }));
-        feedbackText = "🛌 High Fowler's — all enemies slowed";
+        newShieldTicks = PROTECT_SHIELD_TICKS;
+        feedbackText = "🛡 Shielded — enemies slowed, Stability loss halved";
         feedbackColor = "#A78BFA";
         break;
       case "reassess_protocol": {
@@ -2634,7 +2739,8 @@ export default function WardDefense() {
         );
         if (hasCorrect && s.lastKillQuality === "strong") {
           newStability = Math.min(MAX_STABILITY, s.stability + 5);
-          feedbackText = "✦ Reassess Bonus — correct units deployed! +5 Stability";
+          newCorruption = cl(s.corruption - 3, 0, MAX_CORRUPTION);
+          feedbackText = "✦ Reassess Bonus — correct sequencing! +5 Stability";
           feedbackColor = COLORS.success;
         } else if (hasCorrect) {
           feedbackText = "🔄 Reassess — correct units on field, keep going";
@@ -2649,7 +2755,9 @@ export default function WardDefense() {
 
     const fid = String(Date.now());
     set({ ...s, ap: s.ap - ab.apCost, enemies: newEnemies, stability: newStability,
-      reassessUses: newReassessUses,
+      corruption: newCorruption, reassessUses: newReassessUses, shieldTicks: newShieldTicks,
+      stabilizeUsesThisWave: newStabilizeUses,
+      abilityCooldowns: { ...s.abilityCooldowns, [abilityId]: ABILITY_COOLDOWN_TICKS[abilityId] ?? 0 },
       feedbacks: [{ id: fid, text: feedbackText, color: feedbackColor, quality: "bonus" as any, ticks: 7 }, ...s.feedbacks.slice(0, 1)] });
   }
 
@@ -2676,6 +2784,7 @@ export default function WardDefense() {
 
   /* ── Active game ── */
   const stabilityColor = gs.stability > 60 ? COLORS.success : gs.stability > 30 ? COLORS.warning : COLORS.error;
+  const corruptionColor = gs.corruption >= CORRUPTION_DRAIN_START ? "#F87171" : gs.corruption >= 30 ? "#C084FC" : "#7C3AED";
   const waveDef = WAVES[gs.wave] ?? WAVES[WAVES.length - 1];
 
   return (
@@ -2703,18 +2812,36 @@ export default function WardDefense() {
           )}
         </View>
 
-        {/* Stability bar */}
+        {/* Stability + Corruption meters */}
         <View style={s.hudStability}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 3 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 2 }}>
             <Text style={s.hudBarLabel}>Stability</Text>
             <Text style={{ fontSize: 9 }}>❤️</Text>
-            <Text style={[s.hudBarVal, { color: stabilityColor, marginLeft: "auto" as any }]}>{gs.stability}%</Text>
+            <Text style={[s.hudBarVal, { color: stabilityColor, marginLeft: "auto" as any }]}>{Math.round(gs.stability)}%</Text>
           </View>
-          <View style={s.hudStabilityBg}>
+          <View style={[s.hudStabilityBg, gs.stabilityPulse > 0 && {
+            borderWidth: 1, borderColor: "#F97316", shadowColor: "#F97316",
+            shadowOpacity: 0.9, shadowRadius: 4, elevation: 4,
+          }]}>
             <LinearGradient
               colors={[stabilityColor + "cc", stabilityColor]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={[s.hudStabilityFill, { width: `${gs.stability}%` as any }]}
+              style={[s.hudStabilityFill, { width: `${cl(gs.stability, 0, 100)}%` as any }]}
+            />
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, marginBottom: 2 }}>
+            <Text style={s.hudBarLabel}>Corruption</Text>
+            <Text style={{ fontSize: 9 }}>🐲</Text>
+            <Text style={[s.hudBarVal, { color: corruptionColor, marginLeft: "auto" as any }]}>{Math.round(gs.corruption)}%</Text>
+          </View>
+          <View style={[s.hudStabilityBg, gs.corruptionPulse > 0 && {
+            borderWidth: 1, borderColor: "#C084FC", shadowColor: "#C084FC",
+            shadowOpacity: 0.9, shadowRadius: 4, elevation: 4,
+          }]}>
+            <LinearGradient
+              colors={[corruptionColor + "cc", corruptionColor]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={[s.hudStabilityFill, { width: `${cl(gs.corruption, 0, 100)}%` as any }]}
             />
           </View>
         </View>
@@ -2810,6 +2937,7 @@ export default function WardDefense() {
         ap={gs.ap} isPlaying={gs.phase === "playing"}
         hasMerge={findMergePair(gs.deployedUnits) !== null}
         onSynthesize={handleSynthesize}
+        abilityCooldowns={gs.abilityCooldowns}
       />
 
     </SafeAreaView>

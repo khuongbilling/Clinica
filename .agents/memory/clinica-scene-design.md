@@ -34,3 +34,8 @@ description: Rendering constraints and design principles for the five 2.5D arena
 - To preview scenes without onboarding: temporarily render SceneBg in the `!player` branch.
 
 **Why:** These constraints were discovered through visual verification — the scenes appeared completely black or had CSS-box artifacts until these rules were applied.
+
+## Previewing gated screens (battle, onboarding-locked routes)
+- Any screen that guards on `usePlayer()` (`if (loading || !player) return <Loading/>`) or auto-shows a briefing/tutorial modal on mount can't be screenshotted directly without completing onboarding first.
+- Fastest verification path: temporarily loosen the guard (drop `!player` check) and force modal-default states to `false`/skip (briefing `useState`, tutorial auto-start `useEffect`) in the component file, restart the workflow, screenshot, then revert all three edits immediately after. Always tsc + restart again post-revert to confirm the app is back to normal gated behavior.
+- No `react-native-reanimated` babel plugin is configured in this project — use RN's built-in `Animated` API for any new sprite/scene animation work to avoid destabilizing the build.
