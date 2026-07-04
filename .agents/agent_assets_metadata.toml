@@ -414,3 +414,69 @@ id = "5Vcj6itoF93LqKPfwwZ2X"
 uri = "file://frontend/assets/images/realm_kingdom_map.png"
 type = "image"
 title = "realm kingdom map illustration"
+
+[[generated]]
+id = "Yggh-0vHEbHeQGy9JlflR"
+uri = "file://frontend/assets/realm/buildings/grand_ward_atrium.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "vmCmjjYgqIxpsxog5gjPc"
+uri = "file://frontend/assets/realm/buildings/clinica_university.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "vjbRn7X0BMUPEroIkwT_R"
+uri = "file://frontend/assets/realm/buildings/research_library.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GOIdzzCcPtoPcs10-NC50"
+uri = "file://frontend/assets/realm/buildings/hospital_ward.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "wfniHx3xAwv5FwsnK2qBT"
+uri = "file://frontend/assets/realm/buildings/hall_of_heroes.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "10CZln1qCPXrRKGvh4rNI"
+uri = "file://frontend/assets/realm/buildings/apothecary.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "AGFOkwIUuaxprsiX6Onn9"
+uri = "file://frontend/assets/realm/buildings/sanctuary_bank.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "h6TEsn1kxdkYUTqy2AXQs"
+uri = "file://frontend/assets/realm/buildings/sanctuary_bazaar.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ennQIcBP2kwz5X0D7v3a5"
+uri = "file://frontend/assets/realm/buildings/nutrition_garden.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "FzkDSma6jHALS2FOWLUTs"
+uri = "file://frontend/assets/realm/buildings/ward_defense_tower.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "77tnf2RWjHoGFnR6ig4Tf"
+uri = "file://frontend/assets/realm/buildings/faction_embassy.png"
+type = "image"
+title = "generated_image"

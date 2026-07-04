@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState, useEffect } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
@@ -9,6 +9,8 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { IsoGroundTile, IsoTile } from "@/src/components/realm/IsoTile";
+import { IsoBuildingSprite } from "@/src/components/realm/IsoBuildingSprite";
 import {
   ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS, DECORATIONS,
   REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE, REALM_LOOP_NOTE,
@@ -23,10 +25,33 @@ import {
   canPlaceBuilding, canPlaceDecoration, computeRoads, cellId, parseCellId,
   districtToPlotType,
 } from "@/src/game/realmGrid";
+import {
+  ISO_TILE_W, ISO_TILE_H, computeIsoCanvas, cellCenterIso, footprintIso,
+  cellDepth, footprintDepth,
+} from "@/src/game/realmIso";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-const GRID_W = GRID_COLS * CELL_PX;
-const GRID_H = GRID_ROWS * CELL_PX;
+const ISO_CANVAS = computeIsoCanvas(GRID_ROWS, GRID_COLS);
+const GRID_W = ISO_CANVAS.width;
+const GRID_H = ISO_CANVAS.height;
+
+// Painter's-algorithm draw order — every terrain cell is drawn back-to-front
+// once, computed here since GRID_CELLS is a static module-level array.
+const SORTED_CELLS = [...GRID_CELLS].sort((a, b) => cellDepth(a.row, a.col) - cellDepth(b.row, b.col));
+
+const BUILDING_SPRITES: Record<string, any> = {
+  grand_ward_atrium: require("../../assets/realm/buildings/grand_ward_atrium.png"),
+  clinica_university: require("../../assets/realm/buildings/clinica_university.png"),
+  research_library: require("../../assets/realm/buildings/research_library.png"),
+  hospital_ward: require("../../assets/realm/buildings/hospital_ward.png"),
+  hall_of_heroes: require("../../assets/realm/buildings/hall_of_heroes.png"),
+  apothecary: require("../../assets/realm/buildings/apothecary.png"),
+  sanctuary_bank: require("../../assets/realm/buildings/sanctuary_bank.png"),
+  sanctuary_bazaar: require("../../assets/realm/buildings/sanctuary_bazaar.png"),
+  nutrition_garden: require("../../assets/realm/buildings/nutrition_garden.png"),
+  ward_defense_tower: require("../../assets/realm/buildings/ward_defense_tower.png"),
+  faction_embassy: require("../../assets/realm/buildings/faction_embassy.png"),
+};
 
 const DISTRICT_COLOR: Record<string, string> = {
   brand: COLORS.brand, mind: COLORS.mind, protection: COLORS.protection,
@@ -39,13 +64,17 @@ const PLOT_TYPE_COLOR: Record<PlotType, string> = {
   diplomacy: COLORS.storm, decoration: "#c9a06a", road: "#8a7a63", blocked: "#3a3f47",
 };
 
-const TERRAIN_BG: Record<string, string> = {
-  grass: "rgba(70,140,90,0.16)",
-  dirt: "rgba(150,120,80,0.18)",
-  water: "rgba(40,70,110,0.35)",
-  mountain: "rgba(50,50,58,0.5)",
-  stone: "rgba(60,62,68,0.35)",
+// Solid diamond-tile terrain colors — face (top) + edge (beveled underside).
+// Unlike the old flat translucent overlays, these ARE the ground now, so they
+// need to read clearly as grass/dirt/water/stone/mountain at a glance.
+const TERRAIN_FACE: Record<string, string> = {
+  grass: "#3f8f5c", dirt: "#b98f5d", water: "#2f6a9c", mountain: "#565b66", stone: "#4a4e57",
 };
+const TERRAIN_EDGE: Record<string, string> = {
+  grass: "#245637", dirt: "#7a5c38", water: "#1c3f5f", mountain: "#33363d", stone: "#2c2e34",
+};
+const ROAD_FACE = "#c9a06a";
+const ROAD_EDGE = "#8a6a3f";
 
 function districtColorFor(id: string | null | undefined): string {
   if (!id) return COLORS.onSurfaceTertiary;
@@ -104,17 +133,6 @@ export default function KingdomScreen() {
       })
       .filter((x): x is { building: RealmBuilding; origin: { row: number; col: number }; footprint: { w: number; h: number } } => !!x);
   }, [layout]);
-
-  const placedDecorations = useMemo(() => {
-    return Object.entries(decor)
-      .map(([cid, decoId]) => {
-        const cell = getCellById(cid);
-        const decoration = getDecorationById(decoId);
-        if (!cell || !decoration) return null;
-        return { cell, decoration };
-      })
-      .filter((x): x is { cell: PlotCell; decoration: RealmDecoration } => !!x);
-  }, [decor]);
 
   const unplacedUnlocked = useMemo(
     () => REALM_BUILDINGS.filter((b) => isBuildingUnlocked(b, atriumLevel) && !layout[b.id]),
@@ -264,64 +282,92 @@ export default function KingdomScreen() {
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
           <View style={[styles.gridWrap, { width: GRID_W, height: GRID_H }]} testID="kingdom-map">
-            {GRID_CELLS.map((cell) => {
+            {SORTED_CELLS.map((cell) => {
               const locked = cell.isExpansion && !isCellUnlocked(cell, atriumLevel);
               const isRoad = roadSet.has(cell.id) && cell.plotType !== "blocked";
+              const { x, y } = cellCenterIso(cell.row, cell.col, ISO_CANVAS);
+              const face = isRoad ? ROAD_FACE : TERRAIN_FACE[cell.terrain];
+              const edge = isRoad ? ROAD_EDGE : TERRAIN_EDGE[cell.terrain];
+              const accent = cell.plotType === "blocked" ? undefined : PLOT_TYPE_COLOR[cell.plotType] + "55";
+              const deco = decor[cell.id] ? getDecorationById(decor[cell.id]) : null;
               return (
-                <Pressable
-                  key={cell.id}
-                  onPress={() => handleCellPress(cell)}
-                  style={[
-                    styles.cellTile,
-                    {
-                      left: cell.col * CELL_PX, top: cell.row * CELL_PX,
-                      backgroundColor: TERRAIN_BG[cell.terrain],
-                      borderColor: cell.plotType === "blocked" ? "transparent" : PLOT_TYPE_COLOR[cell.plotType] + "33",
-                    },
-                  ]}
-                  testID={`realm-cell-${cell.id}`}
-                >
-                  {isRoad && <View style={styles.roadDot} />}
-                  {locked && <Ionicons name="lock-closed" size={11} color={COLORS.onSurfaceTertiary} />}
-                </Pressable>
+                <View key={cell.id} style={{ position: "absolute", left: 0, top: 0 }}>
+                  <IsoGroundTile
+                    x={x} y={y} w={ISO_TILE_W} h={ISO_TILE_H}
+                    faceColor={face} edgeColor={edge} accentColor={accent} dimmed={locked}
+                  />
+                  <Pressable
+                    onPress={() => handleCellPress(cell)}
+                    style={{
+                      position: "absolute",
+                      left: x - (ISO_TILE_W * 0.42), top: y - (ISO_TILE_H * 0.42),
+                      width: ISO_TILE_W * 0.84, height: ISO_TILE_H * 0.84,
+                    }}
+                    testID={`realm-cell-${cell.id}`}
+                  >
+                    {locked && (
+                      <View style={styles.lockBadge}>
+                        <Ionicons name="lock-closed" size={9} color={COLORS.onSurfaceTertiary} />
+                      </View>
+                    )}
+                  </Pressable>
+                  {deco && (
+                    <View pointerEvents="none" style={{ position: "absolute", left: x - 9, top: y - ISO_TILE_H * 0.75, width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name={deco.icon as any} size={14} color={PLOT_TYPE_COLOR.decoration} />
+                    </View>
+                  )}
+                </View>
               );
             })}
-
-            {placedDecorations.map(({ cell, decoration }) => (
-              <View
-                key={cell.id}
-                style={[styles.decorTile, { left: cell.col * CELL_PX, top: cell.row * CELL_PX }]}
-              >
-                <Ionicons name={decoration.icon as any} size={14} color={PLOT_TYPE_COLOR.decoration} />
-              </View>
-            ))}
 
             {placedBuildings.map(({ building, origin, footprint }) => {
               const color = districtColorFor(building.district);
               const lvl = kingdomLevels[building.kingdomLevelsKey] || 0;
               const isMoveSource = placement?.kind === "building" && placement.isMove && placement.id === building.id;
+              const iso = footprintIso(origin, footprint, ISO_CANVAS);
+              const width = iso.width * 1.06;
+              const sprite = BUILDING_SPRITES[building.id];
               return (
-                <Pressable
-                  key={building.id}
-                  onPress={() => handleCellPress(getCell(origin.row, origin.col)!)}
-                  style={[
-                    styles.buildingTile,
-                    {
-                      left: origin.col * CELL_PX, top: origin.row * CELL_PX,
-                      width: footprint.w * CELL_PX, height: footprint.h * CELL_PX,
-                      borderColor: color, backgroundColor: color + "2a",
-                      opacity: isMoveSource ? 0.35 : 1,
-                    },
-                  ]}
-                  testID={`realm-building-tile-${building.id}`}
-                >
-                  <Ionicons name={building.icon as any} size={Math.min(22, footprint.w * CELL_PX * 0.32)} color={color} />
-                  {lvl > 0 && (
-                    <View style={[styles.plotLvl, { backgroundColor: color }]}>
-                      <Text style={styles.plotLvlTxt}>{lvl}</Text>
-                    </View>
+                <View key={building.id} style={{ position: "absolute", left: 0, top: 0 }}>
+                  {sprite ? (
+                    <IsoBuildingSprite
+                      source={sprite}
+                      centerX={iso.center.x}
+                      bottomY={iso.bottom.y}
+                      width={width}
+                      opacity={isMoveSource ? 0.35 : 1}
+                      onPress={() => handleCellPress(getCell(origin.row, origin.col)!)}
+                      testID={`realm-building-tile-${building.id}`}
+                    >
+                      {lvl > 0 && (
+                        <View style={[styles.plotLvl, { backgroundColor: color }]}>
+                          <Text style={styles.plotLvlTxt}>{lvl}</Text>
+                        </View>
+                      )}
+                    </IsoBuildingSprite>
+                  ) : (
+                    <Pressable
+                      onPress={() => handleCellPress(getCell(origin.row, origin.col)!)}
+                      style={[
+                        styles.buildingTileFallback,
+                        {
+                          left: iso.center.x - width / 2, top: iso.bottom.y - width,
+                          width, height: width,
+                          borderColor: color, backgroundColor: color + "2a",
+                          opacity: isMoveSource ? 0.35 : 1,
+                        },
+                      ]}
+                      testID={`realm-building-tile-${building.id}`}
+                    >
+                      <Ionicons name={building.icon as any} size={Math.min(26, width * 0.3)} color={color} />
+                      {lvl > 0 && (
+                        <View style={[styles.plotLvl, { backgroundColor: color }]}>
+                          <Text style={styles.plotLvlTxt}>{lvl}</Text>
+                        </View>
+                      )}
+                    </Pressable>
                   )}
-                </Pressable>
+                </View>
               );
             })}
 
@@ -329,19 +375,20 @@ export default function KingdomScreen() {
               const footprint = placement.kind === "building" ? getFootprint(placement.id) : { w: 1, h: 1 };
               const cells = getFootprintCells(placement.origin, footprint);
               const ok = !!placementCheck?.ok;
+              const tint = ok ? COLORS.success : COLORS.error;
               return (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.previewBox,
-                    {
-                      left: placement.origin.col * CELL_PX, top: placement.origin.row * CELL_PX,
-                      width: footprint.w * CELL_PX, height: footprint.h * CELL_PX,
-                      borderColor: ok ? COLORS.success : COLORS.error,
-                      backgroundColor: (ok ? COLORS.success : COLORS.error) + "33",
-                    },
-                  ]}
-                />
+                <>
+                  {cells.map((c) => {
+                    const { x, y } = cellCenterIso(c.row, c.col, ISO_CANVAS);
+                    return (
+                      <IsoTile
+                        key={`${c.row}_${c.col}`}
+                        x={x} y={y} w={ISO_TILE_W * 0.94} h={ISO_TILE_H * 0.94}
+                        fill={tint + "55"} borderColor={tint} borderWidth={1.5}
+                      />
+                    );
+                  })}
+                </>
               );
             })()}
           </View>
@@ -931,19 +978,15 @@ const styles = StyleSheet.create({
   bannerTxt: { color: COLORS.brand, fontSize: 11, flex: 1, fontWeight: "600" },
 
   gridWrap: { position: "relative", backgroundColor: COLORS.surface },
-  cellTile: {
-    position: "absolute", width: CELL_PX, height: CELL_PX, borderWidth: 0.5,
+  lockBadge: {
+    position: "absolute", top: "50%", left: "50%", marginLeft: -8, marginTop: -8,
+    width: 16, height: 16, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center", justifyContent: "center",
   },
-  roadDot: { width: 8, height: 8, borderRadius: 2, backgroundColor: "#8a7a63" },
-  decorTile: {
-    position: "absolute", width: CELL_PX, height: CELL_PX, alignItems: "center", justifyContent: "center",
-  },
-  buildingTile: {
+  buildingTileFallback: {
     position: "absolute", borderWidth: 2, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center",
     shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
-  previewBox: { position: "absolute", borderWidth: 2, borderRadius: RADIUS.sm, borderStyle: "dashed" },
   plotLvl: {
     position: "absolute", bottom: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
     alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
