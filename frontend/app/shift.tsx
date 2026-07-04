@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ENEMIES } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
+import { RewardPreview } from "@/src/components/RewardPreview";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
@@ -67,6 +68,8 @@ export default function ShiftPage() {
         <Text style={styles.lead}>
           The ward calls. Three cases await — each one a disease to confront, a patient to stabilize. Choose your encounter.
         </Text>
+
+        <RewardPreview mode="Ward Shift" />
 
         {!canPlay && (
           <View style={styles.staminaWarn}>

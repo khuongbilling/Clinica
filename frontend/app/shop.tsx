@@ -331,6 +331,19 @@ export default function Shop() {
               live trading, or subscriptions are active. See the Economy Guide for full details.
             </Text>
 
+            <Pressable style={styles.card} onPress={() => router.push("/materials")} testID="shop-materials-guide">
+              <View style={[styles.iconBadge, { borderColor: COLORS.brand }]}>
+                <Ionicons name="cube-outline" size={20} color={COLORS.brand} />
+              </View>
+              <View style={styles.cardMain}>
+                <View style={styles.cardHead}>
+                  <Text style={styles.cardName}>Material Guide</Text>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+                </View>
+                <Text style={styles.cardDesc}>Every currency and material — where to earn it and what it's for.</Text>
+              </View>
+            </Pressable>
+
             <Text style={styles.collectionLabel}>CURRENCIES</Text>
             {CURRENCIES.filter((c) => c.id !== "crowns" && c.id !== "codex_shards").map((c) => {
               const balance =

@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { RewardPreview } from "@/src/components/RewardPreview";
 import { DAILY_GEM_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -82,6 +83,8 @@ export default function LotusJournalPage() {
             </Text>
           </View>
         </View>
+
+        <RewardPreview mode="Lotus Plate Journal" />
 
         {/* Main actions */}
         <Pressable style={styles.actionCard} onPress={() => router.push("/lotus-journal-log")}>

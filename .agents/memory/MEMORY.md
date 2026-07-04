@@ -23,3 +23,4 @@
 - [Clinica economy foundation](clinica-economy-foundation.md) — economy.ts is single source of truth for currencies/pricing/marketplace/guardrails; UI screens render from it, stays display-only until real payments requested.
 - [Clinica Realm map foundation](clinica-realm-map-foundation.md) — Atrium level gates all Realm buildings incl. only nav path to University; default Atrium=3 everywhere (defaultPlayer/backend/normalize) or existing routes silently lock.
 - [Clinica global PlayerHeader](clinica-player-header.md) — shared hub header (identity/stamina/4 wallet currencies/EXP bar), scoped to non-battle hub screens only, never Profile; non-linear Player EXP curve.
+- [Clinica material economy](clinica-material-economy.md) — materials.ts is single catalog for all rewards (source/usedFor/relatedMode) feeding Material Guide + RewardPreview chips; new routes need workflow restart for router.d.ts.

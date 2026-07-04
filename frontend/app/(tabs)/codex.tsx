@@ -43,6 +43,14 @@ export default function CodexScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
         </Pressable>
+        <Pressable
+          onPress={() => router.push("/materials")}
+          style={styles.materialsBtn}
+          hitSlop={12}
+          testID="codex-materials-button"
+        >
+          <Ionicons name="cube-outline" size={22} color={COLORS.brand} />
+        </Pressable>
         <Text style={styles.kicker}>THE GREAT CODEX</Text>
         <Text style={styles.title}>Library of Knowledge</Text>
         <Text style={styles.sub}>{unlocked.size} of {CODEX.length} pages restored</Text>
@@ -182,6 +190,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   header: { padding: SPACING.lg, paddingLeft: SPACING.lg + 36, gap: 4 },
   backBtn: { position: "absolute", left: SPACING.sm, top: SPACING.lg, padding: 12, zIndex: 2, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  materialsBtn: { position: "absolute", right: SPACING.sm, top: SPACING.lg, padding: 12, zIndex: 2, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceTertiary, fontSize: 12 },

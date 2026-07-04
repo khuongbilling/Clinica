@@ -696,6 +696,7 @@ function DistrictInfoModal({ districtId, onClose }: { districtId: string | null;
 }
 
 function LegendModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const router = useRouter();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
@@ -721,6 +722,15 @@ function LegendModal({ visible, onClose }: { visible: boolean; onClose: () => vo
             <Text style={styles.sheetLabel}>CUSTOMIZATION</Text>
             <Text style={styles.sheetBody}>{REALM_CUSTOMIZATION_NOTE}</Text>
           </ScrollView>
+          <Pressable
+            style={styles.resourceGuideBtn}
+            onPress={() => { onClose(); router.push("/materials"); }}
+            testID="realm-resource-guide-button"
+          >
+            <Ionicons name="cube-outline" size={16} color={COLORS.brand} />
+            <Text style={styles.resourceGuideTxt}>Realm Resource Guide</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -858,6 +868,12 @@ const styles = StyleSheet.create({
   sheetPurpose: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginBottom: SPACING.sm },
   sheetLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: SPACING.md },
   sheetBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginTop: 4 },
+  resourceGuideBtn: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.md,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  resourceGuideTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", flex: 1 },
   sheetFootnote: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15, marginTop: SPACING.sm, fontStyle: "italic" },
   lockBox: {
     flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: COLORS.warning + "18",

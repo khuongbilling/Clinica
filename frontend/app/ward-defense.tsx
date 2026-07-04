@@ -51,6 +51,7 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 
 import { usePlayer } from "@/src/game/store";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -3633,6 +3634,8 @@ function LobbyScreen({
           <Text style={s.lobbyTitle}>Bronchospasm Siege</Text>
           <Text style={s.lobbySubtitle}>6 Waves · Deploy Healers · Defend the Lantern</Text>
         </View>
+
+        <RewardPreview mode="Ward Defense" />
 
         {/* Mission */}
         <View style={s.lobbyCard}>

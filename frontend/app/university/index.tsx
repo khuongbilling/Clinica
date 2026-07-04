@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { RewardPreview } from "@/src/components/RewardPreview";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const MENU: { id: string; title: string; desc: string; icon: string; route?: string }[] = [
@@ -77,6 +78,8 @@ export default function UniversityHubScreen() {
           <Stat label="Codex Shards" value={String(player.codex_shards || 0)} icon="diamond" />
           <Stat label="University Credits" value={String(player.university_credits || 0)} icon="school" />
         </View>
+
+        <RewardPreview mode="Clinica University" />
 
         {MENU.map((m) => (
           <Pressable
