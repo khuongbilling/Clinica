@@ -14,18 +14,35 @@ export const DUP_SHARD_BONUS = 10; // small consolation shards on a duplicate pu
 
 export interface HeroProgress {
   star: number;
+  // Hero Shards for this specific hero — fed by duplicate pulls (University
+  // Recruitment) and spent on Certification Star promotion. Field kept as
+  // `copies` for backend/save compatibility; use getHeroShards() to read it.
   copies: number;
+  // Hero Level — separate EXP-based growth track, capped per Certification
+  // Star (see university.ts levelCapForStar). Independent of `star`.
+  level?: number;
+  // Safe hero locking/favorite (Step 10) — protects a hero from being used
+  // as promotion material for other heroes.
+  locked?: boolean;
+  favorite?: boolean;
 }
 
 export function defaultProgress(): HeroProgress {
-  return { star: 1, copies: 0 };
+  return { star: 1, copies: 0, level: 1, locked: false, favorite: false };
 }
 
 export function getProgress(
   progression: Record<string, HeroProgress> | undefined,
   heroId: string,
 ): HeroProgress {
-  return progression?.[heroId] ?? defaultProgress();
+  const p = progression?.[heroId];
+  if (!p) return defaultProgress();
+  return { star: p.star, copies: p.copies, level: p.level ?? 1, locked: !!p.locked, favorite: !!p.favorite };
+}
+
+// Hero Shards — clearer accessor name for the reused `copies` field.
+export function getHeroShards(p: HeroProgress): number {
+  return p.copies ?? 0;
 }
 
 // Copies required to go from `star` → star + 1 : 2^(star-1)

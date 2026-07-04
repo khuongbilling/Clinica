@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FOUNDATION_BANNER, rarityColor, SUMMON_COST } from "@/src/game/gacha";
+import { rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -73,10 +74,8 @@ export default function SummonScreen() {
         {last && (
           <View style={[styles.resultCard, last.duplicate ? { borderColor: COLORS.borderStrong } : { borderColor: rarityColor(last.entry.rarity) }]} testID="summon-result">
             <Text style={[styles.resultName, { color: rarityColor(last.entry.rarity) }]}>{last.entry.name}</Text>
-            <View style={{ flexDirection: "row", gap: 4 }}>
-              {Array.from({ length: last.entry.rarity }).map((_, i) => (
-                <Ionicons key={i} name="star" size={12} color={rarityColor(last.entry.rarity)} />
-              ))}
+            <View style={[styles.tierPill, { borderColor: rarityColor(last.entry.rarity) + "70" }]}>
+              <Text style={[styles.tierPillTxt, { color: rarityColor(last.entry.rarity) }]}>{rarityTierLabel(last.entry.rarity)}</Text>
             </View>
             <Text style={styles.resultMeta}>{last.entry.role} · {last.entry.aptitude}</Text>
             <Text style={styles.resultMsg}>{last.message}</Text>
@@ -111,10 +110,8 @@ export default function SummonScreen() {
                 </View>
                 <Text style={styles.poolMeta}>{h.role} · {h.aptitude}</Text>
               </View>
-              <View style={{ flexDirection: "row", gap: 2 }}>
-                {Array.from({ length: h.rarity }).map((_, i) => (
-                  <Ionicons key={i} name="star" size={10} color={rc} />
-                ))}
+              <View style={[styles.tierPillSm, { borderColor: rc + "70" }]}>
+                <Text style={[styles.tierPillSmTxt, { color: rc }]}>{rarityTierLabel(h.rarity)}</Text>
               </View>
               <Text style={styles.poolWeight}>{Math.round((h.weight / FOUNDATION_BANNER.reduce((s, x) => s + x.weight, 0)) * 100)}%</Text>
             </View>
@@ -140,6 +137,10 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   resultCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.lg, borderRadius: 4, borderWidth: 2, alignItems: "center", gap: 6 },
   resultName: { fontSize: 22, fontWeight: "400" },
+  tierPill: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  tierPillTxt: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  tierPillSm: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1 },
+  tierPillSmTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   resultMeta: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
   resultMsg: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", marginTop: SPACING.sm },
   summonBtn: { height: 56, borderRadius: 4, alignItems: "center", justifyContent: "center", overflow: "hidden", flexDirection: "row", gap: SPACING.md },

@@ -17,18 +17,27 @@ const STORAGE_KEY = 'clinica.player.v2';
 // and clamp any malformed values. Keeps older/remote saves compatible.
 function normalizeProgression(p: PlayerState): PlayerState {
   const src = p.hero_progression || {};
-  const prog: Record<string, { star: number; copies: number }> = {};
+  const prog: Record<string, { star: number; copies: number; level: number; locked: boolean; favorite: boolean }> = {};
   let changed = !p.hero_progression;
   for (const [id, raw] of Object.entries(src)) {
     const star = Math.min(MAX_STAR, Math.max(1, Math.round(Number(raw?.star) || 1)));
     const copies = Math.max(0, Math.round(Number(raw?.copies) || 0));
-    prog[id] = { star, copies };
-    if (star !== raw?.star || copies !== raw?.copies) changed = true;
+    const level = Math.max(1, Math.round(Number((raw as any)?.level) || 1));
+    const locked = !!(raw as any)?.locked;
+    const favorite = !!(raw as any)?.favorite;
+    prog[id] = { star, copies, level, locked, favorite };
+    if (star !== raw?.star || copies !== raw?.copies || level !== (raw as any)?.level) changed = true;
   }
   for (const id of p.heroes_owned || []) {
-    if (!prog[id]) { prog[id] = defaultProgress(); changed = true; }
+    if (!prog[id]) { prog[id] = defaultProgress() as any; changed = true; }
   }
-  let out = changed ? { ...p, hero_progression: prog } : p;
+  let out = changed ? { ...p, hero_progression: prog as any } : p;
+  if (!out.class_trainees) {
+    out = { ...out, class_trainees: {} };
+  }
+  if (out.university_credits == null) {
+    out = { ...out, university_credits: 0 };
+  }
   if (out.stamina == null || !out.stamina_updated_at) {
     out = {
       ...out,
@@ -96,6 +105,12 @@ type Ctx = {
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
   summonOnce: () => Promise<{ entry: any; duplicate: boolean; message: string } | null>;
   evolveHero: (heroId: string) => Promise<{ ok: boolean; message: string; star?: number }>;
+  recruitOnce: () => Promise<{ ok: boolean; message: string; result?: import('./university').RecruitResult }>;
+  recruitTen: () => Promise<{ ok: boolean; message: string; results?: import('./university').RecruitResult[] }>;
+  promoteHeroCert: (heroId: string) => Promise<{ ok: boolean; message: string }>;
+  trainHero: (heroId: string) => Promise<{ ok: boolean; message: string }>;
+  toggleHeroLock: (heroId: string) => Promise<void>;
+  toggleHeroFavorite: (heroId: string) => Promise<void>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
   resetPlayer: () => Promise<void>;
@@ -364,6 +379,135 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Evolved to ★${nextProg.star}!`, star: nextProg.star };
   }, [player, updateState]);
 
+  const recruitOnce = useCallback(async () => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    const { recruitOnce: roll, applyRecruitResultToProgression } = await import('./university');
+    const { SUMMON_COST } = await import('./gacha');
+    if ((player.codex_shards || 0) < SUMMON_COST) {
+      return { ok: false, message: 'Not enough Codex Shards for Recruitment.' };
+    }
+    const result = roll(new Set(player.heroes_owned));
+    const { heroesOwned, progression } = applyRecruitResultToProgression(player.hero_progression, player.heroes_owned, result);
+    let nextShards = (player.codex_shards || 0) - SUMMON_COST;
+    let nextTrainees = { ...(player.class_trainees || {}) };
+    let nextCredits = player.university_credits || 0;
+    let nextHistory = player.summon_history || [];
+    if (result.kind === 'trainee' && result.trainee) {
+      nextTrainees[result.trainee.id] = (nextTrainees[result.trainee.id] || 0) + (result.traineeAmount || 0);
+    } else if (result.kind === 'credits') {
+      nextCredits += result.creditsAmount || 0;
+    } else if (result.entry) {
+      nextHistory = [...nextHistory, { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() }];
+    }
+    await updateState({
+      ...player,
+      codex_shards: nextShards,
+      heroes_owned: heroesOwned,
+      hero_progression: progression,
+      class_trainees: nextTrainees,
+      university_credits: nextCredits,
+      summon_history: nextHistory,
+    });
+    return { ok: true, message: result.message, result };
+  }, [player, updateState]);
+
+  const recruitTen = useCallback(async () => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    const { recruitTen: rollTen, applyRecruitResultToProgression } = await import('./university');
+    const { SUMMON_COST } = await import('./gacha');
+    const cost = SUMMON_COST * 10;
+    if ((player.codex_shards || 0) < cost) {
+      return { ok: false, message: 'Not enough Codex Shards for Full Class Recruitment.' };
+    }
+    const results = rollTen(player.heroes_owned);
+    let heroesOwned = player.heroes_owned;
+    let progression = player.hero_progression || {};
+    let nextTrainees = { ...(player.class_trainees || {}) };
+    let nextCredits = player.university_credits || 0;
+    let nextHistory = player.summon_history || [];
+    for (const result of results) {
+      const applied = applyRecruitResultToProgression(progression, heroesOwned, result);
+      heroesOwned = applied.heroesOwned;
+      progression = applied.progression;
+      if (result.kind === 'trainee' && result.trainee) {
+        nextTrainees[result.trainee.id] = (nextTrainees[result.trainee.id] || 0) + (result.traineeAmount || 0);
+      } else if (result.kind === 'credits') {
+        nextCredits += result.creditsAmount || 0;
+      } else if (result.entry) {
+        nextHistory = [...nextHistory, { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() }];
+      }
+    }
+    await updateState({
+      ...player,
+      codex_shards: (player.codex_shards || 0) - cost,
+      heroes_owned: heroesOwned,
+      hero_progression: progression,
+      class_trainees: nextTrainees,
+      university_credits: nextCredits,
+      summon_history: nextHistory,
+    });
+    return { ok: true, message: 'Full Class Recruitment complete!', results };
+  }, [player, updateState]);
+
+  const promoteHeroCert = useCallback(async (heroId: string) => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    if (!player.heroes_owned.includes(heroId)) return { ok: false, message: 'Hero not owned.' };
+    const { HEROES } = await import('./content');
+    const { promoteHero: doPromote } = await import('./university');
+    const hero = HEROES.find((h: any) => h.id === heroId);
+    if (!hero) return { ok: false, message: 'Unknown hero.' };
+    const cur = getProgress(player.hero_progression, heroId);
+    const result = doPromote(hero.name, hero.role, cur, player);
+    if (!result.ok || !result.newProg) return { ok: false, message: result.message };
+    const nextTrainees = { ...(player.class_trainees || {}) };
+    if (result.trainSpent) {
+      const { traineeForRole } = await import('./university');
+      const trainee = traineeForRole(hero.role);
+      nextTrainees[trainee.id] = Math.max(0, (nextTrainees[trainee.id] || 0) - result.trainSpent);
+    }
+    await updateState({
+      ...player,
+      hero_progression: { ...(player.hero_progression || {}), [heroId]: result.newProg },
+      class_trainees: nextTrainees,
+      university_credits: Math.max(0, (player.university_credits || 0) - (result.creditsSpent || 0)),
+    });
+    return { ok: true, message: result.message };
+  }, [player, updateState]);
+
+  const trainHero = useCallback(async (heroId: string) => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    if (!player.heroes_owned.includes(heroId)) return { ok: false, message: 'Hero not owned.' };
+    const { canTrain, trainProgress, levelCapForStar } = await import('./university');
+    const cur = getProgress(player.hero_progression, heroId);
+    if (!canTrain(cur)) {
+      return { ok: false, message: `Already at Level ${levelCapForStar(cur.star)} cap for ${cur.star}-Star. Promote to raise the cap.` };
+    }
+    const next = trainProgress(cur);
+    await updateState({
+      ...player,
+      hero_progression: { ...(player.hero_progression || {}), [heroId]: next },
+    });
+    return { ok: true, message: `Trained to Level ${next.level}!` };
+  }, [player, updateState]);
+
+  const toggleHeroLock = useCallback(async (heroId: string) => {
+    if (!player) return;
+    const cur = getProgress(player.hero_progression, heroId);
+    await updateState({
+      ...player,
+      hero_progression: { ...(player.hero_progression || {}), [heroId]: { ...cur, locked: !cur.locked } },
+    });
+  }, [player, updateState]);
+
+  const toggleHeroFavorite = useCallback(async (heroId: string) => {
+    if (!player) return;
+    const cur = getProgress(player.hero_progression, heroId);
+    await updateState({
+      ...player,
+      hero_progression: { ...(player.hero_progression || {}), [heroId]: { ...cur, favorite: !cur.favorite } },
+    });
+  }, [player, updateState]);
+
   const spendStamina = useCallback(async (cost: number = ENCOUNTER_COST) => {
     // Read + decrement synchronously against the ref (single-threaded critical
     // section) BEFORE any await, so two rapid taps can't both spend the same point.
@@ -561,8 +705,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, spendStamina, logWellnessActivity, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

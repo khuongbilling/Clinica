@@ -162,6 +162,27 @@ export default function KingdomScreen() {
             </CardTag>
           );
         })}
+
+        <Pressable
+          style={[styles.bCard, styles.bCardActive]}
+          testID="kingdom-university"
+          onPress={() => router.push("/university" as any)}
+        >
+          <View style={[styles.bIcon, { borderColor: COLORS.brand }]}>
+            <Ionicons name="school" size={24} color={COLORS.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.bName}>Clinica University</Text>
+            </View>
+            <Text style={styles.bDesc}>Recruit, certify, and train the healers who defend the Kingdom.</Text>
+            <View style={styles.shopHint}>
+              <Ionicons name="school" size={12} color={COLORS.brand} />
+              <Text style={styles.shopHintTxt}>{player.university_credits || 0} Credits — tap to open the University</Text>
+              <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
+            </View>
+          </View>
+        </Pressable>
       </ScrollView>
 
       <TutorialOverlay />

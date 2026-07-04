@@ -9,6 +9,7 @@ import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import { usePlayer } from "@/src/game/store";
 import { canEvolve, getProgress } from "@/src/game/evolution";
+import { rarityTierLabel } from "@/src/game/university";
 import { findSkin } from "@/src/game/shop";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -18,6 +19,16 @@ function Stars({ count, color }: { count: number; color: string }) {
       {Array.from({ length: count }).map((_, i) => (
         <Ionicons key={i} name="star" size={9} color={color} />
       ))}
+    </View>
+  );
+}
+
+// Quality tier badge — rarity is a base-pool weight (3-7), never rendered as
+// stars (Certification Stars are the only stars in the game).
+function TierBadge({ rarity, color }: { rarity: number; color: string }) {
+  return (
+    <View style={[styles.tierBadge, { borderColor: color + "70" }]}>
+      <Text style={[styles.tierBadgeTxt, { color }]}>{rarityTierLabel(rarity)}</Text>
     </View>
   );
 }
@@ -147,7 +158,7 @@ export default function HeroesScreen() {
                   {/* Info row */}
                   <View style={styles.infoRow}>
                     <View style={{ flex: 1 }}>
-                      <Stars count={h.rarity} color={accent} />
+                      <TierBadge rarity={h.rarity} color={accent} />
                       <Text style={[styles.heroName, !isOwned && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>
                         {h.name}
                       </Text>
@@ -252,6 +263,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5, paddingVertical: 2,
   },
   starBadgeTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "800" },
+  tierBadge: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginBottom: 2 },
+  tierBadgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
 
   evolveBadge: {
     position: "absolute", bottom: 6, left: 6,

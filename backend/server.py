@@ -107,6 +107,8 @@ class Player(BaseModel):
     summon_history: List[Dict[str, Any]] = Field(default_factory=list)
     enemy_mastery: Dict[str, int] = Field(default_factory=dict)
     chapter_progress: int = 1
+    class_trainees: Dict[str, int] = Field(default_factory=dict)
+    university_credits: int = 0
     stamina: int = 5
     stamina_updated_at: str = Field(default_factory=now_iso)
     wellness: WellnessState = Field(default_factory=WellnessState)
@@ -146,6 +148,8 @@ class PlayerUpdate(BaseModel):
     summon_history: Optional[List[Dict[str, Any]]] = None
     enemy_mastery: Optional[Dict[str, int]] = None
     chapter_progress: Optional[int] = None
+    class_trainees: Optional[Dict[str, int]] = None
+    university_credits: Optional[int] = None
     stamina: Optional[int] = None
     stamina_updated_at: Optional[str] = None
     wellness: Optional[WellnessState] = None

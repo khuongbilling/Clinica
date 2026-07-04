@@ -835,7 +835,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                       <Text style={styles.teamRole}>{h.role} · {h.element}</Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 1 }}>
-                      {Array.from({ length: h.rarity }).map((_, i) => (
+                      {Array.from({ length: h.star ?? 1 }).map((_, i) => (
                         <Ionicons key={i} name="star" size={10} color={COLORS.brand} />
                       ))}
                     </View>

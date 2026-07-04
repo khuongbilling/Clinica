@@ -12,14 +12,20 @@ import { HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
 import {
-  MAX_STAR,
-  canEvolve,
-  copiesForNextStar,
+  getHeroShards,
   getProgress,
   nextAbilityPreview,
   starPowerBonusPct,
   unlockedAbilityPreviews,
 } from "@/src/game/evolution";
+import {
+  MAX_CERTIFICATION_STAR,
+  autoSelectMaterials,
+  checkPromotion,
+  levelCapForStar,
+  rarityTierLabel,
+  traineeForRole,
+} from "@/src/game/university";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const TABS = ["Details", "Skills", "Upgrade", "Bond", "Lore"] as const;
@@ -284,7 +290,8 @@ export default function HeroProfile() {
     ? Math.min(1, (player.xp - RANKS[player.rank_index].xpRequired) /
         (nextRank.xpRequired - RANKS[player.rank_index].xpRequired))
     : 1;
-  const powerScore = hero.rarity * 280 + hero.skills.length * 90;
+  const prog       = getProgress(player.hero_progression, hero.id);
+  const powerScore = prog.star * 280 + hero.skills.length * 90;
 
   const toggleTeam = async () => {
     if (!isOwned) return;
@@ -341,7 +348,10 @@ export default function HeroProfile() {
       {/* ── IDENTITY BLOCK ── */}
       <View style={styles.identityBlock}>
         <View style={styles.identityRow}>
-          <Stars count={hero.rarity} color={accent} />
+          <Stars count={prog.star} color={accent} />
+          <View style={[styles.tierBadgeSm, { borderColor: accent + "70" }]}>
+            <Text style={[styles.tierBadgeSmTxt, { color: accent }]}>{rarityTierLabel(hero.rarity)}</Text>
+          </View>
           <View style={[styles.elementBadge, { borderColor: accent + "80", backgroundColor: accent + "18" }]}>
             <Text style={[styles.elementTxt, { color: accent }]}>{hero.element.toUpperCase()}</Text>
           </View>
@@ -527,46 +537,98 @@ function PlaceholderTab({ label, accent, icon, message }: { label: string; accen
 }
 
 function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwned: boolean }) {
-  const { player, evolveHero } = usePlayer();
+  const { player, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite } = usePlayer();
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   if (!isOwned) {
     return (
       <PlaceholderTab
-        label="Evolve"
+        label="Certification"
         accent={accent}
         icon="trending-up-outline"
-        message="Recruit this hero to begin their evolution. Duplicate summons become evolution copies you can spend to raise their star."
+        message="Recruit this hero at Clinica University to begin their Hero Certification. Duplicate recruits convert into Hero Shards you can spend to promote their Certification Star."
       />
     );
   }
 
   const prog = getProgress(player?.hero_progression, hero.id);
-  const atMax = prog.star >= MAX_STAR;
-  const needed = copiesForNextStar(prog.star);
-  const ready = canEvolve(prog);
-  const pct = atMax ? 1 : Math.min(1, prog.copies / needed);
+  const atMax = prog.star >= MAX_CERTIFICATION_STAR;
+  const check = checkPromotion(hero.role, prog, player!);
+  const trainee = traineeForRole(hero.role);
+  const auto = autoSelectMaterials(check);
+  const cap = levelCapForStar(prog.star);
+  const level = prog.level ?? 1;
+  const levelPct = Math.min(1, level / cap);
+  const shards = getHeroShards(prog);
   const unlocked = unlockedAbilityPreviews(hero.role, prog.star);
   const nextAbility = nextAbilityPreview(hero.role, prog.star);
   const curBonus = starPowerBonusPct(prog.star);
-  const nextBonus = starPowerBonusPct(prog.star + 1);
+  const nextBonus = starPowerBonusPct(Math.min(prog.star + 1, MAX_CERTIFICATION_STAR));
 
-  const onEvolve = async () => {
-    if (!ready || busy) return;
+  const onTrain = async () => {
+    if (busy) return;
     setBusy(true);
-    const res = await evolveHero(hero.id);
+    const res = await trainHero(hero.id);
+    setFeedback(res.message);
+    setBusy(false);
+  };
+
+  const onPromote = async () => {
+    if (busy || !check.eligible) return;
+    setBusy(true);
+    const res = await promoteHeroCert(hero.id);
     setFeedback(res.message);
     setBusy(false);
   };
 
   return (
     <View style={{ gap: SPACING.lg }}>
-      {/* Star status */}
+      {/* Lock / Favorite */}
+      <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+        <Pressable
+          style={[styles.lockBtn, prog.locked && { borderColor: accent, backgroundColor: accent + "18" }]}
+          onPress={() => toggleHeroLock(hero.id)}
+          testID="hero-lock-toggle"
+        >
+          <Ionicons name={prog.locked ? "lock-closed" : "lock-open-outline"} size={14} color={prog.locked ? accent : COLORS.onSurfaceTertiary} />
+          <Text style={[styles.lockBtnTxt, { color: prog.locked ? accent : COLORS.onSurfaceTertiary }]}>{prog.locked ? "Locked" : "Lock"}</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.lockBtn, prog.favorite && { borderColor: accent, backgroundColor: accent + "18" }]}
+          onPress={() => toggleHeroFavorite(hero.id)}
+          testID="hero-favorite-toggle"
+        >
+          <Ionicons name={prog.favorite ? "heart" : "heart-outline"} size={14} color={prog.favorite ? accent : COLORS.onSurfaceTertiary} />
+          <Text style={[styles.lockBtnTxt, { color: prog.favorite ? accent : COLORS.onSurfaceTertiary }]}>{prog.favorite ? "Favorited" : "Favorite"}</Text>
+        </Pressable>
+      </View>
+
+      {/* Hero Level */}
+      <View style={styles.detailSection}>
+        <SectionHeader title="Hero Level" icon="trending-up-outline" accent={accent} />
+        <View style={styles.evolveBarTrack}>
+          <View style={[styles.evolveBarFill, { width: `${levelPct * 100}%`, backgroundColor: accent }]} />
+        </View>
+        <Text style={styles.evolveCopiesTxt}>Level {level} / {cap} cap (raises with Certification Star)</Text>
+        <Pressable
+          onPress={onTrain}
+          disabled={busy || level >= cap}
+          style={[styles.trainBtn, level >= cap ? { backgroundColor: COLORS.surfaceTertiary } : { borderColor: accent }]}
+          testID="hero-train-btn"
+        >
+          <Ionicons name="school-outline" size={16} color={level >= cap ? COLORS.onSurfaceTertiary : accent} />
+          <Text style={[styles.trainBtnTxt, { color: level >= cap ? COLORS.onSurfaceTertiary : accent }]}>
+            {level >= cap ? "Level cap reached" : "Train at the Training Hall (+1 Level)"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Certification Star status */}
       <View style={[styles.evolveStar, { borderColor: accent + "40" }]}>
-        <Text style={styles.evolveStarLabel}>EVOLUTION</Text>
+        <Text style={styles.evolveStarLabel}>CERTIFICATION</Text>
         <View style={styles.evolveStarRow}>
-          {Array.from({ length: MAX_STAR }).map((_, i) => (
+          {Array.from({ length: MAX_CERTIFICATION_STAR }).map((_, i) => (
             <Ionicons
               key={i}
               name={i < prog.star ? "star" : "star-outline"}
@@ -575,26 +637,22 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
             />
           ))}
         </View>
-        <Text style={[styles.evolveStarNum, { color: accent }]}>★{prog.star}{atMax ? " · MAX" : ` / ${MAX_STAR}`}</Text>
+        <Text style={[styles.evolveStarNum, { color: accent }]}>★{prog.star}{atMax ? " · MAX" : ` / ${MAX_CERTIFICATION_STAR}`}</Text>
         <Text style={styles.evolveBonus}>Skill power +{curBonus}%</Text>
       </View>
 
-      {/* Copies progress */}
+      {/* Promotion requirements */}
       <View style={styles.detailSection}>
-        <SectionHeader title="Evolution Copies" icon="layers-outline" accent={accent} />
+        <SectionHeader title="Promotion Requirements" icon="ribbon-outline" accent={accent} />
         {atMax ? (
-          <Text style={styles.evolveMsg}>Fully evolved — this hero has reached maximum star.</Text>
+          <Text style={styles.evolveMsg}>Fully certified — this hero has reached the maximum Certification Star.</Text>
         ) : (
           <>
-            <View style={styles.evolveBarTrack}>
-              <View style={[styles.evolveBarFill, { width: `${pct * 100}%`, backgroundColor: accent }]} />
-            </View>
-            <Text style={styles.evolveCopiesTxt}>
-              {prog.copies} / {needed} copies to reach ★{prog.star + 1}
-            </Text>
-            <Text style={styles.evolveHint}>
-              Earn copies by summoning duplicates of {hero.name}.
-            </Text>
+            <ReqRow label={`Hero Level ${check.levelNeeded}`} have={check.level} needed={check.levelNeeded} ok={check.levelOk} accent={accent} />
+            <ReqRow label={`Hero Shards${check.req?.shardsOrTrainees ? " (or trainees)" : ""}`} have={check.shardsHave} needed={check.shardsNeeded} ok={check.shardsOk} accent={accent} />
+            <ReqRow label={`${trainee.label}s`} have={check.trainHave} needed={check.trainNeeded} ok={check.trainOk} accent={accent} />
+            <ReqRow label="University Credits" have={check.creditsHave} needed={check.creditsNeeded} ok={check.creditsOk} accent={accent} />
+            <Text style={styles.evolveHint}>{auto.summary}</Text>
           </>
         )}
       </View>
@@ -623,7 +681,7 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
         <View style={styles.detailSection}>
           <SectionHeader title="Next Star Preview" icon="arrow-up-circle-outline" accent={accent} />
           <View style={[styles.previewBox, { borderLeftColor: accent + "60" }]}>
-            <Text style={styles.previewLine}>★{prog.star + 1}: skill power rises to +{nextBonus}%</Text>
+            <Text style={styles.previewLine}>★{prog.star + 1}: skill power rises to +{nextBonus}%, level cap {levelCapForStar(prog.star + 1)}</Text>
             {nextAbility && nextAbility.minStar === prog.star + 1 ? (
               <Text style={styles.previewLine}>Unlocks <Text style={{ color: accent }}>{nextAbility.name}</Text> ({nextAbility.shortEffect})</Text>
             ) : nextAbility ? (
@@ -633,25 +691,35 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
         </View>
       )}
 
-      {/* Evolve button */}
+      {/* Promote button */}
       {!atMax && (
         <Pressable
-          onPress={onEvolve}
-          disabled={!ready || busy}
+          onPress={onPromote}
+          disabled={!check.eligible || busy}
           style={[
             styles.evolveBtn,
-            ready ? { backgroundColor: accent } : { backgroundColor: COLORS.surfaceTertiary },
+            check.eligible ? { backgroundColor: accent } : { backgroundColor: COLORS.surfaceTertiary },
           ]}
-          testID="hero-evolve-btn"
+          testID="hero-promote-btn"
         >
-          <Ionicons name="arrow-up-circle" size={18} color={ready ? COLORS.surface : COLORS.onSurfaceTertiary} />
-          <Text style={[styles.evolveBtnTxt, { color: ready ? COLORS.surface : COLORS.onSurfaceTertiary }]}>
-            {ready ? `Evolve to ★${prog.star + 1}` : `Need ${needed - prog.copies} more copies`}
+          <Ionicons name="arrow-up-circle" size={18} color={check.eligible ? COLORS.surface : COLORS.onSurfaceTertiary} />
+          <Text style={[styles.evolveBtnTxt, { color: check.eligible ? COLORS.surface : COLORS.onSurfaceTertiary }]}>
+            {check.eligible ? `Promote to ★${prog.star + 1}` : "Requirements not yet met"}
           </Text>
         </Pressable>
       )}
 
       {feedback && <Text style={[styles.evolveFeedback, { color: accent }]}>{feedback}</Text>}
+    </View>
+  );
+}
+
+function ReqRow({ label, have, needed, ok, accent }: { label: string; have: number; needed: number; ok: boolean; accent: string }) {
+  return (
+    <View style={styles.reqRow}>
+      <Ionicons name={ok ? "checkmark-circle" : "ellipse-outline"} size={14} color={ok ? accent : COLORS.onSurfaceTertiary} />
+      <Text style={[styles.reqLabel, { color: ok ? COLORS.onSurface : COLORS.onSurfaceSecondary }]}>{label}</Text>
+      <Text style={[styles.reqValue, { color: ok ? accent : COLORS.onSurfaceTertiary }]}>{have} / {needed}</Text>
     </View>
   );
 }
@@ -726,6 +794,8 @@ const styles = StyleSheet.create({
   identityRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" },
   elementBadge: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 3 },
   elementTxt:   { fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  tierBadgeSm: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 2 },
+  tierBadgeSmTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   roleBadge:    { borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 3, backgroundColor: COLORS.surfaceTertiary },
   roleTxt:      { fontSize: 9, fontWeight: "700", letterSpacing: 1, color: COLORS.onSurfaceSecondary },
   heroName:     { color: COLORS.onSurface, fontSize: 26, fontWeight: "700", letterSpacing: 0.3, marginTop: 2 },
@@ -863,4 +933,18 @@ const styles = StyleSheet.create({
   },
   evolveBtnTxt: { fontSize: 14, fontWeight: "700" },
   evolveFeedback: { fontSize: 13, fontWeight: "600", textAlign: "center" },
+  lockBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.md, paddingVertical: 6,
+  },
+  lockBtnTxt: { fontSize: 11, fontWeight: "700" },
+  trainBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    borderWidth: 1, borderRadius: RADIUS.md, paddingVertical: SPACING.sm, marginTop: SPACING.sm,
+  },
+  trainBtnTxt: { fontSize: 12, fontWeight: "700" },
+  reqRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  reqLabel: { flex: 1, fontSize: 12 },
+  reqValue: { fontSize: 12, fontWeight: "700" },
 });

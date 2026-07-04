@@ -132,7 +132,7 @@ export interface PlayerState {
   };
   codex_unlocked: string[];
   heroes_owned: string[];
-  hero_progression?: Record<string, { star: number; copies: number }>;
+  hero_progression?: Record<string, { star: number; copies: number; level?: number; locked?: boolean; favorite?: boolean }>;
   active_team: string[];
   kingdom_levels: Record<string, number>;
   runs_completed: number;
@@ -150,6 +150,10 @@ export interface PlayerState {
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   enemy_mastery?: Record<string, number>;
   chapter_progress?: number;
+  // Clinica University — shared trainee materials keyed by trainee id (see university.ts)
+  class_trainees?: Record<string, number>;
+  // Clinica University — global progression currency
+  university_credits?: number;
   region_progress?: Record<string, number>;
   stamina?: number;
   stamina_updated_at?: string;
