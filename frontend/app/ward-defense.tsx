@@ -3240,27 +3240,32 @@ export default function WardDefense() {
         })()}
       </View>
 
-      {/* Clinical Cue Check section OR feedback strip */}
-      {gs.phase === "wave_pause" ? (
-        <ClinicalQuestionPanel
-          question={CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length]}
-          onAnswer={answerClinQ}
-          answered={cqAnswered?.wave === gs.wave}
-          answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
-          wave={gs.wave}
-          cueChoice={cqCueChoice?.wave === gs.wave ? cqCueChoice!.choice : null}
-          onChooseCue={chooseCueTactic}
-        />
-      ) : (
-        <View style={s.feedbackPanel}>
-          {gs.feedbacks.slice(0, 2).map((f, idx) => (
-            <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color, marginTop: idx > 0 ? 2 : 0 }]}>
-              <Text style={[s.feedbackTxt, { color: f.color }]} numberOfLines={1}>{f.text}</Text>
-            </View>
-          ))}
-          {gs.feedbacks.length === 0 && (
-            <Text style={s.feedbackHint}>Select a unit → tap a tile to deploy.</Text>
-          )}
+      {/* Feedback strip — stays in flow so the board layout doesn't jump during the wave pause */}
+      <View style={s.feedbackPanel}>
+        {gs.feedbacks.slice(0, 2).map((f, idx) => (
+          <View key={f.id} style={[s.feedbackRow, { borderLeftColor: f.color, marginTop: idx > 0 ? 2 : 0 }]}>
+            <Text style={[s.feedbackTxt, { color: f.color }]} numberOfLines={1}>{f.text}</Text>
+          </View>
+        ))}
+        {gs.feedbacks.length === 0 && (
+          <Text style={s.feedbackHint}>Select a unit → tap a tile to deploy.</Text>
+        )}
+      </View>
+
+      {/* Clinical Cue Check — floats OVER everything during the wave pause */}
+      {gs.phase === "wave_pause" && (
+        <View style={s.clinicalOverlay}>
+          <View style={s.clinicalOverlayCard}>
+            <ClinicalQuestionPanel
+              question={CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length]}
+              onAnswer={answerClinQ}
+              answered={cqAnswered?.wave === gs.wave}
+              answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
+              wave={gs.wave}
+              cueChoice={cqCueChoice?.wave === gs.wave ? cqCueChoice!.choice : null}
+              onChooseCue={chooseCueTactic}
+            />
+          </View>
         </View>
       )}
 
@@ -4507,6 +4512,19 @@ const s = StyleSheet.create({
   feedbackTxt: { fontSize: 10, lineHeight: 14, fontWeight: "500" },
   feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic" },
 
+  /* Clinical cue check — floats over the whole battle as a centered modal-style overlay */
+  clinicalOverlay: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 100, elevation: 100,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#000000b0", padding: 16,
+  },
+  clinicalOverlayCard: {
+    width: "100%", maxWidth: 440,
+    borderRadius: 14, overflow: "hidden",
+    borderWidth: 2, borderColor: "#6b4118",
+    shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 18, elevation: 12,
+  },
   /* Clinical cue check panel — parchment/teal style matching reference */
   clinicalPanel: {
     paddingHorizontal: 10, paddingVertical: 8,
