@@ -6,6 +6,10 @@ import { RANKS } from './content';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
 import { MAX_STAMINA, ENCOUNTER_COST, regen } from './stamina';
 import { defaultWellnessState, resolveWellnessLog, WellnessLogInput, WellnessResult } from './wellness';
+import {
+  defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
+  GACHA_COST, MAX_UNIT_LEVEL, WARD_UNIT_META,
+} from './units';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -46,6 +50,15 @@ function normalizeProgression(p: PlayerState): PlayerState {
       owned_upgrades: out.owned_upgrades || [],
     };
   }
+  if (!out.owned_units || Object.keys(out.owned_units).length === 0) {
+    out = { ...out, owned_units: defaultOwnedUnits() };
+  }
+  // Always sanitize (dedupe, owned-only, cap at LOADOUT_SIZE); fall back to
+  // starters when empty so a malformed/over-long persisted loadout is corrected.
+  {
+    const base = (out.ward_loadout && out.ward_loadout.length > 0) ? out.ward_loadout : STARTER_UNIT_IDS;
+    out = { ...out, ward_loadout: sanitizeLoadout(base, out.owned_units!) };
+  }
   return out;
 }
 
@@ -72,6 +85,8 @@ type Ctx = {
   equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   refillStamina: (price: number, amount: number) => Promise<{ ok: boolean; message: string }>;
+  pullGacha: () => Promise<{ ok: boolean; message: string; typeId?: string; isNew?: boolean; level?: number }>;
+  setWardLoadout: (ids: string[]) => Promise<{ ok: boolean; message: string }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -145,6 +160,8 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     owned_skins: [],
     equipped_skin: '',
     owned_upgrades: [],
+    owned_units: defaultOwnedUnits(),
+    ward_loadout: [...STARTER_UNIT_IDS],
     summon_history: [],
     enemy_mastery: {},
     chapter_progress: 1,
@@ -468,15 +485,54 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Restored ${restored - cur.stamina} Stamina for ${cost} Crowns.` };
   }, [updateState]);
 
+  const pullGacha = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const cost = GACHA_COST;
+    if ((base.crowns || 0) < cost) return { ok: false, message: `Need ${cost} Crowns to recruit.` };
+    const owned = { ...(base.owned_units || {}) };
+    const typeId = rollGachaUnit();
+    const meta = WARD_UNIT_META[typeId];
+    const wasOwned = !!owned[typeId];
+    let level: number;
+    let message: string;
+    if (!wasOwned) {
+      level = 1;
+      owned[typeId] = 1;
+      message = `Recruited ${meta.name}!`;
+    } else {
+      level = Math.min(MAX_UNIT_LEVEL, (owned[typeId] || 1) + 1);
+      const wasMaxed = owned[typeId] >= MAX_UNIT_LEVEL;
+      owned[typeId] = level;
+      message = wasMaxed
+        ? `${meta.name} is already max level — duplicate absorbed.`
+        : `Duplicate ${meta.name} → Level ${level}!`;
+    }
+    const next = { ...base, crowns: (base.crowns || 0) - cost, owned_units: owned };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message, typeId, isNew: !wasOwned, level };
+  }, [updateState]);
+
+  const setWardLoadout = useCallback(async (ids: string[]) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const clean = sanitizeLoadout(ids, base.owned_units || {});
+    const next = { ...base, ward_loadout: clean };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: 'Loadout saved.' };
+  }, [updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
   }, []);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, setWardLoadout, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

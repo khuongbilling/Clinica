@@ -101,6 +101,8 @@ class Player(BaseModel):
     owned_skins: List[str] = Field(default_factory=list)
     equipped_skin: str = ""
     owned_upgrades: List[str] = Field(default_factory=list)
+    owned_units: Dict[str, int] = Field(default_factory=dict)
+    ward_loadout: List[str] = Field(default_factory=list)
     summon_history: List[Dict[str, Any]] = Field(default_factory=list)
     enemy_mastery: Dict[str, int] = Field(default_factory=dict)
     chapter_progress: int = 1
@@ -137,6 +139,8 @@ class PlayerUpdate(BaseModel):
     owned_skins: Optional[List[str]] = None
     equipped_skin: Optional[str] = None
     owned_upgrades: Optional[List[str]] = None
+    owned_units: Optional[Dict[str, int]] = None
+    ward_loadout: Optional[List[str]] = None
     summon_history: Optional[List[Dict[str, Any]]] = None
     enemy_mastery: Optional[Dict[str, int]] = None
     chapter_progress: Optional[int] = None

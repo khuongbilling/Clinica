@@ -9,11 +9,13 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
 import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
 import { MAX_STAMINA, regen } from "@/src/game/stamina";
+import { WARD_UNIT_IDS, WARD_UNIT_META, GACHA_COST, MAX_UNIT_LEVEL } from "@/src/game/units";
 
-type TabId = "consumables" | "ward" | "upgrades" | "skins" | "refills";
+type TabId = "consumables" | "recruit" | "ward" | "upgrades" | "skins" | "refills";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "consumables", label: "Consumables", icon: "flask" },
+  { id: "recruit", label: "Recruit", icon: "people" },
   { id: "ward", label: "Ward Defense", icon: "shield-half" },
   { id: "upgrades", label: "Upgrades", icon: "sparkles" },
   { id: "skins", label: "Skins", icon: "color-palette" },
@@ -22,7 +24,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
 
 export default function Shop() {
   const router = useRouter();
-  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina } = usePlayer();
+  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha } = usePlayer();
   const [tab, setTab] = useState<TabId>("consumables");
   const [banner, setBanner] = useState<{ ok: boolean; msg: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,6 +119,53 @@ export default function Shop() {
                     onPress={async () => { const r = await purchaseItem(it.name, it.price); flash(r.ok, r.message); }}
                     testID={`shop-buy-${it.id}`}
                   />
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {tab === "recruit" && (
+          <>
+            <Text style={styles.blurb}>Recruit Ward Defense healers with Crowns. Each pull grants a random unit from the roster — duplicates level up a unit you already own (up to Lv.{MAX_UNIT_LEVEL}), boosting its damage. Choose which units to field in the Ward Defense lobby before a run.</Text>
+            <Pressable
+              style={[styles.recruitBtn, crowns < GACHA_COST && styles.recruitBtnDisabled]}
+              disabled={crowns < GACHA_COST}
+              onPress={async () => { const r = await pullGacha(); flash(r.ok, r.message); }}
+              testID="shop-gacha-pull"
+            >
+              <Ionicons name="sparkles" size={16} color={crowns < GACHA_COST ? COLORS.onSurfaceTertiary : COLORS.onBrand} />
+              <Text style={[styles.recruitBtnTxt, crowns < GACHA_COST && { color: COLORS.onSurfaceTertiary }]}>Recruit a Healer</Text>
+              <View style={styles.recruitCost}>
+                <Ionicons name="diamond" size={12} color={crowns < GACHA_COST ? COLORS.onSurfaceTertiary : COLORS.onBrand} />
+                <Text style={[styles.recruitCostTxt, crowns < GACHA_COST && { color: COLORS.onSurfaceTertiary }]}>{GACHA_COST}</Text>
+              </View>
+            </Pressable>
+            <Text style={styles.collectionLabel}>
+              COLLECTION · {WARD_UNIT_IDS.filter((id) => (player.owned_units || {})[id]).length}/{WARD_UNIT_IDS.length}
+            </Text>
+            {WARD_UNIT_IDS.map((id) => {
+              const m = WARD_UNIT_META[id];
+              const level = (player.owned_units || {})[id] || 0;
+              const owned = level > 0;
+              return (
+                <View key={id} style={[styles.card, !owned && { opacity: 0.55 }]} testID={`shop-unit-${id}`}>
+                  <View style={[styles.iconBadge, { borderColor: owned ? m.color : COLORS.border }]}>
+                    <Ionicons name={owned ? "shield-checkmark" : "lock-closed"} size={18} color={owned ? m.color : COLORS.onSurfaceTertiary} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <View style={styles.cardHead}>
+                      <Text style={styles.cardName}>{m.name}</Text>
+                      {owned && level > 1 && <Text style={[styles.ownedTag, { color: m.color }]}>Lv.{level}</Text>}
+                    </View>
+                    <Text style={[styles.cardEffect, { color: owned ? m.color : COLORS.onSurfaceTertiary }]}>{m.category} · {m.apCost} AP</Text>
+                    <Text style={styles.cardDesc}>{m.blurb}</Text>
+                  </View>
+                  {owned ? (
+                    <View style={styles.ownedBadge}><Ionicons name="checkmark-circle" size={16} color={COLORS.success} /><Text style={styles.ownedBadgeTxt}>Owned</Text></View>
+                  ) : (
+                    <View style={styles.ownedBadge}><Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceTertiary} /><Text style={[styles.ownedBadgeTxt, { color: COLORS.onSurfaceTertiary }]}>Locked</Text></View>
+                  )}
                 </View>
               );
             })}
@@ -372,4 +421,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md, padding: SPACING.md,
   },
   staminaTxt: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
+  recruitBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg,
+  },
+  recruitBtnDisabled: { backgroundColor: COLORS.surfaceTertiary },
+  recruitBtnTxt: { color: COLORS.onBrand, fontWeight: "800", fontSize: 15 },
+  recruitCost: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "#00000030", borderRadius: RADIUS.pill, paddingHorizontal: SPACING.sm, paddingVertical: 3,
+  },
+  recruitCostTxt: { color: COLORS.onBrand, fontWeight: "800", fontSize: 13 },
+  collectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 1, marginTop: SPACING.sm },
 });

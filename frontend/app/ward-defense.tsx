@@ -15,6 +15,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WardBoardV2 } from "./ward-defense-v2";
+import {
+  RoleId, WARD_UNIT_META, WARD_UNIT_IDS, STARTER_UNIT_IDS,
+  LOADOUT_SIZE, UNIT_LEVEL_DMG_STEP, sanitizeLoadout,
+} from "@/src/game/units";
 
 /* ── Card portrait images — Hall of Heroes battle sprites for bottom dock ── */
 const CARD_PORTRAITS: Record<string, any> = {
@@ -276,8 +280,7 @@ type UnitDef = {
   artsName: string;   /* Clinical Arts attack name shown in feedback */
 };
 
-/* ── Clinical Arts roles — each hero's tactical identity ── */
-type RoleId = "ASSESS" | "TREAT" | "STABILIZE" | "PROTECT" | "REASSESS";
+/* ── Clinical Arts roles — each hero's tactical identity (RoleId from src/game/units) ── */
 type RoleDef = { label: string; icon: string; color: string; desc: string };
 const ROLE_DATA: Record<RoleId, RoleDef> = {
   ASSESS:    { label: "Assess",    icon: "🔍", color: "#A78BFA", desc: "Reveals enemy weaknesses; enables follow-up bonus damage." },
@@ -287,11 +290,12 @@ const ROLE_DATA: Record<RoleId, RoleDef> = {
   REASSESS:  { label: "Reassess",  icon: "🔄", color: "#EC4899", desc: "Confirms response — grants bonus AP or extra effects." },
 };
 
-const UNIT_DATA: Record<string, UnitDef> = {
+/* Battle-only stats. Display meta (name/color/apCost/category/role) is merged
+   in from WARD_UNIT_META (src/game/units) so the roster stays single-source. */
+type UnitBattle = Pick<UnitDef, "damage" | "attackSpeed" | "range" | "aoe" | "strong" | "weak" | "concept" | "flavor" | "artsName">;
+const UNIT_BATTLE: Record<string, UnitBattle> = {
   ward_scout: {
-    name: "Ward Scout", color: "#A78BFA",
-    apCost: 3, damage: 18, attackSpeed: 2, range: 0.33,
-    aoe: false, category: "ASSESS", role: "ASSESS",
+    damage: 18, attackSpeed: 2, range: 0.33, aoe: false,
     strong: ["breathless_wisp", "panic_imp"],
     weak:   ["mucus_slime", "corruption_leech", "bronchospasm_drake"],
     concept: "Auscultation identifies respiratory cues — assess before treating.",
@@ -299,9 +303,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Moonlit Assessment Pulse",
   },
   reassess_sage: {
-    name: "Reassess Sage", color: "#F0ABFC",
-    apCost: 4, damage: 21, attackSpeed: 3, range: 0.30,
-    aoe: false, category: "REASSESS", role: "REASSESS",
+    damage: 21, attackSpeed: 3, range: 0.30, aoe: false,
     strong: ["panic_imp", "shock_shade"],
     weak:   ["mucus_slime", "bronchospasm_drake"],
     concept: "Reassessment catches deterioration early and confirms the response.",
@@ -309,9 +311,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Recursive Insight",
   },
   mist_caster: {
-    name: "Mist Caster", color: "#F472B6",
-    apCost: 5, damage: 38, attackSpeed: 4, range: 0.26,
-    aoe: false, category: "TREAT", role: "TREAT",
+    damage: 38, attackSpeed: 4, range: 0.26, aoe: false,
     strong: ["wheeze_sprite", "bronchospasm_drake"],
     weak:   ["hypoxia_wraith", "mucus_slime", "shock_shade"],
     concept: "Bronchodilators relax airway smooth muscle — first-line for bronchospasm.",
@@ -319,9 +319,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Bronchodilator Mist",
   },
   herbal_chemist: {
-    name: "Herbal Chemist", color: "#A3E635",
-    apCost: 5, damage: 26, attackSpeed: 4, range: 0.24,
-    aoe: true, category: "TREAT", role: "TREAT",
+    damage: 26, attackSpeed: 4, range: 0.24, aoe: true,
     strong: ["mucus_slime", "fever_imp", "corruption_leech"],
     weak:   ["hypoxia_wraith", "shock_shade"],
     concept: "Compounded remedies splash multiple threats — antibiotics and mucolytics.",
@@ -329,9 +327,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Volatile Remedy Flask",
   },
   o2_healer: {
-    name: "O₂ Healer", color: "#22D3EE",
-    apCost: 4, damage: 22, attackSpeed: 3, range: 0.29,
-    aoe: true, category: "STABILIZE", role: "STABILIZE",
+    damage: 22, attackSpeed: 3, range: 0.29, aoe: true,
     strong: ["hypoxia_wraith", "shock_shade"],
     weak:   ["wheeze_sprite", "bronchospasm_drake", "fever_imp"],
     concept: "O₂ corrects hypoxemia; positioning aids secretion drainage.",
@@ -339,9 +335,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Lotus Oxygen Ward",
   },
   guardian: {
-    name: "Novice Guardian", color: "#34D399",
-    apCost: 4, damage: 20, attackSpeed: 3, range: 0.28,
-    aoe: false, category: "PROTECT", role: "PROTECT",
+    damage: 20, attackSpeed: 3, range: 0.28, aoe: false,
     strong: ["stun_toad", "corruption_leech"],
     weak:   ["hypoxia_wraith", "breathless_wisp"],
     concept: "Positioning and barrier care shield the lane from disabling threats.",
@@ -349,9 +343,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Aegis Bash",
   },
   rhythm_medic: {
-    name: "Rhythm Medic", color: "#FBBF24",
-    apCost: 5, damage: 30, attackSpeed: 4, range: 0.27,
-    aoe: false, category: "STABILIZE", role: "STABILIZE",
+    damage: 30, attackSpeed: 4, range: 0.27, aoe: false,
     strong: ["shock_shade", "hypoxia_wraith"],
     weak:   ["wheeze_sprite", "fever_imp"],
     concept: "Perfusion support and rhythm control restore circulatory stability.",
@@ -359,9 +351,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Defib Surge",
   },
   lantern_scribe: {
-    name: "Lantern Scribe", color: "#FDE047",
-    apCost: 3, damage: 16, attackSpeed: 2, range: 0.34,
-    aoe: false, category: "REASSESS", role: "REASSESS",
+    damage: 16, attackSpeed: 2, range: 0.34, aoe: false,
     strong: ["panic_imp", "stun_toad"],
     weak:   ["corruption_leech", "bronchospasm_drake"],
     concept: "Documentation and orientation cut through confusion and agitation.",
@@ -369,9 +359,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Lantern Flare Sweep",
   },
   fever_warden: {
-    name: "Fever Warden", color: "#FB7185",
-    apCost: 5, damage: 34, attackSpeed: 4, range: 0.26,
-    aoe: false, category: "TREAT", role: "TREAT",
+    damage: 34, attackSpeed: 4, range: 0.26, aoe: false,
     strong: ["fever_imp", "corruption_leech"],
     weak:   ["shock_shade", "hypoxia_wraith"],
     concept: "Antipyretics and source control quench inflammatory heat.",
@@ -379,9 +367,7 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Cooling Ward Wave",
   },
   airway_sentinel: {
-    name: "Airway Sentinel", color: "#818CF8",
-    apCost: 4, damage: 24, attackSpeed: 3, range: 0.28,
-    aoe: false, category: "PROTECT", role: "PROTECT",
+    damage: 24, attackSpeed: 3, range: 0.28, aoe: false,
     strong: ["mucus_slime", "wheeze_sprite"],
     weak:   ["shock_shade", "fever_imp"],
     concept: "Suction and airway positioning clear secretions and open the airway.",
@@ -389,6 +375,16 @@ const UNIT_DATA: Record<string, UnitDef> = {
     artsName: "Suction Pull Strike",
   },
 };
+const UNIT_DATA: Record<string, UnitDef> = Object.fromEntries(
+  WARD_UNIT_IDS.map((id) => {
+    const m = WARD_UNIT_META[id];
+    return [id, {
+      name: m.name, color: m.color, apCost: m.apCost,
+      category: m.category, role: m.role,
+      ...UNIT_BATTLE[id],
+    } as UnitDef];
+  })
+);
 const UNIT_TYPES = Object.keys(UNIT_DATA);
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -506,6 +502,8 @@ type GS = {
   shieldTicks: number;      /* Positioning shield — halves incoming Stability loss while active */
   abilityCooldowns: Record<string, number>;
   stabilizeUsesThisWave: number; /* diminishing returns for repeated Emergency O₂ casts */
+  loadout: string[];             /* unit type ids the player may deploy this run */
+  unitLevels: Record<string, number>; /* persistent collection level per unit → damage bonus */
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -517,11 +515,17 @@ function freshMastery(): Record<string, EnemyMasteryEntry> {
   return m;
 }
 
-function freshState(boost?: { startAP?: number; startShield?: number }): GS {
+function freshState(
+  boost?: { startAP?: number; startShield?: number },
+  loadout?: string[],
+  unitLevels?: Record<string, number>,
+): GS {
   const startAp = cl(INIT_AP + (boost?.startAP || 0), 0, MAX_AP);
   const startShieldTicks = boost?.startShield ? Math.round(boost.startShield) : 0;
   return {
     phase: "lobby", wave: 0,
+    loadout: (loadout && loadout.length > 0) ? loadout : [...STARTER_UNIT_IDS],
+    unitLevels: unitLevels || {},
     stability: MAX_STABILITY, ap: startAp, apTimer: AP_REGEN_TICKS,
     deployedUnits: [], enemies: [], projectiles: [],
     spawnQueue: [], spawnTimer: 0, wavePauseTicks: 0, feedbacks: [],
@@ -583,10 +587,12 @@ function calcRewards(won: boolean, stability: number) {
 }
 
 /* ── Care Synthesis helpers ── */
-function getScaledStats(def: UnitDef, level: number) {
+function getScaledStats(def: UnitDef, level: number, unitLevel: number = 1) {
   const dmgMult = level === 1 ? 1.0 : level === 2 ? 1.65 : 2.8;
+  /* Persistent collection level (from gacha duplicates) adds a modest damage bonus. */
+  const masteryMult = 1 + UNIT_LEVEL_DMG_STEP * (Math.max(1, unitLevel) - 1);
   return {
-    damage:      Math.round(def.damage * dmgMult),
+    damage:      Math.round(def.damage * dmgMult * masteryMult),
     attackSpeed: Math.max(1, def.attackSpeed - (level - 1)),
     range:       def.range + (level - 1) * 0.045,
   };
@@ -2285,7 +2291,7 @@ function ProjectileView({
    ═══════════════════════════════════════════════════════════════════ */
 function HandPanel({
   mode, setMode, selectedUnit, onSelectUnit, onUseAbility, ap, isPlaying,
-  hasMerge, onSynthesize, abilityCooldowns,
+  hasMerge, onSynthesize, abilityCooldowns, loadout,
 }: {
   mode: "deploy" | "abilities";
   setMode: (m: "deploy" | "abilities") => void;
@@ -2297,6 +2303,7 @@ function HandPanel({
   hasMerge: boolean;
   onSynthesize: () => void;
   abilityCooldowns: Record<string, number>;
+  loadout: string[];
 }) {
   return (
     <View style={s.handArea}>
@@ -2326,8 +2333,9 @@ function HandPanel({
                   </View>
                 </Pressable>
               )}
-              {UNIT_TYPES.map(typeId => {
+              {(loadout.length > 0 ? loadout : UNIT_TYPES).map(typeId => {
                 const u = UNIT_DATA[typeId];
+                if (!u) return null;
                 const canAfford = ap >= u.apCost;
                 const isSelected = selectedUnit === typeId;
                 return (
@@ -2450,7 +2458,7 @@ function WavePauseOverlay({ wave }: { wave: number }) {
    ═══════════════════════════════════════════════════════════════════ */
 export default function WardDefense() {
   const router = useRouter();
-  const { player, applyRewards, syncInventory } = usePlayer();
+  const { player, applyRewards, syncInventory, setWardLoadout } = usePlayer();
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
 
   const gsRef = useRef<GS>(freshState());
@@ -2597,7 +2605,7 @@ export default function WardDefense() {
         if (stunTicks > 0) return { ...u, cooldown: Math.max(cd, 1), castFlash: cf, mergeFlash: mf, stunTicks };
         if (cd > 0) return { ...u, cooldown: cd, castFlash: cf, mergeFlash: mf, stunTicks };
         const uDef = UNIT_DATA[u.typeId];
-        const scaled = getScaledStats(uDef, u.level ?? 1);
+        const scaled = getScaledStats(uDef, u.level ?? 1, s.unitLevels[u.typeId] ?? 1);
         let tgt: ActiveEnemy | null = null, minD = Infinity;
         for (const e of movedEnemies) {
           const d = distFrac(uPos, getEnemyPosFrac(e));
@@ -2808,7 +2816,17 @@ export default function WardDefense() {
   /* ── Start / replay ── */
   function startGame() {
     rewardsApplied.current = false;
-    setSelectedUnit("ward_scout"); setHandMode("deploy");
+    setHandMode("deploy");
+
+    // Resolve this run's loadout: player's chosen units, filtered to owned; fall
+    // back to starters so a fresh/empty loadout can never leave the player unarmed.
+    const owned = player?.owned_units || {};
+    const chosen = (player?.ward_loadout && player.ward_loadout.length > 0)
+      ? player.ward_loadout : STARTER_UNIT_IDS;
+    // Sanitize: dedupe, owned-only, cap at LOADOUT_SIZE — guards against malformed data.
+    let runLoadout = sanitizeLoadout(chosen, owned);
+    if (runLoadout.length === 0) runLoadout = [...STARTER_UNIT_IDS];
+    setSelectedUnit(runLoadout[0]);
 
     // Apply + consume any activated Ward Defense boosts from inventory.
     const boostEffect: { startAP: number; startShield: number } = {
@@ -2830,7 +2848,7 @@ export default function WardDefense() {
       if (consumedAny) syncInventory(inv).catch(() => {});
     }
     setPendingBoosts([]);
-    set(beginWave(freshState(boostEffect), 0));
+    set(beginWave(freshState(boostEffect, runLoadout, owned), 0));
   }
 
   /* ── Deploy a unit on a tile ── */
@@ -2843,6 +2861,11 @@ export default function WardDefense() {
       return;
     }
     const uDef = UNIT_DATA[selectedUnit];
+    if (!uDef || (s.loadout.length > 0 && !s.loadout.includes(selectedUnit))) {
+      const fid = String(Date.now());
+      set({ ...s, feedbacks: [{ id: fid, text: "Unit not in your loadout", color: COLORS.warning, quality: "weak", ticks: 4 }, ...s.feedbacks.slice(0, 1)] });
+      return;
+    }
     if (s.ap < uDef.apCost) {
       const fid = String(Date.now());
       set({ ...s, feedbacks: [{ id: fid, text: `Need ${uDef.apCost} AP for ${uDef.name}`, color: COLORS.warning, quality: "weak", ticks: 4 }, ...s.feedbacks.slice(0, 1)] });
@@ -2969,6 +2992,16 @@ export default function WardDefense() {
             prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
           )
         }
+        ownedUnits={player?.owned_units || {}}
+        loadout={player?.ward_loadout || []}
+        onToggleUnit={(id) => {
+          const cur = player?.ward_loadout || [];
+          if (cur.includes(id)) {
+            setWardLoadout(cur.filter((x) => x !== id));
+          } else if (cur.length < LOADOUT_SIZE) {
+            setWardLoadout([...cur, id]);
+          }
+        }}
       />
     );
   }
@@ -3145,6 +3178,7 @@ export default function WardDefense() {
         hasMerge={findMergePair(gs.deployedUnits) !== null}
         onSynthesize={handleSynthesize}
         abilityCooldowns={gs.abilityCooldowns}
+        loadout={gs.loadout}
       />
 
     </SafeAreaView>
@@ -3357,18 +3391,25 @@ function LobbyScreen({
   inventory,
   pendingBoosts,
   onToggleBoost,
+  ownedUnits,
+  loadout,
+  onToggleUnit,
 }: {
   onStart: () => void;
   onBack: () => void;
   inventory: Record<string, number>;
   pendingBoosts: string[];
   onToggleBoost: (id: string) => void;
+  ownedUnits: Record<string, number>;
+  loadout: string[];
+  onToggleUnit: (id: string) => void;
 }) {
   const [caseVisible,   setCaseVisible]   = useState(false);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [mapExpanded,   setMapExpanded]   = useState(false);
 
   const ownedBoosts = WARD_BOOSTS.filter((b) => (inventory[b.name] || 0) > 0);
+  const ownedUnitIds = WARD_UNIT_IDS.filter((id) => (ownedUnits[id] || 0) > 0);
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
@@ -3464,6 +3505,64 @@ function LobbyScreen({
           <Text style={[s.lobbyBodyTxt, { marginTop: 8 }]}>
             <Text style={{ color: COLORS.air }}>NCLEX Clinical Judgment:</Text> Recognize cues on each enemy · Prioritize threats · Deploy the right unit · Evaluate with Reassess.
           </Text>
+        </View>
+
+        {/* ── LOADOUT (choose deployable units from your collection) ────── */}
+        <View style={s.lobbyCard}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.air }} />
+            <Text style={s.lobbySectionTitle}>LOADOUT</Text>
+            <Text style={{ color: "#64748b", fontSize: 11, fontWeight: "600", marginLeft: "auto" }}>
+              {loadout.length}/{LOADOUT_SIZE}
+            </Text>
+          </View>
+          <Text style={[s.lobbyBodyTxt, { marginBottom: 10 }]}>
+            Pick up to {LOADOUT_SIZE} units from your collection. Only these can be deployed this run. Recruit more in the Apothecary.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {ownedUnitIds.map((id) => {
+              const m = WARD_UNIT_META[id];
+              const active = loadout.includes(id);
+              const lvl = ownedUnits[id] || 1;
+              const full = !active && loadout.length >= LOADOUT_SIZE;
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => onToggleUnit(id)}
+                  disabled={full}
+                  testID={`ward-loadout-${id}`}
+                  style={{
+                    width: "48%",
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                    backgroundColor: active ? m.color + "22" : "#0d1b30",
+                    borderRadius: 10, padding: 10,
+                    borderWidth: 1, borderColor: active ? m.color : "#1e3a5f",
+                    opacity: full ? 0.4 : 1,
+                  }}
+                >
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m.color }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#f0f9ff", fontSize: 12, fontWeight: "700" }} numberOfLines={1}>
+                      {m.name}
+                    </Text>
+                    <Text style={{ color: "#94a3b8", fontSize: 10, marginTop: 1 }}>
+                      {m.category} · Lv{lvl} · {m.apCost} AP
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={active ? "checkmark-circle" : "ellipse-outline"}
+                    size={18}
+                    color={active ? m.color : "#475569"}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+          {loadout.length === 0 && (
+            <Text style={{ color: COLORS.warning, fontSize: 11, marginTop: 8 }}>
+              No units selected — your 3 starter units will be used by default.
+            </Text>
+          )}
         </View>
 
         {/* ── WARD BOOSTS (from the Apothecary Market) ─────────────────── */}
