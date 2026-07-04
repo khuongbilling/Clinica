@@ -5,9 +5,10 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
-import { DAILY_GEM_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
+import { DAILY_INSIGHT_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const GARDEN_METERS = [
@@ -34,7 +35,7 @@ export default function LotusJournalPage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const gemsToday = wellness.daily.date === today ? wellness.daily.gems_earned : 0;
-  const gemsCappedToday = gemsToday >= DAILY_GEM_CAP;
+  const gemsCappedToday = gemsToday >= DAILY_INSIGHT_CAP;
 
   const completeLesson = async (lessonId: string) => {
     const res = await logWellnessActivity({ type: "lesson", lessonId });
@@ -48,7 +49,7 @@ export default function LotusJournalPage() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <PlayerHeader player={player} />
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>
@@ -72,14 +73,14 @@ export default function LotusJournalPage() {
             <Text style={styles.currencyLbl}>Petals</Text>
           </View>
           <View style={styles.currencyPill}>
-            <Ionicons name="diamond" size={16} color={COLORS.mind} />
-            <Text style={styles.currencyVal}>{wellness.lotus_gems}</Text>
-            <Text style={styles.currencyLbl}>Lotus Gems</Text>
+            <Ionicons name="sparkles" size={16} color={COLORS.mind} />
+            <Text style={styles.currencyVal}>{wellness.insight_crystals_earned}</Text>
+            <Text style={styles.currencyLbl}>Insight Crystals</Text>
           </View>
           <View style={styles.currencyPill}>
             <Ionicons name={gemsCappedToday ? "lock-closed" : "flash"} size={14} color={gemsCappedToday ? COLORS.onSurfaceTertiary : COLORS.brand} />
             <Text style={[styles.currencyLbl, { color: gemsCappedToday ? COLORS.onSurfaceTertiary : COLORS.onSurfaceSecondary }]}>
-              {gemsCappedToday ? "Gems capped today" : `${gemsToday}/${DAILY_GEM_CAP} gems today`}
+              {gemsCappedToday ? "Crystals capped today" : `${gemsToday}/${DAILY_INSIGHT_CAP} crystals today`}
             </Text>
           </View>
         </View>

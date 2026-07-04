@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { goBack } from "@/src/utils/navigation";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -65,7 +66,7 @@ export default function UniversityHubScreen() {
       <PlayerHeader player={player} />
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
-        <Pressable style={styles.backBtn} onPress={() => router.back()} testID="university-back">
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} testID="university-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>

@@ -10,6 +10,7 @@ import { getEnemySprite } from "@/src/components/EnemySprites";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
+import { goBack } from "@/src/utils/navigation";
 import { ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -54,7 +55,7 @@ export default function ShiftPage() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>

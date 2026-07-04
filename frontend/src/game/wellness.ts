@@ -233,7 +233,9 @@ export interface WellnessWeeklyState {
 
 export interface WellnessState {
   nourishment_petals: number;
-  lotus_gems: number;
+  // Named to match economy.ts: wellness milestones earn Insight Crystals,
+  // never Lotus Gems (the paid currency) — see materials.ts wellness_badges note.
+  insight_crystals_earned: number;
   garden: WellnessGarden;
   lessons_completed: string[];
   logs_completed: number;
@@ -241,8 +243,8 @@ export interface WellnessState {
   weekly: WellnessWeeklyState;
 }
 
-export const DAILY_GEM_CAP = 3;
-export const WEEKLY_GEM_CAP = 12; // placeholder, ~10-15/week
+export const DAILY_INSIGHT_CAP = 3;
+export const WEEKLY_INSIGHT_CAP = 12; // placeholder, ~10-15/week
 
 const PETALS_BASE = 4;
 const PETALS_PER_CATEGORY = 2;
@@ -272,7 +274,7 @@ function clamp100(n: number): number {
 export function defaultWellnessState(now: Date = new Date()): WellnessState {
   return {
     nourishment_petals: 0,
-    lotus_gems: 0,
+    insight_crystals_earned: 0,
     garden: { hydration: 0, fiber: 0, protein: 0, heart: 0 },
     lessons_completed: [],
     logs_completed: 0,
@@ -440,8 +442,8 @@ export function resolveWellnessLog(input: WellnessLogInput, wellness: WellnessSt
   }
 
   const alreadyCredited = daily.signatures.includes(signature);
-  const dailyRoom = daily.gems_earned < DAILY_GEM_CAP;
-  const weeklyRoom = weekly.gems_earned < WEEKLY_GEM_CAP;
+  const dailyRoom = daily.gems_earned < DAILY_INSIGHT_CAP;
+  const weeklyRoom = weekly.gems_earned < WEEKLY_INSIGHT_CAP;
   const gemAwarded = meaningful && dailyRoom && weeklyRoom && !alreadyCredited;
   const gemCapped = meaningful && !gemAwarded;
 
@@ -465,7 +467,7 @@ export function resolveWellnessLog(input: WellnessLogInput, wellness: WellnessSt
 
   const nextWellness: WellnessState = {
     nourishment_petals: wellness.nourishment_petals + petals,
-    lotus_gems: wellness.lotus_gems + (gemAwarded ? 1 : 0),
+    insight_crystals_earned: wellness.insight_crystals_earned + (gemAwarded ? 1 : 0),
     garden: nextGarden,
     lessons_completed: nextLessons,
     logs_completed: wellness.logs_completed + 1,

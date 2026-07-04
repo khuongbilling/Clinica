@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { goBack } from "@/src/utils/navigation";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,7 +40,7 @@ export default function EconomyGuideScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Pressable
-          onPress={() => { if (router.canGoBack()) router.back(); else router.replace("/(tabs)/profile"); }}
+          onPress={() => goBack(router, "/(tabs)/profile")}
           hitSlop={10}
           style={styles.backBtn}
           testID="economy-back"

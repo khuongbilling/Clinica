@@ -55,36 +55,36 @@ export const DEPLOY_TILES: [number, number][] = [
 ];
 
 /* ─── Assets ────────────────────────────────────────────────────────────── */
-const IMG_MAP = require("../assets/ward-defense/lotus-healing-ward-map-portrait.png");
+const IMG_MAP = require("../../assets/ward-defense/lotus-healing-ward-map-portrait.png");
 /* Fog "wings" — mirrored strips of the map's own outer edges. They extend the
    scenery horizontally so the map spans the FULL screen width on wide displays
    without cropping or altering the square gameplay board. Mirroring guarantees
    pixel-perfect seam continuity at the board edges. */
-const IMG_WING_L = require("../assets/ward-defense/map-wing-left.png");
-const IMG_WING_R = require("../assets/ward-defense/map-wing-right.png");
+const IMG_WING_L = require("../../assets/ward-defense/map-wing-left.png");
+const IMG_WING_R = require("../../assets/ward-defense/map-wing-right.png");
 const IMG_UNITS: Record<string, any> = {
-  ward_scout:      require("../assets/heroes/battle/apprentice_seer.png"),
-  reassess_sage:   require("../assets/heroes/battle/mindkeeper.png"),
-  mist_caster:     require("../assets/heroes/battle/village_caretaker.png"),
-  herbal_chemist:  require("../assets/heroes/battle/wound_sage.png"),
-  o2_healer:       require("../assets/heroes/battle/novice_guardian.png"),
-  guardian:        require("../assets/heroes/battle/junior_warden.png"),
-  rhythm_medic:    require("../assets/heroes/battle/storm_runner.png"),
-  lantern_scribe:  require("../assets/heroes/battle/data_acolyte.png"),
-  fever_warden:    require("../assets/heroes/battle/infection_warden.png"),
-  airway_sentinel: require("../assets/heroes/battle/night_watcher.png"),
+  ward_scout:      require("../../assets/heroes/battle/apprentice_seer.png"),
+  reassess_sage:   require("../../assets/heroes/battle/mindkeeper.png"),
+  mist_caster:     require("../../assets/heroes/battle/village_caretaker.png"),
+  herbal_chemist:  require("../../assets/heroes/battle/wound_sage.png"),
+  o2_healer:       require("../../assets/heroes/battle/novice_guardian.png"),
+  guardian:        require("../../assets/heroes/battle/junior_warden.png"),
+  rhythm_medic:    require("../../assets/heroes/battle/storm_runner.png"),
+  lantern_scribe:  require("../../assets/heroes/battle/data_acolyte.png"),
+  fever_warden:    require("../../assets/heroes/battle/infection_warden.png"),
+  airway_sentinel: require("../../assets/heroes/battle/night_watcher.png"),
 };
 const IMG_ENEMIES: Record<string, any> = {
-  breathless_wisp:    require("../assets/images/enemy_breathless_wisp.png"),
-  wheeze_sprite:      require("../assets/images/enemy_wheeze_sprite.png"),
-  mucus_slime:        require("../assets/images/enemy_mucus_slime.png"),
-  hypoxia_wraith:     require("../assets/images/enemy_hypoxia_wraith.png"),
-  panic_imp:          require("../assets/images/enemy_panic_imp.png"),
-  fever_imp:          require("../assets/images/enemy_fever_imp.png"),
-  shock_shade:        require("../assets/images/enemy_shock_shade.png"),
-  stun_toad:          require("../assets/images/enemy_stun_toad.png"),
-  corruption_leech:   require("../assets/images/enemy_corruption_leech.png"),
-  bronchospasm_drake: require("../assets/images/enemy_bronchospasm_drake.png"),
+  breathless_wisp:    require("../../assets/images/enemy_breathless_wisp.png"),
+  wheeze_sprite:      require("../../assets/images/enemy_wheeze_sprite.png"),
+  mucus_slime:        require("../../assets/images/enemy_mucus_slime.png"),
+  hypoxia_wraith:     require("../../assets/images/enemy_hypoxia_wraith.png"),
+  panic_imp:          require("../../assets/images/enemy_panic_imp.png"),
+  fever_imp:          require("../../assets/images/enemy_fever_imp.png"),
+  shock_shade:        require("../../assets/images/enemy_shock_shade.png"),
+  stun_toad:          require("../../assets/images/enemy_stun_toad.png"),
+  corruption_leech:   require("../../assets/images/enemy_corruption_leech.png"),
+  bronchospasm_drake: require("../../assets/images/enemy_bronchospasm_drake.png"),
 };
 const ENEMY_COLOR: Record<string, string> = {
   breathless_wisp:    "#93c5fd",

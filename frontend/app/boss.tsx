@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BOSS_LORD_IMBALANCE } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
+import { goBack } from "@/src/utils/navigation";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function BossPage() {
@@ -27,7 +28,7 @@ export default function BossPage() {
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Back button */}
-      <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10} testID="boss-back">
+      <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10} testID="boss-back">
         <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
       </Pressable>
 

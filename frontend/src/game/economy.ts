@@ -139,7 +139,7 @@ export const SANCTUARY_BANK_CAPS = {
   specialEventBonusCapNote: "Special event bonus exchanges are tracked separately and do not count against the weekly/monthly caps.",
 };
 
-export const SANCTUARY_BANK_STATUS = "foundation" as const; // "foundation" | "active" — flip only when a real exchange flow ships.
+export const SANCTUARY_BANK_STATUS = "active" as const; // "foundation" | "active" — exchange flow is live (Push 5.5); weekly/monthly caps are informational only, not yet enforced in code.
 
 // -----------------------------------------------------------------------------
 // Step 4 — Lotus Gem bundle pricing (planned future shop offerings, not live)
@@ -436,7 +436,7 @@ export const MATERIAL_SOURCES: MaterialSourceDoc[] = [
   { mode: "Ward Defense", rewards: ["Ward Sigils", "Vital Lantern Cores", "Defense Blueprints", "Enemy Essence", "Unit Mastery materials"] },
   { mode: "Clinica University", rewards: ["University Credits", "Knowledge Points", "Skill Books", "Class Manuals", "Research Scrolls", "Insight Crystals"] },
   { mode: "Lotus Plate Journal", rewards: ["Nourishment Petals", "Recipe Cards", "Nutrition Garden Seeds", "Wellness Badges", "Insight Crystals (capped)"] },
-  { mode: "Realm", rewards: ["Ward Timber", "Healing Clay", "Spirit Stone", "Sterile Kits", "Herb Bundles", "Lab Reagents", "Building Blueprints"] },
+  { mode: "Realm", rewards: ["Ward Timber", "Healing Clay", "Spirit Stone", "Sterile Kit Bundles", "Herb Bundles", "Lab Reagents", "Building Blueprints"] },
   { mode: "Faction / World Boss (later)", rewards: ["Faction Marks", "Epidemic Tokens", "Supply Crates", "World Boss Relics", "Rare Research Samples", "Limited Set Pieces"] },
 ];
 

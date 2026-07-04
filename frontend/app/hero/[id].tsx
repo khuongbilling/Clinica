@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "@/src/utils/navigation";
 import { useState } from "react";
 import {
   Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
@@ -272,10 +273,27 @@ export default function HeroProfile() {
 
   const hero = HEROES.find((h) => h.id === id);
 
-  if (!hero || !player) {
+  // `player` loads asynchronously (AsyncStorage/backend refresh), so on a
+  // direct URL/deep link it can briefly be null even when the hero exists.
+  // Show a loading state instead of a misleading "Hero not found".
+  if (!player) {
     return (
       <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)/heroes")}>
+          <Ionicons name="chevron-back" size={20} color={COLORS.onSurface} />
+          <Text style={styles.backTxt}>Heroes</Text>
+        </Pressable>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: COLORS.onSurfaceTertiary }}>Loading hero…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hero) {
+    return (
+      <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)/heroes")}>
           <Ionicons name="chevron-back" size={20} color={COLORS.onSurface} />
           <Text style={styles.backTxt}>Heroes</Text>
         </Pressable>
@@ -339,7 +357,7 @@ export default function HeroProfile() {
         />
 
         {/* Back nav — overlaid top-left */}
-        <Pressable style={styles.backBtn} onPress={() => router.back()} testID="hero-profile-back">
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)/heroes")} testID="hero-profile-back">
           <View style={styles.backBubble}>
             <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
           </View>

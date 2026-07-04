@@ -21,6 +21,12 @@ const MASTERY_LABELS: Record<string, string> = {
   systems: "Systems",
 };
 
+// Intentionally no <PlayerHeader> on this screen (Push 5.5 decision): the
+// header's identity row (avatar/name/rank/class) exists to link INTO this
+// exact Profile screen, and its own head block below already covers that
+// same info plus rank/XP progress — stacking PlayerHeader here would just
+// duplicate it. Wallet chips (stamina/coins/gems) live on hub screens only;
+// Profile is the deep identity/settings page, not another hub surface.
 export default function ProfileScreen() {
   const router = useRouter();
   const { player, resetPlayer } = usePlayer();

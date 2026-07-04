@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import {
-  DAILY_GEM_CAP,
+  DAILY_INSIGHT_CAP,
   FOOD_TILES_BY_CATEGORY,
   PLATE_CATEGORY_LABEL,
   PlateCategory,
@@ -238,7 +238,7 @@ export default function LotusJournalLogPage() {
                 <View style={[styles.rewardPill, { backgroundColor: COLORS.surfaceTertiary }]}>
                   <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceTertiary} />
                   <Text style={[styles.rewardTxt, { color: COLORS.onSurfaceTertiary }]}>
-                    Lotus Gems capped for today ({DAILY_GEM_CAP}/day) — come back tomorrow!
+                    Insight Crystals capped for today ({DAILY_INSIGHT_CAP}/day) — come back tomorrow!
                   </Text>
                 </View>
               )}

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { goBack } from "@/src/utils/navigation";
 import { CUE_SAFETY_NOTE, type LearningProfile } from "@/src/game/clinical";
 import {
   TUTORIAL_SECTIONS,
@@ -24,10 +25,7 @@ export default function TutorialScreen() {
   const [tier, setTier] = useState<TutorialTier>(recommendedTier);
   const [openId, setOpenId] = useState<string>(TUTORIAL_SECTIONS[0].id);
 
-  const close = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)");
-  };
+  const close = () => goBack(router, "/(tabs)");
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>

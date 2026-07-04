@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HEROES } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
+import { goBack } from "@/src/utils/navigation";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function HeroSelectScreen() {
@@ -29,14 +30,14 @@ export default function HeroSelectScreen() {
     const rest = currentTeam.filter((id) => id !== selected);
     const newTeam = [selected, ...rest].slice(0, 3);
     await saveActiveTeam(newTeam);
-    router.back();
+    goBack(router, "/(tabs)");
   };
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>

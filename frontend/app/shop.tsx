@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
@@ -17,7 +18,7 @@ import {
 } from "@/src/game/units";
 import {
   CURRENCIES, WEEKLY_GEM_BUNDLES, MONTHLY_GEM_BUNDLES, GEM_BUNDLE_STATUS,
-  SANCTUARY_BANK_EXCHANGE_TABLE, SANCTUARY_BANK_CAPS, SANCTUARY_BANK_STATUS,
+  SANCTUARY_BANK_EXCHANGE_TABLE, SANCTUARY_BANK_CAPS,
   SANCTUARY_BAZAAR_TRADEABLE, SANCTUARY_BAZAAR_NON_TRADEABLE, SANCTUARY_BAZAAR_STATUS,
   MONETIZATION_PRODUCTS, ECONOMY_ANCHORS,
 } from "@/src/game/economy";
@@ -36,7 +37,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
 
 export default function Shop() {
   const router = useRouter();
-  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery } = usePlayer();
+  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, exchangeInsightCrystals } = usePlayer();
   const [tab, setTab] = useState<TabId>("consumables");
   const [banner, setBanner] = useState<{ ok: boolean; msg: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,7 +78,7 @@ export default function Shop() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => { if (router.canGoBack()) router.back(); }}
+          onPress={() => goBack(router, "/(tabs)")}
           hitSlop={10}
           style={styles.backBtn}
           testID="shop-back"
@@ -376,9 +377,8 @@ export default function Shop() {
               <View style={styles.cardMain}>
                 <View style={styles.cardHead}>
                   <Text style={styles.cardName}>Sanctuary Bank</Text>
-                  <Text style={styles.foundationTag}>FOUNDATION</Text>
                 </View>
-                <Text style={styles.cardDesc}>Exchange Insight Crystals for Refined Lotus Gems. Tap to view rates & caps.</Text>
+                <Text style={styles.cardDesc}>Exchange Insight Crystals for Refined Lotus Gems. Tap to view rates & exchange.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
             </Pressable>
@@ -508,7 +508,7 @@ export default function Shop() {
               <View style={styles.modalHead}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardName}>Sanctuary Bank</Text>
-                  <Text style={[styles.cardEffect, { color: COLORS.protection }]}>Foundation · exchange not active yet</Text>
+                  <Text style={[styles.cardEffect, { color: COLORS.protection }]}>{insightCrystals.toLocaleString()} Insight Crystals available</Text>
                 </View>
                 <Pressable onPress={() => setBankOpen(false)} hitSlop={10} testID="bank-modal-close">
                   <Ionicons name="close" size={22} color={COLORS.onSurfaceSecondary} />
@@ -516,26 +516,33 @@ export default function Shop() {
               </View>
               <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingVertical: SPACING.sm, gap: SPACING.sm }}>
                 <Text style={styles.cardDesc}>
-                  The Sanctuary Bank will let you exchange Insight Crystals — earned through University
-                  study, wellness, and mastery — into Refined Lotus Gems, an earned premium-equivalent
-                  currency accepted for select purchases.
+                  Exchange Insight Crystals — earned through University study, wellness, and mastery —
+                  into Refined Lotus Gems, an earned premium-equivalent currency accepted for select purchases.
                 </Text>
-                <Text style={styles.infoSectionLabel}>EXCHANGE TABLE</Text>
-                {SANCTUARY_BANK_EXCHANGE_TABLE.map((row) => (
-                  <View key={row.insightCrystals} style={styles.statRow}>
-                    <Text style={styles.statLabel}>{row.insightCrystals.toLocaleString()} Insight Crystals</Text>
-                    <Text style={styles.statValue}>→ {row.refinedLotusGems} Refined Lotus Gems</Text>
-                  </View>
-                ))}
+                <Text style={styles.infoSectionLabel}>EXCHANGE</Text>
+                {SANCTUARY_BANK_EXCHANGE_TABLE.map((row) => {
+                  const canAfford = insightCrystals >= row.insightCrystals;
+                  return (
+                    <Pressable
+                      key={row.insightCrystals}
+                      style={[styles.statRow, { opacity: canAfford ? 1 : 0.5 }]}
+                      disabled={!canAfford}
+                      testID={`bank-exchange-${row.insightCrystals}`}
+                      onPress={async () => {
+                        const res = await exchangeInsightCrystals(row.insightCrystals);
+                        flash(res.ok, res.message);
+                      }}
+                    >
+                      <Text style={styles.statLabel}>{row.insightCrystals.toLocaleString()} Insight Crystals</Text>
+                      <Text style={styles.statValue}>→ {row.refinedLotusGems} Refined Lotus Gems</Text>
+                    </Pressable>
+                  );
+                })}
                 <Text style={styles.infoSectionLabel}>CAPS</Text>
                 <Text style={styles.cardDesc}>
-                  Weekly cap: {SANCTUARY_BANK_CAPS.weeklyRefinedGemCap} Refined Lotus Gems ·
-                  Monthly cap: {SANCTUARY_BANK_CAPS.monthlyRefinedGemCap} Refined Lotus Gems.
+                  Soft guidance for now — weekly cap {SANCTUARY_BANK_CAPS.weeklyRefinedGemCap} Refined Lotus Gems,
+                  monthly cap {SANCTUARY_BANK_CAPS.monthlyRefinedGemCap} Refined Lotus Gems. Enforcement is coming soon.
                   {"\n"}{SANCTUARY_BANK_CAPS.specialEventBonusCapNote}
-                </Text>
-                <Text style={styles.infoSectionLabel}>STATUS</Text>
-                <Text style={styles.cardDesc}>
-                  {SANCTUARY_BANK_STATUS === "foundation" ? "Foundation only — no exchange is active yet." : "Active"}
                 </Text>
               </ScrollView>
             </View>

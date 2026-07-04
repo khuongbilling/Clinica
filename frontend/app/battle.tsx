@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "@/src/utils/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -535,7 +536,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
       {/* ── ZONE A: Enemy header (compact, ~18% height) ── */}
       <View style={styles.zoneA}>
-        <Pressable style={styles.closeBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} testID="battle-close">
+        <Pressable style={styles.closeBtn} onPress={() => goBack(router, "/(tabs)")} testID="battle-close">
           <Ionicons name="close" size={16} color={COLORS.onSurface} />
         </Pressable>
         <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">

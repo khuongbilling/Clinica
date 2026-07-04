@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { WardBoardV2 } from "./ward-defense-v2";
+import { WardBoardV2 } from "@/src/components/WardBoardV2";
 import {
   RoleId, WARD_UNIT_META, WARD_UNIT_IDS, STARTER_UNIT_IDS,
   LOADOUT_SIZE, UNIT_LEVEL_DMG_STEP, sanitizeLoadout,

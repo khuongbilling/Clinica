@@ -164,6 +164,7 @@ type Ctx = {
   completeSimulation: (simId: string, wasCorrect: boolean) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
+  exchangeInsightCrystals: (insightCrystalsCost: number) => Promise<{ ok: boolean; message: string }>;
   recordCueTopics: (topics: string[]) => Promise<void>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -847,6 +848,29 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `+${result.creditsEarned} University Credits!`, result };
   }, [player, updateState]);
 
+  // Sanctuary Bank — exchanges Insight Crystals for Refined Lotus Gems using a
+  // fixed row from SANCTUARY_BANK_EXCHANGE_TABLE (Push 5.5). Weekly/monthly
+  // caps are shown as informational UI copy only; not enforced here yet.
+  const exchangeInsightCrystals = useCallback(async (insightCrystalsCost: number) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const { SANCTUARY_BANK_EXCHANGE_TABLE } = await import('./economy');
+    const row = SANCTUARY_BANK_EXCHANGE_TABLE.find((r) => r.insightCrystals === insightCrystalsCost);
+    if (!row) return { ok: false, message: 'Unknown exchange rate.' };
+    const balance = base.insight_crystals || 0;
+    if (balance < row.insightCrystals) {
+      return { ok: false, message: `Need ${row.insightCrystals.toLocaleString()} Insight Crystals (have ${balance.toLocaleString()}).` };
+    }
+    const next = {
+      ...base,
+      insight_crystals: balance - row.insightCrystals,
+      refined_lotus_gems: (base.refined_lotus_gems || 0) + row.refinedLotusGems,
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Exchanged ${row.insightCrystals.toLocaleString()} Insight Crystals for ${row.refinedLotusGems} Refined Lotus Gems.` };
+  }, [updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
@@ -870,8 +894,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

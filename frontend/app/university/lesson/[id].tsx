@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "@/src/utils/navigation";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -37,7 +38,7 @@ export default function LessonDetailScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
-        <Pressable style={styles.backBtn} onPress={() => router.back()} testID="lesson-back">
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university/lessons")} testID="lesson-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>LESSON{alreadyDone ? " · COMPLETED" : ""}</Text>
