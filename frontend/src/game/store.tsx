@@ -68,6 +68,15 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.crowns == null) {
     out = { ...out, crowns: 0 };
   }
+  if (out.insight_crystals == null || out.refined_lotus_gems == null || out.lotus_gems_paid == null || out.ward_sigils == null) {
+    out = {
+      ...out,
+      insight_crystals: out.insight_crystals ?? 0,
+      refined_lotus_gems: out.refined_lotus_gems ?? 0,
+      lotus_gems_paid: out.lotus_gems_paid ?? 0,
+      ward_sigils: out.ward_sigils ?? 0,
+    };
+  }
   if (!out.owned_skins || !out.owned_upgrades || out.equipped_skin == null) {
     out = {
       ...out,
@@ -224,6 +233,10 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     },
     codex_shards: 50,
     crowns: 0,
+    insight_crystals: 0,
+    refined_lotus_gems: 0,
+    lotus_gems_paid: 0,
+    ward_sigils: 0,
     owned_skins: [],
     equipped_skin: '',
     owned_upgrades: [],

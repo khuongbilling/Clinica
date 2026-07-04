@@ -145,6 +145,15 @@ export interface PlayerState {
   inventory: Record<string, number>;
   codex_shards: number;
   crowns: number;
+  // Economy Foundation (Push 2) — earned effort-premium currency, converted at the
+  // Sanctuary Bank into Refined Lotus Gems. See src/game/economy.ts for full docs.
+  insight_crystals?: number;
+  // Earned premium-equivalent currency (weaker purchasing power than Lotus Gems).
+  refined_lotus_gems?: number;
+  // Paid premium currency placeholder — no real payment system wired up yet.
+  lotus_gems_paid?: number;
+  // Ward Defense unit recruitment/progression currency, separate from Codex Shards.
+  ward_sigils?: number;
   owned_skins?: string[];
   equipped_skin?: string;
   owned_upgrades?: string[];

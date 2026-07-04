@@ -99,6 +99,10 @@ class Player(BaseModel):
     inventory: Dict[str, int] = Field(default_factory=dict)
     codex_shards: int = 0
     crowns: int = 0
+    insight_crystals: int = 0
+    refined_lotus_gems: int = 0
+    lotus_gems_paid: int = 0
+    ward_sigils: int = 0
     owned_skins: List[str] = Field(default_factory=list)
     equipped_skin: str = ""
     owned_upgrades: List[str] = Field(default_factory=list)
@@ -144,6 +148,10 @@ class PlayerUpdate(BaseModel):
     inventory: Optional[Dict[str, int]] = None
     codex_shards: Optional[int] = None
     crowns: Optional[int] = None
+    insight_crystals: Optional[int] = None
+    refined_lotus_gems: Optional[int] = None
+    lotus_gems_paid: Optional[int] = None
+    ward_sigils: Optional[int] = None
     owned_skins: Optional[List[str]] = None
     equipped_skin: Optional[str] = None
     owned_upgrades: Optional[List[str]] = None

@@ -20,3 +20,4 @@
 - [Clinica Player vs Hero Level](clinica-player-vs-hero-level.md) — Player Level = derived from player.xp (account-wide gates/class); Hero Level = per-hero_progression (battle contribution or Training Hall); never conflate.
 - [Clinica Clinical Cue tiers/topics](clinica-cue-tiers-topics.md) — 4-tier (chapter-weighted) x 9-topic cue system layered onto existing cue pipeline additively; topic bonuses reuse existing mechanics fields, never a parallel effect path.
 - [Expo Router hidden tabs pattern](expo-router-hidden-tabs.md) — use `Tabs.Screen options={{href:null}}` to hide a tab but keep its route alive; re-export a top-level screen into `(tabs)/` to promote it without duplicating logic.
+- [Clinica economy foundation](clinica-economy-foundation.md) — economy.ts is single source of truth for currencies/pricing/marketplace/guardrails; UI screens render from it, stays display-only until real payments requested.

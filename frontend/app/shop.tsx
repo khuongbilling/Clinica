@@ -14,8 +14,14 @@ import {
   UNIT_STAT_BLOCKS, getMasteryStats, getMasteryRequirement, unlockedMilestones,
   MERGE_RANK_NAMES,
 } from "@/src/game/units";
+import {
+  CURRENCIES, WEEKLY_GEM_BUNDLES, MONTHLY_GEM_BUNDLES, GEM_BUNDLE_STATUS,
+  SANCTUARY_BANK_EXCHANGE_TABLE, SANCTUARY_BANK_CAPS, SANCTUARY_BANK_STATUS,
+  SANCTUARY_BAZAAR_TRADEABLE, SANCTUARY_BAZAAR_NON_TRADEABLE, SANCTUARY_BAZAAR_STATUS,
+  MONETIZATION_PRODUCTS, ECONOMY_ANCHORS,
+} from "@/src/game/economy";
 
-type TabId = "consumables" | "recruit" | "ward" | "upgrades" | "skins" | "refills";
+type TabId = "consumables" | "recruit" | "ward" | "upgrades" | "skins" | "refills" | "premium";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "consumables", label: "Consumables", icon: "flask" },
@@ -24,6 +30,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "upgrades", label: "Upgrades", icon: "sparkles" },
   { id: "skins", label: "Skins", icon: "color-palette" },
   { id: "refills", label: "Refills", icon: "battery-charging" },
+  { id: "premium", label: "Premium", icon: "diamond-outline" },
 ];
 
 export default function Shop() {
@@ -33,8 +40,13 @@ export default function Shop() {
   const [banner, setBanner] = useState<{ ok: boolean; msg: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [infoUnitId, setInfoUnitId] = useState<string | null>(null);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bazaarOpen, setBazaarOpen] = useState(false);
 
   const crowns = player?.crowns || 0;
+  const insightCrystals = player?.insight_crystals || 0;
+  const refinedLotusGems = player?.refined_lotus_gems || 0;
+  const lotusGemsPaid = player?.lotus_gems_paid || 0;
 
   const staminaMax = useMemo(() => maxStaminaForPlayer(player), [player]);
 
@@ -78,6 +90,14 @@ export default function Shop() {
           <Ionicons name="diamond" size={14} color={COLORS.brand} />
           <Text style={styles.crownsTxt}>{crowns}</Text>
         </View>
+        <Pressable
+          onPress={() => router.push("/economy")}
+          hitSlop={10}
+          style={styles.infoBtn}
+          testID="shop-economy-guide"
+        >
+          <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
+        </Pressable>
       </View>
 
       {/* Tabs */}
@@ -306,6 +326,124 @@ export default function Shop() {
           </>
         )}
 
+        {tab === "premium" && (
+          <>
+            <Text style={styles.blurb}>
+              Foundation preview only — nothing here is purchasable yet. No real-money purchases,
+              live trading, or subscriptions are active. See the Economy Guide for full details.
+            </Text>
+
+            <Text style={styles.collectionLabel}>CURRENCIES</Text>
+            {CURRENCIES.filter((c) => c.id !== "crowns" && c.id !== "codex_shards").map((c) => {
+              const balance =
+                c.id === "insight_crystals" ? insightCrystals :
+                c.id === "refined_lotus_gems" ? refinedLotusGems :
+                c.id === "lotus_gems_paid" ? lotusGemsPaid :
+                player.ward_sigils || 0;
+              return (
+                <View key={c.id} style={styles.card} testID={`shop-currency-${c.id}`}>
+                  <View style={[styles.iconBadge, { borderColor: COLORS.borderStrong }]}>
+                    <Ionicons name={c.icon as any} size={20} color={COLORS.onSurfaceSecondary} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <View style={styles.cardHead}>
+                      <Text style={styles.cardName}>{c.displayName}</Text>
+                      <Text style={styles.ownedTag}>{balance}</Text>
+                    </View>
+                    <Text style={styles.cardEffect}>{c.tagline}</Text>
+                    <Text style={styles.cardDesc}>Earned from: {c.earnedFrom}</Text>
+                  </View>
+                </View>
+              );
+            })}
+
+            <Text style={styles.collectionLabel}>SANCTUARY BANK</Text>
+            <Pressable style={styles.card} onPress={() => setBankOpen(true)} testID="shop-sanctuary-bank">
+              <View style={[styles.iconBadge, { borderColor: COLORS.protection }]}>
+                <Ionicons name="business" size={20} color={COLORS.protection} />
+              </View>
+              <View style={styles.cardMain}>
+                <View style={styles.cardHead}>
+                  <Text style={styles.cardName}>Sanctuary Bank</Text>
+                  <Text style={styles.foundationTag}>FOUNDATION</Text>
+                </View>
+                <Text style={styles.cardDesc}>Exchange Insight Crystals for Refined Lotus Gems. Tap to view rates & caps.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+
+            <Text style={styles.collectionLabel}>SANCTUARY BAZAAR</Text>
+            <Pressable style={styles.card} onPress={() => setBazaarOpen(true)} testID="shop-sanctuary-bazaar">
+              <View style={[styles.iconBadge, { borderColor: COLORS.storm }]}>
+                <Ionicons name="storefront" size={20} color={COLORS.storm} />
+              </View>
+              <View style={styles.cardMain}>
+                <View style={styles.cardHead}>
+                  <Text style={styles.cardName}>Sanctuary Bazaar</Text>
+                  <Text style={styles.foundationTag}>FUTURE</Text>
+                </View>
+                <Text style={styles.cardDesc}>Planned player-to-player trading. Not live yet. Tap to view what will be tradeable.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+
+            <Text style={styles.collectionLabel}>LOTUS GEM BUNDLES · WEEKLY (PLANNED)</Text>
+            {WEEKLY_GEM_BUNDLES.map((b) => (
+              <View key={b.id} style={[styles.card, styles.premiumCard]} testID={`shop-bundle-${b.id}`}>
+                <View style={[styles.iconBadge, { borderColor: COLORS.brand }]}>
+                  <Ionicons name="diamond-outline" size={20} color={COLORS.brand} />
+                </View>
+                <View style={styles.cardMain}>
+                  <Text style={styles.cardName}>{b.totalGems.toLocaleString()} Lotus Gems</Text>
+                  <Text style={[styles.cardEffect, { color: COLORS.brand }]}>{b.baseGems.toLocaleString()} base + {b.bonusPercent}% bonus</Text>
+                  <Text style={styles.cardDesc}>{b.limit}</Text>
+                </View>
+                <Text style={styles.priceTagTxt}>${b.usd.toFixed(2)}</Text>
+              </View>
+            ))}
+
+            <Text style={styles.collectionLabel}>LOTUS GEM BUNDLES · MONTHLY (PLANNED)</Text>
+            {MONTHLY_GEM_BUNDLES.map((b) => (
+              <View key={b.id} style={[styles.card, styles.premiumCard]} testID={`shop-bundle-${b.id}`}>
+                <View style={[styles.iconBadge, { borderColor: COLORS.brand }]}>
+                  <Ionicons name="diamond-outline" size={20} color={COLORS.brand} />
+                </View>
+                <View style={styles.cardMain}>
+                  <Text style={styles.cardName}>{b.totalGems.toLocaleString()} Lotus Gems</Text>
+                  <Text style={[styles.cardEffect, { color: COLORS.brand }]}>{b.baseGems.toLocaleString()} base + {b.bonusPercent}% bonus</Text>
+                  <Text style={styles.cardDesc}>{b.limit}</Text>
+                </View>
+                <Text style={styles.priceTagTxt}>${b.usd.toFixed(2)}</Text>
+              </View>
+            ))}
+            <Text style={styles.blurb}>
+              Status: {GEM_BUNDLE_STATUS === "planned" ? "planned — not purchasable" : GEM_BUNDLE_STATUS}.
+              Anchor: {ECONOMY_ANCHORS.lotusGemsPer99Cents} Lotus Gems ≈ $0.99.
+            </Text>
+
+            <Text style={styles.collectionLabel}>MONETIZATION PLACEHOLDERS</Text>
+            {MONETIZATION_PRODUCTS.map((m) => (
+              <View key={m.id} style={styles.card} testID={`shop-product-${m.id}`}>
+                <View style={[styles.iconBadge, { borderColor: COLORS.energy }]}>
+                  <Ionicons name="pricetag" size={20} color={COLORS.energy} />
+                </View>
+                <View style={styles.cardMain}>
+                  <View style={styles.cardHead}>
+                    <Text style={styles.cardName}>{m.name}</Text>
+                    <Text style={styles.foundationTag}>NOT ACTIVE</Text>
+                  </View>
+                  <Text style={[styles.cardEffect, { color: COLORS.energy }]}>{m.priceUsd} · {m.cadence}</Text>
+                  <Text style={styles.cardDesc}>{m.benefits.join(" · ")}</Text>
+                </View>
+              </View>
+            ))}
+
+            <Pressable style={styles.equipBtn} onPress={() => router.push("/economy")} testID="shop-open-economy-guide">
+              <Text style={styles.equipBtnTxt}>Open full Economy Guide →</Text>
+            </Pressable>
+          </>
+        )}
+
         {tab === "refills" && (
           <>
             <View style={styles.staminaCard}>
@@ -350,6 +488,84 @@ export default function Shop() {
           onUpgrade={async () => { const r = await upgradeUnitMastery(infoUnitId); flash(r.ok, r.message); }}
           onClose={() => setInfoUnitId(null)}
         />
+      )}
+
+      {bankOpen && (
+        <Modal visible animationType="slide" transparent onRequestClose={() => setBankOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHead}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardName}>Sanctuary Bank</Text>
+                  <Text style={[styles.cardEffect, { color: COLORS.protection }]}>Foundation · exchange not active yet</Text>
+                </View>
+                <Pressable onPress={() => setBankOpen(false)} hitSlop={10} testID="bank-modal-close">
+                  <Ionicons name="close" size={22} color={COLORS.onSurfaceSecondary} />
+                </Pressable>
+              </View>
+              <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingVertical: SPACING.sm, gap: SPACING.sm }}>
+                <Text style={styles.cardDesc}>
+                  The Sanctuary Bank will let you exchange Insight Crystals — earned through University
+                  study, wellness, and mastery — into Refined Lotus Gems, an earned premium-equivalent
+                  currency accepted for select purchases.
+                </Text>
+                <Text style={styles.infoSectionLabel}>EXCHANGE TABLE</Text>
+                {SANCTUARY_BANK_EXCHANGE_TABLE.map((row) => (
+                  <View key={row.insightCrystals} style={styles.statRow}>
+                    <Text style={styles.statLabel}>{row.insightCrystals.toLocaleString()} Insight Crystals</Text>
+                    <Text style={styles.statValue}>→ {row.refinedLotusGems} Refined Lotus Gems</Text>
+                  </View>
+                ))}
+                <Text style={styles.infoSectionLabel}>CAPS</Text>
+                <Text style={styles.cardDesc}>
+                  Weekly cap: {SANCTUARY_BANK_CAPS.weeklyRefinedGemCap} Refined Lotus Gems ·
+                  Monthly cap: {SANCTUARY_BANK_CAPS.monthlyRefinedGemCap} Refined Lotus Gems.
+                  {"\n"}{SANCTUARY_BANK_CAPS.specialEventBonusCapNote}
+                </Text>
+                <Text style={styles.infoSectionLabel}>STATUS</Text>
+                <Text style={styles.cardDesc}>
+                  {SANCTUARY_BANK_STATUS === "foundation" ? "Foundation only — no exchange is active yet." : "Active"}
+                </Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {bazaarOpen && (
+        <Modal visible animationType="slide" transparent onRequestClose={() => setBazaarOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHead}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardName}>Sanctuary Bazaar</Text>
+                  <Text style={[styles.cardEffect, { color: COLORS.storm }]}>Future placeholder · no live trading</Text>
+                </View>
+                <Pressable onPress={() => setBazaarOpen(false)} hitSlop={10} testID="bazaar-modal-close">
+                  <Ionicons name="close" size={22} color={COLORS.onSurfaceSecondary} />
+                </Pressable>
+              </View>
+              <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingVertical: SPACING.sm, gap: SPACING.sm }}>
+                <Text style={styles.cardDesc}>
+                  The Sanctuary Bazaar is a planned player-to-player trading space. It is not live —
+                  this is a preview of what will and won't be tradeable once it launches.
+                </Text>
+                <Text style={styles.infoSectionLabel}>WILL BE TRADEABLE</Text>
+                {SANCTUARY_BAZAAR_TRADEABLE.map((t) => (
+                  <Text key={t} style={styles.cardDesc}>• {t}</Text>
+                ))}
+                <Text style={styles.infoSectionLabel}>NEVER TRADEABLE</Text>
+                {SANCTUARY_BAZAAR_NON_TRADEABLE.map((t) => (
+                  <Text key={t} style={styles.cardDesc}>• {t}</Text>
+                ))}
+                <Text style={styles.infoSectionLabel}>STATUS</Text>
+                <Text style={styles.cardDesc}>
+                  {SANCTUARY_BAZAAR_STATUS === "future-placeholder" ? "Future placeholder only — no live trading exists yet." : "Active"}
+                </Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
     </SafeAreaView>
   );
@@ -532,6 +748,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { padding: 2 },
+  infoBtn: { padding: 2 },
+  foundationTag: {
+    color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 0.5,
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  priceTagTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "800" },
   title: { color: COLORS.onSurface, fontSize: 20, fontWeight: "800" },
   subtitle: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 1 },
   crownsPill: {

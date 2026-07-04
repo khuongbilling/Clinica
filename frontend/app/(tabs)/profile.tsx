@@ -132,6 +132,16 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
           </Pressable>
           <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/economy")}
+            testID="profile-economy-button"
+          >
+            <Ionicons name="diamond-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Economy Guide</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
           <View style={styles.settingsRow} testID="profile-achievements-row">
             <Ionicons name="trophy-outline" size={18} color={COLORS.onSurfaceTertiary} />
             <Text style={[styles.settingsRowTxt, { color: COLORS.onSurfaceTertiary }]}>Achievements</Text>
