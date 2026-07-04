@@ -207,6 +207,7 @@ async def create_player(payload: PlayerCreate):
         },
         codex_shards=50,
         kingdom_levels={
+            "grand_ward_atrium": 3,
             "academy_of_healing": 1,
             "library_of_knowledge": 1,
             "hall_of_heroes": 1,

@@ -1,50 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { BUILDINGS } from "@/src/game/content";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
-import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import {
+  ATRIUM_ID, ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS,
+  REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE,
+  getAtriumLevel, isBuildingUnlocked, RealmBuilding,
+} from "@/src/game/realm";
+import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-const ICONS: Record<string, string> = {
-  academy_of_healing: "school",
-  library_of_knowledge: "library",
-  hall_of_heroes: "people-circle",
-  apothecary: "flask",
-};
+const MAP_IMAGE = require("@/assets/images/realm_kingdom_map.png");
+const { width: SCREEN_W } = Dimensions.get("window");
+const MAP_ASPECT = 896 / 1280;
+const MAP_HEIGHT = SCREEN_W / MAP_ASPECT;
 
-const BODY_REGIONS = [
-  { id: "Air Region",        name: "Air Temple",           system: "Respiratory System",     icon: "cloud",          max: 5 },
-  { id: "River Region",      name: "River Gate",           system: "Cardiovascular System",  icon: "water",          max: 5 },
-  { id: "Fire Region",       name: "Fire Ward",            system: "Immune / Infection",     icon: "flame",          max: 5 },
-  { id: "Energy Region",     name: "Energy Shrine",        system: "Metabolic System",       icon: "flash",          max: 5 },
-  { id: "Storm Region",      name: "Storm Observatory",    system: "Sepsis / Multi-system",  icon: "thunderstorm",   max: 5 },
-  { id: "Mind Region",       name: "Mind Tower",           system: "Neurological System",    icon: "bulb",           max: 5 },
-  { id: "Filter Region",     name: "Filter Basin",         system: "Renal System",           icon: "funnel",         max: 5 },
-  { id: "Forge Region",      name: "Forge Hall",           system: "Musculoskeletal",        icon: "hammer",         max: 5 },
-  { id: "Protection Region", name: "Protection Wall",      system: "Integumentary",          icon: "shield",         max: 5 },
-  { id: "Growth Region",     name: "Growth Garden",        system: "Endocrine / Development",icon: "leaf",           max: 5 },
-  { id: "Core",              name: "The Fading Core",      system: "Multi-system Boss",      icon: "planet",         max: 1 },
-];
-
-const REGION_ELEMENT: Record<string, string> = {
-  "Air Region": "Air",
-  "River Region": "River",
-  "Fire Region": "Fire",
-  "Energy Region": "Energy",
-  "Storm Region": "Storm",
-  "Mind Region": "Mind",
-  "Filter Region": "Filter",
-  "Forge Region": "Forge",
-  "Protection Region": "Protection",
-  "Growth Region": "Growth",
-  "Core": "Storm",
+const DISTRICT_COLOR: Record<string, string> = {
+  brand: COLORS.brand, mind: COLORS.mind, protection: COLORS.protection,
+  energy: COLORS.energy, growth: COLORS.growth, fire: COLORS.fire, storm: COLORS.storm,
 };
 
 export default function KingdomScreen() {
@@ -52,6 +30,8 @@ export default function KingdomScreen() {
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
+  const [selected, setSelected] = useState<RealmBuilding | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
 
   useEffect(() => {
     logEvent('kingdom_screen_returned', 'kingdom');
@@ -61,193 +41,307 @@ export default function KingdomScreen() {
     }
   }, []);
 
+  const atriumLevel = useMemo(
+    () => (player ? getAtriumLevel(player.kingdom_levels || {}) : 0),
+    [player]
+  );
+
   if (!player) return null;
 
-  const regionProgress = player.region_progress || {};
-  const totalRestored = Object.values(regionProgress).reduce((sum, v) => sum + v, 0);
+  const kingdomLevels = player.kingdom_levels || {};
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.hero} testID="kingdom-map">
-        <Image
-          source={{ uri: "https://images.pexels.com/photos/29672206/pexels-photo-29672206.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940" }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <LinearGradient
-          colors={["rgba(8,6,20,0.15)", "rgba(12,10,28,0.82)", COLORS.surface]}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <View style={styles.heroInner}>
-          <Text style={styles.kicker}>KINGDOM OF CLINICA</Text>
-          <Text style={styles.title}>Rebuild the Realm</Text>
-          <Text style={styles.sub}>You are the architect of this Realm — every victory restores a body region, grows your buildings, and earns Codex knowledge.</Text>
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.kicker}>REALM OF CLINICA</Text>
+          <Text style={styles.title}>Grand Ward Atrium · Lv.{atriumLevel}</Text>
         </View>
+        <Pressable style={styles.legendBtn} onPress={() => setShowLegend(true)} testID="realm-legend-button" hitSlop={8}>
+          <Ionicons name="information-circle-outline" size={22} color={COLORS.brand} />
+        </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.statsRow}>
-          <Stat label="Runs" value={String(player.runs_completed)} icon="flame" />
-          <Stat label="Bosses" value={String(player.bosses_defeated.length)} icon="trophy" />
-          <Stat label="Restored" value={String(totalRestored)} icon="globe" />
-        </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
+        <View style={[styles.mapWrap, { height: MAP_HEIGHT }]} testID="kingdom-map">
+          <Image source={MAP_IMAGE} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
 
-        <Text style={styles.section}>Body Regions</Text>
-        <Text style={styles.sectionSub}>Win battles to restore each region of the body kingdom.</Text>
-
-        {BODY_REGIONS.map((r) => {
-          const progress = regionProgress[r.id] || 0;
-          const pct = Math.min(progress / r.max, 1);
-          const color = ELEMENT_COLORS[REGION_ELEMENT[r.id]] || COLORS.brand;
-          const unlocked = progress > 0;
-          return (
-            <View key={r.id} style={[styles.regionCard, !unlocked && styles.regionCardLocked, { borderLeftColor: unlocked ? color : COLORS.border }]} testID={`kingdom-region-${r.id}`}>
-              <View style={[styles.regionIcon, { borderColor: unlocked ? color : COLORS.borderStrong, backgroundColor: unlocked ? color + "18" : COLORS.surface }]}>
-                <Ionicons name={(r.icon as any)} size={20} color={unlocked ? color : COLORS.onSurfaceTertiary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.regionHeader}>
-                  <Text style={[styles.regionName, !unlocked && styles.regionNameLocked]}>{r.name}</Text>
-                  <Text style={[styles.regionProgress, { color: unlocked ? color : COLORS.onSurfaceTertiary }]}>
-                    {progress}/{r.max}
-                  </Text>
-                </View>
-                <Text style={styles.regionSystem}>{r.system}</Text>
-                <View style={styles.regionBar}>
-                  <View style={[styles.regionBarFill, { width: `${pct * 100}%`, backgroundColor: color }]} />
-                </View>
-                {!unlocked && (
-                  <Text style={styles.regionLockHint}>Win a battle in this region to begin restoring it.</Text>
-                )}
-              </View>
-            </View>
-          );
-        })}
-
-        <Text style={styles.section}>Buildings</Text>
-        <Text style={styles.sectionSub}>Grow these to expand what your Realm can do.</Text>
-
-        {BUILDINGS.map((b) => {
-          const lvl = player.kingdom_levels[b.id] || 0;
-          const isShop = b.id === "apothecary";
-          const CardTag: any = isShop ? Pressable : View;
-          return (
-            <CardTag
-              key={b.id}
-              style={[styles.bCard, isShop && styles.bCardActive]}
-              testID={`kingdom-building-${b.id}`}
-              {...(isShop ? { onPress: () => router.push("/(tabs)/shop") } : {})}
-            >
-              <View style={[styles.bIcon, { borderColor: COLORS.brand }]}>
-                <Ionicons name={(ICONS[b.id] as any) || "business"} size={24} color={COLORS.brand} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={styles.bName}>{b.name}</Text>
-                  <Text style={styles.bLvl}>LVL {lvl}</Text>
-                </View>
-                <Text style={styles.bDesc}>{b.description}</Text>
-                <Text style={styles.bUnlock}>{b.unlocks}</Text>
-                {isShop && (
-                  <View style={styles.shopHint}>
-                    <Ionicons name="diamond" size={12} color={COLORS.brand} />
-                    <Text style={styles.shopHintTxt}>{player.crowns || 0} Crowns — tap to open the Apothecary Market</Text>
-                    <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
+          {REALM_BUILDINGS.map((b) => {
+            const unlocked = isBuildingUnlocked(b, atriumLevel);
+            const lvl = kingdomLevels[b.kingdomLevelsKey] || 0;
+            const color = DISTRICT_COLOR[REALM_DISTRICTS.find((d) => d.id === b.district)?.colorToken || "brand"];
+            return (
+              <Pressable
+                key={b.id}
+                onPress={() => setSelected(b)}
+                style={[
+                  styles.plot,
+                  {
+                    left: `${b.x}%`, top: `${b.y}%`,
+                    borderColor: unlocked ? color : COLORS.borderStrong,
+                    backgroundColor: unlocked ? color + "26" : "rgba(12,14,18,0.65)",
+                  },
+                  b.isAtrium && styles.plotAtrium,
+                ]}
+                testID={`realm-plot-${b.id}`}
+                hitSlop={6}
+              >
+                <Ionicons
+                  name={(unlocked ? b.icon : "lock-closed") as any}
+                  size={b.isAtrium ? 26 : 20}
+                  color={unlocked ? color : COLORS.onSurfaceTertiary}
+                />
+                {unlocked && lvl > 0 && (
+                  <View style={[styles.plotLvl, { backgroundColor: color }]}>
+                    <Text style={styles.plotLvlTxt}>{lvl}</Text>
                   </View>
                 )}
-                <View style={styles.lvlBar}>
-                  {Array.from({ length: b.maxLevel }).map((_, i) => (
-                    <View key={i} style={[styles.lvlSeg, i < lvl && { backgroundColor: COLORS.brand }]} />
-                  ))}
-                </View>
-              </View>
-            </CardTag>
-          );
-        })}
+              </Pressable>
+            );
+          })}
+        </View>
 
-        <Pressable
-          style={[styles.bCard, styles.bCardActive]}
-          testID="kingdom-university"
-          onPress={() => router.push("/university" as any)}
-        >
-          <View style={[styles.bIcon, { borderColor: COLORS.brand }]}>
-            <Ionicons name="school" size={24} color={COLORS.brand} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={styles.bName}>Clinica University</Text>
+        <View style={styles.hintRow}>
+          <Ionicons name="hand-left-outline" size={13} color={COLORS.onSurfaceTertiary} />
+          <Text style={styles.hintTxt}>Tap a building on the map to see details, requirements, and links.</Text>
+        </View>
+
+        <View style={styles.districtRow}>
+          {REALM_DISTRICTS.map((d) => (
+            <View key={d.id} style={styles.districtChip} testID={`realm-district-${d.id}`}>
+              <View style={[styles.districtDot, { backgroundColor: DISTRICT_COLOR[d.colorToken] }]} />
+              <Text style={styles.districtChipTxt}>{d.name}</Text>
             </View>
-            <Text style={styles.bDesc}>Recruit, certify, and train the healers who defend the Kingdom.</Text>
-            <View style={styles.shopHint}>
-              <Ionicons name="school" size={12} color={COLORS.brand} />
-              <Text style={styles.shopHintTxt}>{player.university_credits || 0} Credits — tap to open the University</Text>
-              <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
-            </View>
-          </View>
-        </Pressable>
+          ))}
+        </View>
       </ScrollView>
+
+      <BuildingDetailModal
+        building={selected}
+        atriumLevel={atriumLevel}
+        kingdomLevels={kingdomLevels}
+        onClose={() => setSelected(null)}
+        router={router}
+      />
+
+      <LegendModal visible={showLegend} onClose={() => setShowLegend(false)} />
 
       <TutorialOverlay />
     </SafeAreaView>
   );
 }
 
-function Stat({ label, value, icon }: { label: string; value: string; icon: string }) {
+function BuildingDetailModal({
+  building, atriumLevel, kingdomLevels, onClose, router,
+}: {
+  building: RealmBuilding | null;
+  atriumLevel: number;
+  kingdomLevels: Record<string, number>;
+  onClose: () => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  if (!building) return null;
+  const unlocked = isBuildingUnlocked(building, atriumLevel);
+  const lvl = kingdomLevels[building.kingdomLevelsKey] || 0;
+  const req = building.requirementsForLevel(lvl);
+  const district = REALM_DISTRICTS.find((d) => d.id === building.district);
+  const color = DISTRICT_COLOR[district?.colorToken || "brand"];
+
   return (
-    <View style={styles.stat}>
-      <Ionicons name={icon as any} size={18} color={COLORS.brand} />
-      <Text style={styles.statVal}>{value}</Text>
-      <Text style={styles.statLbl}>{label}</Text>
-    </View>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-building-sheet">
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <View style={[styles.sheetIcon, { borderColor: color, backgroundColor: color + "1f" }]}>
+              <Ionicons name={(unlocked ? building.icon : "lock-closed") as any} size={26} color={unlocked ? color : COLORS.onSurfaceTertiary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetName}>{building.name}</Text>
+              <Text style={styles.sheetDistrict}>{district?.name}{unlocked ? ` · Lv.${lvl}` : " · Locked"}</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10} testID="realm-sheet-close">
+              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+            <Text style={styles.sheetPurpose}>{building.purpose}</Text>
+
+            {!unlocked ? (
+              <View style={styles.lockBox}>
+                <Ionicons name="lock-closed" size={14} color={COLORS.warning} />
+                <Text style={styles.lockTxt}>
+                  Requires Grand Ward Atrium Lv.{building.atriumLevelRequired} (currently Lv.{atriumLevel}).
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.sheetLabel}>CURRENT BENEFIT</Text>
+                <Text style={styles.sheetBody}>{building.benefitForLevel(lvl)}</Text>
+
+                {lvl < building.maxLevel && (
+                  <>
+                    <Text style={styles.sheetLabel}>NEXT UPGRADE</Text>
+                    <Text style={styles.sheetBody}>{building.nextUpgradeForLevel(lvl)}</Text>
+                    <Text style={styles.sheetLabel}>REQUIREMENTS</Text>
+                    <Text style={styles.sheetBody}>
+                      Atrium Lv.{req.atriumLevel}+{req.materials.length ? " · " + req.materials.join(", ") : ""}
+                    </Text>
+                  </>
+                )}
+              </>
+            )}
+
+            <Text style={styles.sheetLabel}>HERO ASSIGNMENT</Text>
+            {building.heroSlots.length ? (
+              building.heroSlots.map((slot) => (
+                <View key={slot.role} style={styles.slotRow}>
+                  <Ionicons name="person-add-outline" size={14} color={COLORS.brand} />
+                  <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>{slot.role}</Text> — {slot.flavor}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.sheetBody}>Hero Assignment Coming Soon.</Text>
+            )}
+            <Text style={styles.sheetFootnote}>{"\n" + REALM_HERO_ASSIGNMENT_NOTE}</Text>
+
+            {building.skinPlaceholder && (
+              <>
+                <Text style={styles.sheetLabel}>CUSTOMIZATION</Text>
+                <View style={styles.slotRow}>
+                  <Ionicons name="color-palette-outline" size={14} color={COLORS.brand} />
+                  <Text style={styles.slotTxt}>Skin & theme slot — Coming Soon (cosmetic only).</Text>
+                </View>
+              </>
+            )}
+
+            {building.comingSoon && (
+              <View style={styles.comingSoonBox}>
+                <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.comingSoonTxt}>{REALM_BAZAAR_NOTE}</Text>
+              </View>
+            )}
+
+            {unlocked && building.linkKind === "route" && building.linkRoute && (
+              <Pressable
+                style={[styles.linkBtn, { borderColor: color }]}
+                onPress={() => { onClose(); router.push(building.linkRoute as any); }}
+                testID={`realm-link-${building.id}`}
+              >
+                <Text style={[styles.linkBtnTxt, { color }]}>{building.linkLabel}</Text>
+                <Ionicons name="arrow-forward" size={16} color={color} />
+              </Pressable>
+            )}
+            {building.linkKind === "placeholder" && !building.comingSoon && (
+              <Text style={styles.sheetFootnote}>{building.linkLabel}</Text>
+            )}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function LegendModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-legend-sheet">
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetName}>About the Realm</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+          </View>
+          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+            <Text style={styles.sheetBody}>
+              The Realm is your healing kingdom. The Grand Ward Atrium is the town hall — its
+              level unlocks every other district, building by building.
+            </Text>
+            <Text style={styles.sheetLabel}>ATRIUM PROGRESSION</Text>
+            {ATRIUM_UNLOCKS.map((u) => (
+              <Text key={u.level} style={styles.sheetBody}>Lv.{u.level}: {u.note}</Text>
+            ))}
+            <Text style={styles.sheetLabel}>CUSTOMIZATION</Text>
+            <Text style={styles.sheetBody}>{REALM_CUSTOMIZATION_NOTE}</Text>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  hero: { height: 160 },
-  heroInner: { flex: 1, padding: SPACING.lg, justifyContent: "flex-end", gap: 4 },
+  topBar: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { color: COLORS.onSurface, fontSize: 30, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
-  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
-  statsRow: { flexDirection: "row", gap: SPACING.md },
-  stat: {
-    flex: 1, backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    padding: SPACING.md, alignItems: "center", gap: 4, borderWidth: 1, borderColor: COLORS.border,
+  title: { color: COLORS.onSurface, fontSize: 17, fontWeight: "600", marginTop: 2 },
+  legendBtn: {
+    width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center",
+    backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
   },
-  statVal: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },
-  statLbl: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 1 },
 
-  section: { color: COLORS.onSurface, fontSize: 18, marginTop: SPACING.md, fontWeight: "400" },
-  sectionSub: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: -SPACING.sm },
-
-  regionCard: {
-    flexDirection: "row", gap: SPACING.md, backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: 4, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
-    borderLeftWidth: 3,
+  mapWrap: { width: "100%", overflow: "hidden", backgroundColor: COLORS.surface },
+  plot: {
+    position: "absolute", width: 46, height: 46, borderRadius: 23, borderWidth: 2,
+    alignItems: "center", justifyContent: "center", marginLeft: -23, marginTop: -23,
   },
-  regionCardLocked: { opacity: 0.55 },
-  regionIcon: { width: 48, height: 48, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },
-  regionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  regionName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "500" },
-  regionNameLocked: { color: COLORS.onSurfaceTertiary },
-  regionSystem: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
-  regionProgress: { fontSize: 12, fontWeight: "700" },
-  regionBar: { height: 6, borderRadius: 1, backgroundColor: COLORS.surfaceTertiary, marginTop: 8, overflow: "hidden" },
-  regionBarFill: { height: "100%", borderRadius: 1 },
-  regionLockHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic", marginTop: 4 },
-
-  bCard: {
-    flexDirection: "row", gap: SPACING.md, backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
+  plotAtrium: { width: 58, height: 58, borderRadius: 29, marginLeft: -29, marginTop: -29, borderWidth: 3 },
+  plotLvl: {
+    position: "absolute", bottom: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
+    borderWidth: 1.5, borderColor: COLORS.surface,
   },
-  bCardActive: { borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandTertiary + "33" },
-  shopHint: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },
-  shopHintTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "700", flex: 1 },
-  bIcon: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
-  bName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "500" },
-  bLvl: { color: COLORS.brand, fontSize: 11, fontWeight: "700" },
-  bDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
-  bUnlock: { color: COLORS.brand, fontSize: 11, marginTop: 4, fontStyle: "italic" },
-  lvlBar: { flexDirection: "row", gap: 3, marginTop: 8 },
-  lvlSeg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: COLORS.surfaceTertiary },
+  plotLvlTxt: { color: COLORS.onBrand, fontSize: 10, fontWeight: "800" },
+
+  hintRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm },
+  hintTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, flex: 1 },
+
+  districtRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, padding: SPACING.lg },
+  districtChip: {
+    flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: SPACING.sm, paddingVertical: 5,
+    borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  districtDot: { width: 8, height: 8, borderRadius: 4 },
+  districtChipTxt: { color: COLORS.onSurfaceSecondary, fontSize: 10, fontWeight: "600" },
+
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: COLORS.surfaceSecondary, borderTopLeftRadius: RADIUS.lg, borderTopRightRadius: RADIUS.lg,
+    padding: SPACING.lg, borderTopWidth: 1, borderColor: COLORS.border, maxHeight: "80%",
+  },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: "center", marginBottom: SPACING.md },
+  sheetHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.md, marginBottom: SPACING.md },
+  sheetIcon: {
+    width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: "center", justifyContent: "center",
+  },
+  sheetName: { color: COLORS.onSurface, fontSize: 18, fontWeight: "700" },
+  sheetDistrict: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  sheetPurpose: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginBottom: SPACING.sm },
+  sheetLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: SPACING.md },
+  sheetBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginTop: 4 },
+  sheetFootnote: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15, marginTop: SPACING.sm, fontStyle: "italic" },
+  lockBox: {
+    flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: COLORS.warning + "18",
+    borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.xs,
+  },
+  lockTxt: { color: COLORS.warning, fontSize: 12, flex: 1 },
+  slotRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 6 },
+  slotTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1, lineHeight: 16 },
+  comingSoonBox: {
+    flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: COLORS.surfaceTertiary,
+    borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.md,
+  },
+  comingSoonTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, flex: 1, lineHeight: 15 },
+  linkBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    borderWidth: 1.5, borderRadius: RADIUS.pill, paddingVertical: SPACING.sm, marginTop: SPACING.lg,
+  },
+  linkBtnTxt: { fontSize: 14, fontWeight: "700" },
 });

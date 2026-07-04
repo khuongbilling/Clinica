@@ -88,6 +88,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.owned_units || Object.keys(out.owned_units).length === 0) {
     out = { ...out, owned_units: defaultOwnedUnits() };
   }
+  if (out.kingdom_levels && out.kingdom_levels.grand_ward_atrium == null) {
+    // Realm foundation (Push 3): existing players already had academy/library/hall/apothecary
+    // at Lv.1, which unlocked real University/Codex/Heroes/Shop access — default the Atrium
+    // to Lv.3 so those existing routes stay reachable through the Realm map, not newly locked.
+    out = { ...out, kingdom_levels: { ...out.kingdom_levels, grand_ward_atrium: 3 } };
+  }
   if (!out.unit_shards) {
     out = { ...out, unit_shards: {} };
   }
@@ -216,6 +222,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     heroes_owned: [starting, 'village_caretaker'],
     active_team: [starting, 'village_caretaker'],
     kingdom_levels: {
+      grand_ward_atrium: 3,
       academy_of_healing: 1,
       library_of_knowledge: 1,
       hall_of_heroes: 1,
