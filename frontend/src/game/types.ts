@@ -178,4 +178,8 @@ export interface PlayerState {
   // Clinical Cue — lightweight per-topic progress counter (Codex/University hook).
   // Additive only; never blocks battle flow.
   cue_topic_progress?: Record<string, number>;
+  // Push 3.6 — Realm plot system. buildingId -> plotId, and plotId -> decorationId.
+  // Both are cosmetic/layout-only; they never gate gameplay.
+  realm_layout?: Record<string, string>;
+  realm_decor?: Record<string, string>;
 }

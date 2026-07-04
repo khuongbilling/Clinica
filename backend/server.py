@@ -120,6 +120,8 @@ class Player(BaseModel):
     stamina: int = 5
     stamina_updated_at: str = Field(default_factory=now_iso)
     wellness: WellnessState = Field(default_factory=WellnessState)
+    realm_layout: Dict[str, str] = Field(default_factory=dict)
+    realm_decor: Dict[str, str] = Field(default_factory=dict)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -169,6 +171,8 @@ class PlayerUpdate(BaseModel):
     stamina: Optional[int] = None
     stamina_updated_at: Optional[str] = None
     wellness: Optional[WellnessState] = None
+    realm_layout: Optional[Dict[str, str]] = None
+    realm_decor: Optional[Dict[str, str]] = None
 
 
 # ---------- Routes ----------
@@ -212,6 +216,19 @@ async def create_player(payload: PlayerCreate):
             "library_of_knowledge": 1,
             "hall_of_heroes": 1,
             "apothecary": 1,
+        },
+        realm_layout={
+            "grand_ward_atrium": "atrium_plot",
+            "clinica_university": "university_plot",
+            "research_library": "library_plot",
+            "hospital_ward": "hospital_plot",
+            "hall_of_heroes": "training_hall_plot",
+            "apothecary": "apothecary_plot",
+            "sanctuary_bank": "bank_plot",
+            "sanctuary_bazaar": "bazaar_plot",
+            "nutrition_garden": "garden_plot",
+            "ward_defense_tower": "defense_plot",
+            "faction_embassy": "embassy_plot",
         },
     )
     doc = player.model_dump()

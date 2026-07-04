@@ -12,6 +12,7 @@ import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
 } from './units';
+import { buildDefaultRealmLayout } from './realm';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -61,6 +62,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   }
   if (!out.cue_topic_progress) {
     out = { ...out, cue_topic_progress: {} };
+  }
+  if (!out.realm_layout || Object.keys(out.realm_layout).length === 0) {
+    out = { ...out, realm_layout: buildDefaultRealmLayout() };
+  }
+  if (!out.realm_decor) {
+    out = { ...out, realm_decor: {} };
   }
   if (out.player_level == null) {
     out = { ...out, player_level: playerLevelFromXp(out.xp || 0).level };
@@ -141,6 +148,7 @@ type Ctx = {
   pullGacha: () => Promise<{ ok: boolean; message: string; typeId?: string; isNew?: boolean; level?: number }>;
   upgradeUnitMastery: (typeId: string) => Promise<{ ok: boolean; message: string; level?: number }>;
   setWardLoadout: (ids: string[]) => Promise<{ ok: boolean; message: string }>;
+  setRealmLayout: (layoutPatch: Record<string, string>, decorPatch?: Record<string, string | null>) => Promise<{ ok: boolean; message: string }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -788,6 +796,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: 'Loadout saved.' };
   }, [updateState]);
 
+  const setRealmLayout = useCallback(async (layoutPatch: Record<string, string>, decorPatch?: Record<string, string | null>) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const nextLayout = { ...(base.realm_layout || buildDefaultRealmLayout()), ...layoutPatch };
+    const nextDecor = { ...(base.realm_decor || {}) };
+    if (decorPatch) {
+      for (const [plotId, decorationId] of Object.entries(decorPatch)) {
+        if (decorationId == null) delete nextDecor[plotId];
+        else nextDecor[plotId] = decorationId;
+      }
+    }
+    const next = { ...base, realm_layout: nextLayout, realm_decor: nextDecor };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: 'Realm layout updated.' };
+  }, [updateState]);
+
   const completeLesson = useCallback(async (lessonId: string) => {
     if (!player) return { ok: false, message: 'No player loaded.' };
     const { getLesson, computeLessonCompletion } = await import('./lessons');
@@ -844,9 +869,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
