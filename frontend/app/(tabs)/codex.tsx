@@ -63,6 +63,16 @@ export default function CodexScreen() {
             <Text style={styles.depthIntro}>{DEPTH_INTRO[depth] || DEPTH_INTRO.simple}</Text>
           </View>
         </View>
+
+        <Pressable
+          style={styles.classTreeLink}
+          onPress={() => router.push("/class-tree")}
+          testID="codex-class-tree-link"
+        >
+          <Ionicons name="git-network-outline" size={14} color={COLORS.brand} />
+          <Text style={styles.classTreeLinkTxt}>Studying here feeds your Class Tree — view your ability tree</Text>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -202,6 +212,12 @@ const styles = StyleSheet.create({
   },
   depthLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
   depthIntro: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
+  classTreeLink: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.xs, marginTop: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border, borderWidth: 1,
+    borderRadius: RADIUS.md, padding: SPACING.sm,
+  },
+  classTreeLinkTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, flex: 1 },
   scroll: { padding: SPACING.lg, paddingTop: 0, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   section: { color: COLORS.onSurface, fontSize: 18, fontWeight: "400", marginTop: SPACING.sm },
 

@@ -14,6 +14,9 @@ import {
 } from './units';
 import { buildDefaultRealmLayout } from './realm';
 import { isValidCellId } from './realmGrid';
+import {
+  ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
+} from './classTree';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -119,6 +122,14 @@ function normalizeProgression(p: PlayerState): PlayerState {
     const base = (out.ward_loadout && out.ward_loadout.length > 0) ? out.ward_loadout : STARTER_UNIT_IDS;
     out = { ...out, ward_loadout: sanitizeLoadout(base, out.owned_units!) };
   }
+  // Class Tree (Push 6) — backfill the new account-level class identity and
+  // per-class ability progress for saves that predate this system.
+  if (!out.class_tree_id) {
+    out = { ...out, class_tree_id: classIdForAptitude(out.aptitude) };
+  }
+  if (!out.class_progress || CLASS_IDS.some((id) => !Array.isArray(out.class_progress![id]))) {
+    out = { ...out, class_progress: { ...defaultClassProgress(), ...(out.class_progress || {}) } };
+  }
   return out;
 }
 
@@ -177,6 +188,8 @@ type Ctx = {
   recordCueTopics: (topics: string[]) => Promise<void>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
+  setPlayerClass: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
+  claimClassTier: (classId: ClassId, level: 1 | 10 | 20 | 30) => Promise<{ ok: boolean; message: string }>;
 };
 
 const PlayerContext = createContext<Ctx | null>(null);
@@ -905,10 +918,49 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // Class Tree (Push 6) — safe, free class switch (no cost, no cooldown; the
+  // UI is expected to gate this behind a confirm/cancel dialog).
+  const setPlayerClass = useCallback(async (classId: ClassId) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    if (!CLASS_IDS.includes(classId)) return { ok: false, message: 'Unknown class.' };
+    if (base.class_tree_id === classId) return { ok: true, message: 'Already your current class.' };
+    const next = { ...base, class_tree_id: classId };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Your class is now ${classId[0].toUpperCase()}${classId.slice(1)}.` };
+  }, [updateState]);
+
+  // Class Tree (Push 6) — claims a Lv10/20/30 ability tier for a class,
+  // spending the required materials from inventory. Lv1 tiers are automatic
+  // and never need to be claimed. Re-validates everything server-side of
+  // the UI (level, not-already-claimed, sufficient materials) before
+  // spending, so this is safe to call directly.
+  const claimClassTier = useCallback(async (classId: ClassId, level: 1 | 10 | 20 | 30) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const card = getClassTree(classId).find((c) => c.level === level);
+    if (!card) return { ok: false, message: 'Unknown class ability.' };
+    const progress = (base.class_progress || {})[classId] || [];
+    const playerLevel = base.player_level ?? playerLevelFromXp(base.xp).level;
+    const check = canClaimTier(card, playerLevel, progress, base.inventory || {});
+    if (!check.ok) return { ok: false, message: check.reason || 'Cannot unlock this ability yet.' };
+    const inventory = { ...(base.inventory || {}) };
+    for (const req of card.requirements) {
+      inventory[req.material] = (inventory[req.material] || 0) - req.qty;
+    }
+    const classProgress = { ...defaultClassProgress(), ...(base.class_progress || {}) };
+    classProgress[classId] = [...(classProgress[classId] || []), level];
+    const next = { ...base, inventory, class_progress: classProgress };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `${card.name} unlocked.` };
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

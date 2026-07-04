@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
+import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
 import {
-  nextClassAbility, nextLockedFeature, playerClassForAptitude, playerLevelFromXp,
+  nextClassAbility, nextLockedFeature, playerLevelFromXp,
 } from "@/src/game/progression";
 import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
@@ -54,9 +55,10 @@ export function PlayerHeader({
   const remaining = playerLevelInfo.atCap
     ? 0
     : Math.max(0, playerLevelInfo.xpForNextLevel - playerLevelInfo.xpIntoLevel);
-  const playerClass = playerClassForAptitude(player.aptitude);
   const nextUnlock = nextLockedFeature(playerLevelInfo.level);
   const nextAbility = nextClassAbility(player.aptitude, playerLevelInfo.level);
+  const classId = (player.class_tree_id as ClassId) || "medic";
+  const classIdentity = CLASS_IDENTITIES[classId] || CLASS_IDENTITIES.medic;
 
   return (
     <View style={styles.wrap} testID="player-header">
@@ -72,7 +74,14 @@ export function PlayerHeader({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>
-            {player.name} <Text style={styles.levelTxt}>Lv.{playerLevelInfo.level} {playerClass}</Text>
+            {player.name}{" "}
+            <Text
+              style={styles.levelTxt}
+              onPress={() => router.push("/class-tree")}
+              testID="player-header-class-link"
+            >
+              Lv.{playerLevelInfo.level} {classIdentity.name}
+            </Text>
           </Text>
           {!compact && (
             <Text style={styles.rankTxt} numberOfLines={1}>{RANKS[player.rank_index]?.name ?? ""}</Text>

@@ -126,6 +126,11 @@ export interface PlayerState {
   // Derived from `xp` via progression.ts but persisted for fast reads and
   // to detect level-ups (stamina cap, feature unlocks, Player Class tiers).
   player_level?: number;
+  // Class Tree (Push 6) — account-level class identity, additive to the
+  // legacy `player_class` onboarding flavor field above. See
+  // src/game/classTree.ts for the full class/ability/materials model.
+  class_tree_id?: string | null;
+  class_progress?: Record<string, number[]>;
   mastery: {
     assessment: number;
     stabilization: number;

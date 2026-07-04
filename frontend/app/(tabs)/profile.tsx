@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
+import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -70,6 +71,26 @@ export default function ProfileScreen() {
             </>
           ) : <Text style={styles.nextRank}>You have reached the apex.</Text>}
         </View>
+
+        <Pressable
+          style={styles.classTreeCard}
+          onPress={() => router.push("/class-tree")}
+          testID="profile-class-tree-link"
+        >
+          <View style={[styles.classTreeIcon, { backgroundColor: (CLASS_IDENTITIES[(player.class_tree_id as ClassId) || "medic"] || CLASS_IDENTITIES.medic).color + "22" }]}>
+            <Ionicons
+              name={(CLASS_IDENTITIES[(player.class_tree_id as ClassId) || "medic"] || CLASS_IDENTITIES.medic).icon as any}
+              size={22}
+              color={(CLASS_IDENTITIES[(player.class_tree_id as ClassId) || "medic"] || CLASS_IDENTITIES.medic).color}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>CLASS TREE</Text>
+            <Text style={styles.rankName}>{(CLASS_IDENTITIES[(player.class_tree_id as ClassId) || "medic"] || CLASS_IDENTITIES.medic).name}</Text>
+            <Text style={styles.nextRank}>View abilities & switch class</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
 
         <View style={styles.classCard} testID="profile-player-class">
           <Text style={styles.label}>PLAYER CLASS</Text>
@@ -206,6 +227,12 @@ const styles = StyleSheet.create({
   bar: { height: 6, backgroundColor: COLORS.surfaceTertiary, borderRadius: 3, overflow: "hidden", marginTop: 8 },
   barFill: { height: "100%", backgroundColor: COLORS.brand },
   xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 4 },
+  classTreeCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  classTreeIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   classCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 4 },
   abilityRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
   abilityLevel: { color: COLORS.brand, fontSize: 11, fontWeight: "700", width: 40 },

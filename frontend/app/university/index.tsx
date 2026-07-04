@@ -53,6 +53,13 @@ const MENU: { id: string; title: string; desc: string; icon: string; route?: str
     icon: "library",
     route: "/(tabs)/codex",
   },
+  {
+    id: "class-tree",
+    title: "Class Tree",
+    desc: "Pick a Player Class and unlock its ability tree as you level up.",
+    icon: "git-network",
+    route: "/class-tree",
+  },
 ];
 
 export default function UniversityHubScreen() {

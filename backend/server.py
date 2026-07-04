@@ -87,6 +87,8 @@ class Player(BaseModel):
     rank_index: int = 0
     xp: int = 0
     player_level: int = 1
+    class_tree_id: Optional[str] = None
+    class_progress: Dict[str, List[int]] = Field(default_factory=dict)
     mastery: MasteryStats = Field(default_factory=MasteryStats)
     codex_unlocked: List[str] = Field(default_factory=list)
     heroes_owned: List[str] = Field(default_factory=list)
@@ -138,6 +140,8 @@ class PlayerUpdate(BaseModel):
     rank_index: Optional[int] = None
     xp: Optional[int] = None
     player_level: Optional[int] = None
+    class_tree_id: Optional[str] = None
+    class_progress: Optional[Dict[str, List[int]]] = None
     mastery: Optional[MasteryStats] = None
     codex_unlocked: Optional[List[str]] = None
     heroes_owned: Optional[List[str]] = None
