@@ -3,6 +3,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const PREVIEW_ITEMS: { icon: string; title: string; desc: string }[] = [
@@ -34,8 +36,10 @@ const PREVIEW_ITEMS: { icon: string; title: string; desc: string }[] = [
 ];
 
 export default function FactionScreen() {
+  const { player } = usePlayer();
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {player && <PlayerHeader player={player} />}
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
         <View style={styles.heroIcon}>

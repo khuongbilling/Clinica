@@ -5,6 +5,7 @@ import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
@@ -52,6 +53,7 @@ export default function KingdomScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <PlayerHeader player={player} />
       <View style={styles.topBar}>
         <View>
           <Text style={styles.kicker}>REALM OF CLINICA</Text>

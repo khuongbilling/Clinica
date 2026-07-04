@@ -11,12 +11,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
-import { StaminaPill } from "@/src/components/StaminaPill";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { FEATURE_UNLOCKS, isFeatureUnlocked, nextLockedFeature, playerLevelFromXp } from "@/src/game/progression";
-import { useLiveStamina } from "@/src/game/stamina";
+import { FEATURE_UNLOCKS, isFeatureUnlocked, playerLevelFromXp } from "@/src/game/progression";
 
 const INTRO_KEY = "clinica.intro.seen";
 
@@ -47,7 +46,6 @@ export default function RunHome() {
   const { logEvent } = useTestSession();
   const [showIntro, setShowIntro] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const { stamina: staminaNow, max: staminaMax } = useLiveStamina(player);
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
@@ -81,13 +79,10 @@ export default function RunHome() {
                   (nextRank.xpRequired - RANKS[player.rank_index].xpRequired))
     : 1;
 
-  // Player Level panel — account-wide progression, independent of Hero
-  // Level/Rank shown below. See progression.ts playerLevelFromXp.
+  // Player Level (account-wide progression, independent of Hero Level/Rank
+  // shown below) is now surfaced by the global PlayerHeader. See
+  // progression.ts playerLevelFromXp.
   const playerLevelInfo = playerLevelFromXp(player.xp);
-  const playerLevelProgress = playerLevelInfo.atCap
-    ? 1
-    : Math.min(1, playerLevelInfo.xpIntoLevel / playerLevelInfo.xpForNextLevel);
-  const nextUnlock = nextLockedFeature(playerLevelInfo.level);
 
   const leadHeroId   = player.active_team?.[0] ?? "novice_guardian";
   const leadHero     = HEROES.find((h) => h.id === leadHeroId);
@@ -105,60 +100,20 @@ export default function RunHome() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
 
-      {/* ── HEADER — tap player identity to open Profile/Settings ── */}
-      <View style={styles.header}>
-        <Pressable
-          style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm }}
-          onPress={() => router.push("/(tabs)/profile")}
-          hitSlop={6}
-          testID="home-profile-open"
-        >
-          <View style={[styles.headerBtn, apt && { borderColor: apt.color + "60" }]}>
-            <Ionicons name={(apt?.icon as any) || "person-circle"} size={18} color={apt?.color || COLORS.onSurfaceSecondary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
-            <Text style={styles.playerName}>{player.name}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
-        </Pressable>
-        <StaminaPill player={player} />
+      {/* ── TUTORIAL SHORTCUT — kept above the global header so it stays reachable ── */}
+      <View style={styles.tutorialRow}>
         <Pressable
           style={styles.headerBtn}
           onPress={() => router.push("/tutorial")}
           hitSlop={10}
           testID="run-tutorial-button"
         >
-          <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
+          <Ionicons name="help-circle-outline" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
       </View>
 
-      {/* ── PLAYER LEVEL PANEL — account-wide, distinct from Hero Rank/XP below; tap opens Profile ── */}
-      <Pressable
-        style={styles.playerLevelPanel}
-        onPress={() => router.push("/(tabs)/profile")}
-        testID="home-player-level-panel"
-      >
-        <View style={styles.playerLevelBadge}>
-          <Text style={styles.playerLevelBadgeTxt}>{playerLevelInfo.level}</Text>
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={styles.playerLevelLabel}>PLAYER LEVEL</Text>
-            <Text style={styles.playerLevelSub}>
-              {staminaNow}/{staminaMax} stamina
-            </Text>
-          </View>
-          <View style={styles.playerLevelBarBg}>
-            <View style={[styles.playerLevelBarFill, { width: `${Math.round(playerLevelProgress * 100)}%` as any }]} />
-          </View>
-          {nextUnlock && (
-            <Text style={styles.playerLevelUnlockTxt}>
-              Next: {nextUnlock.label} at Lv.{nextUnlock.level}
-            </Text>
-          )}
-        </View>
-      </Pressable>
+      {/* ── GLOBAL PLAYER HEADER — identity/stamina/currencies/EXP (Push 3.5) ── */}
+      <PlayerHeader player={player} />
 
       {/* ── SCENE LOCATION LABEL ── */}
       <View style={styles.sceneLabelRow}>
@@ -419,40 +374,17 @@ function FeatureButton({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
 
-  /* Header */
-  header: {
-    flexDirection: "row", alignItems: "center",
+  /* Tutorial shortcut row (identity/stamina/currencies now live in PlayerHeader) */
+  tutorialRow: {
+    flexDirection: "row", justifyContent: "flex-end",
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xs, paddingBottom: SPACING.xs,
-    gap: SPACING.sm,
+    paddingTop: SPACING.xs,
   },
-  rankKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  playerName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "300" },
   headerBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
     alignItems: "center", justifyContent: "center",
   },
-
-  /* Player Level panel — account-wide progression card */
-  playerLevelPanel: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    marginHorizontal: SPACING.lg, marginBottom: SPACING.xs,
-    backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
-    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm,
-  },
-  playerLevelBadge: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: COLORS.brand + "22", borderWidth: 1.5, borderColor: COLORS.brand,
-    alignItems: "center", justifyContent: "center",
-  },
-  playerLevelBadgeTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "800" },
-  playerLevelLabel: { color: COLORS.onSurfaceSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 },
-  playerLevelSub:   { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "600" },
-  playerLevelBarBg: { height: 5, borderRadius: 3, backgroundColor: COLORS.border, overflow: "hidden" },
-  playerLevelBarFill: { height: "100%", borderRadius: 3, backgroundColor: COLORS.brand },
-  playerLevelUnlockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontStyle: "italic" },
 
   lockedFeatureBtn: { opacity: 0.55 },
 

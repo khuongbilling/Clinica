@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
 import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
@@ -72,6 +73,7 @@ export default function Shop() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <PlayerHeader player={player} />
       {/* Header */}
       <View style={styles.header}>
         <Pressable
@@ -85,10 +87,6 @@ export default function Shop() {
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Apothecary Market</Text>
           <Text style={styles.subtitle}>Spend your Crowns on supplies, boosts & regalia</Text>
-        </View>
-        <View style={styles.crownsPill} testID="shop-crowns">
-          <Ionicons name="diamond" size={14} color={COLORS.brand} />
-          <Text style={styles.crownsTxt}>{crowns}</Text>
         </View>
         <Pressable
           onPress={() => router.push("/economy")}

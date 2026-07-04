@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import { rarityTierLabel } from "@/src/game/university";
@@ -59,6 +60,7 @@ export default function HeroesScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
+      <PlayerHeader player={player} />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>

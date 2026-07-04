@@ -50,6 +50,7 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 };
 
 import { usePlayer } from "@/src/game/store";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -3543,6 +3544,7 @@ function LobbyScreen({
   loadout: string[];
   onToggleUnit: (id: string) => void;
 }) {
+  const { player } = usePlayer();
   const [caseVisible,   setCaseVisible]   = useState(false);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [mapExpanded,   setMapExpanded]   = useState(false);
@@ -3556,6 +3558,7 @@ function LobbyScreen({
         style={StyleSheet.absoluteFillObject} resizeMode="cover" />
       <LinearGradient colors={["#00000000", "#00000000", "#010610cc", "#010610f0"]}
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      {player && <PlayerHeader player={player} compact />}
 
       {/* ── CASE INTRO MODAL ─────────────────────────────────────────── */}
       {caseVisible && (

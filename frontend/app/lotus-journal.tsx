@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { DAILY_GEM_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -44,6 +45,7 @@ export default function LotusJournalPage() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+      <PlayerHeader player={player} />
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />

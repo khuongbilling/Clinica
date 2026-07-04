@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const MENU: { id: string; title: string; desc: string; icon: string; route?: string }[] = [
@@ -60,6 +61,7 @@ export default function UniversityHubScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <PlayerHeader player={player} />
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
         <Pressable style={styles.backBtn} onPress={() => router.back()} testID="university-back">

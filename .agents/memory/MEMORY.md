@@ -22,3 +22,4 @@
 - [Expo Router hidden tabs pattern](expo-router-hidden-tabs.md) — use `Tabs.Screen options={{href:null}}` to hide a tab but keep its route alive; re-export a top-level screen into `(tabs)/` to promote it without duplicating logic.
 - [Clinica economy foundation](clinica-economy-foundation.md) — economy.ts is single source of truth for currencies/pricing/marketplace/guardrails; UI screens render from it, stays display-only until real payments requested.
 - [Clinica Realm map foundation](clinica-realm-map-foundation.md) — Atrium level gates all Realm buildings incl. only nav path to University; default Atrium=3 everywhere (defaultPlayer/backend/normalize) or existing routes silently lock.
+- [Clinica global PlayerHeader](clinica-player-header.md) — shared hub header (identity/stamina/4 wallet currencies/EXP bar), scoped to non-battle hub screens only, never Profile; non-linear Player EXP curve.

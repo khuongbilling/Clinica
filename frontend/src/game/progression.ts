@@ -16,8 +16,11 @@
 // ---------- Player Level curve ----------
 // Cost (in Player EXP) to go from level L to L+1. Same currency as the
 // existing `xp`/RANKS field — RANKS stay as flavor text layered on top.
+// Scaling curve (Push 3.5): early levels stay fast, mid levels slow down,
+// later levels require meaningful progression. Replaces the old flat
+// `60 + (level-1)*15` linear step.
 export function playerXpCostForLevel(level: number): number {
-  return 60 + Math.max(0, level - 1) * 15;
+  return Math.round(100 * Math.pow(level, 1.35) + 50 * level);
 }
 
 export const PLAYER_LEVEL_CAP = 60;
