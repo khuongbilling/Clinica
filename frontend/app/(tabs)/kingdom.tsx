@@ -13,11 +13,13 @@ import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import {
   ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS, REALM_PLOTS, DECORATIONS,
-  REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE,
+  REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE, REALM_LOOP_NOTE,
+  REALM_HARMONY_NOTE, CARE_PATHWAYS_NOTE, CARE_PATHWAYS_EXAMPLES, DISTRICT_IDENTITY_NOTE,
+  HERO_RESIDENCY_NOTE, SANCTUARY_REQUESTS_NOTE, SANCTUARY_REQUESTS_EXAMPLES, REALM_SKIN_EXAMPLES,
   getAtriumLevel, isBuildingUnlocked, RealmBuilding, RealmPlot, RealmDecoration,
   RealmUnlockContext, buildDefaultRealmLayout, isPlotUnlocked, plotUnlockLabel,
   getOccupantBuildingId, getBuildingById, getDecorationById, compatiblePlotsForBuilding,
-  isDecorationAllowedOnPlot, PlotSize,
+  isDecorationAllowedOnPlot, isBuildingAllowedOnPlot, PlotSize, getPlotTypeMeta, AssignmentSlotType,
 } from "@/src/game/realm";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -53,6 +55,7 @@ export default function KingdomScreen() {
 
   const [mode, setMode] = useState<Mode>("view");
   const [buildTargetPlot, setBuildTargetPlot] = useState<RealmPlot | null>(null);
+  const [buildBuildingTargetPlot, setBuildBuildingTargetPlot] = useState<RealmPlot | null>(null);
   const [moveBuildingId, setMoveBuildingId] = useState<string | null>(null);
   const [moveTargetPlot, setMoveTargetPlot] = useState<RealmPlot | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
@@ -94,11 +97,20 @@ export default function KingdomScreen() {
     : [];
   const compatiblePlotIds = new Set(compatiblePlots.map((p) => p.id));
 
+  function availableBuildingsForPlot(plot: RealmPlot): RealmBuilding[] {
+    return REALM_BUILDINGS.filter((b) =>
+      isBuildingAllowedOnPlot(b, plot) &&
+      isBuildingUnlocked(b, atriumLevel) &&
+      !layout[b.id]
+    );
+  }
+
   function exitModes() {
     setMode("view");
     setMoveBuildingId(null);
     setMoveTargetPlot(null);
     setBuildTargetPlot(null);
+    setBuildBuildingTargetPlot(null);
   }
 
   function toggleBuildMode() {
@@ -107,7 +119,7 @@ export default function KingdomScreen() {
     } else {
       setMode("build");
       setMoveBuildingId(null);
-      setBanner("Build Mode: tap a glowing plot to place a decoration.");
+      setBanner("Build Sanctuary: tap a glowing plot to construct a building or place a decoration.");
     }
   }
 
@@ -150,11 +162,16 @@ export default function KingdomScreen() {
         setBanner("This plot is already occupied.");
         return;
       }
-      if (plot.allowedDecorationIds.length === 0) {
-        setBanner("This plot doesn't accept decorations.");
+      const buildableHere = availableBuildingsForPlot(plot);
+      if (buildableHere.length > 0) {
+        setBuildBuildingTargetPlot(plot);
         return;
       }
-      setBuildTargetPlot(plot);
+      if (plot.allowedDecorationIds.length > 0) {
+        setBuildTargetPlot(plot);
+        return;
+      }
+      setBanner("Nothing available to build here yet.");
       return;
     }
 
@@ -172,6 +189,14 @@ export default function KingdomScreen() {
     exitModes();
   }
 
+  async function placeBuilding(building: RealmBuilding) {
+    if (!buildBuildingTargetPlot) return;
+    await setRealmLayout({ [building.id]: buildBuildingTargetPlot.id });
+    setBanner(`${building.name} constructed.`);
+    setBuildBuildingTargetPlot(null);
+    exitModes();
+  }
+
   async function removeDecoration(plotId: string) {
     await setRealmLayout({}, { [plotId]: null });
     setBanner("Decoration removed.");
@@ -183,7 +208,7 @@ export default function KingdomScreen() {
       <PlayerHeader player={player} />
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.kicker}>REALM OF CLINICA</Text>
+          <Text style={styles.kicker}>REALM OF CLINICA · GRAND WARD SANCTUARY</Text>
           <Text style={styles.title}>Grand Ward Atrium · Lv.{atriumLevel}</Text>
         </View>
         <View style={styles.topBarActions}>
@@ -194,7 +219,7 @@ export default function KingdomScreen() {
             hitSlop={6}
           >
             <Ionicons name="hammer-outline" size={16} color={mode === "build" ? COLORS.onBrand : COLORS.brand} />
-            <Text style={[styles.modeBtnTxt, mode === "build" && styles.modeBtnTxtActive]}>Build</Text>
+            <Text style={[styles.modeBtnTxt, mode === "build" && styles.modeBtnTxtActive]}>Build Sanctuary</Text>
           </Pressable>
           {mode !== "view" && (
             <Pressable style={styles.cancelBtn} onPress={exitModes} testID="realm-mode-cancel">
@@ -236,7 +261,8 @@ export default function KingdomScreen() {
               const isMoveSource = mode === "move" && occupantBuildingId === moveBuildingId;
               const isMoveTarget = mode === "move" && compatiblePlotIds.has(plot.id);
               const isMoveDimmed = mode === "move" && !isMoveTarget && !isMoveSource;
-              const isBuildTarget = mode === "build" && unlocked && !occupantBuilding && !occupantDecorationId && plot.allowedDecorationIds.length > 0;
+              const isBuildTarget = mode === "build" && unlocked && !occupantBuilding && !occupantDecorationId &&
+                (plot.allowedDecorationIds.length > 0 || availableBuildingsForPlot(plot).length > 0);
               const isBuildDimmed = mode === "build" && !isBuildTarget;
 
               return (
@@ -293,10 +319,10 @@ export default function KingdomScreen() {
         <Ionicons name="hand-left-outline" size={13} color={COLORS.onSurfaceTertiary} />
         <Text style={styles.hintTxt}>
           {mode === "build"
-            ? "Tap a glowing plot to place a decoration."
+            ? "Tap a glowing plot to construct a building or place a decoration."
             : mode === "move"
             ? "Tap a highlighted plot to relocate the building."
-            : "Pan the map and tap any plot to see details. Use Build Mode to decorate."}
+            : "Pan the map and tap any plot to see details. Use Build Sanctuary to construct and decorate."}
         </Text>
       </View>
 
@@ -348,8 +374,10 @@ export default function KingdomScreen() {
       <EmptyPlotPanel
         plot={selectedEmptyPlot}
         decor={decor}
+        availableBuildings={selectedEmptyPlot ? availableBuildingsForPlot(selectedEmptyPlot) : []}
         onClose={() => setSelectedEmptyPlot(null)}
         onBuild={(plot) => { setSelectedEmptyPlot(null); setMode("build"); setBuildTargetPlot(plot); }}
+        onBuildBuilding={(plot) => { setSelectedEmptyPlot(null); setMode("build"); setBuildBuildingTargetPlot(plot); }}
         onRemoveDecoration={removeDecoration}
       />
 
@@ -359,6 +387,13 @@ export default function KingdomScreen() {
         plot={buildTargetPlot}
         onClose={() => { setBuildTargetPlot(null); }}
         onPick={placeDecoration}
+      />
+
+      <BuildingPickerModal
+        plot={buildBuildingTargetPlot}
+        buildings={buildBuildingTargetPlot ? availableBuildingsForPlot(buildBuildingTargetPlot) : []}
+        onClose={() => { setBuildBuildingTargetPlot(null); }}
+        onPick={placeBuilding}
       />
 
       <LegendModal visible={showLegend} onClose={() => setShowLegend(false)} />
@@ -386,6 +421,8 @@ function BuildingDetailModal({
   const req = building.requirementsForLevel(lvl);
   const district = REALM_DISTRICTS.find((d) => d.id === building.district);
   const color = DISTRICT_COLOR[district?.colorToken || "brand"];
+  const homePlot = REALM_PLOTS.find((p) => p.allowedBuildingIds.includes(building.id));
+  const plotTypeMeta = homePlot ? getPlotTypeMeta(homePlot.plotType) : undefined;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -433,18 +470,38 @@ function BuildingDetailModal({
               </>
             )}
 
-            <Text style={styles.sheetLabel}>HERO ASSIGNMENT</Text>
+            <Text style={styles.sheetLabel}>ASSIGNMENTS</Text>
             {building.heroSlots.length ? (
               building.heroSlots.map((slot) => (
                 <View key={slot.role} style={styles.slotRow}>
-                  <Ionicons name="person-add-outline" size={14} color={COLORS.brand} />
-                  <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>{slot.role}</Text> — {slot.flavor}</Text>
+                  <Ionicons
+                    name={(slot.slotType === "trainee" ? "school-outline" : slot.slotType === "mentor" ? "ribbon-outline" : "person-add-outline") as any}
+                    size={14}
+                    color={COLORS.brand}
+                  />
+                  <Text style={styles.slotTxt}>
+                    <Text style={{ fontWeight: "700" }}>{slot.role}</Text>
+                    {slot.slotType ? ` (${slot.slotType})` : ""} — {slot.flavor}
+                  </Text>
                 </View>
               ))
             ) : (
-              <Text style={styles.sheetBody}>Hero Assignment Coming Soon.</Text>
+              <Text style={styles.sheetBody}>Assignments Coming Soon.</Text>
             )}
             <Text style={styles.sheetFootnote}>{"\n" + REALM_HERO_ASSIGNMENT_NOTE}</Text>
+
+            {plotTypeMeta && (
+              <>
+                <Text style={styles.sheetLabel}>PLOT TYPE</Text>
+                <View style={styles.slotRow}>
+                  <Ionicons name={(plotTypeMeta.icon || "help-circle-outline") as any} size={14} color={COLORS.brand} />
+                  <Text style={styles.slotTxt}>
+                    <Text style={{ fontWeight: "700" }}>{plotTypeMeta.name}</Text>
+                    {" — "}{plotTypeMeta.description}
+                  </Text>
+                </View>
+              </>
+            )}
 
             <Text style={styles.sheetLabel}>PLOT</Text>
             {building.movable ? (
@@ -509,12 +566,14 @@ function BuildingDetailModal({
 }
 
 function EmptyPlotPanel({
-  plot, decor, onClose, onBuild, onRemoveDecoration,
+  plot, decor, availableBuildings, onClose, onBuild, onBuildBuilding, onRemoveDecoration,
 }: {
   plot: RealmPlot | null;
   decor: Record<string, string>;
+  availableBuildings: RealmBuilding[];
   onClose: () => void;
   onBuild: (plot: RealmPlot) => void;
+  onBuildBuilding: (plot: RealmPlot) => void;
   onRemoveDecoration: (plotId: string) => void;
 }) {
   if (!plot) return null;
@@ -523,6 +582,8 @@ function EmptyPlotPanel({
   const decorationId = decor[plot.id];
   const decoration = decorationId ? getDecorationById(decorationId) : undefined;
   const canDecorate = plot.allowedDecorationIds.length > 0;
+  const canConstruct = availableBuildings.length > 0;
+  const plotTypeMeta = getPlotTypeMeta(plot.plotType);
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -535,7 +596,7 @@ function EmptyPlotPanel({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.sheetName}>{plot.name}</Text>
-              <Text style={styles.sheetDistrict}>{district?.name} · {plot.size} plot</Text>
+              <Text style={styles.sheetDistrict}>{district?.name} · {plotTypeMeta.name} · {plot.size} plot</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
@@ -550,17 +611,82 @@ function EmptyPlotPanel({
                 <Text style={styles.moveBtnTxt}>Remove Decoration</Text>
               </Pressable>
             </>
+          ) : canConstruct ? (
+            <>
+              <Text style={styles.sheetBody}>{plotTypeMeta.description}</Text>
+              <Pressable style={[styles.linkBtn, { borderColor: color, marginTop: SPACING.md }]} onPress={() => onBuildBuilding(plot)} testID="realm-build-here">
+                <Text style={[styles.linkBtnTxt, { color }]}>Build Sanctuary Here</Text>
+                <Ionicons name="hammer-outline" size={16} color={color} />
+              </Pressable>
+            </>
           ) : canDecorate ? (
             <>
               <Text style={styles.sheetBody}>This plot is empty and ready to decorate. Decorations are purely cosmetic.</Text>
-              <Pressable style={[styles.linkBtn, { borderColor: color, marginTop: SPACING.md }]} onPress={() => onBuild(plot)} testID="realm-build-here">
-                <Text style={[styles.linkBtnTxt, { color }]}>Build Here</Text>
-                <Ionicons name="hammer-outline" size={16} color={color} />
+              <Pressable style={[styles.linkBtn, { borderColor: color, marginTop: SPACING.md }]} onPress={() => onBuild(plot)} testID="realm-decorate-here">
+                <Text style={[styles.linkBtnTxt, { color }]}>Decorate Here</Text>
+                <Ionicons name="color-palette-outline" size={16} color={color} />
               </Pressable>
             </>
           ) : (
             <Text style={styles.sheetBody}>This plot is reserved for a future building and can't be decorated yet.</Text>
           )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function BuildingPickerModal({
+  plot, buildings, onClose, onPick,
+}: {
+  plot: RealmPlot | null;
+  buildings: RealmBuilding[];
+  onClose: () => void;
+  onPick: (building: RealmBuilding) => void;
+}) {
+  if (!plot) return null;
+  const district = REALM_DISTRICTS.find((d) => d.id === plot.district);
+  const color = DISTRICT_COLOR[district?.colorToken || "brand"];
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-building-picker-sheet">
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <View style={[styles.sheetIcon, { borderColor: color, backgroundColor: color + "1f" }]}>
+              <Ionicons name="hammer-outline" size={26} color={color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetName}>Build on {plot.name}</Text>
+              <Text style={styles.sheetDistrict}>{district?.name} · {plot.size} plot</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+            {buildings.length === 0 ? (
+              <Text style={styles.sheetBody}>No buildings are available to construct here right now.</Text>
+            ) : (
+              buildings.map((b) => (
+                <Pressable
+                  key={b.id}
+                  style={styles.slotRow}
+                  onPress={() => onPick(b)}
+                  testID={`realm-build-pick-${b.id}`}
+                >
+                  <Ionicons name={b.icon as any} size={18} color={color} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.slotTxt, { fontWeight: "700" }]}>{b.name}</Text>
+                    <Text style={styles.sheetFootnote}>{b.purpose}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+                </Pressable>
+              ))
+            )}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -710,15 +836,39 @@ function LegendModal({ visible, onClose }: { visible: boolean; onClose: () => vo
           </View>
           <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
             <Text style={styles.sheetBody}>
-              The Realm is your healing kingdom. The Grand Ward Atrium is the town hall — its
-              level unlocks every other district, building by building. Pan the map to explore, use
-              Build Mode to place decorations on empty plots, and use Move on a building's detail
-              panel to relocate it to a compatible plot.
+              The Grand Ward Sanctuary is your healing realm — a place to build, heal, research,
+              and grow, not to raid or defend against other players. The Grand Ward Atrium is the
+              town hall — its level unlocks every other district, building by building. Pan the map
+              to explore, use Build Sanctuary to construct buildings and place decorations on empty
+              plots, and use Move on a building's detail panel to relocate it to a compatible plot.
             </Text>
+            <Text style={styles.sheetLabel}>THE SANCTUARY LOOP</Text>
+            <Text style={styles.sheetBody}>{REALM_LOOP_NOTE}</Text>
             <Text style={styles.sheetLabel}>ATRIUM PROGRESSION</Text>
             {ATRIUM_UNLOCKS.map((u) => (
               <Text key={u.level} style={styles.sheetBody}>Lv.{u.level}: {u.note}</Text>
             ))}
+            <Text style={styles.sheetLabel}>REALM SYSTEMS</Text>
+            <View style={styles.slotRow}>
+              <Ionicons name="git-network-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>District Identity</Text> — {DISTRICT_IDENTITY_NOTE}</Text>
+            </View>
+            <View style={styles.slotRow}>
+              <Ionicons name="home-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>Hero Residency</Text> — {HERO_RESIDENCY_NOTE}</Text>
+            </View>
+            <View style={styles.slotRow}>
+              <Ionicons name="medkit-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>Care Pathways</Text> — {CARE_PATHWAYS_NOTE}</Text>
+            </View>
+            <View style={styles.slotRow}>
+              <Ionicons name="chatbubbles-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>Sanctuary Requests</Text> — {SANCTUARY_REQUESTS_NOTE}</Text>
+            </View>
+            <View style={styles.slotRow}>
+              <Ionicons name="sparkles-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>Realm Harmony</Text> — {REALM_HARMONY_NOTE}</Text>
+            </View>
             <Text style={styles.sheetLabel}>CUSTOMIZATION</Text>
             <Text style={styles.sheetBody}>{REALM_CUSTOMIZATION_NOTE}</Text>
           </ScrollView>
@@ -764,6 +914,13 @@ function CustomizeModal({ visible, onClose }: { visible: boolean; onClose: () =>
               <View key={c.label} style={styles.slotRow}>
                 <Ionicons name={c.icon as any} size={14} color={COLORS.brand} />
                 <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>{c.label}</Text> — {c.note}</Text>
+              </View>
+            ))}
+            <Text style={styles.sheetLabel}>SAMPLE REALM SKINS</Text>
+            {REALM_SKIN_EXAMPLES.map((skin) => (
+              <View key={skin.name} style={styles.slotRow}>
+                <Ionicons name="color-wand-outline" size={14} color={COLORS.brand} />
+                <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>{skin.name}</Text> — applies to {skin.appliesTo}</Text>
               </View>
             ))}
             <View style={styles.comingSoonBox}>

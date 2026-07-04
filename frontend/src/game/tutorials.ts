@@ -85,16 +85,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   firstKingdom: [
     {
       id: "kingdom_overview",
-      title: "Your Kingdom",
-      body: "Welcome to the Kingdom of Clinica. Each battle you win restores a corrupted system and earns Codex Shards. The kingdom grows as your clinical knowledge expands.",
+      title: "Your Sanctuary",
+      body: "Welcome to the Grand Ward Sanctuary. This is your realm to build, heal, and grow — not to attack or defend against anyone. Each battle you win earns Codex Shards you can spend on new buildings and upgrades here.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
     },
     {
       id: "kingdom_buildings",
-      title: "Kingdom Buildings",
-      body: "Buildings unlock new abilities. The Library of Knowledge holds your Codex entries. The Hall of Heroes manages your team. The Apothecary stocks your items.",
+      title: "Build Sanctuary",
+      body: "Most plots start empty — use Build Sanctuary to construct buildings as you unlock them. The Research Library holds your Codex entries. The Training Hall manages your team. The Apothecary stocks your items.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
