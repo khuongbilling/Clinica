@@ -36,6 +36,13 @@ const MENU: { id: string; title: string; desc: string; icon: string; route?: str
     icon: "business",
     route: "/university/schools",
   },
+  {
+    id: "lessons",
+    title: "Lessons & Simulations",
+    desc: "Quick lessons, quizzes, and simulation cases that translate real health concepts into battle skills.",
+    icon: "book",
+    route: "/university/lessons",
+  },
 ];
 
 export default function UniversityHubScreen() {

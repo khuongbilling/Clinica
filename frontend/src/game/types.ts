@@ -154,6 +154,10 @@ export interface PlayerState {
   class_trainees?: Record<string, number>;
   // Clinica University — global progression currency
   university_credits?: number;
+  // Clinica University — Lessons & Simulations MVP
+  lessons_completed?: string[];
+  simulations_completed?: string[];
+  badge_progress?: Record<string, number>;
   region_progress?: Record<string, number>;
   stamina?: number;
   stamina_updated_at?: string;

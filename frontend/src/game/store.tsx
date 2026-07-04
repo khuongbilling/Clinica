@@ -38,6 +38,14 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.university_credits == null) {
     out = { ...out, university_credits: 0 };
   }
+  if (!out.lessons_completed || !out.simulations_completed || !out.badge_progress) {
+    out = {
+      ...out,
+      lessons_completed: out.lessons_completed || [],
+      simulations_completed: out.simulations_completed || [],
+      badge_progress: out.badge_progress || {},
+    };
+  }
   if (out.stamina == null || !out.stamina_updated_at) {
     out = {
       ...out,
@@ -111,6 +119,8 @@ type Ctx = {
   trainHero: (heroId: string) => Promise<{ ok: boolean; message: string }>;
   toggleHeroLock: (heroId: string) => Promise<void>;
   toggleHeroFavorite: (heroId: string) => Promise<void>;
+  completeLesson: (lessonId: string) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
+  completeSimulation: (simId: string, wasCorrect: boolean) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
   resetPlayer: () => Promise<void>;
@@ -698,6 +708,40 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: 'Loadout saved.' };
   }, [updateState]);
 
+  const completeLesson = useCallback(async (lessonId: string) => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    const { getLesson, computeLessonCompletion } = await import('./lessons');
+    const lesson = getLesson(lessonId);
+    if (!lesson) return { ok: false, message: 'Unknown lesson.' };
+    const result = computeLessonCompletion(lesson, player);
+    const completed = player.lessons_completed || [];
+    const nextCompleted = result.isFirstCompletion ? [...completed, lessonId] : completed;
+    await updateState({
+      ...player,
+      lessons_completed: nextCompleted,
+      university_credits: (player.university_credits || 0) + result.creditsEarned,
+      badge_progress: { ...(player.badge_progress || {}), [result.badgeId]: result.badgeProgress },
+    });
+    return { ok: true, message: `+${result.creditsEarned} University Credits!`, result };
+  }, [player, updateState]);
+
+  const completeSimulation = useCallback(async (simId: string, wasCorrect: boolean) => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    const { getSimulation, computeSimulationCompletion } = await import('./lessons');
+    const sim = getSimulation(simId);
+    if (!sim) return { ok: false, message: 'Unknown simulation.' };
+    const result = computeSimulationCompletion(sim, player, wasCorrect);
+    const completed = player.simulations_completed || [];
+    const nextCompleted = result.isFirstCompletion ? [...completed, simId] : completed;
+    await updateState({
+      ...player,
+      simulations_completed: nextCompleted,
+      university_credits: (player.university_credits || 0) + result.creditsEarned,
+      badge_progress: { ...(player.badge_progress || {}), [result.badgeId]: result.badgeProgress },
+    });
+    return { ok: true, message: `+${result.creditsEarned} University Credits!`, result };
+  }, [player, updateState]);
+
   const resetPlayer = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setPlayer(null);
@@ -705,8 +749,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
