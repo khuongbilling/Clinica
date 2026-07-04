@@ -25,6 +25,16 @@ export type MaterialCategory =
 export type MaterialKind = "power" | "cosmetic" | "wellness" | "learning" | "faction";
 export type MaterialStatus = "active" | "future";
 
+// Step 5 — safe Clinical Supply use cases. Every clinical_supplies material
+// should map to one of these; never "unlimited boss skip" or "instant max".
+export type SupplyUseCase =
+  | "temp_buff" // small temporary battle buff
+  | "one_battle_support" // one-battle support item
+  | "crafting_ingredient" // used to craft other items/equipment
+  | "realm_material" // Realm building upgrade material
+  | "event_resource" // limited-time event shortage resource
+  | "equipment_component"; // equipment upgrade component
+
 export interface MaterialDef {
   id: string;
   name: string;
@@ -38,7 +48,19 @@ export interface MaterialDef {
   status: MaterialStatus;
   note?: string;
   examples?: string[];
+  // Clinical Supplies foundation (Push 5) — only set on clinical_supplies items.
+  useCases?: SupplyUseCase[];
+  safetyNote?: string;
 }
+
+export const SUPPLY_USE_CASE_META: Record<SupplyUseCase, string> = {
+  temp_buff: "Small temporary buff",
+  one_battle_support: "One-battle support item",
+  crafting_ingredient: "Crafting ingredient",
+  realm_material: "Realm upgrade material",
+  event_resource: "Event shortage resource",
+  equipment_component: "Equipment upgrade component",
+};
 
 export const MATERIAL_CATEGORY_META: Record<MaterialCategory, { label: string; icon: string; blurb: string }> = {
   core_currency: { label: "Core Currency", icon: "diamond-outline", blurb: "The main currencies that flow through every mode." },
@@ -218,30 +240,57 @@ const REALM_MATERIALS: MaterialDef[] = [
 // -----------------------------------------------------------------------------
 const CLINICAL_SUPPLIES_MATERIALS: MaterialDef[] = [
   { id: "oxygen_core", name: "Oxygen Core", icon: "pulse", category: "clinical_supplies", rarity: "uncommon", kind: "power",
-    source: "Apothecary, Ward Shift, Hospital Ward, events, Shop.",
-    usedFor: "Battle consumables, crafting, hero equipment, outbreak preparation, Ward Shift support items.",
-    relatedMode: "Apothecary / Hospital Ward", status: "future" },
+    source: "Apothecary, Ward Shift airway chapters, Hospital Ward, events.",
+    usedFor: "Airway/O2 equipment upgrades and respiratory support supplies.",
+    relatedMode: "Apothecary / Hospital Ward", status: "future",
+    useCases: ["equipment_component", "crafting_ingredient"],
+    safetyNote: "Upgrade component only — never an unlimited paid resource or an instant-max shortcut." },
   { id: "sterile_kit_supply", name: "Sterile Kit", icon: "bandage", category: "clinical_supplies", rarity: "common", kind: "power",
-    source: "Apothecary, Ward Shift, Hospital Ward, Shop.",
-    usedFor: "Battle consumables and outbreak preparation.", relatedMode: "Apothecary / Hospital Ward", status: "future" },
+    source: "Apothecary, Ward Shift, Hospital Ward.",
+    usedFor: "Clinical crafting, building upgrades, and small one-battle support.",
+    relatedMode: "Apothecary / Hospital Ward", status: "future",
+    useCases: ["one_battle_support", "crafting_ingredient", "realm_material"] },
   { id: "herbal_vial", name: "Herbal Vial", icon: "flask-outline", category: "clinical_supplies", rarity: "common", kind: "power",
     source: "Apothecary, Ward Shift, events.",
-    usedFor: "Battle consumables and crafting.", relatedMode: "Apothecary", status: "future" },
+    usedFor: "Crafting ingredient for Herbal Chemist equipment and supply recipes.",
+    relatedMode: "Apothecary", status: "future",
+    useCases: ["crafting_ingredient", "equipment_component"] },
   { id: "triage_band", name: "Triage Band", icon: "bandage-outline", category: "clinical_supplies", rarity: "uncommon", kind: "power",
     source: "Ward Shift, Hospital Ward, events.",
-    usedFor: "Battle consumables and hero equipment.", relatedMode: "Hospital Ward", status: "future" },
+    usedFor: "One-battle support and hero equipment upgrade component.",
+    relatedMode: "Hospital Ward", status: "future",
+    useCases: ["one_battle_support", "equipment_component"] },
   { id: "antiseptic_charm", name: "Antiseptic Charm", icon: "shield-checkmark-outline", category: "clinical_supplies", rarity: "rare", kind: "power",
-    source: "Apothecary, events, Shop.",
-    usedFor: "Hero equipment and outbreak preparation.", relatedMode: "Apothecary", status: "future" },
+    source: "Apothecary, events.",
+    usedFor: "Hero equipment upgrade component and outbreak preparation.",
+    relatedMode: "Apothecary", status: "future",
+    useCases: ["equipment_component", "event_resource"] },
   { id: "respiratory_mist_ampoule", name: "Respiratory Mist Ampoule", icon: "cloud-outline", category: "clinical_supplies", rarity: "rare", kind: "power",
     source: "Ward Shift, Hospital Ward, events.",
-    usedFor: "Battle consumables for respiratory encounters.", relatedMode: "Hospital Ward", status: "future" },
+    usedFor: "One-battle support for respiratory encounters and Mist Caster equipment upgrades.",
+    relatedMode: "Hospital Ward", status: "future",
+    useCases: ["one_battle_support", "equipment_component"] },
   { id: "stability_salve", name: "Stability Salve", icon: "medkit-outline", category: "clinical_supplies", rarity: "uncommon", kind: "power",
-    source: "Apothecary, Ward Shift, Shop.",
-    usedFor: "Battle consumables and Ward Shift support items.", relatedMode: "Apothecary", status: "future" },
+    source: "Hospital Ward, Apothecary, Ward Shift.",
+    usedFor: "Small Stability support or gear upgrade component — not an unlimited boss skip.",
+    relatedMode: "Apothecary", status: "future",
+    useCases: ["temp_buff", "equipment_component"],
+    safetyNote: "Small, temporary Stability support only — never a permanent overpowering boost." },
   { id: "ward_infusion", name: "Ward Infusion", icon: "water-outline", category: "clinical_supplies", rarity: "epic", kind: "power",
     source: "Hospital Ward, events, boss rewards.",
-    usedFor: "Crafting and hero equipment (future).", relatedMode: "Hospital Ward", status: "future" },
+    usedFor: "Crafting ingredient and hero equipment upgrade component (future).",
+    relatedMode: "Hospital Ward", status: "future",
+    useCases: ["crafting_ingredient", "equipment_component"] },
+  { id: "cleanse_tincture", name: "Cleanse Tincture", icon: "flask", category: "clinical_supplies", rarity: "uncommon", kind: "power",
+    source: "Apothecary, Ward Shift, Herbal Chemist recipes (future).",
+    usedFor: "One-battle cleanse support and Herbal Chemist equipment crafting.",
+    relatedMode: "Apothecary", status: "future",
+    useCases: ["one_battle_support", "crafting_ingredient"] },
+  { id: "emergency_lantern_oil", name: "Emergency Lantern Oil", icon: "flame-outline", category: "clinical_supplies", rarity: "rare", kind: "power",
+    source: "Hospital Ward, event shortages, boss rewards.",
+    usedFor: "Limited event resource for emergency-response supplies and Guardian equipment components.",
+    relatedMode: "Hospital Ward", status: "future",
+    useCases: ["event_resource", "equipment_component"] },
 ];
 
 // -----------------------------------------------------------------------------

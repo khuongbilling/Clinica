@@ -25,3 +25,4 @@
 - [Clinica global PlayerHeader](clinica-player-header.md) — shared hub header (identity/stamina/4 wallet currencies/EXP bar), scoped to non-battle hub screens only, never Profile; non-linear Player EXP curve.
 - [Clinica material economy](clinica-material-economy.md) — materials.ts is single catalog for all rewards (source/usedFor/relatedMode) feeding Material Guide + RewardPreview chips; new routes need workflow restart for router.d.ts.
 - [Clinica Realm Sanctuary Builder](clinica-realm-sanctuary-builder.md) — Realm is non-combat build/heal/research base, never attack/defend/raid; new realms start empty except Atrium (`prebuilt` flag).
+- [Equipment & Clinical Supplies foundation](equipment-supplies-foundation.md) — equipment.ts is a display-only catalog (status "future", no PlayerState/combat wiring); keep it that way until a dedicated push adds real equipping.

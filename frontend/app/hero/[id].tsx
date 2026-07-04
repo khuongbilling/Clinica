@@ -27,8 +27,16 @@ import {
   traineeForRole,
 } from "@/src/game/university";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import {
+  EQUIPMENT_SLOT_META,
+  EQUIPMENT_RARITY_META,
+  ROLE_STAT_VOCABULARY,
+  ROLE_FIT_RULE,
+  equipmentForHeroRole,
+  type EquipmentSlot,
+} from "@/src/game/equipment";
 
-const TABS = ["Details", "Skills", "Upgrade", "Bond", "Lore"] as const;
+const TABS = ["Details", "Skills", "Equipment", "Upgrade", "Bond", "Lore"] as const;
 type Tab = typeof TABS[number];
 
 const { height: SCREEN_H } = Dimensions.get("window");
@@ -420,6 +428,7 @@ export default function HeroProfile() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.tabContent}>
         {activeTab === "Details"  && <DetailsTab  hero={hero} accent={accent} />}
         {activeTab === "Skills"   && <SkillsTab   hero={hero} accent={accent} />}
+        {activeTab === "Equipment" && <EquipmentTab hero={hero} accent={accent} />}
         {activeTab === "Upgrade"  && <EvolveTab hero={hero} accent={accent} isOwned={isOwned} />}
         {activeTab === "Bond"     && <PlaceholderTab label="Bond" accent={accent} icon="heart-outline"
             message="Bond stories deepen as you use this hero in shifts. Build trust to unlock hidden abilities." />}
@@ -500,6 +509,78 @@ function SkillsTab({ hero, accent }: { hero: any; accent: string }) {
           )}
         </View>
       ))}
+    </View>
+  );
+}
+
+function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
+  const items = equipmentForHeroRole(hero.role);
+  const slots: EquipmentSlot[] = ["focusTool", "wardGarment", "charm", "medicalKit", "relic"];
+  const family = items[0]?.roleFamily;
+  const statLines = family ? ROLE_STAT_VOCABULARY[family] : [];
+
+  return (
+    <View style={{ gap: SPACING.lg }}>
+      <SectionHeader title="Equipment" icon="construct-outline" accent={accent} />
+      <View style={[styles.focusBox, { borderLeftColor: accent + "60" }]}>
+        <Text style={styles.descTxt}>
+          Equipment improves this hero's role identity and is a separate progression track from
+          Level, Certification Star, and Skill Rank — those keep working exactly as before.
+        </Text>
+      </View>
+
+      {statLines.length > 0 && (
+        <View style={styles.detailSection}>
+          <Text style={styles.equipRoleLabel}>ROLE STAT FOCUS</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {statLines.map((s) => (
+              <View key={s} style={[styles.equipStatPill, { borderColor: accent + "40" }]}>
+                <Text style={[styles.equipStatPillTxt, { color: accent }]}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {slots.map((slot) => {
+        const slotMeta = EQUIPMENT_SLOT_META[slot];
+        const item = items.find((i) => i.slot === slot);
+        return (
+          <View key={slot} style={[styles.equipSlotCard, { borderColor: accent + "28" }]}>
+            <View style={styles.equipSlotHeader}>
+              <Ionicons name={slotMeta.icon as any} size={16} color={accent} />
+              <Text style={[styles.equipSlotLabel, { color: accent }]}>{slotMeta.label}</Text>
+              {!item && <Text style={styles.equipSlotEmpty}>Empty — foundation slot</Text>}
+            </View>
+            {item ? (
+              <>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <Text style={styles.equipItemName}>{item.name}</Text>
+                  <View style={[styles.equipRarityChip, { borderColor: EQUIPMENT_RARITY_META[item.rarity].color + "80" }]}>
+                    <Text style={[styles.equipRarityTxt, { color: EQUIPMENT_RARITY_META[item.rarity].color }]}>
+                      {EQUIPMENT_RARITY_META[item.rarity].label}
+                    </Text>
+                  </View>
+                  {item.status === "future" && (
+                    <View style={styles.equipFutureChip}>
+                      <Text style={styles.equipFutureTxt}>SOON</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.equipItemDesc}>{item.description}</Text>
+                <Text style={styles.equipStatLine}>{item.mainStat} · {item.secondaryTrait}</Text>
+                <Text style={styles.equipSourceLine}>Source: {item.source}</Text>
+              </>
+            ) : (
+              <Text style={styles.equipSlotBlurb}>{slotMeta.blurb}</Text>
+            )}
+          </View>
+        );
+      })}
+
+      <View style={[styles.focusBox, { borderLeftColor: accent + "40" }]}>
+        <Text style={[styles.descTxt, { fontSize: 12 }]}>{ROLE_FIT_RULE}</Text>
+      </View>
     </View>
   );
 }
@@ -871,6 +952,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5, alignSelf: "flex-start",
   },
   counterpickTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+
+  /* Equipment */
+  equipRoleLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5, color: COLORS.onSurfaceTertiary },
+  equipStatPill: {
+    borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  equipStatPillTxt: { fontSize: 10, fontWeight: "600" },
+  equipSlotCard: {
+    borderWidth: 1, borderRadius: RADIUS.md,
+    padding: SPACING.md, gap: 4,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  equipSlotHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  equipSlotLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 0.4, flex: 1 },
+  equipSlotEmpty: { fontSize: 10, color: COLORS.onSurfaceTertiary, fontStyle: "italic" },
+  equipSlotBlurb: { fontSize: 12, color: COLORS.onSurfaceTertiary, lineHeight: 17 },
+  equipItemName: { fontSize: 13, fontWeight: "700", color: COLORS.onSurface },
+  equipRarityChip: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  equipRarityTxt: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  equipFutureChip: {
+    backgroundColor: COLORS.onSurfaceTertiary + "22", borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  equipFutureTxt: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5, color: COLORS.onSurfaceTertiary },
+  equipItemDesc: { fontSize: 12, color: COLORS.onSurfaceSecondary, lineHeight: 17 },
+  equipStatLine: { fontSize: 11, fontWeight: "600", color: COLORS.onSurface },
+  equipSourceLine: { fontSize: 10, color: COLORS.onSurfaceTertiary },
 
   /* Skills */
   skillCard: {
