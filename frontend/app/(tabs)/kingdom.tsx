@@ -9,8 +9,9 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
-import { IsoGroundTile, IsoTile } from "@/src/components/realm/IsoTile";
+import { IsoTile } from "@/src/components/realm/IsoTile";
 import { IsoBuildingSprite } from "@/src/components/realm/IsoBuildingSprite";
+import { IsoTerrain } from "@/src/components/realm/IsoTerrain";
 import {
   ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS, DECORATIONS,
   REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE, REALM_LOOP_NOTE,
@@ -64,17 +65,6 @@ const PLOT_TYPE_COLOR: Record<PlotType, string> = {
   diplomacy: COLORS.storm, decoration: "#c9a06a", road: "#8a7a63", blocked: "#3a3f47",
 };
 
-// Solid diamond-tile terrain colors — face (top) + edge (beveled underside).
-// Unlike the old flat translucent overlays, these ARE the ground now, so they
-// need to read clearly as grass/dirt/water/stone/mountain at a glance.
-const TERRAIN_FACE: Record<string, string> = {
-  grass: "#3f8f5c", dirt: "#b98f5d", water: "#2f6a9c", mountain: "#565b66", stone: "#4a4e57",
-};
-const TERRAIN_EDGE: Record<string, string> = {
-  grass: "#245637", dirt: "#7a5c38", water: "#1c3f5f", mountain: "#33363d", stone: "#2c2e34",
-};
-const ROAD_FACE = "#c9a06a";
-const ROAD_EDGE = "#8a6a3f";
 
 function districtColorFor(id: string | null | undefined): string {
   if (!id) return COLORS.onSurfaceTertiary;
@@ -282,20 +272,20 @@ export default function KingdomScreen() {
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
           <View style={[styles.gridWrap, { width: GRID_W, height: GRID_H }]} testID="kingdom-map">
+            <IsoTerrain
+              cells={SORTED_CELLS}
+              canvas={ISO_CANVAS}
+              roadSet={roadSet}
+              unlocked={(cell) => isCellUnlocked(cell, atriumLevel)}
+            />
+
             {SORTED_CELLS.map((cell) => {
+              if (cell.plotType === "blocked") return null;
               const locked = cell.isExpansion && !isCellUnlocked(cell, atriumLevel);
-              const isRoad = roadSet.has(cell.id) && cell.plotType !== "blocked";
               const { x, y } = cellCenterIso(cell.row, cell.col, ISO_CANVAS);
-              const face = isRoad ? ROAD_FACE : TERRAIN_FACE[cell.terrain];
-              const edge = isRoad ? ROAD_EDGE : TERRAIN_EDGE[cell.terrain];
-              const accent = cell.plotType === "blocked" ? undefined : PLOT_TYPE_COLOR[cell.plotType] + "55";
               const deco = decor[cell.id] ? getDecorationById(decor[cell.id]) : null;
               return (
                 <View key={cell.id} style={{ position: "absolute", left: 0, top: 0 }}>
-                  <IsoGroundTile
-                    x={x} y={y} w={ISO_TILE_W} h={ISO_TILE_H}
-                    faceColor={face} edgeColor={edge} accentColor={accent} dimmed={locked}
-                  />
                   <Pressable
                     onPress={() => handleCellPress(cell)}
                     style={{
