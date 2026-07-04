@@ -59,6 +59,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.wellness) {
     out = { ...out, wellness: defaultWellnessState() };
   }
+  if (!out.cue_topic_progress) {
+    out = { ...out, cue_topic_progress: {} };
+  }
   if (out.player_level == null) {
     out = { ...out, player_level: playerLevelFromXp(out.xp || 0).level };
   }
@@ -138,6 +141,7 @@ type Ctx = {
   completeSimulation: (simId: string, wasCorrect: boolean) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
+  recordCueTopics: (topics: string[]) => Promise<void>;
   resetPlayer: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -803,10 +807,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setPlayer(null);
   }, []);
 
+  // Lightweight, additive progress hook for Clinical Cue topics answered correctly
+  // in battle. Never throws/blocks — purely a counter for future Codex/University
+  // surfacing. Safe no-op on an empty list.
+  const recordCueTopics = useCallback(async (topics: string[]) => {
+    if (!topics || topics.length === 0) return;
+    const base = playerRef.current;
+    if (!base) return;
+    const progress = { ...(base.cue_topic_progress || {}) };
+    for (const t of topics) {
+      progress[t] = (progress[t] || 0) + 1;
+    }
+    const next = { ...base, cue_topic_progress: progress };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, recordCueTopics, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

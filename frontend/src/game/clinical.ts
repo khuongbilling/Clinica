@@ -1175,70 +1175,376 @@ export interface ClinicalCueOption {
   correct: boolean;
 }
 
+export type ClinicalCueTier = 'everyday' | 'body_basics' | 'symptom_cue' | 'clinical_judgment';
+
+export const CUE_TIER_LABELS: Record<ClinicalCueTier, string> = {
+  everyday: 'Everyday Health',
+  body_basics: 'Body Basics',
+  symptom_cue: 'Symptom Cue',
+  clinical_judgment: 'Clinical Judgment',
+};
+
+export const CUE_TIER_NUMBER: Record<ClinicalCueTier, number> = {
+  everyday: 1,
+  body_basics: 2,
+  symptom_cue: 3,
+  clinical_judgment: 4,
+};
+
+export type ClinicalCueTopic =
+  | 'oxygen_breathing'
+  | 'heart_circulation'
+  | 'hydration_kidneys'
+  | 'blood_sugar_energy'
+  | 'infection_inflammation'
+  | 'brain_stress_sleep'
+  | 'medication_safety'
+  | 'assessment_reassessment'
+  | 'nutrition_wellness';
+
+export const CUE_TOPIC_LABELS: Record<ClinicalCueTopic, string> = {
+  oxygen_breathing: 'Oxygen & Breathing',
+  heart_circulation: 'Heart & Circulation',
+  hydration_kidneys: 'Hydration & Kidneys',
+  blood_sugar_energy: 'Blood Sugar & Energy',
+  infection_inflammation: 'Infection & Inflammation',
+  brain_stress_sleep: 'Brain, Stress & Sleep',
+  medication_safety: 'Medication Safety',
+  assessment_reassessment: 'Assessment & Reassessment',
+  nutrition_wellness: 'Nutrition & Wellness',
+};
+
+// Maps an enemy's elemental system to the topic most cues should lean toward
+// when that enemy is on screen, so the question feels connected to the fight.
+export const SYSTEM_TO_CUE_TOPIC: Record<string, ClinicalCueTopic> = {
+  Air: 'oxygen_breathing',
+  River: 'hydration_kidneys',
+  Energy: 'blood_sugar_energy',
+  Fire: 'infection_inflammation',
+  Storm: 'heart_circulation',
+  Mind: 'brain_stress_sleep',
+};
+
+export const CUE_SAFETY_NOTE =
+  'Clinical Cues teach general health-education concepts for the game — they are simplified for learning, are not medical advice, and should never be used to diagnose, treat, or make real-world care decisions. Always follow guidance from a qualified clinician.';
+
 export interface ClinicalCueQuestion {
   id: string;
+  tier: ClinicalCueTier;
+  topic: ClinicalCueTopic;
   prompt: string;
   options: ClinicalCueOption[];
-  rationale: string;
+  rationale: string; // "Why it matters" — plain-language explanation of the concept
+  battleTranslation: string; // how the concept maps to what's happening in the fight
+  learnerNote?: string; // optional deeper note, used for Tier 3/4 (Symptom Cue / Clinical Judgment)
+  codexEntryId?: string; // optional link into University/Codex learning entries
 }
 
 export const CLINICAL_CUES: ClinicalCueQuestion[] = [
+  // ---------------- Tier 1: Everyday Health ----------------
   {
-    id: 'cue_priority',
-    prompt: 'A patient shows a new symptom. What comes first?',
+    id: 'cue_water_thirst',
+    tier: 'everyday',
+    topic: 'hydration_kidneys',
+    prompt: 'Feeling thirsty and having darker urine are early signs your body needs...',
     options: [
-      { text: 'Assess before treating', correct: true },
-      { text: 'Treat immediately, assess later', correct: false },
-      { text: 'Wait for the doctor to arrive', correct: false },
+      { text: 'More water', correct: true },
+      { text: 'More sugar', correct: false },
+      { text: 'Less rest', correct: false },
     ],
-    rationale: 'Assessment (gathering data) always precedes intervention — you must know what you are treating.',
+    rationale: 'Thirst and darker urine are your body\u2019s everyday signals that fluid levels are running low — drinking water restores balance before things get worse.',
+    battleTranslation: 'The ward\u2019s River currents run low the same way — Hydration actions matter most when the warning signs appear early.',
+    codexEntryId: 'hydration-basics',
   },
   {
+    id: 'cue_rest_recover',
+    tier: 'everyday',
+    topic: 'nutrition_wellness',
+    prompt: 'After a long, tiring day, what helps your body recover best?',
+    options: [
+      { text: 'Rest, food, and water', correct: true },
+      { text: 'Skipping meals to save time', correct: false },
+      { text: 'Ignoring how tired you feel', correct: false },
+    ],
+    rationale: 'Rest, nutrition, and hydration are the basic building blocks the body uses to repair and recharge every day.',
+    battleTranslation: 'Stability in the ward works the same way — small, steady care keeps a patient from tipping into crisis.',
+  },
+  {
+    id: 'cue_handwashing',
+    tier: 'everyday',
+    topic: 'infection_inflammation',
+    prompt: 'What is the simplest, most effective everyday habit to prevent spreading illness?',
+    options: [
+      { text: 'Washing your hands regularly', correct: true },
+      { text: 'Avoiding all fresh air', correct: false },
+      { text: 'Only washing hands after eating', correct: false },
+    ],
+    rationale: 'Handwashing removes germs before they can spread to others or cause infection — it\u2019s one of the most effective everyday health habits there is.',
+    battleTranslation: 'Blocking the spread of corruption before it takes hold is the same idea — prevention beats a bigger fight later.',
+  },
+  {
+    id: 'cue_notice_change',
+    tier: 'everyday',
+    topic: 'assessment_reassessment',
+    prompt: 'You notice something feels different about your body today. What is the best first step?',
+    options: [
+      { text: 'Pay attention and take note of what changed', correct: true },
+      { text: 'Ignore it completely', correct: false },
+      { text: 'Assume it will fix itself with no thought', correct: false },
+    ],
+    rationale: 'Noticing changes early — before jumping to conclusions — is the first step of clinical thinking: gather information before acting.',
+    battleTranslation: 'Scouting for clues before choosing an action works the same way in the ward.',
+    codexEntryId: 'what-is-a-clinical-cue',
+  },
+  // ---------------- Tier 2: Body Basics ----------------
+  {
     id: 'cue_abc',
+    tier: 'body_basics',
+    topic: 'oxygen_breathing',
     prompt: 'Which comes first when prioritizing patient needs?',
     options: [
       { text: 'Airway', correct: true },
       { text: 'Circulation', correct: false },
       { text: 'Comfort', correct: false },
     ],
-    rationale: 'Airway, Breathing, Circulation (ABC) — airway always comes first.',
+    rationale: 'Airway, Breathing, Circulation (ABC) — without an open airway, nothing else can be treated, so airway always comes first.',
+    battleTranslation: 'Air-aligned foes threaten the airway first — clearing that threat opens the door to every other action.',
+    codexEntryId: 'oxygenation-made-simple',
+  },
+  {
+    id: 'cue_pulse_basics',
+    tier: 'body_basics',
+    topic: 'heart_circulation',
+    prompt: 'A fast, weak pulse most often signals the body is trying to compensate for...',
+    options: [
+      { text: 'Reduced circulation or blood volume', correct: true },
+      { text: 'Too much rest', correct: false },
+      { text: 'Excess hydration', correct: false },
+    ],
+    rationale: 'When circulation drops, the heart beats faster to try to keep enough blood moving — a fast, weak pulse is an early compensation sign.',
+    battleTranslation: 'Storm-aligned corruption strains circulation the same way, and needs stabilizing before it worsens.',
+  },
+  {
+    id: 'cue_blood_sugar_basics',
+    tier: 'body_basics',
+    topic: 'blood_sugar_energy',
+    prompt: 'Shakiness, sudden fatigue, and confusion can be everyday signs of...',
+    options: [
+      { text: 'Low blood sugar', correct: true },
+      { text: 'Too much sleep', correct: false },
+      { text: 'Perfect hydration', correct: false },
+    ],
+    rationale: 'The brain and muscles run on blood sugar for fuel — when it drops too low, shakiness, fatigue, and confusion are the body\u2019s warning signs.',
+    battleTranslation: 'Energy-aligned foes drain the ward\u2019s reserves in a similar way — the pattern is the same, just at ward-scale.',
   },
   {
     id: 'cue_rebound',
+    tier: 'body_basics',
+    topic: 'assessment_reassessment',
     prompt: 'Corruption is dropping fast without reassessment. What is the risk?',
     options: [
       { text: 'A rebound worsening if the cause is not confirmed', correct: true },
       { text: 'No risk — lower corruption is always safe', correct: false },
       { text: 'The patient becomes immune to further disease', correct: false },
     ],
-    rationale: 'Rapid improvement without reassessment can mask a worsening underlying cause — always confirm with reassessment.',
+    rationale: 'Rapid improvement without reassessment can mask a worsening underlying cause — always confirm with reassessment before assuming the job is done.',
+    battleTranslation: 'This is exactly why Reassess closes out the Care Chain — confirming the win keeps it from unraveling.',
   },
   {
+    id: 'cue_fever_basics',
+    tier: 'body_basics',
+    topic: 'infection_inflammation',
+    prompt: 'A fever is generally best understood as...',
+    options: [
+      { text: 'The body\u2019s natural response while fighting an infection', correct: true },
+      { text: 'A sign the body has stopped fighting', correct: false },
+      { text: 'Always dangerous no matter how mild', correct: false },
+    ],
+    rationale: 'Fever is often a healthy sign the immune system is actively responding — it\u2019s a clue, not automatically a crisis.',
+    battleTranslation: 'Fire-aligned corruption flares up the same way when the ward\u2019s defenses are actively engaged.',
+  },
+  // ---------------- Tier 3: Symptom Cue ----------------
+  {
     id: 'cue_chain',
+    tier: 'symptom_cue',
+    topic: 'assessment_reassessment',
     prompt: 'What is the correct order of the Care Chain?',
     options: [
       { text: 'Scout \u2192 Stabilize \u2192 Counter \u2192 Reassess', correct: true },
       { text: 'Counter \u2192 Scout \u2192 Stabilize \u2192 Reassess', correct: false },
       { text: 'Reassess \u2192 Counter \u2192 Scout \u2192 Stabilize', correct: false },
     ],
-    rationale: 'Gather data (Scout), support the patient (Stabilize), treat the cause (Counter), then confirm (Reassess).',
+    rationale: 'Gather data (Scout), support the patient (Stabilize), treat the cause (Counter), then confirm (Reassess) — this order prevents treating the wrong problem.',
+    battleTranslation: 'Following this order in battle is what unlocks full Care Chain bonuses instead of partial credit.',
+    learnerNote: 'In real practice this mirrors the nursing process: Assessment \u2192 Intervention \u2192 Evaluation, repeated continuously rather than done once.',
+    codexEntryId: 'what-is-a-clinical-cue',
+  },
+  {
+    id: 'cue_shortness_breath',
+    tier: 'symptom_cue',
+    topic: 'oxygen_breathing',
+    prompt: 'A patient reports sudden shortness of breath with bluish lips. What does this combination most suggest?',
+    options: [
+      { text: 'A significant oxygenation problem needing urgent attention', correct: true },
+      { text: 'Ordinary tiredness from exercise', correct: false },
+      { text: 'A minor issue that can wait until tomorrow', correct: false },
+    ],
+    rationale: 'Bluish lips (cyanosis) paired with sudden shortness of breath signals the blood isn\u2019t carrying enough oxygen — a combination that needs prompt attention.',
+    battleTranslation: 'Air-aligned enemies that spike quickly demand a fast, prioritized response for the same reason.',
+    learnerNote: 'Cyanosis is a late sign of hypoxia — by the time it appears, oxygen saturation has often already dropped significantly.',
+  },
+  {
+    id: 'cue_dehydration_signs',
+    tier: 'symptom_cue',
+    topic: 'hydration_kidneys',
+    prompt: 'Sunken eyes, dry mouth, and reduced urine output together most likely point to...',
+    options: [
+      { text: 'Moderate to severe dehydration', correct: true },
+      { text: 'Normal, healthy hydration', correct: false },
+      { text: 'An unrelated skin condition', correct: false },
+    ],
+    rationale: 'These three signs together (not just one alone) form a pattern that reliably points to significant fluid loss.',
+    battleTranslation: 'River-aligned corruption often shows multiple linked clues at once — spotting the pattern, not just one clue, sharpens the read.',
+    learnerNote: 'Clustering findings rather than reacting to a single symptom is a core clinical-reasoning skill.',
+  },
+  {
+    id: 'cue_infection_spread',
+    tier: 'symptom_cue',
+    topic: 'infection_inflammation',
+    prompt: 'Redness, warmth, and spreading swelling around a wound most likely indicate...',
+    options: [
+      { text: 'A localized infection that could spread if untreated', correct: true },
+      { text: 'A normal healing bruise', correct: false },
+      { text: 'A sign of dehydration', correct: false },
+    ],
+    rationale: 'Redness, warmth, and spreading swelling are classic signs of infection — the "spreading" part is the key detail suggesting it needs treatment before it worsens.',
+    battleTranslation: 'This is exactly why Infection Control matters against Fire-aligned foes with spread attacks — stopping the spread early prevents a bigger fight.',
+    learnerNote: 'These are the classic local signs of infection: redness, warmth, swelling, and pain — spreading margins suggest it is not yet contained.',
+  },
+  {
+    id: 'cue_low_energy_pattern',
+    tier: 'symptom_cue',
+    topic: 'blood_sugar_energy',
+    prompt: 'Repeated episodes of shakiness, sweating, and confusion that improve quickly after eating suggest a pattern of...',
+    options: [
+      { text: 'Recurring low blood sugar episodes', correct: true },
+      { text: 'A one-time random event', correct: false },
+      { text: 'Normal daily energy dips', correct: false },
+    ],
+    rationale: 'When the same cluster of symptoms recurs and resolves with food, that repeating pattern points to a blood-sugar regulation issue, not a one-off.',
+    battleTranslation: 'Energy-aligned foes that drain and recover in cycles are showing the same kind of repeating pattern to watch for.',
+    learnerNote: 'Recognizing a pattern across multiple episodes (not just one) is what separates a coincidence from a clinical trend.',
+  },
+  // ---------------- Tier 4: Clinical Judgment ----------------
+  {
+    id: 'cue_priority',
+    tier: 'clinical_judgment',
+    topic: 'assessment_reassessment',
+    prompt: 'A patient shows a new symptom. What comes first?',
+    options: [
+      { text: 'Assess before treating', correct: true },
+      { text: 'Treat immediately, assess later', correct: false },
+      { text: 'Wait for the doctor to arrive', correct: false },
+    ],
+    rationale: 'Assessment (gathering data) always precedes intervention — treating before you know what you\u2019re treating risks making the wrong call.',
+    battleTranslation: 'Scouting clues before committing an action is what keeps Care Chain bonuses on track instead of guessing.',
+    learnerNote: 'This is the foundation of clinical judgment: data drives the plan, not the other way around.',
+    codexEntryId: 'what-is-a-clinical-cue',
   },
   {
     id: 'cue_unsafe',
+    tier: 'clinical_judgment',
+    topic: 'medication_safety',
     prompt: 'An action is flagged unsafe for this patient. What should you do?',
     options: [
       { text: 'Avoid it and pick a safer action', correct: true },
       { text: 'Use it anyway for a faster win', correct: false },
       { text: 'Use it twice to be sure', correct: false },
     ],
-    rationale: 'Unsafe actions can actively harm the patient — always choose the safer, clinically appropriate path.',
+    rationale: 'Unsafe actions can actively harm the patient — always choose the safer, clinically appropriate path even if it feels slower.',
+    battleTranslation: 'This mirrors why unsafe actions in battle carry a real penalty instead of just being "less optimal."',
+    learnerNote: 'In practice, "first, do no harm" outweighs speed — an unsafe shortcut is never worth the risk.',
+  },
+  {
+    id: 'cue_competing_priorities',
+    tier: 'clinical_judgment',
+    topic: 'heart_circulation',
+    prompt: 'Two patients need attention: one has a minor complaint, the other shows signs of poor circulation. Who is seen first?',
+    options: [
+      { text: 'The patient with signs of poor circulation', correct: true },
+      { text: 'Whoever asked first', correct: false },
+      { text: 'The patient with the minor complaint, since it\u2019s quicker', correct: false },
+    ],
+    rationale: 'Prioritization means addressing the most physiologically urgent need first, even if another request came in sooner.',
+    battleTranslation: 'This is the same logic behind targeting the more dangerous threat first in a multi-enemy encounter.',
+    learnerNote: 'This reflects real-world triage principles: severity and urgency outrank order of arrival.',
+  },
+  {
+    id: 'cue_stress_sleep_link',
+    tier: 'clinical_judgment',
+    topic: 'brain_stress_sleep',
+    prompt: 'A patient with ongoing poor sleep and high stress is also slower to recover from illness. What does this suggest?',
+    options: [
+      { text: 'Sleep and stress meaningfully affect the body\u2019s ability to heal', correct: true },
+      { text: 'Sleep and stress have no effect on physical recovery', correct: false },
+      { text: 'Only medication affects recovery speed', correct: false },
+    ],
+    rationale: 'Chronic stress and poor sleep impair immune function and healing — mind and body recovery are linked, not separate.',
+    battleTranslation: 'Mind-aligned corruption drains stability the same way — calming and steadying a patient speeds every other treatment.',
+    learnerNote: 'This connects to the mind-body link in clinical practice: psychosocial factors are part of the full clinical picture, not an afterthought.',
+  },
+  {
+    id: 'cue_med_double_check',
+    tier: 'clinical_judgment',
+    topic: 'medication_safety',
+    prompt: 'Before giving any treatment, what is the safest habit to build?',
+    options: [
+      { text: 'Double-check it is the right treatment for the right patient', correct: true },
+      { text: 'Move as fast as possible without checking', correct: false },
+      { text: 'Assume it is correct if it was correct last time', correct: false },
+    ],
+    rationale: 'A quick double-check before acting catches most preventable errors — speed should never replace verification.',
+    battleTranslation: 'This is why confirming a clue before committing to a Counter action pays off more than rushing in.',
+    learnerNote: 'This reflects core medication-safety practice: verifying before administering prevents the majority of avoidable errors.',
   },
 ];
 
-export function getRandomClinicalCue(excludeIds: string[] = []): ClinicalCueQuestion {
-  const pool = CLINICAL_CUES.filter(c => !excludeIds.includes(c.id));
-  const source = pool.length > 0 ? pool : CLINICAL_CUES;
-  return source[Math.floor(Math.random() * source.length)];
+export function getRandomClinicalCue(
+  excludeIds: string[] = [],
+  opts?: { chapter?: number; isBoss?: boolean; topicHint?: ClinicalCueTopic }
+): ClinicalCueQuestion {
+  const notExcluded = CLINICAL_CUES.filter(c => !excludeIds.includes(c.id));
+  const base = notExcluded.length > 0 ? notExcluded : CLINICAL_CUES;
+
+  const chapter = opts?.chapter ?? 1;
+  const isBoss = !!opts?.isBoss;
+
+  let allowedTiers: ClinicalCueTier[];
+  if (isBoss) {
+    allowedTiers = chapter >= 3 ? ['symptom_cue', 'clinical_judgment'] : ['body_basics', 'symptom_cue'];
+  } else if (chapter <= 1) {
+    allowedTiers = ['everyday', 'body_basics'];
+  } else if (chapter === 2) {
+    allowedTiers = ['everyday', 'body_basics', 'symptom_cue'];
+  } else if (chapter === 3) {
+    allowedTiers = ['body_basics', 'symptom_cue'];
+  } else if (chapter === 4) {
+    allowedTiers = ['symptom_cue', 'clinical_judgment'];
+  } else {
+    allowedTiers = ['symptom_cue', 'clinical_judgment'];
+  }
+
+  const tierPool = base.filter(c => allowedTiers.includes(c.tier));
+  const pool = tierPool.length > 0 ? tierPool : base;
+
+  if (opts?.topicHint) {
+    const topicMatches = pool.filter(c => c.topic === opts.topicHint);
+    if (topicMatches.length > 0) {
+      return topicMatches[Math.floor(Math.random() * topicMatches.length)];
+    }
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // ------------------------------------------------------------

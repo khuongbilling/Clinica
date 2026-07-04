@@ -40,6 +40,7 @@ import {
   TEMP_CLINICAL,
   ULTIMATE_BY_ROLE,
   ULTIMATE_CHARGE_MAX,
+  SYSTEM_TO_CUE_TOPIC,
 } from './clinical';
 
 export interface WaveMember {
@@ -111,6 +112,7 @@ export interface BattleState {
   pendingCue: ClinicalCueQuestion | null;
   cuesAnswered: string[];
   cueBonusStabilize: number; // bonus from correct cue answers; boosts every stabilizing action this turn, cleared at end of turn
+  cuesTopicsCorrect: string[]; // topic ids answered correctly this battle, for Codex/University progress
 
   // Clinical Arts ultimates
   heroUltimateCharge: Record<string, number>;
@@ -261,7 +263,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   team.forEach(h => { heroUltimateCharge[h.id] = 0; ultimateUsedCount[h.id] = 0; });
 
   const hand = drawCards(3);
-  const pendingCue = getRandomClinicalCue();
+  const pendingCue = getRandomClinicalCue([], { chapter, topicHint: SYSTEM_TO_CUE_TOPIC[enemy.primarySystem] });
 
   return {
     enemy,
@@ -314,6 +316,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     pendingCue,
     cuesAnswered: [],
     cueBonusStabilize: 0,
+    cuesTopicsCorrect: [],
 
     heroUltimateCharge,
     ultimateUsedCount,
@@ -462,7 +465,7 @@ export function applyCareAttempt(s: BattleState): ApplyResult {
   return { state: next, message: `Care Attempt: -${damage} Corruption.`, status: 'weak' };
 }
 
-function revealHiddenClues(s: BattleState, count: number): BattleState {
+export function revealHiddenClues(s: BattleState, count: number): BattleState {
   const reveal = Math.min(count, s.hiddenClueIds.length);
   if (reveal === 0) return s;
   const hiddenClueIds = [...s.hiddenClueIds];
@@ -921,6 +924,43 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
 // Question-to-power (Clinical Cue)
 // ============================================================
 
+// Small, topic-flavored bonus layered on top of the universal correct-answer reward.
+// Reuses existing BattleState mechanics only — no new gameplay systems introduced.
+function applyCueTopicBonus(s: BattleState, topic: ClinicalCueQuestion['topic']): { state: BattleState; label: string } {
+  switch (topic) {
+    case 'oxygen_breathing':
+    case 'heart_circulation':
+      return {
+        state: { ...s, cueBonusStabilize: s.cueBonusStabilize + 4 },
+        label: 'stabilizing actions further empowered this turn',
+      };
+    case 'assessment_reassessment': {
+      const next = revealHiddenClues(s, 1);
+      return { state: next, label: next.hiddenClueIds.length < s.hiddenClueIds.length ? 'a hidden clue revealed' : 'no hidden clues left to reveal' };
+    }
+    case 'infection_inflammation':
+    case 'medication_safety':
+      return {
+        state: { ...s, corruption: Math.max(0, s.corruption - 3) },
+        label: '-3 Corruption',
+      };
+    case 'nutrition_wellness':
+    case 'blood_sugar_energy':
+      return {
+        state: { ...s, stability: clamp(s.stability + 5, 0, 100) },
+        label: '+5 Stability',
+      };
+    case 'brain_stress_sleep':
+      return {
+        state: { ...s, shieldNext: Math.max(s.shieldNext, s.shieldNext + 10) },
+        label: '+10 Shield',
+      };
+    case 'hydration_kidneys':
+    default:
+      return { state: s, label: '' };
+  }
+}
+
 export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyResult {
   const cue = s.pendingCue;
   if (!cue) return { state: s, message: 'No question pending.', aborted: true };
@@ -935,11 +975,15 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
       pendingCue: null,
       cuesAnswered,
       cueBonusStabilize: s.cueBonusStabilize + 8,
+      cuesTopicsCorrect: [...s.cuesTopicsCorrect, cue.topic],
       // Bonus AP stacks ABOVE the normal per-turn limit (hard-capped to avoid runaway).
       ap: Math.min(s.ap + 1, AP_BONUS_CEILING),
-      log: [...s.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered)`],
     };
     next = addUltimateCharge(next, heroId, 15);
+    const { state: withBonus, label } = applyCueTopicBonus(next, cue.topic);
+    next = withBonus;
+    const bonusLog = label ? `, ${label}` : '';
+    next = { ...next, log: [...next.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered${bonusLog})`] };
     return { state: next, message: 'Correct! +1 AP and a power boost.', status: 'appropriate' };
   }
 
@@ -955,7 +999,9 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
 export function maybeTriggerClinicalCue(s: BattleState): BattleState {
   if (s.pendingCue) return s;
   if (s.cuesAnswered.length >= 4) return s;
-  return { ...s, pendingCue: getRandomClinicalCue(s.cuesAnswered) };
+  const isBoss = (s.enemyClinical?.rewardBase || 0) >= 100;
+  const topicHint = SYSTEM_TO_CUE_TOPIC[s.enemy.primarySystem];
+  return { ...s, pendingCue: getRandomClinicalCue(s.cuesAnswered, { chapter: s.chapter, isBoss, topicHint }) };
 }
 
 export function applyCall(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {

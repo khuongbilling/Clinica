@@ -166,4 +166,7 @@ export interface PlayerState {
   stamina?: number;
   stamina_updated_at?: string;
   wellness?: import('./wellness').WellnessState;
+  // Clinical Cue — lightweight per-topic progress counter (Codex/University hook).
+  // Additive only; never blocks battle flow.
+  cue_topic_progress?: Record<string, number>;
 }

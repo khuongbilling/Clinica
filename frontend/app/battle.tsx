@@ -14,7 +14,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
-import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
+import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { useTestSession } from "@/src/game/testSession";
@@ -50,7 +50,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training }: { enemyId?: string; training?: string }) {
   const router = useRouter();
-  const { player, applyRewards, recordFailure } = usePlayer();
+  const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
@@ -458,7 +458,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         difficultyMultiplier: diffMod?.rewardMultiplier ?? 1,
         stars: starResult.stars,
         isFirstClear,
-        clinicalCuesCorrect: 0,
+        clinicalCuesCorrect: state.cuesTopicsCorrect.length,
       });
 
       // Hero EXP: split the per-hero battle contribution (skills/items/cards
@@ -495,6 +495,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
       }
     } else if (state.outcome === "loss") {
       await recordFailure(enemy.id);
+    }
+    if (state.cuesTopicsCorrect.length > 0) {
+      await recordCueTopics(state.cuesTopicsCorrect);
     }
     const isBoss2 = enemy.id === BOSS_LORD_IMBALANCE.id;
     const baseShards = state.outcome === "win" ? (isTraining ? 10 : (isBoss2 ? 100 : 25)) : 0;
@@ -944,6 +947,9 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         <View style={styles.modalOverlay}>
           <View style={styles.cueModal} testID="clinical-cue-modal">
             <Text style={styles.cueKicker}>CLINICAL CUE</Text>
+            <Text style={styles.cueTierTopic}>
+              Tier {CUE_TIER_NUMBER[state.pendingCue.tier]} · {CUE_TIER_LABELS[state.pendingCue.tier]} · {CUE_TOPIC_LABELS[state.pendingCue.topic]}
+            </Text>
             <Text style={styles.cuePrompt}>{state.pendingCue.prompt}</Text>
             {state.pendingCue.options.map((opt, idx) => (
               <Pressable key={idx} style={styles.cueOption} onPress={() => handleCueAnswer(idx)} testID={`cue-option-${idx}`}>
@@ -956,9 +962,12 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
 
       {cueFeedback && (
         <View style={styles.modalOverlay}>
-          <View style={styles.cueModal} testID="clinical-cue-feedback">
+          <ScrollView style={styles.cueModal} contentContainerStyle={{ paddingBottom: 4 }} testID="clinical-cue-feedback">
             <Text style={[styles.cueKicker, { color: cueFeedback.isCorrect ? COLORS.success : COLORS.error }]}>
               {cueFeedback.isCorrect ? "✓ CORRECT" : "✗ NOT QUITE"}
+            </Text>
+            <Text style={styles.cueTierTopic}>
+              Tier {CUE_TIER_NUMBER[cueFeedback.cue.tier]} · {CUE_TIER_LABELS[cueFeedback.cue.tier]} · {CUE_TOPIC_LABELS[cueFeedback.cue.topic]}
             </Text>
             <Text style={styles.cuePrompt}>{cueFeedback.cue.prompt}</Text>
             {cueFeedback.cue.options.map((opt, idx) => {
@@ -979,27 +988,46 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
                 </View>
               );
             })}
+            {!cueFeedback.isCorrect && (
+              <View style={styles.cueRationaleBox}>
+                <Text style={styles.cueRationaleLabel}>BEST ANSWER</Text>
+                <Text style={styles.cueRationaleTxt}>
+                  {cueFeedback.cue.options.find((o) => o.correct)?.text}
+                </Text>
+              </View>
+            )}
             <View style={styles.cueRationaleBox}>
-              <Text style={styles.cueRationaleLabel}>WHY</Text>
+              <Text style={styles.cueRationaleLabel}>WHY IT MATTERS</Text>
               <Text style={styles.cueRationaleTxt}>{cueFeedback.cue.rationale}</Text>
             </View>
+            <View style={styles.cueRationaleBox}>
+              <Text style={styles.cueRationaleLabel}>BATTLE TRANSLATION</Text>
+              <Text style={styles.cueRationaleTxt}>{cueFeedback.cue.battleTranslation}</Text>
+            </View>
+            {cueFeedback.cue.learnerNote && (
+              <View style={styles.cueRationaleBox}>
+                <Text style={styles.cueRationaleLabel}>CLINICAL LEARNER NOTE</Text>
+                <Text style={styles.cueRationaleTxt}>{cueFeedback.cue.learnerNote}</Text>
+              </View>
+            )}
             <View style={styles.cueRewardBox}>
-              <Text style={styles.cueRewardLabel}>{cueFeedback.isCorrect ? "REWARDS" : "NO BONUS THIS TIME"}</Text>
+              <Text style={styles.cueRewardLabel}>{cueFeedback.isCorrect ? "REWARD" : "MISSED BONUS"}</Text>
               {cueFeedback.isCorrect ? (
                 <>
                   <Text style={styles.cueRewardTxt}>⚡ +1 Action Point</Text>
                   <Text style={styles.cueRewardTxt}>✚ All stabilizing actions this turn empowered (+8)</Text>
                   <Text style={styles.cueRewardTxt}>★ +15 Ultimate charge</Text>
+                  <Text style={styles.cueRewardTxt}>❖ {CUE_TOPIC_LABELS[cueFeedback.cue.topic]} bonus applied</Text>
                 </>
               ) : (
-                <Text style={styles.cueRewardTxt}>Answer clinical cues correctly to earn AP, stabilize boosts, and ultimate charge.</Text>
+                <Text style={styles.cueRewardTxt}>Answer clinical cues correctly to earn AP, stabilize boosts, ultimate charge, and a topic-flavored bonus.</Text>
               )}
             </View>
             <Pressable style={styles.cueContinueBtn} onPress={dismissCueFeedback} testID="cue-continue">
               <Text style={styles.cueContinueTxt}>CONTINUE</Text>
             </Pressable>
             <Text style={styles.cueAutoHint}>Auto-continues in 3s</Text>
-          </View>
+          </ScrollView>
         </View>
       )}
 
@@ -1343,6 +1371,7 @@ const styles = StyleSheet.create({
   // ── Clinical Cue modal ──
   cueModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 8, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380 },
   cueKicker: { color: COLORS.runeGold, fontSize: 10, letterSpacing: 1.5, fontWeight: "700" },
+  cueTierTopic: { color: COLORS.onSurfaceSecondary, fontSize: 10, letterSpacing: 0.5, fontWeight: "600", marginTop: -4 },
   cuePrompt: { color: COLORS.onSurface, fontSize: 15, lineHeight: 21, marginBottom: 4 },
   cueOption: { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
   cueOptionTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13 },

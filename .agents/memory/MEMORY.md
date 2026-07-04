@@ -18,3 +18,4 @@
 - [Apothecary Market shop](clinica-apothecary-shop.md) — crown-sink shop; WD run-start boosts have only 2 real levers (startAP/startShield), a +Stability boost is dead (starts at MAX_STABILITY); upgrades map 1:1 to initBattle opts; skins cosmetic-only.
 - [Ward Defense sprite choreography](ward-defense-sprite-choreography.md) — two-file split (data+loop vs v2 live board); PATH_WPS/DEPLOY_TILES must match; per-unit UNIT_FX lunge/aura/proj driven by atkDx/atkDy; hero+enemy PNGs face LEFT, flip via scaleX:-1.
 - [Clinica Player vs Hero Level](clinica-player-vs-hero-level.md) — Player Level = derived from player.xp (account-wide gates/class); Hero Level = per-hero_progression (battle contribution or Training Hall); never conflate.
+- [Clinica Clinical Cue tiers/topics](clinica-cue-tiers-topics.md) — 4-tier (chapter-weighted) x 9-topic cue system layered onto existing cue pipeline additively; topic bonuses reuse existing mechanics fields, never a parallel effect path.

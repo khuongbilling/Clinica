@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
-import type { LearningProfile } from "@/src/game/clinical";
+import { CUE_SAFETY_NOTE, type LearningProfile } from "@/src/game/clinical";
 import {
   TUTORIAL_SECTIONS,
   TUTORIAL_TIERS,
@@ -124,6 +124,11 @@ export default function TutorialScreen() {
           );
         })}
 
+        <View style={styles.safetyBox} testID="clinical-cue-safety-note">
+          <Text style={styles.safetyLbl}>ABOUT CLINICAL CUES</Text>
+          <Text style={styles.safetyTxt}>{CUE_SAFETY_NOTE}</Text>
+        </View>
+
         <View style={{ height: SPACING.xl }} />
 
         <Pressable style={styles.doneBtn} onPress={close} testID="tutorial-done">
@@ -241,6 +246,22 @@ const styles = StyleSheet.create({
   },
   takeawayRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   takeawayTxt: { color: COLORS.onSurface, fontSize: 12, flex: 1 },
+  safetyBox: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 4,
+    marginTop: SPACING.sm,
+  },
+  safetyLbl: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: "700",
+  },
+  safetyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16 },
 
   doneBtn: {
     backgroundColor: COLORS.brand,
