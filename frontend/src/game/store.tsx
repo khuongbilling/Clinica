@@ -13,6 +13,7 @@ import {
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
 } from './units';
 import { buildDefaultRealmLayout } from './realm';
+import { isValidCellId } from './realmGrid';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -63,10 +64,18 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.cue_topic_progress) {
     out = { ...out, cue_topic_progress: {} };
   }
-  if (!out.realm_layout || Object.keys(out.realm_layout).length === 0) {
+  // Push 5.5 structural correction — realm_layout now stores buildingId ->
+  // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
+  // layout whose values aren't valid grid cell ids predates the rewrite and
+  // is reset to the default (Atrium-only) layout so it can't crash placement.
+  const layoutValues = Object.values(out.realm_layout || {});
+  const layoutIsLegacy = layoutValues.length > 0 && !layoutValues.every((v) => isValidCellId(v));
+  if (!out.realm_layout || Object.keys(out.realm_layout).length === 0 || layoutIsLegacy) {
     out = { ...out, realm_layout: buildDefaultRealmLayout() };
   }
-  if (!out.realm_decor) {
+  const decorKeys = Object.keys(out.realm_decor || {});
+  const decorIsLegacy = decorKeys.length > 0 && !decorKeys.every((k) => isValidCellId(k));
+  if (!out.realm_decor || decorIsLegacy) {
     out = { ...out, realm_decor: {} };
   }
   if (out.player_level == null) {
@@ -148,7 +157,7 @@ type Ctx = {
   pullGacha: () => Promise<{ ok: boolean; message: string; typeId?: string; isNew?: boolean; level?: number }>;
   upgradeUnitMastery: (typeId: string) => Promise<{ ok: boolean; message: string; level?: number }>;
   setWardLoadout: (ids: string[]) => Promise<{ ok: boolean; message: string }>;
-  setRealmLayout: (layoutPatch: Record<string, string>, decorPatch?: Record<string, string | null>) => Promise<{ ok: boolean; message: string }>;
+  setRealmLayout: (layoutPatch: Record<string, string | null>, decorPatch?: Record<string, string | null>) => Promise<{ ok: boolean; message: string }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -797,10 +806,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: 'Loadout saved.' };
   }, [updateState]);
 
-  const setRealmLayout = useCallback(async (layoutPatch: Record<string, string>, decorPatch?: Record<string, string | null>) => {
+  const setRealmLayout = useCallback(async (layoutPatch: Record<string, string | null>, decorPatch?: Record<string, string | null>) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
-    const nextLayout = { ...(base.realm_layout || buildDefaultRealmLayout()), ...layoutPatch };
+    const nextLayout = { ...(base.realm_layout || buildDefaultRealmLayout()) };
+    for (const [buildingId, cellId] of Object.entries(layoutPatch)) {
+      if (cellId == null) delete nextLayout[buildingId];
+      else nextLayout[buildingId] = cellId;
+    }
     const nextDecor = { ...(base.realm_decor || {}) };
     if (decorPatch) {
       for (const [plotId, decorationId] of Object.entries(decorPatch)) {

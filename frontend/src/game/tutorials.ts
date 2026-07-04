@@ -93,8 +93,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "kingdom_buildings",
-      title: "Build Sanctuary",
-      body: "Most plots start empty — use Build Sanctuary to construct buildings as you unlock them. The Research Library holds your Codex entries. The Training Hall manages your team. The Apothecary stocks your items.",
+      title: "Sanctuary Inventory",
+      body: "The grid starts mostly empty — open Sanctuary Inventory to place buildings you've unlocked onto compatible plots, then move or store them anytime. The Research Library holds your Codex entries. The Training Hall manages your team. The Apothecary stocks your items. Roads connect everything automatically.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",

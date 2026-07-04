@@ -17,6 +17,8 @@
 // Any UI (app/(tabs)/kingdom.tsx) should render from these exports rather
 // than hardcoding building copy, positions, or unlock rules.
 
+import { cellId, DEFAULT_ATRIUM_ORIGIN } from "./realmGrid";
+
 export const REALM_LOOP_NOTE =
   "The Realm loop: Build a Sanctuary Plot, Assign a hero or trainee, let it Research/Prepare passive " +
   "bonuses, Customize it cosmetically, then Expand to the next plot or district. There is no Defend, " +
@@ -60,10 +62,11 @@ export interface HeroAssignmentSlot {
 export type PlotSize = "small" | "medium" | "large";
 
 // Sanctuary Plot types — an original Clinica system, organized by purpose
-// rather than by "attack" vs "defense" the way base-builder clones are.
+// rather than by "attack" vs "defense" the way base-builder clones are. These
+// now correspond 1:1 to zones in the Realm grid (see realmGrid.ts).
 export type PlotType =
-  | "landmark" | "care" | "scholar" | "wellness" | "commerce"
-  | "defenseSupport" | "diplomacy" | "decoration";
+  | "sanctuary" | "care" | "scholar" | "wellness" | "commerce"
+  | "support" | "diplomacy" | "decoration" | "road" | "blocked";
 
 export interface PlotTypeMeta {
   id: PlotType;
@@ -73,14 +76,16 @@ export interface PlotTypeMeta {
 }
 
 export const PLOT_TYPE_META: PlotTypeMeta[] = [
-  { id: "landmark", name: "Landmark Plot", icon: "sparkles", description: "Anchors the Realm — required, fixed, and always visible." },
+  { id: "sanctuary", name: "Sanctuary Plot", icon: "sparkles", description: "Anchors the Realm — home of the Grand Ward Atrium and core landmarks." },
   { id: "care", name: "Care Plot", icon: "medkit", description: "Hosts patient-care and stability-support structures." },
   { id: "scholar", name: "Scholar Plot", icon: "school", description: "Hosts learning, research, and recruitment structures." },
   { id: "wellness", name: "Wellness Plot", icon: "leaf", description: "Hosts nutrition and off-shift recovery structures." },
   { id: "commerce", name: "Commerce Plot", icon: "business", description: "Hosts supply, banking, and future trade structures." },
-  { id: "defenseSupport", name: "Defense Support Plot", icon: "shield-checkmark", description: "Hosts Ward Defense readiness structures — prep, not combat." },
+  { id: "support", name: "Support Plot", icon: "shield-checkmark", description: "Hosts Ward Defense readiness structures — prep, not combat." },
   { id: "diplomacy", name: "Diplomacy Plot", icon: "flag", description: "Hosts future faction and collaboration structures." },
   { id: "decoration", name: "Decoration Plot", icon: "flower", description: "Purely cosmetic — lanterns, banners, statues, gardens." },
+  { id: "road", name: "Road", icon: "trail-sign", description: "Auto-generated — connects every building back to the Grand Ward Atrium." },
+  { id: "blocked", name: "Wilds", icon: "leaf-outline", description: "Untamed terrain outside the Realm's buildable grounds." },
 ];
 
 export function getPlotTypeMeta(type: PlotType): PlotTypeMeta {
@@ -92,11 +97,6 @@ export interface RealmBuilding {
   name: string;
   district: DistrictId;
   icon: string;
-  // Position on the map background, as a percentage of width/height (0-100).
-  // This is the DEFAULT position (see REALM_PLOTS / buildDefaultRealmLayout);
-  // a building's live position is wherever `player.realm_layout` places it.
-  x: number;
-  y: number;
   isAtrium?: boolean;
   purpose: string;
   benefitForLevel: (level: number) => string;
@@ -111,9 +111,10 @@ export interface RealmBuilding {
   heroSlots: HeroAssignmentSlot[];
   skinPlaceholder: boolean;
   comingSoon?: boolean;
-  // Push 3.6 — plot system
-  size: PlotSize;
-  // Landmark/anchor buildings stay put; everything else can be relocated via Move mode.
+  // Grid placement — actual footprint (width x height, in cells) lives in
+  // realmGrid.ts (BUILDING_FOOTPRINTS) so the grid engine stays UI-agnostic.
+  // Only the Grand Ward Atrium is fixed; every other building can be freely
+  // placed, moved, or stored via Build Sanctuary / Move mode.
   movable: boolean;
   fixedReason?: string;
 }
@@ -137,7 +138,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Grand Ward Atrium",
     district: "sanctuary",
     icon: "sparkles",
-    x: 50, y: 46,
     isAtrium: true,
     purpose: "The central landmark of the Sanctuary — unlocks new districts, raises building caps, and controls Realm expansion. Never an attack structure.",
     benefitForLevel: (lvl) => `Realm capacity Lv.${lvl}. Unlocks new districts as it grows.`,
@@ -150,7 +150,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkLabel: "Realm core — no external link",
     heroSlots: [{ role: "Realm Steward", flavor: "A future hero role that boosts overall Realm growth.", slotType: "hero" }],
     skinPlaceholder: true,
-    size: "large",
     movable: false,
     fixedReason: "The Grand Ward Atrium anchors the entire Realm and never moves.",
   },
@@ -159,7 +158,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Clinica University",
     district: "scholar",
     icon: "school",
-    x: 26, y: 26,
     purpose: "Generates Knowledge Points and supports Class Manuals, Research, the Recruitment Hall, Clinical Cue mastery, and advanced equipment formulas and Skill Books tied to gear progression.",
     benefitForLevel: (lvl) => `Lv.${lvl} generates Knowledge Points and unlocks lessons, research, and advanced equipment formulas.`,
     nextUpgradeForLevel: (lvl) => `Next level gives +5% Knowledge generation.`,
@@ -176,16 +174,13 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Faculty Mentor", flavor: "A Mentor here speeds up trainee learning.", slotType: "mentor" },
     ],
     skinPlaceholder: true,
-    size: "large",
-    movable: false,
-    fixedReason: "Clinica University's main hall is a Realm landmark and stays put.",
+    movable: true,
   },
   {
     id: "research_library",
     name: "Research Library",
     district: "scholar",
     icon: "library",
-    x: 16, y: 42,
     purpose: "Houses the Codex, class manuals, lore, Clinical Cue review, research bonuses, and equipment lore/Codex links for gear you've earned.",
     benefitForLevel: (lvl) => `Lv.${lvl} unlocks deeper Codex entries, Clinical Cue review tools, and equipment lore links.`,
     nextUpgradeForLevel: (lvl) => `Next level reveals another Codex tier.`,
@@ -201,7 +196,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Archive Trainee", flavor: "A trainee here helps catalog Codex entries faster.", slotType: "trainee" },
     ],
     skinPlaceholder: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -209,7 +203,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Hospital Ward",
     district: "care",
     icon: "medkit",
-    x: 66, y: 24,
     purpose: "Supports Ward Shift preparation, Hero EXP support, Stability bonuses, Clinical Certificates, recovery/stabilization Clinical Supplies, and patient-care reward bonuses.",
     benefitForLevel: (lvl) => `Lv.${lvl} boosts stability gain during Ward Shift battles and recovery/stabilization supply yield.`,
     nextUpgradeForLevel: (lvl) => `Next level further improves patient-care outcomes.`,
@@ -225,16 +218,13 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Stabilize Trainee", flavor: "A Guardian/Stabilize trainee raises Clinical Certificate chance.", slotType: "trainee" },
     ],
     skinPlaceholder: true,
-    size: "large",
-    movable: false,
-    fixedReason: "The Hospital Ward core is a Realm landmark and stays put.",
+    movable: true,
   },
   {
     id: "hall_of_heroes",
     name: "Training Hall",
     district: "care",
     icon: "people-circle",
-    x: 78, y: 42,
     purpose: "Supports hero training, Skill Books, Class Trainees, practice simulations, and the equipment training/enhancement foundation for gear progression.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises the Hero EXP cap, trainee capacity, and equipment training foundation.`,
     nextUpgradeForLevel: (lvl) => `Next level adds another training slot.`,
@@ -251,7 +241,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Veteran Mentor", flavor: "A Mentor here improves trainee outcomes.", slotType: "mentor" },
     ],
     skinPlaceholder: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -259,7 +248,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Apothecary",
     district: "commerce",
     icon: "flask",
-    x: 62, y: 60,
     purpose: "The main source for Clinical Supplies and future pharmaceutical crafting — Herbal Vials, Sterile Kits, supply recipes, and links to the Shop.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises Clinical Supply yield and unlocks more supply recipes.`,
     nextUpgradeForLevel: (lvl) => `Next level adds a new consumable slot.`,
@@ -275,7 +263,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Alchemist Trainee", flavor: "A Treat/Alchemist trainee boosts Clinical Supply production.", slotType: "trainee" },
     ],
     skinPlaceholder: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -283,7 +270,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Sanctuary Bank",
     district: "commerce",
     icon: "business",
-    x: 74, y: 66,
     purpose: "Supports Insight Crystals, Refined Lotus Gems, daily exchange limits, and economy info.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises your daily exchange cap at the Bank.`,
     nextUpgradeForLevel: (lvl) => `Next level increases the daily Insight Crystal exchange cap.`,
@@ -296,7 +282,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkLabel: "Open Economy Guide",
     heroSlots: [{ role: "Treasurer", flavor: "A Treasurer hero here improves exchange rates slightly.", slotType: "hero" }],
     skinPlaceholder: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -304,7 +289,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Sanctuary Bazaar (Night Market)",
     district: "commerce",
     icon: "moon",
-    x: 88, y: 58,
     purpose: "Future placeholder for a cosmetic/collectible trading economy — not live yet, and never resource-stealing or PvP trading.",
     benefitForLevel: () => "Not yet active — this is a Coming Soon / Future Feature placeholder.",
     nextUpgradeForLevel: () => "Future updates will add listing limits, taxes, and account-safety rules.",
@@ -317,7 +301,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     heroSlots: [],
     skinPlaceholder: true,
     comingSoon: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -325,7 +308,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Nutrition Garden",
     district: "wellness",
     icon: "leaf",
-    x: 34, y: 66,
     purpose: "Supports Nourishment Petals, Recipe Cards, Garden Seeds, and the Lotus Plate Journal.",
     benefitForLevel: (lvl) => `Lv.${lvl} boosts Lotus Plate Journal wellness rewards.`,
     nextUpgradeForLevel: (lvl) => `Next level unlocks a new garden plot.`,
@@ -341,7 +323,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Wellness Trainee", flavor: "A Nutrition/Caretaker trainee boosts Recipe Cards and safe Insight Crystal progress.", slotType: "trainee" },
     ],
     skinPlaceholder: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -349,7 +330,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Ward Defense Tower",
     district: "defense",
     icon: "shield",
-    x: 40, y: 82,
     purpose: "Supports Ward Defense readiness and rewards — a preparation structure, not a Realm combat building.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises the Ward Defense difficulty ceiling and rewards.`,
     nextUpgradeForLevel: (lvl) => `Next level unlocks a tougher Ward Defense tier.`,
@@ -362,7 +342,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkLabel: "Open Ward Defense",
     heroSlots: [{ role: "Sentinel", flavor: "A Sentinel hero here improves Ward Defense preparation.", slotType: "hero" }],
     skinPlaceholder: true,
-    size: "medium",
     movable: true,
   },
   {
@@ -370,7 +349,6 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     name: "Faction Embassy",
     district: "diplomacy",
     icon: "flag",
-    x: 60, y: 88,
     purpose: "Future placeholder for allied factions, shared world events, and collaborative (non-PvP) rewards.",
     benefitForLevel: () => "Not yet active — this is a Coming Soon / Future Feature placeholder.",
     nextUpgradeForLevel: () => "Future updates will add faction rosters and shared world-boss goals.",
@@ -383,9 +361,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     heroSlots: [],
     skinPlaceholder: true,
     comingSoon: true,
-    size: "large",
-    movable: false,
-    fixedReason: "The Faction Embassy landmark plot is reserved and stays put.",
+    movable: true,
   },
 ];
 
@@ -399,102 +375,14 @@ export function isBuildingUnlocked(building: RealmBuilding, atriumLevel: number)
 }
 
 // ---------------------------------------------------------------------------
-// Push 3.6 — Plot system
-//
-// A "plot" is a fixed footprint on the Realm map. Buildings live ON plots via
-// player.realm_layout (buildingId -> plotId); decorations live on plots via
-// player.realm_decor (plotId -> decorationId). Plots are predefined — there is
-// no free-placement editor. Some plots ship locked, to be unlocked by future
-// progression, giving the Realm room to grow without new code.
+// Push 5.5 structural correction — the old fixed-plot / painted-map system
+// (REALM_PLOTS, RealmPlot, x/y percentage positions) has been removed. The
+// Realm is now a real data-driven plot-cell GRID (see realmGrid.ts): buildings
+// are separate placeable objects with footprint dimensions, free to place on
+// any compatible, unlocked, unoccupied cell — not pinned to one fixed plot.
+// player.realm_layout now maps buildingId -> origin cellId ("r{row}_c{col}").
+// player.realm_decor now maps a single-cell decoration-plot cellId -> decorationId.
 // ---------------------------------------------------------------------------
-
-export type PlotUnlockRequirement =
-  | { kind: "atriumLevel"; level: number; label: string }
-  | { kind: "playerLevel"; level: number; label: string }
-  | { kind: "chapter"; chapter: number; label: string }
-  | { kind: "buildingBuilt"; buildingId: string; label: string };
-
-export interface RealmPlot {
-  id: string;
-  name: string;
-  district: DistrictId;
-  // Sanctuary Plot type — what kind of structure this plot is meant for.
-  plotType: PlotType;
-  size: PlotSize;
-  x: number;
-  y: number;
-  // Building ids (or decoration ids, for decoration-only plots) allowed here.
-  allowedBuildingIds: string[];
-  allowedDecorationIds: string[];
-  // The building associated with this plot for reference/unlock-label purposes.
-  defaultBuildingId?: string;
-  // Only true for the Grand Ward Atrium plot. All other plots start EMPTY for
-  // a brand-new player and must be built into deliberately via Build
-  // Sanctuary mode — the Realm is not pre-painted with every building.
-  prebuilt?: boolean;
-  // Undefined = always unlocked (subject to the occupant building's own
-  // atrium gating). Defined = an extra Realm-expansion plot with its own gate.
-  unlockRequirement?: PlotUnlockRequirement;
-}
-
-export const REALM_PLOTS: RealmPlot[] = [
-  { id: "atrium_plot", name: "Atrium Grounds", district: "sanctuary", plotType: "landmark", size: "large", x: 50, y: 46, allowedBuildingIds: ["grand_ward_atrium"], allowedDecorationIds: [], defaultBuildingId: "grand_ward_atrium", prebuilt: true },
-  { id: "university_plot", name: "University Grounds", district: "scholar", plotType: "scholar", size: "large", x: 26, y: 26, allowedBuildingIds: ["clinica_university"], allowedDecorationIds: [], defaultBuildingId: "clinica_university" },
-  { id: "library_plot", name: "Library Yard", district: "scholar", plotType: "scholar", size: "medium", x: 16, y: 42, allowedBuildingIds: ["research_library"], allowedDecorationIds: [], defaultBuildingId: "research_library" },
-  { id: "hospital_plot", name: "Hospital Grounds", district: "care", plotType: "care", size: "large", x: 66, y: 24, allowedBuildingIds: ["hospital_ward"], allowedDecorationIds: [], defaultBuildingId: "hospital_ward" },
-  { id: "training_hall_plot", name: "Training Yard", district: "care", plotType: "care", size: "medium", x: 78, y: 42, allowedBuildingIds: ["hall_of_heroes", "apothecary"], allowedDecorationIds: [], defaultBuildingId: "hall_of_heroes" },
-  { id: "apothecary_plot", name: "Market Row — East", district: "commerce", plotType: "commerce", size: "medium", x: 62, y: 60, allowedBuildingIds: ["apothecary", "sanctuary_bank", "sanctuary_bazaar"], allowedDecorationIds: [], defaultBuildingId: "apothecary" },
-  { id: "bank_plot", name: "Market Row — South", district: "commerce", plotType: "commerce", size: "medium", x: 74, y: 66, allowedBuildingIds: ["sanctuary_bank", "apothecary", "sanctuary_bazaar"], allowedDecorationIds: [], defaultBuildingId: "sanctuary_bank" },
-  { id: "bazaar_plot", name: "Market Row — Night Corner", district: "commerce", plotType: "commerce", size: "medium", x: 88, y: 58, allowedBuildingIds: ["sanctuary_bazaar", "apothecary", "sanctuary_bank"], allowedDecorationIds: [], defaultBuildingId: "sanctuary_bazaar" },
-  { id: "garden_plot", name: "Garden Terrace", district: "wellness", plotType: "wellness", size: "medium", x: 34, y: 66, allowedBuildingIds: ["nutrition_garden"], allowedDecorationIds: [], defaultBuildingId: "nutrition_garden" },
-  { id: "defense_plot", name: "Watch Grounds", district: "defense", plotType: "defenseSupport", size: "medium", x: 40, y: 82, allowedBuildingIds: ["ward_defense_tower"], allowedDecorationIds: [], defaultBuildingId: "ward_defense_tower" },
-  { id: "embassy_plot", name: "Embassy Grounds", district: "diplomacy", plotType: "diplomacy", size: "large", x: 60, y: 88, allowedBuildingIds: ["faction_embassy"], allowedDecorationIds: [], defaultBuildingId: "faction_embassy" },
-
-  // Empty from day one — small decoration-only plots near the Atrium so Build
-  // Mode always has something to do, regardless of progression.
-  {
-    id: "lantern_court", name: "Lantern Court", district: "sanctuary", plotType: "decoration", size: "small", x: 40, y: 54,
-    allowedBuildingIds: [], allowedDecorationIds: ["lantern", "banner", "garden_hedge", "statue"],
-  },
-  {
-    id: "statue_court", name: "Statue Court", district: "sanctuary", plotType: "decoration", size: "small", x: 60, y: 54,
-    allowedBuildingIds: [], allowedDecorationIds: ["lantern", "banner", "garden_hedge", "statue"],
-  },
-
-  // Locked expansion plots — give Move Mode somewhere new to go, and give the
-  // Realm visible room to grow.
-  {
-    id: "scholar_annex_plot", name: "Scholar Annex Plot", district: "scholar", plotType: "scholar", size: "medium", x: 20, y: 14,
-    allowedBuildingIds: ["research_library"], allowedDecorationIds: [],
-    unlockRequirement: { kind: "playerLevel", level: 8, label: "Reach Player Level 8" },
-  },
-  {
-    id: "care_support_plot", name: "Care Support Plot", district: "care", plotType: "decoration", size: "small", x: 82, y: 28,
-    allowedBuildingIds: [], allowedDecorationIds: ["lantern", "banner", "garden_hedge", "statue"],
-    unlockRequirement: { kind: "atriumLevel", level: 3, label: "Grand Ward Atrium Lv.3" },
-  },
-  {
-    id: "commerce_expansion_plot", name: "Commerce Expansion Plot", district: "commerce", plotType: "commerce", size: "medium", x: 92, y: 70,
-    allowedBuildingIds: ["apothecary", "sanctuary_bank", "sanctuary_bazaar"], allowedDecorationIds: [],
-    unlockRequirement: { kind: "buildingBuilt", buildingId: "sanctuary_bank", label: "Build the Sanctuary Bank" },
-  },
-  {
-    id: "wellness_grove_plot", name: "Wellness Grove Plot", district: "wellness", plotType: "decoration", size: "small", x: 24, y: 78,
-    allowedBuildingIds: [], allowedDecorationIds: ["lantern", "banner", "garden_hedge", "statue"],
-    unlockRequirement: { kind: "atriumLevel", level: 3, label: "Grand Ward Atrium Lv.3" },
-  },
-  {
-    id: "defense_outpost_plot", name: "Defense Outpost Plot", district: "defense", plotType: "defenseSupport", size: "medium", x: 28, y: 90,
-    allowedBuildingIds: ["ward_defense_tower"], allowedDecorationIds: [],
-    unlockRequirement: { kind: "chapter", chapter: 3, label: "Clear Chapter 3" },
-  },
-  {
-    id: "diplomacy_garden_plot", name: "Diplomacy Garden Plot", district: "diplomacy", plotType: "decoration", size: "small", x: 72, y: 94,
-    allowedBuildingIds: [], allowedDecorationIds: ["lantern", "banner", "garden_hedge", "statue"],
-    unlockRequirement: { kind: "atriumLevel", level: 6, label: "Grand Ward Atrium Lv.6" },
-  },
-];
-
 export interface RealmDecoration {
   id: string;
   name: string;
@@ -515,25 +403,17 @@ export function getBuildingById(id: string): RealmBuilding | undefined {
   return REALM_BUILDINGS.find((b) => b.id === id);
 }
 
-export function getPlotById(id: string): RealmPlot | undefined {
-  return REALM_PLOTS.find((p) => p.id === id);
-}
-
 export function getDecorationById(id: string): RealmDecoration | undefined {
   return DECORATIONS.find((d) => d.id === id);
 }
 
 // The baseline layout every new (or not-yet-migrated) player starts with.
-// Only the Grand Ward Atrium (`prebuilt: true`) is placed automatically —
-// every other Sanctuary Plot starts EMPTY so a new Realm reads as something
-// the player builds into, not a pre-painted finished city. Existing players'
+// Only the Grand Ward Atrium is placed automatically — every other building
+// starts unplaced (in inventory) so a new Realm reads as empty terrain the
+// player builds into, not a pre-painted finished city. Existing players'
 // already-saved realm_layout is untouched; this only affects fresh layouts.
 export function buildDefaultRealmLayout(): Record<string, string> {
-  const layout: Record<string, string> = {};
-  for (const plot of REALM_PLOTS) {
-    if (plot.prebuilt && plot.defaultBuildingId) layout[plot.defaultBuildingId] = plot.id;
-  }
-  return layout;
+  return { [ATRIUM_ID]: cellId(DEFAULT_ATRIUM_ORIGIN.row, DEFAULT_ATRIUM_ORIGIN.col) };
 }
 
 export interface RealmUnlockContext {
@@ -541,64 +421,6 @@ export interface RealmUnlockContext {
   playerLevel: number;
   chapterProgress: number;
   kingdomLevels: Record<string, number>;
-}
-
-export function isPlotUnlocked(plot: RealmPlot, ctx: RealmUnlockContext): boolean {
-  if (plot.unlockRequirement) {
-    const req = plot.unlockRequirement;
-    if (req.kind === "atriumLevel") return ctx.atriumLevel >= req.level;
-    if (req.kind === "playerLevel") return ctx.playerLevel >= req.level;
-    if (req.kind === "chapter") return ctx.chapterProgress >= req.chapter;
-    if (req.kind === "buildingBuilt") return (ctx.kingdomLevels[req.buildingId] || 0) >= 1;
-    return false;
-  }
-  // No explicit gate: a plot with a default building is unlocked once that
-  // building itself is unlocked (mirrors the original atrium-gated map).
-  if (plot.defaultBuildingId) {
-    const building = getBuildingById(plot.defaultBuildingId);
-    if (building) return isBuildingUnlocked(building, ctx.atriumLevel);
-  }
-  return true;
-}
-
-export function plotUnlockLabel(plot: RealmPlot): string {
-  if (plot.unlockRequirement) return plot.unlockRequirement.label;
-  if (plot.defaultBuildingId) {
-    const building = getBuildingById(plot.defaultBuildingId);
-    if (building) return `Grand Ward Atrium Lv.${building.atriumLevelRequired}`;
-  }
-  return "Unlocked";
-}
-
-export function isBuildingAllowedOnPlot(building: RealmBuilding, plot: RealmPlot): boolean {
-  return plot.allowedBuildingIds.includes(building.id);
-}
-
-export function isDecorationAllowedOnPlot(decoration: RealmDecoration, plot: RealmPlot): boolean {
-  return plot.allowedDecorationIds.includes(decoration.id);
-}
-
-// What building currently occupies a plot, if any (derived from realm_layout).
-export function getOccupantBuildingId(plotId: string, layout: Record<string, string>): string | undefined {
-  return Object.keys(layout).find((buildingId) => layout[buildingId] === plotId);
-}
-
-// Every plot that a movable building could relocate to: allowed by rules,
-// currently unlocked, and not already occupied by another building.
-export function compatiblePlotsForBuilding(
-  building: RealmBuilding,
-  plots: RealmPlot[],
-  layout: Record<string, string>,
-  ctx: RealmUnlockContext
-): RealmPlot[] {
-  const currentPlotId = layout[building.id];
-  return plots.filter((plot) => {
-    if (plot.id === currentPlotId) return false;
-    if (!isBuildingAllowedOnPlot(building, plot)) return false;
-    if (!isPlotUnlocked(plot, ctx)) return false;
-    const occupant = getOccupantBuildingId(plot.id, layout);
-    return !occupant;
-  });
 }
 
 export const REALM_CUSTOMIZATION_NOTE =

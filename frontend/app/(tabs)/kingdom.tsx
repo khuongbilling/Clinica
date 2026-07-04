@@ -1,9 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Image as ExpoImage } from "expo-image";
+import { useMemo, useState, useEffect } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
@@ -12,33 +10,50 @@ import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import {
-  ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS, REALM_PLOTS, DECORATIONS,
+  ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS, DECORATIONS,
   REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE, REALM_LOOP_NOTE,
-  REALM_HARMONY_NOTE, CARE_PATHWAYS_NOTE, CARE_PATHWAYS_EXAMPLES, DISTRICT_IDENTITY_NOTE,
-  HERO_RESIDENCY_NOTE, SANCTUARY_REQUESTS_NOTE, SANCTUARY_REQUESTS_EXAMPLES, REALM_SKIN_EXAMPLES,
-  getAtriumLevel, isBuildingUnlocked, RealmBuilding, RealmPlot, RealmDecoration,
-  RealmUnlockContext, buildDefaultRealmLayout, isPlotUnlocked, plotUnlockLabel,
-  getOccupantBuildingId, getBuildingById, getDecorationById, compatiblePlotsForBuilding,
-  isDecorationAllowedOnPlot, isBuildingAllowedOnPlot, PlotSize, getPlotTypeMeta, AssignmentSlotType,
+  REALM_HARMONY_NOTE, CARE_PATHWAYS_NOTE, DISTRICT_IDENTITY_NOTE,
+  HERO_RESIDENCY_NOTE, SANCTUARY_REQUESTS_NOTE, REALM_SKIN_EXAMPLES,
+  getAtriumLevel, isBuildingUnlocked, RealmBuilding, RealmDecoration,
+  buildDefaultRealmLayout, getBuildingById, getDecorationById, PlotType,
 } from "@/src/game/realm";
+import {
+  GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,
+  isCellUnlocked, getFootprint, getFootprintCells, getOccupiedCellMap,
+  canPlaceBuilding, canPlaceDecoration, computeRoads, cellId, parseCellId,
+  districtToPlotType,
+} from "@/src/game/realmGrid";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-const MAP_IMAGE = require("@/assets/images/realm_kingdom_map.png");
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const MAP_ASPECT = 896 / 1280;
-const MAP_SCALE = 1.6;
-const MAP_W = SCREEN_W * MAP_SCALE;
-const MAP_H = MAP_W / MAP_ASPECT;
+const GRID_W = GRID_COLS * CELL_PX;
+const GRID_H = GRID_ROWS * CELL_PX;
 
 const DISTRICT_COLOR: Record<string, string> = {
   brand: COLORS.brand, mind: COLORS.mind, protection: COLORS.protection,
   energy: COLORS.energy, growth: COLORS.growth, fire: COLORS.fire, storm: COLORS.storm,
 };
 
-const PLOT_DIAMETER: Record<PlotSize, number> = { small: 40, medium: 56, large: 72 };
-const PLOT_ICON_SIZE: Record<PlotSize, number> = { small: 16, medium: 22, large: 28 };
+const PLOT_TYPE_COLOR: Record<PlotType, string> = {
+  sanctuary: COLORS.brand, scholar: COLORS.mind, care: COLORS.protection,
+  wellness: COLORS.growth, commerce: COLORS.energy, support: COLORS.fire,
+  diplomacy: COLORS.storm, decoration: "#c9a06a", road: "#8a7a63", blocked: "#3a3f47",
+};
 
-type Mode = "view" | "build" | "move";
+const TERRAIN_BG: Record<string, string> = {
+  grass: "rgba(70,140,90,0.16)",
+  dirt: "rgba(150,120,80,0.18)",
+  water: "rgba(40,70,110,0.35)",
+  mountain: "rgba(50,50,58,0.5)",
+  stone: "rgba(60,62,68,0.35)",
+};
+
+function districtColorFor(id: string | null | undefined): string {
+  if (!id) return COLORS.onSurfaceTertiary;
+  const d = REALM_DISTRICTS.find((x) => x.id === id);
+  return DISTRICT_COLOR[d?.colorToken || "brand"];
+}
+
+type Placement = { kind: "building" | "decoration"; id: string; isMove: boolean; origin: { row: number; col: number } | null };
 
 export default function KingdomScreen() {
   const router = useRouter();
@@ -46,18 +61,12 @@ export default function KingdomScreen() {
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
 
-  const [selectedBuilding, setSelectedBuilding] = useState<RealmBuilding | null>(null);
-  const [selectedEmptyPlot, setSelectedEmptyPlot] = useState<RealmPlot | null>(null);
-  const [selectedLockedPlot, setSelectedLockedPlot] = useState<RealmPlot | null>(null);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const [showInventory, setShowInventory] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
   const [showDistrictInfo, setShowDistrictInfo] = useState<string | null>(null);
-
-  const [mode, setMode] = useState<Mode>("view");
-  const [buildTargetPlot, setBuildTargetPlot] = useState<RealmPlot | null>(null);
-  const [buildBuildingTargetPlot, setBuildBuildingTargetPlot] = useState<RealmPlot | null>(null);
-  const [moveBuildingId, setMoveBuildingId] = useState<string | null>(null);
-  const [moveTargetPlot, setMoveTargetPlot] = useState<RealmPlot | null>(null);
+  const [placement, setPlacement] = useState<Placement | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,7 +79,7 @@ export default function KingdomScreen() {
 
   useEffect(() => {
     if (!banner) return;
-    const t = setTimeout(() => setBanner(null), 2400);
+    const t = setTimeout(() => setBanner(null), 2600);
     return () => clearTimeout(t);
   }, [banner]);
 
@@ -79,128 +88,137 @@ export default function KingdomScreen() {
     [player]
   );
 
+  const layout = player?.realm_layout || buildDefaultRealmLayout();
+  const decor = player?.realm_decor || {};
+
+  const occupiedCellMap = useMemo(() => getOccupiedCellMap(layout), [layout]);
+  const roadSet = useMemo(() => computeRoads(layout), [layout]);
+
+  const placedBuildings = useMemo(() => {
+    return Object.entries(layout)
+      .map(([buildingId, originId]) => {
+        const building = getBuildingById(buildingId);
+        const origin = parseCellId(originId);
+        if (!building || !origin) return null;
+        return { building, origin, footprint: getFootprint(buildingId) };
+      })
+      .filter((x): x is { building: RealmBuilding; origin: { row: number; col: number }; footprint: { w: number; h: number } } => !!x);
+  }, [layout]);
+
+  const placedDecorations = useMemo(() => {
+    return Object.entries(decor)
+      .map(([cid, decoId]) => {
+        const cell = getCellById(cid);
+        const decoration = getDecorationById(decoId);
+        if (!cell || !decoration) return null;
+        return { cell, decoration };
+      })
+      .filter((x): x is { cell: PlotCell; decoration: RealmDecoration } => !!x);
+  }, [decor]);
+
+  const unplacedUnlocked = useMemo(
+    () => REALM_BUILDINGS.filter((b) => isBuildingUnlocked(b, atriumLevel) && !layout[b.id]),
+    [atriumLevel, layout]
+  );
+  const lockedBuildings = useMemo(
+    () => REALM_BUILDINGS.filter((b) => !isBuildingUnlocked(b, atriumLevel)),
+    [atriumLevel]
+  );
+
   if (!player) return null;
 
   const kingdomLevels = player.kingdom_levels || {};
-  const layout = player.realm_layout || buildDefaultRealmLayout();
-  const decor = player.realm_decor || {};
-  const ctx: RealmUnlockContext = {
-    atriumLevel,
-    playerLevel: player.player_level || 1,
-    chapterProgress: player.chapter_progress || 1,
-    kingdomLevels,
-  };
+  const selectedBuilding = selectedBuildingId ? getBuildingById(selectedBuildingId) : null;
+  const selectedOriginId = selectedBuildingId ? layout[selectedBuildingId] : undefined;
 
-  const moveBuilding = moveBuildingId ? getBuildingById(moveBuildingId) : null;
-  const compatiblePlots = moveBuilding
-    ? compatiblePlotsForBuilding(moveBuilding, REALM_PLOTS, layout, ctx)
-    : [];
-  const compatiblePlotIds = new Set(compatiblePlots.map((p) => p.id));
-
-  function availableBuildingsForPlot(plot: RealmPlot): RealmBuilding[] {
-    return REALM_BUILDINGS.filter((b) =>
-      isBuildingAllowedOnPlot(b, plot) &&
-      isBuildingUnlocked(b, atriumLevel) &&
-      !layout[b.id]
-    );
+  function exitPlacement() {
+    setPlacement(null);
   }
 
-  function exitModes() {
-    setMode("view");
-    setMoveBuildingId(null);
-    setMoveTargetPlot(null);
-    setBuildTargetPlot(null);
-    setBuildBuildingTargetPlot(null);
+  function beginPlaceBuilding(building: RealmBuilding, isMove: boolean) {
+    setShowInventory(false);
+    setSelectedBuildingId(null);
+    const currentOriginId = layout[building.id];
+    const currentOrigin = currentOriginId ? parseCellId(currentOriginId) : null;
+    setPlacement({ kind: "building", id: building.id, isMove, origin: isMove ? currentOrigin : null });
+    setBanner(`${isMove ? "Move" : "Place"} ${building.name} (${getFootprint(building.id).w}x${getFootprint(building.id).h}) — tap a cell on the grid.`);
   }
 
-  function toggleBuildMode() {
-    if (mode === "build") {
-      exitModes();
+  function beginPlaceDecoration(decoration: RealmDecoration) {
+    setShowInventory(false);
+    setPlacement({ kind: "decoration", id: decoration.id, isMove: false, origin: null });
+    setBanner(`Place ${decoration.name} — tap an empty Decoration Plot.`);
+  }
+
+  async function storeBuilding(building: RealmBuilding) {
+    await setRealmLayout({ [building.id]: null });
+    setBanner(`${building.name} stored — find it again in Sanctuary Inventory.`);
+    setSelectedBuildingId(null);
+  }
+
+  function handleCellPress(cell: PlotCell) {
+    if (placement) {
+      setPlacement({ ...placement, origin: { row: cell.row, col: cell.col } });
+      return;
+    }
+    const occupantId = occupiedCellMap.get(cell.id);
+    if (occupantId) {
+      setSelectedBuildingId(occupantId);
+      return;
+    }
+    if (decor[cell.id]) {
+      const deco = getDecorationById(decor[cell.id]);
+      setBanner(deco ? `${deco.name} — ${deco.flavor}` : "Decorated plot.");
+      return;
+    }
+    if (roadSet.has(cell.id)) {
+      setBanner("Realm Road — auto-generated, connects every building to the Grand Ward Atrium.");
+      return;
+    }
+    if (cell.plotType === "blocked") {
+      setBanner("Untamed wilds — outside the Realm's buildable grounds.");
+      return;
+    }
+    if (cell.isExpansion && !isCellUnlocked(cell, atriumLevel)) {
+      setBanner(`Locked Expansion Plot — unlocks at Grand Ward Atrium Lv.${cell.expansionAtriumLevel}.`);
+      return;
+    }
+    const meta = getPlotTypeLabel(cell.plotType);
+    setBanner(`${meta} — empty. Use Sanctuary Inventory to build or decorate here.`);
+  }
+
+  const placementCheck = useMemo(() => {
+    if (!placement || !placement.origin) return null;
+    if (placement.kind === "building") {
+      const building = getBuildingById(placement.id);
+      if (!building) return null;
+      return canPlaceBuilding({
+        districtId: building.district,
+        footprint: getFootprint(building.id),
+        origin: placement.origin,
+        occupiedCellMap,
+        atriumLevel,
+        unlocked: isBuildingUnlocked(building, atriumLevel),
+        ignoreBuildingId: placement.isMove ? building.id : undefined,
+      });
+    }
+    const decorOccupied = new Set(Object.keys(decor));
+    return canPlaceDecoration({ origin: placement.origin, occupiedCellMap, decorOccupied });
+  }, [placement, occupiedCellMap, atriumLevel, decor]);
+
+  async function confirmPlacement() {
+    if (!placement || !placement.origin || !placementCheck?.ok) return;
+    const targetCellId = cellId(placement.origin.row, placement.origin.col);
+    if (placement.kind === "building") {
+      const building = getBuildingById(placement.id);
+      await setRealmLayout({ [placement.id]: targetCellId });
+      setBanner(`${building?.name || "Building"} ${placement.isMove ? "moved" : "constructed"}.`);
     } else {
-      setMode("build");
-      setMoveBuildingId(null);
-      setBanner("Build Sanctuary: tap a glowing plot to construct a building or place a decoration.");
+      const decoration = getDecorationById(placement.id);
+      await setRealmLayout({}, { [targetCellId]: placement.id });
+      setBanner(`${decoration?.name || "Decoration"} placed.`);
     }
-  }
-
-  function startMove(building: RealmBuilding) {
-    setSelectedBuilding(null);
-    setMode("move");
-    setMoveBuildingId(building.id);
-    setBanner(`Move Mode: choose a highlighted plot for ${building.name}.`);
-  }
-
-  async function confirmMove() {
-    if (!moveBuildingId || !moveTargetPlot) return;
-    await setRealmLayout({ [moveBuildingId]: moveTargetPlot.id });
-    setBanner("Building moved.");
-    exitModes();
-  }
-
-  function handlePlotPress(plot: RealmPlot) {
-    const unlocked = isPlotUnlocked(plot, ctx);
-    const occupantBuildingId = getOccupantBuildingId(plot.id, layout);
-    const occupantBuilding = occupantBuildingId ? getBuildingById(occupantBuildingId) : undefined;
-    const occupantDecorationId = decor[plot.id];
-
-    if (mode === "move") {
-      if (compatiblePlotIds.has(plot.id)) {
-        setMoveTargetPlot(plot);
-      } else {
-        setBanner("That plot can't hold this building. Move canceled.");
-        exitModes();
-      }
-      return;
-    }
-
-    if (mode === "build") {
-      if (!unlocked) {
-        setBanner(`Locked — ${plotUnlockLabel(plot)}.`);
-        return;
-      }
-      if (occupantBuilding || occupantDecorationId) {
-        setBanner("This plot is already occupied.");
-        return;
-      }
-      const buildableHere = availableBuildingsForPlot(plot);
-      if (buildableHere.length > 0) {
-        setBuildBuildingTargetPlot(plot);
-        return;
-      }
-      if (plot.allowedDecorationIds.length > 0) {
-        setBuildTargetPlot(plot);
-        return;
-      }
-      setBanner("Nothing available to build here yet.");
-      return;
-    }
-
-    // view mode
-    if (!unlocked) { setSelectedLockedPlot(plot); return; }
-    if (occupantBuilding) { setSelectedBuilding(occupantBuilding); return; }
-    setSelectedEmptyPlot(plot);
-  }
-
-  async function placeDecoration(decoration: RealmDecoration) {
-    if (!buildTargetPlot) return;
-    await setRealmLayout({}, { [buildTargetPlot.id]: decoration.id });
-    setBanner(`${decoration.name} placed.`);
-    setBuildTargetPlot(null);
-    exitModes();
-  }
-
-  async function placeBuilding(building: RealmBuilding) {
-    if (!buildBuildingTargetPlot) return;
-    await setRealmLayout({ [building.id]: buildBuildingTargetPlot.id });
-    setBanner(`${building.name} constructed.`);
-    setBuildBuildingTargetPlot(null);
-    exitModes();
-  }
-
-  async function removeDecoration(plotId: string) {
-    await setRealmLayout({}, { [plotId]: null });
-    setBanner("Decoration removed.");
-    setSelectedEmptyPlot(null);
+    exitPlacement();
   }
 
   return (
@@ -213,16 +231,16 @@ export default function KingdomScreen() {
         </View>
         <View style={styles.topBarActions}>
           <Pressable
-            style={[styles.modeBtn, mode === "build" && styles.modeBtnActive]}
-            onPress={toggleBuildMode}
+            style={styles.modeBtn}
+            onPress={() => setShowInventory(true)}
             testID="realm-build-mode-button"
             hitSlop={6}
           >
-            <Ionicons name="hammer-outline" size={16} color={mode === "build" ? COLORS.onBrand : COLORS.brand} />
-            <Text style={[styles.modeBtnTxt, mode === "build" && styles.modeBtnTxtActive]}>Build Sanctuary</Text>
+            <Ionicons name="hammer-outline" size={16} color={COLORS.brand} />
+            <Text style={styles.modeBtnTxt}>Sanctuary Inventory</Text>
           </Pressable>
-          {mode !== "view" && (
-            <Pressable style={styles.cancelBtn} onPress={exitModes} testID="realm-mode-cancel">
+          {placement && (
+            <Pressable style={styles.cancelBtn} onPress={exitPlacement} testID="realm-mode-cancel">
               <Text style={styles.cancelBtnTxt}>Cancel</Text>
             </Pressable>
           )}
@@ -242,75 +260,90 @@ export default function KingdomScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ width: MAP_W }}
+        contentContainerStyle={{ width: GRID_W }}
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
-          <View style={[styles.mapWrap, { width: MAP_W, height: MAP_H }]} testID="kingdom-map">
-            <ExpoImage source={MAP_IMAGE} style={StyleSheet.absoluteFillObject} contentFit="cover" />
-
-            {REALM_PLOTS.map((plot) => {
-              const unlocked = isPlotUnlocked(plot, ctx);
-              const occupantBuildingId = getOccupantBuildingId(plot.id, layout);
-              const occupantBuilding = occupantBuildingId ? getBuildingById(occupantBuildingId) : undefined;
-              const occupantDecorationId = decor[plot.id];
-              const occupantDecoration = occupantDecorationId ? getDecorationById(occupantDecorationId) : undefined;
-              const district = REALM_DISTRICTS.find((d) => d.id === plot.district);
-              const color = DISTRICT_COLOR[district?.colorToken || "brand"];
-              const diameter = PLOT_DIAMETER[plot.size];
-
-              const isMoveSource = mode === "move" && occupantBuildingId === moveBuildingId;
-              const isMoveTarget = mode === "move" && compatiblePlotIds.has(plot.id);
-              const isMoveDimmed = mode === "move" && !isMoveTarget && !isMoveSource;
-              const isBuildTarget = mode === "build" && unlocked && !occupantBuilding && !occupantDecorationId &&
-                (plot.allowedDecorationIds.length > 0 || availableBuildingsForPlot(plot).length > 0);
-              const isBuildDimmed = mode === "build" && !isBuildTarget;
-
+          <View style={[styles.gridWrap, { width: GRID_W, height: GRID_H }]} testID="kingdom-map">
+            {GRID_CELLS.map((cell) => {
+              const locked = cell.isExpansion && !isCellUnlocked(cell, atriumLevel);
+              const isRoad = roadSet.has(cell.id) && cell.plotType !== "blocked";
               return (
                 <Pressable
-                  key={plot.id}
-                  onPress={() => handlePlotPress(plot)}
+                  key={cell.id}
+                  onPress={() => handleCellPress(cell)}
                   style={[
-                    styles.plotWrap,
+                    styles.cellTile,
                     {
-                      left: `${plot.x}%`, top: `${plot.y}%`,
-                      width: diameter, height: diameter,
-                      marginLeft: -diameter / 2, marginTop: -diameter / 2,
+                      left: cell.col * CELL_PX, top: cell.row * CELL_PX,
+                      backgroundColor: TERRAIN_BG[cell.terrain],
+                      borderColor: cell.plotType === "blocked" ? "transparent" : PLOT_TYPE_COLOR[cell.plotType] + "33",
                     },
                   ]}
-                  testID={`realm-plot-${plot.id}`}
-                  hitSlop={4}
+                  testID={`realm-cell-${cell.id}`}
                 >
-                  <LinearGradient
-                    colors={
-                      !unlocked
-                        ? ["rgba(20,20,26,0.85)", "rgba(8,8,12,0.85)"]
-                        : isMoveTarget || isBuildTarget
-                        ? [color + "55", color + "22"]
-                        : [color + "30", color + "12"]
-                    }
-                    style={[
-                      styles.plotPad,
-                      { width: diameter, height: diameter, borderRadius: diameter / 2 },
-                      { borderColor: unlocked ? color : COLORS.borderStrong },
-                      (isMoveTarget || isBuildTarget) && styles.plotPadPulse,
-                      (isMoveDimmed || isBuildDimmed) && styles.plotPadDimmed,
-                      isMoveSource && styles.plotPadSource,
-                    ]}
-                  >
-                    <Ionicons
-                      name={(!unlocked ? "lock-closed" : occupantBuilding ? occupantBuilding.icon : occupantDecoration ? occupantDecoration.icon : "add-circle-outline") as any}
-                      size={PLOT_ICON_SIZE[plot.size]}
-                      color={unlocked ? color : COLORS.onSurfaceTertiary}
-                    />
-                    {unlocked && occupantBuilding && (kingdomLevels[occupantBuilding.kingdomLevelsKey] || 0) > 0 && (
-                      <View style={[styles.plotLvl, { backgroundColor: color }]}>
-                        <Text style={styles.plotLvlTxt}>{kingdomLevels[occupantBuilding.kingdomLevelsKey] || 0}</Text>
-                      </View>
-                    )}
-                  </LinearGradient>
+                  {isRoad && <View style={styles.roadDot} />}
+                  {locked && <Ionicons name="lock-closed" size={11} color={COLORS.onSurfaceTertiary} />}
                 </Pressable>
               );
             })}
+
+            {placedDecorations.map(({ cell, decoration }) => (
+              <View
+                key={cell.id}
+                style={[styles.decorTile, { left: cell.col * CELL_PX, top: cell.row * CELL_PX }]}
+              >
+                <Ionicons name={decoration.icon as any} size={14} color={PLOT_TYPE_COLOR.decoration} />
+              </View>
+            ))}
+
+            {placedBuildings.map(({ building, origin, footprint }) => {
+              const color = districtColorFor(building.district);
+              const lvl = kingdomLevels[building.kingdomLevelsKey] || 0;
+              const isMoveSource = placement?.kind === "building" && placement.isMove && placement.id === building.id;
+              return (
+                <Pressable
+                  key={building.id}
+                  onPress={() => handleCellPress(getCell(origin.row, origin.col)!)}
+                  style={[
+                    styles.buildingTile,
+                    {
+                      left: origin.col * CELL_PX, top: origin.row * CELL_PX,
+                      width: footprint.w * CELL_PX, height: footprint.h * CELL_PX,
+                      borderColor: color, backgroundColor: color + "2a",
+                      opacity: isMoveSource ? 0.35 : 1,
+                    },
+                  ]}
+                  testID={`realm-building-tile-${building.id}`}
+                >
+                  <Ionicons name={building.icon as any} size={Math.min(22, footprint.w * CELL_PX * 0.32)} color={color} />
+                  {lvl > 0 && (
+                    <View style={[styles.plotLvl, { backgroundColor: color }]}>
+                      <Text style={styles.plotLvlTxt}>{lvl}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+
+            {placement?.origin && (() => {
+              const footprint = placement.kind === "building" ? getFootprint(placement.id) : { w: 1, h: 1 };
+              const cells = getFootprintCells(placement.origin, footprint);
+              const ok = !!placementCheck?.ok;
+              return (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.previewBox,
+                    {
+                      left: placement.origin.col * CELL_PX, top: placement.origin.row * CELL_PX,
+                      width: footprint.w * CELL_PX, height: footprint.h * CELL_PX,
+                      borderColor: ok ? COLORS.success : COLORS.error,
+                      backgroundColor: (ok ? COLORS.success : COLORS.error) + "33",
+                    },
+                  ]}
+                />
+              );
+            })()}
           </View>
         </ScrollView>
       </ScrollView>
@@ -318,11 +351,11 @@ export default function KingdomScreen() {
       <View style={styles.hintRow}>
         <Ionicons name="hand-left-outline" size={13} color={COLORS.onSurfaceTertiary} />
         <Text style={styles.hintTxt}>
-          {mode === "build"
-            ? "Tap a glowing plot to construct a building or place a decoration."
-            : mode === "move"
-            ? "Tap a highlighted plot to relocate the building."
-            : "Pan the map and tap any plot to see details. Use Build Sanctuary to construct and decorate."}
+          {placement
+            ? placementCheck?.ok
+              ? "Looks good — Confirm below, or tap another cell to reposition."
+              : placementCheck?.reason || "Tap a compatible, unlocked, unoccupied cell."
+            : "Pan the grid and tap any cell or building. Open Sanctuary Inventory to build, move, or store."}
         </Text>
       </View>
 
@@ -348,71 +381,80 @@ export default function KingdomScreen() {
         </Pressable>
       </ScrollView>
 
-      {mode === "move" && moveTargetPlot && moveBuilding && (
+      {placement?.origin && (
         <View style={styles.confirmBar}>
-          <Text style={styles.confirmBarTxt}>Move {moveBuilding.name} to {moveTargetPlot.name}?</Text>
+          <Text style={styles.confirmBarTxt} numberOfLines={2}>
+            {placementCheck?.ok ? "Confirm placement?" : placementCheck?.reason || "Invalid placement."}
+          </Text>
           <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-            <Pressable style={styles.confirmBarCancel} onPress={() => setMoveTargetPlot(null)}>
+            <Pressable style={styles.confirmBarCancel} onPress={exitPlacement} testID="realm-cancel-place">
               <Text style={styles.confirmBarCancelTxt}>Cancel</Text>
             </Pressable>
-            <Pressable style={styles.confirmBarConfirm} onPress={confirmMove} testID="realm-confirm-move">
+            <Pressable
+              style={[styles.confirmBarConfirm, !placementCheck?.ok && styles.confirmBarConfirmDisabled]}
+              onPress={confirmPlacement}
+              disabled={!placementCheck?.ok}
+              testID="realm-confirm-place"
+            >
               <Text style={styles.confirmBarConfirmTxt}>Confirm</Text>
             </Pressable>
           </View>
         </View>
       )}
 
-      <BuildingDetailModal
+      <BuildingActionSheet
         building={selectedBuilding}
+        originId={selectedOriginId}
         atriumLevel={atriumLevel}
         kingdomLevels={kingdomLevels}
-        onClose={() => setSelectedBuilding(null)}
-        onMove={startMove}
+        onClose={() => setSelectedBuildingId(null)}
+        onMove={(b) => beginPlaceBuilding(b, true)}
+        onStore={storeBuilding}
         router={router}
       />
 
-      <EmptyPlotPanel
-        plot={selectedEmptyPlot}
-        decor={decor}
-        availableBuildings={selectedEmptyPlot ? availableBuildingsForPlot(selectedEmptyPlot) : []}
-        onClose={() => setSelectedEmptyPlot(null)}
-        onBuild={(plot) => { setSelectedEmptyPlot(null); setMode("build"); setBuildTargetPlot(plot); }}
-        onBuildBuilding={(plot) => { setSelectedEmptyPlot(null); setMode("build"); setBuildBuildingTargetPlot(plot); }}
-        onRemoveDecoration={removeDecoration}
-      />
-
-      <LockedPlotPanel plot={selectedLockedPlot} onClose={() => setSelectedLockedPlot(null)} />
-
-      <DecorationPickerModal
-        plot={buildTargetPlot}
-        onClose={() => { setBuildTargetPlot(null); }}
-        onPick={placeDecoration}
-      />
-
-      <BuildingPickerModal
-        plot={buildBuildingTargetPlot}
-        buildings={buildBuildingTargetPlot ? availableBuildingsForPlot(buildBuildingTargetPlot) : []}
-        onClose={() => { setBuildBuildingTargetPlot(null); }}
-        onPick={placeBuilding}
+      <InventoryDrawer
+        visible={showInventory}
+        onClose={() => setShowInventory(false)}
+        unplaced={unplacedUnlocked}
+        locked={lockedBuildings}
+        placed={placedBuildings.map((p) => p.building)}
+        atriumLevel={atriumLevel}
+        kingdomLevels={kingdomLevels}
+        onPickBuilding={(b) => beginPlaceBuilding(b, false)}
+        onPickDecoration={beginPlaceDecoration}
+        onMoveBuilding={(b) => beginPlaceBuilding(b, true)}
+        onStoreBuilding={storeBuilding}
       />
 
       <LegendModal visible={showLegend} onClose={() => setShowLegend(false)} />
       <CustomizeModal visible={showCustomize} onClose={() => setShowCustomize(false)} />
-      <DistrictInfoModal districtId={showDistrictInfo} onClose={() => setShowDistrictInfo(null)} />
+      <DistrictInfoModal districtId={showDistrictInfo} onClose={() => setShowDistrictInfo(null)} layout={layout} />
 
       <TutorialOverlay />
     </SafeAreaView>
   );
 }
 
-function BuildingDetailModal({
-  building, atriumLevel, kingdomLevels, onClose, onMove, router,
+function getPlotTypeLabel(type: PlotType): string {
+  const labels: Record<PlotType, string> = {
+    sanctuary: "Sanctuary Plot", scholar: "Scholar Plot", care: "Care Plot", wellness: "Wellness Plot",
+    commerce: "Commerce Plot", support: "Support Plot", diplomacy: "Diplomacy Plot",
+    decoration: "Decoration Plot", road: "Road", blocked: "Wilds",
+  };
+  return labels[type];
+}
+
+function BuildingActionSheet({
+  building, originId, atriumLevel, kingdomLevels, onClose, onMove, onStore, router,
 }: {
-  building: RealmBuilding | null;
+  building: RealmBuilding | null | undefined;
+  originId: string | undefined;
   atriumLevel: number;
   kingdomLevels: Record<string, number>;
   onClose: () => void;
   onMove: (building: RealmBuilding) => void;
+  onStore: (building: RealmBuilding) => void;
   router: ReturnType<typeof useRouter>;
 }) {
   if (!building) return null;
@@ -421,8 +463,8 @@ function BuildingDetailModal({
   const req = building.requirementsForLevel(lvl);
   const district = REALM_DISTRICTS.find((d) => d.id === building.district);
   const color = DISTRICT_COLOR[district?.colorToken || "brand"];
-  const homePlot = REALM_PLOTS.find((p) => p.allowedBuildingIds.includes(building.id));
-  const plotTypeMeta = homePlot ? getPlotTypeMeta(homePlot.plotType) : undefined;
+  const footprint = getFootprint(building.id);
+  const plotType = districtToPlotType(building.district);
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -490,24 +532,20 @@ function BuildingDetailModal({
             )}
             <Text style={styles.sheetFootnote}>{"\n" + REALM_HERO_ASSIGNMENT_NOTE}</Text>
 
-            {plotTypeMeta && (
-              <>
-                <Text style={styles.sheetLabel}>PLOT TYPE</Text>
-                <View style={styles.slotRow}>
-                  <Ionicons name={(plotTypeMeta.icon || "help-circle-outline") as any} size={14} color={COLORS.brand} />
-                  <Text style={styles.slotTxt}>
-                    <Text style={{ fontWeight: "700" }}>{plotTypeMeta.name}</Text>
-                    {" — "}{plotTypeMeta.description}
-                  </Text>
-                </View>
-              </>
-            )}
+            <Text style={styles.sheetLabel}>FOOTPRINT</Text>
+            <View style={styles.slotRow}>
+              <Ionicons name={(PLOT_TYPE_ICON[plotType] || "square-outline") as any} size={14} color={COLORS.brand} />
+              <Text style={styles.slotTxt}>
+                {footprint.w}x{footprint.h} cells on a {getPlotTypeLabel(plotType)}
+                {originId ? ` · placed at ${originId}` : ""}
+              </Text>
+            </View>
 
             <Text style={styles.sheetLabel}>PLOT</Text>
             {building.movable ? (
               <View style={styles.slotRow}>
                 <Ionicons name="move-outline" size={14} color={COLORS.brand} />
-                <Text style={styles.slotTxt}>This building can be relocated to any compatible plot.</Text>
+                <Text style={styles.slotTxt}>This building can be moved or stored via Sanctuary Inventory.</Text>
               </View>
             ) : (
               <View style={styles.slotRow}>
@@ -533,7 +571,7 @@ function BuildingDetailModal({
               </View>
             )}
 
-            <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.lg }}>
+            <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.lg, flexWrap: "wrap" }}>
               {unlocked && building.linkKind === "route" && building.linkRoute && (
                 <Pressable
                   style={[styles.linkBtn, { borderColor: color, flex: 1 }]}
@@ -546,12 +584,22 @@ function BuildingDetailModal({
               )}
               {unlocked && building.movable && (
                 <Pressable
-                  style={[styles.moveBtn, { flex: building.linkKind === "route" ? undefined : 1 }]}
+                  style={[styles.moveBtn, { flex: 1, marginTop: 0 }]}
                   onPress={() => onMove(building)}
                   testID={`realm-move-${building.id}`}
                 >
                   <Ionicons name="move-outline" size={16} color={COLORS.onSurfaceSecondary} />
                   <Text style={styles.moveBtnTxt}>Move</Text>
+                </Pressable>
+              )}
+              {unlocked && building.movable && (
+                <Pressable
+                  style={[styles.moveBtn, { flex: 1, marginTop: 0 }]}
+                  onPress={() => onStore(building)}
+                  testID={`realm-store-${building.id}`}
+                >
+                  <Ionicons name="archive-outline" size={16} color={COLORS.onSurfaceSecondary} />
+                  <Text style={styles.moveBtnTxt}>Store</Text>
                 </Pressable>
               )}
             </View>
@@ -565,211 +613,131 @@ function BuildingDetailModal({
   );
 }
 
-function EmptyPlotPanel({
-  plot, decor, availableBuildings, onClose, onBuild, onBuildBuilding, onRemoveDecoration,
-}: {
-  plot: RealmPlot | null;
-  decor: Record<string, string>;
-  availableBuildings: RealmBuilding[];
-  onClose: () => void;
-  onBuild: (plot: RealmPlot) => void;
-  onBuildBuilding: (plot: RealmPlot) => void;
-  onRemoveDecoration: (plotId: string) => void;
-}) {
-  if (!plot) return null;
-  const district = REALM_DISTRICTS.find((d) => d.id === plot.district);
-  const color = DISTRICT_COLOR[district?.colorToken || "brand"];
-  const decorationId = decor[plot.id];
-  const decoration = decorationId ? getDecorationById(decorationId) : undefined;
-  const canDecorate = plot.allowedDecorationIds.length > 0;
-  const canConstruct = availableBuildings.length > 0;
-  const plotTypeMeta = getPlotTypeMeta(plot.plotType);
+const PLOT_TYPE_ICON: Record<PlotType, string> = {
+  sanctuary: "sparkles", scholar: "school", care: "medkit", wellness: "leaf",
+  commerce: "business", support: "shield-checkmark", diplomacy: "flag",
+  decoration: "flower", road: "trail-sign", blocked: "leaf-outline",
+};
 
+function InventoryDrawer({
+  visible, onClose, unplaced, locked, placed, atriumLevel, kingdomLevels,
+  onPickBuilding, onPickDecoration, onMoveBuilding, onStoreBuilding,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  unplaced: RealmBuilding[];
+  locked: RealmBuilding[];
+  placed: RealmBuilding[];
+  atriumLevel: number;
+  kingdomLevels: Record<string, number>;
+  onPickBuilding: (b: RealmBuilding) => void;
+  onPickDecoration: (d: RealmDecoration) => void;
+  onMoveBuilding: (b: RealmBuilding) => void;
+  onStoreBuilding: (b: RealmBuilding) => void;
+}) {
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-empty-plot-sheet">
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-inventory-sheet">
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
-            <View style={[styles.sheetIcon, { borderColor: color, backgroundColor: color + "1f" }]}>
-              <Ionicons name={(decoration ? decoration.icon : "square-outline") as any} size={26} color={color} />
-            </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sheetName}>{plot.name}</Text>
-              <Text style={styles.sheetDistrict}>{district?.name} · {plotTypeMeta.name} · {plot.size} plot</Text>
+              <Text style={styles.sheetName}>Sanctuary Inventory</Text>
+              <Text style={styles.sheetDistrict}>Build, move, and store your Realm's buildings</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
             </Pressable>
           </View>
 
-          {decoration ? (
-            <>
-              <Text style={styles.sheetBody}>Decorated with a {decoration.name}. {decoration.flavor}</Text>
-              <Pressable style={styles.moveBtn} onPress={() => onRemoveDecoration(plot.id)} testID="realm-remove-decoration">
-                <Ionicons name="trash-outline" size={16} color={COLORS.onSurfaceSecondary} />
-                <Text style={styles.moveBtnTxt}>Remove Decoration</Text>
-              </Pressable>
-            </>
-          ) : canConstruct ? (
-            <>
-              <Text style={styles.sheetBody}>{plotTypeMeta.description}</Text>
-              <Pressable style={[styles.linkBtn, { borderColor: color, marginTop: SPACING.md }]} onPress={() => onBuildBuilding(plot)} testID="realm-build-here">
-                <Text style={[styles.linkBtnTxt, { color }]}>Build Sanctuary Here</Text>
-                <Ionicons name="hammer-outline" size={16} color={color} />
-              </Pressable>
-            </>
-          ) : canDecorate ? (
-            <>
-              <Text style={styles.sheetBody}>This plot is empty and ready to decorate. Decorations are purely cosmetic.</Text>
-              <Pressable style={[styles.linkBtn, { borderColor: color, marginTop: SPACING.md }]} onPress={() => onBuild(plot)} testID="realm-decorate-here">
-                <Text style={[styles.linkBtnTxt, { color }]}>Decorate Here</Text>
-                <Ionicons name="color-palette-outline" size={16} color={color} />
-              </Pressable>
-            </>
-          ) : (
-            <Text style={styles.sheetBody}>This plot is reserved for a future building and can't be decorated yet.</Text>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function BuildingPickerModal({
-  plot, buildings, onClose, onPick,
-}: {
-  plot: RealmPlot | null;
-  buildings: RealmBuilding[];
-  onClose: () => void;
-  onPick: (building: RealmBuilding) => void;
-}) {
-  if (!plot) return null;
-  const district = REALM_DISTRICTS.find((d) => d.id === plot.district);
-  const color = DISTRICT_COLOR[district?.colorToken || "brand"];
-
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-building-picker-sheet">
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <View style={[styles.sheetIcon, { borderColor: color, backgroundColor: color + "1f" }]}>
-              <Ionicons name="hammer-outline" size={26} color={color} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sheetName}>Build on {plot.name}</Text>
-              <Text style={styles.sheetDistrict}>{district?.name} · {plot.size} plot</Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
-            </Pressable>
-          </View>
-
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-            {buildings.length === 0 ? (
-              <Text style={styles.sheetBody}>No buildings are available to construct here right now.</Text>
-            ) : (
-              buildings.map((b) => (
-                <Pressable
-                  key={b.id}
-                  style={styles.slotRow}
-                  onPress={() => onPick(b)}
-                  testID={`realm-build-pick-${b.id}`}
-                >
-                  <Ionicons name={b.icon as any} size={18} color={color} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.slotTxt, { fontWeight: "700" }]}>{b.name}</Text>
-                    <Text style={styles.sheetFootnote}>{b.purpose}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
-                </Pressable>
-              ))
+          <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+            {placed.length > 0 && (
+              <>
+                <Text style={styles.sheetLabel}>ON THE MAP</Text>
+                {placed.map((b) => {
+                  const color = districtColorFor(b.district);
+                  const footprint = getFootprint(b.id);
+                  return (
+                    <View key={b.id} style={styles.slotRow}>
+                      <Ionicons name={b.icon as any} size={16} color={color} />
+                      <Text style={[styles.slotTxt, { fontWeight: "700" }]}>{b.name}</Text>
+                      <Text style={styles.sheetFootnote}>{footprint.w}x{footprint.h}</Text>
+                      {b.movable && (
+                        <View style={{ flexDirection: "row", gap: 6 }}>
+                          <Pressable onPress={() => onMoveBuilding(b)} hitSlop={6} testID={`realm-inventory-move-${b.id}`}>
+                            <Ionicons name="move-outline" size={16} color={COLORS.onSurfaceSecondary} />
+                          </Pressable>
+                          <Pressable onPress={() => onStoreBuilding(b)} hitSlop={6} testID={`realm-inventory-store-${b.id}`}>
+                            <Ionicons name="archive-outline" size={16} color={COLORS.onSurfaceSecondary} />
+                          </Pressable>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </>
             )}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
 
-function LockedPlotPanel({ plot, onClose }: { plot: RealmPlot | null; onClose: () => void }) {
-  if (!plot) return null;
-  const district = REALM_DISTRICTS.find((d) => d.id === plot.district);
-  const color = DISTRICT_COLOR[district?.colorToken || "brand"];
-  const futureBuilding = plot.allowedBuildingIds.length
-    ? getBuildingById(plot.allowedBuildingIds[0])
-    : undefined;
+            <Text style={styles.sheetLabel}>AVAILABLE TO BUILD</Text>
+            {unplaced.length === 0 ? (
+              <Text style={styles.sheetBody}>Every unlocked building is already on the map.</Text>
+            ) : (
+              unplaced.map((b) => {
+                const footprint = getFootprint(b.id);
+                const color = districtColorFor(b.district);
+                return (
+                  <Pressable key={b.id} style={styles.slotRow} onPress={() => onPickBuilding(b)} testID={`realm-inventory-build-${b.id}`}>
+                    <Ionicons name={b.icon as any} size={18} color={color} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.slotTxt, { fontWeight: "700" }]}>{b.name}</Text>
+                      <Text style={styles.sheetFootnote}>
+                        {footprint.w}x{footprint.h} · {getPlotTypeLabel(districtToPlotType(b.district))} · {b.purpose}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+                  </Pressable>
+                );
+              })
+            )}
 
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-locked-plot-sheet">
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <View style={[styles.sheetIcon, { borderColor: COLORS.borderStrong, backgroundColor: "rgba(12,14,18,0.4)" }]}>
-              <Ionicons name="lock-closed" size={26} color={COLORS.onSurfaceTertiary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sheetName}>{plot.name}</Text>
-              <Text style={styles.sheetDistrict}>{district?.name} · Locked</Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
-            </Pressable>
-          </View>
+            <Text style={styles.sheetLabel}>LOCKED</Text>
+            {locked.map((b) => (
+              <View key={b.id} style={styles.slotRow}>
+                <Ionicons name="lock-closed-outline" size={16} color={COLORS.onSurfaceTertiary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.slotTxt}>{b.name}</Text>
+                  <Text style={styles.sheetFootnote}>Requires Grand Ward Atrium Lv.{b.atriumLevelRequired} (currently Lv.{atriumLevel}).</Text>
+                </View>
+              </View>
+            ))}
 
-          <View style={styles.lockBox}>
-            <Ionicons name="lock-closed" size={14} color={COLORS.warning} />
-            <Text style={styles.lockTxt}>Unlocks with: {plotUnlockLabel(plot)}</Text>
-          </View>
-
-          <Text style={styles.sheetLabel}>WHAT COULD GO HERE</Text>
-          <Text style={styles.sheetBody}>
-            {futureBuilding
-              ? `A future ${futureBuilding.name} plot, or a relocated compatible building.`
-              : "A future decoration plot for Realm customization."}
-          </Text>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function DecorationPickerModal({
-  plot, onClose, onPick,
-}: {
-  plot: RealmPlot | null;
-  onClose: () => void;
-  onPick: (decoration: RealmDecoration) => void;
-}) {
-  if (!plot) return null;
-  const options = DECORATIONS.filter((d) => isDecorationAllowedOnPlot(d, plot));
-
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()} testID="realm-decoration-picker">
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sheetName}>Decorate {plot.name}</Text>
-              <Text style={styles.sheetDistrict}>Cosmetic only — no gameplay effect</Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
-            </Pressable>
-          </View>
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-            {options.map((d) => (
-              <Pressable key={d.id} style={styles.decorRow} onPress={() => onPick(d)} testID={`realm-decoration-${d.id}`}>
-                <Ionicons name={d.icon as any} size={20} color={COLORS.brand} />
+            <Text style={styles.sheetLabel}>DECORATIONS</Text>
+            {DECORATIONS.map((d) => (
+              <Pressable key={d.id} style={styles.decorRow} onPress={() => onPickDecoration(d)} testID={`realm-inventory-decor-${d.id}`}>
+                <Ionicons name={d.icon as any} size={20} color={PLOT_TYPE_COLOR.decoration} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.decorName}>{d.name}</Text>
                   <Text style={styles.decorFlavor}>{d.flavor}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
               </Pressable>
+            ))}
+
+            <Text style={styles.sheetLabel}>ROADS & PATHS</Text>
+            <View style={styles.comingSoonBox}>
+              <Ionicons name="trail-sign-outline" size={14} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.comingSoonTxt}>
+                Roads connect automatically — every building you place gets a path back to the Grand Ward Atrium.
+                There's nothing to place manually.
+              </Text>
+            </View>
+
+            <Text style={styles.sheetLabel}>FUTURE BUILDING SKINS</Text>
+            {REALM_SKIN_EXAMPLES.map((skin) => (
+              <View key={skin.name} style={styles.slotRow}>
+                <Ionicons name="color-wand-outline" size={14} color={COLORS.brand} />
+                <Text style={styles.slotTxt}><Text style={{ fontWeight: "700" }}>{skin.name}</Text> — applies to {skin.appliesTo}</Text>
+              </View>
             ))}
           </ScrollView>
         </Pressable>
@@ -778,7 +746,7 @@ function DecorationPickerModal({
   );
 }
 
-function DistrictInfoModal({ districtId, onClose }: { districtId: string | null; onClose: () => void }) {
+function DistrictInfoModal({ districtId, onClose, layout }: { districtId: string | null; onClose: () => void; layout: Record<string, string> }) {
   const district = REALM_DISTRICTS.find((d) => d.id === districtId);
   if (!district) return null;
   const color = DISTRICT_COLOR[district.colorToken];
@@ -802,11 +770,11 @@ function DistrictInfoModal({ districtId, onClose }: { districtId: string | null;
             </Pressable>
           </View>
           <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sheetLabel}>CURRENT BUILDINGS</Text>
+            <Text style={styles.sheetLabel}>DISTRICT BUILDINGS</Text>
             {buildings.map((b) => (
               <View key={b.id} style={styles.slotRow}>
                 <Ionicons name={b.icon as any} size={14} color={color} />
-                <Text style={styles.slotTxt}>{b.name}</Text>
+                <Text style={styles.slotTxt}>{b.name}{layout[b.id] ? "" : " (in Sanctuary Inventory)"}</Text>
               </View>
             ))}
             <Text style={styles.sheetLabel}>FUTURE DISTRICT BONUS</Text>
@@ -838,9 +806,9 @@ function LegendModal({ visible, onClose }: { visible: boolean; onClose: () => vo
             <Text style={styles.sheetBody}>
               The Grand Ward Sanctuary is your healing realm — a place to build, heal, research,
               and grow, not to raid or defend against other players. The Grand Ward Atrium is the
-              town hall — its level unlocks every other district, building by building. Pan the map
-              to explore, use Build Sanctuary to construct buildings and place decorations on empty
-              plots, and use Move on a building's detail panel to relocate it to a compatible plot.
+              town hall — its level unlocks every other building. Open Sanctuary Inventory to place
+              buildings and decorations on compatible plots, and tap any placed building on the grid
+              to Open, Move, or Store it. Roads connect automatically — there's nothing to build there.
             </Text>
             <Text style={styles.sheetLabel}>THE SANCTUARY LOOP</Text>
             <Text style={styles.sheetBody}>{REALM_LOOP_NOTE}</Text>
@@ -891,8 +859,8 @@ function CustomizeModal({ visible, onClose }: { visible: boolean; onClose: () =>
   const categories = [
     { icon: "color-palette-outline", label: "Building Skins", note: "Alternate looks for each building — cosmetic only." },
     { icon: "map-outline", label: "District Themes", note: "Seasonal or stylistic palettes per district." },
-    { icon: "trail-sign-outline", label: "Roads & Paths", note: "Connect plots with decorative pathways." },
-    { icon: "flame-outline", label: "Lanterns & Banners", note: "Small decorations already placeable via Build Mode." },
+    { icon: "trail-sign-outline", label: "Roads & Paths", note: "Decorative styles for the auto-generated road network." },
+    { icon: "flame-outline", label: "Lanterns & Banners", note: "Small decorations already placeable via Sanctuary Inventory." },
     { icon: "body-outline", label: "Statues & Gardens", note: "Landmark decorations for showcase plots." },
     { icon: "snow-outline", label: "Seasonal Realm Themes", note: "Realm-wide visual events tied to future updates." },
   ];
@@ -952,9 +920,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: SPACING.md, paddingVertical: 8,
     borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.brand, backgroundColor: "transparent",
   },
-  modeBtnActive: { backgroundColor: COLORS.brand },
   modeBtnTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
-  modeBtnTxtActive: { color: COLORS.onBrand },
   cancelBtn: { paddingHorizontal: SPACING.sm, paddingVertical: 8 },
   cancelBtnTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
 
@@ -964,15 +930,20 @@ const styles = StyleSheet.create({
   },
   bannerTxt: { color: COLORS.brand, fontSize: 11, flex: 1, fontWeight: "600" },
 
-  mapWrap: { overflow: "hidden", backgroundColor: COLORS.surface },
-  plotWrap: { position: "absolute", alignItems: "center", justifyContent: "center" },
-  plotPad: {
-    alignItems: "center", justifyContent: "center", borderWidth: 2,
-    shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4,
+  gridWrap: { position: "relative", backgroundColor: COLORS.surface },
+  cellTile: {
+    position: "absolute", width: CELL_PX, height: CELL_PX, borderWidth: 0.5,
+    alignItems: "center", justifyContent: "center",
   },
-  plotPadPulse: { borderWidth: 3 },
-  plotPadDimmed: { opacity: 0.3 },
-  plotPadSource: { opacity: 0.55 },
+  roadDot: { width: 8, height: 8, borderRadius: 2, backgroundColor: "#8a7a63" },
+  decorTile: {
+    position: "absolute", width: CELL_PX, height: CELL_PX, alignItems: "center", justifyContent: "center",
+  },
+  buildingTile: {
+    position: "absolute", borderWidth: 2, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center",
+    shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3,
+  },
+  previewBox: { position: "absolute", borderWidth: 2, borderRadius: RADIUS.sm, borderStyle: "dashed" },
   plotLvl: {
     position: "absolute", bottom: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
     alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
@@ -1008,6 +979,7 @@ const styles = StyleSheet.create({
   confirmBarCancel: { paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
   confirmBarCancelTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
   confirmBarConfirm: { paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.brand },
+  confirmBarConfirmDisabled: { backgroundColor: COLORS.border },
   confirmBarConfirmTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700" },
 
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
