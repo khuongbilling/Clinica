@@ -122,6 +122,10 @@ export interface PlayerState {
   rank: string;
   rank_index: number;
   xp: number;
+  // Player Level — account-wide progression, independent of per-hero Level.
+  // Derived from `xp` via progression.ts but persisted for fast reads and
+  // to detect level-ups (stamina cap, feature unlocks, Player Class tiers).
+  player_level?: number;
   mastery: {
     assessment: number;
     stabilization: number;
@@ -132,7 +136,7 @@ export interface PlayerState {
   };
   codex_unlocked: string[];
   heroes_owned: string[];
-  hero_progression?: Record<string, { star: number; copies: number; level?: number; locked?: boolean; favorite?: boolean }>;
+  hero_progression?: Record<string, { star: number; copies: number; level?: number; xp?: number; locked?: boolean; favorite?: boolean }>;
   active_team: string[];
   kingdom_levels: Record<string, number>;
   runs_completed: number;

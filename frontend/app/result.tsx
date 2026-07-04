@@ -14,15 +14,21 @@ import { getMission } from "@/src/game/missions";
 import { useTestSession } from "@/src/game/testSession";
 import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
 import { getDifficultyModifier } from "@/src/game/difficulty";
+import { HEROES } from "@/src/game/content";
+
+interface HeroXpAwardParsed { heroId: string; contributionShare: number; xpAwarded: number }
+interface HeroLevelUpParsed { heroId: string; fromLevel: number; toLevel: number }
+interface PlayerLevelUpParsed { fromLevel: number; toLevel: number }
 
 export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
-  const { outcome, enemyId, stability, training, shards, crowns, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid } = useLocalSearchParams<{
+  const { outcome, enemyId, stability, training, shards, crowns, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; shards?: string; crowns?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
+    playerXp?: string; heroXp?: string; playerLevelUp?: string; heroLevelUps?: string;
   }>();
   const won = outcome === "win";
   const isTraining = training === "1";
@@ -33,6 +39,26 @@ export default function Result() {
   const emergencyCallsUsed = parseInt(emergency || "0", 10);
   const inappropriateConsultsUsed = parseInt(inappropriate || "0", 10);
   const basicAidUses = parseInt(basicAid || "0", 10);
+  const playerXpEarned = parseInt(playerXp || "0", 10);
+  const heroXpBreakdown: HeroXpAwardParsed[] = useMemo(() => {
+    if (!heroXp) return [];
+    try {
+      const parsed = JSON.parse(heroXp);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  }, [heroXp]);
+  const playerLevelUp: PlayerLevelUpParsed | null = useMemo(() => {
+    if (!playerLevelUpParam) return null;
+    try { return JSON.parse(playerLevelUpParam); } catch { return null; }
+  }, [playerLevelUpParam]);
+  const heroLevelUps: HeroLevelUpParsed[] = useMemo(() => {
+    if (!heroLevelUpsParam) return [];
+    try {
+      const parsed = JSON.parse(heroLevelUpsParam);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  }, [heroLevelUpsParam]);
+  const heroName = (id: string) => HEROES.find((h) => h.id === id)?.name || id;
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -218,14 +244,49 @@ export default function Result() {
                 <Text style={styles.statVal}>{stability}%</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statLbl}>PLAYER XP</Text>
-                <Text style={styles.statVal}>+{Math.floor((enemy?.id === BOSS_LORD_IMBALANCE.id ? 150 : 35 + (enemy?.difficulty || 1) * 10) * (isTraining ? 0.5 : 1))}</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statLbl}>HERO XP</Text>
-                <Text style={styles.statVal}>+{Math.floor((enemy?.id === BOSS_LORD_IMBALANCE.id ? 100 : 20 + (enemy?.difficulty || 1) * 8) * (isTraining ? 0.5 : 1))}</Text>
+                <Text style={styles.statLbl}>PLAYER EXP</Text>
+                <Text style={styles.statVal}>+{playerXpEarned}</Text>
               </View>
             </View>
+
+            {playerLevelUp && (
+              <View style={styles.playerLevelUpCard} testID="result-player-levelup">
+                <Ionicons name="ribbon" size={22} color={COLORS.brand} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.playerLevelUpTitle}>HEALER LEVEL UP!</Text>
+                  <Text style={styles.playerLevelUpText}>
+                    Player Level {playerLevelUp.fromLevel} → {playerLevelUp.toLevel}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {heroXpBreakdown.length > 0 && (
+              <View style={styles.heroXpCard} testID="result-hero-xp">
+                <Text style={styles.heroXpTitle}>HERO CONTRIBUTION</Text>
+                {heroXpBreakdown.map((h) => (
+                  <View key={h.heroId} style={styles.heroXpRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.heroXpName}>{heroName(h.heroId)}</Text>
+                      <Text style={styles.heroXpShare}>{Math.round(h.contributionShare * 100)}% contribution</Text>
+                    </View>
+                    <Text style={styles.heroXpVal}>+{h.xpAwarded} XP</Text>
+                  </View>
+                ))}
+                {heroLevelUps.length > 0 && (
+                  <View style={{ marginTop: 8, gap: 6 }}>
+                    {heroLevelUps.map((l) => (
+                      <View key={l.heroId} style={styles.heroLevelUpRow}>
+                        <Ionicons name="trending-up" size={16} color={COLORS.success} />
+                        <Text style={styles.heroLevelUpText}>
+                          {heroName(l.heroId)} leveled up! Lv.{l.fromLevel} → Lv.{l.toLevel}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
 
             {rewardBreakdown && rewardBreakdown.total > 0 && (
               <View style={styles.shardsCard} testID="result-shards">
@@ -381,6 +442,17 @@ const styles = StyleSheet.create({
   victoryTermText: { color: COLORS.brand, fontSize: 11, fontWeight: "600" },
   diffRewardNote: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.brand + "10", borderRadius: 4, padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.brand + "20" },
   diffRewardText: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
+  playerLevelUpCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand, borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
+  playerLevelUpTitle: { color: COLORS.brand, fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
+  playerLevelUpText: { color: COLORS.onSurface, fontSize: 14, marginTop: 2 },
+  heroXpCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 8 },
+  heroXpTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  heroXpRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  heroXpName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  heroXpShare: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  heroXpVal: { color: COLORS.success, fontSize: 14, fontWeight: "600" },
+  heroLevelUpRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.success + "14", borderRadius: 4, padding: SPACING.sm },
+  heroLevelUpText: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600", flex: 1 },
   kingdomCard: {
     flexDirection: "row", alignItems: "flex-start", gap: SPACING.md,
     backgroundColor: COLORS.brand + "10", borderRadius: RADIUS.md,

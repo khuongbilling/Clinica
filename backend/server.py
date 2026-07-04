@@ -86,6 +86,7 @@ class Player(BaseModel):
     rank: str = "Sprout Healer"
     rank_index: int = 0
     xp: int = 0
+    player_level: int = 1
     mastery: MasteryStats = Field(default_factory=MasteryStats)
     codex_unlocked: List[str] = Field(default_factory=list)
     heroes_owned: List[str] = Field(default_factory=list)
@@ -130,6 +131,7 @@ class PlayerUpdate(BaseModel):
     rank: Optional[str] = None
     rank_index: Optional[int] = None
     xp: Optional[int] = None
+    player_level: Optional[int] = None
     mastery: Optional[MasteryStats] = None
     codex_unlocked: Optional[List[str]] = None
     heroes_owned: Optional[List[str]] = None

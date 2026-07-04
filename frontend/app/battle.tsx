@@ -9,12 +9,13 @@ import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES, getWaveAdditionalEnemies } from "
 import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBACK, STABILIZE_FEEDBACK, COUNTER_FEEDBACK, REASSESS_FEEDBACK } from "@/src/game/explanationLayers";
-import { OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
+import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
-import { getStartingHandicap, statusColor, statusLabel, ULTIMATE_BY_ROLE, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
+import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
+import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
@@ -87,15 +88,19 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
     const handicap = getStartingHandicap(profile);
     const mentorAid = failureCount >= 3;
     const upgrades = aggregateUpgradeEffects(player?.owned_upgrades);
+    // Player Class ability bonuses (Guardian/Seer/Caretaker/Scholar tiers at
+    // Player Level 10/20/30) — see progression.ts getClassBattleBonuses.
+    const classBonuses = getClassBattleBonuses(player?.aptitude, player?.player_level ?? 1);
     const base = initBattle(enemy, team, {
       inventory: player?.inventory || {},
       profile,
       enemyMastery: player?.enemy_mastery,
       chapter: player?.chapter_progress,
-      startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0) + upgrades.startingStabilityBonus,
+      startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0) + upgrades.startingStabilityBonus + classBonuses.startingStabilityBonus,
       enemyDamageReduction: handicap.enemyDamageReduction + upgrades.enemyDamageReduction,
-      revealOneExtraClue: handicap.revealOneExtraClue || isTraining || upgrades.revealOneExtraClue,
-      apBonus: upgrades.apBonus,
+      revealOneExtraClue: handicap.revealOneExtraClue || isTraining || upgrades.revealOneExtraClue || classBonuses.revealOneExtraClue,
+      apBonus: upgrades.apBonus + classBonuses.apBonus,
+      startShield: classBonuses.startShield,
       difficulty: player?.difficulty || undefined,
       additionalEnemies: getWaveAdditionalEnemies(enemy.id),
     });
@@ -411,10 +416,13 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   };
 
   const finish = async () => {
+    let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;
+    let heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[] = [];
+    let playerXpEarned = 0;
+    let heroXpEarned: Record<string, number> = {};
     if (state.outcome === "win") {
       const isBoss = enemy.id === BOSS_LORD_IMBALANCE.id;
       const baseXp = isBoss ? 150 : 35 + enemy.difficulty * 10;
-      const xp = isTraining ? Math.floor(baseXp * 0.5) : baseXp;
       const baseShards = isTraining ? 10 : (isBoss ? 100 : 25);
       const chainBonus = state.fullChainCompleted ? 10 : 0;
       const shards = baseShards + chainBonus;
@@ -425,15 +433,66 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         const diff = v - (startingInventory[k] || 0);
         if (diff !== 0) inventoryDelta[k] = diff;
       }
-      await applyRewards({
-        xp, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, inventoryDelta,
+
+      // Player EXP: separate progression pool from Hero EXP, scaled by
+      // clinical performance (stars), difficulty, first-clear and Clinical
+      // Cue accuracy — see progression.ts computePlayerXpReward.
+      const enemyClinical = ENEMY_CLINICAL[enemy.id];
+      const starRules = getStarRules((player?.learning_profile as LearningProfile | undefined) || undefined, enemyClinical);
+      const starResult = computeStars({
+        won: true,
+        fullChainCompleted: state.fullChainCompleted,
+        unsafeActionsUsed: state.unsafeActionsUsed,
+        poorFitActionsUsed: state.poorFitActionsUsed,
+        turnsTaken: state.turnsTaken,
+        reassessUsed: state.reassessUsedAnytime,
+        consultsUsed: state.consultsUsed,
+        emergencyCallsUsed: state.emergencyCallsUsed,
+        inappropriateConsultsUsed: state.inappropriateConsultsUsed,
+        basicAidUses: state.basicAidUses,
+      }, starRules);
+      const diffMod = getDifficultyModifier(player?.difficulty as any);
+      const isFirstClear = !((player?.enemy_mastery?.[enemy.name] || 0) > 0);
+      playerXpEarned = isTraining ? 0 : computePlayerXpReward({
+        baseXp,
+        difficultyMultiplier: diffMod?.rewardMultiplier ?? 1,
+        stars: starResult.stars,
+        isFirstClear,
+        clinicalCuesCorrect: 0,
+      });
+
+      // Hero EXP: split the per-hero battle contribution (skills/items/cards
+      // used) proportionally, with a participation floor and reduced share
+      // for heroes already above the enemy's level band.
+      const participantIds = team.map((h) => h.id);
+      const enemyLevelBand = enemy.difficulty * 5;
+      const heroProgression = player?.hero_progression;
+      const overleveledIds = participantIds.filter((id) => {
+        const lvl = getProgress(heroProgression, id).level ?? 1;
+        return lvl > enemyLevelBand + 10;
+      });
+      const heroAwards = isTraining ? [] : splitContributionToHeroXp({
+        totalPlayerXp: baseXp,
+        contribution: state.heroContribution,
+        participantIds,
+        overleveledIds,
+      });
+      heroXpEarned = heroAwards.reduce((acc, a) => { acc[a.heroId] = a.xpAwarded; return acc; }, {} as Record<string, number>);
+
+      const rewardsResult = await applyRewards({
+        xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, inventoryDelta,
         mastery: enemy.bestCounters.reduce((acc, c) => {
           const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", cleanse: "judgment", command: "command", analyze: "systems", support: "stabilization" };
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
         }, {} as any),
         bossId: isBoss ? enemy.id : undefined,
         regionId: mission?.kingdomRegion ?? undefined,
+        heroXp: heroXpEarned,
       } as any);
+      if (rewardsResult) {
+        playerLevelUp = rewardsResult.playerLevelUp || null;
+        heroLevelUps = rewardsResult.heroLevelUps || [];
+      }
     } else if (state.outcome === "loss") {
       await recordFailure(enemy.id);
     }
@@ -458,6 +517,10 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         emergency: String(state.emergencyCallsUsed),
         inappropriate: String(state.inappropriateConsultsUsed),
         basicAid: String(state.basicAidUses),
+        playerXp: String(playerXpEarned),
+        heroXp: JSON.stringify(heroXpEarned),
+        playerLevelUp: playerLevelUp ? JSON.stringify(playerLevelUp) : "",
+        heroLevelUps: JSON.stringify(heroLevelUps),
       },
     });
   };

@@ -4,7 +4,9 @@ import { api } from '@/src/api/client';
 import { PlayerState } from './types';
 import { RANKS } from './content';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
-import { MAX_STAMINA, ENCOUNTER_COST, regen } from './stamina';
+import { MAX_STAMINA, ENCOUNTER_COST, regen, maxStaminaForPlayer } from './stamina';
+import { addHeroXp, playerLevelFromXp, staminaMaxForLevel } from './progression';
+import { levelCapForStar } from './university';
 import { defaultWellnessState, resolveWellnessLog, WellnessLogInput, WellnessResult } from './wellness';
 import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
@@ -17,16 +19,17 @@ const STORAGE_KEY = 'clinica.player.v2';
 // and clamp any malformed values. Keeps older/remote saves compatible.
 function normalizeProgression(p: PlayerState): PlayerState {
   const src = p.hero_progression || {};
-  const prog: Record<string, { star: number; copies: number; level: number; locked: boolean; favorite: boolean }> = {};
+  const prog: Record<string, { star: number; copies: number; level: number; xp: number; locked: boolean; favorite: boolean }> = {};
   let changed = !p.hero_progression;
   for (const [id, raw] of Object.entries(src)) {
     const star = Math.min(MAX_STAR, Math.max(1, Math.round(Number(raw?.star) || 1)));
     const copies = Math.max(0, Math.round(Number(raw?.copies) || 0));
     const level = Math.max(1, Math.round(Number((raw as any)?.level) || 1));
+    const xp = Math.max(0, Math.round(Number((raw as any)?.xp) || 0));
     const locked = !!(raw as any)?.locked;
     const favorite = !!(raw as any)?.favorite;
-    prog[id] = { star, copies, level, locked, favorite };
-    if (star !== raw?.star || copies !== raw?.copies || level !== (raw as any)?.level) changed = true;
+    prog[id] = { star, copies, level, xp, locked, favorite };
+    if (star !== raw?.star || copies !== raw?.copies || level !== (raw as any)?.level || xp !== (raw as any)?.xp) changed = true;
   }
   for (const id of p.heroes_owned || []) {
     if (!prog[id]) { prog[id] = defaultProgress() as any; changed = true; }
@@ -55,6 +58,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   }
   if (!out.wellness) {
     out = { ...out, wellness: defaultWellnessState() };
+  }
+  if (out.player_level == null) {
+    out = { ...out, player_level: playerLevelFromXp(out.xp || 0).level };
   }
   if (out.crowns == null) {
     out = { ...out, crowns: 0 };
@@ -99,7 +105,16 @@ type Ctx = {
   player: PlayerState | null;
   loading: boolean;
   createPlayer: (args: CreatePlayerArgs) => Promise<void>;
-  applyRewards: (rewards: { xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[]; buildings?: Record<string, number>; enemyId?: string; codexShards?: number; crowns?: number; inventoryDelta?: Record<string, number>; enemyName?: string }) => Promise<void>;
+  applyRewards: (rewards: {
+    xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[];
+    buildings?: Record<string, number>; enemyId?: string; codexShards?: number; crowns?: number;
+    inventoryDelta?: Record<string, number>; enemyName?: string;
+    // Hero EXP — per-hero contribution-based EXP, distinct from Player EXP (`xp` above).
+    heroXp?: Record<string, number>;
+  }) => Promise<{
+    playerLevelUp: { fromLevel: number; toLevel: number } | null;
+    heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
+  }>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
@@ -129,11 +144,29 @@ type Ctx = {
 
 const PlayerContext = createContext<Ctx | null>(null);
 
+interface PlayerXpApplyResult {
+  player: PlayerState;
+  fromLevel: number;
+  toLevel: number;
+  leveledUp: boolean;
+}
+
 function applyXp(p: PlayerState, addXp: number): PlayerState {
+  return applyXpDetailed(p, addXp).player;
+}
+
+// Applies Player EXP, updates the legacy Rank flavor text AND the new
+// independent Player Level (stamina cap / feature unlocks / Player Class
+// tiers). Returns level-up info so callers (e.g. battle result) can show a
+// dedicated Player level-up celebration, distinct from Hero level-ups.
+function applyXpDetailed(p: PlayerState, addXp: number): PlayerXpApplyResult {
   const newXp = p.xp + addXp;
   let idx = p.rank_index;
   while (idx < RANKS.length - 1 && newXp >= RANKS[idx + 1].xpRequired) idx++;
-  return { ...p, xp: newXp, rank: RANKS[idx].name, rank_index: idx };
+  const fromLevel = p.player_level ?? playerLevelFromXp(p.xp).level;
+  const toLevel = playerLevelFromXp(newXp).level;
+  const player = { ...p, xp: newXp, rank: RANKS[idx].name, rank_index: idx, player_level: toLevel };
+  return { player, fromLevel, toLevel, leveledUp: toLevel > fromLevel };
 }
 
 function makeLocalId(): string {
@@ -164,6 +197,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     rank: 'Sprout Healer',
     rank_index: 0,
     xp: 0,
+    player_level: 1,
     mastery: { assessment: 0, stabilization: 0, pharmacology: 0, judgment: 0, command: 0, systems: 0 },
     codex_unlocked: [],
     heroes_owned: [starting, 'village_caretaker'],
@@ -275,9 +309,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applyRewards = useCallback(async (rewards: Parameters<Ctx['applyRewards']>[0] & { regionId?: string }) => {
-    if (!player) return;
+    if (!player) return { playerLevelUp: null, heroLevelUps: [] };
     let next = { ...player };
-    if (rewards.xp) next = applyXp(next, rewards.xp);
+    let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;
+    if (rewards.xp) {
+      const applied = applyXpDetailed(next, rewards.xp);
+      next = applied.player;
+      if (applied.leveledUp) playerLevelUp = { fromLevel: applied.fromLevel, toLevel: applied.toLevel };
+    }
+    const heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[] = [];
+    if (rewards.heroXp) {
+      const prog = { ...(next.hero_progression || {}) };
+      for (const [heroId, xpAmount] of Object.entries(rewards.heroXp)) {
+        if (!xpAmount) continue;
+        const existing = prog[heroId] ? { ...prog[heroId] } : (defaultProgress() as any);
+        const fromLevel = existing.level ?? 1;
+        const cap = levelCapForStar(existing.star ?? 1);
+        const result = addHeroXp(fromLevel, existing.xp ?? 0, xpAmount, cap);
+        prog[heroId] = { ...existing, xp: result.xp, level: result.level };
+        if (result.level > fromLevel) heroLevelUps.push({ heroId, fromLevel, toLevel: result.level });
+      }
+      next.hero_progression = prog;
+    }
     if (rewards.codex?.length) {
       next.codex_unlocked = Array.from(new Set([...next.codex_unlocked, ...rewards.codex]));
     }
@@ -328,6 +381,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const newChapter = next.runs_completed >= 10 ? 3 : next.runs_completed >= 3 ? 2 : 1;
     next.chapter_progress = Math.max(next.chapter_progress || 1, newChapter);
     await updateState(next);
+    return { playerLevelUp, heroLevelUps };
   }, [player, updateState]);
 
   const recordFailure = useCallback(async (enemyId: string) => {
@@ -524,7 +578,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return false;
     const now = Date.now();
-    const cur = regen(base.stamina ?? MAX_STAMINA, base.stamina_updated_at ?? new Date(now).toISOString(), now);
+    const max = maxStaminaForPlayer(base);
+    const cur = regen(base.stamina ?? max, base.stamina_updated_at ?? new Date(now).toISOString(), now, max);
     if (cur.stamina < cost) {
       // Not enough — still persist the regenerated value so the display is fresh.
       if (cur.stamina !== base.stamina || cur.updatedAt !== base.stamina_updated_at) {
@@ -626,13 +681,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const now = Date.now();
-    const cur = regen(base.stamina ?? MAX_STAMINA, base.stamina_updated_at ?? new Date(now).toISOString(), now);
-    if (cur.stamina >= MAX_STAMINA) {
+    const max = maxStaminaForPlayer(base);
+    const cur = regen(base.stamina ?? max, base.stamina_updated_at ?? new Date(now).toISOString(), now, max);
+    if (cur.stamina >= max) {
       return { ok: false, message: 'Stamina is already full.' };
     }
     const cost = Math.max(0, Math.round(price));
     if ((base.crowns || 0) < cost) return { ok: false, message: 'Not enough Crowns.' };
-    const restored = Math.min(MAX_STAMINA, cur.stamina + amount);
+    const restored = Math.min(max, cur.stamina + amount);
     const next = {
       ...base,
       crowns: (base.crowns || 0) - cost,

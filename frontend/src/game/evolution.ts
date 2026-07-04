@@ -21,6 +21,11 @@ export interface HeroProgress {
   // Hero Level — separate EXP-based growth track, capped per Certification
   // Star (see university.ts levelCapForStar). Independent of `star`.
   level?: number;
+  // Hero EXP (Hero XP) — earned per hero via battle contribution share (see
+  // progression.ts addHeroXp). Distinct from Player EXP. Training Hall
+  // (university.ts trainProgress) still works as a manual, currency-spend
+  // alternative that bumps `level` directly and keeps `xp` in sync.
+  xp?: number;
   // Safe hero locking/favorite (Step 10) — protects a hero from being used
   // as promotion material for other heroes.
   locked?: boolean;
@@ -28,7 +33,7 @@ export interface HeroProgress {
 }
 
 export function defaultProgress(): HeroProgress {
-  return { star: 1, copies: 0, level: 1, locked: false, favorite: false };
+  return { star: 1, copies: 0, level: 1, xp: 0, locked: false, favorite: false };
 }
 
 export function getProgress(
@@ -37,7 +42,7 @@ export function getProgress(
 ): HeroProgress {
   const p = progression?.[heroId];
   if (!p) return defaultProgress();
-  return { star: p.star, copies: p.copies, level: p.level ?? 1, locked: !!p.locked, favorite: !!p.favorite };
+  return { star: p.star, copies: p.copies, level: p.level ?? 1, xp: p.xp ?? 0, locked: !!p.locked, favorite: !!p.favorite };
 }
 
 // Hero Shards — clearer accessor name for the reused `copies` field.

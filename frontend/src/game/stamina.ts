@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react';
+import { staminaMaxForLevel } from './progression';
 
 // ---------- SHIFT STAMINA ----------
 // Each ward encounter costs stamina; it recovers 1 point per REGEN interval of
-// real time, capped at MAX_STAMINA. All regen is computed lazily from a stored
-// value + timestamp, so nothing needs to run in the background.
-
-export const MAX_STAMINA = 5;
+// real time, capped at the player's current stamina max. All regen is computed
+// lazily from a stored value + timestamp, so nothing needs to run in the background.
+//
+// The stamina cap now scales with Player Level (see progression.ts
+// staminaMaxForLevel) instead of being a flat constant. MAX_STAMINA is kept as
+// the Level-1 base cap for legacy callers/fallbacks that don't have a player
+// object handy (e.g. defaultPlayer() initial value).
+export const MAX_STAMINA = staminaMaxForLevel(1);
 export const ENCOUNTER_COST = 1;
 export const REGEN_MINUTES = 12;
 export const REGEN_MS = REGEN_MINUTES * 60 * 1000;
+
+/** Resolve the stamina cap for a player, derived from Player Level. */
+export function maxStaminaForPlayer(player: { player_level?: number } | null | undefined): number {
+  return staminaMaxForLevel(player?.player_level ?? 1);
+}
 
 export interface StaminaState {
   stamina: number;
@@ -22,10 +32,10 @@ export interface StaminaState {
  *  - When partial, the timestamp is advanced by whole intervals consumed,
  *    carrying the sub-interval remainder so the countdown stays accurate.
  */
-export function regen(stamina: number, updatedAtISO: string, now: number = Date.now()): StaminaState {
-  const clamped = Math.max(0, Math.min(MAX_STAMINA, Math.floor(stamina)));
-  if (clamped >= MAX_STAMINA) {
-    return { stamina: MAX_STAMINA, updatedAt: new Date(now).toISOString() };
+export function regen(stamina: number, updatedAtISO: string, now: number = Date.now(), max: number = MAX_STAMINA): StaminaState {
+  const clamped = Math.max(0, Math.min(max, Math.floor(stamina)));
+  if (clamped >= max) {
+    return { stamina: max, updatedAt: new Date(now).toISOString() };
   }
   const last = Date.parse(updatedAtISO);
   const base = Number.isNaN(last) ? now : last;
@@ -34,16 +44,16 @@ export function regen(stamina: number, updatedAtISO: string, now: number = Date.
   if (gained <= 0) {
     return { stamina: clamped, updatedAt: updatedAtISO };
   }
-  const next = Math.min(MAX_STAMINA, clamped + gained);
-  if (next >= MAX_STAMINA) {
-    return { stamina: MAX_STAMINA, updatedAt: new Date(now).toISOString() };
+  const next = Math.min(max, clamped + gained);
+  if (next >= max) {
+    return { stamina: max, updatedAt: new Date(now).toISOString() };
   }
   return { stamina: next, updatedAt: new Date(base + gained * REGEN_MS).toISOString() };
 }
 
 /** Milliseconds until the next stamina point (0 if already full). */
-export function msUntilNext(stamina: number, updatedAtISO: string, now: number = Date.now()): number {
-  if (stamina >= MAX_STAMINA) return 0;
+export function msUntilNext(stamina: number, updatedAtISO: string, now: number = Date.now(), max: number = MAX_STAMINA): number {
+  if (stamina >= max) return 0;
   const last = Date.parse(updatedAtISO);
   const base = Number.isNaN(last) ? now : last;
   return Math.max(0, base + REGEN_MS - now);
@@ -63,14 +73,15 @@ export function formatCountdown(ms: number): string {
  * Live-updating stamina for UI. Recomputes on each render and ticks every
  * second while regenerating so countdowns stay current without persisting.
  */
-export function useLiveStamina(player: { stamina?: number; stamina_updated_at?: string } | null) {
+export function useLiveStamina(player: { stamina?: number; stamina_updated_at?: string; player_level?: number } | null) {
   const [, setTick] = useState(0);
   const now = Date.now();
-  const stored = player?.stamina ?? MAX_STAMINA;
+  const max = maxStaminaForPlayer(player);
+  const stored = player?.stamina ?? max;
   const updatedAt = player?.stamina_updated_at ?? new Date(now).toISOString();
-  const live = regen(stored, updatedAt, now);
-  const remaining = msUntilNext(live.stamina, live.updatedAt, now);
-  const full = live.stamina >= MAX_STAMINA;
+  const live = regen(stored, updatedAt, now, max);
+  const remaining = msUntilNext(live.stamina, live.updatedAt, now, max);
+  const full = live.stamina >= max;
 
   useEffect(() => {
     if (full) return;
@@ -78,5 +89,5 @@ export function useLiveStamina(player: { stamina?: number; stamina_updated_at?: 
     return () => clearInterval(t);
   }, [full]);
 
-  return { stamina: live.stamina, max: MAX_STAMINA, msUntilNext: remaining, full };
+  return { stamina: live.stamina, max, msUntilNext: remaining, full };
 }

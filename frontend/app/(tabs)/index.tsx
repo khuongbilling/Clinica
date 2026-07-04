@@ -15,6 +15,8 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { FEATURE_UNLOCKS, isFeatureUnlocked, nextLockedFeature, playerLevelFromXp } from "@/src/game/progression";
+import { useLiveStamina } from "@/src/game/stamina";
 
 const INTRO_KEY = "clinica.intro.seen";
 
@@ -45,6 +47,7 @@ export default function RunHome() {
   const { logEvent } = useTestSession();
   const [showIntro, setShowIntro] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { stamina: staminaNow, max: staminaMax } = useLiveStamina(player);
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
@@ -78,11 +81,24 @@ export default function RunHome() {
                   (nextRank.xpRequired - RANKS[player.rank_index].xpRequired))
     : 1;
 
+  // Player Level panel — account-wide progression, independent of Hero
+  // Level/Rank shown below. See progression.ts playerLevelFromXp.
+  const playerLevelInfo = playerLevelFromXp(player.xp);
+  const playerLevelProgress = playerLevelInfo.atCap
+    ? 1
+    : Math.min(1, playerLevelInfo.xpIntoLevel / playerLevelInfo.xpForNextLevel);
+  const nextUnlock = nextLockedFeature(playerLevelInfo.level);
+
   const leadHeroId   = player.active_team?.[0] ?? "novice_guardian";
   const leadHero     = HEROES.find((h) => h.id === leadHeroId);
   const heroSprite   = getHeroSprite(leadHeroId);
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
+
+  const FEATURE_LEVEL_WARD_DEFENSE = FEATURE_UNLOCKS.find((f) => f.id === "ward_defense")?.level ?? 3;
+  const FEATURE_LEVEL_LOTUS_JOURNAL = FEATURE_UNLOCKS.find((f) => f.id === "lotus_journal")?.level ?? 7;
+  const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevelInfo.level);
+  const lotusJournalUnlocked = isFeatureUnlocked("lotus_journal", playerLevelInfo.level);
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
@@ -109,6 +125,29 @@ export default function RunHome() {
             <Ionicons name={apt.icon as any} size={18} color={apt.color} />
           </View>
         )}
+      </View>
+
+      {/* ── PLAYER LEVEL PANEL — account-wide, distinct from Hero Rank/XP below ── */}
+      <View style={styles.playerLevelPanel} testID="home-player-level-panel">
+        <View style={styles.playerLevelBadge}>
+          <Text style={styles.playerLevelBadgeTxt}>{playerLevelInfo.level}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 3 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={styles.playerLevelLabel}>PLAYER LEVEL</Text>
+            <Text style={styles.playerLevelSub}>
+              {staminaNow}/{staminaMax} stamina
+            </Text>
+          </View>
+          <View style={styles.playerLevelBarBg}>
+            <View style={[styles.playerLevelBarFill, { width: `${Math.round(playerLevelProgress * 100)}%` as any }]} />
+          </View>
+          {nextUnlock && (
+            <Text style={styles.playerLevelUnlockTxt}>
+              Next: {nextUnlock.label} at Lv.{nextUnlock.level}
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* ── SCENE LOCATION LABEL ── */}
@@ -223,35 +262,39 @@ export default function RunHome() {
 
       {/* ── WARD DEFENSE ENTRY ── */}
       <Pressable
-        style={styles.wardDefBtn}
-        onPress={() => router.push("/ward-defense")}
+        style={[styles.wardDefBtn, !wardDefenseUnlocked && styles.lockedFeatureBtn]}
+        onPress={() => { if (wardDefenseUnlocked) router.push("/ward-defense"); }}
         testID="home-ward-defense"
       >
         <View style={styles.wardDefLeft}>
-          <Text style={styles.wardDefNew}>NEW</Text>
+          <Text style={styles.wardDefNew}>{wardDefenseUnlocked ? "NEW" : `LV.${FEATURE_LEVEL_WARD_DEFENSE}`}</Text>
           <Text style={styles.wardDefTitle}>Ward Defense</Text>
-          <Text style={styles.wardDefSub}>Airway Rush · 5 waves + boss</Text>
+          <Text style={styles.wardDefSub}>
+            {wardDefenseUnlocked ? "Airway Rush · 5 waves + boss" : `Unlocks at Player Level ${FEATURE_LEVEL_WARD_DEFENSE}`}
+          </Text>
         </View>
         <View style={styles.wardDefRight}>
-          <Text style={{ fontSize: 28 }}>🐲</Text>
-          <Ionicons name="chevron-forward" size={14} color={COLORS.air + "80"} />
+          {wardDefenseUnlocked ? <Text style={{ fontSize: 28 }}>🐲</Text> : <Ionicons name="lock-closed" size={22} color={COLORS.onSurfaceTertiary} />}
+          <Ionicons name="chevron-forward" size={14} color={wardDefenseUnlocked ? COLORS.air + "80" : COLORS.onSurfaceTertiary} />
         </View>
       </Pressable>
 
       {/* ── LOTUS PLATE JOURNAL ENTRY (off-shift, no stamina cost) ── */}
       <Pressable
-        style={styles.lotusBtn}
-        onPress={() => router.push("/lotus-journal")}
+        style={[styles.lotusBtn, !lotusJournalUnlocked && styles.lockedFeatureBtn]}
+        onPress={() => { if (lotusJournalUnlocked) router.push("/lotus-journal"); }}
         testID="home-lotus-journal"
       >
         <View style={styles.wardDefLeft}>
-          <Text style={styles.lotusNew}>OFF-SHIFT</Text>
+          <Text style={styles.lotusNew}>{lotusJournalUnlocked ? "OFF-SHIFT" : `LV.${FEATURE_LEVEL_LOTUS_JOURNAL}`}</Text>
           <Text style={styles.wardDefTitle}>Lotus Plate Journal</Text>
-          <Text style={styles.wardDefSub}>Log meals & wellness · grow your Nutrition Garden</Text>
+          <Text style={styles.wardDefSub}>
+            {lotusJournalUnlocked ? "Log meals & wellness · grow your Nutrition Garden" : `Unlocks at Player Level ${FEATURE_LEVEL_LOTUS_JOURNAL}`}
+          </Text>
         </View>
         <View style={styles.wardDefRight}>
-          <Text style={{ fontSize: 28 }}>🪷</Text>
-          <Ionicons name="chevron-forward" size={14} color={COLORS.growth + "80"} />
+          {lotusJournalUnlocked ? <Text style={{ fontSize: 28 }}>🪷</Text> : <Ionicons name="lock-closed" size={22} color={COLORS.onSurfaceTertiary} />}
+          <Ionicons name="chevron-forward" size={14} color={lotusJournalUnlocked ? COLORS.growth + "80" : COLORS.onSurfaceTertiary} />
         </View>
       </Pressable>
 
@@ -385,6 +428,28 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
     alignItems: "center", justifyContent: "center",
   },
+
+  /* Player Level panel — account-wide progression card */
+  playerLevelPanel: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginHorizontal: SPACING.lg, marginBottom: SPACING.xs,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm,
+  },
+  playerLevelBadge: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: COLORS.brand + "22", borderWidth: 1.5, borderColor: COLORS.brand,
+    alignItems: "center", justifyContent: "center",
+  },
+  playerLevelBadgeTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "800" },
+  playerLevelLabel: { color: COLORS.onSurfaceSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 1.4 },
+  playerLevelSub:   { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "600" },
+  playerLevelBarBg: { height: 5, borderRadius: 3, backgroundColor: COLORS.border, overflow: "hidden" },
+  playerLevelBarFill: { height: "100%", borderRadius: 3, backgroundColor: COLORS.brand },
+  playerLevelUnlockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontStyle: "italic" },
+
+  lockedFeatureBtn: { opacity: 0.55 },
 
   /* Scene label */
   sceneLabelRow: {

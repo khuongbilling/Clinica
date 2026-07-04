@@ -7,6 +7,10 @@ import { APTITUDE_INFO, RANKS } from "@/src/game/content";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import {
+  nextClassAbility, playerClassForAptitude, playerLevelFromXp,
+  unlockedClassAbilities,
+} from "@/src/game/progression";
 
 const MASTERY_LABELS: Record<string, string> = {
   assessment: "Assessment",
@@ -31,6 +35,11 @@ export default function ProfileScreen() {
   const apt = APTITUDE_INFO[player.aptitude];
   const nextRank = RANKS[player.rank_index + 1];
 
+  const playerLevelInfo = playerLevelFromXp(player.xp);
+  const playerClass = playerClassForAptitude(player.aptitude);
+  const unlockedAbilities = unlockedClassAbilities(player.aptitude, playerLevelInfo.level);
+  const nextAbility = nextClassAbility(player.aptitude, playerLevelInfo.level);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -54,6 +63,32 @@ export default function ProfileScreen() {
               <Text style={styles.xpTxt}>{player.xp} / {nextRank.xpRequired} XP</Text>
             </>
           ) : <Text style={styles.nextRank}>You have reached the apex.</Text>}
+        </View>
+
+        <View style={styles.classCard} testID="profile-player-class">
+          <Text style={styles.label}>PLAYER CLASS</Text>
+          <Text style={styles.rankName}>{playerClass}</Text>
+          <Text style={styles.nextRank}>Player Level {playerLevelInfo.level}</Text>
+          {unlockedAbilities.length > 0 && (
+            <View style={{ gap: 6, marginTop: 6 }}>
+              {unlockedAbilities.map((a) => (
+                <View key={a.name} style={styles.abilityRow} testID={`class-ability-${a.level}`}>
+                  <Text style={styles.abilityLevel}>Lv.{a.level}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.abilityName}>{a.name}</Text>
+                    <Text style={styles.abilityDesc}>{a.description}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+          {nextAbility ? (
+            <Text style={[styles.nextRank, { marginTop: 6 }]}>
+              Next: {nextAbility.name} at Lv.{nextAbility.level} — {nextAbility.description}
+            </Text>
+          ) : (
+            <Text style={[styles.nextRank, { marginTop: 6 }]}>All class abilities unlocked.</Text>
+          )}
         </View>
 
         <Text style={styles.section}>Mastery</Text>
@@ -117,6 +152,11 @@ const styles = StyleSheet.create({
   bar: { height: 6, backgroundColor: COLORS.surfaceTertiary, borderRadius: 3, overflow: "hidden", marginTop: 8 },
   barFill: { height: "100%", backgroundColor: COLORS.brand },
   xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 4 },
+  classCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 4 },
+  abilityRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
+  abilityLevel: { color: COLORS.brand, fontSize: 11, fontWeight: "700", width: 40 },
+  abilityName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  abilityDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
   section: { color: COLORS.onSurface, fontSize: 18, marginTop: SPACING.sm, fontWeight: "400" },
   masteryGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   mCard: {

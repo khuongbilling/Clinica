@@ -115,6 +115,11 @@ export interface BattleState {
   // Clinical Arts ultimates
   heroUltimateCharge: Record<string, number>;
   ultimateUsedCount: Record<string, number>;
+
+  // Hero EXP — per-hero battle contribution points (damage/heal/shield/reveal/AP
+  // spent), used at battle end to split Hero EXP proportionally (see
+  // progression.ts splitContributionToHeroXp). Distinct from Player EXP.
+  heroContribution: Record<string, number>;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -130,6 +135,9 @@ export interface InitBattleOptions {
   difficulty?: string;
   additionalEnemies?: Enemy[];
   apBonus?: number;
+  // Player Class ability bonus (see progression.ts getClassBattleBonuses) —
+  // seeds the shield the patient starts battle with (Guardian/Caretaker tiers).
+  startShield?: number;
 }
 
 // ============================================================
@@ -263,7 +271,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     team,
     stability,
     corruption,
-    shieldNext: 0,
+    shieldNext: Math.max(0, opts.startShield || 0),
     ap: turnAp,
     apMax: turnAp,
     visibleClues: finalVisible,
@@ -309,7 +317,15 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
 
     heroUltimateCharge,
     ultimateUsedCount,
+    heroContribution: {},
   };
+}
+
+/** Adds battle-contribution points for a hero (damage/heal/shield/reveal/AP spent), used to split Hero EXP at battle end. */
+function addContribution(s: BattleState, heroId: string | null | undefined, points: number): BattleState {
+  if (!heroId || points <= 0) return s;
+  const heroContribution = { ...s.heroContribution, [heroId]: (s.heroContribution[heroId] || 0) + points };
+  return { ...s, heroContribution };
 }
 
 // ============================================================
@@ -396,6 +412,7 @@ export function applyUltimate(s: BattleState, heroId: string): ApplyResult {
       break;
   }
 
+  next = addContribution(next, heroId, 40);
   next = syncWaveAndCheckVictory(next);
   return { state: next, message: `${ult.name} unleashed!`, status: 'appropriate' };
 }
@@ -439,6 +456,7 @@ export function applyCareAttempt(s: BattleState): ApplyResult {
   }, heroId);
 
   next = addUltimateCharge(next, heroId, 8);
+  next = addContribution(next, heroId, damage + 2);
   next = syncWaveAndCheckVictory(next);
 
   return { state: next, message: `Care Attempt: -${damage} Corruption.`, status: 'weak' };
@@ -683,6 +701,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   if (msg) next.log.push(msg);
 
   next = addUltimateCharge(next, hero.id, res.chainAdvanced ? 20 : 12);
+  next = addContribution(next, hero.id, effectAmount + cost * 2);
   next = syncWaveAndCheckVictory(next);
 
   return { state: next, message: msg || `${skill.name} resolved.`, status: res.status };
@@ -773,6 +792,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   if (msg) next.log.push(msg);
 
   next = addUltimateCharge(next, hero?.id || heroId, res.chainAdvanced ? 18 : 10);
+  next = addContribution(next, hero?.id || heroId, effectAmount + cost * 2);
   next = syncWaveAndCheckVictory(next);
   return { state: next, message: msg, status: res.status };
 }
@@ -809,6 +829,7 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
   }
   if (a.shield) next.shieldNext = Math.max(next.shieldNext, a.shield);
   next = addUltimateCharge(next, heroId, 8);
+  next = addContribution(next, heroId, Math.max(a.stabilize || 0, a.strike || 0, a.shield || 0) + a.costAP * 2);
   next = syncWaveAndCheckVictory(next);
   return { state: next, message: `${a.name} resolved.`, status: res.status };
 }
@@ -891,6 +912,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   if (msg) next.log.push(msg);
 
   next = addUltimateCharge(next, heroId, res.chainAdvanced ? 16 : 9);
+  next = addContribution(next, heroId, effectAmount + card.costAP * 2);
   next = syncWaveAndCheckVictory(next);
   return { state: next, message: msg || `${card.name} resolved.`, status: res.status };
 }

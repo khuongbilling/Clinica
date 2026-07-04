@@ -8,7 +8,7 @@ import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
 import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
-import { MAX_STAMINA, regen } from "@/src/game/stamina";
+import { regen, maxStaminaForPlayer } from "@/src/game/stamina";
 import {
   WARD_UNIT_IDS, WARD_UNIT_META, GACHA_COST, MASTERY_LEVEL_CAP,
   UNIT_STAT_BLOCKS, getMasteryStats, getMasteryRequirement, unlockedMilestones,
@@ -36,11 +36,13 @@ export default function Shop() {
 
   const crowns = player?.crowns || 0;
 
+  const staminaMax = useMemo(() => maxStaminaForPlayer(player), [player]);
+
   const staminaNow = useMemo(() => {
     if (!player) return 0;
     const now = Date.now();
-    return regen(player.stamina ?? MAX_STAMINA, player.stamina_updated_at ?? new Date(now).toISOString(), now).stamina;
-  }, [player]);
+    return regen(player.stamina ?? staminaMax, player.stamina_updated_at ?? new Date(now).toISOString(), now, staminaMax).stamina;
+  }, [player, staminaMax]);
 
   function flash(ok: boolean, msg: string) {
     setBanner({ ok, msg });
@@ -303,12 +305,12 @@ export default function Shop() {
           <>
             <View style={styles.staminaCard}>
               <Ionicons name="flash" size={18} color={COLORS.energy} />
-              <Text style={styles.staminaTxt}>Stamina {staminaNow} / {MAX_STAMINA}</Text>
+              <Text style={styles.staminaTxt}>Stamina {staminaNow} / {staminaMax}</Text>
             </View>
             <Text style={styles.blurb}>Out of energy? Spend Crowns to refill your Stamina and keep working shifts.</Text>
             {STAMINA_PACKS.map((p) => {
               const afford = crowns >= p.price;
-              const full = staminaNow >= MAX_STAMINA;
+              const full = staminaNow >= staminaMax;
               return (
                 <View key={p.id} style={styles.card} testID={`shop-stam-${p.id}`}>
                   <View style={[styles.iconBadge, { borderColor: COLORS.energy }]}>
