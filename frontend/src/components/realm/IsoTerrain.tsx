@@ -19,12 +19,16 @@ const BLOCK_H = 13;
 
 // Per-terrain top-face color. Side faces are derived by darkening this so every
 // tile reads as a solid 3D cube of earth/rock/water rather than a flat sticker.
+// Push 5.5 correction: terrain now varies for visual richness (grass/meadow/
+// stone courtyard/path) independent of any district gating.
 const TOP: Record<string, string> = {
   grass: "#57b45f",
-  dirt: "#c19a5e",
+  meadow: "#8fc25a",
+  path: "#c19a5e",
   water: "#3f8ac8",
   mountain: "#6b7280",
-  stone: "#565b66",
+  stone: "#8f8a7c",
+  forest: "#2f6b3a",
 };
 const ROAD_TOP = "#d3ab6c";
 
@@ -59,12 +63,15 @@ function makeRng(row: number, col: number) {
 }
 
 export function IsoTerrain({
-  cells, canvas, roadSet, unlocked,
+  cells, canvas, roadSet, unlocked, buildMode,
 }: {
   cells: PlotCell[];
   canvas: IsoCanvas;
   roadSet: Set<string>;
   unlocked: (cell: PlotCell) => boolean;
+  // Visual hierarchy: the buildable grid outline is subtle during normal play
+  // and drawn more prominently while the player is actively building/placing.
+  buildMode?: boolean;
 }) {
   const hw = ISO_TILE_W / 2;
   const hh = ISO_TILE_H / 2;
@@ -96,8 +103,8 @@ export function IsoTerrain({
         const leftPts = `${D[0]},${D[1]} ${C[0]},${C[1]} ${C[0]},${C[1] + BLOCK_H} ${D[0]},${D[1] + BLOCK_H}`;
         const rightPts = `${C[0]},${C[1]} ${B[0]},${B[1]} ${B[0]},${B[1] + BLOCK_H} ${C[0]},${C[1] + BLOCK_H}`;
 
-        // scatter objects only on planted ground, never on roads/water/rock
-        const canScatter = !isRoad && (cell.terrain === "grass" || cell.terrain === "dirt");
+        // scatter objects only on planted/open ground, never on roads/water/rock/forest
+        const canScatter = !isRoad && (cell.terrain === "grass" || cell.terrain === "meadow" || cell.terrain === "path");
         const scatter: React.ReactNode[] = [];
         if (canScatter) {
           const n = Math.floor(rng() * 3.2); // 0..3 clumps
@@ -107,7 +114,7 @@ export function IsoTerrain({
             const gx = cx + ox;
             const gy = cy + oy;
             const kind = rng();
-            if (cell.terrain === "grass" && kind < 0.6) {
+            if (cell.terrain !== "path" && kind < 0.6) {
               // grass tuft: 3 blades
               const gc = rng() < 0.5 ? "#3f9a49" : "#6cc971";
               scatter.push(
@@ -117,8 +124,8 @@ export function IsoTerrain({
                   <Line x1={gx} y1={gy} x2={gx + 2} y2={gy - 6} stroke={gc} strokeWidth={1.4} strokeLinecap="round" />
                 </G>
               );
-            } else if (cell.terrain === "grass" && kind < 0.78) {
-              // little flower
+            } else if (cell.terrain !== "path" && kind < 0.78) {
+              // little flower — meadow gets a denser, brighter bloom mix
               const fc = ["#f2c14e", "#e8737d", "#c98be0", "#f2f2f2"][Math.floor(rng() * 4)];
               scatter.push(
                 <G key={`f${i}`}>
@@ -127,18 +134,31 @@ export function IsoTerrain({
                 </G>
               );
             } else {
-              // pebble / dirt clod
-              const pc = cell.terrain === "dirt" ? "#9c7b4b" : "#8b8f98";
+              // pebble / trail stone
+              const pc = cell.terrain === "path" ? "#9c7b4b" : "#8b8f98";
               scatter.push(<Ellipse key={`p${i}`} cx={gx} cy={gy} rx={3} ry={1.8} fill={pc} />);
             }
           }
+        }
+        if (cell.terrain === "water" && !isRoad) {
+          scatter.push(<Ellipse key="ripple" cx={cx} cy={cy} rx={hw * 0.35} ry={hh * 0.28} fill="none" stroke="#bfe3ff" strokeWidth={0.8} opacity={0.55} />);
+        }
+        if (cell.terrain === "forest" && !isRoad) {
+          scatter.push(<Circle key="tree" cx={cx} cy={cy - 3} r={5.5} fill="#1f4d29" />);
+          scatter.push(<Circle key="tree2" cx={cx + 4} cy={cy + 1} r={4} fill="#255a30" />);
         }
 
         return (
           <G key={cell.id} opacity={locked ? 0.4 : 1}>
             <Polygon points={leftPts} fill={leftCol} />
             <Polygon points={rightPts} fill={rightCol} />
-            <Polygon points={topPts} fill={topCol} stroke={shade(baseTop, 0.6)} strokeWidth={0.5} />
+            <Polygon
+              points={topPts}
+              fill={topCol}
+              stroke={shade(baseTop, buildMode && cell.plotType === "buildable" ? 0.4 : 0.6)}
+              strokeWidth={buildMode && cell.plotType === "buildable" ? 1.1 : 0.5}
+              strokeOpacity={buildMode && cell.plotType === "buildable" ? 0.9 : 0.5}
+            />
             {isRoad && (
               <Polygon
                 points={`${px(r + 0.15, c + 0.15)},${py(r + 0.15, c + 0.15)} ${px(r + 0.15, c + 0.85)},${py(r + 0.15, c + 0.85)} ${px(r + 0.85, c + 0.85)},${py(r + 0.85, c + 0.85)} ${px(r + 0.85, c + 0.15)},${py(r + 0.85, c + 0.15)}`}

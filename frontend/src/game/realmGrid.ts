@@ -14,16 +14,23 @@ export const GRID_ROWS = 20;
 export const GRID_COLS = 14;
 export const CELL_PX = 34;
 
-export type TerrainType = "grass" | "dirt" | "water" | "mountain" | "stone";
+// Push 5.5 correction — terrain is purely a visual/texture concern now.
+// "meadow" and "path" were added so the terrain reads as painterly, varied
+// grassland instead of one flat green; none of these gate placement — only
+// `plotType` (buildable/decoration/blocked) does that (see canPlaceBuilding).
+export type TerrainType = "grass" | "meadow" | "stone" | "path" | "water" | "forest" | "mountain";
 
 export interface PlotCell {
   id: string;
   row: number;
   col: number;
   plotType: PlotType;
+  // Cosmetic theme tag only (e.g. for Realm Harmony flavor) — never a
+  // placement requirement. Any building may be placed on any buildable cell
+  // regardless of its districtId.
   districtId: DistrictId | null;
   terrain: TerrainType;
-  // Expansion plots are otherwise-normal district cells gated behind a higher
+  // Expansion plots are otherwise-normal buildable cells gated behind a higher
   // Atrium level — they exist so Move/Build have visible room to grow into.
   isExpansion: boolean;
   expansionAtriumLevel: number;
@@ -51,16 +58,29 @@ interface ZoneRect {
   expansionCols?: number[]; // absolute column indices within this rect treated as expansion
 }
 
+// Push 5.5 correction — zones no longer hard-gate WHAT can be built here; they
+// only vary the terrain texture (grass/meadow/stone courtyard) for visual
+// richness, and carry a cosmetic districtId used solely for Realm Harmony
+// flavor tags. Any unlocked, empty "buildable" cell accepts any building
+// whose footprint fits (see canPlaceBuilding below). Small water/forest
+// accent rects are listed FIRST so `.find` matches them before the larger
+// buildable rect they sit inside of, carving out a few intuitive blockers
+// (a pond, a small grove) without needing a bespoke tile grid.
 const ZONES: ZoneRect[] = [
-  { rowStart: 1, rowEnd: 6, colStart: 1, colEnd: 6, plotType: "scholar", districtId: "scholar", terrain: "grass", expansionCols: [1] },
-  { rowStart: 1, rowEnd: 6, colStart: 7, colEnd: 12, plotType: "care", districtId: "care", terrain: "grass", expansionCols: [12] },
-  { rowStart: 7, rowEnd: 7, colStart: 1, colEnd: 12, plotType: "decoration", districtId: null, terrain: "dirt" },
-  { rowStart: 8, rowEnd: 13, colStart: 1, colEnd: 4, plotType: "diplomacy", districtId: "diplomacy", terrain: "grass", expansionCols: [1] },
-  { rowStart: 8, rowEnd: 13, colStart: 5, colEnd: 9, plotType: "sanctuary", districtId: "sanctuary", terrain: "grass" },
-  { rowStart: 8, rowEnd: 13, colStart: 10, colEnd: 12, plotType: "support", districtId: "defense", terrain: "grass", expansionCols: [12] },
-  { rowStart: 14, rowEnd: 14, colStart: 1, colEnd: 12, plotType: "decoration", districtId: null, terrain: "dirt" },
-  { rowStart: 15, rowEnd: 18, colStart: 1, colEnd: 6, plotType: "wellness", districtId: "wellness", terrain: "grass", expansionCols: [1] },
-  { rowStart: 15, rowEnd: 18, colStart: 7, colEnd: 12, plotType: "commerce", districtId: "commerce", terrain: "grass", expansionCols: [12] },
+  // --- small intuitive blockers (checked first) ---
+  { rowStart: 9, rowEnd: 9, colStart: 5, colEnd: 6, plotType: "blocked", districtId: null, terrain: "water" },
+  { rowStart: 16, rowEnd: 17, colStart: 10, colEnd: 11, plotType: "blocked", districtId: null, terrain: "forest" },
+  // --- decoration walkways ---
+  { rowStart: 7, rowEnd: 7, colStart: 1, colEnd: 12, plotType: "decoration", districtId: null, terrain: "path" },
+  { rowStart: 14, rowEnd: 14, colStart: 1, colEnd: 12, plotType: "decoration", districtId: null, terrain: "path" },
+  // --- open buildable ground, terrain-varied only ---
+  { rowStart: 1, rowEnd: 6, colStart: 1, colEnd: 6, plotType: "buildable", districtId: "scholar", terrain: "grass", expansionCols: [1] },
+  { rowStart: 1, rowEnd: 6, colStart: 7, colEnd: 12, plotType: "buildable", districtId: "care", terrain: "meadow", expansionCols: [12] },
+  { rowStart: 8, rowEnd: 13, colStart: 1, colEnd: 4, plotType: "buildable", districtId: "diplomacy", terrain: "grass", expansionCols: [1] },
+  { rowStart: 8, rowEnd: 13, colStart: 5, colEnd: 9, plotType: "buildable", districtId: "sanctuary", terrain: "stone" },
+  { rowStart: 8, rowEnd: 13, colStart: 10, colEnd: 12, plotType: "buildable", districtId: "defense", terrain: "meadow", expansionCols: [12] },
+  { rowStart: 15, rowEnd: 18, colStart: 1, colEnd: 6, plotType: "buildable", districtId: "wellness", terrain: "grass", expansionCols: [1] },
+  { rowStart: 15, rowEnd: 18, colStart: 7, colEnd: 12, plotType: "buildable", districtId: "commerce", terrain: "meadow", expansionCols: [12] },
 ];
 
 const EXPANSION_ATRIUM_LEVEL = 4;
@@ -81,7 +101,7 @@ function buildGrid(): PlotCell[] {
       if (!zone) {
         cells.push({
           id: cellId(row, col), row, col,
-          plotType: "blocked", districtId: null, terrain: "stone",
+          plotType: "blocked", districtId: null, terrain: "forest",
           isExpansion: false, expansionAtriumLevel: 0,
         });
         continue;
@@ -95,6 +115,22 @@ function buildGrid(): PlotCell[] {
     }
   }
   return cells;
+}
+
+// Push 5.5 correction — replaces the old district-locked plot-type label. A
+// cell's label now describes its actual terrain/plot state, never a district
+// requirement, matching the "any unlocked buildable ground works" rule.
+export function getCellLabel(cell: PlotCell): string {
+  if (cell.plotType === "blocked") {
+    if (cell.terrain === "water") return "Water Cell";
+    if (cell.terrain === "mountain") return "Border Cell";
+    if (cell.terrain === "forest") return "Forest Cell";
+    return "Blocked Cell";
+  }
+  if (cell.plotType === "decoration") return "Decoration Cell";
+  if (cell.terrain === "meadow") return "Buildable Meadow";
+  if (cell.terrain === "stone") return "Buildable Stone Courtyard";
+  return "Buildable Grass";
 }
 
 export const GRID_CELLS: PlotCell[] = buildGrid();
@@ -150,10 +186,6 @@ export function getFootprintCells(origin: { row: number; col: number }, footprin
   return out;
 }
 
-export function districtToPlotType(district: DistrictId): PlotType {
-  return district === "defense" ? "support" : (district as PlotType);
-}
-
 // Occupied cells derived from the current layout (buildingId -> origin cellId).
 export function getOccupiedCellMap(layout: Record<string, string>): Map<string, string> {
   const map = new Map<string, string>();
@@ -170,8 +202,11 @@ export function getOccupiedCellMap(layout: Record<string, string>): Map<string, 
 
 export interface PlacementCheck { ok: boolean; reason?: string; cells: { row: number; col: number }[]; }
 
+// Push 5.5 correction — placement is no longer district-gated. Any unlocked,
+// empty, "buildable" cell accepts any building whose footprint fits. The only
+// intuitive blockers left are water/forest/mountain/border terrain, locked
+// expansion ground, and cells already occupied by another building.
 export function canPlaceBuilding(params: {
-  districtId: DistrictId;
   footprint: Footprint;
   origin: { row: number; col: number };
   occupiedCellMap: Map<string, string>;
@@ -179,19 +214,42 @@ export function canPlaceBuilding(params: {
   unlocked: boolean;
   ignoreBuildingId?: string;
 }): PlacementCheck {
-  const { districtId, footprint, origin, occupiedCellMap, atriumLevel, unlocked, ignoreBuildingId } = params;
+  const { footprint, origin, occupiedCellMap, atriumLevel, unlocked, ignoreBuildingId } = params;
   const cells = getFootprintCells(origin, footprint);
   if (!unlocked) return { ok: false, reason: "This building isn't unlocked yet.", cells };
-  const requiredType = districtToPlotType(districtId);
   for (const { row, col } of cells) {
     const cell = getCell(row, col);
     if (!cell) return { ok: false, reason: "That footprint falls outside the Realm grid.", cells };
-    if (cell.plotType !== requiredType) return { ok: false, reason: `Needs a ${requiredType} plot — this ground is incompatible.`, cells };
+    if (cell.plotType !== "buildable") {
+      return { ok: false, reason: "This ground isn't buildable — try open grass, meadow, or stone courtyard.", cells };
+    }
     if (!isCellUnlocked(cell, atriumLevel)) return { ok: false, reason: "This ground is a locked Expansion Plot.", cells };
     const occupant = occupiedCellMap.get(cell.id);
     if (occupant && occupant !== ignoreBuildingId) return { ok: false, reason: "Overlaps an existing building.", cells };
   }
   return { ok: true, cells };
+}
+
+// Returns every origin cell (row, col) on the grid where the given footprint
+// could legally be placed right now — used to highlight ALL valid cells
+// during placement mode, not just the single hovered target.
+export function findAllValidOrigins(params: {
+  footprint: Footprint;
+  occupiedCellMap: Map<string, string>;
+  atriumLevel: number;
+  unlocked: boolean;
+  ignoreBuildingId?: string;
+}): { row: number; col: number }[] {
+  const { footprint, occupiedCellMap, atriumLevel, unlocked, ignoreBuildingId } = params;
+  if (!unlocked) return [];
+  const valid: { row: number; col: number }[] = [];
+  for (let row = 0; row <= GRID_ROWS - footprint.h; row++) {
+    for (let col = 0; col <= GRID_COLS - footprint.w; col++) {
+      const check = canPlaceBuilding({ footprint, origin: { row, col }, occupiedCellMap, atriumLevel, unlocked, ignoreBuildingId });
+      if (check.ok) valid.push({ row, col });
+    }
+  }
+  return valid;
 }
 
 export function canPlaceDecoration(params: {

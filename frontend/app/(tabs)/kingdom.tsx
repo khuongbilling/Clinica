@@ -17,6 +17,7 @@ import {
   REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE, REALM_LOOP_NOTE,
   REALM_HARMONY_NOTE, CARE_PATHWAYS_NOTE, DISTRICT_IDENTITY_NOTE,
   HERO_RESIDENCY_NOTE, SANCTUARY_REQUESTS_NOTE, REALM_SKIN_EXAMPLES,
+  BUILDING_CATEGORIES, BuildingCategory, getHarmonyBonus,
   getAtriumLevel, isBuildingUnlocked, RealmBuilding, RealmDecoration,
   buildDefaultRealmLayout, getBuildingById, getDecorationById, PlotType,
 } from "@/src/game/realm";
@@ -24,7 +25,7 @@ import {
   GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,
   isCellUnlocked, getFootprint, getFootprintCells, getOccupiedCellMap,
   canPlaceBuilding, canPlaceDecoration, computeRoads, cellId, parseCellId,
-  districtToPlotType,
+  getCellLabel, findAllValidOrigins,
 } from "@/src/game/realmGrid";
 import {
   ISO_TILE_W, ISO_TILE_H, computeIsoCanvas, cellCenterIso, footprintIso,
@@ -60,9 +61,13 @@ const DISTRICT_COLOR: Record<string, string> = {
 };
 
 const PLOT_TYPE_COLOR: Record<PlotType, string> = {
-  sanctuary: COLORS.brand, scholar: COLORS.mind, care: COLORS.protection,
-  wellness: COLORS.growth, commerce: COLORS.energy, support: COLORS.fire,
-  diplomacy: COLORS.storm, decoration: "#c9a06a", road: "#8a7a63", blocked: "#3a3f47",
+  buildable: COLORS.brand, decoration: "#c9a06a", blocked: "#3a3f47",
+};
+
+const CATEGORY_COLOR: Record<BuildingCategory, string> = {
+  core: COLORS.brand, learning: COLORS.mind, care: COLORS.protection,
+  supplies: COLORS.energy, wellness: COLORS.growth, economy: COLORS.energy,
+  defense: COLORS.fire, faction: COLORS.storm,
 };
 
 
@@ -191,7 +196,7 @@ export default function KingdomScreen() {
       setBanner(`Locked Expansion Plot — unlocks at Grand Ward Atrium Lv.${cell.expansionAtriumLevel}.`);
       return;
     }
-    const meta = getPlotTypeLabel(cell.plotType);
+    const meta = getCellLabel(cell);
     setBanner(`${meta} — empty. Use Sanctuary Inventory to build or decorate here.`);
   }
 
@@ -201,7 +206,6 @@ export default function KingdomScreen() {
       const building = getBuildingById(placement.id);
       if (!building) return null;
       return canPlaceBuilding({
-        districtId: building.district,
         footprint: getFootprint(building.id),
         origin: placement.origin,
         occupiedCellMap,
@@ -213,6 +217,33 @@ export default function KingdomScreen() {
     const decorOccupied = new Set(Object.keys(decor));
     return canPlaceDecoration({ origin: placement.origin, occupiedCellMap, decorOccupied });
   }, [placement, occupiedCellMap, atriumLevel, decor]);
+
+  // All legal origin cells for the building currently being placed — drives
+  // the "highlight every valid cell" placement preview (not just the target).
+  const validOrigins = useMemo(() => {
+    if (!placement || placement.kind !== "building") return [];
+    const building = getBuildingById(placement.id);
+    if (!building) return [];
+    return findAllValidOrigins({
+      footprint: getFootprint(building.id),
+      occupiedCellMap,
+      atriumLevel,
+      unlocked: isBuildingUnlocked(building, atriumLevel),
+      ignoreBuildingId: placement.isMove ? building.id : undefined,
+    });
+  }, [placement, occupiedCellMap, atriumLevel]);
+
+  const validOriginCells = useMemo(() => {
+    if (!placement || placement.kind !== "building" || !validOrigins.length) return [];
+    const building = getBuildingById(placement.id);
+    if (!building) return [];
+    const footprint = getFootprint(building.id);
+    const set = new Set<string>();
+    for (const o of validOrigins) {
+      for (const c of getFootprintCells(o, footprint)) set.add(cellId(c.row, c.col));
+    }
+    return Array.from(set);
+  }, [placement, validOrigins]);
 
   async function confirmPlacement() {
     if (!placement || !placement.origin || !placementCheck?.ok) return;
@@ -277,6 +308,7 @@ export default function KingdomScreen() {
               canvas={ISO_CANVAS}
               roadSet={roadSet}
               unlocked={(cell) => isCellUnlocked(cell, atriumLevel)}
+              buildMode={!!placement}
             />
 
             {SORTED_CELLS.map((cell) => {
@@ -360,6 +392,23 @@ export default function KingdomScreen() {
                 </View>
               );
             })}
+
+            {placement && validOriginCells.length > 0 && (
+              <>
+                {validOriginCells.map((id) => {
+                  const c = parseCellId(id);
+                  if (!c) return null;
+                  const { x, y } = cellCenterIso(c.row, c.col, ISO_CANVAS);
+                  return (
+                    <IsoTile
+                      key={`valid-${id}`}
+                      x={x} y={y} w={ISO_TILE_W * 0.88} h={ISO_TILE_H * 0.88}
+                      fill={COLORS.success + "22"} borderColor={COLORS.success + "66"} borderWidth={1}
+                    />
+                  );
+                })}
+              </>
+            )}
 
             {placement?.origin && (() => {
               const footprint = placement.kind === "building" ? getFootprint(placement.id) : { w: 1, h: 1 };
@@ -473,14 +522,10 @@ export default function KingdomScreen() {
   );
 }
 
-function getPlotTypeLabel(type: PlotType): string {
-  const labels: Record<PlotType, string> = {
-    sanctuary: "Sanctuary Plot", scholar: "Scholar Plot", care: "Care Plot", wellness: "Wellness Plot",
-    commerce: "Commerce Plot", support: "Support Plot", diplomacy: "Diplomacy Plot",
-    decoration: "Decoration Plot", road: "Road", blocked: "Wilds",
-  };
-  return labels[type];
-}
+const CATEGORY_LABEL: Record<BuildingCategory, string> = {
+  core: "Core", learning: "Learning", care: "Care", supplies: "Supplies",
+  wellness: "Wellness", economy: "Economy", defense: "Defense Support", faction: "Faction",
+};
 
 function BuildingActionSheet({
   building, originId, atriumLevel, kingdomLevels, onClose, onMove, onStore, router,
@@ -501,7 +546,7 @@ function BuildingActionSheet({
   const district = REALM_DISTRICTS.find((d) => d.id === building.district);
   const color = DISTRICT_COLOR[district?.colorToken || "brand"];
   const footprint = getFootprint(building.id);
-  const plotType = districtToPlotType(building.district);
+  const originCell = originId ? getCellById(originId) : null;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -571,11 +616,15 @@ function BuildingActionSheet({
 
             <Text style={styles.sheetLabel}>FOOTPRINT</Text>
             <View style={styles.slotRow}>
-              <Ionicons name={(PLOT_TYPE_ICON[plotType] || "square-outline") as any} size={14} color={COLORS.brand} />
+              <Ionicons name="square-outline" size={14} color={COLORS.brand} />
               <Text style={styles.slotTxt}>
-                {footprint.w}x{footprint.h} cells on a {getPlotTypeLabel(plotType)}
-                {originId ? ` · placed at ${originId}` : ""}
+                {footprint.w}x{footprint.h} cells on any open buildable ground
+                {originCell ? ` · currently on ${getCellLabel(originCell)} (${originId})` : ""}
               </Text>
+            </View>
+            <View style={styles.slotRow}>
+              <Ionicons name="leaf-outline" size={14} color={COLORS.growth} />
+              <Text style={styles.slotTxt}>{REALM_HARMONY_NOTE}</Text>
             </View>
 
             <Text style={styles.sheetLabel}>PLOT</Text>
@@ -650,10 +699,9 @@ function BuildingActionSheet({
   );
 }
 
-const PLOT_TYPE_ICON: Record<PlotType, string> = {
-  sanctuary: "sparkles", scholar: "school", care: "medkit", wellness: "leaf",
-  commerce: "business", support: "shield-checkmark", diplomacy: "flag",
-  decoration: "flower", road: "trail-sign", blocked: "leaf-outline",
+const CATEGORY_ICON: Record<BuildingCategory, string> = {
+  core: "sparkles", learning: "school", care: "medkit", supplies: "leaf",
+  wellness: "flower", economy: "business", defense: "shield-checkmark", faction: "flag",
 };
 
 function InventoryDrawer({
@@ -672,6 +720,10 @@ function InventoryDrawer({
   onMoveBuilding: (b: RealmBuilding) => void;
   onStoreBuilding: (b: RealmBuilding) => void;
 }) {
+  const [category, setCategory] = useState<BuildingCategory | "all">("all");
+  const unplacedFiltered = category === "all" ? unplaced : unplaced.filter((b) => b.category === category);
+  const lockedFiltered = category === "all" ? locked : locked.filter((b) => b.category === category);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
@@ -687,12 +739,38 @@ function InventoryDrawer({
             </Pressable>
           </View>
 
-          <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: SPACING.xs, paddingVertical: SPACING.xs }}
+            style={{ flexGrow: 0, marginBottom: SPACING.xs }}
+          >
+            <Pressable
+              style={[styles.categoryChip, category === "all" && styles.categoryChipActive]}
+              onPress={() => setCategory("all")}
+              testID="realm-tray-category-all"
+            >
+              <Text style={[styles.categoryChipTxt, category === "all" && styles.categoryChipTxtActive]}>All</Text>
+            </Pressable>
+            {BUILDING_CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat}
+                style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
+                onPress={() => setCategory(cat)}
+                testID={`realm-tray-category-${cat}`}
+              >
+                <Ionicons name={(CATEGORY_ICON[cat] || "cube-outline") as any} size={12} color={category === cat ? COLORS.onBrand : COLORS.onSurfaceSecondary} />
+                <Text style={[styles.categoryChipTxt, category === cat && styles.categoryChipTxtActive]}>{CATEGORY_LABEL[cat]}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
             {placed.length > 0 && (
               <>
                 <Text style={styles.sheetLabel}>ON THE MAP</Text>
                 {placed.map((b) => {
-                  const color = districtColorFor(b.district);
+                  const color = CATEGORY_COLOR[b.category] || districtColorFor(b.district);
                   const footprint = getFootprint(b.id);
                   return (
                     <View key={b.id} style={styles.slotRow}>
@@ -716,19 +794,21 @@ function InventoryDrawer({
             )}
 
             <Text style={styles.sheetLabel}>AVAILABLE TO BUILD</Text>
-            {unplaced.length === 0 ? (
-              <Text style={styles.sheetBody}>Every unlocked building is already on the map.</Text>
+            {unplacedFiltered.length === 0 ? (
+              <Text style={styles.sheetBody}>
+                {unplaced.length === 0 ? "Every unlocked building is already on the map." : "No buildings in this category yet."}
+              </Text>
             ) : (
-              unplaced.map((b) => {
+              unplacedFiltered.map((b) => {
                 const footprint = getFootprint(b.id);
-                const color = districtColorFor(b.district);
+                const color = CATEGORY_COLOR[b.category] || districtColorFor(b.district);
                 return (
                   <Pressable key={b.id} style={styles.slotRow} onPress={() => onPickBuilding(b)} testID={`realm-inventory-build-${b.id}`}>
                     <Ionicons name={b.icon as any} size={18} color={color} />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.slotTxt, { fontWeight: "700" }]}>{b.name}</Text>
                       <Text style={styles.sheetFootnote}>
-                        {footprint.w}x{footprint.h} · {getPlotTypeLabel(districtToPlotType(b.district))} · {b.purpose}
+                        {footprint.w}x{footprint.h} · {CATEGORY_LABEL[b.category] || "Building"} · {b.purpose}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
@@ -738,7 +818,7 @@ function InventoryDrawer({
             )}
 
             <Text style={styles.sheetLabel}>LOCKED</Text>
-            {locked.map((b) => (
+            {lockedFiltered.map((b) => (
               <View key={b.id} style={styles.slotRow}>
                 <Ionicons name="lock-closed-outline" size={16} color={COLORS.onSurfaceTertiary} />
                 <View style={{ flex: 1 }}>

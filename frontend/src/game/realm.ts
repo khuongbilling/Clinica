@@ -426,6 +426,23 @@ export function isBuildingUnlocked(building: RealmBuilding, atriumLevel: number)
   return atriumLevel >= building.atriumLevelRequired;
 }
 
+// Realm Harmony proximity check — purely informational. Given a building
+// being placed/inspected and the set of building ids currently adjacent to it
+// (computed by the caller from the grid, e.g. realmGrid.ts neighbor cells),
+// returns the Harmony label if satisfied, or null. Never blocks placement,
+// never affects stats — a soft "nice to know" nudge only.
+export function getHarmonyBonus(
+  building: RealmBuilding,
+  neighborBuildingIds: string[],
+  neighborDecorationIds: string[] = []
+): string | null {
+  const affinity = building.harmony;
+  if (!affinity) return null;
+  const nearBuilding = (affinity.nearBuildingIds || []).some((id) => neighborBuildingIds.includes(id));
+  const nearDecoration = (affinity.nearDecorationIds || []).some((id) => neighborDecorationIds.includes(id));
+  return nearBuilding || nearDecoration ? affinity.label : null;
+}
+
 // ---------------------------------------------------------------------------
 // Push 5.5 structural correction — the old fixed-plot / painted-map system
 // (REALM_PLOTS, RealmPlot, x/y percentage positions) has been removed. The
