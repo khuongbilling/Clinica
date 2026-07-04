@@ -105,12 +105,23 @@ export default function RunHome() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER — tap player identity to open Profile/Settings ── */}
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
-          <Text style={styles.playerName}>{player.name}</Text>
-        </View>
+        <Pressable
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm }}
+          onPress={() => router.push("/(tabs)/profile")}
+          hitSlop={6}
+          testID="home-profile-open"
+        >
+          <View style={[styles.headerBtn, apt && { borderColor: apt.color + "60" }]}>
+            <Ionicons name={(apt?.icon as any) || "person-circle"} size={18} color={apt?.color || COLORS.onSurfaceSecondary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rankKicker}>{RANKS[player.rank_index].name.toUpperCase()}</Text>
+            <Text style={styles.playerName}>{player.name}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
         <StaminaPill player={player} />
         <Pressable
           style={styles.headerBtn}
@@ -120,15 +131,14 @@ export default function RunHome() {
         >
           <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
         </Pressable>
-        {apt && (
-          <View style={[styles.headerBtn, { borderColor: apt.color + "60" }]}>
-            <Ionicons name={apt.icon as any} size={18} color={apt.color} />
-          </View>
-        )}
       </View>
 
-      {/* ── PLAYER LEVEL PANEL — account-wide, distinct from Hero Rank/XP below ── */}
-      <View style={styles.playerLevelPanel} testID="home-player-level-panel">
+      {/* ── PLAYER LEVEL PANEL — account-wide, distinct from Hero Rank/XP below; tap opens Profile ── */}
+      <Pressable
+        style={styles.playerLevelPanel}
+        onPress={() => router.push("/(tabs)/profile")}
+        testID="home-player-level-panel"
+      >
         <View style={styles.playerLevelBadge}>
           <Text style={styles.playerLevelBadgeTxt}>{playerLevelInfo.level}</Text>
         </View>
@@ -148,7 +158,7 @@ export default function RunHome() {
             </Text>
           )}
         </View>
-      </View>
+      </Pressable>
 
       {/* ── SCENE LOCATION LABEL ── */}
       <View style={styles.sceneLabelRow}>
@@ -164,23 +174,16 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN */}
+        {/* LEFT COLUMN — reserved for future Offers/Passes; placeholder only, no monetization yet */}
         <View style={styles.sideCol}>
           <FeatureButton
-            icon="calendar-outline"
-            label="Events"
-            color={COLORS.air}
+            icon="pricetag-outline"
+            label="Offers"
+            color={COLORS.energy}
             locked
             lockText="Soon"
             onPress={() => {}}
-          />
-          <FeatureButton
-            icon="shield-checkmark-outline"
-            label="Daily"
-            color={COLORS.mind}
-            locked
-            lockText="Soon"
-            onPress={() => {}}
+            testID="home-float-offers"
           />
         </View>
 
@@ -208,8 +211,17 @@ export default function RunHome() {
           </Animated.View>
         </Pressable>
 
-        {/* RIGHT COLUMN */}
+        {/* RIGHT COLUMN — active gameplay events/quests */}
         <View style={styles.sideCol}>
+          <FeatureButton
+            icon="calendar-outline"
+            label="Events"
+            color={COLORS.air}
+            locked
+            lockText="Soon"
+            onPress={() => {}}
+            testID="home-float-events"
+          />
           <FeatureButton
             icon={bossUnlocked ? "skull" : "lock-closed"}
             label="Boss"
@@ -218,13 +230,6 @@ export default function RunHome() {
             lockText="1 run"
             onPress={() => { if (bossUnlocked) router.push("/boss"); }}
             testID="home-float-boss"
-          />
-          <FeatureButton
-            icon="sparkles"
-            label="Summon"
-            color={COLORS.brand}
-            onPress={() => router.push("/summon")}
-            testID="home-float-summon"
           />
         </View>
       </View>

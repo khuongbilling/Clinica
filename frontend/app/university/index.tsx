@@ -43,6 +43,13 @@ const MENU: { id: string; title: string; desc: string; icon: string; route?: str
     icon: "book",
     route: "/university/lessons",
   },
+  {
+    id: "library",
+    title: "Research Library",
+    desc: "Browse the Great Codex — unlocked clinical knowledge, battle mechanics, and enemy field notes.",
+    icon: "library",
+    route: "/(tabs)/codex",
+  },
 ];
 
 export default function UniversityHubScreen() {

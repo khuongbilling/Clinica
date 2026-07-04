@@ -80,7 +80,7 @@ export default function KingdomScreen() {
         <View style={styles.heroInner}>
           <Text style={styles.kicker}>KINGDOM OF CLINICA</Text>
           <Text style={styles.title}>Rebuild the Realm</Text>
-          <Text style={styles.sub}>Each victory restores a body region and earns Codex knowledge.</Text>
+          <Text style={styles.sub}>You are the architect of this Realm — every victory restores a body region, grows your buildings, and earns Codex knowledge.</Text>
         </View>
       </View>
 
@@ -124,6 +124,7 @@ export default function KingdomScreen() {
         })}
 
         <Text style={styles.section}>Buildings</Text>
+        <Text style={styles.sectionSub}>Grow these to expand what your Realm can do.</Text>
 
         {BUILDINGS.map((b) => {
           const lvl = player.kingdom_levels[b.id] || 0;
@@ -134,7 +135,7 @@ export default function KingdomScreen() {
               key={b.id}
               style={[styles.bCard, isShop && styles.bCardActive]}
               testID={`kingdom-building-${b.id}`}
-              {...(isShop ? { onPress: () => router.push("/shop") } : {})}
+              {...(isShop ? { onPress: () => router.push("/(tabs)/shop") } : {})}
             >
               <View style={[styles.bIcon, { borderColor: COLORS.brand }]}>
                 <Ionicons name={(ICONS[b.id] as any) || "business"} size={24} color={COLORS.brand} />

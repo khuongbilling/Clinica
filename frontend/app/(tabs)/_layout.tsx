@@ -26,11 +26,11 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="shop"
         options={{
-          title: "RUN",
-          tabBarButtonTestID: "tab-run",
-          tabBarIcon: ({ color, size }) => <Ionicons name="flame" size={size} color={color} />,
+          title: "SHOP",
+          tabBarButtonTestID: "tab-shop",
+          tabBarIcon: ({ color, size }) => <Ionicons name="storefront" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -42,11 +42,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="codex"
+        name="index"
         options={{
-          title: "CODEX",
-          tabBarButtonTestID: "tab-codex",
-          tabBarIcon: ({ color, size }) => <Ionicons name="book" size={size} color={color} />,
+          title: "SHIFT",
+          tabBarButtonTestID: "tab-shift",
+          tabBarIcon: ({ color, size }) => <Ionicons name="flame" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -58,11 +58,25 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="faction"
+        options={{
+          title: "FACTION",
+          tabBarButtonTestID: "tab-faction",
+          tabBarIcon: ({ color, size }) => <Ionicons name="flag" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
-          title: "ME",
+          href: null,
           tabBarButtonTestID: "tab-profile",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="codex"
+        options={{
+          href: null,
+          tabBarButtonTestID: "tab-codex",
         }}
       />
     </Tabs>

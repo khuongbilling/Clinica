@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,6 +25,7 @@ const TUTORIAL_DESC: Record<TutorialId, string> = {
 };
 
 export default function CodexScreen() {
+  const router = useRouter();
   const { player } = usePlayer();
   const { completed, replayTutorial } = useTutorial();
   if (!player) return null;
@@ -33,6 +35,14 @@ export default function CodexScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
+        <Pressable
+          onPress={() => { if (router.canGoBack()) router.back(); else router.replace("/(tabs)/profile"); }}
+          style={styles.backBtn}
+          hitSlop={12}
+          testID="codex-back"
+        >
+          <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
+        </Pressable>
         <Text style={styles.kicker}>THE GREAT CODEX</Text>
         <Text style={styles.title}>Library of Knowledge</Text>
         <Text style={styles.sub}>{unlocked.size} of {CODEX.length} pages restored</Text>
@@ -170,7 +180,8 @@ export default function CodexScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  header: { padding: SPACING.lg, gap: 4 },
+  header: { padding: SPACING.lg, paddingLeft: SPACING.lg + 36, gap: 4 },
+  backBtn: { position: "absolute", left: SPACING.sm, top: SPACING.lg, padding: 12, zIndex: 2, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceTertiary, fontSize: 12 },

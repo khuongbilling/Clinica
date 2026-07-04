@@ -62,7 +62,12 @@ export default function Shop() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backBtn} testID="shop-back">
+        <Pressable
+          onPress={() => { if (router.canGoBack()) router.back(); }}
+          hitSlop={10}
+          style={styles.backBtn}
+          testID="shop-back"
+        >
           <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
         </Pressable>
         <View style={{ flex: 1 }}>

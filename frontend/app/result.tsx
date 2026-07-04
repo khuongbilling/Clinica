@@ -301,7 +301,7 @@ export default function Result() {
             )}
 
             {crownsEarned > 0 && (
-              <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push("/shop")}>
+              <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push("/(tabs)/shop")}>
                 <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
                 <Text style={styles.crownsTxt}>+{crownsEarned} Crowns earned — spend them at the Apothecary Market.</Text>
                 <Ionicons name="chevron-forward" size={16} color={COLORS.energy} />

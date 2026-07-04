@@ -110,20 +110,48 @@ export default function ProfileScreen() {
           <Stat label="Codex Pages" value={String(player.codex_unlocked.length)} />
         </View>
 
-        <Pressable
-          style={styles.tutorialBtn}
-          onPress={() => router.push("/tutorial")}
-          testID="profile-tutorial-button"
-        >
-          <Ionicons name="book" size={16} color={COLORS.brand} />
-          <Text style={styles.tutorialTxt}>{"How to Play — Healer's Manual"}</Text>
-          <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
-        </Pressable>
+        <Text style={styles.section}>Settings</Text>
+        <View style={styles.settingsCard}>
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/tutorial")}
+            testID="profile-tutorial-button"
+          >
+            <Ionicons name="book-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>{"How to Play — Healer's Manual"}</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/(tabs)/codex")}
+            testID="profile-codex-button"
+          >
+            <Ionicons name="library-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Research Library (Codex)</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <View style={styles.settingsRow} testID="profile-achievements-row">
+            <Ionicons name="trophy-outline" size={18} color={COLORS.onSurfaceTertiary} />
+            <Text style={[styles.settingsRowTxt, { color: COLORS.onSurfaceTertiary }]}>Achievements</Text>
+            <Text style={styles.comingSoonTag}>SOON</Text>
+          </View>
+          <View style={styles.settingsDivider} />
+          <View style={styles.settingsRow} testID="profile-support-row">
+            <Ionicons name="help-buoy-outline" size={18} color={COLORS.onSurfaceTertiary} />
+            <Text style={[styles.settingsRowTxt, { color: COLORS.onSurfaceTertiary }]}>Support & Legal</Text>
+            <Text style={styles.comingSoonTag}>SOON</Text>
+          </View>
+        </View>
 
-        <Pressable style={styles.resetBtn} onPress={handleReset} testID="profile-reset-button">
-          <Ionicons name="refresh" size={14} color={COLORS.error} />
-          <Text style={styles.resetTxt}>Reset Account (Start Over)</Text>
-        </Pressable>
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerLabel}>DANGER ZONE</Text>
+          <Pressable style={styles.resetBtn} onPress={handleReset} testID="profile-reset-button">
+            <Ionicons name="refresh" size={14} color={COLORS.error} />
+            <Text style={styles.resetTxt}>Reset Account (Start Over)</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,8 +197,15 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: "row", justifyContent: "space-between" },
   statLbl: { color: COLORS.onSurfaceSecondary, fontSize: 14 },
   statVal: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
-  resetBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: SPACING.md, marginTop: SPACING.md },
+  resetBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: SPACING.md },
   resetTxt: { color: COLORS.error, fontSize: 12, fontWeight: "600" },
   tutorialBtn: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.md, marginTop: SPACING.sm, backgroundColor: COLORS.brand + "12", borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "40" },
   tutorialTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", flex: 1 },
+  settingsCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
+  settingsRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.md },
+  settingsRowTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", flex: 1 },
+  settingsDivider: { height: 1, backgroundColor: COLORS.border, marginLeft: SPACING.md + 18 + SPACING.sm },
+  comingSoonTag: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  dangerZone: { borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.error + "35", backgroundColor: COLORS.error + "08" },
+  dangerLabel: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700", paddingTop: SPACING.sm, paddingHorizontal: SPACING.md },
 });

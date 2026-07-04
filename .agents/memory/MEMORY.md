@@ -19,3 +19,4 @@
 - [Ward Defense sprite choreography](ward-defense-sprite-choreography.md) — two-file split (data+loop vs v2 live board); PATH_WPS/DEPLOY_TILES must match; per-unit UNIT_FX lunge/aura/proj driven by atkDx/atkDy; hero+enemy PNGs face LEFT, flip via scaleX:-1.
 - [Clinica Player vs Hero Level](clinica-player-vs-hero-level.md) — Player Level = derived from player.xp (account-wide gates/class); Hero Level = per-hero_progression (battle contribution or Training Hall); never conflate.
 - [Clinica Clinical Cue tiers/topics](clinica-cue-tiers-topics.md) — 4-tier (chapter-weighted) x 9-topic cue system layered onto existing cue pipeline additively; topic bonuses reuse existing mechanics fields, never a parallel effect path.
+- [Expo Router hidden tabs pattern](expo-router-hidden-tabs.md) — use `Tabs.Screen options={{href:null}}` to hide a tab but keep its route alive; re-export a top-level screen into `(tabs)/` to promote it without duplicating logic.
