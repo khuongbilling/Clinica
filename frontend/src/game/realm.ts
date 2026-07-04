@@ -61,12 +61,13 @@ export interface HeroAssignmentSlot {
 
 export type PlotSize = "small" | "medium" | "large";
 
-// Sanctuary Plot types — an original Clinica system, organized by purpose
-// rather than by "attack" vs "defense" the way base-builder clones are. These
-// now correspond 1:1 to zones in the Realm grid (see realmGrid.ts).
-export type PlotType =
-  | "sanctuary" | "care" | "scholar" | "wellness" | "commerce"
-  | "support" | "diplomacy" | "decoration" | "road" | "blocked";
+// Sanctuary Plot types — Push 5.5 correction: land is no longer split into
+// per-district plot types that hard-gate placement. A cell is now simply
+// buildable, a decoration cell, or blocked terrain. District/theme identity
+// (see DistrictId above) becomes a purely cosmetic tag used for Realm
+// Harmony proximity bonuses (see REALM_HARMONY note + getHarmonyBonus below),
+// never a placement requirement.
+export type PlotType = "buildable" | "decoration" | "blocked";
 
 export interface PlotTypeMeta {
   id: PlotType;
@@ -76,26 +77,61 @@ export interface PlotTypeMeta {
 }
 
 export const PLOT_TYPE_META: PlotTypeMeta[] = [
-  { id: "sanctuary", name: "Sanctuary Plot", icon: "sparkles", description: "Anchors the Realm — home of the Grand Ward Atrium and core landmarks." },
-  { id: "care", name: "Care Plot", icon: "medkit", description: "Hosts patient-care and stability-support structures." },
-  { id: "scholar", name: "Scholar Plot", icon: "school", description: "Hosts learning, research, and recruitment structures." },
-  { id: "wellness", name: "Wellness Plot", icon: "leaf", description: "Hosts nutrition and off-shift recovery structures." },
-  { id: "commerce", name: "Commerce Plot", icon: "business", description: "Hosts supply, banking, and future trade structures." },
-  { id: "support", name: "Support Plot", icon: "shield-checkmark", description: "Hosts Ward Defense readiness structures — prep, not combat." },
-  { id: "diplomacy", name: "Diplomacy Plot", icon: "flag", description: "Hosts future faction and collaboration structures." },
-  { id: "decoration", name: "Decoration Plot", icon: "flower", description: "Purely cosmetic — lanterns, banners, statues, gardens." },
-  { id: "road", name: "Road", icon: "trail-sign", description: "Auto-generated — connects every building back to the Grand Ward Atrium." },
-  { id: "blocked", name: "Wilds", icon: "leaf-outline", description: "Untamed terrain outside the Realm's buildable grounds." },
+  { id: "buildable", name: "Buildable Ground", icon: "leaf", description: "Open grass, meadow, or stone courtyard — any unlocked, empty building fits here if the footprint fits." },
+  { id: "decoration", name: "Decoration Cell", icon: "flower", description: "Purely cosmetic — lanterns, banners, statues, gardens." },
+  { id: "blocked", name: "Blocked Cell", icon: "leaf-outline", description: "Water, forest, cliff, or the map border — not buildable." },
 ];
 
 export function getPlotTypeMeta(type: PlotType): PlotTypeMeta {
   return PLOT_TYPE_META.find((t) => t.id === type) || PLOT_TYPE_META[PLOT_TYPE_META.length - 1];
 }
 
+// ---------------------------------------------------------------------------
+// Building purpose categories — drive the bottom building-card tray. This is
+// independent from `district` (which is now cosmetic/Harmony-only theming).
+// ---------------------------------------------------------------------------
+export type BuildingCategory =
+  | "core" | "learning" | "care" | "supplies" | "wellness" | "economy" | "defense" | "faction";
+
+export interface BuildingCategoryMeta {
+  id: BuildingCategory;
+  name: string;
+  icon: string;
+}
+
+export const BUILDING_CATEGORIES: BuildingCategoryMeta[] = [
+  { id: "core", name: "Core", icon: "sparkles" },
+  { id: "learning", name: "Learning", icon: "school" },
+  { id: "care", name: "Care", icon: "medkit" },
+  { id: "supplies", name: "Supplies", icon: "flask" },
+  { id: "wellness", name: "Wellness", icon: "leaf" },
+  { id: "economy", name: "Economy", icon: "business" },
+  { id: "defense", name: "Defense Support", icon: "shield" },
+  { id: "faction", name: "Faction", icon: "flag" },
+];
+
+// ---------------------------------------------------------------------------
+// Realm Harmony — optional, future-leaning proximity bonuses that REPLACE the
+// old hard district-plot gating. A building can be placed anywhere buildable;
+// if it happens to sit near a thematically-related building or decoration, it
+// shows an informational Harmony tag. Never required, never a hard placement
+// rule, and never tied to attack/defense strength.
+// ---------------------------------------------------------------------------
+export interface HarmonyAffinity {
+  label: string;
+  nearBuildingIds: string[];
+  nearDecorationIds?: string[];
+}
+
 export interface RealmBuilding {
   id: string;
   name: string;
   district: DistrictId;
+  // Building-purpose category — drives the bottom building-card tray. Independent
+  // from `district`, which is now a cosmetic/Harmony-only theme tag, not a gate.
+  category: BuildingCategory;
+  // Optional Realm Harmony proximity bonus — informational only, never required.
+  harmony?: HarmonyAffinity;
   icon: string;
   isAtrium?: boolean;
   purpose: string;
@@ -137,6 +173,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: ATRIUM_ID,
     name: "Grand Ward Atrium",
     district: "sanctuary",
+    category: "core",
     icon: "sparkles",
     isAtrium: true,
     purpose: "The central landmark of the Sanctuary — unlocks new districts, raises building caps, and controls Realm expansion. Never an attack structure.",
@@ -157,6 +194,8 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "clinica_university",
     name: "Clinica University",
     district: "scholar",
+    category: "learning",
+    harmony: { label: "Scholar Harmony", nearBuildingIds: ["research_library"] },
     icon: "school",
     purpose: "Generates Knowledge Points and supports Class Manuals, Research, the Recruitment Hall, Clinical Cue mastery, and advanced equipment formulas and Skill Books tied to gear progression.",
     benefitForLevel: (lvl) => `Lv.${lvl} generates Knowledge Points and unlocks lessons, research, and advanced equipment formulas.`,
@@ -180,6 +219,8 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "research_library",
     name: "Research Library",
     district: "scholar",
+    category: "learning",
+    harmony: { label: "Scholar Harmony", nearBuildingIds: ["clinica_university"] },
     icon: "library",
     purpose: "Houses the Codex, class manuals, lore, Clinical Cue review, research bonuses, and equipment lore/Codex links for gear you've earned.",
     benefitForLevel: (lvl) => `Lv.${lvl} unlocks deeper Codex entries, Clinical Cue review tools, and equipment lore links.`,
@@ -202,6 +243,8 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "hospital_ward",
     name: "Hospital Ward",
     district: "care",
+    category: "care",
+    harmony: { label: "Care Harmony", nearBuildingIds: ["apothecary"] },
     icon: "medkit",
     purpose: "Supports Ward Shift preparation, Hero EXP support, Stability bonuses, Clinical Certificates, recovery/stabilization Clinical Supplies, and patient-care reward bonuses.",
     benefitForLevel: (lvl) => `Lv.${lvl} boosts stability gain during Ward Shift battles and recovery/stabilization supply yield.`,
@@ -224,6 +267,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "hall_of_heroes",
     name: "Training Hall",
     district: "care",
+    category: "learning",
     icon: "people-circle",
     purpose: "Supports hero training, Skill Books, Class Trainees, practice simulations, and the equipment training/enhancement foundation for gear progression.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises the Hero EXP cap, trainee capacity, and equipment training foundation.`,
@@ -247,6 +291,8 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "apothecary",
     name: "Apothecary",
     district: "commerce",
+    category: "supplies",
+    harmony: { label: "Care Harmony", nearBuildingIds: ["hospital_ward"] },
     icon: "flask",
     purpose: "The main source for Clinical Supplies and future pharmaceutical crafting — Herbal Vials, Sterile Kits, supply recipes, and links to the Shop.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises Clinical Supply yield and unlocks more supply recipes.`,
@@ -269,6 +315,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "sanctuary_bank",
     name: "Sanctuary Bank",
     district: "commerce",
+    category: "economy",
     icon: "business",
     purpose: "Supports Insight Crystals, Refined Lotus Gems, daily exchange limits, and economy info.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises your daily exchange cap at the Bank.`,
@@ -288,6 +335,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "sanctuary_bazaar",
     name: "Sanctuary Bazaar (Night Market)",
     district: "commerce",
+    category: "economy",
     icon: "moon",
     purpose: "Future placeholder for a cosmetic/collectible trading economy — not live yet, and never resource-stealing or PvP trading.",
     benefitForLevel: () => "Not yet active — this is a Coming Soon / Future Feature placeholder.",
@@ -307,6 +355,8 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "nutrition_garden",
     name: "Nutrition Garden",
     district: "wellness",
+    category: "wellness",
+    harmony: { label: "Wellness Harmony", nearDecorationIds: ["garden_hedge", "statue"] },
     icon: "leaf",
     purpose: "Supports Nourishment Petals, Recipe Cards, Garden Seeds, and the Lotus Plate Journal.",
     benefitForLevel: (lvl) => `Lv.${lvl} boosts Lotus Plate Journal wellness rewards.`,
@@ -329,6 +379,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "ward_defense_tower",
     name: "Ward Defense Tower",
     district: "defense",
+    category: "defense",
     icon: "shield",
     purpose: "Supports Ward Defense readiness and rewards — a preparation structure, not a Realm combat building.",
     benefitForLevel: (lvl) => `Lv.${lvl} raises the Ward Defense difficulty ceiling and rewards.`,
@@ -348,6 +399,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     id: "faction_embassy",
     name: "Faction Embassy",
     district: "diplomacy",
+    category: "faction",
     icon: "flag",
     purpose: "Future placeholder for allied factions, shared world events, and collaborative (non-PvP) rewards.",
     benefitForLevel: () => "Not yet active — this is a Coming Soon / Future Feature placeholder.",
