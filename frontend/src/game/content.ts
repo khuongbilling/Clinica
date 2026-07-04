@@ -598,6 +598,9 @@ export const BATTLE_MECHANICS: MechanicInfo[] = [
   { id: 'care_chain', icon: 'link', title: 'The Care Chain', body: 'Playing Scout → Stabilize → Counter in order completes a Care Chain for a big bonus. Following the nursing process is rewarded — rushing straight to attacks is not.' },
   { id: 'resistant_foes', icon: 'trending-up', title: 'Resistant & Relentless Foes', body: 'Bosses and late-game enemies resist stabilization — healing sticks less than the number shown — and can hold enormous Corruption. Lean on strong strikes and shields; you can\'t simply out-heal them.' },
   { id: 'wrong_treatment', icon: 'warning', title: 'Wrong Treatment Hurts', body: 'A poor-fit or unsafe action backfires: Stability drops and symptoms worsen. When you\'re unsure, Scout first — a wasted safe turn beats an active mistake.' },
+  { id: 'treatment_field', icon: 'cloud', title: 'Treatment Field', body: 'Some wide-area treatments leave a lingering field over the whole ward — like a nebulizer mist — ticking extra damage on every enemy for a few beats after you cast it. Time your cast for when several foes are on the path.' },
+  { id: 'response_confirmed', icon: 'checkmark-done', title: 'Response Confirmed', body: 'Reassessing right after a correctly-matched treatment lands validates the care plan: bonus Stability, Corruption cleanse, and your next strong hit is empowered. Reassess only pays off after a strong match — check your Clinical Cue first.' },
+  { id: 'treatment_fatigue', icon: 'hourglass', title: 'Treatment Fatigue (Coming Soon)', body: 'A future mechanic: repeating the exact same treatment back-to-back will build fatigue and reduce its effect, rewarding varied care over one-button spam. Not yet active in this version.' },
 ];
 
 // ---------- BUILDINGS ----------

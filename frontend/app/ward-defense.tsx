@@ -18,6 +18,7 @@ import { WardBoardV2 } from "./ward-defense-v2";
 import {
   RoleId, WARD_UNIT_META, WARD_UNIT_IDS, STARTER_UNIT_IDS,
   LOADOUT_SIZE, UNIT_LEVEL_DMG_STEP, sanitizeLoadout,
+  MERGE_RANK_NAMES, MERGE_RANK_CAP, MERGE_RANK_DMG_MULT, mergeRankName,
 } from "@/src/game/units";
 
 /* ── Card portrait images — Hall of Heroes battle sprites for bottom dock ── */
@@ -63,6 +64,7 @@ const WAVE_PAUSE_TICKS = 40;   /* 20 s for pre-wave question phase */
 const SPAWN_GAP_TICKS  = 7;
 const KILL_AP_BONUS    = 2;
 const PREWAVE_AP_BONUS = 8;    /* AP granted for correct pre-wave NCLEX answer */
+const CUE_STABILIZE_BONUS = 8; /* Stability granted by the "Stability Surge" Clinical Cue tactical choice */
 const CLINICAL_CHAIN_WINDOW = 40; /* ticks after an Assess hit that a Treat/Stabilize hit still combos */
 const BOSS_UNREVEALED_RESIST = 0.2; /* Bronchospasm Drake shrugs off damage until an Assess reveals its weakness */
 const ROAD_W           = 40;   /* visual road width in px */
@@ -82,6 +84,11 @@ const ABILITY_COOLDOWN_TICKS: Record<string, number> = {
 };
 const STABILIZE_DIMINISH = 0.55; /* each repeat Emergency O₂ use this wave heals less */
 const PROTECT_SHIELD_TICKS = 6;  /* Positioning halves incoming Stability loss for this many ticks */
+const TREATMENT_FIELD_TICKS = 5; /* Broncho Burst leaves a lingering AoE field for this many ticks */
+const TREATMENT_FIELD_DMG   = 4; /* per-tick damage dealt to every enemy while a Treatment Field is active */
+/* Placeholder for a future mechanic: repeating the same ability back-to-back would build fatigue and
+   reduce its effect. Intentionally inert — not wired into any cast path yet. */
+const TREATMENT_FATIGUE_ENABLED = false;
 
 /* Enemy route — traces the illustrated stone walkway in the reference map.
    MUST stay identical to ward-defense-v2.tsx.                              */
@@ -142,6 +149,8 @@ type EnemyDef = {
   corruptionPressure: number; /* Corruption added per tick while this enemy is alive on the path */
   corruptionOnLeak: number;   /* Corruption spike when this enemy reaches the Vital Lantern */
   isPriority?: boolean;       /* priority threats add more Corruption + reward bigger "Priority Controlled" cleanse */
+  hiddenPathology?: boolean;  /* elite threat — shrugs off most damage until an Assess hit reveals its true weakness */
+  behavior?: "swarm" | "bruiser" | "burst" | "disabler" | "regenerator" | "elite";
   /* ── distinct lane behaviours (all optional / additive) ── */
   selfHealPerTick?: number;   /* Corruption Leech regenerates HP while alive */
   speedBurstChance?: number;  /* Shock Shade — chance per tick to lurch forward at double speed */
@@ -159,7 +168,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Dyspnea",
     flavor: "A restless wisp that steals breath — early assessment reveals its pattern.",
     weakness: "panic",
-    corruptionPressure: 0.12, corruptionOnLeak: 6,
+    corruptionPressure: 0.12, corruptionOnLeak: 6, behavior: "swarm",
     ability: { name: "Fleeting Breath", desc: "Fragile and low-health — falls quickly to a well-matched healer, but slips forward if ignored." },
   },
   wheeze_sprite: {
@@ -170,7 +179,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Wheezing",
     flavor: "Tightens airways — a wheeze audible on auscultation. Mist and suction clear it.",
     weakness: "airway",
-    corruptionPressure: 0.15, corruptionOnLeak: 8,
+    corruptionPressure: 0.15, corruptionOnLeak: 8, behavior: "swarm",
     ability: { name: "Airway Constrict", desc: "Steady mid-tier threat; Mist Caster and Airway Sentinel cut it down fastest." },
   },
   mucus_slime: {
@@ -181,7 +190,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Secretions",
     flavor: "A slow secretion blob — suction and drainage break it apart.",
     weakness: "secretion",
-    corruptionPressure: 0.18, corruptionOnLeak: 8,
+    corruptionPressure: 0.18, corruptionOnLeak: 8, behavior: "bruiser",
     ability: { name: "Sticky Mass", desc: "Slow but high-health and hard-hitting — Herbal Chemist and Airway Sentinel break it apart." },
   },
   hypoxia_wraith: {
@@ -193,7 +202,8 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Oxygen-starving spirit that drains the ward — supplemental O₂ is the direct counter.",
     weakness: "oxygenation",
     corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
-    ability: { name: "Oxygen Drain · Priority", desc: "Priority threat — moves fast and floods the lane with corruption; answer it with O₂ units first." },
+    hiddenPathology: true, behavior: "elite",
+    ability: { name: "Oxygen Drain · Priority", desc: "Elite — Hidden Pathology masks its weakness until an Assess unit reveals it; moves fast and floods the lane with corruption." },
   },
   panic_imp: {
     name: "Panic Imp", icon: "😱",
@@ -203,7 +213,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     clue: "Agitation",
     flavor: "A frantic imp that darts down the lane — calm assessment and reassurance settle it.",
     weakness: "panic",
-    corruptionPressure: 0.16, corruptionOnLeak: 7,
+    corruptionPressure: 0.16, corruptionOnLeak: 7, behavior: "swarm",
     ability: { name: "Frantic Dash", desc: "The fastest spirit on the lane — reaches the Vital Lantern quickly unless intercepted early." },
   },
   fever_imp: {
@@ -215,7 +225,8 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Inflammatory heat spirit — recognise the cue, then cool and treat the source.",
     weakness: "infection",
     corruptionPressure: 0.32, corruptionOnLeak: 12, isPriority: true,
-    ability: { name: "Inflamed Heat · Priority", desc: "Priority threat — steadily raises corruption; cool it with Fever Warden or Herbal Chemist." },
+    behavior: "burst",
+    ability: { name: "Inflamed Heat · Priority", desc: "Burst threat — steadily raises corruption; cool it with Fever Warden or Herbal Chemist." },
   },
   shock_shade: {
     name: "Shock Shade", icon: "⚡",
@@ -226,7 +237,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Circulatory-collapse shade that lurches forward in bursts — stabilise it fast.",
     weakness: "perfusion",
     corruptionPressure: 0.36, corruptionOnLeak: 14, isPriority: true,
-    speedBurstChance: 0.28,
+    speedBurstChance: 0.28, behavior: "burst",
     ability: { name: "Shock Surge", desc: "Randomly lurches forward in sudden speed bursts — a priority threat that's hard to time; stabilise it fast." },
   },
   stun_toad: {
@@ -238,7 +249,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "A dazing toad that briefly stuns the nearest healer it lumbers past — shield the line.",
     weakness: "neuro",
     corruptionPressure: 0.30, corruptionOnLeak: 13, isPriority: true,
-    stunOnPass: true,
+    stunOnPass: true, behavior: "disabler",
     ability: { name: "Dazing Pass", desc: "Briefly stuns the nearest deployed healer it passes, disabling its attacks — shield or space out your line." },
   },
   corruption_leech: {
@@ -250,7 +261,7 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "A self-mending parasite that floods the lane with corruption — burn it down quickly.",
     weakness: "corruption",
     corruptionPressure: 0.5, corruptionOnLeak: 16, isPriority: true,
-    selfHealPerTick: 2,
+    selfHealPerTick: 2, behavior: "regenerator",
     ability: { name: "Self-Mending", desc: "Regenerates its own health every moment — focus heavy, matched damage to burn it down before it heals back." },
   },
   bronchospasm_drake: {
@@ -263,8 +274,18 @@ const ENEMY_DATA: Record<string, EnemyDef> = {
     flavor: "Severe bronchospasm incarnate — Assess to expose its weakness, then hit it with bronchodilator mist. It shrugs off damage until revealed.",
     weakness: "corruption",
     corruptionPressure: 0.9, corruptionOnLeak: 30, isPriority: true,
-    ability: { name: "Hardened Hide", desc: "Shrugs off most damage until an Assess exposes its weakness — reveal it first, then hit with bronchodilator mist." },
+    hiddenPathology: true, behavior: "elite",
+    ability: { name: "Hardened Hide", desc: "Elite — Hidden Pathology shrugs off most damage until an Assess exposes its weakness — reveal it first, then hit with bronchodilator mist." },
   },
+};
+
+const BEHAVIOR_META: Record<string, { label: string; icon: string; counter: string }> = {
+  swarm:       { label: "Swarm",       icon: "🐝", counter: "AoE Treat units clear these fastest." },
+  bruiser:     { label: "Bruiser",     icon: "🛡", counter: "High single-target damage or Protect shielding works best." },
+  burst:       { label: "Burst",       icon: "💥", counter: "Punishes slow reactions — pre-position matched units." },
+  disabler:    { label: "Disabler",    icon: "😵", counter: "Space out or shield your line so one stun can't chain." },
+  regenerator: { label: "Regenerator", icon: "🪱", counter: "Focus fire with matched damage before it heals back." },
+  elite:       { label: "Elite · Hidden Pathology", icon: "🔒", counter: "Deploy an Assess unit first to expose its true weakness." },
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -400,7 +421,7 @@ const ABILITY_DATA: Record<string, AbilityDef> = {
     name: "Broncho Burst", icon: "💨", color: "#F59E0B", apCost: 4,
     category: "TREAT",
     concept: "Nebulized bronchodilator treats all active bronchospasm.",
-    flavor: "Deal 30 damage to every enemy on the path.",
+    flavor: `Deal 30 dmg to all enemies + leaves a Treatment Field (${TREATMENT_FIELD_DMG} dmg/tick for ${TREATMENT_FIELD_TICKS} ticks).`,
   },
   emergency_o2: {
     name: "Emergency O₂", icon: "🆘", color: "#34D399", apCost: 3,
@@ -450,7 +471,7 @@ type ActiveEnemy = {
 type DeployedUnit = {
   uid: string; typeId: string; tileIndex: number;
   cooldown: number; castFlash: number;
-  level: number;      /* 1 | 2 | 3  — Care Synthesis level */
+  level: number;      /* Merge Rank 1-5 (Novice→Ascended) — battle-only, resets each run */
   mergeFlash: number; /* ticks of golden merge-ascension glow */
   atkDx?: number; atkDy?: number; /* normalized direction to last target — drives lunge choreography */
   stunTicks?: number; /* ticks this unit is disabled by a Stun Toad passing */
@@ -504,6 +525,7 @@ type GS = {
   stabilizeUsesThisWave: number; /* diminishing returns for repeated Emergency O₂ casts */
   loadout: string[];             /* unit type ids the player may deploy this run */
   unitLevels: Record<string, number>; /* persistent collection level per unit → damage bonus */
+  treatmentFieldTicks: number; /* Treatment Field — lingering AoE tick damage left by Broncho Burst */
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -536,7 +558,7 @@ function freshState(
     lastKillQuality: null,
     cueBonusReady: false,
     corruption: 0, stabilityPulse: 0, corruptionPulse: 0, shieldTicks: startShieldTicks,
-    abilityCooldowns: {}, stabilizeUsesThisWave: 0,
+    abilityCooldowns: {}, stabilizeUsesThisWave: 0, treatmentFieldTicks: 0,
   };
 }
 
@@ -548,6 +570,17 @@ function beginWave(gs: GS, waveIdx: number): GS {
     feedbacks: [], wavePauseTicks: 0,
     stabilizeUsesThisWave: 0,
   };
+}
+
+/* ── Vital Lantern Stability States — named thresholds shown on the HUD ── */
+const STABILITY_STATES = [
+  { min: 0,  max: 20,  label: "Critical",  color: "#F87171", desc: "The ward is failing — every leak now risks defeat." },
+  { min: 20, max: 45,  label: "Strained",  color: "#FBBF24", desc: "Under heavy pressure — prioritize stabilizing units." },
+  { min: 45, max: 75,  label: "Stable",    color: "#34D399", desc: "Holding steady — keep matching treatments to threats." },
+  { min: 75, max: 101, label: "Fortified", color: "#22D3EE", desc: "The ward is thriving — corruption pressure is dampened." },
+];
+function getStabilityState(stability: number) {
+  return STABILITY_STATES.find(st => stability >= st.min && stability < st.max) ?? STABILITY_STATES[0];
 }
 
 function cl(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
@@ -587,14 +620,15 @@ function calcRewards(won: boolean, stability: number) {
 }
 
 /* ── Care Synthesis helpers ── */
-function getScaledStats(def: UnitDef, level: number, unitLevel: number = 1) {
-  const dmgMult = level === 1 ? 1.0 : level === 2 ? 1.65 : 2.8;
+function getScaledStats(def: UnitDef, mergeRank: number, unitLevel: number = 1) {
+  const rank = cl(mergeRank, 1, MERGE_RANK_CAP);
+  const dmgMult = MERGE_RANK_DMG_MULT[rank - 1];
   /* Persistent collection level (from gacha duplicates) adds a modest damage bonus. */
   const masteryMult = 1 + UNIT_LEVEL_DMG_STEP * (Math.max(1, unitLevel) - 1);
   return {
     damage:      Math.round(def.damage * dmgMult * masteryMult),
-    attackSpeed: Math.max(1, def.attackSpeed - (level - 1)),
-    range:       def.range + (level - 1) * 0.045,
+    attackSpeed: Math.max(1, def.attackSpeed - (rank - 1) * 0.6),
+    range:       def.range + (rank - 1) * 0.03,
   };
 }
 
@@ -602,7 +636,7 @@ function findMergePair(units: DeployedUnit[]): [DeployedUnit, DeployedUnit] | nu
   for (let i = 0; i < units.length; i++) {
     for (let j = i + 1; j < units.length; j++) {
       const a = units[i], b = units[j];
-      if (a.typeId === b.typeId && a.level === b.level && a.level < 3) return [a, b];
+      if (a.typeId === b.typeId && a.level === b.level && a.level < MERGE_RANK_CAP) return [a, b];
     }
   }
   return null;
@@ -891,7 +925,8 @@ function CorruptionPortal({ aw, ah }: { aw: number; ah: number }) {
 function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: number; ah: number }) {
   const [fx, fy] = PATH_WPS[PATH_WPS.length - 1];
   const px = fx * aw, py = fy * ah;
-  const glow  = stability > 60 ? "#34D399" : stability > 30 ? "#FBBF24" : "#F87171";
+  const stabState = getStabilityState(stability);
+  const glow  = stabState.color;
   const glow60 = glow + "60";
   const glow30 = glow + "30";
   const glow15 = glow + "15";
@@ -903,7 +938,7 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
       <View style={{ position: "absolute", top: 20, width: 64, height: 64, borderRadius: 32,
         backgroundColor: glow + "20" }} />
       {/* Label */}
-      <Text style={{ color: glow, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.8, marginBottom: 3 }}>VITAL LANTERN</Text>
+      <Text style={{ color: glow, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.8, marginBottom: 3 }}>VITAL LANTERN — {stabState.label.toUpperCase()}</Text>
       {/* Lantern cap — decorative top bar */}
       <View style={{ width: 56, height: 8, borderRadius: 4,
         backgroundColor: "#2e2212", borderWidth: 1.5, borderColor: glow60, marginBottom: 1 }}>
@@ -2083,6 +2118,17 @@ function EnemyOnPath({
           <Text style={{ fontSize: 8 }}>{WEAKNESS_TYPES[def.weakness].icon}</Text>
         </View>
       )}
+      {/* Hidden Pathology lock — elite threat shrugs off most damage until Assess reveals it */}
+      {def.hiddenPathology && !enemy.revealed && (
+        <View style={{
+          position: "absolute", top: 13, right: -10, zIndex: 9,
+          backgroundColor: "#0a0e1a", borderWidth: 1.3,
+          borderColor: "#94A3B8", borderRadius: 8,
+          width: 15, height: 15, alignItems: "center", justifyContent: "center",
+        }}>
+          <Ionicons name="lock-closed" size={8} color="#94A3B8" />
+        </View>
+      )}
       {/* Boss HP counter */}
       {isBoss && (
         <Text style={{ color: def.color, fontSize: 8, fontWeight: "700",
@@ -2214,13 +2260,13 @@ function DeploymentTileView({
               <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
                 borderRadius: TILE_SIZE / 2, backgroundColor: "#FFD70018" }} />
             )}
-            {/* Level badge top-left */}
+            {/* Merge Rank badge top-left — battle-only, resets each run */}
             {(unit!.level ?? 1) > 1 && (
               <View style={{ position: "absolute", top: 3, left: 3, borderRadius: 3,
-                backgroundColor: (unit!.level ?? 1) >= 3 ? "#FFD700" : "#a78bfa",
+                backgroundColor: (unit!.level ?? 1) >= MERGE_RANK_CAP ? "#FFD700" : "#a78bfa",
                 paddingHorizontal: 3, paddingVertical: 1 }}>
                 <Text style={{ color: "#0a0a1a", fontSize: 5, fontWeight: "800" }}>
-                  Lv.{unit!.level}
+                  {mergeRankName(unit!.level ?? 1)}
                 </Text>
               </View>
             )}
@@ -2476,6 +2522,7 @@ export default function WardDefense() {
   const [speedMul, setSpeedMul] = useState(1);   /* 1× or 2× game speed */
   const [selectedUnit, setSelectedUnit] = useState("ward_scout");
   const [cqAnswered, setCqAnswered] = useState<{ wave: number; correct: boolean } | null>(null);
+  const [cqCueChoice, setCqCueChoice] = useState<{ wave: number; choice: "empower" | "stabilize" } | null>(null);
 
   /* Shared idle bob animation */
   const bobAnim = useRef(new Animated.Value(0)).current;
@@ -2495,11 +2542,26 @@ export default function WardDefense() {
     setCqAnswered({ wave: gs.wave, correct });
     const s = gsRef.current;
     if (correct) {
-      set({ ...s, ap: Math.min(s.ap + PREWAVE_AP_BONUS, MAX_AP), cueBonusReady: true,
-        feedbacks: [{ id: String(Date.now()), text: `+${PREWAVE_AP_BONUS} AP · Clinical reasoning! ⚕ Next strong hit empowered.`, color: "#22d3ee", quality: "bonus" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
+      set({ ...s, ap: Math.min(s.ap + PREWAVE_AP_BONUS, MAX_AP),
+        feedbacks: [{ id: String(Date.now()), text: `+${PREWAVE_AP_BONUS} AP · Clinical reasoning! Choose your tactical edge below.`, color: "#22d3ee", quality: "bonus" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
     } else {
       set({ ...s,
         feedbacks: [{ id: String(Date.now()), text: "✗ Study the rationale — no AP bonus.", color: "#f87171", quality: "weak" as any, ticks: 10 }, ...s.feedbacks.slice(0, 1)] });
+    }
+  }
+
+  /* ── Clinical Cue tactical choice — player picks the reward for a correct answer ── */
+  function chooseCueTactic(choice: "empower" | "stabilize") {
+    if (cqCueChoice?.wave === gs.wave) return;
+    setCqCueChoice({ wave: gs.wave, choice });
+    const s = gsRef.current;
+    if (choice === "empower") {
+      set({ ...s, cueBonusReady: true,
+        feedbacks: [{ id: String(Date.now()) + "e", text: "⚔ Empower chosen — next strong hit is boosted!", color: "#22d3ee", quality: "bonus" as any, ticks: 8 }, ...s.feedbacks.slice(0, 1)] });
+    } else {
+      const stability = cl(s.stability + CUE_STABILIZE_BONUS, 0, MAX_STABILITY);
+      set({ ...s, stability,
+        feedbacks: [{ id: String(Date.now()) + "s", text: `🌊 Stability Surge chosen — +${CUE_STABILIZE_BONUS} Stability!`, color: "#06B6D4", quality: "bonus" as any, ticks: 8 }, ...s.feedbacks.slice(0, 1)] });
     }
   }
 
@@ -2576,6 +2638,18 @@ export default function WardDefense() {
       const abilityCooldowns: Record<string, number> = {};
       for (const [k, v] of Object.entries(s.abilityCooldowns)) {
         const nv = v - 1; if (nv > 0) abilityCooldowns[k] = nv;
+      }
+
+      /* Treatment Field — lingering Broncho Burst mist ticks damage to every enemy while active */
+      const treatmentFieldTicks = Math.max(0, s.treatmentFieldTicks - 1);
+      if (s.treatmentFieldTicks > 0) {
+        for (let i = 0; i < movedEnemies.length; i++) {
+          movedEnemies[i] = { ...movedEnemies[i], hp: movedEnemies[i].hp - TREATMENT_FIELD_DMG, hitFlash: 2 };
+        }
+      }
+      const fieldKilled = movedEnemies.filter(e => e.hp <= 0);
+      if (fieldKilled.length > 0) {
+        for (const e of fieldKilled) movedEnemies.splice(movedEnemies.indexOf(e), 1);
       }
 
       /* Lantern leaks — direct Stability damage + a Corruption spike (an uncontrolled threat got through) */
@@ -2659,11 +2733,11 @@ export default function WardDefense() {
             cueBonusReady = false;
             cueBonusFeedback = `✚ Response Improved — Clinical Cue bonus applied!`;
           }
-          /* Boss resistance: the Bronchospasm Drake shrugs off nearly all damage
-             until its weakness is revealed (Assess/Reassess). Reveal is applied
-             later this tick, so the drake stays resistant through the reveal hit
+          /* Hidden Pathology: elite enemies shrug off nearly all damage until
+             their weakness is revealed (Assess/Reassess). Reveal is applied
+             later this tick, so the enemy stays resistant through the reveal hit
              itself, then takes full matchup damage from the next hit onward. */
-          if (te.typeId === "bronchospasm_drake" && !te.revealed) {
+          if (ENEMY_DATA[te.typeId].hiddenPathology && !te.revealed) {
             dmg = Math.max(1, Math.round(dmg * BOSS_UNREVEALED_RESIST));
           }
           (hitMap[te.uid] ??= []).push({ dmg, quality: q, unitTypeId: p.unitTypeId, chain, cueBonus });
@@ -2790,6 +2864,7 @@ export default function WardDefense() {
         learnedConcepts, enemyMastery, lastKillQuality,
         cueBonusReady,
         corruption, stabilityPulse, corruptionPulse, shieldTicks, abilityCooldowns,
+        treatmentFieldTicks,
       };
 
       if (ns.stability <= 0) { set({ ...ns, phase: "lost" }); return; }
@@ -2900,7 +2975,7 @@ export default function WardDefense() {
       uidSeed: s.uidSeed + 1,
       feedbacks: [{
         id: fid,
-        text: `✦ Care Synthesis — ${uName} ascended to Lv.${newLevel}!`,
+        text: `✦ Care Synthesis — ${uName} reached Merge Rank ${mergeRankName(newLevel)}!`,
         color: "#FFD700", quality: "bonus" as any, ticks: 8,
       }, ...s.feedbacks.slice(0, 1)],
     });
@@ -2920,6 +2995,8 @@ export default function WardDefense() {
     let newReassessUses = s.reassessUses;
     let newShieldTicks = s.shieldTicks;
     let newStabilizeUses = s.stabilizeUsesThisWave;
+    let newCueBonusReady = s.cueBonusReady;
+    let newTreatmentFieldTicks = s.treatmentFieldTicks;
     let feedbackText = "", feedbackColor = ab.color;
 
     switch (abilityId) {
@@ -2929,9 +3006,12 @@ export default function WardDefense() {
         newEnemies = dmgd.filter(e => e.hp > 0);
         const cleanse = 3 + killed * 4;
         newCorruption = cl(s.corruption - cleanse, 0, MAX_CORRUPTION);
+        /* Treatment Field — Broncho Burst leaves a lingering bronchodilator
+           mist over the whole lane, ticking extra damage for a few beats. */
+        newTreatmentFieldTicks = TREATMENT_FIELD_TICKS;
         feedbackText = killed > 0
-          ? `💨 Broncho Burst — ${killed} spirit${killed !== 1 ? "s" : ""} defeated! Corruption Cleansed -${cleanse}`
-          : `💨 Broncho Burst — 30 dmg to all · Corruption Cleansed -${cleanse}`;
+          ? `💨 Broncho Burst — ${killed} spirit${killed !== 1 ? "s" : ""} defeated! Treatment Field laid · Corruption Cleansed -${cleanse}`
+          : `💨 Broncho Burst — 30 dmg to all · Treatment Field laid · Corruption Cleansed -${cleanse}`;
         break;
       }
       case "emergency_o2": {
@@ -2956,9 +3036,13 @@ export default function WardDefense() {
           s.deployedUnits.some(u => UNIT_DATA[u.typeId].strong.includes(e.typeId))
         );
         if (hasCorrect && s.lastKillQuality === "strong") {
+          /* Response Confirmed — Reassess Sage's signature payoff: the prior
+             intervention is validated, restoring Stability, cleansing Corruption,
+             and priming the next strong hit like a correct Clinical Cue answer. */
           newStability = Math.min(MAX_STABILITY, s.stability + 5);
           newCorruption = cl(s.corruption - 3, 0, MAX_CORRUPTION);
-          feedbackText = "✦ Reassess Bonus — correct sequencing! +5 Stability";
+          newCueBonusReady = true;
+          feedbackText = "✅ Response Confirmed — sequencing validated! +5 Stability, next strong hit empowered";
           feedbackColor = COLORS.success;
         } else if (hasCorrect) {
           feedbackText = "🔄 Reassess — correct units on field, keep going";
@@ -2974,7 +3058,8 @@ export default function WardDefense() {
     const fid = String(Date.now());
     set({ ...s, ap: s.ap - ab.apCost, enemies: newEnemies, stability: newStability,
       corruption: newCorruption, reassessUses: newReassessUses, shieldTicks: newShieldTicks,
-      stabilizeUsesThisWave: newStabilizeUses,
+      stabilizeUsesThisWave: newStabilizeUses, cueBonusReady: newCueBonusReady,
+      treatmentFieldTicks: newTreatmentFieldTicks,
       abilityCooldowns: { ...s.abilityCooldowns, [abilityId]: ABILITY_COOLDOWN_TICKS[abilityId] ?? 0 },
       feedbacks: [{ id: fid, text: feedbackText, color: feedbackColor, quality: "bonus" as any, ticks: 7 }, ...s.feedbacks.slice(0, 1)] });
   }
@@ -3084,6 +3169,14 @@ export default function WardDefense() {
               style={[s.hudStabilityFill, { width: `${cl(gs.corruption, 0, 100)}%` as any }]}
             />
           </View>
+          {gs.treatmentFieldTicks > 0 && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3 }}>
+              <Text style={{ fontSize: 8 }}>🌫️</Text>
+              <Text style={{ color: "#67e8f9", fontSize: 7.5, fontWeight: "700" }}>
+                Treatment Field active ({gs.treatmentFieldTicks})
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* AP display */}
@@ -3155,6 +3248,8 @@ export default function WardDefense() {
           answered={cqAnswered?.wave === gs.wave}
           answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
           wave={gs.wave}
+          cueChoice={cqCueChoice?.wave === gs.wave ? cqCueChoice!.choice : null}
+          onChooseCue={chooseCueTactic}
         />
       ) : (
         <View style={s.feedbackPanel}>
@@ -3228,13 +3323,15 @@ const CLINICAL_QUESTIONS = [
 ];
 
 function ClinicalQuestionPanel({
-  question, onAnswer, answered, answeredCorrect, wave,
+  question, onAnswer, answered, answeredCorrect, wave, cueChoice, onChooseCue,
 }: {
   question: typeof CLINICAL_QUESTIONS[0];
   onAnswer: (idx: number) => void;
   answered: boolean;
   answeredCorrect: boolean | null;
   wave: number;
+  cueChoice: "empower" | "stabilize" | null;
+  onChooseCue: (choice: "empower" | "stabilize") => void;
 }) {
   const [timeLeft, setTimeLeft] = useState(30);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -3289,6 +3386,43 @@ function ClinicalQuestionPanel({
               <Text style={{ color: answeredCorrect ? "#a7f3d0" : "#fca5a5", fontSize: 8, lineHeight: 11.5 }}>
                 {question.rationale}
               </Text>
+              {answeredCorrect && (
+                <View style={{ marginTop: 6 }}>
+                  <Text style={{ color: "#a7f3d0", fontSize: 8, fontWeight: "800", marginBottom: 3 }}>
+                    CHOOSE YOUR TACTICAL EDGE:
+                  </Text>
+                  <View style={{ flexDirection: "row", gap: 5 }}>
+                    <Pressable
+                      onPress={() => onChooseCue("empower")}
+                      disabled={!!cueChoice}
+                      style={{
+                        flex: 1, borderRadius: 6, paddingVertical: 5, paddingHorizontal: 6,
+                        borderWidth: 1.5,
+                        borderColor: cueChoice === "empower" ? "#22d3ee" : "#22d3ee55",
+                        backgroundColor: cueChoice === "empower" ? "#0a3020" : "#0a302066",
+                        opacity: cueChoice && cueChoice !== "empower" ? 0.4 : 1,
+                      }}
+                    >
+                      <Text style={{ color: "#67e8f9", fontSize: 8, fontWeight: "800" }}>⚔ Empower Next Strong Hit</Text>
+                      <Text style={{ color: "#a7f3d0", fontSize: 7 }}>+20% dmg on next strong-match hit</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onChooseCue("stabilize")}
+                      disabled={!!cueChoice}
+                      style={{
+                        flex: 1, borderRadius: 6, paddingVertical: 5, paddingHorizontal: 6,
+                        borderWidth: 1.5,
+                        borderColor: cueChoice === "stabilize" ? "#06B6D4" : "#06B6D455",
+                        backgroundColor: cueChoice === "stabilize" ? "#062a33" : "#062a3366",
+                        opacity: cueChoice && cueChoice !== "stabilize" ? 0.4 : 1,
+                      }}
+                    >
+                      <Text style={{ color: "#67e8f9", fontSize: 8, fontWeight: "800" }}>🌊 Stability Surge</Text>
+                      <Text style={{ color: "#a7f3d0", fontSize: 7 }}>+{CUE_STABILIZE_BONUS} Stability now</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
           ) : (
             <View style={s.clinicalGrid}>
@@ -3505,6 +3639,15 @@ function LobbyScreen({
           <Text style={[s.lobbyBodyTxt, { marginTop: 8 }]}>
             <Text style={{ color: COLORS.air }}>NCLEX Clinical Judgment:</Text> Recognize cues on each enemy · Prioritize threats · Deploy the right unit · Evaluate with Reassess.
           </Text>
+          <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: "#ffffff14", paddingTop: 8 }}>
+            <Text style={[s.lobbyBodyTxt, { fontSize: 10.5 }]}>
+              <Text style={{ color: "#FBBF24", fontWeight: "800" }}>Mastery</Text> (Lv 1–15) is permanent —
+              earned with shards from duplicate pulls + Ward Coins, upgraded anytime in the Apothecary.{" "}
+              <Text style={{ color: "#67e8f9", fontWeight: "800" }}>Merge Rank</Text> (Novice→Ascended) is
+              temporary — only for this run, reset when you leave. Both stack: Mastery raises your floor,
+              Merge Rank is what you build mid-battle.
+            </Text>
+          </View>
         </View>
 
         {/* ── LOADOUT (choose deployable units from your collection) ────── */}
@@ -3766,6 +3909,13 @@ function LobbyScreen({
                       <Text style={{ color: COLORS.error, fontSize: 8, fontWeight: "700" }}>BOSS</Text>
                     </View>
                   )}
+                  {def.behavior && (
+                    <View style={{ backgroundColor: "#ffffff14", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                      <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 8, fontWeight: "700" }}>
+                        {BEHAVIOR_META[def.behavior].icon} {BEHAVIOR_META[def.behavior].label}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={s.lobbyListDesc}>{def.flavor}</Text>
                 <View style={{
@@ -3781,6 +3931,21 @@ function LobbyScreen({
                     {def.ability.desc}
                   </Text>
                 </View>
+                {def.behavior && (
+                  <View style={{
+                    flexDirection: "row", alignItems: "flex-start", gap: 5, marginTop: 3,
+                    backgroundColor: "#22c55e10", borderRadius: 6,
+                    borderLeftWidth: 2, borderLeftColor: "#22c55e88",
+                    paddingVertical: 4, paddingHorizontal: 6,
+                  }}>
+                    <Text style={{ color: "#4ade80", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 }}>
+                      COUNTER
+                    </Text>
+                    <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 9, flex: 1, lineHeight: 12 }}>
+                      {BEHAVIOR_META[def.behavior].counter}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           ))}

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
@@ -9,7 +9,11 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
 import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
 import { MAX_STAMINA, regen } from "@/src/game/stamina";
-import { WARD_UNIT_IDS, WARD_UNIT_META, GACHA_COST, MAX_UNIT_LEVEL } from "@/src/game/units";
+import {
+  WARD_UNIT_IDS, WARD_UNIT_META, GACHA_COST, MASTERY_LEVEL_CAP,
+  UNIT_STAT_BLOCKS, getMasteryStats, getMasteryRequirement, unlockedMilestones,
+  MERGE_RANK_NAMES,
+} from "@/src/game/units";
 
 type TabId = "consumables" | "recruit" | "ward" | "upgrades" | "skins" | "refills";
 
@@ -24,10 +28,11 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
 
 export default function Shop() {
   const router = useRouter();
-  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha } = usePlayer();
+  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery } = usePlayer();
   const [tab, setTab] = useState<TabId>("consumables");
   const [banner, setBanner] = useState<{ ok: boolean; msg: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [infoUnitId, setInfoUnitId] = useState<string | null>(null);
 
   const crowns = player?.crowns || 0;
 
@@ -127,7 +132,7 @@ export default function Shop() {
 
         {tab === "recruit" && (
           <>
-            <Text style={styles.blurb}>Recruit Ward Defense healers with Crowns. Each pull grants a random unit from the roster — duplicates level up a unit you already own (up to Lv.{MAX_UNIT_LEVEL}), boosting its damage. Choose which units to field in the Ward Defense lobby before a run.</Text>
+            <Text style={styles.blurb}>Recruit Ward Defense healers with Crowns. Each pull grants a random unit — duplicates become Shards. Spend Shards + Ward Coins to raise a unit's permanent Unit Mastery Level (1-{MASTERY_LEVEL_CAP}). Mastery Level is separate from the temporary Merge Rank you gain by merging units mid-battle. Tap a unit for details.</Text>
             <Pressable
               style={[styles.recruitBtn, crowns < GACHA_COST && styles.recruitBtnDisabled]}
               disabled={crowns < GACHA_COST}
@@ -147,26 +152,28 @@ export default function Shop() {
             {WARD_UNIT_IDS.map((id) => {
               const m = WARD_UNIT_META[id];
               const level = (player.owned_units || {})[id] || 0;
+              const shards = (player.unit_shards || {})[id] || 0;
               const owned = level > 0;
               return (
-                <View key={id} style={[styles.card, !owned && { opacity: 0.55 }]} testID={`shop-unit-${id}`}>
+                <Pressable key={id} onPress={() => owned && setInfoUnitId(id)} style={[styles.card, !owned && { opacity: 0.55 }]} testID={`shop-unit-${id}`}>
                   <View style={[styles.iconBadge, { borderColor: owned ? m.color : COLORS.border }]}>
                     <Ionicons name={owned ? "shield-checkmark" : "lock-closed"} size={18} color={owned ? m.color : COLORS.onSurfaceTertiary} />
                   </View>
                   <View style={styles.cardMain}>
                     <View style={styles.cardHead}>
                       <Text style={styles.cardName}>{m.name}</Text>
-                      {owned && level > 1 && <Text style={[styles.ownedTag, { color: m.color }]}>Lv.{level}</Text>}
+                      {owned && <Text style={[styles.ownedTag, { color: m.color }]}>Mastery Lv.{level}</Text>}
                     </View>
                     <Text style={[styles.cardEffect, { color: owned ? m.color : COLORS.onSurfaceTertiary }]}>{m.category} · {m.apCost} AP</Text>
                     <Text style={styles.cardDesc}>{m.blurb}</Text>
+                    {owned && <Text style={styles.shardTxt}>💠 {shards} shard{shards !== 1 ? "s" : ""}</Text>}
                   </View>
                   {owned ? (
-                    <View style={styles.ownedBadge}><Ionicons name="checkmark-circle" size={16} color={COLORS.success} /><Text style={styles.ownedBadgeTxt}>Owned</Text></View>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
                   ) : (
                     <View style={styles.ownedBadge}><Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceTertiary} /><Text style={[styles.ownedBadgeTxt, { color: COLORS.onSurfaceTertiary }]}>Locked</Text></View>
                   )}
-                </View>
+                </Pressable>
               );
             })}
           </>
@@ -326,8 +333,173 @@ export default function Shop() {
 
         <View style={{ height: SPACING.xxl }} />
       </ScrollView>
+
+      {infoUnitId && (
+        <UnitInfoModal
+          typeId={infoUnitId}
+          level={(player.owned_units || {})[infoUnitId] || 1}
+          shards={(player.unit_shards || {})[infoUnitId] || 0}
+          crowns={crowns}
+          onUpgrade={async () => { const r = await upgradeUnitMastery(infoUnitId); flash(r.ok, r.message); }}
+          onClose={() => setInfoUnitId(null)}
+        />
+      )}
     </SafeAreaView>
   );
+}
+
+type InfoTab = "overview" | "stats" | "merge" | "milestones" | "counters" | "lore";
+const INFO_TABS: { id: InfoTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "stats", label: "Stats" },
+  { id: "merge", label: "Merge" },
+  { id: "milestones", label: "Milestones" },
+  { id: "counters", label: "Counters" },
+  { id: "lore", label: "Lore" },
+];
+
+function UnitInfoModal({ typeId, level, shards, crowns, onUpgrade, onClose }: {
+  typeId: string; level: number; shards: number; crowns: number;
+  onUpgrade: () => void; onClose: () => void;
+}) {
+  const [infoTab, setInfoTab] = useState<InfoTab>("overview");
+  const m = WARD_UNIT_META[typeId];
+  const block = UNIT_STAT_BLOCKS[typeId];
+  const req = getMasteryRequirement(level + 1);
+  const curStats = getMasteryStats(typeId, level);
+  const nextStats = req ? getMasteryStats(typeId, level + 1) : null;
+  const unlocked = unlockedMilestones(typeId, level);
+  const canAfford = !!req && shards >= req.shards && crowns >= req.coins;
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalCard}>
+          <View style={styles.modalHead}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardName}>{m.name}</Text>
+              <Text style={[styles.cardEffect, { color: m.color }]}>{m.category} · Mastery Lv.{level}/{MASTERY_LEVEL_CAP}</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10} testID="unit-info-close">
+              <Ionicons name="close" size={22} color={COLORS.onSurfaceSecondary} />
+            </Pressable>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.infoTabsRow}>
+            {INFO_TABS.map((t) => (
+              <Pressable key={t.id} onPress={() => setInfoTab(t.id)} style={[styles.infoTab, infoTab === t.id && styles.infoTabActive]}>
+                <Text style={[styles.infoTabTxt, infoTab === t.id && styles.infoTabTxtActive]}>{t.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ paddingVertical: SPACING.sm, gap: SPACING.sm }}>
+            {infoTab === "overview" && (
+              <>
+                <Text style={styles.cardDesc}>{m.blurb}</Text>
+                <Text style={styles.infoSectionLabel}>ROLE</Text>
+                <Text style={styles.cardEffect}>{m.role} · {m.apCost} AP to deploy</Text>
+                <Text style={styles.infoSectionLabel}>UNIT MASTERY vs MERGE RANK</Text>
+                <Text style={styles.cardDesc}>
+                  Unit Mastery Level is permanent — it grows outside battle using duplicate Shards
+                  and Ward Coins. Merge Rank is temporary — it only grows by merging matching
+                  {" " + m.name} units together during a single Ward Defense run, and resets when
+                  the run ends. Leveling one never changes the other.
+                </Text>
+              </>
+            )}
+
+            {infoTab === "stats" && block && (
+              <>
+                <View style={styles.progressRow}>
+                  <Text style={styles.infoSectionLabel}>SHARDS: {shards}{req ? ` / ${req.shards}` : ""}</Text>
+                  <Text style={styles.infoSectionLabel}>WARD COINS: {crowns}{req ? ` / ${req.coins}` : ""}</Text>
+                </View>
+                {block.order.map((k) => (
+                  <View key={k} style={styles.statRow}>
+                    <Text style={styles.statLabel}>{block.labels[k]}</Text>
+                    <Text style={styles.statValue}>
+                      {round1(curStats[k])}{block.suffix[k]}
+                      {nextStats && <Text style={styles.statNext}>  → {round1(nextStats[k])}{block.suffix[k]}</Text>}
+                    </Text>
+                  </View>
+                ))}
+                {req ? (
+                  <Pressable
+                    onPress={onUpgrade}
+                    disabled={!canAfford}
+                    style={[styles.upgradeBtn, !canAfford && styles.recruitBtnDisabled]}
+                    testID="unit-info-upgrade"
+                  >
+                    <Text style={[styles.recruitBtnTxt, !canAfford && { color: COLORS.onSurfaceTertiary }]}>
+                      Upgrade to Lv.{level + 1} — {req.shards} Shards + {req.coins} Coins
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.infoSectionLabel}>MAX MASTERY LEVEL REACHED</Text>
+                )}
+              </>
+            )}
+
+            {infoTab === "merge" && (
+              <>
+                <Text style={styles.cardDesc}>
+                  Merge Rank is battle-only and resets every run. Merge two matching{" "}
+                  {m.name} units on the field to advance one rank:
+                </Text>
+                {MERGE_RANK_NAMES.map((n, i) => (
+                  <Text key={n} style={styles.statLabel}>Rank {i + 1} — {n}</Text>
+                ))}
+                <Text style={styles.cardDesc}>
+                  Higher ranks increase this unit's damage, range, targets, or support strength
+                  for the rest of the run only. Merging never spends Shards or affects Mastery Level.
+                </Text>
+              </>
+            )}
+
+            {infoTab === "milestones" && block && (
+              <>
+                {block.milestones.map((ms) => {
+                  const isUnlocked = level >= ms.level;
+                  return (
+                    <View key={ms.level} style={[styles.statRow, { opacity: isUnlocked ? 1 : 0.5 }]}>
+                      <Ionicons name={isUnlocked ? "checkmark-circle" : "lock-closed"} size={14} color={isUnlocked ? COLORS.success : COLORS.onSurfaceTertiary} />
+                      <View style={{ flex: 1, marginLeft: 6 }}>
+                        <Text style={styles.statLabel}>Lv.{ms.level} — {ms.title}</Text>
+                        <Text style={styles.cardDesc}>{ms.desc}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+
+            {infoTab === "counters" && (
+              <>
+                <Text style={styles.infoSectionLabel}>STRONG AGAINST</Text>
+                <Text style={styles.cardDesc}>See enemy preview cards in the Ward Defense lobby for this unit's best matchups.</Text>
+                <Text style={styles.infoSectionLabel}>CLINICAL SEQUENCE</Text>
+                <Text style={styles.cardDesc}>
+                  {m.role === "ASSESS"
+                    ? "Deploy first against unclear/Hidden Pathology enemies — reveal before treating."
+                    : "Works best once threats are assessed/revealed by an Assess unit."}
+                </Text>
+              </>
+            )}
+
+            {infoTab === "lore" && (
+              <Text style={styles.cardDesc}>{m.blurb} A dedicated healer of the Ward, sworn to Assess the threat, Treat the cause, Stabilize the ward, and Reassess the response.</Text>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function round1(n: number | undefined) {
+  if (n == null) return "-";
+  return Math.round(n * 10) / 10;
 }
 
 function BuyButton({ price, disabled, onPress, testID }: { price: number; disabled?: boolean; onPress: () => void; testID?: string }) {
@@ -433,4 +605,29 @@ const styles = StyleSheet.create({
   },
   recruitCostTxt: { color: COLORS.onBrand, fontWeight: "800", fontSize: 13 },
   collectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 1, marginTop: SPACING.sm },
+  shardTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "700", marginTop: 2 },
+  modalBackdrop: { flex: 1, backgroundColor: "#00000090", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.lg, borderTopRightRadius: RADIUS.lg,
+    padding: SPACING.lg, maxHeight: "82%", borderTopWidth: 1, borderColor: COLORS.border,
+  },
+  modalHead: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm, marginBottom: SPACING.sm },
+  infoTabsRow: { flexDirection: "row", gap: SPACING.xs, paddingBottom: SPACING.sm },
+  infoTab: {
+    paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  infoTabActive: { backgroundColor: COLORS.brand, borderColor: COLORS.brand },
+  infoTabTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700" },
+  infoTabTxtActive: { color: COLORS.onBrand },
+  infoSectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: SPACING.xs },
+  progressRow: { flexDirection: "row", justifyContent: "space-between" },
+  statRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 3 },
+  statLabel: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600" },
+  statValue: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
+  statNext: { color: COLORS.success, fontSize: 12, fontWeight: "700" },
+  upgradeBtn: {
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: SPACING.md,
+    alignItems: "center", marginTop: SPACING.sm,
+  },
 });

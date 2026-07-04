@@ -145,6 +145,7 @@ export interface PlayerState {
   equipped_skin?: string;
   owned_upgrades?: string[];
   owned_units?: Record<string, number>;
+  unit_shards?: Record<string, number>;
   ward_loadout?: string[];
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   enemy_mastery?: Record<string, number>;

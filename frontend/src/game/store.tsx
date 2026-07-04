@@ -8,7 +8,7 @@ import { MAX_STAMINA, ENCOUNTER_COST, regen } from './stamina';
 import { defaultWellnessState, resolveWellnessLog, WellnessLogInput, WellnessResult } from './wellness';
 import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
-  GACHA_COST, MAX_UNIT_LEVEL, WARD_UNIT_META,
+  GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
 } from './units';
 
 const STORAGE_KEY = 'clinica.player.v2';
@@ -53,6 +53,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.owned_units || Object.keys(out.owned_units).length === 0) {
     out = { ...out, owned_units: defaultOwnedUnits() };
   }
+  if (!out.unit_shards) {
+    out = { ...out, unit_shards: {} };
+  }
   // Always sanitize (dedupe, owned-only, cap at LOADOUT_SIZE); fall back to
   // starters when empty so a malformed/over-long persisted loadout is corrected.
   {
@@ -86,6 +89,7 @@ type Ctx = {
   purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   refillStamina: (price: number, amount: number) => Promise<{ ok: boolean; message: string }>;
   pullGacha: () => Promise<{ ok: boolean; message: string; typeId?: string; isNew?: boolean; level?: number }>;
+  upgradeUnitMastery: (typeId: string) => Promise<{ ok: boolean; message: string; level?: number }>;
   setWardLoadout: (ids: string[]) => Promise<{ ok: boolean; message: string }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
@@ -161,6 +165,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     equipped_skin: '',
     owned_upgrades: [],
     owned_units: defaultOwnedUnits(),
+    unit_shards: {},
     ward_loadout: [...STARTER_UNIT_IDS],
     summon_history: [],
     enemy_mastery: {},
@@ -491,6 +496,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const cost = GACHA_COST;
     if ((base.crowns || 0) < cost) return { ok: false, message: `Need ${cost} Crowns to recruit.` };
     const owned = { ...(base.owned_units || {}) };
+    const shards = { ...(base.unit_shards || {}) };
     const typeId = rollGachaUnit();
     const meta = WARD_UNIT_META[typeId];
     const wasOwned = !!owned[typeId];
@@ -499,19 +505,43 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!wasOwned) {
       level = 1;
       owned[typeId] = 1;
-      message = `Recruited ${meta.name}!`;
+      message = `Recruited ${meta.name}! Mastery Level 1.`;
     } else {
-      level = Math.min(MAX_UNIT_LEVEL, (owned[typeId] || 1) + 1);
-      const wasMaxed = owned[typeId] >= MAX_UNIT_LEVEL;
-      owned[typeId] = level;
-      message = wasMaxed
-        ? `${meta.name} is already max level — duplicate absorbed.`
-        : `Duplicate ${meta.name} → Level ${level}!`;
+      level = owned[typeId] || 1;
+      shards[typeId] = (shards[typeId] || 0) + 1;
+      message = `Duplicate ${meta.name} → +1 Shard (${shards[typeId]} shards). Use shards + Ward Coins to raise Mastery Level.`;
     }
-    const next = { ...base, crowns: (base.crowns || 0) - cost, owned_units: owned };
+    const next = { ...base, crowns: (base.crowns || 0) - cost, owned_units: owned, unit_shards: shards };
     playerRef.current = next;
     await updateState(next);
     return { ok: true, message, typeId, isNew: !wasOwned, level };
+  }, [updateState]);
+
+  // Unit Mastery Level: PERMANENT upgrade using duplicate shards + Ward Coins (crowns).
+  // Distinct from the temporary in-battle Merge Rank, which resets every run.
+  const upgradeUnitMastery = useCallback(async (typeId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const owned = { ...(base.owned_units || {}) };
+    if (!owned[typeId]) return { ok: false, message: 'You do not own this unit yet.' };
+    const level = owned[typeId] || 1;
+    const req = getMasteryRequirement(level + 1);
+    if (!req) return { ok: false, message: `${WARD_UNIT_META[typeId]?.name || 'Unit'} is already at max Mastery Level ${MASTERY_LEVEL_CAP}.` };
+    const shards = { ...(base.unit_shards || {}) };
+    const haveShards = shards[typeId] || 0;
+    const haveCoins = base.crowns || 0;
+    if (haveShards < req.shards || haveCoins < req.coins) {
+      return {
+        ok: false,
+        message: `Need ${req.shards} shards (have ${haveShards}) and ${req.coins} Ward Coins (have ${haveCoins}).`,
+      };
+    }
+    shards[typeId] = haveShards - req.shards;
+    owned[typeId] = level + 1;
+    const next = { ...base, crowns: haveCoins - req.coins, owned_units: owned, unit_shards: shards };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `${WARD_UNIT_META[typeId]?.name || 'Unit'} reached Mastery Level ${level + 1}!`, level: level + 1 };
   }, [updateState]);
 
   const setWardLoadout = useCallback(async (ids: string[]) => {
@@ -530,9 +560,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, setWardLoadout, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, spendStamina, logWellnessActivity, resetPlayer, refresh]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
