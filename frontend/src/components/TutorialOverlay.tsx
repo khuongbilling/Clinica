@@ -11,6 +11,8 @@ export function TutorialOverlay() {
   if (!activeTutorialId || !currentStep) return null;
 
   const progress = totalSteps > 1 ? `${stepIndex + 1} / ${totalSteps}` : "";
+  // The prologue is a forced, hand-held tutorial — no skipping out of it.
+  const allowSkip = activeTutorialId !== "prologueBattle";
 
   if (currentStep.requireAction) {
     return (
@@ -30,9 +32,11 @@ export function TutorialOverlay() {
               <Text style={styles.bannerBody}>{currentStep.body}</Text>
             </View>
           </View>
-          <Pressable onPress={skipTutorial} style={styles.skipInline} hitSlop={8}>
-            <Text style={styles.skipTxt}>Skip tutorial</Text>
-          </Pressable>
+          {allowSkip && (
+            <Pressable onPress={skipTutorial} style={styles.skipInline} hitSlop={8}>
+              <Text style={styles.skipTxt}>Skip tutorial</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -54,9 +58,11 @@ export function TutorialOverlay() {
           <Text style={styles.popoverBody}>{currentStep.body}</Text>
 
           <View style={styles.popoverActions}>
-            <Pressable onPress={skipTutorial} style={styles.skipBtn} hitSlop={8}>
-              <Text style={styles.skipBtnTxt}>SKIP</Text>
-            </Pressable>
+            {allowSkip && (
+              <Pressable onPress={skipTutorial} style={styles.skipBtn} hitSlop={8}>
+                <Text style={styles.skipBtnTxt}>SKIP</Text>
+              </Pressable>
+            )}
             <Pressable onPress={advanceStep} style={styles.nextBtn}>
               <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
             </Pressable>

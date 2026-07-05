@@ -52,7 +52,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training, prologue }: { enemyId?: string; training?: string; prologue?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
-  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  const { isCompleted, startTutorial, onRequiredAction, currentStep, activeTutorialId } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
@@ -126,7 +126,6 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
   });
 
   const [activeTab, setActiveTab] = useState<Tab>("actions");
-  const [showBriefing, setShowBriefing] = useState(true);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [codexExpanded, setCodexExpanded] = useState(false);
@@ -279,11 +278,6 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     }
   }, [state.basicAidUses]);
 
-  const dismissBriefing = () => {
-    setShowBriefing(false);
-    logEvent('first_battle_started', 'battle', { meta: { enemy: enemy.id, isFirstBattle } });
-  };
-
   const showFeedback = (actionType: string) => {
     let msg: string | null = null;
     if (actionType === 'scout')    msg = SCOUT_FEEDBACK[explanationLayer];
@@ -297,19 +291,31 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 3500);
   };
 
+  // ---- Guided prologue tutorial: force a specific 3-star care chain ----
+  const guidedStep = activeTutorialId === "prologueBattle" && currentStep?.requireAction ? currentStep : null;
+  const guidedSkillId = guidedStep?.requiredSkillId;
+  const guidedCueStep = guidedStep?.requiredActionType === "cue";
+  const guidedEndTurnStep = guidedStep?.requiredActionType === "endTurn";
+  const tutorialNudge = () => {
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    setFeedbackMsg("Follow the highlighted step to continue.");
+    feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 2500);
+  };
+
   const handleSkill = (hero: Hero, skill: HeroSkill, castQuality: CastQuality = "normal") => {
     if (state.outcome !== "ongoing") return;
+    if (guidedStep && skill.id !== guidedSkillId) { tutorialNudge(); return; }
     let effective = skill;
     if (sageDiscount && skill.type === "scout" && skill.cost > 0) {
       effective = { ...skill, cost: Math.max(0, skill.cost - 1) };
       setSageScoutBonusUsed(true);
     }
     if (state.ap < effective.cost) return;
-    if (castQuality === "normal" && skillSupportsCastTiming(effective) && state.outcome === "ongoing") {
+    if (castQuality === "normal" && skillSupportsCastTiming(effective) && state.outcome === "ongoing" && !guidedSkillId) {
       openTimingPrompt(hero, effective);
       return;
     }
-    onRequiredAction(skill.type);
+    onRequiredAction(skill.type, skill.id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero, castQuality).state);
     triggerFx(hero.id, effective.type);
@@ -333,6 +339,17 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     setDetail(null);
   };
   useEffect(() => () => { if (timingAnim.current) clearInterval(timingAnim.current); }, []);
+
+  // Guided prologue: auto-select the hero who owns the required skill and open
+  // the Actions tab so the pinned skill is always visible for the forced tap.
+  useEffect(() => {
+    if (!guidedSkillId) return;
+    const owner = state.team.find(h => h.skills.some(sk => sk.id === guidedSkillId));
+    if (owner && state.selectedHeroId !== owner.id) {
+      setState(s => selectHero(s, owner.id));
+    }
+    setActiveTab("actions");
+  }, [guidedSkillId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openTimingPrompt = (hero: Hero, skill: HeroSkill) => {
     if (timingAnim.current) clearInterval(timingAnim.current);
@@ -368,6 +385,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
 
   const handleCard = (cardId: string) => {
     if (state.outcome !== "ongoing") return;
+    if (guidedStep) { tutorialNudge(); return; }
     const res = applyCard(state, cardId);
     if (res.aborted) return;
     setState(res.state);
@@ -377,6 +395,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
 
   const handleUltimate = (hero: Hero) => {
     if (state.outcome !== "ongoing") return;
+    if (guidedStep) { tutorialNudge(); return; }
     const res = applyUltimate(state, hero.id);
     if (res.aborted) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
@@ -388,9 +407,14 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     const cue = state.pendingCue;
     if (!cue) return;
     const isCorrect = !!cue.options[optionIndex]?.correct;
+    // Guided prologue: only the correct answer is accepted.
+    if (guidedCueStep && !isCorrect) { tutorialNudge(); return; }
     const res = answerClinicalCue(state, optionIndex);
     setState(res.state);
-    if (isCorrect) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (isCorrect) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onRequiredAction("cue");
+    }
     setCueFeedback({ cue, chosenIndex: optionIndex, isCorrect });
     if (cueTimer.current) clearTimeout(cueTimer.current);
     cueTimer.current = setTimeout(() => {
@@ -400,12 +424,14 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
   };
 
   const handleTempAction = (actionId: string) => {
+    if (guidedStep) { tutorialNudge(); return; }
     const res = applyTempAction(state, actionId);
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
   };
   const handleUseItem = (item: Item) => {
+    if (guidedStep) { tutorialNudge(); return; }
     const res = applyItem(state, item);
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "stabilize");
@@ -421,6 +447,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
   // Show ALL calls all the time — players learn by misusing them (penalty handled in applyCall)
   const availableCalls = CALL_OPTIONS;
   const handleCall = (opt: typeof CALL_OPTIONS[number]) => {
+    if (guidedStep) { tutorialNudge(); return; }
     const itemName = opt.effect === "addRelevantItem" ? decideCallItem() : undefined;
     const res = applyCall(state, opt, itemName);
     setState(res.state);
@@ -430,6 +457,8 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
 
   const handleEndTurn = () => {
     if (state.outcome !== "ongoing") return;
+    if (guidedStep && !guidedEndTurnStep) { tutorialNudge(); return; }
+    onRequiredAction("endTurn");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     triggerEnemyAttack(getEnemySignatureAttack(enemy).kind);
     setState((s) => {
@@ -807,7 +836,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
               const careDmg = careAttemptDamage(state.chapter, isBoss);
               const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
               const careNode = (
-                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
+                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled, guidedStep && styles.guidedDim]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
                   <View style={styles.actionHead}>
                     <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
@@ -826,7 +855,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
                 const isLocked = preview.status === "locked";
                 const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
                 return (
-                  <Pressable key={`${selHero.id}-${skill.id}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
+                  <Pressable key={`${selHero.id}-${skill.id}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, guidedSkillId === skill.id && styles.guidedHighlight, !!guidedSkillId && guidedSkillId !== skill.id && styles.guidedDim]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
                     <StatusBadge status={preview.status} />
                     <View style={styles.actionHead}>
                       <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
@@ -964,7 +993,6 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
         )}
       </View>
 
-      <TutorialOverlay />
       <LongPressCoachmark visible={activeTab === "actions" && !detail && state.outcome === "ongoing"} />
 
       {detail && (
@@ -983,7 +1011,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
         </Pressable>
       )}
 
-      {state.pendingCue && !cueFeedback && !showBriefing && state.outcome === "ongoing" && (
+      {state.pendingCue && !cueFeedback && state.outcome === "ongoing" && (activeTutorialId !== "prologueBattle" || guidedCueStep) && (
         <View style={styles.modalOverlay}>
           <View style={styles.cueModal} testID="clinical-cue-modal">
             <Text style={styles.cueKicker}>CLINICAL CUE</Text>
@@ -1090,76 +1118,10 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
         </View>
       )}
 
-      {showBriefing && (
-        <Pressable style={styles.briefingOverlay} onPress={dismissBriefing}>
-          {/* Inner: non-scrollable flex column so Enter Battle is always visible */}
-          <Pressable style={styles.briefingPanel} onPress={(e) => e.stopPropagation()}>
-            {/* Scrollable content area */}
-            <ScrollView
-              contentContainerStyle={styles.briefingScroll}
-              showsVerticalScrollIndicator={false}
-              style={{ flex: 1 }}
-            >
-              {isFirstBattle && (
-                <View style={styles.briefingClinica}>
-                  <Text style={styles.briefingClinicaKicker}>ABOUT CLINICA</Text>
-                  <Text style={styles.briefingClinicaText}>
-                    Read clues, keep Stability above 0, reduce Corruption to 0, restore each body region.
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.briefingKicker}>MISSION BRIEFING</Text>
-              <Text style={styles.briefingTitle}>{mission?.missionTitle ?? enemy.name}</Text>
-              <Text style={styles.briefingEnemy}>{enemy.name} · {enemy.realWorld}</Text>
-              {adaptiveMission
-                ? <Text style={styles.briefingStory}>{adaptiveMission.story}</Text>
-                : mission && <Text style={styles.briefingStory}>{mission.story}</Text>
-              }
-              {adaptiveMission?.clinicalFocus && (
-                <View style={styles.briefingFocusCard}>
-                  <Text style={styles.briefingFocusLabel}>CLINICAL FOCUS</Text>
-                  <Text style={styles.briefingFocusText}>{adaptiveMission.clinicalFocus}</Text>
-                </View>
-              )}
-              <View style={styles.briefingDivider} />
-              <View style={styles.briefingRow}>
-                <View style={styles.briefingCol}>
-                  <Text style={styles.briefingColLabel}>SYSTEM</Text>
-                  <Text style={styles.briefingColVal}>{enemy.primarySystem}</Text>
-                </View>
-                <View style={styles.briefingColSep} />
-                <View style={styles.briefingCol}>
-                  <Text style={styles.briefingColLabel}>RECOMMENDED</Text>
-                  <Text style={styles.briefingColVal}>{(mission?.recommendedRoles ?? enemy.bestCounters).join(", ")}</Text>
-                </View>
-              </View>
-              <View style={styles.briefingWinRow}>
-                <Ionicons name="flag" size={12} color={COLORS.brand} />
-                <Text style={styles.briefingWinText}>{mission?.winCondition ?? "Keep Stability above 0 and reduce Corruption to 0"}</Text>
-              </View>
-              <View style={styles.briefingDivider} />
-              <Text style={styles.briefingGoalsTitle}>STAR GOALS</Text>
-              {(mission?.starGoals ?? (["Win the battle", "Complete the care chain", "Win efficiently"] as [string,string,string])).map((g, i) => (
-                <View key={i} style={styles.briefingGoalRow}>
-                  {Array.from({ length: i + 1 }).map((_, j) => (
-                    <Ionicons key={j} name="star-outline" size={11} color={COLORS.brand} />
-                  ))}
-                  <Text style={styles.briefingGoalText}>{g}</Text>
-                </View>
-              ))}
-            </ScrollView>
-            {/* Sticky footer — always visible */}
-            <View style={styles.briefingFooter}>
-              <Pressable style={styles.briefingEnterBtn} onPress={dismissBriefing} testID="briefing-enter">
-                <Text style={styles.briefingEnterTxt}>ENTER BATTLE</Text>
-              </Pressable>
-              <Text style={styles.briefingDismissHint}>Tap anywhere outside to dismiss</Text>
-            </View>
-          </Pressable>
-        </Pressable>
-      )}
+      {/* Tutorial overlay renders after the cue modals so its guided banner sits above them. */}
+      <TutorialOverlay />
 
-      {state.outcome !== "ongoing" && (
+      {state.outcome !== "ongoing" && activeTutorialId !== "prologueBattle" && (
         <View style={styles.modalOverlay}>
           <View style={styles.outcomeModal}>
             <Ionicons name={state.outcome === "win" ? "shield-checkmark" : "alert-circle"} size={48} color={state.outcome === "win" ? COLORS.success : COLORS.error} />
@@ -1447,6 +1409,8 @@ const styles = StyleSheet.create({
   },
   feedbackText: { color: COLORS.brand, fontSize: 10, lineHeight: 14, flex: 1 },
 
+  guidedHighlight: { borderColor: COLORS.brand, borderWidth: 2, backgroundColor: "rgba(88,166,255,0.10)" },
+  guidedDim: { opacity: 0.35 },
   briefingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.93)", zIndex: 100, justifyContent: "flex-end" },
   briefingPanel: { maxHeight: "90%", backgroundColor: COLORS.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, overflow: "hidden", borderTopWidth: 1, borderColor: COLORS.brand + "40" },
   briefingScroll: { padding: SPACING.lg, paddingTop: SPACING.md },

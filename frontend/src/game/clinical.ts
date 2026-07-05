@@ -362,6 +362,22 @@ export interface EnemyClinical {
 const ASSESS_CHAIN: ChainRole[] = ['Scout', 'Stabilize', 'Counter', 'Reassess'];
 
 export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
+  dehydration_wisp: {
+    clinicalCategory: 'Fluid Balance',
+    diseaseTags: ['dehydration', 'hypovolemia', 'fluid loss'],
+    allowedActionTags: ['assessment', 'reassessment', 'general support', 'comfort', 'airway', 'oxygenation', 'respiratory', 'circulation', 'fluid resuscitation', 'monitoring', 'hydration', 'escalation'],
+    strongActionTags: ['circulation', 'fluid resuscitation', 'hydration'],
+    weakActionTags: ['comfort'],
+    inappropriateActionTags: ['glucose replacement', 'antimicrobial', 'bronchospasm', 'skin integrity', 'orientation', 'fall prevention', 'infection isolation'],
+    unsafeActionTags: [],
+    treatmentChain: ASSESS_CHAIN,
+    preferredChainTags: ['assessment', 'reassessment', 'general support', 'comfort', 'airway', 'oxygenation', 'respiratory', 'circulation', 'fluid resuscitation', 'hydration'],
+    weaknesses: ['River'],
+    resistances: ['Fire'],
+    starTurnLimit: 6,
+    rewardBase: 20,
+    chapter: 1,
+  },
   air_sprite: {
     clinicalCategory: 'Respiratory',
     diseaseTags: ['asthma', 'bronchospasm', 'wheezing', 'respiratory distress'],

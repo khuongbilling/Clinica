@@ -19,7 +19,7 @@ interface TutorialCtx {
   replayTutorial: (id: TutorialId) => Promise<void>;
   resetTutorials: () => Promise<void>;
   isCompleted: (id: TutorialId) => boolean;
-  onRequiredAction: (actionType: string) => void;
+  onRequiredAction: (actionType: string, skillId?: string) => void;
 }
 
 const Ctx = createContext<TutorialCtx | null>(null);
@@ -108,12 +108,17 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     return !!completed[id];
   }, [completed]);
 
-  const onRequiredAction = useCallback((actionType: string) => {
+  const onRequiredAction = useCallback((actionType: string, skillId?: string) => {
     if (!activeTutorialId) return;
     const steps = TUTORIALS[activeTutorialId];
     const step = steps[stepIndex];
     if (!step?.requireAction) return;
-    if (step.requiredActionType && step.requiredActionType !== actionType) return;
+    // A step pinned to a specific skill is only satisfied by that exact skill.
+    if (step.requiredSkillId) {
+      if (step.requiredSkillId !== skillId) return;
+    } else if (step.requiredActionType && step.requiredActionType !== actionType) {
+      return;
+    }
     doAdvance(activeTutorialId, stepIndex);
   }, [activeTutorialId, stepIndex, doAdvance]);
 

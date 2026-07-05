@@ -192,7 +192,7 @@ export const ENEMIES: Enemy[] = [
     difficulty: 1,
     startingStability: 65,
     instability: 4,
-    corruption: 40,
+    corruption: 28,
     weakSystem: 'River',
     visibleClues: [
       { id: 'c1', label: 'Dry Lips', detail: 'Dry mucous membranes.', hidden: false },
