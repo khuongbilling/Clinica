@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -331,7 +331,7 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
         {selected && !acted && <View style={[styles.heroGlowRing, { borderColor: color }]} />}
         <Animated.View pointerEvents="none" style={[styles.castBurst, { backgroundColor: move.aura + "44", borderColor: move.aura, opacity: castGlow }]} />
         {sprite ? (
-          <Image source={sprite} style={styles.heroSprite} resizeMode="contain" />
+          <ExpoImage source={sprite} style={styles.heroSprite} contentFit="contain" />
         ) : (
           <View style={[styles.heroFallback, { backgroundColor: color + "30", borderColor: color }]}>
             <Text style={{ color, fontWeight: "800", fontSize: 16 }}>{hero.name[0]}</Text>
@@ -550,7 +550,7 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
             }}
           >
             {sprite ? (
-              <Image source={sprite} style={styles.enemySprite} resizeMode="contain" />
+              <ExpoImage source={sprite} style={styles.enemySprite} contentFit="contain" />
             ) : (
               <View style={[styles.enemyFallback, { backgroundColor: color + "30", borderColor: color }]}>
                 <Text style={{ color, fontWeight: "800", fontSize: 22 }}>{enemy.name[0]}</Text>

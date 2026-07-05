@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BOSS_LORD_IMBALANCE, CODEX, ENEMIES } from "@/src/game/content";
@@ -131,7 +132,7 @@ export default function Result() {
         <View style={styles.head}>
           {enemy && getEnemySprite(enemy.id) ? (
             <View style={[styles.enemyResultPortrait, { borderColor: won ? COLORS.success : COLORS.error }]}>
-              <Image source={getEnemySprite(enemy.id)!} style={styles.enemyResultImg} resizeMode="contain" />
+              <ExpoImage source={getEnemySprite(enemy.id)!} style={styles.enemyResultImg} contentFit="contain" />
               <View style={[styles.enemyResultBadge, { backgroundColor: won ? COLORS.success : COLORS.error }]}>
                 <Ionicons name={won ? "shield-checkmark" : "alert-circle"} size={22} color={COLORS.surface} />
               </View>

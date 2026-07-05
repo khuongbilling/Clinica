@@ -3,7 +3,7 @@ import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ENEMIES } from "@/src/game/content";
@@ -105,7 +105,7 @@ export default function ShiftCasesPage() {
 
         {/* Daily Quests header with donghua quest emblem */}
         <View style={styles.questHeader}>
-          <Image source={QUEST_ICON} style={styles.questIcon} resizeMode="contain" />
+          <ExpoImage source={QUEST_ICON} style={styles.questIcon} contentFit="contain" />
           <View style={{ flex: 1 }}>
             <Text style={styles.questTitle}>Daily Quests</Text>
             <Text style={styles.questSub}>A rotating set of clinical cases — cycle through and choose one.</Text>
@@ -127,7 +127,7 @@ export default function ShiftCasesPage() {
             <View style={styles.caseThumbWrap}>
               {getEnemySprite(current.id) ? (
                 <>
-                  <Image source={getEnemySprite(current.id)} style={StyleSheet.absoluteFillObject} resizeMode="contain" />
+                  <ExpoImage source={getEnemySprite(current.id)} style={StyleSheet.absoluteFillObject} contentFit="contain" />
                   <LinearGradient colors={["transparent", "rgba(12,14,18,0.85)"]} style={StyleSheet.absoluteFillObject} />
                 </>
               ) : (

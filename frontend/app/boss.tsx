@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Alert } from "react-native";
@@ -59,7 +60,7 @@ export default function BossPage() {
         {/* Boss portrait */}
         <View style={styles.portraitWrap}>
           {sprite ? (
-            <Image source={sprite} style={StyleSheet.absoluteFillObject} resizeMode="contain" />
+            <ExpoImage source={sprite} style={StyleSheet.absoluteFillObject} contentFit="contain" />
           ) : (
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: COLORS.surfaceSecondary }]} />
           )}

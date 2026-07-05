@@ -3,12 +3,16 @@ name: Clinica image rendering
 description: Image component rules for Expo web, and the full image-first architecture for the Ward Defense board.
 ---
 
-# Scene background image rendering on Expo 54 web
+# Image rendering on Expo 54 web — use expo-image for ALL bundled assets
 
 ## Rule
-Use `expo-image`'s `Image` (with `contentFit="cover"`) for ALL illustrated scene backgrounds in this project, NOT React Native's `Image` component.
+Use `expo-image`'s `Image` for EVERY render of a bundled `require('../../assets/...')` asset on this project (backgrounds, enemy sprites, hero sprites, icons), NOT React Native's `Image`. Swap `resizeMode` → `contentFit`.
 
-**Why:** RN Image fails silently (renders transparent/black) inside a `flex: 1, overflow: hidden` View on Expo web — the ward battle arena is exactly this.
+**Why (root cause — confirmed via curl + bundle grep):** In Expo dev, `config.transformer.publicPath = '/assets/?ln=.'` and assets are ONLY served via the `unstable_path` scheme, e.g. `/assets/?unstable_path=assets/enemies/air_sprite.png` → 200. But Metro bakes each asset's `httpServerLocation` WITHOUT the `assets/` prefix (`/assets/enemies/air_sprite.png`). RN-web's `Image` fetches that baked URL directly → Metro scandirs `frontend/enemies` → ENOENT → 404 → renders as a transparent/blank square. `expo-image` (via expo-asset) instead builds the correct `unstable_path` URL → 200. This is app-wide, affecting every `assets/*` subdir. Symptom looks enemy-specific only because browser cache masks still-broken RN-Image screens.
+
+**How to apply:** Any new asset render must use `<ExpoImage source={require(...)} contentFit="..." />`. Grep for `<Image` (RN) rendering `getEnemySprite`/`require('../../assets` and convert. The whole ward shift flow (BattlefieldScene, result, shift-cases, boss) uses ExpoImage.
+
+Older note (still true, narrower symptom): RN Image also fails silently inside a `flex: 1, overflow: hidden` View on Expo web — the ward battle arena is exactly this.
 
 ## ExpoImage background — the ONLY working approach (ward-defense-v2.tsx)
 The `BoardScene` component must use **explicit pixel dimensions** + **`cachePolicy="none"`** + a **`key` prop** that changes when dimensions change. All other approaches go black on repeated Metro restarts:
