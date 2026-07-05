@@ -83,8 +83,8 @@ function districtColorFor(id: string | null | undefined): string {
 
 type Placement = { kind: "building" | "decoration"; id: string; isMove: boolean; origin: { row: number; col: number } | null };
 
-// Only show the full parchment loading screen the first time the Realm opens in
-// a session; once assets are cached, later visits are instant.
+// Only show the full illustrated loading screen the first time the Realm opens
+// in a session; once assets are cached, later visits are instant.
 let realmAssetsWarmed = false;
 const MIN_LOADING_MS = 2200;
 

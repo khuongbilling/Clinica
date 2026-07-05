@@ -528,3 +528,51 @@ id = "-uM_WI6eS_RLnURmGDloA"
 uri = "file://frontend/assets/realm/ui/parchment_scroll.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "pZC3ULKy2GyipYT-EY4-C"
+uri = "file://frontend/assets/loading/scene_01_lantern_rocket.png"
+type = "image"
+title = "scene_01_lantern_rocket"
+
+[[generated]]
+id = "P6ScwcYDbJHxPekcsQuNl"
+uri = "file://frontend/assets/loading/scene_02_thermometer_bat.png"
+type = "image"
+title = "scene_02_thermometer_bat"
+
+[[generated]]
+id = "GKjOVhaebLirwCmZI-5P9"
+uri = "file://frontend/assets/loading/scene_03_water_surf.png"
+type = "image"
+title = "scene_03_water_surf"
+
+[[generated]]
+id = "aWW_ksn8UZ3Ud19KQWa3q"
+uri = "file://frontend/assets/loading/scene_04_swarm_panic.png"
+type = "image"
+title = "scene_04_swarm_panic"
+
+[[generated]]
+id = "1Y35TVygRvWyU2nOJohuj"
+uri = "file://frontend/assets/loading/scene_05_drake_flex.png"
+type = "image"
+title = "scene_05_drake_flex"
+
+[[generated]]
+id = "tmMEM9ml5P_dn0ao0YHr7"
+uri = "file://frontend/assets/loading/scene_06_syringe_sneak.png"
+type = "image"
+title = "scene_06_syringe_sneak"
+
+[[generated]]
+id = "NHWK88KDOJWE_8RIIKDC9"
+uri = "file://frontend/assets/loading/scene_07_back_to_back.png"
+type = "image"
+title = "scene_07_back_to_back"
+
+[[generated]]
+id = "iu0Rhj6PaD_1-xgnkaXNT"
+uri = "file://frontend/assets/loading/scene_08_banana_slip.png"
+type = "image"
+title = "scene_08_banana_slip"

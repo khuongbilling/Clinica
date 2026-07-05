@@ -9,6 +9,13 @@ description: Why the Realm was slow, the durable constraints of image preloading
 textures used as SVG pattern fills + building sprites). Uncached first visit = visible lag. Any new
 realm image should be added to the preload list so it's warmed too.
 
+**Loading screen visual:** shows ONE random comedic splash illustration per mount
+(`loadingArt.ts` LOADING_ART / randomLoadingArt) in a contained square card sized to fit
+portrait+landscape without cropping, with the rotating tip + label overlaid on an
+expo-linear-gradient scrim. Replaced the old parchment-scroll design (parchment asset kept but
+dropped from REALM_IMAGE_MODULES since nothing renders it now). LOADING_ART is warmed at launch via
+preloadTabAssets, but on a truly cold first launch the illustration still fades in via expo-image.
+
 **Two-tier preload design:**
 - `prefetchModules(modules)` in `realmAssets.ts` is the single shared best-effort helper
   (resolve require()→uri via RNImage.resolveAssetSource, then expo-image Image.prefetch). Reuse it.

@@ -46,8 +46,6 @@ export const REALM_IMAGE_MODULES: number[] = [
   require("../../assets/realm/buildings/nutrition_garden.png"),
   require("../../assets/realm/buildings/ward_defense_tower.png"),
   require("../../assets/realm/buildings/faction_embassy.png"),
-  // Loading screen art
-  require("../../assets/realm/ui/parchment_scroll.png"),
 ];
 
 let preloadPromise: Promise<void> | null = null;

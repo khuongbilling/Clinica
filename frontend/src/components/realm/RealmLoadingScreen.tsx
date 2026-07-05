@@ -8,11 +8,10 @@ import {
   View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { COLORS } from "@/src/theme/colors";
-
-const PARCHMENT = require("../../../assets/realm/ui/parchment_scroll.png");
-const PARCHMENT_RATIO = 1024 / 743; // native width / height of the scroll art
+import { randomLoadingArt } from "@/src/game/loadingArt";
 
 const TIPS: string[] = [
   "Buildings unlock as your Grand Ward Atrium levels up — keep completing shifts to raise it.",
@@ -39,8 +38,10 @@ function tipDurationMs(text: string) {
 
 export function RealmLoadingScreen({ tips = TIPS }: { tips?: string[] }) {
   const list = tips.length > 0 ? tips : FALLBACK_TIPS;
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(() => Math.floor(Math.random() * list.length));
+  // Pick one random illustration for this loading appearance.
+  const [art] = useState(() => randomLoadingArt());
   const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -69,24 +70,26 @@ export function RealmLoadingScreen({ tips = TIPS }: { tips?: string[] }) {
     };
   }, [index, list]);
 
-  const pw = Math.min(width * 0.9, 560);
-  const ph = pw / PARCHMENT_RATIO;
+  // Contained square card so the full illustration is always visible, sized to
+  // fit both portrait and landscape without cropping the character.
+  const size = Math.min(width * 0.86, height * 0.52, 460);
 
   return (
     <View style={styles.overlay}>
-      <View style={{ width: pw, height: ph, justifyContent: "center", alignItems: "center" }}>
+      <View style={[styles.card, { width: size, height: size }]}>
         <ExpoImage
-          source={PARCHMENT}
-          style={{ position: "absolute", width: pw, height: ph }}
-          contentFit="contain"
+          source={art}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={400}
         />
-        <Animated.View
-          style={{
-            opacity: fade,
-            paddingHorizontal: pw * 0.17,
-            maxWidth: pw,
-          }}
-        >
+        <LinearGradient
+          colors={["transparent", "rgba(6,20,26,0.35)", "rgba(6,20,26,0.94)"]}
+          locations={[0.45, 0.7, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <Animated.View style={[styles.tipWrap, { opacity: fade }]}>
           <Text style={styles.tipLabel}>SANCTUARY WISDOM</Text>
           <Text style={styles.tipText}>{list[index]}</Text>
         </Animated.View>
@@ -108,27 +111,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 50,
   },
+  card: {
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: COLORS.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
+  },
+  tipWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 40,
+  },
   tipLabel: {
-    color: "#7A4A22",
+    color: COLORS.brand,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 2,
-    textAlign: "center",
-    marginBottom: 8,
-    opacity: 0.85,
+    marginBottom: 6,
   },
   tipText: {
-    color: "#3E2412",
-    fontSize: 16,
-    lineHeight: 23,
+    color: "#EAFBF8",
+    fontSize: 15,
+    lineHeight: 21,
     fontWeight: "600",
-    textAlign: "center",
   },
   footer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 28,
+    marginTop: 26,
   },
   loadingText: {
     color: COLORS.onSurfaceSecondary,
