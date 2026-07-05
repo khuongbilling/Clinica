@@ -13,6 +13,12 @@ const BANNER_IMAGES: Record<string, any> = {
   "ward-defense": require("../../assets/images/banner_ward_defense.png"),
   "boss-ward": require("../../assets/images/banner_boss_ward.png"),
   "lotus-journal": require("../../assets/images/banner_lotus_journal.png"),
+  // Apothecary Market (Shop) hub banners
+  "apothecary-market": require("../../assets/images/banner_apothecary_market.png"),
+  "summoning-altar": require("../../assets/images/banner_summoning_altar.png"),
+  "regalia-upgrades": require("../../assets/images/banner_regalia_upgrades.png"),
+  "sanctuary-bank": require("../../assets/images/banner_sanctuary_bank.png"),
+  "night-market": require("../../assets/images/banner_night_market.png"),
 };
 
 /** Illustrated donghua quest emblem for the Daily Quests section. */

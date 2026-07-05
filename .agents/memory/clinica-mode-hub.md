@@ -51,3 +51,22 @@ encounter = `ENCOUNTER_COST` (1), boss = `BOSS_ENCOUNTER_COST` (5).
 **Gotcha:** direct URL / deep-link to any of these routes reboots the app and loads the
 player async — screens must render a loading spinner while `player == null`, NOT `return null`
 (returns blank black screen that reads as a crash). In-app SPA nav has player already loaded.
+
+**Gotcha (RN web):** `Alert.alert` is unreliable on React Native Web (Expo web) — it renders
+no visible/testable dialog. For coming-soon / lightweight feedback on web screens, use an
+inline toast/notice (small state + timeout banner, e.g. `shop-notice`), not `Alert.alert`.
+
+## Shop hub (same pattern, applied to the Shop tab)
+The Shop tab was migrated from a single 7-tab screen to the SAME banner-hub pattern:
+- Hub: `app/shop.tsx` renders `BannerCard`s from `SHOP_SECTIONS` (`frontend/src/game/shopHub.ts`).
+  `(tabs)/shop.tsx` re-exports `../shop`. Active banner → `router.push(section.route)`; coming_soon
+  (Night Market) → inline `shop-notice` toast (NOT Alert).
+- Detail: `app/shop-section/[id].tsx` is ONE reusable page. `ShopSectionDef extends ModeCardDef`
+  with `groups: ShopGroupId[]`; the page resolves via `findShopSection(id)` and renders the legacy
+  tab content per group (with sub-headings when >1 group). All original handlers preserved
+  (purchaseItem/refillStamina/pullGacha/upgradeUnitMastery/purchaseUpgrade/purchaseSkin/equipSkin/
+  exchangeInsightCrystals), plus UnitInfoModal + Bank/Bazaar modals.
+- **Balanced grouping (user-chosen):** apothecary-market = consumables+ward+refills; summoning-altar
+  = recruit/gacha (the gacha now lives on its own page); regalia-upgrades = upgrades+skins;
+  sanctuary-bank = premium; night-market = coming_soon.
+- 5 shop banner PNGs added to `BANNER_IMAGES` in `ModeBanners.tsx` (keys = section ids).

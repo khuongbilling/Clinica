@@ -606,3 +606,33 @@ id = "r_8E3gRgjqx4obrcUkI_M"
 uri = "file://frontend/assets/images/quest_icon.png"
 type = "image"
 title = "quest scroll icon"
+
+[[generated]]
+id = "jVDAuGt4-Fbm0oBsqwC8z"
+uri = "file://frontend/assets/images/banner_apothecary_market.png"
+type = "image"
+title = "apothecary market banner"
+
+[[generated]]
+id = "CIWZZ5k56wsD9Ihv9L6CM"
+uri = "file://frontend/assets/images/banner_summoning_altar.png"
+type = "image"
+title = "summoning altar banner"
+
+[[generated]]
+id = "VwC5i5p_3wYv_QwUh6XG3"
+uri = "file://frontend/assets/images/banner_regalia_upgrades.png"
+type = "image"
+title = "regalia upgrades banner"
+
+[[generated]]
+id = "e2TMqLWRoBgdxYcf8n5jI"
+uri = "file://frontend/assets/images/banner_sanctuary_bank.png"
+type = "image"
+title = "sanctuary bank banner"
+
+[[generated]]
+id = "xjqAlOROsVs3liqQgRRSd"
+uri = "file://frontend/assets/images/banner_night_market.png"
+type = "image"
+title = "night market banner"
