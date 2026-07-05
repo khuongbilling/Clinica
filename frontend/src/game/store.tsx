@@ -26,6 +26,7 @@ function normalizeProgression(p: PlayerState): PlayerState {
   const src = p.hero_progression || {};
   const prog: Record<string, { star: number; copies: number; level: number; xp: number; locked: boolean; favorite: boolean }> = {};
   let changed = !p.hero_progression;
+  if (p.prologue_complete === undefined) { p = { ...p, prologue_complete: true }; changed = true; }
   for (const [id, raw] of Object.entries(src)) {
     const star = Math.min(MAX_STAR, Math.max(1, Math.round(Number(raw?.star) || 1)));
     const copies = Math.max(0, Math.round(Number(raw?.copies) || 0));
@@ -157,6 +158,7 @@ type CreatePlayerArgs = {
   system_affinity?: string;
   explanation_style?: string;
   codex_depth?: string;
+  prologue_complete?: boolean;
 };
 
 type Ctx = {
@@ -203,6 +205,7 @@ type Ctx = {
   refresh: () => Promise<void>;
   setPlayerClass: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
   claimClassTier: (classId: ClassId, level: 1 | 10 | 20 | 30) => Promise<{ ok: boolean; message: string }>;
+  completePrologue: () => Promise<void>;
 };
 
 const PlayerContext = createContext<Ctx | null>(null);
@@ -257,6 +260,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     explanation_style: args.explanation_style || null,
     codex_depth: args.codex_depth || 'simple',
     onboarding_complete: true,
+    prologue_complete: args.prologue_complete ?? true,
     rank: 'Sprout Healer',
     rank_index: 0,
     xp: 0,
@@ -971,10 +975,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `${card.name} unlocked.` };
   }, [updateState]);
 
+  // Push 1 prologue — marks the guided tutorial + scripted boss sequence
+  // finished so the player never re-enters it. Idempotent no-op if already set.
+  const completePrologue = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.prologue_complete) return;
+    const next = { ...base, prologue_complete: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

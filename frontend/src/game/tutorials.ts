@@ -1,4 +1,5 @@
 export type TutorialId =
+  | "prologueBattle"
   | "firstBattle"
   | "firstKingdom"
   | "firstSummon";
@@ -14,12 +15,68 @@ export interface TutorialStep {
 }
 
 export const TUTORIAL_LABELS: Record<TutorialId, string> = {
+  prologueBattle: "Your First Shift",
   firstBattle: "Battle Basics",
   firstKingdom: "Kingdom Basics",
   firstSummon: "Hero Summoning",
 };
 
 export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
+  prologueBattle: [
+    {
+      id: "prologue_welcome",
+      title: "Welcome to the Ward",
+      body: "A patient needs you. Patient Stability shows how safe they are. Disease Corruption shows how far the illness has progressed. Keep Stability above 0 and bring Corruption to 0 to win.",
+      placement: "center",
+      requireAction: false,
+      nextText: "BEGIN",
+    },
+    {
+      id: "prologue_scout",
+      title: "Step 1: Scout",
+      body: "Always assess before you act. Select a hero and use a skill labeled SCOUT to reveal what's really going on with the patient.",
+      placement: "top",
+      requireAction: true,
+      requiredActionType: "scout",
+      nextText: "USE A SCOUT SKILL",
+    },
+    {
+      id: "prologue_stabilize",
+      title: "Step 2: Stabilize",
+      body: "With clues revealed, protect the patient first. Use a skill labeled STABILIZE to shore up their Stability.",
+      placement: "top",
+      requireAction: true,
+      requiredActionType: "stabilize",
+      nextText: "USE A STABILIZE SKILL",
+    },
+    {
+      id: "prologue_treat",
+      title: "Step 3: Treat",
+      body: "Now fight the disease directly. Use a skill labeled STRIKE to reduce Disease Corruption.",
+      placement: "top",
+      requireAction: true,
+      requiredActionType: "strike",
+      nextText: "USE A STRIKE SKILL",
+    },
+    {
+      id: "prologue_reassess",
+      title: "Step 4: Reassess",
+      body: "Good nursing never stops checking in. Use a skill labeled ANALYZE (or REASSESS) to confirm the patient is responding to treatment.",
+      placement: "top",
+      requireAction: true,
+      requiredActionType: "analyze",
+      nextText: "USE AN ANALYZE SKILL",
+    },
+    {
+      id: "prologue_done",
+      title: "Scout. Stabilize. Treat. Reassess.",
+      body: "This four-step rhythm is the heart of every shift you'll ever run. Keep repeating it — Scout, Stabilize, Treat, Reassess — until the patient is safe.",
+      placement: "center",
+      requireAction: false,
+      nextText: "FINISH THE SHIFT",
+    },
+  ],
+
   firstBattle: [
     {
       id: "battle_goal",

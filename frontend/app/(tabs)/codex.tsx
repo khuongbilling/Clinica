@@ -13,13 +13,13 @@ import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const TUTORIAL_IDS: TutorialId[] = ["firstBattle", "firstKingdom", "firstSummon"];
 
-const TUTORIAL_ICONS: Record<TutorialId, string> = {
+const TUTORIAL_ICONS: Partial<Record<TutorialId, string>> = {
   firstBattle: "shield",
   firstKingdom: "home",
   firstSummon: "sparkles",
 };
 
-const TUTORIAL_DESC: Record<TutorialId, string> = {
+const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
   firstBattle: "Learn Scout, Stabilize, and Counter — the care chain that wins battles.",
   firstKingdom: "Explore your kingdom buildings and understand how the realm grows.",
   firstSummon: "Spend Codex Shards to call new healers with unique clinical skills.",

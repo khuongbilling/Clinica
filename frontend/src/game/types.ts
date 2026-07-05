@@ -83,6 +83,10 @@ export interface Enemy {
   // Multi-enemy wave pressure archetype (affliction adds that ride alongside a primary enemy)
   behaviorTag?: EnemyBehaviorTag;
   isAffliction?: boolean; // small companion enemy, not a standalone encounter
+  // Prologue "Silent Infarct" style story bosses: this fight is narratively
+  // scripted to end in defeat (hidden pathology, resisted treatment) — no
+  // normal Game Over/rewards flow, see battle.tsx + lotus-recall.tsx.
+  scriptedLoss?: boolean;
 }
 
 export interface CodexEntry {
@@ -119,6 +123,10 @@ export interface PlayerState {
   explanation_style?: string | null;
   codex_depth: string;
   onboarding_complete: boolean;
+  // Push 1 prologue: false for brand-new players until they finish the
+  // tutorial win -> scripted boss loss -> Lotus Recall sequence. Defaults
+  // true for pre-existing players so they never re-enter the prologue flow.
+  prologue_complete?: boolean;
   rank: string;
   rank_index: number;
   xp: number;

@@ -24,14 +24,15 @@ export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
-  const { outcome, enemyId, stability, training, shards, crowns, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam } = useLocalSearchParams<{
-    outcome: string; enemyId: string; stability: string; training?: string; shards?: string; crowns?: string;
+  const { outcome, enemyId, stability, training, prologue, shards, crowns, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam } = useLocalSearchParams<{
+    outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; shards?: string; crowns?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
     playerXp?: string; heroXp?: string; playerLevelUp?: string; heroLevelUps?: string;
   }>();
   const won = outcome === "win";
   const isTraining = training === "1";
+  const isPrologueTutorial = prologue === "tutorial";
   const baseShards = parseInt(shards || "0", 10);
   const crownsEarned = parseInt(crowns || "0", 10);
   const fullChainCompleted = fullChain === "1";
@@ -370,18 +371,32 @@ export default function Result() {
               <Text style={styles.primaryTxt}>TRY AGAIN</Text>
             </Pressable>
           )}
-          {won && (
+          {won && isPrologueTutorial && (
+            <Pressable
+              style={styles.primary}
+              onPress={() => router.replace({ pathname: "/battle", params: { enemyId: "silent_infarct", prologue: "boss" } })}
+              testID="result-prologue-continue"
+            >
+              <Ionicons name="alert-circle" size={16} color={COLORS.onBrand} />
+              <Text style={styles.primaryTxt}>ANSWER THE NEXT CALL</Text>
+            </Pressable>
+          )}
+          {won && !isPrologueTutorial && (
             <Pressable style={styles.primary} onPress={() => router.replace("/shift")} testID="result-next-mission">
               <Ionicons name="arrow-forward-circle" size={16} color={COLORS.onBrand} />
               <Text style={styles.primaryTxt}>NEXT MISSION</Text>
             </Pressable>
           )}
-          <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
-            <Text style={styles.secondaryTxt}>RETURN TO KINGDOM</Text>
-          </Pressable>
-          <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)/codex")} testID="result-codex">
-            <Text style={styles.secondaryTxt}>OPEN CODEX</Text>
-          </Pressable>
+          {!(won && isPrologueTutorial) && (
+            <>
+              <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
+                <Text style={styles.secondaryTxt}>RETURN TO KINGDOM</Text>
+              </Pressable>
+              <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)/codex")} testID="result-codex">
+                <Text style={styles.secondaryTxt}>OPEN CODEX</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

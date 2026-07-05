@@ -36,6 +36,7 @@ class PlayerCreate(BaseModel):
     learning_goal: Optional[str] = None
     learning_profile: Optional[str] = None
     codex_depth: Optional[str] = None
+    prologue_complete: Optional[bool] = None
 
 
 class MasteryStats(BaseModel):
@@ -84,6 +85,7 @@ class Player(BaseModel):
     learning_profile: Optional[str] = None
     codex_depth: str = "simple"
     onboarding_complete: bool = True
+    prologue_complete: bool = True
     rank: str = "Sprout Healer"
     rank_index: int = 0
     xp: int = 0
@@ -138,6 +140,7 @@ class PlayerUpdate(BaseModel):
     learning_profile: Optional[str] = None
     codex_depth: Optional[str] = None
     onboarding_complete: Optional[bool] = None
+    prologue_complete: Optional[bool] = None
     rank: Optional[str] = None
     rank_index: Optional[int] = None
     xp: Optional[int] = None
@@ -207,6 +210,7 @@ async def create_player(payload: PlayerCreate):
         learning_goal=payload.learning_goal,
         learning_profile=payload.learning_profile,
         codex_depth=payload.codex_depth or "simple",
+        prologue_complete=payload.prologue_complete if payload.prologue_complete is not None else True,
         heroes_owned=[starting_hero, "village_caretaker"],
         active_team=[starting_hero, "village_caretaker"],
         inventory={

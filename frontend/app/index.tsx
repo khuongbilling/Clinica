@@ -50,7 +50,8 @@ export default function Boot() {
     );
   }
 
-  if (!player) return <Redirect href="/onboarding" />;
+  if (!player) return <Redirect href="/prologue" />;
+  if (player.prologue_complete === false) return <Redirect href="/prologue" />;
   return <Redirect href="/(tabs)" />;
 }
 

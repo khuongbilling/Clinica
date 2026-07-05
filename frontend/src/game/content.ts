@@ -185,6 +185,28 @@ export const HEROES: Hero[] = [
 // ---------- ENEMIES ----------
 export const ENEMIES: Enemy[] = [
   {
+    id: 'dehydration_wisp',
+    name: 'Dehydration Wisp',
+    realWorld: 'Mild dehydration',
+    primarySystem: 'River',
+    difficulty: 1,
+    startingStability: 65,
+    instability: 4,
+    corruption: 40,
+    weakSystem: 'River',
+    visibleClues: [
+      { id: 'c1', label: 'Dry Lips', detail: 'Dry mucous membranes.', hidden: false },
+      { id: 'c2', label: 'Thirsty', detail: 'Patient reports feeling very thirsty.', hidden: false },
+      { id: 'c3', label: 'Mild Fatigue', detail: 'Low energy, slightly drowsy.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Slightly Fast Pulse', detail: 'HR mildly elevated from fluid loss.', hidden: true },
+    ],
+    dangerTrigger: 'Worsening dehydration',
+    bestCounters: ['stabilize', 'scout'],
+    teaches: [],
+  },
+  {
     id: 'air_sprite',
     name: 'Air Sprite Corruption',
     realWorld: 'Asthma exacerbation',
@@ -560,6 +582,33 @@ export const BOSS_LORD_IMBALANCE: Enemy = {
   dangerTrigger: 'Multi-organ collapse',
   bestCounters: ['scout', 'stabilize', 'strike', 'shield'],
   teaches: ['lord_imbalance_lore', 'multi_system_priority'],
+};
+
+// ---------- PROLOGUE BOSS (Push 1) ----------
+// Narratively unwinnable: incomplete Scout info, hidden weakness, corrupted
+// Clinical Cue, resisted treatment, Stability collapse. See battle.tsx for
+// the scriptedLoss handling and lotus-recall.tsx for the aftermath beat.
+export const BOSS_SILENT_INFARCT: Enemy = {
+  id: 'silent_infarct',
+  name: 'The Silent Infarct',
+  realWorld: 'Atypical, hidden-presentation myocardial infarction',
+  primarySystem: 'River',
+  difficulty: 5,
+  startingStability: 55,
+  instability: 14,
+  corruption: 260,
+  stabilityResistance: 0.9, // shrugs off nearly all stabilization — this fight cannot be held steady
+  visibleClues: [
+    { id: 'c1', label: 'Vague Fatigue', detail: 'Patient reports "just feeling off." Nothing specific.', hidden: false },
+    { id: 'c2', label: 'Vitals Look Fine', detail: 'BP and HR within normal range — for now.', hidden: false },
+  ],
+  hiddenClues: [
+    { id: 'h1', label: '???', detail: 'The chart contradicts itself. This reading cannot be trusted.', hidden: true },
+  ],
+  dangerTrigger: 'Sudden, silent cardiac collapse',
+  bestCounters: ['scout', 'stabilize'],
+  teaches: [],
+  scriptedLoss: true,
 };
 
 // ---------- CODEX ----------

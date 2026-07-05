@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
-import { BOSS_LORD_IMBALANCE, ENEMIES, HEROES, getWaveAdditionalEnemies } from "@/src/game/content";
+import { BOSS_LORD_IMBALANCE, BOSS_SILENT_INFARCT, ENEMIES, HEROES, getWaveAdditionalEnemies } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBACK, STABILIZE_FEEDBACK, COUNTER_FEEDBACK, REASSESS_FEEDBACK } from "@/src/game/explanationLayers";
@@ -37,7 +37,7 @@ type DetailEntry =
   | { kind: "call"; option: typeof CALL_OPTIONS[number] };
 
 export default function Battle() {
-  const { enemyId, training } = useLocalSearchParams<{ enemyId: string; training?: string }>();
+  const { enemyId, training, prologue } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string }>();
   const { player, loading } = usePlayer();
   if (loading || !player) {
     return (
@@ -46,22 +46,28 @@ export default function Battle() {
       </View>
     );
   }
-  return <BattleInner enemyId={enemyId} training={training} />;
+  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} />;
 }
 
-function BattleInner({ enemyId, training }: { enemyId?: string; training?: string }) {
+function BattleInner({ enemyId, training, prologue }: { enemyId?: string; training?: string; prologue?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
+  // Push 1 prologue: "tutorial" is the guided, reliably-winnable Ward Shift
+  // fight; "boss" is the narratively scripted-to-lose Silent Infarct fight.
+  const isPrologueTutorial = prologue === "tutorial";
 
   const enemy = useMemo(() => {
     if (!enemyId) return ENEMIES[0];
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
+    if (enemyId === BOSS_SILENT_INFARCT.id) return BOSS_SILENT_INFARCT;
     return ENEMIES.find((e) => e.id === enemyId) || ENEMIES[0];
   }, [enemyId]);
+
+  const isPrologueBoss = prologue === "boss" && !!enemy.scriptedLoss;
 
   const team = useMemo(() => {
     if (!player) return HEROES.slice(0, 3);
@@ -163,13 +169,33 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   const prevTurn = useRef(state.turnsTaken);
   const tsFirstAction = useRef(false);
   const tsPrevClueCount = useRef(state.visibleClues.length);
-  // Auto-start firstBattle tutorial on first visit
+  // Auto-start the guided prologueBattle tutorial for the Push 1 tutorial
+  // fight, otherwise fall back to the normal firstBattle tutorial.
   useEffect(() => {
+    if (isPrologueTutorial) {
+      if (!isCompleted("prologueBattle")) {
+        const t = setTimeout(() => startTutorial("prologueBattle"), 800);
+        return () => clearTimeout(t);
+      }
+      return;
+    }
     if (!isCompleted("firstBattle")) {
       const t = setTimeout(() => startTutorial("firstBattle"), 800);
       return () => clearTimeout(t);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push 1 prologue boss safety net: this fight is narratively scripted to
+  // end in defeat. Normal stability math already makes it nearly unwinnable
+  // (very high stabilityResistance/instability, no weakSystem), but if the
+  // player somehow keeps Stability alive past a generous turn cap, force the
+  // scripted collapse rather than ever letting them "win" the boss.
+  useEffect(() => {
+    if (!isPrologueBoss) return;
+    if (state.outcome !== "ongoing") return;
+    if (state.turnsTaken < 6) return;
+    setState((s) => ({ ...s, outcome: "loss", stability: 0, log: [...s.log, "⚠ System Warning: the patient's condition collapses without warning."] }));
+  }, [isPrologueBoss, state.outcome, state.turnsTaken]);
 
   // On mount: introduce the goal
   useEffect(() => { tips.enqueue("battle.intro"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -417,6 +443,12 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
   };
 
   const finish = async () => {
+    // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
+    // Route straight into the Lotus Recall cutscene regardless of outcome.
+    if (isPrologueBoss) {
+      router.replace({ pathname: "/lotus-recall", params: { enemyId: enemy.id } });
+      return;
+    }
     let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;
     let heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[] = [];
     let playerXpEarned = 0;
@@ -510,6 +542,7 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
         enemyId: enemy.id,
         stability: String(state.stability),
         training: isTraining ? "1" : "0",
+        prologue: isPrologueTutorial ? "tutorial" : "",
         shards: String(baseShards),
         crowns: String(crownsEarned),
         fullChain: state.fullChainCompleted ? "1" : "0",
@@ -581,6 +614,12 @@ function BattleInner({ enemyId, training }: { enemyId?: string; training?: strin
             )}
           </View>
         </View>
+        {isPrologueBoss && (
+          <View style={styles.systemWarningBanner} testID="battle-system-warning">
+            <Ionicons name="warning" size={13} color={COLORS.error} />
+            <Text style={styles.systemWarningTxt}>SYSTEM WARNING: incomplete data. Readings cannot be trusted.</Text>
+          </View>
+        )}
       </View>
 
       {/* ── ZONE A2: Battlefield — live hero + enemy sprites ── */}
@@ -1247,6 +1286,8 @@ const styles = StyleSheet.create({
   enemyKicker: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700" },
   trainingTag: { backgroundColor: COLORS.brandTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: RADIUS.pill },
   trainingTxt: { color: COLORS.brand, fontSize: 8, fontWeight: "700", letterSpacing: 1 },
+  systemWarningBanner: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.error + "18", borderWidth: 1, borderColor: COLORS.error + "50", borderRadius: RADIUS.sm, paddingHorizontal: 8, paddingVertical: 4, marginTop: 6 },
+  systemWarningTxt: { color: COLORS.error, fontSize: 10, fontWeight: "700", letterSpacing: 0.5, flex: 1 },
   enemyName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "300", lineHeight: 18 },
   systemPills: { flexDirection: "row", gap: 4, marginTop: 2, flexWrap: "wrap" },
   sysPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, borderWidth: 1 },
