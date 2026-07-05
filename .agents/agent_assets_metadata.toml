@@ -636,3 +636,9 @@ id = "xjqAlOROsVs3liqQgRRSd"
 uri = "file://frontend/assets/images/banner_night_market.png"
 type = "image"
 title = "night market banner"
+
+[[generated]]
+id = "3z8VyCmMw4jTVQr7yFFrZ"
+uri = "file://frontend/assets/enemies/dehydration_wisp.png"
+type = "image"
+title = "dehydration wisp enemy"

@@ -15,6 +15,7 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   electrox_flicker: require('../../assets/enemies/electrox_flicker.png'),
   mind_fog: require('../../assets/enemies/mind_fog.png'),
   lord_imbalance: require('../../assets/enemies/lord_imbalance.png'),
+  dehydration_wisp: require('../../assets/enemies/dehydration_wisp.png'),
 };
 
 export function getEnemySprite(enemyId: string): ImageSourcePropType | undefined {
