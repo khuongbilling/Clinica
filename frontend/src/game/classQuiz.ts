@@ -1,23 +1,45 @@
-// Push 3 — System personality/career quiz + Automated Class Assignment.
+// Push 3/4 — System personality/career quiz + Automated Class Assignment,
+// class-result lore translation, and confirmation copy.
 //
 // This is the single source of truth for the post-recall class-diagnostic
-// quiz. It is used by the live post-recall onboarding flow
-// (app/post-recall.tsx), which runs the quiz AFTER the prologue tutorial
-// battle + Lotus Recall + name entry.
+// quiz and its result-screen flavor content. It is used by the live
+// post-recall onboarding flow (app/post-recall.tsx), which runs the quiz
+// AFTER the prologue tutorial battle + Lotus Recall + name entry.
 //
-// Scope note (Push 3): this module only SCORES a recommendation (primary
-// fantasy class, modern department resonance, second closest fit) or
-// generates an Automated Class Assignment. It intentionally does NOT decide
-// how that recommendation is persisted to the player — final class saving,
-// the full result-confirmation screen, reminiscence, Lotus Lessons, and
-// simulation chapters are Push 4+ work.
+// Scope note (Push 3): scores a recommendation (primary fantasy class,
+// modern department resonance, second closest fit) or generates an
+// Automated Class Assignment.
+// Scope note (Push 4): adds the lore/flavor content (class title, "why this
+// fits", future path hint) shown on the result screen, and the confirmation
+// SYSTEM-message copy. Saving the choice onto the player is handled by
+// store.confirmClassDiagnostic, which writes into the EXISTING class_tree_id
+// field from classTree.ts (see fantasyClassFromClassId/classIdFromFantasyClass
+// below for the two-way mapping) — no new PlayerState fields are introduced.
+// Starting-trait text is intentionally NOT duplicated here; it is read live
+// from classTree.ts's CLASS_TREES (Lv1 card) so the two systems never drift.
+// Reminiscence, University transition, Lotus Lessons, and simulation
+// chapters remain Push 5+ work.
 //
 // NOTE: app/onboarding.tsx is the older, unlinked create-a-new-player flow
 // and keeps its own private copy of quiz-like data. The reachable quiz is
 // the one wired through this module.
 
+import type { ClassId } from './classTree';
+
 export const FANTASY_CLASSES = ['Guardian', 'Seer', 'Caretaker', 'Scholar', 'Alchemist', 'Medic'] as const;
 export type FantasyClass = (typeof FANTASY_CLASSES)[number];
+
+// classTree.ts's ClassId values are exactly the lowercase form of
+// FANTASY_CLASSES — this mapping is guaranteed stable by that shared
+// vocabulary (both lists are hand-kept in sync; a mismatch would break
+// class-tree lookups immediately and loudly, not silently).
+export function classIdFromFantasyClass(cls: FantasyClass): ClassId {
+  return cls.toLowerCase() as ClassId;
+}
+
+export function fantasyClassFromClassId(id: ClassId): FantasyClass {
+  return (id.charAt(0).toUpperCase() + id.slice(1)) as FantasyClass;
+}
 
 export type QuestionId = 'q1' | 'q2' | 'q3' | 'q4' | 'q5';
 
@@ -248,4 +270,86 @@ export function computeAutomatedAssignment(): QuizResult {
     resonanceScores: { [primaryResonance]: 1 },
     automated: true,
   };
+}
+
+// ── Push 4: class-result lore translation ──────────────────────────────────
+
+// A short epithet shown alongside the bare class name on the result screen
+// (distinct from CLASS_TAGLINE, which is a one-line description).
+export const CLASS_FLAVOR_TITLE: Record<FantasyClass, string> = {
+  Guardian: 'The Steadfast Shield',
+  Seer: 'The Hidden-Cause Reader',
+  Caretaker: 'The Patient Healer',
+  Scholar: 'The Lifelong Student',
+  Alchemist: 'The Precise Preparer',
+  Medic: 'The Adaptable Generalist',
+};
+
+// "Why this fits" — a short, second-person explanation tying the class back
+// to the instinct the player showed in the quiz (or was assigned, for
+// Automated Class Assignment).
+export const CLASS_WHY_FITS: Record<FantasyClass, string> = {
+  Guardian: 'You react to danger first and think second \u2014 the instinct that keeps a ward\u2019s Vital Stability from collapsing when it matters most.',
+  Seer: 'You need to understand before you act. That habit of asking \u201cwhy\u201d is exactly what uncovers what everyone else misses.',
+  Caretaker: 'You measure success by how someone feels after you leave the room, not just whether a number improved.',
+  Scholar: 'You turn every hard case into a lesson \u2014 and you\u2019d rather prevent the next one than just treat this one.',
+  Alchemist: 'You trust the right formula more than the right feeling. Precision is how you show you care.',
+  Medic: 'You don\u2019t specialize in one thing, because every ward needs someone who can do a bit of everything, reliably.',
+};
+
+// Future path hints — LORE/COPY ONLY. These describe where a class's
+// training could lead someday; no mechanics, unlocks, or systems are gated
+// behind these strings. Keyed by Modern Department Resonance so the hint
+// stays consistent whichever class the player is currently previewing.
+const FUTURE_PATH_HINTS: Record<string, string> = {
+  'Emergency': 'Code Guardian',
+  'Critical Care': 'Code Guardian',
+  'Diagnostics': 'Pathology Seer',
+  'Assessment': 'Pathology Seer',
+  'Primary Care': 'Ward Practitioner',
+  'Family Health': 'Ward Practitioner',
+  'Chronic Care': 'Ward Practitioner',
+  'Rehab': 'Ward Practitioner',
+  'Mental Health': 'Mindweaver',
+  'Support': 'Mindweaver',
+  'Public Health': 'Epidemic Warden',
+  'Prevention': 'Epidemic Warden',
+  'Pharmacy': 'Lotus Pharmacist',
+  'Pharmacology': 'Lotus Pharmacist',
+  'Lab': 'Lotus Pharmacist',
+  'Treatment Science': 'Lotus Pharmacist',
+  'Research-Education': 'Grand Scholar',
+  'Research & Education': 'Grand Scholar',
+  'Research': 'Grand Scholar',
+  'Education': 'Grand Scholar',
+  'Nutrition': 'Vital Garden Sage',
+  'Lifestyle Health': 'Vital Garden Sage',
+  'Nutrition-Lifestyle Health': 'Vital Garden Sage',
+  'Procedural': 'Blade Clinician',
+  'Surgery': 'Blade Clinician',
+  'Leadership': 'Triage Commander',
+  'Care Coordination': 'Triage Commander',
+};
+
+// Per-class fallback so a future path hint is ALWAYS defined, even if a
+// resonance string is ever introduced that isn't in the table above.
+const CLASS_DEFAULT_FUTURE_PATH: Record<FantasyClass, string> = {
+  Guardian: 'Code Guardian',
+  Seer: 'Pathology Seer',
+  Caretaker: 'Ward Practitioner',
+  Scholar: 'Grand Scholar',
+  Alchemist: 'Lotus Pharmacist',
+  Medic: 'Triage Commander',
+};
+
+export function getFuturePathHint(resonance: string, primaryClass: FantasyClass): string {
+  return FUTURE_PATH_HINTS[resonance] ?? CLASS_DEFAULT_FUTURE_PATH[primaryClass];
+}
+
+// The Modern Department Resonance to display for a given class on the
+// result screen: the quiz's own scored resonance for the recommended class,
+// or that class's natural default resonance when previewing/switching to a
+// different class (second-closest fit or a manual pick).
+export function resonanceForPreview(result: QuizResult, cls: FantasyClass): string {
+  return cls === result.primaryClass ? result.primaryResonance : CLASS_DEFAULT_RESONANCE[cls];
 }

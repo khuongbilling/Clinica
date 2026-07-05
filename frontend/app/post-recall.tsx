@@ -4,16 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
+import { CLASS_IDENTITIES, CLASS_IDS, getClassTree, type ClassId } from "@/src/game/classTree";
 import {
   QUIZ_QUESTIONS,
   computeQuizResult,
   computeAutomatedAssignment,
   formatResonance,
-  CLASS_TAGLINE,
-  CLASS_ICON,
-  CLASS_COLOR,
+  classIdFromFantasyClass,
+  fantasyClassFromClassId,
+  resonanceForPreview,
+  getFuturePathHint,
+  CLASS_FLAVOR_TITLE,
+  CLASS_WHY_FITS,
   type QuizAnswers,
   type QuizResult,
+  type FantasyClass,
 } from "@/src/game/classQuiz";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -21,21 +26,24 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 // player ever reaches the normal hub, in two resumable sub-steps:
 //   1. Identity restoration — a System-styled name input that saves into the
 //      same `player.name` field used everywhere else (header, profile).
-//   2. Class diagnostic (Push 3) — a 5-question System personality/career
-//      quiz (or an "Automated Class Assignment" shortcut) that RECOMMENDS a
-//      primary class, second-closest fit, and modern department resonance.
-//      Push 3 intentionally stops at showing that recommendation — actually
-//      saving the class onto the player, the full confirmation screen,
-//      reminiscence, Lotus Lessons, and simulation chapters are Push 4+.
-//      For now, "Continue" simply marks the diagnostic sub-step as seen
-//      (completeIdentityRestore's sibling, completeDiagnosticIntro) so the
-//      player is never stuck re-answering it, then proceeds to the hub.
+//   2. Class diagnostic (Push 3 + 4) — a 5-question System personality/career
+//      quiz (or an "Automated Class Assignment" shortcut) that recommends a
+//      primary class, second-closest fit, and modern department resonance,
+//      then (Push 4) a full result screen where the player can accept the
+//      recommendation, switch to the second-closest fit, or choose any of
+//      the 6 classes manually, and finally REGISTER that choice onto the
+//      player via store.confirmClassDiagnostic — the exact same class_tree_id
+//      field already read by Profile/PlayerHeader/Class Tree. The choice is
+//      explicitly framed as forgiving and non-permanent: it can be freely
+//      re-switched later from the Class Tree screen.
+//      Reminiscence, University transition, Lotus Lessons, and simulation
+//      chapters remain Push 5+ work.
 // The screen re-derives which sub-step to show from persisted player flags
 // (identity_restored / diagnostic_intro_seen) on every render, so a reload
 // or app restart mid-sequence always resumes at the correct step instead of
 // getting stuck or skipping ahead.
 
-type DiagnosticView = "intro" | "question" | "assigning" | "result";
+type DiagnosticView = "intro" | "question" | "assigning" | "result" | "chooser" | "confirming";
 
 const AUTOMATED_MESSAGES = [
   "SYSTEM: Soul resonance unstable.",
@@ -44,7 +52,7 @@ const AUTOMATED_MESSAGES = [
 
 export default function PostRecall() {
   const router = useRouter();
-  const { player, completeIdentityRestore, completeDiagnosticIntro } = usePlayer();
+  const { player, completeIdentityRestore, confirmClassDiagnostic } = usePlayer();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -55,6 +63,13 @@ export default function PostRecall() {
   const [view, setView] = useState<DiagnosticView>("intro");
   const [automatedMsgIndex, setAutomatedMsgIndex] = useState(0);
   const [result, setResult] = useState<QuizResult | null>(null);
+  // Which class is currently being previewed for registration — defaults to
+  // the primary recommendation, but can be switched to the second-closest
+  // fit or any manually chosen class without losing the original result.
+  const [previewClass, setPreviewClass] = useState<FantasyClass | null>(null);
+  const [confirmMessages, setConfirmMessages] = useState<string[]>([]);
+  const [confirmMsgIndex, setConfirmMsgIndex] = useState(0);
+  const confirmFiredRef = useRef(false);
 
   const phase: "identity" | "diagnostic" | "done" = !player
     ? "identity"
@@ -89,6 +104,29 @@ export default function PostRecall() {
     return () => clearTimeout(t);
   }, [view, automatedMsgIndex]);
 
+  // Drives the SYSTEM confirmation message sequence, then actually saves the
+  // chosen class. Guarded by confirmFiredRef so the save only fires once per
+  // "confirming" entry even if this effect re-runs on re-render.
+  useEffect(() => {
+    if (view !== "confirming") return;
+    if (confirmMsgIndex < confirmMessages.length - 1) {
+      const t = setTimeout(() => setConfirmMsgIndex((i) => i + 1), 750);
+      return () => clearTimeout(t);
+    }
+    if (confirmFiredRef.current) return;
+    const t = setTimeout(async () => {
+      if (!previewClass || confirmFiredRef.current) return;
+      confirmFiredRef.current = true;
+      setSubmitting(true);
+      try {
+        await confirmClassDiagnostic(classIdFromFantasyClass(previewClass));
+      } finally {
+        setSubmitting(false);
+      }
+    }, 1100);
+    return () => clearTimeout(t);
+  }, [view, confirmMsgIndex, confirmMessages.length, previewClass, confirmClassDiagnostic]);
+
   const submitIdentity = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -112,7 +150,9 @@ export default function PostRecall() {
     if (quizStep + 1 < QUIZ_QUESTIONS.length) {
       setQuizStep(quizStep + 1);
     } else {
-      setResult(computeQuizResult(nextAnswers));
+      const r = computeQuizResult(nextAnswers);
+      setResult(r);
+      setPreviewClass(r.primaryClass);
       setView("result");
     }
   };
@@ -121,37 +161,73 @@ export default function PostRecall() {
     if (quizStep + 1 < QUIZ_QUESTIONS.length) {
       setQuizStep(quizStep + 1);
     } else {
-      setResult(computeQuizResult(answers));
+      const r = computeQuizResult(answers);
+      setResult(r);
+      setPreviewClass(r.primaryClass);
       setView("result");
     }
   };
 
   const runAutomatedAssignment = () => {
-    setResult(computeAutomatedAssignment());
+    const r = computeAutomatedAssignment();
+    setResult(r);
+    setPreviewClass(r.primaryClass);
     setAutomatedMsgIndex(0);
     setView("assigning");
   };
 
   const changeAnswers = () => {
     setResult(null);
+    setPreviewClass(null);
     setAnswers({});
     setQuizStep(0);
     setView("question");
   };
 
-  const confirmContinue = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      // Push 3 scope: acknowledge the diagnostic step only. The recommended
-      // class/resonance is not yet written onto the player — see Push 4.
-      await completeDiagnosticIntro();
-    } finally {
-      setSubmitting(false);
-    }
+  const previewSecondFit = () => {
+    if (!result) return;
+    setPreviewClass(result.secondaryClass);
+  };
+
+  const previewRecommended = () => {
+    if (!result) return;
+    setPreviewClass(result.primaryClass);
+  };
+
+  const openChooser = () => setView("chooser");
+
+  const pickManualClass = (id: ClassId) => {
+    setPreviewClass(fantasyClassFromClassId(id));
+    setView("result");
+  };
+
+  const beginConfirm = () => {
+    if (!result || !previewClass) return;
+    const resonance = resonanceForPreview(result, previewClass);
+    const trait = getClassTree(classIdFromFantasyClass(previewClass))[0];
+    confirmFiredRef.current = false;
+    setConfirmMessages([
+      `SYSTEM: Class registered \u2014 ${previewClass}.`,
+      `SYSTEM: Initial trait unlocked \u2014 ${trait?.name ?? "Field Readiness"}.`,
+      `SYSTEM: Secondary resonance detected \u2014 ${formatResonance(resonance)}.`,
+      "SYSTEM: Warning: Insight archive incomplete.",
+      "SYSTEM: Recommended correction: Clinica University.",
+    ]);
+    setConfirmMsgIndex(0);
+    setView("confirming");
   };
 
   if (phase === "done") return null;
+
+  const activeClass = previewClass ?? result?.primaryClass ?? null;
+  const activeIsPrimary = !!result && activeClass === result.primaryClass;
+  const activeIsSecondary = !!result && activeClass === result.secondaryClass;
+  const activeIdentity = activeClass ? CLASS_IDENTITIES[classIdFromFantasyClass(activeClass)] : null;
+  const activeResonance = result && activeClass ? resonanceForPreview(result, activeClass) : null;
+  const activeTrait = activeClass ? getClassTree(classIdFromFantasyClass(activeClass))[0] : null;
+  const activeFuturePath = result && activeClass && activeResonance
+    ? getFuturePathHint(activeResonance, activeClass)
+    : null;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="post-recall-screen">
@@ -264,57 +340,152 @@ export default function PostRecall() {
               <Text key={i} style={styles.systemLine}>{line}</Text>
             ))}
           </Animated.View>
+        ) : view === "chooser" ? (
+          <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-chooser">
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+              <Pressable style={styles.backLink} onPress={() => setView("result")} testID="post-recall-chooser-back">
+                <Ionicons name="chevron-back" size={16} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.backLinkTxt}>Back to result</Text>
+              </Pressable>
+              <Text style={styles.kicker}>SYSTEM: MANUAL OVERRIDE</Text>
+              <Text style={styles.qTitle}>Choose a Class</Text>
+              <Text style={styles.body}>
+                Any of the six pathways is available. This is a starting point, not a lock.
+              </Text>
+              <View style={styles.classGrid}>
+                {CLASS_IDS.map((id) => {
+                  const identity = CLASS_IDENTITIES[id];
+                  const isActive = activeClass === fantasyClassFromClassId(id);
+                  return (
+                    <Pressable
+                      key={id}
+                      style={[
+                        styles.classCard,
+                        { borderColor: isActive ? identity.color : COLORS.border },
+                        isActive && { backgroundColor: identity.color + "18" },
+                      ]}
+                      onPress={() => pickManualClass(id)}
+                      testID={`post-recall-chooser-${id}`}
+                    >
+                      <View style={[styles.classCardIcon, { backgroundColor: identity.color + "22" }]}>
+                        <Ionicons name={identity.icon as any} size={22} color={identity.color} />
+                      </View>
+                      <Text style={styles.classCardName}>{identity.name}</Text>
+                      <Text style={styles.classCardRole} numberOfLines={2}>{identity.role}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </Animated.View>
+        ) : view === "confirming" ? (
+          <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-confirming">
+            <Ionicons name="checkmark-circle-outline" size={32} color={COLORS.brand} />
+            {confirmMessages.slice(0, confirmMsgIndex + 1).map((line, i) => (
+              <Text key={i} style={styles.systemLine}>{line}</Text>
+            ))}
+          </Animated.View>
         ) : (
           <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-result">
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-              {result && (
+              {result && activeClass && activeIdentity && (
                 <>
                   <View style={styles.diagBlock}>
-                    <Text style={[styles.kicker, { color: CLASS_COLOR[result.primaryClass] }]}>
-                      {result.automated ? "SYSTEM: CLASS ASSIGNED" : "YOUR RECOMMENDED PATH"}
+                    <Text style={[styles.kicker, { color: activeIdentity.color }]}>
+                      {result.automated && activeIsPrimary
+                        ? "SYSTEM: CLASS ASSIGNED"
+                        : activeIsPrimary
+                        ? "YOUR RECOMMENDED PATH"
+                        : activeIsSecondary
+                        ? "ALTERNATE RESONANCE"
+                        : "MANUAL SELECTION"}
                     </Text>
                     <View style={styles.resultIcon}>
-                      <Ionicons name={CLASS_ICON[result.primaryClass] as any} size={28} color={CLASS_COLOR[result.primaryClass]} />
+                      <Ionicons name={activeIdentity.icon as any} size={28} color={activeIdentity.color} />
                     </View>
-                    <Text style={styles.pathTitle}>{result.primaryClass}</Text>
-                    <Text style={styles.body}>{CLASS_TAGLINE[result.primaryClass]}</Text>
+                    <Text style={styles.pathTitle}>{activeClass}</Text>
+                    <Text style={styles.flavorTitle}>{CLASS_FLAVOR_TITLE[activeClass]}</Text>
+                    <Text style={styles.body}>{CLASS_WHY_FITS[activeClass]}</Text>
                   </View>
-                  <View style={[styles.setupCard, { borderColor: CLASS_COLOR[result.primaryClass] + "40" }]}>
-                    <Text style={styles.setupCardTitle}>RECOMMENDED SETUP</Text>
+
+                  <View style={[styles.setupCard, { borderColor: activeIdentity.color + "40" }]}>
+                    <Text style={styles.setupCardTitle}>SYSTEM ANALYSIS</Text>
                     <View style={{ gap: SPACING.sm }}>
                       <View style={styles.setupRow}>
                         <Ionicons name="business-outline" size={14} color={COLORS.onSurfaceTertiary} />
                         <Text style={styles.setupLabel}>Modern Department Resonance:</Text>
-                        <Text style={styles.setupValue}>{formatResonance(result.primaryResonance)}</Text>
+                        <Text style={styles.setupValue}>{formatResonance(activeResonance || "")}</Text>
                       </View>
+                      {activeTrait && (
+                        <View style={styles.setupRow}>
+                          <Ionicons name="sparkles-outline" size={14} color={COLORS.onSurfaceTertiary} />
+                          <Text style={styles.setupLabel}>Starting Trait:</Text>
+                          <Text style={styles.setupValue}>{activeTrait.name}</Text>
+                        </View>
+                      )}
                       <View style={styles.setupRow}>
-                        <Ionicons name={CLASS_ICON[result.secondaryClass] as any} size={14} color={COLORS.onSurfaceTertiary} />
+                        <Ionicons name={CLASS_IDENTITIES[classIdFromFantasyClass(result.secondaryClass)].icon as any} size={14} color={COLORS.onSurfaceTertiary} />
                         <Text style={styles.setupLabel}>Second Closest Fit:</Text>
                         <Text style={styles.setupValue}>{result.secondaryClass}</Text>
                       </View>
+                      {activeFuturePath && (
+                        <View style={styles.setupRow}>
+                          <Ionicons name="telescope-outline" size={14} color={COLORS.onSurfaceTertiary} />
+                          <Text style={styles.setupLabel}>Future Path Hint:</Text>
+                          <Text style={styles.setupValue}>{activeFuturePath}</Text>
+                        </View>
+                      )}
                     </View>
+                    {activeTrait && (
+                      <Text style={styles.traitDesc}>{activeTrait.description}</Text>
+                    )}
                   </View>
+
                   <Text style={styles.note}>
-                    This is a recommendation, {player?.name || "Healer"} — not a lock. Your class,
-                    depth, and pathway keep evolving as you train at the University.
+                    This is a starting pathway, {player?.name || "Healer"} — not a lock. Your
+                    class stays freely re-trainable from the Class Tree, and every future path
+                    keeps evolving as you train at the University.
                   </Text>
+
                   <Pressable
                     style={[styles.button, submitting && styles.buttonDisabled]}
-                    onPress={confirmContinue}
+                    onPress={beginConfirm}
                     disabled={submitting}
-                    testID="post-recall-diagnostic-continue"
+                    testID="post-recall-register-class"
                   >
-                    <Text style={styles.buttonTxt}>CONTINUE</Text>
+                    <Text style={styles.buttonTxt}>
+                      {activeIsPrimary ? `ACCEPT \u2014 REGISTER ${activeClass.toUpperCase()}` : `CONFIRM \u2014 REGISTER ${activeClass.toUpperCase()}`}
+                    </Text>
                   </Pressable>
-                  {!result.automated && (
-                    <Pressable
-                      style={styles.secondaryBtn}
-                      testID="post-recall-class-change"
-                      onPress={changeAnswers}
-                    >
-                      <Text style={styles.secondaryTxt}>CHANGE ANSWERS</Text>
+
+                  <View style={{ gap: SPACING.xs, width: "100%", alignItems: "center" }}>
+                    {!activeIsSecondary && (
+                      <Pressable style={styles.secondaryBtn} testID="post-recall-preview-second-fit" onPress={previewSecondFit}>
+                        <Text style={styles.secondaryTxt}>REVIEW SECOND CLOSEST FIT — {result.secondaryClass.toUpperCase()}</Text>
+                      </Pressable>
+                    )}
+                    {!activeIsPrimary && (
+                      <Pressable style={styles.secondaryBtn} testID="post-recall-preview-recommended" onPress={previewRecommended}>
+                        <Text style={styles.secondaryTxt}>BACK TO RECOMMENDED — {result.primaryClass.toUpperCase()}</Text>
+                      </Pressable>
+                    )}
+                    <Pressable style={styles.secondaryBtn} testID="post-recall-open-chooser" onPress={openChooser}>
+                      <Text style={styles.secondaryTxt}>CHOOSE A DIFFERENT CLASS</Text>
                     </Pressable>
-                  )}
+                    {!result.automated && (
+                      <Pressable style={styles.secondaryBtn} testID="post-recall-class-change" onPress={changeAnswers}>
+                        <Text style={styles.secondaryTxt}>CHANGE ANSWERS</Text>
+                      </Pressable>
+                    )}
+                    <Pressable
+                      style={styles.automatedBtnCompact}
+                      onPress={runAutomatedAssignment}
+                      testID="post-recall-automated-assignment-result"
+                    >
+                      <Ionicons name="shuffle-outline" size={14} color={COLORS.onSurfaceTertiary} />
+                      <Text style={styles.automatedCompactTxt}>Automated Class Assignment instead</Text>
+                    </Pressable>
+                  </View>
                 </>
               )}
             </ScrollView>
@@ -335,6 +506,7 @@ const styles = StyleSheet.create({
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 2, fontWeight: "700", textAlign: "center", marginTop: SPACING.xs },
   qTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "600", textAlign: "center", lineHeight: 27 },
   pathTitle: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", textAlign: "center" },
+  flavorTitle: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600", textAlign: "center", fontStyle: "italic" },
   body: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: SPACING.xs },
   note: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center" },
   input: {
@@ -402,9 +574,25 @@ const styles = StyleSheet.create({
   setupRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
   setupLabel: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   setupValue: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", flexShrink: 1 },
+  traitDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, marginTop: SPACING.sm },
   button: { backgroundColor: COLORS.brand, paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, borderRadius: RADIUS.md, marginTop: SPACING.md, width: "100%", alignItems: "center" },
   buttonDisabled: { opacity: 0.6 },
-  buttonTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
-  secondaryBtn: { alignItems: "center", paddingVertical: SPACING.md, marginTop: SPACING.xs },
-  secondaryTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 1, fontWeight: "600" },
+  buttonTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 1.5, textAlign: "center" },
+  secondaryBtn: { alignItems: "center", paddingVertical: SPACING.sm },
+  secondaryTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 0.5, fontWeight: "600", textAlign: "center" },
+  backLink: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" },
+  backLinkTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
+  classGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, width: "100%", justifyContent: "space-between" },
+  classCard: {
+    width: "48%",
+    borderWidth: 1.5,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  classCardIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  classCardName: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  classCardRole: { color: COLORS.onSurfaceTertiary, fontSize: 11, textAlign: "center", lineHeight: 15 },
 });

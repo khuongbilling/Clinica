@@ -213,6 +213,7 @@ type Ctx = {
   completeIdentityRestore: (name: string) => Promise<void>;
   completeDiagnosticIntro: () => Promise<void>;
   applyClassDiagnostic: (profile: ClassDiagnosticInput) => Promise<void>;
+  confirmClassDiagnostic: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
 };
 
 // Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
@@ -1037,13 +1038,34 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
-  // Reserved for Push 4+: applies a final class result onto the EXISTING
-  // player (switches aptitude/class identity, learning + difficulty
-  // settings, grants the new aptitude's starting hero, realigns the
-  // account-level class tree). Not called by the current post-recall flow
-  // (Push 3), which only shows the quiz/automated-assignment RESULT and
-  // completes via completeDiagnosticIntro() above without saving a class —
-  // mapping the 6 quiz classes onto the 3 backend aptitudes is future work.
+  // Push 4 — the actual "save to profile" step following the post-recall
+  // class-result screen. This is now the LIVE completion path called by
+  // app/post-recall.tsx: it registers the chosen class onto class_tree_id
+  // (the exact same field Profile/PlayerHeader/Class Tree already read —
+  // reuses setPlayerClass's validation) AND marks diagnostic_intro_seen in
+  // one atomic update, so the player is never left in a half-confirmed
+  // state. Deliberately does NOT touch aptitude/learning_profile/difficulty/
+  // heroes_owned/active_team — the choice is meant to be forgiving and
+  // non-permanent (freely re-switchable later from the Class Tree screen),
+  // so no hero grants or identity fields are altered here.
+  const confirmClassDiagnostic = useCallback(async (classId: ClassId) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    if (!CLASS_IDS.includes(classId)) return { ok: false, message: 'Unknown class.' };
+    const next: PlayerState = { ...base, class_tree_id: classId, diagnostic_intro_seen: true };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Class registered — ${classId[0].toUpperCase()}${classId.slice(1)}.` };
+  }, [updateState]);
+
+  // Reserved for a future push: applies a full identity result onto the
+  // EXISTING player (switches aptitude/class identity, learning +
+  // difficulty settings, grants the new aptitude's starting hero, realigns
+  // the account-level class tree). NOT called by the current post-recall
+  // flow — Push 4 registers the class via confirmClassDiagnostic (above)
+  // only, and deliberately leaves aptitude/learning-profile/hero-grant
+  // fields untouched. Mapping the 6 quiz classes onto the 3 backend
+  // aptitudes (if ever needed) remains future work.
   const applyClassDiagnostic = useCallback(async (profile: ClassDiagnosticInput) => {
     const base = playerRef.current;
     if (!base) return;
@@ -1072,8 +1094,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic, confirmClassDiagnostic,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
