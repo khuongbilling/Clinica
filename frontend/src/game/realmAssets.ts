@@ -1,11 +1,31 @@
 import { Image as RNImage } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
-// Every image the Realm/Sanctuary screen renders. Kept in one place so the
-// loading screen can warm the browser/native cache ahead of time instead of the
-// map fetching + decoding ~21MB of PNGs on mount (which is what made the Realm
-// feel slow to open on the first visit).
-const REALM_IMAGE_MODULES: number[] = [
+// Prefetch (download + cache) a list of image modules. Resolves each require()
+// module to a URI, then warms the expo-image cache. Best-effort — a failure must
+// never block or crash the caller. (expo-asset is not installed; expo-image's
+// prefetch is the cross-platform way to warm the cache here.)
+export async function prefetchModules(modules: number[]): Promise<void> {
+  const uris = modules
+    .map((m) => {
+      try {
+        return RNImage.resolveAssetSource(m)?.uri ?? null;
+      } catch {
+        return null;
+      }
+    })
+    .filter((u): u is string => !!u);
+  try {
+    await ExpoImage.prefetch(uris);
+  } catch {
+    // Ignore — the images will still load lazily when rendered.
+  }
+}
+
+// Every image the Realm/Sanctuary screen renders. Kept in one place so it can be
+// warmed ahead of time instead of the map fetching + decoding ~21MB of PNGs on
+// mount (which is what made the Realm feel slow to open on the first visit).
+export const REALM_IMAGE_MODULES: number[] = [
   // Terrain textures (SVG pattern fills in IsoTerrain)
   require("../../assets/realm/terrain/grass.png"),
   require("../../assets/realm/terrain/meadow.png"),
@@ -32,26 +52,9 @@ const REALM_IMAGE_MODULES: number[] = [
 
 let preloadPromise: Promise<void> | null = null;
 
-// Prefetch (download + cache) all realm images. Idempotent: the work runs once
-// per session and subsequent callers await the same promise. Best-effort — a
-// prefetch failure must never block the Realm from opening.
+// Warm just the Realm's images. Idempotent (single shared promise). Used by the
+// Realm loading screen so it can reveal the map once the textures are ready.
 export function preloadRealmAssets(): Promise<void> {
-  if (preloadPromise) return preloadPromise;
-  preloadPromise = (async () => {
-    const uris = REALM_IMAGE_MODULES
-      .map((m) => {
-        try {
-          return RNImage.resolveAssetSource(m)?.uri ?? null;
-        } catch {
-          return null;
-        }
-      })
-      .filter((u): u is string => !!u);
-    try {
-      await ExpoImage.prefetch(uris);
-    } catch {
-      // Ignore — the images will still load lazily when rendered.
-    }
-  })();
+  if (!preloadPromise) preloadPromise = prefetchModules(REALM_IMAGE_MODULES);
   return preloadPromise;
 }

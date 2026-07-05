@@ -16,6 +16,9 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   mindkeeper: require('../../assets/heroes/mindkeeper.png'),
 };
 
+// All portrait modules, for cache preloading at game start.
+export const HERO_SPRITE_MODULES = Object.values(SPRITES);
+
 export function getHeroSprite(heroId: string): ImageSourcePropType | undefined {
   return SPRITES[heroId];
 }

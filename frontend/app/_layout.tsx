@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { PlayerProvider } from "@/src/game/store";
+import { preloadTabAssets } from "@/src/game/tabAssets";
 import { TutorialProvider } from "@/src/game/tutorialStore";
 import { TestSessionProvider } from "@/src/game/testSession";
 import { TestPanel } from "@/src/components/TestPanel";
@@ -23,6 +24,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
+
+  useEffect(() => {
+    // Warm every bottom-tab image once at launch so tab switches are instant.
+    preloadTabAssets();
+  }, []);
 
   if (!loaded && !error) return null;
 

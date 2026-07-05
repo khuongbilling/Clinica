@@ -11,6 +11,9 @@ const BATTLE_SPRITES: Record<string, any> = {
   mindkeeper: require('../../assets/heroes/battle/mindkeeper.png'),
 };
 
+// All battle-sprite modules, for cache preloading at game start.
+export const HERO_BATTLE_SPRITE_MODULES = Object.values(BATTLE_SPRITES);
+
 export function getHeroBattleSprite(heroId: string): any | null {
   return BATTLE_SPRITES[heroId] ?? null;
 }

@@ -1,13 +1,27 @@
 ---
-name: Clinica Realm loading screen
-description: Why the Realm was slow to open and the durable constraints of its loading screen.
+name: Clinica asset preloading (Realm loading screen + launch tab preload)
+description: Why the Realm was slow, the durable constraints of image preloading, and the two-tier preload design.
 ---
 
-# Realm loading screen + asset preload
+# Asset preloading (Realm loading screen + launch-time tab preload)
 
 **Root cause of Realm slowness:** `/kingdom` fetches + decodes ~21MB of PNGs on mount (terrain
 textures used as SVG pattern fills + building sprites). Uncached first visit = visible lag. Any new
 realm image should be added to the preload list so it's warmed too.
+
+**Two-tier preload design:**
+- `prefetchModules(modules)` in `realmAssets.ts` is the single shared best-effort helper
+  (resolve require()→uri via RNImage.resolveAssetSource, then expo-image Image.prefetch). Reuse it.
+- `preloadTabAssets()` (`tabAssets.ts`) runs once at app launch from `_layout.tsx` useEffect,
+  warming EVERY bottom-tab image: home_hub_bg + hero portraits + hero battle sprites + all realm
+  modules. Fire-and-forget, memoized module-level promise.
+- `preloadRealmAssets()` stays separate so the Realm loading screen has its own awaitable; the two
+  promises can double-warm realm images if Realm opens before launch preload finishes, but
+  expo-image dedups by URL so it's harmless redundant work, not a bug.
+- **Avoid path drift:** pull hero image lists from the existing require maps
+  (`HERO_SPRITE_MODULES` = Object.values(SPRITES), `HERO_BATTLE_SPRITE_MODULES`) rather than
+  re-typing paths. When new art is added to any tab, append to the exported module map/list.
+- SHOP + FACTION currently render no static PNGs (icons/text only) — nothing to preload there yet.
 
 **Durable constraints:**
 - expo-asset is NOT installed; warm the image cache with expo-image `Image.prefetch`, resolving
