@@ -1021,9 +1021,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
-  // Legacy: marks the diagnostic sub-step as seen WITHOUT assigning a class.
-  // Kept for backward compatibility; the live post-recall flow uses
-  // applyClassDiagnostic (below) which sets diagnostic_intro_seen itself.
+  // Push 3: marks the post-recall diagnostic sub-step as seen WITHOUT
+  // assigning a class. This is the CURRENT live completion action used by
+  // app/post-recall.tsx — Push 3 only surfaces the personality/career quiz
+  // result (primary/second-closest class + resonance) for the player to
+  // read; it deliberately does NOT persist a class onto the player yet,
+  // since the backend/store only model 3 aptitudes (guardian/sage/warden)
+  // and mapping 6 quiz classes onto those is Push 4+ work.
   // Idempotent no-op if already seen.
   const completeDiagnosticIntro = useCallback(async () => {
     const base = playerRef.current;
@@ -1033,12 +1037,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
-  // Post-recall class diagnostic — applies the quiz result onto the EXISTING
-  // player: switches aptitude/class identity, learning + difficulty settings,
-  // grants the new aptitude's starting hero (added to roster + team, deduped),
-  // realigns the account-level class tree, and marks the diagnostic done so
-  // the intro sub-step is never re-shown. Only class-relevant fields are
-  // touched — all existing progress (crowns, heroes, tutorial state) is kept.
+  // Reserved for Push 4+: applies a final class result onto the EXISTING
+  // player (switches aptitude/class identity, learning + difficulty
+  // settings, grants the new aptitude's starting hero, realigns the
+  // account-level class tree). Not called by the current post-recall flow
+  // (Push 3), which only shows the quiz/automated-assignment RESULT and
+  // completes via completeDiagnosticIntro() above without saving a class —
+  // mapping the 6 quiz classes onto the 3 backend aptitudes is future work.
   const applyClassDiagnostic = useCallback(async (profile: ClassDiagnosticInput) => {
     const base = playerRef.current;
     if (!base) return;
