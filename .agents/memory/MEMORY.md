@@ -31,3 +31,4 @@
 - [Clinica Realm Sanctuary Builder](clinica-realm-sanctuary-builder.md) — Realm is non-combat build/heal/research base, never attack/defend/raid; new realms start empty except Atrium (`prebuilt` flag).
 - [Equipment & Clinical Supplies foundation](equipment-supplies-foundation.md) — equipment.ts is a display-only catalog (status "future", no PlayerState/combat wiring); keep it that way until a dedicated push adds real equipping.
 - [Clinica Class Tree foundation](clinica-class-tree-foundation.md) — new classTree.ts is deliberately separate from legacy progression.ts (battle-wired PlayerClass/getClassBattleBonuses); do not merge until a dedicated battle-integration push.
+- [Clinica Ward Operations mode hub](clinica-mode-hub.md) — shared modeHub.ts + ModeCard drive Shift/University/Faction future-mode placeholders; coming-soon taps always Alert, never route/stamina/reward.

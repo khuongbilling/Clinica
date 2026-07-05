@@ -2,12 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { ModeCard } from "@/src/components/ModeCard";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
+import { UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const MENU: { id: string; title: string; desc: string; icon: string; route?: string }[] = [
@@ -107,6 +109,23 @@ export default function UniversityHubScreen() {
           </Pressable>
         ))}
 
+        <Text style={styles.sectionHeading}>Future Learning</Text>
+        <View style={{ gap: SPACING.sm }}>
+          {UNIVERSITY_FUTURE_MODES.map((m) => (
+            <ModeCard
+              key={m.id}
+              mode={m}
+              testID={`university-future-${m.id}`}
+              onPress={() =>
+                Alert.alert(
+                  `${m.title} — Coming Soon`,
+                  m.subtitle + "\n\nThis feature is still in development.",
+                )
+              }
+            />
+          ))}
+        </View>
+
         <View style={styles.footNote}>
           <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
           <Text style={styles.footNoteTxt}>
@@ -160,4 +179,5 @@ const styles = StyleSheet.create({
   cardDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
+  sectionHeading: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.md },
 });

@@ -2,16 +2,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ENEMIES } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
+import { ModeCard } from "@/src/components/ModeCard";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
+import {
+  CLINICAL_CHALLENGE_MODES, FUTURE_EVENT_MODES, KNOWLEDGE_CHALLENGE_MODES,
+  ModeCardDef, WARD_SHIFT_MODE, WELLNESS_MODES,
+} from "@/src/game/modeHub";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function ShiftPage() {
@@ -21,6 +26,25 @@ export default function ShiftPage() {
   const [blocked, setBlocked] = useState(false);
   const launchingRef = useRef(false);
   const canPlay = stamina >= ENCOUNTER_COST;
+
+  const bossUnlocked = (player?.bosses_defeated?.length ?? 0) > 0 || (player?.runs_completed ?? 0) >= 1;
+
+  const handleModePress = (mode: ModeCardDef) => {
+    if (mode.status === "coming_soon" || mode.status === "locked") {
+      Alert.alert(
+        mode.status === "locked" ? "Not Yet Unlocked" : `${mode.title} — Coming Soon`,
+        mode.status === "locked"
+          ? mode.unlockRequirement || "This mode isn't unlocked yet."
+          : mode.subtitle + "\n\nThis mode is still in development — no stamina is spent and no rewards are given yet.",
+      );
+      return;
+    }
+    if (mode.id === "boss-ward" && !bossUnlocked) {
+      Alert.alert("The Fading Core is Sealed", "Complete at least one shift to break the seal and confront Lord Imbalance.");
+      return;
+    }
+    if (mode.route) router.push(mode.route as any);
+  };
 
   const dailyShift = useMemo(() => {
     if (!player) return [];
@@ -51,6 +75,12 @@ export default function ShiftPage() {
     setTimeout(() => { launchingRef.current = false; }, 1000);
   };
 
+  const clinicalModes = CLINICAL_CHALLENGE_MODES.map((m) =>
+    m.id === "boss-ward" && !bossUnlocked
+      ? { ...m, unlockRequirement: "Complete at least one shift to unlock." }
+      : m,
+  );
+
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Header */}
@@ -59,18 +89,16 @@ export default function ShiftPage() {
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.kicker}>DAILY DUTY</Text>
-          <Text style={styles.title}>Today's Shift</Text>
+          <Text style={styles.kicker}>WARD OPERATIONS</Text>
+          <Text style={styles.title}>Choose Your Mode</Text>
         </View>
         <StaminaPill player={player} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.lead}>
-          The ward calls. Three cases await — each one a disease to confront, a patient to stabilize. Choose your encounter.
+          Your mission control for every clinical mission, challenge, and off-shift activity. New modes will appear here as they open.
         </Text>
-
-        <RewardPreview mode="Ward Shift" />
 
         {!canPlay && (
           <View style={styles.staminaWarn}>
@@ -88,6 +116,13 @@ export default function ShiftPage() {
           </View>
         )}
 
+        {/* Continue — Ward Shift */}
+        <Text style={styles.section}>Continue</Text>
+        <ModeCard mode={WARD_SHIFT_MODE} onPress={() => {}} testID="mode-ward-shift" />
+
+        <RewardPreview mode="Ward Shift" />
+
+        <Text style={styles.sectionHint}>Today's Cases — tap one to begin</Text>
         {dailyShift.map((e, idx) => {
           const sprite = getEnemySprite(e.id);
           const accent = ELEMENT_COLORS[e.primarySystem] ?? COLORS.brand;
@@ -135,10 +170,42 @@ export default function ShiftPage() {
           );
         })}
 
+        {/* Clinical Challenges */}
+        <Text style={styles.section}>Clinical Challenges</Text>
+        <View style={styles.mediumGrid}>
+          {clinicalModes.map((m) => (
+            <ModeCard key={m.id} mode={m} onPress={() => handleModePress(m)} testID={`mode-${m.id}`} />
+          ))}
+        </View>
+
+        {/* Knowledge Challenges */}
+        <Text style={styles.section}>Knowledge Challenges</Text>
+        <View style={styles.smallGrid}>
+          {KNOWLEDGE_CHALLENGE_MODES.map((m) => (
+            <ModeCard key={m.id} mode={m} onPress={() => handleModePress(m)} testID={`mode-${m.id}`} />
+          ))}
+        </View>
+
+        {/* Wellness / Off-Shift */}
+        <Text style={styles.section}>Wellness / Off-Shift</Text>
+        <View style={styles.mediumGrid}>
+          {WELLNESS_MODES.map((m) => (
+            <ModeCard key={m.id} mode={m} onPress={() => handleModePress(m)} testID={`mode-${m.id}`} />
+          ))}
+        </View>
+
+        {/* Future Events */}
+        <Text style={styles.section}>Future Events</Text>
+        <View style={styles.smallGrid}>
+          {FUTURE_EVENT_MODES.map((m) => (
+            <ModeCard key={m.id} mode={m} onPress={() => handleModePress(m)} testID={`mode-${m.id}`} />
+          ))}
+        </View>
+
         <View style={styles.footNote}>
           <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
           <Text style={styles.footNoteTxt}>
-            Shifts refresh as you complete runs. Complete all 3 to advance the kingdom.
+            Coming Soon modes are placeholders only — tapping them never spends stamina or grants rewards.
           </Text>
         </View>
       </ScrollView>
@@ -180,4 +247,8 @@ const styles = StyleSheet.create({
   enterBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceTertiary },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },
+  section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.md, marginBottom: 2 },
+  sectionHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "600", marginTop: SPACING.xs, marginBottom: -SPACING.xs },
+  mediumGrid: { gap: SPACING.sm },
+  smallGrid: { gap: SPACING.sm },
 });

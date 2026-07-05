@@ -9,29 +9,34 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const PREVIEW_ITEMS: { icon: string; title: string; desc: string }[] = [
   {
+    icon: "list-outline",
+    title: "Faction Missions",
+    desc: "Group objectives that reward the whole faction — no solo grinding required.",
+  },
+  {
     icon: "planet-outline",
-    title: "World Bosses",
+    title: "World Boss",
     desc: "Band together with other healer factions to bring down colossal corruption events too large for one team alone.",
   },
   {
     icon: "pulse-outline",
-    title: "Epidemic Events",
+    title: "Epidemic Response",
     desc: "Time-limited outbreaks that call every faction to respond, with shared progress toward a cure.",
   },
   {
-    icon: "shield-outline",
-    title: "Territory Support",
-    desc: "Back your faction's standing in the Kingdom by contributing to collaborative defense goals.",
+    icon: "medkit-outline",
+    title: "Relief Campaigns",
+    desc: "Contribute supplies and effort toward Kingdom-wide relief goals alongside your faction.",
   },
   {
-    icon: "people-circle-outline",
-    title: "Collaborative Goals",
-    desc: "Group objectives that reward the whole faction — no solo grinding required.",
+    icon: "podium-outline",
+    title: "Faction Rankings",
+    desc: "Climb a leaderboard of allied factions based on collective contribution and standing.",
   },
   {
     icon: "diamond-outline",
-    title: "Rare Material Rewards",
-    desc: "Faction participation will unlock crafting materials not available anywhere else.",
+    title: "Alliance Rewards",
+    desc: "Faction participation will unlock crafting materials and rewards not available anywhere else.",
   },
 ];
 
