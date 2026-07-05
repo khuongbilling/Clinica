@@ -12,8 +12,6 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { IsoTile } from "@/src/components/realm/IsoTile";
 import { IsoBuildingSprite } from "@/src/components/realm/IsoBuildingSprite";
 import { IsoTerrain } from "@/src/components/realm/IsoTerrain";
-import { RealmLoadingScreen } from "@/src/components/realm/RealmLoadingScreen";
-import { preloadRealmAssets } from "@/src/game/realmAssets";
 import {
   ATRIUM_UNLOCKS, REALM_BUILDINGS, REALM_DISTRICTS, DECORATIONS,
   REALM_BAZAAR_NOTE, REALM_CUSTOMIZATION_NOTE, REALM_HERO_ASSIGNMENT_NOTE, REALM_LOOP_NOTE,
@@ -83,11 +81,6 @@ function districtColorFor(id: string | null | undefined): string {
 
 type Placement = { kind: "building" | "decoration"; id: string; isMove: boolean; origin: { row: number; col: number } | null };
 
-// Only show the full illustrated loading screen the first time the Realm opens
-// in a session; once assets are cached, later visits are instant.
-let realmAssetsWarmed = false;
-const MIN_LOADING_MS = 2200;
-
 export default function KingdomScreen() {
   const router = useRouter();
   const { player, setRealmLayout } = usePlayer();
@@ -101,24 +94,6 @@ export default function KingdomScreen() {
   const [showDistrictInfo, setShowDistrictInfo] = useState<string | null>(null);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
-  const [assetsReady, setAssetsReady] = useState(realmAssetsWarmed);
-
-  useEffect(() => {
-    if (realmAssetsWarmed) return;
-    let active = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const started = Date.now();
-    preloadRealmAssets().finally(() => {
-      if (!active) return;
-      const wait = Math.max(0, MIN_LOADING_MS - (Date.now() - started));
-      timer = setTimeout(() => {
-        if (!active) return;
-        realmAssetsWarmed = true;
-        setAssetsReady(true);
-      }, wait);
-    });
-    return () => { active = false; if (timer) clearTimeout(timer); };
-  }, []);
 
   useEffect(() => {
     logEvent('kingdom_screen_returned', 'kingdom');
@@ -293,10 +268,6 @@ export default function KingdomScreen() {
       setBanner(`${decoration?.name || "Decoration"} placed.`);
     }
     exitPlacement();
-  }
-
-  if (!assetsReady) {
-    return <RealmLoadingScreen />;
   }
 
   return (
