@@ -81,6 +81,19 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.realm_decor || decorIsLegacy) {
     out = { ...out, realm_decor: {} };
   }
+  // Push 5.6 — backfill a terrain seed for players created before the per-player
+  // terrain system. Derive it deterministically from the player id (not random)
+  // so a legacy player's Realm stays identical across every refresh even if the
+  // seed is never persisted back to the backend record.
+  if (!out.realm_seed || out.realm_seed <= 0) {
+    const src = String(out.id || 'clinica');
+    let h = 2166136261;
+    for (let i = 0; i < src.length; i++) {
+      h ^= src.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    out = { ...out, realm_seed: (h >>> 0) % 2_000_000_000 + 1 };
+  }
   if (out.player_level == null) {
     out = { ...out, player_level: playerLevelFromXp(out.xp || 0).level };
   }
@@ -288,6 +301,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     stamina: MAX_STAMINA,
     stamina_updated_at: new Date().toISOString(),
     wellness: defaultWellnessState(),
+    realm_seed: Math.floor(Math.random() * 2_000_000_000) + 1,
   };
 }
 

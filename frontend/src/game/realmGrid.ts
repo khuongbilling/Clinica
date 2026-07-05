@@ -136,6 +136,97 @@ export function getCellLabel(cell: PlotCell): string {
 export const GRID_CELLS: PlotCell[] = buildGrid();
 const CELL_BY_ID = new Map(GRID_CELLS.map((c) => [c.id, c]));
 
+// ---------------------------------------------------------------------------
+// Push 5.6 — per-player RANDOM terrain. Every player gets a unique-looking
+// Realm generated deterministically from their `realm_seed`. This only remaps
+// each cell's cosmetic `terrain` texture — it NEVER changes `plotType`, so
+// what/where a building can be placed stays identical for every player (fair
+// progression). Buildable ground varies across grass/meadow/path; natural
+// blockers (border ring, forest, water) vary across forest/water/mountain via
+// smooth value-noise so ponds and groves cluster naturally instead of looking
+// like random static.
+// ---------------------------------------------------------------------------
+
+function hash2(x: number, y: number, seed: number): number {
+  let h = (x * 374761393 + y * 668265263 + seed * 2246822519) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 1274126177) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+// Smooth 2D value noise in [0,1] sampled at a chosen frequency, so terrain
+// forms soft blobs/regions rather than per-cell speckle.
+function valueNoise(row: number, col: number, seed: number, freq: number): number {
+  const fx = col / freq;
+  const fy = row / freq;
+  const x0 = Math.floor(fx), y0 = Math.floor(fy);
+  const tx = fx - x0, ty = fy - y0;
+  const sx = tx * tx * (3 - 2 * tx);
+  const sy = ty * ty * (3 - 2 * ty);
+  const n00 = hash2(x0, y0, seed);
+  const n10 = hash2(x0 + 1, y0, seed);
+  const n01 = hash2(x0, y0 + 1, seed);
+  const n11 = hash2(x0 + 1, y0 + 1, seed);
+  const nx0 = n00 + (n10 - n00) * sx;
+  const nx1 = n01 + (n11 - n01) * sx;
+  return nx0 + (nx1 - nx0) * sy;
+}
+
+// Returns a map of cellId -> terrain texture for the given player seed.
+// Callers overlay this onto GRID_CELLS (overriding only `terrain`).
+export function generatePlayerTerrain(seed: number): Record<string, TerrainType> {
+  const s = seed && seed > 0 ? seed >>> 0 : 1;
+  const map: Record<string, TerrainType> = {};
+  for (const cell of GRID_CELLS) {
+    if (cell.plotType === "buildable") {
+      // Open ground: soft regions of grass, flowery meadow, and worn dirt.
+      const n = valueNoise(cell.row, cell.col, s, 3.5);
+      const m = valueNoise(cell.row, cell.col, s ^ 0x9e3779b9, 5.5);
+      let t: TerrainType;
+      if (cell.terrain === "stone") {
+        t = "stone"; // keep the central courtyard reading as paved ground
+      } else if (m > 0.72) {
+        t = "path";
+      } else if (n > 0.55) {
+        t = "meadow";
+      } else {
+        t = "grass";
+      }
+      map[cell.id] = t;
+    } else if (cell.plotType === "decoration") {
+      map[cell.id] = "path";
+    } else {
+      // Blocked cells: keep the outer water ring readable, but let inner
+      // blockers vary between groves (forest), ponds (water) and rock outcrops.
+      const onBorder =
+        cell.row === 0 || cell.row === GRID_ROWS - 1 || cell.col === 0 || cell.col === GRID_COLS - 1;
+      if (onBorder) {
+        // Top/bottom edges become mountain ridges, side edges stay water,
+        // with occasional variation so the frame isn't perfectly uniform.
+        const edgeNoise = valueNoise(cell.row, cell.col, s ^ 0x51ed270b, 4);
+        if (cell.row === 0 || cell.row === GRID_ROWS - 1) {
+          map[cell.id] = edgeNoise > 0.7 ? "forest" : "mountain";
+        } else {
+          map[cell.id] = edgeNoise > 0.82 ? "mountain" : "water";
+        }
+      } else {
+        const n = valueNoise(cell.row, cell.col, s ^ 0x27d4eb2f, 2.6);
+        map[cell.id] = n > 0.62 ? "water" : n > 0.34 ? "forest" : "mountain";
+      }
+    }
+  }
+  return map;
+}
+
+// Applies a generated terrain map onto the static grid, returning a fresh
+// PlotCell[] with only `terrain` overridden (plotType/lock/district intact).
+export function cellsWithTerrain(terrain: Record<string, TerrainType>): PlotCell[] {
+  return GRID_CELLS.map((c) => {
+    const t = terrain[c.id];
+    return t && t !== c.terrain ? { ...c, terrain: t } : c;
+  });
+}
+
 export function getCell(row: number, col: number): PlotCell | undefined {
   return CELL_BY_ID.get(cellId(row, col));
 }

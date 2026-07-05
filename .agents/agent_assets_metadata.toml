@@ -480,3 +480,45 @@ id = "77tnf2RWjHoGFnR6ig4Tf"
 uri = "file://frontend/assets/realm/buildings/faction_embassy.png"
 type = "image"
 title = "faction_embassy"
+
+[[generated]]
+id = "B9fIKoyhaO3uxa1LgJaT_"
+uri = "file://frontend/assets/realm/terrain/grass.png"
+type = "image"
+title = "grass tile"
+
+[[generated]]
+id = "uv9nDCH2__oAvGT4wZilB"
+uri = "file://frontend/assets/realm/terrain/meadow.png"
+type = "image"
+title = "meadow tile"
+
+[[generated]]
+id = "KWs2J8_fpkogF4elEIeL6"
+uri = "file://frontend/assets/realm/terrain/path.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "krtfHvgJmwhH48_VCrVcd"
+uri = "file://frontend/assets/realm/terrain/water.png"
+type = "image"
+title = "water tile"
+
+[[generated]]
+id = "pQPZDBjWccsS8HaKUsHF-"
+uri = "file://frontend/assets/realm/terrain/forest.png"
+type = "image"
+title = "forest canopy tile"
+
+[[generated]]
+id = "uBTXcyOh8SBwAU6-gSXet"
+uri = "file://frontend/assets/realm/terrain/mountain.png"
+type = "image"
+title = "mountain rock tile"
+
+[[generated]]
+id = "huv_ZF_w7Qx0jO3P9Qjvp"
+uri = "file://frontend/assets/realm/terrain/stone.png"
+type = "image"
+title = "stone courtyard tile"

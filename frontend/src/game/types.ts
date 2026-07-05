@@ -187,4 +187,9 @@ export interface PlayerState {
   // Both are cosmetic/layout-only; they never gate gameplay.
   realm_layout?: Record<string, string>;
   realm_decor?: Record<string, string>;
+  // Push 5.6 — per-player random terrain seed. Assigned once at player
+  // creation; drives a deterministic, unique terrain-texture distribution
+  // for this player's Realm (see generatePlayerTerrain). Purely cosmetic —
+  // never changes what/where a building can be placed.
+  realm_seed?: number;
 }

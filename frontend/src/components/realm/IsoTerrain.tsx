@@ -1,5 +1,5 @@
 import * as RNSvg from "react-native-svg";
-import type { PlotCell } from "@/src/game/realmGrid";
+import type { PlotCell, TerrainType } from "@/src/game/realmGrid";
 import { ISO_TILE_W, ISO_TILE_H, IsoCanvas } from "@/src/game/realmIso";
 
 // react-native-svg 15.x ships class-component typings that React 19's stricter
@@ -7,30 +7,46 @@ import { ISO_TILE_W, ISO_TILE_H, IsoCanvas } from "@/src/game/realmIso";
 // we alias the primitives through React.ComponentType to satisfy tsc.
 const Svg = RNSvg.default as unknown as React.ComponentType<any>;
 const Polygon = RNSvg.Polygon as unknown as React.ComponentType<any>;
-const Circle = RNSvg.Circle as unknown as React.ComponentType<any>;
-const Ellipse = RNSvg.Ellipse as unknown as React.ComponentType<any>;
-const Line = RNSvg.Line as unknown as React.ComponentType<any>;
 const G = RNSvg.G as unknown as React.ComponentType<any>;
+const Defs = RNSvg.Defs as unknown as React.ComponentType<any>;
+const Pattern = RNSvg.Pattern as unknown as React.ComponentType<any>;
+const SvgImage = RNSvg.Image as unknown as React.ComponentType<any>;
 
-// Height (in px) of the extruded 3D block below each ground tile's top face.
-// The top face stays exactly where the flat tile used to be, so buildings still
-// anchor correctly — the block only adds visible thickness downward.
+// Donghua-style painted terrain textures. These REPLACE the old flat SVG color
+// fills — each diamond plot is now filled with a hand-painted illustration
+// (grass, flowery meadow, dirt path, water, forest canopy, rock, stone court)
+// clipped to the tile shape. The patterns are tiled in screen space so adjacent
+// same-terrain tiles read as one continuous painted field, not repeated stamps.
+const TEXTURES: Record<TerrainType | "road", any> = {
+  grass: require("../../../assets/realm/terrain/grass.png"),
+  meadow: require("../../../assets/realm/terrain/meadow.png"),
+  path: require("../../../assets/realm/terrain/path.png"),
+  water: require("../../../assets/realm/terrain/water.png"),
+  forest: require("../../../assets/realm/terrain/forest.png"),
+  mountain: require("../../../assets/realm/terrain/mountain.png"),
+  stone: require("../../../assets/realm/terrain/stone.png"),
+  road: require("../../../assets/realm/terrain/path.png"),
+};
+
+// Skirt (extruded 3D side face) colors — a solid earthy tone per terrain so
+// every tile still reads as a chunk of ground with thickness under the painted
+// top face. Chosen to sit slightly darker than the texture's midtone.
+const SKIRT: Record<TerrainType | "road", string> = {
+  grass: "#3f7a3f",
+  meadow: "#4f7f38",
+  path: "#8a6a3e",
+  water: "#2f6f9a",
+  forest: "#1f4d29",
+  mountain: "#4a4f57",
+  stone: "#6f6a5c",
+  road: "#8a6a3e",
+};
+
 const BLOCK_H = 13;
 
-// Per-terrain top-face color. Side faces are derived by darkening this so every
-// tile reads as a solid 3D cube of earth/rock/water rather than a flat sticker.
-// Push 5.5 correction: terrain now varies for visual richness (grass/meadow/
-// stone courtyard/path) independent of any district gating.
-const TOP: Record<string, string> = {
-  grass: "#57b45f",
-  meadow: "#8fc25a",
-  path: "#c19a5e",
-  water: "#3f8ac8",
-  mountain: "#6b7280",
-  stone: "#8f8a7c",
-  forest: "#2f6b3a",
-};
-const ROAD_TOP = "#d3ab6c";
+// The pattern tile size in screen px. The texture repeats across the whole
+// canvas at this size; larger = more zoomed-in / fewer repeats.
+const TEX_TILE = 128;
 
 function parse(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -44,23 +60,10 @@ function shade(hex: string, f: number): string {
   const [r, g, b] = parse(hex);
   return toHex(r * f, g * f, b * f);
 }
-function vary(hex: string, d: number): string {
-  const [r, g, b] = parse(hex);
-  return toHex(r + d, g + d, b + d);
-}
 
-// Deterministic per-cell PRNG so terrain variation & scattered objects are
-// randomized-looking but stable across every re-render (no flicker).
-function makeRng(row: number, col: number) {
-  let s = ((row * 73856093) ^ (col * 19349663)) >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const TERRAIN_KEYS: (TerrainType | "road")[] = [
+  "grass", "meadow", "path", "water", "forest", "mountain", "stone", "road",
+];
 
 export function IsoTerrain({
   cells, canvas, roadSet, unlocked, buildMode,
@@ -80,92 +83,61 @@ export function IsoTerrain({
 
   return (
     <Svg width={canvas.width} height={canvas.height} style={{ position: "absolute", left: 0, top: 0 }} pointerEvents="none">
+      <Defs>
+        {TERRAIN_KEYS.map((k) => (
+          <Pattern
+            key={k}
+            id={`terr-${k}`}
+            patternUnits="userSpaceOnUse"
+            width={TEX_TILE}
+            height={TEX_TILE}
+          >
+            <SvgImage
+              href={TEXTURES[k]}
+              x={0}
+              y={0}
+              width={TEX_TILE}
+              height={TEX_TILE}
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </Pattern>
+        ))}
+      </Defs>
       {cells.map((cell) => {
         const isRoad = roadSet.has(cell.id) && cell.plotType !== "blocked";
         const locked = cell.isExpansion && !unlocked(cell);
-        const rng = makeRng(cell.row, cell.col);
+        const key = (isRoad ? "road" : cell.terrain) as TerrainType | "road";
 
         const r = cell.row, c = cell.col;
-        const A = [px(r, c), py(r, c)];        // top (back)
-        const B = [px(r, c + 1), py(r, c + 1)];    // right
+        const A = [px(r, c), py(r, c)];              // top (back)
+        const B = [px(r, c + 1), py(r, c + 1)];      // right
         const C = [px(r + 1, c + 1), py(r + 1, c + 1)]; // bottom (front)
-        const D = [px(r + 1, c), py(r + 1, c)];    // left
-        const cx = px(r + 0.5, c + 0.5);
-        const cy = py(r + 0.5, c + 0.5);
+        const D = [px(r + 1, c), py(r + 1, c)];      // left
 
-        const baseTop = isRoad ? ROAD_TOP : TOP[cell.terrain];
-        // subtle per-tile lightness jitter for a natural, non-uniform field
-        const topCol = vary(baseTop, Math.round((rng() - 0.5) * 18));
-        const leftCol = shade(baseTop, 0.72);
-        const rightCol = shade(baseTop, 0.55);
+        const skirt = SKIRT[key];
+        const leftCol = shade(skirt, 0.82);
+        const rightCol = shade(skirt, 0.6);
 
         const topPts = `${A[0]},${A[1]} ${B[0]},${B[1]} ${C[0]},${C[1]} ${D[0]},${D[1]}`;
         const leftPts = `${D[0]},${D[1]} ${C[0]},${C[1]} ${C[0]},${C[1] + BLOCK_H} ${D[0]},${D[1] + BLOCK_H}`;
         const rightPts = `${C[0]},${C[1]} ${B[0]},${B[1]} ${B[0]},${B[1] + BLOCK_H} ${C[0]},${C[1] + BLOCK_H}`;
 
-        // scatter objects only on planted/open ground, never on roads/water/rock/forest
-        const canScatter = !isRoad && (cell.terrain === "grass" || cell.terrain === "meadow" || cell.terrain === "path");
-        const scatter: React.ReactNode[] = [];
-        if (canScatter) {
-          const n = Math.floor(rng() * 3.2); // 0..3 clumps
-          for (let i = 0; i < n; i++) {
-            const ox = (rng() - 0.5) * hw * 0.9;
-            const oy = (rng() - 0.5) * hh * 0.9;
-            const gx = cx + ox;
-            const gy = cy + oy;
-            const kind = rng();
-            if (cell.terrain !== "path" && kind < 0.6) {
-              // grass tuft: 3 blades
-              const gc = rng() < 0.5 ? "#3f9a49" : "#6cc971";
-              scatter.push(
-                <G key={`g${i}`}>
-                  <Line x1={gx} y1={gy} x2={gx - 2} y2={gy - 6} stroke={gc} strokeWidth={1.4} strokeLinecap="round" />
-                  <Line x1={gx} y1={gy} x2={gx} y2={gy - 7.5} stroke={gc} strokeWidth={1.4} strokeLinecap="round" />
-                  <Line x1={gx} y1={gy} x2={gx + 2} y2={gy - 6} stroke={gc} strokeWidth={1.4} strokeLinecap="round" />
-                </G>
-              );
-            } else if (cell.terrain !== "path" && kind < 0.78) {
-              // little flower — meadow gets a denser, brighter bloom mix
-              const fc = ["#f2c14e", "#e8737d", "#c98be0", "#f2f2f2"][Math.floor(rng() * 4)];
-              scatter.push(
-                <G key={`f${i}`}>
-                  <Line x1={gx} y1={gy} x2={gx} y2={gy - 5} stroke="#3f9a49" strokeWidth={1.2} strokeLinecap="round" />
-                  <Circle cx={gx} cy={gy - 6} r={2} fill={fc} />
-                </G>
-              );
-            } else {
-              // pebble / trail stone
-              const pc = cell.terrain === "path" ? "#9c7b4b" : "#8b8f98";
-              scatter.push(<Ellipse key={`p${i}`} cx={gx} cy={gy} rx={3} ry={1.8} fill={pc} />);
-            }
-          }
-        }
-        if (cell.terrain === "water" && !isRoad) {
-          scatter.push(<Ellipse key="ripple" cx={cx} cy={cy} rx={hw * 0.35} ry={hh * 0.28} fill="none" stroke="#bfe3ff" strokeWidth={0.8} opacity={0.55} />);
-        }
-        if (cell.terrain === "forest" && !isRoad) {
-          scatter.push(<Circle key="tree" cx={cx} cy={cy - 3} r={5.5} fill="#1f4d29" />);
-          scatter.push(<Circle key="tree2" cx={cx + 4} cy={cy + 1} r={4} fill="#255a30" />);
-        }
+        // Grid outline: nearly invisible during normal play so the map reads as
+        // continuous painted terrain; crisp gold on buildable cells while
+        // placing so the player can see where a footprint will land.
+        const showBuildOutline = buildMode && cell.plotType === "buildable";
 
         return (
-          <G key={cell.id} opacity={locked ? 0.4 : 1}>
+          <G key={cell.id} opacity={locked ? 0.42 : 1}>
             <Polygon points={leftPts} fill={leftCol} />
             <Polygon points={rightPts} fill={rightCol} />
             <Polygon
               points={topPts}
-              fill={topCol}
-              stroke={shade(baseTop, buildMode && cell.plotType === "buildable" ? 0.4 : 0.6)}
-              strokeWidth={buildMode && cell.plotType === "buildable" ? 1.1 : 0.5}
-              strokeOpacity={buildMode && cell.plotType === "buildable" ? 0.9 : 0.5}
+              fill={`url(#terr-${key})`}
+              stroke={showBuildOutline ? "#f2c14e" : "#00000022"}
+              strokeWidth={showBuildOutline ? 1.2 : 0.5}
+              strokeOpacity={showBuildOutline ? 0.9 : 0.25}
             />
-            {isRoad && (
-              <Polygon
-                points={`${px(r + 0.15, c + 0.15)},${py(r + 0.15, c + 0.15)} ${px(r + 0.15, c + 0.85)},${py(r + 0.15, c + 0.85)} ${px(r + 0.85, c + 0.85)},${py(r + 0.85, c + 0.85)} ${px(r + 0.85, c + 0.15)},${py(r + 0.85, c + 0.15)}`}
-                fill={vary(ROAD_TOP, 20)}
-              />
-            )}
-            {scatter}
           </G>
         );
       })}

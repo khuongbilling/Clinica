@@ -25,7 +25,7 @@ import {
   GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,
   isCellUnlocked, getFootprint, getFootprintCells, getOccupiedCellMap,
   canPlaceBuilding, canPlaceDecoration, computeRoads, cellId, parseCellId,
-  getCellLabel, findAllValidOrigins,
+  getCellLabel, findAllValidOrigins, generatePlayerTerrain, cellsWithTerrain,
 } from "@/src/game/realmGrid";
 import {
   ISO_TILE_W, ISO_TILE_H, computeIsoCanvas, cellCenterIso, footprintIso,
@@ -37,9 +37,11 @@ const ISO_CANVAS = computeIsoCanvas(GRID_ROWS, GRID_COLS);
 const GRID_W = ISO_CANVAS.width;
 const GRID_H = ISO_CANVAS.height;
 
-// Painter's-algorithm draw order — every terrain cell is drawn back-to-front
-// once, computed here since GRID_CELLS is a static module-level array.
-const SORTED_CELLS = [...GRID_CELLS].sort((a, b) => cellDepth(a.row, a.col) - cellDepth(b.row, b.col));
+// Painter's-algorithm depth comparator — every terrain cell is drawn
+// back-to-front once. The cell array itself is now built per-player from the
+// player's realm_seed (see sortedCells in the component) so each Realm gets a
+// unique terrain texture distribution.
+const byDepth = (a: PlotCell, b: PlotCell) => cellDepth(a.row, a.col) - cellDepth(b.row, b.col);
 
 const BUILDING_SPRITES: Record<string, any> = {
   grand_ward_atrium: require("../../assets/realm/buildings/grand_ward_atrium.png"),
@@ -114,6 +116,14 @@ export default function KingdomScreen() {
 
   const layout = player?.realm_layout || buildDefaultRealmLayout();
   const decor = player?.realm_decor || {};
+
+  // Per-player terrain — a unique but deterministic texture map generated from
+  // this player's realm_seed. Only cosmetic `terrain` is overridden; plotType,
+  // locks, districts, and placement rules are identical for every player.
+  const sortedCells = useMemo(() => {
+    const terrain = generatePlayerTerrain(player?.realm_seed || 1);
+    return cellsWithTerrain(terrain).sort(byDepth);
+  }, [player?.realm_seed]);
 
   const occupiedCellMap = useMemo(() => getOccupiedCellMap(layout), [layout]);
   const roadSet = useMemo(() => computeRoads(layout), [layout]);
@@ -304,14 +314,14 @@ export default function KingdomScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
           <View style={[styles.gridWrap, { width: GRID_W, height: GRID_H }]} testID="kingdom-map">
             <IsoTerrain
-              cells={SORTED_CELLS}
+              cells={sortedCells}
               canvas={ISO_CANVAS}
               roadSet={roadSet}
               unlocked={(cell) => isCellUnlocked(cell, atriumLevel)}
               buildMode={!!placement}
             />
 
-            {SORTED_CELLS.map((cell) => {
+            {sortedCells.map((cell) => {
               if (cell.plotType === "blocked") return null;
               const locked = cell.isExpansion && !isCellUnlocked(cell, atriumLevel);
               const { x, y } = cellCenterIso(cell.row, cell.col, ISO_CANVAS);
