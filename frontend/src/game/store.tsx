@@ -212,6 +212,19 @@ type Ctx = {
   completePrologue: () => Promise<void>;
   completeIdentityRestore: (name: string) => Promise<void>;
   completeDiagnosticIntro: () => Promise<void>;
+  applyClassDiagnostic: (profile: ClassDiagnosticInput) => Promise<void>;
+};
+
+// Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
+// subset of CreatePlayerArgs, applied onto an already-existing player.
+export type ClassDiagnosticInput = {
+  aptitude: string;
+  player_class: string;
+  learning_profile: string;
+  difficulty: string;
+  system_affinity: string;
+  explanation_style: string;
+  codex_depth: string;
 };
 
 const PlayerContext = createContext<Ctx | null>(null);
@@ -245,14 +258,15 @@ function makeLocalId(): string {
   return 'local_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
+const APTITUDE_STARTING_HERO: Record<string, string> = {
+  guardian: 'novice_guardian',
+  sage: 'apprentice_seer',
+  warden: 'junior_warden',
+  weaver: 'data_acolyte',
+};
+
 function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
-  const aptitudeStartingHero: Record<string, string> = {
-    guardian: 'novice_guardian',
-    sage: 'apprentice_seer',
-    warden: 'junior_warden',
-    weaver: 'data_acolyte',
-  };
-  const starting = aptitudeStartingHero[args.aptitude] || 'novice_guardian';
+  const starting = APTITUDE_STARTING_HERO[args.aptitude] || 'novice_guardian';
   return {
     id,
     name: (args.name || 'Healer').trim().slice(0, 24) || 'Healer',
@@ -1007,9 +1021,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
-  // Push 2 post-recall onboarding — step 2: diagnostic intro acknowledgement.
-  // Only marks the intro as seen; the actual diagnostic quiz/class
-  // assignment is deferred to a later push. Idempotent no-op if already seen.
+  // Legacy: marks the diagnostic sub-step as seen WITHOUT assigning a class.
+  // Kept for backward compatibility; the live post-recall flow uses
+  // applyClassDiagnostic (below) which sets diagnostic_intro_seen itself.
+  // Idempotent no-op if already seen.
   const completeDiagnosticIntro = useCallback(async () => {
     const base = playerRef.current;
     if (!base || base.diagnostic_intro_seen) return;
@@ -1018,10 +1033,42 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // Post-recall class diagnostic — applies the quiz result onto the EXISTING
+  // player: switches aptitude/class identity, learning + difficulty settings,
+  // grants the new aptitude's starting hero (added to roster + team, deduped),
+  // realigns the account-level class tree, and marks the diagnostic done so
+  // the intro sub-step is never re-shown. Only class-relevant fields are
+  // touched — all existing progress (crowns, heroes, tutorial state) is kept.
+  const applyClassDiagnostic = useCallback(async (profile: ClassDiagnosticInput) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const starter = APTITUDE_STARTING_HERO[profile.aptitude] || 'novice_guardian';
+    const heroesOwned = Array.from(new Set([...(base.heroes_owned || []), starter]));
+    const activeTeam = (base.active_team && base.active_team.length > 0)
+      ? Array.from(new Set([...base.active_team, starter])).slice(0, 3)
+      : heroesOwned.slice(0, 3);
+    const next: PlayerState = {
+      ...base,
+      aptitude: profile.aptitude as any,
+      player_class: profile.player_class,
+      learning_profile: profile.learning_profile,
+      difficulty: profile.difficulty as any,
+      system_affinity: profile.system_affinity,
+      explanation_style: profile.explanation_style,
+      codex_depth: profile.codex_depth,
+      class_tree_id: classIdForAptitude(profile.aptitude),
+      heroes_owned: heroesOwned,
+      active_team: activeTeam,
+      diagnostic_intro_seen: true,
+    };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
