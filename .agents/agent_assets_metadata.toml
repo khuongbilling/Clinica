@@ -576,3 +576,33 @@ id = "iu0Rhj6PaD_1-xgnkaXNT"
 uri = "file://frontend/assets/loading/scene_08_banana_slip.png"
 type = "image"
 title = "scene_08_banana_slip"
+
+[[generated]]
+id = "woTQv6TGPgIWRtALqXoLK"
+uri = "file://frontend/assets/images/banner_ward_shift.png"
+type = "image"
+title = "ward shift banner"
+
+[[generated]]
+id = "DzVSGwD29Gs2UoshiZAQz"
+uri = "file://frontend/assets/images/banner_ward_defense.png"
+type = "image"
+title = "ward defense banner"
+
+[[generated]]
+id = "LWNAJyjPMoKqfNxbvKnX0"
+uri = "file://frontend/assets/images/banner_boss_ward.png"
+type = "image"
+title = "boss ward banner"
+
+[[generated]]
+id = "VaubwlRdKfLN8UDxhiPPZ"
+uri = "file://frontend/assets/images/banner_lotus_journal.png"
+type = "image"
+title = "lotus journal banner"
+
+[[generated]]
+id = "r_8E3gRgjqx4obrcUkI_M"
+uri = "file://frontend/assets/images/quest_icon.png"
+type = "image"
+title = "quest scroll icon"

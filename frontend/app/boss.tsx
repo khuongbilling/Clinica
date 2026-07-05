@@ -1,27 +1,50 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Alert } from "react-native";
 
 import { BOSS_LORD_IMBALANCE } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
+import { BOSS_ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function BossPage() {
   const router = useRouter();
-  const { player } = usePlayer();
+  const { player, spendStamina } = usePlayer();
+  const { stamina, msUntilNext } = useLiveStamina(player);
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
   const boss = BOSS_LORD_IMBALANCE;
   const sprite = getEnemySprite(boss.id);
   const accent = ELEMENT_COLORS[boss.primarySystem] ?? "#F87171";
+  const canFight = stamina >= BOSS_ENCOUNTER_COST;
 
-  const enter = () => {
+  const enter = async () => {
+    if (!canFight) {
+      Alert.alert(
+        "Not Enough Shift Challenges",
+        `A boss encounter costs ${BOSS_ENCOUNTER_COST} Shift Challenges. You have ${stamina}. Next challenge in ${formatCountdown(msUntilNext)}.`,
+      );
+      return;
+    }
+    const ok = await spendStamina(BOSS_ENCOUNTER_COST);
+    if (!ok) {
+      Alert.alert("Not Enough Shift Challenges", `A boss encounter costs ${BOSS_ENCOUNTER_COST} Shift Challenges.`);
+      return;
+    }
     router.push({ pathname: "/battle", params: { enemyId: boss.id } });
   };
 
@@ -124,6 +147,7 @@ export default function BossPage() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   backBtn: {
     position: "absolute", top: 60, left: SPACING.lg, zIndex: 10,
     width: 38, height: 38, borderRadius: 19,

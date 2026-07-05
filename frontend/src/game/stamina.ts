@@ -11,8 +11,11 @@ import { staminaMaxForLevel } from './progression';
 // the Level-1 base cap for legacy callers/fallbacks that don't have a player
 // object handy (e.g. defaultPlayer() initial value).
 export const MAX_STAMINA = staminaMaxForLevel(1);
+// A regular ward case costs 1 Shift Challenge; a boss costs 5.
 export const ENCOUNTER_COST = 1;
-export const REGEN_MINUTES = 12;
+export const BOSS_ENCOUNTER_COST = 5;
+// Shift Challenges refill 6 per hour (one every 10 minutes) up to the cap.
+export const REGEN_MINUTES = 10;
 export const REGEN_MS = REGEN_MINUTES * 60 * 1000;
 
 /** Resolve the stamina cap for a player, derived from Player Level. */

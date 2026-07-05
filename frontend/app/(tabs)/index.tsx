@@ -15,7 +15,7 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { FEATURE_UNLOCKS, isFeatureUnlocked, playerLevelFromXp } from "@/src/game/progression";
+import { playerLevelFromXp } from "@/src/game/progression";
 
 const INTRO_KEY = "clinica.intro.seen";
 
@@ -89,11 +89,6 @@ export default function RunHome() {
   const heroSprite   = getHeroSprite(leadHeroId);
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
   const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
-
-  const FEATURE_LEVEL_WARD_DEFENSE = FEATURE_UNLOCKS.find((f) => f.id === "ward_defense")?.level ?? 3;
-  const FEATURE_LEVEL_LOTUS_JOURNAL = FEATURE_UNLOCKS.find((f) => f.id === "lotus_journal")?.level ?? 7;
-  const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevelInfo.level);
-  const lotusJournalUnlocked = isFeatureUnlocked("lotus_journal", playerLevelInfo.level);
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
@@ -218,44 +213,6 @@ export default function RunHome() {
         <Ionicons name="medical" size={18} color={COLORS.onBrand} />
         <Text style={styles.startTxt}>START SHIFT</Text>
         <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
-      </Pressable>
-
-      {/* ── WARD DEFENSE ENTRY ── */}
-      <Pressable
-        style={[styles.wardDefBtn, !wardDefenseUnlocked && styles.lockedFeatureBtn]}
-        onPress={() => { if (wardDefenseUnlocked) router.push("/ward-defense"); }}
-        testID="home-ward-defense"
-      >
-        <View style={styles.wardDefLeft}>
-          <Text style={styles.wardDefNew}>{wardDefenseUnlocked ? "NEW" : `LV.${FEATURE_LEVEL_WARD_DEFENSE}`}</Text>
-          <Text style={styles.wardDefTitle}>Ward Defense</Text>
-          <Text style={styles.wardDefSub}>
-            {wardDefenseUnlocked ? "Airway Rush · 5 waves + boss" : `Unlocks at Player Level ${FEATURE_LEVEL_WARD_DEFENSE}`}
-          </Text>
-        </View>
-        <View style={styles.wardDefRight}>
-          {wardDefenseUnlocked ? <Text style={{ fontSize: 28 }}>🐲</Text> : <Ionicons name="lock-closed" size={22} color={COLORS.onSurfaceTertiary} />}
-          <Ionicons name="chevron-forward" size={14} color={wardDefenseUnlocked ? COLORS.air + "80" : COLORS.onSurfaceTertiary} />
-        </View>
-      </Pressable>
-
-      {/* ── LOTUS PLATE JOURNAL ENTRY (off-shift, no stamina cost) ── */}
-      <Pressable
-        style={[styles.lotusBtn, !lotusJournalUnlocked && styles.lockedFeatureBtn]}
-        onPress={() => { if (lotusJournalUnlocked) router.push("/lotus-journal"); }}
-        testID="home-lotus-journal"
-      >
-        <View style={styles.wardDefLeft}>
-          <Text style={styles.lotusNew}>{lotusJournalUnlocked ? "OFF-SHIFT" : `LV.${FEATURE_LEVEL_LOTUS_JOURNAL}`}</Text>
-          <Text style={styles.wardDefTitle}>Lotus Plate Journal</Text>
-          <Text style={styles.wardDefSub}>
-            {lotusJournalUnlocked ? "Log meals & wellness · grow your Nutrition Garden" : `Unlocks at Player Level ${FEATURE_LEVEL_LOTUS_JOURNAL}`}
-          </Text>
-        </View>
-        <View style={styles.wardDefRight}>
-          {lotusJournalUnlocked ? <Text style={{ fontSize: 28 }}>🪷</Text> : <Ionicons name="lock-closed" size={22} color={COLORS.onSurfaceTertiary} />}
-          <Ionicons name="chevron-forward" size={14} color={lotusJournalUnlocked ? COLORS.growth + "80" : COLORS.onSurfaceTertiary} />
-        </View>
       </Pressable>
 
       {/* ── INTRO MODAL ── */}
