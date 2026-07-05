@@ -119,7 +119,7 @@ export const BUILDING_CATEGORIES: BuildingCategoryMeta[] = [
 // ---------------------------------------------------------------------------
 export interface HarmonyAffinity {
   label: string;
-  nearBuildingIds: string[];
+  nearBuildingIds?: string[];
   nearDecorationIds?: string[];
 }
 

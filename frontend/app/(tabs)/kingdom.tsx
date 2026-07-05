@@ -138,6 +138,51 @@ export default function KingdomScreen() {
     [atriumLevel]
   );
 
+  const placementCheck = useMemo(() => {
+    if (!placement || !placement.origin) return null;
+    if (placement.kind === "building") {
+      const building = getBuildingById(placement.id);
+      if (!building) return null;
+      return canPlaceBuilding({
+        footprint: getFootprint(building.id),
+        origin: placement.origin,
+        occupiedCellMap,
+        atriumLevel,
+        unlocked: isBuildingUnlocked(building, atriumLevel),
+        ignoreBuildingId: placement.isMove ? building.id : undefined,
+      });
+    }
+    const decorOccupied = new Set(Object.keys(decor));
+    return canPlaceDecoration({ origin: placement.origin, occupiedCellMap, decorOccupied });
+  }, [placement, occupiedCellMap, atriumLevel, decor]);
+
+  // All legal origin cells for the building currently being placed — drives
+  // the "highlight every valid cell" placement preview (not just the target).
+  const validOrigins = useMemo(() => {
+    if (!placement || placement.kind !== "building") return [];
+    const building = getBuildingById(placement.id);
+    if (!building) return [];
+    return findAllValidOrigins({
+      footprint: getFootprint(building.id),
+      occupiedCellMap,
+      atriumLevel,
+      unlocked: isBuildingUnlocked(building, atriumLevel),
+      ignoreBuildingId: placement.isMove ? building.id : undefined,
+    });
+  }, [placement, occupiedCellMap, atriumLevel]);
+
+  const validOriginCells = useMemo(() => {
+    if (!placement || placement.kind !== "building" || !validOrigins.length) return [];
+    const building = getBuildingById(placement.id);
+    if (!building) return [];
+    const footprint = getFootprint(building.id);
+    const set = new Set<string>();
+    for (const o of validOrigins) {
+      for (const c of getFootprintCells(o, footprint)) set.add(cellId(c.row, c.col));
+    }
+    return Array.from(set);
+  }, [placement, validOrigins]);
+
   if (!player) return null;
 
   const kingdomLevels = player.kingdom_levels || {};
@@ -199,51 +244,6 @@ export default function KingdomScreen() {
     const meta = getCellLabel(cell);
     setBanner(`${meta} — empty. Use Sanctuary Inventory to build or decorate here.`);
   }
-
-  const placementCheck = useMemo(() => {
-    if (!placement || !placement.origin) return null;
-    if (placement.kind === "building") {
-      const building = getBuildingById(placement.id);
-      if (!building) return null;
-      return canPlaceBuilding({
-        footprint: getFootprint(building.id),
-        origin: placement.origin,
-        occupiedCellMap,
-        atriumLevel,
-        unlocked: isBuildingUnlocked(building, atriumLevel),
-        ignoreBuildingId: placement.isMove ? building.id : undefined,
-      });
-    }
-    const decorOccupied = new Set(Object.keys(decor));
-    return canPlaceDecoration({ origin: placement.origin, occupiedCellMap, decorOccupied });
-  }, [placement, occupiedCellMap, atriumLevel, decor]);
-
-  // All legal origin cells for the building currently being placed — drives
-  // the "highlight every valid cell" placement preview (not just the target).
-  const validOrigins = useMemo(() => {
-    if (!placement || placement.kind !== "building") return [];
-    const building = getBuildingById(placement.id);
-    if (!building) return [];
-    return findAllValidOrigins({
-      footprint: getFootprint(building.id),
-      occupiedCellMap,
-      atriumLevel,
-      unlocked: isBuildingUnlocked(building, atriumLevel),
-      ignoreBuildingId: placement.isMove ? building.id : undefined,
-    });
-  }, [placement, occupiedCellMap, atriumLevel]);
-
-  const validOriginCells = useMemo(() => {
-    if (!placement || placement.kind !== "building" || !validOrigins.length) return [];
-    const building = getBuildingById(placement.id);
-    if (!building) return [];
-    const footprint = getFootprint(building.id);
-    const set = new Set<string>();
-    for (const o of validOrigins) {
-      for (const c of getFootprintCells(o, footprint)) set.add(cellId(c.row, c.col));
-    }
-    return Array.from(set);
-  }, [placement, validOrigins]);
 
   async function confirmPlacement() {
     if (!placement || !placement.origin || !placementCheck?.ok) return;
@@ -754,13 +754,13 @@ function InventoryDrawer({
             </Pressable>
             {BUILDING_CATEGORIES.map((cat) => (
               <Pressable
-                key={cat}
-                style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
-                onPress={() => setCategory(cat)}
-                testID={`realm-tray-category-${cat}`}
+                key={cat.id}
+                style={[styles.categoryChip, category === cat.id && styles.categoryChipActive]}
+                onPress={() => setCategory(cat.id)}
+                testID={`realm-tray-category-${cat.id}`}
               >
-                <Ionicons name={(CATEGORY_ICON[cat] || "cube-outline") as any} size={12} color={category === cat ? COLORS.onBrand : COLORS.onSurfaceSecondary} />
-                <Text style={[styles.categoryChipTxt, category === cat && styles.categoryChipTxtActive]}>{CATEGORY_LABEL[cat]}</Text>
+                <Ionicons name={(CATEGORY_ICON[cat.id] || "cube-outline") as any} size={12} color={category === cat.id ? COLORS.onBrand : COLORS.onSurfaceSecondary} />
+                <Text style={[styles.categoryChipTxt, category === cat.id && styles.categoryChipTxtActive]}>{CATEGORY_LABEL[cat.id]}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -1109,6 +1109,10 @@ const styles = StyleSheet.create({
   sheetDistrict: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   sheetPurpose: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginBottom: SPACING.sm },
   sheetLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: SPACING.md },
+  categoryChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border },
+  categoryChipActive: { backgroundColor: COLORS.brand, borderColor: COLORS.brand },
+  categoryChipTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "700" },
+  categoryChipTxtActive: { color: COLORS.onBrand },
   sheetBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginTop: 4 },
   resourceGuideBtn: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.md,

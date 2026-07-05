@@ -17,8 +17,11 @@ description: Key environment and startup quirks for the Clinica: Kingdom of Heal
 
 ## Backend
 - `emergentintegrations==0.2.0` is in the original `requirements.txt` but is an Emergent-platform-only package — blocked by Replit's package firewall. Remove it before running `pip install`.
-- Backend requires two env vars: `MONGO_URL` (secret) and `DB_NAME` (set to "clinica").
+- Backend requires two env vars: `MONGO_URL` and `DB_NAME` (set to "clinica").
 - The entire battle system is frontend-only — MongoDB is only needed for player profile persistence.
+- **No MongoDB Atlas needed** — `mongodb` (v7) installs cleanly as a Nix system dependency (`installSystemDependencies(["mongodb"])`). Run it as its own workflow: `mongod --dbpath .local/mongodb-data --bind_ip 127.0.0.1 --port 27017 --quiet`, with `MONGO_URL="mongodb://localhost:27017"`.
+- **Blank-screen-everywhere symptom** (onboarding renders but every tab shows nothing) usually means `player` never loaded, not a UI bug. Check two things: (1) `frontend/.env` `EXPO_PUBLIC_BACKEND_URL` must be set to `https://$REPLIT_DEV_DOMAIN:8000` (empty string = every API call silently throws in `src/api/client.ts`, home tab still renders "blank" behind the tab bar because every screen has `if (!player) return null`); (2) confirm mongod is actually reachable — pymongo's `ServerSelectionTimeoutError` on `insert_one` only surfaces in backend workflow logs, not the browser console.
+- `EXPO_PUBLIC_BACKEND_URL` lives in Replit env vars scoped "shared" by default; if it needs a real value only in dev (prod deploy has no backend workflow at all currently — separate known gap), delete from shared first, then `setEnvVars` under `environment: "development"`.
 
 ## Ward Defense V2 board system (current state — full visual polish applied)
 

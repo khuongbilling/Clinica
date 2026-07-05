@@ -11,7 +11,9 @@ channel = "stable-25_05"
 
 [userenv.shared]
 DB_NAME = "clinica"
-EXPO_PUBLIC_BACKEND_URL = ""
+
+[userenv.development]
+EXPO_PUBLIC_BACKEND_URL = "https://1a88ce60-54d7-432b-a038-dd5cf757c637-00-35in8reqfcisl.spock.replit.dev:8000"
 
 [workflows]
 runButton = "Project"
@@ -28,6 +30,10 @@ args = "Start application"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Start Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MongoDB"
 
 [[workflows.workflow]]
 name = "Start application"
@@ -49,6 +55,17 @@ author = "agent"
 task = "shell.exec"
 args = "cd backend && uvicorn server:app --host 0.0.0.0 --port 8000"
 waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "MongoDB"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mkdir -p .local/mongodb-data && mongod --dbpath .local/mongodb-data --bind_ip 127.0.0.1 --port 27017 --quiet"
 
 [workflows.workflow.metadata]
 outputType = "console"
