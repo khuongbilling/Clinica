@@ -52,6 +52,7 @@ export default function Boot() {
 
   if (!player) return <Redirect href="/prologue" />;
   if (player.prologue_complete === false) return <Redirect href="/prologue" />;
+  if (player.identity_restored === false || player.diagnostic_intro_seen === false) return <Redirect href="/post-recall" />;
   return <Redirect href="/(tabs)" />;
 }
 

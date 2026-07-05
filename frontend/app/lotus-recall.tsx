@@ -26,7 +26,7 @@ export default function LotusRecall() {
 
   const proceed = async () => {
     await completePrologue();
-    router.replace("/(tabs)");
+    router.replace("/post-recall");
   };
 
   return (

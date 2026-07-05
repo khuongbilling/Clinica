@@ -127,6 +127,11 @@ export interface PlayerState {
   // tutorial win -> scripted boss loss -> Lotus Recall sequence. Defaults
   // true for pre-existing players so they never re-enter the prologue flow.
   prologue_complete?: boolean;
+  // Push 2 post-recall onboarding: two resumable sub-steps that run right
+  // after Lotus Recall, before the player reaches the normal hub. Both
+  // default true for pre-existing players so they are never re-entered.
+  identity_restored?: boolean;
+  diagnostic_intro_seen?: boolean;
   rank: string;
   rank_index: number;
   xp: number;

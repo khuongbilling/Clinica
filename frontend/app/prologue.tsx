@@ -36,6 +36,8 @@ export default function Prologue() {
         aptitude: "guardian",
         codex_depth: "simple",
         prologue_complete: false,
+        identity_restored: false,
+        diagnostic_intro_seen: false,
       }).then(() => {
         router.replace({ pathname: "/battle", params: { enemyId: "dehydration_wisp", training: "1", prologue: "tutorial" } });
       }).catch(() => {

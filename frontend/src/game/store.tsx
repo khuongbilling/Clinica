@@ -27,6 +27,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   const prog: Record<string, { star: number; copies: number; level: number; xp: number; locked: boolean; favorite: boolean }> = {};
   let changed = !p.hero_progression;
   if (p.prologue_complete === undefined) { p = { ...p, prologue_complete: true }; changed = true; }
+  if (p.identity_restored === undefined) { p = { ...p, identity_restored: true }; changed = true; }
+  if (p.diagnostic_intro_seen === undefined) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
   for (const [id, raw] of Object.entries(src)) {
     const star = Math.min(MAX_STAR, Math.max(1, Math.round(Number(raw?.star) || 1)));
     const copies = Math.max(0, Math.round(Number(raw?.copies) || 0));
@@ -159,6 +161,8 @@ type CreatePlayerArgs = {
   explanation_style?: string;
   codex_depth?: string;
   prologue_complete?: boolean;
+  identity_restored?: boolean;
+  diagnostic_intro_seen?: boolean;
 };
 
 type Ctx = {
@@ -206,6 +210,8 @@ type Ctx = {
   setPlayerClass: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
   claimClassTier: (classId: ClassId, level: 1 | 10 | 20 | 30) => Promise<{ ok: boolean; message: string }>;
   completePrologue: () => Promise<void>;
+  completeIdentityRestore: (name: string) => Promise<void>;
+  completeDiagnosticIntro: () => Promise<void>;
 };
 
 const PlayerContext = createContext<Ctx | null>(null);
@@ -261,6 +267,8 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     codex_depth: args.codex_depth || 'simple',
     onboarding_complete: true,
     prologue_complete: args.prologue_complete ?? true,
+    identity_restored: args.identity_restored ?? true,
+    diagnostic_intro_seen: args.diagnostic_intro_seen ?? true,
     rank: 'Sprout Healer',
     rank_index: 0,
     xp: 0,
@@ -985,10 +993,35 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // Push 2 post-recall onboarding — step 1: identity restoration. Saves the
+  // player-entered name to the same `name` field used everywhere else
+  // (header, profile, etc.) and marks this sub-step done so it is never
+  // re-shown. Idempotent no-op if already restored.
+  const completeIdentityRestore = useCallback(async (name: string) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const cleanName = (name || '').trim().slice(0, 24) || base.name || 'Healer';
+    if (base.identity_restored && base.name === cleanName) return;
+    const next = { ...base, name: cleanName, identity_restored: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
+  // Push 2 post-recall onboarding — step 2: diagnostic intro acknowledgement.
+  // Only marks the intro as seen; the actual diagnostic quiz/class
+  // assignment is deferred to a later push. Idempotent no-op if already seen.
+  const completeDiagnosticIntro = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.diagnostic_intro_seen) return;
+    const next = { ...base, diagnostic_intro_seen: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
