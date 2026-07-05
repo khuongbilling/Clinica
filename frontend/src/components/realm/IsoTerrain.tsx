@@ -134,9 +134,15 @@ export function IsoTerrain({
             <Polygon
               points={topPts}
               fill={`url(#terr-${key})`}
-              stroke={showBuildOutline ? "#f2c14e" : "#00000022"}
-              strokeWidth={showBuildOutline ? 1.2 : 0.5}
-              strokeOpacity={showBuildOutline ? 0.9 : 0.25}
+              // In normal play, stroke each tile with its OWN texture (not a dark
+              // line) so the painted fill bleeds ~1px past the polygon edge and
+              // closes the hairline antialiasing seams between neighbours — the
+              // field reads as one continuous painting, not a grid of plots.
+              // While building, switch to a crisp gold outline so footprints are
+              // legible.
+              stroke={showBuildOutline ? "#f2c14e" : `url(#terr-${key})`}
+              strokeWidth={showBuildOutline ? 1.2 : 1}
+              strokeOpacity={showBuildOutline ? 0.9 : 1}
             />
           </G>
         );

@@ -141,10 +141,13 @@ const CELL_BY_ID = new Map(GRID_CELLS.map((c) => [c.id, c]));
 // Realm generated deterministically from their `realm_seed`. This only remaps
 // each cell's cosmetic `terrain` texture — it NEVER changes `plotType`, so
 // what/where a building can be placed stays identical for every player (fair
-// progression). Buildable ground varies across grass/meadow/path; natural
-// blockers (border ring, forest, water) vary across forest/water/mountain via
-// smooth value-noise so ponds and groves cluster naturally instead of looking
-// like random static.
+// progression). Buildable ground varies across grass/meadow only (worn dirt
+// shows up solely as the auto-generated roads between buildings, so open fields
+// stay coherent). Inland natural blockers are ponds (water) and groves (forest)
+// only — never rock — so no stray "stone block in a field of grass". Rock/
+// mountain appears only as the top/bottom border ridge framing the map. All of
+// it is driven by smooth value-noise so features cluster naturally instead of
+// looking like random static.
 // ---------------------------------------------------------------------------
 
 function hash2(x: number, y: number, seed: number): number {
@@ -179,39 +182,38 @@ export function generatePlayerTerrain(seed: number): Record<string, TerrainType>
   const map: Record<string, TerrainType> = {};
   for (const cell of GRID_CELLS) {
     if (cell.plotType === "buildable") {
-      // Open ground: soft regions of grass, flowery meadow, and worn dirt.
-      const n = valueNoise(cell.row, cell.col, s, 3.5);
-      const m = valueNoise(cell.row, cell.col, s ^ 0x9e3779b9, 5.5);
-      let t: TerrainType;
       if (cell.terrain === "stone") {
-        t = "stone"; // keep the central courtyard reading as paved ground
-      } else if (m > 0.72) {
-        t = "path";
-      } else if (n > 0.55) {
-        t = "meadow";
+        // Keep the central courtyard reading as one coherent paved plaza.
+        map[cell.id] = "stone";
       } else {
-        t = "grass";
+        // Open ground: soft flowery-meadow regions melting into plain grass.
+        // No stray dirt patches — those only ever appear as real roads.
+        const n = valueNoise(cell.row, cell.col, s, 4.5);
+        map[cell.id] = n > 0.58 ? "meadow" : "grass";
       }
-      map[cell.id] = t;
     } else if (cell.plotType === "decoration") {
       map[cell.id] = "path";
     } else {
-      // Blocked cells: keep the outer water ring readable, but let inner
-      // blockers vary between groves (forest), ponds (water) and rock outcrops.
+      // Blocked cells: a coherent water/mountain frame around the edge, with
+      // inland blockers limited to natural ponds and groves.
       const onBorder =
         cell.row === 0 || cell.row === GRID_ROWS - 1 || cell.col === 0 || cell.col === GRID_COLS - 1;
       if (onBorder) {
-        // Top/bottom edges become mountain ridges, side edges stay water,
-        // with occasional variation so the frame isn't perfectly uniform.
+        // Top/bottom edges form a mountain ridge (with the odd tree line), the
+        // side edges stay a clean water moat — a coherent frame, no rogue rocks
+        // poking into the water.
         const edgeNoise = valueNoise(cell.row, cell.col, s ^ 0x51ed270b, 4);
         if (cell.row === 0 || cell.row === GRID_ROWS - 1) {
-          map[cell.id] = edgeNoise > 0.7 ? "forest" : "mountain";
+          map[cell.id] = edgeNoise > 0.72 ? "forest" : "mountain";
         } else {
-          map[cell.id] = edgeNoise > 0.82 ? "mountain" : "water";
+          map[cell.id] = "water";
         }
       } else {
-        const n = valueNoise(cell.row, cell.col, s ^ 0x27d4eb2f, 2.6);
-        map[cell.id] = n > 0.62 ? "water" : n > 0.34 ? "forest" : "mountain";
+        // Inland blockers are natural features only — ponds and groves that
+        // cluster smoothly. Never rock, so nothing reads as a random stone
+        // block dropped into the greenery.
+        const n = valueNoise(cell.row, cell.col, s ^ 0x27d4eb2f, 3.0);
+        map[cell.id] = n > 0.5 ? "water" : "forest";
       }
     }
   }

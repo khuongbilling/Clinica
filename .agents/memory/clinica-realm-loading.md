@@ -16,9 +16,21 @@ expo-linear-gradient scrim. Replaced the old parchment-scroll design (parchment 
 dropped from REALM_IMAGE_MODULES since nothing renders it now). LOADING_ART is warmed at launch via
 preloadTabAssets, but on a truly cold first launch the illustration still fades in via expo-image.
 
+**Web cache gotcha (the real "empty then slowly loads" cause):** expo-image's `Image.prefetch`
+warms ONLY expo-image's own cache. The Realm paints terrain via react-native-svg `<image>` and
+buildings via RN `<Image>` — both read the browser's NATIVE image cache, which prefetch does NOT
+populate. So on web, `prefetchModules` must decode each URI through a real `HTMLImageElement`
+(`new window.Image()` + `img.decode()`), which is the exact cache those elements use. Skip
+expo-image.prefetch on web (redundant double-download); keep it for native. Wrap the web decode in
+`Promise.race([decodeAll, 12s ceiling])` so a slow/huge asset can never hang the loading gate —
+`decodeInBrowser` resolves on load/error/catch (never rejects) and the timeout always resolves, so
+`preloadRealmAssets().finally(...)` is guaranteed to progress. **Why:** without this the gate
+resolved (prefetch done) but SVG/RN tiles were still uncached, so the map showed blank then filled.
+
 **Two-tier preload design:**
 - `prefetchModules(modules)` in `realmAssets.ts` is the single shared best-effort helper
-  (resolve require()→uri via RNImage.resolveAssetSource, then expo-image Image.prefetch). Reuse it.
+  (resolve require()→uri via RNImage.resolveAssetSource; web = HTMLImageElement decode w/ ceiling,
+  native = expo-image Image.prefetch). Reuse it.
 - `preloadTabAssets()` (`tabAssets.ts`) runs once at app launch from `_layout.tsx` useEffect,
   warming EVERY bottom-tab image: home_hub_bg + hero portraits + hero battle sprites + all realm
   modules. Fire-and-forget, memoized module-level promise.

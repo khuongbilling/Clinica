@@ -1,5 +1,26 @@
-import { Image as RNImage } from "react-native";
+import { Image as RNImage, Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
+
+// Fully decode a URL through a real HTMLImageElement so the browser's own image
+// cache is populated AND the bitmap is decoded. Resolves (never rejects) so one
+// bad asset can't block the batch.
+function decodeInBrowser(uri: string): Promise<void> {
+  return new Promise<void>((resolve) => {
+    try {
+      const img = new window.Image();
+      const done = () => resolve();
+      img.onload = () => {
+        // decode() guarantees the bitmap is ready to paint; fall back to onload.
+        if (typeof img.decode === "function") img.decode().then(done, done);
+        else done();
+      };
+      img.onerror = () => resolve();
+      img.src = uri;
+    } catch {
+      resolve();
+    }
+  });
+}
 
 // Prefetch (download + cache) a list of image modules. Resolves each require()
 // module to a URI, then warms the expo-image cache. Best-effort — a failure must
@@ -15,6 +36,21 @@ export async function prefetchModules(modules: number[]): Promise<void> {
       }
     })
     .filter((u): u is string => !!u);
+
+  // On web the Realm paints terrain through react-native-svg <image> and
+  // buildings through RN <Image> — both read the browser's NATIVE image cache,
+  // which expo-image's prefetch does not populate. So decode straight through
+  // real HTMLImageElements (the exact cache those elements use) instead of
+  // double-downloading via expo-image too. A ceiling keeps a slow/huge asset
+  // from ever hanging the loading screen — anything still in flight keeps
+  // warming in the background and paints moments later.
+  if (Platform.OS === "web" && typeof window !== "undefined" && typeof window.Image === "function") {
+    const decodeAll = Promise.all(uris.map(decodeInBrowser)).then(() => undefined);
+    const ceiling = new Promise<void>((resolve) => setTimeout(resolve, 12000));
+    await Promise.race([decodeAll, ceiling]);
+    return;
+  }
+
   try {
     await ExpoImage.prefetch(uris);
   } catch {
