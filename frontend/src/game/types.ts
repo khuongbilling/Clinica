@@ -185,6 +185,10 @@ export interface PlayerState {
   class_trainees?: Record<string, number>;
   // Clinica University — global progression currency
   university_credits?: number;
+  // Push 5 — Memory Reminiscence: has the player seen the post-recall
+  // reminiscence story scene (modern-world origin -> Silent Infarct -> Lotus
+  // Recall)? Gates the one-time redirect from post-recall into /reminiscence.
+  seen_reminiscence?: boolean;
   // Clinica University — Lessons & Simulations MVP
   lessons_completed?: string[];
   simulations_completed?: string[];

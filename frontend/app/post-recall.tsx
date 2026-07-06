@@ -36,8 +36,10 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 //      field already read by Profile/PlayerHeader/Class Tree. The choice is
 //      explicitly framed as forgiving and non-permanent: it can be freely
 //      re-switched later from the Class Tree screen.
-//      Reminiscence, University transition, Lotus Lessons, and simulation
-//      chapters remain Push 5+ work.
+//      (Push 5) Once class is confirmed, the player is routed once through
+//      the memory-reminiscence scene, then into Clinica University, where
+//      Lotus Lessons and the Ch1-5 simulation framing live (see
+//      reminiscence.tsx, university/*, lotusLessons.ts, modeHub.ts).
 // The screen re-derives which sub-step to show from persisted player flags
 // (identity_restored / diagnostic_intro_seen) on every render, so a reload
 // or app restart mid-sequence always resumes at the correct step instead of
@@ -85,8 +87,16 @@ export default function PostRecall() {
   }, [phase, view, quizStep, automatedMsgIndex, fadeAnim]);
 
   useEffect(() => {
-    if (phase === "done") router.replace("/(tabs)");
-  }, [phase, router]);
+    if (phase !== "done") return;
+    // Push 5 — after class confirmation, route through the one-time
+    // memory-reminiscence scene before the player ever reaches University
+    // or the normal hub. Once seen, later visits go straight to the hub.
+    if (player && !player.seen_reminiscence) {
+      router.replace("/reminiscence");
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [phase, player, router]);
 
   useEffect(() => {
     if (player?.name && player.name !== "Healer") setName(player.name);

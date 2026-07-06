@@ -53,6 +53,10 @@ export default function Boot() {
   if (!player) return <Redirect href="/prologue" />;
   if (player.prologue_complete === false) return <Redirect href="/prologue" />;
   if (player.identity_restored === false || player.diagnostic_intro_seen === false) return <Redirect href="/post-recall" />;
+  // Push 5 — if the player has confirmed their class but hasn't yet seen the
+  // memory-reminiscence scene (e.g. app was closed mid-scene), resume there
+  // instead of dropping them straight into the hub.
+  if (player.seen_reminiscence === false) return <Redirect href="/reminiscence" />;
   return <Redirect href="/(tabs)" />;
 }
 

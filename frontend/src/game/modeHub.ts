@@ -13,6 +13,23 @@
 // `artBrief` below is the commissioning brief for that future banner.
 // ────────────────────────────────────────────────────────────
 
+// Push 5 — Chapter 1-5 are framed as Clinica University simulations rather
+// than disconnected battles: each Ward Shift case belongs to a numbered
+// chapter, and every chapter maps to one simulation focus area students
+// walk through as part of their University training.
+export const CHAPTER_SIMULATION_LABELS: Record<number, string> = {
+  1: "Hydration",
+  2: "Fever & Infection",
+  3: "Breathing & Oxygen",
+  4: "Circulation",
+  5: "First Real Ward Return",
+};
+
+export function chapterSimulationLabel(chapter?: number): string {
+  const n = chapter ?? 1;
+  return CHAPTER_SIMULATION_LABELS[n] || `Chapter ${n}`;
+}
+
 export type ModeStatus = "active" | "locked" | "coming_soon" | "preview";
 export type ModeCardSize = "large" | "medium" | "small";
 

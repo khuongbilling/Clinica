@@ -10,6 +10,7 @@ import { ModeCard } from "@/src/components/ModeCard";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
+import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const MENU: { id: string; title: string; desc: string; icon: string; route?: string }[] = [
@@ -70,6 +71,8 @@ export default function UniversityHubScreen() {
 
   if (!player) return null;
 
+  const nextLotusNode = firstIncompleteLotusNode(player);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <PlayerHeader player={player} />
@@ -84,12 +87,43 @@ export default function UniversityHubScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.mentorBox}>
+          <Ionicons name="sparkles-outline" size={16} color={COLORS.brand} />
+          <Text style={styles.mentorTxt}>
+            "You were not recalled because you were ready. You were recalled because you can still learn."
+          </Text>
+        </View>
+
         <View style={styles.statsRow}>
           <Stat label="Codex Shards" value={String(player.codex_shards || 0)} icon="diamond" />
           <Stat label="University Credits" value={String(player.university_credits || 0)} icon="school" />
         </View>
 
         <RewardPreview mode="Clinica University" />
+
+        {nextLotusNode && (
+          <Pressable
+            style={styles.startHereCard}
+            onPress={() => router.push("/university/lessons" as any)}
+            testID="university-start-here"
+          >
+            <View style={styles.startHereBadge}>
+              <Text style={styles.startHereBadgeTxt}>START HERE</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.md }}>
+              <View style={styles.startHereIcon}>
+                <Ionicons name="school" size={24} color={COLORS.onBrand} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.startHereTitle}>Lotus Lessons: {nextLotusNode.title}</Text>
+                <Text style={styles.startHereDesc}>
+                  A short, simple path to get you back on your feet — the ward will still be there after.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.onBrand} />
+            </View>
+          </Pressable>
+        )}
 
         {MENU.map((m) => (
           <Pressable
@@ -159,6 +193,27 @@ const styles = StyleSheet.create({
   title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 2 },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  mentorBox: {
+    flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
+    borderWidth: 1, borderColor: COLORS.brand + "40", borderRadius: RADIUS.md,
+    padding: SPACING.md, backgroundColor: COLORS.brand + "10",
+  },
+  mentorTxt: { flex: 1, color: COLORS.onSurface, fontSize: 13, lineHeight: 19, fontStyle: "italic" },
+  startHereCard: {
+    borderWidth: 1, borderColor: COLORS.brand, borderRadius: RADIUS.md,
+    padding: SPACING.md, backgroundColor: COLORS.brand, gap: 4,
+  },
+  startHereBadge: {
+    alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4,
+  },
+  startHereBadgeTxt: { color: COLORS.onBrand, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
+  startHereIcon: {
+    width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  startHereTitle: { color: COLORS.onBrand, fontSize: 15, fontWeight: "700" },
+  startHereDesc: { color: COLORS.onBrand, fontSize: 11, marginTop: 2, opacity: 0.9 },
   statsRow: { flexDirection: "row", gap: SPACING.md },
   stat: {
     flex: 1, backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,

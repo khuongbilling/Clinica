@@ -29,6 +29,11 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (p.prologue_complete === undefined) { p = { ...p, prologue_complete: true }; changed = true; }
   if (p.identity_restored === undefined) { p = { ...p, identity_restored: true }; changed = true; }
   if (p.diagnostic_intro_seen === undefined) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
+  // Push 5 — existing players (created before this push) never had the
+  // reminiscence scene, so backfill them as "already seen" rather than
+  // surprising returning players with it. Brand-new players get `false`
+  // explicitly in createPlayer below, so they DO see it once.
+  if (p.seen_reminiscence === undefined) { p = { ...p, seen_reminiscence: true }; changed = true; }
   for (const [id, raw] of Object.entries(src)) {
     const star = Math.min(MAX_STAR, Math.max(1, Math.round(Number(raw?.star) || 1)));
     const copies = Math.max(0, Math.round(Number(raw?.copies) || 0));
@@ -212,6 +217,8 @@ type Ctx = {
   completePrologue: () => Promise<void>;
   completeIdentityRestore: (name: string) => Promise<void>;
   completeDiagnosticIntro: () => Promise<void>;
+  markReminiscenceSeen: () => Promise<void>;
+  completeLotusLessonNode: (nodeId: string) => Promise<{ ok: boolean; message: string; rewards?: import('./lotusLessons').LotusLessonRewards }>;
   applyClassDiagnostic: (profile: ClassDiagnosticInput) => Promise<void>;
   confirmClassDiagnostic: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
 };
@@ -284,6 +291,9 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     prologue_complete: args.prologue_complete ?? true,
     identity_restored: args.identity_restored ?? true,
     diagnostic_intro_seen: args.diagnostic_intro_seen ?? true,
+    // Push 5 — new players have not seen the memory-reminiscence scene yet;
+    // it plays once, right after their class-diagnostic is confirmed.
+    seen_reminiscence: false,
     rank: 'Sprout Healer',
     rank_index: 0,
     xp: 0,
@@ -1058,6 +1068,52 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Class registered — ${classId[0].toUpperCase()}${classId.slice(1)}.` };
   }, [updateState]);
 
+  // Push 5 — marks the post-recall memory-reminiscence scene as seen so the
+  // one-time redirect (post-recall -> reminiscence -> University) never
+  // re-triggers on later app opens. Idempotent no-op if already seen.
+  const markReminiscenceSeen = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.seen_reminiscence) return;
+    const next = { ...base, seen_reminiscence: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
+  // Push 5 — completes a Lotus Lessons node (the Duolingo-style onboarding
+  // path inside University). Grants fixed, earned-only rewards (Insight
+  // Crystals, Crowns/"Ward Coins", University Credits/"Knowledge Points",
+  // Player XP) — never paid Lotus Gems. Tracked in the same
+  // lessons_completed list as the Lessons & Simulations MVP, under a
+  // "lotus:" id prefix so the two systems never collide. Repeat completions
+  // are a no-op (rewards are a one-time onboarding grant, not farmable).
+  const completeLotusLessonNode = useCallback(async (nodeId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const { getLotusNode, lotusNodeCompletionId } = await import('./lotusLessons');
+    const node = getLotusNode(nodeId);
+    if (!node || node.status !== 'available') return { ok: false, message: 'Unknown lesson.' };
+    const completionId = lotusNodeCompletionId(nodeId);
+    const completed = base.lessons_completed || [];
+    if (completed.includes(completionId)) {
+      return { ok: true, message: 'Already completed.', rewards: node.rewards };
+    }
+    const withXp = applyXpDetailed(base, node.rewards.xp).player;
+    const next: PlayerState = {
+      ...withXp,
+      lessons_completed: [...completed, completionId],
+      insight_crystals: (base.insight_crystals || 0) + node.rewards.insightCrystals,
+      crowns: (base.crowns || 0) + node.rewards.crowns,
+      university_credits: (base.university_credits || 0) + node.rewards.universityCredits,
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return {
+      ok: true,
+      message: `+${node.rewards.insightCrystals} Insight Crystals · +${node.rewards.crowns} Ward Coins · +${node.rewards.universityCredits} Knowledge Points · +${node.rewards.xp} XP`,
+      rewards: node.rewards,
+    };
+  }, [updateState]);
+
   // Reserved for a future push: applies a full identity result onto the
   // EXISTING player (switches aptitude/class identity, learning +
   // difficulty settings, grants the new aptitude's starting hero, realigns
@@ -1094,8 +1150,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, applyClassDiagnostic, confirmClassDiagnostic]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

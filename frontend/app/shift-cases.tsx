@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ENEMIES } from "@/src/game/content";
+import { ENEMY_CLINICAL } from "@/src/game/clinical";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { QUEST_ICON } from "@/src/components/ModeBanners";
 import { StaminaPill } from "@/src/components/StaminaPill";
@@ -15,6 +16,7 @@ import { goBack } from "@/src/utils/navigation";
 import {
   BOSS_ENCOUNTER_COST, ENCOUNTER_COST, formatCountdown, useLiveStamina,
 } from "@/src/game/stamina";
+import { chapterSimulationLabel } from "@/src/game/modeHub";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────
@@ -145,6 +147,9 @@ export default function ShiftCasesPage() {
             </View>
 
             <View style={styles.caseBody}>
+              <Text style={styles.chapterLabel}>
+                CHAPTER {ENEMY_CLINICAL[current.id]?.chapter ?? 1} · UNIVERSITY SIMULATION: {chapterSimulationLabel(ENEMY_CLINICAL[current.id]?.chapter).toUpperCase()}
+              </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text style={[styles.caseSys, { color: accent }]}>{current.primarySystem.toUpperCase()}</Text>
                 {current.secondarySystem && (
@@ -271,6 +276,7 @@ const styles = StyleSheet.create({
   },
   caseCounterTxt: { color: "#fff", fontSize: 10, fontWeight: "700" },
   caseBody: { padding: SPACING.md, gap: 5 },
+  chapterLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
   caseSys: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   diffRow: { flexDirection: "row", gap: 2, marginLeft: 2 },
   caseName: { color: COLORS.onSurface, fontSize: 20, fontWeight: "600" },

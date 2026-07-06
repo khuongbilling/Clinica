@@ -12,6 +12,7 @@ import {
   lessonsForDepartment,
   simulationsForDepartment,
 } from "@/src/game/lessons";
+import { LOTUS_PATHS, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -25,6 +26,7 @@ export default function LessonsHubScreen() {
   const completedLessons = player.lessons_completed || [];
   const available = DEPARTMENTS.filter((d) => d.status === "available");
   const comingSoon = DEPARTMENTS.filter((d) => d.status === "coming_soon");
+  const vitalFoundations = LOTUS_PATHS.find((p) => p.id === "vital-foundations");
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -46,6 +48,50 @@ export default function LessonsHubScreen() {
           <Ionicons name="information-circle-outline" size={16} color={COLORS.onSurfaceTertiary} />
           <Text style={styles.safetyTxt}>{SAFETY_NOTE}</Text>
         </View>
+
+        {vitalFoundations && (
+          <>
+            <Text style={styles.section}>{vitalFoundations.name}</Text>
+            <Text style={styles.pathDesc}>{vitalFoundations.description}</Text>
+            <View style={styles.pathTrack}>
+              {vitalFoundations.nodes.map((node, i) => {
+                const locked = node.status !== "available";
+                const done = !locked && isLotusNodeComplete(player, node.id);
+                const isLast = i === vitalFoundations.nodes.length - 1;
+                return (
+                  <View key={node.id} style={styles.pathRow}>
+                    <View style={styles.pathNodeCol}>
+                      <Pressable
+                        disabled={locked}
+                        onPress={() => router.push(`/university/lotus-lesson/${node.id}` as any)}
+                        style={[
+                          styles.pathNode,
+                          done && styles.pathNodeDone,
+                          locked && styles.pathNodeLocked,
+                        ]}
+                        testID={`lotus-node-${node.id}`}
+                      >
+                        <Ionicons
+                          name={locked ? "lock-closed" : done ? "checkmark" : "water"}
+                          size={20}
+                          color={locked ? COLORS.onSurfaceTertiary : COLORS.onBrand}
+                        />
+                      </Pressable>
+                      {!isLast && <View style={styles.pathConnector} />}
+                    </View>
+                    <View style={styles.pathNodeBody}>
+                      <Text style={[styles.pathNodeTitle, locked && styles.pathNodeTitleLocked]}>
+                        {node.title}
+                      </Text>
+                      <Text style={styles.pathNodeSub}>{node.subtitle}</Text>
+                      {done && <Text style={styles.pathNodeDoneTxt}>Completed</Text>}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         <Text style={styles.section}>Departments</Text>
         {available.map((d) => {
@@ -129,6 +175,22 @@ const styles = StyleSheet.create({
   },
   safetyTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
   section: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", marginTop: SPACING.sm },
+  pathDesc: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: -SPACING.sm },
+  pathTrack: { gap: 0 },
+  pathRow: { flexDirection: "row", gap: SPACING.md },
+  pathNodeCol: { alignItems: "center" },
+  pathNode: {
+    width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center",
+    backgroundColor: COLORS.brand, borderWidth: 1, borderColor: COLORS.brand,
+  },
+  pathNodeDone: { backgroundColor: COLORS.success || COLORS.brand },
+  pathNodeLocked: { backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border },
+  pathConnector: { width: 2, flex: 1, minHeight: 24, backgroundColor: COLORS.border, marginVertical: 2 },
+  pathNodeBody: { flex: 1, paddingBottom: SPACING.lg },
+  pathNodeTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  pathNodeTitleLocked: { color: COLORS.onSurfaceTertiary },
+  pathNodeSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 2 },
+  pathNodeDoneTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "700", marginTop: 4 },
   deptCard: {
     flexDirection: "row", gap: SPACING.md, alignItems: "center",
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,

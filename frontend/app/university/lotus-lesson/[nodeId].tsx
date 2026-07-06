@@ -1,0 +1,211 @@
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "@/src/utils/navigation";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  getLotusNode,
+  isLotusNodeComplete,
+  LOTUS_LESSON_SAFETY_NOTE,
+} from "@/src/game/lotusLessons";
+import { usePlayer } from "@/src/game/store";
+import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+
+// Push 5 — Lotus Lesson interaction flow.
+//
+// Renders one node's `interactions` array in order: "info" beats just
+// require a tap to continue, "choice" beats show options with gentle,
+// non-blocking feedback (wrong answers never fail the player out — they
+// just see why, then continue). On the last interaction, grants the
+// node's earned-only rewards and shows the payoff copy that links this
+// lesson to its first real Ward Shift case.
+
+export default function LotusLessonScreen() {
+  const router = useRouter();
+  const { nodeId } = useLocalSearchParams<{ nodeId: string }>();
+  const { player, completeLotusLessonNode } = usePlayer();
+  const node = getLotusNode(String(nodeId));
+
+  const [step, setStep] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [finished, setFinished] = useState(false);
+  const [rewardMsg, setRewardMsg] = useState<string | null>(null);
+
+  if (!player || !node) return null;
+
+  const alreadyDone = isLotusNodeComplete(player, node.id);
+  const interaction = node.interactions[step];
+  const isLast = step === node.interactions.length - 1;
+
+  const finish = async () => {
+    const res = await completeLotusLessonNode(node.id);
+    if (res.ok) setRewardMsg(res.message);
+    setFinished(true);
+  };
+
+  const advance = () => {
+    setSelected(null);
+    if (isLast) {
+      finish();
+    } else {
+      setStep((s) => s + 1);
+    }
+  };
+
+  const onChoose = (i: number) => {
+    if (selected !== null) return;
+    setSelected(i);
+  };
+
+  const goToShift = () => {
+    router.replace({ pathname: "/battle", params: { enemyId: node.linkedCaseId } } as any);
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.hero}>
+        <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university/lessons")} testID="lotus-lesson-back">
+          <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
+        </Pressable>
+        <Text style={styles.kicker}>LOTUS LESSON{alreadyDone ? " · COMPLETED" : ""}</Text>
+        <Text style={styles.title}>{node.title}</Text>
+        {!finished && (
+          <View style={styles.progressRow}>
+            {node.interactions.map((_, i) => (
+              <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]} />
+            ))}
+          </View>
+        )}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {!finished ? (
+          <>
+            <View style={styles.safetyBox}>
+              <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.safetyTxt}>{LOTUS_LESSON_SAFETY_NOTE}</Text>
+            </View>
+
+            <View style={styles.card} testID="lotus-lesson-interaction">
+              <Text style={styles.prompt}>{interaction.prompt}</Text>
+              {interaction.detail && <Text style={styles.detail}>{interaction.detail}</Text>}
+
+              {interaction.type === "choice" && interaction.choices && (
+                <View style={{ gap: SPACING.sm, marginTop: SPACING.sm }}>
+                  {interaction.choices.map((c, i) => {
+                    const isSel = selected === i;
+                    const showCorrect = selected !== null && c.correct;
+                    const showWrong = isSel && !c.correct;
+                    return (
+                      <Pressable
+                        key={i}
+                        onPress={() => onChoose(i)}
+                        disabled={selected !== null}
+                        style={[
+                          styles.choice,
+                          showCorrect && styles.choiceCorrect,
+                          showWrong && styles.choiceWrong,
+                        ]}
+                        testID={`lotus-choice-${i}`}
+                      >
+                        <Text style={styles.choiceTxt}>{c.text}</Text>
+                      </Pressable>
+                    );
+                  })}
+                  {selected !== null && (
+                    <Text style={styles.feedbackTxt}>{interaction.choices[selected].feedback}</Text>
+                  )}
+                </View>
+              )}
+            </View>
+
+            {(interaction.type === "info" || selected !== null) && (
+              <Pressable style={styles.continueBtn} onPress={advance} testID="lotus-lesson-continue">
+                <Text style={styles.continueTxt}>{isLast ? "Finish Lesson" : "Continue"}</Text>
+                <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
+              </Pressable>
+            )}
+          </>
+        ) : (
+          <View style={styles.doneWrap} testID="lotus-lesson-complete">
+            <Ionicons name="checkmark-circle" size={48} color={COLORS.brand} />
+            <Text style={styles.doneTitle}>Lesson Complete</Text>
+            {rewardMsg && <Text style={styles.rewardTxt}>{rewardMsg}</Text>}
+            {node.payoffCopy && (
+              <View style={styles.payoffBox}>
+                <Text style={styles.payoffTxt}>{node.payoffCopy}</Text>
+              </View>
+            )}
+            {node.linkedCaseId && (
+              <Pressable style={styles.continueBtn} onPress={goToShift} testID="lotus-lesson-go-shift">
+                <Ionicons name="pulse" size={16} color={COLORS.onBrand} />
+                <Text style={styles.continueTxt}>Try It in a Ward Shift</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={styles.secondaryBtn}
+              onPress={() => goBack(router, "/university/lessons")}
+              testID="lotus-lesson-back-to-path"
+            >
+              <Text style={styles.secondaryTxt}>Back to Vital Foundations</Text>
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.surface },
+  hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
+  backBtn: {
+    width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
+  },
+  kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
+  title: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },
+  progressRow: { flexDirection: "row", gap: 6, marginTop: SPACING.sm },
+  progressDot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: COLORS.border },
+  progressDotActive: { backgroundColor: COLORS.brand },
+  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  safetyBox: {
+    flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    padding: SPACING.sm, backgroundColor: COLORS.surfaceSecondary,
+  },
+  safetyTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
+  card: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    padding: SPACING.lg, backgroundColor: COLORS.surfaceSecondary, gap: SPACING.sm,
+  },
+  prompt: { color: COLORS.onSurface, fontSize: 16, fontWeight: "600", lineHeight: 23 },
+  detail: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
+  choice: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    padding: SPACING.sm, backgroundColor: COLORS.surface,
+  },
+  choiceCorrect: { borderColor: COLORS.brand, backgroundColor: COLORS.brand + "18" },
+  choiceWrong: { borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandSecondary + "18" },
+  choiceTxt: { color: COLORS.onSurface, fontSize: 13 },
+  feedbackTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  continueBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.pill, paddingVertical: SPACING.md,
+  },
+  continueTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700" },
+  doneWrap: { alignItems: "center", gap: SPACING.md, paddingTop: SPACING.lg },
+  doneTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" },
+  rewardTxt: { color: COLORS.brand, fontSize: 13, fontWeight: "700", textAlign: "center" },
+  payoffBox: {
+    borderWidth: 1, borderColor: COLORS.brand + "40", borderRadius: RADIUS.md,
+    padding: SPACING.md, backgroundColor: COLORS.brand + "10", width: "100%",
+  },
+  payoffTxt: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19, textAlign: "center", fontStyle: "italic" },
+  secondaryBtn: { paddingVertical: SPACING.sm },
+  secondaryTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
+});

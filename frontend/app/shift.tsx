@@ -9,7 +9,7 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import {
-  CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
+  CHAPTER_SIMULATION_LABELS, CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
   WARD_SHIFT_MODE, WELLNESS_MODES,
 } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -70,6 +70,21 @@ export default function ShiftPage() {
           Pick a mode to read its briefing, then step in. New modes open here as you progress.
         </Text>
 
+        <View style={styles.simBox}>
+          <Text style={styles.simTitle}>Clinica University Simulations</Text>
+          <Text style={styles.simSub}>
+            Every case in the ward is a University simulation, run in order as you progress:
+          </Text>
+          <View style={{ gap: 3 }}>
+            {Object.entries(CHAPTER_SIMULATION_LABELS).map(([ch, label]) => (
+              <View key={ch} style={styles.simRow}>
+                <Text style={styles.simChapter}>Ch.{ch}</Text>
+                <Text style={styles.simLabel}>{label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* Clinical Challenges — illustrated banners → each mode's intro */}
         <Text style={styles.section}>Clinical Challenges</Text>
         <BannerCard mode={WARD_SHIFT_MODE} height={156} onPress={() => openIntro(WARD_SHIFT_MODE)} testID="mode-ward-shift" />
@@ -123,6 +138,12 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.xs },
   section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 2 },
+  simBox: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, gap: 6 },
+  simTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
+  simSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginBottom: 2 },
+  simRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "baseline" },
+  simChapter: { color: COLORS.brand, fontSize: 11, fontWeight: "800", width: 34 },
+  simLabel: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
   smallGrid: { gap: SPACING.sm },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },

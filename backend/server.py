@@ -123,6 +123,7 @@ class Player(BaseModel):
     chapter_progress: int = 1
     class_trainees: Dict[str, int] = Field(default_factory=dict)
     university_credits: int = 0
+    seen_reminiscence: bool = False
     lessons_completed: List[str] = Field(default_factory=list)
     simulations_completed: List[str] = Field(default_factory=list)
     badge_progress: Dict[str, int] = Field(default_factory=dict)
@@ -180,6 +181,7 @@ class PlayerUpdate(BaseModel):
     chapter_progress: Optional[int] = None
     class_trainees: Optional[Dict[str, int]] = None
     university_credits: Optional[int] = None
+    seen_reminiscence: Optional[bool] = None
     lessons_completed: Optional[List[str]] = None
     simulations_completed: Optional[List[str]] = None
     badge_progress: Optional[Dict[str, int]] = None
