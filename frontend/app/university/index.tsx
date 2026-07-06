@@ -12,6 +12,8 @@ import { RewardPreview } from "@/src/components/RewardPreview";
 import { UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
 import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
+import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 
 const MENU: { id: string; title: string; desc: string; icon: string; route?: string }[] = [
   {
@@ -78,7 +80,7 @@ export default function UniversityHubScreen() {
       <PlayerHeader player={player} />
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
-        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} testID="university-back">
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10} testID="university-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>
@@ -87,6 +89,10 @@ export default function UniversityHubScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <SceneTransition trigger="university-arrival">
+        {nextLotusNode && (player.lessons_completed?.length ?? 0) === 0 && (
+          <OnboardingProgressBar step="University" />
+        )}
         <View style={styles.mentorBox}>
           <Ionicons name="sparkles-outline" size={16} color={COLORS.brand} />
           <Text style={styles.mentorTxt}>
@@ -126,6 +132,7 @@ export default function UniversityHubScreen() {
             </View>
           </Pressable>
         )}
+        </SceneTransition>
 
         {MENU.map((m) => (
           <Pressable

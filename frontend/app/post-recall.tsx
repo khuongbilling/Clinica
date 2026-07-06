@@ -21,6 +21,9 @@ import {
   type FantasyClass,
 } from "@/src/game/classQuiz";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
+import { MilestoneReward } from "@/src/components/onboarding/MilestoneReward";
+import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
 
 // Post-recall onboarding. Runs immediately after Lotus Recall, before the
 // player ever reaches the normal hub, in two resumable sub-steps:
@@ -270,9 +273,12 @@ export default function PostRecall() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         {phase === "identity" ? (
           <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-identity">
+            {!isReplay && <OnboardingProgressBar step="Identity" />}
             <Ionicons name="finger-print" size={36} color={COLORS.brand} />
-            <Text style={styles.systemLine}>SYSTEM: Identity record fragmented.</Text>
-            <Text style={styles.systemLine}>SYSTEM: Restore designation.</Text>
+            <SystemPanel icon="finger-print-outline" compact>
+              <Text style={styles.systemLine}>Identity record fragmented.</Text>
+              <Text style={styles.systemLine}>Restore designation.</Text>
+            </SystemPanel>
             <Text style={styles.body}>
               The Lotus Recall preserved you, but not every record. Before the Sanctuary can
               re-open your file, it needs a name to write it under.
@@ -301,8 +307,11 @@ export default function PostRecall() {
           </Animated.View>
         ) : view === "intro" ? (
           <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-diagnostic-intro">
+            {!isReplay && <OnboardingProgressBar step="Diagnostic" />}
             <Ionicons name="pulse" size={32} color={COLORS.brand} />
-            <Text style={styles.systemLine}>SYSTEM: Class resonance detected.</Text>
+            <SystemPanel icon="pulse-outline" compact>
+              <Text style={styles.systemLine}>Class resonance detected.</Text>
+            </SystemPanel>
             <Text style={styles.body}>
               A short diagnostic, {player?.name || "Healer"} — not a test. Five quick scenarios
               recommend a starting pathway and the modern department it resonates with. Nothing
@@ -372,9 +381,11 @@ export default function PostRecall() {
         ) : view === "assigning" ? (
           <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-assigning">
             <Ionicons name="hourglass-outline" size={32} color={COLORS.brand} />
-            {AUTOMATED_MESSAGES.slice(0, automatedMsgIndex + 1).map((line, i) => (
-              <Text key={i} style={styles.systemLine}>{line}</Text>
-            ))}
+            <SystemPanel icon="hourglass-outline" compact>
+              {AUTOMATED_MESSAGES.slice(0, automatedMsgIndex + 1).map((line, i) => (
+                <Text key={i} style={styles.systemLine}>{line.replace(/^SYSTEM:\s*/, "")}</Text>
+              ))}
+            </SystemPanel>
           </Animated.View>
         ) : view === "chooser" ? (
           <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-chooser">
@@ -417,13 +428,26 @@ export default function PostRecall() {
         ) : view === "confirming" ? (
           <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-confirming">
             <Ionicons name="checkmark-circle-outline" size={32} color={COLORS.brand} />
-            {confirmMessages.slice(0, confirmMsgIndex + 1).map((line, i) => (
-              <Text key={i} style={styles.systemLine}>{line}</Text>
-            ))}
+            <SystemPanel icon="checkmark-circle-outline" compact>
+              {confirmMessages.slice(0, confirmMsgIndex + 1).map((line, i) => (
+                <Text key={i} style={styles.systemLine}>{line.replace(/^SYSTEM:\s*/, "")}</Text>
+              ))}
+            </SystemPanel>
+            {confirmMsgIndex >= confirmMessages.length - 1 && activeTrait && activeClass && (
+              <MilestoneReward
+                title="CLASS REGISTERED"
+                accent={activeIdentity?.color}
+                items={[
+                  { icon: (activeIdentity?.icon as any) || "school-outline", label: activeClass },
+                  { icon: "sparkles-outline", label: activeTrait.name },
+                ]}
+              />
+            )}
           </Animated.View>
         ) : (
           <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-result">
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+              {!isReplay && <OnboardingProgressBar step="Class Result" />}
               {result && activeClass && activeIdentity && (
                 <>
                   <View style={styles.diagBlock}>

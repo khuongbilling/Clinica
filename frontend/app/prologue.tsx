@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, SPACING } from "@/src/theme/colors";
+import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 
 // Push 1 prologue entry point. Replaces the old name/quiz onboarding as the
 // very first thing a brand-new player sees: a short cinematic beat, then a
@@ -14,12 +16,7 @@ export default function Prologue() {
   const router = useRouter();
   const { player, createPlayer } = usePlayer();
   const [starting, setStarting] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
   const startedRef = useRef(false);
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 900, useNativeDriver: true }).start();
-  }, [fadeAnim]);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -49,15 +46,19 @@ export default function Prologue() {
 
   return (
     <View style={styles.container} testID="prologue-screen">
-      <Animated.View style={[styles.block, { opacity: fadeAnim }]}>
+      <SceneTransition style={styles.block}>
+        <OnboardingProgressBar step="Prologue" />
         <Text style={styles.kicker}>THE KINGDOM OF HEALING</Text>
         <Text style={styles.title}>A patient needs you.</Text>
         <Text style={styles.body}>
           Somewhere in the ward, Stability is falling and Corruption is spreading.
           There is no time for paperwork — only the work itself.
         </Text>
-        <Text style={styles.sub}>{starting ? "Entering the ward…" : "Preparing your first shift…"}</Text>
-      </Animated.View>
+        <View style={styles.subRow}>
+          <ActivityIndicator size="small" color={COLORS.brand} />
+          <Text style={styles.sub}>{starting ? "Entering the ward…" : "Preparing your first shift…"}</Text>
+        </View>
+      </SceneTransition>
     </View>
   );
 }
@@ -70,9 +71,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: SPACING.xl,
   },
-  block: { alignItems: "center", gap: SPACING.md, maxWidth: 360 },
+  block: { alignItems: "center", gap: SPACING.md, maxWidth: 360, width: "100%" },
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 3, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300", textAlign: "center" },
   body: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21, textAlign: "center" },
-  sub: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 1, marginTop: SPACING.md },
+  subRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.md },
+  sub: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 1 },
 });

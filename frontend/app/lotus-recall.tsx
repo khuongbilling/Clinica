@@ -5,6 +5,8 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 
 // Push 1 prologue finale. Reached only after the scripted-to-lose Silent
 // Infarct boss battle. There is no Game Over screen here and no rewards —
@@ -38,7 +40,9 @@ export default function LotusRecall() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="lotus-recall-screen">
-      <Animated.View style={[styles.block, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.glow, { opacity: fadeAnim }]} pointerEvents="none" />
+      <SceneTransition style={styles.block} duration={1200}>
+        {!isReplay && <OnboardingProgressBar step="Lotus Recall" />}
         <Ionicons name="flower" size={40} color={COLORS.brand} />
         <Text style={styles.kicker}>LOTUS RECALL</Text>
         <Text style={styles.title}>The patient is gone.</Text>
@@ -51,12 +55,17 @@ export default function LotusRecall() {
           healers so carefully. A pulse of lotus light draws you back to the Sanctuary, safe,
           to begin that training in earnest.
         </Text>
-        {ready && (
+        {ready ? (
           <Pressable style={styles.button} onPress={proceed} testID="lotus-recall-continue">
             <Text style={styles.buttonTxt}>{isReplay ? "END REPLAY" : "RETURN TO THE SANCTUARY"}</Text>
           </Pressable>
+        ) : (
+          <View style={styles.waitRow}>
+            <View style={styles.waitDot} />
+            <Text style={styles.waitTxt}>The lotus light gathers…</Text>
+          </View>
         )}
-      </Animated.View>
+      </SceneTransition>
     </SafeAreaView>
   );
 }
@@ -69,4 +78,16 @@ const styles = StyleSheet.create({
   body: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21, textAlign: "center" },
   button: { backgroundColor: COLORS.brand, paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, borderRadius: RADIUS.md, marginTop: SPACING.lg },
   buttonTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
+  glow: {
+    position: "absolute",
+    top: "30%",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: COLORS.brand,
+    opacity: 0.08,
+  },
+  waitRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.lg },
+  waitDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.brand },
+  waitTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 1 },
 });

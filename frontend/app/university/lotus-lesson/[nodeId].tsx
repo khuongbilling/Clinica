@@ -13,6 +13,10 @@ import {
 } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { MilestoneReward } from "@/src/components/onboarding/MilestoneReward";
+import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
+import type { LotusLessonRewards } from "@/src/game/lotusLessons";
 
 // Push 5 — Lotus Lesson interaction flow.
 //
@@ -32,7 +36,7 @@ export default function LotusLessonScreen() {
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
-  const [rewardMsg, setRewardMsg] = useState<string | null>(null);
+  const [rewards, setRewards] = useState<LotusLessonRewards | null>(null);
 
   if (!player || !node) return null;
 
@@ -42,7 +46,7 @@ export default function LotusLessonScreen() {
 
   const finish = async () => {
     const res = await completeLotusLessonNode(node.id);
-    if (res.ok) setRewardMsg(res.message);
+    if (res.ok && res.rewards) setRewards(res.rewards);
     setFinished(true);
   };
 
@@ -68,7 +72,7 @@ export default function LotusLessonScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
-        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university/lessons")} testID="lotus-lesson-back">
+        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university/lessons")} hitSlop={10} testID="lotus-lesson-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>LOTUS LESSON{alreadyDone ? " · COMPLETED" : ""}</Text>
@@ -84,7 +88,7 @@ export default function LotusLessonScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {!finished ? (
-          <>
+          <SceneTransition trigger={step}>
             <View style={styles.safetyBox}>
               <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.safetyTxt}>{LOTUS_LESSON_SAFETY_NOTE}</Text>
@@ -129,12 +133,26 @@ export default function LotusLessonScreen() {
                 <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
               </Pressable>
             )}
-          </>
+          </SceneTransition>
         ) : (
-          <View style={styles.doneWrap} testID="lotus-lesson-complete">
+          <SceneTransition trigger="lesson-complete" style={styles.doneWrap}>
+          <View testID="lotus-lesson-complete">
+            {!alreadyDone && (player.lessons_completed?.length ?? 0) <= 1 && (
+              <OnboardingProgressBar step="Lessons" />
+            )}
             <Ionicons name="checkmark-circle" size={48} color={COLORS.brand} />
             <Text style={styles.doneTitle}>Lesson Complete</Text>
-            {rewardMsg && <Text style={styles.rewardTxt}>{rewardMsg}</Text>}
+            {rewards && (
+              <MilestoneReward
+                title="LESSON REWARD"
+                items={[
+                  { icon: "diamond-outline", label: "Insight Crystals", amount: String(rewards.insightCrystals) },
+                  { icon: "logo-usd", label: "Ward Coins", amount: String(rewards.crowns) },
+                  { icon: "school-outline", label: "Knowledge Points", amount: String(rewards.universityCredits) },
+                  { icon: "trending-up-outline", label: "XP", amount: String(rewards.xp) },
+                ]}
+              />
+            )}
             {node.payoffCopy && (
               <View style={styles.payoffBox}>
                 <Text style={styles.payoffTxt}>{node.payoffCopy}</Text>
@@ -154,6 +172,7 @@ export default function LotusLessonScreen() {
               <Text style={styles.secondaryTxt}>Back to Vital Foundations</Text>
             </Pressable>
           </View>
+          </SceneTransition>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -200,7 +219,6 @@ const styles = StyleSheet.create({
   continueTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700" },
   doneWrap: { alignItems: "center", gap: SPACING.md, paddingTop: SPACING.lg },
   doneTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" },
-  rewardTxt: { color: COLORS.brand, fontSize: 13, fontWeight: "700", textAlign: "center" },
   payoffBox: {
     borderWidth: 1, borderColor: COLORS.brand + "40", borderRadius: RADIUS.md,
     padding: SPACING.md, backgroundColor: COLORS.brand + "10", width: "100%",
