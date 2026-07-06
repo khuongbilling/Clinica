@@ -26,8 +26,9 @@ The prologue battle is a fully *forced* hand-held tutorial: the player can only 
 **How to apply:** For any float-over-game overlay, put `pointerEvents: 'box-none'` in the wrapper's STYLE (children get touches by default). Do not "fix" it back to the prop form — that reintroduces the deprecation and doesn't match the working pattern.
 
 ## Cue feedback is non-blocking; the cue QUESTION still blocks
-- The unanswered Clinical Cue modal (`state.pendingCue && !cueFeedback`) stays a full-screen blocking `modalOverlay` — the player must answer it.
-- The ANSWERED-cue feedback (`cueFeedback`) is a bottom-anchored card (`cueFeedbackWrap` absolute-fill + style.pointerEvents box-none; `cueFeedbackCard` the visible ScrollView) so reading the rationale never freezes the shift. Auto-continues after 3s (`setTimeout` in `handleCueAnswer`) or via CONTINUE.
+- The unanswered Clinical Cue modal (`state.pendingCue && !cueFeedback`) stays a full-screen blocking `modalOverlay` — the player must answer it. Its card is a ScrollView (`cueModal` style + `cueModalContent` contentContainerStyle, `maxHeight:"85%"`) so a tall cue can't overflow the centered overlay and appear off-center.
+- The ANSWERED-cue feedback (`cueFeedback`) is a **screen-centered** card (`cueFeedbackWrap` absolute-fill, `justifyContent:"center"` + style.pointerEvents box-none; `cueFeedbackCard` the visible ScrollView) so reading the rationale never freezes the shift. Auto-continues after 3s (`setTimeout` in `handleCueAnswer`) or via CONTINUE.
+- **Both the question and the explanation must be horizontally + vertically centered** (user requirement). The wrap centers position; keep the feedback box-none so it stays non-blocking even while centered.
 
 ## Long-press hint is a tutorial step, not a separate coachmark
 - The old standalone `LongPressCoachmark` component was deleted. Its "tap to use / long-press for full nursing+NCLEX detail" message now lives as the one-time non-action step `prologue_skills` in `TUTORIALS.prologueBattle` (between the cue step and the scout step). Don't re-add a separate coachmark.

@@ -1014,7 +1014,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
 
       {state.pendingCue && !cueFeedback && state.outcome === "ongoing" && (activeTutorialId !== "prologueBattle" || guidedCueStep) && (
         <View style={styles.modalOverlay}>
-          <View style={styles.cueModal} testID="clinical-cue-modal">
+          <ScrollView style={styles.cueModal} contentContainerStyle={styles.cueModalContent} showsVerticalScrollIndicator={false} testID="clinical-cue-modal">
             <Text style={styles.cueKicker}>CLINICAL CUE</Text>
             <Text style={styles.cueTierTopic}>
               Tier {CUE_TIER_NUMBER[state.pendingCue.tier]} · {CUE_TIER_LABELS[state.pendingCue.tier]} · {CUE_TOPIC_LABELS[state.pendingCue.topic]}
@@ -1025,7 +1025,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
                 <Text style={styles.cueOptionTxt}>{opt.text}</Text>
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         </View>
       )}
 
@@ -1374,8 +1374,9 @@ const styles = StyleSheet.create({
   ultBtnTxt: { color: "#1A1200", fontSize: 8, fontWeight: "700" },
 
   // ── Clinical Cue modal ──
-  cueModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 8, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380 },
-  cueFeedbackWrap: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end", alignItems: "center", padding: SPACING.md },
+  cueModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, maxHeight: "85%", flexGrow: 0 },
+  cueModalContent: { padding: SPACING.lg, gap: 8 },
+  cueFeedbackWrap: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center", padding: SPACING.md },
   cueFeedbackCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, maxHeight: "60%", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 20 },
   cueKicker: { color: COLORS.runeGold, fontSize: 10, letterSpacing: 1.5, fontWeight: "700", textAlign: "center" },
   cueTierTopic: { color: COLORS.onSurfaceSecondary, fontSize: 10, letterSpacing: 0.5, fontWeight: "600", marginTop: -4, textAlign: "center" },
