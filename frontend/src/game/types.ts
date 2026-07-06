@@ -144,6 +144,14 @@ export interface PlayerState {
   // src/game/classTree.ts for the full class/ability/materials model.
   class_tree_id?: string | null;
   class_progress?: Record<string, number[]>;
+  // Push 6 — snapshot of the class-diagnostic quiz result at the moment the
+  // player's class was last confirmed. Purely descriptive (never re-derives
+  // gameplay); lets the read-only "Review Class Result" screen show the same
+  // resonance/second-fit context the player saw during onboarding without
+  // having to re-run or re-store the full quiz answers. Backfilled for
+  // legacy players in normalizeProgression so it is never left undefined.
+  class_diagnostic_resonance?: string | null;
+  class_diagnostic_secondary?: string | null;
   mastery: {
     assessment: number;
     stabilization: number;

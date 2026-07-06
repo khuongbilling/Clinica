@@ -36,7 +36,7 @@ type DetailEntry =
   | { kind: "call"; option: typeof CALL_OPTIONS[number] };
 
 export default function Battle() {
-  const { enemyId, training, prologue } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string }>();
+  const { enemyId, training, prologue, replay } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string }>();
   const { player, loading } = usePlayer();
   if (loading || !player) {
     return (
@@ -45,10 +45,10 @@ export default function Battle() {
       </View>
     );
   }
-  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} />;
+  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} />;
 }
 
-function BattleInner({ enemyId, training, prologue }: { enemyId?: string; training?: string; prologue?: string }) {
+function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction, currentStep, activeTutorialId } = useTutorial();
@@ -58,6 +58,10 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
   // Push 1 prologue: "tutorial" is the guided, reliably-winnable Ward Shift
   // fight; "boss" is the narratively scripted-to-lose Silent Infarct fight.
   const isPrologueTutorial = prologue === "tutorial";
+  // Push 6 — Profile "Replay Prologue" re-enters this exact guided sequence
+  // without touching saved progress: no XP/currency/mastery/codex/inventory
+  // is granted or recorded, and no onboarding flag is ever written.
+  const isReplay = replay === "1";
 
   const enemy = useMemo(() => {
     if (!enemyId) return ENEMIES[0];
@@ -485,13 +489,32 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
     // Route straight into the Lotus Recall cutscene regardless of outcome.
     if (isPrologueBoss) {
-      router.replace({ pathname: "/lotus-recall", params: { enemyId: enemy.id } });
+      router.replace({ pathname: "/lotus-recall", params: { enemyId: enemy.id, replay: isReplay ? "1" : "" } });
       return;
     }
     let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;
     let heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[] = [];
     let playerXpEarned = 0;
     let heroXpEarned: Record<string, number> = {};
+    // Push 6 replay: skip every reward/progress mutation below (XP, hero XP,
+    // shards, crowns, inventory, mastery, codex, failure counts, cue topics).
+    // Falls straight through to the outcome screen with nothing granted.
+    if (isReplay) {
+      router.replace({
+        pathname: "/result",
+        params: {
+          outcome: state.outcome, enemyId: enemy.id, stability: String(state.stability),
+          training: isTraining ? "1" : "0", prologue: isPrologueTutorial ? "tutorial" : "",
+          replay: "1", shards: "0", crowns: "0", fullChain: state.fullChainCompleted ? "1" : "0",
+          unsafe: String(state.unsafeActionsUsed), poorFit: String(state.poorFitActionsUsed),
+          turns: String(state.turnsTaken), reassess: state.reassessUsedAnytime ? "1" : "0",
+          consults: String(state.consultsUsed), emergency: String(state.emergencyCallsUsed),
+          inappropriate: String(state.inappropriateConsultsUsed), basicAid: String(state.basicAidUses),
+          playerXp: "0", heroXp: "{}", playerLevelUp: "", heroLevelUps: "[]",
+        },
+      });
+      return;
+    }
     if (state.outcome === "win") {
       const isBoss = enemy.id === BOSS_LORD_IMBALANCE.id;
       const baseXp = isBoss ? 150 : 35 + enemy.difficulty * 10;

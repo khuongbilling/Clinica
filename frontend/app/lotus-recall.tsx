@@ -14,7 +14,10 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export default function LotusRecall() {
   const router = useRouter();
   const { completePrologue } = usePlayer();
-  useLocalSearchParams<{ enemyId?: string }>();
+  const { replay } = useLocalSearchParams<{ enemyId?: string; replay?: string }>();
+  // Push 6 — Replay Prologue watches this cinematic without ever writing
+  // prologue_complete or entering the real (mutating) post-recall onboarding.
+  const isReplay = replay === "1";
   const [ready, setReady] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -25,6 +28,10 @@ export default function LotusRecall() {
   }, [fadeAnim]);
 
   const proceed = async () => {
+    if (isReplay) {
+      router.replace("/(tabs)/profile");
+      return;
+    }
     await completePrologue();
     router.replace("/post-recall");
   };
@@ -46,7 +53,7 @@ export default function LotusRecall() {
         </Text>
         {ready && (
           <Pressable style={styles.button} onPress={proceed} testID="lotus-recall-continue">
-            <Text style={styles.buttonTxt}>RETURN TO THE SANCTUARY</Text>
+            <Text style={styles.buttonTxt}>{isReplay ? "END REPLAY" : "RETURN TO THE SANCTUARY"}</Text>
           </Pressable>
         )}
       </Animated.View>

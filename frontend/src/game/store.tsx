@@ -17,6 +17,7 @@ import { isValidCellId } from './realmGrid';
 import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
 } from './classTree';
+import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -151,6 +152,20 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.class_progress || CLASS_IDS.some((id) => !Array.isArray(out.class_progress![id]))) {
     out = { ...out, class_progress: { ...defaultClassProgress(), ...(out.class_progress || {}) } };
   }
+  // Push 6 — backfill the diagnostic snapshot for players who confirmed a
+  // class before this field existed (or switched classes via the Class Tree
+  // screen, which does not go through the quiz). Falls back to a deterministic
+  // default resonance/second-fit derived purely from the current class so the
+  // read-only Review Class Result screen always has something to show.
+  if (!out.class_diagnostic_resonance || !out.class_diagnostic_secondary) {
+    const currentClass = fantasyClassFromClassId((out.class_tree_id as ClassId) || 'medic');
+    const secondary = FANTASY_CLASSES.find((c) => c !== currentClass) || currentClass;
+    out = {
+      ...out,
+      class_diagnostic_resonance: out.class_diagnostic_resonance || CLASS_DEFAULT_RESONANCE[currentClass],
+      class_diagnostic_secondary: out.class_diagnostic_secondary || secondary,
+    };
+  }
   return out;
 }
 
@@ -220,7 +235,7 @@ type Ctx = {
   markReminiscenceSeen: () => Promise<void>;
   completeLotusLessonNode: (nodeId: string) => Promise<{ ok: boolean; message: string; rewards?: import('./lotusLessons').LotusLessonRewards }>;
   applyClassDiagnostic: (profile: ClassDiagnosticInput) => Promise<void>;
-  confirmClassDiagnostic: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
+  confirmClassDiagnostic: (classId: ClassId, resonance?: string, secondaryFantasyClass?: string) => Promise<{ ok: boolean; message: string }>;
 };
 
 // Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
@@ -1058,11 +1073,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // heroes_owned/active_team — the choice is meant to be forgiving and
   // non-permanent (freely re-switchable later from the Class Tree screen),
   // so no hero grants or identity fields are altered here.
-  const confirmClassDiagnostic = useCallback(async (classId: ClassId) => {
+  // `resonance`/`secondaryFantasyClass` are an optional Push 6 snapshot of the
+  // quiz result at confirmation time, purely for the read-only Review Class
+  // Result screen — never re-derives or gates any gameplay. Falls back to
+  // deterministic defaults when omitted (e.g. legacy callers).
+  const confirmClassDiagnostic = useCallback(async (classId: ClassId, resonance?: string, secondaryFantasyClass?: string) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     if (!CLASS_IDS.includes(classId)) return { ok: false, message: 'Unknown class.' };
-    const next: PlayerState = { ...base, class_tree_id: classId, diagnostic_intro_seen: true };
+    const fallbackFantasy = fantasyClassFromClassId(classId);
+    const next: PlayerState = {
+      ...base,
+      class_tree_id: classId,
+      diagnostic_intro_seen: true,
+      class_diagnostic_resonance: resonance || CLASS_DEFAULT_RESONANCE[fallbackFantasy],
+      class_diagnostic_secondary: secondaryFantasyClass || FANTASY_CLASSES.find((c) => c !== fallbackFantasy) || fallbackFantasy,
+    };
     playerRef.current = next;
     await updateState(next);
     return { ok: true, message: `Class registered — ${classId[0].toUpperCase()}${classId.slice(1)}.` };

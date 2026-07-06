@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -55,6 +55,14 @@ const AUTOMATED_MESSAGES = [
 export default function PostRecall() {
   const router = useRouter();
   const { player, completeIdentityRestore, confirmClassDiagnostic } = usePlayer();
+  const { replay } = useLocalSearchParams<{ replay?: string }>();
+  // Push 6 — Profile "Replay Class Diagnostic" reopens this same quiz for a
+  // player who already finished onboarding. It always starts on the intro
+  // view (ignoring identity/diagnostic_intro_seen), never auto-redirects
+  // away, and only ever writes anything if the player explicitly taps
+  // REGISTER on the result screen — exactly the same explicit-confirm gate
+  // normal onboarding already uses.
+  const isReplay = replay === "1";
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -73,7 +81,9 @@ export default function PostRecall() {
   const [confirmMsgIndex, setConfirmMsgIndex] = useState(0);
   const confirmFiredRef = useRef(false);
 
-  const phase: "identity" | "diagnostic" | "done" = !player
+  const phase: "identity" | "diagnostic" | "done" = isReplay
+    ? "diagnostic"
+    : !player
     ? "identity"
     : player.identity_restored === false
     ? "identity"
@@ -87,6 +97,7 @@ export default function PostRecall() {
   }, [phase, view, quizStep, automatedMsgIndex, fadeAnim]);
 
   useEffect(() => {
+    if (isReplay) return;
     if (phase !== "done") return;
     // Push 5 — after class confirmation, route through the one-time
     // memory-reminiscence scene before the player ever reaches University
@@ -96,7 +107,7 @@ export default function PostRecall() {
     } else {
       router.replace("/(tabs)");
     }
-  }, [phase, player, router]);
+  }, [isReplay, phase, player, router]);
 
   useEffect(() => {
     if (player?.name && player.name !== "Healer") setName(player.name);
@@ -125,17 +136,22 @@ export default function PostRecall() {
     }
     if (confirmFiredRef.current) return;
     const t = setTimeout(async () => {
-      if (!previewClass || confirmFiredRef.current) return;
+      if (!previewClass || !result || confirmFiredRef.current) return;
       confirmFiredRef.current = true;
       setSubmitting(true);
       try {
-        await confirmClassDiagnostic(classIdFromFantasyClass(previewClass));
+        await confirmClassDiagnostic(
+          classIdFromFantasyClass(previewClass),
+          resonanceForPreview(result, previewClass),
+          result.secondaryClass,
+        );
+        if (isReplay) router.replace("/(tabs)/profile");
       } finally {
         setSubmitting(false);
       }
     }, 1100);
     return () => clearTimeout(t);
-  }, [view, confirmMsgIndex, confirmMessages.length, previewClass, confirmClassDiagnostic]);
+  }, [view, confirmMsgIndex, confirmMessages.length, previewClass, result, confirmClassDiagnostic, isReplay, router]);
 
   const submitIdentity = async () => {
     if (submitting) return;
@@ -241,6 +257,16 @@ export default function PostRecall() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="post-recall-screen">
+      {isReplay && (
+        <Pressable
+          style={styles.replayCloseBtn}
+          onPress={() => router.replace("/(tabs)/profile")}
+          hitSlop={10}
+          testID="post-recall-replay-close"
+        >
+          <Ionicons name="close" size={18} color={COLORS.onSurfaceSecondary} />
+        </Pressable>
+      )}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         {phase === "identity" ? (
           <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-identity">
@@ -508,6 +534,11 @@ export default function PostRecall() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  replayCloseBtn: {
+    position: "absolute", top: SPACING.md, right: SPACING.md, zIndex: 10,
+    width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center",
+    backgroundColor: COLORS.surfaceSecondary,
+  },
   flex: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
   scroll: { gap: SPACING.md, paddingVertical: SPACING.lg, alignItems: "center", maxWidth: 420, width: "100%", alignSelf: "center" },
   block: { alignItems: "center", gap: SPACING.md, maxWidth: 380, width: "100%" },

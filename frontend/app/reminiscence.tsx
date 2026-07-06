@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -121,6 +121,12 @@ const PANELS: Panel[] = [
 export default function ReminiscenceScreen() {
   const router = useRouter();
   const { player, markReminiscenceSeen } = usePlayer();
+  const { replay } = useLocalSearchParams<{ replay?: string }>();
+  // Push 6 — Profile "Replay Memory Reminiscence" watches this cutscene again
+  // without breaking University/Lotus Lessons state: markReminiscenceSeen is
+  // already a no-op once seen_reminiscence is true, and this bounces back to
+  // Profile afterward instead of re-entering University's onboarding path.
+  const isReplay = replay === "1";
   const [panelIndex, setPanelIndex] = useState(0);
   const contentFade = useRef(new Animated.Value(0)).current;
   const finishingRef = useRef(false);
@@ -132,18 +138,20 @@ export default function ReminiscenceScreen() {
 
   // Safety: if this screen is ever reached after it's already been seen
   // (e.g. deep link, back navigation, or app reload mid-scene), never trap
-  // the player — bounce straight to University.
+  // the player — bounce straight to University. Skipped entirely in replay
+  // mode, since seen_reminiscence being true is exactly what makes replay
+  // reachable in the first place.
   useEffect(() => {
-    if (player?.seen_reminiscence) {
+    if (!isReplay && player?.seen_reminiscence) {
       router.replace("/university");
     }
-  }, [player?.seen_reminiscence, router]);
+  }, [isReplay, player?.seen_reminiscence, router]);
 
   const finish = async () => {
     if (finishingRef.current) return;
     finishingRef.current = true;
     await markReminiscenceSeen();
-    router.replace("/university");
+    router.replace(isReplay ? "/(tabs)/profile" : "/university");
   };
 
   const advance = () => {

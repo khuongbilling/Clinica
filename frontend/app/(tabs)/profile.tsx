@@ -197,6 +197,59 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <Text style={styles.section}>Onboarding & Replay</Text>
+        <View style={styles.settingsCard}>
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/battle?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1")}
+            testID="profile-replay-prologue-button"
+          >
+            <Ionicons name="film-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Replay Prologue Shift</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/reminiscence?replay=1")}
+            testID="profile-replay-reminiscence-button"
+          >
+            <Ionicons name="images-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Replay Memory Reminiscence</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/post-recall?replay=1")}
+            testID="profile-replay-diagnostic-button"
+          >
+            <Ionicons name="pulse-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Replay Class Diagnostic</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/class-result")}
+            testID="profile-class-result-button"
+          >
+            <Ionicons name="ribbon-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Review Class Result</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/tutorial-center")}
+            testID="profile-tutorial-center-button"
+          >
+            <Ionicons name="school-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Tutorial Replay Center</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+        </View>
+
         <View style={styles.dangerZone}>
           <Text style={styles.dangerLabel}>DANGER ZONE</Text>
           <Pressable style={styles.resetBtn} onPress={handleReset} testID="profile-reset-button">
