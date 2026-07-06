@@ -155,6 +155,31 @@ export default function ShiftPage() {
           <BannerCard key={m.id} mode={m} height={120} onPress={() => openIntro(m)} testID={`mode-${m.id}`} />
         ))}
 
+        {/* Event Hub (Push 7) — preview-only events + monetization foundation */}
+        <Text style={styles.section}>Events & Offers</Text>
+        <Pressable
+          style={styles.eventBanner}
+          testID="ward-hub-events"
+          onPress={() => router.push("/events" as any)}
+        >
+          <View style={styles.eventIcon}>
+            <Ionicons name="calendar" size={26} color={COLORS.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.eventTitleRow}>
+              <Text style={styles.eventTitle}>Event Hub</Text>
+              <View style={styles.eventPreviewBadge}>
+                <Text style={styles.eventPreviewBadgeTxt}>PREVIEW</Text>
+              </View>
+            </View>
+            <Text style={styles.eventSub}>
+              Sneak peek at upcoming event tracks and future support-the-Sanctuary offers. Nothing
+              is active yet — no purchases, billing, or gameplay effects.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
+
         {/* Coming Soon — only the single next event/content, gated by chapter */}
         {nextUp && (
           <>
@@ -209,6 +234,22 @@ const styles = StyleSheet.create({
   uniKicker: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
   uniTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700", marginTop: 1 },
   uniSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  eventBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "45",
+    padding: SPACING.md,
+  },
+  eventIcon: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: COLORS.brand + "18",
+    alignItems: "center", justifyContent: "center",
+  },
+  eventTitleRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  eventTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" },
+  eventPreviewBadge: { backgroundColor: COLORS.brand + "22", borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 2 },
+  eventPreviewBadgeTxt: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  eventSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
   smallGrid: { gap: SPACING.sm },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },
