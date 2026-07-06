@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { usePlayer } from "@/src/game/store";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import { rarityTierLabel } from "@/src/game/university";
@@ -37,6 +38,7 @@ function TierBadge({ rarity, color }: { rarity: number; color: string }) {
 export default function HeroesScreen() {
   const router = useRouter();
   const { player, saveActiveTeam } = usePlayer();
+  const gate = useFeatureGate("hall_of_heroes");
   const [team, setTeam] = useState<string[]>(player?.active_team ?? []);
 
   useEffect(() => {
@@ -44,6 +46,9 @@ export default function HeroesScreen() {
   }, [player]);
 
   if (!player) return null;
+  // Block direct navigation (deep links / in-app links) into a still-locked
+  // Hall of Heroes — the tab bar hides the button, but the route stays alive.
+  if (!gate.unlocked) return <FeatureLockedView title="The Hall of Heroes" reason={gate.reason} />;
 
   const owned = new Set(player.heroes_owned);
   const equippedSkin = findSkin(player.equipped_skin || "");

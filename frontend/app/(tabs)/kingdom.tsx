@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
@@ -84,6 +85,7 @@ type Placement = { kind: "building" | "decoration"; id: string; isMove: boolean;
 export default function KingdomScreen() {
   const router = useRouter();
   const { player, setRealmLayout } = usePlayer();
+  const realmGate = useFeatureGate("realm");
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
 
@@ -194,6 +196,8 @@ export default function KingdomScreen() {
   }, [placement, validOrigins]);
 
   if (!player) return null;
+  // Block direct navigation into a still-locked Realm (tab hidden, route alive).
+  if (!realmGate.unlocked) return <FeatureLockedView title="The Realm" reason={realmGate.reason} />;
 
   const kingdomLevels = player.kingdom_levels || {};
   const selectedBuilding = selectedBuildingId ? getBuildingById(selectedBuildingId) : null;

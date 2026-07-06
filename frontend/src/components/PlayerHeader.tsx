@@ -6,7 +6,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
 import {
-  nextClassAbility, nextLockedFeature, playerLevelFromXp,
+  buildGateContext, checkFeatureGate, nextClassAbility, nextLockedFeature, playerLevelFromXp,
 } from "@/src/game/progression";
 import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
@@ -59,6 +59,9 @@ export function PlayerHeader({
   const nextAbility = nextClassAbility(player.aptitude, playerLevelInfo.level);
   const classId = (player.class_tree_id as ClassId) || "medic";
   const classIdentity = CLASS_IDENTITIES[classId] || CLASS_IDENTITIES.medic;
+  // The crowns chip links to the Shop, which is gated. Suppress the link until
+  // the Shop unlocks so it can't be used to sneak into a locked area.
+  const shopUnlocked = checkFeatureGate("shop", buildGateContext(player)).unlocked;
 
   return (
     <View style={styles.wrap} testID="player-header">
@@ -104,7 +107,7 @@ export function PlayerHeader({
           icon="cash"
           iconColor={COLORS.brand}
           text={formatCompactNumber(player.crowns)}
-          onPress={() => router.push("/(tabs)/shop")}
+          onPress={() => { if (shopUnlocked) router.push("/(tabs)/shop"); }}
         />
         <Chip
           testID="player-header-refined-gems"

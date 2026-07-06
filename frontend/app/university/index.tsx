@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { ModeCard } from "@/src/components/ModeCard";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
 import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
@@ -70,8 +71,12 @@ const MENU: { id: string; title: string; desc: string; icon: string; route?: str
 export default function UniversityHubScreen() {
   const router = useRouter();
   const { player } = usePlayer();
+  const gate = useFeatureGate("university");
+  const heroesGate = useFeatureGate("hall_of_heroes");
 
   if (!player) return null;
+  // Block direct navigation into a still-locked University.
+  if (!gate.unlocked) return <FeatureLockedView title="Clinica University" reason={gate.reason} />;
 
   const nextLotusNode = firstIncompleteLotusNode(player);
 
@@ -134,23 +139,36 @@ export default function UniversityHubScreen() {
         )}
         </SceneTransition>
 
-        {MENU.map((m) => (
-          <Pressable
-            key={m.id}
-            style={styles.card}
-            onPress={() => m.route && router.push(m.route as any)}
-            testID={`university-menu-${m.id}`}
-          >
-            <View style={styles.cardIcon}>
-              <Ionicons name={m.icon as any} size={22} color={COLORS.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{m.title}</Text>
-              <Text style={styles.cardDesc}>{m.desc}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
-          </Pressable>
-        ))}
+        {MENU.map((m) => {
+          // Certification lives in the Hall of Heroes, which has its own gate.
+          // Lock this link (rather than navigating into a locked screen) until
+          // the Hall unlocks, so the guided-onboarding order is respected.
+          const locked = m.id === "certification" && !heroesGate.unlocked;
+          return (
+            <Pressable
+              key={m.id}
+              style={[styles.card, locked && styles.cardLocked]}
+              disabled={locked}
+              onPress={() => m.route && router.push(m.route as any)}
+              testID={`university-menu-${m.id}`}
+            >
+              <View style={styles.cardIcon}>
+                <Ionicons name={m.icon as any} size={22} color={COLORS.brand} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{m.title}</Text>
+                <Text style={styles.cardDesc}>
+                  {locked ? (heroesGate.reason ?? m.desc) : m.desc}
+                </Text>
+              </View>
+              <Ionicons
+                name={locked ? "lock-closed" : "chevron-forward"}
+                size={18}
+                color={COLORS.onSurfaceTertiary}
+              />
+            </Pressable>
+          );
+        })}
 
         <Text style={styles.sectionHeading}>Future Learning</Text>
         <View style={{ gap: SPACING.sm }}>
@@ -235,6 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
   },
+  cardLocked: { opacity: 0.5 },
   cardIcon: {
     width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center",
     backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.brand + "40",

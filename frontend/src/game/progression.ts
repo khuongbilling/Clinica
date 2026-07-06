@@ -137,6 +137,28 @@ export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResu
   }
 }
 
+// Build the compound gate context from a player-like object. Centralized so
+// every gate call site (tab bar, screen entry guards, in-app links) derives the
+// same level + narrative-milestone signals. Kept loosely typed to avoid a
+// circular import with the store's PlayerState.
+export function buildGateContext(
+  player:
+    | {
+        player_level?: number | null;
+        xp?: number | null;
+        runs_completed?: number | null;
+        lessons_completed?: unknown[] | null;
+      }
+    | null
+    | undefined,
+): CompoundGateContext {
+  return {
+    level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
+    firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
+    lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
+  };
+}
+
 // ---------- Player Class abilities (account-level, unlocked at 10/20/30) ----------
 export type PlayerClass = 'Guardian' | 'Seer' | 'Caretaker' | 'Scholar';
 

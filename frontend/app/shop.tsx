@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
@@ -14,6 +15,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export default function Shop() {
   const router = useRouter();
   const { player } = usePlayer();
+  const gate = useFeatureGate("shop");
   const { isCompleted, startTutorial } = useTutorial();
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,6 +40,8 @@ export default function Shop() {
       </SafeAreaView>
     );
   }
+  // Block direct navigation into a still-locked Shop (tab hidden, route alive).
+  if (!gate.unlocked) return <FeatureLockedView title="The Apothecary Market" reason={gate.reason} />;
 
   const active = SHOP_SECTIONS.filter((s) => s.status === "active");
   const comingSoon = SHOP_SECTIONS.filter((s) => s.status !== "active");
