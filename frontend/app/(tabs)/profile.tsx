@@ -35,7 +35,12 @@ export default function ProfileScreen() {
 
   async function handleReset() {
     await resetTutorials();
-    resetPlayer();
+    await resetPlayer();
+    // Return to the boot gate so the full fresh-player flow re-runs
+    // (title → preloader → prologue → the forced guided tutorial battle).
+    // Without this the app would stay mounted inside (tabs) on a now-blank
+    // screen and never replay onboarding.
+    router.replace("/");
   }
 
   if (!player) return null;
