@@ -36,11 +36,19 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_cue",
       title: "First: A Clinical Cue",
-      body: "Before you act, a Clinical Cue tests your judgement. Read it carefully and tap the CORRECT answer. Getting it right earns a bonus that makes your care stronger this turn.",
+      body: "A Clinical Cue is a quick judgement check drawn from the patient in front of you. Read the question, weigh the options, and tap the answer you believe is CORRECT. A right answer earns a bonus that strengthens every stabilizing action this turn. After you answer, a short explanation slides in — you can keep playing while you read it, it won't block the shift.",
       placement: "top",
       requireAction: true,
       requiredActionType: "cue",
       nextText: "ANSWER CORRECTLY",
+    },
+    {
+      id: "prologue_skills",
+      title: "Reading Your Skills",
+      body: "Each hero carries clinical skills. Tap a skill to use it. Long-press any skill, item, or call to open its full detail — the real nursing and NCLEX reasoning behind it. Long-pressing never costs a turn, so explore whenever you're curious.",
+      placement: "center",
+      requireAction: false,
+      nextText: "GOT IT",
     },
     {
       id: "prologue_scout",

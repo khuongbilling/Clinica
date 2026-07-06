@@ -21,6 +21,20 @@ The prologue battle is a fully *forced* hand-held tutorial: the player can only 
 - Tune enemy `corruption` so the forced sequence lands the win exactly on the final step (chain-complete bonus of -20 is applied on completion). Cue answered correctly grants +1 AP and a stabilize bonus.
 - A cue exists at battle init (set in `initBattle`), so a "answer the cue" first step always has something to show.
 
+## Non-blocking overlays: use style.pointerEvents, NOT the prop
+**Why:** On this Expo-web target (RN 0.81 / react-native-web) the `pointerEvents="box-none"` *prop* is DEPRECATED (console warns "props.pointerEvents is deprecated. Use style.pointerEvents"). The proven non-blocking overlay here (`TutorialOverlay`'s guided banner) uses `style={{ pointerEvents: 'box-none' }}` and taps still pass through to the skills underneath. `box-none` = the View is never the touch target but its children are, so an absolute-fill wrapper can float a card while the game stays tappable.
+**How to apply:** For any float-over-game overlay, put `pointerEvents: 'box-none'` in the wrapper's STYLE (children get touches by default). Do not "fix" it back to the prop form — that reintroduces the deprecation and doesn't match the working pattern.
+
+## Cue feedback is non-blocking; the cue QUESTION still blocks
+- The unanswered Clinical Cue modal (`state.pendingCue && !cueFeedback`) stays a full-screen blocking `modalOverlay` — the player must answer it.
+- The ANSWERED-cue feedback (`cueFeedback`) is a bottom-anchored card (`cueFeedbackWrap` absolute-fill + style.pointerEvents box-none; `cueFeedbackCard` the visible ScrollView) so reading the rationale never freezes the shift. Auto-continues after 3s (`setTimeout` in `handleCueAnswer`) or via CONTINUE.
+
+## Long-press hint is a tutorial step, not a separate coachmark
+- The old standalone `LongPressCoachmark` component was deleted. Its "tap to use / long-press for full nursing+NCLEX detail" message now lives as the one-time non-action step `prologue_skills` in `TUTORIALS.prologueBattle` (between the cue step and the scout step). Don't re-add a separate coachmark.
+
+## Every guided step highlights its control — including END TURN
+- Skills use `guidedHighlight`/`guidedDim`; the END TURN button now does too: `guidedEndTurnStep && styles.guidedHighlight`, and `guidedStep && !guidedEndTurnStep && styles.guidedDim`. Keep END TURN in sync with the skill highlight logic when touching guided styling.
+
 ## Other gotchas
 - Cue modal is gated during prologue to only show on the cue step (`activeTutorialId !== "prologueBattle" || guidedCueStep`); wrong cue answers are rejected.
 - Outcome modal is suppressed while `activeTutorialId === "prologueBattle"` so the final `prologue_done` tutorial card shows before the win screen.

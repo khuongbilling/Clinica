@@ -642,3 +642,9 @@ id = "3z8VyCmMw4jTVQr7yFFrZ"
 uri = "file://frontend/assets/enemies/dehydration_wisp.png"
 type = "image"
 title = "dehydration wisp enemy"
+
+[[generated]]
+id = "X44KDbzZlnIgcDICd28cG"
+uri = "file://frontend/assets/enemies/silent_infarct.png"
+type = "image"
+title = "silent infarct boss"

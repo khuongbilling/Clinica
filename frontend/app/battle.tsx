@@ -17,7 +17,6 @@ import { aggregateUpgradeEffects } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
-import { LongPressCoachmark } from "@/src/components/LongPressCoachmark";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
@@ -779,7 +778,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
               );
             })}
           </View>
-          <Pressable onPress={handleEndTurn} style={styles.endBtn} disabled={state.outcome !== "ongoing"} testID="battle-end-turn">
+          <Pressable onPress={handleEndTurn} style={[styles.endBtn, guidedEndTurnStep && styles.guidedHighlight, guidedStep && !guidedEndTurnStep && styles.guidedDim]} disabled={state.outcome !== "ongoing"} testID="battle-end-turn">
             <Text style={styles.endTxt}>END TURN</Text>
           </Pressable>
         </View>
@@ -993,8 +992,6 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
         )}
       </View>
 
-      <LongPressCoachmark visible={activeTab === "actions" && !detail && state.outcome === "ongoing"} />
-
       {detail && (
         <Pressable style={styles.modalOverlay} onPress={() => setDetail(null)}>
           <Pressable style={styles.detailModal} onPress={(e) => e.stopPropagation()}>
@@ -1029,8 +1026,8 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
       )}
 
       {cueFeedback && (
-        <View style={styles.modalOverlay}>
-          <ScrollView style={styles.cueModal} contentContainerStyle={{ paddingBottom: 4 }} testID="clinical-cue-feedback">
+        <View style={[styles.cueFeedbackWrap, { pointerEvents: "box-none" }]}>
+          <ScrollView style={styles.cueFeedbackCard} contentContainerStyle={{ paddingBottom: 4 }} testID="clinical-cue-feedback">
             <Text style={[styles.cueKicker, { color: cueFeedback.isCorrect ? COLORS.success : COLORS.error }]}>
               {cueFeedback.isCorrect ? "✓ CORRECT" : "✗ NOT QUITE"}
             </Text>
@@ -1374,6 +1371,8 @@ const styles = StyleSheet.create({
 
   // ── Clinical Cue modal ──
   cueModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 8, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380 },
+  cueFeedbackWrap: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end", alignItems: "center", padding: SPACING.md },
+  cueFeedbackCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, maxHeight: "60%", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 20 },
   cueKicker: { color: COLORS.runeGold, fontSize: 10, letterSpacing: 1.5, fontWeight: "700" },
   cueTierTopic: { color: COLORS.onSurfaceSecondary, fontSize: 10, letterSpacing: 0.5, fontWeight: "600", marginTop: -4 },
   cuePrompt: { color: COLORS.onSurface, fontSize: 15, lineHeight: 21, marginBottom: 4 },
