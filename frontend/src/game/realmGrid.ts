@@ -265,9 +265,15 @@ export function getFootprint(buildingId: string): Footprint {
   return BUILDING_FOOTPRINTS[buildingId] || { w: 1, h: 1 };
 }
 
-// Default Atrium origin — the only building placed automatically. Chosen so its
-// 4x4 footprint fits entirely inside the central Sanctuary zone.
+// Default Atrium origin — the anchor landmark. Chosen so its 4x4 footprint
+// fits entirely inside the central Sanctuary zone (rows 9-12, cols 6-9).
 export const DEFAULT_ATRIUM_ORIGIN = { row: 9, col: 6 };
+
+// Default Clinica University origin — auto-placed by the guided-onboarding pass
+// just to the LEFT of the Atrium. Its 3x3 footprint occupies rows 9-11, cols
+// 2-4: all buildable, unlocked grass in the diplomacy zone (cols 1-4), clear of
+// the Atrium's 4x4 footprint (cols 6-9) and the central water cells at r9 c5-6.
+export const DEFAULT_UNIVERSITY_ORIGIN = { row: 9, col: 2 };
 
 export function getFootprintCells(origin: { row: number; col: number }, footprint: Footprint): { row: number; col: number }[] {
   const out: { row: number; col: number }[] = [];

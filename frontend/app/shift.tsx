@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -7,6 +8,8 @@ import { BannerCard } from "@/src/components/ModeBanners";
 import { ModeCard } from "@/src/components/ModeCard";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
+import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
 import {
   CHAPTER_SIMULATION_LABELS, CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
@@ -17,8 +20,25 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
+  const { isCompleted, startTutorial } = useTutorial();
 
   const bossUnlocked = (player?.bosses_defeated?.length ?? 0) > 0 || (player?.runs_completed ?? 0) >= 1;
+
+  const gateCtx: CompoundGateContext = {
+    level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
+    firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
+    lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
+  };
+  const universityGate = checkFeatureGate("university", gateCtx);
+
+  // The System narrates the Ward hub once, pointing at the University banner.
+  useEffect(() => {
+    if (!player) return;
+    if (isCompleted("systemHubIntro") && !isCompleted("systemWardHub")) {
+      const t = setTimeout(() => startTutorial("systemWardHub"), 500);
+      return () => clearTimeout(t);
+    }
+  }, [player, isCompleted, startTutorial]);
 
   if (!player) {
     return (
@@ -71,9 +91,11 @@ export default function ShiftPage() {
         </Text>
 
         <View style={styles.simBox}>
-          <Text style={styles.simTitle}>Clinica University Simulations</Text>
+          <Text style={styles.simTitle}>Your Story, One Case at a Time</Text>
           <Text style={styles.simSub}>
-            Every case in the ward is a University simulation, run in order as you progress:
+            You were summoned to heal — and every patient you meet is another chapter of that
+            journey. Clinica University walks beside you, turning each case into a lesson you
+            live through rather than a test you sit:
           </Text>
           <View style={{ gap: 3 }}>
             {Object.entries(CHAPTER_SIMULATION_LABELS).map(([ch, label]) => (
@@ -98,6 +120,34 @@ export default function ShiftPage() {
             testID={`mode-${m.id}`}
           />
         ))}
+
+        {/* Learn — the System points new healers here for their first lessons */}
+        <Text style={styles.section}>Learn</Text>
+        <Pressable
+          style={[styles.uniBanner, !universityGate.unlocked && styles.uniBannerLocked]}
+          testID="ward-hub-university"
+          onPress={() => {
+            if (!universityGate.unlocked) {
+              Alert.alert("Clinica University — Locked", universityGate.reason || "Keep progressing to unlock.");
+              return;
+            }
+            router.push("/university" as any);
+          }}
+        >
+          <View style={styles.uniIcon}>
+            <Ionicons name={universityGate.unlocked ? "school" : "lock-closed"} size={26} color={universityGate.unlocked ? COLORS.brand : COLORS.onSurfaceTertiary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.uniKicker}>ANSWER THE CALL TO LEARN</Text>
+            <Text style={styles.uniTitle}>Clinica University</Text>
+            <Text style={styles.uniSub}>
+              {universityGate.unlocked
+                ? "Study the reasoning behind every treatment — your first lessons reward your first heroes."
+                : universityGate.reason}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
 
         {/* Off-Shift wellness */}
         <Text style={styles.section}>Off-Shift</Text>
@@ -144,6 +194,21 @@ const styles = StyleSheet.create({
   simRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "baseline" },
   simChapter: { color: COLORS.brand, fontSize: 11, fontWeight: "800", width: 34 },
   simLabel: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
+  uniBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "45",
+    padding: SPACING.md,
+  },
+  uniBannerLocked: { opacity: 0.6, borderColor: COLORS.border },
+  uniIcon: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: COLORS.brand + "18",
+    alignItems: "center", justifyContent: "center",
+  },
+  uniKicker: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  uniTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700", marginTop: 1 },
+  uniSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
   smallGrid: { gap: SPACING.sm },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },

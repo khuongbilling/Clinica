@@ -14,6 +14,7 @@ import { getHeroSprite } from "@/src/components/HeroSprites";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { playerLevelFromXp } from "@/src/game/progression";
 
@@ -44,12 +45,25 @@ export default function RunHome() {
   const router  = useRouter();
   const { player, loading } = usePlayer();
   const { logEvent } = useTestSession();
+  const { isCompleted, startTutorial } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
   }, []);
+
+  // The System introduces itself on the main hub after the reminiscence. It's a
+  // forced, non-skippable narrated sequence that points at the stamina/currency
+  // bar and sends the player into the Ward. Only fires once the welcome intro
+  // modal is dismissed so the two forced overlays never stack.
+  useEffect(() => {
+    if (loading || !player || showIntro) return;
+    if (!isCompleted("systemHubIntro")) {
+      const t = setTimeout(() => startTutorial("systemHubIntro"), 600);
+      return () => clearTimeout(t);
+    }
+  }, [loading, player, showIntro, isCompleted, startTutorial]);
 
   useEffect(() => {
     Animated.loop(Animated.sequence([

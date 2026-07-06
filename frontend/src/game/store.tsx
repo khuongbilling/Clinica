@@ -1124,8 +1124,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return { ok: true, message: 'Already completed.', rewards: node.rewards };
     }
     const withXp = applyXpDetailed(base, node.rewards.xp).player;
+    // Grant any heroes tied to this lesson — this is how the first University
+    // lessons populate the Hall of Heroes with the player's first units. Mirror
+    // applyRewards: dedupe into heroes_owned AND seed a hero_progression entry
+    // for each newly granted hero so persisted state is immediately coherent.
+    const grantHeroes = node.rewards.grantHeroes || [];
+    const heroesOwned = grantHeroes.length
+      ? Array.from(new Set([...(base.heroes_owned || []), ...grantHeroes]))
+      : (base.heroes_owned || []);
+    const heroProgression = { ...(base.hero_progression || {}) };
+    if (grantHeroes.length) {
+      for (const id of grantHeroes) {
+        if (!heroProgression[id]) heroProgression[id] = defaultProgress();
+      }
+    }
     const next: PlayerState = {
       ...withXp,
+      heroes_owned: heroesOwned,
+      hero_progression: heroProgression,
       lessons_completed: [...completed, completionId],
       insight_crystals: (base.insight_crystals || 0) + node.rewards.insightCrystals,
       crowns: (base.crowns || 0) + node.rewards.crowns,

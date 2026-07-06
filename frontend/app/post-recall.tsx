@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   systemLine: { color: COLORS.brand, fontSize: 13, fontWeight: "700", letterSpacing: 0.5, textAlign: "center" },
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 2, fontWeight: "700", textAlign: "center", marginTop: SPACING.xs },
   qTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "600", textAlign: "center", lineHeight: 27 },
-  pathTitle: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", textAlign: "center" },
+  pathTitle: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", textAlign: "center", lineHeight: 30 },
   flavorTitle: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600", textAlign: "center", fontStyle: "italic" },
   body: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: SPACING.xs },
   note: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center" },

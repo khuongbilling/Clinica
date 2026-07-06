@@ -1,8 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { usePlayer } from "@/src/game/store";
+import { getSystemIdentity, type SystemIdentity } from "@/src/game/systemNarrator";
+import { isSystemTutorial } from "@/src/game/tutorials";
+import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 /**
@@ -49,9 +54,29 @@ function PointerChevron({ dir }: { dir: "up" | "down" }) {
   );
 }
 
+/** Small circular donghua portrait of the System, tinted by its identity. */
+function SystemPortrait({ identity, size = 40 }: { identity: SystemIdentity; size?: number }) {
+  return (
+    <View
+      style={[
+        styles.systemPortrait,
+        { width: size, height: size, borderRadius: size / 2, borderColor: identity.color },
+      ]}
+    >
+      <ExpoImage
+        source={identity.art}
+        style={{ width: size, height: size }}
+        contentFit="cover"
+        transition={200}
+      />
+    </View>
+  );
+}
+
 export function TutorialOverlay() {
   const { currentStep, stepIndex, totalSteps, advanceStep, skipTutorial, activeTutorialId } = useTutorial();
   const insets = useSafeAreaInsets();
+  const { player } = usePlayer();
   const [instant, setInstant] = useState(false);
 
   const stepId = currentStep?.id;
@@ -62,63 +87,115 @@ export function TutorialOverlay() {
   if (!activeTutorialId || !currentStep) return null;
 
   const progress = totalSteps > 1 ? `${stepIndex + 1} / ${totalSteps}` : "";
-  // The prologue is a forced, hand-held tutorial — no skipping out of it.
-  const allowSkip = activeTutorialId !== "prologueBattle";
+  const isSystem = isSystemTutorial(activeTutorialId);
+  // Forced tutorials can't be skipped: the prologue and every System-narrated
+  // onboarding step.
+  const allowSkip = activeTutorialId !== "prologueBattle" && !isSystem;
 
-  if (currentStep.requireAction) {
+  // Resolve the System narrator's identity (dark silhouette until Player L10,
+  // then colored by aptitude). Level is derived from xp, matching the rest of
+  // the app, falling back to the stored player_level if present.
+  const playerLevel = player
+    ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level)
+    : 1;
+  const identity = getSystemIdentity(playerLevel, player?.aptitude);
+
+  // Positioned narrative box: used for real gameplay steps (requireAction) AND
+  // for the System's informational forced banners (banner) that point at live
+  // on-screen UI. Banners advance via their own Next button instead of a game
+  // action.
+  const usesBox = currentStep.requireAction || currentStep.banner;
+
+  if (usesBox) {
     const placement = currentStep.placement;
     const justify = placement === "bottom" ? "flex-end" : placement === "center" ? "center" : "flex-start";
     // The highlighted control lives outside the box: below it for a top/center
-    // banner, above it for a bottom banner. Point the arrow toward it.
+    // banner, above it for a bottom banner. Point the arrow toward it. Purely
+    // informational banners don't point at a specific control.
+    const showChevron = currentStep.requireAction;
     const arrowUp = placement === "bottom";
+    const accent = isSystem ? identity.color : COLORS.brand;
     return (
       <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
         <Pressable
           onPress={() => setInstant(true)}
           style={[
             styles.narrativeBox,
+            isSystem && { borderColor: accent, shadowColor: accent },
             placement === "top" && { marginTop: insets.top + SPACING.xs },
             placement === "bottom" && { marginBottom: insets.bottom + SPACING.md },
             { pointerEvents: "auto" },
           ]}
         >
-          {arrowUp && <PointerChevron dir="up" />}
+          {showChevron && arrowUp && <PointerChevron dir="up" />}
           <View style={styles.narrativeHead}>
-            <View style={styles.guideBadge}>
-              <Ionicons name="chatbubbles" size={11} color={COLORS.onBrand} />
-              <Text style={styles.guideBadgeTxt}>GUIDE</Text>
-            </View>
-            <Text style={styles.narrativeTitle} numberOfLines={1}>{currentStep.title}</Text>
+            {isSystem ? (
+              <>
+                <SystemPortrait identity={identity} size={34} />
+                <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{identity.name}</Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.guideBadge}>
+                  <Ionicons name="chatbubbles" size={11} color={COLORS.onBrand} />
+                  <Text style={styles.guideBadgeTxt}>GUIDE</Text>
+                </View>
+                <Text style={styles.narrativeTitle} numberOfLines={1}>{currentStep.title}</Text>
+              </>
+            )}
             {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
           </View>
+          {isSystem ? <Text style={styles.systemStepTitle}>{currentStep.title}</Text> : null}
           <TypewriterText text={currentStep.body} style={styles.narrativeBody} instant={instant} />
           <View style={styles.narrativeFoot}>
-            {currentStep.nextText ? (
-              <Text style={styles.tapPrompt} numberOfLines={1}>▸ {currentStep.nextText}</Text>
-            ) : <View style={{ flex: 1 }} />}
-            {allowSkip && (
-              <Pressable onPress={skipTutorial} hitSlop={8}>
-                <Text style={styles.skipTxt}>Skip</Text>
-              </Pressable>
+            {currentStep.banner ? (
+              <>
+                <View style={{ flex: 1 }} />
+                <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
+                  <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                {currentStep.nextText ? (
+                  <Text style={[styles.tapPrompt, isSystem && { color: accent }]} numberOfLines={1}>▸ {currentStep.nextText}</Text>
+                ) : <View style={{ flex: 1 }} />}
+                {allowSkip && (
+                  <Pressable onPress={skipTutorial} hitSlop={8}>
+                    <Text style={styles.skipTxt}>Skip</Text>
+                  </Pressable>
+                )}
+              </>
             )}
           </View>
-          {!arrowUp && <PointerChevron dir="down" />}
+          {showChevron && !arrowUp && <PointerChevron dir="down" />}
         </Pressable>
       </View>
     );
   }
 
+  const accent = isSystem ? identity.color : COLORS.brand;
   return (
     <Modal transparent visible animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
-        <Pressable style={styles.popover} onPress={() => setInstant(true)}>
-          <View style={styles.popoverHead}>
-            <View style={styles.codexBadge}>
-              <Ionicons name="book" size={11} color={COLORS.onBrand} />
-              <Text style={styles.codexBadgeTxt}>CODEX GUIDE</Text>
+        <Pressable style={[styles.popover, isSystem && { borderColor: accent + "80" }]} onPress={() => setInstant(true)}>
+          {isSystem ? (
+            <View style={styles.systemPopoverHead}>
+              <SystemPortrait identity={identity} size={52} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.systemName, { color: accent }]}>{identity.name}</Text>
+                {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
+              </View>
             </View>
-            {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
-          </View>
+          ) : (
+            <View style={styles.popoverHead}>
+              <View style={styles.codexBadge}>
+                <Ionicons name="book" size={11} color={COLORS.onBrand} />
+                <Text style={styles.codexBadgeTxt}>CODEX GUIDE</Text>
+              </View>
+              {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
+            </View>
+          )}
 
           <Text style={styles.popoverTitle}>{currentStep.title}</Text>
           <TypewriterText text={currentStep.body} style={styles.popoverBody} instant={instant} />
@@ -129,7 +206,7 @@ export function TutorialOverlay() {
                 <Text style={styles.skipBtnTxt}>SKIP</Text>
               </Pressable>
             )}
-            <Pressable onPress={advanceStep} style={styles.nextBtn}>
+            <Pressable onPress={advanceStep} style={[styles.nextBtn, isSystem && { backgroundColor: accent }]}>
               <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
             </Pressable>
           </View>
@@ -251,6 +328,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 16,
     elevation: 16,
+  },
+  systemPortrait: {
+    overflow: "hidden",
+    borderWidth: 2,
+    backgroundColor: "#0B1420",
+  },
+  systemStepTitle: {
+    color: COLORS.onSurface,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    marginTop: 2,
+  },
+  systemPopoverHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  systemName: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   narrativeHead: {
     flexDirection: "row",

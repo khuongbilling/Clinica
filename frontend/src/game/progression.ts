@@ -70,10 +70,12 @@ export interface FeatureUnlock {
 
 export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   { id: 'ward_shift', label: 'Ward Shift', level: 1 },
-  { id: 'hall_of_heroes', label: 'Hall of Heroes', level: 1 },
-  { id: 'ward_defense', label: 'Ward Defense', level: 3 },
-  { id: 'university', label: 'Clinica University & Training Hall', level: 5 },
-  { id: 'lotus_journal', label: 'Lotus Plate Journal', level: 7 },
+  { id: 'lotus_journal', label: 'Lotus Plate Journal', level: 2 },
+  { id: 'shop', label: 'Shops (Apothecary Market)', level: 2 },
+  { id: 'university', label: 'Clinica University & Training Hall', level: 3 },
+  { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 3 },
+  { id: 'hall_of_heroes', label: 'Hall of Heroes', level: 3 },
+  { id: 'ward_defense', label: 'Ward Defense', level: 5 },
   { id: 'ten_pull', label: 'Full Class Recruitment (10-pull)', level: 12 },
   { id: 'advanced_traits', label: 'Advanced Hero Traits', level: 15 },
   { id: 'advanced_sims', label: 'Advanced Simulations', level: 25 },
@@ -88,6 +90,51 @@ export function isFeatureUnlocked(id: string, level: number): boolean {
 export function nextLockedFeature(level: number): FeatureUnlock | null {
   const locked = FEATURE_UNLOCKS.filter((f) => f.level > level).sort((a, b) => a.level - b.level);
   return locked[0] || null;
+}
+
+// ---------- Compound feature gates ----------
+// Some features require BOTH a Player Level AND a narrative milestone flag
+// (first Ward Shift completed, first lessons done). These express the guided-
+// onboarding gating from the "System narrator" onboarding pass. Level-only
+// checks stay in isFeatureUnlocked above; callers that need the story gate use
+// these instead so a max-level returning player is never blocked by a flag
+// they can no longer earn out of order.
+export interface CompoundGateContext {
+  level: number;
+  firstWardShiftDone: boolean;
+  lessonsStarted: boolean;
+}
+
+export interface GateResult {
+  unlocked: boolean;
+  reason: string | null;
+}
+
+export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResult {
+  const levelOk = isFeatureUnlocked(id, ctx.level);
+  const f = FEATURE_UNLOCKS.find((x) => x.id === id);
+  const needLevel = f ? f.level : 1;
+  if (!levelOk) {
+    return { unlocked: false, reason: `Reach Player Level ${needLevel} to unlock.` };
+  }
+  switch (id) {
+    // Hall of Heroes opens after the first University lessons (which grant the
+    // player's first two units). University itself must NOT require lessons —
+    // it's where lessons are taken, so gating it on lessonsStarted would be
+    // circular; it's Player-Level-only.
+    case 'hall_of_heroes':
+      if (!ctx.lessonsStarted) {
+        return { unlocked: false, reason: 'Begin your first University lessons to unlock.' };
+      }
+      return { unlocked: true, reason: null };
+    case 'realm':
+      if (!ctx.firstWardShiftDone) {
+        return { unlocked: false, reason: 'Complete your first Ward Shift to unlock the Realm.' };
+      }
+      return { unlocked: true, reason: null };
+    default:
+      return { unlocked: true, reason: null };
+  }
 }
 
 // ---------- Player Class abilities (account-level, unlocked at 10/20/30) ----------

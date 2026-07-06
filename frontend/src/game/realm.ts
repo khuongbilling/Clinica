@@ -17,7 +17,7 @@
 // Any UI (app/(tabs)/kingdom.tsx) should render from these exports rather
 // than hardcoding building copy, positions, or unlock rules.
 
-import { cellId, DEFAULT_ATRIUM_ORIGIN } from "./realmGrid";
+import { cellId, DEFAULT_ATRIUM_ORIGIN, DEFAULT_UNIVERSITY_ORIGIN } from "./realmGrid";
 
 export const REALM_LOOP_NOTE =
   "The Realm loop: Build a Sanctuary Plot, Assign a hero or trainee, let it Research/Prepare passive " +
@@ -477,12 +477,18 @@ export function getDecorationById(id: string): RealmDecoration | undefined {
 }
 
 // The baseline layout every new (or not-yet-migrated) player starts with.
-// Only the Grand Ward Atrium is placed automatically — every other building
-// starts unplaced (in inventory) so a new Realm reads as empty terrain the
-// player builds into, not a pre-painted finished city. Existing players'
-// already-saved realm_layout is untouched; this only affects fresh layouts.
+// The guided-onboarding pass auto-places TWO landmarks so the Realm reads as a
+// living sanctuary the moment the player first reaches it (Realm unlocks at
+// Player Level 3 + first Ward Shift): the Grand Ward Atrium (the anchor) and
+// Clinica University (placed just below the Atrium). Every OTHER building still
+// starts unplaced (in inventory) so the player keeps a sanctuary to grow into.
+// Existing players' already-saved realm_layout is untouched; this only affects
+// fresh layouts.
 export function buildDefaultRealmLayout(): Record<string, string> {
-  return { [ATRIUM_ID]: cellId(DEFAULT_ATRIUM_ORIGIN.row, DEFAULT_ATRIUM_ORIGIN.col) };
+  return {
+    [ATRIUM_ID]: cellId(DEFAULT_ATRIUM_ORIGIN.row, DEFAULT_ATRIUM_ORIGIN.col),
+    clinica_university: cellId(DEFAULT_UNIVERSITY_ORIGIN.row, DEFAULT_UNIVERSITY_ORIGIN.col),
+  };
 }
 
 export interface RealmUnlockContext {

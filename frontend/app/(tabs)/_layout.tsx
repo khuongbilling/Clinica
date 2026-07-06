@@ -2,11 +2,27 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/src/theme/colors";
+import { usePlayer } from "@/src/game/store";
+import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 8);
   const tabH = 50 + bottomPad;
+
+  // Guided-onboarding tab gating. Tabs stay hidden (href:null keeps their route
+  // alive for deep links) until the player meets each feature's Player-Level +
+  // narrative-milestone gate: Shops L2, Heroes (Hall) L3 + first lessons, Realm
+  // L3 + first Ward Shift. The Shift tab is always available.
+  const { player } = usePlayer();
+  const ctx: CompoundGateContext = {
+    level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
+    firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
+    lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
+  };
+  const shopUnlocked = checkFeatureGate("shop", ctx).unlocked;
+  const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const realmUnlocked = checkFeatureGate("realm", ctx).unlocked;
 
   return (
     <Tabs
@@ -29,6 +45,7 @@ export default function TabsLayout() {
         name="shop"
         options={{
           title: "SHOP",
+          href: shopUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-shop",
           tabBarIcon: ({ color, size }) => <Ionicons name="storefront" size={size} color={color} />,
         }}
@@ -37,6 +54,7 @@ export default function TabsLayout() {
         name="heroes"
         options={{
           title: "HEROES",
+          href: heroesUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-heroes",
           tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
         }}
@@ -53,6 +71,7 @@ export default function TabsLayout() {
         name="kingdom"
         options={{
           title: "REALM",
+          href: realmUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-kingdom",
           tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} />,
         }}

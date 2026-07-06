@@ -138,12 +138,12 @@ export default function ReminiscenceScreen() {
 
   // Safety: if this screen is ever reached after it's already been seen
   // (e.g. deep link, back navigation, or app reload mid-scene), never trap
-  // the player — bounce straight to University. Skipped entirely in replay
+  // the player — bounce straight to the main hub. Skipped entirely in replay
   // mode, since seen_reminiscence being true is exactly what makes replay
   // reachable in the first place.
   useEffect(() => {
     if (!isReplay && player?.seen_reminiscence) {
-      router.replace("/university");
+      router.replace("/(tabs)");
     }
   }, [isReplay, player?.seen_reminiscence, router]);
 
@@ -151,7 +151,9 @@ export default function ReminiscenceScreen() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     await markReminiscenceSeen();
-    router.replace(isReplay ? "/(tabs)/profile" : "/university");
+    // After reminiscence, land the player on the MAIN hub — the System will
+    // narrate the guided onboarding from there — not straight into University.
+    router.replace(isReplay ? "/(tabs)/profile" : "/(tabs)");
   };
 
   const advance = () => {
@@ -217,7 +219,7 @@ export default function ReminiscenceScreen() {
 
       <View style={styles.bottomBar}>
         <Pressable style={styles.continueBtn} onPress={advance} testID="reminiscence-continue">
-          <Text style={styles.continueTxt}>{isLast ? "Enter Clinica University" : "Continue"}</Text>
+          <Text style={styles.continueTxt}>{isLast ? "Enter Clinica" : "Continue"}</Text>
           <Ionicons name="arrow-forward" size={16} color={PALETTE.ivory} />
         </Pressable>
       </View>

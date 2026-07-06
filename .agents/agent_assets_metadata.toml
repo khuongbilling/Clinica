@@ -762,3 +762,33 @@ id = "Lc2pOBMqIkwUhXfePCoV3"
 uri = "file://frontend/assets/loading/anime_06_back_to_back.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "1l7ec7U6RIR28MB0vE4uO"
+uri = "file://frontend/assets/system/system_shadow.png"
+type = "image"
+title = "system shadow narrator"
+
+[[generated]]
+id = "_JdipTpcxRUuUGM5l7tCC"
+uri = "file://frontend/assets/system/system_guardian.png"
+type = "image"
+title = "system guardian narrator"
+
+[[generated]]
+id = "stH7RvTbBxT198oPABfZu"
+uri = "file://frontend/assets/system/system_sage.png"
+type = "image"
+title = "system sage narrator"
+
+[[generated]]
+id = "hY5u1ZFDleyqdJlpYYb0R"
+uri = "file://frontend/assets/system/system_warden.png"
+type = "image"
+title = "system warden narrator"
+
+[[generated]]
+id = "Js2nAUYO-dtYAPcuO5-hG"
+uri = "file://frontend/assets/system/system_weaver.png"
+type = "image"
+title = "system weaver narrator"

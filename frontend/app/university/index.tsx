@@ -82,15 +82,17 @@ export default function UniversityHubScreen() {
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>
-        <Text style={styles.title}>Hero Progression Campus</Text>
-        <Text style={styles.sub}>Recruit, certify, and train the healers who defend the Kingdom.</Text>
+        <Text style={styles.title}>Where Your Story Begins</Text>
+        <Text style={styles.sub}>Learn the way of the healer, one living case at a time.</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.mentorBox}>
           <Ionicons name="sparkles-outline" size={16} color={COLORS.brand} />
           <Text style={styles.mentorTxt}>
-            "You were not recalled because you were ready. You were recalled because you can still learn."
+            "You were not recalled because you were ready. You were recalled because you can still
+            learn. Every patient here is a chapter — begin with a single lesson, and the ward will
+            teach you the rest."
           </Text>
         </View>
 

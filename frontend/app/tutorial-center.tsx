@@ -11,7 +11,10 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const TUTORIAL_ORDER: TutorialId[] = ["prologueBattle", "firstBattle", "firstKingdom", "firstSummon"];
 
-const TUTORIAL_DESC: Record<TutorialId, string> = {
+// System-narrated onboarding tutorials (systemHubIntro/systemWardHub/systemShops)
+// are one-time, non-skippable story beats and are intentionally omitted from the
+// replay center, so this map is partial.
+const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
   prologueBattle: "The very first guided shift — Scout, Stabilize, Counter, Reassess.",
   firstBattle: "Care Chain basics: matching skills to what a patient needs.",
   firstKingdom: "Sanctuary Core, inventory, and how your realm grows.",

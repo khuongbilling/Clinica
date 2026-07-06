@@ -1,20 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function Shop() {
   const router = useRouter();
   const { player } = usePlayer();
+  const { isCompleted, startTutorial } = useTutorial();
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The System narrates the Market only after the guided flow reaches it:
+  // hub intro → ward hub → first University lessons. Firing it out of order
+  // (e.g. before lessons) would break the intended onboarding sequence, so we
+  // require the ward-hub beat done AND the first lessons started.
+  const lessonsStarted = (player?.lessons_completed?.length ?? 0) > 0;
+  useEffect(() => {
+    if (!player) return;
+    if (isCompleted("systemWardHub") && lessonsStarted && !isCompleted("systemShops")) {
+      const t = setTimeout(() => startTutorial("systemShops"), 500);
+      return () => clearTimeout(t);
+    }
+  }, [player, lessonsStarted, isCompleted, startTutorial]);
 
   if (!player) {
     return (

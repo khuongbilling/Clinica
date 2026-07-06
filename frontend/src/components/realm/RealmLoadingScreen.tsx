@@ -64,13 +64,24 @@ export function RealmLoadingScreen({ tips = TIPS }: { tips?: string[] }) {
     };
   }, [index, list]);
 
-  // Full-page illustration: the art spans the entire screen behind the hints.
+  // Full-page illustration. A blurred, zoomed COVER copy fills the screen edge
+  // to edge (no dead bars on any aspect ratio), and a crisp CONTAIN copy on top
+  // guarantees the whole comedic scene is always fully visible — never cropped —
+  // regardless of phone shape.
   return (
     <View style={styles.overlay}>
       <ExpoImage
         source={art}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
+        blurRadius={30}
+        transition={0}
+      />
+      <View style={[StyleSheet.absoluteFill, styles.coverDim]} pointerEvents="none" />
+      <ExpoImage
+        source={art}
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
         transition={400}
       />
       <LinearGradient
@@ -101,6 +112,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     justifyContent: "flex-end",
     zIndex: 50,
+  },
+  coverDim: {
+    backgroundColor: "rgba(6,20,26,0.55)",
   },
   bottom: {
     paddingHorizontal: 24,

@@ -2,7 +2,10 @@ export type TutorialId =
   | "prologueBattle"
   | "firstBattle"
   | "firstKingdom"
-  | "firstSummon";
+  | "firstSummon"
+  | "systemHubIntro"
+  | "systemWardHub"
+  | "systemShops";
 
 export interface TutorialStep {
   id: string;
@@ -13,6 +16,14 @@ export interface TutorialStep {
   requiredActionType?: string;
   /** When set, the step is only satisfied by tapping this exact skill id. */
   requiredSkillId?: string;
+  /**
+   * Informational forced banner: renders as a positioned narrative box (like a
+   * requireAction step) but advances via its own "Next" button rather than a
+   * game action. Used by the System-narrated hub onboarding to point at real
+   * on-screen UI (top stamina/currency bar, Ward banner, Shops) without needing
+   * to hook a gameplay action.
+   */
+  banner?: boolean;
   nextText?: string;
 }
 
@@ -21,7 +32,19 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   firstBattle: "Battle Basics",
   firstKingdom: "Kingdom Basics",
   firstSummon: "Hero Summoning",
+  systemHubIntro: "The System Awakens",
+  systemWardHub: "The Ward",
+  systemShops: "The Apothecary Market",
 };
+
+// Tutorials narrated by "the System" — the overlay renders its donghua portrait
+// (a dark silhouette until Player Level 10, then colored by aptitude) and its
+// name in place of the generic GUIDE badge, and treats them as forced (no skip).
+export const SYSTEM_TUTORIAL_IDS: TutorialId[] = ["systemHubIntro", "systemWardHub", "systemShops"];
+
+export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
+  return !!id && SYSTEM_TUTORIAL_IDS.includes(id);
+}
 
 export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   prologueBattle: [
@@ -219,6 +242,66 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredActionType: "summon",
       nextText: "TAP SUMMON",
+    },
+  ],
+
+  // ── System-narrated guided-onboarding sequence (hub-level, forced banners) ──
+  systemHubIntro: [
+    {
+      id: "system_awaken",
+      title: "The System Awakens",
+      body: "…So. You've returned. I am the System — the presence bound to you since the Recall. My true form is still shadow to you; prove yourself, and I will come into focus. For now, let me show you your Ward.",
+      placement: "center",
+      requireAction: false,
+      nextText: "WHO ARE YOU?",
+    },
+    {
+      id: "system_topbar",
+      title: "Your Vitals",
+      body: "Up here I track everything that matters: your Shift Stamina — the energy each Ward Shift costs — and your currencies. Stamina recovers over time. Watch this bar; it is your lifeline.",
+      placement: "top",
+      requireAction: false,
+      banner: true,
+      nextText: "UNDERSTOOD",
+    },
+    {
+      id: "system_to_ward",
+      title: "To the Ward",
+      body: "A patient is waiting. Open the Ward and begin your first Shift — I will be watching. Everything else — the Realm, the University, the Market — opens to you as you grow stronger.",
+      placement: "center",
+      requireAction: false,
+      nextText: "ENTER THE WARD",
+    },
+  ],
+
+  systemWardHub: [
+    {
+      id: "system_ward_intro",
+      title: "The Ward",
+      body: "This is the Ward — where you take clinical shifts against the corruption. Choose a case, read the patient, and hold the line. Each shift you complete makes you stronger and reveals more of the Realm.",
+      placement: "center",
+      requireAction: false,
+      nextText: "GO ON",
+    },
+    {
+      id: "system_ward_university",
+      title: "Answer the Call to Learn",
+      body: "This banner leads to Clinica University. Your first lessons there teach the reasoning behind every treatment — and reward you with your first heroes. Learning is not optional here. It is power.",
+      placement: "center",
+      requireAction: false,
+      banner: true,
+      nextText: "I WILL STUDY",
+    },
+  ],
+
+  systemShops: [
+    {
+      id: "system_shops_intro",
+      title: "The Apothecary Market",
+      body: "You've grown enough to trade. The Market spends your hard-earned currency on supplies, upgrades, and cosmetics — never on shortcuts to victory. Spend wisely; a healer's resources are precious.",
+      placement: "center",
+      requireAction: false,
+      nextText: "SHOW ME",
     },
   ],
 };

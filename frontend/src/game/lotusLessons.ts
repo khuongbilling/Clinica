@@ -30,6 +30,10 @@ export interface LotusLessonRewards {
   crowns: number;
   universityCredits: number;
   xp: number;
+  // Hero ids granted into heroes_owned on first completion. This is how a new
+  // healer earns their first heroes ("units") through University lessons —
+  // completing the onboarding path populates the Hall of Heroes.
+  grantHeroes?: string[];
 }
 
 export interface LotusLessonNode {
@@ -66,7 +70,7 @@ export const LOTUS_PATHS: LotusPath[] = [
         status: 'available',
         linkedCaseId: 'dehydration_wisp',
         payoffCopy: 'Your Lotus Lesson helped you recognize the dehydration cue.',
-        rewards: { insightCrystals: 2, crowns: 25, universityCredits: 10, xp: 15 },
+        rewards: { insightCrystals: 2, crowns: 25, universityCredits: 10, xp: 15, grantHeroes: ['apprentice_seer', 'village_caretaker'] },
         interactions: [
           {
             type: 'info',
