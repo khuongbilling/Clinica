@@ -171,11 +171,15 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
   // fight, otherwise fall back to the normal firstBattle tutorial.
   useEffect(() => {
     if (isPrologueTutorial) {
-      if (!isCompleted("prologueBattle")) {
-        const t = setTimeout(() => startTutorial("prologueBattle"), 800);
-        return () => clearTimeout(t);
-      }
-      return;
+      // The prologue Ward Shift is only ever reached while the backend-owned
+      // prologue_complete flag is still false. Tutorial completion, however,
+      // lives in device-local AsyncStorage — so a phone that ran the prologue
+      // before keeps prologueBattle marked done and would silently skip the
+      // guided walkthrough (no forcing, no highlights) even for a fresh player.
+      // Reaching this screen is itself proof the player still needs the
+      // hand-held first shift, so always force-start it here.
+      const t = setTimeout(() => startTutorial("prologueBattle"), 800);
+      return () => clearTimeout(t);
     }
     if (!isCompleted("firstBattle")) {
       const t = setTimeout(() => startTutorial("firstBattle"), 800);

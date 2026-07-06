@@ -41,3 +41,7 @@ The prologue battle is a fully *forced* hand-held tutorial: the player can only 
 - `TutorialOverlay` must render AFTER the cue modals in JSX so its top require-action banner sits above the cue overlay.
 - Skip is hidden during the prologue (`allowSkip = activeTutorialId !== "prologueBattle"`) so the forced flow can't be bypassed.
 - The old per-battle "tap anywhere to start" mission-briefing overlay was removed entirely (was shown at every battle).
+
+## Force-start the prologue tutorial — do NOT gate it on isCompleted
+**Why:** Tutorial completion (`clinica.tutorials.v1`) lives in **device-local AsyncStorage**, but the prologue battle is only reachable while the **backend-owned** `prologue_complete` flag is false. Gating the auto-start on `!isCompleted("prologueBattle")` meant a device that ran the prologue once kept the flag `true` locally, so a fresh backend player silently got NO guided walkthrough (no forcing, no highlights) on that phone — while a fresh web session worked. This is exactly why "works in the subagent/web but not in Expo Go".
+**How to apply:** In `battle.tsx`'s auto-start effect, `isPrologueTutorial` always calls `startTutorial("prologueBattle")` unconditionally. Reaching the prologue battle is itself proof the player still needs it. Only the non-prologue `firstBattle` tutorial is gated on device-local `isCompleted`. Never re-add an `isCompleted` guard around the prologue start.
