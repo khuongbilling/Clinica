@@ -1,14 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { ActivityIndicator, Animated, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COLORS } from "@/src/theme/colors";
 import { randomLoadingArt } from "@/src/game/loadingArt";
@@ -38,9 +32,9 @@ function tipDurationMs(text: string) {
 
 export function RealmLoadingScreen({ tips = TIPS }: { tips?: string[] }) {
   const list = tips.length > 0 ? tips : FALLBACK_TIPS;
-  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(() => Math.floor(Math.random() * list.length));
-  // Pick one random illustration for this loading appearance.
+  // Pick one random multi-hero illustration for this loading appearance.
   const [art] = useState(() => randomLoadingArt());
   const fade = useRef(new Animated.Value(0)).current;
 
@@ -70,34 +64,32 @@ export function RealmLoadingScreen({ tips = TIPS }: { tips?: string[] }) {
     };
   }, [index, list]);
 
-  // Contained square card so the full illustration is always visible, sized to
-  // fit both portrait and landscape without cropping the character.
-  const size = Math.min(width * 0.86, height * 0.52, 460);
-
+  // Full-page illustration: the art spans the entire screen behind the hints.
   return (
     <View style={styles.overlay}>
-      <View style={[styles.card, { width: size, height: size }]}>
-        <ExpoImage
-          source={art}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={400}
-        />
-        <LinearGradient
-          colors={["transparent", "rgba(6,20,26,0.35)", "rgba(6,20,26,0.94)"]}
-          locations={[0.45, 0.7, 1]}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
+      <ExpoImage
+        source={art}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={400}
+      />
+      <LinearGradient
+        colors={["rgba(6,20,26,0.25)", "transparent", "rgba(6,20,26,0.55)", "rgba(6,20,26,0.97)"]}
+        locations={[0, 0.32, 0.62, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
+      <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
         <Animated.View style={[styles.tipWrap, { opacity: fade }]}>
           <Text style={styles.tipLabel}>SANCTUARY WISDOM</Text>
           <Text style={styles.tipText}>{list[index]}</Text>
         </Animated.View>
-      </View>
 
-      <View style={styles.footer}>
-        <ActivityIndicator color={COLORS.brand} />
-        <Text style={styles.loadingText}>Preparing your realm…</Text>
+        <View style={styles.footer}>
+          <ActivityIndicator color={COLORS.brand} />
+          <Text style={styles.loadingText}>Preparing your realm…</Text>
+        </View>
       </View>
     </View>
   );
@@ -107,30 +99,14 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
     zIndex: 50,
   },
-  card: {
-    borderRadius: 24,
-    overflow: "hidden",
-    backgroundColor: COLORS.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+  bottom: {
+    paddingHorizontal: 24,
   },
   tipWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 40,
+    marginBottom: 22,
   },
   tipLabel: {
     color: COLORS.brand,
@@ -141,15 +117,14 @@ const styles = StyleSheet.create({
   },
   tipText: {
     color: "#EAFBF8",
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 16,
+    lineHeight: 23,
     fontWeight: "600",
   },
   footer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 26,
   },
   loadingText: {
     color: COLORS.onSurfaceSecondary,

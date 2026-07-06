@@ -648,3 +648,27 @@ id = "X44KDbzZlnIgcDICd28cG"
 uri = "file://frontend/assets/enemies/silent_infarct.png"
 type = "image"
 title = "silent infarct boss"
+
+[[generated]]
+id = "1f82LH4Bc1LhS-v1bQuiG"
+uri = "file://frontend/assets/loading/party_01_charge.png"
+type = "image"
+title = "hero party charge loading"
+
+[[generated]]
+id = "lY2P7QlZ5kgl8Io7Uz4Ns"
+uri = "file://frontend/assets/loading/party_02_backtoback.png"
+type = "image"
+title = "hero party back to back"
+
+[[generated]]
+id = "aHEIZXFnNXNLIaOiQWpwS"
+uri = "file://frontend/assets/loading/party_03_summit.png"
+type = "image"
+title = "hero party summit heroic"
+
+[[generated]]
+id = "PB5iHUGgEKp3bg1jWm4KT"
+uri = "file://frontend/assets/images/title_splash.png"
+type = "image"
+title = "clinica title splash isekai"

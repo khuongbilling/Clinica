@@ -19,6 +19,9 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   silent_infarct: require('../../assets/enemies/silent_infarct.png'),
 };
 
+// All enemy portrait modules, for cache preloading at game start.
+export const ENEMY_SPRITE_MODULES = Object.values(SPRITES);
+
 export function getEnemySprite(enemyId: string): ImageSourcePropType | undefined {
   return SPRITES[enemyId];
 }

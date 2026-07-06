@@ -50,14 +50,10 @@ export default function Boot() {
     );
   }
 
-  if (!player) return <Redirect href="/prologue" />;
-  if (player.prologue_complete === false) return <Redirect href="/prologue" />;
-  if (player.identity_restored === false || player.diagnostic_intro_seen === false) return <Redirect href="/post-recall" />;
-  // Push 5 — if the player has confirmed their class but hasn't yet seen the
-  // memory-reminiscence scene (e.g. app was closed mid-scene), resume there
-  // instead of dropping them straight into the hub.
-  if (player.seen_reminiscence === false) return <Redirect href="/reminiscence" />;
-  return <Redirect href="/(tabs)" />;
+  // Once the player store has loaded, always enter through the title/landing
+  // screen. From there "Start Game" runs the full-page preloader, which warms
+  // every asset (including battle backgrounds) before routing into the game.
+  return <Redirect href="/title" />;
 }
 
 const styles = StyleSheet.create({
