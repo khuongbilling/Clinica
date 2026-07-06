@@ -1,12 +1,63 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
+/**
+ * Types the text out character-by-character like a visual-novel narrative box so
+ * the player actually reads each step. Tap the box to reveal the rest instantly.
+ */
+function TypewriterText({ text, style, instant, speed = 16 }: { text: string; style?: any; instant?: boolean; speed?: number }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (instant) {
+      setCount(text.length);
+      return;
+    }
+    setCount(0);
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setCount(i);
+      if (i >= text.length) clearInterval(id);
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed, instant]);
+  return <Text style={style}>{text.slice(0, count)}</Text>;
+}
+
+/** A pulsing chevron that points from the narrative box toward the highlighted action. */
+function PointerChevron({ dir }: { dir: "up" | "down" }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 620, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 620, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+  const shift = anim.interpolate({ inputRange: [0, 1], outputRange: dir === "up" ? [0, -6] : [0, 6] });
+  return (
+    <Animated.View style={[styles.chevron, dir === "up" ? styles.chevronUp : styles.chevronDown, { transform: [{ translateY: shift }] }]}>
+      <Ionicons name={dir === "up" ? "chevron-up" : "chevron-down"} size={22} color={COLORS.brand} />
+    </Animated.View>
+  );
+}
+
 export function TutorialOverlay() {
   const { currentStep, stepIndex, totalSteps, advanceStep, skipTutorial, activeTutorialId } = useTutorial();
   const insets = useSafeAreaInsets();
+  const [instant, setInstant] = useState(false);
+
+  const stepId = currentStep?.id;
+  useEffect(() => {
+    setInstant(false);
+  }, [stepId]);
 
   if (!activeTutorialId || !currentStep) return null;
 
@@ -15,29 +66,44 @@ export function TutorialOverlay() {
   const allowSkip = activeTutorialId !== "prologueBattle";
 
   if (currentStep.requireAction) {
+    const placement = currentStep.placement;
+    const justify = placement === "bottom" ? "flex-end" : placement === "center" ? "center" : "flex-start";
+    // The highlighted control lives outside the box: below it for a top/center
+    // banner, above it for a bottom banner. Point the arrow toward it.
+    const arrowUp = placement === "bottom";
     return (
-      <View
-        style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { pointerEvents: 'box-none' }]}
-      >
-        <View style={[styles.actionBanner, { marginTop: insets.top + SPACING.xs, pointerEvents: 'auto' }]}>
-          <View style={styles.bannerRow}>
-            <View style={styles.bannerIcon}>
-              <Ionicons name="arrow-down" size={14} color={COLORS.onBrand} />
+      <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
+        <Pressable
+          onPress={() => setInstant(true)}
+          style={[
+            styles.narrativeBox,
+            placement === "top" && { marginTop: insets.top + SPACING.xs },
+            placement === "bottom" && { marginBottom: insets.bottom + SPACING.md },
+            { pointerEvents: "auto" },
+          ]}
+        >
+          {arrowUp && <PointerChevron dir="up" />}
+          <View style={styles.narrativeHead}>
+            <View style={styles.guideBadge}>
+              <Ionicons name="chatbubbles" size={11} color={COLORS.onBrand} />
+              <Text style={styles.guideBadgeTxt}>GUIDE</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.bannerTitleRow}>
-                <Text style={styles.bannerTitle}>{currentStep.title.toUpperCase()}</Text>
-                {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
-              </View>
-              <Text style={styles.bannerBody}>{currentStep.body}</Text>
-            </View>
+            <Text style={styles.narrativeTitle} numberOfLines={1}>{currentStep.title}</Text>
+            {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
           </View>
-          {allowSkip && (
-            <Pressable onPress={skipTutorial} style={styles.skipInline} hitSlop={8}>
-              <Text style={styles.skipTxt}>Skip tutorial</Text>
-            </Pressable>
-          )}
-        </View>
+          <TypewriterText text={currentStep.body} style={styles.narrativeBody} instant={instant} />
+          <View style={styles.narrativeFoot}>
+            {currentStep.nextText ? (
+              <Text style={styles.tapPrompt} numberOfLines={1}>▸ {currentStep.nextText}</Text>
+            ) : <View style={{ flex: 1 }} />}
+            {allowSkip && (
+              <Pressable onPress={skipTutorial} hitSlop={8}>
+                <Text style={styles.skipTxt}>Skip</Text>
+              </Pressable>
+            )}
+          </View>
+          {!arrowUp && <PointerChevron dir="down" />}
+        </Pressable>
       </View>
     );
   }
@@ -45,7 +111,7 @@ export function TutorialOverlay() {
   return (
     <Modal transparent visible animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
-        <View style={styles.popover}>
+        <Pressable style={styles.popover} onPress={() => setInstant(true)}>
           <View style={styles.popoverHead}>
             <View style={styles.codexBadge}>
               <Ionicons name="book" size={11} color={COLORS.onBrand} />
@@ -55,7 +121,7 @@ export function TutorialOverlay() {
           </View>
 
           <Text style={styles.popoverTitle}>{currentStep.title}</Text>
-          <Text style={styles.popoverBody}>{currentStep.body}</Text>
+          <TypewriterText text={currentStep.body} style={styles.popoverBody} instant={instant} />
 
           <View style={styles.popoverActions}>
             {allowSkip && (
@@ -67,7 +133,7 @@ export function TutorialOverlay() {
               <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
             </Pressable>
           </View>
-        </View>
+        </Pressable>
       </View>
     </Modal>
   );
@@ -132,6 +198,7 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceSecondary,
     fontSize: 13,
     lineHeight: 19,
+    minHeight: 57,
   },
   popoverActions: {
     flexDirection: "row",
@@ -163,71 +230,97 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
+  // ── Guided action narrative box (positioned near the highlighted control) ──
   actionOverlay: {
     zIndex: 9000,
-    justifyContent: "flex-start",
-    alignItems: "stretch",
+    alignItems: "center",
     paddingHorizontal: SPACING.sm,
   },
-  actionBanner: {
+  narrativeBox: {
     backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.brand + "80",
-    padding: SPACING.md,
-    gap: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: COLORS.brand,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    width: "100%",
+    maxWidth: 460,
+    gap: 6,
     shadowColor: COLORS.brand,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    elevation: 16,
   },
-  bannerRow: {
+  narrativeHead: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: SPACING.sm,
-  },
-  bannerIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.brand,
     alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 2,
+    gap: SPACING.xs,
   },
-  bannerTitleRow: {
+  guideBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.brand,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+  },
+  guideBadgeTxt: {
+    color: COLORS.onBrand,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  narrativeTitle: {
+    flex: 1,
+    color: COLORS.onSurface,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  narrativeBody: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 40,
+  },
+  narrativeFoot: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 2,
+    marginTop: 2,
   },
-  bannerTitle: {
-    color: COLORS.brand,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.2,
+  tapPrompt: {
     flex: 1,
+    color: COLORS.brand,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   progressTxt: {
     color: COLORS.onSurfaceTertiary,
     fontSize: 10,
     fontWeight: "600",
   },
-  bannerBody: {
-    color: COLORS.onSurfaceSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  skipInline: {
-    alignSelf: "flex-end",
-  },
   skipTxt: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.5,
     textDecorationLine: "underline",
+  },
+  chevron: {
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chevronUp: {
+    marginTop: -SPACING.sm,
+    marginBottom: 2,
+  },
+  chevronDown: {
+    marginBottom: -SPACING.sm,
+    marginTop: 2,
   },
 });

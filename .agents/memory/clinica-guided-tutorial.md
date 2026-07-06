@@ -21,14 +21,25 @@ The prologue battle is a fully *forced* hand-held tutorial: the player can only 
 - Tune enemy `corruption` so the forced sequence lands the win exactly on the final step (chain-complete bonus of -20 is applied on completion). Cue answered correctly grants +1 AP and a stabilize bonus.
 - A cue exists at battle init (set in `initBattle`), so a "answer the cue" first step always has something to show.
 
-## Non-blocking overlays: use style.pointerEvents, NOT the prop
-**Why:** On this Expo-web target (RN 0.81 / react-native-web) the `pointerEvents="box-none"` *prop* is DEPRECATED (console warns "props.pointerEvents is deprecated. Use style.pointerEvents"). The proven non-blocking overlay here (`TutorialOverlay`'s guided banner) uses `style={{ pointerEvents: 'box-none' }}` and taps still pass through to the skills underneath. `box-none` = the View is never the touch target but its children are, so an absolute-fill wrapper can float a card while the game stays tappable.
-**How to apply:** For any float-over-game overlay, put `pointerEvents: 'box-none'` in the wrapper's STYLE (children get touches by default). Do not "fix" it back to the prop form — that reintroduces the deprecation and doesn't match the working pattern.
+## Float-over-game overlays: use style.pointerEvents, NOT the prop
+**Why:** On this Expo-web target (RN 0.81 / react-native-web) the `pointerEvents="box-none"` *prop* is DEPRECATED (console warns "props.pointerEvents is deprecated. Use style.pointerEvents"). `TutorialOverlay`'s guided banner uses `style={{ pointerEvents: 'box-none' }}` so taps pass through to the skills underneath (`box-none` = the wrapper View is never the touch target but its children are).
+**How to apply:** For any float-over-game overlay, put `pointerEvents: 'box-none'` in the wrapper's STYLE. Do not "fix" it back to the prop form.
 
-## Cue feedback is non-blocking; the cue QUESTION still blocks
-- The unanswered Clinical Cue modal (`state.pendingCue && !cueFeedback`) stays a full-screen blocking `modalOverlay` — the player must answer it. Its card is a ScrollView (`cueModal` style + `cueModalContent` contentContainerStyle, `maxHeight:"85%"`) so a tall cue can't overflow the centered overlay and appear off-center.
-- The ANSWERED-cue feedback (`cueFeedback`) is a **screen-centered** card (`cueFeedbackWrap` absolute-fill, `justifyContent:"center"` + style.pointerEvents box-none; `cueFeedbackCard` the visible ScrollView) so reading the rationale never freezes the shift. Auto-continues after 3s (`setTimeout` in `handleCueAnswer`) or via CONTINUE.
-- **Both the question and the explanation must be horizontally + vertically centered** (user requirement). The wrap centers position; keep the feedback box-none so it stays non-blocking even while centered.
+## Cue feedback is a BLOCKING covering front layer (reversed from earlier non-blocking design)
+**Why:** User later reversed the earlier "non-blocking / always-centered" cue-feedback rule. The answered-cue explanation must now COVER everything underneath and block interaction until dismissed.
+- The unanswered cue QUESTION (`state.pendingCue && !cueFeedback`) still blocks via `modalOverlay` (ScrollView `cueModal`/`cueModolContent`, `maxHeight:"85%"`).
+- The ANSWERED-cue feedback (`cueFeedback`) is now `cueFeedbackWrap` = absolute-fill with a SOLID dark backdrop (`rgba(0,0,0,0.92)`) + `zIndex:9500`, NO `box-none` (so it captures touches). `cueFeedbackCard` maxHeight raised to 82%. Auto-continues after 3s or via CONTINUE.
+**How to apply:** Do not re-add `box-none` to the feedback wrap or re-center it as a floating card — it is intentionally a full covering top layer now.
+
+## Guided cue must DEFER the tutorial advance until feedback dismiss
+**Why:** A native RN `Modal` (the next non-action step popover, e.g. `prologue_skills`) always renders above plain high-zIndex Views. If `onRequiredAction("cue")` fires immediately on a correct guided answer, that popover pops on top of the covering feedback and steals the front layer.
+**How to apply:** On correct guided-cue answer set `cueAdvanceRef.current = true` (do NOT call `onRequiredAction("cue")` yet); `dismissCueFeedback` (called by CONTINUE and the 3s timer) fires `onRequiredAction("cue")`. This keeps the explanation the top layer until the player closes it.
+
+## Guided action hints are placement-aware narrative boxes (not a fixed top banner)
+**Why:** User wanted each guided step near its highlighted control, "type screen narrative" style, pointing at the action.
+- `TutorialStep.placement` is now honored by `TutorialOverlay`'s require-action branch: `bottom`→box anchored near the bottom action zone with a pulsing UP chevron (skill/endturn/scout/stabilize/strike/summon steps); `top`→near top with DOWN chevron (the cue step, since its modal is centered); `center`→centered.
+- Body text uses a `TypewriterText` component (types out; tap the box = reveal instantly, reset per `stepId`). Non-action popover steps also use the typewriter.
+**How to apply:** Set a step's `placement` to control where its hint sits relative to its highlighted control; `bottom` for controls in the lower action grid. Chevron direction is derived from placement (`arrowUp = placement === "bottom"`).
 
 ## Long-press hint is a tutorial step, not a separate coachmark
 - The old standalone `LongPressCoachmark` component was deleted. Its "tap to use / long-press for full nursing+NCLEX detail" message now lives as the one-time non-action step `prologue_skills` in `TUTORIALS.prologueBattle` (between the cue step and the scout step). Don't re-add a separate coachmark.

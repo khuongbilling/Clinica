@@ -139,9 +139,17 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     isCorrect: boolean;
   } | null>(null);
   const cueTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Defer advancing the guided tutorial until the covering cue explanation is
+  // dismissed — otherwise the next step's Modal popover would render on top of
+  // the feedback and steal the front layer.
+  const cueAdvanceRef = useRef(false);
   const dismissCueFeedback = () => {
     if (cueTimer.current) { clearTimeout(cueTimer.current); cueTimer.current = null; }
     setCueFeedback(null);
+    if (cueAdvanceRef.current) {
+      cueAdvanceRef.current = false;
+      onRequiredAction("cue");
+    }
   };
   useEffect(() => () => { if (cueTimer.current) clearTimeout(cueTimer.current); }, []);
   const [actionFx, setActionFx] = useState<BattleFx>(null);
@@ -416,13 +424,12 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
     setState(res.state);
     if (isCorrect) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      onRequiredAction("cue");
+      if (guidedCueStep) cueAdvanceRef.current = true;
     }
     setCueFeedback({ cue, chosenIndex: optionIndex, isCorrect });
     if (cueTimer.current) clearTimeout(cueTimer.current);
     cueTimer.current = setTimeout(() => {
-      cueTimer.current = null;
-      setCueFeedback(null);
+      dismissCueFeedback();
     }, 3000);
   };
 
@@ -1030,7 +1037,7 @@ function BattleInner({ enemyId, training, prologue }: { enemyId?: string; traini
       )}
 
       {cueFeedback && (
-        <View style={[styles.cueFeedbackWrap, { pointerEvents: "box-none" }]}>
+        <View style={styles.cueFeedbackWrap}>
           <ScrollView style={styles.cueFeedbackCard} contentContainerStyle={{ paddingBottom: 4 }} testID="clinical-cue-feedback">
             <Text style={[styles.cueKicker, { color: cueFeedback.isCorrect ? COLORS.success : COLORS.error }]}>
               {cueFeedback.isCorrect ? "✓ CORRECT" : "✗ NOT QUITE"}
@@ -1376,8 +1383,8 @@ const styles = StyleSheet.create({
   // ── Clinical Cue modal ──
   cueModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, maxHeight: "85%", flexGrow: 0 },
   cueModalContent: { padding: SPACING.lg, gap: 8 },
-  cueFeedbackWrap: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center", padding: SPACING.md },
-  cueFeedbackCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, maxHeight: "60%", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 20 },
+  cueFeedbackWrap: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center", padding: SPACING.md, backgroundColor: "rgba(0,0,0,0.92)", zIndex: 9500 },
+  cueFeedbackCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.runeGold + "60", width: "100%", maxWidth: 380, maxHeight: "82%", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 20 },
   cueKicker: { color: COLORS.runeGold, fontSize: 10, letterSpacing: 1.5, fontWeight: "700", textAlign: "center" },
   cueTierTopic: { color: COLORS.onSurfaceSecondary, fontSize: 10, letterSpacing: 0.5, fontWeight: "600", marginTop: -4, textAlign: "center" },
   cuePrompt: { color: COLORS.onSurface, fontSize: 15, lineHeight: 21, marginBottom: 4, textAlign: "center" },
