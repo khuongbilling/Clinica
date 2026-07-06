@@ -27,6 +27,10 @@ export interface ModeCardDef {
   route?: string; // gameplay destination — where the intro's "Begin" button leads
   rewardPreview?: string;
   unlockRequirement?: string;
+  // Rollout order for coming-soon content. The hub only teases the SINGLE next
+  // coming-soon mode whose `unlockChapter` is still ahead of the player's
+  // `chapter_progress`; every other placeholder stays hidden until it's next.
+  unlockChapter?: number;
   artBrief: string;
   // ── Mode → Intro → Gameplay pattern (Step 13) ──
   // The hub routes every active mode to its intro at `/mode/<id>`. The intro
@@ -119,6 +123,7 @@ export const CLINICAL_CHALLENGE_MODES: ModeCardDef[] = [
     accentColor: "#F59E0B",
     status: "coming_soon",
     size: "small",
+    unlockChapter: 2,
     artBrief:
       "A scholar-healer reviewing floating case scrolls beside a patient bed under soft jade-and-gold light.",
   },
@@ -130,6 +135,7 @@ export const CLINICAL_CHALLENGE_MODES: ModeCardDef[] = [
     accentColor: "#EF4444",
     status: "coming_soon",
     size: "small",
+    unlockChapter: 3,
     artBrief:
       "A fast emergency scene with bright alert sigils, a healer rushing forward, and urgent clinical energy.",
   },
@@ -145,6 +151,7 @@ export const KNOWLEDGE_CHALLENGE_MODES: ModeCardDef[] = [
     accentColor: "#A78BFA",
     status: "coming_soon",
     size: "small",
+    unlockChapter: 4,
     artBrief:
       "Two scholar-healers facing off across a glowing knowledge arena with answer glyphs and medical runes.",
   },
@@ -156,6 +163,7 @@ export const KNOWLEDGE_CHALLENGE_MODES: ModeCardDef[] = [
     accentColor: "#F59E0B",
     status: "coming_soon",
     size: "small",
+    unlockChapter: 5,
     artBrief:
       "An academy competition hall with podiums, category seals, and students in fantasy-medical uniforms.",
   },
@@ -197,6 +205,7 @@ export const FUTURE_EVENT_MODES: ModeCardDef[] = [
     accentColor: "#22D3EE",
     status: "coming_soon",
     size: "small",
+    unlockChapter: 6,
     artBrief:
       "A traveling healer party approaching a village under mist with medical packs, lanterns, and relief banners.",
   },
@@ -208,6 +217,7 @@ export const FUTURE_EVENT_MODES: ModeCardDef[] = [
     accentColor: "#7C3AED",
     status: "coming_soon",
     size: "small",
+    unlockChapter: 7,
     artBrief:
       "Faction healers rallying under banners as disease fog spreads across a distant city.",
   },
@@ -290,4 +300,26 @@ export const ALL_MODES: ModeCardDef[] = [
 export function findMode(id: string | undefined | null): ModeCardDef | undefined {
   if (!id) return undefined;
   return ALL_MODES.find((m) => m.id === id);
+}
+
+// ---------- Coming-soon teaser (chapter-gated) ----------
+// Every not-yet-reached placeholder stays hidden; the hub only surfaces the
+// single next event/content in this rollout order (sorted by unlock chapter).
+export const COMING_SOON_MODES: ModeCardDef[] = [
+  ...CLINICAL_CHALLENGE_MODES,
+  ...KNOWLEDGE_CHALLENGE_MODES,
+  ...FUTURE_EVENT_MODES,
+]
+  .filter((m) => m.status === "coming_soon")
+  .sort((a, b) => (a.unlockChapter ?? Infinity) - (b.unlockChapter ?? Infinity));
+
+/**
+ * The single next coming-soon event/content to tease, based on the player's
+ * current chapter. Returns the earliest placeholder whose `unlockChapter` is
+ * still ahead of the player; all others stay hidden until it's their turn.
+ * Returns undefined once there is nothing left to preview.
+ */
+export function nextComingSoonMode(chapterProgress: number): ModeCardDef | undefined {
+  const ch = chapterProgress || 1;
+  return COMING_SOON_MODES.find((m) => (m.unlockChapter ?? Infinity) > ch);
 }

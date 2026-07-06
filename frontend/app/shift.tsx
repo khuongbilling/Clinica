@@ -9,8 +9,8 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import {
-  CLINICAL_CHALLENGE_MODES, FUTURE_EVENT_MODES, KNOWLEDGE_CHALLENGE_MODES,
-  ModeCardDef, WARD_SHIFT_MODE, WELLNESS_MODES,
+  CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
+  WARD_SHIFT_MODE, WELLNESS_MODES,
 } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -31,18 +31,17 @@ export default function ShiftPage() {
   // Active clinical banners for the hub: Ward Shift (hero) + Ward Defense + Boss Ward.
   const activeClinical = CLINICAL_CHALLENGE_MODES.filter((m) => m.status === "active");
   const activeWellness = WELLNESS_MODES.filter((m) => m.status === "active");
-  // Everything still in development becomes a compact "coming soon" card.
-  const comingSoon: ModeCardDef[] = [
-    ...CLINICAL_CHALLENGE_MODES.filter((m) => m.status === "coming_soon"),
-    ...KNOWLEDGE_CHALLENGE_MODES,
-    ...FUTURE_EVENT_MODES,
-  ];
+  // Only tease the SINGLE next event/content that opens based on chapter
+  // progress. Every other not-yet-reached placeholder stays hidden until it is
+  // next in line.
+  const nextUp = nextComingSoonMode(player.chapter_progress ?? 1);
 
   const openIntro = (mode: ModeCardDef) => {
     if (mode.status === "coming_soon" || mode.status === "locked") {
+      const when = mode.unlockChapter ? `\n\nOpens in Chapter ${mode.unlockChapter}.` : "";
       Alert.alert(
         `${mode.title} — Coming Soon`,
-        mode.subtitle + "\n\nThis mode is still in development — nothing is spent and no rewards are given yet.",
+        mode.subtitle + when + "\n\nThis mode is still in development — nothing is spent and no rewards are given yet.",
       );
       return;
     }
@@ -91,20 +90,24 @@ export default function ShiftPage() {
           <BannerCard key={m.id} mode={m} height={120} onPress={() => openIntro(m)} testID={`mode-${m.id}`} />
         ))}
 
-        {/* Coming Soon — compact placeholders */}
-        <Text style={styles.section}>Coming Soon</Text>
-        <View style={styles.smallGrid}>
-          {comingSoon.map((m) => (
-            <ModeCard key={m.id} mode={m} onPress={() => openIntro(m)} testID={`mode-${m.id}`} />
-          ))}
-        </View>
+        {/* Coming Soon — only the single next event/content, gated by chapter */}
+        {nextUp && (
+          <>
+            <Text style={styles.section}>Coming Soon</Text>
+            <View style={styles.smallGrid}>
+              <ModeCard mode={nextUp} onPress={() => openIntro(nextUp)} testID={`mode-${nextUp.id}`} />
+            </View>
 
-        <View style={styles.footNote}>
-          <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
-          <Text style={styles.footNoteTxt}>
-            Coming Soon modes are placeholders only — tapping them never spends Shift Challenges or grants rewards.
-          </Text>
-        </View>
+            <View style={styles.footNote}>
+              <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.footNoteTxt}>
+                {nextUp.unlockChapter
+                  ? `Next up in Chapter ${nextUp.unlockChapter}. It's just a preview — tapping never spends Shift Challenges or grants rewards.`
+                  : "This is just a preview — tapping never spends Shift Challenges or grants rewards."}
+              </Text>
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
