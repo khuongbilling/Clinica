@@ -726,3 +726,39 @@ id = "af6rXCk9axgCxN7AZiDFF"
 uri = "file://frontend/assets/reminiscence/panel_09_university.png"
 type = "image"
 title = "panel9 university recovery hall"
+
+[[generated]]
+id = "oQHLRPwGkD-fYS1JJZYBD"
+uri = "file://frontend/assets/loading/anime_01_charge.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "jY13cx0cRJcHjRO9CCjgE"
+uri = "file://frontend/assets/loading/anime_02_lantern_bonk.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LotK_GHGrUjz0rQtdG8X3"
+uri = "file://frontend/assets/loading/anime_03_fire_flex.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Trr4pbSSn7HXahsOeuIR4"
+uri = "file://frontend/assets/loading/anime_04_water_surf.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Vpa6PIdx4QU60_mlgs3TF"
+uri = "file://frontend/assets/loading/anime_05_tea_confuse.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Lc2pOBMqIkwUhXfePCoV3"
+uri = "file://frontend/assets/loading/anime_06_back_to_back.png"
+type = "image"
+title = "generated_image"
