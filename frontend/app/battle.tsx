@@ -21,6 +21,8 @@ import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
+import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
+import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import type { ActionType, Hero, HeroSkill } from "@/src/game/types";
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
 import { usePlayer } from "@/src/game/store";
@@ -1152,7 +1154,29 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {/* Tutorial overlay renders after the cue modals so its guided banner sits above them. */}
       <TutorialOverlay />
 
-      {state.outcome !== "ongoing" && activeTutorialId !== "prologueBattle" && (
+      {state.outcome !== "ongoing" && isPrologueBoss && (
+        <View style={styles.bossCollapseOverlay}>
+          <SceneTransition duration={900} style={styles.bossCollapseInner}>
+            <SystemPanel icon="pulse-outline" label="SYSTEM · CRITICAL" accent={COLORS.error}>
+              <Text style={styles.bossCollapseTitle}>The patient could not be saved.</Text>
+              <Text style={styles.bossCollapseBody}>
+                {enemy.dangerTrigger}. No skill in your hands could have turned this
+                back — the readings were never yours to trust.
+              </Text>
+              <Text style={styles.bossCollapseBody}>
+                And then, in the silence after, something answers. A voice that
+                should not be there. It knows your name.
+              </Text>
+            </SystemPanel>
+            <Pressable style={styles.bossCollapseBtn} onPress={finish} testID="battle-finish">
+              <Ionicons name="sparkles" size={16} color={COLORS.onBrand} />
+              <Text style={styles.bossCollapseBtnTxt}>ANSWER IT</Text>
+            </Pressable>
+          </SceneTransition>
+        </View>
+      )}
+
+      {state.outcome !== "ongoing" && !isPrologueBoss && activeTutorialId !== "prologueBattle" && (
         <View style={styles.modalOverlay}>
           <View style={styles.outcomeModal}>
             <Ionicons name={state.outcome === "win" ? "shield-checkmark" : "alert-circle"} size={48} color={state.outcome === "win" ? COLORS.success : COLORS.error} />
@@ -1396,6 +1420,14 @@ const styles = StyleSheet.create({
   modalSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", lineHeight: 19 },
   continueBtn: { backgroundColor: COLORS.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.pill, marginTop: SPACING.sm },
   continueBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
+
+  // ── Prologue boss scripted-collapse cinematic overlay ──
+  bossCollapseOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.94)", alignItems: "center", justifyContent: "center", padding: SPACING.lg },
+  bossCollapseInner: { width: "100%", maxWidth: 400, alignItems: "center", gap: SPACING.lg },
+  bossCollapseTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "400", lineHeight: 26 },
+  bossCollapseBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+  bossCollapseBtn: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.pill },
+  bossCollapseBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
 
   // ── Ultimate charge meter (hero pill) ──
   ultBarBg: { width: "100%", height: 3, borderRadius: 2, backgroundColor: COLORS.surface, marginTop: 3, overflow: "hidden" },

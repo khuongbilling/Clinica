@@ -31,3 +31,15 @@ shared vocabulary each screen drifts to its own dialogue box/progress dot/reward
 
 **How to apply:** when touching any onboarding-adjacent screen, check whether it needs
 one of these 4 primitives before hand-rolling a new box/animation/reward chip.
+
+**Scripted-loss boss outcome:** the prologue boss (`isPrologueBoss`, Silent Infarct,
+scriptedLoss) is narratively meant to lose and routes straight to Lotus Recall — it must
+NOT reuse the generic "Patient Lost — review the lesson and try again" outcome modal
+(implies a retry that doesn't exist). Give it its own cinematic collapse overlay
+(SceneTransition + SystemPanel, CRITICAL/error accent) leading into the System's voice.
+Keep the split so all *non-boss* battles keep the original outcome modal untouched.
+
+**First Simulation Shift = the prologue tutorial WIN result screen** (`won &&
+isPrologueTutorial` in result.tsx), NOT a separate route. Onboarding polish there
+(OnboardingProgressBar step "First Shift" + MilestoneReward) must be scoped to that exact
+condition so ordinary battle result screens are unaffected.

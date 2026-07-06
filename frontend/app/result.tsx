@@ -16,6 +16,9 @@ import { useTestSession } from "@/src/game/testSession";
 import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
 import { getDifficultyModifier } from "@/src/game/difficulty";
 import { HEROES } from "@/src/game/content";
+import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
+import { MilestoneReward, type MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 
 interface HeroXpAwardParsed { heroId: string; contributionShare: number; xpAwarded: number }
 interface HeroLevelUpParsed { heroId: string; fromLevel: number; toLevel: number }
@@ -99,6 +102,19 @@ export default function Result() {
 
   const rewardBreakdown = won ? calculateRewards(baseShards, starResult.stars, fullChainCompleted) : null;
 
+  // First Simulation Shift (prologue tutorial win) — present the modest
+  // rewards as a single onboarding milestone card instead of only the
+  // scattered shards/crowns cards below.
+  const firstShiftRewards: MilestoneRewardItem[] = useMemo(() => {
+    const items: MilestoneRewardItem[] = [
+      { icon: "heart", label: "Patient stabilized" },
+      { icon: "star", label: "Stars", amount: String(starResult.stars) },
+    ];
+    if (rewardBreakdown && rewardBreakdown.total > 0) items.push({ icon: "diamond", label: "Codex Shards", amount: String(rewardBreakdown.total) });
+    if (crownsEarned > 0) items.push({ icon: "cash-outline", label: "Crowns", amount: String(crownsEarned) });
+    return items;
+  }, [starResult.stars, rewardBreakdown, crownsEarned]);
+
   useEffect(() => {
     logEvent('victory_screen_viewed', 'result', {
       meta: { won, enemyId: enemy?.id, stars: starResult.stars },
@@ -133,6 +149,11 @@ export default function Result() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {won && isPrologueTutorial && (
+          <SceneTransition duration={800}>
+            <OnboardingProgressBar step="First Shift" />
+          </SceneTransition>
+        )}
         <View style={styles.head}>
           {enemy && getEnemySprite(enemy.id) ? (
             <View style={[styles.enemyResultPortrait, { borderColor: won ? COLORS.success : COLORS.error }]}>
@@ -152,6 +173,14 @@ export default function Result() {
           <Text style={styles.title}>{won && mission ? mission.victoryTitle : enemy?.name ?? ""}</Text>
           <Text style={styles.sub}>{won && mission ? enemy?.name : enemy?.realWorld}{isTraining ? " · Training" : ""}</Text>
         </View>
+
+        {won && isPrologueTutorial && (
+          <MilestoneReward
+            title="FIRST SIMULATION SHIFT COMPLETE"
+            items={firstShiftRewards}
+            accent={COLORS.success}
+          />
+        )}
 
         {won && (
           <>
