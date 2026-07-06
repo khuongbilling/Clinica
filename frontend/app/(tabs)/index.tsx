@@ -210,8 +210,8 @@ export default function RunHome() {
         onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
         testID="run-random-encounter"
       >
-        <Ionicons name="medical" size={18} color={COLORS.onBrand} />
-        <Text style={styles.startTxt}>START SHIFT</Text>
+        <Ionicons name="star" size={18} color={COLORS.onBrand} />
+        <Text style={styles.startTxt}>REPORT FOR SHIFT</Text>
         <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
       </Pressable>
 
