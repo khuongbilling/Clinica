@@ -15,6 +15,7 @@ import { getMission } from "@/src/game/missions";
 import { useTestSession } from "@/src/game/testSession";
 import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
 import { getDifficultyModifier } from "@/src/game/difficulty";
+import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { HEROES } from "@/src/game/content";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
@@ -43,6 +44,10 @@ export default function Result() {
   const isReplay = replay === "1";
   const baseShards = parseInt(shards || "0", 10);
   const crownsEarned = parseInt(crowns || "0", 10);
+  // Only offer the "spend at the Apothecary Market" shortcut once the Shop is
+  // actually unlocked — otherwise the card would bounce the player into a locked
+  // screen. When still gated, the card stays informational (non-pressable).
+  const shopGate = checkFeatureGate("shop", buildGateContext(player));
   const fullChainCompleted = fullChain === "1";
   const consultsUsed = parseInt(consults || "0", 10);
   const emergencyCallsUsed = parseInt(emergency || "0", 10);
@@ -336,11 +341,20 @@ export default function Result() {
             )}
 
             {crownsEarned > 0 && (
-              <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push("/(tabs)/shop")}>
-                <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
-                <Text style={styles.crownsTxt}>+{crownsEarned} Crowns earned — spend them at the Apothecary Market.</Text>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.energy} />
-              </Pressable>
+              shopGate.unlocked ? (
+                <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push("/(tabs)/shop")}>
+                  <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
+                  <Text style={styles.crownsTxt}>+{crownsEarned} Crowns earned — spend them at the Apothecary Market.</Text>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.energy} />
+                </Pressable>
+              ) : (
+                <View style={styles.crownsCard} testID="result-crowns-locked">
+                  <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
+                  <Text style={styles.crownsTxt}>
+                    +{crownsEarned} Crowns earned — {shopGate.reason || "unlock the Apothecary Market to spend them."}
+                  </Text>
+                </View>
+              )
             )}
 
             {mission && (

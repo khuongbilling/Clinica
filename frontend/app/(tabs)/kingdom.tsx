@@ -32,6 +32,7 @@ import {
   ISO_TILE_W, ISO_TILE_H, computeIsoCanvas, cellCenterIso, footprintIso,
   cellDepth, footprintDepth,
 } from "@/src/game/realmIso";
+import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const ISO_CANVAS = computeIsoCanvas(GRID_ROWS, GRID_COLS);
@@ -553,8 +554,15 @@ function BuildingActionSheet({
   onStore: (building: RealmBuilding) => void;
   router: ReturnType<typeof useRouter>;
 }) {
+  const { player } = usePlayer();
   if (!building) return null;
   const unlocked = isBuildingUnlocked(building, atriumLevel);
+  // Route links can point at a still-gated screen (Heroes / Shop / University).
+  // Respect that feature gate here so the modal never shortcuts a player into a
+  // locked area — the link is disabled with the unlock reason instead.
+  const linkGate = building.linkFeature
+    ? checkFeatureGate(building.linkFeature, buildGateContext(player))
+    : { unlocked: true, reason: null };
   const lvl = kingdomLevels[building.kingdomLevelsKey] || 0;
   const req = building.requirementsForLevel(lvl);
   const district = REALM_DISTRICTS.find((d) => d.id === building.district);
@@ -673,14 +681,26 @@ function BuildingActionSheet({
 
             <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.lg, flexWrap: "wrap" }}>
               {unlocked && building.linkKind === "route" && building.linkRoute && (
-                <Pressable
-                  style={[styles.linkBtn, { borderColor: color, flex: 1 }]}
-                  onPress={() => { onClose(); router.push(building.linkRoute as any); }}
-                  testID={`realm-link-${building.id}`}
-                >
-                  <Text style={[styles.linkBtnTxt, { color }]}>{building.linkLabel}</Text>
-                  <Ionicons name="arrow-forward" size={16} color={color} />
-                </Pressable>
+                linkGate.unlocked ? (
+                  <Pressable
+                    style={[styles.linkBtn, { borderColor: color, flex: 1 }]}
+                    onPress={() => { onClose(); router.push(building.linkRoute as any); }}
+                    testID={`realm-link-${building.id}`}
+                  >
+                    <Text style={[styles.linkBtnTxt, { color }]}>{building.linkLabel}</Text>
+                    <Ionicons name="arrow-forward" size={16} color={color} />
+                  </Pressable>
+                ) : (
+                  <View
+                    style={[styles.linkBtn, styles.linkBtnLocked, { flex: 1 }]}
+                    testID={`realm-link-${building.id}-locked`}
+                  >
+                    <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceTertiary} />
+                    <Text style={styles.linkBtnLockedTxt}>
+                      {linkGate.reason || "Locked"}
+                    </Text>
+                  </View>
+                )
               )}
               {unlocked && building.movable && (
                 <Pressable
@@ -1152,6 +1172,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderRadius: RADIUS.pill, paddingVertical: SPACING.sm,
   },
   linkBtnTxt: { fontSize: 14, fontWeight: "700" },
+  linkBtnLocked: {
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  linkBtnLockedTxt: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.onSurfaceTertiary,
+    flexShrink: 1,
+    textAlign: "center",
+  },
   moveBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.pill, paddingVertical: SPACING.sm,

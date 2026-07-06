@@ -144,6 +144,11 @@ export interface RealmBuilding {
   linkKind: RealmLinkKind;
   linkRoute?: string;
   linkLabel: string;
+  // Feature-gate id (see progression.ts FEATURE_UNLOCKS / checkFeatureGate) for
+  // route links that point at a still-gated screen (Heroes, Shop, University).
+  // When set, the building modal disables the link until that feature unlocks so
+  // it can't be used as a shortcut into a locked area.
+  linkFeature?: string;
   heroSlots: HeroAssignmentSlot[];
   skinPlaceholder: boolean;
   comingSoon?: boolean;
@@ -207,6 +212,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkKind: "route",
     linkRoute: "/university",
     linkLabel: "Open Clinica University",
+    linkFeature: "university",
     heroSlots: [
       { role: "Scholar", flavor: "A Scholar hero here increases Knowledge Point generation.", slotType: "hero" },
       { role: "University Trainee", flavor: "A Seer or University trainee boosts research progress.", slotType: "trainee" },
@@ -279,6 +285,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkKind: "route",
     linkRoute: "/(tabs)/heroes",
     linkLabel: "Open Hall of Heroes",
+    linkFeature: "hall_of_heroes",
     heroSlots: [
       { role: "Drillmaster", flavor: "A Drillmaster hero here speeds up hero training.", slotType: "hero" },
       { role: "Class Trainee", flavor: "A Trainee here runs practice simulations for bonus Skill Books.", slotType: "trainee" },
@@ -304,6 +311,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkKind: "route",
     linkRoute: "/(tabs)/shop",
     linkLabel: "Open the Shop",
+    linkFeature: "shop",
     heroSlots: [
       { role: "Herbalist", flavor: "A Herbal-type hero here improves clinical supply crafting.", slotType: "hero" },
       { role: "Alchemist Trainee", flavor: "A Treat/Alchemist trainee boosts Clinical Supply production.", slotType: "trainee" },
