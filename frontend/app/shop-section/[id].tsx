@@ -580,6 +580,13 @@ export default function ShopSection() {
                 <Text style={styles.cardDesc}>
                   {SANCTUARY_BAZAAR_STATUS === "future-placeholder" ? "Future placeholder only — no live trading exists yet." : "Active"}
                 </Text>
+                <Pressable
+                  style={styles.equipBtn}
+                  onPress={() => { setBazaarOpen(false); router.push("/bazaar" as any); }}
+                  testID="shop-open-full-bazaar"
+                >
+                  <Text style={styles.equipBtnTxt}>Open full Sanctuary Bazaar preview →</Text>
+                </Pressable>
               </ScrollView>
             </View>
           </View>
