@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image as ExpoImage } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -261,11 +261,20 @@ export default function PostRecall() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="post-recall-screen">
-      <ExpoImage
-        source={require("@/assets/onboarding/glass_tech_bg.png")}
+      {/* Clinica healing-academy background: deep jade night sky with lotus warmth */}
+      <LinearGradient
+        colors={["#0B1628", "#0E2330", "#112B28", "#0F2420"]}
+        locations={[0, 0.35, 0.72, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
         style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        transition={600}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={["#1B5C4820", "#C084FC12", "#00000000"]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
       <View style={styles.scrim} pointerEvents="none" />

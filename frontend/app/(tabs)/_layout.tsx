@@ -81,6 +81,7 @@ export default function TabsLayout() {
         name="faction"
         options={{
           title: "FACTION",
+          href: null,
           tabBarButtonTestID: "tab-faction",
           tabBarIcon: ({ color, size }) => <Ionicons name="flag" size={size} color={color} />,
         }}

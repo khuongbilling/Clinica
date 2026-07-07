@@ -96,12 +96,23 @@ export default function ShiftPage() {
 
         <InlineNotice notice={notice} icon="lock-closed" testID="shift-notice" />
 
-        {/* System narrator — only shown when clinical modes are still locked */}
+        {/* System narrator + Go to University CTA — shown when Ward Shift is still locked */}
         {showUniversityPrompt && (
-          <SystemNarratorBar
-            message="Ward Shifts are Clinica University simulations — imitated disease at a foundation level, safe for a student. Begin your first University lesson to open them; lessons also reward your first heroes."
-            testID="shift-narrator-university"
-          />
+          <>
+            <SystemNarratorBar
+              message="Ward Shifts are Clinica University simulations — safe, structured clinical training. Complete your first lesson to unlock them; lessons also reward your first heroes."
+              testID="shift-narrator-university"
+            />
+            <Pressable
+              style={styles.universityCtaBtn}
+              onPress={() => router.push("/university" as any)}
+              testID="shift-go-to-university"
+            >
+              <Ionicons name="school" size={16} color={COLORS.onBrand} />
+              <Text style={styles.universityCtaTxt}>Go to University — Start Your First Lesson</Text>
+              <Ionicons name="arrow-forward" size={15} color={COLORS.onBrand} />
+            </Pressable>
+          </>
         )}
 
         {/* ── Learn — Clinica University is the first mode that opens, so it
@@ -260,4 +271,23 @@ const styles = StyleSheet.create({
   smallGrid: { gap: SPACING.sm },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },
+  universityCtaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.md,
+    paddingVertical: 13,
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+  },
+  universityCtaTxt: {
+    color: COLORS.onBrand,
+    fontSize: 14,
+    fontWeight: "700",
+    flex: 1,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
 });
