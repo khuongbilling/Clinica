@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,6 +21,8 @@ export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bossUnlocked = (player?.bosses_defeated?.length ?? 0) > 0 || (player?.runs_completed ?? 0) >= 1;
 
@@ -56,6 +58,12 @@ export default function ShiftPage() {
   // next in line.
   const nextUp = nextComingSoonMode(player.chapter_progress ?? 1);
 
+  const flashNotice = (msg: string) => {
+    setNotice(msg);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), 3200);
+  };
+
   const openIntro = (mode: ModeCardDef) => {
     if (mode.status === "coming_soon" || mode.status === "locked") {
       const when = mode.unlockChapter ? `\n\nOpens in Chapter ${mode.unlockChapter}.` : "";
@@ -89,6 +97,13 @@ export default function ShiftPage() {
         <Text style={styles.lead}>
           Pick a mode to read its briefing, then step in. New modes open here as you progress.
         </Text>
+
+        {notice && (
+          <View style={styles.notice} testID="shift-notice">
+            <Ionicons name="lock-closed" size={16} color={COLORS.brand} />
+            <Text style={styles.noticeTxt}>{notice}</Text>
+          </View>
+        )}
 
         <View style={styles.simBox}>
           <Text style={styles.simTitle}>Your Story, One Case at a Time</Text>
@@ -128,7 +143,7 @@ export default function ShiftPage() {
           testID="ward-hub-university"
           onPress={() => {
             if (!universityGate.unlocked) {
-              Alert.alert("Clinica University — Locked", universityGate.reason || "Keep progressing to unlock.");
+              flashNotice(universityGate.reason || "Clinica University is locked — keep progressing to unlock.");
               return;
             }
             router.push("/university" as any);
@@ -212,6 +227,12 @@ const styles = StyleSheet.create({
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.xs },
+  notice: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandTertiary + "40",
+  },
+  noticeTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "600", flex: 1, lineHeight: 16 },
   section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 2 },
   simBox: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, gap: 6 },
   simTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
