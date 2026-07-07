@@ -882,3 +882,9 @@ id = "VTKHdxxUQZnLqxJ3w21lm"
 uri = "file://frontend/assets/images/mentor_guide.png"
 type = "image"
 title = "hand-drawn mentor narrator portrait"
+
+[[generated]]
+id = "Z0pojP8i_CSUIyYbDI0cH"
+uri = "file://frontend/assets/enemies/verdantha.png"
+type = "image"
+title = "verdantha bloom matriarch boss"
