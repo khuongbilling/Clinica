@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Pressable, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -58,7 +58,13 @@ export default function WorldEventScreen() {
   const { player } = usePlayer();
   const [tab, setTab] = useState<Tab>("overview");
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]} testID="world-event-loading">
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
   // Deep-link / back-nav safety net: if an under-level player reaches this route
@@ -700,6 +706,7 @@ function SystemTag({ label, color }: { label: string; color: string }) {
 
 const styles = StyleSheet.create({
   root:     { flex: 1, backgroundColor: COLORS.surface },
+  loading:  { alignItems: "center", justifyContent: "center" },
 
   lockedWrap: {
     flex: 1, alignItems: "center", justifyContent: "center",
