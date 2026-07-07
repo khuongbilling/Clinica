@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -30,7 +30,7 @@ import type { LotusLessonRewards } from "@/src/game/lotusLessons";
 export default function LotusLessonScreen() {
   const router = useRouter();
   const { nodeId } = useLocalSearchParams<{ nodeId: string }>();
-  const { player, completeLotusLessonNode } = usePlayer();
+  const { player, loading, completeLotusLessonNode } = usePlayer();
   const node = getLotusNode(String(nodeId));
 
   const [step, setStep] = useState(0);
@@ -38,7 +38,34 @@ export default function LotusLessonScreen() {
   const [finished, setFinished] = useState(false);
   const [rewards, setRewards] = useState<LotusLessonRewards | null>(null);
 
-  if (!player || !node) return null;
+  if (loading || !player || !node) {
+    const notFound = !loading && !!player && !node;
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.hero}>
+          <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+          <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university/lessons")} hitSlop={10} testID="lotus-lesson-back">
+            <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
+          </Pressable>
+          <Text style={styles.kicker}>LOTUS LESSON</Text>
+          {notFound && <Text style={styles.title}>Lesson not found</Text>}
+        </View>
+        <View style={styles.fallback}>
+          {notFound ? (
+            <>
+              <Text style={styles.detail}>This lesson isn’t available right now. Head back to Vital Foundations to pick another.</Text>
+              <Pressable style={styles.continueBtn} onPress={() => goBack(router, "/university/lessons")} testID="lotus-lesson-back-to-path">
+                <Ionicons name="arrow-back" size={16} color={COLORS.onBrand} />
+                <Text style={styles.continueTxt}>Back to Lessons</Text>
+              </Pressable>
+            </>
+          ) : (
+            <ActivityIndicator color={COLORS.brand} />
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const alreadyDone = isLotusNodeComplete(player, node.id);
   const interaction = node.interactions[step];
@@ -192,6 +219,7 @@ const styles = StyleSheet.create({
   progressDot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: COLORS.border },
   progressDotActive: { backgroundColor: COLORS.brand },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  fallback: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.md, padding: SPACING.xl },
   safetyBox: {
     flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,

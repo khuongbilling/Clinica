@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -18,9 +18,25 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function LessonsHubScreen() {
   const router = useRouter();
-  const { player } = usePlayer();
+  const { player, loading } = usePlayer();
 
-  if (!player) return null;
+  if (loading || !player) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.hero}>
+          <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+          <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university")} testID="lessons-back">
+            <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
+          </Pressable>
+          <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>
+          <Text style={styles.title}>Lessons & Simulations</Text>
+        </View>
+        <View style={styles.fallback}>
+          <ActivityIndicator color={COLORS.brand} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const badgeProgress = player.badge_progress || {};
   const completedLessons = player.lessons_completed || [];
@@ -168,6 +184,7 @@ const styles = StyleSheet.create({
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2 },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  fallback: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
   safetyBox: {
     flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
