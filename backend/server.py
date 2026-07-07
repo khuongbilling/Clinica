@@ -119,6 +119,7 @@ class Player(BaseModel):
     epidemic_tokens: int = 0
     owned_skins: List[str] = Field(default_factory=list)
     equipped_skin: str = ""
+    equipped_ward_skin: str = ""
     owned_upgrades: List[str] = Field(default_factory=list)
     owned_units: Dict[str, int] = Field(default_factory=dict)
     unit_shards: Dict[str, int] = Field(default_factory=dict)
@@ -187,6 +188,7 @@ class PlayerUpdate(BaseModel):
     epidemic_tokens: Optional[int] = None
     owned_skins: Optional[List[str]] = None
     equipped_skin: Optional[str] = None
+    equipped_ward_skin: Optional[str] = None
     owned_upgrades: Optional[List[str]] = None
     owned_units: Optional[Dict[str, int]] = None
     unit_shards: Optional[Dict[str, int]] = None

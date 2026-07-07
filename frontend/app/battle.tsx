@@ -95,9 +95,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   // Cosmetic ward-skin backdrop (e.g. Bloom Ward Skin). Only ward skins carry a
   // wardBackdrop; equipped aura-only skins leave the per-system arena unchanged.
   const wardBackdrop = useMemo(() => {
-    const skin = findSkin(player?.equipped_skin || "");
+    const skin = findSkin(player?.equipped_ward_skin || "");
     return skin?.wardBackdrop ?? null;
-  }, [player?.equipped_skin]);
+  }, [player?.equipped_ward_skin]);
 
   const failureCount = (player?.failure_counts || {})[enemy.id] || 0;
   const mentorAid = failureCount >= 3;

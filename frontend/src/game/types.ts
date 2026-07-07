@@ -194,7 +194,12 @@ export interface PlayerState {
   // runs against the outbreak. Track real player contribution to the event.
   epidemic_tokens?: number;
   owned_skins?: string[];
+  // Hero-aura cosmetic slot (Verdant/Ember/Tidal/Royal auras).
   equipped_skin?: string;
+  // Independent ward-arena backdrop cosmetic slot (skins with a wardBackdrop,
+  // e.g. Bloom Ward). Kept separate from equipped_skin so a player can wear a
+  // hero aura AND a ward backdrop at the same time.
+  equipped_ward_skin?: string;
   owned_upgrades?: string[];
   owned_units?: Record<string, number>;
   unit_shards?: Record<string, number>;

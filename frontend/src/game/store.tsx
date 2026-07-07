@@ -14,6 +14,7 @@ import {
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
 } from './units';
 import { buildDefaultRealmLayout, getProducerBuildings } from './realm';
+import { findSkin } from './shop';
 import { isValidCellId } from './realmGrid';
 import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
@@ -160,11 +161,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
       epidemic_tokens: out.epidemic_tokens ?? 0,
     };
   }
-  if (!out.owned_skins || !out.owned_upgrades || out.equipped_skin == null) {
+  if (!out.owned_skins || !out.owned_upgrades || out.equipped_skin == null || out.equipped_ward_skin == null) {
     out = {
       ...out,
       owned_skins: out.owned_skins || [],
       equipped_skin: out.equipped_skin || '',
+      equipped_ward_skin: out.equipped_ward_skin || '',
       owned_upgrades: out.owned_upgrades || [],
     };
   }
@@ -250,7 +252,7 @@ type Ctx = {
   claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
   setActiveTitle: (titleId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
-  equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
+  equipSkin: (skinId: string, kind?: 'aura' | 'ward') => Promise<{ ok: boolean; message: string }>;
   purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   refillStamina: (price: number, amount: number) => Promise<{ ok: boolean; message: string }>;
   pullGacha: () => Promise<{ ok: boolean; message: string; typeId?: string; isNew?: boolean; level?: number }>;
@@ -400,6 +402,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     epidemic_tokens: 0,
     owned_skins: [],
     equipped_skin: '',
+    equipped_ward_skin: '',
     owned_upgrades: [],
     owned_units: defaultOwnedUnits(),
     unit_shards: {},
@@ -843,8 +846,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       next[item.grant.field] = ((base[item.grant.field] as number) || 0) + item.grant.amount;
     } else if (item.grant.kind === 'cosmetic') {
       // Mirror purchaseSkin: add to owned_skins and auto-equip the new look.
+      // Ward-backdrop skins equip into their own slot so they don't clobber any
+      // hero aura the player is wearing (and vice-versa).
       next.owned_skins = [...(base.owned_skins || []), item.grant.skinId];
-      next.equipped_skin = item.grant.skinId;
+      const grantedSkin = findSkin(item.grant.skinId);
+      if (grantedSkin?.wardBackdrop) next.equipped_ward_skin = item.grant.skinId;
+      else next.equipped_skin = item.grant.skinId;
     } else {
       next.inventory = {
         ...(base.inventory || {}),
@@ -924,25 +931,35 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (owned.includes(skinId)) return { ok: false, message: 'Already owned.' };
     const cost = Math.max(0, Math.round(price));
     if ((base.crowns || 0) < cost) return { ok: false, message: 'Not enough Crowns.' };
+    const skin = findSkin(skinId);
     const next = {
       ...base,
       crowns: (base.crowns || 0) - cost,
       owned_skins: [...owned, skinId],
-      equipped_skin: skinId, // auto-equip on purchase
     };
+    // Auto-equip on purchase into the matching slot (ward backdrop vs hero aura)
+    // so buying one cosmetic never unequips the other kind.
+    if (skin?.wardBackdrop) next.equipped_ward_skin = skinId;
+    else next.equipped_skin = skinId;
     playerRef.current = next;
     await updateState(next);
     return { ok: true, message: `Unlocked and equipped for ${cost} Crowns.` };
   }, [updateState]);
 
-  const equipSkin = useCallback(async (skinId: string) => {
+  // Equip (or, with skinId "", clear) a cosmetic. Ward-backdrop skins and hero
+  // aura skins live in independent slots so both can be worn at once. When
+  // clearing (skinId ""), pass `kind` to say which slot to reset; when equipping
+  // a real skin the slot is derived from whether it carries a wardBackdrop.
+  const equipSkin = useCallback(async (skinId: string, kind?: 'aura' | 'ward') => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
-    // Empty string clears the equipped skin (default look).
     if (skinId && !(base.owned_skins || []).includes(skinId)) {
       return { ok: false, message: 'Skin not owned.' };
     }
-    const next = { ...base, equipped_skin: skinId };
+    const isWard = skinId ? !!findSkin(skinId)?.wardBackdrop : kind === 'ward';
+    const next = isWard
+      ? { ...base, equipped_ward_skin: skinId }
+      : { ...base, equipped_skin: skinId };
     playerRef.current = next;
     await updateState(next);
     return { ok: true, message: skinId ? 'Equipped.' : 'Reverted to default look.' };

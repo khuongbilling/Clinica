@@ -303,7 +303,10 @@ export default function ShopSection() {
 
             {g === "skins" && (
               <>
-                <Text style={styles.blurb}>Skins are purely cosmetic — hero auras (and, for ward skins, a new Ward Shift arena backdrop). They never change stats or battle outcomes.</Text>
+                <Text style={styles.blurb}>Skins are purely cosmetic — a hero aura and a Ward Shift arena backdrop are two independent slots, so you can wear one of each at the same time. They never change stats or battle outcomes.</Text>
+
+                {/* ---- Hero Aura slot ---- */}
+                <Text style={styles.sectionTitle}>Hero Aura</Text>
                 {/* Default look option */}
                 <View style={styles.card}>
                   <View style={[styles.auraSwatch, { backgroundColor: COLORS.surfaceTertiary, borderColor: COLORS.borderStrong }]}>
@@ -316,14 +319,35 @@ export default function ShopSection() {
                   {(player.equipped_skin || "") === "" ? (
                     <View style={styles.ownedBadge}><Ionicons name="checkmark-circle" size={16} color={COLORS.success} /><Text style={styles.ownedBadgeTxt}>Equipped</Text></View>
                   ) : (
-                    <Pressable style={styles.equipBtn} onPress={async () => { const r = await equipSkin(""); flash(r.ok, r.message); }} testID="shop-skin-default">
+                    <Pressable style={styles.equipBtn} onPress={async () => { const r = await equipSkin("", "aura"); flash(r.ok, r.message); }} testID="shop-skin-default">
                       <Text style={styles.equipBtnTxt}>Use</Text>
                     </Pressable>
                   )}
                 </View>
+
+                {/* ---- Ward Backdrop slot ---- */}
+                <Text style={styles.sectionTitle}>Ward Backdrop</Text>
+                <View style={styles.card}>
+                  <View style={[styles.auraSwatch, { backgroundColor: COLORS.surfaceTertiary, borderColor: COLORS.borderStrong }]}>
+                    <Ionicons name="image" size={20} color={COLORS.onSurfaceSecondary} />
+                  </View>
+                  <View style={styles.cardMain}>
+                    <Text style={styles.cardName}>Default Arena</Text>
+                    <Text style={styles.cardDesc}>No backdrop swap — the standard Ward Shift arena.</Text>
+                  </View>
+                  {(player.equipped_ward_skin || "") === "" ? (
+                    <View style={styles.ownedBadge}><Ionicons name="checkmark-circle" size={16} color={COLORS.success} /><Text style={styles.ownedBadgeTxt}>Equipped</Text></View>
+                  ) : (
+                    <Pressable style={styles.equipBtn} onPress={async () => { const r = await equipSkin("", "ward"); flash(r.ok, r.message); }} testID="shop-ward-default">
+                      <Text style={styles.equipBtnTxt}>Use</Text>
+                    </Pressable>
+                  )}
+                </View>
+
                 {SKINS.map((s) => {
+                  const isWard = !!s.wardBackdrop;
                   const owned = (player.owned_skins || []).includes(s.id);
-                  const equipped = player.equipped_skin === s.id;
+                  const equipped = isWard ? player.equipped_ward_skin === s.id : player.equipped_skin === s.id;
                   const afford = crowns >= s.price;
                   return (
                     <View key={s.id} style={styles.card} testID={`shop-skin-${s.id}`}>
@@ -332,7 +356,7 @@ export default function ShopSection() {
                       </View>
                       <View style={styles.cardMain}>
                         <Text style={styles.cardName}>{s.name}</Text>
-                        <Text style={[styles.cardEffect, { color: s.accentColor }]}>{s.subtitle} • Cosmetic</Text>
+                        <Text style={[styles.cardEffect, { color: s.accentColor }]}>{s.subtitle} • {isWard ? "Ward Backdrop" : "Hero Aura"}</Text>
                         <Text style={styles.cardDesc}>{s.description}</Text>
                       </View>
                       {!owned && s.exchangeOnly ? (
@@ -796,6 +820,7 @@ const styles = StyleSheet.create({
   bannerTxt: { fontSize: 13, fontWeight: "600", flex: 1 },
   scroll: { padding: SPACING.lg, gap: SPACING.md },
   blurb: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, marginBottom: SPACING.xs },
+  sectionTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", marginTop: SPACING.xs, marginBottom: SPACING.xs / 2 },
   card: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border, borderWidth: 1,
