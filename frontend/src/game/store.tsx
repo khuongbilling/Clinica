@@ -18,6 +18,7 @@ import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
 } from './classTree';
 import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
+import { TokenExchangeItem } from './worldEvent';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -228,6 +229,7 @@ type Ctx = {
     heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
   }>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
+  redeemExchangeItem: (item: TokenExchangeItem) => Promise<{ ok: boolean; message: string }>;
   purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
@@ -784,6 +786,34 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Purchased ${qty}× ${itemName} for ${cost} Crowns.` };
   }, [updateState]);
 
+  // Spend Epidemic Tokens at the Miasma Bloom Token Exchange. Mirrors
+  // purchaseItem's synchronous ref-based critical section so rapid taps can't
+  // overspend. Only items carrying a `grant` are redeemable; the reward is
+  // applied to an existing PlayerState field (no new fields, so no backend sync
+  // is needed).
+  const redeemExchangeItem = useCallback(async (item: TokenExchangeItem) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    if (!item.grant) return { ok: false, message: 'This reward is coming soon.' };
+    const cost = Math.max(0, Math.round(item.cost));
+    const balance = base.epidemic_tokens || 0;
+    if (balance < cost) {
+      return { ok: false, message: `Not enough Epidemic Tokens. Need ${cost.toLocaleString()}.` };
+    }
+    const next: PlayerState = { ...base, epidemic_tokens: balance - cost };
+    if (item.grant.kind === 'currency') {
+      next[item.grant.field] = ((base[item.grant.field] as number) || 0) + item.grant.amount;
+    } else {
+      next.inventory = {
+        ...(base.inventory || {}),
+        [item.grant.itemName]: ((base.inventory || {})[item.grant.itemName] || 0) + item.grant.qty,
+      };
+    }
+    playerRef.current = next; // commit synchronously before awaiting persistence
+    await updateState(next);
+    return { ok: true, message: `Redeemed ${item.name} for ${cost.toLocaleString()} Epidemic Tokens.` };
+  }, [updateState]);
+
   const purchaseSkin = useCallback(async (skinId: string, price: number) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
@@ -1316,9 +1346,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

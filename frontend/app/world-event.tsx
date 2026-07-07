@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
@@ -266,7 +267,27 @@ function SystemsTab({ router }: { router: any }) {
 // ── Rewards Tab ───────────────────────────────────────────────────────────────
 
 function RewardsTab() {
+  const { player, redeemExchangeItem } = usePlayer();
+  const { notice, flashNotice } = useInlineNotice();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const tokens = player?.epidemic_tokens ?? 0;
   const [rewardFilter, setRewardFilter] = useState<"all" | "milestones" | "catalog" | "exchange">("all");
+
+  const handleRedeem = async (item: typeof TOKEN_EXCHANGE[number]) => {
+    if (busyId) return;
+    if (!item.grant) {
+      flashNotice(`${item.name} is coming soon — not yet redeemable.`);
+      return;
+    }
+    if (tokens < item.cost) {
+      flashNotice(`Not enough Epidemic Tokens for ${item.name} (need ${item.cost.toLocaleString()}).`);
+      return;
+    }
+    setBusyId(item.id);
+    const res = await redeemExchangeItem(item);
+    setBusyId(null);
+    flashNotice(res.message);
+  };
 
   const filters: { id: typeof rewardFilter; label: string }[] = [
     { id: "all",        label: "All"       },
@@ -368,27 +389,46 @@ function RewardsTab() {
           <View style={styles.exchangeNotice}>
             <Ionicons name="flask" size={13} color={BLOOM_ACCENT} />
             <Text style={styles.exchangeNoticeTxt}>
-              Spend Epidemic Tokens here. The exchange is not yet active — no tokens can be
-              spent in this prototype.
+              Spend the Epidemic Tokens you earn from Ward Shift runs here. You currently
+              hold {tokens.toLocaleString()}. Items marked Coming Soon aren't redeemable yet.
             </Text>
           </View>
-          {TOKEN_EXCHANGE.map((item) => (
-            <View key={item.id} style={styles.exchangeRow} testID={`world-event-exchange-${item.id}`}>
-              <View style={[styles.exchangeIconBox, { backgroundColor: item.accentColor + "22" }]}>
-                <Ionicons name={item.icon as any} size={18} color={item.accentColor} />
+          <InlineNotice notice={notice} icon="flask" testID="world-event-exchange-notice" />
+          {TOKEN_EXCHANGE.map((item) => {
+            const locked = !item.grant;
+            const affordable = !locked && tokens >= item.cost;
+            const busy = busyId === item.id;
+            const disabled = locked || !affordable || busy;
+            return (
+              <View key={item.id} style={styles.exchangeRow} testID={`world-event-exchange-${item.id}`}>
+                <View style={[styles.exchangeIconBox, { backgroundColor: item.accentColor + "22" }]}>
+                  <Ionicons name={item.icon as any} size={18} color={item.accentColor} />
+                </View>
+                <Text style={styles.exchangeItemName}>{item.name}</Text>
+                <View style={{ flex: 1 }} />
+                <View style={styles.exchangeCostBox}>
+                  <Ionicons name="flask" size={11} color={affordable || locked ? BLOOM_ACCENT : COLORS.error} />
+                  <Text style={[styles.exchangeCost, !affordable && !locked && { color: COLORS.error }]}>
+                    {item.cost.toLocaleString()}
+                  </Text>
+                </View>
+                <BadgePill badge={item.badge} />
+                <Pressable
+                  style={[styles.exchangeBtn, disabled && { opacity: 0.4 }]}
+                  onPress={() => handleRedeem(item)}
+                  disabled={busy}
+                  hitSlop={6}
+                  testID={`world-event-exchange-buy-${item.id}`}
+                >
+                  <Ionicons
+                    name={locked ? "lock-closed" : affordable ? "cart" : "close"}
+                    size={12}
+                    color={COLORS.onBrand}
+                  />
+                </Pressable>
               </View>
-              <Text style={styles.exchangeItemName}>{item.name}</Text>
-              <View style={{ flex: 1 }} />
-              <View style={styles.exchangeCostBox}>
-                <Ionicons name="flask" size={11} color={BLOOM_ACCENT} />
-                <Text style={styles.exchangeCost}>{item.cost.toLocaleString()}</Text>
-              </View>
-              <BadgePill badge={item.badge} />
-              <View style={[styles.exchangeBtn, { opacity: 0.4 }]}>
-                <Ionicons name="lock-closed" size={12} color={COLORS.onBrand} />
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </>
       )}
     </View>
