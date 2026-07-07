@@ -73,6 +73,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   }, [enemyId]);
 
   const isPrologueBoss = prologue === "boss" && !!enemy.scriptedLoss;
+  // Shared boss check for reward tiering: the scripted prologue boss OR any
+  // World Event world boss earns boss-scale XP/shards/crowns.
+  const isBossEnemy = enemy.id === BOSS_LORD_IMBALANCE.id || !!enemy.worldBoss;
 
   const team = useMemo(() => {
     if (!player) return HEROES.slice(0, 3);
@@ -519,7 +522,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       return;
     }
     if (state.outcome === "win") {
-      const isBoss = enemy.id === BOSS_LORD_IMBALANCE.id;
+      // Boss-tier rewards apply to the scripted prologue boss AND any World
+      // Event world boss (Verdantha). Keyed on a shared check rather than a
+      // single hardcoded id so live world bosses aren't under-rewarded.
+      const isBoss = isBossEnemy;
       const baseXp = isBoss ? 150 : 35 + enemy.difficulty * 10;
       const baseShards = isTraining ? 10 : (isBoss ? 100 : 25);
       const chainBonus = state.fullChainCompleted ? 10 : 0;
@@ -530,6 +536,11 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       for (const [k, v] of Object.entries(state.inventory)) {
         const diff = v - (startingInventory[k] || 0);
         if (diff !== 0) inventoryDelta[k] = diff;
+      }
+      // World Boss Relic Shard drop — a real inventory grant for defeating a
+      // world boss (mirrors the drop card shown on the result screen).
+      if (!isTraining && !!enemy.worldBoss) {
+        inventoryDelta["World Boss Relic Shard"] = (inventoryDelta["World Boss Relic Shard"] || 0) + 1;
       }
 
       // Player EXP: separate progression pool from Hero EXP, scaled by
@@ -589,7 +600,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", cleanse: "judgment", command: "command", analyze: "systems", support: "stabilization" };
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
         }, {} as any),
-        bossId: isBoss ? enemy.id : undefined,
+        bossId: isBossEnemy ? enemy.id : undefined,
         regionId: mission?.kingdomRegion ?? undefined,
         heroXp: heroXpEarned,
       } as any);
@@ -603,9 +614,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.cuesTopicsCorrect.length > 0) {
       await recordCueTopics(state.cuesTopicsCorrect);
     }
-    const isBoss2 = enemy.id === BOSS_LORD_IMBALANCE.id;
-    const baseShards = state.outcome === "win" ? (isTraining ? 10 : (isBoss2 ? 100 : 25)) : 0;
-    const crownsEarned = state.outcome === "win" ? (isTraining ? 8 : (isBoss2 ? 80 : 20 + enemy.difficulty * 5)) : 0;
+    const baseShards = state.outcome === "win" ? (isTraining ? 10 : (isBossEnemy ? 100 : 25)) : 0;
+    const crownsEarned = state.outcome === "win" ? (isTraining ? 8 : (isBossEnemy ? 80 : 20 + enemy.difficulty * 5)) : 0;
     router.replace({
       pathname: "/result",
       params: {
