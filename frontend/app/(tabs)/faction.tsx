@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PlayerHeader } from "@/src/components/PlayerHeader";
@@ -29,19 +30,21 @@ const PREVIEW_ITEMS: { icon: string; title: string; desc: string }[] = [
     desc: "Contribute supplies and effort toward Kingdom-wide relief goals alongside your faction.",
   },
   {
-    icon: "podium-outline",
-    title: "Faction Rankings",
-    desc: "Climb a leaderboard of allied factions based on collective contribution and standing.",
+    icon: "flask-outline",
+    title: "Research Contribution",
+    desc: "Pool Insight Crystals into faction research queues to unlock group-wide passive bonuses.",
   },
   {
     icon: "diamond-outline",
     title: "Alliance Rewards",
-    desc: "Faction participation will unlock crafting materials and rewards not available anywhere else.",
+    desc: "Faction participation unlocks Faction Marks, banners, Realm decorations, and profile titles not available anywhere else.",
   },
 ];
 
 export default function FactionScreen() {
   const { player } = usePlayer();
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {player && <PlayerHeader player={player} />}
@@ -53,7 +56,8 @@ export default function FactionScreen() {
         <Text style={styles.kicker}>COMING SOON</Text>
         <Text style={styles.title}>Faction Embassy</Text>
         <Text style={styles.sub}>
-          A future home for allied healer factions, shared world events, and collaborative rewards.
+          A cooperative hub for allied healer factions — donate supplies, complete group
+          missions, contribute to research, and prepare for future world events together.
         </Text>
       </View>
 
@@ -71,11 +75,22 @@ export default function FactionScreen() {
           </View>
         ))}
 
+        {/* ── Embassy deep-link ── */}
+        <Pressable
+          style={styles.deepLink}
+          onPress={() => router.push("/embassy" as any)}
+          testID="faction-open-embassy"
+        >
+          <Ionicons name="flag-outline" size={16} color={COLORS.brand} />
+          <Text style={styles.deepLinkTxt}>Open full Faction Embassy preview →</Text>
+        </Pressable>
+
         <View style={styles.footNote}>
           <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
           <Text style={styles.footNoteTxt}>
-            None of these features are live yet. Factions, trading, and territory control are in
-            design — this page will grow into a full hub as they ship.
+            None of these features are live yet. Factions, territory control, and guild chat are
+            in design — this page will grow into a full hub as they ship. Everything is
+            cooperative; there is no PvP, raids, or faction-vs-faction warfare in scope.
           </Text>
         </View>
       </ScrollView>
@@ -107,6 +122,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
   cardDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2, lineHeight: 16 },
+  deepLink: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1.5, borderColor: COLORS.brand + "55",
+    padding: SPACING.md, justifyContent: "center",
+  },
+  deepLinkTxt: { color: COLORS.brand, fontSize: 13, fontWeight: "700" },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
 });
