@@ -111,7 +111,7 @@ function toastFromPulse(pulse: NonNullable<ReturnType<typeof usePlayer>["dailyPu
 }
 
 export function DailyPulseToast() {
-  const { player, dailyPulse, requestOpenDailyRounds, claimDailyObjective, claimDailyAllComplete } = usePlayer();
+  const { player, dailyPulse, requestOpenDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal } = usePlayer();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
@@ -176,11 +176,13 @@ export function DailyPulseToast() {
     const items = claimableItems(player);
     if (items.length === 0) { dismiss(); return; }
     const only = items[0];
-    if (items.length > 1 || only.kind === "weekly") { openPanel(); return; }
+    if (items.length > 1) { openPanel(); return; }
 
     setClaiming(true);
     try {
-      const res = only.kind === "all"
+      const res = only.kind === "weekly"
+        ? await claimWeeklyGoal()
+        : only.kind === "all"
         ? await claimDailyAllComplete()
         : await claimDailyObjective(only.id);
       if (res.ok) {
@@ -199,7 +201,7 @@ export function DailyPulseToast() {
     } finally {
       setClaiming(false);
     }
-  }, [claiming, player, dismiss, openPanel, claimDailyAllComplete, claimDailyObjective, showToast]);
+  }, [claiming, player, dismiss, openPanel, claimDailyAllComplete, claimDailyObjective, claimWeeklyGoal, showToast]);
 
   if (!toast) return null;
 
