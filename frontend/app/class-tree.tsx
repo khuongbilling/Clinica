@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
@@ -23,7 +23,13 @@ export default function ClassTreeScreen() {
   const [busyLevel, setBusyLevel] = useState<number | null>(null);
   const { notice, flashNotice } = useInlineNotice();
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loading]} edges={["top", "bottom"]} testID="class-tree-loading">
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   const currentId = (player.class_tree_id as ClassId) || "medic";
   const activeId = viewingId || currentId;
@@ -237,6 +243,7 @@ export default function ClassTreeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   backBtn: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary },

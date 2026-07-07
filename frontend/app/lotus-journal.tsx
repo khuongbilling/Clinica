@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
@@ -29,9 +29,14 @@ export default function LotusJournalPage() {
   const [lessonOpen, setLessonOpen] = useState<string | null>(null);
   const [lessonMsg, setLessonMsg] = useState<string | null>(null);
 
-  if (!player) return null;
+  if (!player || !player.wellness) {
+    return (
+      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]} testID="lotus-journal-loading">
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
   const wellness = player.wellness;
-  if (!wellness) return null;
 
   const today = new Date().toISOString().slice(0, 10);
   const gemsToday = wellness.daily.date === today ? wellness.daily.gems_earned : 0;
@@ -213,6 +218,7 @@ export default function LotusJournalPage() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.sm },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   kicker: { color: COLORS.growth, fontSize: 10, fontWeight: "700", letterSpacing: 2 },

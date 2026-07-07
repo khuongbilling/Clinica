@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
@@ -18,7 +18,13 @@ export default function HeroSelectScreen() {
   );
   const [saving, setSaving] = useState(false);
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]} testID="hero-select-loading">
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   const owned = new Set(player.heroes_owned);
   const ownedHeroes = HEROES.filter((h) => owned.has(h.id));
@@ -124,6 +130,7 @@ export default function HeroSelectScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row", alignItems: "center",
     gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.sm,

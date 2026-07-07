@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
@@ -17,7 +17,13 @@ export default function ClassResultScreen() {
   const router = useRouter();
   const { player } = usePlayer();
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loading]} edges={["top", "bottom"]} testID="class-result-loading">
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   const classId = (player.class_tree_id as ClassId) || "medic";
   const identity = CLASS_IDENTITIES[classId];
@@ -118,6 +124,7 @@ export default function ClassResultScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   scroll: {
     flexGrow: 1,
     alignItems: "center",
