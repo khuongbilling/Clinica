@@ -90,6 +90,7 @@ class Player(BaseModel):
     prologue_complete: bool = True
     identity_restored: bool = True
     diagnostic_intro_seen: bool = True
+    avatar_id: str = ""
     rank: str = "Sprout Healer"
     rank_index: int = 0
     xp: int = 0
@@ -153,6 +154,7 @@ class PlayerUpdate(BaseModel):
     prologue_complete: Optional[bool] = None
     identity_restored: Optional[bool] = None
     diagnostic_intro_seen: Optional[bool] = None
+    avatar_id: Optional[str] = None
     rank: Optional[str] = None
     rank_index: Optional[int] = None
     xp: Optional[int] = None

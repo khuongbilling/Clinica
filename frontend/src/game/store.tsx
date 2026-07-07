@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { api } from '@/src/api/client';
 import { PlayerState } from './types';
 import { RANKS } from './content';
+import { isValidAvatarId } from './avatars';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
 import { MAX_STAMINA, ENCOUNTER_COST, regen, maxStaminaForPlayer } from './stamina';
 import { addHeroXp, playerLevelFromXp, staminaMaxForLevel } from './progression';
@@ -31,6 +32,7 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (p.prologue_complete === undefined) { p = { ...p, prologue_complete: true }; changed = true; }
   if (p.identity_restored === undefined) { p = { ...p, identity_restored: true }; changed = true; }
   if (p.diagnostic_intro_seen === undefined) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
+  if (p.avatar_id === undefined) { p = { ...p, avatar_id: '' }; changed = true; }
   // Push 5 — existing players (created before this push) never had the
   // reminiscence scene, so backfill them as "already seen" rather than
   // surprising returning players with it. Brand-new players get `false`
@@ -263,6 +265,7 @@ type Ctx = {
   claimClassTier: (classId: ClassId, level: 1 | 10 | 20 | 30) => Promise<{ ok: boolean; message: string }>;
   completePrologue: () => Promise<void>;
   completeIdentityRestore: (name: string) => Promise<void>;
+  setAvatar: (id: string) => Promise<void>;
   completeDiagnosticIntro: () => Promise<void>;
   markReminiscenceSeen: () => Promise<void>;
   completeLotusLessonNode: (nodeId: string) => Promise<{ ok: boolean; message: string; rewards?: import('./lotusLessons').LotusLessonRewards }>;
@@ -326,6 +329,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     id,
     name: (args.name || 'Healer').trim().slice(0, 24) || 'Healer',
     aptitude: args.aptitude as any,
+    avatar_id: '',
     recommended_aptitude: args.recommended_aptitude as any || null,
     learning_goal: args.learning_goal || null,
     learning_profile: args.learning_profile || null,
@@ -1202,6 +1206,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // Persist the player's chosen hand-drawn portrait avatar. `id` is an avatar
+  // registry key (see game/avatars.ts); '' clears back to the aptitude icon.
+  const setAvatar = useCallback(async (id: string) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const clean = (id || '').trim();
+    if (!isValidAvatarId(clean)) return;
+    if (base.avatar_id === clean) return;
+    const next = { ...base, avatar_id: clean };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   // Push 3: marks the post-recall diagnostic sub-step as seen WITHOUT
   // assigning a class. This is the CURRENT live completion action used by
   // app/post-recall.tsx — Push 3 only surfaces the personality/career quiz
@@ -1347,8 +1364,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

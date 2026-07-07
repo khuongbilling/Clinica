@@ -888,3 +888,63 @@ id = "Z0pojP8i_CSUIyYbDI0cH"
 uri = "file://frontend/assets/enemies/verdantha.png"
 type = "image"
 title = "verdantha bloom matriarch boss"
+
+[[generated]]
+id = "nQ5xHL9aBsflS13a7rJno"
+uri = "file://frontend/assets/avatars/portrait_01.png"
+type = "image"
+title = "healer portrait woman"
+
+[[generated]]
+id = "VLNvf1JGnooa6kGDqbfN3"
+uri = "file://frontend/assets/avatars/portrait_02.png"
+type = "image"
+title = "healer portrait man"
+
+[[generated]]
+id = "T2sc7FhRc9N5QlMKJe2la"
+uri = "file://frontend/assets/avatars/portrait_03.png"
+type = "image"
+title = "mentor healer woman"
+
+[[generated]]
+id = "jqvQeiYajwPCV-oylkN5B"
+uri = "file://frontend/assets/avatars/portrait_04.png"
+type = "image"
+title = "cheerful girl healer braids"
+
+[[generated]]
+id = "Kx_Wek8MshHAPrMxA3xVs"
+uri = "file://frontend/assets/avatars/portrait_05.png"
+type = "image"
+title = "stoic knight healer man"
+
+[[generated]]
+id = "b4M9NnJ76pFwidOi6CTVv"
+uri = "file://frontend/assets/avatars/portrait_06.png"
+type = "image"
+title = "mystic lotus healer woman"
+
+[[generated]]
+id = "NC8Pw0OAFlbz3zEEY1ty6"
+uri = "file://frontend/assets/ui-icons/icon_stamina.png"
+type = "image"
+title = "hand drawn stamina icon"
+
+[[generated]]
+id = "O-5EkUxlGc0zfUf1qs5NX"
+uri = "file://frontend/assets/ui-icons/icon_crowns.png"
+type = "image"
+title = "hand drawn coin icon"
+
+[[generated]]
+id = "mKq-9DgrW0z_9OXrGwrXB"
+uri = "file://frontend/assets/ui-icons/icon_refined_gem.png"
+type = "image"
+title = "hand drawn gem icon"
+
+[[generated]]
+id = "aMGazBYGqLzfQ2eDUePb3"
+uri = "file://frontend/assets/ui-icons/icon_lotus_gem.png"
+type = "image"
+title = "hand drawn lotus gem icon"

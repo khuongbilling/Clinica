@@ -136,6 +136,9 @@ export interface PlayerState {
   // default true for pre-existing players so they are never re-entered.
   identity_restored?: boolean;
   diagnostic_intro_seen?: boolean;
+  // Chosen hand-drawn portrait avatar id (see game/avatars.ts). Empty string
+  // falls back to the aptitude Ionicon in the header/profile.
+  avatar_id?: string;
   rank: string;
   rank_index: number;
   xp: number;

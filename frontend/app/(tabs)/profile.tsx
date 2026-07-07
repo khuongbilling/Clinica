@@ -1,9 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
+import { AVATAR_OPTIONS, getAvatarSource } from "@/src/game/avatars";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -30,8 +33,9 @@ const MASTERY_LABELS: Record<string, string> = {
 // Profile is the deep identity/settings page, not another hub surface.
 export default function ProfileScreen() {
   const router = useRouter();
-  const { player, resetPlayer } = usePlayer();
+  const { player, resetPlayer, setAvatar } = usePlayer();
   const { resetTutorials } = useTutorial();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   async function handleReset() {
     await resetTutorials();
@@ -56,9 +60,20 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.head}>
-          <View style={[styles.avatar, { borderColor: apt.color }]}>
-            <Ionicons name={apt.icon as any} size={36} color={apt.color} />
-          </View>
+          <Pressable
+            style={[styles.avatar, { borderColor: apt.color }]}
+            onPress={() => setPickerOpen(true)}
+            testID="profile-avatar"
+          >
+            {getAvatarSource(player.avatar_id) ? (
+              <ExpoImage source={getAvatarSource(player.avatar_id)!} style={styles.avatarImg} contentFit="cover" />
+            ) : (
+              <Ionicons name={apt.icon as any} size={36} color={apt.color} />
+            )}
+            <View style={[styles.avatarEditBadge, { borderColor: apt.color }]}>
+              <Ionicons name="pencil" size={11} color={COLORS.onBrand} />
+            </View>
+          </Pressable>
           <Text style={styles.name}>{player.name}</Text>
           <Text style={styles.aptLine}>{apt.title} · {player.rank}</Text>
         </View>
@@ -258,6 +273,46 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Portrait avatar picker */}
+      <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
+        <Pressable style={styles.pickerBackdrop} onPress={() => setPickerOpen(false)}>
+          <Pressable style={styles.pickerCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.pickerTitle}>Choose Your Portrait</Text>
+            <Text style={styles.pickerSub}>Pick a hand-drawn healer portrait for your profile.</Text>
+            <View style={styles.pickerGrid}>
+              {AVATAR_OPTIONS.map((opt) => {
+                const selected = player.avatar_id === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    style={[styles.pickerOption, selected && { borderColor: apt.color, borderWidth: 3 }]}
+                    onPress={async () => { await setAvatar(opt.id); setPickerOpen(false); }}
+                    testID={`avatar-option-${opt.id}`}
+                  >
+                    <ExpoImage source={opt.source} style={styles.pickerImg} contentFit="cover" />
+                    {selected && (
+                      <View style={[styles.pickerCheck, { backgroundColor: apt.color }]}>
+                        <Ionicons name="checkmark" size={13} color={COLORS.onBrand} />
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+            {!!player.avatar_id && (
+              <Pressable
+                style={styles.pickerClear}
+                onPress={async () => { await setAvatar(""); setPickerOpen(false); }}
+                testID="avatar-clear"
+              >
+                <Ionicons name="close-circle-outline" size={15} color={COLORS.onSurfaceSecondary} />
+                <Text style={styles.pickerClearTxt}>Use aptitude icon instead</Text>
+              </Pressable>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -275,7 +330,39 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
   head: { alignItems: "center", gap: 8, marginTop: SPACING.md },
-  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 2, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary },
+  avatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 2, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary, overflow: "hidden" },
+  avatarImg: { width: "100%", height: "100%" },
+  avatarEditBadge: {
+    position: "absolute", right: -2, bottom: -2,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: COLORS.brand, borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+  },
+  pickerBackdrop: { flex: 1, backgroundColor: "#000000AA", alignItems: "center", justifyContent: "center", padding: SPACING.xl },
+  pickerCard: {
+    width: "100%", maxWidth: 380,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border,
+    padding: SPACING.lg, gap: 6,
+  },
+  pickerTitle: { color: COLORS.onSurface, fontSize: 17, fontWeight: "800" },
+  pickerSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginBottom: 6 },
+  pickerGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" },
+  pickerOption: {
+    width: 92, height: 92, borderRadius: RADIUS.md, overflow: "hidden",
+    borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.surface,
+  },
+  pickerImg: { width: "100%", height: "100%" },
+  pickerCheck: {
+    position: "absolute", right: 4, top: 4,
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: "center", justifyContent: "center",
+  },
+  pickerClear: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    marginTop: 10, paddingVertical: 8,
+  },
+  pickerClearTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
   name: { color: COLORS.onSurface, fontSize: 24, fontWeight: "400", marginTop: SPACING.sm },
   aptLine: { color: COLORS.brand, fontSize: 12, letterSpacing: 1.5, fontWeight: "600" },
   rankCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 6 },

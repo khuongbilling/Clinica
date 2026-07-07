@@ -1,22 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { ImageSourcePropType, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
+import { getAvatarSource } from "@/src/game/avatars";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
 import {
   buildGateContext, checkFeatureGate, nextClassAbility, nextLockedFeature, playerLevelFromXp,
 } from "@/src/game/progression";
 import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
+import { getUiIcon } from "@/src/game/uiIcons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ────────────────────────────────────────────────────────────
 // PlayerHeader — persistent global top bar for hub/non-battle pages
-// (Push 3.5). Three rows: identity (tap -> Profile), a wrapping row of
-// compact currency/stamina chips (each tappable to a relevant screen or
-// info panel), and a slim Player EXP bar (tap -> level rewards panel).
+// (Push 3.5). Two rows: a single identity+wallet line (hand-drawn portrait
+// avatar + name/title on the left, tap -> Profile; a wrapping cluster of
+// compact currency/stamina chips on the right, each tappable to a relevant
+// screen or info panel), and a slim Player EXP bar (tap -> level rewards).
+// Chip icons and the avatar use hand-drawn donghua/anime art.
 //
 // Currencies shown here are intentionally limited to the four "main
 // wallet" items (stamina, Ward Coins, Refined Lotus Gems, Lotus Gems).
@@ -63,69 +68,76 @@ export function PlayerHeader({
   // the Shop unlocks so it can't be used to sneak into a locked area.
   const shopUnlocked = checkFeatureGate("shop", buildGateContext(player)).unlocked;
 
+  const avatarSource = getAvatarSource(player.avatar_id);
+
   return (
     <View style={styles.wrap} testID="player-header">
-      {/* ── ROW 1 — identity ── */}
-      <Pressable
-        style={styles.identityRow}
-        onPress={() => router.push("/(tabs)/profile")}
-        hitSlop={4}
-        testID="player-header-identity"
-      >
-        <View style={[styles.avatar, apt && { borderColor: apt.color + "70" }]}>
-          <Ionicons name={(apt?.icon as any) || "person-circle"} size={compact ? 15 : 18} color={apt?.color || COLORS.onSurfaceSecondary} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>
-            {player.name}{" "}
-            <Text
-              style={styles.levelTxt}
-              onPress={() => router.push("/class-tree")}
-              testID="player-header-class-link"
-            >
-              Lv.{playerLevelInfo.level} {classIdentity.name}
+      {/* ── ROW 1 — identity + wallet chips on one line ── */}
+      <View style={styles.topRow}>
+        <Pressable
+          style={styles.identityRow}
+          onPress={() => router.push("/(tabs)/profile")}
+          hitSlop={4}
+          testID="player-header-identity"
+        >
+          <View style={[styles.avatar, apt && { borderColor: apt.color + "70" }]}>
+            {avatarSource ? (
+              <ExpoImage source={avatarSource} style={styles.avatarImg} contentFit="cover" />
+            ) : (
+              <Ionicons name={(apt?.icon as any) || "person-circle"} size={compact ? 16 : 20} color={apt?.color || COLORS.onSurfaceSecondary} />
+            )}
+          </View>
+          <View style={styles.identityText}>
+            <Text style={styles.name} numberOfLines={1}>
+              {player.name}{" "}
+              <Text
+                style={styles.levelTxt}
+                onPress={() => router.push("/class-tree")}
+                testID="player-header-class-link"
+              >
+                Lv.{playerLevelInfo.level} {classIdentity.name}
+              </Text>
             </Text>
-          </Text>
-          {!compact && (
-            <Text style={styles.rankTxt} numberOfLines={1}>{RANKS[player.rank_index]?.name ?? ""}</Text>
-          )}
-        </View>
-        <Ionicons name="chevron-forward" size={13} color={COLORS.onSurfaceTertiary} />
-      </Pressable>
+            {!compact && (
+              <Text style={styles.rankTxt} numberOfLines={1}>{RANKS[player.rank_index]?.name ?? ""}</Text>
+            )}
+          </View>
+        </Pressable>
 
-      {/* ── ROW 2 — chips (wraps to a second line on narrow widths) ── */}
-      <View style={styles.chipRow}>
-        <Chip
-          testID="player-header-stamina"
-          icon="flash"
-          iconColor={stamina <= 0 ? COLORS.error : COLORS.brand}
-          text={`${stamina}/${staminaMax}`}
-          onPress={() => setInfoModal("stamina")}
-        />
-        <Chip
-          testID="player-header-crowns"
-          icon="cash"
-          iconColor={COLORS.brand}
-          text={formatCompactNumber(player.crowns)}
-          onPress={() => { if (shopUnlocked) router.push("/(tabs)/shop"); }}
-        />
-        <Chip
-          testID="player-header-refined-gems"
-          icon="diamond"
-          iconColor={COLORS.filter}
-          text={formatCompactNumber(player.refined_lotus_gems ?? 0)}
-          onPress={() => router.push("/economy")}
-        />
-        <Chip
-          testID="player-header-lotus-gems"
-          icon="flower"
-          iconColor={COLORS.growth}
-          text={formatCompactNumber(player.lotus_gems_paid ?? 0)}
-          onPress={() => router.push("/economy")}
-        />
+        {/* wallet + stamina chips (wrap onto a second line on narrow widths) */}
+        <View style={styles.chipRow}>
+          <Chip
+            testID="player-header-stamina"
+            icon={getUiIcon("stamina")}
+            tint={stamina <= 0 ? COLORS.error : COLORS.brand}
+            text={`${stamina}/${staminaMax}`}
+            onPress={() => setInfoModal("stamina")}
+          />
+          <Chip
+            testID="player-header-crowns"
+            icon={getUiIcon("crowns")}
+            tint={COLORS.brand}
+            text={formatCompactNumber(player.crowns)}
+            onPress={() => { if (shopUnlocked) router.push("/(tabs)/shop"); }}
+          />
+          <Chip
+            testID="player-header-refined-gems"
+            icon={getUiIcon("refined_gem")}
+            tint={COLORS.filter}
+            text={formatCompactNumber(player.refined_lotus_gems ?? 0)}
+            onPress={() => router.push("/economy")}
+          />
+          <Chip
+            testID="player-header-lotus-gems"
+            icon={getUiIcon("lotus_gem")}
+            tint={COLORS.growth}
+            text={formatCompactNumber(player.lotus_gems_paid ?? 0)}
+            onPress={() => router.push("/economy")}
+          />
+        </View>
       </View>
 
-      {/* ── ROW 3 — slim Player EXP bar ── */}
+      {/* ── ROW 2 — slim Player EXP bar ── */}
       <Pressable
         style={styles.expRow}
         onPress={() => setInfoModal("level")}
@@ -194,17 +206,17 @@ export function PlayerHeader({
 }
 
 function Chip({
-  icon, iconColor, text, onPress, testID,
+  icon, tint, text, onPress, testID,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
+  icon: ImageSourcePropType;
+  tint: string;
   text: string;
   onPress: () => void;
   testID?: string;
 }) {
   return (
-    <Pressable style={[styles.chip, { borderColor: iconColor + "40" }]} onPress={onPress} hitSlop={4} testID={testID}>
-      <Ionicons name={icon} size={12} color={iconColor} />
+    <Pressable style={[styles.chip, { borderColor: tint + "40" }]} onPress={onPress} hitSlop={4} testID={testID}>
+      <ExpoImage source={icon} style={styles.chipIcon} contentFit="contain" />
       <Text style={styles.chipTxt}>{text}</Text>
     </Pressable>
   );
@@ -220,17 +232,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
   },
-  identityRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  topRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: SPACING.sm, rowGap: 7 },
+  identityRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexGrow: 1, flexShrink: 1, flexBasis: 160, minWidth: 0 },
+  identityText: { flexShrink: 1, minWidth: 0 },
   avatar: {
-    width: 30, height: 30, borderRadius: 15,
+    width: 34, height: 34, borderRadius: 17,
     backgroundColor: COLORS.surfaceSecondary,
     borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
+    overflow: "hidden",
   },
+  avatarImg: { width: "100%", height: "100%" },
   name: { color: COLORS.onSurface, fontSize: 14, fontWeight: "800" },
   levelTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
   rankTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600", letterSpacing: 0.4, marginTop: 1 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, flexGrow: 1, justifyContent: "flex-end" },
   chip: {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: COLORS.surfaceSecondary,
@@ -239,6 +255,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  chipIcon: { width: 15, height: 15 },
   chipTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
   expRow: { gap: 3 },
   expBarBg: {
