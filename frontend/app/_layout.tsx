@@ -10,7 +10,6 @@ import { PlayerProvider } from "@/src/game/store";
 import { preloadTabAssets } from "@/src/game/tabAssets";
 import { TutorialProvider } from "@/src/game/tutorialStore";
 import { TestSessionProvider } from "@/src/game/testSession";
-import { TestPanel } from "@/src/components/TestPanel";
 import { COLORS } from "@/src/theme/colors";
 
 LogBox.ignoreAllLogs(true);
@@ -46,7 +45,6 @@ export default function RootLayout() {
                   animation: "fade",
                 }}
               />
-              <TestPanel />
             </TestSessionProvider>
           </TutorialProvider>
         </PlayerProvider>
