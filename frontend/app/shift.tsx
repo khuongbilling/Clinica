@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
 import { ModeCard } from "@/src/components/ModeCard";
 import { StaminaPill } from "@/src/components/StaminaPill";
+import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
@@ -21,8 +22,7 @@ export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
-  const [notice, setNotice] = useState<string | null>(null);
-  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { notice, flashNotice } = useInlineNotice();
 
   const bossUnlocked = (player?.bosses_defeated?.length ?? 0) > 0 || (player?.runs_completed ?? 0) >= 1;
 
@@ -58,12 +58,6 @@ export default function ShiftPage() {
   // next in line.
   const nextUp = nextComingSoonMode(player.chapter_progress ?? 1);
 
-  const flashNotice = (msg: string) => {
-    setNotice(msg);
-    if (noticeTimer.current) clearTimeout(noticeTimer.current);
-    noticeTimer.current = setTimeout(() => setNotice(null), 3200);
-  };
-
   const openIntro = (mode: ModeCardDef) => {
     if (mode.status === "coming_soon" || mode.status === "locked") {
       const when = mode.unlockChapter ? ` Opens in Chapter ${mode.unlockChapter}.` : "";
@@ -97,12 +91,7 @@ export default function ShiftPage() {
           Pick a mode to read its briefing, then step in. New modes open here as you progress.
         </Text>
 
-        {notice && (
-          <View style={styles.notice} testID="shift-notice">
-            <Ionicons name="lock-closed" size={16} color={COLORS.brand} />
-            <Text style={styles.noticeTxt}>{notice}</Text>
-          </View>
-        )}
+        <InlineNotice notice={notice} icon="lock-closed" testID="shift-notice" />
 
         <View style={styles.simBox}>
           <Text style={styles.simTitle}>Your Story, One Case at a Time</Text>
@@ -226,12 +215,6 @@ const styles = StyleSheet.create({
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.xs },
-  notice: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1,
-    borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandTertiary + "40",
-  },
-  noticeTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "600", flex: 1, lineHeight: 16 },
   section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 2 },
   simBox: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, gap: 6 },
   simTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
