@@ -68,14 +68,19 @@ export interface FeatureUnlock {
   level: number;
 }
 
+// Rollout order (guided so a new player never faces everything at once):
+//   University (foundation) → Ward Shift simulations → Ward Defense → Realm →
+//   Boss exam → living-world endgame. Ward Shift is Level 1 but gated behind
+//   the first University lesson (narrative gate in checkFeatureGate) so School
+//   always comes first. Realm sits AFTER Ward Defense but BEFORE the Boss.
 export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   { id: 'university', label: 'Clinica University & Training Hall', level: 1 },
+  { id: 'ward_shift', label: 'Ward Shift Simulations', level: 1 },
   { id: 'lotus_journal', label: 'Lotus Plate Journal', level: 2 },
   { id: 'shop', label: 'Shops (Apothecary Market)', level: 2 },
-  { id: 'ward_shift', label: 'Ward Shift', level: 3 },
-  { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 3 },
   { id: 'hall_of_heroes', label: 'Hall of Heroes', level: 3 },
-  { id: 'ward_defense', label: 'Ward Defense', level: 5 },
+  { id: 'ward_defense', label: 'Ward Defense', level: 4 },
+  { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 5 },
   { id: 'boss', label: 'Boss Encounters', level: 7 },
   { id: 'world_event', label: 'World Events (Miasma Bloom)', level: 10 },
   { id: 'ten_pull', label: 'Full Class Recruitment (10-pull)', level: 12 },
@@ -127,6 +132,15 @@ export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResu
     case 'hall_of_heroes':
       if (!ctx.lessonsStarted) {
         return { unlocked: false, reason: 'Begin your first University lessons to unlock.' };
+      }
+      return { unlocked: true, reason: null };
+    // Ward Shift simulations open only after the player begins their first
+    // University lesson — School always comes before the (simulated) ward. This
+    // is a narrative gate, not a level gate, so a returning max-level player who
+    // never happened to open a lesson isn't hard-blocked (level is already met).
+    case 'ward_shift':
+      if (!ctx.lessonsStarted) {
+        return { unlocked: false, reason: 'Begin your first University lesson to open Ward Shift simulations.' };
       }
       return { unlocked: true, reason: null };
     case 'realm':

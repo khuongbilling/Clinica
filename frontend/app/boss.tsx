@@ -9,6 +9,7 @@ import { BOSS_LORD_IMBALANCE, BOSS_VERDANTHA } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
+import { isFeatureUnlocked, playerLevelFromXp } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
 import { BOSS_ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
 import { VERDANTHA, isVerdanthaUnlocked, getVerdanthaTokensRemaining } from "@/src/game/worldEvent";
@@ -40,13 +41,15 @@ export default function BossPage() {
 
   // Verdantha is gated behind Phase III — Convergence, driven by the player's
   // real world-event containment progress (their Epidemic Tokens). She manifests
-  // once the Sanctuary crosses into Phase III. Lord Imbalance unlocks after any
-  // completed shift as before.
+  // once the Sanctuary crosses into Phase III. Lord Imbalance is the ward exam —
+  // it unlocks at Player Level 7 (after University → Ward Shift → Ward Defense →
+  // Realm), or stays open once already defeated.
   const tokens = player.epidemic_tokens ?? 0;
   const verdanthaTokensLeft = getVerdanthaTokensRemaining(tokens);
+  const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
   const bossUnlocked = isVerdantha
     ? isVerdanthaUnlocked(tokens)
-    : ((player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1);
+    : ((player.bosses_defeated?.length ?? 0) > 0 || isFeatureUnlocked("boss", playerLevel));
 
   const backTarget = isVerdantha ? "/world-event" : "/(tabs)";
 
@@ -207,7 +210,7 @@ export default function BossPage() {
               <Text style={styles.lockedSub}>
                 {isVerdantha
                   ? `The Bloom Matriarch only manifests at Phase III — Convergence, once the Sanctuary crosses the Containment Threshold. Earn ${verdanthaTokensLeft.toLocaleString()} more Epidemic Token${verdanthaTokensLeft === 1 ? "" : "s"} from Ward Shift runs to tip the event into Convergence.`
-                  : "Complete at least one shift to break the seal and confront Lord Imbalance."}
+                  : "Reach Player Level 7 — clear your ward training first — to break the seal and confront Lord Imbalance."}
               </Text>
             </View>
           </View>

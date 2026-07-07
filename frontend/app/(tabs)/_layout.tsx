@@ -13,7 +13,8 @@ export default function TabsLayout() {
   // Guided-onboarding tab gating. Tabs stay hidden (href:null keeps their route
   // alive for deep links) until the player meets each feature's Player-Level +
   // narrative-milestone gate: Shops L2, Heroes (Hall) L3 + first lessons, Realm
-  // L3 + first Ward Shift. The Shift tab is always available.
+  // L5 + first Ward Shift (after Ward Defense, before the Boss). Shift tab is
+  // always available.
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
     level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,

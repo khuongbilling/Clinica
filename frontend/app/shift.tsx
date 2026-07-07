@@ -27,16 +27,18 @@ export default function ShiftPage() {
 
   const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
 
-  const wardShiftUnlocked = isFeatureUnlocked("ward_shift", playerLevel);
-  const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevel);
-  const bossUnlocked = isFeatureUnlocked("boss", playerLevel);
-
   const gateCtx: CompoundGateContext = {
     level: playerLevel,
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
     lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
   };
   const universityGate = checkFeatureGate("university", gateCtx);
+  // Ward Shift is gated behind the first University lesson (School first), not
+  // a level — so use the narrative gate. Ward Defense / Boss stay level-gated.
+  const wardShiftGate = checkFeatureGate("ward_shift", gateCtx);
+  const wardShiftUnlocked = wardShiftGate.unlocked;
+  const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevel);
+  const bossUnlocked = isFeatureUnlocked("boss", playerLevel);
 
   // The System narrates the Ward hub once, pointing at the University banner.
   useEffect(() => {
@@ -97,7 +99,7 @@ export default function ShiftPage() {
         {/* System narrator — only shown when clinical modes are still locked */}
         {showUniversityPrompt && (
           <SystemNarratorBar
-            message="Clinical shifts open at Level 3. Begin your University lessons first — they reward your first heroes and teach the reasoning behind every treatment."
+            message="Ward Shifts are Clinica University simulations — imitated disease at a foundation level, safe for a student. Begin your first University lesson to open them; lessons also reward your first heroes."
             testID="shift-narrator-university"
           />
         )}
@@ -105,15 +107,15 @@ export default function ShiftPage() {
         {/* ── Clinical Challenges ── */}
         <Text style={styles.section}>Clinical Challenges</Text>
 
-        {/* Ward Shift — locked until Level 3 */}
+        {/* Ward Shift — University simulation, opens after the first lesson */}
         <BannerCard
           mode={WARD_SHIFT_MODE}
           height={156}
           locked={!wardShiftUnlocked}
-          lockLabel={!wardShiftUnlocked ? "Unlocks at Level 3" : undefined}
+          lockLabel={!wardShiftUnlocked ? "Begin a University lesson" : undefined}
           onPress={() => {
             if (!wardShiftUnlocked) {
-              flashNotice("Ward Shift unlocks at Player Level 3. Study at Clinica University first.");
+              flashNotice(wardShiftGate.reason || "Study your first lesson at Clinica University first.");
               return;
             }
             openIntro(WARD_SHIFT_MODE);
@@ -122,14 +124,15 @@ export default function ShiftPage() {
         />
 
         {activeClinical.map((m) => {
-          // Ward Defense locks at Level 5; Boss Ward locks at Level 7.
+          // Ward Defense opens at Level 4; the Realm opens at Level 5 (before the
+          // Boss); Boss Ward is the exam at Level 7.
           const isWardDefense = m.id === "ward-defense";
           const isBossWard = m.id === "boss-ward";
           const modeLocked =
             (isWardDefense && !wardDefenseUnlocked) ||
             (isBossWard && !bossUnlocked);
           const modeLockLabel = isWardDefense && !wardDefenseUnlocked
-            ? "Unlocks at Level 5"
+            ? "Unlocks at Level 4"
             : isBossWard && !bossUnlocked
               ? "Unlocks at Level 7"
               : undefined;
@@ -144,7 +147,7 @@ export default function ShiftPage() {
                 if (modeLocked) {
                   flashNotice(
                     isWardDefense
-                      ? "Ward Defense unlocks at Player Level 5."
+                      ? "Ward Defense unlocks at Player Level 4."
                       : "Boss Encounters unlock at Player Level 7.",
                   );
                   return;

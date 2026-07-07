@@ -65,7 +65,7 @@ export interface ModeCardDef {
 export const WARD_SHIFT_MODE: ModeCardDef = {
   id: "ward-shift",
   title: "Ward Shift",
-  subtitle: "Main clinical story battles. Scout, stabilize, treat, and reassess.",
+  subtitle: "Clinica University clinical simulations — read the clues, stabilize, treat, reassess.",
   icon: "medkit",
   accentColor: "#D4AF37",
   status: "active",
@@ -73,12 +73,12 @@ export const WARD_SHIFT_MODE: ModeCardDef = {
   route: "/shift-cases",
   rewardPreview: "Crowns, Hero EXP, Codex Shards",
   imageKey: "ward-shift",
-  entryLabel: "Report for Shift",
+  entryLabel: "Enter Simulation",
   lore:
-    "The wards of Clinica never sleep. Each shift, patients arrive carrying the shadows of disease, and only a healer who can read the body's clues can turn the tide. You lead the team — steady the failing, treat the cause, and reassess until the ward is calm again.",
+    "Before you set foot on a real ward, Clinica University runs you through supervised simulations — imitated disease processes, weak enough to be safe for a student still rebuilding their foundation. Each shift is a training case: read the body's clues, steady the failing, treat the cause, and reassess. As you advance through the chapters, the simulations sharpen into real ward returns and the disease grows teeth.",
   howItWorks: [
-    "Pick a case from today's shift and step into a turn-based clinical battle.",
-    "Scout for clues, stabilize the patient, treat the cause, then reassess.",
+    "Early chapters are University simulations — weaker, imitated disease at a foundation level.",
+    "Pick a case, then scout for clues, stabilize, treat the cause, and reassess in turn-based battle.",
     "Each regular case costs 1 Shift Challenge; you earn Crowns, Hero EXP, and Codex Shards.",
   ],
   artBrief:
@@ -121,7 +121,7 @@ export const CLINICAL_CHALLENGE_MODES: ModeCardDef[] = [
     rewardPreview: "Rare materials, Codex lore",
     imageKey: "boss-ward",
     entryLabel: "Confront the Threat",
-    unlockRequirement: "Complete at least one shift to unlock.",
+    unlockRequirement: "Reach Player Level 7 to unlock — pass the ward first.",
     lore:
       "Some pathologies grow too vast for an ordinary case — a convergence of failing systems that threatens the whole kingdom. These are the Boss Wards: rare, dangerous, and unforgettable. Only a prepared team should answer the call.",
     howItWorks: [

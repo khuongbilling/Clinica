@@ -58,7 +58,7 @@ export default function ModeIntroPage() {
 
   const begin = () => {
     if (locked) {
-      flashNotice("The Fading Core is Sealed — complete at least one shift to unlock this encounter.");
+      flashNotice("The Fading Core is Sealed — reach Player Level 7 to unlock this encounter.");
       return;
     }
     if (!playable || !mode.route) {

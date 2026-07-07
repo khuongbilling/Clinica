@@ -578,7 +578,8 @@ export function getDecorationById(id: string): RealmDecoration | undefined {
 // The baseline layout every new (or not-yet-migrated) player starts with.
 // The guided-onboarding pass auto-places TWO landmarks so the Realm reads as a
 // living sanctuary the moment the player first reaches it (Realm unlocks at
-// Player Level 3 + first Ward Shift): the Grand Ward Atrium (the anchor) and
+// Player Level 5 + first Ward Shift, after Ward Defense but before the Boss):
+// the Grand Ward Atrium (the anchor) and
 // Clinica University (placed just below the Atrium). Every OTHER building still
 // starts unplaced (in inventory) so the player keeps a sanctuary to grow into.
 // Existing players' already-saved realm_layout is untouched; this only affects
