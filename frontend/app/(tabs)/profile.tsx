@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
 import { AVATAR_OPTIONS, getAvatarSource } from "@/src/game/avatars";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
-import { getEventTitle } from "@/src/game/worldEvent";
+import { EVENT_TITLES, getEventTitle } from "@/src/game/worldEvent";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -59,6 +59,8 @@ export default function ProfileScreen() {
 
   const ownedTitles = player.owned_titles || [];
   const activeTitle = player.active_title ? getEventTitle(player.active_title) : null;
+  // Un-owned Titles from the catalog, surfaced as locked collection goals.
+  const lockedTitles = Object.values(EVENT_TITLES).filter((t) => !ownedTitles.includes(t.id));
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -149,7 +151,15 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={styles.section}>Titles</Text>
-        {ownedTitles.length > 0 ? (
+        {ownedTitles.length === 0 && (
+          <View style={styles.titlesEmpty} testID="profile-titles-empty">
+            <Ionicons name="ribbon-outline" size={20} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.titlesEmptyTxt}>
+              No Titles earned yet. Claim Miasma Bloom event milestones to earn cosmetic Titles like Bloom Researcher.
+            </Text>
+          </View>
+        )}
+        {(ownedTitles.length > 0 || lockedTitles.length > 0) && (
           <View style={styles.titlesCard} testID="profile-titles-card">
             {ownedTitles.map((tid) => {
               const t = getEventTitle(tid);
@@ -176,13 +186,22 @@ export default function ProfileScreen() {
                 </Pressable>
               );
             })}
-          </View>
-        ) : (
-          <View style={styles.titlesEmpty} testID="profile-titles-empty">
-            <Ionicons name="ribbon-outline" size={20} color={COLORS.onSurfaceTertiary} />
-            <Text style={styles.titlesEmptyTxt}>
-              No Titles earned yet. Claim Miasma Bloom event milestones to earn cosmetic Titles like Bloom Researcher.
-            </Text>
+            {lockedTitles.map((t) => (
+              <View
+                key={t.id}
+                style={[styles.titleRow, styles.titleRowLocked]}
+                testID={`title-locked-${t.id}`}
+              >
+                <Ionicons name="lock-closed" size={16} color={COLORS.onSurfaceTertiary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.titleName, styles.titleNameLocked]}>{t.label}</Text>
+                  {!!t.description && <Text style={styles.titleDesc}>{t.description}</Text>}
+                </View>
+                <View style={styles.titleLockedPill}>
+                  <Text style={styles.titleLockedPillTxt}>LOCKED</Text>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
@@ -424,7 +443,11 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     padding: SPACING.md, borderWidth: 1, borderColor: "transparent", borderRadius: RADIUS.md,
   },
+  titleRowLocked: { opacity: 0.55 },
   titleName: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  titleNameLocked: { color: COLORS.onSurfaceSecondary },
+  titleLockedPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: COLORS.surfaceTertiary },
+  titleLockedPillTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
   titleDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   titleEquipHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600" },
   titleActivePill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
