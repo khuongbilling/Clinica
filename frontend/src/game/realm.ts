@@ -123,6 +123,25 @@ export interface HarmonyAffinity {
   nearDecorationIds?: string[];
 }
 
+// Which PlayerState currency a producer building banks its points into when
+// the player collects them. Must match a real numeric PlayerState field.
+export type RealmProductionCurrency = "university_credits" | "codex_shards" | "insight_crystals";
+
+export interface RealmProduction {
+  // Display label for the points that accrue, e.g. "Knowledge Points".
+  resource: string;
+  // PlayerState currency the collected points are banked into.
+  currency: RealmProductionCurrency;
+  icon: string;
+  // Base points generated per real hour at building level 1, before hero bonus.
+  ratePerHour: number;
+  // Base storage cap at building level 1 — accrual stops here until collected.
+  cap: number;
+}
+
+// Each hero assigned to a producer building adds this fraction to its rate.
+export const HERO_ASSIGNMENT_RATE_BONUS = 0.25;
+
 export interface RealmBuilding {
   id: string;
   name: string;
@@ -150,6 +169,11 @@ export interface RealmBuilding {
   // it can't be used as a shortcut into a locked area.
   linkFeature?: string;
   heroSlots: HeroAssignmentSlot[];
+  // Passive point production (Realm Sanctuary economy). When set, this building
+  // accrues `resource` points over real time while it is placed & unlocked.
+  // Assigned heroes boost the rate (see productionRatePerHour). Purely a
+  // cooperative build-your-sanctuary economy — never combat/PvP power.
+  production?: RealmProduction;
   skinPlaceholder: boolean;
   comingSoon?: boolean;
   // Grid placement — actual footprint (width x height, in cells) lives in
@@ -218,6 +242,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "University Trainee", flavor: "A Seer or University trainee boosts research progress.", slotType: "trainee" },
       { role: "Faculty Mentor", flavor: "A Mentor here speeds up trainee learning.", slotType: "mentor" },
     ],
+    production: { resource: "Knowledge Points", currency: "university_credits", icon: "school", ratePerHour: 12, cap: 300 },
     skinPlaceholder: true,
     movable: true,
   },
@@ -242,6 +267,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "Seer", flavor: "A Seer hero here improves research and Codex progress.", slotType: "hero" },
       { role: "Archive Trainee", flavor: "A trainee here helps catalog Codex entries faster.", slotType: "trainee" },
     ],
+    production: { resource: "Codex Shards", currency: "codex_shards", icon: "library", ratePerHour: 6, cap: 180 },
     skinPlaceholder: true,
     movable: true,
   },
@@ -336,6 +362,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     linkRoute: "/economy",
     linkLabel: "Open Economy Guide",
     heroSlots: [{ role: "Treasurer", flavor: "A Treasurer hero here improves exchange rates slightly.", slotType: "hero" }],
+    production: { resource: "Insight Crystals", currency: "insight_crystals", icon: "diamond", ratePerHour: 4, cap: 120 },
     skinPlaceholder: true,
     movable: true,
   },
@@ -480,6 +507,68 @@ export const DECORATIONS: RealmDecoration[] = [
 
 export function getBuildingById(id: string): RealmBuilding | undefined {
   return REALM_BUILDINGS.find((b) => b.id === id);
+}
+
+// ---------------------------------------------------------------------------
+// Realm point production — producer buildings (Clinica University, Research
+// Library, Sanctuary Bank, …) accrue `resource` points over real time while
+// placed & unlocked. Assigned heroes raise the rate. Accrual is stored lazily
+// (points + updatedAt timestamp per building) and computed on demand, mirroring
+// the stamina lazy-regen pattern. Cooperative economy only — never PvP power.
+// ---------------------------------------------------------------------------
+
+export interface RealmProductionState {
+  points: number;
+  updatedAt: string;
+}
+
+export const REALM_PRODUCTION_NOTE =
+  "Producer buildings quietly generate points over time. Assign heroes to a producer " +
+  "to boost its rate, then collect the points into your wallet. Fully cooperative — " +
+  "nothing here affects battles, other players, or attack/defense strength.";
+
+export function getProducerBuildings(): RealmBuilding[] {
+  return REALM_BUILDINGS.filter((b) => !!b.production);
+}
+
+// Live points-per-hour for a producer at `level` with `assignedCount` heroes.
+export function productionRatePerHour(
+  building: RealmBuilding,
+  level: number,
+  assignedCount: number
+): number {
+  if (!building.production || level <= 0) return 0;
+  const base = building.production.ratePerHour * level;
+  return base * (1 + HERO_ASSIGNMENT_RATE_BONUS * Math.max(0, assignedCount));
+}
+
+// Storage cap scales with building level so upgrading is meaningful.
+export function productionCap(building: RealmBuilding, level: number): number {
+  if (!building.production) return 0;
+  return building.production.cap * Math.max(1, level);
+}
+
+// Current accrued points, given the stored snapshot and the current time.
+// Capped at productionCap; never negative.
+export function computeAccruedPoints(
+  building: RealmBuilding,
+  level: number,
+  assignedCount: number,
+  stored: RealmProductionState | undefined,
+  nowMs: number
+): number {
+  if (!building.production) return 0;
+  const cap = productionCap(building, level);
+  const rate = productionRatePerHour(building, level, assignedCount);
+  const basePoints = Math.max(0, stored?.points ?? 0);
+  const since = stored?.updatedAt ? Date.parse(stored.updatedAt) : nowMs;
+  const elapsedHours = Number.isFinite(since) ? Math.max(0, (nowMs - since) / 3_600_000) : 0;
+  return Math.min(cap, basePoints + rate * elapsedHours);
+}
+
+// Number of heroes currently assigned to a building (ignores empty slots).
+export function assignedHeroCount(assignments: string[] | undefined): number {
+  return (assignments || []).filter((id) => !!id).length;
 }
 
 export function getDecorationById(id: string): RealmDecoration | undefined {

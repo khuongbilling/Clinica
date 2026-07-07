@@ -41,3 +41,4 @@
 - [Clinica Push 5 reminiscence gating](clinica-push5-reminiscence-onboarding.md) — one-time "seen" flags need 3 wiring sites (normalize backfill, createPlayer default, boot resume check); watch unreached `/onboarding` alt player-creation route.
 - [Onboarding polish primitives](clinica-onboarding-polish-primitives.md) — shared SystemPanel/OnboardingProgressBar/MilestoneReward/SceneTransition; wrap don't hand-roll; gate progress bar on "still onboarding" state.
 - [System Narrator onboarding](clinica-system-narrator-onboarding.md) — guided hub→ward→university→shops beats; each System trigger gated on prior beat; university gate is level-only (no circular lessons gate); lesson grantHeroes must seed hero_progression.
+- [Realm production & hero assignment](clinica-realm-production.md) — producers accrue points lazily (stamina-style); MUST seed {points,updatedAt} on placement or clock never starts; heroes +25%/each; settle+freeze on unplace.

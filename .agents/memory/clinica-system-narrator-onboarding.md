@@ -3,7 +3,7 @@ name: Clinica System Narrator onboarding flow
 description: How the "the System" guided onboarding, feature gating, and lesson→hero grant fit together
 ---
 
-# System Narrator guided onboarding (Task #9 family)
+# System Narrator guided onboarding
 
 The guided new-player flow is a chain of one-time, non-skippable tutorials
 narrated by "the System" (donghua portrait, dark shadow until player level 10,

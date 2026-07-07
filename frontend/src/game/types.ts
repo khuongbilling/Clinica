@@ -212,6 +212,14 @@ export interface PlayerState {
   // Both are cosmetic/layout-only; they never gate gameplay.
   realm_layout?: Record<string, string>;
   realm_decor?: Record<string, string>;
+  // Realm hero assignment — buildingId -> per-slot hero ids ("" = empty slot).
+  // Assigned heroes boost a producer building's point rate; heroes are never
+  // locked out of battles or teams by being assigned here.
+  realm_assignments?: Record<string, string[]>;
+  // Realm point production — buildingId -> { points, updatedAt } accrual
+  // snapshot. Points accrue over real time and are collected into a wallet
+  // currency (see realm.ts RealmProduction / computeAccruedPoints).
+  realm_production?: Record<string, { points: number; updatedAt: string }>;
   // Push 5.6 — per-player random terrain seed. Assigned once at player
   // creation; drives a deterministic, unique terrain-texture distribution
   // for this player's Realm (see generatePlayerTerrain). Purely cosmetic —

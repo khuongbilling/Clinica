@@ -134,6 +134,8 @@ class Player(BaseModel):
     wellness: WellnessState = Field(default_factory=WellnessState)
     realm_layout: Dict[str, str] = Field(default_factory=dict)
     realm_decor: Dict[str, str] = Field(default_factory=dict)
+    realm_assignments: Dict[str, List[str]] = Field(default_factory=dict)
+    realm_production: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     realm_seed: int = 0
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
@@ -194,6 +196,8 @@ class PlayerUpdate(BaseModel):
     wellness: Optional[WellnessState] = None
     realm_layout: Optional[Dict[str, str]] = None
     realm_decor: Optional[Dict[str, str]] = None
+    realm_assignments: Optional[Dict[str, List[str]]] = None
+    realm_production: Optional[Dict[str, Dict[str, Any]]] = None
     realm_seed: Optional[int] = None
 
 

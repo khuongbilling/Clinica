@@ -12,7 +12,7 @@ import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
 } from './units';
-import { buildDefaultRealmLayout } from './realm';
+import { buildDefaultRealmLayout, getProducerBuildings } from './realm';
 import { isValidCellId } from './realmGrid';
 import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
@@ -89,6 +89,32 @@ function normalizeProgression(p: PlayerState): PlayerState {
   const decorIsLegacy = decorKeys.length > 0 && !decorKeys.every((k) => isValidCellId(k));
   if (!out.realm_decor || decorIsLegacy) {
     out = { ...out, realm_decor: {} };
+  }
+  // Realm hero assignment + point production — backfill empty maps for saves
+  // created before this system so the Realm screen never reads undefined.
+  if (!out.realm_assignments) {
+    out = { ...out, realm_assignments: {} };
+  }
+  if (!out.realm_production) {
+    out = { ...out, realm_production: {} };
+  }
+  // Seed a production snapshot for every producer building that is currently
+  // placed but has no snapshot yet. Without this, computeAccruedPoints has no
+  // start timestamp and would report 0 forever — passive point generation must
+  // begin the moment a producer is on the board, not only after a hero is
+  // assigned. New snapshots start the clock "now" so no back-pay is granted.
+  {
+    const nowIso = new Date().toISOString();
+    const layout = out.realm_layout || {};
+    const prod = { ...(out.realm_production || {}) };
+    let seeded = false;
+    for (const b of getProducerBuildings()) {
+      if (layout[b.id] && !prod[b.id]) {
+        prod[b.id] = { points: 0, updatedAt: nowIso };
+        seeded = true;
+      }
+    }
+    if (seeded) out = { ...out, realm_production: prod };
   }
   // Push 5.6 — backfill a terrain seed for players created before the per-player
   // terrain system. Derive it deterministically from the player id (not random)
@@ -208,6 +234,8 @@ type Ctx = {
   upgradeUnitMastery: (typeId: string) => Promise<{ ok: boolean; message: string; level?: number }>;
   setWardLoadout: (ids: string[]) => Promise<{ ok: boolean; message: string }>;
   setRealmLayout: (layoutPatch: Record<string, string | null>, decorPatch?: Record<string, string | null>) => Promise<{ ok: boolean; message: string }>;
+  setRealmAssignment: (buildingId: string, heroIds: string[]) => Promise<{ ok: boolean; message: string }>;
+  collectRealmProduction: (buildingId: string) => Promise<{ ok: boolean; message: string; amount?: number }>;
   recordFailure: (enemyId: string) => Promise<void>;
   syncInventory: (newInventory: Record<string, number>) => Promise<void>;
   saveActiveTeam: (teamIds: string[]) => Promise<void>;
@@ -888,10 +916,29 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const setRealmLayout = useCallback(async (layoutPatch: Record<string, string | null>, decorPatch?: Record<string, string | null>) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
+    const realm = await import('./realm');
     const nextLayout = { ...(base.realm_layout || buildDefaultRealmLayout()) };
+    const nextProduction = { ...(base.realm_production || {}) };
+    const now = Date.now();
     for (const [buildingId, cellId] of Object.entries(layoutPatch)) {
+      const wasPlaced = !!nextLayout[buildingId];
+      const willPlace = cellId != null;
       if (cellId == null) delete nextLayout[buildingId];
       else nextLayout[buildingId] = cellId;
+      // Keep production honest across placement changes: a producer only earns
+      // while it is on the board. On placement (re)start its clock now; on
+      // removal settle accrued points and freeze so no time is banked while the
+      // building sits in storage.
+      const building = realm.getBuildingById(buildingId);
+      if (building?.production && wasPlaced !== willPlace) {
+        const lvl = (base.kingdom_levels || {})[building.kingdomLevelsKey] || 0;
+        const count = realm.assignedHeroCount((base.realm_assignments || {})[buildingId]);
+        const prev = nextProduction[buildingId];
+        const settled = willPlace
+          ? Math.max(0, prev?.points ?? 0)
+          : realm.computeAccruedPoints(building, lvl, count, prev, now);
+        nextProduction[buildingId] = { points: settled, updatedAt: new Date(now).toISOString() };
+      }
     }
     const nextDecor = { ...(base.realm_decor || {}) };
     if (decorPatch) {
@@ -900,10 +947,79 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         else nextDecor[plotId] = decorationId;
       }
     }
-    const next = { ...base, realm_layout: nextLayout, realm_decor: nextDecor };
+    const next = { ...base, realm_layout: nextLayout, realm_decor: nextDecor, realm_production: nextProduction };
     playerRef.current = next;
     await updateState(next);
     return { ok: true, message: 'Realm layout updated.' };
+  }, [updateState]);
+
+  // Realm hero assignment — set the full per-slot hero id array for a building
+  // ("" marks an empty slot). Before changing the roster we "settle" any points
+  // that accrued under the OLD hero count, so the new rate only applies going
+  // forward (never retroactively re-prices past accrual).
+  const setRealmAssignment = useCallback(async (buildingId: string, heroIds: string[]) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const realm = await import('./realm');
+    const building = realm.getBuildingById(buildingId);
+    if (!building) return { ok: false, message: 'Unknown building.' };
+    const maxSlots = building.heroSlots.length;
+    if (maxSlots <= 0) return { ok: false, message: 'This building has no assignment slots.' };
+    // Clamp to slot count and drop duplicate hero ids (a hero fills one slot).
+    const seen = new Set<string>();
+    const clamped: string[] = [];
+    for (let i = 0; i < maxSlots; i++) {
+      const id = heroIds[i] || '';
+      if (id && !seen.has(id) && (base.heroes_owned || []).includes(id)) {
+        seen.add(id);
+        clamped.push(id);
+      } else {
+        clamped.push('');
+      }
+    }
+    let nextProduction = base.realm_production || {};
+    if (building.production) {
+      const lvl = (base.kingdom_levels || {})[building.kingdomLevelsKey] || 0;
+      const prevCount = realm.assignedHeroCount((base.realm_assignments || {})[buildingId]);
+      const settled = realm.computeAccruedPoints(building, lvl, prevCount, (base.realm_production || {})[buildingId], Date.now());
+      nextProduction = { ...nextProduction, [buildingId]: { points: settled, updatedAt: new Date().toISOString() } };
+    }
+    const next = {
+      ...base,
+      realm_assignments: { ...(base.realm_assignments || {}), [buildingId]: clamped },
+      realm_production: nextProduction,
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: 'Assignment updated.' };
+  }, [updateState]);
+
+  // Collect the points a producer building has accrued into its wallet currency,
+  // then reset that building's accrual to zero from now.
+  const collectRealmProduction = useCallback(async (buildingId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const realm = await import('./realm');
+    const building = realm.getBuildingById(buildingId);
+    if (!building || !building.production) return { ok: false, message: 'This building does not produce points.' };
+    const lvl = (base.kingdom_levels || {})[building.kingdomLevelsKey] || 0;
+    if (lvl <= 0) return { ok: false, message: 'Build this structure first.' };
+    const count = realm.assignedHeroCount((base.realm_assignments || {})[buildingId]);
+    const accrued = realm.computeAccruedPoints(building, lvl, count, (base.realm_production || {})[buildingId], Date.now());
+    const amount = Math.floor(accrued);
+    if (amount < 1) return { ok: false, message: 'Nothing to collect yet.' };
+    const currency = building.production.currency;
+    const next = {
+      ...base,
+      [currency]: ((base as any)[currency] || 0) + amount,
+      realm_production: {
+        ...(base.realm_production || {}),
+        [buildingId]: { points: accrued - amount, updatedAt: new Date().toISOString() },
+      },
+    } as PlayerState;
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Collected ${amount.toLocaleString()} ${building.production.resource}.`, amount };
   }, [updateState]);
 
   const completeLesson = useCallback(async (lessonId: string) => {
@@ -1191,9 +1307,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

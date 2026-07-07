@@ -21,7 +21,10 @@ import {
   BUILDING_CATEGORIES, BuildingCategory, getHarmonyBonus,
   getAtriumLevel, isBuildingUnlocked, RealmBuilding, RealmDecoration,
   buildDefaultRealmLayout, getBuildingById, getDecorationById, PlotType,
+  REALM_PRODUCTION_NOTE, getProducerBuildings, productionRatePerHour,
+  productionCap, computeAccruedPoints, assignedHeroCount, HERO_ASSIGNMENT_RATE_BONUS,
 } from "@/src/game/realm";
+import { HEROES } from "@/src/game/content";
 import {
   GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,
   isCellUnlocked, getFootprint, getFootprintCells, getOccupiedCellMap,
@@ -85,7 +88,7 @@ type Placement = { kind: "building" | "decoration"; id: string; isMove: boolean;
 
 export default function KingdomScreen() {
   const router = useRouter();
-  const { player, setRealmLayout } = usePlayer();
+  const { player, setRealmLayout, collectRealmProduction } = usePlayer();
   const realmGate = useFeatureGate("realm");
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
@@ -97,6 +100,14 @@ export default function KingdomScreen() {
   const [showDistrictInfo, setShowDistrictInfo] = useState<string | null>(null);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  // Live clock for point-accrual display — ticks every 20s while on screen so
+  // producer buildings visibly climb toward their cap without a manual refresh.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 20_000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     logEvent('kingdom_screen_returned', 'kingdom');
@@ -461,6 +472,18 @@ export default function KingdomScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
+        <ProductionPanel
+          player={player}
+          atriumLevel={atriumLevel}
+          layout={layout}
+          nowMs={nowMs}
+          onSelect={(id) => setSelectedBuildingId(id)}
+          onCollect={async (id) => {
+            const res = await collectRealmProduction(id);
+            setBanner(res.message);
+          }}
+        />
+
         <View style={styles.districtRow}>
           {REALM_DISTRICTS.map((d) => (
             <Pressable
@@ -542,6 +565,84 @@ const CATEGORY_LABEL: Record<BuildingCategory, string> = {
   wellness: "Wellness", economy: "Economy", defense: "Defense Support", faction: "Faction",
 };
 
+// Realm production summary — visible on the Realm page. Lists every producer
+// building the player has placed & unlocked, showing live accrued points, the
+// per-hour rate (boosted by assigned heroes), and a Collect button.
+function ProductionPanel({
+  player, atriumLevel, layout, nowMs, onSelect, onCollect,
+}: {
+  player: any;
+  atriumLevel: number;
+  layout: Record<string, string>;
+  nowMs: number;
+  onSelect: (buildingId: string) => void;
+  onCollect: (buildingId: string) => void;
+}) {
+  const producers = getProducerBuildings().filter(
+    (b) => isBuildingUnlocked(b, atriumLevel) && !!layout[b.id]
+  );
+
+  return (
+    <View style={styles.prodPanel} testID="realm-production-panel">
+      <View style={styles.prodHeader}>
+        <Ionicons name="sparkles" size={16} color={COLORS.brand} />
+        <Text style={styles.prodTitle}>Sanctuary Production</Text>
+      </View>
+
+      {producers.length === 0 ? (
+        <Text style={styles.prodEmpty}>
+          Build and unlock a producer (Clinica University, Research Library, or the Sanctuary Bank)
+          to start generating points here.
+        </Text>
+      ) : (
+        producers.map((b) => {
+          const lvl = (player.kingdom_levels || {})[b.kingdomLevelsKey] || 0;
+          const assigned = (player.realm_assignments || {})[b.id];
+          const count = assignedHeroCount(assigned);
+          const rate = productionRatePerHour(b, lvl, count);
+          const cap = productionCap(b, lvl);
+          const accrued = computeAccruedPoints(b, lvl, count, (player.realm_production || {})[b.id], nowMs);
+          const shown = Math.floor(accrued);
+          const full = accrued >= cap - 0.001;
+          const color = DISTRICT_COLOR[REALM_DISTRICTS.find((d) => d.id === b.district)?.colorToken || "brand"];
+          return (
+            <View key={b.id} style={styles.prodRow} testID={`realm-production-${b.id}`}>
+              <Pressable style={styles.prodRowMain} onPress={() => onSelect(b.id)}>
+                <View style={[styles.prodIcon, { borderColor: color, backgroundColor: color + "1f" }]}>
+                  <Ionicons name={(b.production!.icon) as any} size={18} color={color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.prodName}>{b.name}</Text>
+                  <Text style={styles.prodMeta}>
+                    <Text style={{ color: full ? COLORS.warning : COLORS.onSurface, fontWeight: "800" }}>
+                      {shown.toLocaleString()}
+                    </Text>
+                    <Text> / {cap.toLocaleString()} {b.production!.resource}</Text>
+                  </Text>
+                  <Text style={styles.prodSub}>
+                    {rate.toFixed(1)}/hr{count > 0 ? ` · ${count} hero${count > 1 ? "es" : ""} assigned` : " · no heroes assigned"}
+                    {full ? " · FULL" : ""}
+                  </Text>
+                </View>
+              </Pressable>
+              <Pressable
+                style={[styles.prodCollect, shown < 1 && styles.prodCollectDisabled]}
+                onPress={() => onCollect(b.id)}
+                disabled={shown < 1}
+                testID={`realm-collect-${b.id}`}
+              >
+                <Ionicons name="download-outline" size={14} color={shown < 1 ? COLORS.onSurfaceTertiary : COLORS.onBrand} />
+                <Text style={[styles.prodCollectTxt, shown < 1 && { color: COLORS.onSurfaceTertiary }]}>Collect</Text>
+              </Pressable>
+            </View>
+          );
+        })
+      )}
+      <Text style={styles.prodNote}>{REALM_PRODUCTION_NOTE}</Text>
+    </View>
+  );
+}
+
 function BuildingActionSheet({
   building, originId, atriumLevel, kingdomLevels, onClose, onMove, onStore, router,
 }: {
@@ -554,7 +655,14 @@ function BuildingActionSheet({
   onStore: (building: RealmBuilding) => void;
   router: ReturnType<typeof useRouter>;
 }) {
-  const { player } = usePlayer();
+  const { player, setRealmAssignment, collectRealmProduction } = usePlayer();
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!building) return;
+    const t = setInterval(() => setNowMs(Date.now()), 15_000);
+    return () => clearInterval(t);
+  }, [building?.id]);
   if (!building) return null;
   const unlocked = isBuildingUnlocked(building, atriumLevel);
   // Route links can point at a still-gated screen (Heroes / Shop / University).
@@ -569,6 +677,34 @@ function BuildingActionSheet({
   const color = DISTRICT_COLOR[district?.colorToken || "brand"];
   const footprint = getFootprint(building.id);
   const originCell = originId ? getCellById(originId) : null;
+  const isPlaced = !!originId;
+
+  // Hero assignment — per-slot array ("" = empty). Assigned heroes boost a
+  // producer's point rate. Heroes stay fully usable in battles/teams.
+  const assignments: string[] = (player?.realm_assignments || {})[building.id] || [];
+  const assignedCount = assignedHeroCount(assignments);
+  const assignedElsewhere = assignments.filter((id) => !!id);
+
+  // Production (only for producer buildings that are placed & unlocked).
+  const prod = building.production;
+  const rate = prod ? productionRatePerHour(building, lvl, assignedCount) : 0;
+  const cap = prod ? productionCap(building, lvl) : 0;
+  const accrued = prod ? computeAccruedPoints(building, lvl, assignedCount, (player?.realm_production || {})[building.id], nowMs) : 0;
+  const accruedShown = Math.floor(accrued);
+
+  async function assignHero(slotIndex: number, heroId: string) {
+    if (!building) return;
+    const next = building.heroSlots.map((_, i) => assignments[i] || "");
+    next[slotIndex] = heroId;
+    await setRealmAssignment(building.id, next);
+    setPickerSlot(null);
+  }
+  async function clearSlot(slotIndex: number) {
+    if (!building) return;
+    const next = building.heroSlots.map((_, i) => assignments[i] || "");
+    next[slotIndex] = "";
+    await setRealmAssignment(building.id, next);
+  }
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -616,23 +752,83 @@ function BuildingActionSheet({
               </>
             )}
 
-            <Text style={styles.sheetLabel}>ASSIGNMENTS</Text>
-            {building.heroSlots.length ? (
-              building.heroSlots.map((slot) => (
-                <View key={slot.role} style={styles.slotRow}>
-                  <Ionicons
-                    name={(slot.slotType === "trainee" ? "school-outline" : slot.slotType === "mentor" ? "ribbon-outline" : "person-add-outline") as any}
-                    size={14}
-                    color={COLORS.brand}
-                  />
-                  <Text style={styles.slotTxt}>
-                    <Text style={{ fontWeight: "700" }}>{slot.role}</Text>
-                    {slot.slotType ? ` (${slot.slotType})` : ""} — {slot.flavor}
+            {unlocked && prod && (
+              <>
+                <Text style={styles.sheetLabel}>PRODUCTION</Text>
+                <View style={styles.prodSheetBox}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+                    <Ionicons name={(prod.icon) as any} size={18} color={color} />
+                    <Text style={styles.prodSheetPoints}>
+                      {accruedShown.toLocaleString()} <Text style={styles.prodSheetCap}>/ {cap.toLocaleString()} {prod.resource}</Text>
+                    </Text>
+                  </View>
+                  <Text style={styles.prodSheetRate}>
+                    {isPlaced
+                      ? `Generating ${rate.toFixed(1)}/hr · ${assignedCount} hero${assignedCount === 1 ? "" : "es"} assigned (+${Math.round(assignedCount * HERO_ASSIGNMENT_RATE_BONUS * 100)}%)`
+                      : "Place this building in your Realm to start producing."}
                   </Text>
+                  <Pressable
+                    style={[styles.prodSheetCollect, (!isPlaced || accruedShown < 1) && styles.prodCollectDisabled]}
+                    disabled={!isPlaced || accruedShown < 1}
+                    onPress={async () => { await collectRealmProduction(building.id); }}
+                    testID={`realm-sheet-collect-${building.id}`}
+                  >
+                    <Ionicons name="download-outline" size={15} color={(!isPlaced || accruedShown < 1) ? COLORS.onSurfaceTertiary : COLORS.onBrand} />
+                    <Text style={[styles.prodSheetCollectTxt, (!isPlaced || accruedShown < 1) && { color: COLORS.onSurfaceTertiary }]}>
+                      Collect {prod.resource}
+                    </Text>
+                  </Pressable>
                 </View>
-              ))
+              </>
+            )}
+
+            <Text style={styles.sheetLabel}>HERO ASSIGNMENTS</Text>
+            {building.heroSlots.length ? (
+              building.heroSlots.map((slot, i) => {
+                const heroId = assignments[i] || "";
+                const hero = heroId ? HEROES.find((h) => h.id === heroId) : null;
+                const canAssign = unlocked && isPlaced && (player?.heroes_owned || []).length > 0;
+                return (
+                  <View key={slot.role} style={styles.assignSlot}>
+                    <Ionicons
+                      name={(slot.slotType === "trainee" ? "school-outline" : slot.slotType === "mentor" ? "ribbon-outline" : "person-add-outline") as any}
+                      size={16}
+                      color={hero ? color : COLORS.onSurfaceTertiary}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.assignRole}>
+                        {slot.role}{slot.slotType ? ` · ${slot.slotType}` : ""}
+                      </Text>
+                      {hero ? (
+                        <Text style={styles.assignHeroName}>{hero.name} — {hero.role}</Text>
+                      ) : (
+                        <Text style={styles.assignFlavor}>{slot.flavor}</Text>
+                      )}
+                    </View>
+                    {hero ? (
+                      <Pressable style={styles.assignBtnClear} onPress={() => clearSlot(i)} testID={`realm-unassign-${building.id}-${i}`}>
+                        <Ionicons name="close" size={14} color={COLORS.onSurfaceSecondary} />
+                        <Text style={styles.assignBtnClearTxt}>Remove</Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        style={[styles.assignBtn, { borderColor: color }, !canAssign && styles.prodCollectDisabled]}
+                        disabled={!canAssign}
+                        onPress={() => setPickerSlot(i)}
+                        testID={`realm-assign-${building.id}-${i}`}
+                      >
+                        <Ionicons name="add" size={14} color={canAssign ? color : COLORS.onSurfaceTertiary} />
+                        <Text style={[styles.assignBtnTxt, { color: canAssign ? color : COLORS.onSurfaceTertiary }]}>Assign</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })
             ) : (
-              <Text style={styles.sheetBody}>Assignments Coming Soon.</Text>
+              <Text style={styles.sheetBody}>This building has no hero assignment slots.</Text>
+            )}
+            {building.heroSlots.length > 0 && !isPlaced && (
+              <Text style={styles.sheetFootnote}>Place this building in your Realm to assign heroes.</Text>
             )}
             <Text style={styles.sheetFootnote}>{"\n" + REALM_HERO_ASSIGNMENT_NOTE}</Text>
 
@@ -725,6 +921,83 @@ function BuildingActionSheet({
             </View>
             {building.linkKind === "placeholder" && !building.comingSoon && (
               <Text style={styles.sheetFootnote}>{building.linkLabel}</Text>
+            )}
+          </ScrollView>
+
+          {pickerSlot !== null && (
+            <HeroPickerModal
+              player={player}
+              alreadyAssigned={assignedElsewhere}
+              accentColor={color}
+              onPick={(heroId) => assignHero(pickerSlot, heroId)}
+              onClose={() => setPickerSlot(null)}
+            />
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// Modal for choosing which owned hero to assign to a Realm producer slot.
+// Heroes already assigned to another slot in THIS building are disabled to
+// prevent double-booking a single hero on the same building.
+function HeroPickerModal({
+  player, alreadyAssigned, accentColor, onPick, onClose,
+}: {
+  player: any;
+  alreadyAssigned: string[];
+  accentColor: string;
+  onPick: (heroId: string) => void;
+  onClose: () => void;
+}) {
+  const owned: string[] = player?.heroes_owned || [];
+  const heroes = owned
+    .map((id) => HEROES.find((h) => h.id === id))
+    .filter((h): h is (typeof HEROES)[number] => !!h);
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.pickerSheet} onPress={(e) => e.stopPropagation()} testID="realm-hero-picker">
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetName}>Assign a Hero</Text>
+              <Text style={styles.sheetDistrict}>Boosts this building's production rate</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10} testID="realm-picker-close">
+              <Ionicons name="close" size={22} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+          </View>
+          <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+            {heroes.length === 0 ? (
+              <Text style={styles.sheetBody}>You have no heroes yet. Recruit heroes to assign them here.</Text>
+            ) : (
+              heroes.map((h) => {
+                const taken = alreadyAssigned.includes(h.id);
+                return (
+                  <Pressable
+                    key={h.id}
+                    style={[styles.pickerRow, taken && styles.prodCollectDisabled]}
+                    disabled={taken}
+                    onPress={() => onPick(h.id)}
+                    testID={`realm-picker-hero-${h.id}`}
+                  >
+                    <View style={[styles.pickerAvatar, { borderColor: accentColor, backgroundColor: accentColor + "1f" }]}>
+                      <Ionicons name="person" size={18} color={accentColor} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pickerName}>{h.name}</Text>
+                      <Text style={styles.pickerMeta}>{h.role} · {h.element}</Text>
+                    </View>
+                    {taken ? (
+                      <Text style={styles.pickerTaken}>Assigned here</Text>
+                    ) : (
+                      <Ionicons name="add-circle" size={22} color={accentColor} />
+                    )}
+                  </Pressable>
+                );
+              })
             )}
           </ScrollView>
         </Pressable>
@@ -1195,4 +1468,84 @@ const styles = StyleSheet.create({
   },
   decorName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
   decorFlavor: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+
+  // Realm-page production summary panel
+  prodPanel: {
+    marginHorizontal: SPACING.lg, marginBottom: SPACING.md, padding: SPACING.md,
+    borderRadius: RADIUS.lg, backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  prodHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: SPACING.sm },
+  prodTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "800", letterSpacing: 0.3 },
+  prodEmpty: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17 },
+  prodRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: SPACING.sm,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  prodRowMain: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flex: 1 },
+  prodIcon: {
+    width: 38, height: 38, borderRadius: RADIUS.md, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+  },
+  prodName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
+  prodMeta: { fontSize: 12, marginTop: 1, color: COLORS.onSurfaceSecondary },
+  prodSub: { color: COLORS.onSurfaceTertiary, fontSize: 10.5, marginTop: 1 },
+  prodCollect: {
+    flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.brand,
+    paddingHorizontal: SPACING.sm, paddingVertical: 7, borderRadius: RADIUS.pill,
+  },
+  prodCollectDisabled: { opacity: 0.45 },
+  prodCollectTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "800" },
+  prodNote: { color: COLORS.onSurfaceTertiary, fontSize: 10.5, lineHeight: 15, marginTop: SPACING.sm, fontStyle: "italic" },
+
+  // Production box inside the building sheet
+  prodSheetBox: {
+    marginTop: SPACING.xs, padding: SPACING.md, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  prodSheetPoints: { color: COLORS.onSurface, fontSize: 18, fontWeight: "800" },
+  prodSheetCap: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
+  prodSheetRate: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 4 },
+  prodSheetCollect: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: SPACING.sm,
+    backgroundColor: COLORS.brand, paddingVertical: SPACING.sm, borderRadius: RADIUS.pill,
+  },
+  prodSheetCollectTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "800" },
+
+  // Interactive hero-assignment slots
+  assignSlot: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.sm,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border,
+  },
+  assignRole: { color: COLORS.onSurface, fontSize: 12.5, fontWeight: "700" },
+  assignHeroName: { color: COLORS.brand, fontSize: 12, marginTop: 1, fontWeight: "600" },
+  assignFlavor: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1, lineHeight: 15 },
+  assignBtn: {
+    flexDirection: "row", alignItems: "center", gap: 3, borderWidth: 1.5, borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.sm, paddingVertical: 5,
+  },
+  assignBtnTxt: { fontSize: 12, fontWeight: "800" },
+  assignBtnClear: {
+    flexDirection: "row", alignItems: "center", gap: 3, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: RADIUS.pill, paddingHorizontal: SPACING.sm, paddingVertical: 5,
+  },
+  assignBtnClearTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700" },
+
+  // Hero picker modal
+  pickerSheet: {
+    position: "absolute", left: SPACING.lg, right: SPACING.lg, top: "18%",
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  pickerRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: SPACING.sm,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  pickerAvatar: {
+    width: 40, height: 40, borderRadius: RADIUS.md, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+  },
+  pickerName: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  pickerMeta: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
+  pickerTaken: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic" },
 });
