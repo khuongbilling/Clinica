@@ -11,6 +11,7 @@ import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { InlineNotice, useInlineNotice, MessageDialog } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
+import { playRewardCue } from "@/src/game/cues";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
@@ -367,6 +368,7 @@ function RewardsTab() {
     setBusyId(ms.id);
     const res = await claimMilestone(ms.id);
     setBusyId(null);
+    if (res.ok) playRewardCue(true);
     if (res.ok && res.earnedTitles?.length) {
       // A rare cosmetic Title is a memorable moment — surface a dedicated
       // celebratory callout (by name) instead of the generic claim toast.

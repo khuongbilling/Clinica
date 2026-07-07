@@ -9,6 +9,7 @@ import {
   CLASS_IDENTITIES, CLASS_IDS, ClassAbilityCard, ClassId, GUARDRAIL_LINES,
   canClaimTier, getClassTree, isTierClaimed,
 } from "@/src/game/classTree";
+import { playRewardCue } from "@/src/game/cues";
 import { getMaterialById } from "@/src/game/materials";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { usePlayer } from "@/src/game/store";
@@ -44,6 +45,7 @@ export default function ClassTreeScreen() {
     setBusyLevel(card.level);
     const res = await claimClassTier(activeId, card.level);
     setBusyLevel(null);
+    if (res.ok) playRewardCue(true);
     flashNotice(`${res.ok ? "Ability Unlocked" : "Not Yet"} — ${res.message}`);
   }
 

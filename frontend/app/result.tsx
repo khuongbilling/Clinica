@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BOSS_LORD_IMBALANCE, CODEX, ENEMIES } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
+import { playRewardCue } from "@/src/game/cues";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -129,6 +130,7 @@ export default function Result() {
       meta: { won, enemyId: enemy?.id, stars: starResult.stars },
     });
     if (won) {
+      playRewardCue(true);
       logEvent('stars_earned', 'result', { meta: { stars: starResult.stars, enemyId: enemy?.id } });
       if (mission) logEvent('region_progress_updated', 'result', { meta: { region: mission.kingdomRegion } });
     }

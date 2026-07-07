@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { DailyPulseToast } from "@/src/components/DailyPulseToast";
 import { PlayerProvider } from "@/src/game/store";
+import { SettingsProvider } from "@/src/game/settingsStore";
 import { preloadTabAssets } from "@/src/game/tabAssets";
 import { TutorialProvider } from "@/src/game/tutorialStore";
 import { TestSessionProvider } from "@/src/game/testSession";
@@ -36,6 +37,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.surface }}>
       <SafeAreaProvider>
         <PlayerProvider>
+          <SettingsProvider>
           <TutorialProvider>
             <TestSessionProvider>
               <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
@@ -49,6 +51,7 @@ export default function RootLayout() {
               <DailyPulseToast />
             </TestSessionProvider>
           </TutorialProvider>
+          </SettingsProvider>
         </PlayerProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

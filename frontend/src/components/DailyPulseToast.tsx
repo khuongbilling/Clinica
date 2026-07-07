@@ -5,6 +5,7 @@ import { ActivityIndicator, Animated, Easing, Platform, Pressable, StyleSheet, T
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { playRewardCue } from "@/src/game/cues";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import {
   allObjectivesComplete, ensureFreshDailyRounds, summarizeReward,
@@ -146,6 +147,7 @@ export function DailyPulseToast() {
   useEffect(() => {
     if (!dailyPulse || dailyPulse.id === lastId.current) return;
     lastId.current = dailyPulse.id;
+    playRewardCue(dailyPulse.allJustCompleted);
     showToast(toastFromPulse(dailyPulse));
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);

@@ -10,6 +10,8 @@ import { AVATAR_OPTIONS, getAvatarSource } from "@/src/game/avatars";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
 import { EVENT_TITLES, getEventTitle } from "@/src/game/worldEvent";
 import { usePlayer } from "@/src/game/store";
+import { useSettings } from "@/src/game/settingsStore";
+import { playRewardCue } from "@/src/game/cues";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
@@ -35,6 +37,7 @@ const MASTERY_LABELS: Record<string, string> = {
 export default function ProfileScreen() {
   const router = useRouter();
   const { player, resetPlayer, setAvatar, setActiveTitle } = usePlayer();
+  const { soundEnabled, hapticsEnabled, setSound, setHaptics } = useSettings();
   const { resetTutorials } = useTutorial();
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -232,6 +235,38 @@ export default function ProfileScreen() {
 
         <Text style={styles.section}>Settings</Text>
         <View style={styles.settingsCard}>
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => { const next = !soundEnabled; setSound(next); if (next) playRewardCue(false); }}
+            testID="profile-sound-toggle"
+          >
+            <Ionicons
+              name={soundEnabled ? "volume-high-outline" : "volume-mute-outline"}
+              size={18}
+              color={soundEnabled ? COLORS.brand : COLORS.onSurfaceTertiary}
+            />
+            <Text style={styles.settingsRowTxt}>Sound Effects</Text>
+            <View style={[styles.toggle, soundEnabled && styles.toggleOn]}>
+              <View style={[styles.toggleKnob, soundEnabled && styles.toggleKnobOn]} />
+            </View>
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => { const next = !hapticsEnabled; setHaptics(next); if (next) playRewardCue(false); }}
+            testID="profile-haptics-toggle"
+          >
+            <Ionicons
+              name="phone-portrait-outline"
+              size={18}
+              color={hapticsEnabled ? COLORS.brand : COLORS.onSurfaceTertiary}
+            />
+            <Text style={styles.settingsRowTxt}>Vibration (mobile)</Text>
+            <View style={[styles.toggle, hapticsEnabled && styles.toggleOn]}>
+              <View style={[styles.toggleKnob, hapticsEnabled && styles.toggleKnobOn]} />
+            </View>
+          </Pressable>
+          <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
             onPress={() => router.push("/tutorial")}
@@ -504,6 +539,16 @@ const styles = StyleSheet.create({
   settingsRowTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", flex: 1 },
   settingsDivider: { height: 1, backgroundColor: COLORS.border, marginLeft: SPACING.md + 18 + SPACING.sm },
   comingSoonTag: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  toggle: {
+    width: 42, height: 24, borderRadius: 12, padding: 3,
+    backgroundColor: COLORS.surfaceTertiary, justifyContent: "center",
+  },
+  toggleOn: { backgroundColor: COLORS.brand },
+  toggleKnob: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.onSurfaceTertiary,
+    alignSelf: "flex-start",
+  },
+  toggleKnobOn: { backgroundColor: COLORS.onBrand, alignSelf: "flex-end" },
   dangerZone: { borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.error + "35", backgroundColor: COLORS.error + "08" },
   dangerLabel: { color: COLORS.error, fontSize: 9, letterSpacing: 2, fontWeight: "700", paddingTop: SPACING.sm, paddingHorizontal: SPACING.md },
 });

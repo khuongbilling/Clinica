@@ -50,3 +50,4 @@
 - [University-first hub](university-first-hub.md) — University = prominent first destination; NarratorGuide (Mentor Bai) + illustrated BannerCards grouped in sections; deliberately reduced options; deep-link player=null shows loading fallback.
 - [Clinica UI token layer](clinica-ui-token-layer.md) — two coexisting themes: legacy dark COLORS (colors.ts) + new warm-dark luminous UI tokens (ui.ts) + ui/ primitives; per-screen migration, never global swap.
 - [Daily Ward Rounds](clinica-daily-rounds.md) — free daily loop (streak+3 objectives+weekly); progress credited by threading foldDailyProgress into existing reward handlers; weekly credited once/day on all-complete, not on check-in.
+- [Feedback cues (sound+haptics)](clinica-feedback-cues.md) — single playRewardCue helper (Web Audio chime + expo-haptics); mute settings live in standalone AsyncStorage settingsStore, NOT PlayerState.

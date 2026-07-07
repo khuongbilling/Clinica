@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
@@ -37,7 +38,7 @@ export default function UniversityRecruitScreen() {
     setBatch(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else setSingle(res.result || null);
+    else { setSingle(res.result || null); playRewardCue(false); }
     setBusy(false);
   };
 
@@ -48,7 +49,7 @@ export default function UniversityRecruitScreen() {
     setSingle(null);
     const res = await recruitTen();
     if (!res.ok) setError(res.message);
-    else setBatch(res.results || null);
+    else { setBatch(res.results || null); playRewardCue(true); }
     setBusy(false);
   };
 
