@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { MessageDialog } from "@/src/components/WebAlert";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TUTORIAL_LABELS, TUTORIALS, type TutorialId } from "@/src/game/tutorials";
 import { goBack } from "@/src/utils/navigation";
@@ -31,32 +32,21 @@ export default function TutorialCenterScreen() {
   const router = useRouter();
   const { completed, replayTutorial, resetTutorials } = useTutorial();
   const [resetting, setResetting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   async function handleReplay(id: TutorialId) {
     await replayTutorial(id);
     router.replace("/(tabs)");
   }
 
-  async function handleResetAll() {
-    Alert.alert(
-      "Reset All Tutorials?",
-      "This re-arms every coach-mark tutorial so it shows again. Your class, heroes, progress, and everything else in your save stay exactly as they are.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Reset Tutorials",
-          style: "destructive",
-          onPress: async () => {
-            setResetting(true);
-            try {
-              await resetTutorials();
-            } finally {
-              setResetting(false);
-            }
-          },
-        },
-      ],
-    );
+  async function doResetAll() {
+    setConfirmReset(false);
+    setResetting(true);
+    try {
+      await resetTutorials();
+    } finally {
+      setResetting(false);
+    }
   }
 
   return (
@@ -99,12 +89,24 @@ export default function TutorialCenterScreen() {
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerLabel}>RESET</Text>
-          <Pressable style={styles.resetBtn} onPress={handleResetAll} disabled={resetting} testID="tutorial-center-reset-all">
+          <Pressable style={styles.resetBtn} onPress={() => setConfirmReset(true)} disabled={resetting} testID="tutorial-center-reset-all">
             <Ionicons name="refresh" size={14} color={COLORS.error} />
             <Text style={styles.resetTxt}>Reset All Tutorials</Text>
           </Pressable>
         </View>
       </ScrollView>
+
+      <MessageDialog
+        visible={confirmReset}
+        title="Reset All Tutorials?"
+        message="This re-arms every coach-mark tutorial so it shows again. Your class, heroes, progress, and everything else in your save stay exactly as they are."
+        cancelLabel="Cancel"
+        confirmLabel="Reset Tutorials"
+        destructive
+        onCancel={() => setConfirmReset(false)}
+        onConfirm={doResetAll}
+        testID="tutorial-center-reset-dialog"
+      />
     </SafeAreaView>
   );
 }

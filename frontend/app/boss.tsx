@@ -5,10 +5,9 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Alert } from "react-native";
-
 import { BOSS_LORD_IMBALANCE } from "@/src/game/content";
 import { getEnemySprite } from "@/src/components/EnemySprites";
+import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { BOSS_ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
@@ -18,6 +17,7 @@ export default function BossPage() {
   const router = useRouter();
   const { player, spendStamina } = usePlayer();
   const { stamina, msUntilNext } = useLiveStamina(player);
+  const { notice, flashNotice } = useInlineNotice();
 
   if (!player) {
     return (
@@ -35,15 +35,14 @@ export default function BossPage() {
 
   const enter = async () => {
     if (!canFight) {
-      Alert.alert(
-        "Not Enough Shift Challenges",
-        `A boss encounter costs ${BOSS_ENCOUNTER_COST} Shift Challenges. You have ${stamina}. Next challenge in ${formatCountdown(msUntilNext)}.`,
+      flashNotice(
+        `Not enough Shift Challenges — a boss encounter costs ${BOSS_ENCOUNTER_COST}. You have ${stamina}. Next challenge in ${formatCountdown(msUntilNext)}.`,
       );
       return;
     }
     const ok = await spendStamina(BOSS_ENCOUNTER_COST);
     if (!ok) {
-      Alert.alert("Not Enough Shift Challenges", `A boss encounter costs ${BOSS_ENCOUNTER_COST} Shift Challenges.`);
+      flashNotice(`Not enough Shift Challenges — a boss encounter costs ${BOSS_ENCOUNTER_COST}.`);
       return;
     }
     router.push({ pathname: "/battle", params: { enemyId: boss.id } });
@@ -125,6 +124,12 @@ export default function BossPage() {
             Multi-system collapse. Read every clue. Choose one crisis at a time. The patient will deteriorate fast.
           </Text>
         </View>
+
+        {notice && (
+          <View style={{ marginHorizontal: SPACING.lg, marginBottom: SPACING.md }}>
+            <InlineNotice notice={notice} icon="flash" testID="boss-notice" />
+          </View>
+        )}
 
         {/* CTA */}
         {bossUnlocked ? (

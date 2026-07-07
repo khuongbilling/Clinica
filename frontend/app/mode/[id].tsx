@@ -2,11 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { getBannerImage } from "@/src/components/ModeBanners";
+import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { findMode, MODE_STATUS_LABEL } from "@/src/game/modeHub";
@@ -23,6 +24,7 @@ export default function ModeIntroPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { player } = usePlayer();
+  const { notice, flashNotice } = useInlineNotice();
   const mode = findMode(id);
 
   if (!player) {
@@ -55,11 +57,11 @@ export default function ModeIntroPage() {
 
   const begin = () => {
     if (locked) {
-      Alert.alert("The Fading Core is Sealed", "Complete at least one shift to unlock this encounter.");
+      flashNotice("The Fading Core is Sealed — complete at least one shift to unlock this encounter.");
       return;
     }
     if (!playable || !mode.route) {
-      Alert.alert(`${mode.title} — Coming Soon`, "This mode is still in development.");
+      flashNotice(`${mode.title} — Coming Soon. This mode is still in development.`);
       return;
     }
     router.push(mode.route as any);
@@ -138,6 +140,11 @@ export default function ModeIntroPage() {
 
       {/* Sticky CTA */}
       <View style={styles.ctaBar}>
+        {notice && (
+          <View style={{ marginBottom: SPACING.sm }}>
+            <InlineNotice notice={notice} icon="lock-closed" testID="mode-intro-notice" />
+          </View>
+        )}
         <Pressable
           style={[styles.cta, { backgroundColor: playable ? mode.accentColor : COLORS.surfaceTertiary }]}
           onPress={begin}

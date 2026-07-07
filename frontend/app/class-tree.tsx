@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import {
   CLASS_IDENTITIES, CLASS_IDS, ClassAbilityCard, ClassId, GUARDRAIL_LINES,
   canClaimTier, getClassTree, isTierClaimed,
@@ -20,6 +21,7 @@ export default function ClassTreeScreen() {
   const [viewingId, setViewingId] = useState<ClassId | null>(null);
   const [switchTarget, setSwitchTarget] = useState<ClassId | null>(null);
   const [busyLevel, setBusyLevel] = useState<number | null>(null);
+  const { notice, flashNotice } = useInlineNotice();
 
   if (!player) return null;
 
@@ -36,14 +38,14 @@ export default function ClassTreeScreen() {
     setBusyLevel(card.level);
     const res = await claimClassTier(activeId, card.level);
     setBusyLevel(null);
-    Alert.alert(res.ok ? "Ability Unlocked" : "Not Yet", res.message);
+    flashNotice(`${res.ok ? "Ability Unlocked" : "Not Yet"} — ${res.message}`);
   }
 
   async function confirmSwitch() {
     if (!switchTarget) return;
     const res = await setPlayerClass(switchTarget);
     setSwitchTarget(null);
-    Alert.alert(res.ok ? "Class Updated" : "Could Not Switch", res.message);
+    flashNotice(`${res.ok ? "Class Updated" : "Could Not Switch"} — ${res.message}`);
   }
 
   return (
@@ -58,6 +60,8 @@ export default function ClassTreeScreen() {
             <Text style={styles.title}>Class Tree</Text>
           </View>
         </View>
+
+        {notice && <InlineNotice notice={notice} icon="sparkles" testID="class-tree-notice" />}
 
         <View style={[styles.currentCard, { borderColor: CLASS_IDENTITIES[currentId].color + "55" }]} testID="class-tree-current">
           <View style={[styles.currentIcon, { backgroundColor: CLASS_IDENTITIES[currentId].color + "22", borderColor: CLASS_IDENTITIES[currentId].color }]}>

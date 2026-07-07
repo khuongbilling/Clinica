@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { goBack } from "@/src/utils/navigation";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { ModeCard } from "@/src/components/ModeCard";
+import { MessageDialog } from "@/src/components/WebAlert";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { RewardPreview } from "@/src/components/RewardPreview";
@@ -73,6 +75,7 @@ export default function UniversityHubScreen() {
   const { player } = usePlayer();
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
+  const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
 
   if (!player) return null;
   // Block direct navigation into a still-locked University.
@@ -178,10 +181,10 @@ export default function UniversityHubScreen() {
               mode={m}
               testID={`university-future-${m.id}`}
               onPress={() =>
-                Alert.alert(
-                  `${m.title} — Coming Soon`,
-                  m.subtitle + "\n\nThis feature is still in development.",
-                )
+                setInfo({
+                  title: `${m.title} — Coming Soon`,
+                  message: m.subtitle + "\n\nThis feature is still in development.",
+                })
               }
             />
           ))}
@@ -195,6 +198,15 @@ export default function UniversityHubScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <MessageDialog
+        visible={!!info}
+        title={info?.title ?? ""}
+        message={info?.message ?? ""}
+        confirmLabel="Got it"
+        onConfirm={() => setInfo(null)}
+        testID="university-info-dialog"
+      />
     </SafeAreaView>
   );
 }

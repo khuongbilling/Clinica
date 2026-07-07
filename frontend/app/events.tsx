@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EventTrackCard } from "@/src/components/events/EventTrackCard";
 import { MonetizationCard } from "@/src/components/events/MonetizationCard";
 import { StaminaPill } from "@/src/components/StaminaPill";
+import { MessageDialog } from "@/src/components/WebAlert";
 import { EVENT_TRACKS, EventTrackDef, MONETIZATION_CARDS, MonetizationCardDef } from "@/src/game/eventsHub";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
@@ -27,6 +28,7 @@ export default function EventsPage() {
   const { width } = useWindowDimensions();
   const isWide = width >= 760;
   const [tab, setTab] = useState<"events" | "offers">("events");
+  const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
 
   if (!player) {
     return (
@@ -37,17 +39,17 @@ export default function EventsPage() {
   }
 
   const openMonetizationInfo = (card: MonetizationCardDef) => {
-    Alert.alert(
-      `${card.title} — ${card.badge}`,
-      `${card.detail}\n\nNo purchases, billing, or platform store integrations are active. This is a design preview only.`,
-    );
+    setInfo({
+      title: `${card.title} — ${card.badge}`,
+      message: `${card.detail}\n\nNo purchases, billing, or platform store integrations are active. This is a design preview only.`,
+    });
   };
 
   const openEventInfo = (event: EventTrackDef) => {
-    Alert.alert(
-      `${event.title} — ${event.badge}`,
-      `${event.subtitle}\n\nFree Track: ${event.rewards.freeTrack}\nPremium Track (placeholder): ${event.rewards.premiumTrack}\n\nThis is a design preview — no rewards, timers, or gameplay changes are live yet. Premium content is always cosmetic, lore, or material — never exclusive power.`,
-    );
+    setInfo({
+      title: `${event.title} — ${event.badge}`,
+      message: `${event.subtitle}\n\nFree Track: ${event.rewards.freeTrack}\nPremium Track (placeholder): ${event.rewards.premiumTrack}\n\nThis is a design preview — no rewards, timers, or gameplay changes are live yet. Premium content is always cosmetic, lore, or material — never exclusive power.`,
+    });
   };
 
   const offersSection = (
@@ -138,6 +140,15 @@ export default function EventsPage() {
           offersSection
         )}
       </ScrollView>
+
+      <MessageDialog
+        visible={!!info}
+        title={info?.title ?? ""}
+        message={info?.message ?? ""}
+        confirmLabel="Got it"
+        onConfirm={() => setInfo(null)}
+        testID="events-info-dialog"
+      />
     </SafeAreaView>
   );
 }
