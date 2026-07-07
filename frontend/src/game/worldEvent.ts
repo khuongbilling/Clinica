@@ -48,13 +48,23 @@ export interface WorldEventPhase {
   badge: WorldEventBadge;
 }
 
+// ── Balance choice (single-player local model) ────────────────────────────────
+// In this local build the player's own Epidemic Tokens stand in for the whole
+// collective containment contribution, so the thresholds must be reachable by
+// one healer in a handful of sessions — otherwise the meter reads as "live but
+// stuck". We deliberately keep the original 1 : 5 : 10 phase ratio but scale the
+// absolute numbers down so that, paired with the per-run accrual in
+// computeEpidemicTokens (~25–45 tokens per Ward Shift run), a normal session of
+// ~6–10 runs visibly climbs the Phase I bar (roughly a third to a half of it),
+// Phase I clears in ~1–2 sessions, and Phase III (the Verdantha unlock) is a
+// multi-session goal rather than an unreachable grind.
 export const MIASMA_BLOOM_PHASES: WorldEventPhase[] = [
   {
     id: "phase_seedfall",
     label: "Phase I — Seedfall",
     description:
       "Initial spore dispersal detected. Ward shifts are encountering mutated Bloom-variants of known disease monsters. Containment protocols activated.",
-    threshold: 1000,
+    threshold: 500,
     badge: "Preview",
   },
   {
@@ -62,7 +72,7 @@ export const MIASMA_BLOOM_PHASES: WorldEventPhase[] = [
     label: "Phase II — Full Bloom",
     description:
       "Miasma density rising. Ward Defense perimeters are under elevated pressure. The University races to formulate a Research Countermeasure.",
-    threshold: 5000,
+    threshold: 2500,
     badge: "Planned",
   },
   {
@@ -70,10 +80,37 @@ export const MIASMA_BLOOM_PHASES: WorldEventPhase[] = [
     label: "Phase III — Convergence",
     description:
       "World Boss Verdantha materialises at the Sanctuary Core. All factions redirect resources to the final push.",
-    threshold: 10000,
+    threshold: 5000,
     badge: "Planned",
   },
 ];
+
+// ── Per-run token accrual (live) ──────────────────────────────────────────────
+// How many Epidemic Tokens a completed Ward Shift run against the Bloom awards.
+// Centralised here (rather than inline in battle.tsx) so the accrual scale and
+// the phase thresholds above stay balanced against each other in one place.
+//
+// Scale, for a mid-game run:
+//   base 12  +  stars×6 (0–18)  +  difficulty×4  [ +12 first clear ]
+//   → a 2★, difficulty-2 clear ≈ 32 tokens (44 on first clear).
+// Boss / World-event encounters are a major containment push (×2.5). At this
+// rate a normal 6–10 run session earns ~200–350 tokens, so the Phase I bar
+// (threshold 500) visibly climbs every session instead of barely moving.
+export function computeEpidemicTokens(opts: {
+  stars: number; // 0..3 clinical performance for the run
+  difficulty: number; // enemy.difficulty band (1..~6)
+  isBoss?: boolean;
+  isFirstClear?: boolean;
+}): number {
+  const stars = Math.max(0, Math.min(3, Math.round(opts.stars || 0)));
+  const difficulty = Math.max(1, Math.round(opts.difficulty || 1));
+  let tokens = 12; // base contribution for containing a Bloom shift run
+  tokens += stars * 6; // better clinical care contains more of the Bloom
+  tokens += difficulty * 4; // tougher wards seed denser Bloom
+  if (opts.isFirstClear) tokens += 12; // first-clear discovery bonus
+  if (opts.isBoss) tokens = Math.round(tokens * 2.5); // World-scale push
+  return Math.max(1, tokens);
+}
 
 // ── Containment progress (live, derived from the player's Epidemic Tokens) ─────
 // Single-player local model: the player's own Epidemic Tokens stand in for the
@@ -93,8 +130,10 @@ export function formatContainmentLabel(tokens: number, phase: WorldEventPhase): 
 // Lore: "Each cleared patient reduces the Sanctuary Corruption Meter by 1 point."
 // In this single-player local build every Epidemic Token earned represents a
 // cleared Bloom-patient, so the meter drains 1 point per token from its starting
-// maximum. A lower meter means a safer Sanctuary.
-export const SANCTUARY_CORRUPTION_MAX = 1000;
+// maximum. A lower meter means a safer Sanctuary. Kept in step with the Phase I
+// threshold so that fully pushing back the local corruption meter lines up with
+// clearing the first containment phase (see the balance note above).
+export const SANCTUARY_CORRUPTION_MAX = 500;
 
 export function getSanctuaryCorruption(tokens: number): number {
   return Math.max(0, SANCTUARY_CORRUPTION_MAX - Math.max(0, tokens));
@@ -134,7 +173,7 @@ export const MIASMA_BLOOM_SYSTEMS: SystemContribution[] = [
     mechanicDesc:
       "Completing Ward Shift runs against Bloom-variant enemies earns Epidemic Tokens. Each cleared patient reduces the Sanctuary Corruption Meter by 1 point. Bloom-variant enemies are harder but drop Rare Loot.",
     contribution:
-      "Epidemic Tokens (1–3 per shift run), reduced Sanctuary Corruption, chance of Supply Crate drops from Bloom enemies.",
+      "Epidemic Tokens (~25–45 per shift run, scaled by clinical performance and difficulty), reduced Sanctuary Corruption, chance of Supply Crate drops from Bloom enemies.",
     rewardHint: "Bloom-tier enemies have a chance to drop World Boss Relic shards.",
     route: "/(tabs)",
   },
@@ -312,7 +351,9 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     ],
     badge: "Preview",
     metric: "tokens",
-    goal: 1000,
+    // Locked to the live Phase I threshold so this milestone triggers exactly
+    // when the containment bar clears Phase I — never drifts out of sync with it.
+    goal: MIASMA_BLOOM_PHASES[0].threshold,
     grant: { epidemicTokens: 2000, materials: { "World Boss Relic Shard": 3 } },
   },
   {

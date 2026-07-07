@@ -17,6 +17,7 @@ import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
+import { computeEpidemicTokens } from "@/src/game/worldEvent";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
@@ -596,10 +597,17 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       heroXpEarned = heroAwards.reduce((acc, a) => { acc[a.heroId] = a.xpAwarded; return acc; }, {} as Record<string, number>);
 
       // Miasma Bloom world event — a completed Ward Shift run against the
-      // outbreak earns 1–3 Epidemic Tokens, scaled by clinical performance
-      // (stars). Training and the scripted prologue tutorial don't count as
-      // real shift runs, so they award none.
-      epidemicTokensEarned = isTraining || isPrologueTutorial ? 0 : Math.max(1, starResult.stars);
+      // outbreak earns Epidemic Tokens scaled by clinical performance (stars),
+      // ward difficulty, first-clear and boss status. The exact scale (and how
+      // it balances against the phase thresholds) lives in computeEpidemicTokens
+      // so accrual and thresholds stay tuned together. Training and the scripted
+      // prologue tutorial don't count as real shift runs, so they award none.
+      epidemicTokensEarned = isTraining || isPrologueTutorial ? 0 : computeEpidemicTokens({
+        stars: starResult.stars,
+        difficulty: enemy.difficulty,
+        isBoss: isBossEnemy,
+        isFirstClear,
+      });
 
       const rewardsResult = await applyRewards({
         xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, epidemicTokens: epidemicTokensEarned, inventoryDelta,
