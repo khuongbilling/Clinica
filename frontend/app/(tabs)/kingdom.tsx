@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState, useEffect } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
@@ -207,7 +207,13 @@ export default function KingdomScreen() {
     return Array.from(set);
   }, [placement, validOrigins]);
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loading]} edges={["top"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
   // Block direct navigation into a still-locked Realm (tab hidden, route alive).
   if (!realmGate.unlocked) return <FeatureLockedView title="The Realm" reason={realmGate.reason} />;
 
@@ -1328,6 +1334,7 @@ function CustomizeModal({ visible, onClose }: { visible: boolean; onClose: () =>
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   topBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,

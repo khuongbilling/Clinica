@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
@@ -45,7 +45,13 @@ export default function HeroesScreen() {
     if (player) setTeam(player.active_team ?? []);
   }, [player]);
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.root, styles.loading]} edges={["top"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
   // Block direct navigation (deep links / in-app links) into a still-locked
   // Hall of Heroes — the tab bar hides the button, but the route stays alive.
   if (!gate.unlocked) return <FeatureLockedView title="The Hall of Heroes" reason={gate.reason} />;
@@ -211,6 +217,7 @@ export default function HeroesScreen() {
 
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
 
   header: {
     paddingHorizontal: SPACING.lg,

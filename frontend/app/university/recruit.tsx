@@ -19,7 +19,13 @@ export default function UniversityRecruitScreen() {
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loading]} edges={["top"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   const shards = player.codex_shards || 0;
   const tenCost = SUMMON_COST * 10;
@@ -144,6 +150,7 @@ function ResultTile({ result }: { result: RecruitResult }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
   backBtn: {
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",

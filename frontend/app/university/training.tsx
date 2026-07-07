@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
@@ -18,7 +18,13 @@ export default function TrainingHallScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
 
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loading]} edges={["top"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
 
   const owned = HEROES.filter((h) => player.heroes_owned.includes(h.id));
 
@@ -86,6 +92,7 @@ export default function TrainingHallScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
   backBtn: {
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",

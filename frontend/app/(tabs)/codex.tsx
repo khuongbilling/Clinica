@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BATTLE_MECHANICS, CODEX, ENEMIES } from "@/src/game/content";
@@ -29,7 +29,13 @@ export default function CodexScreen() {
   const router = useRouter();
   const { player } = usePlayer();
   const { completed, replayTutorial } = useTutorial();
-  if (!player) return null;
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loading]} edges={["top"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
   const unlocked = new Set(player.codex_unlocked);
   const depth = player.codex_depth || "simple";
 
@@ -199,6 +205,7 @@ export default function CodexScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  loading: { alignItems: "center", justifyContent: "center" },
   header: { padding: SPACING.lg, paddingLeft: SPACING.lg + 36, gap: 4 },
   backBtn: { position: "absolute", left: SPACING.sm, top: SPACING.lg, padding: 12, zIndex: 2, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   materialsBtn: { position: "absolute", right: SPACING.sm, top: SPACING.lg, padding: 12, zIndex: 2, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
