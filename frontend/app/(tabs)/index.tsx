@@ -57,11 +57,21 @@ const FALLBACK_SCENE = ARENA_SCENES.River;
 
 export default function RunHome() {
   const router  = useRouter();
-  const { player, loading } = usePlayer();
+  const { player, loading, openRoundsSignal } = usePlayer();
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
+  const roundsSignalSeen = useRef(0);
+
+  // A daily-progress cue (e.g. the "all duties complete" toast) can ask the hub
+  // to open the Rounds panel; honour the latest request once.
+  useEffect(() => {
+    if (openRoundsSignal > roundsSignalSeen.current) {
+      roundsSignalSeen.current = openRoundsSignal;
+      setShowRounds(true);
+    }
+  }, [openRoundsSignal]);
   const [eventBannerDismissed, setEventBannerDismissed] = useState<boolean | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 

@@ -37,6 +37,13 @@ second source of truth that can drift.
   auto-checks-in on open and shows a red count badge for pending check-in + claims.
 - Static "Daily Orders" preview card in `events.tsx` graduates by intercepting
   `openEventInfo` for id `daily-orders` and routing to `/(tabs)` instead of the dialog.
+- **Live progress cue:** crediting flows through the provider-scoped `foldDaily`
+  (replaced the old pure `foldDailyProgress`), which diffs objectives before/after
+  and emits an ephemeral, non-persisted `dailyPulse` on the store. A single global
+  `DailyPulseToast` mounted in root `_layout` (inside PlayerProvider) watches it so
+  ANY screen shows the cue instantly. The all-complete toast taps → `requestOpenDailyRounds()`
+  bumps `openRoundsSignal`, which the hub watches to auto-open the panel. Any NEW
+  fold call site must use `foldDaily`, not re-add a pure fold, or its cue is lost.
 - **Recurring lesson still applies:** `daily_rounds` had to be added to backend
   Player + PlayerUpdate + normalize backfill + defaultPlayer, or refresh wipes it.
   Pydantic `DailyRoundsState`/`DailyObjectiveState` field names must match the TS

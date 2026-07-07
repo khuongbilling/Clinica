@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
+import { DailyPulseToast } from "@/src/components/DailyPulseToast";
 import { PlayerProvider } from "@/src/game/store";
 import { preloadTabAssets } from "@/src/game/tabAssets";
 import { TutorialProvider } from "@/src/game/tutorialStore";
@@ -45,6 +46,7 @@ export default function RootLayout() {
                   animation: "fade",
                 }}
               />
+              <DailyPulseToast />
             </TestSessionProvider>
           </TutorialProvider>
         </PlayerProvider>
