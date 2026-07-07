@@ -54,7 +54,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
-  const { isCompleted, startTutorial, onRequiredAction, currentStep, activeTutorialId } = useTutorial();
+  const { isCompleted, startTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
@@ -866,7 +866,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {/* During a bottom-placed guided step, reserve space so the tutorial
           narrative box floats below the action buttons instead of covering
           (and blocking taps on) them on short/mobile-mirror web viewports. */}
-      <View style={[styles.zoneD, guidedStep?.placement === "bottom" && styles.zoneDGuidedReserve]}>
+      <View style={[styles.zoneD, guidedStep?.placement === "bottom" && { marginBottom: guidedReserve || 220 }]}>
         {/* Objective strip / adaptive feedback banner */}
         {feedbackMsg ? (
           <View style={styles.feedbackBanner}>
@@ -1414,7 +1414,6 @@ const styles = StyleSheet.create({
 
   // ── Zone D: Actions ──
   zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm, overflow: "hidden" },
-  zoneDGuidedReserve: { marginBottom: 220 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, paddingBottom: SPACING.sm },
   actionBtn: {
     width: "48.5%", minHeight: 70, padding: 8, borderRadius: 4,

@@ -20,6 +20,11 @@ interface TutorialCtx {
   resetTutorials: () => Promise<void>;
   isCompleted: (id: TutorialId) => boolean;
   onRequiredAction: (actionType: string, skillId?: string) => void;
+  /** Vertical space (px) a bottom-placed guided box currently needs, measured
+   *  live by TutorialOverlay so screens can reserve exactly enough room and
+   *  never let the box cover the control it points to. 0 when not applicable. */
+  guidedReserve: number;
+  setGuidedReserve: (h: number) => void;
 }
 
 const Ctx = createContext<TutorialCtx | null>(null);
@@ -43,6 +48,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [completed, setCompleted] = useState<TutorialProgress>({});
   const [activeTutorialId, setActiveTutorialId] = useState<TutorialId | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const [guidedReserve, setGuidedReserve] = useState(0);
 
   useEffect(() => {
     loadProgress().then(setCompleted);
@@ -146,8 +152,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     resetTutorials,
     isCompleted,
     onRequiredAction,
+    guidedReserve,
+    setGuidedReserve,
   }), [completed, activeTutorialId, stepIndex, currentStep, totalSteps,
-    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials, isCompleted, onRequiredAction]);
+    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials, isCompleted, onRequiredAction,
+    guidedReserve]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

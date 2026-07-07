@@ -74,7 +74,7 @@ function SystemPortrait({ identity, size = 40 }: { identity: SystemIdentity; siz
 }
 
 export function TutorialOverlay() {
-  const { currentStep, stepIndex, totalSteps, advanceStep, skipTutorial, activeTutorialId } = useTutorial();
+  const { currentStep, stepIndex, totalSteps, advanceStep, skipTutorial, activeTutorialId, setGuidedReserve } = useTutorial();
   const insets = useSafeAreaInsets();
   const { player } = usePlayer();
   const [instant, setInstant] = useState(false);
@@ -83,6 +83,15 @@ export function TutorialOverlay() {
   useEffect(() => {
     setInstant(false);
   }, [stepId]);
+
+  // Reserve is only meaningful while a bottom-placed guided box is showing.
+  // Clear it whenever we're not (top/center box, banner, or overlay hidden) so
+  // screens don't keep dead bottom padding after the step advances.
+  const isBottomGuidedBox = !!(currentStep?.requireAction && currentStep?.placement === "bottom");
+  useEffect(() => {
+    if (!isBottomGuidedBox) setGuidedReserve(0);
+    return () => setGuidedReserve(0);
+  }, [isBottomGuidedBox, setGuidedReserve]);
 
   if (!activeTutorialId || !currentStep) return null;
 
@@ -119,6 +128,9 @@ export function TutorialOverlay() {
       <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
         <Pressable
           onPress={() => setInstant(true)}
+          onLayout={placement === "bottom" && currentStep.requireAction
+            ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.md + SPACING.sm)
+            : undefined}
           style={[
             styles.narrativeBox,
             isSystem && { borderColor: accent, shadowColor: accent },

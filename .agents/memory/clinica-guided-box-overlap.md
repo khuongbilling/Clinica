@@ -1,38 +1,28 @@
 ---
 name: Clinica guided tutorial box vs action buttons overlap
-description: On short/web viewports the bottom-placed TutorialOverlay narrative box (pointerEvents auto) covers and blocks the battle action buttons it points to; reserve layout space instead of relocating the box.
+description: The bottom-placed guided TutorialOverlay box can cover and block the battle button it points to; reserve its measured height in the layout rather than relocating it or guessing a fixed number.
 ---
 
 # Guided narrative box blocks the very button it points to
 
-The battle screen is a fixed flex column with no outer scroll: patient stats →
-scene → heroes/AP/tabs → action/skill area (the last zone is `flex:1` and sits
-at the very bottom). The guided `TutorialOverlay` renders an absolute overlay;
-for `placement: "bottom"` steps its narrative box sits at the bottom of the
-screen with `pointerEvents: auto`.
+The battle screen is a fixed flex column (no outer scroll) whose action/skill
+buttons sit in the bottom zone. The guided `TutorialOverlay` renders an absolute
+overlay; a `placement: "bottom"` box (dark bg, `pointerEvents: auto`) lands over
+that same bottom zone and swallows taps on the highlighted control.
 
-**Problem:** the skill buttons the guided step tells the user to tap live in the
-bottom action zone — the SAME region the bottom box overlays. On a tall native
-phone the zone has slack so the buttons sit above the box, but on a short web
-(phone-mirror iframe) viewport the zone is compressed and the box lands on top
-of the buttons, swallowing the tap. So the guided step becomes impossible to
-complete on web only.
+**Fix pattern:** reserve empty layout space at the bottom of the battle column
+while a bottom-placed guided step is active, so the buttons render *above* the
+box and taps pass through the `box-none` overlay container. Do NOT relocate the
+box to `top` (that hides the patient stats the tutorial is teaching you to watch).
 
-**Fix pattern:** do NOT relocate the box to `top` (that hides the patient
-stats the tutorial is teaching you to watch). Instead reserve empty layout
-space at the bottom of the battle column while a bottom-placed guided step is
-active, so the action buttons render *above* the box's region and the box
-floats over the reserved empty gap. Concretely: a conditional
-`marginBottom` on the action zone, gated on `guidedStep?.placement === "bottom"`.
-The overlay container is already `pointerEvents: box-none`, so once the buttons
-are outside the box's rectangle, taps pass straight through.
-
-**Why:** keeps both the buttons tappable and the top stats visible, works on
-every viewport size, and touches no battle/tutorial logic — pure layout.
+**Why a fixed reserve is not enough:** the box's real footprint varies by
+device — safe-area insets (Android nav bar) push it higher and long/wrapped text
+makes it taller, so a hardcoded pixel reserve overlapped again on Android.
+Measure the box (`onLayout` height + `insets.bottom` + spacing), publish it
+through the tutorial store, and have the screen reserve exactly that. Clear the
+reserve to 0 when the box isn't a bottom guided box (and on unmount) or dead
+bottom padding lingers in normal battle.
 
 **How to apply:** any new bottom-placed guided `requireAction` step whose target
-control lives in the bottom action zone is covered automatically by the reserve.
-Caveat: the reserve is a fixed constant sized for the short prologue copy; if a
-step's body text grows a lot (localization) the box could exceed it — then
-switch to a measured/dynamic box height rather than bumping the constant blindly.
-Top-placed steps (e.g. the cue step) don't get the reserve and don't need it.
+lives in the bottom action zone is handled automatically. Keep a small first-frame
+fallback (pre-measurement) so there's no flash of zero reserve.
