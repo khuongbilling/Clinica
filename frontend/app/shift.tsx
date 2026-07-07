@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -9,7 +9,9 @@ import { ModeCard } from "@/src/components/ModeCard";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
+import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { usePlayer } from "@/src/game/store";
+import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
@@ -19,13 +21,22 @@ import {
 } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
+const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
+function dailyRoundsUnlockedModes(player: any): string[] {
+  const ctx = { level: playerLevelFromXp(player?.xp ?? 0).level, firstWardShiftDone: (player?.runs_completed ?? 0) > 0, lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0 };
+  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
+}
+
 export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
   const { notice, flashNotice } = useInlineNotice();
+  const [showRounds, setShowRounds] = useState(false);
 
   const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
+  const roundsFresh = player ? ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state : null;
+  const roundsBadge = roundsFresh ? claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0) : 0;
 
   const gateCtx: CompoundGateContext = {
     level: playerLevel,
@@ -87,6 +98,21 @@ export default function ShiftPage() {
           <Text style={styles.title}>Choose Your Mode</Text>
         </View>
         <StaminaPill player={player} />
+        {/* Quest sticker — opens Daily Rounds / Journey panel */}
+        <Pressable
+          style={styles.questSticker}
+          onPress={() => setShowRounds(true)}
+          hitSlop={6}
+          testID="shift-quest-sticker"
+        >
+          <Ionicons name="list" size={18} color={COLORS.brand} />
+          <Text style={styles.questStickerTxt}>Quests</Text>
+          {roundsBadge > 0 && (
+            <View style={styles.questBadge}>
+              <Text style={styles.questBadgeTxt}>{roundsBadge > 9 ? "9+" : roundsBadge}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -238,6 +264,9 @@ export default function ShiftPage() {
           </>
         )}
       </ScrollView>
+
+      {/* Daily Rounds / Journey panel — triggered by Quest sticker button */}
+      <DailyRoundsPanel visible={showRounds} onClose={() => setShowRounds(false)} />
     </SafeAreaView>
   );
 }
@@ -290,4 +319,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.3,
   },
+  questSticker: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.brand + "18",
+    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.brand + "50",
+    paddingHorizontal: 10, paddingVertical: 6,
+    position: "relative",
+  },
+  questStickerTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  questBadge: {
+    position: "absolute", top: -5, right: -6,
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: COLORS.error, alignItems: "center", justifyContent: "center",
+  },
+  questBadgeTxt: { color: "#fff", fontSize: 9, fontWeight: "800" },
 });

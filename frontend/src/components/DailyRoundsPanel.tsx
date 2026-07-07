@@ -7,7 +7,7 @@ import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { getUiIcon } from "@/src/game/uiIcons";
-import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
+import { buildGateContext, checkFeatureGate, playerLevelFromXp } from "@/src/game/progression";
 import {
   DailyReward, DailyRoundsState, defaultDailyRoundsState, ensureFreshDailyRounds,
   allObjectivesComplete, WEEKLY_GOAL_TARGET, WEEKLY_GOAL_REWARD, ALL_COMPLETE_BONUS,
@@ -54,6 +54,63 @@ function ProgressBar({ value, target, color = COLORS.brand }: { value: number; t
   return (
     <View style={styles.barBg}>
       <View style={[styles.barFill, { width: `${Math.round(pct * 100)}%` as any, backgroundColor: color }]} />
+    </View>
+  );
+}
+
+// ── Journey Milestones — one-time achievement display (derived from player state, display-only) ──
+interface JMilestone { id: string; label: string; description: string; icon: string; done: boolean }
+
+function buildMilestones(player: any): JMilestone[] {
+  const level = playerLevelFromXp(player?.xp ?? 0).level;
+  const lessonsCompleted: string[] = player?.lessons_completed ?? [];
+  const hasAnyLesson = lessonsCompleted.length > 0;
+  const hasLotusLesson = lessonsCompleted.some((id: string) => id.startsWith('lotus:'));
+  const hasWardShiftWin = (player?.runs_completed ?? 0) >= 1;
+  const journalLogged = !!(
+    (player as any)?.wellness_log?.entries?.length ||
+    (player as any)?.wellness_log?.activities?.length ||
+    (player as any)?.wellness_entries > 0
+  );
+  const hasRealm = Object.keys(player?.realm_buildings ?? {}).filter((k: string) => k !== 'atrium').length > 0;
+  const chapter1Done = (player?.chapter_progress ?? 1) >= 2;
+
+  return [
+    { id: 'prologue',       label: 'Complete the Prologue',       description: 'Answer the first call and face the Infarct.',         icon: 'sparkles',      done: true },
+    { id: 'university',     label: 'Begin at University',          description: 'Start your first Lotus Lesson.',                     icon: 'school-outline', done: hasAnyLesson },
+    { id: 'first_lesson',   label: 'Complete a Lotus Lesson',      description: 'Finish a lesson in Vital Foundations.',              icon: 'leaf',           done: hasLotusLesson },
+    { id: 'ward_shift_win', label: 'Win Your First Ward Shift',    description: 'Purify a disease in a clinical case.',               icon: 'shield-checkmark-outline', done: hasWardShiftWin },
+    { id: 'journal',        label: 'Log a Journal Entry',          description: 'Record your first Lotus Plate Journal activity.',    icon: 'journal-outline', done: journalLogged },
+    { id: 'level_3',        label: 'Reach Level 3',                description: 'Grow your healer rank through victories.',           icon: 'trending-up',    done: level >= 3 },
+    { id: 'ward_defense',   label: 'Unlock Ward Defense',          description: 'Reach Level 4 to guard the ward from waves.',        icon: 'git-network-outline', done: level >= 4 },
+    { id: 'realm',          label: 'Build in the Realm',           description: 'Place your first structure in the Sanctuary.',      icon: 'business-outline', done: hasRealm },
+    { id: 'chapter_1',      label: 'Complete Chapter 1',           description: 'Advance to Chapter 2 of the healing journey.',      icon: 'trophy-outline', done: chapter1Done },
+  ];
+}
+
+function JourneyMilestones({ player }: { player: any }) {
+  if (!player) return null;
+  const milestones = buildMilestones(player);
+  const doneCount = milestones.filter((m) => m.done).length;
+  return (
+    <View style={styles.milestonesWrap}>
+      <View style={styles.milestonesProgress}>
+        <Text style={styles.milestonesProgressTxt}>{doneCount} / {milestones.length} achieved</Text>
+        <View style={styles.barBg}>
+          <View style={[styles.barFill, { width: `${Math.round((doneCount / milestones.length) * 100)}%` as any, backgroundColor: COLORS.brand }]} />
+        </View>
+      </View>
+      {milestones.map((m) => (
+        <View key={m.id} style={[styles.milestoneRow, m.done && styles.milestoneRowDone]}>
+          <View style={[styles.milestoneIcon, m.done && styles.milestoneIconDone]}>
+            <Ionicons name={(m.done ? 'checkmark' : m.icon) as any} size={14} color={m.done ? COLORS.success : COLORS.onSurfaceTertiary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.milestoneLabel, m.done && styles.milestoneLabelDone]}>{m.label}</Text>
+            <Text style={styles.milestoneDesc}>{m.description}</Text>
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
@@ -292,6 +349,10 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
               <RewardChips reward={WEEKLY_GOAL_REWARD} dim={state.weekly_claimed} />
             </View>
 
+            {/* Journey Milestones */}
+            <Text style={styles.sectionLabel}>JOURNEY MILESTONES</Text>
+            <JourneyMilestones player={player} />
+
             <Text style={styles.footNote}>
               All rewards are free — no purchases involved. Duties are drawn only from wards you've unlocked.
             </Text>
@@ -400,4 +461,22 @@ const styles = StyleSheet.create({
   barFill: { height: "100%", borderRadius: 3 },
 
   footNote: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic", lineHeight: 14, marginTop: SPACING.sm },
+
+  milestonesWrap: { gap: SPACING.xs },
+  milestonesProgress: { gap: 5, marginBottom: SPACING.xs },
+  milestonesProgressTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
+  milestoneRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, opacity: 0.7,
+  },
+  milestoneRowDone: { borderColor: COLORS.success + "35", backgroundColor: COLORS.success + "0C", opacity: 1 },
+  milestoneIcon: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.surfaceTertiary,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  milestoneIconDone: { backgroundColor: COLORS.success + "1A" },
+  milestoneLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
+  milestoneLabelDone: { color: COLORS.onSurface },
+  milestoneDesc: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 1 },
 });

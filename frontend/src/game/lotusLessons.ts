@@ -47,6 +47,9 @@ export interface LotusLessonNode {
   // Enemy id in ENEMIES/ENEMY_CLINICAL this node's concept pays off in Ward Shift.
   linkedCaseId?: string;
   payoffCopy?: string;
+  // Short learning labels shown in the lesson UI and on the result bridge banner.
+  // Format: "Health Skill: Noticing Cues" | "NCLEX Concept: Assessment" | "Clinical Habit: Reassess"
+  learningTags?: string[];
 }
 
 export interface LotusPath {
@@ -69,7 +72,8 @@ export const LOTUS_PATHS: LotusPath[] = [
         subtitle: 'Notice the simple signs your body gives you.',
         status: 'available',
         linkedCaseId: 'dehydration_wisp',
-        payoffCopy: 'Your Lotus Lesson helped you recognize the dehydration cue.',
+        payoffCopy: 'Your Lotus Lesson helped you recognize the dehydration cue — thirst, dry lips, low energy. You\'ll meet that pattern in the ward very soon.',
+        learningTags: ['Health Skill: Noticing Cues', 'NCLEX Concept: Assessment'],
         rewards: { insightCrystals: 2, crowns: 25, universityCredits: 10, xp: 15, grantHeroes: ['apprentice_seer', 'village_caretaker'] },
         interactions: [
           {
@@ -107,23 +111,101 @@ export const LOTUS_PATHS: LotusPath[] = [
           },
         ],
       },
+
+      // ── Lesson 2: Fever & Warmth ─────────────────────────────────────────
       {
         id: 'fever-and-warmth',
         pathId: 'vital-foundations',
         title: 'Recognizing Cues: Fever & Warmth',
-        subtitle: 'Coming soon — unlocks as you continue your training.',
-        status: 'coming_soon',
-        rewards: { insightCrystals: 0, crowns: 0, universityCredits: 0, xp: 0 },
-        interactions: [],
+        subtitle: 'Learn to read the body\'s heat signals.',
+        status: 'available',
+        linkedCaseId: 'fire_imp',
+        payoffCopy: 'The warmth cue you studied here is exactly what you\'ll see in the Fire Ward — the body\'s fever response, made visible. Scout first, then act.',
+        learningTags: ['Health Skill: Noticing Cues', 'Clinical Habit: Reassess', 'NCLEX Concept: Assessment'],
+        rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 15 },
+        interactions: [
+          {
+            type: 'info',
+            prompt: 'The body uses warmth as a messenger — not an enemy.',
+            detail: 'A rise in temperature is one of the body\'s oldest tools. It signals that something is happening internally — often the immune system responding to a threat. Warmth alone isn\'t a crisis, but it is worth noticing.',
+          },
+          {
+            type: 'choice',
+            prompt: 'Which group of signs together suggests the body may be responding to infection?',
+            choices: [
+              { text: 'Feeling warm, chills, and unusual fatigue', correct: true, feedback: 'Correct — warmth with chills and fatigue is a classic cluster of signs that the body is working hard to fight something.' },
+              { text: 'Feeling hungry, energetic, and alert', correct: false, feedback: 'Not quite — hunger and high energy aren\'t typical signs of the body responding to an infection.' },
+              { text: 'Feeling calm, cool, and well-rested', correct: false, feedback: 'Not quite — these signs suggest the body is comfortable, not responding to a challenge.' },
+            ],
+          },
+          {
+            type: 'info',
+            prompt: 'When warmth, chills, and fatigue appear together — rest, fluids, and reassessment are sensible first steps.',
+            detail: 'These cues don\'t always mean a serious illness. But they do mean: slow down, stay hydrated, and check again in a little while to see if the signs are improving, staying the same, or getting worse. That\'s the habit of reassessment.',
+          },
+          {
+            type: 'choice',
+            prompt: 'Someone has felt warm and very tired for two days. They also report chills. What is a sensible general response?',
+            choices: [
+              { text: 'Encourage rest, ensure fluids, and check again in a few hours', correct: true, feedback: 'Correct — rest and fluids support the body while you monitor whether the signs improve. Checking back in is the key habit.' },
+              { text: 'Assume it will pass and do nothing', correct: false, feedback: 'Not quite — two days of warmth with chills and fatigue is worth gentle monitoring, not ignoring.' },
+              { text: 'Expect the warmth to be permanent', correct: false, feedback: 'Not quite — fever patterns change. Reassessment helps you notice if things are getting better or worse.' },
+            ],
+          },
+          {
+            type: 'info',
+            prompt: 'The most important habit here is reassessment: you act gently, then you check again.',
+            detail: 'In the ward, this is called Reassess — the same pattern. A healer doesn\'t just treat once and walk away. They watch whether the patient responds, and they adjust. You\'ve just practiced the start of that habit.',
+          },
+        ],
       },
+
+      // ── Lesson 3: Breathing Basics ───────────────────────────────────────
       {
         id: 'breathing-basics',
         pathId: 'vital-foundations',
         title: 'Recognizing Cues: Breathing Basics',
-        subtitle: 'Coming soon — unlocks as you continue your training.',
-        status: 'coming_soon',
-        rewards: { insightCrystals: 0, crowns: 0, universityCredits: 0, xp: 0 },
-        interactions: [],
+        subtitle: 'Why breathing is always the first thing a healer checks.',
+        status: 'available',
+        linkedCaseId: 'air_sprite',
+        payoffCopy: 'The breathing cues you studied here — rate, effort, unusual sounds — are the same ones you\'ll use to Scout the Air Sprite in the ward. Notice first, then act.',
+        learningTags: ['NCLEX Concept: Priority', 'Health Skill: Noticing Cues', 'NCLEX Concept: Assessment'],
+        rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 15 },
+        interactions: [
+          {
+            type: 'info',
+            prompt: 'Breathing is always the first thing a healer checks — before anything else.',
+            detail: 'The body can manage without food for days. Without water for hours. But breathing? Minutes. That\'s why every clinical framework — ABC, ABCDE, SBAR — starts with the airway and breathing. It\'s not a rule someone invented; it\'s the body\'s own priority order.',
+          },
+          {
+            type: 'choice',
+            prompt: 'Which sign most clearly suggests someone may need immediate breathing support?',
+            choices: [
+              { text: 'Breathing faster than normal and saying they can\'t get enough air', correct: true, feedback: 'Correct — rapid breathing combined with a feeling of air hunger is a priority cue that the body is working hard just to breathe.' },
+              { text: 'Breathing slowly and feeling relaxed', correct: false, feedback: 'Not quite — slow, relaxed breathing is a sign of comfort, not distress. The priority cue is fast breathing with effort.' },
+              { text: 'Holding a normal conversation without effort', correct: false, feedback: 'Not quite — if someone can talk easily, their breathing is managing. Look for the effort, not just the rate.' },
+            ],
+          },
+          {
+            type: 'info',
+            prompt: 'Calm observation tells you more than rushing to act.',
+            detail: 'When you notice unusual breathing, the first step is to observe — not to immediately intervene. Count the breaths per minute (roughly). Look for effort: are the shoulders heaving? Are the nostrils flaring? Listen for sounds: wheezing, rattling, or none at all. This takes under a minute, and it shapes every decision after.',
+          },
+          {
+            type: 'choice',
+            prompt: 'You notice someone breathing quickly, with effort. Their lips look slightly blue. What should you do first?',
+            choices: [
+              { text: 'Observe carefully — count breaths, note effort and sounds — then act based on what you find', correct: true, feedback: 'Correct — a focused 30-second observation gives you the information to act well. The goal is targeted help, not blind response.' },
+              { text: 'Immediately start any available treatment without assessing further', correct: false, feedback: 'Not quite — acting without assessing can mean you miss the real cause. Observe first, then choose the right action.' },
+              { text: 'Wait and hope the signs resolve on their own', correct: false, feedback: 'Not quite — blue-tinged lips with fast, effortful breathing is a priority signal. Calm observation and then action are both needed.' },
+            ],
+          },
+          {
+            type: 'info',
+            prompt: 'In the ward, this is called Scouting — and it\'s the most powerful first move in every case.',
+            detail: 'Scout before you act. The Ward Shift clinical cases reward healers who observe first and then choose the right targeted action. The breathing priority you just learned is exactly the logic behind why Airway and Breathing lead every assessment.',
+          },
+        ],
       },
     ],
   },
@@ -157,6 +239,17 @@ export function firstIncompleteLotusNode(player: PlayerState): LotusLessonNode |
     for (const node of path.nodes) {
       if (node.status !== 'available') continue;
       if (!isLotusNodeComplete(player, node.id)) return node;
+    }
+  }
+  return undefined;
+}
+
+// Find the Lotus Lesson node (if any) linked to a specific Ward Shift enemy id.
+// Used by the lesson-to-battle bridge banner in shift-cases and result screens.
+export function getLotusNodeForEnemy(enemyId: string): LotusLessonNode | undefined {
+  for (const path of LOTUS_PATHS) {
+    for (const node of path.nodes) {
+      if (node.linkedCaseId === enemyId && node.status === 'available') return node;
     }
   }
   return undefined;

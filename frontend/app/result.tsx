@@ -12,6 +12,7 @@ import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
+import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getMission } from "@/src/game/missions";
 import { useTestSession } from "@/src/game/testSession";
 import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
@@ -93,6 +94,8 @@ export default function Result() {
   const profile = (player?.learning_profile as LearningProfile | undefined) || undefined;
   const explanationLayer = getExplanationLayer(player?.learning_profile);
   const victorySummary = enemy ? getVictorySummary(enemy.id, explanationLayer) : null;
+  const linkedLesson = enemy ? getLotusNodeForEnemy(enemy.id) : undefined;
+  const lessonComplete = (linkedLesson && player) ? isLotusNodeComplete(player, linkedLesson.id) : false;
   const diffMod = getDifficultyModifier(player?.difficulty as any);
   const starRules = getStarRules(profile, enemyClinical);
   const starResult = useMemo(() => {
@@ -423,6 +426,45 @@ export default function Result() {
                 ))}
               </>
             )}
+
+            {/* ── What This Case Taught — clinical reflection card ── */}
+            <View style={styles.reflectionCard} testID="result-reflection-card">
+              <View style={styles.reflectionHeader}>
+                <Ionicons name="leaf-outline" size={14} color={COLORS.brand} />
+                <Text style={styles.reflectionKicker}>WHAT THIS CASE TAUGHT</Text>
+              </View>
+              <View style={styles.reflectionSteps}>
+                <View style={styles.reflectionStep}>
+                  <Ionicons name="search-outline" size={12} color={COLORS.brand} />
+                  <Text style={styles.reflectionStepTxt}>Scout first — reveal cues before acting, so you treat the right system.</Text>
+                </View>
+                <View style={styles.reflectionStep}>
+                  <Ionicons name="shield-outline" size={12} color={COLORS.brand} />
+                  <Text style={styles.reflectionStepTxt}>Stabilize before countering — keep the patient safe, then address the cause.</Text>
+                </View>
+                <View style={styles.reflectionStep}>
+                  <Ionicons name="refresh-outline" size={12} color={COLORS.brand} />
+                  <Text style={styles.reflectionStepTxt}>Reassess after treatment — check whether the response improved or shifted.</Text>
+                </View>
+              </View>
+              {lessonComplete && linkedLesson && (
+                <View style={styles.reflectionLessonRow}>
+                  <Ionicons name="checkmark-circle" size={13} color={COLORS.brand} />
+                  <Text style={styles.reflectionLessonTxt}>
+                    Your Lotus Lesson <Text style={styles.reflectionLessonName}>{linkedLesson.title}</Text> prepared you for this encounter.
+                  </Text>
+                </View>
+              )}
+              {(linkedLesson?.learningTags ?? []).length > 0 && (
+                <View style={styles.reflectionTags}>
+                  {(linkedLesson!.learningTags!).map((tag) => (
+                    <View key={tag} style={styles.reflectionTag}>
+                      <Text style={styles.reflectionTagTxt}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
           </>
         )}
 
@@ -568,4 +610,29 @@ const styles = StyleSheet.create({
   kingdomSub: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
   regionBar: { height: 4, borderRadius: 2, backgroundColor: COLORS.border, overflow: "hidden" },
   regionFill: { height: "100%", backgroundColor: COLORS.brand, borderRadius: 2 },
+
+  reflectionCard: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "30",
+    borderLeftWidth: 3, borderLeftColor: COLORS.brand + "80",
+    padding: SPACING.md, gap: SPACING.sm,
+  },
+  reflectionHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  reflectionKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  reflectionSteps: { gap: 6, marginTop: 2 },
+  reflectionStep: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
+  reflectionStepTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, flex: 1 },
+  reflectionLessonRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 6,
+    backgroundColor: COLORS.brand + "0E", borderRadius: 6,
+    padding: SPACING.sm, marginTop: 2,
+  },
+  reflectionLessonTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, flex: 1 },
+  reflectionLessonName: { color: COLORS.brand, fontWeight: "700" },
+  reflectionTags: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 2 },
+  reflectionTag: {
+    backgroundColor: COLORS.brand + "14", borderRadius: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.brand + "28",
+  },
+  reflectionTagTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 0.3 },
 });

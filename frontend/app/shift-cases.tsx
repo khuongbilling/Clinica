@@ -13,6 +13,7 @@ import { QUEST_ICON } from "@/src/components/ModeBanners";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
+import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import {
   BOSS_ENCOUNTER_COST, ENCOUNTER_COST, formatCountdown, useLiveStamina,
 } from "@/src/game/stamina";
@@ -76,6 +77,10 @@ export default function ShiftCasesPage() {
 
   const accent = current ? (ELEMENT_COLORS[current.primarySystem] ?? COLORS.brand) : COLORS.brand;
 
+  // Lesson-to-battle bridge — check if this enemy has a completed Lotus Lesson linked to it.
+  const linkedLesson = current ? getLotusNodeForEnemy(current.id) : undefined;
+  const lessonComplete = linkedLesson ? isLotusNodeComplete(player, linkedLesson.id) : false;
+
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Header */}
@@ -113,6 +118,31 @@ export default function ShiftCasesPage() {
             <Text style={styles.questSub}>A rotating set of clinical cases — cycle through and choose one.</Text>
           </View>
         </View>
+
+        {/* Lesson-to-battle bridge banner — shown when a completed Lotus Lesson links here */}
+        {lessonComplete && linkedLesson && (
+          <View style={styles.lessonBridge} testID="lesson-bridge-banner">
+            <View style={styles.lessonBridgeIcon}>
+              <Ionicons name="leaf" size={16} color={COLORS.brand} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.lessonBridgeKicker}>LOTUS LESSON HELPS HERE</Text>
+              <Text style={styles.lessonBridgeTitle}>{linkedLesson.title}</Text>
+              <Text style={styles.lessonBridgeSub}>
+                {linkedLesson.payoffCopy ?? "Your lesson prepared you for the cues in this case. Scout first, then act."}
+              </Text>
+              {linkedLesson.learningTags && linkedLesson.learningTags.length > 0 && (
+                <View style={styles.lessonBridgeTags}>
+                  {linkedLesson.learningTags.map((tag) => (
+                    <View key={tag} style={styles.lessonBridgeTag}>
+                      <Text style={styles.lessonBridgeTagTxt}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {!canPlay && (
           <View style={styles.warn}>
@@ -296,6 +326,25 @@ const styles = StyleSheet.create({
 
   dots: { flexDirection: "row", justifyContent: "center", gap: 6, marginTop: -SPACING.xs },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.border },
+
+  lessonBridge: {
+    flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
+    backgroundColor: COLORS.brand + "12", borderWidth: 1, borderColor: COLORS.brand + "45",
+    borderRadius: RADIUS.md, padding: SPACING.md,
+  },
+  lessonBridgeIcon: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.brand + "20",
+    alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
+  },
+  lessonBridgeKicker: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  lessonBridgeTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", marginTop: 1 },
+  lessonBridgeSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  lessonBridgeTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 5 },
+  lessonBridgeTag: {
+    backgroundColor: COLORS.brand + "1A", borderRadius: 4,
+    paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.brand + "30",
+  },
+  lessonBridgeTagTxt: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 0.3 },
 
   section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.md, marginBottom: 2 },
   bossCard: {
