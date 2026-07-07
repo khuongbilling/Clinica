@@ -994,8 +994,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: 'Assignment updated.' };
   }, [updateState]);
 
-  // Collect the points a producer building has accrued into its wallet currency,
-  // then reset that building's accrual to zero from now.
+  // Collect the whole (floored) points a producer building has accrued into its
+  // wallet currency, keeping the sub-1 fractional remainder to accrue onward.
   const collectRealmProduction = useCallback(async (buildingId: string) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
@@ -1004,6 +1004,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!building || !building.production) return { ok: false, message: 'This building does not produce points.' };
     const lvl = (base.kingdom_levels || {})[building.kingdomLevelsKey] || 0;
     if (lvl <= 0) return { ok: false, message: 'Build this structure first.' };
+    // Producers only earn while on the board — reject collection if the building
+    // is currently in storage, even if a frozen snapshot still holds points.
+    if (!(base.realm_layout || {})[buildingId]) return { ok: false, message: 'Place this building in your Realm first.' };
     const count = realm.assignedHeroCount((base.realm_assignments || {})[buildingId]);
     const accrued = realm.computeAccruedPoints(building, lvl, count, (base.realm_production || {})[buildingId], Date.now());
     const amount = Math.floor(accrued);
