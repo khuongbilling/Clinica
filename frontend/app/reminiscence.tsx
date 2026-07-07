@@ -16,24 +16,34 @@ import { TypedText } from "@/src/components/reminiscence/TypedText";
 import { NarrativePanel } from "@/src/components/ui/NarrativePanel";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 
-// Push 6 — "Fragments of Before": the Memory Reminiscence visual-novel cutscene.
+// "Reminiscing / Fragments of Before": the Memory Reminiscence visual-novel
+// cutscene.
 //
 // Runs exactly once, immediately after Push 4's class confirmation
 // (post-recall.tsx redirects here instead of straight to the hub when
 // `player.seen_reminiscence` is false). A paced, skippable donghua/manhwa-style
-// visual novel: 15 tap-to-advance illustrated scene cards written as a single
-// first-person memory, dressed with lightweight Animated-API motion (fade /
-// slow zoom / slow pan / gentle pulse / heartbeat / lotus petals / rising light
-// motes / cold rain / a one-shot Lotus Recall burst) and optional "SYSTEM:"
-// lines. No video files, no frame-by-frame animation — every card is a single
-// still illustration dressed up with code-driven motion.
+// motion comic: 14 tap-to-advance illustrated scene cards written as one
+// connected first-person memory, dressed with lightweight Animated-API motion
+// (fade / slow zoom / slow pan / gentle pulse / heartbeat / lotus petals /
+// rising light motes / cold rain / a one-shot Lotus Recall burst) and optional
+// "SYSTEM:" lines. No video files, no frame-by-frame animation — every card is
+// a single still illustration dressed up with code-driven motion.
 //
-// The colour arc runs bright → dark → golden: warm hopeful memories, then the
-// cold weight of failure and grief, then the golden rebirth. An enigmatic
-// narrator — "The Lotus Keeper" — appears only near the end (scenes 9–10),
-// never dominating. Nothing is graphic; loss is shown symbolically (a wilting
-// lotus, rain, a fading heartbeat). Ends by transitioning toward Clinica
-// University, whose "Start Here" card already highlights the Lotus Lessons.
+// Story (current Clinica canon): the player was a HEALTH STUDENT in a world
+// like Earth, with an undecided path (nursing / medicine / public health /
+// mental health / research / teaching / leadership). Their first life ended
+// suddenly; they awakened in Clinica, gained power too easily, mistook power
+// for understanding, and failed against The Silent Infarction. Lotus Recall
+// returned them for a second chance — not for more strength, but for guided
+// learning that begins at Clinica University.
+//
+// The colour arc runs warm → dark → luminous: warm student memories, the sudden
+// dark of the first death, the gold of awakening, warm overconfidence, the dark
+// of the Silent Infarction and failure, then the golden rebirth. The enigmatic
+// narrator — "The Lotus Keeper" — appears only near the end (scenes 12–13),
+// ancient and instructional, never a tooltip. Nothing is graphic; loss is shown
+// symbolically (collapse, rain, a fading heartbeat). Ends by pointing the player
+// toward Clinica University, where the true journey begins.
 //
 // Bright "donghua" palette — intentionally separate from the app's dark COLORS
 // theme, since this scene reads as pearl/ivory/sky-blue/jade/lotus-pink/gold.
@@ -72,11 +82,11 @@ type Panel = {
 
 const PANELS: Panel[] = [
   {
-    kicker: "A LIFE OF PURPOSE",
+    kicker: "BEFORE CLINICA",
     lines: [
-      "Before this world… there was another. And in it, I had a dream.",
-      "To heal. To understand. To ease the pain of others.",
-      "It was everything to me.",
+      "Before Clinica, there was another life — a world not so different from Earth.",
+      "Classrooms. Deadlines. Crowded hallways. Futures that still felt open.",
+      "I was a student then. Still learning. Still searching. Still certain there would be time.",
     ],
     art: require("../assets/reminiscence/panel_01_classroom.png"),
     effect: "fadeIn",
@@ -85,11 +95,11 @@ const PANELS: Panel[] = [
     moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE PATH I CHOSE",
+    kicker: "A FUTURE NOT YET CHOSEN",
     lines: [
-      "So I gave it everything. Every late night. Every doubt swallowed in silence.",
-      "Every small step forward, I told myself the same quiet promise —",
-      "that one day, it would be enough.",
+      "I had not chosen a single path. Not yet.",
+      "Nursing called to me. So did medicine. Public health. Mental health. Research. Teaching. Leadership.",
+      "So many ways to heal — and I had not yet learned which one belonged to me.",
     ],
     art: require("../assets/reminiscence/panel_02_future.png"),
     effect: "zoomIn",
@@ -98,11 +108,11 @@ const PANELS: Panel[] = [
     moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE WORLD I SWORE TO PROTECT",
+    kicker: "WHY I WANTED TO HEAL",
     lines: [
-      "Patients. Colleagues. Friends who became family.",
-      "Their smiles. Their trust. The way they breathed easier when I walked in.",
-      "They were every reason I kept going.",
+      "If I had not yet chosen my profession, I had already chosen my reason.",
+      "I wanted to understand suffering. To ease fear.",
+      "To stand beside someone in their worst moment — and not look away.",
     ],
     art: require("../assets/reminiscence/scene_people.png"),
     effect: "panSlow",
@@ -111,55 +121,85 @@ const PANELS: Panel[] = [
     moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE SHIFT THAT BROKE ME",
+    kicker: "THE LIFE I THOUGHT WOULD CONTINUE",
     lines: [
-      "Then came the night that changed everything.",
-      "Alarms tearing the quiet apart. Running feet. Too many, all at once.",
-      "And one case I was so certain I could solve.",
+      "My life was unfinished in the ordinary way most lives are unfinished.",
+      "Assignments I still meant to complete. Messages I still meant to answer.",
+      "I believed the future would wait for me. I believed there would always be one more day.",
     ],
     art: require("../assets/reminiscence/panel_03_event.png"),
     effect: "panSlow",
-    tint: "dark",
+    tint: "warm",
+    rain: true,
   },
   {
-    kicker: "THE SILENT INFARCT",
+    kicker: "THE END OF THE FIRST LIFE",
     lines: [
-      "A quiet chest. A heart failing without a single cry for help.",
-      "The signs were there. The clues were there.",
+      "Then one ordinary moment became my last.",
+      "No grand warning. No storybook sign — only a sudden rupture.",
+      "The floor vanished beneath certainty. And then… there was only darkness.",
     ],
-    systemLines: ["SYSTEM: Insight archive incomplete."],
+    art: require("../assets/reminiscence/scene_flatline.png"),
+    effect: "fadeIn",
+    tint: "dark",
+    rain: true,
+  },
+  {
+    kicker: "AWAKENING IN CLINICA",
+    lines: [
+      "When I opened my eyes again, I was no longer in that world.",
+      "A realm where illness could take shape, and healing held true power.",
+      "This was Clinica. I did not know why I had been brought here — only that I had another life.",
+    ],
+    art: require("../assets/reminiscence/panel_05_arrival.png"),
+    effect: "fadeIn",
+    tint: "gold",
+    petals: true,
+    motes: true,
+    moteColor: "#FFF3D6",
+  },
+  {
+    kicker: "THE POWER THAT CAME TOO EASILY",
+    lines: [
+      "Fragments of who I had once been returned to me as instinct.",
+      "I could act. I could fight. I could heal.",
+      "Power came so easily that I mistook familiarity for understanding.",
+    ],
+    art: require("../assets/reminiscence/panel_06_mastery.png"),
+    effect: "zoomIn",
+    tint: "gold",
+    motes: true,
+    moteColor: "#FBE7B0",
+  },
+  {
+    kicker: "CONFIDENCE WITHOUT UNDERSTANDING",
+    lines: [
+      "I stopped questioning what I should have studied.",
+      "I treated symptoms before causes. I acted before I understood.",
+      "I thought confidence was the same as mastery. It was not.",
+    ],
+    art: require("../assets/reminiscence/scene_hollow.png"),
+    effect: "zoomIn",
+    tint: "warm",
+  },
+  {
+    kicker: "THE SILENT INFARCTION",
+    lines: [
+      "Then I met the enemy that power alone could never defeat.",
+      "The Silent Infarction. It did not overwhelm me — it did something worse.",
+      "It revealed me.",
+    ],
+    systemLines: ["SYSTEM: Hidden cues undetected."],
     art: require("../assets/reminiscence/panel_07_infarct.png"),
     effect: "heartbeat",
     tint: "dark",
   },
   {
-    kicker: "TOO SLOW. TOO SURE.",
+    kicker: "THE FAILURE",
     lines: [
-      "But I was too slow. Too proud. Too blind to read it in time.",
-      "And when I finally understood…",
-      "the monitor had already gone still.",
-    ],
-    art: require("../assets/reminiscence/scene_flatline.png"),
-    effect: "fadeIn",
-    tint: "cold",
-    rain: true,
-  },
-  {
-    kicker: "EVERYTHING I COULDN'T SAVE",
-    lines: [
-      "It was not one life. In the end, it was many.",
-      "And with each name I could not hold onto,",
-      "a small part of me died with them.",
-    ],
-    art: require("../assets/reminiscence/scene_could_not_save.png"),
-    effect: "fadeIn",
-    tint: "cold",
-  },
-  {
-    kicker: "THE WEIGHT OF REGRET",
-    lines: [
-      "I knelt in the rain and asked the question every healer fears to speak —",
-      "was I ever truly enough?",
+      "In that moment, my certainty fell apart.",
+      "The signs had been there. The warnings. The truth beneath the surface.",
+      "I had wanted to heal — but wanting had not been enough.",
     ],
     art: require("../assets/reminiscence/scene_regret.png"),
     effect: "fadeIn",
@@ -167,36 +207,25 @@ const PANELS: Panel[] = [
     rain: true,
   },
   {
-    kicker: "WHAT I BECAME",
+    kicker: "LOTUS RECALL",
     lines: [
-      "I was still a doctor. I still wore the coat.",
-      "But I no longer remembered what it meant to heal.",
-      "Only how it felt to fail.",
+      "But even that was not the end.",
+      "A light unfolded beneath me like a bloom opening in the dark.",
+      "Time trembled. Memory recoiled. I was not erased — I was returned.",
     ],
-    art: require("../assets/reminiscence/scene_hollow.png"),
-    effect: "zoomIn",
-    tint: "cold",
-  },
-  {
-    kicker: "IN THE DARKNESS",
-    lines: [
-      "And then… nothing. Weightless. Endless. I died.",
-      "Or so I believed —",
-      "until a single thread of light refused to let me fade.",
-    ],
-    systemLines: ["SYSTEM: Soul-thread detected."],
-    art: require("../assets/reminiscence/panel_04_darkness_thread.png"),
-    effect: "pulse",
-    tint: "dark",
+    systemLines: ["SYSTEM: Emergency Lotus Recall activated.", "SYSTEM: Soul-thread preserved."],
+    art: require("../assets/reminiscence/panel_08_lotus_recall.png"),
+    effect: "lotusRecall",
+    tint: "gold",
     petals: true,
   },
   {
     kicker: "THE VOICE",
     lines: [],
     keeperLines: [
-      "A voice called to me. Not with anger…",
-      "You grieve the ones you lost. Good.",
-      "Only those who still grieve are worth calling back.",
+      "Then a voice found me in the dark. Calm. Ancient. Neither cruel nor kind.",
+      "You mistook power for mastery. You acted before you understood.",
+      "You called yourself ready because the world had not yet corrected you. Now it has.",
     ],
     art: require("../assets/reminiscence/scene_lotus_keeper.png"),
     effect: "fadeIn",
@@ -205,12 +234,12 @@ const PANELS: Panel[] = [
     moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE LOTUS KEEPER",
+    kicker: "THE SECOND CHANCE",
     lines: [],
     keeperLines: [
-      "I am the Lotus Keeper. I do not offer forgiveness, healer.",
-      "I offer something you wasted the first time —",
-      "the chance to truly understand.",
+      "You were not returned to repeat your failure. You were returned to confront it.",
+      "This time, you will not begin with power. You will begin with study.",
+      "You will understand before you claim the right to heal.",
     ],
     art: require("../assets/reminiscence/scene_keeper_closeup.png"),
     effect: "zoomIn",
@@ -220,36 +249,11 @@ const PANELS: Panel[] = [
     moteColor: "#FFF3D6",
   },
   {
-    kicker: "A SECOND CHANCE",
-    lines: [],
-    keeperLines: [
-      "\u201CYou still wish to heal?\u201D — Then learn.",
-      "This time… understand first.",
-      "Now — open your eyes.",
-    ],
-    art: require("../assets/reminiscence/scene_keeper_closeup.png"),
-    effect: "pulse",
-    tint: "gold",
-    petals: true,
-  },
-  {
-    kicker: "LOTUS RECALL",
+    kicker: "CLINICA UNIVERSITY",
     lines: [
-      "Light poured through me — a warmth I had forgotten I could feel.",
-      "A second heartbeat. Blooming.",
-    ],
-    systemLines: ["SYSTEM: Emergency Lotus Recall activated.", "SYSTEM: Soul-thread preserved."],
-    art: require("../assets/reminiscence/panel_08_lotus_recall.png"),
-    effect: "lotusRecall",
-    tint: "gold",
-    petals: true,
-  },
-  {
-    kicker: "A NEW WORLD",
-    lines: [
-      "I opened my eyes to marble halls and morning gold — a world called Clinica.",
-      "The past does not define me.",
-      "But understanding it… will save the future.",
+      "And so I was sent back — not to my first world, but to the beginning of this one.",
+      "Ahead of me stood the University — not a detour, but the path I should have taken from the start.",
+      "This time, I will not mistake power for wisdom. This time, I will learn before I act.",
     ],
     art: require("../assets/reminiscence/panel_09_university.png"),
     effect: "fadeIn",

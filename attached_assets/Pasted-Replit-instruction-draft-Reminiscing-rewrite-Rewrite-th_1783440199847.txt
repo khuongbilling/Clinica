@@ -1,0 +1,95 @@
+Replit instruction draft — Reminiscing rewrite
+
+Rewrite the current “Reminiscing / Fragments of Before” sequence so it reflects the current Clinica story direction and reads as a smooth first-person narrative rather than short fragmented scene captions.
+
+Story requirements
+
+The reminiscence must clearly communicate:
+
+The player originally lived in another world similar to Earth
+They were a health student who wanted to help others but had not yet chosen a final healthcare path
+The player’s possible future paths included nursing, medicine, public health, mental health, teaching, research, leadership, and other healing careers
+Their first life ended unexpectedly
+They awakened in Clinica, the fantasy world of healing
+In that second life, they gained power too quickly and became overconfident
+They mistook power for understanding
+They failed against The Silent Infarction
+Lotus Recall activated and sent them back for a second chance
+The purpose of the second chance is not simply strength, but guided learning
+Clinica University is the place where that true journey begins
+Narrative tone
+
+Write the sequence as if the player is remembering their own story.
+Use connected first-person narrative prose, not short disconnected fragments.
+The text should feel reflective, emotional, clear, and suspenseful.
+Keep it mobile-readable with short paragraphs, but do not reduce it to one-line slogans.
+
+Structure
+
+Use 12–14 illustrated motion-comic scenes with donghua/manwha/anime-style visuals.
+
+Recommended scene flow:
+
+Before Clinica
+A Future Not Yet Chosen
+Why I Wanted to Heal
+The Life I Thought Would Continue
+The End of the First Life
+Awakening in Clinica
+The Power That Came Too Easily
+Confidence Without Understanding
+The Silent Infarction
+The Failure
+Lotus Recall
+The Voice
+Return to the Beginning
+Clinica University
+Important correction
+
+The story should not frame the player only as a physician.
+They should be presented as a health student with an undecided path, which better supports Clinica’s long-term healthcare career exploration theme.
+
+Narrator
+
+The mysterious guide should appear late in the reminiscence, near the final scenes.
+Use The Lotus Keeper as the temporary identity.
+The Lotus Keeper should feel ancient, calm, enigmatic, and instructional — not like a generic tooltip.
+
+Example lines:
+
+“You mistook power for mastery.”
+“This time, you will understand before you act.”
+“You were not returned to repeat your failure.”
+“You were returned to learn.”
+Art direction
+
+Use the same illustrated art style already used in the better Clinica banners:
+
+donghua/manwha/anime style
+hand-drawn feel
+clean character rendering
+consistent fantasy-medical academy design language
+warm academic scenes → dark failure scenes → white-gold recall → bright University hope
+
+Avoid:
+
+cyberpunk backgrounds
+disconnected text fragments
+generic stock fantasy
+overly realistic hospital imagery
+graphic death scenes
+Motion-comic behavior
+
+Do not make a full anime video.
+Use:
+
+full-screen illustrated panels
+tap to continue
+narration box at the bottom
+subtle fade/zoom/light particle effects
+optional skip after the first scene
+visible progress indicator
+final transition directly into Clinica University
+Goal
+
+The sequence should feel like a meaningful story chapter that explains why the player must study before entering the Ward, and it should emotionally support Clinica’s identity as a fantasy academy for healing, learning, and career discovery.
