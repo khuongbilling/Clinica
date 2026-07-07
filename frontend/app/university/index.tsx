@@ -216,6 +216,13 @@ export default function UniversityHubScreen() {
           onPress={() => router.push("/university/schools" as any)}
           testID="university-more-schools"
         />
+        <MoreRow
+          icon="compass"
+          title="Career Explorer"
+          desc="Healthcare is not one road. Discover the many paths a healer can walk."
+          onPress={() => router.push("/university/career-explorer" as any)}
+          testID="university-more-career-explorer"
+        />
 
         {/* FUTURE LEARNING — collapsed by default to reduce clutter */}
         <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">

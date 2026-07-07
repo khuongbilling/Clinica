@@ -75,9 +75,9 @@ export default function LotusJournalPage() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.lead}>
-          Log meals, hydration, and wellness habits, learn simple everyday nutrition tips, grow your Nutrition
-          Garden, and earn safe cosmetic rewards. This is entirely off-shift — it never spends shift energy or
-          shift time.
+          Log meals, hydration, sleep, movement, mindfulness, and reflections — learn simple everyday wellness
+          tips, grow your Nutrition Garden, and earn safe cosmetic rewards. Entirely off-shift — never spends
+          stamina or shift time. General wellness tools only, not medical advice.
         </Text>
 
         {/* Currencies */}

@@ -23,9 +23,14 @@ const MEAL_TYPES: { key: WellnessLogType; label: string; icon: string }[] = [
   { key: "dinner", label: "Dinner", icon: "moon-outline" },
   { key: "snack", label: "Snack", icon: "cafe-outline" },
 ];
-const OTHER_TYPES: { key: WellnessLogType; label: string; icon: string }[] = [
-  { key: "hydration", label: "Hydration", icon: "water-outline" },
-  { key: "checkin", label: "Wellness Check-In", icon: "heart-outline" },
+
+const WELLNESS_TYPES: { key: WellnessLogType; label: string; icon: string; color: string }[] = [
+  { key: "hydration", label: "Hydration", icon: "water-outline", color: COLORS.river },
+  { key: "sleep", label: "Sleep", icon: "bed-outline", color: COLORS.mind },
+  { key: "movement", label: "Movement", icon: "body-outline", color: COLORS.protection },
+  { key: "mindfulness", label: "Mindfulness", icon: "flower-outline", color: "#A78BFA" },
+  { key: "reflection", label: "Reflection", icon: "journal-outline", color: COLORS.brand },
+  { key: "checkin", label: "Wellness Check-In", icon: "heart-outline", color: COLORS.growth },
 ];
 
 const CATEGORY_ORDER: PlateCategory[] = ["protein", "carb", "veg_fruit_fiber", "fat_flavor", "drink", "treat"];
@@ -46,7 +51,40 @@ const HABIT_CHOICES = [
   { key: "hydration", label: "Stayed hydrated" },
 ];
 
-type Step = "type" | "plate" | "hydration" | "checkin" | "result";
+const SLEEP_RATINGS = [
+  { key: "great", label: "Slept great", icon: "sunny", color: COLORS.growth },
+  { key: "ok", label: "Slept okay", icon: "partly-sunny-outline", color: COLORS.energy },
+  { key: "fair", label: "A little restless", icon: "cloudy-outline", color: COLORS.onSurfaceSecondary },
+  { key: "poor", label: "Not enough sleep", icon: "rainy-outline", color: COLORS.onSurfaceTertiary },
+];
+
+const ACTIVITY_TYPES = [
+  { key: "walk", label: "Walk or jog" },
+  { key: "stretch", label: "Stretching" },
+  { key: "yoga", label: "Yoga" },
+  { key: "sports", label: "Sports or gym" },
+  { key: "dance", label: "Dance" },
+  { key: "cycling", label: "Cycling" },
+  { key: "other", label: "Something else" },
+];
+
+const MINDFUL_CHOICES = [
+  { key: "breathing", label: "Breathing exercise" },
+  { key: "meditation", label: "Short meditation" },
+  { key: "nature", label: "Nature walk or quiet moment" },
+  { key: "journaling", label: "Journaling" },
+  { key: "other", label: "Another mindful pause" },
+];
+
+const REFLECTION_PROMPTS = [
+  "How is your energy today?",
+  "Did you drink water today?",
+  "Did you move or stretch?",
+  "How did you rest last night?",
+  "What is one healthy choice you made?",
+];
+
+type Step = "type" | "plate" | "hydration" | "checkin" | "sleep" | "movement" | "mindfulness" | "reflection" | "result";
 
 export default function LotusJournalLogPage() {
   const router = useRouter();
@@ -57,6 +95,9 @@ export default function LotusJournalLogPage() {
   const [tileIds, setTileIds] = useState<string[]>([]);
   const [drinkChoice, setDrinkChoice] = useState<string | null>(null);
   const [habits, setHabits] = useState<string[]>([]);
+  const [sleepRating, setSleepRating] = useState<string | null>(null);
+  const [activityTypes, setActivityTypes] = useState<string[]>([]);
+  const [mindfulChoice, setMindfulChoice] = useState<string | null>(null);
   const [result, setResult] = useState<WellnessResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +106,9 @@ export default function LotusJournalLogPage() {
     setTileIds([]);
     setDrinkChoice(null);
     setHabits([]);
+    setSleepRating(null);
+    setActivityTypes([]);
+    setMindfulChoice(null);
     setResult(null);
   };
 
@@ -72,6 +116,10 @@ export default function LotusJournalLogPage() {
     setLogType(t);
     if (t === "hydration") setStep("hydration");
     else if (t === "checkin") setStep("checkin");
+    else if (t === "sleep") setStep("sleep");
+    else if (t === "movement") setStep("movement");
+    else if (t === "mindfulness") setStep("mindfulness");
+    else if (t === "reflection") setStep("reflection");
     else setStep("plate");
   };
 
@@ -80,6 +128,9 @@ export default function LotusJournalLogPage() {
   };
   const toggleHabit = (id: string) => {
     setHabits((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const toggleActivity = (id: string) => {
+    setActivityTypes((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const submit = async () => {
@@ -90,6 +141,14 @@ export default function LotusJournalLogPage() {
       input = { type: "hydration", drinkChoice: drinkChoice || "water" };
     } else if (logType === "checkin") {
       input = { type: "checkin", habits };
+    } else if (logType === "sleep") {
+      input = { type: "sleep", sleepRating: sleepRating || "ok" };
+    } else if (logType === "movement") {
+      input = { type: "movement", activityTypes };
+    } else if (logType === "mindfulness") {
+      input = { type: "mindfulness", mindfulChoice: mindfulChoice || "breathing" };
+    } else if (logType === "reflection") {
+      input = { type: "reflection" };
     } else {
       input = { type: logType, tileIds };
     }
@@ -115,25 +174,44 @@ export default function LotusJournalLogPage() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── Type selector ─────────────────────────────────────── */}
         {step === "type" && (
           <>
             <Text style={styles.lead}>What would you like to log?</Text>
+
+            <Text style={styles.sectionLbl}>MEALS</Text>
             <View style={styles.grid}>
-              {[...MEAL_TYPES, ...OTHER_TYPES].map((t) => (
+              {MEAL_TYPES.map((t) => (
                 <Pressable key={t.key} style={styles.typeCard} onPress={() => chooseType(t.key)}>
                   <Ionicons name={t.icon as any} size={22} color={COLORS.brand} />
                   <Text style={styles.typeLbl}>{t.label}</Text>
                 </Pressable>
               ))}
             </View>
+
+            <Text style={styles.sectionLbl}>WELLNESS CHECK-INS</Text>
+            <View style={styles.grid}>
+              {WELLNESS_TYPES.map((t) => (
+                <Pressable key={t.key} style={styles.typeCard} onPress={() => chooseType(t.key)}>
+                  <Ionicons name={t.icon as any} size={22} color={t.color} />
+                  <Text style={styles.typeLbl}>{t.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.wellnessNote}>
+              Wellness logs support reflection and healthy habits. They are general wellness tools, not medical advice.
+            </Text>
           </>
         )}
 
+        {/* ── Meal plate builder ────────────────────────────────── */}
         {step === "plate" && (
           <>
             <Text style={styles.lead}>
               Build your {MEAL_TYPES.find((m) => m.key === logType)?.label.toLowerCase()} plate. No exact calorie
-              counting needed — just tap what's on it.
+              counting needed — just tap what is on it.
             </Text>
             {CATEGORY_ORDER.map((cat) => (
               <View key={cat} style={{ gap: 8 }}>
@@ -166,6 +244,7 @@ export default function LotusJournalLogPage() {
           </>
         )}
 
+        {/* ── Hydration ─────────────────────────────────────────── */}
         {step === "hydration" && (
           <>
             <Text style={styles.lead}>How did you hydrate?</Text>
@@ -186,9 +265,10 @@ export default function LotusJournalLogPage() {
           </>
         )}
 
+        {/* ── Wellness Check-In ─────────────────────────────────── */}
         {step === "checkin" && (
           <>
-            <Text style={styles.lead}>How's today going? Select anything that applies — no wrong answers.</Text>
+            <Text style={styles.lead}>How is today going? Select anything that applies — no wrong answers.</Text>
             <View style={{ gap: 8 }}>
               {HABIT_CHOICES.map((h) => {
                 const selected = habits.includes(h.key);
@@ -206,6 +286,96 @@ export default function LotusJournalLogPage() {
           </>
         )}
 
+        {/* ── Sleep Check-In ────────────────────────────────────── */}
+        {step === "sleep" && (
+          <>
+            <Text style={styles.promptQ}>How did you rest?</Text>
+            <Text style={styles.lead}>No judgment here — just a gentle check-in on your sleep.</Text>
+            <View style={{ gap: 8 }}>
+              {SLEEP_RATINGS.map((r) => (
+                <Pressable
+                  key={r.key}
+                  style={[styles.habitRow, sleepRating === r.key && styles.tileSelected]}
+                  onPress={() => setSleepRating(r.key)}
+                >
+                  <Ionicons name={r.icon as any} size={18} color={sleepRating === r.key ? COLORS.onBrand : r.color} />
+                  <Text style={[styles.habitLbl, sleepRating === r.key && { color: COLORS.onBrand }]}>{r.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable style={[styles.submitBtn, !sleepRating && { opacity: 0.4 }]} onPress={submit} disabled={!sleepRating || submitting}>
+              <Text style={styles.submitBtnTxt}>Log Sleep</Text>
+            </Pressable>
+          </>
+        )}
+
+        {/* ── Movement Check-In ─────────────────────────────────── */}
+        {step === "movement" && (
+          <>
+            <Text style={styles.promptQ}>Did you move today?</Text>
+            <Text style={styles.lead}>Select anything that applies. Even a short walk counts.</Text>
+            <View style={{ gap: 8 }}>
+              {ACTIVITY_TYPES.map((a) => {
+                const selected = activityTypes.includes(a.key);
+                return (
+                  <Pressable key={a.key} style={[styles.habitRow, selected && styles.tileSelected]} onPress={() => toggleActivity(a.key)}>
+                    <Ionicons name={selected ? "checkbox" : "square-outline"} size={18} color={selected ? COLORS.onBrand : COLORS.onSurfaceTertiary} />
+                    <Text style={[styles.habitLbl, selected && { color: COLORS.onBrand }]}>{a.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable style={styles.submitBtn} onPress={submit} disabled={submitting}>
+              <Text style={styles.submitBtnTxt}>{activityTypes.length > 0 ? "Log Movement" : "Log — Nothing Today"}</Text>
+            </Pressable>
+          </>
+        )}
+
+        {/* ── Mindfulness Check-In ──────────────────────────────── */}
+        {step === "mindfulness" && (
+          <>
+            <Text style={styles.promptQ}>Did you take a mindful moment?</Text>
+            <Text style={styles.lead}>A minute of calm is still a minute of calm, no matter how it looks.</Text>
+            <View style={{ gap: 8 }}>
+              {MINDFUL_CHOICES.map((m) => (
+                <Pressable
+                  key={m.key}
+                  style={[styles.habitRow, mindfulChoice === m.key && styles.tileSelected]}
+                  onPress={() => setMindfulChoice(m.key)}
+                >
+                  <Ionicons name={mindfulChoice === m.key ? "radio-button-on" : "radio-button-off"} size={18} color={mindfulChoice === m.key ? COLORS.onBrand : COLORS.onSurfaceTertiary} />
+                  <Text style={[styles.habitLbl, mindfulChoice === m.key && { color: COLORS.onBrand }]}>{m.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable style={[styles.submitBtn, !mindfulChoice && { opacity: 0.4 }]} onPress={submit} disabled={!mindfulChoice || submitting}>
+              <Text style={styles.submitBtnTxt}>Log Mindful Moment</Text>
+            </Pressable>
+          </>
+        )}
+
+        {/* ── Reflection Prompt ─────────────────────────────────── */}
+        {step === "reflection" && (
+          <>
+            <Text style={styles.promptQ}>Take a moment to reflect.</Text>
+            <View style={styles.promptCard}>
+              {REFLECTION_PROMPTS.map((p, i) => (
+                <View key={i} style={styles.promptRow}>
+                  <Ionicons name="leaf-outline" size={13} color={COLORS.brand} />
+                  <Text style={styles.promptTxt}>{p}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.lead}>
+              You do not need to answer every prompt — just pause and notice. Then log when you are ready.
+            </Text>
+            <Pressable style={styles.submitBtn} onPress={submit} disabled={submitting}>
+              <Text style={styles.submitBtnTxt}>Log Reflection</Text>
+            </Pressable>
+          </>
+        )}
+
+        {/* ── Result ────────────────────────────────────────────── */}
         {step === "result" && result && (
           <View style={styles.resultCard}>
             <Text style={styles.resultRating}>{result.feedback.rating}</Text>
@@ -234,7 +404,7 @@ export default function LotusJournalLogPage() {
               {result.gemAwarded && (
                 <View style={styles.rewardPill}>
                   <Ionicons name="diamond" size={14} color={COLORS.mind} />
-                  <Text style={styles.rewardTxt}>+1 Lotus Gem</Text>
+                  <Text style={styles.rewardTxt}>+1 Insight Crystal</Text>
                 </View>
               )}
               {result.gemCapped && (
@@ -256,6 +426,7 @@ export default function LotusJournalLogPage() {
             </View>
           </View>
         )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -268,7 +439,10 @@ const styles = StyleSheet.create({
   kicker: { color: COLORS.growth, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
-  lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, marginBottom: SPACING.sm },
+  sectionLbl: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, marginTop: 4 },
+  lead: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20, marginBottom: SPACING.sm },
+  promptQ: { color: COLORS.onSurface, fontSize: 18, fontWeight: "600", lineHeight: 26 },
+  wellnessNote: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 17, fontStyle: "italic", marginTop: 4 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   typeCard: {
     width: "31%", minWidth: 100, alignItems: "center", gap: 6,
@@ -292,6 +466,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   habitLbl: { color: COLORS.onSurface, fontSize: 13 },
+  promptCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: SPACING.sm,
+  },
+  promptRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  promptTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, flex: 1 },
   submitBtn: { marginTop: SPACING.md, backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: "center" },
   secondaryBtn: { backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border },
   submitBtnTxt: { color: COLORS.onBrand, fontWeight: "700" },
@@ -302,12 +482,12 @@ const styles = StyleSheet.create({
   resultRating: { color: COLORS.brand, fontSize: 20, fontWeight: "700" },
   resultLabel: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   resultRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  resultTxt: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19 },
+  resultTxt: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19, flex: 1 },
   rewardRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   rewardPill: {
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill,
     paddingVertical: 6, paddingHorizontal: 10,
   },
-  rewardTxt: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600" },
+  rewardTxt: { color: COLORS.onSurface, fontSize: 12 },
 });

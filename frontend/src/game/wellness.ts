@@ -283,7 +283,10 @@ export function defaultWellnessState(now: Date = new Date()): WellnessState {
   };
 }
 
-export type WellnessLogType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'hydration' | 'checkin' | 'recipe' | 'lesson';
+export type WellnessLogType =
+  | 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  | 'hydration' | 'checkin' | 'recipe' | 'lesson'
+  | 'sleep' | 'movement' | 'mindfulness' | 'reflection';
 
 export interface WellnessLogInput {
   type: WellnessLogType;
@@ -292,6 +295,10 @@ export interface WellnessLogInput {
   habits?: string[];
   recipeId?: string;
   lessonId?: string;
+  // B8 wellness expansion
+  sleepRating?: string;
+  activityTypes?: string[];
+  mindfulChoice?: string;
 }
 
 export interface WellnessFeedback {
@@ -366,6 +373,55 @@ export function resolveWellnessLog(input: WellnessLogInput, wellness: WellnessSt
         ? 'A consistent bedtime supports steady energy and mood the next day.'
         : 'Small stress resets — a short walk, stretching, or a few slow breaths — add up over time.',
       explanation: 'Sleep, movement, and stress resets support your body the same way food does — steady habits build steady energy.',
+    };
+  } else if (input.type === 'sleep') {
+    const rating = input.sleepRating || 'ok';
+    meaningful = true;
+    petals = PETALS_CHECKIN;
+    gardenDelta = { heart: 5 };
+    signature = `sleep:${rating}:${today}`;
+    feedback = {
+      rating: 'Sleep Check-In',
+      strengths: ['Rest awareness'],
+      suggestion: rating === 'poor' || rating === 'fair'
+        ? 'Even a short rest or a consistent bedtime can help — small improvements in sleep add up over time.'
+        : 'A consistent sleep schedule helps your body repair and your mind stay sharp.',
+      explanation: 'Sleep is when your body heals, consolidates memories, and resets energy levels — prioritizing rest is a real wellness act.',
+    };
+  } else if (input.type === 'movement') {
+    const activities = input.activityTypes || [];
+    meaningful = activities.length > 0;
+    petals = PETALS_CHECKIN;
+    gardenDelta = { protein: 4, heart: 3 };
+    signature = `movement:${[...activities].sort().join(',')}:${today}`;
+    feedback = {
+      rating: meaningful ? 'Movement Logged' : 'Movement Noted',
+      strengths: meaningful ? activities.map((a) => a.charAt(0).toUpperCase() + a.slice(1)) : ['You checked in on movement — that counts!'],
+      suggestion: 'Even short bursts of movement — a 10-minute walk or a few stretches — support energy and circulation.',
+      explanation: 'Regular movement supports cardiovascular health, mood, and steady energy. Any movement is better than none.',
+    };
+  } else if (input.type === 'mindfulness') {
+    const choice = input.mindfulChoice || 'breathing';
+    meaningful = true;
+    petals = 5;
+    gardenDelta = { heart: 6 };
+    signature = `mindfulness:${choice}:${today}`;
+    feedback = {
+      rating: 'Mindful Moment',
+      strengths: ['Stress awareness', 'Mental reset'],
+      suggestion: 'Even one minute of slow, focused breathing can shift your nervous system toward calm.',
+      explanation: 'Mindfulness practices reduce stress hormones, improve focus, and help your body regulate — small pauses add up over a shift.',
+    };
+  } else if (input.type === 'reflection') {
+    meaningful = true;
+    petals = 5;
+    gardenDelta = { heart: 4 };
+    signature = `reflection:${today}`;
+    feedback = {
+      rating: 'Reflection Complete',
+      strengths: ['Self-awareness', 'Healthy habit recognition'],
+      suggestion: 'Noticing healthy choices — even small ones — makes it easier to build on them.',
+      explanation: 'Reflection is one of the most underrated wellness habits. Recognizing what went well helps the brain anchor positive patterns.',
     };
   } else if (input.type === 'recipe') {
     meaningful = true;

@@ -1,50 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Pressable } from "react-native";
 
-import { BazaarChipList } from "@/src/components/bazaar/BazaarChipList";
-import { BazaarRuleRow } from "@/src/components/bazaar/BazaarRuleRow";
-import { BazaarSectionCard } from "@/src/components/bazaar/BazaarSectionCard";
-import { StaminaPill } from "@/src/components/StaminaPill";
-import {
-  BAZAAR_STATUS,
-  BAZAAR_WELCOME,
-  BAZAAR_PURPOSE,
-  BAZAAR_TRADEABLE_SECTION,
-  BAZAAR_NON_TRADEABLE_SECTION,
-  BAZAAR_MARKETPLACE_RULES,
-  BAZAAR_TRADING_REQUIREMENTS,
-  BAZAAR_TAX_TIERS,
-  BAZAAR_TAX_NOTES,
-  BAZAAR_LISTING_FEES,
-  BAZAAR_SAFETY_GUIDELINES,
-} from "@/src/game/bazaarHub";
-import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-// ────────────────────────────────────────────────────────────
-// Push 8 — Sanctuary Bazaar Placeholder.
-// This screen is a polished, NON-FUNCTIONAL preview of the future player
-// marketplace. There is no live trading, no listings, no purchases, no
-// auctions, and no player-to-player transactions anywhere on this page —
-// every section is clearly informational and labeled Preview / Planned /
-// Coming Soon.
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// B9 Trust Cleanup — Sanctuary Bazaar is a Future Chapter preview only.
+// This screen shows what the Bazaar will eventually offer, with no live
+// trading, listings, purchases, auctions, or player-to-player transactions.
+// ────────────────────────────────────────────────────────────────────────────
+
+const BAZAAR_PILLARS = [
+  { icon: "swap-horizontal-outline", label: "Player-to-player item exchange", color: "#A78BFA" },
+  { icon: "pricetag-outline", label: "List and discover rare drops", color: "#22D3EE" },
+  { icon: "shield-checkmark-outline", label: "Scam-free with built-in safeguards", color: "#34D399" },
+  { icon: "leaf-outline", label: "Cosmetic-only crown transactions", color: COLORS.growth },
+];
+
+const BAZAAR_TEASER = [
+  "Trade cosmetic drops, material bundles, and Ward tokens with other players",
+  "Browse listings at your own pace — no live auction pressure",
+  "Safety guardrails built in from the start",
+  "No pay-to-win items will ever appear in the Bazaar",
+];
 
 export default function BazaarScreen() {
   const router = useRouter();
-  const { player } = usePlayer();
-
-  if (!player) {
-    return (
-      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]}>
-        <ActivityIndicator color={COLORS.brand} />
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -56,142 +39,67 @@ export default function BazaarScreen() {
           <Text style={styles.kicker}>SANCTUARY COMMERCE</Text>
           <Text style={styles.title}>Sanctuary Bazaar</Text>
         </View>
-        <StaminaPill player={player} />
-      </View>
-
-      <View style={styles.notice}>
-        <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
-        <Text style={styles.noticeTxt}>
-          {BAZAAR_STATUS.toUpperCase()} — this is a design preview only. No live trading, listings,
-          purchases, auctions, or player-to-player transactions exist yet.
-        </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Welcome overview */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="moon" size={14} color={COLORS.storm} />
-            <Text style={styles.heroBadgeTxt}>{BAZAAR_STATUS.toUpperCase()}</Text>
+
+        {/* Prominent preview banner */}
+        <View style={styles.previewBanner}>
+          <Ionicons name="time-outline" size={20} color={COLORS.storm} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.previewTitle}>Preview Only</Text>
+            <Text style={styles.previewBody}>
+              This feature will open in a future chapter. No live trading, listings, purchases, or player-to-player transactions exist yet.
+            </Text>
           </View>
-          <Text style={styles.heroKicker}>{BAZAAR_WELCOME.kicker}</Text>
-          <Text style={styles.heroTitle}>{BAZAAR_WELCOME.title}</Text>
-          <Text style={styles.heroBody}>{BAZAAR_WELCOME.body}</Text>
         </View>
 
-        {/* Marketplace purpose */}
-        <BazaarSectionCard title={BAZAAR_PURPOSE.title} icon="help-buoy-outline" accentColor="#A78BFA" intro={BAZAAR_PURPOSE.body} testID="bazaar-purpose">
-          <View style={styles.pillarRow}>
-            {BAZAAR_PURPOSE.pillars.map((p) => (
-              <View key={p.label} style={styles.pillar}>
-                <View style={styles.pillarIcon}>
-                  <Ionicons name={p.icon as any} size={16} color={COLORS.brand} />
-                </View>
-                <Text style={styles.pillarTxt} numberOfLines={2}>{p.label}</Text>
-              </View>
-            ))}
-          </View>
-        </BazaarSectionCard>
-
-        {/* Tradeable categories */}
-        <BazaarSectionCard
-          title={BAZAAR_TRADEABLE_SECTION.title}
-          icon={BAZAAR_TRADEABLE_SECTION.icon}
-          accentColor={BAZAAR_TRADEABLE_SECTION.accentColor}
-          intro={BAZAAR_TRADEABLE_SECTION.intro}
-          testID="bazaar-tradeable"
-        >
-          <BazaarChipList items={BAZAAR_TRADEABLE_SECTION.chips} accentColor={BAZAAR_TRADEABLE_SECTION.accentColor} icon="checkmark-circle-outline" />
-        </BazaarSectionCard>
-
-        {/* Non-tradeable categories */}
-        <BazaarSectionCard
-          title={BAZAAR_NON_TRADEABLE_SECTION.title}
-          icon={BAZAAR_NON_TRADEABLE_SECTION.icon}
-          accentColor={BAZAAR_NON_TRADEABLE_SECTION.accentColor}
-          intro={BAZAAR_NON_TRADEABLE_SECTION.intro}
-          testID="bazaar-non-tradeable"
-        >
-          <BazaarChipList items={BAZAAR_NON_TRADEABLE_SECTION.chips} accentColor={BAZAAR_NON_TRADEABLE_SECTION.accentColor} icon="close-circle-outline" />
-        </BazaarSectionCard>
-
-        {/* Marketplace rules */}
-        <BazaarSectionCard
-          title="Marketplace Rules"
-          icon="document-text-outline"
-          accentColor="#5B9BD5"
-          intro="Planned safeguards that will govern every trade once the Bazaar goes live."
-          testID="bazaar-rules"
-        >
-          {BAZAAR_MARKETPLACE_RULES.map((row) => (
-            <BazaarRuleRow key={row.label} row={row} accentColor="#5B9BD5" />
-          ))}
-        </BazaarSectionCard>
-
-        {/* Trading requirements */}
-        <BazaarSectionCard
-          title="Trading Requirements"
-          icon="checkbox-outline"
-          accentColor="#F59E0B"
-          intro="Requirements a healer must meet before they can buy or sell anything."
-          testID="bazaar-requirements"
-        >
-          {BAZAAR_TRADING_REQUIREMENTS.map((row) => (
-            <BazaarRuleRow key={row.label} row={row} accentColor="#F59E0B" />
-          ))}
-        </BazaarSectionCard>
-
-        {/* Taxes */}
-        <BazaarSectionCard
-          title="Taxes"
-          icon="calculator-outline"
-          accentColor="#F97316"
-          intro={BAZAAR_TAX_NOTES.intro}
-          testID="bazaar-taxes"
-        >
-          {BAZAAR_TAX_TIERS.map((tier) => (
-            <View key={tier.id} style={styles.taxRow}>
-              <Text style={styles.taxLabel}>{tier.label}</Text>
-              <Text style={styles.taxValue}>{tier.buyerTaxPercent}% buyer + {tier.sellerTaxPercent}% seller</Text>
-            </View>
-          ))}
-          <Text style={styles.footnote}>Buyer currency: {BAZAAR_TAX_NOTES.buyerCurrency}. {BAZAAR_TAX_NOTES.refinedGemCapNote}</Text>
-        </BazaarSectionCard>
-
-        {/* Listing fees */}
-        <BazaarSectionCard
-          title="Listing Fees"
-          icon="pricetag-outline"
-          accentColor="#22D3EE"
-          intro={BAZAAR_LISTING_FEES.intro}
-          testID="bazaar-listing-fees"
-        >
-          <BazaarRuleRow row={{ icon: "pricetags-outline", label: "Fee rate", value: `${BAZAAR_LISTING_FEES.feePercent}% of listing price (min ${BAZAAR_LISTING_FEES.minFee}, max ${BAZAAR_LISTING_FEES.maxFee})` }} accentColor="#22D3EE" />
-          <BazaarRuleRow row={{ icon: "diamond-outline", label: "Payable with", value: BAZAAR_LISTING_FEES.currencies.join(" or ") }} accentColor="#22D3EE" />
-          <BazaarRuleRow row={{ icon: "return-up-back-outline", label: "If the item sells", value: `${BAZAAR_LISTING_FEES.refundOnSellPercent}% of the listing fee is refunded` }} accentColor="#22D3EE" />
-          <BazaarRuleRow row={{ icon: "time-outline", label: "If the listing expires", value: BAZAAR_LISTING_FEES.lostOnExpire ? "The listing fee is not refunded" : "The listing fee is refunded" }} accentColor="#22D3EE" />
-        </BazaarSectionCard>
-
-        {/* Safety guidelines */}
-        <BazaarSectionCard
-          title="Safety Guidelines"
-          icon="shield-checkmark-outline"
-          accentColor="#34D399"
-          intro="Protections built in from the start to keep trading fair and scam-free."
-          testID="bazaar-safety"
-        >
-          {BAZAAR_SAFETY_GUIDELINES.map((row) => (
-            <BazaarRuleRow key={row.label} row={row} accentColor="#34D399" />
-          ))}
-        </BazaarSectionCard>
-
-        <View style={styles.closingNotice}>
-          <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
-          <Text style={styles.noticeTxt}>
-            Nothing on this page can be tapped to buy, sell, or trade anything. All numbers and rules
-            are planning placeholders and may change before the Bazaar ever opens.
+        {/* Hero card */}
+        <View style={styles.heroCard}>
+          <Text style={styles.heroKicker}>COMING IN A FUTURE CHAPTER</Text>
+          <Text style={styles.heroTitle}>The Sanctuary Bazaar</Text>
+          <Text style={styles.heroBody}>
+            A player-driven marketplace where healers can trade cosmetic items, material bundles, and ward tokens with each other — built from the ground up with fairness and safety in mind.
           </Text>
         </View>
+
+        {/* Pillars */}
+        <Text style={styles.sectionLbl}>WHAT THE BAZAAR WILL OFFER</Text>
+        <View style={styles.pillarGrid}>
+          {BAZAAR_PILLARS.map((p) => (
+            <View key={p.label} style={[styles.pillar, { borderColor: p.color + "44" }]}>
+              <View style={[styles.pillarIcon, { backgroundColor: p.color + "22" }]}>
+                <Ionicons name={p.icon as any} size={18} color={p.color} />
+              </View>
+              <Text style={styles.pillarTxt}>{p.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Teaser bullets */}
+        <Text style={styles.sectionLbl}>PLANNED FEATURES</Text>
+        <View style={styles.teaserCard}>
+          {BAZAAR_TEASER.map((item, i) => (
+            <View key={i} style={styles.teaserRow}>
+              <Ionicons name="ellipse" size={6} color={COLORS.brand} />
+              <Text style={styles.teaserTxt}>{item}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Return button */}
+        <Pressable style={styles.returnBtn} onPress={() => goBack(router, "/(tabs)/kingdom")} testID="bazaar-return">
+          <Ionicons name="home-outline" size={18} color={COLORS.onBrand} />
+          <Text style={styles.returnBtnTxt}>Return to Kingdom</Text>
+        </Pressable>
+
+        <View style={styles.footNote}>
+          <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+          <Text style={styles.footNoteTxt}>
+            All features shown are planning previews and may change before the Bazaar ever opens.
+          </Text>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -199,53 +107,47 @@ export default function BazaarScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
-  loading: { alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.sm },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   kicker: { color: COLORS.storm, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
-  notice: {
-    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
-    marginHorizontal: SPACING.lg, marginBottom: SPACING.sm,
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md,
+  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  previewBanner: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.md,
+    backgroundColor: COLORS.storm + "15", borderRadius: RADIUS.lg,
+    borderWidth: 1.5, borderColor: COLORS.storm + "50",
+    padding: SPACING.md,
   },
-  noticeTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, flex: 1, fontStyle: "italic" },
-  scroll: { padding: SPACING.lg, paddingTop: 0, paddingBottom: SPACING.xxxl, gap: SPACING.md },
+  previewTitle: { color: COLORS.storm, fontSize: 14, fontWeight: "700", marginBottom: 2 },
+  previewBody: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
   heroCard: {
-    borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.storm + "45",
-    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.lg, gap: 6,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.lg, gap: 6,
   },
-  heroBadge: {
-    flexDirection: "row", alignSelf: "flex-start", alignItems: "center", gap: 4,
-    backgroundColor: COLORS.storm + "22", borderColor: COLORS.storm + "55", borderWidth: 1,
-    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 4,
-  },
-  heroBadgeTxt: { color: COLORS.storm, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   heroKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
-  heroTitle: { color: COLORS.onSurface, fontSize: 19, fontWeight: "700" },
-  heroBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, marginTop: 2 },
-  pillarRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  heroTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" },
+  heroBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20, marginTop: 2 },
+  sectionLbl: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  pillarGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   pillar: {
-    flexBasis: "47%", flexGrow: 1, flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: 8,
-  },
-  pillarIcon: {
-    width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.brand + "22",
-    alignItems: "center", justifyContent: "center",
-  },
-  pillarTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, flex: 1, fontWeight: "600" },
-  taxRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.sm, paddingVertical: 8,
-  },
-  taxLabel: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
-  taxValue: { color: COLORS.onSurfaceSecondary, fontSize: 12 },
-  footnote: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15, fontStyle: "italic", marginTop: 2 },
-  closingNotice: {
-    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
+    flexBasis: "47%", flexGrow: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md,
+    borderWidth: 1, padding: SPACING.sm,
   },
+  pillarIcon: { width: 34, height: 34, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
+  pillarTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1, lineHeight: 16 },
+  teaserCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: SPACING.sm,
+  },
+  teaserRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingTop: 2 },
+  teaserTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, flex: 1 },
+  returnBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: 14,
+    marginTop: SPACING.sm,
+  },
+  returnBtnTxt: { color: COLORS.onBrand, fontSize: 15, fontWeight: "700" },
+  footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
+  footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16, fontStyle: "italic" },
 });
