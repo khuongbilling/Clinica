@@ -61,6 +61,28 @@ export interface ModeCardDef {
   entryLabel?: string;
 }
 
+// ---------- Learn (hub entry) ----------
+// Clinica University is the FIRST mode that opens — the gateway to every
+// clinical challenge. It leads its own illustrated banner at the top of the
+// Ward Operations hub, ahead of Ward Shift → Ward Defense → Boss Ward, matching
+// the order in which the modes unlock. Routes straight to `/university` (it is
+// its own hub) rather than the shared `/mode/[id]` intro.
+export const UNIVERSITY_HUB_MODE: ModeCardDef = {
+  id: "university",
+  title: "Clinica University",
+  subtitle: "Study the reasoning behind every treatment — your first lessons reward your first heroes.",
+  icon: "school",
+  accentColor: "#D4AF37",
+  status: "active",
+  size: "large",
+  route: "/university",
+  rewardPreview: "First Heroes, Clinical Mastery",
+  imageKey: "university",
+  entryLabel: "Enter the University",
+  artBrief:
+    "A grand jade-and-gold fantasy-medical academy hall with student healers studying glowing anatomy sigils and floating lesson scrolls.",
+};
+
 // ---------- Continue ----------
 export const WARD_SHIFT_MODE: ModeCardDef = {
   id: "ward-shift",

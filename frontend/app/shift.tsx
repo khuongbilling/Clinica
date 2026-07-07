@@ -15,7 +15,7 @@ import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGa
 import { goBack } from "@/src/utils/navigation";
 import {
   CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
-  WARD_SHIFT_MODE, WELLNESS_MODES,
+  UNIVERSITY_HUB_MODE, WARD_SHIFT_MODE, WELLNESS_MODES,
 } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -104,7 +104,26 @@ export default function ShiftPage() {
           />
         )}
 
-        {/* ── Clinical Challenges ── */}
+        {/* ── Learn — Clinica University is the first mode that opens, so it
+            leads the hub ahead of every clinical challenge. ── */}
+        <Text style={styles.section}>Learn</Text>
+        <BannerCard
+          mode={UNIVERSITY_HUB_MODE}
+          height={168}
+          locked={!universityGate.unlocked}
+          lockLabel={!universityGate.unlocked ? "Keep progressing to unlock" : undefined}
+          onPress={() => {
+            if (!universityGate.unlocked) {
+              flashNotice(universityGate.reason || "Clinica University is locked — keep progressing to unlock.");
+              return;
+            }
+            router.push("/university" as any);
+          }}
+          testID="ward-hub-university"
+        />
+
+        {/* ── Clinical Challenges — ordered by when they open:
+            Ward Shift (first lesson) → Ward Defense (Lv 4) → Boss Ward (Lv 7). ── */}
         <Text style={styles.section}>Clinical Challenges</Text>
 
         {/* Ward Shift — University simulation, opens after the first lesson */}
@@ -158,34 +177,6 @@ export default function ShiftPage() {
             />
           );
         })}
-
-        {/* ── Learn ── */}
-        <Text style={styles.section}>Learn</Text>
-        <Pressable
-          style={[styles.uniBanner, !universityGate.unlocked && styles.uniBannerLocked]}
-          testID="ward-hub-university"
-          onPress={() => {
-            if (!universityGate.unlocked) {
-              flashNotice(universityGate.reason || "Clinica University is locked — keep progressing to unlock.");
-              return;
-            }
-            router.push("/university" as any);
-          }}
-        >
-          <View style={styles.uniIcon}>
-            <Ionicons name={universityGate.unlocked ? "school" : "lock-closed"} size={26} color={universityGate.unlocked ? COLORS.brand : COLORS.onSurfaceTertiary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.uniKicker}>ANSWER THE CALL TO LEARN</Text>
-            <Text style={styles.uniTitle}>Clinica University</Text>
-            <Text style={styles.uniSub}>
-              {universityGate.unlocked
-                ? "Study the reasoning behind every treatment — your first lessons reward your first heroes."
-                : universityGate.reason}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
-        </Pressable>
 
         {/* ── Off-Shift wellness ── */}
         <Text style={styles.section}>Off-Shift</Text>
@@ -250,21 +241,6 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.xs },
   section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 2 },
-  uniBanner: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.md,
-    backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "45",
-    padding: SPACING.md,
-  },
-  uniBannerLocked: { opacity: 0.6, borderColor: COLORS.border },
-  uniIcon: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: COLORS.brand + "18",
-    alignItems: "center", justifyContent: "center",
-  },
-  uniKicker: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
-  uniTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700", marginTop: 1 },
-  uniSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
   eventBanner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary,
