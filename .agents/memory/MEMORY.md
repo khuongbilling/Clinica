@@ -43,3 +43,4 @@
 - [Onboarding polish primitives](clinica-onboarding-polish-primitives.md) — shared SystemPanel/OnboardingProgressBar/MilestoneReward/SceneTransition; wrap don't hand-roll; gate progress bar on "still onboarding" state.
 - [System Narrator onboarding](clinica-system-narrator-onboarding.md) — guided hub→ward→university→shops beats; each System trigger gated on prior beat; university gate is level-only (no circular lessons gate); lesson grantHeroes must seed hero_progression.
 - [Realm production & hero assignment](clinica-realm-production.md) — producers accrue points lazily (stamina-style); MUST seed {points,updatedAt} on placement or clock never starts; heroes +25%/each; settle+freeze on unplace.
+- [University-first hub](university-first-hub.md) — University = prominent first destination; NarratorGuide (Mentor Bai) + illustrated BannerCards grouped in sections; deliberately reduced options; deep-link player=null shows loading fallback.

@@ -19,6 +19,13 @@ const BANNER_IMAGES: Record<string, any> = {
   "regalia-upgrades": require("../../assets/images/banner_regalia_upgrades.png"),
   "sanctuary-bank": require("../../assets/images/banner_sanctuary_bank.png"),
   "night-market": require("../../assets/images/banner_night_market.png"),
+  // Clinica University hub banners
+  "university": require("../../assets/images/banner_university.png"),
+  "uni-lessons": require("../../assets/images/banner_uni_lessons.png"),
+  "uni-recruit": require("../../assets/images/banner_uni_recruit.png"),
+  "uni-training": require("../../assets/images/banner_uni_training.png"),
+  "uni-library": require("../../assets/images/banner_uni_library.png"),
+  "uni-classtree": require("../../assets/images/banner_uni_classtree.png"),
 };
 
 /** Illustrated donghua quest emblem for the Daily Quests section. */

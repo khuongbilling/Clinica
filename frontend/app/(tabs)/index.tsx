@@ -12,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { APTITUDE_INFO, HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { NarratorGuide } from "@/src/components/NarratorGuide";
+import { getBannerImage } from "@/src/components/ModeBanners";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -120,6 +122,10 @@ export default function RunHome() {
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
+  // New players are steered to Clinica University first — it is the prominent
+  // opening of the game until they've taken their first lesson.
+  const isNewLearner = (player.lessons_completed?.length ?? 0) === 0;
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
 
@@ -175,6 +181,21 @@ export default function RunHome() {
             <Ionicons name="close" size={14} color={COLORS.onSurfaceTertiary} />
           </Pressable>
         </Pressable>
+      )}
+
+      {/* ── UNIVERSITY ONBOARDING — the prominent first step for new players ── */}
+      {isNewLearner && (
+        <View style={styles.uniOnboard}>
+          <NarratorGuide
+            name="Mentor Bai"
+            bgImage={getBannerImage("university")}
+            message="Your journey begins at Clinica University. Learn to read the body, and your first heroes will answer the call."
+            objective="Enter Clinica University and complete your first lesson."
+            ctaLabel="Enter Clinica University"
+            onPress={() => router.push("/university")}
+            testID="home-university-onboard"
+          />
+        </View>
       )}
 
       {/* ── MAIN ARENA — layered: scenic bg → side cols → hero portrait ── */}
@@ -416,6 +437,9 @@ const styles = StyleSheet.create({
   },
   sceneDot:  { width: 5, height: 5, borderRadius: 3 },
   sceneLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+
+  /* University onboarding banner (prominent first step for new players) */
+  uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
 
   /* Arena — fills remaining vertical space */
   arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },

@@ -840,3 +840,45 @@ id = "wO1n_Ez6sTx1IBVaMteOg"
 uri = "file://frontend/assets/reminiscence/scene_keeper_closeup.png"
 type = "image"
 title = "Lotus Keeper close-up frame"
+
+[[generated]]
+id = "2ZgNRmEFLaVpqHplWdVgY"
+uri = "file://frontend/assets/images/banner_university.png"
+type = "image"
+title = "University hub hero banner"
+
+[[generated]]
+id = "13LoKt1GxWIGGLH2p4ZAO"
+uri = "file://frontend/assets/images/banner_uni_lessons.png"
+type = "image"
+title = "Lessons banner"
+
+[[generated]]
+id = "DzKRmEysauQt5AKLJYmXf"
+uri = "file://frontend/assets/images/banner_uni_recruit.png"
+type = "image"
+title = "Recruitment banner"
+
+[[generated]]
+id = "yGCLML4D_j3rxr8tdj1St"
+uri = "file://frontend/assets/images/banner_uni_training.png"
+type = "image"
+title = "Training Hall banner"
+
+[[generated]]
+id = "a5H4RWzQifKyl0AdHH3k3"
+uri = "file://frontend/assets/images/banner_uni_library.png"
+type = "image"
+title = "Research Library banner"
+
+[[generated]]
+id = "-MkKRIEuU4BUAIcknqnO4"
+uri = "file://frontend/assets/images/banner_uni_classtree.png"
+type = "image"
+title = "Class Tree banner"
+
+[[generated]]
+id = "VTKHdxxUQZnLqxJ3w21lm"
+uri = "file://frontend/assets/images/mentor_guide.png"
+type = "image"
+title = "hand-drawn mentor narrator portrait"
