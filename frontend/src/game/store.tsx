@@ -249,7 +249,7 @@ type Ctx = {
   recordWardWaves: (count: number) => Promise<void>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   redeemExchangeItem: (item: TokenExchangeItem) => Promise<{ ok: boolean; message: string }>;
-  claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
+  claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string; earnedTitles?: string[] }>;
   setActiveTitle: (titleId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   equipSkin: (skinId: string, kind?: 'aura' | 'ward') => Promise<{ ok: boolean; message: string }>;
@@ -899,8 +899,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (g.codex?.length) {
       next.codex_unlocked = Array.from(new Set([...(base.codex_unlocked || []), ...g.codex]));
     }
+    // Track which titles are *newly* earned (not already owned) so the caller can
+    // surface a dedicated celebratory callout for the rare cosmetic.
+    let earnedTitles: string[] = [];
     if (g.titles?.length) {
-      const merged = Array.from(new Set([...(base.owned_titles || []), ...g.titles]));
+      const owned = base.owned_titles || [];
+      earnedTitles = g.titles.filter((t) => !owned.includes(t));
+      const merged = Array.from(new Set([...owned, ...g.titles]));
       next.owned_titles = merged;
       // Auto-equip the first earned title so the reward is immediately visible;
       // once the player has picked one, respect their choice and leave it be.
@@ -908,7 +913,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     playerRef.current = next; // commit synchronously before awaiting persistence
     await updateState(next);
-    return { ok: true, message: `Claimed “${ms.label}” reward!` };
+    return { ok: true, message: `Claimed “${ms.label}” reward!`, earnedTitles };
   }, [updateState]);
 
   // Set (or clear, with "") the player's displayed profile Title. Cosmetic only.

@@ -9,7 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
-import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
+import { InlineNotice, useInlineNotice, MessageDialog } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -30,6 +30,7 @@ import {
   getCorruptionCleared,
   getCorruptionClearedFraction,
   isVerdanthaUnlocked,
+  getEventTitle,
   SANCTUARY_CORRUPTION_MAX,
   type WorldEventBadge,
 } from "@/src/game/worldEvent";
@@ -353,9 +354,11 @@ function SystemsTab({ router }: { router: any }) {
 // ── Rewards Tab ───────────────────────────────────────────────────────────────
 
 function RewardsTab() {
+  const router = useRouter();
   const { player, redeemExchangeItem, claimMilestone } = usePlayer();
   const { notice, flashNotice } = useInlineNotice();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [titleCelebration, setTitleCelebration] = useState<string[] | null>(null);
   const tokens = player?.epidemic_tokens ?? 0;
   const [rewardFilter, setRewardFilter] = useState<"all" | "milestones" | "catalog" | "exchange">("all");
 
@@ -364,8 +367,18 @@ function RewardsTab() {
     setBusyId(ms.id);
     const res = await claimMilestone(ms.id);
     setBusyId(null);
-    flashNotice(res.message);
+    if (res.ok && res.earnedTitles?.length) {
+      // A rare cosmetic Title is a memorable moment — surface a dedicated
+      // celebratory callout (by name) instead of the generic claim toast.
+      setTitleCelebration(res.earnedTitles);
+    } else {
+      flashNotice(res.message);
+    }
   };
+
+  const celebrationTitles = (titleCelebration || []).map(getEventTitle);
+  const celebrationNames = celebrationTitles.map((t) => t.label).join(" & ");
+  const healerName = (player?.name || "Healer").trim() || "Healer";
 
   const handleRedeem = async (item: typeof TOKEN_EXCHANGE[number]) => {
     if (busyId) return;
@@ -553,6 +566,25 @@ function RewardsTab() {
           })}
         </>
       )}
+
+      {/* Celebratory callout when a claim grants a rare cosmetic Title. */}
+      <MessageDialog
+        visible={!!titleCelebration}
+        title={`🎉 Congratulations, ${healerName}!`}
+        message={
+          celebrationTitles.length > 1
+            ? `You've earned the Titles ${celebrationNames}! These rare honorifics are now yours — wear one under your name on the Profile screen to show it off.`
+            : `You've earned the Title “${celebrationNames}”! This rare honorific is now yours — wear it under your name on the Profile screen to show it off.`
+        }
+        confirmLabel="View on Profile"
+        cancelLabel="Not now"
+        onConfirm={() => {
+          setTitleCelebration(null);
+          router.push("/(tabs)/profile");
+        }}
+        onCancel={() => setTitleCelebration(null)}
+        testID="world-event-title-celebration"
+      />
     </View>
   );
 }
