@@ -2525,6 +2525,7 @@ export default function WardDefense() {
   const [selectedUnit, setSelectedUnit] = useState("ward_scout");
   const [cqAnswered, setCqAnswered] = useState<{ wave: number; correct: boolean } | null>(null);
   const [cqCueChoice, setCqCueChoice] = useState<{ wave: number; choice: "empower" | "stabilize" } | null>(null);
+  const [cqDismissedWave, setCqDismissedWave] = useState<number | null>(null);
 
   /* Shared idle bob animation */
   const bobAnim = useRef(new Animated.Value(0)).current;
@@ -2925,6 +2926,9 @@ export default function WardDefense() {
       if (consumedAny) syncInventory(inv).catch(() => {});
     }
     setPendingBoosts([]);
+    setCqAnswered(null);
+    setCqCueChoice(null);
+    setCqDismissedWave(null);
     set(beginWave(freshState(boostEffect, runLoadout, owned), 0));
   }
 
@@ -3255,7 +3259,7 @@ export default function WardDefense() {
       </View>
 
       {/* Clinical Cue Check — floats OVER everything during the wave pause */}
-      {gs.phase === "wave_pause" && (
+      {gs.phase === "wave_pause" && cqDismissedWave !== gs.wave && (
         <View style={s.clinicalOverlay}>
           <View style={s.clinicalOverlayCard}>
             <ClinicalQuestionPanel
@@ -3266,6 +3270,7 @@ export default function WardDefense() {
               wave={gs.wave}
               cueChoice={cqCueChoice?.wave === gs.wave ? cqCueChoice!.choice : null}
               onChooseCue={chooseCueTactic}
+              onClose={() => setCqDismissedWave(gs.wave)}
             />
           </View>
         </View>
@@ -3330,7 +3335,7 @@ const CLINICAL_QUESTIONS = [
 ];
 
 function ClinicalQuestionPanel({
-  question, onAnswer, answered, answeredCorrect, wave, cueChoice, onChooseCue,
+  question, onAnswer, answered, answeredCorrect, wave, cueChoice, onChooseCue, onClose,
 }: {
   question: typeof CLINICAL_QUESTIONS[0];
   onAnswer: (idx: number) => void;
@@ -3339,6 +3344,7 @@ function ClinicalQuestionPanel({
   wave: number;
   cueChoice: "empower" | "stabilize" | null;
   onChooseCue: (choice: "empower" | "stabilize") => void;
+  onClose: () => void;
 }) {
   const [timeLeft, setTimeLeft] = useState(30);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -3373,6 +3379,9 @@ function ClinicalQuestionPanel({
         {answered && answeredCorrect && (
           <Text style={{ color: "#155a38", fontSize: 9, fontWeight: "800" }}>✓ +{PREWAVE_AP_BONUS} AP earned</Text>
         )}
+        <Pressable onPress={onClose} hitSlop={10} style={s.clinicalClose}>
+          <Ionicons name="close" size={14} color="#4a2e00" />
+        </Pressable>
       </View>
 
       {/* Main row: question+answers | lotus sidebar */}
@@ -4554,6 +4563,11 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: "#c8700060",
   },
   clinicalTimerTxt: { color: "#fbbf24", fontSize: 9, fontWeight: "800" },
+  clinicalClose: {
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#00000018", borderWidth: 1, borderColor: "#4a2e0033",
+  },
   clinicalQ: {
     color: "#2d1200", fontSize: 10, fontWeight: "700", lineHeight: 14,
     marginBottom: 6,
