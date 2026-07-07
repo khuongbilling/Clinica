@@ -13,6 +13,8 @@ import { LotusRecallBurst } from "@/src/components/reminiscence/LotusRecallBurst
 import { LightMotesOverlay } from "@/src/components/reminiscence/LightMotesOverlay";
 import { RainOverlay } from "@/src/components/reminiscence/RainOverlay";
 import { TypedText } from "@/src/components/reminiscence/TypedText";
+import { NarrativePanel } from "@/src/components/ui/NarrativePanel";
+import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 
 // Push 6 — "Fragments of Before": the Memory Reminiscence visual-novel cutscene.
 //
@@ -296,7 +298,15 @@ export default function ReminiscenceScreen() {
     router.replace(isReplay ? "/(tabs)/profile" : "/(tabs)");
   };
 
+  // Guard against accidental double-advance: the bottom narrative panel and the
+  // Continue button are stacked tap targets, so a single tap near their seam
+  // could otherwise fire twice and skip a scene. Ignore any advance within a
+  // short window of the previous one so progression stays exactly one step.
+  const lastAdvanceRef = useRef(0);
   const advance = () => {
+    const now = Date.now();
+    if (now - lastAdvanceRef.current < 350) return;
+    lastAdvanceRef.current = now;
     if (panelIndex < PANELS.length - 1) {
       setPanelIndex((i) => i + 1);
     } else {
@@ -342,53 +352,59 @@ export default function ReminiscenceScreen() {
         )}
       </View>
 
-      <Pressable style={styles.flex} onPress={advance} testID="reminiscence-tap-area">
-        <Animated.View style={[styles.content, { opacity: contentFade }]}>
-          <Text style={[styles.kicker, hasKeeper && styles.kickerKeeper]}>{panel.kicker}</Text>
-          <View style={{ gap: SPACING.sm }}>
-            {panel.lines.map((line, i) => (
-              <Text key={`l-${i}`} style={styles.line}>
-                {line}
-              </Text>
-            ))}
-            {hasKeeper && (
-              <View style={styles.keeperWrap}>
-                <View style={styles.keeperNameRow}>
-                  <Ionicons name="flower-outline" size={13} color={PALETTE.goldBright} />
-                  <Text style={styles.keeperName}>THE LOTUS KEEPER</Text>
-                </View>
-                {panel.keeperLines?.map((line, i) => (
-                  <Text key={`k-${i}`} style={styles.keeperLine}>
-                    {line}
-                  </Text>
-                ))}
-              </View>
-            )}
-            {panel.systemLines?.map((line, i) => (
-              <TypedText
-                key={`s-${panelIndex}-${i}`}
-                text={line}
-                delay={panel.lines.length > 0 ? 500 + i * 900 : i * 900}
-                style={styles.systemLine}
-              />
-            ))}
-          </View>
-        </Animated.View>
-      </Pressable>
+      {/* Upper region — tapping the illustration advances the scene */}
+      <Pressable style={styles.tapArea} onPress={advance} testID="reminiscence-tap-area" />
 
-      <View style={styles.bottomBar}>
-        <Pressable style={styles.continueBtn} onPress={advance} testID="reminiscence-continue">
-          <Text style={styles.continueTxt}>{isLast ? "Enter Clinica" : "Continue"}</Text>
-          <Ionicons name="arrow-forward" size={16} color={PALETTE.ivory} />
+      {/* Bottom narrative panel — keeps story text legible over the art */}
+      <Animated.View style={[styles.bottomWrap, { opacity: contentFade }]}>
+        <Pressable onPress={advance}>
+          <NarrativePanel>
+            <Text style={[styles.kicker, hasKeeper && styles.kickerKeeper]}>{panel.kicker}</Text>
+            <View style={{ gap: SPACING.sm, marginTop: SPACING.sm }}>
+              {panel.lines.map((line, i) => (
+                <Text key={`l-${i}`} style={styles.line}>
+                  {line}
+                </Text>
+              ))}
+              {hasKeeper && (
+                <View style={styles.keeperWrap}>
+                  <View style={styles.keeperNameRow}>
+                    <Ionicons name="flower-outline" size={13} color={PALETTE.goldBright} />
+                    <Text style={styles.keeperName}>THE LOTUS KEEPER</Text>
+                  </View>
+                  {panel.keeperLines?.map((line, i) => (
+                    <Text key={`k-${i}`} style={styles.keeperLine}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              )}
+              {panel.systemLines?.map((line, i) => (
+                <TypedText
+                  key={`s-${panelIndex}-${i}`}
+                  text={line}
+                  delay={panel.lines.length > 0 ? 500 + i * 900 : i * 900}
+                  style={styles.systemLine}
+                />
+              ))}
+            </View>
+          </NarrativePanel>
         </Pressable>
-      </View>
+
+        <PrimaryButton
+          label={isLast ? "Enter Clinica" : "Continue"}
+          onPress={advance}
+          iconRight="arrow-forward"
+          style={styles.continueBtn}
+          testID="reminiscence-continue"
+        />
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: PALETTE.navyDeep },
-  flex: { flex: 1 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -408,18 +424,19 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   skipTxt: { color: PALETTE.ivory, fontSize: 13, fontWeight: "600", opacity: 0.85 },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: SPACING.xl,
-    gap: SPACING.lg,
+  tapArea: { flex: 1 },
+  bottomWrap: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    paddingTop: SPACING.sm,
+    gap: SPACING.md,
   },
   kicker: {
     color: PALETTE.goldBright,
     fontSize: 11,
     letterSpacing: 3,
     fontWeight: "800",
+    textAlign: "center",
     textShadowColor: "rgba(0,0,0,0.6)",
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 1 },
@@ -474,20 +491,5 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 1 },
   },
-  bottomBar: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg, paddingTop: SPACING.sm },
-  continueBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    backgroundColor: PALETTE.gold,
-    borderRadius: RADIUS.pill,
-    paddingVertical: SPACING.md,
-    shadowColor: PALETTE.gold,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  continueTxt: { color: PALETTE.ivory, fontSize: 15, fontWeight: "700" },
+  continueBtn: { alignSelf: "stretch" },
 });

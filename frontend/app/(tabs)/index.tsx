@@ -18,6 +18,8 @@ import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI, UI_RADIUS, GLOW } from "@/src/theme/ui";
+import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
@@ -102,11 +104,11 @@ export default function RunHome() {
   };
 
   if (loading) {
-    return <View style={{ flex: 1, backgroundColor: COLORS.surface }} />;
+    return <View style={{ flex: 1, backgroundColor: UI.bgDeep }} />;
   }
 
   if (!player) {
-    return <View style={{ flex: 1, backgroundColor: COLORS.surface }} />;
+    return <View style={{ flex: 1, backgroundColor: UI.bgDeep }} />;
   }
 
   const apt      = APTITUDE_INFO[player.aptitude];
@@ -312,15 +314,13 @@ export default function RunHome() {
       </Pressable>
 
       {/* ── START SHIFT ── */}
-      <Pressable
-        style={styles.startBtn}
+      <PrimaryButton
+        label="ENTER THE WARD"
+        icon="medical"
         onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
+        style={styles.startBtn}
         testID="run-random-encounter"
-      >
-        <Ionicons name="medical" size={18} color={COLORS.onBrand} />
-        <Text style={styles.startTxt}>ENTER THE WARD</Text>
-        <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
-      </Pressable>
+      />
 
       {/* ── INTRO MODAL ── */}
       <Modal visible={showIntro} transparent animationType="slide" statusBarTranslucent>
@@ -446,7 +446,7 @@ function FeatureButton({
 
 /* ── Styles ── */
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.surface },
+  root: { flex: 1, backgroundColor: UI.bgDeep },
 
   /* Tutorial shortcut row (identity/stamina/currencies now live in PlayerHeader) */
   tutorialRow: {
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: COLORS.surfaceSecondary, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: UI.panel, borderWidth: 1, borderColor: UI.border,
     alignItems: "center", justifyContent: "center",
   },
 
@@ -550,29 +550,23 @@ const styles = StyleSheet.create({
   infoPanel: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md, marginTop: SPACING.xs,
-    backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md, padding: SPACING.sm, borderWidth: 1,
+    backgroundColor: UI.panel,
+    borderRadius: UI_RADIUS.card, padding: SPACING.md, borderWidth: 1,
   },
   elementBadge: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 4, alignSelf: "center" },
   elementTxt:   { fontSize: 9, fontWeight: "700", letterSpacing: 1.4 },
-  heroName:     { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
-  heroTitle:    { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 1 },
+  heroName:     { color: UI.text, fontSize: 15, fontWeight: "700" },
+  heroTitle:    { color: UI.textSoft, fontSize: 11, marginTop: 1 },
   xpCol:        { alignItems: "flex-end", gap: 3 },
-  xpBg:         { width: 64, height: 3, borderRadius: 2, backgroundColor: COLORS.border, overflow: "hidden" },
+  xpBg:         { width: 64, height: 3, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
   xpBar:        { height: "100%", borderRadius: 2 },
-  xpTxt:        { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.6 },
+  xpTxt:        { color: UI.textDim, fontSize: 9, letterSpacing: 0.6 },
 
-  /* Start button */
+  /* Start button — layout only; visuals come from PrimaryButton */
   startBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: SPACING.sm,
-    backgroundColor: COLORS.brand,
     marginHorizontal: SPACING.md,
     marginTop: SPACING.sm, marginBottom: SPACING.xs,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.md + 2,
   },
-  startTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700", letterSpacing: 2 },
 
   /* Ward Defense card */
   wardDefBtn: {
@@ -601,26 +595,27 @@ const styles = StyleSheet.create({
   lotusNew: { color: COLORS.growth, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
 
   /* Intro modal */
-  introOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.88)", justifyContent: "flex-end" },
+  introOverlay: { flex: 1, backgroundColor: "rgba(10,7,16,0.9)", justifyContent: "flex-end" },
   introPanel: {
-    backgroundColor: COLORS.surfaceSecondary,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: UI.panel,
+    borderTopLeftRadius: UI_RADIUS.xl, borderTopRightRadius: UI_RADIUS.xl,
     padding: SPACING.xl, paddingBottom: SPACING.xxxl,
-    borderTopWidth: 1, borderColor: COLORS.brand + "40",
+    borderTopWidth: 1, borderColor: UI.borderStrong,
     gap: SPACING.md,
   },
-  introHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: "center", marginBottom: SPACING.sm },
-  introKicker:  { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  introTitle:   { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
-  introBody:    { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22 },
+  introHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: UI.divider, alignSelf: "center", marginBottom: SPACING.sm },
+  introKicker:  { color: UI.gold, fontSize: 10, fontWeight: "800", letterSpacing: 2.5 },
+  introTitle:   { color: UI.text, fontSize: 26, fontWeight: "800" },
+  introBody:    { color: UI.textSoft, fontSize: 14, lineHeight: 22 },
   introSystems: { flexDirection: "row", gap: SPACING.xs, flexWrap: "wrap" },
   sysPill:  { alignItems: "center", gap: 3, minWidth: 46 },
   sysDot:   { width: 8, height: 8, borderRadius: 4 },
   sysName:  { fontSize: 11, fontWeight: "700" },
-  sysDesc:  { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+  sysDesc:  { color: UI.textDim, fontSize: 9 },
   introCta: {
-    backgroundColor: COLORS.brand, borderRadius: RADIUS.md,
-    paddingVertical: SPACING.md, alignItems: "center", marginTop: SPACING.sm,
+    backgroundColor: UI.gold, borderRadius: UI_RADIUS.pill,
+    paddingVertical: SPACING.md + 2, alignItems: "center", marginTop: SPACING.sm,
+    ...GLOW.gold,
   },
-  introCtaTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
+  introCtaTxt: { color: UI.onGold, fontSize: 13, fontWeight: "800", letterSpacing: 2 },
 });
