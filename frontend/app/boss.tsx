@@ -11,7 +11,7 @@ import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { BOSS_ENCOUNTER_COST, formatCountdown, useLiveStamina } from "@/src/game/stamina";
-import { VERDANTHA, VERDANTHA_UNLOCKED } from "@/src/game/worldEvent";
+import { VERDANTHA, isVerdanthaUnlocked, getVerdanthaTokensRemaining } from "@/src/game/worldEvent";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const BLOOM_ACCENT = "#34D399";
@@ -38,11 +38,14 @@ export default function BossPage() {
   const accent = isVerdantha ? BLOOM_ACCENT : (ELEMENT_COLORS[boss.primarySystem] ?? "#F87171");
   const canFight = stamina >= BOSS_ENCOUNTER_COST;
 
-  // Verdantha is gated behind Phase III — Convergence. Until that goes live
-  // (VERDANTHA_UNLOCKED) the fight cannot start. Lord Imbalance unlocks after
-  // any completed shift as before.
+  // Verdantha is gated behind Phase III — Convergence, driven by the player's
+  // real world-event containment progress (their Epidemic Tokens). She manifests
+  // once the Sanctuary crosses into Phase III. Lord Imbalance unlocks after any
+  // completed shift as before.
+  const tokens = player.epidemic_tokens ?? 0;
+  const verdanthaTokensLeft = getVerdanthaTokensRemaining(tokens);
   const bossUnlocked = isVerdantha
-    ? VERDANTHA_UNLOCKED
+    ? isVerdanthaUnlocked(tokens)
     : ((player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1);
 
   const backTarget = isVerdantha ? "/world-event" : "/(tabs)";
@@ -203,7 +206,7 @@ export default function BossPage() {
               </Text>
               <Text style={styles.lockedSub}>
                 {isVerdantha
-                  ? "The Bloom Matriarch only manifests at Phase III — Convergence, when the Sanctuary-wide Containment Threshold is crossed. This world-boss fight is not yet live."
+                  ? `The Bloom Matriarch only manifests at Phase III — Convergence, once the Sanctuary crosses the Containment Threshold. Earn ${verdanthaTokensLeft.toLocaleString()} more Epidemic Token${verdanthaTokensLeft === 1 ? "" : "s"} from Ward Shift runs to tip the event into Convergence.`
                   : "Complete at least one shift to break the seal and confront Lord Imbalance."}
               </Text>
             </View>

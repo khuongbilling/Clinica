@@ -447,13 +447,38 @@ export interface WorldBossPreview {
   artBrief: string;
 }
 
-// Placeholder unlock gate for the playable Verdantha encounter. The Bloom
-// Matriarch only manifests at Phase III — Convergence. There is no live phase
-// progression in this prototype, so this stays false: the "Challenge Verdantha"
-// entry routes to the gated boss screen, which shows a Coming Soon lock instead
-// of letting the fight start. Flip to true (or wire to real phase progress)
-// when Phase III goes live.
-export const VERDANTHA_UNLOCKED = false;
+// Unlock gate for the playable Verdantha encounter. The Bloom Matriarch only
+// manifests at Phase III — Convergence. Rather than a hardcoded bool, this is
+// driven by real world-event phase progress: in this single-player local model
+// the player's own Epidemic Tokens stand in for the collective containment
+// contribution, so Verdantha becomes reachable once the Sanctuary crosses into
+// Phase III (i.e. the player has cleared the Phase II containment threshold).
+export const PHASE_III_ID = "phase_convergence";
+
+// The token total at which the Sanctuary enters Phase III — Convergence. This is
+// the threshold of the phase immediately BEFORE Phase III (Phase II — Full
+// Bloom), because clearing that phase is what tips the event into Convergence
+// and materialises Verdantha at the Sanctuary Core.
+export function getPhaseIIIEntryThreshold(): number {
+  const idx = MIASMA_BLOOM_PHASES.findIndex((p) => p.id === PHASE_III_ID);
+  if (idx <= 0) {
+    // Defensive fallback: if the phase list changes shape, gate on the last
+    // phase's own threshold so the boss never unlocks accidentally early.
+    return MIASMA_BLOOM_PHASES[MIASMA_BLOOM_PHASES.length - 1]?.threshold ?? Number.MAX_SAFE_INTEGER;
+  }
+  return MIASMA_BLOOM_PHASES[idx - 1].threshold;
+}
+
+// True once the player's containment contribution has tipped the event into
+// Phase III — Convergence, making the Verdantha world-boss fight reachable.
+export function isVerdanthaUnlocked(tokens: number): boolean {
+  return Math.max(0, tokens) >= getPhaseIIIEntryThreshold();
+}
+
+// Epidemic Tokens still needed before Verdantha manifests (0 once unlocked).
+export function getVerdanthaTokensRemaining(tokens: number): number {
+  return Math.max(0, getPhaseIIIEntryThreshold() - Math.max(0, tokens));
+}
 
 export const VERDANTHA: WorldBossPreview = {
   id: "verdantha",

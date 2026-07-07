@@ -27,6 +27,7 @@ import {
   getSanctuaryCorruption,
   getCorruptionCleared,
   getCorruptionClearedFraction,
+  isVerdanthaUnlocked,
   SANCTUARY_CORRUPTION_MAX,
   type WorldEventBadge,
 } from "@/src/game/worldEvent";
@@ -486,7 +487,10 @@ function RewardsTab() {
 // ── Boss Tab ──────────────────────────────────────────────────────────────────
 
 function BossTab({ router }: { router: any }) {
+  const { player } = usePlayer();
   const boss = VERDANTHA;
+  const tokens = player?.epidemic_tokens ?? 0;
+  const unlocked = isVerdanthaUnlocked(tokens);
   return (
     <View style={styles.section}>
       {/* Boss hero card */}
@@ -565,7 +569,9 @@ function BossTab({ router }: { router: any }) {
         <Ionicons name="skull" size={18} color={BLOOM_ACCENT} />
         <View style={{ flex: 1 }}>
           <Text style={styles.challengeTxt}>Challenge Verdantha</Text>
-          <Text style={styles.challengeSub}>Manifests at Phase III — Coming Soon</Text>
+          <Text style={styles.challengeSub}>
+            {unlocked ? "Phase III live — enter the battle" : "Manifests at Phase III — Convergence"}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={BLOOM_ACCENT} />
       </Pressable>
