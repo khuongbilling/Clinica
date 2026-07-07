@@ -1122,8 +1122,21 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Exchanged ${row.insightCrystals.toLocaleString()} Insight Crystals for ${row.refinedLotusGems} Refined Lotus Gems.` };
   }, [updateState]);
 
+  // Full account wipe — clears EVERY app-owned persisted flag (player,
+  // one-time intro/tips banners, dismissed world-event banner, cached test
+  // session, …), not just the player record, so "Reset Account" truly starts
+  // the game over from scratch. All Clinica keys share the `clinica.` prefix.
   const resetPlayer = useCallback(async () => {
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const owned = keys.filter((k) => k.startsWith('clinica.'));
+      if (owned.length) await AsyncStorage.multiRemove(owned);
+      else await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Fall back to at least clearing the player record if enumeration fails.
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    }
+    playerRef.current = null;
     setPlayer(null);
   }, []);
 
