@@ -468,6 +468,31 @@ export const TOKEN_EXCHANGE: TokenExchangeItem[] = [
   { id: "ex_skin",        name: "Bloom Ward Skin",         icon: "color-palette",  accentColor: "#F472B6", cost: 5000,  badge: "Coming Soon",  category: "cosmetic"  },
 ];
 
+// ── Active Event (static preview) ─────────────────────────────────────────────
+// A single flag + summary so hub screens can surface the currently-running world
+// event without importing the whole data set. Still preview-only — nothing here
+// wires live timers, progress, or rewards.
+
+export interface ActiveWorldEvent {
+  id: string;
+  title: string;
+  subtitle: string;
+  accentColor: string;
+  route: string;
+  badge: WorldEventBadge;
+}
+
+export const WORLD_EVENT_ACTIVE = true;
+
+export const ACTIVE_WORLD_EVENT: ActiveWorldEvent = {
+  id: "miasma_bloom",
+  title: MIASMA_BLOOM_LORE.title,
+  subtitle: MIASMA_BLOOM_LORE.subtitle,
+  accentColor: "#34D399",
+  route: "/world-event",
+  badge: "Preview",
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 export const WORLD_EVENT_BADGE_COLOR: Record<WorldEventBadge, string> = {

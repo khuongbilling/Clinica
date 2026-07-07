@@ -17,8 +17,10 @@ import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { playerLevelFromXp } from "@/src/game/progression";
+import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 
 const INTRO_KEY = "clinica.intro.seen";
+const WORLD_EVENT_BANNER_KEY = `clinica.worldEventBanner.dismissed.${ACTIVE_WORLD_EVENT.id}`;
 
 /* ── Arena scene definitions — element accent + orb colors for props ── */
 const ARENA_SCENES: Record<string, {
@@ -47,11 +49,21 @@ export default function RunHome() {
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
+  const [eventBannerDismissed, setEventBannerDismissed] = useState<boolean | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
   }, []);
+
+  useEffect(() => {
+    AsyncStorage.getItem(WORLD_EVENT_BANNER_KEY).then((v) => setEventBannerDismissed(!!v));
+  }, []);
+
+  const dismissEventBanner = async () => {
+    setEventBannerDismissed(true);
+    await AsyncStorage.setItem(WORLD_EVENT_BANNER_KEY, "1");
+  };
 
   // The System introduces itself on the main hub after the reminiscence. It's a
   // forced, non-skippable narrated sequence that points at the stamina/currency
@@ -130,6 +142,39 @@ export default function RunHome() {
         <Text style={[styles.sceneLabel, { color: scene.accent }]}>{scene.name.toUpperCase()}</Text>
       </View>
 
+      {/* ── WORLD EVENT BANNER — dismissible, links to the live event preview ── */}
+      {WORLD_EVENT_ACTIVE && eventBannerDismissed === false && (
+        <Pressable
+          style={styles.eventBanner}
+          onPress={() => router.push(ACTIVE_WORLD_EVENT.route as any)}
+          testID="home-world-event-banner"
+        >
+          <View style={styles.eventBannerIcon}>
+            <Ionicons name="earth" size={22} color={ACTIVE_WORLD_EVENT.accentColor} />
+            <View style={[styles.eventLiveDot, { backgroundColor: ACTIVE_WORLD_EVENT.accentColor }]} />
+          </View>
+          <View style={{ flex: 1, gap: 1 }}>
+            <View style={styles.eventBannerTopRow}>
+              <Text style={styles.eventBannerKicker}>WORLD EVENT · LIVE</Text>
+              <View style={styles.eventBannerBadge}>
+                <Text style={styles.eventBannerBadgeTxt}>{ACTIVE_WORLD_EVENT.badge.toUpperCase()}</Text>
+              </View>
+            </View>
+            <Text style={styles.eventBannerTitle}>{ACTIVE_WORLD_EVENT.title}</Text>
+            <Text style={styles.eventBannerSub} numberOfLines={1}>{ACTIVE_WORLD_EVENT.subtitle}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={ACTIVE_WORLD_EVENT.accentColor} />
+          <Pressable
+            style={styles.eventBannerClose}
+            onPress={dismissEventBanner}
+            hitSlop={10}
+            testID="home-world-event-dismiss"
+          >
+            <Ionicons name="close" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+        </Pressable>
+      )}
+
       {/* ── MAIN ARENA — layered: scenic bg → side cols → hero portrait ── */}
       <View style={styles.arena}>
 
@@ -181,9 +226,8 @@ export default function RunHome() {
             icon="calendar-outline"
             label="Events"
             color={COLORS.air}
-            locked
-            lockText="Soon"
-            onPress={() => {}}
+            live={WORLD_EVENT_ACTIVE}
+            onPress={() => router.push("/events")}
             testID="home-float-events"
           />
           <FeatureButton
@@ -321,10 +365,10 @@ const sc = StyleSheet.create({
 
 /* ── FeatureButton ── */
 function FeatureButton({
-  icon, label, color, locked, lockText, onPress, testID,
+  icon, label, color, locked, lockText, live, onPress, testID,
 }: {
   icon: string; label: string; color: string;
-  locked?: boolean; lockText?: string;
+  locked?: boolean; lockText?: string; live?: boolean;
   onPress: () => void; testID?: string;
 }) {
   return (
@@ -334,8 +378,10 @@ function FeatureButton({
         backgroundColor: locked ? COLORS.surfaceTertiary : color + "18",
       }]}>
         <Ionicons name={icon as any} size={22} color={locked ? COLORS.onSurfaceTertiary : color} />
+        {live && !locked ? <View style={styles.featLiveDot} /> : null}
       </View>
       <Text style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
+      {live && !locked ? <Text style={styles.featLiveTxt}>LIVE</Text> : null}
       {locked && lockText ? <Text style={styles.featLock}>{lockText}</Text> : null}
     </Pressable>
   );
@@ -376,6 +422,45 @@ const styles = StyleSheet.create({
   featCircle: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   featLabel:  { fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textAlign: "center" },
   featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+  featLiveDot: {
+    position: "absolute", top: 2, right: 2,
+    width: 9, height: 9, borderRadius: 5,
+    backgroundColor: "#34D399",
+    borderWidth: 1.5, borderColor: COLORS.surface,
+  },
+  featLiveTxt: { color: "#34D399", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+
+  /* World Event banner (Shift hub entry point) */
+  eventBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2,
+    backgroundColor: "#065F4640", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#34D39955",
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  eventBannerIcon: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: "#34D39922",
+    alignItems: "center", justifyContent: "center",
+  },
+  eventLiveDot: {
+    position: "absolute", top: 1, right: 1,
+    width: 9, height: 9, borderRadius: 5,
+    borderWidth: 1.5, borderColor: COLORS.surface,
+  },
+  eventBannerTopRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  eventBannerKicker: { color: "#34D399", fontSize: 8, fontWeight: "800", letterSpacing: 1.5 },
+  eventBannerBadge: {
+    backgroundColor: "#5B9BD522", borderWidth: 1, borderColor: "#5B9BD555",
+    borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 1,
+  },
+  eventBannerBadgeTxt: { color: "#5B9BD5", fontSize: 7, fontWeight: "800", letterSpacing: 1 },
+  eventBannerTitle: { color: "#34D399", fontSize: 15, fontWeight: "700" },
+  eventBannerSub:   { color: COLORS.onSurfaceSecondary, fontSize: 10, lineHeight: 13 },
+  eventBannerClose: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: COLORS.surfaceSecondary,
+    alignItems: "center", justifyContent: "center",
+  },
 
   /* Hero center — transparent, no frame or pedestal */
   heroCenter: { flex: 1, position: "relative" },
