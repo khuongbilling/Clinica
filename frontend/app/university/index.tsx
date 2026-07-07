@@ -168,10 +168,7 @@ export default function UniversityHubScreen() {
         <BannerCard
           mode={LESSONS_BANNER}
           height={158}
-          onPress={() => {
-            onRequiredAction("openLesson");
-            router.push("/university/lessons" as any);
-          }}
+          onPress={() => router.push("/university/lessons" as any)}
           testID="university-banner-lessons"
         />
 

@@ -285,12 +285,12 @@ export default function KingdomScreen() {
       const building = getBuildingById(placement.id);
       await setRealmLayout({ [placement.id]: targetCellId });
       setBanner(`${building?.name || "Building"} ${placement.isMove ? "moved" : "constructed"}.`);
+      onRequiredAction("placeBuilding");
     } else {
       const decoration = getDecorationById(placement.id);
       await setRealmLayout({}, { [targetCellId]: placement.id });
       setBanner(`${decoration?.name || "Decoration"} placed.`);
     }
-    onRequiredAction("placeBuilding");
     exitPlacement();
   }
 
