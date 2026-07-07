@@ -1,0 +1,459 @@
+Goal
+Please do a safe visual/UI refresh pass on Clinica.
+
+The main goal is to keep Clinica’s fantasy-medical RPG identity while fixing the two biggest current problems:
+
+UI/UX friction points
+
+Aesthetic inconsistencies
+
+This should be a presentation-layer improvement pass, not a product-logic rewrite.
+
+Core Direction
+Use the current high-end manhwa/donghua-inspired drawing style as the foundation.
+
+Keep:
+
+expressive faces and eyes
+
+painterly anime/manhwa rendering
+
+cinematic composition
+
+elegant linework
+
+soft shading and polished lighting
+
+emotionally resonant character framing
+
+Important:
+
+keep the drawing style
+
+do not keep the darker tone as the default overall mood
+
+Clinica’s baseline world should feel:
+
+luminous
+
+magical
+
+hopeful
+
+academy-like
+
+clean
+
+supportive
+
+mobile-friendly
+
+Main Problems To Fix
+1) UI/UX friction points
+Please reduce:
+
+crowded panels
+
+too much text visible at once
+
+weak scanability on mobile
+
+unclear tap priority
+
+visual competition between story, controls, and decorative framing
+
+long scene lists or dense layouts that overwhelm the player
+
+2) Aesthetic inconsistencies
+Please fix cases where:
+
+dramatic character art does not match flatter or more generic UI
+
+mystical fantasy elements feel disconnected from medical-learning elements
+
+cold blue tragedy dominates too often
+
+story scene art feels more premium than menus, buttons, icons, and progression screens
+
+different surfaces feel like different products instead of one game world
+
+Implementation Priorities
+Priority 1: Unify the visual system
+Rebuild the UI styling so:
+
+menus
+
+panels
+
+cards
+
+buttons
+
+quest boards
+
+dialogue boxes
+
+rewards
+
+progression surfaces
+
+all feel like they belong to the same illustrated world as the character art.
+
+Use one consistent design language across:
+
+home/dashboard
+
+lesson screens
+
+battles
+
+quests
+
+dialogue scenes
+
+rewards/inventory
+
+progression views
+
+onboarding/tutorial overlays
+
+Priority 2: Reduce mobile friction
+Improve mobile readability and interaction hierarchy.
+
+Target fixes:
+
+increase text size where body copy is dense
+
+increase spacing between sections
+
+reduce visible copy per panel
+
+simplify panel stacking
+
+create a stronger primary action hierarchy
+
+make rewards, objectives, and next actions obvious
+
+ensure tap targets feel comfortable on phones
+
+Priority 3: Brighten the default Clinica mood
+Keep the premium illustration quality, but shift the baseline palette and lighting toward:
+
+hopeful
+
+magical
+
+fantasy-medical adventure
+
+Visual Style Rules
+Character illustration
+Use:
+
+polished hand-drawn anime/manhwa rendering
+
+expressive eyes and subtle emotion
+
+elegant silhouettes
+
+soft painterly shading
+
+cinematic crops for key narrative moments
+
+Avoid:
+
+generic mobile-game mascot style
+
+chibi-heavy default presentation
+
+plastic 3D-rendered look
+
+inconsistent AI-art styles
+
+flat corporate healthcare illustration
+
+Environment style
+The world should feel like a fantasy-medical academy.
+
+Add more:
+
+magical university interiors
+
+healing halls
+
+alchemy/apothecary influence
+
+celestial-medical symbols
+
+warm study spaces
+
+luminous clinics, libraries, labs, courtyards, archives, observatories
+
+clean fantasy architecture with softness and wonder
+
+Avoid relying too much on:
+
+dark rainy city scenes
+
+grim hospital realism
+
+sterile white clinical portals
+
+horror-medical imagery
+
+Color palette
+Shift away from cold tragic blue dominance.
+
+Preferred palette:
+
+luminous ivory
+
+pearl white
+
+soft gold
+
+healing teal
+
+arcane blue
+
+soft sky blue
+
+lotus lavender accents
+
+restrained midnight blue only for contrast
+
+Usage:
+
+darker blues are for memory, danger, mystery, or grief beats
+
+gold, ivory, teal, and magical glow tones should define the main product identity
+
+keep contrast strong for mobile readability
+
+UI materials and panels
+Use:
+
+layered fantasy-academy panels
+
+subtle glow edges
+
+clean card hierarchy
+
+slightly ornamental but restrained borders
+
+soft magical highlights
+
+elegant depth and shadow
+
+Avoid:
+
+generic SaaS cards
+
+medical portal boxes
+
+neon sci-fi HUD overload
+
+over-decorated fantasy frames that reduce readability
+
+Icon direction
+Icons should feel part of the same world.
+
+Prefer:
+
+line icons with soft fill accents
+
+healing, study, quest, star, constellation, herb, tonic, scroll, book, lotus, and spark motifs
+
+clean silhouettes that read well on small screens
+
+Avoid:
+
+mismatched icon packs
+
+generic hospital pictograms as the main icon language
+
+overly cute childish icons
+
+UX and Layout Rules
+Information hierarchy
+Every screen should make these clear at first glance:
+
+where the player is
+
+what the main objective is
+
+what action to take next
+
+what is locked vs unlocked
+
+what reward, progress, or consequence just happened
+
+Density rules
+For mobile-first layouts:
+
+do not stack too many equally weighted cards
+
+do not show long multi-step lists without chunking
+
+limit visible text blocks
+
+prefer progressive disclosure
+
+introduce one idea at a time during onboarding, tutorials, and narrative scenes
+
+Narrative scene rules
+For reminiscence/story scenes:
+
+use full-screen or near-full-screen illustration
+
+keep narrative text in a clear bottom panel
+
+make tap-to-continue obvious but unobtrusive
+
+keep progress visible
+
+avoid crowding the story scene with extra system UI
+
+preserve emotional clarity over decorative complexity
+
+Buttons and actions
+Buttons should have clear hierarchy:
+
+one obvious primary action
+
+secondary actions visually subordinate
+
+destructive/skip-like actions minimized where appropriate
+
+comfortable spacing for thumbs
+
+First Screens To Update
+Apply this pass first to:
+
+intro/reminiscence sequence
+
+main home/dashboard
+
+quest/mission screen
+
+lesson/learning module screen
+
+battle/challenge screen
+
+For each screen, update:
+
+panel system
+
+spacing
+
+typography hierarchy
+
+button hierarchy
+
+objective clarity
+
+reward/progression signaling
+
+visual consistency with the premium illustration style
+
+Safe First Implementation Pass
+Please complete this without changing core app logic.
+
+1) Introduce a unified visual token set for:
+colors
+
+spacing
+
+radius
+
+shadows
+
+borders
+
+panel backgrounds
+
+text hierarchy
+
+button variants
+
+2) Create reusable UI wrappers/components for:
+primary panel
+
+narrative panel
+
+quest card
+
+reward card
+
+section header
+
+primary button
+
+secondary button
+
+3) Refactor the intro/reminiscence screen to:
+improve mobile readability
+
+reduce visual density
+
+preserve premium art quality
+
+brighten the world identity slightly
+
+4) Apply the same system to one non-story gameplay screen
+Use that second screen to prove the visual system works outside the narrative sequence.
+
+Build Notes
+When implementing:
+
+prioritize reusable styling primitives over one-off overrides
+
+do not change data flow or business logic in this pass
+
+preserve current functionality while improving presentation
+
+optimize for portrait mobile first, then tablet and desktop
+
+test readability on narrow screens before adding decorative detail
+
+Definition of Success
+This pass is successful if:
+
+Clinica feels more visually unified
+
+the premium drawing style is preserved
+
+the world feels more magical and hopeful by default
+
+mobile screens become easier to scan and tap
+
+the UI looks like it belongs to the same world as the illustrations
+
+story scenes feel cinematic without making the whole game too dark
+
+What To Avoid
+Do not move Clinica toward:
+
+generic hospital UI
+
+corporate health dashboard styling
+
+worksheet-like learning software
+
+mixed unrelated illustration styles
+
+overly childish educational-game presentation
+
+dark tragedy as the constant identity
+
+cluttered decorative fantasy UI that hurts readability
+
+Recommended Next Milestone
+Deliver one polished vertical slice containing:
+
+refreshed reminiscence scene
+
+refreshed quest/home screen
+
+shared UI tokens and component styling
+
+This should give Clinica a visible visual-system upgrade while staying implementation-safe.
