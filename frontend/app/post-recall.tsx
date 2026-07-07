@@ -281,39 +281,46 @@ export default function PostRecall() {
       )}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         {phase === "identity" ? (
-          <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-identity">
+          <Animated.View style={[styles.identityWrap, { opacity: fadeAnim }]} testID="post-recall-identity">
             {!isReplay && <OnboardingProgressBar step="Identity" />}
-            <Ionicons name="finger-print" size={36} color={COLORS.brand} />
-            <SystemPanel icon="finger-print-outline" compact>
-              <Text style={styles.systemLine}>Identity record fragmented.</Text>
-              <Text style={styles.systemLine}>Restore designation.</Text>
-            </SystemPanel>
-            <Text style={styles.body}>
-              The Lotus Recall preserved you, but not every record. Before the Sanctuary can
-              re-open your file, it needs a name to write it under.
-            </Text>
-            <Text style={styles.inputLabel}>ENTER DESIGNATION</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-              placeholderTextColor={COLORS.onSurfaceTertiary}
-              style={styles.input}
-              maxLength={24}
-              autoFocus
-              autoCapitalize="words"
-              returnKeyType="done"
-              onSubmitEditing={submitIdentity}
-              testID="post-recall-name-input"
-            />
-            <Pressable
-              style={[styles.button, submitting && styles.buttonDisabled]}
-              onPress={submitIdentity}
-              disabled={submitting}
-              testID="post-recall-name-continue"
-            >
-              <Text style={styles.buttonTxt}>CONFIRM DESIGNATION</Text>
-            </Pressable>
+            <View style={styles.identityHeader}>
+              <View style={styles.identityBadge}>
+                <Ionicons name="finger-print" size={30} color={COLORS.brand} />
+              </View>
+              <Text style={styles.identityTitle}>Restore Your Designation</Text>
+              <SystemPanel icon="finger-print-outline" compact>
+                <Text style={styles.systemLine}>Identity record fragmented.</Text>
+                <Text style={styles.systemLine}>Restore designation.</Text>
+              </SystemPanel>
+              <Text style={styles.body}>
+                The Lotus Recall preserved you, but not every record. Before the Sanctuary can
+                re-open your file, it needs a name to write it under.
+              </Text>
+            </View>
+            <View style={styles.identityForm}>
+              <Text style={styles.inputLabel}>ENTER DESIGNATION</Text>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor={COLORS.onSurfaceTertiary}
+                style={styles.input}
+                maxLength={24}
+                autoFocus
+                autoCapitalize="words"
+                returnKeyType="done"
+                onSubmitEditing={submitIdentity}
+                testID="post-recall-name-input"
+              />
+              <Pressable
+                style={[styles.button, submitting && styles.buttonDisabled]}
+                onPress={submitIdentity}
+                disabled={submitting}
+                testID="post-recall-name-continue"
+              >
+                <Text style={styles.buttonTxt}>CONFIRM DESIGNATION</Text>
+              </Pressable>
+            </View>
           </Animated.View>
         ) : view === "intro" ? (
           <Animated.View style={[styles.block, { opacity: fadeAnim }]} testID="post-recall-diagnostic-intro">
@@ -574,6 +581,36 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
   },
   flex: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
+  identityWrap: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 400,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingTop: SPACING.xl,
+    gap: SPACING.lg,
+  },
+  identityHeader: { alignItems: "center", gap: SPACING.md, width: "100%" },
+  identityBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(212,175,55,0.12)",
+    borderWidth: 1,
+    borderColor: COLORS.brand,
+  },
+  identityTitle: {
+    color: COLORS.onSurface,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "300",
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  identityForm: { width: "100%", alignItems: "center", gap: SPACING.md },
   scrollWrap: { flex: 1, width: "100%" },
   scrollView: { flex: 1, width: "100%" },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(6,10,14,0.66)" },
