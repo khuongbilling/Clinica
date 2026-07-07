@@ -82,7 +82,7 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   { id: 'ward_defense', label: 'Ward Defense', level: 4 },
   { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 5 },
   { id: 'boss', label: 'Boss Encounters', level: 7 },
-  { id: 'world_event', label: 'World Events (Miasma Bloom)', level: 10 },
+  { id: 'world_event', label: 'World Events (Miasma Bloom)', level: 5 },
   { id: 'ten_pull', label: 'Full Class Recruitment (10-pull)', level: 12 },
   { id: 'advanced_traits', label: 'Advanced Hero Traits', level: 15 },
   { id: 'advanced_sims', label: 'Advanced Simulations', level: 25 },

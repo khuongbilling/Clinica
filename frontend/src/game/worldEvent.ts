@@ -759,3 +759,70 @@ export const REWARD_CATEGORY_LABEL: Record<EventRewardItem["category"], string> 
   relic:    "Boss Relic",
   codex:    "Codex Entry",
 };
+
+// ── B6 — Community Health Board: Public Health Education Cards ────────────
+// Shown read-only to all players (even below Level 5) in the world-event
+// locked view. Plain-language, non-medical-advice cards framed in Clinica
+// fantasy terms. Art direction: donghua/anime, luminous teal-green palette.
+
+export interface PublicHealthCard {
+  id: string;
+  title: string;
+  icon: string; // Ionicons name
+  accentColor: string;
+  body: string;
+  fantasyFrame: string; // How this maps to Clinica's game world
+}
+
+export const PUBLIC_HEALTH_EDUCATION_CARDS: PublicHealthCard[] = [
+  {
+    id: "what-is-outbreak",
+    title: "What Is an Outbreak?",
+    icon: "alert-circle-outline",
+    accentColor: "#F59E0B",
+    body:
+      "An outbreak happens when more people than expected get the same illness in the same place at the same time. Disease spreads when a pathogen finds new hosts faster than the body — or community — can respond.",
+    fantasyFrame:
+      "In the Sanctuary, an outbreak looks like Bloom-variant disease-monsters multiplying faster than healers can contain them — crossing ward lines and weakening the Vital Lantern.",
+  },
+  {
+    id: "why-prevention-matters",
+    title: "Why Prevention Matters",
+    icon: "shield-checkmark-outline",
+    accentColor: "#34D399",
+    body:
+      "Preventing one case can stop dozens more. Vaccination, hand hygiene, clean water, and early recognition all break the chain of transmission before it grows. Prevention is always cheaper — in lives and resources — than outbreak response.",
+    fantasyFrame:
+      "Each ward shift you complete strengthens the Sanctuary's Containment threshold. Every disease-monster you treat represents a real chain of transmission broken before it spreads.",
+  },
+  {
+    id: "how-communities-reduce-spread",
+    title: "How Communities Reduce Spread",
+    icon: "people-outline",
+    accentColor: "#6EE7B7",
+    body:
+      "Disease spreads through networks of people. When a community works together — sharing information, reducing crowding, supporting sick members to stay home — the pathogen has fewer pathways to travel. Collective action flattens the spread curve.",
+    fantasyFrame:
+      "The Miasma Bloom recedes only when the entire Sanctuary coordinates — ward shifts slow spread, the University develops countermeasures, Realm buildings generate supplies. No single healer stops an epidemic alone.",
+  },
+  {
+    id: "public-health-roles",
+    title: "What Public Health Teams Do",
+    icon: "medkit-outline",
+    accentColor: "#A78BFA",
+    body:
+      "Public health nurses and teams investigate cases, trace contacts, educate communities, and connect people to care. They look beyond individual patients to understand why illness is spreading and who is most at risk — then act before it worsens.",
+    fantasyFrame:
+      "The Clinica healer team tracks outbreak patterns using Clinical Cues and ward logs — identifying Disease Priority, recognizing Vital Signs, and deploying the right care before corruption spreads to the next ward.",
+  },
+  {
+    id: "surveillance-recognition",
+    title: "Surveillance & Early Recognition",
+    icon: "eye-outline",
+    accentColor: "#5B9BD5",
+    body:
+      "Surveillance means watching for unusual patterns — more fever cases than normal, a cluster of similar symptoms, or new pathogen reports from a community. Early recognition by frontline workers is often what stops an outbreak from becoming a crisis.",
+    fantasyFrame:
+      "In Clinica, surveillance looks like reading the Containment Meter, recognizing Bloom-pattern enemies before they multiply, and acting on Clinical Cue warnings before corruption reaches a critical ward site.",
+  },
+];

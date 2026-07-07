@@ -24,6 +24,7 @@ import {
   TOKEN_EXCHANGE,
   WORLD_EVENT_BADGE_COLOR,
   REWARD_CATEGORY_LABEL,
+  PUBLIC_HEALTH_EDUCATION_CARDS,
   getPhaseProgress,
   getMilestoneProgress,
   formatContainmentLabel,
@@ -59,6 +60,7 @@ export default function WorldEventScreen() {
   const router = useRouter();
   const { player } = usePlayer();
   const [tab, setTab] = useState<Tab>("overview");
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   if (!player) {
     return (
@@ -74,25 +76,131 @@ export default function WorldEventScreen() {
   const worldEventLevel = FEATURE_UNLOCKS.find((f) => f.id === "world_event")?.level ?? 10;
   const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
   if (!worldEventUnlocked) {
+    // ── B6 — Community Health Board (Level 1–4 read-only view) ──────────────
+    // Show rich public health education content instead of a bare lock wall.
+    // Epidemic Tokens are NOT shown or spendable here; active participation
+    // unlocks at Level 5 with the full World Event.
     return (
       <SafeAreaView style={styles.root} edges={["top"]} testID="world-event-locked">
         <PlayerHeader player={player} />
-        <View style={styles.lockedWrap}>
-          <View style={styles.lockedIcon}>
-            <Ionicons name="lock-closed" size={34} color={BLOOM_ACCENT} />
+        <ScrollView contentContainerStyle={styles.boardScroll} showsVerticalScrollIndicator={false}>
+          {/* ── Header ── */}
+          <View style={styles.boardHeader}>
+            <Pressable style={styles.backBtn} onPress={() => goBack(router, "/events")} hitSlop={10} testID="world-event-locked-back">
+              <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.boardKicker}>COMMUNITY HEALTH BOARD · READ-ONLY</Text>
+              <Text style={styles.boardTitle}>Public Health Watch</Text>
+              <Text style={styles.boardSub}>Following the Miasma Bloom outbreak across the Sanctuary</Text>
+            </View>
           </View>
-          <Text style={styles.lockedKicker}>WORLD EVENT · LOCKED</Text>
-          <Text style={styles.lockedTitle}>{MIASMA_BLOOM_LORE.title}</Text>
-          <Text style={styles.lockedBody}>
-            Realm-wide World Events are later-game content. Reach{" "}
-            <Text style={{ color: BLOOM_GLOW, fontWeight: "700" }}>Player Level {worldEventLevel}</Text>{" "}
-            to answer the Miasma Bloom outbreak and unlock the World Boss.
+
+          {/* ── Outbreak lore teaser ── */}
+          <View style={styles.boardLoreCard}>
+            <View style={styles.loreCardRow}>
+              <Ionicons name="earth" size={20} color={BLOOM_ACCENT} />
+              <Text style={styles.loreCardTitle}>Active Outbreak: Miasma Bloom</Text>
+            </View>
+            <Text style={styles.loreCardBody}>{MIASMA_BLOOM_LORE.flavor}</Text>
+            <View style={styles.loreTag}>
+              <Ionicons name="alert-circle-outline" size={11} color={BLOOM_ACCENT} />
+              <Text style={styles.loreTagTxt}>Realm-wide epidemic event · Outbreak active</Text>
+            </View>
+          </View>
+
+          {/* ── Community status meter (read-only) ── */}
+          <View style={styles.meterCard}>
+            <View style={styles.meterHeader}>
+              <Ionicons name="bar-chart-outline" size={14} color={BLOOM_ACCENT} />
+              <Text style={styles.meterTitle}>Community Containment Status</Text>
+              <View style={styles.readOnlyBadge}>
+                <Text style={styles.readOnlyTxt}>COMMUNITY</Text>
+              </View>
+            </View>
+            <Text style={styles.meterSub}>
+              Healers across the Sanctuary contribute to the global containment effort. This meter
+              reflects the collective progress against the Miasma Bloom.
+            </Text>
+            <View style={styles.meterBarBg}>
+              <View style={[styles.meterBarFill, { width: "18%" }]} />
+            </View>
+            <Text style={styles.meterLabel}>Phase I — Containment Effort (Preview)</Text>
+            <View style={styles.helpNotice}>
+              <Ionicons name="time-outline" size={13} color={BLOOM_GLOW} />
+              <Text style={styles.helpNoticeTxt}>
+                You can contribute once your early training is complete.{" "}
+                <Text style={{ color: BLOOM_ACCENT, fontWeight: "700" }}>Reach Level {worldEventLevel} to join the outbreak response.</Text>
+              </Text>
+            </View>
+          </View>
+
+          {/* ── Unlock requirement ── */}
+          <View style={styles.unlockCard}>
+            <View style={styles.unlockRow}>
+              <View style={styles.unlockIcon}>
+                <Ionicons name="lock-closed-outline" size={18} color={BLOOM_ACCENT} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.unlockTitle}>Active Participation Unlocks at Level {worldEventLevel}</Text>
+                <Text style={styles.unlockBody}>
+                  Complete your early ward training to join the outbreak response — earn Epidemic
+                  Tokens, track your personal containment score, and unlock the World Boss encounter.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ── Public health education cards ── */}
+          <Text style={styles.eduSectionTitle}>PUBLIC HEALTH PRIMER</Text>
+          <Text style={styles.eduSectionSub}>
+            While you train, learn how real communities fight disease outbreaks — and how that maps
+            to every battle in Clinica.
           </Text>
-          <Pressable style={styles.lockedBtn} onPress={() => goBack(router, "/shift")} testID="world-event-locked-back">
-            <Ionicons name="arrow-back" size={16} color={COLORS.onBrand} />
-            <Text style={styles.lockedBtnTxt}>BACK</Text>
-          </Pressable>
-        </View>
+          <View style={styles.eduStack}>
+            {PUBLIC_HEALTH_EDUCATION_CARDS.map((card) => {
+              const expanded = expandedCard === card.id;
+              return (
+                <Pressable
+                  key={card.id}
+                  style={[styles.eduCard, { borderColor: card.accentColor + "40" }]}
+                  onPress={() => setExpandedCard(expanded ? null : card.id)}
+                  testID={`phcard-${card.id}`}
+                >
+                  <View style={styles.eduCardHeader}>
+                    <View style={[styles.eduCardIcon, { backgroundColor: card.accentColor + "1A" }]}>
+                      <Ionicons name={card.icon as any} size={16} color={card.accentColor} />
+                    </View>
+                    <Text style={styles.eduCardTitle}>{card.title}</Text>
+                    <Ionicons
+                      name={expanded ? "chevron-up" : "chevron-down"}
+                      size={14}
+                      color={COLORS.onSurfaceTertiary}
+                    />
+                  </View>
+                  {expanded && (
+                    <View style={styles.eduCardBody}>
+                      <Text style={styles.eduCardBodyTxt}>{card.body}</Text>
+                      <View style={[styles.eduCardFrame, { borderColor: card.accentColor + "30" }]}>
+                        <Ionicons name="game-controller-outline" size={11} color={card.accentColor} />
+                        <Text style={[styles.eduCardFrameTxt, { color: card.accentColor }]}>
+                          In Clinica:{" "}
+                        </Text>
+                        <Text style={styles.eduCardFrameBody}>{card.fantasyFrame}</Text>
+                      </View>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* ── Disclaimer ── */}
+          <Text style={styles.boardDisclaimer}>
+            Public health information is for educational context only and is not medical advice.
+            Clinica is a game — always consult qualified health professionals for real health concerns.
+          </Text>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -1029,4 +1137,88 @@ const styles = StyleSheet.create({
   artBrief:   { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18, fontStyle: "italic" },
   artNotice:  { flexDirection: "row", gap: 4, alignItems: "center" },
   artNoticeTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
+
+  // ── B6 Community Health Board ──────────────────────────────────────────────
+  boardScroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  boardHeader: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.md, marginBottom: SPACING.xs,
+  },
+  boardKicker: { color: BLOOM_ACCENT, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  boardTitle:  { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", marginTop: 2 },
+  boardSub:    { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
+
+  boardLoreCard: {
+    backgroundColor: BLOOM_DARK + "55", borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: BLOOM_ACCENT + "44", padding: SPACING.md, gap: SPACING.sm,
+  },
+  loreCardRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  loreCardTitle: { color: BLOOM_ACCENT, fontSize: 14, fontWeight: "700", flex: 1 },
+  loreCardBody: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18, fontStyle: "italic" },
+  loreTag: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: BLOOM_ACCENT + "18", borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 4, alignSelf: "flex-start",
+  },
+  loreTagTxt: { color: BLOOM_ACCENT, fontSize: 10, fontWeight: "700" },
+
+  meterCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: SPACING.sm,
+  },
+  meterHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  meterTitle:  { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", flex: 1 },
+  readOnlyBadge: {
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill,
+    paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.border,
+  },
+  readOnlyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  meterSub:    { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
+  meterBarBg:  { height: 8, borderRadius: 4, backgroundColor: COLORS.border, overflow: "hidden" },
+  meterBarFill: { height: "100%", backgroundColor: BLOOM_ACCENT, borderRadius: 4 },
+  meterLabel:  { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600" },
+  helpNotice: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
+    backgroundColor: BLOOM_DARK + "44", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: BLOOM_ACCENT + "33", padding: SPACING.sm,
+  },
+  helpNoticeTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, flex: 1 },
+
+  unlockCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: BLOOM_ACCENT + "33", padding: SPACING.md,
+  },
+  unlockRow: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.md },
+  unlockIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: BLOOM_ACCENT + "18", alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  unlockTitle: { color: BLOOM_GLOW, fontSize: 13, fontWeight: "700", marginBottom: 3 },
+  unlockBody:  { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
+
+  eduSectionTitle: {
+    color: BLOOM_ACCENT, fontSize: 10, fontWeight: "700", letterSpacing: 1.5, marginTop: SPACING.xs,
+  },
+  eduSectionSub: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17 },
+  eduStack: { gap: SPACING.sm },
+  eduCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, padding: SPACING.md, gap: SPACING.sm,
+  },
+  eduCardHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  eduCardIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  eduCardTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", flex: 1 },
+  eduCardBody:  { gap: SPACING.sm },
+  eduCardBodyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  eduCardFrame: {
+    flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start",
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
+    borderWidth: 1, padding: SPACING.sm, gap: 2,
+  },
+  eduCardFrameTxt:  { fontSize: 11, fontWeight: "800" },
+  eduCardFrameBody: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16, flex: 1 },
+  boardDisclaimer: {
+    color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, fontStyle: "italic",
+    textAlign: "center", marginTop: SPACING.sm,
+  },
 });

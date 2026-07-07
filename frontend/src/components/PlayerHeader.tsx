@@ -17,17 +17,18 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ────────────────────────────────────────────────────────────
 // PlayerHeader — persistent global top bar for hub/non-battle pages
-// (Push 3.5). Two rows: a single identity+wallet line (hand-drawn portrait
-// avatar + name/title on the left, tap -> Profile; a wrapping cluster of
-// compact currency/stamina chips on the right, each tappable to a relevant
-// screen or info panel), and a slim Player EXP bar (tap -> level rewards).
-// Chip icons and the avatar use hand-drawn donghua/anime art.
+// (Push 3.5 + B4 Progressive Reveal). Two rows: identity+wallet line and
+// a slim Player EXP bar.
 //
-// Currencies shown here are intentionally limited to the four "main
-// wallet" items (stamina, Ward Coins, Refined Lotus Gems, Lotus Gems).
-// Everything else (Codex Shards, Ward Sigils, Nourishment Petals,
-// Faction Marks, building materials, Insight Crystals) stays inside its
-// own system's screen — see realm.ts / economy.ts / wellness.ts.
+// B4 Progressive Reveal rules (do NOT show confusing 0-balance chips to new players):
+//   Always:        Stamina + Ward Coins (the two core everyday resources)
+//   Shop unlocked (Level 2) OR has any balance:  Refined Lotus Gems chip
+//   Has any paid gems:                           Lotus Gems (paid) chip
+//   Tap each chip → info modal explaining what it is and where to spend it
+//
+// Currencies that belong only inside their own screens (NOT shown here):
+//   Codex Shards, Ward Sigils, Insight Crystals, University Credits,
+//   Epidemic Tokens, Nourishment Petals, Faction Marks, building materials
 // ────────────────────────────────────────────────────────────
 
 export function formatCompactNumber(n: number): string {
@@ -41,6 +42,8 @@ export function formatCompactNumber(n: number): string {
   return `${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
 }
 
+type InfoModal = "stamina" | "level" | "crowns" | "refined_gems" | "lotus_gems" | null;
+
 export function PlayerHeader({
   player,
   compact = false,
@@ -50,7 +53,7 @@ export function PlayerHeader({
 }) {
   const router = useRouter();
   const { stamina, max: staminaMax } = useLiveStamina(player);
-  const [infoModal, setInfoModal] = useState<"stamina" | "level" | null>(null);
+  const [infoModal, setInfoModal] = useState<InfoModal>(null);
 
   const apt = APTITUDE_INFO[player.aptitude];
   const playerLevelInfo = playerLevelFromXp(player.xp);
@@ -64,9 +67,15 @@ export function PlayerHeader({
   const nextAbility = nextClassAbility(player.aptitude, playerLevelInfo.level);
   const classId = (player.class_tree_id as ClassId) || "medic";
   const classIdentity = CLASS_IDENTITIES[classId] || CLASS_IDENTITIES.medic;
-  // The crowns chip links to the Shop, which is gated. Suppress the link until
-  // the Shop unlocks so it can't be used to sneak into a locked area.
+
+  // ── Progressive reveal gates ──────────────────────────────
+  // Shop gate: crowns chip links to Shop only if unlocked (level 2)
   const shopUnlocked = checkFeatureGate("shop", buildGateContext(player)).unlocked;
+  // Refined Lotus Gems: show once Shop unlocks (level 2) OR player already has a balance
+  const showRefinedGems = shopUnlocked || (player.refined_lotus_gems ?? 0) > 0;
+  // Paid Lotus Gems: only show if player actually has some — suppress the confusing
+  // 0-balance chip until premium spending has been introduced
+  const showPaidGems = (player.lotus_gems_paid ?? 0) > 0;
 
   const avatarSource = getAvatarSource(player.avatar_id);
 
@@ -104,8 +113,9 @@ export function PlayerHeader({
           </View>
         </Pressable>
 
-        {/* wallet + stamina chips (wrap onto a second line on narrow widths) */}
+        {/* wallet + stamina chips — progressively revealed */}
         <View style={styles.chipRow}>
+          {/* Always visible: Stamina */}
           <Chip
             testID="player-header-stamina"
             icon={getUiIcon("stamina")}
@@ -113,27 +123,34 @@ export function PlayerHeader({
             text={`${stamina}/${staminaMax}`}
             onPress={() => setInfoModal("stamina")}
           />
+          {/* Always visible: Ward Coins */}
           <Chip
             testID="player-header-crowns"
             icon={getUiIcon("crowns")}
             tint={COLORS.brand}
             text={formatCompactNumber(player.crowns)}
-            onPress={() => { if (shopUnlocked) router.push("/(tabs)/shop"); }}
+            onPress={() => setInfoModal("crowns")}
           />
-          <Chip
-            testID="player-header-refined-gems"
-            icon={getUiIcon("refined_gem")}
-            tint={COLORS.filter}
-            text={formatCompactNumber(player.refined_lotus_gems ?? 0)}
-            onPress={() => router.push("/economy")}
-          />
-          <Chip
-            testID="player-header-lotus-gems"
-            icon={getUiIcon("lotus_gem")}
-            tint={COLORS.growth}
-            text={formatCompactNumber(player.lotus_gems_paid ?? 0)}
-            onPress={() => router.push("/economy")}
-          />
+          {/* Progressively revealed: Refined Lotus Gems (Shop unlocked or already has some) */}
+          {showRefinedGems && (
+            <Chip
+              testID="player-header-refined-gems"
+              icon={getUiIcon("refined_gem")}
+              tint={COLORS.filter}
+              text={formatCompactNumber(player.refined_lotus_gems ?? 0)}
+              onPress={() => setInfoModal("refined_gems")}
+            />
+          )}
+          {/* Progressively revealed: Paid Lotus Gems (only when player has any) */}
+          {showPaidGems && (
+            <Chip
+              testID="player-header-lotus-gems"
+              icon={getUiIcon("lotus_gem")}
+              tint={COLORS.growth}
+              text={formatCompactNumber(player.lotus_gems_paid ?? 0)}
+              onPress={() => setInfoModal("lotus_gems")}
+            />
+          )}
         </View>
       </View>
 
@@ -160,15 +177,94 @@ export function PlayerHeader({
             <Ionicons name="flash" size={22} color={COLORS.brand} />
             <Text style={styles.modalTitle}>Shift Stamina</Text>
             <Text style={styles.modalBody}>
-              You have {stamina}/{staminaMax} Stamina. It regenerates slowly over time and is spent starting a
-              Ward Shift battle. Your max Stamina grows as your Player Level rises.
+              You have {stamina}/{staminaMax} Stamina. It regenerates slowly over time and is spent when
+              you start a Ward Shift battle. Your max Stamina grows as your Player Level rises.
             </Text>
+            <Text style={styles.modalHint}>Spend it on Ward Shift battles to earn Ward Coins, Codex Shards, and Hero EXP.</Text>
             <Pressable
               style={styles.modalBtn}
               onPress={() => { setInfoModal(null); router.push("/(tabs)/index" as any); }}
               testID="player-header-stamina-goto-shift"
             >
               <Text style={styles.modalBtnTxt}>Go to Ward Shift</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Ward Coins info modal ── */}
+      <Modal visible={infoModal === "crowns"} transparent animationType="fade" onRequestClose={() => setInfoModal(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setInfoModal(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Ionicons name="shield" size={22} color={COLORS.brand} />
+            <Text style={styles.modalTitle}>Ward Coins</Text>
+            <Text style={styles.modalBody}>
+              Ward Coins are the primary free currency of the Sanctuary. Earn them by completing Ward
+              Shift battles, Daily Rounds objectives, and story milestones.
+            </Text>
+            <Text style={styles.modalHint}>Spend them at the Apothecary Market for Clinical Supplies, hero upgrades, and Ward Defense boosts.</Text>
+            {shopUnlocked && (
+              <Pressable
+                style={styles.modalBtn}
+                onPress={() => { setInfoModal(null); router.push("/(tabs)/shop"); }}
+                testID="player-header-crowns-goto-shop"
+              >
+                <Text style={styles.modalBtnTxt}>Go to Shop</Text>
+              </Pressable>
+            )}
+            {!shopUnlocked && (
+              <View style={styles.modalLockedHint}>
+                <Ionicons name="lock-closed-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.modalLockedTxt}>Shop unlocks at Level 2</Text>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Refined Lotus Gems info modal ── */}
+      <Modal visible={infoModal === "refined_gems"} transparent animationType="fade" onRequestClose={() => setInfoModal(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setInfoModal(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Ionicons name="diamond" size={22} color={COLORS.filter} />
+            <Text style={styles.modalTitle}>Refined Lotus Gems</Text>
+            <Text style={styles.modalBody}>
+              Refined Lotus Gems are a mid-tier earned currency — crafted in the Sanctuary Bank by
+              converting Insight Crystals you earn through learning and play. They are{" "}
+              <Text style={{ fontWeight: "800" }}>never sold for real money</Text> and cost about
+              20% more to buy at their exchange rate than paid Lotus Gems, rewarding dedicated players.
+            </Text>
+            <Text style={styles.modalHint}>Spend them on cosmetics, hero skins, and Realm decorations.</Text>
+            <Pressable
+              style={styles.modalBtn}
+              onPress={() => { setInfoModal(null); router.push("/economy"); }}
+              testID="player-header-refined-gems-goto-economy"
+            >
+              <Text style={styles.modalBtnTxt}>View Currency Guide</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Paid Lotus Gems info modal ── */}
+      <Modal visible={infoModal === "lotus_gems"} transparent animationType="fade" onRequestClose={() => setInfoModal(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setInfoModal(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Ionicons name="sparkles" size={22} color={COLORS.growth} />
+            <Text style={styles.modalTitle}>Lotus Gems</Text>
+            <Text style={styles.modalBody}>
+              Lotus Gems are an optional premium currency for players who choose to support Clinica's
+              development. They are spent only on cosmetics, passes, and convenience items —{" "}
+              <Text style={{ fontWeight: "800" }}>never on exclusive power</Text> or progression
+              advantages unavailable to free players.
+            </Text>
+            <Text style={styles.modalHint}>Core clinical learning and all ward progression are always completely free.</Text>
+            <Pressable
+              style={styles.modalBtn}
+              onPress={() => { setInfoModal(null); router.push("/economy"); }}
+              testID="player-header-lotus-gems-goto-economy"
+            >
+              <Text style={styles.modalBtnTxt}>View Currency Guide</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -276,7 +372,14 @@ const styles = StyleSheet.create({
   },
   modalTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "800" },
   modalBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18 },
+  modalHint: { color: COLORS.brand, fontSize: 11, lineHeight: 16, fontStyle: "italic" },
   modalSub: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
+  modalLockedHint: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm,
+    paddingHorizontal: 10, paddingVertical: 7,
+  },
+  modalLockedTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
   modalBtn: {
     marginTop: 4,
     backgroundColor: COLORS.brand,

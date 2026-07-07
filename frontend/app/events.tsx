@@ -30,6 +30,19 @@ export default function EventsPage() {
   const isWide = width >= 760;
   const [tab, setTab] = useState<"events" | "offers">("events");
 
+  const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
+
+  if (!player) {
+    return (
+      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]}>
+        <ActivityIndicator color={COLORS.brand} />
+      </SafeAreaView>
+    );
+  }
+
+  // World Events: full participation gated at Level 5; Community Health Board visible to all.
+  const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
+
   const worldEventBanner = (
     <Pressable
       style={styles.worldEventBanner}
@@ -41,31 +54,25 @@ export default function EventsPage() {
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
-          <Text style={styles.worldEventKicker}>WORLD EVENT · PUSH 10 PROTOTYPE</Text>
+          <Text style={styles.worldEventKicker}>
+            {worldEventUnlocked ? "WORLD EVENT · PUSH 10 PROTOTYPE" : "COMMUNITY HEALTH BOARD"}
+          </Text>
           <View style={styles.worldEventBadge}>
-            <Text style={styles.worldEventBadgeTxt}>PREVIEW</Text>
+            <Text style={styles.worldEventBadgeTxt}>{worldEventUnlocked ? "PREVIEW" : "READ-ONLY"}</Text>
           </View>
         </View>
-        <Text style={styles.worldEventTitle}>Miasma Bloom</Text>
+        <Text style={styles.worldEventTitle}>
+          {worldEventUnlocked ? "Miasma Bloom" : "Public Health Watch"}
+        </Text>
         <Text style={styles.worldEventSub}>
-          A Realm-Wide Epidemic Event — see how every system connects to fight the outbreak.
+          {worldEventUnlocked
+            ? "A Realm-Wide Epidemic Event — see how every system connects to fight the outbreak."
+            : "Follow the Miasma Bloom outbreak and learn how communities fight disease together."}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={"#34D399"} />
     </Pressable>
   );
-  const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
-
-  if (!player) {
-    return (
-      <SafeAreaView style={[styles.root, styles.loading]} edges={["top", "bottom"]}>
-        <ActivityIndicator color={COLORS.brand} />
-      </SafeAreaView>
-    );
-  }
-
-  // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
-  const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
 
   const openMonetizationInfo = (card: MonetizationCardDef) => {
     setInfo({
@@ -91,8 +98,16 @@ export default function EventsPage() {
   const offersSection = (
     <View style={styles.column}>
       <View style={styles.colHeader}>
-        <Ionicons name="storefront-outline" size={16} color={COLORS.brand} />
-        <Text style={styles.colTitle}>Support the Sanctuary</Text>
+        <Ionicons name="heart-outline" size={16} color={COLORS.brand} />
+        <Text style={styles.colTitle}>Support Clinica</Text>
+      </View>
+      {/* B5 — Ethical monetization statement */}
+      <View style={styles.ethicalStatement}>
+        <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.success} style={{ marginTop: 1 }} />
+        <Text style={styles.ethicalTxt}>
+          <Text style={{ fontWeight: "800", color: COLORS.onSurface }}>Core learning is always free.</Text>
+          {" "}All ward progression, clinical education, and normal gameplay are free to earn. Paid options exist only to support development and add personalization — cosmetics, convenience, and lore. Nothing here grants exclusive power or blocks your progress.
+        </Text>
       </View>
       <Text style={styles.colSub}>
         Future ways to support Clinica's development. Nothing here is active — no billing is
@@ -165,7 +180,8 @@ export default function EventsPage() {
       )}
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {worldEventUnlocked && worldEventBanner}
+        {/* Show world-event banner for all players — label adapts to unlock state */}
+        {worldEventBanner}
         {isWide ? (
           <View style={styles.wideRow}>
             {offersSection}
@@ -221,6 +237,13 @@ const styles = StyleSheet.create({
   colTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" },
   colSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
   cardStack: { gap: SPACING.md, marginTop: 4 },
+  ethicalStatement: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
+    backgroundColor: COLORS.success + "0D", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.success + "30",
+    padding: SPACING.md,
+  },
+  ethicalTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, flex: 1 },
   worldEventBanner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: "#065F4644", borderRadius: RADIUS.lg,

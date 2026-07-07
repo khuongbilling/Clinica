@@ -94,6 +94,17 @@ export const MONETIZATION_CARDS: MonetizationCardDef[] = [
       "A placeholder for optional Gem bundles that would only ever be spendable on cosmetics, passes, and convenience — never on power. No billing, storefront, or platform integration is connected. Nothing can be purchased today.",
     artBrief: "A cluster of faceted lotus-cut gems glowing softly on a ceremonial tray, uncollected.",
   },
+  {
+    id: "founder-support",
+    title: "Support Clinica",
+    subtitle: "Help fund free clinical education for everyone.",
+    icon: "heart-outline",
+    accentColor: "#F43F5E",
+    badge: "Planned",
+    detail:
+      "Clinica is built to make real clinical reasoning education accessible and free. A future 'Founder' or direct-support option would let players contribute to ongoing development and server costs, with no gameplay advantage granted in return — just our sincere gratitude and a small profile badge.",
+    artBrief: "A glowing lotus lantern held up toward a starlit Sanctuary skyline, warmly illuminating the ward.",
+  },
 ];
 
 export type EventCadence = "daily" | "weekly" | "monthly" | "seasonal" | "special";
