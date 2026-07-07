@@ -22,6 +22,12 @@ import {
   TOKEN_EXCHANGE,
   WORLD_EVENT_BADGE_COLOR,
   REWARD_CATEGORY_LABEL,
+  getPhaseProgress,
+  formatContainmentLabel,
+  getSanctuaryCorruption,
+  getCorruptionCleared,
+  getCorruptionClearedFraction,
+  SANCTUARY_CORRUPTION_MAX,
   type WorldEventBadge,
 } from "@/src/game/worldEvent";
 
@@ -83,8 +89,9 @@ export default function WorldEventScreen() {
       <View style={styles.noticeBar}>
         <Ionicons name="flask-outline" size={13} color={BLOOM_ACCENT} />
         <Text style={styles.noticeTxt}>
-          Prototype preview — no purchases, multiplayer, live sync, or leaderboards. All progress is
-          placeholder. Labels mark each section's readiness.
+          Prototype preview — no purchases, multiplayer, live sync, or leaderboards. Your Containment
+          and Corruption meters track your real Epidemic Tokens; other sections use placeholder data.
+          Labels mark each section's readiness.
         </Text>
       </View>
 
@@ -151,6 +158,33 @@ function OverviewTab() {
         </Text>
       </View>
 
+      {/* Sanctuary Corruption Meter — drains as the player clears Bloom-patients */}
+      <SectionHeading icon="pulse-outline" title="Sanctuary Corruption Meter" />
+      <View style={[styles.corruptionCard, { borderColor: BLOOM_ACCENT + "55" }]} testID="world-event-corruption-meter">
+        <LinearGradient
+          colors={[BLOOM_DARK + "44", "transparent"]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.corruptionTopRow}>
+          <Text style={styles.corruptionValue}>{getSanctuaryCorruption(tokens).toLocaleString()}</Text>
+          <Text style={styles.corruptionMax}>/ {SANCTUARY_CORRUPTION_MAX.toLocaleString()} corruption</Text>
+        </View>
+        {/* Bar fills from the right — a fuller bar means MORE corruption remaining */}
+        <View style={styles.corruptionTrack}>
+          <View
+            style={[
+              styles.corruptionFill,
+              { width: `${(getSanctuaryCorruption(tokens) / SANCTUARY_CORRUPTION_MAX) * 100}%` },
+            ]}
+          />
+        </View>
+        <Text style={styles.corruptionHint}>
+          {getCorruptionCleared(tokens) > 0
+            ? `You've pushed back ${getCorruptionCleared(tokens).toLocaleString()} point${getCorruptionCleared(tokens) > 1 ? "s" : ""} of corruption (${Math.round(getCorruptionClearedFraction(tokens) * 100)}%). Each Bloom-patient you clear drains 1 point.`
+            : "Each Bloom-patient you clear in a Ward Shift drains 1 point from the Sanctuary's corruption."}
+        </Text>
+      </View>
+
       {/* Lore block */}
       <SectionHeading icon="book-outline" title="Event Lore" />
       <View style={[styles.loreCard, { borderColor: BLOOM_ACCENT + "55" }]}>
@@ -172,36 +206,50 @@ function OverviewTab() {
         <Text style={styles.threatTxt}>{MIASMA_BLOOM_LORE.threat}</Text>
       </View>
 
-      {/* Phase roadmap */}
+      {/* Phase roadmap — bars fill live from the player's Epidemic Tokens */}
       <SectionHeading icon="map-outline" title="Event Phases" />
-      {MIASMA_BLOOM_PHASES.map((phase, i) => (
-        <View key={phase.id} style={styles.phaseRow} testID={`world-event-phase-${phase.id}`}>
-          <View style={[styles.phaseIndex, { backgroundColor: i === 0 ? BLOOM_ACCENT + "33" : COLORS.surfaceTertiary }]}>
-            <Text style={[styles.phaseIndexTxt, { color: i === 0 ? BLOOM_ACCENT : COLORS.onSurfaceTertiary }]}>
-              {i + 1}
-            </Text>
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <View style={styles.phaseTopRow}>
-              <Text style={styles.phaseLabel}>{phase.label}</Text>
-              <BadgePill badge={phase.badge} />
+      {MIASMA_BLOOM_PHASES.map((phase, i) => {
+        const progress = getPhaseProgress(tokens, phase);
+        const cleared = progress >= 1;
+        const active = tokens < phase.threshold && (i === 0 || tokens >= MIASMA_BLOOM_PHASES[i - 1].threshold);
+        const highlight = cleared || active;
+        return (
+          <View key={phase.id} style={styles.phaseRow} testID={`world-event-phase-${phase.id}`}>
+            <View style={[styles.phaseIndex, { backgroundColor: highlight ? BLOOM_ACCENT + "33" : COLORS.surfaceTertiary }]}>
+              {cleared ? (
+                <Ionicons name="checkmark" size={16} color={BLOOM_ACCENT} />
+              ) : (
+                <Text style={[styles.phaseIndexTxt, { color: highlight ? BLOOM_ACCENT : COLORS.onSurfaceTertiary }]}>
+                  {i + 1}
+                </Text>
+              )}
             </View>
-            <Text style={styles.phaseDesc}>{phase.description}</Text>
-            {/* Progress bar */}
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${phase.thresholdProgress * 100}%`, backgroundColor: BLOOM_ACCENT }]} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <View style={styles.phaseTopRow}>
+                <Text style={styles.phaseLabel}>{phase.label}</Text>
+                <BadgePill badge={phase.badge} />
+              </View>
+              <Text style={styles.phaseDesc}>{phase.description}</Text>
+              {/* Progress bar */}
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: BLOOM_ACCENT }]} />
+              </View>
+              <Text style={styles.phaseThreshold}>
+                {formatContainmentLabel(tokens, phase)}
+                {cleared ? "  ·  Cleared" : `  ·  ${Math.round(progress * 100)}%`}
+              </Text>
             </View>
-            <Text style={styles.phaseThreshold}>{phase.thresholdLabel}</Text>
           </View>
-        </View>
-      ))}
+        );
+      })}
 
       {/* Collective note */}
       <View style={styles.collectiveNote}>
         <Ionicons name="people-outline" size={14} color={COLORS.onSurfaceTertiary} />
         <Text style={styles.collectiveNoteTxt}>
-          Phase thresholds are collective — all participating healers contribute together. Live
-          synchronisation and leaderboards are not implemented in this prototype.
+          These meters fill from your own Epidemic Tokens. In the full event, phase thresholds are
+          collective — all participating healers contribute together — but live synchronisation and
+          leaderboards are not implemented in this prototype.
         </Text>
       </View>
     </View>
@@ -638,6 +686,19 @@ const styles = StyleSheet.create({
   contributionValue: { color: BLOOM_ACCENT, fontSize: 24, fontWeight: "800" },
   contributionLabel: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600" },
   contributionHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, flex: 1, textAlign: "right", lineHeight: 14 },
+
+  // Sanctuary Corruption Meter
+  corruptionCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, borderWidth: 1,
+    padding: SPACING.lg, gap: SPACING.sm, overflow: "hidden",
+  },
+  corruptionTopRow: { flexDirection: "row", alignItems: "baseline", gap: SPACING.xs },
+  corruptionValue:  { color: BLOOM_ACCENT, fontSize: 22, fontWeight: "800" },
+  corruptionMax:    { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600" },
+  corruptionTrack:  { height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 4, overflow: "hidden" },
+  corruptionFill:   { height: "100%", borderRadius: 4, backgroundColor: "#EF4444", alignSelf: "flex-end" },
+  corruptionHint:   { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14 },
+
   loreCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, borderWidth: 1,
     padding: SPACING.lg, gap: SPACING.sm, overflow: "hidden",

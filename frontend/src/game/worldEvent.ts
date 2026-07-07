@@ -44,8 +44,7 @@ export interface WorldEventPhase {
   id: string;
   label: string;
   description: string;
-  thresholdLabel: string;
-  thresholdProgress: number; // 0..1 (static preview)
+  threshold: number; // Containment tokens required to clear this phase
   badge: WorldEventBadge;
 }
 
@@ -55,8 +54,7 @@ export const MIASMA_BLOOM_PHASES: WorldEventPhase[] = [
     label: "Phase I — Seedfall",
     description:
       "Initial spore dispersal detected. Ward shifts are encountering mutated Bloom-variants of known disease monsters. Containment protocols activated.",
-    thresholdLabel: "Containment 0 / 1 000 (Preview)",
-    thresholdProgress: 0,
+    threshold: 1000,
     badge: "Preview",
   },
   {
@@ -64,8 +62,7 @@ export const MIASMA_BLOOM_PHASES: WorldEventPhase[] = [
     label: "Phase II — Full Bloom",
     description:
       "Miasma density rising. Ward Defense perimeters are under elevated pressure. The University races to formulate a Research Countermeasure.",
-    thresholdLabel: "Containment 0 / 5 000 (Planned)",
-    thresholdProgress: 0,
+    threshold: 5000,
     badge: "Planned",
   },
   {
@@ -73,11 +70,43 @@ export const MIASMA_BLOOM_PHASES: WorldEventPhase[] = [
     label: "Phase III — Convergence",
     description:
       "World Boss Verdantha materialises at the Sanctuary Core. All factions redirect resources to the final push.",
-    thresholdLabel: "Containment 0 / 10 000 (Planned)",
-    thresholdProgress: 0,
+    threshold: 10000,
     badge: "Planned",
   },
 ];
+
+// ── Containment progress (live, derived from the player's Epidemic Tokens) ─────
+// Single-player local model: the player's own Epidemic Tokens stand in for the
+// collective containment contribution. Each phase's bar fills toward its
+// absolute token threshold.
+export function getPhaseProgress(tokens: number, phase: WorldEventPhase): number {
+  if (phase.threshold <= 0) return 0;
+  return Math.max(0, Math.min(1, tokens / phase.threshold));
+}
+
+export function formatContainmentLabel(tokens: number, phase: WorldEventPhase): string {
+  const capped = Math.min(Math.max(0, tokens), phase.threshold);
+  return `Containment ${capped.toLocaleString()} / ${phase.threshold.toLocaleString()}`;
+}
+
+// ── Sanctuary Corruption Meter ────────────────────────────────────────────────
+// Lore: "Each cleared patient reduces the Sanctuary Corruption Meter by 1 point."
+// In this single-player local build every Epidemic Token earned represents a
+// cleared Bloom-patient, so the meter drains 1 point per token from its starting
+// maximum. A lower meter means a safer Sanctuary.
+export const SANCTUARY_CORRUPTION_MAX = 1000;
+
+export function getSanctuaryCorruption(tokens: number): number {
+  return Math.max(0, SANCTUARY_CORRUPTION_MAX - Math.max(0, tokens));
+}
+
+export function getCorruptionCleared(tokens: number): number {
+  return Math.min(Math.max(0, tokens), SANCTUARY_CORRUPTION_MAX);
+}
+
+export function getCorruptionClearedFraction(tokens: number): number {
+  return getCorruptionCleared(tokens) / SANCTUARY_CORRUPTION_MAX;
+}
 
 // ── System Connections ────────────────────────────────────────────────────────
 
