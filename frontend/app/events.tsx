@@ -28,6 +28,31 @@ export default function EventsPage() {
   const { width } = useWindowDimensions();
   const isWide = width >= 760;
   const [tab, setTab] = useState<"events" | "offers">("events");
+
+  const worldEventBanner = (
+    <Pressable
+      style={styles.worldEventBanner}
+      onPress={() => router.push("/world-event" as any)}
+      testID="events-world-event-banner"
+    >
+      <View style={styles.worldEventLeft}>
+        <Ionicons name="earth" size={28} color="#34D399" />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+          <Text style={styles.worldEventKicker}>WORLD EVENT · PUSH 10 PROTOTYPE</Text>
+          <View style={styles.worldEventBadge}>
+            <Text style={styles.worldEventBadgeTxt}>PREVIEW</Text>
+          </View>
+        </View>
+        <Text style={styles.worldEventTitle}>Miasma Bloom</Text>
+        <Text style={styles.worldEventSub}>
+          A Realm-Wide Epidemic Event — see how every system connects to fight the outbreak.
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={"#34D399"} />
+    </Pressable>
+  );
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
 
   if (!player) {
@@ -129,6 +154,7 @@ export default function EventsPage() {
       )}
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {worldEventBanner}
         {isWide ? (
           <View style={styles.wideRow}>
             {offersSection}
@@ -184,4 +210,22 @@ const styles = StyleSheet.create({
   colTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" },
   colSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
   cardStack: { gap: SPACING.md, marginTop: 4 },
+  worldEventBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: "#065F4644", borderRadius: RADIUS.lg,
+    borderWidth: 2, borderColor: "#34D39955",
+    padding: SPACING.md, marginBottom: SPACING.sm,
+  },
+  worldEventLeft: {
+    width: 48, height: 48, borderRadius: 24, backgroundColor: "#34D39922",
+    alignItems: "center", justifyContent: "center",
+  },
+  worldEventKicker: { color: "#34D399", fontSize: 8, fontWeight: "700", letterSpacing: 1.5 },
+  worldEventBadge: {
+    backgroundColor: "#5B9BD522", borderWidth: 1, borderColor: "#5B9BD555",
+    borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 1,
+  },
+  worldEventBadgeTxt: { color: "#5B9BD5", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  worldEventTitle: { color: "#34D399", fontSize: 17, fontWeight: "300" },
+  worldEventSub:   { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 15 },
 });
