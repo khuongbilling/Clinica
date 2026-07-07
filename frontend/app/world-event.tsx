@@ -24,6 +24,7 @@ import {
   WORLD_EVENT_BADGE_COLOR,
   REWARD_CATEGORY_LABEL,
   getPhaseProgress,
+  getMilestoneProgress,
   formatContainmentLabel,
   getSanctuaryCorruption,
   getCorruptionCleared,
@@ -346,11 +347,19 @@ function SystemsTab({ router }: { router: any }) {
 // ── Rewards Tab ───────────────────────────────────────────────────────────────
 
 function RewardsTab() {
-  const { player, redeemExchangeItem } = usePlayer();
+  const { player, redeemExchangeItem, claimMilestone } = usePlayer();
   const { notice, flashNotice } = useInlineNotice();
   const [busyId, setBusyId] = useState<string | null>(null);
   const tokens = player?.epidemic_tokens ?? 0;
   const [rewardFilter, setRewardFilter] = useState<"all" | "milestones" | "catalog" | "exchange">("all");
+
+  const handleClaimMilestone = async (ms: typeof MIASMA_BLOOM_MILESTONES[number]) => {
+    if (busyId) return;
+    setBusyId(ms.id);
+    const res = await claimMilestone(ms.id);
+    setBusyId(null);
+    flashNotice(res.message);
+  };
 
   const handleRedeem = async (item: typeof TOKEN_EXCHANGE[number]) => {
     if (busyId) return;
@@ -398,9 +407,12 @@ function RewardsTab() {
         <>
           <SectionHeading icon="trophy-outline" title="Event Milestones" />
           <Text style={styles.sectionSub}>
-            Individual milestone rewards earned as you contribute to the event. Not yet active — labels show planned state.
+            Individual milestone rewards earned as you contribute to the event. Meet a milestone's requirement, then tap Claim to collect its rewards.
           </Text>
-          {MIASMA_BLOOM_MILESTONES.map((ms) => (
+          {MIASMA_BLOOM_MILESTONES.map((ms) => {
+            const prog = getMilestoneProgress(ms, player);
+            const busy = busyId === ms.id;
+            return (
             <View key={ms.id} style={styles.milestoneCard} testID={`world-event-milestone-${ms.id}`}>
               <View style={styles.milestoneTierBadge}>
                 <Text style={styles.milestoneTierTxt}>{ms.tier}</Text>
@@ -411,6 +423,15 @@ function RewardsTab() {
                   <BadgePill badge={ms.badge} />
                 </View>
                 <Text style={styles.msReq}>{ms.requirement}</Text>
+                {/* Live progress toward the requirement */}
+                <View style={styles.msProgressRow}>
+                  <View style={styles.msProgressTrack}>
+                    <View style={[styles.msProgressFill, { width: `${Math.round(prog.pct * 100)}%` }]} />
+                  </View>
+                  <Text style={styles.msProgressTxt}>
+                    {prog.claimed ? "Claimed" : `${Math.min(prog.current, prog.goal)}/${prog.goal}`}
+                  </Text>
+                </View>
                 <View style={styles.msRewardRow}>
                   {ms.rewards.map((r, i) => (
                     <View key={i} style={[styles.msRewardChip, { borderColor: r.accentColor + "55" }]}>
@@ -420,11 +441,27 @@ function RewardsTab() {
                   ))}
                 </View>
               </View>
-              <View style={[styles.msClaimBtn, styles.msClaimBtnDisabled]}>
-                <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceTertiary} />
-              </View>
+              {prog.claimed ? (
+                <View style={[styles.msClaimBtn, styles.msClaimBtnClaimed]} testID={`world-event-milestone-claimed-${ms.id}`}>
+                  <Ionicons name="checkmark" size={14} color="#34D399" />
+                </View>
+              ) : prog.met ? (
+                <Pressable
+                  style={[styles.msClaimBtn, busy && { opacity: 0.6 }]}
+                  onPress={() => handleClaimMilestone(ms)}
+                  disabled={busy}
+                  testID={`world-event-milestone-claim-${ms.id}`}
+                >
+                  <Ionicons name="gift" size={14} color={COLORS.onBrand ?? "#0B0B0F"} />
+                </Pressable>
+              ) : (
+                <View style={[styles.msClaimBtn, styles.msClaimBtnDisabled]}>
+                  <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceTertiary} />
+                </View>
+              )}
             </View>
-          ))}
+            );
+          })}
         </>
       )}
 
@@ -847,11 +884,18 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2,
   },
   msRewardTxt: { fontSize: 9, fontWeight: "700" },
+  msProgressRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  msProgressTrack: {
+    flex: 1, height: 5, borderRadius: 3, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden",
+  },
+  msProgressFill: { height: "100%", borderRadius: 3, backgroundColor: BLOOM_ACCENT },
+  msProgressTxt: { color: COLORS.onSurfaceSecondary, fontSize: 9, fontWeight: "700", minWidth: 34, textAlign: "right" },
   msClaimBtn: {
     width: 28, height: 28, borderRadius: 6, backgroundColor: BLOOM_ACCENT,
     alignItems: "center", justifyContent: "center",
   },
   msClaimBtnDisabled: { backgroundColor: COLORS.surfaceTertiary },
+  msClaimBtnClaimed: { backgroundColor: "#34D39922", borderWidth: 1, borderColor: "#34D39966" },
 
   // Catalog
   catalogGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },

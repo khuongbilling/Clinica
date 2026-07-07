@@ -19,7 +19,7 @@ import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
 } from './classTree';
 import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
-import { TokenExchangeItem } from './worldEvent';
+import { TokenExchangeItem, MIASMA_BLOOM_MILESTONES, getMilestoneProgress } from './worldEvent';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -65,6 +65,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
       simulations_completed: out.simulations_completed || [],
       badge_progress: out.badge_progress || {},
     };
+  }
+  if (!out.claimed_milestones) {
+    out = { ...out, claimed_milestones: [] };
   }
   if (out.stamina == null || !out.stamina_updated_at) {
     out = {
@@ -232,6 +235,7 @@ type Ctx = {
   }>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   redeemExchangeItem: (item: TokenExchangeItem) => Promise<{ ok: boolean; message: string }>;
+  claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
@@ -362,6 +366,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     },
     runs_completed: 0,
     bosses_defeated: [],
+    claimed_milestones: [],
     failure_counts: {},
     inventory: {
       'Albuterol Mist': 1,
@@ -816,6 +821,47 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     playerRef.current = next; // commit synchronously before awaiting persistence
     await updateState(next);
     return { ok: true, message: `Redeemed ${item.name} for ${cost.toLocaleString()} Epidemic Tokens.` };
+  }, [updateState]);
+
+  // Claim a Miasma Bloom Event Milestone. Guards: milestone must exist, its
+  // requirement must be met against the player's real progress, and it must not
+  // already be claimed. Applies the milestone's concrete grant (currencies,
+  // materials, codex entries) and records the id in claimed_milestones so the
+  // reward can never be double-claimed. Uses the same synchronous playerRef
+  // critical section as redeemExchangeItem so rapid taps can't double-grant.
+  const claimMilestone = useCallback(async (milestoneId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const ms = MIASMA_BLOOM_MILESTONES.find((m) => m.id === milestoneId);
+    if (!ms) return { ok: false, message: 'Unknown milestone.' };
+    const claimed = base.claimed_milestones || [];
+    if (claimed.includes(milestoneId)) {
+      return { ok: false, message: `${ms.label} already claimed.` };
+    }
+    const progress = getMilestoneProgress(ms, base);
+    if (!progress.met) {
+      return { ok: false, message: `${ms.label} not ready — ${progress.current}/${progress.goal}.` };
+    }
+    const g = ms.grant;
+    const next: PlayerState = {
+      ...base,
+      claimed_milestones: [...claimed, milestoneId],
+    };
+    if (g.epidemicTokens) next.epidemic_tokens = (base.epidemic_tokens || 0) + g.epidemicTokens;
+    if (g.insightCrystals) next.insight_crystals = (base.insight_crystals || 0) + g.insightCrystals;
+    if (g.codexShards) next.codex_shards = (base.codex_shards || 0) + g.codexShards;
+    if (g.materials) {
+      next.inventory = { ...(base.inventory || {}) };
+      for (const [name, qty] of Object.entries(g.materials)) {
+        next.inventory[name] = (next.inventory[name] || 0) + qty;
+      }
+    }
+    if (g.codex?.length) {
+      next.codex_unlocked = Array.from(new Set([...(base.codex_unlocked || []), ...g.codex]));
+    }
+    playerRef.current = next; // commit synchronously before awaiting persistence
+    await updateState(next);
+    return { ok: true, message: `Claimed “${ms.label}” reward!` };
   }, [updateState]);
 
   const purchaseSkin = useCallback(async (skinId: string, price: number) => {
@@ -1376,9 +1422,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

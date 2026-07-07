@@ -131,6 +131,7 @@ class Player(BaseModel):
     lessons_completed: List[str] = Field(default_factory=list)
     simulations_completed: List[str] = Field(default_factory=list)
     badge_progress: Dict[str, int] = Field(default_factory=dict)
+    claimed_milestones: List[str] = Field(default_factory=list)
     stamina: int = 5
     stamina_updated_at: str = Field(default_factory=now_iso)
     wellness: WellnessState = Field(default_factory=WellnessState)
@@ -195,6 +196,7 @@ class PlayerUpdate(BaseModel):
     lessons_completed: Optional[List[str]] = None
     simulations_completed: Optional[List[str]] = None
     badge_progress: Optional[Dict[str, int]] = None
+    claimed_milestones: Optional[List[str]] = None
     stamina: Optional[int] = None
     stamina_updated_at: Optional[str] = None
     wellness: Optional[WellnessState] = None

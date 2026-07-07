@@ -212,6 +212,25 @@ export const MIASMA_BLOOM_SYSTEMS: SystemContribution[] = [
 
 // ── Milestone Rewards ─────────────────────────────────────────────────────────
 
+// A milestone's progress is tracked against one real PlayerState-derived signal.
+//   runs     → total Ward Shift / battle runs completed (player.runs_completed)
+//   patients → total Bloom-variant patients treated (sum of enemy_mastery counts)
+//   lessons  → University lessons completed (player.lessons_completed.length)
+//   tokens   → Epidemic Tokens earned = collective containment (player.epidemic_tokens)
+//   boss     → World Boss Verdantha defeated (player.bosses_defeated includes verdantha)
+export type MilestoneMetric = "runs" | "patients" | "lessons" | "tokens" | "boss";
+
+// What claiming a milestone actually hands the player. Every field maps to a
+// real PlayerState currency / inventory / codex sink, so a claimed milestone
+// always delivers something concrete (mirrors the honest-grant exchange model).
+export interface MilestoneGrant {
+  epidemicTokens?: number;
+  insightCrystals?: number;
+  codexShards?: number;
+  materials?: Record<string, number>;
+  codex?: string[]; // Codex entry ids to unlock
+}
+
 export interface MilestoneReward {
   id: string;
   tier: number;
@@ -219,7 +238,9 @@ export interface MilestoneReward {
   requirement: string;
   rewards: { icon: string; label: string; accentColor: string }[];
   badge: WorldEventBadge;
-  claimed: boolean; // static preview — always false
+  metric: MilestoneMetric;
+  goal: number; // requirement target for the metric above
+  grant: MilestoneGrant; // concrete rewards applied on claim
 }
 
 export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
@@ -233,7 +254,9 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
       { icon: "cube", label: "1 Supply Crate", accentColor: "#D4AF37" },
     ],
     badge: "Preview",
-    claimed: false,
+    metric: "runs",
+    goal: 1,
+    grant: { epidemicTokens: 50, materials: { "Supply Crate": 1 } },
   },
   {
     id: "ms_2",
@@ -245,7 +268,9 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
       { icon: "sparkles", label: "Bloom Research Notes (Codex)", accentColor: "#A78BFA" },
     ],
     badge: "Preview",
-    claimed: false,
+    metric: "patients",
+    goal: 5,
+    grant: { epidemicTokens: 200, codex: ["bloom_research_notes"] },
   },
   {
     id: "ms_3",
@@ -258,7 +283,9 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
       { icon: "cube", label: "3 Supply Crates", accentColor: "#D4AF37" },
     ],
     badge: "Preview",
-    claimed: false,
+    metric: "runs",
+    goal: 3,
+    grant: { epidemicTokens: 500, insightCrystals: 200, materials: { "Supply Crate": 3 } },
   },
   {
     id: "ms_4",
@@ -267,11 +294,12 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     requirement: "Complete any Bloom-Response lesson in the University.",
     rewards: [
       { icon: "flask", label: "1 000 Epidemic Tokens", accentColor: "#34D399" },
-      { icon: "ribbon", label: "Bloom Researcher Title (Profile)", accentColor: "#A78BFA" },
       { icon: "library", label: "Bloom Anatomy entry (Codex)", accentColor: "#5B9BD5" },
     ],
     badge: "Preview",
-    claimed: false,
+    metric: "lessons",
+    goal: 1,
+    grant: { epidemicTokens: 1000, codex: ["bloom_anatomy"] },
   },
   {
     id: "ms_5",
@@ -280,11 +308,12 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     requirement: "Reach Phase I Containment Threshold (collective milestone).",
     rewards: [
       { icon: "flask", label: "2 000 Epidemic Tokens", accentColor: "#34D399" },
-      { icon: "trophy", label: "Bloom Veteran Title", accentColor: "#D4AF37" },
       { icon: "cube", label: "World Boss Relic Shard ×3", accentColor: "#F97316" },
     ],
     badge: "Preview",
-    claimed: false,
+    metric: "tokens",
+    goal: 1000,
+    grant: { epidemicTokens: 2000, materials: { "World Boss Relic Shard": 3 } },
   },
   {
     id: "ms_6",
@@ -293,14 +322,62 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     requirement: "Reach Phase III — defeat the World Boss Verdantha.",
     rewards: [
       { icon: "star", label: "Rare Material: Verdanthite ×5", accentColor: "#34D399" },
-      { icon: "ribbon", label: "Verdantha Slayer Title", accentColor: "#EF4444" },
-      { icon: "color-palette", label: "Bloom Ward Skin (Coming Soon)", accentColor: "#F472B6" },
       { icon: "cube", label: "World Boss Relic — Verdantha's Core", accentColor: "#F97316" },
     ],
     badge: "Planned",
-    claimed: false,
+    metric: "boss",
+    goal: 1,
+    grant: { materials: { "Verdanthite": 5, "Verdantha's Core": 1 } },
   },
 ];
+
+// ── Milestone progress (live, derived from real PlayerState signals) ──────────
+
+export interface MilestoneProgress {
+  current: number;
+  goal: number;
+  met: boolean;
+  claimed: boolean;
+  pct: number; // 0..1 clamped
+}
+
+// Resolve a milestone's current progress from the player's real counters. Kept
+// pure/defensive so a partially-loaded player never throws — missing counters
+// read as 0. `claimed` is sourced from the player's persisted claim list.
+export function getMilestoneProgress(
+  ms: MilestoneReward,
+  player: {
+    runs_completed?: number;
+    enemy_mastery?: Record<string, number>;
+    lessons_completed?: string[];
+    epidemic_tokens?: number;
+    bosses_defeated?: string[];
+    claimed_milestones?: string[];
+  } | null | undefined,
+): MilestoneProgress {
+  const claimed = !!player?.claimed_milestones?.includes(ms.id);
+  let current = 0;
+  switch (ms.metric) {
+    case "runs":
+      current = Math.max(0, player?.runs_completed ?? 0);
+      break;
+    case "patients":
+      current = Object.values(player?.enemy_mastery ?? {}).reduce((a, b) => a + (b || 0), 0);
+      break;
+    case "lessons":
+      current = player?.lessons_completed?.length ?? 0;
+      break;
+    case "tokens":
+      current = Math.max(0, player?.epidemic_tokens ?? 0);
+      break;
+    case "boss":
+      current = player?.bosses_defeated?.includes("verdantha") ? 1 : 0;
+      break;
+  }
+  const goal = Math.max(1, ms.goal);
+  const met = current >= goal;
+  return { current, goal, met, claimed, pct: Math.max(0, Math.min(1, current / goal)) };
+}
 
 // ── Reward Catalog Preview ────────────────────────────────────────────────────
 

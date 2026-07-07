@@ -211,6 +211,8 @@ export interface PlayerState {
   lessons_completed?: string[];
   simulations_completed?: string[];
   badge_progress?: Record<string, number>;
+  // World Event — Miasma Bloom milestone rewards the player has claimed.
+  claimed_milestones?: string[];
   region_progress?: Record<string, number>;
   stamina?: number;
   stamina_updated_at?: string;
