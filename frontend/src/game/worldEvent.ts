@@ -268,6 +268,57 @@ export interface MilestoneGrant {
   codexShards?: number;
   materials?: Record<string, number>;
   codex?: string[]; // Codex entry ids to unlock
+  titles?: string[]; // Cosmetic profile Title ids to award (see EVENT_TITLES)
+}
+
+// ── Profile Titles (cosmetic) ─────────────────────────────────────────────────
+// Earned, purely-cosmetic honorifics displayed under the player's name on the
+// Profile screen. They carry NO stat effect. Each id below maps to a real
+// PlayerState grant (player.owned_titles) so a title reward always delivers a
+// concrete, displayable thing — mirroring the honest-grant model used for
+// currencies/materials/codex entries.
+export interface EventTitle {
+  id: string;
+  label: string;
+  accentColor: string;
+  description: string;
+}
+
+export const EVENT_TITLES: Record<string, EventTitle> = {
+  bloom_researcher: {
+    id: "bloom_researcher",
+    label: "Bloom Researcher",
+    accentColor: "#A78BFA",
+    description:
+      "Awarded for completing a Bloom-Response lesson at the University during the Miasma Bloom. A mark of scholarly countermeasure work.",
+  },
+  bloom_veteran: {
+    id: "bloom_veteran",
+    label: "Bloom Veteran",
+    accentColor: "#34D399",
+    description:
+      "Awarded for pushing Sanctuary containment across the Phase I threshold. A seasoned hand at holding back the tide.",
+  },
+  verdantha_slayer: {
+    id: "verdantha_slayer",
+    label: "Verdantha Slayer",
+    accentColor: "#EF4444",
+    description:
+      "Awarded to healers who contributed to the defeat of the World Boss Verdantha in Phase III. The rarest Bloom honorific.",
+  },
+};
+
+// Resolve a title id to its catalog entry, defensively (unknown ids read as a
+// minimal fallback so the UI never crashes on legacy / future title ids).
+export function getEventTitle(id: string): EventTitle {
+  return (
+    EVENT_TITLES[id] ?? {
+      id,
+      label: id,
+      accentColor: "#94A3B8",
+      description: "",
+    }
+  );
 }
 
 export interface MilestoneReward {
@@ -334,11 +385,12 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     rewards: [
       { icon: "flask", label: "1 000 Epidemic Tokens", accentColor: "#34D399" },
       { icon: "library", label: "Bloom Anatomy entry (Codex)", accentColor: "#5B9BD5" },
+      { icon: "ribbon", label: "Title: Bloom Researcher", accentColor: "#A78BFA" },
     ],
     badge: "Preview",
     metric: "lessons",
     goal: 1,
-    grant: { epidemicTokens: 1000, codex: ["bloom_anatomy"] },
+    grant: { epidemicTokens: 1000, codex: ["bloom_anatomy"], titles: ["bloom_researcher"] },
   },
   {
     id: "ms_5",
@@ -348,13 +400,14 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     rewards: [
       { icon: "flask", label: "2 000 Epidemic Tokens", accentColor: "#34D399" },
       { icon: "cube", label: "World Boss Relic Shard ×3", accentColor: "#F97316" },
+      { icon: "ribbon", label: "Title: Bloom Veteran", accentColor: "#34D399" },
     ],
     badge: "Preview",
     metric: "tokens",
     // Locked to the live Phase I threshold so this milestone triggers exactly
     // when the containment bar clears Phase I — never drifts out of sync with it.
     goal: MIASMA_BLOOM_PHASES[0].threshold,
-    grant: { epidemicTokens: 2000, materials: { "World Boss Relic Shard": 3 } },
+    grant: { epidemicTokens: 2000, materials: { "World Boss Relic Shard": 3 }, titles: ["bloom_veteran"] },
   },
   {
     id: "ms_6",
@@ -364,11 +417,12 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
     rewards: [
       { icon: "star", label: "Rare Material: Verdanthite ×5", accentColor: "#34D399" },
       { icon: "cube", label: "World Boss Relic — Verdantha's Core", accentColor: "#F97316" },
+      { icon: "ribbon", label: "Title: Verdantha Slayer", accentColor: "#EF4444" },
     ],
     badge: "Planned",
     metric: "boss",
     goal: 1,
-    grant: { materials: { "Verdanthite": 5, "Verdantha's Core": 1 } },
+    grant: { materials: { "Verdanthite": 5, "Verdantha's Core": 1 }, titles: ["verdantha_slayer"] },
   },
 ];
 

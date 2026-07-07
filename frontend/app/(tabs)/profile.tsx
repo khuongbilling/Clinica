@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
 import { AVATAR_OPTIONS, getAvatarSource } from "@/src/game/avatars";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
+import { getEventTitle } from "@/src/game/worldEvent";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -33,7 +34,7 @@ const MASTERY_LABELS: Record<string, string> = {
 // Profile is the deep identity/settings page, not another hub surface.
 export default function ProfileScreen() {
   const router = useRouter();
-  const { player, resetPlayer, setAvatar } = usePlayer();
+  const { player, resetPlayer, setAvatar, setActiveTitle } = usePlayer();
   const { resetTutorials } = useTutorial();
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -56,6 +57,9 @@ export default function ProfileScreen() {
   const unlockedAbilities = unlockedClassAbilities(player.aptitude, playerLevelInfo.level);
   const nextAbility = nextClassAbility(player.aptitude, playerLevelInfo.level);
 
+  const ownedTitles = player.owned_titles || [];
+  const activeTitle = player.active_title ? getEventTitle(player.active_title) : null;
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -75,6 +79,12 @@ export default function ProfileScreen() {
             </View>
           </Pressable>
           <Text style={styles.name}>{player.name}</Text>
+          {activeTitle && (
+            <View style={[styles.titleBadge, { borderColor: activeTitle.accentColor + "66", backgroundColor: activeTitle.accentColor + "18" }]} testID="profile-active-title">
+              <Ionicons name="ribbon" size={12} color={activeTitle.accentColor} />
+              <Text style={[styles.titleBadgeTxt, { color: activeTitle.accentColor }]}>{activeTitle.label}</Text>
+            </View>
+          )}
           <Text style={styles.aptLine}>{apt.title} · {player.rank}</Text>
         </View>
 
@@ -137,6 +147,44 @@ export default function ProfileScreen() {
             <Text style={[styles.nextRank, { marginTop: 6 }]}>All class abilities unlocked.</Text>
           )}
         </View>
+
+        <Text style={styles.section}>Titles</Text>
+        {ownedTitles.length > 0 ? (
+          <View style={styles.titlesCard} testID="profile-titles-card">
+            {ownedTitles.map((tid) => {
+              const t = getEventTitle(tid);
+              const selected = player.active_title === tid;
+              return (
+                <Pressable
+                  key={tid}
+                  style={[styles.titleRow, selected && { borderColor: t.accentColor, backgroundColor: t.accentColor + "12" }]}
+                  onPress={() => setActiveTitle(selected ? "" : tid)}
+                  testID={`title-option-${tid}`}
+                >
+                  <Ionicons name="ribbon" size={18} color={t.accentColor} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.titleName}>{t.label}</Text>
+                    {!!t.description && <Text style={styles.titleDesc}>{t.description}</Text>}
+                  </View>
+                  {selected ? (
+                    <View style={[styles.titleActivePill, { backgroundColor: t.accentColor }]}>
+                      <Text style={styles.titleActivePillTxt}>ACTIVE</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.titleEquipHint}>Tap to display</Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.titlesEmpty} testID="profile-titles-empty">
+            <Ionicons name="ribbon-outline" size={20} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.titlesEmptyTxt}>
+              No Titles earned yet. Claim Miasma Bloom event milestones to earn cosmetic Titles like Bloom Researcher.
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.section}>Mastery</Text>
         <View style={styles.masteryGrid}>
@@ -364,7 +412,29 @@ const styles = StyleSheet.create({
   },
   pickerClearTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
   name: { color: COLORS.onSurface, fontSize: 24, fontWeight: "400", marginTop: SPACING.sm },
+  titleBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1,
+    marginTop: 2,
+  },
+  titleBadgeTxt: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   aptLine: { color: COLORS.brand, fontSize: 12, letterSpacing: 1.5, fontWeight: "600" },
+  titlesCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden", gap: 1 },
+  titleRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    padding: SPACING.md, borderWidth: 1, borderColor: "transparent", borderRadius: RADIUS.md,
+  },
+  titleName: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  titleDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  titleEquipHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600" },
+  titleActivePill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  titleActivePillTxt: { color: COLORS.onBrand, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
+  titlesEmpty: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  titlesEmptyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, flex: 1, lineHeight: 17 },
   rankCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, gap: 6 },
   label: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   rankName: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },

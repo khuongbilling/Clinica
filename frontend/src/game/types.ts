@@ -213,6 +213,10 @@ export interface PlayerState {
   badge_progress?: Record<string, number>;
   // World Event — Miasma Bloom milestone rewards the player has claimed.
   claimed_milestones?: string[];
+  // Cosmetic profile Titles the player has earned (see EVENT_TITLES). Purely
+  // decorative — no stat effect. `active_title` is the one shown under the name.
+  owned_titles?: string[];
+  active_title?: string;
   region_progress?: Record<string, number>;
   stamina?: number;
   stamina_updated_at?: string;

@@ -69,6 +69,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.claimed_milestones) {
     out = { ...out, claimed_milestones: [] };
   }
+  if (!out.owned_titles) {
+    out = { ...out, owned_titles: [] };
+  }
+  if (out.active_title == null) {
+    out = { ...out, active_title: "" };
+  }
   if (out.stamina == null || !out.stamina_updated_at) {
     out = {
       ...out,
@@ -236,6 +242,7 @@ type Ctx = {
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   redeemExchangeItem: (item: TokenExchangeItem) => Promise<{ ok: boolean; message: string }>;
   claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
+  setActiveTitle: (titleId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseSkin: (skinId: string, price: number) => Promise<{ ok: boolean; message: string }>;
   equipSkin: (skinId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseUpgrade: (upgradeId: string, price: number) => Promise<{ ok: boolean; message: string }>;
@@ -367,6 +374,8 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     runs_completed: 0,
     bosses_defeated: [],
     claimed_milestones: [],
+    owned_titles: [],
+    active_title: "",
     failure_counts: {},
     inventory: {
       'Albuterol Mist': 1,
@@ -870,9 +879,29 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (g.codex?.length) {
       next.codex_unlocked = Array.from(new Set([...(base.codex_unlocked || []), ...g.codex]));
     }
+    if (g.titles?.length) {
+      const merged = Array.from(new Set([...(base.owned_titles || []), ...g.titles]));
+      next.owned_titles = merged;
+      // Auto-equip the first earned title so the reward is immediately visible;
+      // once the player has picked one, respect their choice and leave it be.
+      if (!base.active_title && merged.length) next.active_title = g.titles[0];
+    }
     playerRef.current = next; // commit synchronously before awaiting persistence
     await updateState(next);
     return { ok: true, message: `Claimed “${ms.label}” reward!` };
+  }, [updateState]);
+
+  // Set (or clear, with "") the player's displayed profile Title. Cosmetic only.
+  const setActiveTitle = useCallback(async (titleId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    if (titleId && !(base.owned_titles || []).includes(titleId)) {
+      return { ok: false, message: 'Title not earned yet.' };
+    }
+    const next = { ...base, active_title: titleId };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: titleId ? 'Title updated.' : 'Title cleared.' };
   }, [updateState]);
 
   const purchaseSkin = useCallback(async (skinId: string, price: number) => {
@@ -1433,9 +1462,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
+    player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
