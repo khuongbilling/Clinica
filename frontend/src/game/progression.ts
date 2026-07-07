@@ -77,6 +77,7 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   { id: 'hall_of_heroes', label: 'Hall of Heroes', level: 3 },
   { id: 'ward_defense', label: 'Ward Defense', level: 5 },
   { id: 'boss', label: 'Boss Encounters', level: 7 },
+  { id: 'world_event', label: 'World Events (Miasma Bloom)', level: 10 },
   { id: 'ten_pull', label: 'Full Class Recruitment (10-pull)', level: 12 },
   { id: 'advanced_traits', label: 'Advanced Hero Traits', level: 15 },
   { id: 'advanced_sims', label: 'Advanced Simulations', level: 25 },

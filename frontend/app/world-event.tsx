@@ -11,6 +11,7 @@ import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
+import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
   MIASMA_BLOOM_LORE,
@@ -57,6 +58,35 @@ export default function WorldEventScreen() {
   const [tab, setTab] = useState<Tab>("overview");
 
   if (!player) return null;
+
+  // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
+  // Deep-link / back-nav safety net: if an under-level player reaches this route
+  // directly, show a locked card instead of the full event dashboard.
+  const worldEventLevel = FEATURE_UNLOCKS.find((f) => f.id === "world_event")?.level ?? 10;
+  const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
+  if (!worldEventUnlocked) {
+    return (
+      <SafeAreaView style={styles.root} edges={["top"]} testID="world-event-locked">
+        <PlayerHeader player={player} />
+        <View style={styles.lockedWrap}>
+          <View style={styles.lockedIcon}>
+            <Ionicons name="lock-closed" size={34} color={BLOOM_ACCENT} />
+          </View>
+          <Text style={styles.lockedKicker}>WORLD EVENT · LOCKED</Text>
+          <Text style={styles.lockedTitle}>{MIASMA_BLOOM_LORE.title}</Text>
+          <Text style={styles.lockedBody}>
+            Realm-wide World Events are later-game content. Reach{" "}
+            <Text style={{ color: BLOOM_GLOW, fontWeight: "700" }}>Player Level {worldEventLevel}</Text>{" "}
+            to answer the Miasma Bloom outbreak and unlock the World Boss.
+          </Text>
+          <Pressable style={styles.lockedBtn} onPress={() => goBack(router, "/shift")} testID="world-event-locked-back">
+            <Ionicons name="arrow-back" size={16} color={COLORS.onBrand} />
+            <Text style={styles.lockedBtnTxt}>BACK</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -633,6 +663,28 @@ function SystemTag({ label, color }: { label: string; color: string }) {
 
 const styles = StyleSheet.create({
   root:     { flex: 1, backgroundColor: COLORS.surface },
+
+  lockedWrap: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    paddingHorizontal: SPACING.xl, gap: SPACING.md,
+  },
+  lockedIcon: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: BLOOM_ACCENT + "1A", borderWidth: 1, borderColor: BLOOM_ACCENT + "55",
+    alignItems: "center", justifyContent: "center", marginBottom: SPACING.sm,
+  },
+  lockedKicker: { color: BLOOM_ACCENT, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  lockedTitle:  { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", textAlign: "center" },
+  lockedBody:   {
+    color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21,
+    textAlign: "center", maxWidth: 340,
+  },
+  lockedBtn: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.pill,
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, marginTop: SPACING.md,
+  },
+  lockedBtnTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 1 },
 
   header: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,

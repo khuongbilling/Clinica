@@ -792,3 +792,27 @@ id = "Js2nAUYO-dtYAPcuO5-hG"
 uri = "file://frontend/assets/system/system_weaver.png"
 type = "image"
 title = "system weaver narrator"
+
+[[generated]]
+id = "jSNCNbvqYN9Y05ksK3OeK"
+uri = "file://frontend/assets/reminiscence/scene_people.png"
+type = "image"
+title = "people i protect"
+
+[[generated]]
+id = "1OtN7GbzR-YjDZi6-YSjh"
+uri = "file://frontend/assets/reminiscence/scene_could_not_save.png"
+type = "image"
+title = "could not save"
+
+[[generated]]
+id = "AzIN-Bkt1kxj1Uoh7kEMT"
+uri = "file://frontend/assets/reminiscence/scene_regret.png"
+type = "image"
+title = "weight of regret"
+
+[[generated]]
+id = "uPeZOtLn1BzyX1f60_tgX"
+uri = "file://frontend/assets/reminiscence/scene_lotus_keeper.png"
+type = "image"
+title = "lotus keeper"

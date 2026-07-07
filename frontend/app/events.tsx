@@ -10,6 +10,7 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { MessageDialog } from "@/src/components/WebAlert";
 import { EVENT_TRACKS, EventTrackDef, MONETIZATION_CARDS, MonetizationCardDef } from "@/src/game/eventsHub";
 import { usePlayer } from "@/src/game/store";
+import { playerLevelFromXp, isFeatureUnlocked } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -62,6 +63,9 @@ export default function EventsPage() {
       </SafeAreaView>
     );
   }
+
+  // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
+  const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
 
   const openMonetizationInfo = (card: MonetizationCardDef) => {
     setInfo({
@@ -154,7 +158,7 @@ export default function EventsPage() {
       )}
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {worldEventBanner}
+        {worldEventUnlocked && worldEventBanner}
         {isWide ? (
           <View style={styles.wideRow}>
             {offersSection}

@@ -3,7 +3,7 @@ import { Animated, Easing, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import type { ReactNode } from "react";
 
-export type PanelEffect = "fadeIn" | "zoomIn" | "panSlow" | "pulse" | "lotusRecall";
+export type PanelEffect = "fadeIn" | "zoomIn" | "panSlow" | "pulse" | "heartbeat" | "lotusRecall";
 
 // Applies one light-motion effect (fade / slow zoom / slow pan / gentle pulse)
 // to a still illustration — this is the "motion" in motion-comic, without any
@@ -54,6 +54,21 @@ export function MotionPanel({
         Animated.sequence([
           Animated.timing(pulse, { toValue: 1.045, duration: 950, useNativeDriver: true }),
           Animated.timing(pulse, { toValue: 1, duration: 950, useNativeDriver: true }),
+        ]),
+      );
+      pulseLoop.start();
+    }
+
+    if (effect === "heartbeat") {
+      // A double-thump cardiac pulse (lub-dub) followed by a rest — used for the
+      // "silent infarct" beat so the still frame feels like a fading heartbeat.
+      pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1.035, duration: 140, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 150, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1.05, duration: 140, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 180, useNativeDriver: true }),
+          Animated.delay(1000),
         ]),
       );
       pulseLoop.start();

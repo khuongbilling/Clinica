@@ -16,7 +16,7 @@ import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { playerLevelFromXp } from "@/src/game/progression";
+import { playerLevelFromXp, isFeatureUnlocked } from "@/src/game/progression";
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 
 const INTRO_KEY = "clinica.intro.seen";
@@ -115,6 +115,8 @@ export default function RunHome() {
   const heroSprite   = getHeroSprite(leadHeroId);
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
   const bossUnlocked = playerLevelInfo.level >= 7;
+  // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
+  const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelInfo.level);
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
@@ -143,7 +145,7 @@ export default function RunHome() {
       </View>
 
       {/* ── WORLD EVENT BANNER — dismissible, links to the live event preview ── */}
-      {WORLD_EVENT_ACTIVE && eventBannerDismissed === false && (
+      {WORLD_EVENT_ACTIVE && worldEventUnlocked && eventBannerDismissed === false && (
         <Pressable
           style={styles.eventBanner}
           onPress={() => router.push(ACTIVE_WORLD_EVENT.route as any)}
@@ -223,11 +225,13 @@ export default function RunHome() {
         {/* RIGHT COLUMN — active gameplay events/quests */}
         <View style={styles.sideCol}>
           <FeatureButton
-            icon="calendar-outline"
+            icon={worldEventUnlocked ? "calendar-outline" : "lock-closed"}
             label="Events"
             color={COLORS.air}
-            live={WORLD_EVENT_ACTIVE}
-            onPress={() => router.push("/events")}
+            live={WORLD_EVENT_ACTIVE && worldEventUnlocked}
+            locked={!worldEventUnlocked}
+            lockText="Lv.10"
+            onPress={() => { if (worldEventUnlocked) router.push("/events"); }}
             testID="home-float-events"
           />
           <FeatureButton

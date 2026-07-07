@@ -10,25 +10,31 @@ import { SPACING, RADIUS } from "@/src/theme/colors";
 import { MotionPanel, PanelEffect } from "@/src/components/reminiscence/MotionPanel";
 import { LotusPetalOverlay } from "@/src/components/reminiscence/LotusPetalOverlay";
 import { LotusRecallBurst } from "@/src/components/reminiscence/LotusRecallBurst";
+import { LightMotesOverlay } from "@/src/components/reminiscence/LightMotesOverlay";
+import { RainOverlay } from "@/src/components/reminiscence/RainOverlay";
 import { TypedText } from "@/src/components/reminiscence/TypedText";
 
-// Push 6 — Memory Reminiscence motion-comic upgrade.
+// Push 6 — "Fragments of Before": the Memory Reminiscence visual-novel cutscene.
 //
 // Runs exactly once, immediately after Push 4's class confirmation
 // (post-recall.tsx redirects here instead of straight to the hub when
-// `player.seen_reminiscence` is false). A short, paced, skippable
-// donghua/manhwa-style motion-comic: 9 tap-to-advance illustrated panels with
-// light Animated-API motion (fade / slow zoom / slow pan / pulse / lotus
-// petals / a one-shot Lotus Recall burst) and optional typed "SYSTEM:" lines.
-// No video files, no frame-by-frame animation — every panel is a single still
-// illustration dressed up with lightweight, code-driven motion. Ends by
-// transitioning into Clinica University (not the normal hub), whose
-// "Start Here" card already highlights Lotus Lessons.
+// `player.seen_reminiscence` is false). A paced, skippable donghua/manhwa-style
+// visual novel: 12 tap-to-advance illustrated scene cards written as a single
+// first-person memory, dressed with lightweight Animated-API motion (fade /
+// slow zoom / slow pan / gentle pulse / heartbeat / lotus petals / rising light
+// motes / cold rain / a one-shot Lotus Recall burst) and optional "SYSTEM:"
+// lines. No video files, no frame-by-frame animation — every card is a single
+// still illustration dressed up with code-driven motion.
 //
-// Bright "donghua" palette — intentionally separate from the app's dark
-// COLORS theme, since this scene is meant to read as pearl/ivory/sky-blue/
-// jade/lotus-pink/gold rather than the dark-fantasy dashboard look used
-// elsewhere in the app.
+// The colour arc runs bright → dark → golden: warm hopeful memories, then the
+// cold weight of failure and grief, then the golden rebirth. An enigmatic
+// narrator — "The Lotus Keeper" — appears only near the end (scenes 9–10),
+// never dominating. Nothing is graphic; loss is shown symbolically (a wilting
+// lotus, rain, a fading heartbeat). Ends by transitioning toward Clinica
+// University, whose "Start Here" card already highlights the Lotus Lessons.
+//
+// Bright "donghua" palette — intentionally separate from the app's dark COLORS
+// theme, since this scene reads as pearl/ivory/sky-blue/jade/lotus-pink/gold.
 const PALETTE = {
   ivory: "#FBF6EC",
   skyBlueSoft: "#BFE0F5",
@@ -37,84 +43,170 @@ const PALETTE = {
   navyDeep: "#0E1526",
 } as const;
 
+// Per-scene bottom-heavy gradient tints that carry the bright→dark→golden arc.
+// Each keeps the lower third dark enough for legible text while shifting the
+// overall cast of the frame.
+type Tint = "warm" | "dark" | "cold" | "gold";
+const TINTS: Record<Tint, [string, string, string]> = {
+  warm: ["rgba(60,40,14,0.02)", "rgba(46,30,10,0.16)", "rgba(28,18,6,0.82)"],
+  dark: ["rgba(6,10,20,0.12)", "rgba(6,10,20,0.42)", "rgba(3,6,14,0.93)"],
+  cold: ["rgba(20,32,48,0.10)", "rgba(12,22,38,0.44)", "rgba(4,10,22,0.93)"],
+  gold: ["rgba(70,50,14,0.03)", "rgba(52,36,10,0.18)", "rgba(26,17,5,0.85)"],
+};
+
 type Panel = {
   kicker: string;
   lines: string[];
   systemLines?: string[];
+  keeperLines?: string[];
   art: number;
   effect: PanelEffect;
+  tint: Tint;
   petals?: boolean;
+  motes?: boolean;
+  moteColor?: string;
+  rain?: boolean;
 };
 
 const PANELS: Panel[] = [
   {
-    kicker: "BEFORE THIS WORLD",
-    lines: ["Before this world, there was another."],
+    kicker: "FRAGMENTS OF BEFORE",
+    lines: [
+      "Before this world, there was another — and in it, there was me.",
+      "I remember the quiet hum of late nights, textbooks open, coffee gone cold.",
+    ],
     art: require("../assets/reminiscence/panel_01_classroom.png"),
     effect: "fadeIn",
+    tint: "warm",
+    motes: true,
+    moteColor: "#FBE7B0",
   },
   {
-    kicker: "AN UNNAMED FUTURE",
+    kicker: "THE PATH I CHOSE",
     lines: [
-      "Fluorescent classrooms. Unfinished plans.",
-      "A future leaning toward medicine, but never named.",
+      "I chose medicine. Not for glory —",
+      "for the moment a frightened person finally feels safe again.",
     ],
     art: require("../assets/reminiscence/panel_02_future.png"),
     effect: "zoomIn",
+    tint: "warm",
+    motes: true,
+    moteColor: "#FBE7B0",
   },
   {
-    kicker: "THAT DAY",
-    lines: ["Then everything changed."],
+    kicker: "THE ONES I LOVED",
+    lines: [
+      "There were faces I promised to protect.",
+      "Patients. Classmates. The mentors who believed in me before I believed in myself.",
+    ],
+    art: require("../assets/reminiscence/scene_people.png"),
+    effect: "panSlow",
+    tint: "warm",
+    motes: true,
+    moteColor: "#FBE7B0",
+  },
+  {
+    kicker: "THE SHIFT",
+    lines: [
+      "Then came the shift I can never forget.",
+      "Alarms. Running footsteps. Too many, all at once, all needing me.",
+    ],
     art: require("../assets/reminiscence/panel_03_event.png"),
     effect: "panSlow",
+    tint: "dark",
   },
   {
-    kicker: "DARKNESS",
-    lines: ["Darkness."],
+    kicker: "THE SILENT SIGN",
+    lines: [
+      "A quiet chest. A heart failing without a sound.",
+      "The signs were there — and I was too slow to read them.",
+    ],
+    systemLines: ["SYSTEM: Insight archive incomplete."],
+    art: require("../assets/reminiscence/panel_07_infarct.png"),
+    effect: "heartbeat",
+    tint: "dark",
+  },
+  {
+    kicker: "WHAT I COULD NOT HOLD",
+    lines: [
+      "I have carried every name I could not save.",
+      "They do not leave. They only grow quieter.",
+    ],
+    art: require("../assets/reminiscence/scene_could_not_save.png"),
+    effect: "fadeIn",
+    tint: "cold",
+  },
+  {
+    kicker: "THE WEIGHT OF REGRET",
+    lines: [
+      "I knelt in the rain and asked the question every healer fears —",
+      "was I ever enough?",
+    ],
+    art: require("../assets/reminiscence/scene_regret.png"),
+    effect: "fadeIn",
+    tint: "cold",
+    rain: true,
+  },
+  {
+    kicker: "INTO THE DARK",
+    lines: [
+      "And then — darkness. Weightless. Endless.",
+      "Until a single thread of light refused to let me fade.",
+    ],
     systemLines: ["SYSTEM: Soul-thread detected."],
     art: require("../assets/reminiscence/panel_04_darkness_thread.png"),
     effect: "pulse",
-  },
-  {
-    kicker: "ARRIVAL",
-    lines: ["And then — this world."],
-    art: require("../assets/reminiscence/panel_05_arrival.png"),
-    effect: "panSlow",
+    tint: "dark",
     petals: true,
   },
   {
-    kicker: "A SECOND CHANCE",
-    lines: [
-      "You called it a second chance.",
-      "But somewhere along the way, you mistook survival for mastery.",
+    kicker: "A VOICE IN THE LIGHT",
+    lines: [],
+    keeperLines: [
+      "You grieve the ones you lost.",
+      "Good. Only those who still grieve are worth saving twice.",
     ],
-    art: require("../assets/reminiscence/panel_06_mastery.png"),
-    effect: "zoomIn",
+    art: require("../assets/reminiscence/scene_lotus_keeper.png"),
+    effect: "fadeIn",
+    tint: "gold",
+    motes: true,
+    moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE SILENT INFARCT",
-    lines: ["The ward corrected you."],
-    systemLines: ["SYSTEM: Insight archive incomplete."],
-    art: require("../assets/reminiscence/panel_07_infarct.png"),
-    effect: "pulse",
+    kicker: "THE LOTUS KEEPER",
+    lines: [],
+    keeperLines: [
+      "I am the Lotus Keeper. I do not offer forgiveness.",
+      "I offer one more chance — to learn what you could not, before.",
+    ],
+    art: require("../assets/reminiscence/scene_lotus_keeper.png"),
+    effect: "zoomIn",
+    tint: "gold",
+    petals: true,
+    motes: true,
+    moteColor: "#FFF3D6",
   },
   {
     kicker: "LOTUS RECALL",
-    lines: [],
+    lines: ["Light poured through me — a warmth I had long forgotten.", "A second heartbeat, blooming."],
     systemLines: ["SYSTEM: Emergency Lotus Recall activated.", "SYSTEM: Soul-thread preserved."],
     art: require("../assets/reminiscence/panel_08_lotus_recall.png"),
     effect: "lotusRecall",
+    tint: "gold",
     petals: true,
   },
   {
     kicker: "CLINICA UNIVERSITY",
     lines: [
-      "You were not recalled because you were ready.",
-      "You were recalled because you can still learn.",
+      "I open my eyes to marble halls and morning gold.",
+      "Here, the Lotus Lessons begin. This time — I will be ready.",
     ],
     art: require("../assets/reminiscence/panel_09_university.png"),
     effect: "fadeIn",
+    tint: "gold",
     petals: true,
+    motes: true,
+    moteColor: "#FFF3D6",
   },
 ];
 
@@ -167,15 +259,18 @@ export default function ReminiscenceScreen() {
   const panel = PANELS[panelIndex];
   const isLast = panelIndex === PANELS.length - 1;
   const canSkip = panelIndex > 0;
+  const hasKeeper = !!panel.keeperLines?.length;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={StyleSheet.absoluteFill}>
         <MotionPanel key={panelIndex} source={panel.art} effect={panel.effect}>
           {panel.effect === "lotusRecall" && <LotusRecallBurst />}
+          {panel.rain && <RainOverlay density={1} />}
+          {panel.motes && <LightMotesOverlay density={1} color={panel.moteColor} />}
           {panel.petals && <LotusPetalOverlay density={panel.effect === "lotusRecall" ? 1.6 : 1} />}
           <LinearGradient
-            colors={["rgba(14,21,38,0.05)", "rgba(14,21,38,0.12)", "rgba(14,21,38,0.86)"]}
+            colors={TINTS[panel.tint]}
             locations={[0, 0.5, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
@@ -198,13 +293,26 @@ export default function ReminiscenceScreen() {
 
       <Pressable style={styles.flex} onPress={advance} testID="reminiscence-tap-area">
         <Animated.View style={[styles.content, { opacity: contentFade }]}>
-          <Text style={styles.kicker}>{panel.kicker}</Text>
+          <Text style={[styles.kicker, hasKeeper && styles.kickerKeeper]}>{panel.kicker}</Text>
           <View style={{ gap: SPACING.sm }}>
             {panel.lines.map((line, i) => (
               <Text key={`l-${i}`} style={styles.line}>
                 {line}
               </Text>
             ))}
+            {hasKeeper && (
+              <View style={styles.keeperWrap}>
+                <View style={styles.keeperNameRow}>
+                  <Ionicons name="flower-outline" size={13} color={PALETTE.goldBright} />
+                  <Text style={styles.keeperName}>THE LOTUS KEEPER</Text>
+                </View>
+                {panel.keeperLines?.map((line, i) => (
+                  <Text key={`k-${i}`} style={styles.keeperLine}>
+                    {line}
+                  </Text>
+                ))}
+              </View>
+            )}
             {panel.systemLines?.map((line, i) => (
               <TypedText
                 key={`s-${panelIndex}-${i}`}
@@ -257,6 +365,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 1 },
   },
+  kickerKeeper: { color: PALETTE.goldBright },
   line: {
     color: PALETTE.ivory,
     fontSize: 19,
@@ -264,6 +373,34 @@ const styles = StyleSheet.create({
     lineHeight: 27,
     textAlign: "center",
     textShadowColor: "rgba(0,0,0,0.65)",
+    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 1 },
+  },
+  keeperWrap: {
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
+    backgroundColor: "rgba(20,14,6,0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(242,194,92,0.35)",
+  },
+  keeperNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  keeperName: {
+    color: PALETTE.goldBright,
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: "800",
+  },
+  keeperLine: {
+    color: "#FCEFC9",
+    fontSize: 19,
+    fontStyle: "italic",
+    fontWeight: "500",
+    lineHeight: 28,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.7)",
     textShadowRadius: 8,
     textShadowOffset: { width: 0, height: 1 },
   },
