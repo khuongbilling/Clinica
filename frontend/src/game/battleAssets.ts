@@ -19,6 +19,8 @@ export const BATTLE_BG_MODULES: number[] = [
   require("../../assets/images/battle_bg/forge.png"),
   require("../../assets/images/battle_bg/protection.png"),
   require("../../assets/images/battle_bg/growth.png"),
+  // Bespoke World-Scale boss arena (see BOSS_BG in BattlefieldScene).
+  require("../../assets/images/battle_bg/verdantha.png"),
 ];
 
 export const BATTLE_IMAGE_MODULES: number[] = [

@@ -954,3 +954,9 @@ id = "RDwjPfq1qaaT5Rs4izl4N"
 uri = "file://frontend/assets/images/battle_bg/bloom_ward.png"
 type = "image"
 title = "bloom ward backdrop"
+
+[[generated]]
+id = "HkrAEq3BZwMuDewUcnzg_"
+uri = "file://frontend/assets/images/battle_bg/verdantha.png"
+type = "image"
+title = "verdantha miasma bloom arena"

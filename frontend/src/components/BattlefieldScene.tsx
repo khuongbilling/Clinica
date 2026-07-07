@@ -20,6 +20,13 @@ const SYSTEM_BG: Record<string, ReturnType<typeof require>> = {
   Growth: require("@/assets/images/battle_bg/growth.png"),
 };
 
+// Bespoke boss arena backdrops keyed by enemy.id — a World-Scale boss gets its
+// own signature battle scene instead of the generic per-system background.
+const BOSS_BG: Record<string, ReturnType<typeof require>> = {
+  // Verdantha, the Bloom Matriarch — the "Miasma Bloom" spore-corrupted Sanctuary courtyard.
+  verdantha: require("@/assets/images/battle_bg/verdantha.png"),
+};
+
 import { getHeroBattleSprite } from "./HeroBattleSprites";
 import { getEnemySprite } from "./EnemySprites";
 import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
@@ -158,7 +165,7 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
     setInfoOpen(false);
   }, [enemy.id]);
 
-  const sceneBg = wardBackdrop ?? SYSTEM_BG[enemy.primarySystem] ?? BATTLE_BG;
+  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[enemy.primarySystem] ?? BATTLE_BG;
   const accent = ELEMENT_COLORS[enemy.primarySystem] || COLORS.brand;
 
   return (
