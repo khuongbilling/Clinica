@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { APTITUDE_INFO, RANKS } from "@/src/game/content";
 import { AVATAR_OPTIONS, getAvatarSource } from "@/src/game/avatars";
 import { CLASS_IDENTITIES, ClassId } from "@/src/game/classTree";
+import { learningProfileLabel } from "@/src/game/firstWeekPath";
 import { EVENT_TITLES, getEventTitle } from "@/src/game/worldEvent";
 import { usePlayer } from "@/src/game/store";
 import { useSettings } from "@/src/game/settingsStore";
@@ -265,6 +266,17 @@ export default function ProfileScreen() {
             <View style={[styles.toggle, hapticsEnabled && styles.toggleOn]}>
               <View style={[styles.toggleKnob, hapticsEnabled && styles.toggleKnobOn]} />
             </View>
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
+            onPress={() => router.push("/learning-profile" as any)}
+            testID="profile-learning-profile-button"
+          >
+            <Ionicons name="options-outline" size={18} color={COLORS.brand} />
+            <Text style={[styles.settingsRowTxt, { flex: 1 }]}>Learning Style</Text>
+            <Text style={{ color: COLORS.onSurfaceTertiary, fontSize: 11 }}>{learningProfileLabel(player.learning_profile)}</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
           </Pressable>
           <View style={styles.settingsDivider} />
           <Pressable

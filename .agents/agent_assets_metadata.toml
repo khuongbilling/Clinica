@@ -605,7 +605,7 @@ title = "lotus journal banner"
 id = "r_8E3gRgjqx4obrcUkI_M"
 uri = "file://frontend/assets/images/quest_icon.png"
 type = "image"
-title = "quest scroll icon"
+title = "clinica_quest_scroll_icon"
 
 [[generated]]
 id = "jVDAuGt4-Fbm0oBsqwC8z"
@@ -978,3 +978,21 @@ id = "y_BPSBdFBLKDEH_IoC6AD"
 uri = "file://frontend/assets/images/battle_bg/celestial.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "gpPVmNpPX1Qny7AsP2t27"
+uri = "file://frontend/assets/images/icon.png"
+type = "image"
+title = "clinica_icon_lotus_seal"
+
+[[generated]]
+id = "oUMyZSXp8NSPylx_15oWM"
+uri = "file://frontend/assets/images/adaptive-icon.png"
+type = "image"
+title = "clinica_adaptive_icon_lotus"
+
+[[generated]]
+id = "GEyfmraxPOQe2l8ZaXRvK"
+uri = "file://frontend/assets/images/favicon.png"
+type = "image"
+title = "clinica_favicon_lotus"

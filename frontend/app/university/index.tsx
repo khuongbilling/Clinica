@@ -220,6 +220,20 @@ export default function UniversityHubScreen() {
           onPress={() => router.push("/university/career-explorer" as any)}
           testID="university-more-career-explorer"
         />
+        <MoreRow
+          icon="map-outline"
+          title="Academy Orientation Path"
+          desc="Your first-week journey — milestones, next steps, and day-by-day guidance."
+          onPress={() => router.push("/academy-path" as any)}
+          testID="university-more-academy-path"
+        />
+        <MoreRow
+          icon="options-outline"
+          title="Learning Style"
+          desc="Personalize explanation depth and clue visibility to match how you learn."
+          onPress={() => router.push("/learning-profile" as any)}
+          testID="university-more-learning-profile"
+        />
 
         {/* FUTURE LEARNING — collapsed by default to reduce clutter */}
         <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
