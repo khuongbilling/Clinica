@@ -297,9 +297,15 @@ export default function ReminiscenceScreen() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     await markReminiscenceSeen();
-    // After reminiscence, land the player on the MAIN hub — the System will
-    // narrate the guided onboarding from there — not straight into University.
-    router.replace(isReplay ? "/(tabs)/profile" : "/(tabs)");
+    // The reminiscence ends on "Clinica University" — so land the player there
+    // directly, delivering on the cutscene's promise instead of detouring
+    // through the hub. University is gated only by account level 1 (always met),
+    // so a fresh post-recall player never hits the feature lock, and the
+    // University screen already greets them (Mentor Bai's "you were recalled…"
+    // line + arrival transition). The hub's own welcome modal + System-narrator
+    // intro simply defer until the player first opens the hub. Replay mode (from
+    // Profile) still returns to Profile so it never re-enters onboarding.
+    router.replace(isReplay ? "/(tabs)/profile" : "/university");
   };
 
   // Guard against accidental double-advance: the bottom narrative panel and the
@@ -396,7 +402,7 @@ export default function ReminiscenceScreen() {
         </Pressable>
 
         <PrimaryButton
-          label={isLast ? "Enter Clinica" : "Continue"}
+          label={isLast ? "Begin at the University" : "Continue"}
           onPress={advance}
           iconRight="arrow-forward"
           style={styles.continueBtn}

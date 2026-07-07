@@ -18,6 +18,10 @@ On NATIVE devices a large (~1.2MB) battle-background PNG can paint as a white fr
 # prefetch ceilings — important
 `prefetchModules` (realmAssets.ts): web path decodes through real `HTMLImageElement` with a **12s ceiling**; native path is `ExpoImage.prefetch` with **NO ceiling**. So the preloader screen MUST keep its own fail-open cap (MAX_WAIT_MS) that flips the assets-ready gate regardless, or a stalled native prefetch hangs the loader forever. Preloader gate = `minElapsed (2.4s) && assetsReady && !loading`, guarded by a `navigated` ref against double-replace.
 
+# Post-reminiscence destination
+`reminiscence.tsx` `finish()` routes a FIRST-TIME (non-replay) player straight to `/university`, NOT the hub `/(tabs)` — the cutscene's final scene is "Clinica University", so landing there is the narrative payoff. Replay mode (from Profile) returns to `/(tabs)/profile`. Safe because University is gated only by account level 1 (always met) and its screen self-greets (Mentor Bai "you were recalled…" + arrival SceneTransition).
+**Consequence:** the hub's welcome modal (`clinica.intro.seen`) + `systemHubIntro` narrator now DEFER until first hub visit; downstream System beats (`systemWardHub`→`systemShops`) chain off `systemHubIntro`, so their order is non-deterministic if the player explores before opening the hub. This is an accepted tradeoff, not a bug.
+
 # Misc
 - Sprite maps (`HERO_SPRITE_MODULES`, `ENEMY_SPRITE_MODULES`, etc.) are typed `ImageSourcePropType[]`; `prefetchModules` wants `number[]` → cast `as unknown as number[]` (require() returns a module number at runtime).
 - expo-router typed routes: after adding a new `app/*.tsx` route file, restart the workflow so `.expo/types/router.d.ts` regenerates or tsc flags the new href as invalid.
