@@ -26,6 +26,15 @@ means adding a fold call at its action handler.
 second source of truth that can drift.
 
 ## Non-obvious rules
+- **All recurring-reset calendar math is LOCAL, never UTC.** `dateKey`/`weekKey`
+  (wellness.ts) and `msUntilNextDay` (dailyRounds.ts) must share one calendar
+  definition (local components) so the daily reroll, weekly reset, and the
+  "refreshes in" countdown flip at the same instant in every timezone. Never
+  reintroduce `toISOString().slice(0,10)` for a day key anywhere that compares
+  against these (e.g. firstWeekPath check-in step). Test fixtures for these
+  must also be built from local components, not UTC instants, or UTC+14 zones
+  drift a day; rollover tests include a near-local-midnight seam section and
+  should be run under multiple `TZ=` values.
 - Objectives roll seeded by `hashSeed(playerId + ':' + dateKey)` so they're stable
   per player per day; the pool is filtered to modes passing `checkFeatureGate` first,
   so fewer than 3 appear if fewer modes are unlocked.

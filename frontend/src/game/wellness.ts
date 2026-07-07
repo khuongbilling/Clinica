@@ -252,8 +252,16 @@ const PETALS_HYDRATION = 4;
 const PETALS_CHECKIN = 5;
 const PETALS_RECIPE = 6;
 
+// Calendar definition: ALL recurring resets (daily reroll, weekly reset,
+// "refreshes in" countdown) use the player's LOCAL calendar day. dateKey,
+// weekKey, and dailyRounds.msUntilNextDay must stay in agreement — do not
+// mix in toISOString()/UTC here or days and ISO weeks can disagree near
+// local midnight for non-UTC players.
 export function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function weekKey(d: Date): string {

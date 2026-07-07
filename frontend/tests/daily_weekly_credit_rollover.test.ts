@@ -14,7 +14,11 @@
 //   4. The store-style critical section (ensureFresh -> record -> synchronous
 //      ref commit) stays credit-safe across the boundary under concurrency.
 //
-// All calls use a controlled `now` (noon UTC to avoid timezone day drift).
+// Calendar helpers are all LOCAL-calendar now, so noon clocks are just a
+// convenience; a dedicated near-midnight section pins the timezone seam.
+// Run under a non-UTC zone to exercise it, e.g.:
+//   TZ=Pacific/Kiritimati npx sucrase-node tests/daily_weekly_credit_rollover.test.ts
+//   TZ=America/Los_Angeles npx sucrase-node tests/daily_weekly_credit_rollover.test.ts
 
 import {
   DailyRoundsState,
@@ -24,6 +28,7 @@ import {
   ensureFreshDailyRounds,
   recordObjectiveProgress,
   allObjectivesComplete,
+  msUntilNextDay,
 } from '../src/game/dailyRounds';
 import { dateKey, weekKey } from '../src/game/wellness';
 
@@ -35,13 +40,14 @@ function check(name: string, cond: boolean, details = '') {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Controlled clock. Noon UTC keeps dateKey (UTC-based) and weekKey
-// (local-component-based) on the same calendar day in any test timezone.
+// Controlled clock. All calendar helpers are LOCAL-calendar, so fixtures use
+// local date components (not UTC instants) to stay on the intended day in
+// every test timezone.
 // ─────────────────────────────────────────────────────────────
-const DAY1 = new Date('2026-07-07T12:00:00Z'); // Tuesday
-const DAY2 = new Date('2026-07-08T12:00:00Z'); // Wednesday, same ISO week
-const SUNDAY = new Date('2026-07-12T12:00:00Z'); // last day of ISO week
-const MONDAY = new Date('2026-07-13T12:00:00Z'); // first day of NEXT ISO week
+const DAY1 = new Date(2026, 6, 7, 12); // Tuesday, local noon
+const DAY2 = new Date(2026, 6, 8, 12); // Wednesday, same ISO week
+const SUNDAY = new Date(2026, 6, 12, 12); // last day of ISO week
+const MONDAY = new Date(2026, 6, 13, 12); // first day of NEXT ISO week
 
 const D1 = dateKey(DAY1);
 const D2 = dateKey(DAY2);
@@ -245,6 +251,61 @@ async function run() {
       creditedCount(dr, DMON) === 1 &&
       creditedCount(dr, DSUN) === 0,
       `key=${dr.weekly_key} days=${dr.weekly_days_completed} dates=${JSON.stringify(dr.weekly_credited_dates)}`);
+  }
+
+  // ── 5. Near-local-midnight timezone seam ────────────────────
+  // One minute before and after LOCAL midnight (whatever TZ this runs in):
+  // dateKey/weekKey/msUntilNextDay must all flip at the same instant, and a
+  // completion just before midnight must credit the pre-midnight date.
+  {
+    // Local Sun Jul 12 2026 23:59 and Mon Jul 13 2026 00:01 (local components,
+    // so this is a true local-midnight + ISO-week boundary in every timezone).
+    const beforeMid = new Date(2026, 6, 12, 23, 59, 0, 0);
+    const afterMid = new Date(2026, 6, 13, 0, 1, 0, 0);
+    const midnight = new Date(2026, 6, 13, 0, 0, 0, 0);
+
+    check('MIDNIGHT: dateKey flips across local midnight',
+      dateKey(beforeMid) === '2026-07-12' && dateKey(afterMid) === '2026-07-13',
+      `before=${dateKey(beforeMid)} after=${dateKey(afterMid)}`);
+    check('MIDNIGHT: weekKey flips at the same boundary (Sun→Mon ISO week)',
+      weekKey(beforeMid) !== weekKey(afterMid) &&
+      weekKey(afterMid) === weekKey(new Date(2026, 6, 13, 12, 0)),
+      `before=${weekKey(beforeMid)} after=${weekKey(afterMid)}`);
+    check('MIDNIGHT: dateKey and weekKey agree one ms either side of midnight',
+      dateKey(new Date(midnight.getTime() - 1)) === '2026-07-12' &&
+      weekKey(new Date(midnight.getTime() - 1)) === weekKey(beforeMid) &&
+      dateKey(midnight) === '2026-07-13' &&
+      weekKey(midnight) === weekKey(afterMid));
+    check('MIDNIGHT: countdown reaches zero exactly at the reroll instant',
+      msUntilNextDay(beforeMid) === 60 * 1000 &&
+      msUntilNextDay(new Date(midnight.getTime() - 1)) === 1,
+      `beforeMs=${msUntilNextDay(beforeMid)}`);
+
+    // Completion at 23:59 credits the pre-midnight date; the 00:01 reroll
+    // rerolls objectives AND resets the week without mis-crediting.
+    let s = freshFor(beforeMid);
+    check('MIDNIGHT: pre-midnight state keyed to pre-midnight day/week',
+      s.daily_date === '2026-07-12' && s.weekly_key === weekKey(beforeMid),
+      `daily_date=${s.daily_date} week=${s.weekly_key}`);
+    s = completeAll(s, beforeMid);
+    check('MIDNIGHT: 23:59 completion credits the old date once',
+      s.weekly_days_completed === 1 && creditedCount(s, '2026-07-12') === 1,
+      `days=${s.weekly_days_completed} dates=${JSON.stringify(s.weekly_credited_dates)}`);
+
+    const rolled = freshFor(afterMid, s);
+    check('MIDNIGHT: 00:01 reroll flips day AND week together',
+      rolled.daily_date === '2026-07-13' &&
+      rolled.weekly_key === weekKey(afterMid) &&
+      rolled.weekly_days_completed === 0 &&
+      rolled.weekly_credited_dates.length === 0 &&
+      rolled.objectives.every((o) => o.progress === 0),
+      `daily_date=${rolled.daily_date} week=${rolled.weekly_key} days=${rolled.weekly_days_completed}`);
+
+    const s2 = completeAll(rolled, afterMid);
+    check('MIDNIGHT: first completion after midnight credits the new date once',
+      s2.weekly_days_completed === 1 && creditedCount(s2, '2026-07-13') === 1 &&
+      creditedCount(s2, '2026-07-12') === 0,
+      `days=${s2.weekly_days_completed} dates=${JSON.stringify(s2.weekly_credited_dates)}`);
   }
 
   // ── Summary ────────────────────────────────────────────────

@@ -8,6 +8,7 @@
  */
 
 import { playerLevelFromXp } from './progression';
+import { dateKey } from './wellness';
 
 export interface JourneyStep {
   id: string;
@@ -67,7 +68,7 @@ export const FIRST_WEEK_PATH: JourneyDay[] = [
         checkDone: (p) => {
           const rounds = p?.daily_rounds;
           if (!rounds) return false;
-          const today = new Date().toISOString().slice(0, 10);
+          const today = dateKey(new Date());
           return rounds.last_checkin_date === today || (rounds.streak_count || 0) >= 1;
         },
       },

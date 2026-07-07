@@ -272,7 +272,8 @@ export interface CheckInResult {
 }
 
 function prevDateKey(now: Date): string {
-  const d = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  // Local-calendar previous day (DST-safe: Date normalizes day-1 overflow).
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   return dateKey(d);
 }
 
@@ -398,7 +399,11 @@ export function checkInAvailable(state: DailyRoundsState | undefined, now: Date 
   return !hasCheckedInToday(state, now);
 }
 
-/** Milliseconds until the next calendar day (local midnight) for the refresh timer. */
+/**
+ * Milliseconds until the next calendar day (local midnight) for the refresh
+ * timer. Must agree with wellness.dateKey/weekKey (all local-calendar) so the
+ * countdown flips at the same instant the daily reroll happens.
+ */
 export function msUntilNextDay(now: Date = new Date()): number {
   const next = new Date(now);
   next.setHours(24, 0, 0, 0);
