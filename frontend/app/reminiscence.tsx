@@ -19,7 +19,7 @@ import { TypedText } from "@/src/components/reminiscence/TypedText";
 // Runs exactly once, immediately after Push 4's class confirmation
 // (post-recall.tsx redirects here instead of straight to the hub when
 // `player.seen_reminiscence` is false). A paced, skippable donghua/manhwa-style
-// visual novel: 12 tap-to-advance illustrated scene cards written as a single
+// visual novel: 15 tap-to-advance illustrated scene cards written as a single
 // first-person memory, dressed with lightweight Animated-API motion (fade /
 // slow zoom / slow pan / gentle pulse / heartbeat / lotus petals / rising light
 // motes / cold rain / a one-shot Lotus Recall burst) and optional "SYSTEM:"
@@ -70,10 +70,11 @@ type Panel = {
 
 const PANELS: Panel[] = [
   {
-    kicker: "FRAGMENTS OF BEFORE",
+    kicker: "A LIFE OF PURPOSE",
     lines: [
-      "Before this world, there was another — and in it, there was me.",
-      "I remember the quiet hum of late nights, textbooks open, coffee gone cold.",
+      "Before this world… there was another. And in it, I had a dream.",
+      "To heal. To understand. To ease the pain of others.",
+      "It was everything to me.",
     ],
     art: require("../assets/reminiscence/panel_01_classroom.png"),
     effect: "fadeIn",
@@ -84,8 +85,9 @@ const PANELS: Panel[] = [
   {
     kicker: "THE PATH I CHOSE",
     lines: [
-      "I chose medicine. Not for glory —",
-      "for the moment a frightened person finally feels safe again.",
+      "So I gave it everything. Every late night. Every doubt swallowed in silence.",
+      "Every small step forward, I told myself the same quiet promise —",
+      "that one day, it would be enough.",
     ],
     art: require("../assets/reminiscence/panel_02_future.png"),
     effect: "zoomIn",
@@ -94,10 +96,11 @@ const PANELS: Panel[] = [
     moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE ONES I LOVED",
+    kicker: "THE WORLD I SWORE TO PROTECT",
     lines: [
-      "There were faces I promised to protect.",
-      "Patients. Classmates. The mentors who believed in me before I believed in myself.",
+      "Patients. Colleagues. Friends who became family.",
+      "Their smiles. Their trust. The way they breathed easier when I walked in.",
+      "They were every reason I kept going.",
     ],
     art: require("../assets/reminiscence/scene_people.png"),
     effect: "panSlow",
@@ -106,20 +109,21 @@ const PANELS: Panel[] = [
     moteColor: "#FBE7B0",
   },
   {
-    kicker: "THE SHIFT",
+    kicker: "THE SHIFT THAT BROKE ME",
     lines: [
-      "Then came the shift I can never forget.",
-      "Alarms. Running footsteps. Too many, all at once, all needing me.",
+      "Then came the night that changed everything.",
+      "Alarms tearing the quiet apart. Running feet. Too many, all at once.",
+      "And one case I was so certain I could solve.",
     ],
     art: require("../assets/reminiscence/panel_03_event.png"),
     effect: "panSlow",
     tint: "dark",
   },
   {
-    kicker: "THE SILENT SIGN",
+    kicker: "THE SILENT INFARCT",
     lines: [
-      "A quiet chest. A heart failing without a sound.",
-      "The signs were there — and I was too slow to read them.",
+      "A quiet chest. A heart failing without a single cry for help.",
+      "The signs were there. The clues were there.",
     ],
     systemLines: ["SYSTEM: Insight archive incomplete."],
     art: require("../assets/reminiscence/panel_07_infarct.png"),
@@ -127,10 +131,23 @@ const PANELS: Panel[] = [
     tint: "dark",
   },
   {
-    kicker: "WHAT I COULD NOT HOLD",
+    kicker: "TOO SLOW. TOO SURE.",
     lines: [
-      "I have carried every name I could not save.",
-      "They do not leave. They only grow quieter.",
+      "But I was too slow. Too proud. Too blind to read it in time.",
+      "And when I finally understood…",
+      "the monitor had already gone still.",
+    ],
+    art: require("../assets/reminiscence/scene_flatline.png"),
+    effect: "fadeIn",
+    tint: "cold",
+    rain: true,
+  },
+  {
+    kicker: "EVERYTHING I COULDN'T SAVE",
+    lines: [
+      "It was not one life. In the end, it was many.",
+      "And with each name I could not hold onto,",
+      "a small part of me died with them.",
     ],
     art: require("../assets/reminiscence/scene_could_not_save.png"),
     effect: "fadeIn",
@@ -139,8 +156,8 @@ const PANELS: Panel[] = [
   {
     kicker: "THE WEIGHT OF REGRET",
     lines: [
-      "I knelt in the rain and asked the question every healer fears —",
-      "was I ever enough?",
+      "I knelt in the rain and asked the question every healer fears to speak —",
+      "was I ever truly enough?",
     ],
     art: require("../assets/reminiscence/scene_regret.png"),
     effect: "fadeIn",
@@ -148,10 +165,22 @@ const PANELS: Panel[] = [
     rain: true,
   },
   {
-    kicker: "INTO THE DARK",
+    kicker: "WHAT I BECAME",
     lines: [
-      "And then — darkness. Weightless. Endless.",
-      "Until a single thread of light refused to let me fade.",
+      "I was still a doctor. I still wore the coat.",
+      "But I no longer remembered what it meant to heal.",
+      "Only how it felt to fail.",
+    ],
+    art: require("../assets/reminiscence/scene_hollow.png"),
+    effect: "zoomIn",
+    tint: "cold",
+  },
+  {
+    kicker: "IN THE DARKNESS",
+    lines: [
+      "And then… nothing. Weightless. Endless. I died.",
+      "Or so I believed —",
+      "until a single thread of light refused to let me fade.",
     ],
     systemLines: ["SYSTEM: Soul-thread detected."],
     art: require("../assets/reminiscence/panel_04_darkness_thread.png"),
@@ -160,11 +189,12 @@ const PANELS: Panel[] = [
     petals: true,
   },
   {
-    kicker: "A VOICE IN THE LIGHT",
+    kicker: "THE VOICE",
     lines: [],
     keeperLines: [
-      "You grieve the ones you lost.",
-      "Good. Only those who still grieve are worth saving twice.",
+      "A voice called to me. Not with anger…",
+      "You grieve the ones you lost. Good.",
+      "Only those who still grieve are worth calling back.",
     ],
     art: require("../assets/reminiscence/scene_lotus_keeper.png"),
     effect: "fadeIn",
@@ -176,10 +206,11 @@ const PANELS: Panel[] = [
     kicker: "THE LOTUS KEEPER",
     lines: [],
     keeperLines: [
-      "I am the Lotus Keeper. I do not offer forgiveness.",
-      "I offer one more chance — to learn what you could not, before.",
+      "I am the Lotus Keeper. I do not offer forgiveness, healer.",
+      "I offer something you wasted the first time —",
+      "the chance to truly understand.",
     ],
-    art: require("../assets/reminiscence/scene_lotus_keeper.png"),
+    art: require("../assets/reminiscence/scene_keeper_closeup.png"),
     effect: "zoomIn",
     tint: "gold",
     petals: true,
@@ -187,8 +218,24 @@ const PANELS: Panel[] = [
     moteColor: "#FFF3D6",
   },
   {
+    kicker: "A SECOND CHANCE",
+    lines: [],
+    keeperLines: [
+      "\u201CYou still wish to heal?\u201D — Then learn.",
+      "This time… understand first.",
+      "Now — open your eyes.",
+    ],
+    art: require("../assets/reminiscence/scene_keeper_closeup.png"),
+    effect: "pulse",
+    tint: "gold",
+    petals: true,
+  },
+  {
     kicker: "LOTUS RECALL",
-    lines: ["Light poured through me — a warmth I had long forgotten.", "A second heartbeat, blooming."],
+    lines: [
+      "Light poured through me — a warmth I had forgotten I could feel.",
+      "A second heartbeat. Blooming.",
+    ],
     systemLines: ["SYSTEM: Emergency Lotus Recall activated.", "SYSTEM: Soul-thread preserved."],
     art: require("../assets/reminiscence/panel_08_lotus_recall.png"),
     effect: "lotusRecall",
@@ -196,10 +243,11 @@ const PANELS: Panel[] = [
     petals: true,
   },
   {
-    kicker: "CLINICA UNIVERSITY",
+    kicker: "A NEW WORLD",
     lines: [
-      "I open my eyes to marble halls and morning gold.",
-      "Here, the Lotus Lessons begin. This time — I will be ready.",
+      "I opened my eyes to marble halls and morning gold — a world called Clinica.",
+      "The past does not define me.",
+      "But understanding it… will save the future.",
     ],
     art: require("../assets/reminiscence/panel_09_university.png"),
     effect: "fadeIn",
@@ -284,6 +332,9 @@ export default function ReminiscenceScreen() {
             <View key={i} style={[styles.progressDot, i <= panelIndex && styles.progressDotActive]} />
           ))}
         </View>
+        <Text style={styles.counterTxt}>
+          {panelIndex + 1} / {PANELS.length}
+        </Text>
         {canSkip && (
           <Pressable onPress={finish} hitSlop={10} testID="reminiscence-skip">
             <Text style={styles.skipTxt}>Skip</Text>
@@ -348,6 +399,14 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: "row", gap: 6, flex: 1, marginRight: SPACING.md },
   progressDot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.28)" },
   progressDotActive: { backgroundColor: PALETTE.goldBright },
+  counterTxt: {
+    color: PALETTE.goldBright,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    opacity: 0.9,
+    marginRight: SPACING.md,
+  },
   skipTxt: { color: PALETTE.ivory, fontSize: 13, fontWeight: "600", opacity: 0.85 },
   content: {
     flex: 1,

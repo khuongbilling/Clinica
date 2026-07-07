@@ -822,3 +822,21 @@ id = "SCg65nE2giCcTYcphSx6x"
 uri = "file://frontend/assets/onboarding/glass_tech_bg.png"
 type = "image"
 title = "glass tech backdrop"
+
+[[generated]]
+id = "60ClLtU2Bx7aoucgGX6oS"
+uri = "file://frontend/assets/reminiscence/scene_flatline.png"
+type = "image"
+title = "flatline failed-save frame"
+
+[[generated]]
+id = "YAnBPRTA7Dd9_MsPIo11F"
+uri = "file://frontend/assets/reminiscence/scene_hollow.png"
+type = "image"
+title = "hollow broken doctor frame"
+
+[[generated]]
+id = "wO1n_Ez6sTx1IBVaMteOg"
+uri = "file://frontend/assets/reminiscence/scene_keeper_closeup.png"
+type = "image"
+title = "Lotus Keeper close-up frame"
