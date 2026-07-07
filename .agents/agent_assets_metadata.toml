@@ -816,3 +816,9 @@ id = "uPeZOtLn1BzyX1f60_tgX"
 uri = "file://frontend/assets/reminiscence/scene_lotus_keeper.png"
 type = "image"
 title = "lotus keeper"
+
+[[generated]]
+id = "SCg65nE2giCcTYcphSx6x"
+uri = "file://frontend/assets/onboarding/glass_tech_bg.png"
+type = "image"
+title = "glass tech backdrop"

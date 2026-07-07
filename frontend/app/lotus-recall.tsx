@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -22,13 +23,11 @@ export default function LotusRecall() {
   // prologue_complete or entering the real (mutating) post-recall onboarding.
   const isReplay = replay === "1";
   const [ready, setReady] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }).start();
     const t = setTimeout(() => setReady(true), 1800);
     return () => clearTimeout(t);
-  }, [fadeAnim]);
+  }, []);
 
   const proceed = async () => {
     if (isReplay) {
@@ -41,7 +40,14 @@ export default function LotusRecall() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="lotus-recall-screen">
-      <Animated.View style={[styles.glow, { opacity: fadeAnim }]} pointerEvents="none" />
+      <ExpoImage
+        source={require("@/assets/onboarding/glass_tech_bg.png")}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={800}
+        pointerEvents="none"
+      />
+      <View style={styles.scrim} pointerEvents="none" />
       <SceneTransition style={styles.block} duration={1200}>
         {!isReplay && <OnboardingProgressBar step="Lotus Recall" />}
         {!isReplay && (
@@ -79,21 +85,13 @@ export default function LotusRecall() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
-  block: { alignItems: "center", gap: SPACING.md, maxWidth: 380 },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(6,10,14,0.62)" },
+  block: { alignItems: "center", gap: SPACING.md, maxWidth: 380, width: "100%" },
   kicker: { color: COLORS.brand, fontSize: 12, letterSpacing: 4, fontWeight: "700", marginTop: SPACING.sm },
   title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300", textAlign: "center" },
   body: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21, textAlign: "center" },
   button: { backgroundColor: COLORS.brand, paddingVertical: SPACING.md, paddingHorizontal: SPACING.xl, borderRadius: RADIUS.md, marginTop: SPACING.lg },
   buttonTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
-  glow: {
-    position: "absolute",
-    top: "30%",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.brand,
-    opacity: 0.08,
-  },
   waitRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.lg },
   waitDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.brand },
   waitTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 1 },

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -260,6 +261,14 @@ export default function PostRecall() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="post-recall-screen">
+      <ExpoImage
+        source={require("@/assets/onboarding/glass_tech_bg.png")}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={600}
+        pointerEvents="none"
+      />
+      <View style={styles.scrim} pointerEvents="none" />
       {isReplay && (
         <Pressable
           style={styles.replayCloseBtn}
@@ -283,10 +292,11 @@ export default function PostRecall() {
               The Lotus Recall preserved you, but not every record. Before the Sanctuary can
               re-open your file, it needs a name to write it under.
             </Text>
+            <Text style={styles.inputLabel}>ENTER DESIGNATION</Text>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Enter your designation"
+              placeholder="Your name"
               placeholderTextColor={COLORS.onSurfaceTertiary}
               style={styles.input}
               maxLength={24}
@@ -339,8 +349,8 @@ export default function PostRecall() {
             </Pressable>
           </Animated.View>
         ) : view === "question" ? (
-          <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-diagnostic">
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          <Animated.View style={[styles.scrollWrap, { opacity: fadeAnim }]} testID="post-recall-diagnostic">
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
               <View style={styles.diagBlock}>
                 <View style={styles.progressRow}>
                   {QUIZ_QUESTIONS.map((_, i) => (
@@ -388,8 +398,8 @@ export default function PostRecall() {
             </SystemPanel>
           </Animated.View>
         ) : view === "chooser" ? (
-          <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-chooser">
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          <Animated.View style={[styles.scrollWrap, { opacity: fadeAnim }]} testID="post-recall-chooser">
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
               <Pressable style={styles.backLink} onPress={() => setView("result")} testID="post-recall-chooser-back">
                 <Ionicons name="chevron-back" size={16} color={COLORS.onSurfaceTertiary} />
                 <Text style={styles.backLinkTxt}>Back to result</Text>
@@ -445,8 +455,8 @@ export default function PostRecall() {
             )}
           </Animated.View>
         ) : (
-          <Animated.View style={[styles.flex, { opacity: fadeAnim, width: "100%" }]} testID="post-recall-result">
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          <Animated.View style={[styles.scrollWrap, { opacity: fadeAnim }]} testID="post-recall-result">
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
               {!isReplay && <OnboardingProgressBar step="Class Result" />}
               {result && activeClass && activeIdentity && (
                 <>
@@ -564,7 +574,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
   },
   flex: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
-  scroll: { gap: SPACING.md, paddingVertical: SPACING.lg, alignItems: "center", maxWidth: 420, width: "100%", alignSelf: "center" },
+  scrollWrap: { flex: 1, width: "100%" },
+  scrollView: { flex: 1, width: "100%" },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(6,10,14,0.66)" },
+  scroll: { gap: SPACING.md, paddingVertical: SPACING.md, alignItems: "center", maxWidth: 460, width: "100%", alignSelf: "center" },
   block: { alignItems: "center", gap: SPACING.md, maxWidth: 380, width: "100%" },
   diagBlock: { alignItems: "center", gap: SPACING.sm, width: "100%" },
   systemLine: { color: COLORS.brand, fontSize: 13, fontWeight: "700", letterSpacing: 0.5, textAlign: "center" },
@@ -576,15 +589,31 @@ const styles = StyleSheet.create({
   note: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center" },
   input: {
     width: "100%",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    borderWidth: 1.5,
+    borderColor: COLORS.brand + "88",
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md + 4,
     color: COLORS.onSurface,
-    fontSize: 15,
-    marginTop: SPACING.sm,
-    backgroundColor: COLORS.surfaceSecondary,
+    fontSize: 22,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textAlign: "center",
+    marginTop: SPACING.md,
+    backgroundColor: "rgba(18,26,34,0.72)",
+    shadowColor: COLORS.brand,
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+  inputLabel: {
+    color: COLORS.brand,
+    fontSize: 11,
+    letterSpacing: 3,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: SPACING.md,
   },
   progressRow: { flexDirection: "row", gap: 6, marginTop: SPACING.sm },
   progressDot: { width: 22, height: 4, borderRadius: 2, backgroundColor: COLORS.border },
