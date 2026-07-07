@@ -7,6 +7,7 @@ import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
+import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 
 // Push 1 prologue finale. Reached only after the scripted-to-lose Silent
 // Infarct boss battle. There is no Game Over screen here and no rewards —
@@ -43,6 +44,12 @@ export default function LotusRecall() {
       <Animated.View style={[styles.glow, { opacity: fadeAnim }]} pointerEvents="none" />
       <SceneTransition style={styles.block} duration={1200}>
         {!isReplay && <OnboardingProgressBar step="Lotus Recall" />}
+        {!isReplay && (
+          <SystemNarratorBar
+            message="You were not ready. But you answered the call. The Recall has brought you back — now the real training begins."
+            testID="lotus-recall-narrator"
+          />
+        )}
         <Ionicons name="flower" size={40} color={COLORS.brand} />
         <Text style={styles.kicker}>LOTUS RECALL</Text>
         <Text style={styles.title}>The patient is gone.</Text>

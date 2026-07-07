@@ -69,13 +69,14 @@ export interface FeatureUnlock {
 }
 
 export const FEATURE_UNLOCKS: FeatureUnlock[] = [
-  { id: 'ward_shift', label: 'Ward Shift', level: 1 },
+  { id: 'university', label: 'Clinica University & Training Hall', level: 1 },
   { id: 'lotus_journal', label: 'Lotus Plate Journal', level: 2 },
   { id: 'shop', label: 'Shops (Apothecary Market)', level: 2 },
-  { id: 'university', label: 'Clinica University & Training Hall', level: 3 },
+  { id: 'ward_shift', label: 'Ward Shift', level: 3 },
   { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 3 },
   { id: 'hall_of_heroes', label: 'Hall of Heroes', level: 3 },
   { id: 'ward_defense', label: 'Ward Defense', level: 5 },
+  { id: 'boss', label: 'Boss Encounters', level: 7 },
   { id: 'ten_pull', label: 'Full Class Recruitment (10-pull)', level: 12 },
   { id: 'advanced_traits', label: 'Advanced Hero Traits', level: 15 },
   { id: 'advanced_sims', label: 'Advanced Simulations', level: 25 },

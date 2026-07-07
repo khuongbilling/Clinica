@@ -49,7 +49,8 @@ export default function ModeIntroPage() {
     );
   }
 
-  const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
+  const playerLevel = player.player_level ?? 1;
+  const bossUnlocked = playerLevel >= 7;
   const locked = mode.id === "boss-ward" && !bossUnlocked;
   const playable = mode.status === "active" && !locked && !!mode.route;
   const art = getBannerImage(mode.imageKey);

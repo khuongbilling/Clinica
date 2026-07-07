@@ -17,6 +17,7 @@ import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 
 const MENU: { id: string; title: string; desc: string; icon: string; route?: string }[] = [
   {
@@ -100,6 +101,12 @@ export default function UniversityHubScreen() {
         <SceneTransition trigger="university-arrival">
         {nextLotusNode && (player.lessons_completed?.length ?? 0) === 0 && (
           <OnboardingProgressBar step="University" />
+        )}
+        {(player.lessons_completed?.length ?? 0) === 0 && (
+          <SystemNarratorBar
+            message="University access restored. Your next correction begins with study. Begin a lesson — it will reward you with your first heroes."
+            testID="university-narrator"
+          />
         )}
         <View style={styles.mentorBox}>
           <Ionicons name="sparkles-outline" size={16} color={COLORS.brand} />

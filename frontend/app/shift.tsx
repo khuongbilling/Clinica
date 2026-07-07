@@ -7,13 +7,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BannerCard } from "@/src/components/ModeBanners";
 import { ModeCard } from "@/src/components/ModeCard";
 import { StaminaPill } from "@/src/components/StaminaPill";
+import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
-import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
+import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
 import {
-  CHAPTER_SIMULATION_LABELS, CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
+  CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
   WARD_SHIFT_MODE, WELLNESS_MODES,
 } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -24,10 +25,14 @@ export default function ShiftPage() {
   const { isCompleted, startTutorial } = useTutorial();
   const { notice, flashNotice } = useInlineNotice();
 
-  const bossUnlocked = (player?.bosses_defeated?.length ?? 0) > 0 || (player?.runs_completed ?? 0) >= 1;
+  const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
+
+  const wardShiftUnlocked = isFeatureUnlocked("ward_shift", playerLevel);
+  const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevel);
+  const bossUnlocked = isFeatureUnlocked("boss", playerLevel);
 
   const gateCtx: CompoundGateContext = {
-    level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
+    level: playerLevel,
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
     lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
   };
@@ -50,12 +55,8 @@ export default function ShiftPage() {
     );
   }
 
-  // Active clinical banners for the hub: Ward Shift (hero) + Ward Defense + Boss Ward.
   const activeClinical = CLINICAL_CHALLENGE_MODES.filter((m) => m.status === "active");
   const activeWellness = WELLNESS_MODES.filter((m) => m.status === "active");
-  // Only tease the SINGLE next event/content that opens based on chapter
-  // progress. Every other not-yet-reached placeholder stays hidden until it is
-  // next in line.
   const nextUp = nextComingSoonMode(player.chapter_progress ?? 1);
 
   const openIntro = (mode: ModeCardDef) => {
@@ -66,11 +67,11 @@ export default function ShiftPage() {
       );
       return;
     }
-    // Active modes always open their intro page — including Boss Ward when its
-    // shift-completion gate isn't met yet. The intro (`/mode/[id]`) owns the
-    // locked-state display and disables its own CTA.
     router.push(`/mode/${mode.id}` as any);
   };
+
+  // Show a System narrator bar for new/low-level players, pointing them to University first.
+  const showUniversityPrompt = !wardShiftUnlocked;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -88,43 +89,74 @@ export default function ShiftPage() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.lead}>
-          Pick a mode to read its briefing, then step in. New modes open here as you progress.
+          Pick a mode to read its briefing, then step in. New modes open as you progress.
         </Text>
 
         <InlineNotice notice={notice} icon="lock-closed" testID="shift-notice" />
 
-        <View style={styles.simBox}>
-          <Text style={styles.simTitle}>Your Story, One Case at a Time</Text>
-          <Text style={styles.simSub}>
-            You were summoned to heal — and every patient you meet is another chapter of that
-            journey. Clinica University walks beside you, turning each case into a lesson you
-            live through rather than a test you sit:
-          </Text>
-          <View style={{ gap: 3 }}>
-            {Object.entries(CHAPTER_SIMULATION_LABELS).map(([ch, label]) => (
-              <View key={ch} style={styles.simRow}>
-                <Text style={styles.simChapter}>Ch.{ch}</Text>
-                <Text style={styles.simLabel}>{label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Clinical Challenges — illustrated banners → each mode's intro */}
-        <Text style={styles.section}>Clinical Challenges</Text>
-        <BannerCard mode={WARD_SHIFT_MODE} height={156} onPress={() => openIntro(WARD_SHIFT_MODE)} testID="mode-ward-shift" />
-        {activeClinical.map((m) => (
-          <BannerCard
-            key={m.id}
-            mode={m}
-            height={128}
-            locked={m.id === "boss-ward" && !bossUnlocked}
-            onPress={() => openIntro(m)}
-            testID={`mode-${m.id}`}
+        {/* System narrator — only shown when clinical modes are still locked */}
+        {showUniversityPrompt && (
+          <SystemNarratorBar
+            message="Clinical shifts open at Level 3. Begin your University lessons first — they reward your first heroes and teach the reasoning behind every treatment."
+            testID="shift-narrator-university"
           />
-        ))}
+        )}
 
-        {/* Learn — the System points new healers here for their first lessons */}
+        {/* ── Clinical Challenges ── */}
+        <Text style={styles.section}>Clinical Challenges</Text>
+
+        {/* Ward Shift — locked until Level 3 */}
+        <BannerCard
+          mode={WARD_SHIFT_MODE}
+          height={156}
+          locked={!wardShiftUnlocked}
+          lockLabel={!wardShiftUnlocked ? "Unlocks at Level 3" : undefined}
+          onPress={() => {
+            if (!wardShiftUnlocked) {
+              flashNotice("Ward Shift unlocks at Player Level 3. Study at Clinica University first.");
+              return;
+            }
+            openIntro(WARD_SHIFT_MODE);
+          }}
+          testID="mode-ward-shift"
+        />
+
+        {activeClinical.map((m) => {
+          // Ward Defense locks at Level 5; Boss Ward locks at Level 7.
+          const isWardDefense = m.id === "ward-defense";
+          const isBossWard = m.id === "boss-ward";
+          const modeLocked =
+            (isWardDefense && !wardDefenseUnlocked) ||
+            (isBossWard && !bossUnlocked);
+          const modeLockLabel = isWardDefense && !wardDefenseUnlocked
+            ? "Unlocks at Level 5"
+            : isBossWard && !bossUnlocked
+              ? "Unlocks at Level 7"
+              : undefined;
+          return (
+            <BannerCard
+              key={m.id}
+              mode={m}
+              height={128}
+              locked={modeLocked}
+              lockLabel={modeLockLabel}
+              onPress={() => {
+                if (modeLocked) {
+                  flashNotice(
+                    isWardDefense
+                      ? "Ward Defense unlocks at Player Level 5."
+                      : "Boss Encounters unlock at Player Level 7.",
+                  );
+                  return;
+                }
+                openIntro(m);
+              }}
+              testID={`mode-${m.id}`}
+            />
+          );
+        })}
+
+        {/* ── Learn ── */}
         <Text style={styles.section}>Learn</Text>
         <Pressable
           style={[styles.uniBanner, !universityGate.unlocked && styles.uniBannerLocked]}
@@ -152,13 +184,13 @@ export default function ShiftPage() {
           <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
         </Pressable>
 
-        {/* Off-Shift wellness */}
+        {/* ── Off-Shift wellness ── */}
         <Text style={styles.section}>Off-Shift</Text>
         {activeWellness.map((m) => (
           <BannerCard key={m.id} mode={m} height={120} onPress={() => openIntro(m)} testID={`mode-${m.id}`} />
         ))}
 
-        {/* Event Hub (Push 7) — preview-only events + monetization foundation */}
+        {/* ── Event Hub ── */}
         <Text style={styles.section}>Events & Offers</Text>
         <Pressable
           style={styles.eventBanner}
@@ -183,14 +215,13 @@ export default function ShiftPage() {
           <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
         </Pressable>
 
-        {/* Coming Soon — only the single next event/content, gated by chapter */}
+        {/* Coming Soon — only the single next event/content gated by chapter */}
         {nextUp && (
           <>
             <Text style={styles.section}>Coming Soon</Text>
             <View style={styles.smallGrid}>
               <ModeCard mode={nextUp} onPress={() => openIntro(nextUp)} testID={`mode-${nextUp.id}`} />
             </View>
-
             <View style={styles.footNote}>
               <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.footNoteTxt}>
@@ -216,12 +247,6 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.xs },
   section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 2 },
-  simBox: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, gap: 6 },
-  simTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
-  simSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginBottom: 2 },
-  simRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "baseline" },
-  simChapter: { color: COLORS.brand, fontSize: 11, fontWeight: "800", width: 34 },
-  simLabel: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
   uniBanner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary,

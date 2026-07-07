@@ -46,6 +46,8 @@ interface BannerCardProps {
   onPress: () => void;
   height?: number;
   locked?: boolean;
+  /** When locked, shows a level/condition unlock label in the center of the card. */
+  lockLabel?: string;
   testID?: string;
 }
 
@@ -54,7 +56,7 @@ interface BannerCardProps {
  * Shows the illustrated donghua art (or an accent gradient fallback) with a
  * darkened lower band carrying the mode title, subtitle, and status.
  */
-export function BannerCard({ mode, onPress, height = 132, locked, testID }: BannerCardProps) {
+export function BannerCard({ mode, onPress, height = 132, locked, lockLabel, testID }: BannerCardProps) {
   const art = getBannerImage(mode.imageKey);
   const dimmed = locked || mode.status === "coming_soon";
   return (
@@ -84,6 +86,16 @@ export function BannerCard({ mode, onPress, height = 132, locked, testID }: Bann
       <View style={styles.topRow}>
         <StatusBadge status={locked ? "locked" : mode.status} color={mode.accentColor} />
       </View>
+
+      {/* Lock label — centered overlay when banner is locked with a level requirement */}
+      {locked && lockLabel && (
+        <View style={styles.lockLabelWrap} pointerEvents="none">
+          <View style={styles.lockLabelPill}>
+            <Ionicons name="lock-closed" size={11} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.lockLabelTxt}>{lockLabel}</Text>
+          </View>
+        </View>
+      )}
 
       {/* Bottom content band */}
       <View style={styles.body}>
@@ -128,6 +140,28 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3,
   },
   badgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  lockLabelWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockLabelPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(8,10,14,0.72)",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  lockLabelTxt: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   body: { padding: SPACING.md, gap: 3 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   iconChip: {

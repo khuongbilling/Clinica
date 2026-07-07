@@ -102,7 +102,7 @@ export default function RunHome() {
   const leadHero     = HEROES.find((h) => h.id === leadHeroId);
   const heroSprite   = getHeroSprite(leadHeroId);
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
-  const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
+  const bossUnlocked = playerLevelInfo.level >= 7;
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
@@ -191,7 +191,7 @@ export default function RunHome() {
             label="Boss"
             color={COLORS.error}
             locked={!bossUnlocked}
-            lockText="1 run"
+            lockText="Lv.7"
             onPress={() => { if (bossUnlocked) router.push("/boss"); }}
             testID="home-float-boss"
           />
