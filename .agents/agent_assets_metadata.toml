@@ -948,3 +948,9 @@ id = "aMGazBYGqLzfQ2eDUePb3"
 uri = "file://frontend/assets/ui-icons/icon_lotus_gem.png"
 type = "image"
 title = "hand drawn lotus gem icon"
+
+[[generated]]
+id = "RDwjPfq1qaaT5Rs4izl4N"
+uri = "file://frontend/assets/images/battle_bg/bloom_ward.png"
+type = "image"
+title = "bloom ward backdrop"

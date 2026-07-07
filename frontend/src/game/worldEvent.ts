@@ -589,12 +589,14 @@ export const VERDANTHA: WorldBossPreview = {
 // ── Token Exchange Preview ────────────────────────────────────────────────────
 
 // A grant describes exactly what a redeemed exchange item hands the player.
-// Items with a grant are live and purchasable; items without one (e.g. the
-// cosmetic skin that has no real equippable asset yet) stay locked so the
-// exchange never promises a reward it can't actually deliver.
+// Items with a grant are live and purchasable; items without one stay locked so
+// the exchange never promises a reward it can't actually deliver.
 export type ExchangeGrant =
   | { kind: "currency"; field: "codex_shards" | "insight_crystals"; amount: number }
-  | { kind: "material"; itemName: string; qty: number };
+  | { kind: "material"; itemName: string; qty: number }
+  // Cosmetic grant: adds a ward/hero skin id to player.owned_skins (mirrors
+  // purchaseSkin). Never touches stats — purely visual, so it stays event-safe.
+  | { kind: "cosmetic"; skinId: string };
 
 export interface TokenExchangeItem {
   id: string;
@@ -613,7 +615,7 @@ export const TOKEN_EXCHANGE: TokenExchangeItem[] = [
   { id: "ex_crystals",    name: "Insight Crystals ×100",  icon: "diamond",        accentColor: "#22D3EE", cost: 300,   badge: "Preview",      category: "currency",  grant: { kind: "currency", field: "insight_crystals",         amount: 100 } },
   { id: "ex_verdanthite", name: "Verdanthite ×1",         icon: "star",           accentColor: "#34D399", cost: 1000,  badge: "Preview",      category: "material",  grant: { kind: "material", itemName: "Verdanthite",           qty: 1   } },
   { id: "ex_relic_shard", name: "World Boss Relic Shard", icon: "cube",           accentColor: "#F97316", cost: 2000,  badge: "Preview",      category: "relic",     grant: { kind: "material", itemName: "World Boss Relic Shard", qty: 1   } },
-  { id: "ex_skin",        name: "Bloom Ward Skin",         icon: "color-palette",  accentColor: "#F472B6", cost: 5000,  badge: "Coming Soon",  category: "cosmetic"   },
+  { id: "ex_skin",        name: "Bloom Ward Skin",         icon: "color-palette",  accentColor: "#F472B6", cost: 5000,  badge: "Preview",      category: "cosmetic",  grant: { kind: "cosmetic", skinId: "skin_bloom_ward" } },
 ];
 
 // ── Active Event (static preview) ─────────────────────────────────────────────

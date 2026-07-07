@@ -809,9 +809,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (balance < cost) {
       return { ok: false, message: `Not enough Epidemic Tokens. Need ${cost.toLocaleString()}.` };
     }
+    if (item.grant.kind === 'cosmetic') {
+      // Guard against re-buying a cosmetic the player already owns (skins are
+      // one-time unlocks; a duplicate would waste tokens for no benefit).
+      if ((base.owned_skins || []).includes(item.grant.skinId)) {
+        return { ok: false, message: `${item.name} already unlocked — equip it in the Apothecary.` };
+      }
+    }
     const next: PlayerState = { ...base, epidemic_tokens: balance - cost };
     if (item.grant.kind === 'currency') {
       next[item.grant.field] = ((base[item.grant.field] as number) || 0) + item.grant.amount;
+    } else if (item.grant.kind === 'cosmetic') {
+      // Mirror purchaseSkin: add to owned_skins and auto-equip the new look.
+      next.owned_skins = [...(base.owned_skins || []), item.grant.skinId];
+      next.equipped_skin = item.grant.skinId;
     } else {
       next.inventory = {
         ...(base.inventory || {}),

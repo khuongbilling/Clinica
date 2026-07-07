@@ -14,6 +14,12 @@ export interface ShopSkin {
   auraColor: string;   // glow behind the hero portrait
   accentColor: string; // frame / border accent
   icon: string;        // Ionicons name
+  // Optional ward-arena backdrop this skin swaps in during Ward Shift battles.
+  // Only set for "ward skins" (e.g. the Bloom Ward Skin) — plain aura skins omit it.
+  wardBackdrop?: ReturnType<typeof require>;
+  // When true the skin is NOT crown-purchasable; it is earned elsewhere (e.g.
+  // the Miasma Bloom Token Exchange) and only ever equipped once owned.
+  exchangeOnly?: boolean;
 }
 
 export const SKINS: ShopSkin[] = [
@@ -56,6 +62,18 @@ export const SKINS: ShopSkin[] = [
     auraColor: '#c084fc',
     accentColor: '#facc15',
     icon: 'diamond',
+  },
+  {
+    id: 'skin_bloom_ward',
+    name: 'Bloom Ward Skin',
+    subtitle: 'Bioluminescent Ward',
+    description: 'Reclaims the Miasma Bloom for the light — glowing petals and spore-lanterns transform your Ward Shift arena, plus a soft rose-teal aura on your healers. Earned from the Token Exchange. Purely cosmetic.',
+    price: 0,
+    auraColor: '#f472b6',
+    accentColor: '#2dd4bf',
+    icon: 'color-palette',
+    wardBackdrop: require('@/assets/images/battle_bg/bloom_ward.png'),
+    exchangeOnly: true,
   },
 ];
 

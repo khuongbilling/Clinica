@@ -13,7 +13,7 @@ import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBA
 import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
-import { aggregateUpgradeEffects } from "@/src/game/shop";
+import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
@@ -90,6 +90,13 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (fromTeam.length >= 1) return fromTeam.slice(0, 3);
     return HEROES.slice(0, 3);
   }, [player]);
+
+  // Cosmetic ward-skin backdrop (e.g. Bloom Ward Skin). Only ward skins carry a
+  // wardBackdrop; equipped aura-only skins leave the per-system arena unchanged.
+  const wardBackdrop = useMemo(() => {
+    const skin = findSkin(player?.equipped_skin || "");
+    return skin?.wardBackdrop ?? null;
+  }, [player?.equipped_skin]);
 
   const failureCount = (player?.failure_counts || {})[enemy.id] || 0;
   const mentorAid = failureCount >= 3;
@@ -726,6 +733,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         enemyFxAction={enemyFxAction}
         enemyAttackTs={enemyAttackTs}
         enemyAttackKind={enemyAttackKind}
+        wardBackdrop={wardBackdrop}
       />
 
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}

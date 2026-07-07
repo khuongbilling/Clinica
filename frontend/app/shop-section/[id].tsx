@@ -303,7 +303,7 @@ export default function ShopSection() {
 
             {g === "skins" && (
               <>
-                <Text style={styles.blurb}>Skins are purely cosmetic auras for your heroes — they never change stats or battle outcomes.</Text>
+                <Text style={styles.blurb}>Skins are purely cosmetic — hero auras (and, for ward skins, a new Ward Shift arena backdrop). They never change stats or battle outcomes.</Text>
                 {/* Default look option */}
                 <View style={styles.card}>
                   <View style={[styles.auraSwatch, { backgroundColor: COLORS.surfaceTertiary, borderColor: COLORS.borderStrong }]}>
@@ -335,7 +335,12 @@ export default function ShopSection() {
                         <Text style={[styles.cardEffect, { color: s.accentColor }]}>{s.subtitle} • Cosmetic</Text>
                         <Text style={styles.cardDesc}>{s.description}</Text>
                       </View>
-                      {!owned ? (
+                      {!owned && s.exchangeOnly ? (
+                        <View style={styles.lockedBadge} testID={`shop-skin-locked-${s.id}`}>
+                          <Ionicons name="ticket-outline" size={14} color={COLORS.onSurfaceSecondary} />
+                          <Text style={styles.lockedBadgeTxt}>Token Exchange</Text>
+                        </View>
+                      ) : !owned ? (
                         <BuyButton
                           price={s.price}
                           disabled={!afford}
@@ -827,6 +832,8 @@ const styles = StyleSheet.create({
   equipBtnTxt: { color: COLORS.onSurface, fontWeight: "700", fontSize: 13 },
   ownedBadge: { flexDirection: "row", alignItems: "center", gap: 4, minWidth: 62, justifyContent: "center" },
   ownedBadgeTxt: { color: COLORS.success, fontWeight: "700", fontSize: 12 },
+  lockedBadge: { flexDirection: "row", alignItems: "center", gap: 4, minWidth: 62, justifyContent: "center" },
+  lockedBadgeTxt: { color: COLORS.onSurfaceSecondary, fontWeight: "700", fontSize: 11 },
   staminaCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border, borderWidth: 1,

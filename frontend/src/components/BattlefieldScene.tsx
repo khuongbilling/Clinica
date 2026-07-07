@@ -146,16 +146,19 @@ interface BattlefieldSceneProps {
   enemyFxAction?: ActionType | null;
   enemyAttackTs?: number;
   enemyAttackKind?: EnemyAttackKind | null;
+  // Optional cosmetic ward-skin backdrop (e.g. Bloom Ward Skin). When set it
+  // overrides the per-system arena background. Purely visual.
+  wardBackdrop?: ReturnType<typeof require> | null;
 }
 
-export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed, outcome, actionFx, enemyFxTs, enemyFxAction, enemyAttackTs = 0, enemyAttackKind }: BattlefieldSceneProps) {
+export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed, outcome, actionFx, enemyFxTs, enemyFxAction, enemyAttackTs = 0, enemyAttackKind, wardBackdrop }: BattlefieldSceneProps) {
   const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
     setInfoOpen(false);
   }, [enemy.id]);
 
-  const sceneBg = SYSTEM_BG[enemy.primarySystem] ?? BATTLE_BG;
+  const sceneBg = wardBackdrop ?? SYSTEM_BG[enemy.primarySystem] ?? BATTLE_BG;
   const accent = ELEMENT_COLORS[enemy.primarySystem] || COLORS.brand;
 
   return (

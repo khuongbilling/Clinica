@@ -21,5 +21,10 @@ Ward boosts are bought into `inventory` keyed by `boost.name` (via `purchaseItem
 ## Skins are cosmetic-only
 `equipped_skin` renders an aura glow + accent border on owned Hero cards (heroes.tsx). Never touches stats. They are color/aura themes, NOT new sprite art.
 
+## Ward skins reuse the single skin slot
+A "ward skin" (e.g. Bloom Ward Skin) is just a normal `ShopSkin` with an extra `wardBackdrop` (require'd PNG) that BattlefieldScene uses to OVERRIDE the per-system arena background. It still lives in `owned_skins` + the single `equipped_skin` slot, so equipping a ward skin and a hero-aura skin is mutually exclusive (one cosmetic slot for both). `exchangeOnly:true` marks skins that aren't crown-purchasable (earned via Miasma Bloom Token Exchange instead) — the shop skins tab shows a "Token Exchange" badge instead of a BuyButton for those.
+**Why:** avoids a new PlayerState field (backend Player/PlayerUpdate normalize-wipe gotcha) and reuses the whole purchase/equip UI.
+**How to apply:** Token Exchange cosmetic rewards use `ExchangeGrant {kind:"cosmetic", skinId}` in worldEvent.ts; `redeemExchangeItem` mirrors purchaseSkin (adds to owned_skins + auto-equips, guards against re-buying an owned skin).
+
 ## Persistence
 `crowns`, `owned_skins`, `equipped_skin`, `owned_upgrades` must all exist on backend Player + PlayerUpdate models or refresh's normalize wipes them (see clinica-hero-evolution rule). `equipped_skin` default "" persists unequip because update_player filters only `None`.
