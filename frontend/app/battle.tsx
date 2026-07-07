@@ -1079,7 +1079,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       )}
 
       {state.pendingCue && !cueFeedback && state.outcome === "ongoing" && (activeTutorialId !== "prologueBattle" || guidedCueStep) && (
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, styles.cueModalOverlay]}>
           <ScrollView style={styles.cueModal} contentContainerStyle={styles.cueModalContent} showsVerticalScrollIndicator={false} testID="clinical-cue-modal">
             <Text style={styles.cueKicker}>CLINICAL CUE</Text>
             <Text style={styles.cueTierTopic}>
@@ -1439,6 +1439,10 @@ const styles = StyleSheet.create({
 
   // ── Modals ──
   modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", padding: SPACING.lg },
+  // On web, the guided TutorialOverlay action layer sits at zIndex 9000; without
+  // an explicit zIndex the cue-question modal renders beneath it and swallows all
+  // clicks (works on native because JSX paint order wins). Match the feedback card.
+  cueModalOverlay: { zIndex: 9500 },
   detailModal: { backgroundColor: COLORS.surfaceSecondary, borderRadius: 8, padding: SPACING.lg, gap: 6, borderWidth: 1, borderColor: COLORS.brand + "50", width: "100%", maxWidth: 380, maxHeight: "80%" },
   detailKicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: "700" },
   detailTitle: { color: COLORS.onSurface, fontSize: 22, fontWeight: "400", marginBottom: 2 },
