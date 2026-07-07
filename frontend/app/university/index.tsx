@@ -1,16 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { goBack } from "@/src/utils/navigation";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { ModeCard } from "@/src/components/ModeCard";
 import { BannerCard } from "@/src/components/ModeBanners";
 import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { MessageDialog } from "@/src/components/WebAlert";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
@@ -95,8 +97,16 @@ export default function UniversityHubScreen() {
   const { player } = usePlayer();
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
+
+  useEffect(() => {
+    if (!isCompleted("firstLesson")) {
+      const t = setTimeout(() => startTutorial("firstLesson"), 700);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   // Deep links reboot the app; render nothing heavy but never a blank crash.
   if (!player) {
@@ -158,7 +168,10 @@ export default function UniversityHubScreen() {
         <BannerCard
           mode={LESSONS_BANNER}
           height={158}
-          onPress={() => router.push("/university/lessons" as any)}
+          onPress={() => {
+            onRequiredAction("openLesson");
+            router.push("/university/lessons" as any);
+          }}
           testID="university-banner-lessons"
         />
 
@@ -245,6 +258,8 @@ export default function UniversityHubScreen() {
         onConfirm={() => setInfo(null)}
         testID="university-info-dialog"
       />
+
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }

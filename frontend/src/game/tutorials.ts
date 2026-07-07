@@ -3,6 +3,10 @@ export type TutorialId =
   | "firstBattle"
   | "firstKingdom"
   | "firstSummon"
+  | "firstWardDefense"
+  | "firstHeroTeam"
+  | "firstLesson"
+  | "firstLotusEntry"
   | "systemHubIntro"
   | "systemWardHub"
   | "systemShops";
@@ -30,8 +34,12 @@ export interface TutorialStep {
 export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   prologueBattle: "Your First Shift",
   firstBattle: "Battle Basics",
-  firstKingdom: "Kingdom Basics",
+  firstKingdom: "Sanctuary Basics",
   firstSummon: "Hero Summoning",
+  firstWardDefense: "Ward Defense",
+  firstHeroTeam: "Your Active Team",
+  firstLesson: "Lotus Lessons",
+  firstLotusEntry: "Lotus Plate Journal",
   systemHubIntro: "The System Awakens",
   systemWardHub: "The Ward",
   systemShops: "The Apothecary Market",
@@ -202,14 +210,23 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "kingdom_buildings",
       title: "Sanctuary Inventory",
-      body: "The grid starts mostly empty — open Sanctuary Inventory to place buildings you've unlocked onto compatible plots, then move or store them anytime. The Research Library holds your Codex entries. The Training Hall manages your team. The Apothecary stocks your items. Roads connect everything automatically.",
+      body: "The grid starts mostly empty — open Sanctuary Inventory to place buildings you've unlocked onto compatible plots, then move or store them anytime. The Research Library holds your Codex entries. The Training Hall manages your team. The Apothecary stocks your items.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
     },
     {
+      id: "kingdom_place",
+      title: "Place a Building",
+      body: "Open the Sanctuary Inventory (bottom-left button) and place any building onto an empty plot. Tap the green tile to confirm. Roads connect everything automatically.",
+      placement: "bottom",
+      requireAction: true,
+      requiredActionType: "placeBuilding",
+      nextText: "OPEN INVENTORY & PLACE",
+    },
+    {
       id: "kingdom_done",
-      title: "Enter the Core",
+      title: "Your Sanctuary is Growing",
       body: "Head to the home screen to start a clinical encounter. Each battle teaches a real nursing concept. The Codex tab holds deeper explanations after you win.",
       placement: "center",
       requireAction: false,
@@ -220,8 +237,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   firstSummon: [
     {
       id: "summon_intro",
-      title: "Summon Hall",
-      body: "Codex Shards are earned from battles. Spend them here to summon new healers. Each hero has unique clinical skills tied to a body system.",
+      title: "Recruitment Hall",
+      body: "Codex Shards are earned from battles and lessons. Spend them here to summon new healers. Each hero has unique clinical skills tied to a body system.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
@@ -237,11 +254,144 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "summon_action",
       title: "Call a Healer",
-      body: "Tap the Summon button below to call a new hero to your team. Duplicate heroes refund Shards. Add new heroes to your active team before the next battle.",
+      body: "Tap the SINGLE RECRUITMENT button below to call a new hero to your team. Duplicate heroes refund Shards. Add new heroes to your active team before the next battle.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "summon",
-      nextText: "TAP SUMMON",
+      nextText: "TAP SINGLE RECRUITMENT",
+    },
+  ],
+
+  // ── Ward Defense first-entry tutorial ──
+  firstWardDefense: [
+    {
+      id: "wd_intro",
+      title: "Ward Defense: Airway Code Rush",
+      body: "Disease spirits advance along the road toward the Vital Lantern — your patient's lifeline. Deploy healer units on tiles to intercept and defeat them before they reach it.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "wd_ap",
+      title: "Action Points & Deployment",
+      body: "Each healer unit costs Action Points (AP) to deploy. AP regenerates slowly over time and spikes when you answer a Clinical Question correctly before a wave. Choose your units wisely.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "wd_deploy",
+      title: "Deploy a Healer",
+      body: "Select a unit from the dock at the bottom, then tap an empty tile on the board to deploy it. Ward Scout is affordable — try deploying one now.",
+      placement: "bottom",
+      requireAction: true,
+      requiredActionType: "deploy",
+      nextText: "DEPLOY A UNIT",
+    },
+    {
+      id: "wd_merge",
+      title: "Care Synthesis — Merge & Upgrade",
+      body: "Deploy two identical same-level units and tap SYNTHESIZE to merge them into a stronger one. Stronger units deal more damage and have greater range. Try it whenever the button appears.",
+      placement: "bottom",
+      requireAction: true,
+      requiredActionType: "merge",
+      nextText: "SYNTHESIZE TWO UNITS",
+    },
+    {
+      id: "wd_done",
+      title: "Protect the Vital Lantern",
+      body: "Matched units deal bonus damage — Assess units reveal weaknesses first, then Treat units hit hard. Watch the Corruption and Stability bars above. Good luck!",
+      placement: "center",
+      requireAction: false,
+      nextText: "BEGIN THE DEFENSE",
+    },
+  ],
+
+  // ── Hall of Heroes first-entry tutorial ──
+  firstHeroTeam: [
+    {
+      id: "heroes_intro",
+      title: "Your Healer Roster",
+      body: "This is the Hall of Heroes — every healer you've recruited lives here. You can bring up to 3 into your active team for clinical shifts.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "heroes_roles",
+      title: "Team Roles",
+      body: "Balance your team across roles: a Scout to reveal clues, a Stabilizer to protect the patient, and a Striker to defeat the disease. A Coordinator is a bonus support pick.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "heroes_set",
+      title: "Set Your Active Team",
+      body: "Tap the + button on any owned hero card to add them to your active team. Tap again to remove. Changes save instantly — build your best lineup now.",
+      placement: "bottom",
+      requireAction: true,
+      requiredActionType: "setTeam",
+      nextText: "ADD A HERO TO TEAM",
+    },
+  ],
+
+  // ── University / Lotus Lessons first-entry tutorial ──
+  firstLesson: [
+    {
+      id: "lesson_intro",
+      title: "Clinica University",
+      body: "This is where clinical reasoning grows. Lotus Lessons are short, structured cases that teach real nursing concepts and reward your first heroes. Begin here before anything else.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "lesson_mentor",
+      title: "Mentor Bai",
+      body: "Mentor Bai guides your learning path. Follow the recommended lesson order — each one builds on the last and unlocks new content as you progress.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "lesson_open",
+      title: "Open Lotus Lessons",
+      body: "Tap the LOTUS LESSONS banner to begin your first lesson. Lessons are free, no stamina cost — you can replay them anytime for review.",
+      placement: "bottom",
+      requireAction: true,
+      requiredActionType: "openLesson",
+      nextText: "TAP LOTUS LESSONS",
+    },
+  ],
+
+  // ── Lotus Plate Journal first-entry tutorial ──
+  firstLotusEntry: [
+    {
+      id: "lotus_intro",
+      title: "The Lotus Plate Journal",
+      body: "This is your off-shift wellness space. Log meals, hydration, and habits to grow your Nutrition Garden and earn Nourishment Petals. No stamina cost — ever.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "lotus_garden",
+      title: "Nutrition Garden",
+      body: "The four garden meters — Hydration, Fiber, Protein, and Heart — grow as you log entries. Keep them healthy and the garden flourishes. Purely for your well-being, never for combat power.",
+      placement: "center",
+      requireAction: false,
+      nextText: "NEXT",
+    },
+    {
+      id: "lotus_log",
+      title: "Log Your First Entry",
+      body: "Tap LOG A MEAL OR CHECK-IN to build your first plate or log a habit check-in. Every entry earns Nourishment Petals for cosmetic rewards.",
+      placement: "bottom",
+      requireAction: true,
+      requiredActionType: "logEntry",
+      nextText: "TAP LOG A MEAL",
     },
   ],
 

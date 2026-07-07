@@ -10,6 +10,7 @@ import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate"
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+
 import { IsoTile } from "@/src/components/realm/IsoTile";
 import { IsoBuildingSprite } from "@/src/components/realm/IsoBuildingSprite";
 import { IsoTerrain } from "@/src/components/realm/IsoTerrain";
@@ -91,7 +92,7 @@ export default function KingdomScreen() {
   const { player, setRealmLayout, collectRealmProduction } = usePlayer();
   const realmGate = useFeatureGate("realm");
   const { logEvent } = useTestSession();
-  const { isCompleted, startTutorial } = useTutorial();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
 
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [showInventory, setShowInventory] = useState(false);
@@ -289,6 +290,7 @@ export default function KingdomScreen() {
       await setRealmLayout({}, { [targetCellId]: placement.id });
       setBanner(`${decoration?.name || "Decoration"} placed.`);
     }
+    onRequiredAction("placeBuilding");
     exitPlacement();
   }
 

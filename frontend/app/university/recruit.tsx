@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,15 +10,24 @@ import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function UniversityRecruitScreen() {
   const router = useRouter();
   const { player, recruitOnce, recruitTen } = usePlayer();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [busy, setBusy] = useState(false);
   const [single, setSingle] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isCompleted("firstSummon")) {
+      const t = setTimeout(() => startTutorial("firstSummon"), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   if (!player) {
     return (
@@ -38,7 +47,7 @@ export default function UniversityRecruitScreen() {
     setBatch(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else { setSingle(res.result || null); playRewardCue(false); }
+    else { setSingle(res.result || null); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 

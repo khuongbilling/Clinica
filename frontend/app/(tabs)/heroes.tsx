@@ -8,8 +8,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import { rarityTierLabel } from "@/src/game/university";
 import { findSkin } from "@/src/game/shop";
@@ -39,11 +41,19 @@ export default function HeroesScreen() {
   const router = useRouter();
   const { player, saveActiveTeam } = usePlayer();
   const gate = useFeatureGate("hall_of_heroes");
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [team, setTeam] = useState<string[]>(player?.active_team ?? []);
 
   useEffect(() => {
     if (player) setTeam(player.active_team ?? []);
   }, [player]);
+
+  useEffect(() => {
+    if (!isCompleted("firstHeroTeam")) {
+      const t = setTimeout(() => startTutorial("firstHeroTeam"), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   if (!player) {
     return (
@@ -67,6 +77,7 @@ export default function HeroesScreen() {
     const next = inTeam ? team.filter((id) => id !== heroId) : [...team, heroId];
     setTeam(next);
     await saveActiveTeam(next);
+    onRequiredAction("setTeam");
   };
 
   return (
@@ -211,6 +222,8 @@ export default function HeroesScreen() {
           })}
         </View>
       </ScrollView>
+
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }

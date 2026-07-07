@@ -10,7 +10,16 @@ import { TUTORIAL_LABELS, TUTORIALS, type TutorialId } from "@/src/game/tutorial
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-const TUTORIAL_ORDER: TutorialId[] = ["prologueBattle", "firstBattle", "firstKingdom", "firstSummon"];
+const TUTORIAL_ORDER: TutorialId[] = [
+  "prologueBattle",
+  "firstBattle",
+  "firstKingdom",
+  "firstSummon",
+  "firstWardDefense",
+  "firstHeroTeam",
+  "firstLesson",
+  "firstLotusEntry",
+];
 
 // System-narrated onboarding tutorials (systemHubIntro/systemWardHub/systemShops)
 // are one-time, non-skippable story beats and are intentionally omitted from the
@@ -18,8 +27,12 @@ const TUTORIAL_ORDER: TutorialId[] = ["prologueBattle", "firstBattle", "firstKin
 const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
   prologueBattle: "The very first guided shift — Scout, Stabilize, Counter, Reassess.",
   firstBattle: "Care Chain basics: matching skills to what a patient needs.",
-  firstKingdom: "Sanctuary Core, inventory, and how your realm grows.",
-  firstSummon: "Summon Hall and calling new healers to your ward.",
+  firstKingdom: "Sanctuary Core, inventory, placing a building, and how your realm grows.",
+  firstSummon: "Recruitment Hall — calling new healers to your ward.",
+  firstWardDefense: "Ward Defense basics — deploying units and Care Synthesis merges.",
+  firstHeroTeam: "Hall of Heroes — setting your active team for clinical shifts.",
+  firstLesson: "Clinica University — opening your first Lotus Lesson.",
+  firstLotusEntry: "Lotus Plate Journal — logging your first meal or check-in.",
 };
 
 // Push 6 — Tutorial Replay Center. Lists every in-app coach-mark tutorial

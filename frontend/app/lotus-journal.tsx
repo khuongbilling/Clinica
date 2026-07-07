@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { DAILY_INSIGHT_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -26,8 +28,16 @@ const BOUTIQUE_ITEMS = [
 export default function LotusJournalPage() {
   const router = useRouter();
   const { player, logWellnessActivity } = usePlayer();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [lessonOpen, setLessonOpen] = useState<string | null>(null);
   const [lessonMsg, setLessonMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isCompleted("firstLotusEntry")) {
+      const t = setTimeout(() => startTutorial("firstLotusEntry"), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   if (!player || !player.wellness) {
     return (
@@ -93,7 +103,7 @@ export default function LotusJournalPage() {
         <RewardPreview mode="Lotus Plate Journal" />
 
         {/* Main actions */}
-        <Pressable style={styles.actionCard} onPress={() => router.push("/lotus-journal-log")}>
+        <Pressable style={styles.actionCard} onPress={() => { onRequiredAction("logEntry"); router.push("/lotus-journal-log"); }}>
           <View style={[styles.actionIcon, { backgroundColor: COLORS.growth + "20" }]}>
             <Ionicons name="restaurant" size={22} color={COLORS.growth} />
           </View>
@@ -190,6 +200,8 @@ export default function LotusJournalPage() {
           </Text>
         </View>
       </ScrollView>
+
+      <TutorialOverlay />
 
       <Modal visible={!!lessonOpen} transparent animationType="fade" onRequestClose={() => setLessonOpen(null)}>
         <View style={styles.modalBackdrop}>

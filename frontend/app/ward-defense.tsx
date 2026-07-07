@@ -50,6 +50,8 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 };
 
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
@@ -2507,6 +2509,7 @@ function WavePauseOverlay({ wave }: { wave: number }) {
 export default function WardDefense() {
   const router = useRouter();
   const { player, applyRewards, recordWardWaves, syncInventory, setWardLoadout } = usePlayer();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
 
   const gsRef = useRef<GS>(freshState());
@@ -2529,6 +2532,14 @@ export default function WardDefense() {
   const [cqAnswered, setCqAnswered] = useState<{ wave: number; correct: boolean } | null>(null);
   const [cqCueChoice, setCqCueChoice] = useState<{ wave: number; choice: "empower" | "stabilize" } | null>(null);
   const [cqDismissedWave, setCqDismissedWave] = useState<number | null>(null);
+
+  /* First-entry tutorial */
+  useEffect(() => {
+    if (!isCompleted("firstWardDefense")) {
+      const t = setTimeout(() => startTutorial("firstWardDefense"), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   /* Shared idle bob animation */
   const bobAnim = useRef(new Animated.Value(0)).current;
@@ -2975,6 +2986,7 @@ export default function WardDefense() {
       uidSeed: s.uidSeed + 1,
       feedbacks: [{ id: fid, text: `${uDef.name} deployed — ${uDef.flavor}`, color: uDef.color, quality: "bonus" as any, ticks: 5 }, ...s.feedbacks.slice(0, 1)],
     });
+    onRequiredAction("deploy");
   }
 
   /* ── Care Synthesis — merge two same-type same-level units → Lv+1 ── */
@@ -3000,6 +3012,7 @@ export default function WardDefense() {
         color: "#FFD700", quality: "bonus" as any, ticks: 8,
       }, ...s.feedbacks.slice(0, 1)],
     });
+    onRequiredAction("merge");
   }
 
   /* ── Use a global ability ── */
@@ -3303,6 +3316,7 @@ export default function WardDefense() {
         loadout={gs.loadout}
       />
 
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }
