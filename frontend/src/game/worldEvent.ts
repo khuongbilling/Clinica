@@ -418,6 +418,14 @@ export interface WorldBossPreview {
   artBrief: string;
 }
 
+// Placeholder unlock gate for the playable Verdantha encounter. The Bloom
+// Matriarch only manifests at Phase III — Convergence. There is no live phase
+// progression in this prototype, so this stays false: the "Challenge Verdantha"
+// entry routes to the gated boss screen, which shows a Coming Soon lock instead
+// of letting the fight start. Flip to true (or wire to real phase progress)
+// when Phase III goes live.
+export const VERDANTHA_UNLOCKED = false;
+
 export const VERDANTHA: WorldBossPreview = {
   id: "verdantha",
   name: "Verdantha",

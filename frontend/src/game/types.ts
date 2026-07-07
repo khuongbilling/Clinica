@@ -87,6 +87,10 @@ export interface Enemy {
   // scripted to end in defeat (hidden pathology, resisted treatment) — no
   // normal Game Over/rewards flow, see battle.tsx + lotus-recall.tsx.
   scriptedLoss?: boolean;
+  // World Event boss (e.g. Verdantha): lives in ENEMIES so battle/result can
+  // resolve it, but must be excluded from the normal Ward Shift encounter pool
+  // and only reachable through its gated World Boss entry point.
+  worldBoss?: boolean;
 }
 
 export interface CodexEntry {

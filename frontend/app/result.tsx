@@ -17,6 +17,7 @@ import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLa
 import { getDifficultyModifier } from "@/src/game/difficulty";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { HEROES } from "@/src/game/content";
+import { VERDANTHA } from "@/src/game/worldEvent";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { MilestoneReward, type MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
@@ -370,6 +371,25 @@ export default function Result() {
               </Pressable>
             )}
 
+            {enemy?.worldBoss && (
+              <View style={styles.bossDropCard} testID="result-worldboss-drop">
+                <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+                  <Ionicons name="cube" size={20} color={EPIDEMIC_ACCENT} />
+                  <Text style={styles.bossDropTitle}>WORLD BOSS RELIC</Text>
+                </View>
+                <Text style={styles.bossDropTxt}>
+                  World Boss Relic Shard secured — a crystallised remnant of {enemy.name}'s core.
+                </Text>
+                <View style={styles.bossDropDivider} />
+                {VERDANTHA.dropRewards.map((drop, i) => (
+                  <View key={i} style={styles.bossDropRow}>
+                    <Ionicons name="cube-outline" size={13} color={EPIDEMIC_ACCENT} />
+                    <Text style={styles.bossDropRowTxt}>{drop}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {mission && (
               <View style={styles.kingdomCard}>
                 <Ionicons name="globe-outline" size={16} color={COLORS.brand} />
@@ -498,6 +518,12 @@ const styles = StyleSheet.create({
   crownsTxt: { color: COLORS.energy, fontSize: 14, fontWeight: "600", flex: 1 },
   tokensCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: EPIDEMIC_ACCENT + "14", borderColor: EPIDEMIC_ACCENT + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
   tokensTxt: { color: EPIDEMIC_ACCENT, fontSize: 14, fontWeight: "600", flex: 1 },
+  bossDropCard: { backgroundColor: EPIDEMIC_ACCENT + "10", borderColor: EPIDEMIC_ACCENT + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md, gap: SPACING.sm },
+  bossDropTitle: { color: EPIDEMIC_ACCENT, fontSize: 11, fontWeight: "700", letterSpacing: 2 },
+  bossDropTxt: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19 },
+  bossDropDivider: { height: 1, backgroundColor: EPIDEMIC_ACCENT + "22" },
+  bossDropRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  bossDropRowTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
   shardsBreakdown: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
   starsCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 3, borderTopColor: COLORS.brand, alignItems: "center", gap: 4 },
   starsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },

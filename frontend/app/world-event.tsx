@@ -116,7 +116,7 @@ export default function WorldEventScreen() {
         {tab === "overview" && <OverviewTab />}
         {tab === "systems"  && <SystemsTab router={router} />}
         {tab === "rewards"  && <RewardsTab />}
-        {tab === "boss"     && <BossTab />}
+        {tab === "boss"     && <BossTab router={router} />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -397,7 +397,7 @@ function RewardsTab() {
 
 // ── Boss Tab ──────────────────────────────────────────────────────────────────
 
-function BossTab() {
+function BossTab({ router }: { router: any }) {
   const boss = VERDANTHA;
   return (
     <View style={styles.section}>
@@ -462,6 +462,25 @@ function BossTab() {
           <Text style={styles.dropTxt}>{drop}</Text>
         </View>
       ))}
+
+      {/* Challenge entry — routes to the gated /boss encounter screen */}
+      <Pressable
+        style={[styles.challengeBtn, { borderColor: BLOOM_ACCENT + "88" }]}
+        onPress={() => router.push({ pathname: "/boss", params: { bossId: "verdantha" } })}
+        testID="world-event-challenge-verdantha"
+      >
+        <LinearGradient
+          colors={[BLOOM_DARK + "AA", "transparent"]}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        />
+        <Ionicons name="skull" size={18} color={BLOOM_ACCENT} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.challengeTxt}>Challenge Verdantha</Text>
+          <Text style={styles.challengeSub}>Manifests at Phase III — Coming Soon</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={BLOOM_ACCENT} />
+      </Pressable>
 
       {/* Art direction note */}
       <SectionHeading icon="color-palette-outline" title="Art Direction Note" />
@@ -748,6 +767,15 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   dropTxt: { color: COLORS.onSurface, fontSize: 12 },
+
+  challengeBtn: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    marginTop: SPACING.md, padding: SPACING.md,
+    borderRadius: RADIUS.md, borderWidth: 1, overflow: "hidden",
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  challengeTxt: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  challengeSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
 
   artCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,

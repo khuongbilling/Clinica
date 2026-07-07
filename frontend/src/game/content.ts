@@ -433,6 +433,38 @@ export const ENEMIES: Enemy[] = [
     bestCounters: ['shield', 'cleanse', 'scout'],
     teaches: ['delirium_basics', 'safety_first'],
   },
+  // ---------- WORLD EVENT BOSS — Verdantha, the Bloom Matriarch ----------
+  // Playable-but-gated Phase III World Boss for the Miasma Bloom event. Lives in
+  // ENEMIES so battle.tsx/result.tsx can resolve it by id, but carries
+  // worldBoss:true so it is filtered out of the normal Ward Shift pool. It is
+  // only reachable through the gated "Challenge Verdantha" entry on the World
+  // Event Boss tab (see world-event.tsx + boss.tsx). Descriptive lore lives in
+  // worldEvent.ts (VERDANTHA); this entry holds the battle-facing stats.
+  {
+    id: 'verdantha',
+    name: 'Verdantha',
+    realWorld: 'Invasive systemic fungal infection (disseminated mycosis)',
+    primarySystem: 'Growth',
+    secondarySystem: 'Filter',
+    difficulty: 5,
+    startingStability: 50,
+    instability: 11,
+    corruption: 320,
+    stabilityResistance: 0.5, // the Bloom regrows — stabilization sticks poorly against it
+    worldBoss: true,
+    visibleClues: [
+      { id: 'c1', label: 'Spore Bloom Spreading', detail: 'Luminous growth advancing across every ward.', hidden: false },
+      { id: 'c2', label: 'Filter Overwhelmed', detail: 'Toxin clearance failing — the land itself is corrupted.', hidden: false },
+      { id: 'c3', label: 'Systemic Invasion', detail: 'Multiple organ systems seeded at once.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Core Resonance', detail: 'Drawn to the Vital Lantern — growth accelerates near life-force.', hidden: true },
+      { id: 'h2', label: 'Fire & River Weakness', detail: 'Burns and flushes clear spore clouds faster than anything else.', hidden: true },
+    ],
+    dangerTrigger: 'Bloom Cascade — realm-wide spore corruption',
+    bestCounters: ['strike', 'cleanse', 'shield', 'scout'],
+    teaches: [],
+  },
 ];
 
 // ---------- WAVE AFFLICTIONS (small companion enemies that ride alongside a primary enemy) ----------
@@ -583,6 +615,12 @@ export const BOSS_LORD_IMBALANCE: Enemy = {
   bestCounters: ['scout', 'stabilize', 'strike', 'shield'],
   teaches: ['lord_imbalance_lore', 'multi_system_priority'],
 };
+
+// ---------- WORLD EVENT BOSS reference ----------
+// Single source of truth: the object lives inside ENEMIES (so battle/result
+// resolve it by id); this export is a convenience handle for the gated boss
+// entry screen. Non-null assertion is safe — the entry is defined above.
+export const BOSS_VERDANTHA: Enemy = ENEMIES.find((e) => e.id === 'verdantha')!;
 
 // ---------- PROLOGUE BOSS (Push 1) ----------
 // Narratively unwinnable: incomplete Scout info, hidden weakness, corrupted
