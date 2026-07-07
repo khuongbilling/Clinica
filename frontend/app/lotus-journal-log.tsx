@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import {
   DAILY_INSIGHT_CAP,
   FOOD_TILES_BY_CATEGORY,
@@ -50,6 +51,7 @@ type Step = "type" | "plate" | "hydration" | "checkin" | "result";
 export default function LotusJournalLogPage() {
   const router = useRouter();
   const { logWellnessActivity } = usePlayer();
+  const { onRequiredAction } = useTutorial();
   const [step, setStep] = useState<Step>("type");
   const [logType, setLogType] = useState<WellnessLogType>("breakfast");
   const [tileIds, setTileIds] = useState<string[]>([]);
@@ -96,6 +98,7 @@ export default function LotusJournalLogPage() {
     if (res) {
       setResult(res);
       setStep("result");
+      onRequiredAction("logEntry");
     }
   };
 

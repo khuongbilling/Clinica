@@ -11,6 +11,7 @@ import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function UniversityRecruitScreen() {
@@ -113,6 +114,8 @@ export default function UniversityRecruitScreen() {
           <Text style={styles.oddsLine}>10% — University Credits</Text>
         </View>
       </ScrollView>
+
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }

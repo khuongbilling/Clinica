@@ -103,7 +103,7 @@ export default function LotusJournalPage() {
         <RewardPreview mode="Lotus Plate Journal" />
 
         {/* Main actions */}
-        <Pressable style={styles.actionCard} onPress={() => { onRequiredAction("logEntry"); router.push("/lotus-journal-log"); }}>
+        <Pressable style={styles.actionCard} onPress={() => router.push("/lotus-journal-log")}>
           <View style={[styles.actionIcon, { backgroundColor: COLORS.growth + "20" }]}>
             <Ionicons name="restaurant" size={22} color={COLORS.growth} />
           </View>
