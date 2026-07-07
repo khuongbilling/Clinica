@@ -78,6 +78,31 @@ class WellnessState(BaseModel):
     weekly: WellnessWeekly = Field(default_factory=WellnessWeekly)
 
 
+class DailyObjectiveState(BaseModel):
+    id: str = ""
+    mode: str = ""
+    event: str = ""
+    target: int = 0
+    progress: int = 0
+    claimed: bool = False
+    label: str = ""
+    description: str = ""
+    icon: str = ""
+    reward: Dict[str, int] = Field(default_factory=dict)
+
+
+class DailyRoundsState(BaseModel):
+    streak_count: int = 0
+    last_checkin_date: str = ""
+    daily_date: str = ""
+    objectives: List[DailyObjectiveState] = Field(default_factory=list)
+    all_complete_claimed: bool = False
+    weekly_key: str = ""
+    weekly_days_completed: int = 0
+    weekly_claimed: bool = False
+    weekly_credited_dates: List[str] = Field(default_factory=list)
+
+
 class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -139,6 +164,7 @@ class Player(BaseModel):
     stamina: int = 5
     stamina_updated_at: str = Field(default_factory=now_iso)
     wellness: WellnessState = Field(default_factory=WellnessState)
+    daily_rounds: DailyRoundsState = Field(default_factory=DailyRoundsState)
     realm_layout: Dict[str, str] = Field(default_factory=dict)
     realm_decor: Dict[str, str] = Field(default_factory=dict)
     realm_assignments: Dict[str, List[str]] = Field(default_factory=dict)
@@ -208,6 +234,7 @@ class PlayerUpdate(BaseModel):
     stamina: Optional[int] = None
     stamina_updated_at: Optional[str] = None
     wellness: Optional[WellnessState] = None
+    daily_rounds: Optional[DailyRoundsState] = None
     realm_layout: Optional[Dict[str, str]] = None
     realm_decor: Optional[Dict[str, str]] = None
     realm_assignments: Optional[Dict[str, List[str]]] = None

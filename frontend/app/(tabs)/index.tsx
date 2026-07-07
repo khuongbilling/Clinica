@@ -18,8 +18,16 @@ import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { playerLevelFromXp, isFeatureUnlocked } from "@/src/game/progression";
+import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
+import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
+import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
+
+const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
+function dailyRoundsUnlockedModes(player: any): string[] {
+  const ctx = buildGateContext(player);
+  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
+}
 
 const INTRO_KEY = "clinica.intro.seen";
 const WORLD_EVENT_BANNER_KEY = `clinica.worldEventBanner.dismissed.${ACTIVE_WORLD_EVENT.id}`;
@@ -51,6 +59,7 @@ export default function RunHome() {
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
+  const [showRounds, setShowRounds] = useState(false);
   const [eventBannerDismissed, setEventBannerDismissed] = useState<boolean | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -125,6 +134,11 @@ export default function RunHome() {
   // New players are steered to Clinica University first — it is the prominent
   // opening of the game until they've taken their first lesson.
   const isNewLearner = (player.lessons_completed?.length ?? 0) === 0;
+
+  // Daily Ward Rounds — free daily engagement loop. Hidden until the player has
+  // begun (post-University), then shows a badge for pending check-in/claims.
+  const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state;
+  const roundsBadge = claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -206,8 +220,18 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN — reserved for future Offers/Passes; placeholder only, no monetization yet */}
+        {/* LEFT COLUMN — Daily Ward Rounds (free) + reserved Offers placeholder */}
         <View style={styles.sideCol}>
+          {!isNewLearner && (
+            <FeatureButton
+              icon="today"
+              label="Rounds"
+              color={COLORS.brand}
+              badge={roundsBadge}
+              onPress={() => setShowRounds(true)}
+              testID="home-float-rounds"
+            />
+          )}
           <FeatureButton
             icon="pricetag-outline"
             label="Offers"
@@ -331,6 +355,9 @@ export default function RunHome() {
           </View>
         </View>
       </Modal>
+
+      {/* ── DAILY WARD ROUNDS PANEL ── */}
+      <DailyRoundsPanel visible={showRounds} onClose={() => setShowRounds(false)} />
     </SafeAreaView>
   );
 }
@@ -390,10 +417,10 @@ const sc = StyleSheet.create({
 
 /* ── FeatureButton ── */
 function FeatureButton({
-  icon, label, color, locked, lockText, live, onPress, testID,
+  icon, label, color, locked, lockText, live, badge, onPress, testID,
 }: {
   icon: string; label: string; color: string;
-  locked?: boolean; lockText?: string; live?: boolean;
+  locked?: boolean; lockText?: string; live?: boolean; badge?: number;
   onPress: () => void; testID?: string;
 }) {
   return (
@@ -404,6 +431,11 @@ function FeatureButton({
       }]}>
         <Ionicons name={icon as any} size={22} color={locked ? COLORS.onSurfaceTertiary : color} />
         {live && !locked ? <View style={styles.featLiveDot} /> : null}
+        {!locked && badge && badge > 0 ? (
+          <View style={styles.featBadge}>
+            <Text style={styles.featBadgeTxt}>{badge > 9 ? "9+" : badge}</Text>
+          </View>
+        ) : null}
       </View>
       <Text style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
       {live && !locked ? <Text style={styles.featLiveTxt}>LIVE</Text> : null}
@@ -457,6 +489,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: COLORS.surface,
   },
   featLiveTxt: { color: "#34D399", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  featBadge: {
+    position: "absolute", top: -3, right: -3,
+    minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: COLORS.error,
+    borderWidth: 1.5, borderColor: COLORS.surface,
+    alignItems: "center", justifyContent: "center",
+  },
+  featBadgeTxt: { color: "#FFFFFF", fontSize: 9, fontWeight: "800" },
 
   /* World Event banner (Shift hub entry point) */
   eventBanner: {

@@ -10,6 +10,12 @@ import { addHeroXp, playerLevelFromXp, staminaMaxForLevel } from './progression'
 import { levelCapForStar } from './university';
 import { defaultWellnessState, resolveWellnessLog, WellnessLogInput, WellnessResult } from './wellness';
 import {
+  DailyEventType, DailyReward, DailyRoundsState, defaultDailyRoundsState, ensureFreshDailyRounds,
+  checkInDailyRounds as computeCheckIn, recordObjectiveProgress, claimObjectiveReward,
+  claimAllCompleteBonus, claimWeeklyReward, CheckInResult,
+} from './dailyRounds';
+import { buildGateContext, checkFeatureGate } from './progression';
+import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
 } from './units';
@@ -85,6 +91,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   }
   if (!out.wellness) {
     out = { ...out, wellness: defaultWellnessState() };
+  }
+  if (!out.daily_rounds) {
+    out = { ...out, daily_rounds: defaultDailyRoundsState() };
   }
   if (!out.cue_topic_progress) {
     out = { ...out, cue_topic_progress: {} };
@@ -276,6 +285,11 @@ type Ctx = {
   completeSimulation: (simId: string, wasCorrect: boolean) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
+  // Daily Ward Rounds — free-to-earn daily engagement loop.
+  checkInDailyRounds: () => Promise<CheckInResult | null>;
+  claimDailyObjective: (objectiveId: string) => Promise<{ ok: boolean; message: string; reward?: DailyReward }>;
+  claimDailyAllComplete: () => Promise<{ ok: boolean; message: string; reward?: DailyReward }>;
+  claimWeeklyGoal: () => Promise<{ ok: boolean; message: string; reward?: DailyReward }>;
   exchangeInsightCrystals: (insightCrystalsCost: number) => Promise<{ ok: boolean; message: string }>;
   recordCueTopics: (topics: string[]) => Promise<void>;
   resetPlayer: () => Promise<void>;
@@ -333,6 +347,39 @@ function applyXpDetailed(p: PlayerState, addXp: number): PlayerXpApplyResult {
 
 function makeLocalId(): string {
   return 'local_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+// ---------- Daily Ward Rounds helpers ----------
+// Modes a Daily Rounds objective can be drawn from. Filtered per-player through
+// the same compound feature gate the rest of the app uses, so a brand-new
+// player only ever gets objectives for the systems they have actually unlocked.
+const DAILY_ROUNDS_MODES = ['ward_shift', 'ward_defense', 'university', 'lotus_journal', 'hall_of_heroes'];
+
+function dailyRoundsUnlockedModes(p: PlayerState): string[] {
+  const ctx = buildGateContext(p);
+  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
+}
+
+// Credit currency reward from a claimed daily/weekly/streak reward. Uses only
+// existing currencies (Crowns / Codex Shards / Insight Crystals) — no new
+// currency, no monetization.
+function addDailyReward(p: PlayerState, r: DailyReward): PlayerState {
+  return {
+    ...p,
+    crowns: (p.crowns || 0) + (r.crowns || 0),
+    codex_shards: (p.codex_shards || 0) + (r.codexShards || 0),
+    insight_crystals: (p.insight_crystals || 0) + (r.insightCrystals || 0),
+  };
+}
+
+// Fold auto-filling objective progress into a player before it is persisted.
+// Safe no-op when the matching mode isn't among today's objectives. Ensures the
+// day/week roll is fresh first so progress lands on the right objective set.
+function foldDailyProgress(p: PlayerState, event: DailyEventType, amount: number = 1): PlayerState {
+  const modes = dailyRoundsUnlockedModes(p);
+  const fresh = ensureFreshDailyRounds(p.daily_rounds, modes, p.id).state;
+  const rec = recordObjectiveProgress(fresh, event, amount);
+  return { ...p, daily_rounds: rec.state };
 }
 
 const APTITUDE_STARTING_HERO: Record<string, string> = {
@@ -414,6 +461,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     stamina: MAX_STAMINA,
     stamina_updated_at: new Date().toISOString(),
     wellness: defaultWellnessState(),
+    daily_rounds: defaultDailyRoundsState(),
     realm_seed: Math.floor(Math.random() * 2_000_000_000) + 1,
   };
 }
@@ -565,13 +613,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     next.runs_completed = next.runs_completed + 1;
     const newChapter = next.runs_completed >= 10 ? 3 : next.runs_completed >= 3 ? 2 : 1;
     next.chapter_progress = Math.max(next.chapter_progress || 1, newChapter);
+    next = foldDailyProgress(next, 'ward_shift_win');
     await updateState(next);
     return { playerLevelUp, heroLevelUps };
   }, [player, updateState]);
 
   const recordWardWaves = useCallback(async (count: number) => {
     if (!player || !count || count <= 0) return;
-    const next = { ...player, ward_defense_waves: (player.ward_defense_waves || 0) + count };
+    let next = { ...player, ward_defense_waves: (player.ward_defense_waves || 0) + count };
+    next = foldDailyProgress(next, 'ward_defense_wave', count);
     await updateState(next);
   }, [player, updateState]);
 
@@ -617,7 +667,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       ...(player.summon_history || []),
       { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.duplicate, date: new Date().toISOString() },
     ];
-    await updateState({ ...player, codex_shards: nextShards, heroes_owned: nextHeroes, hero_progression: prog, summon_history: nextHistory });
+    await updateState(foldDailyProgress({ ...player, codex_shards: nextShards, heroes_owned: nextHeroes, hero_progression: prog, summon_history: nextHistory }, 'hero_action'));
     return { ...result, message };
   }, [player, updateState]);
 
@@ -627,10 +677,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const cur = getProgress(player.hero_progression, heroId);
     if (!canEvolve(cur)) return { ok: false, message: 'Not enough copies to evolve.' };
     const nextProg = evolveProgress(cur);
-    await updateState({
+    await updateState(foldDailyProgress({
       ...player,
       hero_progression: { ...(player.hero_progression || {}), [heroId]: nextProg },
-    });
+    }, 'hero_action'));
     return { ok: true, message: `Evolved to ★${nextProg.star}!`, star: nextProg.star };
   }, [player, updateState]);
 
@@ -654,7 +704,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else if (result.entry) {
       nextHistory = [...nextHistory, { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() }];
     }
-    await updateState({
+    await updateState(foldDailyProgress({
       ...player,
       codex_shards: nextShards,
       heroes_owned: heroesOwned,
@@ -662,7 +712,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       class_trainees: nextTrainees,
       university_credits: nextCredits,
       summon_history: nextHistory,
-    });
+    }, 'hero_action'));
     return { ok: true, message: result.message, result };
   }, [player, updateState]);
 
@@ -692,7 +742,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         nextHistory = [...nextHistory, { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() }];
       }
     }
-    await updateState({
+    await updateState(foldDailyProgress({
       ...player,
       codex_shards: (player.codex_shards || 0) - cost,
       heroes_owned: heroesOwned,
@@ -700,7 +750,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       class_trainees: nextTrainees,
       university_credits: nextCredits,
       summon_history: nextHistory,
-    });
+    }, 'hero_action'));
     return { ok: true, message: 'Full Class Recruitment complete!', results };
   }, [player, updateState]);
 
@@ -738,10 +788,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, message: `Already at Level ${levelCapForStar(cur.star)} cap for ${cur.star}-Star. Promote to raise the cap.` };
     }
     const next = trainProgress(cur);
-    await updateState({
+    await updateState(foldDailyProgress({
       ...player,
       hero_progression: { ...(player.hero_progression || {}), [heroId]: next },
-    });
+    }, 'hero_action'));
     return { ok: true, message: `Trained to Level ${next.level}!` };
   }, [player, updateState]);
 
@@ -794,10 +844,66 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!base) return null;
     const wellness = base.wellness ?? defaultWellnessState();
     const result = resolveWellnessLog(input, wellness);
-    const next = { ...base, wellness: result.nextWellness };
+    let next: PlayerState = { ...base, wellness: result.nextWellness };
+    next = foldDailyProgress(next, 'wellness_log');
     playerRef.current = next;
     await updateState(next);
     return result;
+  }, [updateState]);
+
+  // ---------- Daily Ward Rounds ----------
+  // Perform the once-per-day login check-in. Ensures the objective/week roll is
+  // fresh, then increments (or resets) the streak and credits the streak reward.
+  const checkInDailyRounds = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base) return null;
+    const modes = dailyRoundsUnlockedModes(base);
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const result = computeCheckIn(fresh);
+    let next: PlayerState = { ...base, daily_rounds: result.state };
+    if (result.reward) next = addDailyReward(next, result.reward);
+    playerRef.current = next;
+    await updateState(next);
+    return result;
+  }, [updateState]);
+
+  const claimDailyObjective = useCallback(async (objectiveId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const modes = dailyRoundsUnlockedModes(base);
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const res = claimObjectiveReward(fresh, objectiveId);
+    if (!res.reward) return { ok: false, message: res.message };
+    const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: res.message, reward: res.reward };
+  }, [updateState]);
+
+  const claimDailyAllComplete = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const modes = dailyRoundsUnlockedModes(base);
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const res = claimAllCompleteBonus(fresh);
+    if (!res.reward) return { ok: false, message: res.message };
+    const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: res.message, reward: res.reward };
+  }, [updateState]);
+
+  const claimWeeklyGoal = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const modes = dailyRoundsUnlockedModes(base);
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const res = claimWeeklyReward(fresh);
+    if (!res.reward) return { ok: false, message: res.message };
+    const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: res.message, reward: res.reward };
   }, [updateState]);
 
   const purchaseItem = useCallback(async (itemName: string, price: number, qty: number = 1) => {
@@ -1194,12 +1300,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const result = computeLessonCompletion(lesson, player);
     const completed = player.lessons_completed || [];
     const nextCompleted = result.isFirstCompletion ? [...completed, lessonId] : completed;
-    await updateState({
+    await updateState(foldDailyProgress({
       ...player,
       lessons_completed: nextCompleted,
       university_credits: (player.university_credits || 0) + result.creditsEarned,
       badge_progress: { ...(player.badge_progress || {}), [result.badgeId]: result.badgeProgress },
-    });
+    }, 'university_lesson'));
     return { ok: true, message: `+${result.creditsEarned} University Credits!`, result };
   }, [player, updateState]);
 
@@ -1498,8 +1604,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
+  }), [player, loading, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

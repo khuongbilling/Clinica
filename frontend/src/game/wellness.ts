@@ -252,11 +252,11 @@ const PETALS_HYDRATION = 4;
 const PETALS_CHECKIN = 5;
 const PETALS_RECIPE = 6;
 
-function dateKey(d: Date): string {
+export function dateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function weekKey(d: Date): string {
+export function weekKey(d: Date): string {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const dayNum = (date.getUTCDay() + 6) % 7;
   date.setUTCDate(date.getUTCDate() - dayNum + 3);

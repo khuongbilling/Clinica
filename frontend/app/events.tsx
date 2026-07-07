@@ -75,6 +75,13 @@ export default function EventsPage() {
   };
 
   const openEventInfo = (event: EventTrackDef) => {
+    // "Daily Orders" has graduated into the live Daily Ward Rounds loop — send
+    // the player to the hub (where the Rounds panel lives) instead of the
+    // static design preview dialog.
+    if (event.id === "daily-orders") {
+      router.push("/(tabs)" as any);
+      return;
+    }
     setInfo({
       title: `${event.title} — ${event.badge}`,
       message: `${event.subtitle}\n\nFree Track: ${event.rewards.freeTrack}\nPremium Track (placeholder): ${event.rewards.premiumTrack}\n\nThis is a design preview — no rewards, timers, or gameplay changes are live yet. Premium content is always cosmetic, lore, or material — never exclusive power.`,

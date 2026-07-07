@@ -48,3 +48,4 @@
 - [Reset Account full wipe](clinica-reset-account.md) — resetPlayer must clear ALL `clinica.`-prefixed AsyncStorage keys (intro/tips/banner/testSession), not just player, then Boot→title; keep the prefix convention or reset misses new flags.
 - [Guided progression ladder](clinica-progression-ladder.md) — University→WardShift(sim)→WardDefense→Realm→Boss→endgame; ward_shift uses narrative gate (lessonsStarted); boss gate duplicated in 3 files (shift/mode/boss) — sync all.
 - [University-first hub](university-first-hub.md) — University = prominent first destination; NarratorGuide (Mentor Bai) + illustrated BannerCards grouped in sections; deliberately reduced options; deep-link player=null shows loading fallback.
+- [Daily Ward Rounds](clinica-daily-rounds.md) — free daily loop (streak+3 objectives+weekly); progress credited by threading foldDailyProgress into existing reward handlers; weekly credited once/day on all-complete, not on check-in.
