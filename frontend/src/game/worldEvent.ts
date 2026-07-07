@@ -253,11 +253,12 @@ export const MIASMA_BLOOM_SYSTEMS: SystemContribution[] = [
 
 // A milestone's progress is tracked against one real PlayerState-derived signal.
 //   runs     → total Ward Shift / battle runs completed (player.runs_completed)
+//   waves    → Ward Defense: Code Rush Bloom waves survived (player.ward_defense_waves)
 //   patients → total Bloom-variant patients treated (sum of enemy_mastery counts)
 //   lessons  → University lessons completed (player.lessons_completed.length)
 //   tokens   → Epidemic Tokens earned = collective containment (player.epidemic_tokens)
 //   boss     → World Boss Verdantha defeated (player.bosses_defeated includes verdantha)
-export type MilestoneMetric = "runs" | "patients" | "lessons" | "tokens" | "boss";
+export type MilestoneMetric = "runs" | "waves" | "patients" | "lessons" | "tokens" | "boss";
 
 // What claiming a milestone actually hands the player. Every field maps to a
 // real PlayerState currency / inventory / codex sink, so a claimed milestone
@@ -373,7 +374,7 @@ export const MIASMA_BLOOM_MILESTONES: MilestoneReward[] = [
       { icon: "cube", label: "3 Supply Crates", accentColor: "#D4AF37" },
     ],
     badge: "Preview",
-    metric: "runs",
+    metric: "waves",
     goal: 3,
     grant: { epidemicTokens: 500, insightCrystals: 200, materials: { "Supply Crate": 3 } },
   },
@@ -443,6 +444,7 @@ export function getMilestoneProgress(
   ms: MilestoneReward,
   player: {
     runs_completed?: number;
+    ward_defense_waves?: number;
     enemy_mastery?: Record<string, number>;
     lessons_completed?: string[];
     epidemic_tokens?: number;
@@ -455,6 +457,9 @@ export function getMilestoneProgress(
   switch (ms.metric) {
     case "runs":
       current = Math.max(0, player?.runs_completed ?? 0);
+      break;
+    case "waves":
+      current = Math.max(0, player?.ward_defense_waves ?? 0);
       break;
     case "patients":
       current = Object.values(player?.enemy_mastery ?? {}).reduce((a, b) => a + (b || 0), 0);

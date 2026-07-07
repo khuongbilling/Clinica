@@ -106,6 +106,7 @@ class Player(BaseModel):
     active_team: List[str] = Field(default_factory=list)
     kingdom_levels: Dict[str, int] = Field(default_factory=dict)
     runs_completed: int = 0
+    ward_defense_waves: int = 0
     bosses_defeated: List[str] = Field(default_factory=list)
     failure_counts: Dict[str, int] = Field(default_factory=dict)
     inventory: Dict[str, int] = Field(default_factory=dict)
@@ -173,6 +174,7 @@ class PlayerUpdate(BaseModel):
     active_team: Optional[List[str]] = None
     kingdom_levels: Optional[Dict[str, int]] = None
     runs_completed: Optional[int] = None
+    ward_defense_waves: Optional[int] = None
     bosses_defeated: Optional[List[str]] = None
     failure_counts: Optional[Dict[str, int]] = None
     inventory: Optional[Dict[str, int]] = None

@@ -144,6 +144,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.player_level == null) {
     out = { ...out, player_level: playerLevelFromXp(out.xp || 0).level };
   }
+  if (out.ward_defense_waves == null) {
+    out = { ...out, ward_defense_waves: 0 };
+  }
   if (out.crowns == null) {
     out = { ...out, crowns: 0 };
   }
@@ -239,6 +242,9 @@ type Ctx = {
     playerLevelUp: { fromLevel: number; toLevel: number } | null;
     heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
   }>;
+  // Ward Defense: persist that `count` Bloom waves were cleared/survived this run.
+  // Increments the account-wide ward_defense_waves counter (drives ms_3).
+  recordWardWaves: (count: number) => Promise<void>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   redeemExchangeItem: (item: TokenExchangeItem) => Promise<{ ok: boolean; message: string }>;
   claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
@@ -372,6 +378,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
       apothecary: 1,
     },
     runs_completed: 0,
+    ward_defense_waves: 0,
     bosses_defeated: [],
     claimed_milestones: [],
     owned_titles: [],
@@ -557,6 +564,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     next.chapter_progress = Math.max(next.chapter_progress || 1, newChapter);
     await updateState(next);
     return { playerLevelUp, heroLevelUps };
+  }, [player, updateState]);
+
+  const recordWardWaves = useCallback(async (count: number) => {
+    if (!player || !count || count <= 0) return;
+    const next = { ...player, ward_defense_waves: (player.ward_defense_waves || 0) + count };
+    await updateState(next);
   }, [player, updateState]);
 
   const recordFailure = useCallback(async (enemyId: string) => {
@@ -1462,9 +1475,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
+    player, loading, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic,
-  }), [player, loading, createPlayer, applyRewards, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
+  }), [player, loading, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

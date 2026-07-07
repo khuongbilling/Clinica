@@ -173,6 +173,9 @@ export interface PlayerState {
   active_team: string[];
   kingdom_levels: Record<string, number>;
   runs_completed: number;
+  // Ward Defense: Code Rush waves cleared/survived across all runs. Distinct from
+  // runs_completed (whole battles); powers the honest "Perimeter Held" milestone.
+  ward_defense_waves: number;
   bosses_defeated: string[];
   failure_counts: Record<string, number>;
   inventory: Record<string, number>;

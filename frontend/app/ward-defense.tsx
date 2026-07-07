@@ -2506,12 +2506,15 @@ function WavePauseOverlay({ wave }: { wave: number }) {
    ═══════════════════════════════════════════════════════════════════ */
 export default function WardDefense() {
   const router = useRouter();
-  const { player, applyRewards, syncInventory, setWardLoadout } = usePlayer();
+  const { player, applyRewards, recordWardWaves, syncInventory, setWardLoadout } = usePlayer();
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
 
   const gsRef = useRef<GS>(freshState());
   const [, bump] = useState(0);
   const rewardsApplied = useRef(false);
+  /* Wave indices already banked into ward_defense_waves this run (dedupe so a
+     wave clears exactly once even though the tick loop re-renders many times). */
+  const wavesRecorded = useRef<Set<number>>(new Set());
 
   const gs = gsRef.current;
   function set(next: GS) { gsRef.current = next; bump(t => t + 1); }
@@ -2882,6 +2885,17 @@ export default function WardDefense() {
     return () => clearInterval(iv);
   }, [speedMul]);
 
+  /* ── Bank each cleared Bloom wave into the persisted counter ── */
+  useEffect(() => {
+    // A wave is fully cleared when the run transitions into the between-wave
+    // pause (moving on to the next wave) or into "won" (the final wave cleared).
+    // gs.wave still holds the just-cleared wave index at both points.
+    if ((gs.phase === "wave_pause" || gs.phase === "won") && !wavesRecorded.current.has(gs.wave)) {
+      wavesRecorded.current.add(gs.wave);
+      recordWardWaves(1).catch(() => {});
+    }
+  }, [gs.phase, gs.wave]);
+
   /* ── Apply rewards on game end ── */
   useEffect(() => {
     if ((gs.phase === "won" || gs.phase === "lost") && !rewardsApplied.current && player) {
@@ -2894,6 +2908,7 @@ export default function WardDefense() {
   /* ── Start / replay ── */
   function startGame() {
     rewardsApplied.current = false;
+    wavesRecorded.current = new Set();
     setHandMode("deploy");
 
     // Resolve this run's loadout: player's chosen units, filtered to owned; fall
