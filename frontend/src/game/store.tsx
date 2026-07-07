@@ -135,13 +135,14 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.crowns == null) {
     out = { ...out, crowns: 0 };
   }
-  if (out.insight_crystals == null || out.refined_lotus_gems == null || out.lotus_gems_paid == null || out.ward_sigils == null) {
+  if (out.insight_crystals == null || out.refined_lotus_gems == null || out.lotus_gems_paid == null || out.ward_sigils == null || out.epidemic_tokens == null) {
     out = {
       ...out,
       insight_crystals: out.insight_crystals ?? 0,
       refined_lotus_gems: out.refined_lotus_gems ?? 0,
       lotus_gems_paid: out.lotus_gems_paid ?? 0,
       ward_sigils: out.ward_sigils ?? 0,
+      epidemic_tokens: out.epidemic_tokens ?? 0,
     };
   }
   if (!out.owned_skins || !out.owned_upgrades || out.equipped_skin == null) {
@@ -218,6 +219,7 @@ type Ctx = {
   applyRewards: (rewards: {
     xp?: number; codex?: string[]; mastery?: Partial<PlayerState['mastery']>; bossId?: string; heroes?: string[];
     buildings?: Record<string, number>; enemyId?: string; codexShards?: number; crowns?: number;
+    epidemicTokens?: number;
     inventoryDelta?: Record<string, number>; enemyName?: string;
     // Hero EXP — per-hero contribution-based EXP, distinct from Player EXP (`xp` above).
     heroXp?: Record<string, number>;
@@ -368,6 +370,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     refined_lotus_gems: 0,
     lotus_gems_paid: 0,
     ward_sigils: 0,
+    epidemic_tokens: 0,
     owned_skins: [],
     equipped_skin: '',
     owned_upgrades: [],
@@ -511,6 +514,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     if (rewards.crowns) {
       next.crowns = (next.crowns || 0) + rewards.crowns;
+    }
+    if (rewards.epidemicTokens) {
+      next.epidemic_tokens = (next.epidemic_tokens || 0) + rewards.epidemicTokens;
     }
     if (rewards.inventoryDelta) {
       next.inventory = { ...(next.inventory || {}) };

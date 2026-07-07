@@ -21,6 +21,8 @@ import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { MilestoneReward, type MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 
+const EPIDEMIC_ACCENT = "#34D399";
+
 interface HeroXpAwardParsed { heroId: string; contributionShare: number; xpAwarded: number }
 interface HeroLevelUpParsed { heroId: string; fromLevel: number; toLevel: number }
 interface PlayerLevelUpParsed { fromLevel: number; toLevel: number }
@@ -29,8 +31,8 @@ export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
-  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam } = useLocalSearchParams<{
-    outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string;
+  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam } = useLocalSearchParams<{
+    outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string; epidemicTokens?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
     playerXp?: string; heroXp?: string; playerLevelUp?: string; heroLevelUps?: string;
@@ -44,6 +46,7 @@ export default function Result() {
   const isReplay = replay === "1";
   const baseShards = parseInt(shards || "0", 10);
   const crownsEarned = parseInt(crowns || "0", 10);
+  const epidemicTokensEarned = parseInt(epidemicTokens || "0", 10);
   // Only offer the "spend at the Apothecary Market" shortcut once the Shop is
   // actually unlocked — otherwise the card would bounce the player into a locked
   // screen. When still gated, the card stays informational (non-pressable).
@@ -357,6 +360,16 @@ export default function Result() {
               )
             )}
 
+            {epidemicTokensEarned > 0 && (
+              <Pressable style={styles.tokensCard} testID="result-epidemic-tokens" onPress={() => router.push("/world-event")}>
+                <Ionicons name="flask" size={20} color={EPIDEMIC_ACCENT} />
+                <Text style={styles.tokensTxt}>
+                  +{epidemicTokensEarned} Epidemic Token{epidemicTokensEarned > 1 ? "s" : ""} — your Ward Shift helped contain the Miasma Bloom.
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={EPIDEMIC_ACCENT} />
+              </Pressable>
+            )}
+
             {mission && (
               <View style={styles.kingdomCard}>
                 <Ionicons name="globe-outline" size={16} color={COLORS.brand} />
@@ -483,6 +496,8 @@ const styles = StyleSheet.create({
   shardsTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600" },
   crownsCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.energy + "14", borderColor: COLORS.energy + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
   crownsTxt: { color: COLORS.energy, fontSize: 14, fontWeight: "600", flex: 1 },
+  tokensCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: EPIDEMIC_ACCENT + "14", borderColor: EPIDEMIC_ACCENT + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
+  tokensTxt: { color: EPIDEMIC_ACCENT, fontSize: 14, fontWeight: "600", flex: 1 },
   shardsBreakdown: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
   starsCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 3, borderTopColor: COLORS.brand, alignItems: "center", gap: 4 },
   starsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },

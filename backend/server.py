@@ -114,6 +114,7 @@ class Player(BaseModel):
     refined_lotus_gems: int = 0
     lotus_gems_paid: int = 0
     ward_sigils: int = 0
+    epidemic_tokens: int = 0
     owned_skins: List[str] = Field(default_factory=list)
     equipped_skin: str = ""
     owned_upgrades: List[str] = Field(default_factory=list)
@@ -176,6 +177,7 @@ class PlayerUpdate(BaseModel):
     refined_lotus_gems: Optional[int] = None
     lotus_gems_paid: Optional[int] = None
     ward_sigils: Optional[int] = None
+    epidemic_tokens: Optional[int] = None
     owned_skins: Optional[List[str]] = None
     equipped_skin: Optional[str] = None
     owned_upgrades: Optional[List[str]] = None

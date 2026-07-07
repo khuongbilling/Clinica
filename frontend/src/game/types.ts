@@ -180,6 +180,9 @@ export interface PlayerState {
   lotus_gems_paid?: number;
   // Ward Defense unit recruitment/progression currency, separate from Codex Shards.
   ward_sigils?: number;
+  // Miasma Bloom world event — Epidemic Tokens earned by completing Ward Shift
+  // runs against the outbreak. Track real player contribution to the event.
+  epidemic_tokens?: number;
   owned_skins?: string[];
   equipped_skin?: string;
   owned_upgrades?: string[];

@@ -69,7 +69,13 @@ export default function WorldEventScreen() {
           <Text style={styles.title}>{MIASMA_BLOOM_LORE.title}</Text>
           <Text style={styles.subtitle}>{MIASMA_BLOOM_LORE.subtitle}</Text>
         </View>
-        <BadgePill badge="Preview" />
+        <View style={{ alignItems: "flex-end", gap: 6 }}>
+          <BadgePill badge="Preview" />
+          <View style={styles.headerTokenPill} testID="world-event-header-tokens">
+            <Ionicons name="flask" size={11} color={BLOOM_ACCENT} />
+            <Text style={styles.headerTokenTxt}>{(player.epidemic_tokens ?? 0).toLocaleString()}</Text>
+          </View>
+        </View>
       </View>
 
       {/* ── Preview notice ── */}
@@ -119,8 +125,31 @@ export default function WorldEventScreen() {
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
 function OverviewTab() {
+  const { player } = usePlayer();
+  const tokens = player?.epidemic_tokens ?? 0;
   return (
     <View style={styles.section}>
+      {/* Live contribution — real Epidemic Tokens earned from Ward Shift runs */}
+      <SectionHeading icon="flask-outline" title="Your Contribution" />
+      <View style={[styles.contributionCard, { borderColor: BLOOM_ACCENT + "66" }]} testID="world-event-token-balance">
+        <LinearGradient
+          colors={[BLOOM_DARK + "44", "transparent"]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={[styles.contributionIconBox, { backgroundColor: BLOOM_ACCENT + "22" }]}>
+          <Ionicons name="flask" size={22} color={BLOOM_ACCENT} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.contributionValue}>{tokens.toLocaleString()}</Text>
+          <Text style={styles.contributionLabel}>Epidemic Tokens earned</Text>
+        </View>
+        <Text style={styles.contributionHint}>
+          {tokens > 0
+            ? "Earned from Ward Shift runs against the Bloom."
+            : "Complete a Ward Shift run to start earning tokens."}
+        </Text>
+      </View>
+
       {/* Lore block */}
       <SectionHeading icon="book-outline" title="Event Lore" />
       <View style={[styles.loreCard, { borderColor: BLOOM_ACCENT + "55" }]}>
@@ -539,6 +568,17 @@ const styles = StyleSheet.create({
   badgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 1 },
 
   // Lore card
+  headerTokenPill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: BLOOM_ACCENT + "1F", borderColor: BLOOM_ACCENT + "55", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  headerTokenTxt: { color: BLOOM_ACCENT, fontSize: 11, fontWeight: "800" },
+  contributionCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, borderWidth: 1,
+    padding: SPACING.lg, overflow: "hidden",
+  },
+  contributionIconBox: { width: 44, height: 44, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
+  contributionValue: { color: BLOOM_ACCENT, fontSize: 24, fontWeight: "800" },
+  contributionLabel: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600" },
+  contributionHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, flex: 1, textAlign: "right", lineHeight: 14 },
   loreCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, borderWidth: 1,
     padding: SPACING.lg, gap: SPACING.sm, overflow: "hidden",

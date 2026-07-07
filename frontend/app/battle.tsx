@@ -498,6 +498,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     let heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[] = [];
     let playerXpEarned = 0;
     let heroXpEarned: Record<string, number> = {};
+    let epidemicTokensEarned = 0;
     // Push 6 replay: skip every reward/progress mutation below (XP, hero XP,
     // shards, crowns, inventory, mastery, codex, failure counts, cue topics).
     // Falls straight through to the outcome screen with nothing granted.
@@ -576,8 +577,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       });
       heroXpEarned = heroAwards.reduce((acc, a) => { acc[a.heroId] = a.xpAwarded; return acc; }, {} as Record<string, number>);
 
+      // Miasma Bloom world event — a completed Ward Shift run against the
+      // outbreak earns 1–3 Epidemic Tokens, scaled by clinical performance
+      // (stars). Training and the scripted prologue tutorial don't count as
+      // real shift runs, so they award none.
+      epidemicTokensEarned = isTraining || isPrologueTutorial ? 0 : Math.max(1, starResult.stars);
+
       const rewardsResult = await applyRewards({
-        xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, inventoryDelta,
+        xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, epidemicTokens: epidemicTokensEarned, inventoryDelta,
         mastery: enemy.bestCounters.reduce((acc, c) => {
           const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", cleanse: "judgment", command: "command", analyze: "systems", support: "stabilization" };
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
@@ -609,6 +616,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         prologue: isPrologueTutorial ? "tutorial" : "",
         shards: String(baseShards),
         crowns: String(crownsEarned),
+        epidemicTokens: String(epidemicTokensEarned),
         fullChain: state.fullChainCompleted ? "1" : "0",
         unsafe: String(state.unsafeActionsUsed),
         poorFit: String(state.poorFitActionsUsed),
