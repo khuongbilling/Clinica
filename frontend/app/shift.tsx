@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
@@ -66,10 +66,9 @@ export default function ShiftPage() {
 
   const openIntro = (mode: ModeCardDef) => {
     if (mode.status === "coming_soon" || mode.status === "locked") {
-      const when = mode.unlockChapter ? `\n\nOpens in Chapter ${mode.unlockChapter}.` : "";
-      Alert.alert(
-        `${mode.title} — Coming Soon`,
-        mode.subtitle + when + "\n\nThis mode is still in development — nothing is spent and no rewards are given yet.",
+      const when = mode.unlockChapter ? ` Opens in Chapter ${mode.unlockChapter}.` : "";
+      flashNotice(
+        `${mode.title} — Coming Soon.${when} Still in development — nothing is spent and no rewards are given yet.`,
       );
       return;
     }
