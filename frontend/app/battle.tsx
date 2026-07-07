@@ -863,7 +863,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       </View>
 
       {/* ── ZONE D: Action area (flex 1, scrolls internally) ── */}
-      <View style={styles.zoneD}>
+      {/* During a bottom-placed guided step, reserve space so the tutorial
+          narrative box floats below the action buttons instead of covering
+          (and blocking taps on) them on short/mobile-mirror web viewports. */}
+      <View style={[styles.zoneD, guidedStep?.placement === "bottom" && styles.zoneDGuidedReserve]}>
         {/* Objective strip / adaptive feedback banner */}
         {feedbackMsg ? (
           <View style={styles.feedbackBanner}>
@@ -1411,6 +1414,7 @@ const styles = StyleSheet.create({
 
   // ── Zone D: Actions ──
   zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm, overflow: "hidden" },
+  zoneDGuidedReserve: { marginBottom: 220 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, paddingBottom: SPACING.sm },
   actionBtn: {
     width: "48.5%", minHeight: 70, padding: 8, borderRadius: 4,
