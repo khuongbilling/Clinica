@@ -45,14 +45,15 @@ import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 // symbolically (collapse, rain, a fading heartbeat). Ends by pointing the player
 // toward Clinica University, where the true journey begins.
 //
-// Bright "donghua" palette — intentionally separate from the app's dark COLORS
-// theme, since this scene reads as pearl/ivory/sky-blue/jade/lotus-pink/gold.
+// Muted "manhwa ink" palette — the reminiscence reads as a mature manhwa
+// visual novel: aged paper, steel-blue ink, restrained luminous gold. Kept
+// intentionally separate from the app's donghua gameplay themes.
 const PALETTE = {
-  ivory: "#FBF6EC",
-  skyBlueSoft: "#BFE0F5",
-  gold: "#C9962C",
-  goldBright: "#F2C25C",
-  navyDeep: "#0E1526",
+  ivory: "#EDE6D8",
+  skyBlueSoft: "#9FB4C7",
+  gold: "#B58A3A",
+  goldBright: "#E0B45C",
+  navyDeep: "#0A0C12",
 } as const;
 
 // Per-scene bottom-heavy gradient tints that carry the bright→dark→golden arc.
@@ -60,10 +61,10 @@ const PALETTE = {
 // overall cast of the frame.
 type Tint = "warm" | "dark" | "cold" | "gold";
 const TINTS: Record<Tint, [string, string, string]> = {
-  warm: ["rgba(60,40,14,0.02)", "rgba(46,30,10,0.16)", "rgba(28,18,6,0.82)"],
-  dark: ["rgba(6,10,20,0.12)", "rgba(6,10,20,0.42)", "rgba(3,6,14,0.93)"],
-  cold: ["rgba(20,32,48,0.10)", "rgba(12,22,38,0.44)", "rgba(4,10,22,0.93)"],
-  gold: ["rgba(70,50,14,0.03)", "rgba(52,36,10,0.18)", "rgba(26,17,5,0.85)"],
+  warm: ["rgba(44,32,16,0.06)", "rgba(34,24,12,0.22)", "rgba(18,13,7,0.88)"],
+  dark: ["rgba(4,6,12,0.16)", "rgba(4,6,12,0.48)", "rgba(2,3,7,0.95)"],
+  cold: ["rgba(14,22,34,0.14)", "rgba(9,15,26,0.5)", "rgba(3,6,14,0.95)"],
+  gold: ["rgba(52,38,14,0.06)", "rgba(38,27,10,0.24)", "rgba(19,13,5,0.88)"],
 };
 
 type Panel = {

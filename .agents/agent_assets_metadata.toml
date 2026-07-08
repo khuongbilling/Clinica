@@ -671,25 +671,25 @@ title = "hero party summit heroic"
 id = "PB5iHUGgEKp3bg1jWm4KT"
 uri = "file://frontend/assets/images/title_splash.png"
 type = "image"
-title = "clinica title splash isekai"
+title = "generated_image"
 
 [[generated]]
 id = "ze0N1Fd1VI9Q1-bwKhbDB"
 uri = "file://frontend/assets/reminiscence/panel_01_classroom.png"
 type = "image"
-title = "panel1 before this world classroom"
+title = "generated_image"
 
 [[generated]]
 id = "j_IOXEWbzws-5TK_Ss1FA"
 uri = "file://frontend/assets/reminiscence/panel_02_future.png"
 type = "image"
-title = "panel2 unnamed future desk closeup"
+title = "generated_image"
 
 [[generated]]
 id = "tVAwMHQd64D7S0Tn6CguE"
 uri = "file://frontend/assets/reminiscence/panel_03_event.png"
 type = "image"
-title = "panel3 sudden symbolic event"
+title = "generated_image"
 
 [[generated]]
 id = "5Of-2hwkN6eYNJ5VLVtPq"
@@ -701,31 +701,31 @@ title = "panel4 darkness lotus thread"
 id = "bdnBzixkCxApdzUZAklY6"
 uri = "file://frontend/assets/reminiscence/panel_05_arrival.png"
 type = "image"
-title = "panel5 arrival in clinica"
+title = "generated_image"
 
 [[generated]]
 id = "tQA1KO57KdX6cg5lrq6Ta"
 uri = "file://frontend/assets/reminiscence/panel_06_mastery.png"
 type = "image"
-title = "panel6 mistaken for mastery"
+title = "generated_image"
 
 [[generated]]
 id = "j-kAIQTsdGu5Wo8nTEXit"
 uri = "file://frontend/assets/reminiscence/panel_07_infarct.png"
 type = "image"
-title = "panel7 silent infarct memory"
+title = "generated_image"
 
 [[generated]]
 id = "lmbajTZn9dE_ZO1ffd-tM"
 uri = "file://frontend/assets/reminiscence/panel_08_lotus_recall.png"
 type = "image"
-title = "panel8 lotus recall bloom"
+title = "generated_image"
 
 [[generated]]
 id = "af6rXCk9axgCxN7AZiDFF"
 uri = "file://frontend/assets/reminiscence/panel_09_university.png"
 type = "image"
-title = "panel9 university recovery hall"
+title = "generated_image"
 
 [[generated]]
 id = "oQHLRPwGkD-fYS1JJZYBD"
@@ -809,13 +809,13 @@ title = "could not save"
 id = "AzIN-Bkt1kxj1Uoh7kEMT"
 uri = "file://frontend/assets/reminiscence/scene_regret.png"
 type = "image"
-title = "weight of regret"
+title = "generated_image"
 
 [[generated]]
 id = "uPeZOtLn1BzyX1f60_tgX"
 uri = "file://frontend/assets/reminiscence/scene_lotus_keeper.png"
 type = "image"
-title = "lotus keeper"
+title = "generated_image"
 
 [[generated]]
 id = "SCg65nE2giCcTYcphSx6x"
@@ -827,19 +827,19 @@ title = "glass tech backdrop"
 id = "60ClLtU2Bx7aoucgGX6oS"
 uri = "file://frontend/assets/reminiscence/scene_flatline.png"
 type = "image"
-title = "flatline failed-save frame"
+title = "generated_image"
 
 [[generated]]
 id = "YAnBPRTA7Dd9_MsPIo11F"
 uri = "file://frontend/assets/reminiscence/scene_hollow.png"
 type = "image"
-title = "hollow broken doctor frame"
+title = "generated_image"
 
 [[generated]]
 id = "wO1n_Ez6sTx1IBVaMteOg"
 uri = "file://frontend/assets/reminiscence/scene_keeper_closeup.png"
 type = "image"
-title = "Lotus Keeper close-up frame"
+title = "generated_image"
 
 [[generated]]
 id = "2ZgNRmEFLaVpqHplWdVgY"
@@ -996,3 +996,33 @@ id = "GEyfmraxPOQe2l8ZaXRvK"
 uri = "file://frontend/assets/images/favicon.png"
 type = "image"
 title = "clinica_favicon_lotus"
+
+[[generated]]
+id = "l5oNbHCzZMbO9CF5nHqg3"
+uri = "file://frontend/assets/story/chapter_01_opening.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "yhIgUS2vez8AHesAu7Lpq"
+uri = "file://frontend/assets/story/chapter_02_opening.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VO_SbXTQUXH33cadTEak3"
+uri = "file://frontend/assets/story/keeper_scene.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "256qPEv0LXwx09ciqMhi2"
+uri = "file://frontend/assets/story/physician_past.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "iuRXOiWgd6ElOIjeDdhOe"
+uri = "file://frontend/assets/story/flashback_shards.png"
+type = "image"
+title = "generated_image"

@@ -1,0 +1,172 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { STORY_SCENES, getStoryScene } from "@/src/game/storyScenes";
+import { NarrativePanel } from "@/src/components/ui/NarrativePanel";
+import { SPACING, RADIUS } from "@/src/theme/colors";
+
+// Story Scene — the reusable mature-manhwa narrative screen (hybrid art
+// direction). Renders one still manhwa illustration full-bleed with paced,
+// tap-to-advance lines in an ink-toned NarrativePanel. Without a sceneId it
+// shows the Story Gallery list. Viewing a scene writes no progression state.
+const INK = {
+  paper: "#EDE6D8",
+  gold: "#E0B45C",
+  steel: "#9FB4C7",
+  black: "#07080D",
+} as const;
+
+export default function StorySceneScreen() {
+  const { sceneId } = useLocalSearchParams<{ sceneId?: string }>();
+  const scene = getStoryScene(sceneId);
+
+  if (!scene) return <StoryGallery />;
+  return <SceneViewer key={scene.id} sceneId={scene.id} />;
+}
+
+function SceneViewer({ sceneId }: { sceneId: string }) {
+  const router = useRouter();
+  const scene = getStoryScene(sceneId)!;
+  const allLines = [
+    ...scene.lines.map((t) => ({ t, keeper: false })),
+    ...(scene.keeperLines ?? []).map((t) => ({ t, keeper: true })),
+  ];
+  const [shown, setShown] = useState(1);
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    fade.setValue(0);
+    Animated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+  }, [shown, fade]);
+
+  const done = shown >= allLines.length;
+
+  function advance() {
+    if (!done) setShown((n) => n + 1);
+    else router.back();
+  }
+
+  return (
+    <View style={styles.root} testID="story-scene">
+      <ExpoImage source={scene.art} style={StyleSheet.absoluteFill} contentFit="cover" transition={400} />
+      <LinearGradient
+        colors={["rgba(4,5,9,0.55)", "rgba(4,5,9,0)", "rgba(4,5,9,0.35)", "rgba(4,5,9,0.9)"]}
+        locations={[0, 0.28, 0.62, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+        <View style={styles.topRow}>
+          <View>
+            <Text style={styles.kicker}>{scene.kicker}</Text>
+            <Text style={styles.title}>{scene.title}</Text>
+          </View>
+          <Pressable onPress={() => router.back()} hitSlop={12} testID="story-scene-close">
+            <Ionicons name="close" size={22} color={INK.paper} />
+          </Pressable>
+        </View>
+
+        <Pressable style={styles.tapZone} onPress={advance} testID="story-scene-advance">
+          <NarrativePanel tone="ink" style={styles.panel}>
+            {allLines.slice(0, shown).map((ln, i) => (
+              <Animated.Text
+                key={i}
+                style={[
+                  ln.keeper ? styles.keeperLine : styles.line,
+                  i === shown - 1 && { opacity: fade },
+                ]}
+              >
+                {ln.t}
+              </Animated.Text>
+            ))}
+            <Text style={styles.hint}>{done ? "Tap to close" : "Tap to continue"}</Text>
+          </NarrativePanel>
+        </Pressable>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function StoryGallery() {
+  const router = useRouter();
+  return (
+    <SafeAreaView style={styles.galleryRoot} edges={["top", "bottom"]} testID="story-gallery">
+      <View style={styles.galleryHeader}>
+        <Pressable onPress={() => router.back()} hitSlop={12} testID="story-gallery-back">
+          <Ionicons name="chevron-back" size={22} color={INK.paper} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.kicker}>FRAGMENTS & CHAPTERS</Text>
+          <Text style={styles.title}>Story Scenes</Text>
+        </View>
+      </View>
+      <ScrollView contentContainerStyle={styles.galleryList}>
+        {STORY_SCENES.map((s) => (
+          <Pressable
+            key={s.id}
+            style={styles.card}
+            onPress={() => router.push(`/story-scene?sceneId=${s.id}` as never)}
+            testID={`story-card-${s.id}`}
+          >
+            <ExpoImage source={s.art} style={styles.cardArt} contentFit="cover" transition={250} />
+            <LinearGradient
+              colors={["rgba(4,5,9,0)", "rgba(4,5,9,0.55)", "rgba(4,5,9,0.92)"]}
+              locations={[0.35, 0.7, 1]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            <View style={styles.cardTxt}>
+              <Text style={styles.cardKicker}>{s.kicker}</Text>
+              <Text style={styles.cardTitle}>{s.title}</Text>
+            </View>
+          </Pressable>
+        ))}
+        <Text style={styles.galleryNote}>
+          Quiet moments from the story so far. Viewing a memory changes nothing — it is only remembering.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: INK.black },
+  safe: { flex: 1, justifyContent: "space-between", padding: SPACING.lg },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  kicker: { color: INK.gold, fontSize: 11, fontWeight: "800", letterSpacing: 2.5 },
+  title: {
+    color: INK.paper, fontSize: 22, fontWeight: "300", letterSpacing: 1, marginTop: 4,
+    textShadowColor: "rgba(0,0,0,0.7)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8,
+  },
+  tapZone: { justifyContent: "flex-end" },
+  panel: { gap: SPACING.sm },
+  line: { color: INK.paper, fontSize: 15, lineHeight: 23, marginBottom: SPACING.sm },
+  keeperLine: {
+    color: INK.gold, fontSize: 15, lineHeight: 23, fontStyle: "italic", marginBottom: SPACING.sm,
+  },
+  hint: { color: INK.steel, fontSize: 11, letterSpacing: 1.2, textAlign: "center", opacity: 0.8 },
+
+  galleryRoot: { flex: 1, backgroundColor: INK.black },
+  galleryHeader: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+  },
+  galleryList: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xl },
+  card: {
+    height: 150, borderRadius: RADIUS.lg, overflow: "hidden",
+    borderWidth: 1, borderColor: "rgba(224,180,92,0.25)",
+  },
+  cardArt: { ...StyleSheet.absoluteFillObject },
+  cardTxt: { flex: 1, justifyContent: "flex-end", padding: SPACING.md },
+  cardKicker: { color: INK.gold, fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  cardTitle: { color: INK.paper, fontSize: 17, fontWeight: "600", marginTop: 2 },
+  galleryNote: {
+    color: INK.steel, fontSize: 12, lineHeight: 18, textAlign: "center",
+    fontStyle: "italic", marginTop: SPACING.sm, opacity: 0.75,
+  },
+});

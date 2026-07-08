@@ -356,6 +356,16 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
+            onPress={() => router.push("/story-scene")}
+            testID="profile-story-scenes-button"
+          >
+            <Ionicons name="book-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Story Scenes</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
             onPress={() => router.push("/post-recall?replay=1")}
             testID="profile-replay-diagnostic-button"
           >
