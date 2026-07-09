@@ -136,7 +136,7 @@ export function TutorialOverlay() {
         <Pressable
           onPress={() => setInstant(true)}
           onLayout={placement === "bottom" && currentStep.requireAction
-            ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.md + SPACING.sm)
+            ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.xxl)
             : undefined}
           style={[
             styles.narrativeBox,

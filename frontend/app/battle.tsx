@@ -677,7 +677,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   // (Skills are filtered per selected hero in the Actions tab)
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={[styles.container, guidedStep?.placement === "bottom" && { paddingBottom: Math.max(guidedReserve, 280) }]}
+      edges={["top", "bottom"]}
+    >
 
       {/* ── ZONE A: Enemy header (compact, ~18% height) ── */}
       <View style={styles.zoneA}>
@@ -878,10 +881,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       </View>
 
       {/* ── ZONE D: Action area (flex 1, scrolls internally) ── */}
-      {/* During a bottom-placed guided step, reserve space so the tutorial
-          narrative box floats below the action buttons instead of covering
-          (and blocking taps on) them on short/mobile-mirror web viewports. */}
-      <View style={[styles.zoneD, guidedStep?.placement === "bottom" && { marginBottom: guidedReserve || 220 }]}>
+      <View style={styles.zoneD}>
         {/* Objective strip / adaptive feedback banner. While the guided
             prologue tutorial is actively narrating (Master Bai walks the
             player through every step), the goal strip is redundant noise —
