@@ -82,6 +82,10 @@ externalPort = 3000
 localPort = 8000
 externalPort = 8000
 
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["sh", "-c", "cd frontend && npx expo export --platform web --output-dir dist && npx serve dist -p 5000"]
