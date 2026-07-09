@@ -35,6 +35,17 @@ const SYSTEM_ART: Record<'shadow' | SystemAptitude, any> = {
 const SHADOW_COLOR = '#8B93A7';
 const SHADOW_NAME = 'The System';
 
+// ── Master Bai — the PRE-time-travel narrator ────────────────────────────
+// Timeline rule: the System did not exist until the player was Recalled
+// (went back in time). Everything before that — the prologue scenes, the
+// first guided tutorial battle, and the scripted-loss boss battle — is
+// voiced by Master Bai instead. Everything after the prologue is System.
+export const MASTER_BAI = {
+  name: 'Master Bai',
+  color: '#D9A441',
+  art: require('../../assets/images/master_bai.png'),
+} as const;
+
 export interface SystemIdentity {
   revealed: boolean;
   aptitude: SystemAptitude | null;

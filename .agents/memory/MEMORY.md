@@ -54,4 +54,4 @@
 - [Clinica UI token layer](clinica-ui-token-layer.md) — two coexisting themes: legacy dark COLORS (colors.ts) + new warm-dark luminous UI tokens (ui.ts) + ui/ primitives; per-screen migration, never global swap.
 - [Daily Ward Rounds](clinica-daily-rounds.md) — free daily loop (streak+3 objectives+weekly); progress credited by threading foldDailyProgress into existing reward handlers; weekly credited once/day on all-complete, not on check-in.
 - [Feedback cues (sound+haptics)](clinica-feedback-cues.md) — single playRewardCue helper (Web Audio chime + expo-haptics); mute settings live in standalone AsyncStorage settingsStore, NOT PlayerState.
-- [Single-System tutorial voice](clinica-single-system-tutorial.md) — all tutorials speak as The System; startTutorial queues pre-hydration starts or completed tutorials replay after reload; API client 6s timeout keeps onboarding from hanging.
+- [Narrator timeline & tutorial voice](clinica-single-system-tutorial.md) — pre-Recall = Master Bai/neutral HUD, post-prologue = System; VN cut-in overlay; startTutorial hydration guard prevents replay after reload.

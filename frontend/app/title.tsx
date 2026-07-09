@@ -29,7 +29,7 @@ export default function Title() {
 
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Text style={styles.kicker}>THE SYSTEM HAS SUMMONED YOU</Text>
+          <Text style={styles.kicker}>THE KINGDOM CALLS FOR A HEALER</Text>
           <Text style={styles.title}>CLINICA</Text>
           <Text style={styles.subtitle}>Kingdom of Healing</Text>
         </View>

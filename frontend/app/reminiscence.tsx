@@ -190,7 +190,7 @@ const PANELS: Panel[] = [
       "The Silent Infarction. It did not overwhelm me — it did something worse.",
       "It revealed me.",
     ],
-    systemLines: ["SYSTEM: Hidden cues undetected."],
+    systemLines: ["MONITOR: Hidden cues undetected."],
     art: require("../assets/reminiscence/panel_07_infarct.png"),
     effect: "heartbeat",
     tint: "dark",

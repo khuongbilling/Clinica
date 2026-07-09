@@ -136,7 +136,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       if (clue) revealedLabels = [...revealedLabels, clue.label];
       log = [...log, `⟡ Weaver's Eye: one hidden clue revealed at battle start.`];
     }
-    if (mentorAid) log = [...log, `🕯 The System steadies your hand. Starting Stability +10.`];
+    if (mentorAid) log = [...log, isPrologueTutorial || isPrologueBoss ? `🕯 Master Bai steadies your hand. Starting Stability +10.` : `🕯 The System steadies your hand. Starting Stability +10.`];
     if (isTraining) log = [...log, `📜 Training Battle: hidden clue revealed, enemy weakened.`];
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });
@@ -223,7 +223,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (!isPrologueBoss) return;
     if (state.outcome !== "ongoing") return;
     if (state.turnsTaken < 6) return;
-    setState((s) => ({ ...s, outcome: "loss", stability: 0, log: [...s.log, "⚠ System Warning: the patient's condition collapses without warning."] }));
+    setState((s) => ({ ...s, outcome: "loss", stability: 0, log: [...s.log, "⚠ The patient's condition collapses without warning."] }));
   }, [isPrologueBoss, state.outcome, state.turnsTaken]);
 
   // On mount: introduce the goal
@@ -716,7 +716,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         {isPrologueBoss && (
           <View style={styles.systemWarningBanner} testID="battle-system-warning">
             <Ionicons name="warning" size={13} color={COLORS.error} />
-            <Text style={styles.systemWarningTxt}>SYSTEM WARNING: incomplete data. Readings cannot be trusted.</Text>
+            <Text style={styles.systemWarningTxt}>WARD ALARM: incomplete data. Readings cannot be trusted.</Text>
           </View>
         )}
       </View>
@@ -761,7 +761,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         <Pressable style={styles.codexCard} onPress={() => setCodexExpanded(!codexExpanded)} testID="battle-guidance">
           <Ionicons name="book-outline" size={11} color={COLORS.brand} />
           <Text style={styles.codexLabel} numberOfLines={codexExpanded ? undefined : 1}>
-            {mentorAid ? "SYSTEM'S AID: " : tacticalHint ? "SYSTEM: " : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
+            {mentorAid ? (isPrologueTutorial || isPrologueBoss ? "MASTER BAI'S AID: " : "SYSTEM'S AID: ") : tacticalHint ? (isPrologueTutorial || isPrologueBoss ? "MASTER BAI: " : "SYSTEM: ") : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
             <Text style={styles.codexText}>
               {mentorAid ? `+10 Stability. ${hints.tactical}` : tacticalHint ? hints.tactical : gentleHint ? hints.gentle : `Match actions to the ${enemy.primarySystem} system.`}
             </Text>
@@ -869,13 +869,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           narrative box floats below the action buttons instead of covering
           (and blocking taps on) them on short/mobile-mirror web viewports. */}
       <View style={[styles.zoneD, guidedStep?.placement === "bottom" && { marginBottom: guidedReserve || 220 }]}>
-        {/* Objective strip / adaptive feedback banner */}
+        {/* Objective strip / adaptive feedback banner. While the guided
+            prologue tutorial is actively narrating (Master Bai walks the
+            player through every step), the goal strip is redundant noise —
+            hide it and let the narrator carry the objective. */}
         {feedbackMsg ? (
           <View style={styles.feedbackBanner}>
             <Ionicons name="information-circle" size={11} color={COLORS.brand} />
             <Text style={styles.feedbackText} numberOfLines={2}>{feedbackMsg}</Text>
           </View>
-        ) : (
+        ) : activeTutorialId ? null : (
           <View style={styles.objectiveStrip}>
             <Text style={styles.objectiveText}>Goal: {objectiveStrip}</Text>
           </View>
@@ -1196,7 +1199,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {state.outcome !== "ongoing" && isPrologueBoss && (
         <View style={styles.bossCollapseOverlay}>
           <SceneTransition duration={900} style={styles.bossCollapseInner}>
-            <SystemPanel icon="pulse-outline" label="SYSTEM · CRITICAL" accent={COLORS.error}>
+            <SystemPanel icon="pulse-outline" label="WARD ALARM · CRITICAL" accent={COLORS.error}>
               <Text style={styles.bossCollapseTitle}>The patient could not be saved.</Text>
               <Text style={styles.bossCollapseBody}>
                 {enemy.dangerTrigger}. No skill in your hands could have turned this

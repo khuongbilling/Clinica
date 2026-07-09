@@ -45,11 +45,13 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   systemShops: "The Apothecary Market",
 };
 
-// ALL tutorials are narrated by "the System" — the one guiding voice of the
-// game. The overlay always renders its donghua portrait (a dark silhouette
-// until Player Level 10, then colored by aptitude) and its name.
+// Narrator timeline: the System did not exist until the player was Recalled
+// (went back in time at the end of the prologue). The guided prologue battle
+// therefore speaks with Master Bai's voice; every tutorial after the prologue
+// is narrated by the System (a dark silhouette until Player Level 10, then
+// colored by aptitude).
 export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
-  return !!id;
+  return !!id && id !== "prologueBattle";
 }
 
 // Forced (non-skippable) tutorials: the guided prologue battle and the

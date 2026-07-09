@@ -5,7 +5,7 @@ import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { usePlayer } from "@/src/game/store";
-import { getSystemIdentity, type SystemIdentity } from "@/src/game/systemNarrator";
+import { getSystemIdentity, MASTER_BAI } from "@/src/game/systemNarrator";
 import { isForcedTutorial, isSystemTutorial } from "@/src/game/tutorials";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -54,19 +54,19 @@ function PointerChevron({ dir }: { dir: "up" | "down" }) {
   );
 }
 
-/** Small circular donghua portrait of the System, tinted by its identity. */
-function SystemPortrait({ identity, size = 40 }: { identity: SystemIdentity; size?: number }) {
+/**
+ * Large avatar cut-in of the current narrator — a tall figure "speaking to"
+ * the player beside the dialogue text, visual-novel style, instead of a tiny
+ * circular portrait. Tinted by the narrator's accent color.
+ */
+function NarratorFigure({ art, color, width, height }: { art: any; color: string; width: number; height: number }) {
   return (
-    <View
-      style={[
-        styles.systemPortrait,
-        { width: size, height: size, borderRadius: size / 2, borderColor: identity.color },
-      ]}
-    >
+    <View style={[styles.narratorFigure, { width, height, borderColor: color }]}>
       <ExpoImage
-        source={identity.art}
-        style={{ width: size, height: size }}
+        source={art}
+        style={{ width, height }}
         contentFit="cover"
+        contentPosition="top center"
         transition={200}
       />
     </View>
@@ -109,6 +109,13 @@ export function TutorialOverlay() {
     : 1;
   const identity = getSystemIdentity(playerLevel, player?.aptitude);
 
+  // Timeline-aware narrator: the guided prologue battle is voiced by Master
+  // Bai (the System doesn't exist until the Recall); everything else is the
+  // System.
+  const narrator = isSystem
+    ? { name: identity.name, color: identity.color, art: identity.art }
+    : MASTER_BAI;
+
   // Positioned narrative box: used for real gameplay steps (requireAction) AND
   // for the System's informational forced banners (banner) that point at live
   // on-screen UI. Banners advance via their own Next button instead of a game
@@ -123,7 +130,7 @@ export function TutorialOverlay() {
     // informational banners don't point at a specific control.
     const showChevron = currentStep.requireAction;
     const arrowUp = placement === "bottom";
-    const accent = isSystem ? identity.color : COLORS.brand;
+    const accent = narrator.color;
     return (
       <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
         <Pressable
@@ -133,32 +140,24 @@ export function TutorialOverlay() {
             : undefined}
           style={[
             styles.narrativeBox,
-            isSystem && { borderColor: accent, shadowColor: accent },
+            { borderColor: accent, shadowColor: accent },
             placement === "top" && { marginTop: insets.top + SPACING.xs },
             placement === "bottom" && { marginBottom: insets.bottom + SPACING.md },
             { pointerEvents: "auto" },
           ]}
         >
           {showChevron && arrowUp && <PointerChevron dir="up" />}
-          <View style={styles.narrativeHead}>
-            {isSystem ? (
-              <>
-                <SystemPortrait identity={identity} size={34} />
-                <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{identity.name}</Text>
-              </>
-            ) : (
-              <>
-                <View style={styles.guideBadge}>
-                  <Ionicons name="chatbubbles" size={11} color={COLORS.onBrand} />
-                  <Text style={styles.guideBadgeTxt}>GUIDE</Text>
-                </View>
-                <Text style={styles.narrativeTitle} numberOfLines={1}>{currentStep.title}</Text>
-              </>
-            )}
-            {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
+          <View style={styles.narrativeRow}>
+            <NarratorFigure art={narrator.art} color={accent} width={64} height={92} />
+            <View style={styles.narrativeContent}>
+              <View style={styles.narrativeHead}>
+                <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{narrator.name}</Text>
+                {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
+              </View>
+              <Text style={styles.systemStepTitle}>{currentStep.title}</Text>
+              <TypewriterText text={currentStep.body} style={styles.narrativeBody} instant={instant} />
+            </View>
           </View>
-          {isSystem ? <Text style={styles.systemStepTitle}>{currentStep.title}</Text> : null}
-          <TypewriterText text={currentStep.body} style={styles.narrativeBody} instant={instant} />
           <View style={styles.narrativeFoot}>
             {currentStep.banner ? (
               <>
@@ -170,7 +169,7 @@ export function TutorialOverlay() {
             ) : (
               <>
                 {currentStep.nextText ? (
-                  <Text style={[styles.tapPrompt, isSystem && { color: accent }]} numberOfLines={1}>▸ {currentStep.nextText}</Text>
+                  <Text style={[styles.tapPrompt, { color: accent }]} numberOfLines={1}>▸ {currentStep.nextText}</Text>
                 ) : <View style={{ flex: 1 }} />}
                 {allowSkip && (
                   <Pressable onPress={skipTutorial} hitSlop={8}>
@@ -186,29 +185,20 @@ export function TutorialOverlay() {
     );
   }
 
-  const accent = isSystem ? identity.color : COLORS.brand;
+  const accent = narrator.color;
   return (
     <Modal transparent visible animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
-        <Pressable style={[styles.popover, isSystem && { borderColor: accent + "80" }]} onPress={() => setInstant(true)}>
-          {isSystem ? (
-            <View style={styles.systemPopoverHead}>
-              <SystemPortrait identity={identity} size={52} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.systemName, { color: accent }]}>{identity.name}</Text>
-                {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.popoverHead}>
-              <View style={styles.codexBadge}>
-                <Ionicons name="book" size={11} color={COLORS.onBrand} />
-                <Text style={styles.codexBadgeTxt}>CODEX GUIDE</Text>
-              </View>
-              {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
-            </View>
-          )}
-
+        {/* Large avatar cut-in rising above the dialogue box — the narrator
+            "stands" over the box, speaking to the player, VN style. */}
+        <View style={styles.cutinWrap}>
+          <NarratorFigure art={narrator.art} color={accent} width={128} height={172} />
+          <View style={styles.cutinNameWrap}>
+            <Text style={[styles.systemName, { color: accent }]}>{narrator.name}</Text>
+            {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
+          </View>
+        </View>
+        <Pressable style={[styles.popover, { borderColor: accent + "80" }]} onPress={() => setInstant(true)}>
           <Text style={styles.popoverTitle}>{currentStep.title}</Text>
           <TypewriterText text={currentStep.body} style={styles.popoverBody} instant={instant} />
 
@@ -218,7 +208,7 @@ export function TutorialOverlay() {
                 <Text style={styles.skipBtnTxt}>SKIP</Text>
               </Pressable>
             )}
-            <Pressable onPress={advanceStep} style={[styles.nextBtn, isSystem && { backgroundColor: accent }]}>
+            <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
               <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
             </Pressable>
           </View>
@@ -251,25 +241,18 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 24,
   },
-  popoverHead: {
+  cutinWrap: {
+    width: "100%",
+    maxWidth: 360,
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: SPACING.sm,
+    marginBottom: -SPACING.sm,
+    zIndex: 2,
   },
-  codexBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: COLORS.brand,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.pill,
-  },
-  codexBadgeTxt: {
-    color: COLORS.onBrand,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
+  cutinNameWrap: {
+    flex: 1,
+    paddingBottom: SPACING.md + SPACING.xs,
   },
   progressTxtDark: {
     color: COLORS.onSurfaceTertiary,
@@ -341,10 +324,20 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 16,
   },
-  systemPortrait: {
+  narratorFigure: {
     overflow: "hidden",
     borderWidth: 2,
+    borderRadius: RADIUS.md,
     backgroundColor: "#0B1420",
+  },
+  narrativeRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    alignItems: "flex-start",
+  },
+  narrativeContent: {
+    flex: 1,
+    gap: 4,
   },
   systemStepTitle: {
     color: COLORS.onSurface,
@@ -352,11 +345,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3,
     marginTop: 2,
-  },
-  systemPopoverHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
   },
   systemName: {
     fontSize: 14,
@@ -367,21 +355,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.xs,
-  },
-  guideBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: COLORS.brand,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.pill,
-  },
-  guideBadgeTxt: {
-    color: COLORS.onBrand,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
   },
   narrativeTitle: {
     flex: 1,
