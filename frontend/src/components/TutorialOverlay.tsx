@@ -5,7 +5,7 @@ import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { usePlayer } from "@/src/game/store";
-import { getSystemIdentity, MASTER_BAI } from "@/src/game/systemNarrator";
+import { getSystemIdentity, MASTER_BAI, type SystemIdentity } from "@/src/game/systemNarrator";
 import { isForcedTutorial, isSystemTutorial } from "@/src/game/tutorials";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";

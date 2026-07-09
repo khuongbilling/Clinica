@@ -17,7 +17,8 @@ export type CurrencyId =
   | "insight_crystals"
   | "refined_lotus_gems"
   | "lotus_gems_paid"
-  | "ward_sigils";
+  | "ward_sigils"
+  | "university_credits";
 
 export interface CurrencyDef {
   id: CurrencyId;
@@ -98,6 +99,17 @@ export const CURRENCIES: CurrencyDef[] = [
     tagline: "Ward Defense unit recruitment/progression currency, separate from hero Codex Shards.",
     earnedFrom: "Ward Defense runs, Defense Blueprints, Unit Mastery milestones.",
     spentOn: "Future Ward Defense unit recruitment/progression (foundation only).",
+  },
+  {
+    id: "university_credits",
+    displayName: "University Credits",
+    shortLabel: "Credits",
+    icon: "school",
+    color: "growth",
+    category: "progression",
+    tagline: "The University's learning currency — proof of study, spent on hero promotions.",
+    earnedFrom: "University lessons, Recruitment Hall rolls (10% of rolls, guaranteed in a Full Class ×10), Research Library.",
+    spentOn: "Hero Certification Star promotions at the University (500 → 1,500 → 5,000 → 15,000 Credits per star).",
   },
 ];
 
@@ -434,7 +446,7 @@ export interface MaterialSourceDoc {
 export const MATERIAL_SOURCES: MaterialSourceDoc[] = [
   { mode: "Ward Shift", rewards: ["Player EXP", "Hero EXP", "Ward Coins", "Codex Shards", "Clinical Certificates", "Chapter materials", "Hero shards"] },
   { mode: "Ward Defense", rewards: ["Ward Sigils", "Vital Lantern Cores", "Defense Blueprints", "Enemy Essence", "Unit Mastery materials"] },
-  { mode: "Clinica University", rewards: ["University Credits", "Knowledge Points", "Skill Books", "Class Manuals", "Research Scrolls", "Insight Crystals"] },
+  { mode: "Clinica University", rewards: ["University Credits", "Skill Books", "Class Manuals", "Research Scrolls", "Insight Crystals"] },
   { mode: "Lotus Plate Journal", rewards: ["Nourishment Petals", "Recipe Cards", "Nutrition Garden Seeds", "Wellness Badges", "Insight Crystals (capped)"] },
   { mode: "Realm", rewards: ["Ward Timber", "Healing Clay", "Spirit Stone", "Sterile Kit Bundles", "Herb Bundles", "Lab Reagents", "Building Blueprints"] },
   { mode: "Faction / World Boss (later)", rewards: ["Faction Marks", "Epidemic Tokens", "Supply Crates", "World Boss Relics", "Rare Research Samples", "Limited Set Pieces"] },
@@ -444,9 +456,9 @@ export const MATERIAL_SOURCES: MaterialSourceDoc[] = [
 // Step 13 — Player & hero progression economy rules
 // -----------------------------------------------------------------------------
 export const PLAYER_PROGRESSION_RULES = {
-  currencies: ["Player EXP", "Knowledge Points", "Class Manuals", "Ascension Seals"],
+  currencies: ["Player EXP", "University Credits", "Class Manuals", "Ascension Seals"],
   classChangeLevels: [10, 20, 30],
-  classChangeRequires: ["Player level", "Chapter progression", "Knowledge Points", "Class Manual", "Ascension Seal", "University milestone"],
+  classChangeRequires: ["Player level", "Chapter progression", "University Credits", "Class Manual", "Ascension Seal", "University milestone"],
   paidCurrencyCanBuyClassAdvancement: false,
 };
 

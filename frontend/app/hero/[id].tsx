@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
+import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { usePlayer } from "@/src/game/store";
 import {
   getHeroShards,
@@ -751,6 +752,9 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
             <ReqRow label={`Hero Shards${check.req?.shardsOrTrainees ? " (or trainees)" : ""}`} have={check.shardsHave} needed={check.shardsNeeded} ok={check.shardsOk} accent={accent} />
             <ReqRow label={`${trainee.label}s`} have={check.trainHave} needed={check.trainNeeded} ok={check.trainOk} accent={accent} />
             <ReqRow label="University Credits" have={check.creditsHave} needed={check.creditsNeeded} ok={check.creditsOk} accent={accent} />
+            <View style={{ marginTop: 4 }}>
+              <UniversityCreditsBadge amount={check.creditsHave} compact testID="hero-credits-badge" />
+            </View>
             <Text style={styles.evolveHint}>{auto.summary}</Text>
           </>
         )}

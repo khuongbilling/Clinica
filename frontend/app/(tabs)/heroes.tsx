@@ -94,6 +94,20 @@ export default function HeroesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {player.heroes_owned.length === 0 && (
+          <View style={styles.emptyBanner} testID="heroes-empty-state">
+            <Ionicons name="school" size={26} color={COLORS.brand} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.emptyTitle}>No healers on your roster yet</Text>
+              <Text style={styles.emptyTxt}>
+                Every hero joins your ward through University Recruitment. Enroll your first healer to build your team.
+              </Text>
+            </View>
+            <Pressable style={styles.emptyBtn} onPress={() => router.push("/university/recruit")} testID="heroes-empty-recruit-btn">
+              <Text style={styles.emptyBtnTxt}>RECRUIT</Text>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.grid}>
           {HEROES.map((h) => {
             const isOwned  = owned.has(h.id);
@@ -245,6 +259,19 @@ const styles = StyleSheet.create({
 
   scroll: { padding: SPACING.md, paddingBottom: 120 },
   grid:   { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+
+  emptyBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    borderWidth: 1, borderColor: COLORS.brand + "50", borderRadius: RADIUS.md,
+    backgroundColor: COLORS.brand + "12", padding: SPACING.md, marginBottom: SPACING.md,
+  },
+  emptyTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
+  emptyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  emptyBtn: {
+    borderRadius: RADIUS.pill, backgroundColor: COLORS.brand,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  emptyBtnTxt: { color: COLORS.onBrand, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
 
   cardWrap: { width: "47.5%" },
 

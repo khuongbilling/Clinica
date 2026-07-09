@@ -171,10 +171,11 @@ const HERO_GROWTH_MATERIALS: MaterialDef[] = [
 // -----------------------------------------------------------------------------
 const PLAYER_CLASS_MATERIALS: MaterialDef[] = [
   {
-    id: "knowledge_points", name: "Knowledge Points", icon: "bulb", category: "player_class", rarity: "uncommon", kind: "learning",
-    source: "Clinica University, Research Library, Clinical Cue mastery, University lessons, Realm University assignment (later).",
-    usedFor: "Player class tree, research bonuses, learning progression, account-level passives.",
+    id: "knowledge_points", name: "University Credits", icon: "school", category: "player_class", rarity: "uncommon", kind: "learning",
+    source: "University lessons, Recruitment Hall rolls, Research Library, Clinical Cue mastery, Realm University assignment (later).",
+    usedFor: "Hero Certification Star promotions at the University; research bonuses and learning progression.",
     relatedMode: "University", status: "active",
+    note: "Also called Knowledge Points in older lesson copy.",
   },
   {
     id: "class_manuals", name: "Class Manuals", icon: "reader", category: "player_class", rarity: "epic", kind: "learning",

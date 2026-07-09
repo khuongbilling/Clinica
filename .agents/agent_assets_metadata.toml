@@ -1026,3 +1026,9 @@ id = "iuRXOiWgd6ElOIjeDdhOe"
 uri = "file://frontend/assets/story/flashback_shards.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "FyJrHOHX6_pIOQdQjXbub"
+uri = "file://frontend/assets/ui-icons/icon_university_credit.png"
+type = "image"
+title = "university credits scroll icon"

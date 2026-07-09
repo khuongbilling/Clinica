@@ -78,8 +78,21 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   // World Event world boss earns boss-scale XP/shards/crowns.
   const isBossEnemy = enemy.id === BOSS_LORD_IMBALANCE.id || !!enemy.worldBoss;
 
+  // Prologue loaner heroes: brand-new players own no heroes (Recruitment is
+  // the only source), so the guided tutorial battle and the scripted prologue
+  // boss run on TEMPORARY loaner heroes. The tutorial script pins specific
+  // skills (Lantern of Clues / Guardian's Touch), so the loaner pair must be
+  // exactly Novice Guardian + Village Caretaker. Loaners are never persisted:
+  // the prologue runs as training (no hero XP) and nothing writes them into
+  // heroes_owned/active_team/hero_progression.
+  const isPrologueLoanerBattle = isPrologueTutorial || isPrologueBoss;
   const team = useMemo(() => {
-    if (!player) return HEROES.slice(0, 3);
+    if (isPrologueLoanerBattle || !player || (player.heroes_owned || []).length === 0) {
+      const loanerIds = ["novice_guardian", "village_caretaker"];
+      return loanerIds
+        .map((id) => HEROES.find((h) => h.id === id))
+        .filter(Boolean) as Hero[];
+    }
     const teamIds = (player.active_team && player.active_team.length > 0) ? player.active_team : player.heroes_owned;
     const fromTeam = teamIds
       .map(id => {
@@ -90,7 +103,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       .filter(Boolean) as Hero[];
     if (fromTeam.length >= 1) return fromTeam.slice(0, 3);
     return HEROES.slice(0, 3);
-  }, [player]);
+  }, [player, isPrologueLoanerBattle]);
 
   // Cosmetic ward-skin backdrop (e.g. Bloom Ward Skin). Only ward skins carry a
   // wardBackdrop; equipped aura-only skins leave the per-system arena unchanged.

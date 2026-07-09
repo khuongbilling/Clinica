@@ -392,15 +392,7 @@ function addDailyReward(p: PlayerState, r: DailyReward): PlayerState {
 // the day/week roll is fresh first so progress lands on the right objective set,
 // and is a safe no-op when the matching mode isn't among today's objectives.
 
-const APTITUDE_STARTING_HERO: Record<string, string> = {
-  guardian: 'novice_guardian',
-  sage: 'apprentice_seer',
-  warden: 'junior_warden',
-  weaver: 'data_acolyte',
-};
-
 function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
-  const starting = APTITUDE_STARTING_HERO[args.aptitude] || 'novice_guardian';
   return {
     id,
     name: (args.name || 'Healer').trim().slice(0, 24) || 'Healer',
@@ -427,8 +419,11 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     player_level: 1,
     mastery: { assessment: 0, stabilization: 0, pharmacology: 0, judgment: 0, command: 0, systems: 0 },
     codex_unlocked: [],
-    heroes_owned: [starting, 'village_caretaker'],
-    active_team: [starting, 'village_caretaker'],
+    // Heroes are earned exclusively through University Recruitment — new
+    // players start with an empty roster (the prologue battle uses temporary
+    // loaner heroes that are never persisted).
+    heroes_owned: [],
+    active_team: [],
     kingdom_levels: {
       grand_ward_atrium: 3,
       academy_of_healing: 1,
@@ -1590,24 +1585,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return { ok: true, message: 'Already completed.', rewards: node.rewards };
     }
     const withXp = applyXpDetailed(base, node.rewards.xp).player;
-    // Grant any heroes tied to this lesson — this is how the first University
-    // lessons populate the Hall of Heroes with the player's first units. Mirror
-    // applyRewards: dedupe into heroes_owned AND seed a hero_progression entry
-    // for each newly granted hero so persisted state is immediately coherent.
-    const grantHeroes = node.rewards.grantHeroes || [];
-    const heroesOwned = grantHeroes.length
-      ? Array.from(new Set([...(base.heroes_owned || []), ...grantHeroes]))
-      : (base.heroes_owned || []);
-    const heroProgression = { ...(base.hero_progression || {}) };
-    if (grantHeroes.length) {
-      for (const id of grantHeroes) {
-        if (!heroProgression[id]) heroProgression[id] = defaultProgress();
-      }
-    }
+    // Heroes are earned exclusively through University Recruitment — lessons
+    // never grant heroes, only currencies and XP.
     const next: PlayerState = {
       ...withXp,
-      heroes_owned: heroesOwned,
-      hero_progression: heroProgression,
       lessons_completed: [...completed, completionId],
       insight_crystals: (base.insight_crystals || 0) + node.rewards.insightCrystals,
       crowns: (base.crowns || 0) + node.rewards.crowns,
@@ -1617,7 +1598,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
     return {
       ok: true,
-      message: `+${node.rewards.insightCrystals} Insight Crystals · +${node.rewards.crowns} Ward Coins · +${node.rewards.universityCredits} Knowledge Points · +${node.rewards.xp} XP`,
+      message: `+${node.rewards.insightCrystals} Insight Crystals · +${node.rewards.crowns} Ward Coins · +${node.rewards.universityCredits} University Credits · +${node.rewards.xp} XP`,
       rewards: node.rewards,
     };
   }, [updateState]);
@@ -1633,11 +1614,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const applyClassDiagnostic = useCallback(async (profile: ClassDiagnosticInput) => {
     const base = playerRef.current;
     if (!base) return;
-    const starter = APTITUDE_STARTING_HERO[profile.aptitude] || 'novice_guardian';
-    const heroesOwned = Array.from(new Set([...(base.heroes_owned || []), starter]));
-    const activeTeam = (base.active_team && base.active_team.length > 0)
-      ? Array.from(new Set([...base.active_team, starter])).slice(0, 3)
-      : heroesOwned.slice(0, 3);
+    // Heroes come exclusively from University Recruitment — a class switch
+    // never grants a starter hero, it only realigns identity/class fields.
     const next: PlayerState = {
       ...base,
       aptitude: profile.aptitude as any,
@@ -1648,8 +1626,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       explanation_style: profile.explanation_style,
       codex_depth: profile.codex_depth,
       class_tree_id: classIdForAptitude(profile.aptitude),
-      heroes_owned: heroesOwned,
-      active_team: activeTeam,
       diagnostic_intro_seen: true,
     };
     playerRef.current = next;

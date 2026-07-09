@@ -201,7 +201,7 @@ export const MIASMA_BLOOM_SYSTEMS: SystemContribution[] = [
     mechanicDesc:
       "Completing University Lessons and Simulations tagged [BLOOM-RESPONSE] earns Research Points that contribute to the Research Countermeasure bar. At each countermeasure tier, Sanctuary-wide Corruption decay rate improves for all players.",
     contribution:
-      "Research Points → countermeasure tiers, bonus Knowledge Points, Codex Shards.",
+      "Research Points → countermeasure tiers, bonus University Credits, Codex Shards.",
     rewardHint: "Completing the Research Countermeasure chain unlocks a Bloom Anatomy Codex entry.",
     route: "/university",
   },

@@ -106,7 +106,7 @@ export interface ClassAbilityCard {
 // Requirement pattern shared by every class, per Step 3 of the spec:
 //   Lv1  — free, automatic once this is your current class and you're Lv1+.
 //   Lv10 — requires 1 Class Manual.
-//   Lv20 — requires Knowledge Points + 1 Class Manual.
+//   Lv20 — requires University Credits + 1 Class Manual.
 //   Lv30 — requires 1 Ascension Seal.
 const TIER_10_REQ: ClassTierRequirement[] = [{ material: 'class_manuals', qty: 1 }];
 const TIER_20_REQ: ClassTierRequirement[] = [{ material: 'knowledge_points', qty: 30 }, { material: 'class_manuals', qty: 1 }];
@@ -132,7 +132,7 @@ export const CLASS_TREES: Record<ClassId, ClassAbilityCard[]> = {
     { level: 30, name: 'Lotus Recovery Field', description: 'Restores a small amount of Stability over time.', requirements: TIER_30_REQ },
   ],
   scholar: [
-    { level: 1, name: 'Studious Mind', description: 'Gain extra Knowledge Points from Clinical Cue success.', requirements: [] },
+    { level: 1, name: 'Studious Mind', description: 'Gain extra University Credits from Clinical Cue success.', requirements: [] },
     { level: 10, name: 'Lesson Retention', description: 'University lessons give increased progress.', requirements: TIER_10_REQ },
     { level: 20, name: 'Codex Memory', description: 'Reviewing the Codex after Clinical Cue success gives a small Insight Crystal bonus.', requirements: TIER_20_REQ },
     { level: 30, name: 'Grand Rounds', description: "Correct answers temporarily strengthen your active heroes' role bonuses.", requirements: TIER_30_REQ },
@@ -219,7 +219,7 @@ export function nextClassTier(classId: ClassId, progress: number[] | undefined):
 // no-required-class product guarantees for this system.
 export const GUARDRAIL_LINES: string[] = [
   'Class bonuses are supportive — they help, but you never need a specific class to win.',
-  'There are no paid class unlocks. Class Manuals and Knowledge Points are earned through normal play.',
+  'There are no paid class unlocks. Class Manuals and University Credits are earned through normal play.',
   'Ascension Seals are earned through major progression milestones and are never sold directly.',
   'Basic gameplay (Ward Shift, Ward Defense, Heroes, Shop, University) stays fully available regardless of your class.',
   'Deeper battle integration for class abilities will roll out gradually in future updates.',

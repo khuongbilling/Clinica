@@ -253,13 +253,6 @@ async def root():
 async def create_player(payload: PlayerCreate):
     if payload.aptitude not in {"guardian", "sage", "warden", "weaver"}:
         raise HTTPException(status_code=400, detail="invalid aptitude")
-    aptitude_starting_hero = {
-        "guardian": "novice_guardian",
-        "sage": "apprentice_seer",
-        "warden": "junior_warden",
-        "weaver": "data_acolyte",
-    }
-    starting_hero = aptitude_starting_hero[payload.aptitude]
     player = Player(
         name=payload.name.strip()[:24] or "Healer",
         aptitude=payload.aptitude,
@@ -270,8 +263,9 @@ async def create_player(payload: PlayerCreate):
         prologue_complete=payload.prologue_complete if payload.prologue_complete is not None else True,
         identity_restored=payload.identity_restored if payload.identity_restored is not None else True,
         diagnostic_intro_seen=payload.diagnostic_intro_seen if payload.diagnostic_intro_seen is not None else True,
-        heroes_owned=[starting_hero, "village_caretaker"],
-        active_team=[starting_hero, "village_caretaker"],
+        # Heroes are earned exclusively through University Recruitment.
+        heroes_owned=[],
+        active_team=[],
         inventory={
             "Albuterol Mist": 1,
             "Glucose Gel": 1,

@@ -128,7 +128,7 @@ export interface HarmonyAffinity {
 export type RealmProductionCurrency = "university_credits" | "codex_shards" | "insight_crystals";
 
 export interface RealmProduction {
-  // Display label for the points that accrue, e.g. "Knowledge Points".
+  // Display label for the points that accrue, e.g. "University Credits".
   resource: string;
   // PlayerState currency the collected points are banked into.
   currency: RealmProductionCurrency;
@@ -226,8 +226,8 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     category: "learning",
     harmony: { label: "Scholar Harmony", nearBuildingIds: ["research_library"] },
     icon: "school",
-    purpose: "Generates Knowledge Points and supports Class Manuals, Research, the Recruitment Hall, Clinical Cue mastery, and advanced equipment formulas and Skill Books tied to gear progression.",
-    benefitForLevel: (lvl) => `Lv.${lvl} generates Knowledge Points and unlocks lessons, research, and advanced equipment formulas.`,
+    purpose: "Generates University Credits and supports Class Manuals, Research, the Recruitment Hall, Clinical Cue mastery, and advanced equipment formulas and Skill Books tied to gear progression.",
+    benefitForLevel: (lvl) => `Lv.${lvl} generates University Credits and unlocks lessons, research, and advanced equipment formulas.`,
     nextUpgradeForLevel: (lvl) => `Next level gives +5% Knowledge generation.`,
     maxLevel: 5,
     kingdomLevelsKey: "academy_of_healing",
@@ -242,7 +242,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
       { role: "University Trainee", flavor: "A Seer or University trainee boosts research progress.", slotType: "trainee" },
       { role: "Faculty Mentor", flavor: "A Mentor here speeds up trainee learning.", slotType: "mentor" },
     ],
-    production: { resource: "Knowledge Points", currency: "university_credits", icon: "school", ratePerHour: 12, cap: 300 },
+    production: { resource: "University Credits", currency: "university_credits", icon: "school", ratePerHour: 12, cap: 300 },
     skinPlaceholder: true,
     movable: true,
   },

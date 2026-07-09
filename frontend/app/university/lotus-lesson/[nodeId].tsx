@@ -184,7 +184,7 @@ export default function LotusLessonScreen() {
                 items={[
                   { icon: "diamond-outline", label: "Insight Crystals", amount: String(rewards.insightCrystals) },
                   { icon: "logo-usd", label: "Ward Coins", amount: String(rewards.crowns) },
-                  { icon: "school-outline", label: "Knowledge Points", amount: String(rewards.universityCredits) },
+                  { icon: "school-outline", label: "University Credits", amount: String(rewards.universityCredits) },
                   { icon: "trending-up-outline", label: "XP", amount: String(rewards.xp) },
                 ]}
               />

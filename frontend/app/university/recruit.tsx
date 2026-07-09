@@ -10,6 +10,7 @@ import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
+import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -73,10 +74,13 @@ export default function UniversityRecruitScreen() {
         <Text style={styles.kicker}>UNIVERSITY RECRUITMENT</Text>
         <Text style={styles.title}>Recruitment Hall</Text>
         <Text style={styles.sub}>Enroll new healers, or convert duplicates into Hero Shards, Class Trainees, and Credits.</Text>
-        <View style={styles.shardCard}>
-          <Ionicons name="diamond" size={18} color={COLORS.brand} />
-          <Text style={styles.shardVal}>{shards}</Text>
-          <Text style={styles.shardLbl}>CODEX SHARDS</Text>
+        <View style={styles.walletRow}>
+          <View style={styles.shardCard}>
+            <Ionicons name="diamond" size={18} color={COLORS.brand} />
+            <Text style={styles.shardVal}>{shards}</Text>
+            <Text style={styles.shardLbl}>CODEX SHARDS</Text>
+          </View>
+          <UniversityCreditsBadge amount={player.university_credits || 0} compact testID="recruit-credits-badge" />
         </View>
       </View>
 
@@ -172,6 +176,7 @@ const styles = StyleSheet.create({
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 2 },
+  walletRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" },
   shardCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,

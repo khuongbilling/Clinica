@@ -56,6 +56,19 @@ export default function HeroSelectScreen() {
       </Text>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {ownedHeroes.length === 0 && (
+          <View style={styles.emptyBox} testID="hero-select-empty-state">
+            <Ionicons name="people-outline" size={32} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.emptyTitle}>No heroes to choose from yet</Text>
+            <Text style={styles.emptyTxt}>
+              Heroes join your ward through University Recruitment. Enroll your first healer, then pick your lead here.
+            </Text>
+            <Pressable style={styles.emptyBtn} onPress={() => router.push("/university/recruit")} testID="hero-select-empty-recruit-btn">
+              <Ionicons name="school" size={14} color={COLORS.onBrand} />
+              <Text style={styles.emptyBtnTxt}>GO TO RECRUITMENT HALL</Text>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.grid}>
           {ownedHeroes.map((h) => {
             const isSelected = selected === h.id;
@@ -101,7 +114,8 @@ export default function HeroSelectScreen() {
         </View>
       </ScrollView>
 
-      {/* Confirm CTA */}
+      {/* Confirm CTA — hidden until the player owns at least one hero */}
+      {ownedHeroes.length > 0 && (
       <View style={styles.footer}>
         <View style={styles.previewRow}>
           {getHeroSprite(selected) && (
@@ -124,11 +138,20 @@ export default function HeroSelectScreen() {
           <Ionicons name="checkmark-circle" size={18} color={COLORS.onBrand} />
         </Pressable>
       </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  emptyBox: { alignItems: "center", gap: SPACING.sm, paddingVertical: SPACING.xl, paddingHorizontal: SPACING.lg },
+  emptyTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
+  emptyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center", maxWidth: 300 },
+  emptyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6, borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.brand, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.lg, marginTop: SPACING.xs,
+  },
+  emptyBtnTxt: { color: COLORS.onBrand, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
   root: { flex: 1, backgroundColor: COLORS.surface },
   loading: { alignItems: "center", justifyContent: "center" },
   header: {

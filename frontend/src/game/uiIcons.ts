@@ -7,6 +7,7 @@ export const UI_ICONS: Record<string, ImageSourcePropType> = {
   crowns: require('../../assets/ui-icons/icon_crowns.png'),
   refined_gem: require('../../assets/ui-icons/icon_refined_gem.png'),
   lotus_gem: require('../../assets/ui-icons/icon_lotus_gem.png'),
+  university_credit: require('../../assets/ui-icons/icon_university_credit.png'),
 };
 
 export function getUiIcon(name: keyof typeof UI_ICONS): ImageSourcePropType {
