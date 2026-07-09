@@ -370,12 +370,12 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "lesson_open",
-      title: "Open Lotus Lessons",
-      body: "Tap the LOTUS LESSONS banner to begin your first lesson. Lessons are free, no stamina cost — you can replay them anytime for review.",
+      title: "Open Your First Lesson",
+      body: "Tap the LOTUS LESSONS banner, then open the first lesson on your recommended path. Lessons are free, no stamina cost — you can replay them anytime for review.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "openLesson",
-      nextText: "TAP LOTUS LESSONS",
+      nextText: "OPEN YOUR FIRST LESSON",
     },
   ],
 

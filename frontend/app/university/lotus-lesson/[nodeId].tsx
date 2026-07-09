@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -12,6 +12,7 @@ import {
   LOTUS_LESSON_SAFETY_NOTE,
 } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { MilestoneReward } from "@/src/components/onboarding/MilestoneReward";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
@@ -37,6 +38,14 @@ export default function LotusLessonScreen() {
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
   const [rewards, setRewards] = useState<LotusLessonRewards | null>(null);
+  const { onRequiredAction } = useTutorial();
+
+  // The player has actually started a lesson once this screen loads with a
+  // valid node — this is the real core action the firstLesson tutorial gates on.
+  const lessonStarted = !loading && !!player && !!node;
+  useEffect(() => {
+    if (lessonStarted) onRequiredAction("openLesson");
+  }, [lessonStarted]);
 
   if (loading || !player || !node) {
     const notFound = !loading && !!player && !node;

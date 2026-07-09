@@ -2,12 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getLesson, getBadge } from "@/src/game/lessons";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function LessonDetailScreen() {
@@ -18,6 +19,13 @@ export default function LessonDetailScreen() {
   const [selected, setSelected] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
   const [reward, setReward] = useState<string | null>(null);
+  const { onRequiredAction } = useTutorial();
+
+  // Opening a real lesson screen is the core action the firstLesson tutorial gates on.
+  const lessonStarted = !!player && !!lesson;
+  useEffect(() => {
+    if (lessonStarted) onRequiredAction("openLesson");
+  }, [lessonStarted]);
 
   if (!player || !lesson) return null;
 

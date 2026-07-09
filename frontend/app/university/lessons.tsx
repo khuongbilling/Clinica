@@ -14,13 +14,12 @@ import {
 } from "@/src/game/lessons";
 import { LOTUS_PATHS, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
-import { useTutorial } from "@/src/game/tutorialStore";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function LessonsHubScreen() {
   const router = useRouter();
   const { player, loading } = usePlayer();
-  const { onRequiredAction } = useTutorial();
 
   if (loading || !player) {
     return (
@@ -81,7 +80,7 @@ export default function LessonsHubScreen() {
                     <View style={styles.pathNodeCol}>
                       <Pressable
                         disabled={locked}
-                        onPress={() => { onRequiredAction("openLesson"); router.push(`/university/lotus-lesson/${node.id}` as any); }}
+                        onPress={() => router.push(`/university/lotus-lesson/${node.id}` as any)}
                         style={[
                           styles.pathNode,
                           done && styles.pathNodeDone,
@@ -120,7 +119,7 @@ export default function LessonsHubScreen() {
             <Pressable
               key={d.id}
               style={styles.deptCard}
-              onPress={() => { onRequiredAction("openLesson"); router.push(`/university/department/${d.id}` as any); }}
+              onPress={() => router.push(`/university/department/${d.id}` as any)}
               testID={`lessons-dept-${d.id}`}
             >
               <View style={styles.deptIcon}>
@@ -171,6 +170,7 @@ export default function LessonsHubScreen() {
           })}
         </View>
       </ScrollView>
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }
