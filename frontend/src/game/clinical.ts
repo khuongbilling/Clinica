@@ -1551,16 +1551,26 @@ export function getRandomClinicalCue(
   }
 
   const tierPool = base.filter(c => allowedTiers.includes(c.tier));
-  const pool = tierPool.length > 0 ? tierPool : base;
+  const pool = shuffleCues(tierPool.length > 0 ? tierPool : base);
 
-  if (opts?.topicHint) {
+  // Topic hint biases (but does not lock) selection toward the enemy's system,
+  // so the same enemy no longer surfaces the same narrow question set every battle.
+  if (opts?.topicHint && Math.random() < 0.6) {
     const topicMatches = pool.filter(c => c.topic === opts.topicHint);
-    if (topicMatches.length > 0) {
-      return topicMatches[Math.floor(Math.random() * topicMatches.length)];
-    }
+    if (topicMatches.length > 0) return topicMatches[0];
   }
 
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pool[0];
+}
+
+/** Fisher–Yates shuffle (returns a new array; source untouched). */
+function shuffleCues(list: ClinicalCueQuestion[]): ClinicalCueQuestion[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
 // ------------------------------------------------------------

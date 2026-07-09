@@ -110,6 +110,7 @@ export interface BattleState {
 
   // Question-to-power (Clinical Cue)
   pendingCue: ClinicalCueQuestion | null;
+  nextCueTurn: number; // earliest turn the next cue may trigger (randomized, ≥2 turns after the last presentation)
   cuesAnswered: string[];
   cueBonusStabilize: number; // bonus from correct cue answers; boosts every stabilizing action this turn, cleared at end of turn
   cuesTopicsCorrect: string[]; // topic ids answered correctly this battle, for Codex/University progress
@@ -314,6 +315,8 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
 
     hand,
     pendingCue,
+    // Opening cue counts as the first presentation: next cue rolls 2–4 turns later.
+    nextCueTurn: 1 + rollCueGap(),
     cuesAnswered: [],
     cueBonusStabilize: 0,
     cuesTopicsCorrect: [],
@@ -996,12 +999,21 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
   return { state: next, message: 'Not quite — no bonus this time.', status: 'weak' };
 }
 
+/** Random gap (2–4 turns) between Clinical Cue presentations. */
+function rollCueGap(): number {
+  return 2 + Math.floor(Math.random() * 3);
+}
+
 export function maybeTriggerClinicalCue(s: BattleState): BattleState {
   if (s.pendingCue) return s;
   if (s.cuesAnswered.length >= 4) return s;
   const isBoss = (s.enemyClinical?.rewardBase || 0) >= 100;
   const topicHint = SYSTEM_TO_CUE_TOPIC[s.enemy.primarySystem];
-  return { ...s, pendingCue: getRandomClinicalCue(s.cuesAnswered, { chapter: s.chapter, isBoss, topicHint }) };
+  return {
+    ...s,
+    pendingCue: getRandomClinicalCue(s.cuesAnswered, { chapter: s.chapter, isBoss, topicHint }),
+    nextCueTurn: s.turn + rollCueGap(),
+  };
 }
 
 export function applyCall(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {
@@ -1249,8 +1261,8 @@ export function endPlayerTurn(s: BattleState): BattleState {
     dangerTriggerActive,
   };
 
-  // Clinical Cue — a fresh question every couple of turns to keep power tied to knowledge
-  if (next.turn % 2 === 0) {
+  // Clinical Cue — next question lands on a randomized turn, always ≥2 turns after the last one
+  if (next.turn >= next.nextCueTurn) {
     next = maybeTriggerClinicalCue(next);
   }
 
