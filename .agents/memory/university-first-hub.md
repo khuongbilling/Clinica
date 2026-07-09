@@ -8,7 +8,7 @@ description: How Clinica University is surfaced as the prominent first destinati
 Clinica University is the intended FIRST place a new player goes. The pattern:
 
 - **NarratorGuide** (`frontend/src/components/NarratorGuide.tsx`) is the reusable
-  hand-drawn donghua narrator ("Mentor Bai", `assets/images/mentor_guide.png`).
+  System narrator (single System persona; mentor art removed).
   Two layouts: `bgImage` = full illustrated-banner variant (used on hub), else a
   compact portrait+message panel. Renders portrait + directive message + Objective
   chip + CTA button. Reuse this component for any guided directive; do NOT re-add

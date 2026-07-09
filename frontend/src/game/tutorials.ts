@@ -45,13 +45,24 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   systemShops: "The Apothecary Market",
 };
 
-// Tutorials narrated by "the System" — the overlay renders its donghua portrait
-// (a dark silhouette until Player Level 10, then colored by aptitude) and its
-// name in place of the generic GUIDE badge, and treats them as forced (no skip).
-export const SYSTEM_TUTORIAL_IDS: TutorialId[] = ["systemHubIntro", "systemWardHub", "systemShops"];
-
+// ALL tutorials are narrated by "the System" — the one guiding voice of the
+// game. The overlay always renders its donghua portrait (a dark silhouette
+// until Player Level 10, then colored by aptitude) and its name.
 export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
-  return !!id && SYSTEM_TUTORIAL_IDS.includes(id);
+  return !!id;
+}
+
+// Forced (non-skippable) tutorials: the guided prologue battle and the
+// System's one-time hub-onboarding beats. Everything else can be skipped.
+export const FORCED_TUTORIAL_IDS: TutorialId[] = [
+  "prologueBattle",
+  "systemHubIntro",
+  "systemWardHub",
+  "systemShops",
+];
+
+export function isForcedTutorial(id: TutorialId | null | undefined): boolean {
+  return !!id && FORCED_TUTORIAL_IDS.includes(id);
 }
 
 export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
@@ -349,8 +360,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "lesson_mentor",
-      title: "Mentor Bai",
-      body: "Mentor Bai guides your learning path. Follow the recommended lesson order — each one builds on the last and unlocks new content as you progress.",
+      title: "Your Learning Path",
+      body: "I have arranged your learning path. Follow the recommended lesson order — each one builds on the last and unlocks new content as you progress. What you master here is recorded in the Codex for review.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",

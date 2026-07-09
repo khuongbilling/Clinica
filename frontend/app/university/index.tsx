@@ -143,14 +143,12 @@ export default function UniversityHubScreen() {
         <SceneTransition trigger="university-arrival">
           {isNewLearner && nextLotusNode && <OnboardingProgressBar step="University" />}
 
-          {/* Single hand-drawn mentor narrator — replaces the old stacked
-              System bar + mentor quote + start-here card. */}
+          {/* The System — the single narrator voice of the game. */}
           <NarratorGuide
-            name="Mentor Bai"
             message={
               isNewLearner
-                ? "Welcome back to the ward, healer. You were recalled not because you were ready — but because you can still learn. Begin with a single lesson, and I will guide you the rest of the way."
-                : "Good to see you again. Take a lesson to sharpen your reasoning, recruit and train your healers, or study the Codex. The choice is yours."
+                ? "…This is the University. You were recalled not because you were ready — but because you can still learn. Begin with a single lesson. I will be watching your reasoning grow."
+                : "You return to study. Good. Take a lesson to sharpen your reasoning, recruit and train your healers, or consult the Codex. The choice is yours."
             }
             objective={
               isNewLearner && nextLotusNode

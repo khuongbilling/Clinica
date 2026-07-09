@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { TutorialId, TutorialStep, TUTORIALS } from "./tutorials";
 
 const STORAGE_KEY = "clinica.tutorials.v1";
@@ -50,8 +50,34 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [guidedReserve, setGuidedReserve] = useState(0);
 
+  // Ref mirrors so startTutorial can guard synchronously (two screens mounting
+  // in the same frame must not preempt each other's tutorial).
+  const activeRef = useRef<TutorialId | null>(null);
+  const completedRef = useRef<TutorialProgress>({});
+  useEffect(() => { activeRef.current = activeTutorialId; }, [activeTutorialId]);
+  useEffect(() => { completedRef.current = completed; }, [completed]);
+
+  // Hydration guard: until the persisted completion flags have loaded,
+  // startTutorial must not trust the (still empty) completedRef — otherwise a
+  // screen's auto-start timer firing before hydration replays a tutorial the
+  // player already finished. Pre-hydration starts are queued and resolved
+  // against the real data once it lands.
+  const hydratedRef = useRef(false);
+  const pendingStartRef = useRef<TutorialId | null>(null);
+
   useEffect(() => {
-    loadProgress().then(setCompleted);
+    loadProgress().then((p) => {
+      completedRef.current = p;
+      setCompleted(p);
+      hydratedRef.current = true;
+      const pending = pendingStartRef.current;
+      pendingStartRef.current = null;
+      if (pending && !activeRef.current && !p[pending]) {
+        activeRef.current = pending;
+        setActiveTutorialId(pending);
+        setStepIndex(0);
+      }
+    });
   }, []);
 
   const markDone = useCallback(async (id: TutorialId) => {
@@ -63,6 +89,16 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startTutorial = useCallback((id: TutorialId) => {
+    // ONE tutorial loop at a time: never preempt an in-progress tutorial, and
+    // never auto-restart one that's already running or already completed.
+    // (Deliberate replays go through replayTutorial, which un-completes first.)
+    if (!hydratedRef.current) {
+      if (!pendingStartRef.current) pendingStartRef.current = id;
+      return;
+    }
+    if (activeRef.current) return;
+    if (completedRef.current[id]) return;
+    activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
   }, []);
@@ -72,6 +108,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     const nextIdx = idx + 1;
     if (nextIdx >= steps.length) {
       markDone(tutId);
+      activeRef.current = null;
+      completedRef.current = { ...completedRef.current, [tutId]: true };
       setActiveTutorialId(null);
       setStepIndex(0);
     } else {
@@ -87,6 +125,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const skipTutorial = useCallback(() => {
     if (!activeTutorialId) return;
     markDone(activeTutorialId);
+    activeRef.current = null;
+    completedRef.current = { ...completedRef.current, [activeTutorialId]: true };
     setActiveTutorialId(null);
     setStepIndex(0);
   }, [activeTutorialId, markDone]);
@@ -97,6 +137,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       saveProgress(next);
       return next;
     });
+    completedRef.current = { ...completedRef.current, [id]: false };
+    activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
   }, []);
@@ -105,6 +147,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
     } catch {}
+    completedRef.current = {};
+    activeRef.current = null;
     setCompleted({});
     setActiveTutorialId(null);
     setStepIndex(0);

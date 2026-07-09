@@ -54,7 +54,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
-  const { isCompleted, startTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
+  const { isCompleted, startTutorial, replayTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
@@ -136,7 +136,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       if (clue) revealedLabels = [...revealedLabels, clue.label];
       log = [...log, `⟡ Weaver's Eye: one hidden clue revealed at battle start.`];
     }
-    if (mentorAid) log = [...log, `🕯 A mentor steadies your hand. Starting Stability +10.`];
+    if (mentorAid) log = [...log, `🕯 The System steadies your hand. Starting Stability +10.`];
     if (isTraining) log = [...log, `📜 Training Battle: hidden clue revealed, enemy weakened.`];
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });
@@ -202,8 +202,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       // before keeps prologueBattle marked done and would silently skip the
       // guided walkthrough (no forcing, no highlights) even for a fresh player.
       // Reaching this screen is itself proof the player still needs the
-      // hand-held first shift, so always force-start it here.
-      const t = setTimeout(() => startTutorial("prologueBattle"), 800);
+      // hand-held first shift, so always force-start it here. replayTutorial
+      // (not startTutorial) is used because it bypasses the "already
+      // completed" guard — this is the one legitimate forced restart.
+      const t = setTimeout(() => replayTutorial("prologueBattle"), 800);
       return () => clearTimeout(t);
     }
     if (!isCompleted("firstBattle")) {
@@ -759,7 +761,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         <Pressable style={styles.codexCard} onPress={() => setCodexExpanded(!codexExpanded)} testID="battle-guidance">
           <Ionicons name="book-outline" size={11} color={COLORS.brand} />
           <Text style={styles.codexLabel} numberOfLines={codexExpanded ? undefined : 1}>
-            {mentorAid ? "MENTOR'S AID: " : tacticalHint ? "MENTOR: " : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
+            {mentorAid ? "SYSTEM'S AID: " : tacticalHint ? "SYSTEM: " : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
             <Text style={styles.codexText}>
               {mentorAid ? `+10 Stability. ${hints.tactical}` : tacticalHint ? hints.tactical : gentleHint ? hints.gentle : `Match actions to the ${enemy.primarySystem} system.`}
             </Text>

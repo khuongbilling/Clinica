@@ -4,20 +4,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { usePlayer } from "@/src/game/store";
+import { getSystemIdentity } from "@/src/game/systemNarrator";
+import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-const MENTOR_ART = require("../../assets/images/mentor_guide.png");
-
 export interface NarratorGuideProps {
-  /** What the narrator says — a directive line guiding the player. */
+  /** What the System says — a directive line guiding the player. */
   message: string;
   /** Optional one-line objective shown as a highlighted chip. */
   objective?: string;
   /** Call-to-action button label. Omit to hide the button. */
   ctaLabel?: string;
   onPress?: () => void;
-  /** Narrator name shown above the message. */
-  name?: string;
   /**
    * When provided, the guide renders as a full illustrated banner with this
    * art as the background (behind a legibility scrim). Otherwise it renders as
@@ -28,8 +27,10 @@ export interface NarratorGuideProps {
 }
 
 /**
- * NarratorGuide — a hand-drawn donghua mentor who narrates and directs the
- * player on where/how to start and their current objective. Two layouts:
+ * NarratorGuide — the enigmatic System, the ONE guiding voice of the game.
+ * Renders the System's donghua portrait (dark silhouette until Player Level 10,
+ * then colored by aptitude) and narrates where/how to start and the current
+ * objective. Two layouts:
  *  - Illustrated banner (pass `bgImage`) — used as a prominent onboarding hero.
  *  - Compact panel (no `bgImage`) — used inline above a screen's content.
  */
@@ -38,12 +39,18 @@ export function NarratorGuide({
   objective,
   ctaLabel,
   onPress,
-  name = "Mentor",
   bgImage,
   testID,
 }: NarratorGuideProps) {
+  const { player } = usePlayer();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(10)).current;
+
+  const playerLevel = player
+    ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level)
+    : 1;
+  const identity = getSystemIdentity(playerLevel, player?.aptitude);
+  const accent = identity.color;
 
   useEffect(() => {
     Animated.parallel([
@@ -55,13 +62,13 @@ export function NarratorGuide({
   const Body = (
     <>
       <View style={styles.headerRow}>
-        <View style={styles.portrait}>
-          <ExpoImage source={MENTOR_ART} style={styles.portraitImg} contentFit="cover" transition={200} />
+        <View style={[styles.portrait, { borderColor: accent + "AA" }]}>
+          <ExpoImage source={identity.art} style={styles.portraitImg} contentFit="cover" transition={200} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <View style={styles.nameRow}>
-            <Ionicons name="sparkles" size={11} color={COLORS.brand} />
-            <Text style={styles.name} numberOfLines={1}>{name.toUpperCase()}</Text>
+            <Ionicons name="sparkles" size={11} color={accent} />
+            <Text style={[styles.name, { color: accent }]} numberOfLines={1}>{identity.name.toUpperCase()}</Text>
           </View>
           <Text style={[styles.message, bgImage ? styles.messageOnArt : null]}>{message}</Text>
         </View>
@@ -132,14 +139,13 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 29,
     borderWidth: 2,
-    borderColor: COLORS.brand + "AA",
     overflow: "hidden",
     backgroundColor: "#0B1420",
     flexShrink: 0,
   },
   portraitImg: { width: 58, height: 58 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  name: { color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  name: { fontSize: 10, fontWeight: "800", letterSpacing: 2 },
   message: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19 },
   messageOnArt: { color: "#F2F5FA", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 },
   objectiveChip: {

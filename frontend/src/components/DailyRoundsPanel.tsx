@@ -210,7 +210,6 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
             {showExplainer && (
               <View style={{ marginBottom: SPACING.sm }}>
                 <NarratorGuide
-                  name="System"
                   message="Ward Rounds reward you for showing up. Check in daily to build your streak, clear three rotating duties across the systems you've unlocked, and hit your weekly goal — all free."
                   objective="Check in each day and complete your three duties."
                   ctaLabel="Understood"

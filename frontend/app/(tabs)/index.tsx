@@ -213,9 +213,8 @@ export default function RunHome() {
       {isNewLearner && (
         <View style={styles.uniOnboard}>
           <NarratorGuide
-            name="Mentor Bai"
             bgImage={getBannerImage("university")}
-            message="Your journey begins at Clinica University. Learn to read the body, and your first heroes will answer the call."
+            message="Your path begins at Clinica University. Learn to read the body, and your first heroes will answer the call. I will guide you from here."
             objective="Enter Clinica University and complete your first lesson."
             ctaLabel="Enter Clinica University"
             onPress={() => router.push("/university")}

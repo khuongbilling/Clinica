@@ -264,7 +264,7 @@ Useful primarily when AP is stranded (1 AP left, no system match available).`),
   },
   {
     id: 'mentor',
-    title: "Mentor's Guidance (When You Lose)",
+    title: "The System's Aid (When You Lose)",
     icon: 'school',
     kicker: 'The game softens when you struggle — by design.',
     content: {
@@ -273,7 +273,7 @@ If you lose the same battle a few times, the game offers a "Training" mode — e
 It also shows hints based on what you missed. Learning > winning.`),
       practiced: w(`
 Failure counters track per-enemy losses. At 2 losses you receive tactical hints (revealing the priority cue). At 3 losses a Training variant unlocks with reduced corruption and softer instability.
-Mentor's Guidance does not penalize your stars — it's there to lower the cliff.`),
+The System's Aid does not penalize your stars — it's there to lower the cliff.`),
       expert: w(`
 Failure-recovery models spiral curriculum: repeated failure surfaces remediation content (chain logic, system mismatch, missed escalation), then offers a deliberate-practice mode with relaxed parameters.
 Mastery is earned by re-attempting at normal difficulty after Training.`),

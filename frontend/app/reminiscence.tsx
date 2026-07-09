@@ -302,7 +302,7 @@ export default function ReminiscenceScreen() {
     // directly, delivering on the cutscene's promise instead of detouring
     // through the hub. University is gated only by account level 1 (always met),
     // so a fresh post-recall player never hits the feature lock, and the
-    // University screen already greets them (Mentor Bai's "you were recalled…"
+    // University screen already greets them (the System's "you were recalled…"
     // line + arrival transition). The hub's own welcome modal + System-narrator
     // intro simply defer until the player first opens the hub. Replay mode (from
     // Profile) still returns to Profile so it never re-enters onboarding.

@@ -5,12 +5,22 @@ const BASE_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants?.expoConfig?
 const API = `${BASE_URL}/api`;
 const BACKEND_AVAILABLE = BASE_URL.length > 0;
 
+const REQUEST_TIMEOUT_MS = 6000;
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   if (!BACKEND_AVAILABLE) throw new Error('Backend not configured');
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API ${res.status}: ${text}`);

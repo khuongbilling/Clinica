@@ -246,7 +246,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     finalVisible.push(id);
     const clue = allClues.find(c => c.id === id);
     if (clue) finalRevealedLabels.push(clue.label);
-    log.push(`Mentor's eye: one hidden clue is already revealed.`);
+    log.push(`The System's eye: one hidden clue is already revealed.`);
   }
 
   const heroActionsUsed: Record<string, boolean> = {};

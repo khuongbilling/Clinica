@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { usePlayer } from "@/src/game/store";
 import { getSystemIdentity, type SystemIdentity } from "@/src/game/systemNarrator";
-import { isSystemTutorial } from "@/src/game/tutorials";
+import { isForcedTutorial, isSystemTutorial } from "@/src/game/tutorials";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -97,9 +97,9 @@ export function TutorialOverlay() {
 
   const progress = totalSteps > 1 ? `${stepIndex + 1} / ${totalSteps}` : "";
   const isSystem = isSystemTutorial(activeTutorialId);
-  // Forced tutorials can't be skipped: the prologue and every System-narrated
-  // onboarding step.
-  const allowSkip = activeTutorialId !== "prologueBattle" && !isSystem;
+  // Forced tutorials can't be skipped: the prologue battle and the System's
+  // one-time hub-onboarding beats.
+  const allowSkip = !isForcedTutorial(activeTutorialId);
 
   // Resolve the System narrator's identity (dark silhouette until Player L10,
   // then colored by aptitude). Level is derived from xp, matching the rest of

@@ -471,7 +471,7 @@ export default function Result() {
         {!won && hints && (
           <View style={[styles.tipCard, showTraining && { borderColor: COLORS.brand }]}>
             <Text style={styles.tipKicker}>
-              {showTraining ? "A MENTOR JOINS YOU" : showTactical ? "MENTOR'S GUIDANCE" : "THE CODEX WHISPERS"}
+              {showTraining ? "THE SYSTEM INTERVENES" : showTactical ? "THE SYSTEM'S GUIDANCE" : "THE CODEX WHISPERS"}
             </Text>
             <Text style={styles.tipTitle}>{enemy?.dangerTrigger}</Text>
             <Text style={styles.tipBody}>
