@@ -123,10 +123,11 @@ export default function Result() {
       { icon: "heart", label: "Patient stabilized" },
       { icon: "star", label: "Stars", amount: String(starResult.stars) },
     ];
+    if (playerXpEarned > 0) items.push({ icon: "trending-up-outline", label: "Assessment Spark", amount: `+${playerXpEarned} XP` });
     if (rewardBreakdown && rewardBreakdown.total > 0) items.push({ icon: "diamond", label: "Codex Shards", amount: String(rewardBreakdown.total) });
     if (crownsEarned > 0) items.push({ icon: "cash-outline", label: "Crowns", amount: String(crownsEarned) });
     return items;
-  }, [starResult.stars, rewardBreakdown, crownsEarned]);
+  }, [starResult.stars, rewardBreakdown, crownsEarned, playerXpEarned]);
 
   useEffect(() => {
     logEvent('victory_screen_viewed', 'result', {

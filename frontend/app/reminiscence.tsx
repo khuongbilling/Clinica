@@ -85,7 +85,7 @@ const PANELS: Panel[] = [
   {
     kicker: "BEFORE CLINICA",
     lines: [
-      "Before Clinica, there was another life — a world not so different from Earth.",
+      "Before Clinica, there was another life. A world not so different from Earth.",
       "Classrooms. Deadlines. Crowded hallways. Futures that still felt open.",
       "I was a student then. Still learning. Still searching. Still certain there would be time.",
     ],
@@ -198,9 +198,9 @@ const PANELS: Panel[] = [
   {
     kicker: "THE FAILURE",
     lines: [
-      "In that moment, my certainty fell apart.",
+      "My certainty fell apart.",
       "The signs had been there. The warnings. The truth beneath the surface.",
-      "I had wanted to heal — but wanting had not been enough.",
+      "I had wanted to heal. But wanting had not been enough.",
     ],
     art: require("../assets/reminiscence/scene_regret.png"),
     effect: "fadeIn",
@@ -212,7 +212,7 @@ const PANELS: Panel[] = [
     lines: [
       "But even that was not the end.",
       "A light unfolded beneath me like a bloom opening in the dark.",
-      "Time trembled. Memory recoiled. I was not erased — I was returned.",
+      "Time trembled. Memory recoiled. I was not erased. I was returned.",
     ],
     systemLines: ["SYSTEM: Emergency Lotus Recall activated.", "SYSTEM: Soul-thread preserved."],
     art: require("../assets/reminiscence/panel_08_lotus_recall.png"),

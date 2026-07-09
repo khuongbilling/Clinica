@@ -80,7 +80,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_cue",
       title: "First: A Clinical Cue",
-      body: "A Clinical Cue is a quick judgement check drawn from the patient in front of you. Read the question, weigh the options, and tap the answer you believe is CORRECT. A right answer earns a bonus that strengthens every stabilizing action this turn. After you answer, a short explanation slides in — you can keep playing while you read it, it won't block the shift.",
+      body: "A Clinical Cue appears above. Read the question, weigh the options, tap the answer you believe is correct. A right answer powers up your stabilizing actions this turn. A short explanation will appear after you answer. It won't block the shift.",
       placement: "top",
       requireAction: true,
       requiredActionType: "cue",
@@ -89,7 +89,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_skills",
       title: "Reading Your Skills",
-      body: "Each hero carries clinical skills. Tap a skill to use it. Long-press any skill, item, or call to open its full detail — the real nursing and NCLEX reasoning behind it. Long-pressing never costs a turn, so explore whenever you're curious.",
+      body: "Each hero carries clinical skills. Tap a skill to use it. Long-press any skill or item to read the reasoning behind it. Long-pressing never costs a turn.",
       placement: "center",
       requireAction: false,
       nextText: "GOT IT",
@@ -142,7 +142,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_done",
       title: "Scout. Stabilize. Counter. Reassess.",
-      body: "Perfect — a complete care chain! This four-step rhythm is the heart of every shift you'll ever run. Follow it and you'll earn top marks. The patient is safe.",
+      body: "A complete care chain. This four-step rhythm is the heart of every shift. Scout. Stabilize. Counter. Reassess. The patient is safe.",
       placement: "center",
       requireAction: false,
       nextText: "FINISH THE SHIFT",

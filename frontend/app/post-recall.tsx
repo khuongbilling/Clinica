@@ -292,6 +292,16 @@ export default function PostRecall() {
         {phase === "identity" ? (
           <Animated.View style={[styles.identityWrap, { opacity: fadeAnim }]} testID="post-recall-identity">
             {!isReplay && <OnboardingProgressBar step="Identity" />}
+            {!isReplay && (
+              <MilestoneReward
+                title="LOTUS RECALL AWAKENED"
+                accent={COLORS.brand}
+                items={[
+                  { icon: "flower-outline", label: "Memory preserved" },
+                  { icon: "refresh-outline", label: "Second chance granted" },
+                ]}
+              />
+            )}
             <View style={styles.identityHeader}>
               <View style={styles.identityBadge}>
                 <Ionicons name="finger-print" size={30} color={COLORS.brand} />

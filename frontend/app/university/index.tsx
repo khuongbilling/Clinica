@@ -36,68 +36,64 @@ const LESSONS_BANNER: ModeCardDef = {
   artBrief: "",
 };
 
-// Grow-your-healers banners.
-const GROW_BANNERS: ModeCardDef[] = [
-  {
-    id: "uni-recruit",
-    title: "University Recruitment",
-    subtitle: "Enroll new healers with Hero Shards, Trainees, and Credits.",
-    icon: "sparkles",
-    accentColor: "#F59E0B",
-    status: "active",
-    size: "medium",
-    imageKey: "uni-recruit",
-    route: "/university/recruit",
-    artBrief: "",
-  },
-  {
-    id: "uni-training",
-    title: "Training Hall",
-    subtitle: "Level up your healers toward their Certification Star's cap.",
-    icon: "trending-up",
-    accentColor: "#5B9BD5",
-    status: "active",
-    size: "medium",
-    imageKey: "uni-training",
-    route: "/university/training",
-    artBrief: "",
-  },
-];
+const RECRUIT_BANNER: ModeCardDef = {
+  id: "uni-recruit",
+  title: "University Recruitment",
+  subtitle: "Enroll new healers with Hero Shards, Trainees, and Credits.",
+  icon: "sparkles",
+  accentColor: "#F59E0B",
+  status: "active",
+  size: "medium",
+  imageKey: "uni-recruit",
+  route: "/university/recruit",
+  artBrief: "",
+};
 
-// Knowledge-and-paths banners.
-const KNOWLEDGE_BANNERS: ModeCardDef[] = [
-  {
-    id: "uni-library",
-    title: "Research Library",
-    subtitle: "Browse the Great Codex — knowledge, battle mechanics, field notes.",
-    icon: "library",
-    accentColor: "#22D3EE",
-    status: "active",
-    size: "medium",
-    imageKey: "uni-library",
-    route: "/(tabs)/codex",
-    artBrief: "",
-  },
-  {
-    id: "uni-classtree",
-    title: "Class Tree",
-    subtitle: "Choose a Player Class and unlock its ability tree as you level.",
-    icon: "git-network",
-    accentColor: "#A78BFA",
-    status: "active",
-    size: "medium",
-    imageKey: "uni-classtree",
-    route: "/class-tree",
-    artBrief: "",
-  },
-];
+const TRAINING_BANNER: ModeCardDef = {
+  id: "uni-training",
+  title: "Training Hall",
+  subtitle: "Level up your healers toward their Certification Star's cap.",
+  icon: "trending-up",
+  accentColor: "#5B9BD5",
+  status: "active",
+  size: "medium",
+  imageKey: "uni-training",
+  route: "/university/training",
+  artBrief: "",
+};
+
+const LIBRARY_BANNER: ModeCardDef = {
+  id: "uni-library",
+  title: "Research Library",
+  subtitle: "Browse the Great Codex — knowledge, battle mechanics, field notes.",
+  icon: "library",
+  accentColor: "#22D3EE",
+  status: "active",
+  size: "medium",
+  imageKey: "uni-library",
+  route: "/(tabs)/codex",
+  artBrief: "",
+};
+
+const CLASSTREE_BANNER: ModeCardDef = {
+  id: "uni-classtree",
+  title: "Class Tree",
+  subtitle: "Choose a Player Class and unlock its ability tree as you level.",
+  icon: "git-network",
+  accentColor: "#A78BFA",
+  status: "active",
+  size: "medium",
+  imageKey: "uni-classtree",
+  route: "/class-tree",
+  artBrief: "",
+};
 
 export default function UniversityHubScreen() {
   const router = useRouter();
   const { player } = usePlayer();
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
-  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  const { isCompleted, startTutorial } = useTutorial();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
 
@@ -108,7 +104,6 @@ export default function UniversityHubScreen() {
     }
   }, []);
 
-  // Deep links reboot the app; render nothing heavy but never a blank crash.
   if (!player) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -120,11 +115,26 @@ export default function UniversityHubScreen() {
       </SafeAreaView>
     );
   }
-  // Block direct navigation into a still-locked University.
   if (!gate.unlocked) return <FeatureLockedView title="Clinica University" reason={gate.reason} />;
 
   const nextLotusNode = firstIncompleteLotusNode(player);
-  const isNewLearner = (player.lessons_completed?.length ?? 0) === 0;
+  const lessonsCompleted = player.lessons_completed?.length ?? 0;
+  const isNewLearner = lessonsCompleted === 0;
+  const heroCount = player.heroes_owned?.length ?? 0;
+  // Show Recruitment once the player has completed at least one lesson.
+  const showRecruitment = !isNewLearner;
+  // Show Training Hall once the player has at least 2 heroes to train.
+  const showTraining = heroCount >= 2;
+  // Show Codex link as an optional reference once any lesson is done.
+  const showCodex = !isNewLearner;
+  // Class Tree is display-only until Level 5 and not useful to new learners early.
+  const showClassTree = (player.player_level ?? 1) >= 5;
+  // Career Explorer is informational; surface it at Level 3 or after 3+ lessons.
+  const showCareerExplorer = (player.player_level ?? 1) >= 3 || lessonsCompleted >= 3;
+  // Hall of Heroes is gated by its own feature gate.
+  const showHeroes = heroesGate.unlocked;
+  // "More" section is relevant once the player has progressed beyond the first lesson.
+  const showMore = !isNewLearner;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -143,17 +153,11 @@ export default function UniversityHubScreen() {
         <SceneTransition trigger="university-arrival">
           {isNewLearner && nextLotusNode && <OnboardingProgressBar step="University" />}
 
-          {/* The System — the single narrator voice of the game. */}
           <NarratorGuide
             message={
               isNewLearner
                 ? "…This is the University. You were recalled not because you were ready — but because you can still learn. Begin with a single lesson. I will be watching your reasoning grow."
                 : "You return to study. Good. Take a lesson to sharpen your reasoning, recruit and train your healers, or consult the Codex. The choice is yours."
-            }
-            objective={
-              isNewLearner && nextLotusNode
-                ? `Complete your first lesson — “${nextLotusNode.title}” — to earn your first heroes.`
-                : undefined
             }
             ctaLabel={nextLotusNode ? "Begin a Lesson" : undefined}
             onPress={nextLotusNode ? () => router.push("/university/lessons" as any) : undefined}
@@ -161,7 +165,7 @@ export default function UniversityHubScreen() {
           />
         </SceneTransition>
 
-        {/* BEGIN HERE — the primary learning path */}
+        {/* BEGIN HERE — always shown, the primary learning path */}
         <Text style={styles.sectionHeading}>BEGIN HERE</Text>
         <BannerCard
           mode={LESSONS_BANNER}
@@ -170,91 +174,102 @@ export default function UniversityHubScreen() {
           testID="university-banner-lessons"
         />
 
-        {/* GROW YOUR HEALERS */}
-        <Text style={styles.sectionHeading}>GROW YOUR HEALERS</Text>
-        {GROW_BANNERS.map((m) => (
+        {/* GROW YOUR HEALERS — revealed progressively */}
+        {(showRecruitment || showTraining) && (
+          <Text style={styles.sectionHeading}>GROW YOUR HEALERS</Text>
+        )}
+        {showRecruitment && (
           <BannerCard
-            key={m.id}
-            mode={m}
+            mode={RECRUIT_BANNER}
             height={120}
-            onPress={() => m.route && router.push(m.route as any)}
-            testID={`university-banner-${m.id}`}
+            onPress={() => router.push("/university/recruit" as any)}
+            testID="university-banner-uni-recruit"
           />
-        ))}
-
-        {/* KNOWLEDGE & PATHS */}
-        <Text style={styles.sectionHeading}>KNOWLEDGE & PATHS</Text>
-        {KNOWLEDGE_BANNERS.map((m) => (
+        )}
+        {showTraining && (
           <BannerCard
-            key={m.id}
-            mode={m}
+            mode={TRAINING_BANNER}
             height={120}
-            onPress={() => m.route && router.push(m.route as any)}
-            testID={`university-banner-${m.id}`}
+            onPress={() => router.push("/university/training" as any)}
+            testID="university-banner-uni-training"
           />
-        ))}
+        )}
 
-        {/* MORE — compact secondary links to keep the page uncluttered */}
-        <Text style={styles.sectionHeading}>MORE AT UNIVERSITY</Text>
-        <MoreRow
-          icon="ribbon"
-          title="Hall of Heroes"
-          desc={heroesGate.unlocked ? "Certify heroes and raise their star." : (heroesGate.reason ?? "Unlocks soon.")}
-          locked={!heroesGate.unlocked}
-          onPress={() => router.push("/(tabs)/heroes" as any)}
-          testID="university-more-heroes"
-        />
-        <MoreRow
-          icon="business"
-          title="Department Schools"
-          desc="Specialized schools for each role. More opening soon."
-          onPress={() => router.push("/university/schools" as any)}
-          testID="university-more-schools"
-        />
-        <MoreRow
-          icon="compass"
-          title="Career Explorer"
-          desc="Healthcare is not one road. Discover the many paths a healer can walk."
-          onPress={() => router.push("/university/career-explorer" as any)}
-          testID="university-more-career-explorer"
-        />
-        <MoreRow
-          icon="map-outline"
-          title="Academy Orientation Path"
-          desc="Your first-week journey — milestones, next steps, and day-by-day guidance."
-          onPress={() => router.push("/academy-path" as any)}
-          testID="university-more-academy-path"
-        />
-        <MoreRow
-          icon="options-outline"
-          title="Learning Style"
-          desc="Personalize explanation depth and clue visibility to match how you learn."
-          onPress={() => router.push("/learning-profile" as any)}
-          testID="university-more-learning-profile"
-        />
+        {/* KNOWLEDGE & PATHS — revealed after first lesson */}
+        {(showCodex || showClassTree) && (
+          <Text style={styles.sectionHeading}>KNOWLEDGE & PATHS</Text>
+        )}
+        {showCodex && (
+          <BannerCard
+            mode={LIBRARY_BANNER}
+            height={120}
+            onPress={() => router.push("/(tabs)/codex" as any)}
+            testID="university-banner-uni-library"
+          />
+        )}
+        {showClassTree && (
+          <BannerCard
+            mode={CLASSTREE_BANNER}
+            height={120}
+            onPress={() => router.push("/class-tree" as any)}
+            testID="university-banner-uni-classtree"
+          />
+        )}
 
-        {/* FUTURE LEARNING — collapsed by default to reduce clutter */}
-        <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
-          <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceSecondary} />
-          <Text style={styles.futureToggleTxt}>Future Learning ({UNIVERSITY_FUTURE_MODES.length})</Text>
-          <Ionicons name={showFuture ? "chevron-up" : "chevron-down"} size={16} color={COLORS.onSurfaceTertiary} />
-        </Pressable>
-        {showFuture && (
-          <View style={{ gap: SPACING.sm }}>
-            {UNIVERSITY_FUTURE_MODES.map((m) => (
-              <ModeCard
-                key={m.id}
-                mode={m}
-                testID={`university-future-${m.id}`}
-                onPress={() =>
-                  setInfo({
-                    title: `${m.title} — Coming Soon`,
-                    message: m.subtitle + "\n\nThis feature is still in development.",
-                  })
-                }
+        {/* MORE — revealed after first lesson */}
+        {showMore && (
+          <>
+            <Text style={styles.sectionHeading}>MORE AT UNIVERSITY</Text>
+            {showHeroes && (
+              <MoreRow
+                icon="ribbon"
+                title="Hall of Heroes"
+                desc="Certify heroes and raise their star."
+                onPress={() => router.push("/(tabs)/heroes" as any)}
+                testID="university-more-heroes"
               />
-            ))}
-          </View>
+            )}
+            {showCareerExplorer && (
+              <MoreRow
+                icon="compass"
+                title="Career Explorer"
+                desc="Healthcare is not one road. Discover the many paths a healer can walk."
+                onPress={() => router.push("/university/career-explorer" as any)}
+                testID="university-more-career-explorer"
+              />
+            )}
+            <MoreRow
+              icon="options-outline"
+              title="Learning Style"
+              desc="Personalize explanation depth and clue visibility to match how you learn."
+              onPress={() => router.push("/learning-profile" as any)}
+              testID="university-more-learning-profile"
+            />
+
+            {/* Future Learning — collapsed by default */}
+            <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
+              <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceSecondary} />
+              <Text style={styles.futureToggleTxt}>Future Learning ({UNIVERSITY_FUTURE_MODES.length})</Text>
+              <Ionicons name={showFuture ? "chevron-up" : "chevron-down"} size={16} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+            {showFuture && (
+              <View style={{ gap: SPACING.sm }}>
+                {UNIVERSITY_FUTURE_MODES.map((m) => (
+                  <ModeCard
+                    key={m.id}
+                    mode={m}
+                    testID={`university-future-${m.id}`}
+                    onPress={() =>
+                      setInfo({
+                        title: `${m.title} — Coming Soon`,
+                        message: m.subtitle + "\n\nThis feature is still in development.",
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            )}
+          </>
         )}
 
         <View style={styles.footNote}>
