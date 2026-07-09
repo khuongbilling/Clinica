@@ -215,6 +215,10 @@ export interface PlayerState {
   // reminiscence story scene (modern-world origin -> Silent Infarct -> Lotus
   // Recall)? Gates the one-time redirect from post-recall into /reminiscence.
   seen_reminiscence?: boolean;
+  // Manhwa story layer — ids of story scenes (see storyScenes.ts) the player
+  // has watched. Drives one-time auto-triggers at chapter milestones and the
+  // "NEW" badges in the Profile Story Gallery.
+  story_scenes_seen?: string[];
   // Clinica University — Lessons & Simulations MVP
   lessons_completed?: string[];
   simulations_completed?: string[];

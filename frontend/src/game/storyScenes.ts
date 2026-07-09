@@ -8,7 +8,21 @@
 //
 // Adding a scene = add an entry here (art under frontend/assets/story/) and
 // it is automatically listed in the Story Gallery and routable via
-// /story-scene?sceneId=<id>. No progression state is written by viewing.
+// /story-scene?sceneId=<id>. Viewing a scene writes only its "seen" flag
+// (player.story_scenes_seen) — never progression or rewards.
+//
+// Scenes carry cinematic metadata (motion effect + ambient FX, matching the
+// Reminiscence motion-comic vocabulary) and an unlock rule:
+// - chapter scenes auto-play once when chapter_progress reaches their chapter
+// - side scenes unlock at existing progression beats and surface via a
+//   one-time "new memory" prompt on the hub (never auto-play).
+
+import type { PlayerState } from "./types";
+import type { PanelEffect } from "@/src/components/reminiscence/MotionPanel";
+
+export type StorySceneUnlock =
+  | { type: "chapter"; chapter: number }
+  | { type: "beat"; beat: "class_confirmed" | "first_lesson" | "seasoned_healer"; hint: string };
 
 export type StoryScene = {
   id: string;
@@ -20,6 +34,14 @@ export type StoryScene = {
   /** Optional Lotus Keeper dialogue, styled distinctly (gold, italic). */
   keeperLines?: string[];
   art: number;
+  /** Ken-burns style motion applied to the still illustration. */
+  effect: PanelEffect;
+  /** Ambient overlays — rising light motes / falling lotus petals / rain. */
+  motes?: boolean;
+  moteColor?: string;
+  petals?: boolean;
+  rain?: boolean;
+  unlock: StorySceneUnlock;
 };
 
 export const STORY_SCENES: StoryScene[] = [
@@ -33,6 +55,10 @@ export const STORY_SCENES: StoryScene[] = [
       "This time, I would earn my answers before I gave them.",
     ],
     art: require("../../assets/story/chapter_01_opening.png"),
+    effect: "zoomIn",
+    motes: true,
+    moteColor: "#D8E4EE",
+    unlock: { type: "chapter", chapter: 1 },
   },
   {
     id: "chapter_02",
@@ -44,6 +70,9 @@ export const STORY_SCENES: StoryScene[] = [
       "And I understood, at last, that knowledge is not for the one who holds it. It is for everyone standing beneath the same storm.",
     ],
     art: require("../../assets/story/chapter_02_opening.png"),
+    effect: "panSlow",
+    rain: true,
+    unlock: { type: "chapter", chapter: 2 },
   },
   {
     id: "keeper_audience",
@@ -58,6 +87,11 @@ export const STORY_SCENES: StoryScene[] = [
       "Go back to your ward, healer. The lotus does not bloom for those who watch it. It blooms for those who tend the water.",
     ],
     art: require("../../assets/story/keeper_scene.png"),
+    effect: "lotusRecall",
+    petals: true,
+    motes: true,
+    moteColor: "#FBE7B0",
+    unlock: { type: "beat", beat: "class_confirmed", hint: "Confirm your class calling" },
   },
   {
     id: "physician_past",
@@ -69,6 +103,10 @@ export const STORY_SCENES: StoryScene[] = [
       "I did not understand then what I was seeing. It was not knowledge. It was devotion wearing knowledge like a coat.",
     ],
     art: require("../../assets/story/physician_past.png"),
+    effect: "panSlow",
+    motes: true,
+    moteColor: "#FBE7B0",
+    unlock: { type: "beat", beat: "first_lesson", hint: "Complete your first University lesson" },
   },
   {
     id: "flashback_shards",
@@ -80,9 +118,54 @@ export const STORY_SCENES: StoryScene[] = [
       "The rest, I am learning to rebuild — one patient, one lesson, one day at a time.",
     ],
     art: require("../../assets/story/flashback_shards.png"),
+    effect: "heartbeat",
+    petals: true,
+    unlock: { type: "beat", beat: "seasoned_healer", hint: "Complete five Ward Shifts" },
   },
 ];
 
 export function getStoryScene(id: string | undefined): StoryScene | undefined {
   return STORY_SCENES.find((s) => s.id === id);
+}
+
+export function isSceneSeen(player: PlayerState | null | undefined, sceneId: string): boolean {
+  return !!player?.story_scenes_seen?.includes(sceneId);
+}
+
+/** Whether the scene's narrative beat has been reached for this player. */
+export function isSceneUnlocked(scene: StoryScene, player: PlayerState | null | undefined): boolean {
+  if (!player) return false;
+  const u = scene.unlock;
+  if (u.type === "chapter") return (player.chapter_progress ?? 1) >= u.chapter;
+  switch (u.beat) {
+    case "class_confirmed":
+      return !!player.class_tree_id && !!player.class_diagnostic_resonance;
+    case "first_lesson":
+      return (player.lessons_completed || []).length >= 1;
+    case "seasoned_healer":
+      return (player.runs_completed || 0) >= 5;
+  }
+}
+
+/**
+ * The chapter scene (if any) that should auto-play right now: its chapter
+ * milestone is reached and the player has never watched it. Chapter scenes
+ * auto-play in order, one per hub visit.
+ */
+export function nextAutoStoryScene(player: PlayerState | null | undefined): StoryScene | undefined {
+  if (!player) return undefined;
+  return STORY_SCENES.find(
+    (s) => s.unlock.type === "chapter" && isSceneUnlocked(s, player) && !isSceneSeen(player, s.id),
+  );
+}
+
+/**
+ * A newly unlocked side scene the player hasn't watched — surfaced as a
+ * gentle "new memory" prompt on the hub rather than auto-playing.
+ */
+export function nextUnseenSideScene(player: PlayerState | null | undefined): StoryScene | undefined {
+  if (!player) return undefined;
+  return STORY_SCENES.find(
+    (s) => s.unlock.type === "beat" && isSceneUnlocked(s, player) && !isSceneSeen(player, s.id),
+  );
 }

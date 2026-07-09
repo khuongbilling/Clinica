@@ -24,6 +24,7 @@ import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGat
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
+import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 function dailyRoundsUnlockedModes(player: any): string[] {
@@ -100,6 +101,24 @@ export default function RunHome() {
     }
   }, [loading, player, showIntro, isCompleted, startTutorial]);
 
+  // Manhwa story layer — chapter scenes auto-play once when their chapter
+  // milestone is reached. Deferred until the welcome intro and the System's
+  // hub introduction are done so forced overlays never stack, and guarded so
+  // at most one scene is pushed per hub mount (the "seen" flag written on
+  // exit prevents any replay).
+  const autoScenePushed = useRef(false);
+  useEffect(() => {
+    if (loading || !player || showIntro) return;
+    if (!isCompleted("systemHubIntro")) return;
+    if (autoScenePushed.current) return;
+    const scene = nextAutoStoryScene(player);
+    if (scene) {
+      autoScenePushed.current = true;
+      const t = setTimeout(() => router.push(`/story-scene?sceneId=${scene.id}` as any), 400);
+      return () => clearTimeout(t);
+    }
+  }, [loading, player, showIntro, isCompleted, router]);
+
   useEffect(() => {
     Animated.loop(Animated.sequence([
       Animated.timing(pulseAnim, { toValue: 0.25, duration: 850, useNativeDriver: false }),
@@ -151,6 +170,10 @@ export default function RunHome() {
   // begun (post-University), then shows a badge for pending check-in/claims.
   const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state;
   const roundsBadge = claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0);
+
+  // Manhwa story layer — a newly unlocked side scene surfaces as a one-time
+  // "new memory" prompt; it disappears once the scene is watched (or skipped).
+  const newMemory = nextUnseenSideScene(player);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -206,6 +229,24 @@ export default function RunHome() {
           >
             <Ionicons name="close" size={14} color={COLORS.onSurfaceTertiary} />
           </Pressable>
+        </Pressable>
+      )}
+
+      {/* ── NEW MEMORY PROMPT — a side story scene has unlocked ── */}
+      {newMemory && (
+        <Pressable
+          style={styles.memoryBanner}
+          onPress={() => router.push(`/story-scene?sceneId=${newMemory.id}` as any)}
+          testID="home-new-memory-banner"
+        >
+          <Ionicons name="sparkles" size={18} color="#E0B45C" />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Text style={styles.memoryBannerKicker}>NEW MEMORY REMEMBERED</Text>
+            <Text style={styles.memoryBannerTitle} numberOfLines={1}>
+              {newMemory.kicker} — {newMemory.title}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#E0B45C" />
         </Pressable>
       )}
 
@@ -508,6 +549,15 @@ const styles = StyleSheet.create({
   featBadgeTxt: { color: "#FFFFFF", fontSize: 9, fontWeight: "800" },
 
   /* World Event banner (Shift hub entry point) */
+  memoryBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2,
+    backgroundColor: "#1A140840", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#E0B45C55",
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  memoryBannerKicker: { color: "#E0B45C", fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  memoryBannerTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
   eventBanner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2,
