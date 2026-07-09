@@ -7,8 +7,10 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-n
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  STORY_SCENES, getStoryScene, isSceneSeen, isSceneUnlocked,
+  STORY_SCENES, getStoryScene, isSceneSeen, isSceneUnlocked, sceneAmbience,
 } from "@/src/game/storyScenes";
+import { pokeAmbience, startAmbience, stopAmbience } from "@/src/game/ambient";
+import { useSettings } from "@/src/game/settingsStore";
 import { usePlayer } from "@/src/game/store";
 import { MotionPanel } from "@/src/components/reminiscence/MotionPanel";
 import { LotusPetalOverlay } from "@/src/components/reminiscence/LotusPetalOverlay";
@@ -43,6 +45,7 @@ export default function StorySceneScreen() {
 function SceneViewer({ sceneId }: { sceneId: string }) {
   const router = useRouter();
   const { markStorySceneSeen } = usePlayer();
+  const { soundEnabled } = useSettings();
   const scene = getStoryScene(sceneId)!;
   const allLines = [
     ...scene.lines.map((t) => ({ t, keeper: false })),
@@ -58,6 +61,14 @@ function SceneViewer({ sceneId }: { sceneId: string }) {
   useEffect(() => {
     Animated.timing(veil, { toValue: 0, duration: 600, useNativeDriver: true }).start();
   }, [veil]);
+
+  // Gentle ambient loop matching the scene's mood while it is open —
+  // starts/stops with the live mute toggle and always stops on exit.
+  useEffect(() => {
+    if (soundEnabled) startAmbience(sceneAmbience(scene));
+    else stopAmbience();
+    return () => stopAmbience();
+  }, [soundEnabled, scene]);
 
   useEffect(() => {
     fade.setValue(0);
@@ -79,6 +90,9 @@ function SceneViewer({ sceneId }: { sceneId: string }) {
   }
 
   function advance() {
+    // Taps count as user gestures — wake a suspended AudioContext so the
+    // ambience can start even under strict browser autoplay policies.
+    pokeAmbience();
     if (!done) setShown((n) => n + 1);
     else leave();
   }

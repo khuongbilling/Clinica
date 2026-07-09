@@ -18,6 +18,7 @@
 //   one-time "new memory" prompt on the hub (never auto-play).
 
 import type { PlayerState } from "./types";
+import type { AmbienceMood } from "./ambient";
 import type { PanelEffect } from "@/src/components/reminiscence/MotionPanel";
 
 export type StorySceneUnlock =
@@ -41,8 +42,22 @@ export type StoryScene = {
   moteColor?: string;
   petals?: boolean;
   rain?: boolean;
+  /** Ambient sound mood while the scene is open (see ambient.ts). */
+  ambience?: AmbienceMood;
   unlock: StorySceneUnlock;
 };
+
+/**
+ * The ambience mood for a scene — its explicit `ambience`, or one derived
+ * from its visual FX (rain → rain patter, petals → warm chimes, otherwise
+ * the quiet ward hum) so new scenes get fitting sound for free.
+ */
+export function sceneAmbience(scene: StoryScene): AmbienceMood {
+  if (scene.ambience) return scene.ambience;
+  if (scene.rain) return "rain";
+  if (scene.petals) return "chimes";
+  return "ward";
+}
 
 export const STORY_SCENES: StoryScene[] = [
   {

@@ -25,6 +25,11 @@ export function setSoundEnabled(next: boolean) {
   soundEnabled = next;
 }
 
+/** Current sound mute state — shared with the ambient engine (ambient.ts). */
+export function isSoundEnabled(): boolean {
+  return soundEnabled;
+}
+
 /** Toggle the haptic channel (persisted via settingsStore). */
 export function setHapticsEnabled(next: boolean) {
   hapticsEnabled = next;
