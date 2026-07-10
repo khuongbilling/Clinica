@@ -447,20 +447,20 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   stabilizeIntro: [
     {
       id: "stabilize_open",
-      title: "Act in Order",
-      body: "The sequence of your actions changes what the patient survives. Choose carefully.",
+      title: "The System",
+      body: "Act in order. First, check how unstable the patient is.",
       placement: "center",
       requireAction: false,
       nextText: "UNDERSTOOD",
     },
     {
       id: "stabilize_first_action",
-      title: "First, Assess",
-      body: "First, check how unstable the patient is.",
+      title: "Tap it now.",
+      body: "Check her mental state. Find it in the action tiles.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "action_assess_mental_status",
-      nextText: "TAP ASSESS",
+      nextText: "TAP ASSESS MENTAL STATUS",
     },
   ],
 };
