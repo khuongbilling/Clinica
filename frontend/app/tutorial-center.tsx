@@ -17,7 +17,6 @@ const TUTORIAL_ORDER: TutorialId[] = [
   "firstSummon",
   "firstWardDefense",
   "firstHeroTeam",
-  "firstLesson",
   "firstLotusEntry",
 ];
 
@@ -31,7 +30,6 @@ const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
   firstSummon: "Recruitment Hall — calling new healers to your ward.",
   firstWardDefense: "Ward Defense basics — deploying units and Care Synthesis merges.",
   firstHeroTeam: "Hall of Heroes — setting your active team for clinical shifts.",
-  firstLesson: "Clinica University — opening your first Lotus Lesson.",
   firstLotusEntry: "Lotus Plate Journal — logging your first meal or check-in.",
 };
 

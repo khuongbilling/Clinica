@@ -41,7 +41,7 @@ export default function LotusLessonScreen() {
   const { onRequiredAction } = useTutorial();
 
   // The player has actually started a lesson once this screen loads with a
-  // valid node — this is the real core action the firstLesson tutorial gates on.
+  // valid node — advance to the lesson screen.
   const lessonStarted = !loading && !!player && !!node;
   useEffect(() => {
     if (lessonStarted) onRequiredAction("openLesson");

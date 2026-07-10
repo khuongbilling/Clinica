@@ -7,7 +7,6 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
-import { useTutorial } from "@/src/game/tutorialStore";
 import { ModeCard } from "@/src/components/ModeCard";
 import { BannerCard } from "@/src/components/ModeBanners";
 import { NarratorGuide } from "@/src/components/NarratorGuide";
@@ -93,16 +92,8 @@ export default function UniversityHubScreen() {
   const { player } = usePlayer();
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
-  const { isCompleted, startTutorial } = useTutorial();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
-
-  useEffect(() => {
-    if (!isCompleted("firstLesson")) {
-      const t = setTimeout(() => startTutorial("firstLesson"), 700);
-      return () => clearTimeout(t);
-    }
-  }, []);
 
   if (!player) {
     return (

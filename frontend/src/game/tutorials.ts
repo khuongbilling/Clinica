@@ -5,7 +5,6 @@ export type TutorialId =
   | "firstSummon"
   | "firstWardDefense"
   | "firstHeroTeam"
-  | "firstLesson"
   | "firstLotusEntry"
   | "systemHubIntro"
   | "systemWardHub"
@@ -38,7 +37,6 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   firstSummon: "Hero Summoning",
   firstWardDefense: "Ward Defense",
   firstHeroTeam: "Your Active Team",
-  firstLesson: "Lotus Lessons",
   firstLotusEntry: "Lotus Plate Journal",
   systemHubIntro: "The System Awakens",
   systemWardHub: "The Ward",
@@ -278,14 +276,6 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       nextText: "NEXT",
     },
     {
-      id: "heroes_roles",
-      title: "Team Roles",
-      body: "Balance your team across roles: a Scout to reveal clues, a Stabilizer to protect the patient, and a Striker to defeat the disease. A Coordinator is a bonus support pick.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
       id: "heroes_set",
       title: "Set Your Active Team",
       body: "Tap the + button on any owned hero card to add them to your active team. Tap again to remove. Changes save instantly — build your best lineup now.",
@@ -293,35 +283,6 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredActionType: "setTeam",
       nextText: "ADD A HERO TO TEAM",
-    },
-  ],
-
-  // ── University / Lotus Lessons first-entry tutorial ──
-  firstLesson: [
-    {
-      id: "lesson_intro",
-      title: "Clinica University",
-      body: "This is where clinical reasoning grows. Lotus Lessons are short, structured cases that teach real nursing concepts and reward your first heroes. Begin here before anything else.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
-      id: "lesson_mentor",
-      title: "Your Learning Path",
-      body: "I have arranged your learning path. Follow the recommended lesson order — each one builds on the last and unlocks new content as you progress. What you master here is recorded in the Codex for review.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
-      id: "lesson_open",
-      title: "Open Your First Lesson",
-      body: "Tap the LOTUS LESSONS banner, then open the first lesson on your recommended path. Lessons are free, no stamina cost — you can replay them anytime for review.",
-      placement: "bottom",
-      requireAction: true,
-      requiredActionType: "openLesson",
-      nextText: "OPEN YOUR FIRST LESSON",
     },
   ],
 
@@ -395,7 +356,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_ward_university",
       title: "Answer the Call to Learn",
-      body: "This banner leads to Clinica University. Your first lessons there teach the reasoning behind every treatment — and reward you with your first heroes. Learning is not optional here. It is power.",
+      body: "The University awaits. Your first lessons reward your first heroes — and sharpen the reasoning you will need for harder cases ahead.",
       placement: "center",
       requireAction: false,
       banner: true,

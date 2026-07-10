@@ -21,7 +21,7 @@ export default function LessonDetailScreen() {
   const [reward, setReward] = useState<string | null>(null);
   const { onRequiredAction } = useTutorial();
 
-  // Opening a real lesson screen is the core action the firstLesson tutorial gates on.
+  // Opening a real lesson screen.
   const lessonStarted = !!player && !!lesson;
   useEffect(() => {
     if (lessonStarted) onRequiredAction("openLesson");
