@@ -1,8 +1,9 @@
 /**
- * Apply It — placeholder screen reached from "Apply It" on the Cue Hunt lesson.
+ * Apply It — bridge screen between the Cue Hunt lesson and Rapid Triage.
  *
- * Step 6 will replace this with the full Rapid Triage challenge.
- * For now this is a minimal, safe landing page with a back path.
+ * Routes directly into /university/rapid-triage via a prominent CTA.
+ * The "Back to University" escape hatch is still present for players who
+ * don't want to continue immediately.
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -26,7 +27,7 @@ export default function ApplyItScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <LinearGradient
-        colors={["#162C24", "#0E2018", COLORS.surface]}
+        colors={["#1A1228", "#130E20", COLORS.surface]}
         style={StyleSheet.absoluteFillObject}
       />
 
@@ -50,23 +51,33 @@ export default function ApplyItScreen() {
       <View style={styles.content}>
         <View style={styles.card}>
           <LinearGradient
-            colors={["#1A3830", "#142C26"]}
+            colors={["#1E1630", "#160F22"]}
             style={StyleSheet.absoluteFillObject}
           />
           <View style={styles.iconWrap}>
-            <Ionicons name="timer-outline" size={36} color="#2DD4BF" />
+            <Ionicons name="timer-outline" size={36} color="#A78BFA" />
           </View>
-          <Text style={styles.cardTitle}>Coming Soon</Text>
+          <Text style={styles.cardTitle}>Ready?</Text>
           <Text style={styles.cardBody}>
-            In Rapid Triage, you'll apply what you learned to sort five patients by urgency.
+            Sort three patients by urgency — Emergency, Urgent, or Routine.
           </Text>
           <Text style={styles.cardBody}>
-            This challenge unlocks next.
+            Use what you just learned about dehydration.
           </Text>
         </View>
+
+        {/* Primary CTA */}
+        <Pressable
+          style={styles.startBtn}
+          onPress={() => router.push("/university/rapid-triage" as any)}
+          testID="apply-start-triage"
+        >
+          <Text style={styles.startBtnTxt}>Begin Rapid Triage</Text>
+          <Ionicons name="arrow-forward" size={14} color="#0B1A18" />
+        </Pressable>
       </View>
 
-      {/* Back CTA */}
+      {/* Escape hatch */}
       <Pressable
         style={styles.backCTA}
         onPress={() => goBack(router, "/university")}
@@ -95,7 +106,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   headerCenter: { flex: 1, gap: 1 },
-  kicker: { color: "#2DD4BF", fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  kicker: { color: "#A78BFA", fontSize: 9, fontWeight: "700", letterSpacing: 2 },
   title: { color: COLORS.onSurface, fontSize: 14, fontWeight: "300" },
 
   content: {
@@ -103,13 +114,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: SPACING.lg,
+    gap: SPACING.lg,
   },
   card: {
     width: "100%",
     maxWidth: 360,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: "#2DD4BF20",
+    borderColor: "#A78BFA28",
     padding: SPACING.xl,
     alignItems: "center",
     gap: SPACING.md,
@@ -117,19 +129,33 @@ const styles = StyleSheet.create({
   },
   iconWrap: {
     width: 68, height: 68, borderRadius: 34,
-    backgroundColor: "#2DD4BF12",
-    borderWidth: 1, borderColor: "#2DD4BF30",
+    backgroundColor: "#A78BFA10",
+    borderWidth: 1, borderColor: "#A78BFA30",
     alignItems: "center", justifyContent: "center",
     marginBottom: SPACING.sm,
   },
   cardTitle: {
-    color: "#2DD4BF",
+    color: "#A78BFA",
     fontSize: 18, fontWeight: "700", letterSpacing: 0.3,
   },
   cardBody: {
     color: COLORS.onSurfaceSecondary,
     fontSize: 14, lineHeight: 20,
     textAlign: "center",
+  },
+
+  startBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#A78BFA",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: 15,
+  },
+  startBtnTxt: {
+    color: "#0B1A18",
+    fontSize: 15, fontWeight: "800", letterSpacing: 0.4,
   },
 
   backCTA: {
