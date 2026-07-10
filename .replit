@@ -44,7 +44,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && REACT_NATIVE_PACKAGER_HOSTNAME=$(printenv REPLIT_DEV_DOMAIN) CI=1 npx expo start --port 5000"
+args = "cd frontend && CI=1 npx expo start --tunnel --clear --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -73,10 +73,6 @@ outputType = "console"
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
 
 [[ports]]
 localPort = 8000
