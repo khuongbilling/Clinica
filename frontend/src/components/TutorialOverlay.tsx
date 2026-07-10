@@ -150,16 +150,25 @@ export function TutorialOverlay() {
     const justify = placement === "bottom" ? "flex-end" : placement === "center" ? "center" : "flex-start";
     const accent = narrator.color;
     const isBattleTutorial = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
-    const showScrim = isBattleTutorial && currentStep.requireAction;
+    // Mini-game steps use requiredTargetId: after the box dismisses a blocking
+    // scrim stays active — only the highlighted element (zIndex 9500, styled by
+    // useHighlightTarget) can be tapped. Battle tutorials use visual-only scrims
+    // because battle.tsx guards block wrong presses in their own handlers.
+    const isMiniGameStep = !!currentStep.requiredTargetId;
+    const showScrim = (isBattleTutorial || isMiniGameStep) && currentStep.requireAction;
 
-    // After the player taps a second time on a requireAction step the
-    // narrative box disappears, leaving only a dim scrim + the highlighted
-    // button. The scrim is visual-only here so the correct button is tappable;
-    // handler-level guards in battle.tsx block all wrong presses.
+    // After the player taps a second time on a requireAction step the narrative
+    // box disappears, leaving only the scrim + the highlighted element.
+    //   • Battle tutorial  → scrim is visual-only (pointerEvents none); battle.tsx guards block wrong presses.
+    //   • Mini-game step   → scrim is ACTIVE (pointerEvents auto); only the element at zIndex 9500 is reachable.
     if (boxDismissed) {
-      return showScrim ? (
-        <View style={[styles.battleScrim, { zIndex: 9000 }]} pointerEvents="none" />
-      ) : null;
+      if (!showScrim) return null;
+      return (
+        <View
+          style={[styles.battleScrim, { zIndex: 9000 }]}
+          pointerEvents={isMiniGameStep ? "auto" : "none"}
+        />
+      );
     }
 
     const showChevron = currentStep.requireAction;

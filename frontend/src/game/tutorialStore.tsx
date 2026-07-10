@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { TutorialId, TutorialStep, TUTORIALS } from "./tutorials";
+import type { ViewStyle } from "react-native";
 
 const STORAGE_KEY = "clinica.tutorials.v1";
 
@@ -20,6 +21,15 @@ interface TutorialCtx {
   resetTutorials: () => Promise<void>;
   isCompleted: (id: TutorialId) => boolean;
   onRequiredAction: (actionType: string, skillId?: string) => void;
+  /**
+   * For University mini-game tutorials: call this with the tapped element's ID.
+   * Advances the tutorial only if currentStep.requiredTargetId matches.
+   * Mini-game screens should use useHighlightTarget(id) instead of calling
+   * this directly — it handles both the highlight style and the press binding.
+   */
+  onTargetTap: (targetId: string) => void;
+  /** The requiredTargetId of the current step, or null when not applicable. */
+  requiredTargetId: string | null;
   /** Vertical space (px) a bottom-placed guided box currently needs, measured
    *  live by TutorialOverlay so screens can reserve exactly enough room and
    *  never let the box cover the control it points to. 0 when not applicable. */
@@ -172,6 +182,15 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     doAdvance(activeTutorialId, stepIndex);
   }, [activeTutorialId, stepIndex, doAdvance]);
 
+  const onTargetTap = useCallback((targetId: string) => {
+    if (!activeTutorialId) return;
+    const steps = TUTORIALS[activeTutorialId];
+    const step = steps[stepIndex];
+    if (!step?.requireAction || !step.requiredTargetId) return;
+    if (step.requiredTargetId !== targetId) return;
+    doAdvance(activeTutorialId, stepIndex);
+  }, [activeTutorialId, stepIndex, doAdvance]);
+
   const currentStep = useMemo<TutorialStep | null>(() => {
     if (!activeTutorialId) return null;
     return TUTORIALS[activeTutorialId][stepIndex] ?? null;
@@ -181,6 +200,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (!activeTutorialId) return 0;
     return TUTORIALS[activeTutorialId].length;
   }, [activeTutorialId]);
+
+  const requiredTargetId = useMemo<string | null>(
+    () => currentStep?.requiredTargetId ?? null,
+    [currentStep],
+  );
 
   const value = useMemo<TutorialCtx>(() => ({
     completed,
@@ -196,10 +220,13 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     resetTutorials,
     isCompleted,
     onRequiredAction,
+    onTargetTap,
+    requiredTargetId,
     guidedReserve,
     setGuidedReserve,
   }), [completed, activeTutorialId, stepIndex, currentStep, totalSteps,
-    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials, isCompleted, onRequiredAction,
+    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials, isCompleted,
+    onRequiredAction, onTargetTap, requiredTargetId,
     guidedReserve]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -210,3 +237,47 @@ export function useTutorial() {
   if (!ctx) throw new Error("useTutorial must be used within TutorialProvider");
   return ctx;
 }
+
+/**
+ * Convenience hook for any tappable element in a University mini-game screen.
+ *
+ * Usage:
+ *   const { isHighlighted, onTargetPress } = useHighlightTarget("clue_dry_lips");
+ *   <Pressable onPress={onTargetPress} style={[styles.chip, isHighlighted && styles.chipHighlight]}>
+ *
+ * When `isHighlighted` is true the element is the current forced tutorial target:
+ *   - Apply zIndex: 9500 so it sits above the blocking scrim rendered by TutorialOverlay.
+ *   - Apply a teal/gold glow border so the player sees what to tap.
+ *   - Only `onTargetPress` advances the tutorial; all other taps on the element
+ *     still call the game's own handler (so counters update etc.).
+ * When `isHighlighted` is false the element behaves normally.
+ */
+export function useHighlightTarget(targetId: string): {
+  isHighlighted: boolean;
+  onTargetPress: () => void;
+  highlightStyle: ViewStyle;
+} {
+  const { requiredTargetId, onTargetTap, currentStep, activeTutorialId } = useTutorial();
+  const isHighlighted =
+    !!activeTutorialId &&
+    !!currentStep?.requireAction &&
+    !!currentStep?.requiredTargetId &&
+    requiredTargetId === targetId;
+  const onTargetPress = useCallback(() => {
+    if (isHighlighted) onTargetTap(targetId);
+  }, [isHighlighted, onTargetTap, targetId]);
+  const highlightStyle: ViewStyle = isHighlighted
+    ? {
+        zIndex: 9500,
+        borderWidth: 2,
+        borderColor: "#2DD4BF",
+        shadowColor: "#2DD4BF",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 12,
+        elevation: 20,
+      }
+    : {};
+  return { isHighlighted, onTargetPress, highlightStyle };
+}
+

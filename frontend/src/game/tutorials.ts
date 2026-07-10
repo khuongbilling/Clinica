@@ -8,7 +8,11 @@ export type TutorialId =
   | "firstLotusEntry"
   | "systemHubIntro"
   | "systemWardHub"
-  | "systemShops";
+  | "systemShops"
+  // ── University mini-game tutorials (System-narrated, forced, no skip/close) ──
+  | "cueHuntIntro"
+  | "rapidTriageIntro"
+  | "stabilizeIntro";
 
 export interface TutorialStep {
   id: string;
@@ -19,6 +23,15 @@ export interface TutorialStep {
   requiredActionType?: string;
   /** When set, the step is only satisfied by tapping this exact skill id. */
   requiredSkillId?: string;
+  /**
+   * When set on a requireAction step, the step is satisfied by calling
+   * onTargetTap(requiredTargetId) from the game screen. After the dialogue box
+   * is dismissed, TutorialOverlay renders a BLOCKING scrim that captures all
+   * taps; only the element rendered above zIndex 9500 (the highlighted target)
+   * is reachable. Use useHighlightTarget(id) in the game screen to get the
+   * correct style + press handler automatically.
+   */
+  requiredTargetId?: string;
   /**
    * Informational forced banner: renders as a positioned narrative box (like a
    * requireAction step) but advances via its own "Next" button rather than a
@@ -41,6 +54,9 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   systemHubIntro: "The System Awakens",
   systemWardHub: "The Ward",
   systemShops: "The Apothecary Market",
+  cueHuntIntro: "Cue Hunt",
+  rapidTriageIntro: "Rapid Triage",
+  stabilizeIntro: "Stabilize Stack",
 };
 
 // Narrator timeline: the System did not exist until the player was Recalled
@@ -52,10 +68,14 @@ export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
   return !!id && id !== "prologueBattle" && id !== "firstBattle";
 }
 
-// All tutorials are closeable via the ✕ button on the tutorial box.
-// During battle tutorials the rest of the screen is blocked so the ✕ on
-// the box is the only reliable way to exit — which is intentional.
-export const FORCED_TUTORIAL_IDS: TutorialId[] = [];
+// University mini-game tutorials are fully forced: no close, no skip, no X.
+// The tap-to-reveal → tap-to-dismiss → highlight-and-block flow is the only
+// path. Add any new mini-game tutorial ID here to opt it into that behavior.
+export const FORCED_TUTORIAL_IDS: TutorialId[] = [
+  "cueHuntIntro",
+  "rapidTriageIntro",
+  "stabilizeIntro",
+];
 
 export function isForcedTutorial(id: TutorialId | null | undefined): boolean {
   return !!id && FORCED_TUTORIAL_IDS.includes(id);
@@ -372,6 +392,75 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       placement: "center",
       requireAction: false,
       nextText: "SHOW ME",
+    },
+  ],
+
+  // ── University mini-game tutorials ──────────────────────────────────────
+  // All three follow the same forced flow:
+  //   1. Intro step (modal) — tap to reveal, tap again to advance.
+  //   2. Target step (positioned box, requireAction + requiredTargetId):
+  //      tap to reveal → tap again → box dismisses → blocking scrim appears →
+  //      only the highlighted target (zIndex 9500) is tappable → tap it to advance.
+  // Narrated by the System (isSystemTutorial returns true for all three).
+  // No close button, no skip button, no X — tap flow only.
+
+  cueHuntIntro: [
+    {
+      id: "cue_hunt_open",
+      title: "Learn to See",
+      body: "Before you treat, learn to see. A patient's story holds clues others miss. Tap each one you find.",
+      placement: "center",
+      requireAction: false,
+      nextText: "LOOK CLOSER",
+    },
+    {
+      id: "cue_hunt_first_tap",
+      title: "Find the First Clue",
+      body: "Tap the dry lips.",
+      placement: "top",
+      requireAction: true,
+      requiredTargetId: "clue_dry_lips",
+      nextText: "TAP THE DRY LIPS",
+    },
+  ],
+
+  rapidTriageIntro: [
+    {
+      id: "triage_open",
+      title: "Decide Fast",
+      body: "Now decide how quickly this patient needs help. Speed and accuracy both matter here.",
+      placement: "center",
+      requireAction: false,
+      nextText: "READY",
+    },
+    {
+      id: "triage_first_card",
+      title: "Sort the Patient",
+      body: "Tap the right category for this patient.",
+      placement: "top",
+      requireAction: true,
+      requiredTargetId: "triage_urgent",
+      nextText: "TAP URGENT",
+    },
+  ],
+
+  stabilizeIntro: [
+    {
+      id: "stabilize_open",
+      title: "Act in Order",
+      body: "The sequence of your actions changes what the patient survives. Choose carefully.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
+    },
+    {
+      id: "stabilize_first_action",
+      title: "First, Assess",
+      body: "First, check how unstable the patient is.",
+      placement: "top",
+      requireAction: true,
+      requiredTargetId: "action_assess_mental_status",
+      nextText: "TAP ASSESS",
     },
   ],
 };
