@@ -12,7 +12,9 @@ export type TutorialId =
   // ── University mini-game tutorials (System-narrated, forced, no skip/close) ──
   | "cueHuntIntro"
   | "rapidTriageIntro"
-  | "stabilizeIntro";
+  | "stabilizeIntro"
+  // ── Off-Shift mini-game tutorials ──
+  | "mealcraftIntro";
 
 export interface TutorialStep {
   id: string;
@@ -57,6 +59,7 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   cueHuntIntro: "Cue Hunt",
   rapidTriageIntro: "Rapid Triage",
   stabilizeIntro: "Stabilize Stack",
+  mealcraftIntro: "Mealcraft: Lotus Plate",
 };
 
 // Narrator timeline: the System did not exist until the player was Recalled
@@ -75,6 +78,7 @@ export const FORCED_TUTORIAL_IDS: TutorialId[] = [
   "cueHuntIntro",
   "rapidTriageIntro",
   "stabilizeIntro",
+  "mealcraftIntro",
 ];
 
 export function isForcedTutorial(id: TutorialId | null | undefined): boolean {
@@ -461,6 +465,26 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredTargetId: "action_assess_mental_status",
       nextText: "TAP ASSESS MENTAL STATUS",
+    },
+  ],
+
+  mealcraftIntro: [
+    {
+      id: "mealcraft_open",
+      title: "The System",
+      body: "Build a plate that keeps blood sugar steady. Start with a protein.",
+      placement: "center",
+      requireAction: false,
+      nextText: "GOT IT",
+    },
+    {
+      id: "mealcraft_first_tap",
+      title: "Add protein first.",
+      body: "Tap the grilled chicken to anchor the plate.",
+      placement: "top",
+      requireAction: true,
+      requiredTargetId: "food_grilled_chicken",
+      nextText: "TAP GRILLED CHICKEN",
     },
   ],
 };

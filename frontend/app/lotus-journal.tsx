@@ -103,6 +103,17 @@ export default function LotusJournalPage() {
         <RewardPreview mode="Lotus Plate Journal" />
 
         {/* Main actions */}
+        <Pressable style={styles.actionCard} onPress={() => router.push("/mealcraft" as any)}>
+          <View style={[styles.actionIcon, { backgroundColor: "#F59E0B20" }]}>
+            <Ionicons name="fast-food" size={22} color="#F59E0B" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.actionTitle}>Mealcraft: Lotus Plate</Text>
+            <Text style={styles.actionSub}>Build a patient meal tray and learn nutrition balance</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
+
         <Pressable style={styles.actionCard} onPress={() => router.push("/lotus-journal-log")}>
           <View style={[styles.actionIcon, { backgroundColor: COLORS.growth + "20" }]}>
             <Ionicons name="restaurant" size={22} color={COLORS.growth} />
