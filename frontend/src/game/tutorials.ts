@@ -46,12 +46,12 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
 };
 
 // Narrator timeline: the System did not exist until the player was Recalled
-// (went back in time at the end of the prologue). The guided prologue battle
-// therefore speaks with Master Bai's voice; every tutorial after the prologue
-// is narrated by the System (a dark silhouette until Player Level 10, then
-// colored by aptitude).
+// (end of the prologue). Both the prologue battle AND the second battle
+// (firstBattle) are narrated by Master Bai — the Recall hasn't happened yet.
+// Everything after those two is narrated by the System (dark silhouette until
+// Player Level 10, then coloured by aptitude).
 export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
-  return !!id && id !== "prologueBattle";
+  return !!id && id !== "prologueBattle" && id !== "firstBattle";
 }
 
 // All tutorials are closeable via the ✕ button on the tutorial box.
@@ -147,63 +147,13 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
 
   firstBattle: [
     {
-      id: "battle_goal",
-      title: "Battle Goal",
-      body: "Patient Stability shows how safe the patient is. Disease Corruption shows how much the illness has taken hold. Keep Stability above 0 and reduce Corruption to win.",
+      id: "first_battle_brief",
+      title: "Remember the Chain",
+      body: "Scout first — reveal what the patient truly needs. Then Stabilize to buy time. Then Strike to drive back the illness. That sequence is your clinical chain. This patient is in a bad way. Do what you can. I won't guide your hand from here.",
       placement: "center",
       requireAction: false,
-      nextText: "GOT IT",
-    },
-    {
-      id: "action_points",
-      title: "Clinical Time",
-      body: "Action Points (AP) are your team's time this turn. Skills cost AP. Press END TURN when you're done. If Stability drops too low, your team gets fewer AP.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
-      id: "hero_select",
-      title: "Choose a Hero",
-      body: "Each hero acts once per turn. Tap a hero name above to select them, then choose their action in the panel below. Heroes have different skills and system affinities.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
-      id: "use_scout",
-      title: "Scout First",
-      body: "Select a hero and use a Scout skill in the ACTIONS tab. Scouts reveal hidden clues — clues show you what the patient really needs. Look for skills labeled SCOUT.",
-      placement: "center",
-      requireAction: true,
-      requiredActionType: "scout",
-      nextText: "USE A SCOUT SKILL",
-    },
-    {
-      id: "use_stabilize",
-      title: "Stabilize the Patient",
-      body: "Now use a Stabilize skill. Stabilizing improves patient safety and can restore AP on future turns. Look for skills labeled STABILIZE.",
-      placement: "center",
-      requireAction: true,
-      requiredActionType: "stabilize",
-      nextText: "USE A STABILIZE SKILL",
-    },
-    {
-      id: "use_counter",
-      title: "Counter the Disease",
-      body: "Use a Strike skill to directly reduce Disease Corruption. Matching the enemy's system type deals extra damage. Look for skills labeled STRIKE.",
-      placement: "center",
-      requireAction: true,
-      requiredActionType: "strike",
-      nextText: "USE A STRIKE SKILL",
-    },
-    {
-      id: "care_chain_done",
-      title: "Care Chain Complete",
-      body: "Scout → Stabilize → Counter. This is the care chain. Following it earns better rewards and wins battles faster. End your turn and keep fighting!",
-      placement: "center",
-      requireAction: false,
-      nextText: "FINISH TUTORIAL",
+      banner: true,
+      nextText: "BEGIN",
     },
   ],
 
