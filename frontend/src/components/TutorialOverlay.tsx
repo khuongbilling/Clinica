@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { usePlayer } from "@/src/game/store";
 import { getSystemIdentity, MASTER_BAI, type SystemIdentity } from "@/src/game/systemNarrator";
-import { isForcedTutorial, isSystemTutorial } from "@/src/game/tutorials";
+import { isSystemTutorial } from "@/src/game/tutorials";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -83,19 +83,32 @@ function NarratorFigure({ art, color, width, height }: { art: any; color: string
 }
 
 export function TutorialOverlay() {
-  const { currentStep, stepIndex, totalSteps, advanceStep, skipTutorial, activeTutorialId, setGuidedReserve } = useTutorial();
+  const { currentStep, stepIndex, totalSteps, advanceStep, activeTutorialId, setGuidedReserve } = useTutorial();
   const insets = useSafeAreaInsets();
   const { player } = usePlayer();
   const [instant, setInstant] = useState(false);
+  // When true the narrative box is hidden; only the dim scrim + highlighted
+  // button remain visible (requireAction steps only).
+  const [boxDismissed, setBoxDismissed] = useState(false);
 
   const stepId = currentStep?.id;
   useEffect(() => {
     setInstant(false);
+    setBoxDismissed(false);
   }, [stepId]);
 
-  // Called by TypewriterText when all characters are visible. Switches instant
-  // to true so the box becomes passthrough and the highlighted button is tappable.
+  // Animation complete: text is fully visible, hint changes to "tap to continue".
   const handleTypewriterComplete = useCallback(() => setInstant(true), []);
+
+  // Tap handler for the narrative box:
+  //   1st tap → instantly reveal all remaining text
+  //   2nd tap on requireAction step → dismiss box, expose highlighted button
+  //   2nd tap on banner/non-action step → advance to next step
+  const handleBoxTap = useCallback(() => {
+    if (!instant) { setInstant(true); return; }
+    if (currentStep?.requireAction) { setBoxDismissed(true); }
+    else { advanceStep(); }
+  }, [instant, currentStep, advanceStep]);
 
   // Reserve is only meaningful while a bottom-placed guided box is showing.
   // Clear it whenever we're not (top/center box, banner, or overlay hidden) so
@@ -110,9 +123,6 @@ export function TutorialOverlay() {
 
   const progress = totalSteps > 1 ? `${stepIndex + 1} / ${totalSteps}` : "";
   const isSystem = isSystemTutorial(activeTutorialId);
-  // Forced tutorials can't be skipped: the prologue battle and the System's
-  // one-time hub-onboarding beats.
-  const allowSkip = !isForcedTutorial(activeTutorialId);
 
   // Resolve the System narrator's identity (dark silhouette until Player L10,
   // then colored by aptitude). Level is derived from xp, matching the rest of
@@ -138,94 +148,81 @@ export function TutorialOverlay() {
   if (usesBox) {
     const placement = currentStep.placement;
     const justify = placement === "bottom" ? "flex-end" : placement === "center" ? "center" : "flex-start";
+    const accent = narrator.color;
+    const isBattleTutorial = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
+    const showScrim = isBattleTutorial && currentStep.requireAction;
+
+    // After the player taps a second time on a requireAction step the
+    // narrative box disappears, leaving only a dim scrim + the highlighted
+    // button. The scrim is visual-only here so the correct button is tappable;
+    // handler-level guards in battle.tsx block all wrong presses.
+    if (boxDismissed) {
+      return showScrim ? (
+        <View style={[styles.battleScrim, { zIndex: 9000 }]} pointerEvents="none" />
+      ) : null;
+    }
+
     const showChevron = currentStep.requireAction;
     const arrowUp = placement === "bottom";
-    const accent = narrator.color;
-
-    // Once all text is visible (instant=true) on a requireAction step, the box
-    // becomes passthrough so the player can tap the highlighted button directly.
-    // Banner steps keep pointerEvents:auto because they need the NEXT button.
-    const boxPassthrough = !!(currentStep.requireAction && !currentStep.banner && instant);
-
-    // During battle tutorials block every other tap on the battle screen.
-    // A full-screen scrim sits below the tutorial box (z 8999 vs box z 9000)
-    // and catches all touches. Handler-level guards in battle.tsx already
-    // return early for wrong skills, but the scrim prevents taps on areas
-    // with no handler (enemy panel, header area, etc.) from registering at all.
-    const isBattleTutorial = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
 
     return (
       <>
-        {isBattleTutorial && currentStep.requireAction && (
-          <View style={styles.battleScrim} pointerEvents="auto" />
-        )}
-      <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
-        <Pressable
-          // While text is animating, tap the box to reveal all text instantly.
-          // Once passthrough, onPress is removed so touches fall through to the
-          // highlighted button; pointerEvents:box-none keeps Skip tappable.
-          onPress={boxPassthrough ? undefined : () => setInstant(true)}
-          onLayout={placement === "bottom" && currentStep.requireAction
-            ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.xxl)
-            : undefined}
-          style={[
-            styles.narrativeBox,
-            { borderColor: accent, shadowColor: accent },
-            placement === "top" && { marginTop: insets.top + SPACING.xs },
-            placement === "bottom" && { marginBottom: insets.bottom + SPACING.md },
-            boxPassthrough
-              ? { pointerEvents: "box-none", opacity: 0.88 }
-              : { pointerEvents: "auto" },
-          ]}
-        >
-          {showChevron && arrowUp && <PointerChevron dir="up" />}
-          {/* ✕ close button — top-right corner; shown whenever the tutorial
-              can be skipped (all tutorials except the guided prologue battle) */}
-          {allowSkip && (
-            <Pressable onPress={skipTutorial} hitSlop={10} style={styles.boxClose}>
-              <Ionicons name="close" size={15} color={COLORS.onSurfaceTertiary} />
-            </Pressable>
-          )}
-          <View style={styles.narrativeRow}>
-            <NarratorFigure art={narrator.art} color={accent} width={64} height={92} />
-            <View style={styles.narrativeContent}>
-              <View style={styles.narrativeHead}>
-                <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{narrator.name}</Text>
-                {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
+        {/* Blocking scrim while the narration box is visible during a battle
+            tutorial. Sits below the box (z 8999 vs box z 9000) so the box
+            stays interactive, but blocks taps on all battle-UI behind it. */}
+        {showScrim && <View style={styles.battleScrim} pointerEvents="auto" />}
+        <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
+          <Pressable
+            onPress={handleBoxTap}
+            onLayout={placement === "bottom" && currentStep.requireAction
+              ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.xxl)
+              : undefined}
+            style={[
+              styles.narrativeBox,
+              { borderColor: accent, shadowColor: accent },
+              placement === "top" && { marginTop: insets.top + SPACING.xs },
+              placement === "bottom" && { marginBottom: insets.bottom + SPACING.md },
+              { pointerEvents: "auto" },
+            ]}
+          >
+            {showChevron && arrowUp && <PointerChevron dir="up" />}
+            <View style={styles.narrativeRow}>
+              <NarratorFigure art={narrator.art} color={accent} width={64} height={92} />
+              <View style={styles.narrativeContent}>
+                <View style={styles.narrativeHead}>
+                  <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{narrator.name}</Text>
+                  {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
+                </View>
+                <Text style={styles.systemStepTitle}>{currentStep.title}</Text>
+                <TypewriterText
+                  text={currentStep.body}
+                  style={styles.narrativeBody}
+                  instant={instant}
+                  onComplete={handleTypewriterComplete}
+                />
               </View>
-              <Text style={styles.systemStepTitle}>{currentStep.title}</Text>
-              <TypewriterText
-                text={currentStep.body}
-                style={styles.narrativeBody}
-                instant={instant}
-                onComplete={handleTypewriterComplete}
-              />
             </View>
-          </View>
-          <View style={styles.narrativeFoot}>
-            {currentStep.banner ? (
-              <>
-                <View style={{ flex: 1 }} />
-                <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
-                  <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
-                </Pressable>
-              </>
-            ) : (
-              <>
-                {currentStep.nextText ? (
-                  <Text style={[styles.tapPrompt, { color: accent }]} numberOfLines={1}>▸ {currentStep.nextText}</Text>
-                ) : <View style={{ flex: 1 }} />}
-                {allowSkip && (
-                  <Pressable onPress={skipTutorial} hitSlop={8} style={{ pointerEvents: "auto" }}>
-                    <Text style={styles.skipTxt}>Skip</Text>
+            <View style={styles.narrativeFoot}>
+              {currentStep.banner ? (
+                <>
+                  <View style={{ flex: 1 }} />
+                  <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
+                    <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
                   </Pressable>
-                )}
-              </>
-            )}
-          </View>
-          {showChevron && !arrowUp && <PointerChevron dir="down" />}
-        </Pressable>
-      </View>
+                </>
+              ) : (
+                <Text style={[styles.tapPrompt, { color: instant ? accent : COLORS.onSurfaceTertiary }]} numberOfLines={1}>
+                  {instant
+                    ? "▸ tap to continue"
+                    : currentStep.nextText
+                      ? `▸ ${currentStep.nextText}`
+                      : "▸ tap to reveal"}
+                </Text>
+              )}
+            </View>
+            {showChevron && !arrowUp && <PointerChevron dir="down" />}
+          </Pressable>
+        </View>
       </>
     );
   }
@@ -243,22 +240,20 @@ export function TutorialOverlay() {
             {progress ? <Text style={styles.progressTxtDark}>{progress}</Text> : null}
           </View>
         </View>
-        <Pressable style={[styles.popover, { borderColor: accent + "80" }]} onPress={() => setInstant(true)}>
-          {/* ✕ close button — top-right of the popover card */}
-          {allowSkip && (
-            <Pressable onPress={skipTutorial} hitSlop={10} style={styles.popoverClose}>
-              <Ionicons name="close" size={16} color={COLORS.onSurfaceTertiary} />
-            </Pressable>
-          )}
+        {/* Tap anywhere on the popover to reveal text (1st tap) or advance
+            (2nd tap). The NEXT button always advances immediately. */}
+        <Pressable
+          style={[styles.popover, { borderColor: accent + "80" }]}
+          onPress={handleBoxTap}
+        >
           <Text style={styles.popoverTitle}>{currentStep.title}</Text>
-          <TypewriterText text={currentStep.body} style={styles.popoverBody} instant={instant} />
-
+          <TypewriterText
+            text={currentStep.body}
+            style={styles.popoverBody}
+            instant={instant}
+            onComplete={handleTypewriterComplete}
+          />
           <View style={styles.popoverActions}>
-            {allowSkip && (
-              <Pressable onPress={skipTutorial} style={styles.skipBtn} hitSlop={8}>
-                <Text style={styles.skipBtnTxt}>SKIP</Text>
-              </Pressable>
-            )}
             <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
               <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
             </Pressable>
@@ -330,16 +325,6 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginTop: SPACING.xs,
   },
-  skipBtn: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-  },
-  skipBtnTxt: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
   nextBtn: {
     backgroundColor: COLORS.brand,
     paddingHorizontal: SPACING.lg,
@@ -360,22 +345,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 8999,
     backgroundColor: "rgba(0,0,0,0.45)",
-  },
-
-  // ── Close (✕) buttons — absolute top-right of each box variant ──
-  boxClose: {
-    position: "absolute",
-    top: SPACING.sm,
-    right: SPACING.sm,
-    zIndex: 10,
-    padding: 4,
-  },
-  popoverClose: {
-    position: "absolute",
-    top: SPACING.sm,
-    right: SPACING.sm,
-    zIndex: 10,
-    padding: 4,
   },
 
   // ── Guided action narrative box (positioned near the highlighted control) ──
@@ -462,13 +431,6 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     fontSize: 10,
     fontWeight: "600",
-  },
-  skipTxt: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    textDecorationLine: "underline",
   },
   chevron: {
     alignSelf: "center",
