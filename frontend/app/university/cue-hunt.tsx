@@ -307,298 +307,1032 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
   return (
     <View style={{ width: U, height: U * SCENE_RATIO, overflow: "hidden" }}>
-      {/* ── ROOM BACKGROUND ────────────────────────────────────────────── */}
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 1 · DEEP ROOM BACKGROUND
+          A richer two-tone gradient: deep forest green ceiling to near-black
+          floor, evoking a lantern-lit stone infirmary at night.
+      ══════════════════════════════════════════════════════════════ */}
       <LinearGradient
-        colors={["#1C3C30", "#153028", "#0E2018"]}
-        locations={[0, 0.5, 1]}
+        colors={["#0D1F16", "#142818", "#0A1510", "#080E09"]}
+        locations={[0, 0.38, 0.72, 1]}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Floor area — slightly darker, separated by a faint line */}
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 2 · WALL STONE TEXTURE
+          Horizontal mortar courses and faint vertical pillar marks give
+          the back wall the feel of dressed stone or plastered brick.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Stone course (mortar) lines */}
+      {[0.18, 0.36, 0.54, 0.70, 0.86].map((y, i) => (
+        <View key={`sc${i}`} style={{
+          position: "absolute",
+          left: 0, top: U * y, right: 0, height: 1,
+          backgroundColor: "#2DD4BF07",
+        }} />
+      ))}
+      {/* Vertical pillar grooves */}
+      {[0.25, 0.50, 0.75].map((x, i) => (
+        <View key={`vp${i}`} style={{
+          position: "absolute",
+          left: U * x, top: 0, width: 1,
+          height: U * 0.92,
+          backgroundColor: "#FFFFFF04",
+        }} />
+      ))}
+      {/* Wainscoting: lower wall panel, subtly darker */}
       <View style={{
         position: "absolute",
-        top: U * 0.95, left: 0, right: 0,
-        height: U * (SCENE_RATIO - 0.95),
-        backgroundColor: "#0C1A10",
+        left: 0, top: U * 0.820, right: 0,
+        height: U * (SCENE_RATIO - 0.820),
+        backgroundColor: "#070D08",
       }} />
       <View style={{
         position: "absolute",
-        top: U * 0.95, left: 0, right: 0, height: 1,
-        backgroundColor: "#2DD4BF18",
+        left: 0, top: U * 0.820, right: 0, height: 2,
+        backgroundColor: "#D4AF3722",
       }} />
 
-      {/* ── WINDOW ARCH (back wall, top center) ────────────────────────── */}
-      {/* Outer warm ambient glow */}
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 3 · CEILING ZONE + BEAM
+          The ceiling is pitched dark with two carved beams from which
+          the hanging lanterns are suspended.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Dark ceiling gradient */}
+      <LinearGradient
+        colors={["#030806", "#0D1F16"]}
+        style={{
+          position: "absolute", top: 0, left: 0, right: 0,
+          height: U * 0.115,
+        }}
+      />
+      {/* Main ceiling beam (horizontal dark band) */}
       <View style={{
         position: "absolute",
-        left: U * 0.30, top: -U * 0.04,
-        width: U * 0.40, height: U * 0.30,
-        borderTopLeftRadius: U * 0.20,
-        borderTopRightRadius: U * 0.20,
-        backgroundColor: "#F5C840",
-        opacity: 0.09,
+        left: 0, top: U * 0.095, right: 0, height: U * 0.032,
+        backgroundColor: "#182818",
+        borderBottomWidth: 1.5, borderBottomColor: "#2DD4BF10",
       }} />
-      {/* Arch frame */}
+      {/* Beam wood-grain marks */}
+      {[0.18, 0.38, 0.60, 0.80].map((x, i) => (
+        <View key={`bm${i}`} style={{
+          position: "absolute",
+          left: U * x, top: U * 0.095,
+          width: 1, height: U * 0.032,
+          backgroundColor: "#000000",
+          opacity: 0.18,
+        }} />
+      ))}
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 4 · WINDOW ARCH — moonlit, with cross-bars + light rays
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Outer moonlight ambient glow (broad, soft) */}
+      <LinearGradient
+        colors={["#D8C07840", "#D4AF3718", "transparent"]}
+        style={{
+          position: "absolute", top: -U * 0.02,
+          left: U * 0.240, width: U * 0.520,
+          height: U * 0.420,
+        }}
+      />
+      {/* Outer arch molding — wider ornate frame */}
       <View style={{
         position: "absolute",
-        left: U * 0.335, top: 0,
-        width: U * 0.33, height: U * 0.26,
-        borderTopLeftRadius: U * 0.165,
-        borderTopRightRadius: U * 0.165,
-        borderWidth: 1.5, borderBottomWidth: 0,
-        borderColor: "#F5C84055",
+        left: U * 0.328, top: 0,
+        width: U * 0.344, height: U * 0.272,
+        borderTopLeftRadius: U * 0.172,
+        borderTopRightRadius: U * 0.172,
+        borderWidth: 2.5, borderBottomWidth: 0,
+        borderColor: "#D4AF3740",
+      }} />
+      {/* Inner arch glass area */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.346, top: 0,
+        width: U * 0.308, height: U * 0.250,
+        borderTopLeftRadius: U * 0.154,
+        borderTopRightRadius: U * 0.154,
         overflow: "hidden",
       }}>
         <LinearGradient
-          colors={["#F5C84028", "#F5C84005"]}
+          colors={["#C8B06035", "#D4AF3720", "#C8B06010"]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* Dividing bar in arch */}
+        {/* Vertical center bar */}
         <View style={{
           position: "absolute", bottom: 0,
-          left: "50%", width: 1.5, height: "52%",
-          backgroundColor: "#F5C84030",
+          left: "50%", width: 1.5, height: "62%",
+          backgroundColor: "#D4AF3732",
           transform: [{ translateX: -0.75 }],
         }} />
+        {/* Horizontal cross bar */}
+        <View style={{
+          position: "absolute", top: "40%",
+          left: 0, right: 0, height: 1.5,
+          backgroundColor: "#D4AF3725",
+        }} />
+        {/* Subtle light rays spilling from arch */}
+        <View style={{
+          position: "absolute", top: "8%", left: "55%",
+          width: U * 0.042, height: U * 0.240,
+          backgroundColor: "#D8C07808",
+          transform: [{ rotate: "14deg" }, { translateX: -U * 0.021 }],
+        }} />
+        <View style={{
+          position: "absolute", top: "8%", left: "28%",
+          width: U * 0.032, height: U * 0.240,
+          backgroundColor: "#D8C07806",
+          transform: [{ rotate: "-12deg" }, { translateX: -U * 0.016 }],
+        }} />
       </View>
-
-      {/* Thin pillar lines flanking the window */}
+      {/* Flanking pillar lines */}
       <View style={{
         position: "absolute", top: 0,
-        left: U * 0.275, width: 1.5, height: U * 0.28,
-        backgroundColor: "#2DD4BF18",
+        left: U * 0.272, width: 2, height: U * 0.295,
+        backgroundColor: "#D4AF3718",
       }} />
       <View style={{
         position: "absolute", top: 0,
-        right: U * 0.275, width: 1.5, height: U * 0.28,
-        backgroundColor: "#2DD4BF18",
+        left: U * (1 - 0.272) - 2, width: 2, height: U * 0.295,
+        backgroundColor: "#D4AF3718",
       }} />
-
-      {/* Wall ambient gradient near window (lotus glow) */}
+      {/* Window light wash on wall below arch */}
       <LinearGradient
-        colors={["#F5C84012", "transparent"]}
+        colors={["#D4AF3410", "transparent"]}
         style={{
           position: "absolute", top: 0, left: 0, right: 0,
-          height: U * 0.35,
+          height: U * 0.380,
         }}
       />
 
-      {/* ── BOOK STACK (left wall) ─────────────────────────────────────── */}
-      {([
-        { dy: 0.00, w: 0.130, c: "#2D4428" },
-        { dy: 0.055, w: 0.110, c: "#1E3518" },
-        { dy: 0.110, w: 0.145, c: "#3A5230" },
-      ] as const).map((b, i) => (
-        <View key={i} style={{
-          position: "absolute",
-          left: U * 0.040, top: U * 0.690 + U * b.dy,
-          width: U * b.w, height: U * 0.048,
-          backgroundColor: b.c, borderRadius: 2,
-          borderRightWidth: 1, borderRightColor: "#FFFFFF10",
-        }} />
-      ))}
-      {/* Gold accent spine line on books */}
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 5 · LOTUS SYMBOL carved on back wall (below window)
+          A subtle disc with six petals — Clinica's medical-magical sigil.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Disc backing */}
       <View style={{
         position: "absolute",
-        left: U * 0.040, top: U * 0.690,
-        width: 2, height: U * 0.158,
-        backgroundColor: "#D4AF3725",
+        left: U * 0.437, top: U * 0.298,
+        width: U * 0.126, height: U * 0.126,
+        borderRadius: U * 0.063,
+        borderWidth: 1, borderColor: "#2DD4BF14",
+        backgroundColor: "#2DD4BF08",
       }} />
-
-      {/* ── SCROLL (floor left) ────────────────────────────────────────── */}
+      {/* Inner ring */}
       <View style={{
         position: "absolute",
-        left: U * 0.148, top: U * 0.968,
-        width: U * 0.082, height: U * 0.140,
-        borderRadius: U * 0.041,
-        backgroundColor: "#8B6E3A",
-        borderWidth: 1, borderColor: "#A0804A40",
+        left: U * 0.462, top: U * 0.323,
+        width: U * 0.076, height: U * 0.076,
+        borderRadius: U * 0.038,
+        borderWidth: 1, borderColor: "#2DD4BF18",
+      }} />
+      {/* Six lotus petals (rotated ellipses) */}
+      {[0, 60, 120, 180, 240, 300].map((deg, i) => {
+        const rad = (deg * Math.PI) / 180;
+        return (
+          <View key={`lp${i}`} pointerEvents="none" style={{
+            position: "absolute",
+            left: U * 0.490 + Math.cos(rad) * U * 0.040 - U * 0.010,
+            top: U * 0.361 + Math.sin(rad) * U * 0.040 - U * 0.018,
+            width: U * 0.020, height: U * 0.036,
+            borderRadius: U * 0.010,
+            borderWidth: 1, borderColor: "#2DD4BF16",
+            backgroundColor: "#2DD4BF07",
+            transform: [{ rotate: `${deg}deg` }],
+          }} />
+        );
+      })}
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 6 · LEFT HANGING LANTERN
+          Iron wall-bracket → chain → lantern body with amber glow.
+          Light from this lantern pools on the left floor area.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Warm glow halo behind lantern */}
+      <View style={{
+        position: "absolute",
+        left: -U * 0.020, top: U * 0.078,
+        width: U * 0.220, height: U * 0.360,
+        borderRadius: U * 0.110,
+        backgroundColor: "#E8A42008",
+      }} />
+      {/* Bracket arm (horizontal, from wall) */}
+      <View style={{
+        position: "absolute",
+        left: 0, top: U * 0.108,
+        width: U * 0.075, height: U * 0.015,
+        backgroundColor: "#283C2A", borderRadius: 3,
+      }} />
+      {/* Chain (vertical) */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.066, top: U * 0.122,
+        width: 2, height: U * 0.062,
+        backgroundColor: "#3A4E3C",
+      }} />
+      {/* Lantern top cap */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.042, top: U * 0.183,
+        width: U * 0.050, height: U * 0.014,
+        backgroundColor: "#283C2A", borderRadius: 3,
+      }} />
+      {/* Lantern body */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.040, top: U * 0.196,
+        width: U * 0.054, height: U * 0.074,
+        borderRadius: 5,
+        backgroundColor: "#1C2C1E",
+        borderWidth: 1.5, borderColor: "#E8A42048",
         overflow: "hidden",
       }}>
-        {/* Scroll end caps */}
+        <LinearGradient
+          colors={["#E8A42028", "#E8A42014"]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {[0.28, 0.56, 0.82].map((y, i) => (
+          <View key={i} style={{
+            position: "absolute",
+            left: 0, top: `${y * 100}%`, right: 0, height: 1,
+            backgroundColor: "#E8A42025",
+          }} />
+        ))}
+      </View>
+      {/* Lantern bottom cap */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.042, top: U * 0.268,
+        width: U * 0.050, height: U * 0.014,
+        backgroundColor: "#283C2A", borderRadius: 3,
+      }} />
+      {/* Flame glow dot */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.060, top: U * 0.226,
+        width: 7, height: 7, borderRadius: 3.5,
+        backgroundColor: "#FFD06048",
+      }} />
+      {/* Floor light pool (left) */}
+      <LinearGradient
+        colors={["#E8A42010", "transparent"]}
+        style={{
+          position: "absolute",
+          left: 0, top: U * 0.720,
+          width: U * 0.280, height: U * 0.320,
+          borderRadius: U * 0.140,
+        }}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 7 · RIGHT HANGING LANTERN (mirror of left)
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Warm glow halo */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.800, top: U * 0.078,
+        width: U * 0.220, height: U * 0.360,
+        borderRadius: U * 0.110,
+        backgroundColor: "#E8A42008",
+      }} />
+      {/* Bracket arm */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.925, top: U * 0.108,
+        width: U * 0.075, height: U * 0.015,
+        backgroundColor: "#283C2A", borderRadius: 3,
+      }} />
+      {/* Chain */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.932, top: U * 0.122,
+        width: 2, height: U * 0.062,
+        backgroundColor: "#3A4E3C",
+      }} />
+      {/* Lantern top cap */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.908, top: U * 0.183,
+        width: U * 0.050, height: U * 0.014,
+        backgroundColor: "#283C2A", borderRadius: 3,
+      }} />
+      {/* Lantern body */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.906, top: U * 0.196,
+        width: U * 0.054, height: U * 0.074,
+        borderRadius: 5,
+        backgroundColor: "#1C2C1E",
+        borderWidth: 1.5, borderColor: "#E8A42048",
+        overflow: "hidden",
+      }}>
+        <LinearGradient
+          colors={["#E8A42028", "#E8A42014"]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {[0.28, 0.56, 0.82].map((y, i) => (
+          <View key={i} style={{
+            position: "absolute",
+            left: 0, top: `${y * 100}%`, right: 0, height: 1,
+            backgroundColor: "#E8A42025",
+          }} />
+        ))}
+      </View>
+      {/* Lantern bottom cap */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.908, top: U * 0.268,
+        width: U * 0.050, height: U * 0.014,
+        backgroundColor: "#283C2A", borderRadius: 3,
+      }} />
+      {/* Flame glow dot */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.926, top: U * 0.226,
+        width: 7, height: 7, borderRadius: 3.5,
+        backgroundColor: "#FFD06048",
+      }} />
+      {/* Floor light pool (right) */}
+      <LinearGradient
+        colors={["#E8A42010", "transparent"]}
+        style={{
+          position: "absolute",
+          left: U * 0.720, top: U * 0.720,
+          width: U * 0.280, height: U * 0.320,
+          borderRadius: U * 0.140,
+        }}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 8 · FLOOR — stone tiles
+      ══════════════════════════════════════════════════════════════ */}
+      <View style={{
+        position: "absolute",
+        top: U * 0.970, left: 0, right: 0,
+        height: U * (SCENE_RATIO - 0.970),
+        backgroundColor: "#060C07",
+      }} />
+      <View style={{
+        position: "absolute",
+        top: U * 0.970, left: 0, right: 0, height: 1.5,
+        backgroundColor: "#2DD4BF12",
+      }} />
+      {/* Tile grid lines on floor */}
+      {[0.25, 0.50, 0.75].map((x, i) => (
+        <View key={`tg${i}`} style={{
+          position: "absolute",
+          left: U * x, top: U * 0.970, width: 1,
+          height: U * (SCENE_RATIO - 0.970),
+          backgroundColor: "#FFFFFF04",
+        }} />
+      ))}
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 9 · INFIRMARY BED — raised cot with carved headboard
+          The patient sits propped against the headboard. All bed elements
+          render BEFORE the patient figure so the figure appears in front.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Raised platform base (dark lacquered wood) */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.172, top: U * 0.960,
+        width: U * 0.656, height: U * 0.040,
+        backgroundColor: "#192818", borderRadius: 4,
+        borderTopWidth: 2, borderTopColor: "#253C26",
+      }} />
+      {/* Platform highlight edge */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.172, top: U * 0.960,
+        width: U * 0.656, height: 2,
+        backgroundColor: "#D4AF3718",
+      }} />
+
+      {/* Mattress / futon body — dark aged linen, lantern-lit */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.194, top: U * 0.468,
+        width: U * 0.612, height: U * 0.496,
+        borderRadius: 9,
+        overflow: "hidden",
+      }}>
+        <LinearGradient
+          colors={["#2A4840", "#1E3830"]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Horizontal sheet creases */}
         <View style={{
-          position: "absolute", top: 0, left: 0, right: 0,
-          height: U * 0.020, backgroundColor: "#6A5228",
-          borderRadius: U * 0.041,
+          position: "absolute",
+          left: 0, top: "30%", right: 0, height: 1,
+          backgroundColor: "#2DD4BF18",
         }} />
         <View style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          height: U * 0.020, backgroundColor: "#6A5228",
-          borderRadius: U * 0.041,
+          position: "absolute",
+          left: 0, top: "65%", right: 0, height: 1,
+          backgroundColor: "#2DD4BF10",
+        }} />
+      </View>
+      {/* Mattress teal trim border (top edge) */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.194, top: U * 0.468,
+        width: U * 0.612, height: 3,
+        backgroundColor: "#2DD4BF30", borderRadius: 3,
+      }} />
+
+      {/* Lower blanket / coverlet over legs — deep teal */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.218, top: U * 0.886,
+        width: U * 0.564, height: U * 0.076,
+        borderRadius: 7,
+        overflow: "hidden",
+        borderWidth: 1, borderColor: "#2DD4BF35",
+      }}>
+        <LinearGradient
+          colors={["#1E5048", "#143C36"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Blanket fold line */}
+        <View style={{
+          position: "absolute",
+          left: 0, top: "48%", right: 0, height: 1.5,
+          backgroundColor: "#2DD4BF20",
         }} />
       </View>
 
-      {/* ── SIDE TABLE (right) ─────────────────────────────────────────── */}
-      {/* Table top surface */}
+      {/* Headboard — carved dark wood behind patient head/shoulders */}
+      {/* Main back panel */}
       <View style={{
         position: "absolute",
-        left: U * 0.700, top: U * 0.852,
-        width: U * 0.220, height: U * 0.026,
-        backgroundColor: "#2A3C30", borderRadius: 3,
-        borderTopWidth: 1, borderTopColor: "#3C5040",
+        left: U * 0.200, top: U * 0.180,
+        width: U * 0.600, height: U * 0.295,
+        borderRadius: 7,
+        backgroundColor: "#14221A",
+        borderWidth: 1.5, borderColor: "#263A28",
+      }} />
+      {/* Arched decorative top */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.308, top: U * 0.152,
+        width: U * 0.384, height: U * 0.122,
+        borderTopLeftRadius: U * 0.192,
+        borderTopRightRadius: U * 0.192,
+        backgroundColor: "#162018",
+        borderWidth: 1.5, borderColor: "#263A28",
+      }} />
+      {/* Headboard inlay — lotus roundel */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.458, top: U * 0.168,
+        width: U * 0.084, height: U * 0.084,
+        borderRadius: U * 0.042,
+        borderWidth: 1.5, borderColor: "#D4AF3728",
+        backgroundColor: "#D4AF3710",
+      }} />
+      <View style={{
+        position: "absolute",
+        left: U * 0.474, top: U * 0.184,
+        width: U * 0.052, height: U * 0.052,
+        borderRadius: U * 0.026,
+        borderWidth: 1, borderColor: "#D4AF3720",
+      }} />
+      {/* Left bed post */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.192, top: U * 0.180,
+        width: U * 0.022, height: U * 0.800,
+        backgroundColor: "#162018",
+        borderRadius: 4,
+        borderWidth: 1, borderColor: "#263A28",
+      }} />
+      {/* Right bed post */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.786, top: U * 0.180,
+        width: U * 0.022, height: U * 0.800,
+        backgroundColor: "#162018",
+        borderRadius: 4,
+        borderWidth: 1, borderColor: "#263A28",
+      }} />
+
+      {/* ── Patient notes scroll — pinned to headboard ── */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.582, top: U * 0.200,
+        width: U * 0.096, height: U * 0.118,
+        backgroundColor: "#C8B462",
+        borderRadius: 3,
+        borderWidth: 1, borderColor: "#A09040",
+        overflow: "hidden",
+      }}>
+        {/* Parchment header bar */}
+        <View style={{
+          position: "absolute",
+          left: 0, top: 0, right: 0, height: U * 0.016,
+          backgroundColor: "#9A8035",
+          opacity: 0.40,
+        }} />
+        {/* Simulated text lines */}
+        {[0.26, 0.40, 0.54, 0.68, 0.82].map((y, i) => (
+          <View key={i} style={{
+            position: "absolute",
+            left: U * 0.008, top: `${y * 100}%`,
+            right: U * 0.008, height: 1.5,
+            backgroundColor: "#6A4A18",
+            borderRadius: 1, opacity: 0.45,
+          }} />
+        ))}
+      </View>
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 10 · PILLOW — behind the patient's head (dark sage linen)
+      ══════════════════════════════════════════════════════════════ */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.326, top: U * 0.262,
+        width: U * 0.348, height: U * 0.096,
+        borderRadius: U * 0.048,
+        overflow: "hidden",
+        borderWidth: 1, borderColor: "#2DD4BF20",
+      }}>
+        <LinearGradient
+          colors={["#2E5048", "#224038"]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Pillow teal trim stitching */}
+        <View style={{
+          position: "absolute",
+          left: 6, top: 5, right: 6, bottom: 5,
+          borderRadius: U * 0.046,
+          borderWidth: 1, borderColor: "#2DD4BF28",
+        }} />
+      </View>
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 11 · BOOK STACK (left wall) — 4 volumes with colored spines
+          Distractor zone: cx=0.125, cy=0.740, r=0.084
+      ══════════════════════════════════════════════════════════════ */}
+      {([
+        { dy: 0.000, w: 0.112, c: "#2C4228", acc: "#7A5A28" },
+        { dy: 0.050, w: 0.092, c: "#1A2E1A", acc: "#4A7038" },
+        { dy: 0.100, w: 0.132, c: "#3A5030", acc: "#8A6832" },
+        { dy: 0.150, w: 0.098, c: "#1E3420", acc: "#557040" },
+      ] as const).map((b, i) => (
+        <View key={i} style={{
+          position: "absolute",
+          left: U * 0.026, top: U * 0.692 + U * b.dy,
+          width: U * b.w, height: U * 0.044,
+          backgroundColor: b.c, borderRadius: 2,
+          borderRightWidth: 1.5, borderRightColor: "#FFFFFF10",
+          borderTopWidth: 1, borderTopColor: "#FFFFFF06",
+        }}>
+          {/* Spine colour accent */}
+          <View style={{
+            position: "absolute",
+            left: 0, top: 0, width: 3, height: "100%",
+            backgroundColor: b.acc, opacity: 0.65, borderRadius: 1,
+          }} />
+        </View>
+      ))}
+      {/* Gold accent vertical stripe across spine edges */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.026, top: U * 0.692,
+        width: 2, height: U * 0.194,
+        backgroundColor: "#D4AF3728",
+      }} />
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 12 · SCROLL ON FLOOR (left)
+          Distractor zone: cx=0.190, cy=1.030, r=0.073
+      ══════════════════════════════════════════════════════════════ */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.147, top: U * 0.972,
+        width: U * 0.086, height: U * 0.148,
+        borderRadius: U * 0.043,
+        backgroundColor: "#A08048",
+        borderWidth: 1.5, borderColor: "#C0A05840",
+        overflow: "hidden",
+      }}>
+        {/* End caps */}
+        <View style={{
+          position: "absolute", top: 0, left: 0, right: 0,
+          height: U * 0.022, backgroundColor: "#7A6030",
+          borderRadius: U * 0.043,
+        }} />
+        <View style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          height: U * 0.022, backgroundColor: "#7A6030",
+          borderRadius: U * 0.043,
+        }} />
+        {/* Text line hints */}
+        {[0.38, 0.55].map((y, i) => (
+          <View key={i} style={{
+            position: "absolute",
+            left: U * 0.010, top: `${y * 100}%`,
+            right: U * 0.010, height: 1.5,
+            backgroundColor: "#6A4A1830", borderRadius: 1,
+          }} />
+        ))}
+      </View>
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 13 · SIDE TABLE (right) — more detailed
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Table surface */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.698, top: U * 0.842,
+        width: U * 0.244, height: U * 0.028,
+        backgroundColor: "#223028", borderRadius: 4,
+        borderTopWidth: 1.5, borderTopColor: "#384E3A",
       }} />
       {/* Table leg */}
       <View style={{
         position: "absolute",
-        left: U * 0.793, top: U * 0.878,
-        width: U * 0.032, height: U * 0.120,
-        backgroundColor: "#1E2E24", borderRadius: 2,
+        left: U * 0.800, top: U * 0.868,
+        width: U * 0.044, height: U * 0.100,
+        backgroundColor: "#1A2620", borderRadius: 3,
+      }} />
+      {/* Bottom stretcher bar */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.706, top: U * 0.952,
+        width: U * 0.228, height: U * 0.010,
+        backgroundColor: "#1A2620", borderRadius: 2,
       }} />
 
-      {/* ── FLASK (on table, right) ────────────────────────────────────── */}
-      {/* Flask cap */}
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 14 · SMALL VIALS + HERBS ON TABLE
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Vial 1 — tall, teal liquid (medical) */}
       <View style={{
         position: "absolute",
-        left: U * 0.795, top: U * 0.516,
-        width: U * 0.062, height: U * 0.022,
-        backgroundColor: "#2A4840", borderRadius: 3,
-        borderWidth: 1, borderColor: "#3A5A5050",
-      }} />
-      {/* Flask body */}
-      <View style={{
-        position: "absolute",
-        left: U * 0.800, top: U * 0.535,
-        width: U * 0.052, height: U * 0.320,
-        borderRadius: U * 0.026,
-        backgroundColor: "#1A3430",
-        borderWidth: 1.5, borderColor: "#D4AF3748",
+        left: U * 0.714, top: U * 0.790,
+        width: U * 0.022, height: U * 0.054,
+        borderRadius: U * 0.011,
+        backgroundColor: "#183028",
+        borderWidth: 1, borderColor: "#2DD4BF48",
         overflow: "hidden",
       }}>
-        {/* Water level — only ~10% full at the very bottom */}
         <View style={{
-          position: "absolute",
-          bottom: 0, left: 2, right: 2, height: "10%",
-          backgroundColor: "#2DD4BF32", borderRadius: U * 0.022,
+          position: "absolute", bottom: 0, left: 1, right: 1, height: "35%",
+          backgroundColor: "#2DD4BF30", borderRadius: U * 0.009,
         }} />
-        {/* Subtle highlight stripe on glass */}
+        {/* Glass highlight */}
         <View style={{
           position: "absolute",
-          left: U * 0.010, top: U * 0.025,
-          width: U * 0.010, height: "55%",
-          backgroundColor: "#FFFFFF14", borderRadius: 3,
+          left: 2, top: 3, width: 2, height: "45%",
+          backgroundColor: "#FFFFFF18", borderRadius: 1,
         }} />
       </View>
-
-      {/* ── HEALING MAT / CUSHION ─────────────────────────────────────── */}
-      {/* Raised platform */}
+      {/* Vial 1 stopper */}
       <View style={{
         position: "absolute",
-        left: U * 0.200, top: U * 0.978,
-        width: U * 0.400, height: U * 0.065,
-        backgroundColor: "#142820", borderRadius: 6,
+        left: U * 0.712, top: U * 0.787,
+        width: U * 0.026, height: U * 0.006,
+        backgroundColor: "#284038", borderRadius: 2,
       }} />
-      {/* Mat surface */}
+      {/* Vial 2 — shorter, amber herbal */}
       <View style={{
         position: "absolute",
-        left: U * 0.215, top: U * 0.985,
-        width: U * 0.370, height: U * 0.054,
-        backgroundColor: "#1D4040", borderRadius: 5,
-        borderWidth: 1, borderColor: "#2DD4BF2A",
-      }} />
-      {/* Mat teal trim lines */}
-      <View style={{
-        position: "absolute",
-        left: U * 0.215, top: U * 0.985,
-        width: U * 0.370, height: 1.5,
-        backgroundColor: "#2DD4BF20",
-      }} />
-      <View style={{
-        position: "absolute",
-        left: U * 0.215, top: U * 0.985 + U * 0.052,
-        width: U * 0.370, height: 1.5,
-        backgroundColor: "#2DD4BF20",
-      }} />
-
-      {/* ── PATIENT FIGURE ────────────────────────────────────────────── */}
-      {/* Hair — slightly behind and above the head */}
-      <View style={{
-        position: "absolute",
-        left: U * 0.378, top: U * 0.220,
-        width: U * 0.244, height: U * 0.130,
-        borderRadius: U * 0.120,
-        backgroundColor: "#2D1A0A",
-      }} />
-
-      {/* Head (circle) */}
-      <View style={{
-        position: "absolute",
-        left: U * 0.420, top: U * 0.260,
-        width: U * 0.160, height: U * 0.160,
-        borderRadius: U * 0.080,
-        backgroundColor: "#C4957A",
+        left: U * 0.746, top: U * 0.804,
+        width: U * 0.024, height: U * 0.040,
+        borderRadius: U * 0.012,
+        backgroundColor: "#1C2820",
+        borderWidth: 1, borderColor: "#D4AF3740",
+        overflow: "hidden",
       }}>
-        {/* Lower face shading (chin/neck blend) */}
+        <View style={{
+          position: "absolute", bottom: 0, left: 1, right: 1, height: "55%",
+          backgroundColor: "#D4AF3722", borderRadius: U * 0.010,
+        }} />
         <View style={{
           position: "absolute",
-          bottom: 0, left: 0, right: 0, height: "45%",
+          left: 2, top: 2, width: 2, height: "40%",
+          backgroundColor: "#FFFFFF14", borderRadius: 1,
+        }} />
+      </View>
+      {/* Herb sprig bundle on table */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.776, top: U * 0.820,
+        width: U * 0.032, height: U * 0.024,
+        borderRadius: 3,
+        borderWidth: 1, borderColor: "#4A8040",
+        backgroundColor: "#182E18",
+      }} />
+      {/* Tiny mortar bowl shape */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.876, top: U * 0.820,
+        width: U * 0.040, height: U * 0.024,
+        borderBottomLeftRadius: U * 0.020,
+        borderBottomRightRadius: U * 0.020,
+        backgroundColor: "#1E2E22",
+        borderWidth: 1, borderColor: "#3A5038",
+      }} />
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 15 · FLASK — empty water flask (CLUE ZONE cx=0.826, cy=0.685)
+          Zone spans: x (0.748–0.904)·U, y (0.607–0.763)·U
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Flask neck */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.808, top: U * 0.502,
+        width: U * 0.036, height: U * 0.044,
+        borderRadius: 5,
+        backgroundColor: "#192E2A",
+        borderWidth: 1, borderColor: "#D4AF3740",
+      }} />
+      {/* Flask stopper cap */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.802, top: U * 0.494,
+        width: U * 0.048, height: U * 0.014,
+        backgroundColor: "#284840", borderRadius: 3,
+        borderWidth: 1, borderColor: "#3A5A5055",
+      }} />
+      {/* Flask body — rounder, more prominent */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.793, top: U * 0.542,
+        width: U * 0.066, height: U * 0.298,
+        borderRadius: U * 0.033,
+        backgroundColor: "#182E2A",
+        borderWidth: 2, borderColor: "#D4AF3760",
+        overflow: "hidden",
+      }}>
+        {/* Very low water — almost empty */}
+        <View style={{
+          position: "absolute",
+          bottom: 0, left: 3, right: 3, height: "9%",
+          backgroundColor: "#2DD4BF38", borderRadius: U * 0.028,
+        }} />
+        {/* Water surface shimmer */}
+        <View style={{
+          position: "absolute",
+          bottom: "9%", left: 5, right: 5, height: 1.5,
+          backgroundColor: "#2DD4BF50",
+        }} />
+        {/* Glass highlight — main */}
+        <View style={{
+          position: "absolute",
+          left: U * 0.010, top: U * 0.018,
+          width: U * 0.012, height: "52%",
+          backgroundColor: "#FFFFFF1A", borderRadius: 3,
+        }} />
+        {/* Glass highlight — secondary */}
+        <View style={{
+          position: "absolute",
+          right: U * 0.008, top: U * 0.028,
+          width: U * 0.008, height: "30%",
+          backgroundColor: "#FFFFFF0C", borderRadius: 2,
+        }} />
+      </View>
+      {/* Parchment label ribbon on flask */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.796, top: U * 0.644,
+        width: U * 0.060, height: U * 0.024,
+        backgroundColor: "#D4AF3714",
+        borderRadius: 2,
+        borderWidth: 1, borderColor: "#D4AF3728",
+      }} />
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 16 · PATIENT FIGURE
+          Zones: dry_lips at (0.500, 0.375)·U — lower head (mouth area)
+                 weak_posture at (0.500, 0.690)·U — mid-robe body
+          Figure renders in front of bed (comes after bed in JSX).
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Hair mass — dark, slightly volumetric */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.372, top: U * 0.222,
+        width: U * 0.256, height: U * 0.140,
+        borderRadius: U * 0.128,
+        backgroundColor: "#1E1005",
+        overflow: "hidden",
+      }}>
+        {/* Hair volume shine */}
+        <View style={{
+          position: "absolute",
+          left: U * 0.024, top: U * 0.016,
+          width: U * 0.090, height: U * 0.066,
+          borderRadius: U * 0.033,
+          backgroundColor: "#2C1A08",
+          opacity: 0.50,
+        }} />
+      </View>
+      {/* Side hair strand — left */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.378, top: U * 0.306,
+        width: U * 0.030, height: U * 0.118,
+        borderRadius: U * 0.015,
+        backgroundColor: "#1E1005",
+      }} />
+      {/* Side hair strand — right */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.592, top: U * 0.306,
+        width: U * 0.030, height: U * 0.114,
+        borderRadius: U * 0.015,
+        backgroundColor: "#1E1005",
+      }} />
+
+      {/* Head — warm skin tone */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.420, top: U * 0.264,
+        width: U * 0.160, height: U * 0.160,
+        borderRadius: U * 0.080,
+        overflow: "hidden",
+      }}>
+        <LinearGradient
+          colors={["#C8A080", "#B8886A"]}
+          start={{ x: 0.25, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Lower face (chin/jaw shade) */}
+        <View style={{
+          position: "absolute",
+          bottom: 0, left: 0, right: 0, height: "42%",
           borderBottomLeftRadius: U * 0.080,
           borderBottomRightRadius: U * 0.080,
-          backgroundColor: "#B5866A",
+          backgroundColor: "#B07A60",
+          opacity: 0.55,
+        }} />
+        {/* Eyebrow lines (subtle — fatigue shows in the brows) */}
+        <View style={{
+          position: "absolute",
+          left: "18%", top: "28%",
+          width: "22%", height: 2,
+          backgroundColor: "#4E3018",
+          borderRadius: 1, opacity: 0.55,
+        }} />
+        <View style={{
+          position: "absolute",
+          right: "18%", top: "28%",
+          width: "22%", height: 2,
+          backgroundColor: "#4E3018",
+          borderRadius: 1, opacity: 0.55,
+        }} />
+        {/* Dry lips hint — pale, slightly parted (the clue!) */}
+        <View style={{
+          position: "absolute",
+          left: "28%", bottom: "18%",
+          width: "44%", height: 5,
+          backgroundColor: "#C09078",
+          borderRadius: 2.5, opacity: 0.70,
+        }} />
+        {/* Lip crease (dryness suggestion) */}
+        <View style={{
+          position: "absolute",
+          left: "46%", bottom: "19%",
+          width: "8%", height: 3,
+          backgroundColor: "#A87858",
+          borderRadius: 1, opacity: 0.50,
         }} />
       </View>
 
       {/* Neck */}
       <View style={{
         position: "absolute",
-        left: U * 0.468, top: U * 0.418,
-        width: U * 0.064, height: U * 0.058,
-        backgroundColor: "#B5866A",
-        borderRadius: 3,
+        left: U * 0.469, top: U * 0.420,
+        width: U * 0.062, height: U * 0.054,
+        backgroundColor: "#B8886A",
+        borderRadius: 4,
       }} />
 
-      {/* Shoulders — slightly drooped left (showing weak posture) */}
+      {/* Shoulders — drooped (weak posture) */}
       <View style={{
         position: "absolute",
-        left: U * 0.258, top: U * 0.462,
-        width: U * 0.484, height: U * 0.096,
-        borderRadius: U * 0.048,
-        backgroundColor: "#C4DED8",
-        transform: [{ rotate: "2.5deg" }],
-      }} />
-
-      {/* Body / robe — main garment */}
-      <View style={{
-        position: "absolute",
-        left: U * 0.332, top: U * 0.528,
-        width: U * 0.336, height: U * 0.430,
-        borderRadius: 10,
-        backgroundColor: "#D4E8E4",
-        transform: [{ rotate: "1.5deg" }],
+        left: U * 0.258, top: U * 0.464,
+        width: U * 0.484, height: U * 0.094,
+        borderRadius: U * 0.047,
         overflow: "hidden",
+        transform: [{ rotate: "2.5deg" }],
       }}>
-        {/* Subtle robe center line */}
-        <View style={{
-          position: "absolute",
-          left: "50%", top: 0, width: 1.5, height: "100%",
-          backgroundColor: "#9DC8C220",
-          transform: [{ translateX: -0.75 }],
-        }} />
-        {/* Robe fold shading */}
         <LinearGradient
-          colors={["transparent", "#7AADA826"]}
-          start={{ x: 0, y: 0.4 }}
+          colors={["#C4DED8", "#B0CAC4"]}
+          start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Shoulder shadow inward */}
+        <LinearGradient
+          colors={["transparent", "#90B8B228"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
       </View>
 
-      {/* Legs / robe hem on mat */}
+      {/* Body / robe — main garment */}
       <View style={{
         position: "absolute",
-        left: U * 0.260, top: U * 0.928,
-        width: U * 0.480, height: U * 0.080,
-        borderRadius: 8,
+        left: U * 0.332, top: U * 0.532,
+        width: U * 0.336, height: U * 0.370,
+        borderRadius: 11,
+        transform: [{ rotate: "1.5deg" }],
+        overflow: "hidden",
+      }}>
+        <LinearGradient
+          colors={["#D4E8E4", "#C4D8D2"]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Centre robe fold line */}
+        <View style={{
+          position: "absolute",
+          left: "50%", top: 0, width: 1.5, height: "100%",
+          backgroundColor: "#9DC8C222",
+          transform: [{ translateX: -0.75 }],
+        }} />
+        {/* Robe shading gradient */}
+        <LinearGradient
+          colors={["transparent", "#7AADA82A"]}
+          start={{ x: 0, y: 0.3 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Collar detail */}
+        <View style={{
+          position: "absolute",
+          left: "28%", top: 0, width: "44%", height: 9,
+          backgroundColor: "#B8D0CA",
+          borderRadius: 4,
+        }} />
+      </View>
+
+      {/* Legs / robe hem visible above blanket */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.278, top: U * 0.884,
+        width: U * 0.444, height: U * 0.052,
+        borderRadius: 7,
         backgroundColor: "#BAD2CC",
         transform: [{ rotate: "1deg" }],
       }} />
 
-      {/* ── AMBIENT PARTICLES (Lotus magic) ──────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 17 · AMBIENT LIGHT OVERLAYS
+          Soft radial glows from lanterns and window wash the scene.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Central warm lantern-light pool over bed */}
+      <LinearGradient
+        colors={["#E8A42008", "transparent"]}
+        style={{
+          position: "absolute",
+          left: U * 0.220, top: U * 0.220,
+          width: U * 0.560, height: U * 0.480,
+          borderRadius: U * 0.280,
+        }}
+      />
+      {/* Moonlight spill down from window */}
+      <LinearGradient
+        colors={["#D4AF3412", "transparent"]}
+        style={{
+          position: "absolute",
+          left: U * 0.290, top: U * 0.240,
+          width: U * 0.420, height: U * 0.320,
+        }}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 18 · AMBIENT PARTICLES (Lotus healing magic)
+          Teal motes float near the lanterns, window, and patient.
+      ══════════════════════════════════════════════════════════════ */}
       {[
-        { px: 0.220, py: 0.142, pr: 2.5, po: 0.32 },
-        { px: 0.762, py: 0.178, pr: 3.0, po: 0.26 },
-        { px: 0.370, py: 0.640, pr: 2.0, po: 0.18 },
-        { px: 0.655, py: 0.295, pr: 2.0, po: 0.20 },
-        { px: 0.140, py: 0.460, pr: 1.5, po: 0.15 },
+        { px: 0.128, py: 0.074, pr: 2.4, po: 0.30 },
+        { px: 0.936, py: 0.074, pr: 2.2, po: 0.26 },
+        { px: 0.206, py: 0.190, pr: 1.6, po: 0.20 },
+        { px: 0.782, py: 0.196, pr: 1.8, po: 0.22 },
+        { px: 0.500, py: 0.080, pr: 2.4, po: 0.24 },
+        { px: 0.372, py: 0.625, pr: 1.4, po: 0.14 },
+        { px: 0.636, py: 0.316, pr: 1.4, po: 0.16 },
+        { px: 0.142, py: 0.462, pr: 1.2, po: 0.12 },
+        { px: 0.862, py: 0.448, pr: 1.2, po: 0.14 },
+        { px: 0.500, py: 0.440, pr: 1.0, po: 0.10 },
+        { px: 0.320, py: 0.282, pr: 1.2, po: 0.12 },
+        { px: 0.688, py: 0.258, pr: 1.0, po: 0.10 },
       ].map((p, i) => (
         <View
           key={i}
@@ -615,7 +1349,53 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         />
       ))}
 
-      {/* ── CLUE ZONES — rendered above all scene elements ─────────── */}
+      {/* ══════════════════════════════════════════════════════════════
+          LAYER 19 · FOREGROUND VIGNETTE
+          Dark edge strips add cinematic depth and focus the eye
+          on the patient at the centre.
+      ══════════════════════════════════════════════════════════════ */}
+      {/* Left edge */}
+      <LinearGradient
+        colors={["#000A06CC", "transparent"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{
+          position: "absolute",
+          left: 0, top: 0, width: U * 0.110,
+          height: U * SCENE_RATIO,
+        }}
+      />
+      {/* Right edge */}
+      <LinearGradient
+        colors={["transparent", "#000A06CC"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{
+          position: "absolute",
+          left: U * 0.890, top: 0, width: U * 0.110,
+          height: U * SCENE_RATIO,
+        }}
+      />
+      {/* Top edge */}
+      <LinearGradient
+        colors={["#000A06CC", "transparent"]}
+        style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, height: U * 0.085,
+        }}
+      />
+      {/* Bottom edge */}
+      <LinearGradient
+        colors={["transparent", "#000A0680"]}
+        style={{
+          position: "absolute",
+          bottom: 0, left: 0, right: 0, height: U * 0.080,
+        }}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          CLUE ZONES — always rendered on top of all scene elements
+      ══════════════════════════════════════════════════════════════ */}
       {ZONES.map((zone) => (
         <ClueZone
           key={zone.id}
