@@ -769,30 +769,49 @@ export default function CueHuntScreen() {
         </View>
       </View>
 
-      {/* ── BOTTOM: completion panel OR back link ─────────────────────── */}
+      {/* ── BOTTOM: completion feedback OR back link ──────────────────── */}
       {phase === "complete" ? (
-        <View style={styles.completeBanner}>
+        <View style={styles.completionCard}>
           <LinearGradient
-            colors={["#0D3B38", "#162E2B"]}
+            colors={["#0D3B38", "#152E2A"]}
             style={StyleSheet.absoluteFillObject}
           />
-          <View style={styles.completeIcon}>
-            <Ionicons name="checkmark-done" size={20} color="#2DD4BF" />
+
+          {/* Icon + kicker row */}
+          <View style={styles.completeTopRow}>
+            <View style={styles.completeIconWrap}>
+              <Ionicons name="checkmark-done" size={14} color="#2DD4BF" />
+            </View>
+            <Text style={styles.completeKicker}>ROUND COMPLETE</Text>
           </View>
-          <View style={styles.completeText}>
-            <Text style={styles.completeTitleTxt}>Scene read.</Text>
-            <Text style={styles.completeBodyTxt}>
-              All clues found — dehydration risk identified.
-            </Text>
+
+          {/* Observation — what the player noticed */}
+          <Text style={styles.observationTxt}>
+            "You noticed dry lips, weakness, and poor intake."
+          </Text>
+
+          {/* Clinical connection */}
+          <Text style={styles.clinicalTxt}>
+            These clues suggest dehydration risk.
+          </Text>
+
+          {/* Action row */}
+          <View style={styles.completeActions}>
+            <Pressable
+              style={styles.learnWhyBtn}
+              onPress={() => router.push("/university/cue-hunt-lesson" as any)}
+              testID="cue-hunt-learn-why"
+            >
+              <Text style={styles.learnWhyTxt}>Learn Why</Text>
+              <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
+            </Pressable>
+            <Pressable
+              onPress={() => goBack(router, "/university")}
+              testID="cue-hunt-finish"
+            >
+              <Text style={styles.completeBackTxt}>Back to University</Text>
+            </Pressable>
           </View>
-          <Pressable
-            style={styles.completeBtn}
-            onPress={() => goBack(router, "/university")}
-            testID="cue-hunt-finish"
-          >
-            <Text style={styles.completeBtnTxt}>Done</Text>
-            <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
-          </Pressable>
         </View>
       ) : (
         <Pressable
@@ -877,33 +896,58 @@ const styles = StyleSheet.create({
   },
   toastTxt: { color: "#2DD4BF", fontSize: 12, fontWeight: "600" },
 
-  completeBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
+  completionCard: {
     margin: SPACING.lg,
     marginTop: 0,
     borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1.5, borderColor: "#2DD4BF40",
+    padding: SPACING.lg,
+    gap: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: "#2DD4BF30",
     overflow: "hidden",
   },
-  completeIcon: {
-    width: 40, height: 40, borderRadius: 20,
+  completeTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  completeIconWrap: {
+    width: 26, height: 26, borderRadius: 13,
     backgroundColor: "#2DD4BF18",
     borderWidth: 1, borderColor: "#2DD4BF40",
     alignItems: "center", justifyContent: "center",
   },
-  completeText: { flex: 1, gap: 2 },
-  completeTitleTxt: { color: "#2DD4BF", fontSize: 14, fontWeight: "700" },
-  completeBodyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
-  completeBtn: {
+  completeKicker: {
+    color: "#2DD4BF",
+    fontSize: 9, fontWeight: "700", letterSpacing: 2,
+  },
+  observationTxt: {
+    color: COLORS.onSurface,
+    fontSize: 15, fontStyle: "italic", fontWeight: "300",
+    lineHeight: 22,
+  },
+  clinicalTxt: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  completeActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    marginTop: SPACING.xs ?? 4,
+  },
+  learnWhyBtn: {
     flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "#2DD4BF",
     borderRadius: RADIUS.pill,
-    paddingHorizontal: SPACING.md, paddingVertical: 8,
+    paddingHorizontal: SPACING.lg, paddingVertical: 10,
   },
-  completeBtnTxt: { color: "#0B1A18", fontSize: 12, fontWeight: "800" },
+  learnWhyTxt: { color: "#0B1A18", fontSize: 13, fontWeight: "800" },
+  completeBackTxt: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 13, fontWeight: "600",
+  },
 
   backToUni: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
