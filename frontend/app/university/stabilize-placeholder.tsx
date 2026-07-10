@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   patientInfo: { flex: 1, gap: 3 },
-  patientRole: { color: "#38BDF8", fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  patientRole: { color: "#38BDF8", fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
   patientPrompt: {
     color: COLORS.onSurface,
     fontSize: 13, lineHeight: 18, fontWeight: "300",
@@ -546,8 +546,8 @@ const styles = StyleSheet.create({
   },
   stabilityLabel: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 8, fontWeight: "700", letterSpacing: 2,
-    width: 60,
+    fontSize: 10, fontWeight: "700", letterSpacing: 1.5,
+    width: 66,
   },
   stabilityTrack: {
     flex: 1, height: 8, borderRadius: 4,
@@ -572,9 +572,9 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     paddingHorizontal: SPACING.sm,
     paddingVertical: 8,
-    minHeight: 38,
+    minHeight: 44,
   },
-  chainSlotLabel: { flex: 1, fontSize: 9, fontWeight: "600", letterSpacing: 0.2 },
+  chainSlotLabel: { flex: 1, fontSize: 11, fontWeight: "600", letterSpacing: 0.2 },
   chainSlotEmpty: { color: "#2A3A4A", fontSize: 13, fontWeight: "700", margin: "auto" as any },
 
   // Feedback
@@ -583,12 +583,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 4,
-    minHeight: 26,
+    paddingVertical: 6,
+    minHeight: 32,
   },
   feedbackTxt: {
     color: "#F59E0B",
-    fontSize: 11, fontWeight: "600", lineHeight: 15, flex: 1,
+    fontSize: 12, fontWeight: "600", lineHeight: 16, flex: 1,
   },
 
   // Tiles

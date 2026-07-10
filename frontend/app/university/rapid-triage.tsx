@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#A78BFA30",
     paddingHorizontal: 8, paddingVertical: 3,
   },
-  roleChipTxt: { color: "#A78BFA", fontSize: 8, fontWeight: "700", letterSpacing: 2 },
+  roleChipTxt: { color: "#A78BFA", fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
   avatarWrap: {
     width: 80, height: 80, borderRadius: 40,
     borderWidth: 1.5, borderColor: "#A78BFA40",
@@ -465,8 +465,8 @@ const styles = StyleSheet.create({
     alignSelf: "stretch", marginHorizontal: SPACING.md,
   },
   promptTxt: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 11, letterSpacing: 1,
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13, letterSpacing: 0.3,
     fontStyle: "italic", textAlign: "center",
   },
 

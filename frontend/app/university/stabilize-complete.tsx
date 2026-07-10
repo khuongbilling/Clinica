@@ -113,6 +113,7 @@ export default function StabilizeCompleteScreen() {
   const { completeLotusLessonNode } = usePlayer();
 
   const [claimed, setClaimed] = useState(false);
+  const [ctaReady, setCtaReady] = useState(false);
 
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-12)).current;
@@ -135,8 +136,9 @@ export default function StabilizeCompleteScreen() {
       Animated.timing(headerSlide, { toValue: 0, duration: 340, useNativeDriver: true }),
     ]).start();
 
-    // CTA appears after all badges
+    // CTA appears after all badges — mark ready first so pointerEvents enable
     const t = setTimeout(() => {
+      setCtaReady(true);
       Animated.timing(ctaFade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     }, BADGES.length * 220 + 500);
     return () => clearTimeout(t);
@@ -195,7 +197,7 @@ export default function StabilizeCompleteScreen() {
       </View>
 
       {/* ── CONTINUE CTA ──────────────────────────────────────────────── */}
-      <Animated.View style={[styles.ctaWrap, { opacity: ctaFade }]}>
+      <Animated.View style={[styles.ctaWrap, { opacity: ctaFade }]} pointerEvents={ctaReady ? "auto" : "none"}>
         <Pressable
           style={styles.ctaBtn}
           onPress={() => router.replace("/university" as any)}

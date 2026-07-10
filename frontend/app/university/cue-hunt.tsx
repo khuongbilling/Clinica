@@ -279,7 +279,7 @@ function ClueZone({ zone, scW, found, onCorrect, onWrong }: ClueZoneProps) {
           }}
         >
           <Text
-            style={{ color: zone.color, fontSize: 9, fontWeight: "700", letterSpacing: 0.8 }}
+            style={{ color: zone.color, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 }}
           >
             {zone.label}
           </Text>
@@ -941,7 +941,8 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: "#2DD4BF",
     borderRadius: RADIUS.pill,
-    paddingHorizontal: SPACING.lg, paddingVertical: 10,
+    paddingHorizontal: SPACING.lg, paddingVertical: 14,
+    minHeight: 44,
   },
   learnWhyTxt: { color: "#0B1A18", fontSize: 13, fontWeight: "800" },
   completeBackTxt: {

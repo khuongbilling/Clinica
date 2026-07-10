@@ -324,7 +324,8 @@ const styles = StyleSheet.create({
     borderColor: "#2DD4BF50",
     borderRadius: RADIUS.pill,
     paddingHorizontal: SPACING.xl,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    minHeight: 44,
     backgroundColor: "#2DD4BF0A",
   },
   nextTxt: {
