@@ -1,18 +1,21 @@
 /**
- * Cue Hunt Lesson — Dehydration Risk
+ * Cue Hunt Lesson — Dehydration Basics · The Fading Apprentice
  *
- * Minimal placeholder reached from the "Learn Why" CTA on the Cue Hunt
- * completion panel. Step 5 will build this into a full short linked lesson.
- * For now it shows a concise clinical insight bridging play → explanation.
+ * Short linked lesson reached from "Learn Why" on the Cue Hunt completion panel.
+ * Three teaching beats, one at a time. Tap Next to advance; tap Apply It on the
+ * final beat to move toward the Rapid Triage challenge.
+ *
+ * Design: beat-by-beat fade transition, centered icon + heading + body,
+ * progress dots at top. No long text blocks, no MCQs, no old lesson format.
  */
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
+  Animated,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,29 +26,42 @@ import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Data
+// Teaching beats
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CLUE_RECAP = [
+interface Beat {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  step: string;
+  heading: string;
+  body: string;
+  accentColor: string;
+}
+
+const BEATS: Beat[] = [
   {
-    id: "lips",
-    icon: "water-outline" as const,
-    label: "Dry lips",
-    why: "Mucous membranes lose moisture before other signs appear — a sensitive early marker.",
+    icon: "water-outline",
+    step: "STEP 1",
+    heading: "Recognising Dehydration",
+    body: "Dehydration can show as dry mouth, dizziness, weakness, thirst, or low urine output.",
+    accentColor: "#2DD4BF",
   },
   {
-    id: "posture",
-    icon: "body-outline" as const,
-    label: "Weak posture",
-    why: "Fluid loss reduces blood volume and muscle perfusion, causing fatigue and slumping.",
+    icon: "pulse-outline",
+    step: "STEP 2",
+    heading: "Assess Before You Act",
+    body: "First, assess severity. Check mental status, vital signs, and whether the patient can safely drink.",
+    accentColor: "#2DD4BF",
   },
   {
-    id: "flask",
-    icon: "beaker-outline" as const,
-    label: "Near-empty flask",
-    why: "Low intake confirms the mechanism. The body cannot compensate without replacing fluids.",
+    icon: "warning-outline",
+    step: "STEP 3",
+    heading: "Don't Rush Treatment",
+    body: "Do not jump to treatment before you know how unstable the patient is.",
+    accentColor: "#F59E0B",
   },
-] as const;
+];
+
+const TOTAL = BEATS.length;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -53,6 +69,38 @@ const CLUE_RECAP = [
 
 export default function CueHuntLessonScreen() {
   const router = useRouter();
+  const [beatIdx, setBeatIdx] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const beat = BEATS[beatIdx];
+  const isLast = beatIdx === TOTAL - 1;
+
+  const advance = () => {
+    // Fade out current beat
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 160,
+      useNativeDriver: true,
+    }).start(() => {
+      if (isLast) {
+        // Navigate to Apply It placeholder
+        router.push("/university/apply-it" as any);
+        // Reset for if user navigates back
+        setBeatIdx(0);
+        fadeAnim.setValue(1);
+      } else {
+        setBeatIdx((prev) => prev + 1);
+        // Fade in next beat
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+  };
+
+  const dots = Array.from({ length: TOTAL }, (_, i) => i);
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -61,7 +109,7 @@ export default function CueHuntLessonScreen() {
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* ── HEADER ────────────────────────────────────────────────────── */}
+      {/* ── HEADER ──────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
@@ -72,70 +120,91 @@ export default function CueHuntLessonScreen() {
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.kicker}>CLINICAL INSIGHT</Text>
-          <Text style={styles.title}>Why Dehydration?</Text>
+          <Text style={styles.kicker}>DEHYDRATION BASICS</Text>
+          <Text style={styles.subtitle}>The Fading Apprentice</Text>
         </View>
+        <Text style={styles.counter}>
+          {beatIdx + 1}/{TOTAL}
+        </Text>
       </View>
 
-      {/* ── CONTENT ───────────────────────────────────────────────────── */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Recap label */}
-        <Text style={styles.sectionLabel}>WHAT YOU FOUND</Text>
-
-        {/* Clue cards — one per discovered clue */}
-        {CLUE_RECAP.map((c) => (
-          <View key={c.id} style={styles.clueCard}>
-            <LinearGradient
-              colors={["#1A3830", "#142C26"]}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.clueIconWrap}>
-              <Ionicons name={c.icon} size={16} color="#2DD4BF" />
-            </View>
-            <View style={styles.clueBody}>
-              <Text style={styles.clueLabel}>{c.label}</Text>
-              <Text style={styles.clueWhy}>{c.why}</Text>
-            </View>
-          </View>
+      {/* ── PROGRESS DOTS ───────────────────────────────────────────── */}
+      <View style={styles.dotRow}>
+        {dots.map((i) => (
+          <View
+            key={i}
+            style={[
+              styles.dot,
+              i < beatIdx && styles.dotPast,
+              i === beatIdx && styles.dotActive,
+            ]}
+          />
         ))}
+      </View>
 
-        {/* Insight block */}
-        <View style={styles.insightCard}>
+      {/* ── BEAT CONTENT (fades in/out on advance) ──────────────────── */}
+      <Animated.View style={[styles.beatArea, { opacity: fadeAnim }]}>
+        {/* Icon circle */}
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              borderColor: beat.accentColor + "50",
+              backgroundColor: beat.accentColor + "14",
+              shadowColor: beat.accentColor,
+            },
+          ]}
+        >
+          <Ionicons name={beat.icon} size={34} color={beat.accentColor} />
+        </View>
+
+        {/* Step label */}
+        <Text style={[styles.stepLabel, { color: beat.accentColor }]}>
+          {beat.step}
+        </Text>
+
+        {/* Heading */}
+        <Text style={styles.heading}>{beat.heading}</Text>
+
+        {/* Body — one short idea */}
+        <View style={styles.bodyCard}>
           <LinearGradient
-            colors={["#1C3830", "#142E28"]}
+            colors={["#1A3830", "#142C26"]}
             style={StyleSheet.absoluteFillObject}
           />
-          <View style={styles.insightHeader}>
-            <Ionicons name="bulb-outline" size={14} color="#D4AF37" />
-            <Text style={styles.insightKicker}>THE PATTERN</Text>
-          </View>
-          <Text style={styles.insightBody}>
-            Three separate clues — lips, posture, intake — all point to the same mechanism: the body losing more fluid than it takes in.
-          </Text>
-          <Text style={styles.insightBody}>
-            No single clue is enough. Seeing them together is clinical pattern recognition. That's what you just practised.
-          </Text>
+          <Text style={styles.bodyTxt}>{beat.body}</Text>
         </View>
 
-        {/* Coming-soon notice */}
-        <View style={styles.comingSoonRow}>
-          <Ionicons name="time-outline" size={12} color={COLORS.onSurfaceTertiary} />
-          <Text style={styles.comingSoonTxt}>Full lesson unlocking soon.</Text>
-        </View>
-      </ScrollView>
+        {/* Connecting thought on beat 1 — links back to Cue Hunt */}
+        {beatIdx === 0 && (
+          <Text style={styles.connectTxt}>
+            ← This is what dry lips, weak posture, and an empty flask were telling you.
+          </Text>
+        )}
+      </Animated.View>
 
-      {/* ── BACK CTA ──────────────────────────────────────────────────── */}
-      <Pressable
-        style={styles.backCTA}
-        onPress={() => goBack(router, "/university")}
-        testID="lesson-finish"
-      >
-        <Ionicons name="chevron-back" size={15} color={COLORS.onSurfaceTertiary} />
-        <Text style={styles.backCTATxt}>Back to University</Text>
-      </Pressable>
+      {/* ── CTA ─────────────────────────────────────────────────────── */}
+      <View style={styles.ctaRow}>
+        {isLast ? (
+          <Pressable
+            style={styles.applyBtn}
+            onPress={advance}
+            testID="lesson-apply-it"
+          >
+            <Text style={styles.applyTxt}>Apply It</Text>
+            <Ionicons name="arrow-forward" size={14} color="#0B1A18" />
+          </Pressable>
+        ) : (
+          <Pressable
+            style={styles.nextBtn}
+            onPress={advance}
+            testID={`lesson-next-${beatIdx}`}
+          >
+            <Text style={styles.nextTxt}>Next</Text>
+            <Ionicons name="chevron-forward" size={14} color="#2DD4BF" />
+          </Pressable>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -147,6 +216,7 @@ export default function CueHuntLessonScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
 
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -160,80 +230,118 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   headerCenter: { flex: 1, gap: 1 },
-  kicker: { color: "#D4AF37", fontSize: 9, fontWeight: "700", letterSpacing: 2 },
-  title: { color: COLORS.onSurface, fontSize: 14, fontWeight: "300", letterSpacing: 0.4 },
-
-  content: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: SPACING.md,
-  },
-
-  sectionLabel: {
-    color: COLORS.onSurfaceTertiary,
+  kicker: {
+    color: "#2DD4BF",
     fontSize: 9, fontWeight: "700", letterSpacing: 2,
-    marginBottom: SPACING.xs ?? 4,
+  },
+  subtitle: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 12, fontWeight: "300",
+  },
+  counter: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 12, fontWeight: "600",
   },
 
-  clueCard: {
+  // Progress
+  dotRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    justifyContent: "center",
+    gap: 6,
+    paddingBottom: SPACING.sm,
+  },
+  dot: {
+    width: 28, height: 4, borderRadius: 2,
+    backgroundColor: COLORS.border,
+  },
+  dotPast: { backgroundColor: "#2DD4BF60" },
+  dotActive: { backgroundColor: "#2DD4BF" },
+
+  // Beat area
+  beatArea: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: SPACING.xl,
     gap: SPACING.md,
-    borderRadius: RADIUS.md,
+  },
+  iconCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    marginBottom: SPACING.sm,
+  },
+  stepLabel: {
+    fontSize: 9, fontWeight: "700", letterSpacing: 2,
+  },
+  heading: {
+    color: COLORS.onSurface,
+    fontSize: 22, fontWeight: "300",
+    textAlign: "center",
+    letterSpacing: 0.3,
+    lineHeight: 30,
+  },
+  bodyCard: {
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: "#2DD4BF18",
-    padding: SPACING.md,
+    padding: SPACING.lg,
     overflow: "hidden",
+    width: "100%",
+    marginTop: SPACING.xs,
   },
-  clueIconWrap: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: "#2DD4BF12",
-    borderWidth: 1, borderColor: "#2DD4BF30",
-    alignItems: "center", justifyContent: "center",
-    flexShrink: 0,
+  bodyTxt: {
+    color: COLORS.onSurface,
+    fontSize: 15,
+    lineHeight: 23,
+    textAlign: "center",
+    fontWeight: "300",
   },
-  clueBody: { flex: 1, gap: 3 },
-  clueLabel: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
-  clueWhy: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
-
-  insightCard: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: "#D4AF3728",
-    padding: SPACING.md,
-    gap: SPACING.sm,
-    overflow: "hidden",
-    marginTop: SPACING.sm,
-  },
-  insightHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  insightKicker: {
-    color: "#D4AF37",
-    fontSize: 9, fontWeight: "700", letterSpacing: 2,
-  },
-  insightBody: {
-    color: COLORS.onSurfaceSecondary,
-    fontSize: 13, lineHeight: 19,
-  },
-
-  comingSoonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: SPACING.sm,
-    justifyContent: "center",
-  },
-  comingSoonTxt: {
+  connectTxt: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 11, fontStyle: "italic",
+    fontSize: 11,
+    textAlign: "center",
+    fontStyle: "italic",
+    lineHeight: 16,
+    paddingHorizontal: SPACING.md,
   },
 
-  backCTA: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 4, paddingVertical: SPACING.md, paddingBottom: SPACING.xl,
+  // CTAs
+  ctaRow: {
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xxl,
+    paddingTop: SPACING.md,
   },
-  backCTATxt: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
+  nextBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: "#2DD4BF50",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: 12,
+    backgroundColor: "#2DD4BF0A",
+  },
+  nextTxt: {
+    color: "#2DD4BF",
+    fontSize: 14, fontWeight: "700", letterSpacing: 0.5,
+  },
+  applyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#2DD4BF",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.xxl,
+    paddingVertical: 14,
+  },
+  applyTxt: {
+    color: "#0B1A18",
+    fontSize: 15, fontWeight: "800", letterSpacing: 0.4,
+  },
 });
