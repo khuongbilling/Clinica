@@ -677,10 +677,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   // (Skills are filtered per selected hero in the Actions tab)
 
   return (
-    <SafeAreaView
-      style={[styles.container, guidedStep?.placement === "bottom" && { paddingBottom: Math.max(guidedReserve, 280) }]}
-      edges={["top", "bottom"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
 
       {/* ── ZONE A: Enemy header (compact, ~18% height) ── */}
       <View style={styles.zoneA}>
