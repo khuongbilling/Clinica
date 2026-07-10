@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -53,6 +53,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
+  const navigation = useNavigation();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
@@ -239,6 +240,26 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     setState((s) => ({ ...s, outcome: "loss", stability: 0, log: [...s.log, "⚠ The patient's condition collapses without warning."] }));
   }, [isPrologueBoss, state.outcome, state.turnsTaken]);
 
+  // ── Mandatory battle exit guards (scripted-loss prologue boss) ───────────
+  // The scripted-loss boss must always complete so the Lotus Recall /
+  // Reminiscence scene plays and later tutorial state is valid.
+  // Three layers:
+  //   1. isMandatoryBattle hides the X/help buttons from render 0 (see below).
+  //   2. BackHandler blocks the Android hardware back button.
+  //   3. navigation.beforeRemove blocks swipe-back (iOS) and browser back (web).
+  useEffect(() => {
+    if (!isPrologueBoss) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isPrologueBoss) return;
+    const onBeforeRemove = (e: any) => { e.preventDefault(); };
+    navigation.addListener("beforeRemove", onBeforeRemove);
+    return () => navigation.removeListener("beforeRemove", onBeforeRemove);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // On mount: introduce the goal
   useEffect(() => { tips.enqueue("battle.intro"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // First skill cast
@@ -338,6 +359,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   // Covers both the prologue battle and the first post-onboarding battle so
   // that wrong taps are caught with a nudge in both tutorials.
   const isTutorialBattle = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
+  // isMandatoryBattle adds isPrologueBoss so the X/help buttons are hidden
+  // from render 0 (not just after the 800ms tutorial-start delay), and are
+  // always hidden even if firstBattle was somehow already completed.
+  const isMandatoryBattle = isTutorialBattle || isPrologueBoss;
   const guidedStep = isTutorialBattle && currentStep?.requireAction ? currentStep : null;
   const guidedSkillId = guidedStep?.requiredSkillId;
   const guidedCueStep = guidedStep?.requiredActionType === "cue";
@@ -686,12 +711,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       <View style={styles.zoneA}>
         {/* Hide exit and help buttons during tutorial battles — the ✕ on
             the tutorial overlay box is the only correct exit path. */}
-        {!isTutorialBattle && (
+        {!isMandatoryBattle && (
           <Pressable style={styles.closeBtn} onPress={() => goBack(router, "/(tabs)")} testID="battle-close">
             <Ionicons name="close" size={16} color={COLORS.onSurface} />
           </Pressable>
         )}
-        {!isTutorialBattle && (
+        {!isMandatoryBattle && (
           <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">
             <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
           </Pressable>
