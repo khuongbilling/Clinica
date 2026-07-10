@@ -21,6 +21,44 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 
+// ── Cue Hunt featured hero banner ────────────────────────────────────────────
+// Shown above every other University section so the first tap a new learner
+// makes leads to a visual, playable hook rather than a reading passage.
+function CueHuntHeroBanner({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable style={styles.cueCard} onPress={onPress} testID="university-banner-cue-hunt">
+      <LinearGradient
+        colors={["#0D3B38", "#1B5550", "#0D2E2B"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      {/* subtle radial glow top-right */}
+      <View style={styles.cueGlow} pointerEvents="none" />
+
+      <View style={styles.cueTop}>
+        <View style={styles.cueBadge}>
+          <Ionicons name="eye-outline" size={11} color="#2DD4BF" />
+          <Text style={styles.cueBadgeTxt}>PLAY FIRST</Text>
+        </View>
+      </View>
+
+      <View style={styles.cueBody}>
+        <Text style={styles.cueKicker}>CUE HUNT</Text>
+        <Text style={styles.cueTitle}>The Fading Apprentice</Text>
+        <Text style={styles.cueSub}>Find what others missed.</Text>
+      </View>
+
+      <View style={styles.cueCtaRow}>
+        <View style={styles.cueCtaBtn}>
+          <Text style={styles.cueCtaTxt}>Start Cue Hunt</Text>
+          <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 // The primary "begin here" learning banner — the heart of the University.
 const LESSONS_BANNER: ModeCardDef = {
   id: "uni-lessons",
@@ -153,21 +191,56 @@ export default function UniversityHubScreen() {
             <NarratorGuide
               message={
                 isNewLearner
-                  ? "…This is the University. You were recalled not because you were ready — but because you can still learn. Begin with a single lesson. I will be watching your reasoning grow."
-                  : "You return to study. Good. Take a lesson to sharpen your reasoning, recruit and train your healers, or consult the Codex. The choice is yours."
+                  ? "…This is the University. Start with Cue Hunt above — a live case where you tap the clues a real patient is showing. Or take a Lotus Lesson to study the reasoning. Both paths reward heroes."
+                  : "You return to study. Good. Run a Cue Hunt, take a lesson, recruit healers, or consult the Codex. The choice is yours."
               }
-              ctaLabel={nextLotusNode ? "Begin a Lesson" : undefined}
-              onPress={nextLotusNode ? () => router.push("/university/lessons" as any) : undefined}
+              ctaLabel={isNewLearner ? "Start Cue Hunt" : undefined}
+              onPress={isNewLearner ? () => router.push("/university/cue-hunt" as any) : undefined}
               testID="university-narrator"
             />
           </SceneTransition>
         )}
 
-        {/* BEGIN HERE — always shown, the primary learning path */}
-        <Text style={styles.sectionHeading}>BEGIN HERE</Text>
+        {/* CUE HUNT — featured first, the primary first-click for new learners */}
+        <CueHuntHeroBanner onPress={() => router.push("/university/cue-hunt" as any)} />
+
+        {/* Rapid Triage — second mini-game */}
+        <Pressable
+          style={styles.triageCard}
+          onPress={() => router.push("/university/rapid-triage" as any)}
+          testID="university-banner-rapid-triage"
+        >
+          <View style={[styles.triageIconWrap, { backgroundColor: "#F59E0B18" }]}>
+            <Ionicons name="flash" size={18} color="#F59E0B" />
+          </View>
+          <View style={styles.triageInfo}>
+            <Text style={styles.triageTitle}>Rapid Triage</Text>
+            <Text style={styles.triageSub}>Sort 5 patients — speed and accuracy both matter.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
+
+        {/* Stabilize Stack — third mini-game */}
+        <Pressable
+          style={[styles.triageCard, { borderColor: "#06B6D425" }]}
+          onPress={() => router.push("/university/stabilize-stack" as any)}
+          testID="university-banner-stabilize-stack"
+        >
+          <View style={[styles.triageIconWrap, { backgroundColor: "#06B6D418" }]}>
+            <Ionicons name="layers" size={18} color="#06B6D4" />
+          </View>
+          <View style={styles.triageInfo}>
+            <Text style={styles.triageTitle}>Stabilize Stack</Text>
+            <Text style={styles.triageSub}>Order your interventions — sequence decides survival.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+        </Pressable>
+
+        {/* LESSONS — available below, not removed */}
+        <Text style={styles.sectionHeading}>LESSONS</Text>
         <BannerCard
           mode={LESSONS_BANNER}
-          height={158}
+          height={120}
           onPress={() => router.push("/university/lessons" as any)}
           testID="university-banner-lessons"
         />
@@ -334,6 +407,118 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800",
     letterSpacing: 1.5, marginTop: SPACING.sm,
   },
+
+  // ── Cue Hunt featured hero banner ────────────────────────────────────────
+  cueCard: {
+    borderRadius: RADIUS.lg,
+    overflow: "hidden",
+    height: 172,
+    borderWidth: 1.5,
+    borderColor: "#2DD4BF35",
+  },
+  cueGlow: {
+    position: "absolute",
+    top: -40,
+    right: -40,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "#2DD4BF18",
+  },
+  cueTop: {
+    padding: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cueBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#2DD4BF20",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#2DD4BF40",
+  },
+  cueBadgeTxt: {
+    color: "#2DD4BF",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  cueBody: {
+    flex: 1,
+    paddingHorizontal: SPACING.md,
+    justifyContent: "center",
+    gap: 2,
+  },
+  cueKicker: {
+    color: "#2DD4BF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  cueTitle: {
+    color: COLORS.onSurface,
+    fontSize: 20,
+    fontWeight: "300",
+    letterSpacing: 0.3,
+  },
+  cueSub: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 12,
+    marginTop: 1,
+  },
+  cueCtaRow: {
+    padding: SPACING.md,
+    paddingTop: SPACING.sm,
+    alignItems: "flex-start",
+  },
+  cueCtaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#2DD4BF",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+  },
+  cueCtaTxt: {
+    color: "#0B1A18",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  // ── Rapid Triage compact row ──────────────────────────────────────────────
+  triageCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: "#F59E0B25",
+  },
+  triageIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  triageInfo: { flex: 1, gap: 2 },
+  triageTitle: {
+    color: COLORS.onSurface,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  triageSub: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11,
+  },
+
   moreRow: {
     flexDirection: "row", gap: SPACING.md, alignItems: "center",
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
