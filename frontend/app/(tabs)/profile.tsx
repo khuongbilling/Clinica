@@ -45,11 +45,10 @@ export default function ProfileScreen() {
   async function handleReset() {
     await resetTutorials();
     await resetPlayer();
-    // Return to the boot gate so the full fresh-player flow re-runs
-    // (title → preloader → prologue → the forced guided tutorial battle).
-    // Without this the app would stay mounted inside (tabs) on a now-blank
-    // screen and never replay onboarding.
-    router.replace("/");
+    // Navigate directly to the title/start screen. Skipping Boot ("/") avoids
+    // a double-redirect (Boot always redirects straight to /title anyway) that
+    // can race on web and leave the app on a blank screen after reset.
+    router.replace("/title" as never);
   }
 
   if (!player) {
