@@ -54,13 +54,12 @@ export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
   return !!id && id !== "prologueBattle";
 }
 
-// Forced (non-skippable) tutorials: the guided prologue battle and the
-// System's one-time hub-onboarding beats. Everything else can be skipped.
+// Forced (non-closeable) tutorials: only the guided prologue battle, which
+// requires the player to perform specific actions to progress. All other
+// tutorials — including the System/Mentor Bai hub onboarding beats — show
+// an ✕ close button so players can dismiss them at any time.
 export const FORCED_TUTORIAL_IDS: TutorialId[] = [
   "prologueBattle",
-  "systemHubIntro",
-  "systemWardHub",
-  "systemShops",
 ];
 
 export function isForcedTutorial(id: TutorialId | null | undefined): boolean {

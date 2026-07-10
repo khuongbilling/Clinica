@@ -168,6 +168,13 @@ export function TutorialOverlay() {
           ]}
         >
           {showChevron && arrowUp && <PointerChevron dir="up" />}
+          {/* ✕ close button — top-right corner; shown whenever the tutorial
+              can be skipped (all tutorials except the guided prologue battle) */}
+          {allowSkip && (
+            <Pressable onPress={skipTutorial} hitSlop={10} style={styles.boxClose}>
+              <Ionicons name="close" size={15} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+          )}
           <View style={styles.narrativeRow}>
             <NarratorFigure art={narrator.art} color={accent} width={64} height={92} />
             <View style={styles.narrativeContent}>
@@ -225,6 +232,12 @@ export function TutorialOverlay() {
           </View>
         </View>
         <Pressable style={[styles.popover, { borderColor: accent + "80" }]} onPress={() => setInstant(true)}>
+          {/* ✕ close button — top-right of the popover card */}
+          {allowSkip && (
+            <Pressable onPress={skipTutorial} hitSlop={10} style={styles.popoverClose}>
+              <Ionicons name="close" size={16} color={COLORS.onSurfaceTertiary} />
+            </Pressable>
+          )}
           <Text style={styles.popoverTitle}>{currentStep.title}</Text>
           <TypewriterText text={currentStep.body} style={styles.popoverBody} instant={instant} />
 
@@ -326,6 +339,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.5,
+  },
+
+  // ── Close (✕) buttons — absolute top-right of each box variant ──
+  boxClose: {
+    position: "absolute",
+    top: SPACING.sm,
+    right: SPACING.sm,
+    zIndex: 10,
+    padding: 4,
+  },
+  popoverClose: {
+    position: "absolute",
+    top: SPACING.sm,
+    right: SPACING.sm,
+    zIndex: 10,
+    padding: 4,
   },
 
   // ── Guided action narrative box (positioned near the highlighted control) ──
