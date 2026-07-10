@@ -147,7 +147,18 @@ export function TutorialOverlay() {
     // Banner steps keep pointerEvents:auto because they need the NEXT button.
     const boxPassthrough = !!(currentStep.requireAction && !currentStep.banner && instant);
 
+    // During battle tutorials block every other tap on the battle screen.
+    // A full-screen scrim sits below the tutorial box (z 8999 vs box z 9000)
+    // and catches all touches. Handler-level guards in battle.tsx already
+    // return early for wrong skills, but the scrim prevents taps on areas
+    // with no handler (enemy panel, header area, etc.) from registering at all.
+    const isBattleTutorial = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
+
     return (
+      <>
+        {isBattleTutorial && currentStep.requireAction && (
+          <View style={styles.battleScrim} pointerEvents="auto" />
+        )}
       <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
         <Pressable
           // While text is animating, tap the box to reveal all text instantly.
@@ -215,6 +226,7 @@ export function TutorialOverlay() {
           {showChevron && !arrowUp && <PointerChevron dir="down" />}
         </Pressable>
       </View>
+      </>
     );
   }
 
@@ -339,6 +351,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.5,
+  },
+
+  // Full-screen scrim rendered below the tutorial box during battle tutorials.
+  // zIndex 8999 sits below the box (9000) but above the battle UI (0),
+  // blocking taps on enemy panels, header, and any non-skill area.
+  battleScrim: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 8999,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
 
   // ── Close (✕) buttons — absolute top-right of each box variant ──

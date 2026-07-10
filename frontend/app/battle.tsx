@@ -334,8 +334,11 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 3500);
   };
 
-  // ---- Guided prologue tutorial: force a specific 3-star care chain ----
-  const guidedStep = activeTutorialId === "prologueBattle" && currentStep?.requireAction ? currentStep : null;
+  // ---- Guided tutorial battle: force a specific care-chain sequence ----
+  // Covers both the prologue battle and the first post-onboarding battle so
+  // that wrong taps are caught with a nudge in both tutorials.
+  const isTutorialBattle = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
+  const guidedStep = isTutorialBattle && currentStep?.requireAction ? currentStep : null;
   const guidedSkillId = guidedStep?.requiredSkillId;
   const guidedCueStep = guidedStep?.requiredActionType === "cue";
   const guidedEndTurnStep = guidedStep?.requiredActionType === "endTurn";
@@ -681,17 +684,18 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
       {/* ── ZONE A: Enemy header (compact, ~18% height) ── */}
       <View style={styles.zoneA}>
-        {/* Hide the exit button while either tutorial battle is active so
-            players cannot bypass the guided sequence. All other battles
-            keep the X as normal. */}
-        {activeTutorialId !== "prologueBattle" && activeTutorialId !== "firstBattle" && (
+        {/* Hide exit and help buttons during tutorial battles — the ✕ on
+            the tutorial overlay box is the only correct exit path. */}
+        {!isTutorialBattle && (
           <Pressable style={styles.closeBtn} onPress={() => goBack(router, "/(tabs)")} testID="battle-close">
             <Ionicons name="close" size={16} color={COLORS.onSurface} />
           </Pressable>
         )}
-        <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">
-          <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
-        </Pressable>
+        {!isTutorialBattle && (
+          <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">
+            <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
+          </Pressable>
+        )}
         <View style={styles.enemyHeaderRow}>
           <View style={{ flex: 1, gap: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

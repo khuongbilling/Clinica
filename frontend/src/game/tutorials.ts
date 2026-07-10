@@ -54,13 +54,10 @@ export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
   return !!id && id !== "prologueBattle";
 }
 
-// Forced (non-closeable) tutorials: only the guided prologue battle, which
-// requires the player to perform specific actions to progress. All other
-// tutorials — including the System/Mentor Bai hub onboarding beats — show
-// an ✕ close button so players can dismiss them at any time.
-export const FORCED_TUTORIAL_IDS: TutorialId[] = [
-  "prologueBattle",
-];
+// All tutorials are closeable via the ✕ button on the tutorial box.
+// During battle tutorials the rest of the screen is blocked so the ✕ on
+// the box is the only reliable way to exit — which is intentional.
+export const FORCED_TUTORIAL_IDS: TutorialId[] = [];
 
 export function isForcedTutorial(id: TutorialId | null | undefined): boolean {
   return !!id && FORCED_TUTORIAL_IDS.includes(id);
