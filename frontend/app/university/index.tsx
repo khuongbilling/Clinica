@@ -12,6 +12,7 @@ import { BannerCard } from "@/src/components/ModeBanners";
 import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
@@ -92,6 +93,7 @@ export default function UniversityHubScreen() {
   const { player } = usePlayer();
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
+  const { activeTutorialId } = useTutorial();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
 
@@ -141,20 +143,25 @@ export default function UniversityHubScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <SceneTransition trigger="university-arrival">
-          {isNewLearner && nextLotusNode && <OnboardingProgressBar step="University" />}
+        {/* Only show the step-tracker and System narrator card when no tutorial
+            overlay is active — the overlay already provides the active instruction
+            and stacking a second guide card on top creates redundant guidance. */}
+        {!activeTutorialId && (
+          <SceneTransition trigger="university-arrival">
+            {isNewLearner && nextLotusNode && <OnboardingProgressBar step="University" />}
 
-          <NarratorGuide
-            message={
-              isNewLearner
-                ? "…This is the University. You were recalled not because you were ready — but because you can still learn. Begin with a single lesson. I will be watching your reasoning grow."
-                : "You return to study. Good. Take a lesson to sharpen your reasoning, recruit and train your healers, or consult the Codex. The choice is yours."
-            }
-            ctaLabel={nextLotusNode ? "Begin a Lesson" : undefined}
-            onPress={nextLotusNode ? () => router.push("/university/lessons" as any) : undefined}
-            testID="university-narrator"
-          />
-        </SceneTransition>
+            <NarratorGuide
+              message={
+                isNewLearner
+                  ? "…This is the University. You were recalled not because you were ready — but because you can still learn. Begin with a single lesson. I will be watching your reasoning grow."
+                  : "You return to study. Good. Take a lesson to sharpen your reasoning, recruit and train your healers, or consult the Codex. The choice is yours."
+              }
+              ctaLabel={nextLotusNode ? "Begin a Lesson" : undefined}
+              onPress={nextLotusNode ? () => router.push("/university/lessons" as any) : undefined}
+              testID="university-narrator"
+            />
+          </SceneTransition>
+        )}
 
         {/* BEGIN HERE — always shown, the primary learning path */}
         <Text style={styles.sectionHeading}>BEGIN HERE</Text>
