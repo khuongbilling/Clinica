@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,12 +13,18 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 /**
  * Types the text out character-by-character like a visual-novel narrative box so
  * the player actually reads each step. Tap the box to reveal the rest instantly.
+ * Calls onComplete when all characters are visible (naturally or via instant).
  */
-function TypewriterText({ text, style, instant, speed = 16 }: { text: string; style?: any; instant?: boolean; speed?: number }) {
+function TypewriterText({ text, style, instant, speed = 16, onComplete }: { text: string; style?: any; instant?: boolean; speed?: number; onComplete?: () => void }) {
   const [count, setCount] = useState(0);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; });
+
   useEffect(() => {
     if (instant) {
       setCount(text.length);
+      // Fire onComplete when skipped-to-instant so box goes passthrough immediately.
+      onCompleteRef.current?.();
       return;
     }
     setCount(0);
@@ -26,7 +32,10 @@ function TypewriterText({ text, style, instant, speed = 16 }: { text: string; st
     const id = setInterval(() => {
       i += 1;
       setCount(i);
-      if (i >= text.length) clearInterval(id);
+      if (i >= text.length) {
+        clearInterval(id);
+        onCompleteRef.current?.();
+      }
     }, speed);
     return () => clearInterval(id);
   }, [text, speed, instant]);
@@ -84,6 +93,10 @@ export function TutorialOverlay() {
     setInstant(false);
   }, [stepId]);
 
+  // Called by TypewriterText when all characters are visible. Switches instant
+  // to true so the box becomes passthrough and the highlighted button is tappable.
+  const handleTypewriterComplete = useCallback(() => setInstant(true), []);
+
   // Reserve is only meaningful while a bottom-placed guided box is showing.
   // Clear it whenever we're not (top/center box, banner, or overlay hidden) so
   // screens don't keep dead bottom padding after the step advances.
@@ -125,16 +138,22 @@ export function TutorialOverlay() {
   if (usesBox) {
     const placement = currentStep.placement;
     const justify = placement === "bottom" ? "flex-end" : placement === "center" ? "center" : "flex-start";
-    // The highlighted control lives outside the box: below it for a top/center
-    // banner, above it for a bottom banner. Point the arrow toward it. Purely
-    // informational banners don't point at a specific control.
     const showChevron = currentStep.requireAction;
     const arrowUp = placement === "bottom";
     const accent = narrator.color;
+
+    // Once all text is visible (instant=true) on a requireAction step, the box
+    // becomes passthrough so the player can tap the highlighted button directly.
+    // Banner steps keep pointerEvents:auto because they need the NEXT button.
+    const boxPassthrough = !!(currentStep.requireAction && !currentStep.banner && instant);
+
     return (
       <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
         <Pressable
-          onPress={() => setInstant(true)}
+          // While text is animating, tap the box to reveal all text instantly.
+          // Once passthrough, onPress is removed so touches fall through to the
+          // highlighted button; pointerEvents:box-none keeps Skip tappable.
+          onPress={boxPassthrough ? undefined : () => setInstant(true)}
           onLayout={placement === "bottom" && currentStep.requireAction
             ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.xxl)
             : undefined}
@@ -143,7 +162,9 @@ export function TutorialOverlay() {
             { borderColor: accent, shadowColor: accent },
             placement === "top" && { marginTop: insets.top + SPACING.xs },
             placement === "bottom" && { marginBottom: insets.bottom + SPACING.md },
-            { pointerEvents: "auto" },
+            boxPassthrough
+              ? { pointerEvents: "box-none", opacity: 0.88 }
+              : { pointerEvents: "auto" },
           ]}
         >
           {showChevron && arrowUp && <PointerChevron dir="up" />}
@@ -155,7 +176,12 @@ export function TutorialOverlay() {
                 {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
               </View>
               <Text style={styles.systemStepTitle}>{currentStep.title}</Text>
-              <TypewriterText text={currentStep.body} style={styles.narrativeBody} instant={instant} />
+              <TypewriterText
+                text={currentStep.body}
+                style={styles.narrativeBody}
+                instant={instant}
+                onComplete={handleTypewriterComplete}
+              />
             </View>
           </View>
           <View style={styles.narrativeFoot}>
@@ -172,7 +198,7 @@ export function TutorialOverlay() {
                   <Text style={[styles.tapPrompt, { color: accent }]} numberOfLines={1}>▸ {currentStep.nextText}</Text>
                 ) : <View style={{ flex: 1 }} />}
                 {allowSkip && (
-                  <Pressable onPress={skipTutorial} hitSlop={8}>
+                  <Pressable onPress={skipTutorial} hitSlop={8} style={{ pointerEvents: "auto" }}>
                     <Text style={styles.skipTxt}>Skip</Text>
                   </Pressable>
                 )}

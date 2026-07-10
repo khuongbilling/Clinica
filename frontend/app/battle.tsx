@@ -681,9 +681,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
       {/* ── ZONE A: Enemy header (compact, ~18% height) ── */}
       <View style={styles.zoneA}>
-        <Pressable style={styles.closeBtn} onPress={() => goBack(router, "/(tabs)")} testID="battle-close">
-          <Ionicons name="close" size={16} color={COLORS.onSurface} />
-        </Pressable>
+        {/* Hide the exit button while either tutorial battle is active so
+            players cannot bypass the guided sequence. All other battles
+            keep the X as normal. */}
+        {activeTutorialId !== "prologueBattle" && activeTutorialId !== "firstBattle" && (
+          <Pressable style={styles.closeBtn} onPress={() => goBack(router, "/(tabs)")} testID="battle-close">
+            <Ionicons name="close" size={16} color={COLORS.onSurface} />
+          </Pressable>
+        )}
         <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">
           <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
         </Pressable>
