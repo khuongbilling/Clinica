@@ -407,16 +407,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   cueHuntIntro: [
     {
       id: "cue_hunt_open",
-      title: "Learn to See",
-      body: "Before you treat, learn to see. A patient's story holds clues others miss. Tap each one you find.",
+      title: "The System",
+      body: "Before you treat, learn to see. Tap the dry lips.",
       placement: "center",
       requireAction: false,
-      nextText: "LOOK CLOSER",
+      nextText: "UNDERSTOOD",
     },
     {
       id: "cue_hunt_first_tap",
-      title: "Find the First Clue",
-      body: "Tap the dry lips.",
+      title: "Tap it now.",
+      body: "The dry lips. Find it in the scene.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "clue_dry_lips",
