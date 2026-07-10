@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { goBack } from "@/src/utils/navigation";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,7 +16,7 @@ import { useTutorial } from "@/src/game/tutorialStore";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
-import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
+import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
@@ -151,6 +151,8 @@ export default function UniversityHubScreen() {
   const nextLotusNode = firstIncompleteLotusNode(player);
   const lessonsCompleted = player.lessons_completed?.length ?? 0;
   const isNewLearner = lessonsCompleted === 0;
+  // True once the player finishes the full Fading Apprentice chain (Step 9 reward screen)
+  const chainComplete = isLotusNodeComplete(player, "recognizing-cues-hydration");
   const heroCount = player.heroes_owned?.length ?? 0;
   // Show Recruitment once the player has completed at least one lesson.
   const showRecruitment = !isNewLearner;
@@ -204,37 +206,8 @@ export default function UniversityHubScreen() {
         {/* CUE HUNT — featured first, the primary first-click for new learners */}
         <CueHuntHeroBanner onPress={() => router.push("/university/cue-hunt" as any)} />
 
-        {/* Rapid Triage — second mini-game */}
-        <Pressable
-          style={styles.triageCard}
-          onPress={() => router.push("/university/rapid-triage" as any)}
-          testID="university-banner-rapid-triage"
-        >
-          <View style={[styles.triageIconWrap, { backgroundColor: "#F59E0B18" }]}>
-            <Ionicons name="flash" size={18} color="#F59E0B" />
-          </View>
-          <View style={styles.triageInfo}>
-            <Text style={styles.triageTitle}>Rapid Triage</Text>
-            <Text style={styles.triageSub}>Sort 5 patients — speed and accuracy both matter.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
-        </Pressable>
-
-        {/* Stabilize Stack — third mini-game */}
-        <Pressable
-          style={[styles.triageCard, { borderColor: "#06B6D425" }]}
-          onPress={() => router.push("/university/stabilize-stack" as any)}
-          testID="university-banner-stabilize-stack"
-        >
-          <View style={[styles.triageIconWrap, { backgroundColor: "#06B6D418" }]}>
-            <Ionicons name="layers" size={18} color="#06B6D4" />
-          </View>
-          <View style={styles.triageInfo}>
-            <Text style={styles.triageTitle}>Stabilize Stack</Text>
-            <Text style={styles.triageSub}>Order your interventions — sequence decides survival.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
-        </Pressable>
+        {/* Chain track — shows the 4 steps of The Fading Apprentice case chain */}
+        <ChainTrack chainDone={chainComplete} />
 
         {/* LESSONS — available below, not removed */}
         <Text style={styles.sectionHeading}>LESSONS</Text>
@@ -316,6 +289,13 @@ export default function UniversityHubScreen() {
               onPress={() => router.push("/learning-profile" as any)}
               testID="university-more-learning-profile"
             />
+            <MoreRow
+              icon="layers-outline"
+              title="Stabilize Stack: ABCDE"
+              desc="A second ordering challenge — a different patient, different stakes."
+              onPress={() => router.push("/university/stabilize-stack" as any)}
+              testID="university-more-stabilize-abcde"
+            />
 
             {/* Future Learning — collapsed by default */}
             <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
@@ -363,6 +343,78 @@ export default function UniversityHubScreen() {
 
       <TutorialOverlay />
     </SafeAreaView>
+  );
+}
+
+// ── ChainTrack ──────────────────────────────────────────────────────────────
+// Shows the 4-step "Fading Apprentice" case chain below the hero banner.
+// When chainDone is true all steps glow and a completion badge appears.
+const CHAIN_STEPS = [
+  { icon: "eye-outline" as const, label: "Cue Hunt", color: "#2DD4BF" },
+  { icon: "flash-outline" as const, label: "Triage", color: "#F59E0B" },
+  { icon: "layers-outline" as const, label: "Stabilize", color: "#38BDF8" },
+  { icon: "ribbon-outline" as const, label: "Reward", color: "#D4AF37" },
+];
+
+function ChainTrack({ chainDone }: { chainDone: boolean }) {
+  return (
+    <View style={chainStyles.wrap}>
+      <View style={chainStyles.headerRow}>
+        <Text style={chainStyles.chainLabel}>THE FADING APPRENTICE · CASE CHAIN</Text>
+        {chainDone && (
+          <View style={chainStyles.doneBadge}>
+            <Ionicons name="checkmark-circle" size={11} color="#22C55E" />
+            <Text style={chainStyles.doneTxt}>COMPLETE</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={chainStyles.stepsRow}>
+        {CHAIN_STEPS.map((step, i) => (
+          <React.Fragment key={step.label}>
+            <View style={chainStyles.stepWrap}>
+              <View
+                style={[
+                  chainStyles.stepCircle,
+                  {
+                    borderColor: chainDone ? step.color + "88" : step.color + "38",
+                    backgroundColor: chainDone ? step.color + "18" : "transparent",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={step.icon}
+                  size={13}
+                  color={chainDone ? step.color : COLORS.onSurfaceTertiary}
+                />
+              </View>
+              <Text
+                style={[
+                  chainStyles.stepLabel,
+                  { color: chainDone ? step.color : COLORS.onSurfaceTertiary },
+                ]}
+              >
+                {step.label}
+              </Text>
+            </View>
+            {i < CHAIN_STEPS.length - 1 && (
+              <View
+                style={[
+                  chainStyles.connector,
+                  chainDone && { backgroundColor: "#2DD4BF30" },
+                ]}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </View>
+
+      {!chainDone && (
+        <Text style={chainStyles.hint}>
+          Start Cue Hunt above — each step unlocks the next.
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -540,4 +592,81 @@ const styles = StyleSheet.create({
   futureToggleTxt: { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
+});
+
+// ── ChainTrack styles ────────────────────────────────────────────────────────
+const chainStyles = StyleSheet.create({
+  wrap: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: "#2DD4BF20",
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  chainLabel: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  doneBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#22C55E18",
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: "#22C55E30",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  doneTxt: {
+    color: "#22C55E",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  stepsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stepWrap: {
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  connector: {
+    height: 1.5,
+    width: 12,
+    backgroundColor: "#2A3A4A",
+    marginBottom: 16,
+    flexShrink: 0,
+  },
+  hint: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 10,
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingTop: 2,
+  },
 });
