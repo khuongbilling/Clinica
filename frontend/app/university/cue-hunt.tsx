@@ -310,26 +310,58 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
       {/* ══════════════════════════════════════════════════════════════
           LAYER 1 · DEEP ROOM BACKGROUND
-          A richer two-tone gradient: deep forest green ceiling to near-black
-          floor, evoking a lantern-lit stone infirmary at night.
+          Donghua atmosphere: base dark is not flat but has a painterly
+          warm-centre / cool-edge temperature story. Lanterns heat the
+          left and right walls with amber; moon casts silver-blue down
+          the centre column; teal lotus magic pools near the floor.
       ══════════════════════════════════════════════════════════════ */}
+      {/* Base deep-night gradient */}
       <LinearGradient
-        colors={["#0D1F16", "#142818", "#0A1510", "#080E09"]}
-        locations={[0, 0.38, 0.72, 1]}
+        colors={["#0A1810", "#111D14", "#0C1710", "#070C08"]}
+        locations={[0, 0.28, 0.68, 1]}
         style={StyleSheet.absoluteFillObject}
+      />
+      {/* Warm lantern side-wash — amber heat from both walls */}
+      <LinearGradient
+        colors={["#C8781018", "transparent", "#C8781018"]}
+        start={{ x: 0, y: 0.44 }}
+        end={{ x: 1, y: 0.44 }}
+        style={{ position: "absolute", left: 0, top: 0, right: 0, height: U * SCENE_RATIO }}
+      />
+      {/* Cool moonlight column down centre — silver-blue from window */}
+      <LinearGradient
+        colors={["#8AB8CC1C", "transparent"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{
+          position: "absolute",
+          left: U * 0.310, top: 0, width: U * 0.380, height: U * 0.640,
+        }}
+      />
+      {/* Teal lotus-magic floor ambience — faint glow near patient */}
+      <LinearGradient
+        colors={["transparent", "#2DD4BF0A"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{
+          position: "absolute",
+          left: U * 0.220, top: U * 0.600, width: U * 0.560, height: U * 0.450,
+          borderRadius: U * 0.225,
+        }}
       />
 
       {/* ══════════════════════════════════════════════════════════════
           LAYER 2 · WALL STONE TEXTURE
           Horizontal mortar courses and faint vertical pillar marks give
           the back wall the feel of dressed stone or plastered brick.
+          Slightly stronger lines for painterly depth.
       ══════════════════════════════════════════════════════════════ */}
       {/* Stone course (mortar) lines */}
       {[0.18, 0.36, 0.54, 0.70, 0.86].map((y, i) => (
         <View key={`sc${i}`} style={{
           position: "absolute",
           left: 0, top: U * y, right: 0, height: 1,
-          backgroundColor: "#2DD4BF07",
+          backgroundColor: "#2DD4BF0D",
         }} />
       ))}
       {/* Vertical pillar grooves */}
@@ -338,7 +370,7 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
           position: "absolute",
           left: U * x, top: 0, width: 1,
           height: U * 0.92,
-          backgroundColor: "#FFFFFF04",
+          backgroundColor: "#FFFFFF07",
         }} />
       ))}
       {/* Wainscoting: lower wall panel, subtly darker */}
@@ -346,12 +378,19 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         position: "absolute",
         left: 0, top: U * 0.820, right: 0,
         height: U * (SCENE_RATIO - 0.820),
-        backgroundColor: "#070D08",
+        backgroundColor: "#060C07",
       }} />
+      {/* Wainscoting gold trim rail — more visible, fantasy-medical gilt */}
       <View style={{
         position: "absolute",
-        left: 0, top: U * 0.820, right: 0, height: 2,
-        backgroundColor: "#D4AF3722",
+        left: 0, top: U * 0.820, right: 0, height: 2.5,
+        backgroundColor: "#D4AF3740",
+      }} />
+      {/* Wainscoting inner shadow rail */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.048, top: U * 0.827, right: U * 0.048, height: 1,
+        backgroundColor: "#D4AF3720",
       }} />
 
       {/* ══════════════════════════════════════════════════════════════
@@ -386,18 +425,29 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
       ))}
 
       {/* ══════════════════════════════════════════════════════════════
-          LAYER 4 · WINDOW ARCH — moonlit, with cross-bars + light rays
+          LAYER 4 · WINDOW ARCH — moonlit Lotus arch with silver-blue cast
+          Donghua: moonlight is cooler/silver-blue, distinct from warm amber
+          lanterns. Light rays are visible shafts of lunar silver.
       ══════════════════════════════════════════════════════════════ */}
-      {/* Outer moonlight ambient glow (broad, soft) */}
+      {/* Broad cool lunar bloom behind arch — silver-blue, not amber */}
       <LinearGradient
-        colors={["#D8C07840", "#D4AF3718", "transparent"]}
+        colors={["#B0C8E040", "#9AB8D028", "transparent"]}
         style={{
           position: "absolute", top: -U * 0.02,
-          left: U * 0.240, width: U * 0.520,
-          height: U * 0.420,
+          left: U * 0.220, width: U * 0.560,
+          height: U * 0.460,
         }}
       />
-      {/* Outer arch molding — wider ornate frame */}
+      {/* Secondary warm highlight near top of arch (candle glow from inside) */}
+      <LinearGradient
+        colors={["#D4AF3420", "transparent"]}
+        style={{
+          position: "absolute", top: 0,
+          left: U * 0.310, width: U * 0.380,
+          height: U * 0.200,
+        }}
+      />
+      {/* Outer arch molding — ornate gilt frame */}
       <View style={{
         position: "absolute",
         left: U * 0.328, top: 0,
@@ -405,9 +455,19 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         borderTopLeftRadius: U * 0.172,
         borderTopRightRadius: U * 0.172,
         borderWidth: 2.5, borderBottomWidth: 0,
-        borderColor: "#D4AF3740",
+        borderColor: "#D4AF3752",
       }} />
-      {/* Inner arch glass area */}
+      {/* Arch outer-outer faint halo ring */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.316, top: 0,
+        width: U * 0.368, height: U * 0.284,
+        borderTopLeftRadius: U * 0.184,
+        borderTopRightRadius: U * 0.184,
+        borderWidth: 1, borderBottomWidth: 0,
+        borderColor: "#D4AF3720",
+      }} />
+      {/* Inner arch glass area — silver-blue lunar glass */}
       <View style={{
         position: "absolute",
         left: U * 0.346, top: 0,
@@ -417,7 +477,7 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         overflow: "hidden",
       }}>
         <LinearGradient
-          colors={["#C8B06035", "#D4AF3720", "#C8B06010"]}
+          colors={["#B8D0E848", "#A8C4DC28", "#8AB0C810"]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFillObject}
@@ -426,71 +486,98 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         <View style={{
           position: "absolute", bottom: 0,
           left: "50%", width: 1.5, height: "62%",
-          backgroundColor: "#D4AF3732",
+          backgroundColor: "#D4AF3738",
           transform: [{ translateX: -0.75 }],
         }} />
         {/* Horizontal cross bar */}
         <View style={{
           position: "absolute", top: "40%",
           left: 0, right: 0, height: 1.5,
-          backgroundColor: "#D4AF3725",
+          backgroundColor: "#D4AF3730",
         }} />
-        {/* Subtle light rays spilling from arch */}
+        {/* Moonlight ray — left shaft, silver-blue */}
         <View style={{
-          position: "absolute", top: "8%", left: "55%",
-          width: U * 0.042, height: U * 0.240,
-          backgroundColor: "#D8C07808",
-          transform: [{ rotate: "14deg" }, { translateX: -U * 0.021 }],
+          position: "absolute", top: "5%", left: "20%",
+          width: U * 0.044, height: U * 0.260,
+          backgroundColor: "#C8DCF014",
+          transform: [{ rotate: "-12deg" }, { translateX: -U * 0.022 }],
         }} />
+        {/* Moonlight ray — right shaft */}
         <View style={{
-          position: "absolute", top: "8%", left: "28%",
-          width: U * 0.032, height: U * 0.240,
-          backgroundColor: "#D8C07806",
-          transform: [{ rotate: "-12deg" }, { translateX: -U * 0.016 }],
+          position: "absolute", top: "5%", left: "60%",
+          width: U * 0.038, height: U * 0.260,
+          backgroundColor: "#C8DCF012",
+          transform: [{ rotate: "15deg" }, { translateX: -U * 0.019 }],
+        }} />
+        {/* Centre bright spot — moon face in glass */}
+        <View style={{
+          position: "absolute", top: "10%", left: "35%",
+          width: "30%", height: "25%",
+          borderRadius: 100,
+          backgroundColor: "#D0E4F820",
         }} />
       </View>
-      {/* Flanking pillar lines */}
+      {/* Flanking pillar lines — gilt edges */}
       <View style={{
         position: "absolute", top: 0,
-        left: U * 0.272, width: 2, height: U * 0.295,
-        backgroundColor: "#D4AF3718",
+        left: U * 0.272, width: 2.5, height: U * 0.295,
+        backgroundColor: "#D4AF3728",
       }} />
       <View style={{
         position: "absolute", top: 0,
-        left: U * (1 - 0.272) - 2, width: 2, height: U * 0.295,
-        backgroundColor: "#D4AF3718",
+        left: U * (1 - 0.272) - 2, width: 2.5, height: U * 0.295,
+        backgroundColor: "#D4AF3728",
       }} />
-      {/* Window light wash on wall below arch */}
+      {/* Moonlight wall-wash below arch — cool silver-blue cast on stone */}
       <LinearGradient
-        colors={["#D4AF3410", "transparent"]}
+        colors={["#9AB8CC18", "transparent"]}
         style={{
           position: "absolute", top: 0, left: 0, right: 0,
-          height: U * 0.380,
+          height: U * 0.420,
         }}
       />
 
       {/* ══════════════════════════════════════════════════════════════
-          LAYER 5 · LOTUS SYMBOL carved on back wall (below window)
-          A subtle disc with six petals — Clinica's medical-magical sigil.
+          LAYER 5 · LOTUS SIGIL — carved & glowing on back wall
+          Clinica's medical-magical emblem. Donghua: magical sigils glow
+          softly with inner light. Three rings: outer bloom, main disc,
+          inner detail. Petals have visible luminous teal fill.
       ══════════════════════════════════════════════════════════════ */}
-      {/* Disc backing */}
+      {/* Outermost soft glow bloom — large radius, barely-there */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.406, top: U * 0.267,
+        width: U * 0.188, height: U * 0.188,
+        borderRadius: U * 0.094,
+        backgroundColor: "#2DD4BF0E",
+      }} />
+      {/* Disc backing — brighter, feels inlaid */}
       <View style={{
         position: "absolute",
         left: U * 0.437, top: U * 0.298,
         width: U * 0.126, height: U * 0.126,
         borderRadius: U * 0.063,
-        borderWidth: 1, borderColor: "#2DD4BF14",
-        backgroundColor: "#2DD4BF08",
+        borderWidth: 1.5, borderColor: "#2DD4BF30",
+        backgroundColor: "#2DD4BF14",
+      }} />
+      {/* Mid ring */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.455, top: U * 0.316,
+        width: U * 0.090, height: U * 0.090,
+        borderRadius: U * 0.045,
+        borderWidth: 1, borderColor: "#2DD4BF22",
       }} />
       {/* Inner ring */}
       <View style={{
         position: "absolute",
-        left: U * 0.462, top: U * 0.323,
-        width: U * 0.076, height: U * 0.076,
-        borderRadius: U * 0.038,
-        borderWidth: 1, borderColor: "#2DD4BF18",
+        left: U * 0.468, top: U * 0.329,
+        width: U * 0.064, height: U * 0.064,
+        borderRadius: U * 0.032,
+        borderWidth: 1, borderColor: "#2DD4BF28",
+        backgroundColor: "#2DD4BF08",
       }} />
-      {/* Six lotus petals (rotated ellipses) */}
+      {/* Six lotus petals — luminous teal fill */}
       {[0, 60, 120, 180, 240, 300].map((deg, i) => {
         const rad = (deg * Math.PI) / 180;
         return (
@@ -500,8 +587,8 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
             top: U * 0.361 + Math.sin(rad) * U * 0.040 - U * 0.018,
             width: U * 0.020, height: U * 0.036,
             borderRadius: U * 0.010,
-            borderWidth: 1, borderColor: "#2DD4BF16",
-            backgroundColor: "#2DD4BF07",
+            borderWidth: 1, borderColor: "#2DD4BF28",
+            backgroundColor: "#2DD4BF10",
             transform: [{ rotate: `${deg}deg` }],
           }} />
         );
@@ -509,17 +596,37 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
       {/* ══════════════════════════════════════════════════════════════
           LAYER 6 · LEFT HANGING LANTERN
-          Iron wall-bracket → chain → lantern body with amber glow.
-          Light from this lantern pools on the left floor area.
+          Donghua: lanterns are prominent luminous light sources, not just
+          props. Large outer bloom + brighter inner corona + visible flame.
+          The light pools on wall and floor beneath to sell the 3D space.
       ══════════════════════════════════════════════════════════════ */}
-      {/* Warm glow halo behind lantern */}
+      {/* Outer warm bloom — large soft amber cloud on wall */}
       <View style={{
         position: "absolute",
-        left: -U * 0.020, top: U * 0.078,
-        width: U * 0.220, height: U * 0.360,
-        borderRadius: U * 0.110,
-        backgroundColor: "#E8A42008",
+        left: -U * 0.070, top: U * 0.040,
+        width: U * 0.340, height: U * 0.520,
+        borderRadius: U * 0.170,
+        backgroundColor: "#E8A42018",
       }} />
+      {/* Inner corona — brighter, tighter around lantern body */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.004, top: U * 0.120,
+        width: U * 0.170, height: U * 0.300,
+        borderRadius: U * 0.085,
+        backgroundColor: "#E8A42028",
+      }} />
+      {/* Wall amber wash — lantern casts on stone beside it */}
+      <LinearGradient
+        colors={["#C87010", "transparent"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{
+          position: "absolute",
+          left: 0, top: U * 0.140, width: U * 0.180, height: U * 0.200,
+          borderRadius: U * 0.090, opacity: 0.08,
+        }}
+      />
       {/* Bracket arm (horizontal, from wall) */}
       <View style={{
         position: "absolute",
@@ -570,35 +677,73 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         width: U * 0.050, height: U * 0.014,
         backgroundColor: "#283C2A", borderRadius: 3,
       }} />
-      {/* Flame glow dot */}
+      {/* Flame glow — outer halo */}
       <View style={{
         position: "absolute",
-        left: U * 0.060, top: U * 0.226,
-        width: 7, height: 7, borderRadius: 3.5,
-        backgroundColor: "#FFD06048",
+        left: U * 0.046, top: U * 0.212,
+        width: 22, height: 22, borderRadius: 11,
+        backgroundColor: "#FFD06018",
       }} />
-      {/* Floor light pool (left) */}
+      {/* Flame glow — inner bright */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.059, top: U * 0.225,
+        width: 9, height: 9, borderRadius: 4.5,
+        backgroundColor: "#FFE08068",
+      }} />
+      {/* Floor light pool (left) — broad amber spill */}
       <LinearGradient
-        colors={["#E8A42010", "transparent"]}
+        colors={["#E8A42030", "transparent"]}
         style={{
           position: "absolute",
-          left: 0, top: U * 0.720,
-          width: U * 0.280, height: U * 0.320,
-          borderRadius: U * 0.140,
+          left: 0, top: U * 0.700,
+          width: U * 0.320, height: U * 0.380,
+          borderRadius: U * 0.160,
+        }}
+      />
+      {/* Wall light wash (left, descending from lantern) */}
+      <LinearGradient
+        colors={["#D08018", "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          position: "absolute",
+          left: 0, top: U * 0.260, width: U * 0.200, height: U * 0.400,
+          opacity: 0.06,
         }}
       />
 
       {/* ══════════════════════════════════════════════════════════════
           LAYER 7 · RIGHT HANGING LANTERN (mirror of left)
+          Same luminous treatment: outer bloom + inner corona + visible flame.
       ══════════════════════════════════════════════════════════════ */}
-      {/* Warm glow halo */}
+      {/* Outer warm bloom — right side */}
       <View style={{
         position: "absolute",
-        left: U * 0.800, top: U * 0.078,
-        width: U * 0.220, height: U * 0.360,
-        borderRadius: U * 0.110,
-        backgroundColor: "#E8A42008",
+        left: U * 0.730, top: U * 0.040,
+        width: U * 0.340, height: U * 0.520,
+        borderRadius: U * 0.170,
+        backgroundColor: "#E8A42018",
       }} />
+      {/* Inner corona — right */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.826, top: U * 0.120,
+        width: U * 0.170, height: U * 0.300,
+        borderRadius: U * 0.085,
+        backgroundColor: "#E8A42028",
+      }} />
+      {/* Wall amber wash — right lantern on stone */}
+      <LinearGradient
+        colors={["transparent", "#C87010"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{
+          position: "absolute",
+          left: U * 0.820, top: U * 0.140, width: U * 0.180, height: U * 0.200,
+          borderRadius: U * 0.090, opacity: 0.08,
+        }}
+      />
       {/* Bracket arm */}
       <View style={{
         position: "absolute",
@@ -649,21 +794,39 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         width: U * 0.050, height: U * 0.014,
         backgroundColor: "#283C2A", borderRadius: 3,
       }} />
-      {/* Flame glow dot */}
+      {/* Flame glow — outer halo (right) */}
       <View style={{
         position: "absolute",
-        left: U * 0.926, top: U * 0.226,
-        width: 7, height: 7, borderRadius: 3.5,
-        backgroundColor: "#FFD06048",
+        left: U * 0.912, top: U * 0.212,
+        width: 22, height: 22, borderRadius: 11,
+        backgroundColor: "#FFD06018",
       }} />
-      {/* Floor light pool (right) */}
+      {/* Flame glow — inner bright (right) */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.925, top: U * 0.225,
+        width: 9, height: 9, borderRadius: 4.5,
+        backgroundColor: "#FFE08068",
+      }} />
+      {/* Floor light pool (right) — broad amber spill */}
       <LinearGradient
-        colors={["#E8A42010", "transparent"]}
+        colors={["#E8A42030", "transparent"]}
         style={{
           position: "absolute",
-          left: U * 0.720, top: U * 0.720,
-          width: U * 0.280, height: U * 0.320,
-          borderRadius: U * 0.140,
+          left: U * 0.680, top: U * 0.700,
+          width: U * 0.320, height: U * 0.380,
+          borderRadius: U * 0.160,
+        }}
+      />
+      {/* Wall light wash (right, descending) */}
+      <LinearGradient
+        colors={["transparent", "#D08018"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          position: "absolute",
+          left: U * 0.800, top: U * 0.260, width: U * 0.200, height: U * 0.400,
+          opacity: 0.06,
         }}
       />
 
@@ -823,6 +986,17 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         borderRadius: 4,
         borderWidth: 1, borderColor: "#263A28",
       }} />
+
+      {/* ── Headboard clinical rune marks — Lotus diagnostic glyphs ──
+          Fantasy-medical: the academy beds have Lotus-script glyphs carved
+          into the headboard for vital monitoring. Three short horizontal
+          bars each side, very faint teal, feel like carved inlay.         */}
+      <View pointerEvents="none" style={{ position: "absolute", left: U * 0.224, top: U * 0.328, width: U * 0.052, height: 1.5, backgroundColor: "#2DD4BF22" }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: U * 0.232, top: U * 0.336, width: U * 0.036, height: 1.5, backgroundColor: "#2DD4BF18" }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: U * 0.228, top: U * 0.344, width: U * 0.044, height: 1.5, backgroundColor: "#2DD4BF14" }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: U * 0.724, top: U * 0.328, width: U * 0.052, height: 1.5, backgroundColor: "#2DD4BF22" }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: U * 0.732, top: U * 0.336, width: U * 0.036, height: 1.5, backgroundColor: "#2DD4BF18" }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: U * 0.728, top: U * 0.344, width: U * 0.044, height: 1.5, backgroundColor: "#2DD4BF14" }} />
 
       {/* ── Patient notes scroll — pinned to headboard ── */}
       <View style={{
@@ -1557,27 +1731,90 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
       {/* ══════════════════════════════════════════════════════════════
           LAYER 17 · AMBIENT LIGHT OVERLAYS
-          Soft radial glows from lanterns and window wash the scene.
+          Donghua: overlapping warm/cool light pools create painterly depth.
+          Central pool is warm amber; centre-top is cooler moonlight silver;
+          a faint Lotus diagnostic ring marks the clinical monitoring field.
       ══════════════════════════════════════════════════════════════ */}
-      {/* Central warm lantern-light pool over bed */}
+      {/* Central warm lantern-light pool — deeper amber over bed */}
       <LinearGradient
-        colors={["#E8A42008", "transparent"]}
+        colors={["#E8A42018", "transparent"]}
         style={{
           position: "absolute",
-          left: U * 0.220, top: U * 0.220,
-          width: U * 0.560, height: U * 0.480,
-          borderRadius: U * 0.280,
+          left: U * 0.190, top: U * 0.180,
+          width: U * 0.620, height: U * 0.540,
+          borderRadius: U * 0.310,
         }}
       />
-      {/* Moonlight spill down from window */}
+      {/* Moonlight spill — silver-blue lunar cast down from arch */}
       <LinearGradient
-        colors={["#D4AF3412", "transparent"]}
+        colors={["#A8C4DC22", "transparent"]}
         style={{
           position: "absolute",
-          left: U * 0.290, top: U * 0.240,
-          width: U * 0.420, height: U * 0.320,
+          left: U * 0.280, top: U * 0.200,
+          width: U * 0.440, height: U * 0.380,
         }}
       />
+      {/* Side-light accent — very faint amber on left edge of patient */}
+      <LinearGradient
+        colors={["#D09020", "transparent"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{
+          position: "absolute",
+          left: U * 0.180, top: U * 0.420, width: U * 0.200, height: U * 0.300,
+          borderRadius: U * 0.100, opacity: 0.06,
+        }}
+      />
+      {/* ── Lotus Diagnostic Circle — fantasy-medical monitoring field ──
+          In the Clinica world, infirmary beds in the Lotus academy are
+          inscribed with diagnostic circles that monitor patient vitals
+          through Lotus magic. Two concentric rings, barely visible, give
+          the scene its fantasy-medical RPG identity without distraction. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          left: U * 0.148, top: U * 0.348,
+          width: U * 0.704, height: U * 0.704,
+          borderRadius: U * 0.352,
+          borderWidth: 1, borderColor: "#2DD4BF20",
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          left: U * 0.172, top: U * 0.372,
+          width: U * 0.656, height: U * 0.656,
+          borderRadius: U * 0.328,
+          borderWidth: 1, borderColor: "#2DD4BF12",
+        }}
+      />
+      {/* Diagnostic ring cardinal marks — four tiny teal ticks at N/E/S/W */}
+      <View pointerEvents="none" style={{
+        position: "absolute",
+        left: U * 0.498, top: U * 0.342,
+        width: 4, height: 8, borderRadius: 2,
+        backgroundColor: "#2DD4BF22",
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute",
+        left: U * 0.498, top: U * 1.046,
+        width: 4, height: 8, borderRadius: 2,
+        backgroundColor: "#2DD4BF22",
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute",
+        left: U * 0.144, top: U * 0.696,
+        width: 8, height: 4, borderRadius: 2,
+        backgroundColor: "#2DD4BF22",
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute",
+        left: U * 0.848, top: U * 0.696,
+        width: 8, height: 4, borderRadius: 2,
+        backgroundColor: "#2DD4BF22",
+      }} />
 
       {/* ══════════════════════════════════════════════════════════════
           LAYER 18 · AMBIENT PARTICLES (Lotus healing magic)
