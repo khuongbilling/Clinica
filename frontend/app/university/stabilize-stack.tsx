@@ -1,7 +1,27 @@
+/**
+ * Stabilize Stack — The Garden (Wei, 50M, ABCDE ordering)
+ *
+ * Visual: hand-drawn donghua fantasy-medical board. Patient panel with animated
+ * Stability bar at top; illustrated action cards with fantasy-medical icons;
+ * visible 5-step Care Chain track that locks cards in as the player taps them.
+ *
+ * GAMEPLAY / TUTORIAL LOGIC IS UNCHANGED:
+ *  - ACTIONS / correctOrder / DISPLAY_ORDER / phase machine: identical
+ *  - Tutorial wiring: stabilizeIntro → requiredTargetId "action_assess_mental_status"
+ *    still uses useHighlightTarget + onTargetPress (zIndex 9500 blocking scrim)
+ *  - testIDs preserved: stack-tile-{id}, stabilize-back/finish/continue/return
+ */
+
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Pressable,
@@ -30,8 +50,6 @@ interface ActionCard {
 }
 
 // ── Case data ────────────────────────────────────────────────────────────────
-// "The Garden" — Wei, 50M, unresponsive in garden. ABCDE ordering case.
-// correctOrder defines the ideal clinical sequence (1 = first).
 
 const CASE = {
   name: "Wei",
@@ -40,10 +58,10 @@ const CASE = {
   setting: "Found unresponsive in garden by neighbour",
   complaint: "No response to verbal stimulus. Breathing noted but irregular.",
   vitals: [
-    { label: "HR", value: "102", alert: true },
-    { label: "RR", value: "8", alert: true },
-    { label: "SpO₂", value: "88%", alert: true },
-    { label: "Temp", value: "36.8°C", alert: false },
+    { label: "HR",   value: "102",   alert: true },
+    { label: "RR",   value: "8",     alert: true },
+    { label: "SpO₂", value: "88%",   alert: true },
+    { label: "Temp", value: "36.8°C",alert: false },
   ],
 };
 
@@ -52,7 +70,7 @@ const ACTIONS: ActionCard[] = [
     id: "action_assess_mental_status",
     label: "Assess mental status",
     shortDesc: "Check responsiveness — AVPU",
-    icon: "radio-button-on-outline",
+    icon: "eye-outline",
     correctOrder: 1,
     reasoning: "Disability (D in ABCDE). Establish whether the patient responds to voice, pain, or not at all before acting.",
     framework: "ABCDE · D — Disability",
@@ -62,7 +80,7 @@ const ACTIONS: ActionCard[] = [
     id: "action_open_airway",
     label: "Open the airway",
     shortDesc: "Head-tilt chin-lift position",
-    icon: "git-merge-outline",
+    icon: "arrow-up-circle-outline",
     correctOrder: 2,
     reasoning: "Airway (A). An unconscious patient loses muscle tone — the tongue can fall back. Opening the airway is always the first physical intervention.",
     framework: "ABCDE · A — Airway",
@@ -72,7 +90,7 @@ const ACTIONS: ActionCard[] = [
     id: "action_check_breathing",
     label: "Check breathing",
     shortDesc: "Look, listen, feel — 10 seconds",
-    icon: "partly-sunny-outline",
+    icon: "pulse-outline",
     correctOrder: 3,
     reasoning: "Breathing (B). Only after a patent airway: assess rate, depth, and symmetry. Wei's RR of 8 is dangerously low.",
     framework: "ABCDE · B — Breathing",
@@ -82,7 +100,7 @@ const ACTIONS: ActionCard[] = [
     id: "action_apply_oxygen",
     label: "Apply high-flow O₂",
     shortDesc: "15L/min via non-rebreather mask",
-    icon: "cloud-outline",
+    icon: "cloud-circle-outline",
     correctOrder: 4,
     reasoning: "Breathing intervention. SpO₂ 88% is critically low. High-flow oxygen is the immediate response before circulation is assessed.",
     framework: "ABCDE · B — Breathing intervention",
@@ -100,115 +118,343 @@ const ACTIONS: ActionCard[] = [
   },
 ];
 
-// Shuffle for display (same shuffle each play for consistency in this prototype)
-const DISPLAY_ORDER = [2, 4, 0, 3, 1]; // indices into ACTIONS array
+// Shuffle for display (same each play for consistency)
+const DISPLAY_ORDER = [2, 4, 0, 3, 1];
 
-// ── Action tile ───────────────────────────────────────────────────────────────
+// Per-action visual extras (keeps ActionCard interface clean)
+const ACTION_VISUAL: Record<string, { glowDesc: string }> = {
+  action_assess_mental_status: { glowDesc: "Diagnostic aura appears near the head" },
+  action_open_airway:          { glowDesc: "Airway passage glows open" },
+  action_check_breathing:      { glowDesc: "Breath-wave line stabilises" },
+  action_apply_oxygen:         { glowDesc: "Oxygen halo spreads — SpO₂ rising" },
+  action_iv_access:            { glowDesc: "Circulation link established" },
+};
 
-function ActionTile({
+// ── PatientPanel — stability bar + vitals ─────────────────────────────────────
+
+function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
+  const stabilityAnim = useRef(new Animated.Value(0.18)).current;
+
+  useEffect(() => {
+    const target = 0.18 + runningCorrect * (0.82 / ACTIONS.length);
+    Animated.timing(stabilityAnim, {
+      toValue: target,
+      duration: 480,
+      useNativeDriver: false,
+    }).start();
+  }, [runningCorrect, stabilityAnim]);
+
+  const stabPct = Math.round((0.18 + runningCorrect * (0.82 / ACTIONS.length)) * 100);
+  const stabColor = stabPct < 40 ? "#EF4444" : stabPct < 70 ? "#F59E0B" : "#2DD4BF";
+
+  return (
+    <View style={styles.patientCard}>
+      <LinearGradient
+        colors={["#0E1D2E", "#091420"]}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* Name row */}
+      <View style={styles.patientRow}>
+        <View style={styles.patientAvatar}>
+          <Ionicons name="person" size={20} color="#06B6D4" />
+        </View>
+        <View style={styles.patientInfo}>
+          <Text style={styles.patientName}>{CASE.name}, {CASE.age} · {CASE.sex}</Text>
+          <Text style={styles.patientMeta}>{CASE.setting}</Text>
+        </View>
+        <View style={styles.criticalBadge}>
+          <View style={styles.criticalDot} />
+          <Text style={styles.criticalTxt}>Critical</Text>
+        </View>
+      </View>
+
+      {/* Stability bar */}
+      <View style={styles.stabilityRow}>
+        <Text style={styles.stabilityLabel}>Patient Stability</Text>
+        <Text style={[styles.stabilityPct, { color: stabColor }]}>{stabPct}%</Text>
+      </View>
+      <View style={styles.stabilityTrack}>
+        <LinearGradient
+          colors={["#0B1A14", "#122A20"]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Animated.View
+          style={[
+            styles.stabilityFill,
+            {
+              width: stabilityAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["0%", "100%"],
+              }) as any,
+              backgroundColor: stabColor,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[stabColor + "CC", stabColor]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </Animated.View>
+        {/* Glow orb at the leading edge */}
+        <Animated.View
+          style={[
+            styles.stabilityOrb,
+            {
+              left: stabilityAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["0%", "98%"],
+              }) as any,
+              backgroundColor: stabColor,
+            },
+          ]}
+        />
+      </View>
+
+      {/* Complaint */}
+      <Text style={styles.complaint}>{CASE.complaint}</Text>
+
+      {/* Vitals */}
+      <View style={styles.vitalStrip}>
+        {CASE.vitals.map((v) => (
+          <View key={v.label} style={styles.vitalItem}>
+            <Text style={styles.vitalLabel}>{v.label}</Text>
+            <Text style={[styles.vitalValue, v.alert && styles.vitalAlert]}>{v.value}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ── CareChainTrack ─────────────────────────────────────────────────────────────
+
+function CareChainTrack({ tapSequence }: { tapSequence: string[] }) {
+  return (
+    <View style={styles.chainOuter}>
+      <LinearGradient
+        colors={["#0D2518", "#091A12"]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <Text style={styles.chainTitle}>
+        <Ionicons name="link-outline" size={10} color="#2DD4BF" />{"  "}CARE CHAIN
+      </Text>
+      <View style={styles.chainSlots}>
+        {Array.from({ length: ACTIONS.length }, (_, i) => {
+          const filledId = tapSequence[i];
+          const action = filledId ? ACTIONS.find((a) => a.id === filledId) : null;
+          const isCorrect = action && action.correctOrder === i + 1;
+          const dotColor = action ? (isCorrect ? action.color : "#EF4444") : "#1E3830";
+          return (
+            <React.Fragment key={i}>
+              <View style={styles.chainSlot}>
+                <View
+                  style={[
+                    styles.chainDot,
+                    {
+                      backgroundColor: action ? dotColor + "22" : "#1E3830",
+                      borderColor: action ? dotColor : "#2DD4BF18",
+                    },
+                  ]}
+                >
+                  {action ? (
+                    <Ionicons name={action.icon} size={13} color={dotColor} />
+                  ) : (
+                    <Text style={styles.chainStepNum}>{i + 1}</Text>
+                  )}
+                </View>
+                <Text style={[styles.chainStepLabel, action && { color: dotColor }]}>
+                  {action ? action.label.split(" ").slice(0, 2).join(" ") : `Step ${i + 1}`}
+                </Text>
+              </View>
+              {i < ACTIONS.length - 1 && (
+                <View style={[styles.chainConnector, { backgroundColor: tapSequence[i] ? "#2DD4BF30" : "#1E3830" }]} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ── ActionCardTile ─────────────────────────────────────────────────────────────
+
+function ActionCardTile({
   action,
   tapIndex,
-  totalTapped,
   onTap,
   disabled,
 }: {
   action: ActionCard;
   tapIndex: number | null;
-  totalTapped: number;
   onTap: (id: string) => void;
   disabled: boolean;
 }) {
   const { isHighlighted, onTargetPress, highlightStyle } = useHighlightTarget(action.id);
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
+  const glowAnim = useMemo(() => new Animated.Value(0), []);
+  const shakeX = useMemo(() => new Animated.Value(0), []);
+
   const isTapped = tapIndex !== null;
   const isCorrectPosition = isTapped && tapIndex + 1 === action.correctOrder;
+  const isWrong = isTapped && !isCorrectPosition;
+
+  useEffect(() => {
+    if (!isTapped) return;
+    if (isCorrectPosition) {
+      // Glow burst
+      glowAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0.4, duration: 350, useNativeDriver: true }),
+      ]).start();
+    } else {
+      // Gentle shake + dim caution
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: -6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -4, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 4, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 50, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isTapped, isCorrectPosition, glowAnim, shakeX]);
 
   const handlePress = useCallback(() => {
     if (disabled || isTapped) return;
     Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.93, duration: 70, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 0.94, duration: 65, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
     ]).start();
     if (isHighlighted) onTargetPress();
     onTap(action.id);
   }, [disabled, isTapped, isHighlighted, onTargetPress, onTap, action.id, scaleAnim]);
 
+  const ringColor = isWrong ? "#EF4444" : action.color;
+  const cardBg = isTapped
+    ? (isCorrectPosition ? action.color + "12" : "#EF444412")
+    : "transparent";
+  const borderColor = isTapped
+    ? (isCorrectPosition ? action.color + "55" : "#EF444455")
+    : isHighlighted
+      ? "#2DD4BF"
+      : COLORS.border;
+
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+    <Animated.View
+      style={[
+        { transform: [{ scale: scaleAnim }, { translateX: shakeX }] },
+        isHighlighted && styles.cardHighlightShadow,
+        highlightStyle,
+      ]}
+    >
       <Pressable
-        style={[
-          styles.tile,
-          isTapped && styles.tileTapped,
-          isTapped && { borderColor: (isCorrectPosition ? action.color : "#EF4444") + "50" },
-          isHighlighted && styles.tileHighlight,
-          highlightStyle,
-        ]}
+        style={[styles.card, { borderColor, backgroundColor: cardBg }]}
         onPress={handlePress}
         testID={`stack-tile-${action.id}`}
       >
-        {isTapped && (
-          <LinearGradient
-            colors={
-              isCorrectPosition
-                ? [action.color + "15", action.color + "06"]
-                : ["#EF444415", "#EF444406"]
-            }
-            style={StyleSheet.absoluteFillObject}
+        {/* Correct glow overlay */}
+        {isCorrectPosition && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                borderRadius: RADIUS.md,
+                backgroundColor: action.color + "18",
+                opacity: glowAnim,
+              },
+            ]}
           />
         )}
 
-        {/* Order badge */}
-        <View
-          style={[
-            styles.badge,
-            isTapped
-              ? {
-                  backgroundColor: isCorrectPosition ? action.color : "#EF4444",
-                }
-              : styles.badgeEmpty,
-          ]}
-        >
-          {isTapped ? (
-            <Text style={styles.badgeNum}>{tapIndex! + 1}</Text>
-          ) : (
-            <Text style={styles.badgeQ}>?</Text>
-          )}
-        </View>
+        {/* Wrong — caution rune overlay */}
+        {isWrong && (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFillObject, styles.cautionRune]}
+          >
+            <Ionicons name="warning-outline" size={14} color="#EF444460" />
+          </View>
+        )}
 
-        {/* Icon + text */}
-        <View style={styles.tileBody}>
+        {/* Top row: order badge + framework tag */}
+        <View style={styles.cardTopRow}>
           <View
             style={[
-              styles.tileIcon,
-              { backgroundColor: isTapped ? action.color + "22" : "rgba(255,255,255,0.06)" },
+              styles.orderBadge,
+              isTapped
+                ? { backgroundColor: ringColor, borderColor: ringColor }
+                : styles.orderBadgeEmpty,
+            ]}
+          >
+            {isTapped ? (
+              <Text style={styles.orderBadgeNum}>{tapIndex! + 1}</Text>
+            ) : (
+              <Text style={styles.orderBadgeQ}>?</Text>
+            )}
+          </View>
+
+          <Text style={[styles.frameworkTag, { color: isTapped ? ringColor : COLORS.onSurfaceTertiary }]}>
+            {action.framework}
+          </Text>
+        </View>
+
+        {/* Icon + label row */}
+        <View style={styles.cardBody}>
+          <View
+            style={[
+              styles.cardIconWrap,
+              {
+                backgroundColor: isTapped
+                  ? ringColor + "22"
+                  : action.color + "14",
+                borderColor: isTapped ? ringColor + "60" : action.color + "30",
+              },
             ]}
           >
             <Ionicons
               name={action.icon}
-              size={18}
-              color={isTapped ? action.color : COLORS.onSurfaceTertiary}
+              size={22}
+              color={isTapped ? ringColor : action.color}
             />
           </View>
-          <View style={styles.tileText}>
+          <View style={styles.cardTextWrap}>
             <Text
               style={[
-                styles.tileLabel,
-                isTapped && { color: COLORS.onSurface },
+                styles.cardLabel,
+                { color: isTapped ? COLORS.onSurface : COLORS.onSurfaceSecondary },
               ]}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {action.label}
             </Text>
-            <Text style={styles.tileDesc} numberOfLines={1}>
-              {action.shortDesc}
+            <Text style={styles.cardDesc} numberOfLines={2}>
+              {isTapped
+                ? ACTION_VISUAL[action.id]?.glowDesc ?? action.shortDesc
+                : action.shortDesc}
             </Text>
           </View>
         </View>
 
-        {/* Post-tap: framework tag */}
-        {isTapped && (
-          <Text style={[styles.tileFramework, { color: action.color }]}>
-            {action.framework}
+        {/* Correct: animated glow ring at bottom */}
+        {isCorrectPosition && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.correctGlowBar,
+              { backgroundColor: action.color, opacity: glowAnim },
+            ]}
+          />
+        )}
+
+        {/* Wrong: coaching line */}
+        {isWrong && (
+          <Text style={styles.cautionCoach}>
+            Not quite — review the ABCDE order after all cards are placed.
           </Text>
         )}
       </Pressable>
@@ -226,7 +472,6 @@ export default function StabilizeStackScreen() {
 
   const [tapSequence, setTapSequence] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>("playing");
-  const [reviewIndex, setReviewIndex] = useState(0);
   const [revealAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -245,7 +490,7 @@ export default function StabilizeStackScreen() {
         if (prev.includes(id)) return prev;
         const next = [...prev, id];
         if (next.length === ACTIONS.length) {
-          setTimeout(() => setPhase("review"), 400);
+          setTimeout(() => setPhase("review"), 450);
           Animated.timing(revealAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
         }
         return next;
@@ -271,7 +516,14 @@ export default function StabilizeStackScreen() {
     [tapSequence],
   );
 
-  // Ordered review: show each action's reasoning in the correct clinical order
+  // Running correct count: updates as each action is tapped (for stability bar)
+  const runningCorrect = useMemo(() => {
+    return ACTIONS.filter((a) => {
+      const idx = tapSequence.indexOf(a.id);
+      return idx !== -1 && idx + 1 === a.correctOrder;
+    }).length;
+  }, [tapSequence]);
+
   const reviewActions = useMemo(
     () => [...ACTIONS].sort((a, b) => a.correctOrder - b.correctOrder),
     [],
@@ -289,6 +541,8 @@ export default function StabilizeStackScreen() {
         ? { label: "Good Instincts", color: "#22C55E", icon: "checkmark-done" as const }
         : { label: "Keep Learning", color: "#F59E0B", icon: "school" as const };
 
+  // ── Complete phase ───────────────────────────────────────────────────────────
+
   if (phase === "complete") {
     return (
       <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -297,7 +551,11 @@ export default function StabilizeStackScreen() {
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university")} hitSlop={10}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => goBack(router, "/university")}
+            hitSlop={10}
+          >
             <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
           </Pressable>
           <Text style={styles.kicker}>STABILIZE STACK · COMPLETE</Text>
@@ -326,6 +584,8 @@ export default function StabilizeStackScreen() {
     );
   }
 
+  // ── Playing + review phases ──────────────────────────────────────────────────
+
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <LinearGradient
@@ -349,40 +609,19 @@ export default function StabilizeStackScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Patient card */}
-        <View style={styles.patientCard}>
-          <LinearGradient
-            colors={["#0E1D2E", "#091420"]}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.patientRow}>
-            <View style={styles.patientAvatar}>
-              <Ionicons name="person" size={22} color="#06B6D4" />
-            </View>
-            <View style={styles.patientInfo}>
-              <Text style={styles.patientName}>{CASE.name}, {CASE.age} · {CASE.sex}</Text>
-              <Text style={styles.patientMeta}>{CASE.setting}</Text>
-            </View>
-            <View style={styles.criticalBadge}>
-              <View style={styles.criticalDot} />
-              <Text style={styles.criticalTxt}>Critical</Text>
-            </View>
-          </View>
-          <Text style={styles.complaint}>{CASE.complaint}</Text>
-          <View style={styles.vitalStrip}>
-            {CASE.vitals.map((v) => (
-              <View key={v.label} style={styles.vitalItem}>
-                <Text style={styles.vitalLabel}>{v.label}</Text>
-                <Text style={[styles.vitalValue, v.alert && styles.vitalAlert]}>{v.value}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Patient panel with stability bar */}
+        <PatientPanel runningCorrect={runningCorrect} />
 
-        {/* Instructions */}
+        {/* Care Chain track */}
+        <CareChainTrack tapSequence={tapSequence} />
+
+        {/* Instruction row */}
         <View style={styles.instructRow}>
-          <Ionicons name="layers-outline" size={14} color={COLORS.onSurfaceTertiary} />
+          <Ionicons name="layers-outline" size={13} color="#2DD4BF" />
           <Text style={styles.instructTxt}>
             {phase === "playing"
               ? "Tap each action in the order a clinician should do it."
@@ -390,15 +629,14 @@ export default function StabilizeStackScreen() {
           </Text>
         </View>
 
-        {/* Action tiles — playing phase */}
+        {/* Action cards — playing phase */}
         {phase === "playing" && (
-          <View style={styles.tileList}>
+          <View style={styles.cardList}>
             {displayedActions.map((action) => (
-              <ActionTile
+              <ActionCardTile
                 key={action.id}
                 action={action}
                 tapIndex={tapIndexFor(action.id)}
-                totalTapped={tapSequence.length}
                 onTap={handleTap}
                 disabled={false}
               />
@@ -406,7 +644,7 @@ export default function StabilizeStackScreen() {
           </View>
         )}
 
-        {/* Review phase — actions shown in correct order with reasoning */}
+        {/* Review phase — correct clinical order with reasoning */}
         {phase === "review" && (
           <Animated.View style={[styles.reviewWrap, { opacity: revealAnim }]}>
             {reviewActions.map((action) => {
@@ -455,7 +693,6 @@ export default function StabilizeStackScreen() {
               );
             })}
 
-            {/* Score + continue */}
             <View style={[styles.scoreRow, { marginTop: SPACING.sm }]}>
               <Text style={styles.scoreLbl}>Correct sequence</Text>
               <Text style={[styles.scoreVal, { color: grade.color }]}>
@@ -490,6 +727,7 @@ export default function StabilizeStackScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
+
   header: {
     flexDirection: "row", alignItems: "center",
     gap: SPACING.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
@@ -499,11 +737,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
     alignItems: "center", justifyContent: "center",
   },
-  kicker: { color: "#06B6D4", fontSize: 10, fontWeight: "700", letterSpacing: 2, flex: 1 },
+  kicker: {
+    color: "#06B6D4", fontSize: 10, fontWeight: "700", letterSpacing: 2, flex: 1,
+  },
   tappedCount: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
 
-  scroll: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxxl, gap: SPACING.md },
+  scroll: { paddingHorizontal: SPACING.lg, paddingBottom: 64, gap: SPACING.md },
 
+  // ── Patient card ──────────────────────────────────────────────────────────
   patientCard: {
     borderRadius: RADIUS.lg, overflow: "hidden",
     borderWidth: 1, borderColor: "#06B6D430",
@@ -511,9 +752,8 @@ const styles = StyleSheet.create({
   },
   patientRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
   patientAvatar: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: "#06B6D418",
-    borderWidth: 1.5, borderColor: "#06B6D440",
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#06B6D418", borderWidth: 1.5, borderColor: "#06B6D440",
     alignItems: "center", justifyContent: "center",
   },
   patientInfo: { flex: 1, gap: 2 },
@@ -521,14 +761,37 @@ const styles = StyleSheet.create({
   patientMeta: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
   criticalBadge: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "#EF444418",
-    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: "#EF444418", borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 4,
     borderWidth: 1, borderColor: "#EF444430",
   },
   criticalDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#EF4444" },
   criticalTxt: { color: "#EF4444", fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+
+  // Stability bar
+  stabilityRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+  },
+  stabilityLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  stabilityPct: { fontSize: 11, fontWeight: "700" },
+  stabilityTrack: {
+    height: 8, borderRadius: 4, overflow: "hidden",
+    backgroundColor: "#0B1A14",
+    borderWidth: 1, borderColor: "#2DD4BF14",
+    position: "relative",
+  },
+  stabilityFill: {
+    position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4,
+    overflow: "hidden",
+  },
+  stabilityOrb: {
+    position: "absolute", width: 10, height: 10,
+    borderRadius: 5, top: -1,
+    shadowColor: "#2DD4BF", shadowOpacity: 0.9, shadowRadius: 6,
+  },
+
   complaint: {
-    color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19,
+    color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18,
     fontStyle: "italic", backgroundColor: "rgba(255,255,255,0.03)",
     borderRadius: RADIUS.sm, padding: SPACING.sm,
   },
@@ -541,44 +804,87 @@ const styles = StyleSheet.create({
   vitalValue: { color: COLORS.onSurfaceSecondary, fontSize: 15, fontWeight: "300" },
   vitalAlert: { color: "#EF4444" },
 
+  // ── Care Chain track ──────────────────────────────────────────────────────
+  chainOuter: {
+    borderRadius: RADIUS.md, overflow: "hidden",
+    borderWidth: 1, borderColor: "#2DD4BF18",
+    padding: SPACING.sm, gap: SPACING.sm,
+  },
+  chainTitle: {
+    color: "#2DD4BF", fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
+  },
+  chainSlots: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+  },
+  chainSlot: { alignItems: "center", gap: 4, flex: 1 },
+  chainDot: {
+    width: 34, height: 34, borderRadius: 17,
+    borderWidth: 1.5, alignItems: "center", justifyContent: "center",
+  },
+  chainStepNum: {
+    color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700",
+  },
+  chainStepLabel: {
+    color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "600",
+    textAlign: "center", letterSpacing: 0.2, lineHeight: 11,
+  },
+  chainConnector: { height: 1.5, flex: 0.15, marginBottom: 16 },
+
+  // ── Instruction row ───────────────────────────────────────────────────────
   instructRow: {
-    flexDirection: "row", alignItems: "center",
-    gap: SPACING.sm,
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
   },
   instructTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, flex: 1 },
 
-  // Action tiles
-  tileList: { gap: SPACING.sm },
-  tile: {
-    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceSecondary,
+  // ── Action cards ──────────────────────────────────────────────────────────
+  cardList: { gap: SPACING.sm },
+  card: {
+    borderRadius: RADIUS.md, borderWidth: 1,
     padding: SPACING.md, gap: SPACING.sm, overflow: "hidden",
+    backgroundColor: COLORS.surfaceSecondary,
   },
-  tileTapped: { backgroundColor: COLORS.surfaceTertiary },
-  tileHighlight: {
-    borderColor: "#2DD4BF",
-    shadowColor: "#2DD4BF", shadowOpacity: 0.7,
-    shadowRadius: 10, elevation: 16,
+  cardHighlightShadow: {
+    shadowColor: "#2DD4BF", shadowOpacity: 0.75, shadowRadius: 12,
+    elevation: 18,
   },
-  badge: {
-    width: 24, height: 24, borderRadius: 12,
-    alignItems: "center", justifyContent: "center",
-    alignSelf: "flex-start" as any,
+  cardTopRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
   },
-  badgeEmpty: { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: COLORS.border },
-  badgeNum: { color: COLORS.surface, fontSize: 12, fontWeight: "800" },
-  badgeQ: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
-  tileBody: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
-  tileIcon: {
-    width: 38, height: 38, borderRadius: 19,
+  orderBadge: {
+    width: 22, height: 22, borderRadius: 11,
     alignItems: "center", justifyContent: "center",
   },
-  tileText: { flex: 1, gap: 2 },
-  tileLabel: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
-  tileDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, opacity: 0.7 },
-  tileFramework: { fontSize: 9, fontWeight: "700", letterSpacing: 0.8 },
+  orderBadgeEmpty: {
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  orderBadgeNum: { color: COLORS.surface, fontSize: 11, fontWeight: "800" },
+  orderBadgeQ: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
+  frameworkTag: { fontSize: 9, fontWeight: "700", letterSpacing: 0.8, flex: 1 },
 
-  // Review
+  cardBody: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
+  cardIconWrap: {
+    width: 46, height: 46, borderRadius: 23,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  cardTextWrap: { flex: 1, gap: 3 },
+  cardLabel: { fontSize: 14, fontWeight: "700", lineHeight: 19 },
+  cardDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
+
+  correctGlowBar: {
+    height: 2, borderRadius: 1, marginTop: 2,
+  },
+
+  cautionRune: {
+    alignItems: "flex-end", justifyContent: "flex-end",
+    padding: SPACING.sm, pointerEvents: "none",
+  },
+  cautionCoach: {
+    color: "#EF4444AA", fontSize: 10, lineHeight: 15, fontStyle: "italic",
+  },
+
+  // ── Review ────────────────────────────────────────────────────────────────
   reviewWrap: { gap: SPACING.sm },
   reviewCard: {
     borderRadius: RADIUS.md, borderWidth: 1,
@@ -587,8 +893,7 @@ const styles = StyleSheet.create({
   },
   reviewTop: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   reviewNum: {
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: "center", justifyContent: "center",
+    width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center",
   },
   reviewNumTxt: { color: COLORS.surface, fontSize: 13, fontWeight: "800" },
   reviewTitleWrap: { flex: 1, gap: 2 },
@@ -596,52 +901,51 @@ const styles = StyleSheet.create({
   reviewFramework: { fontSize: 9, fontWeight: "700", letterSpacing: 0.8 },
   reviewPlayerBadge: {
     flexDirection: "row", alignItems: "center", gap: 3,
-    borderWidth: 1, borderRadius: RADIUS.pill,
+    borderWidth: 1, borderRadius: RADIUS.pill, borderColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 6, paddingVertical: 3,
-    borderColor: "rgba(255,255,255,0.1)",
   },
   reviewPlayerTxt: { fontSize: 10, fontWeight: "700" },
   reviewReasoning: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
 
   scoreRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  scoreLbl: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
-  scoreVal: { fontSize: 14, fontWeight: "800" },
+  scoreLbl: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  scoreVal: { fontSize: 20, fontWeight: "800" },
   continueBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, borderRadius: RADIUS.pill,
-    paddingVertical: 12, paddingHorizontal: SPACING.xl,
-    marginTop: SPACING.xs,
+    gap: SPACING.sm, borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md, marginTop: SPACING.sm,
   },
-  continueBtnTxt: { fontSize: 13, fontWeight: "800", letterSpacing: 0.5 },
+  continueBtnTxt: { fontSize: 14, fontWeight: "700" },
 
-  // Complete
+  // ── Complete ──────────────────────────────────────────────────────────────
   completeBody: {
     flex: 1, alignItems: "center", justifyContent: "center",
     paddingHorizontal: SPACING.xl, gap: SPACING.md,
   },
   completeIcon: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderWidth: 1.5, alignItems: "center", justifyContent: "center",
+    borderWidth: 2, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
-  gradeLabel: { fontSize: 22, fontWeight: "300", letterSpacing: 1 },
-  scoreDisplay: { color: COLORS.onSurface, fontSize: 48, fontWeight: "200", letterSpacing: -1 },
-  scoreCaption: { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: -SPACING.md },
-  completeDivider: { width: 48, height: 1.5, backgroundColor: COLORS.border, marginVertical: SPACING.xs },
+  gradeLabel: { fontSize: 22, fontWeight: "800", letterSpacing: 0.5 },
+  scoreDisplay: { color: COLORS.onSurface, fontSize: 40, fontWeight: "300" },
+  scoreCaption: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: -SPACING.sm },
+  completeDivider: { width: "40%", height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.sm },
   completeLearning: {
     color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20,
-    textAlign: "center", maxWidth: 320,
+    textAlign: "center",
   },
   completeBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    borderRadius: RADIUS.pill, paddingHorizontal: SPACING.xl, paddingVertical: 12,
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    borderRadius: RADIUS.md, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
     marginTop: SPACING.sm,
   },
-  completeBtnTxt: { fontSize: 13, fontWeight: "800", letterSpacing: 0.5 },
+  completeBtnTxt: { fontSize: 14, fontWeight: "700" },
 
+  // ── Back to Uni ───────────────────────────────────────────────────────────
   backToUni: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 4, paddingVertical: SPACING.sm,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    alignSelf: "center", paddingVertical: SPACING.sm,
   },
-  backToUniTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
+  backToUniTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
 });
