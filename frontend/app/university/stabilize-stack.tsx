@@ -13,6 +13,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, {
@@ -24,6 +25,7 @@ import React, {
 } from "react";
 import {
   Animated,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,7 +36,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
+
+// Patient scene illustration (donghua) — 1408x768
+const PATIENT_SCENE = require("../../assets/images/stabilize_patient_wei.png");
+const PATIENT_SCENE_RATIO = 1408 / 768;
+
+// On web, RN-web's ScrollView base style applies `transform: translateZ(0)`,
+// which creates a CSS stacking context that TRAPS the tutorial-highlighted
+// card's zIndex 9500 below the TutorialOverlay blocking scrim (zIndex 9000)
+// — making the forced tutorial step unclickable. Overriding the transform
+// lets the highlighted card escape and sit above the scrim, exactly like the
+// non-scrolling mini-game screens (rapid-triage, mealcraft).
+const SCROLL_FIX_WEB =
+  Platform.OS === "web" ? ({ transform: "none" } as any) : undefined;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +72,6 @@ const CASE = {
   age: 50,
   sex: "M",
   setting: "Found unresponsive in garden by neighbour",
-  complaint: "No response to verbal stimulus. Breathing noted but irregular.",
   vitals: [
     { label: "HR",   value: "102",   alert: true },
     { label: "RR",   value: "8",     alert: true },
@@ -130,7 +145,153 @@ const ACTION_VISUAL: Record<string, { glowDesc: string }> = {
   action_iv_access:            { glowDesc: "Circulation link established" },
 };
 
-// ── PatientPanel — stability bar + vitals ─────────────────────────────────────
+// ── Animated patient scene — Wei in the garden, symptoms visible ─────────────
+
+/** Pulsing symptom chip pinned over the patient scene. */
+function SymptomChip({
+  icon,
+  label,
+  color,
+  delay,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  color: string;
+  delay: number;
+}) {
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+        Animated.delay(400),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse, delay]);
+
+  const dotOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
+  const dotScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.25] });
+
+  return (
+    <View style={[styles.symptomChip, { borderColor: color + "55" }]}>
+      <Animated.View
+        style={[
+          styles.symptomDot,
+          { backgroundColor: color, opacity: dotOpacity, transform: [{ scale: dotScale }] },
+        ]}
+      />
+      <Ionicons name={icon} size={11} color={color} />
+      <Text style={[styles.symptomTxt, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+function PatientScene({ runningCorrect }: { runningCorrect: number }) {
+  // Slow, IRREGULAR breathing — shallow rise, pause, uneven fall (RR 8).
+  const breath = useRef(new Animated.Value(0)).current;
+  // Critical red vignette pulse; fades out as the patient stabilises.
+  const vignette = useRef(new Animated.Value(0)).current;
+  // Teal healing glow that grows with each correct action.
+  const heal = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        // shallow inhale
+        Animated.timing(breath, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        // hold — apnoeic pause (the "irregular" part)
+        Animated.delay(900),
+        // quick partial exhale
+        Animated.timing(breath, { toValue: 0.35, duration: 500, useNativeDriver: true }),
+        Animated.delay(300),
+        // slow full exhale
+        Animated.timing(breath, { toValue: 0, duration: 1600, useNativeDriver: true }),
+        // long pause before the next breath
+        Animated.delay(1400),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breath]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(vignette, { toValue: 1, duration: 1100, useNativeDriver: true }),
+        Animated.timing(vignette, { toValue: 0, duration: 1100, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [vignette]);
+
+  useEffect(() => {
+    Animated.timing(heal, {
+      toValue: runningCorrect / ACTIONS.length,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, [runningCorrect, heal]);
+
+  // Vignette peak opacity shrinks as the patient improves.
+  const vigMax = Math.max(0.05, 0.32 - runningCorrect * 0.06);
+  const vignetteOpacity = vignette.interpolate({
+    inputRange: [0, 1],
+    outputRange: [vigMax * 0.35, vigMax],
+  });
+  const healOpacity = heal.interpolate({ inputRange: [0, 1], outputRange: [0, 0.22] });
+  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.022] });
+  const breathShift = breath.interpolate({ inputRange: [0, 1], outputRange: [0, -3] });
+
+  return (
+    <View style={styles.sceneWrap}>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFillObject,
+          { transform: [{ scale: breathScale }, { translateY: breathShift }] },
+        ]}
+      >
+        <ExpoImage
+          source={PATIENT_SCENE}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
+          transition={250}
+        />
+      </Animated.View>
+
+      {/* Critical red vignette — pulses, weakens as stability rises */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.sceneVignette, { opacity: vignetteOpacity }]}
+      />
+      {/* Healing teal wash — grows with correct actions */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.sceneHeal, { opacity: healOpacity }]}
+      />
+      {/* Bottom gradient so chips stay legible */}
+      <LinearGradient
+        colors={["transparent", "rgba(5,12,18,0.82)"]}
+        style={styles.sceneBottomFade}
+        pointerEvents="none"
+      />
+
+      {/* Symptom chips — the "description", shown ON the patient */}
+      <View style={styles.symptomRow} pointerEvents="none">
+        <SymptomChip icon="moon-outline" label="Unresponsive" color="#C4B5FD" delay={0} />
+        <SymptomChip icon="pulse-outline" label="RR 8 · irregular" color="#F59E0B" delay={450} />
+        <SymptomChip icon="water-outline" label="SpO₂ 88% · lips dusky" color="#60A5FA" delay={900} />
+      </View>
+    </View>
+  );
+}
+
+// ── PatientPanel — scene + stability bar + vitals ─────────────────────────────
 
 function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
   const stabilityAnim = useRef(new Animated.Value(0.18)).current;
@@ -168,6 +329,9 @@ function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
           <Text style={styles.criticalTxt}>Critical</Text>
         </View>
       </View>
+
+      {/* Animated patient scene */}
+      <PatientScene runningCorrect={runningCorrect} />
 
       {/* Stability bar */}
       <View style={styles.stabilityRow}>
@@ -212,9 +376,6 @@ function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
           ]}
         />
       </View>
-
-      {/* Complaint */}
-      <Text style={styles.complaint}>{CASE.complaint}</Text>
 
       {/* Vitals */}
       <View style={styles.vitalStrip}>
@@ -610,6 +771,7 @@ export default function StabilizeStackScreen() {
       </View>
 
       <ScrollView
+        style={SCROLL_FIX_WEB}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
@@ -719,6 +881,11 @@ export default function StabilizeStackScreen() {
           <Text style={styles.backToUniTxt}>Back to University</Text>
         </Pressable>
       </ScrollView>
+
+      {/* Tutorial narration + blocking scrim (stabilizeIntro, forced).
+          Must be rendered INSIDE this screen so the highlighted card
+          (zIndex 9500, via useHighlightTarget) can sit above the scrim. */}
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }
@@ -768,6 +935,49 @@ const styles = StyleSheet.create({
   criticalDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#EF4444" },
   criticalTxt: { color: "#EF4444", fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
 
+  // ── Animated patient scene ────────────────────────────────────────────────
+  sceneWrap: {
+    width: "100%",
+    aspectRatio: PATIENT_SCENE_RATIO,
+    borderRadius: RADIUS.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#06B6D425",
+    backgroundColor: "#091420",
+  },
+  sceneVignette: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#7F1D1D",
+  },
+  sceneHeal: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#2DD4BF",
+  },
+  sceneBottomFade: {
+    position: "absolute",
+    left: 0, right: 0, bottom: 0,
+    height: "46%",
+  },
+  symptomRow: {
+    position: "absolute",
+    left: SPACING.sm, right: SPACING.sm, bottom: SPACING.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  symptomChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(5,12,18,0.78)",
+    borderWidth: 1,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  symptomDot: { width: 6, height: 6, borderRadius: 3 },
+  symptomTxt: { fontSize: 10, fontWeight: "700", letterSpacing: 0.3 },
+
   // Stability bar
   stabilityRow: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
@@ -790,11 +1000,6 @@ const styles = StyleSheet.create({
     shadowColor: "#2DD4BF", shadowOpacity: 0.9, shadowRadius: 6,
   },
 
-  complaint: {
-    color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18,
-    fontStyle: "italic", backgroundColor: "rgba(255,255,255,0.03)",
-    borderRadius: RADIUS.sm, padding: SPACING.sm,
-  },
   vitalStrip: {
     flexDirection: "row", justifyContent: "space-between",
     paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border,

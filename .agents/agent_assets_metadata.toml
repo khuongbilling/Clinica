@@ -1050,3 +1050,9 @@ id = "rQ6gckc3D34VHY_PMxRS0"
 uri = "file://frontend/assets/images/cue_hunt_infirmary_scene_v2.png"
 type = "image"
 title = "infirmary scene empty flask v2"
+
+[[generated]]
+id = "vJ4SRyZAcIUNLL4YX6FSD"
+uri = "file://frontend/assets/images/stabilize_patient_wei.png"
+type = "image"
+title = "Wei unconscious garden patient"

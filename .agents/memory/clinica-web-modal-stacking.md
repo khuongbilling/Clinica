@@ -28,3 +28,20 @@ with a guided tutorial step, give it an explicit high `zIndex` (match the 9500
 convention). Trade-off: raising the modal above the tutorial hides the guidance
 narrative box behind the modal's dark scrim on web — acceptable and consistent
 with how the feedback card already behaves.
+
+## ScrollView traps the highlighted target's zIndex on web
+
+Two extra requirements for the mini-game forced-step pattern
+(`useHighlightTarget` → target at `zIndex 9500` above the blocking scrim):
+
+1. **The screen must render `<TutorialOverlay />` itself** (sibling of its
+   content). If it doesn't, the narration/scrim either never appears or comes
+   from another mounted screen's instance in a foreign stacking context, and
+   the target can never rise above it.
+2. **RN-web `ScrollView` has base style `transform: translateZ(0)`** (hardware
+   compositing hint), which creates a CSS stacking context that traps ANY
+   descendant `zIndex` below a sibling scrim — so a highlighted card inside a
+   ScrollView is unclickable on web even at `zIndex 9500`. Fix: pass
+   `style={{ transform: "none" }}` (web only; RN-web ≥0.19 passes string
+   transforms through, and the user style merges after the base style).
+   Non-scrolling screens (rapid-triage, mealcraft) never hit this.
