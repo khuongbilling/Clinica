@@ -1032,3 +1032,21 @@ id = "FyJrHOHX6_pIOQdQjXbub"
 uri = "file://frontend/assets/ui-icons/icon_university_credit.png"
 type = "image"
 title = "university credits scroll icon"
+
+[[generated]]
+id = "MqYNSBfIVm6zad9rovjLQ"
+uri = "file://frontend/assets/images/cue_hunt_infirmary_scene.png"
+type = "image"
+title = "donghua infirmary patient scene"
+
+[[generated]]
+id = "NkV9P7bRmNwpS1UN-EKWV"
+uri = "file://frontend/assets/images/cue_hunt_chibi_healer.png"
+type = "image"
+title = "chibi healer clue accent"
+
+[[generated]]
+id = "rQ6gckc3D34VHY_PMxRS0"
+uri = "file://frontend/assets/images/cue_hunt_infirmary_scene_v2.png"
+type = "image"
+title = "infirmary scene empty flask v2"
