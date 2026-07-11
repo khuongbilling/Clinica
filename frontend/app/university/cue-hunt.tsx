@@ -1076,17 +1076,24 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         borderWidth: 2, borderColor: "#D4AF3760",
         overflow: "hidden",
       }}>
-        {/* Very low water — almost empty */}
+        {/* Barely-there water — critically empty (the flask clue) */}
         <View style={{
           position: "absolute",
-          bottom: 0, left: 3, right: 3, height: "9%",
-          backgroundColor: "#2DD4BF38", borderRadius: U * 0.028,
+          bottom: 0, left: 3, right: 3, height: "4%",
+          backgroundColor: "#2DD4BF30", borderRadius: U * 0.028,
         }} />
-        {/* Water surface shimmer */}
+        {/* Water surface shimmer — low & prominent */}
         <View style={{
           position: "absolute",
-          bottom: "9%", left: 5, right: 5, height: 1.5,
-          backgroundColor: "#2DD4BF50",
+          bottom: "4%", left: 4, right: 4, height: 2,
+          backgroundColor: "#2DD4BF60",
+        }} />
+        {/* Dry condensation ring — was once full */}
+        <View style={{
+          position: "absolute",
+          bottom: "28%", left: 6, right: 6, height: 1,
+          backgroundColor: "#2DD4BF18",
+          borderRadius: 1,
         }} />
         {/* Glass highlight — main */}
         <View style={{
@@ -1155,7 +1162,7 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         backgroundColor: "#1E1005",
       }} />
 
-      {/* Head — warm skin tone */}
+      {/* Head — sallow, pale skin (dehydration pallor) */}
       <View style={{
         position: "absolute",
         left: U * 0.420, top: U * 0.264,
@@ -1163,51 +1170,110 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         borderRadius: U * 0.080,
         overflow: "hidden",
       }}>
+        {/* Base skin — cooler, paler amber (dehydrated, ashen) */}
         <LinearGradient
-          colors={["#C8A080", "#B8886A"]}
+          colors={["#BEAB88", "#A89070"]}
           start={{ x: 0.25, y: 0 }}
           end={{ x: 0.85, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* Lower face (chin/jaw shade) */}
+        {/* Temple/cheek pallor wash — grey-cool overtone */}
+        <LinearGradient
+          colors={["#7888A020", "transparent", "#7888A020"]}
+          start={{ x: 0, y: 0.25 }}
+          end={{ x: 1, y: 0.75 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Lower face shade */}
         <View style={{
           position: "absolute",
           bottom: 0, left: 0, right: 0, height: "42%",
           borderBottomLeftRadius: U * 0.080,
           borderBottomRightRadius: U * 0.080,
-          backgroundColor: "#B07A60",
+          backgroundColor: "#A07858",
           opacity: 0.55,
         }} />
-        {/* Eyebrow lines (subtle — fatigue shows in the brows) */}
+        {/* Left eyebrow — furrowed inward (worry/fatigue) */}
         <View style={{
           position: "absolute",
-          left: "18%", top: "28%",
-          width: "22%", height: 2,
-          backgroundColor: "#4E3018",
-          borderRadius: 1, opacity: 0.55,
+          left: "15%", top: "26%",
+          width: "24%", height: 2.5,
+          backgroundColor: "#4A2C10",
+          borderRadius: 1.25, opacity: 0.85,
+          transform: [{ rotate: "10deg" }],
         }} />
+        {/* Right eyebrow — furrowed inward */}
         <View style={{
           position: "absolute",
-          right: "18%", top: "28%",
-          width: "22%", height: 2,
-          backgroundColor: "#4E3018",
-          borderRadius: 1, opacity: 0.55,
+          right: "15%", top: "26%",
+          width: "24%", height: 2.5,
+          backgroundColor: "#4A2C10",
+          borderRadius: 1.25, opacity: 0.85,
+          transform: [{ rotate: "-10deg" }],
         }} />
-        {/* Dry lips hint — pale, slightly parted (the clue!) */}
+        {/* Left eye — heavy-lidded closed line (fatigued) */}
         <View style={{
           position: "absolute",
-          left: "28%", bottom: "18%",
-          width: "44%", height: 5,
-          backgroundColor: "#C09078",
-          borderRadius: 2.5, opacity: 0.70,
+          left: "16%", top: "43%",
+          width: "24%", height: 4,
+          backgroundColor: "#3A2010",
+          borderRadius: 2, opacity: 0.82,
         }} />
-        {/* Lip crease (dryness suggestion) */}
+        {/* Left eye under-shadow (hollow eyes) */}
         <View style={{
           position: "absolute",
-          left: "46%", bottom: "19%",
-          width: "8%", height: 3,
-          backgroundColor: "#A87858",
-          borderRadius: 1, opacity: 0.50,
+          left: "16%", top: "50%",
+          width: "24%", height: 2,
+          backgroundColor: "#8A7060",
+          borderRadius: 1, opacity: 0.38,
+        }} />
+        {/* Right eye — heavy-lidded closed line */}
+        <View style={{
+          position: "absolute",
+          right: "16%", top: "43%",
+          width: "24%", height: 4,
+          backgroundColor: "#3A2010",
+          borderRadius: 2, opacity: 0.82,
+        }} />
+        {/* Right eye under-shadow */}
+        <View style={{
+          position: "absolute",
+          right: "16%", top: "50%",
+          width: "24%", height: 2,
+          backgroundColor: "#8A7060",
+          borderRadius: 1, opacity: 0.38,
+        }} />
+        {/* Dry lips — pale, cracked, parted (PRIMARY clue: dry_lips zone) */}
+        <View style={{
+          position: "absolute",
+          left: "22%", bottom: "19%",
+          width: "56%", height: 8,
+          backgroundColor: "#C8B098",
+          borderRadius: 4, opacity: 0.92,
+        }} />
+        {/* Lip center gap — slightly parted, thirsty */}
+        <View style={{
+          position: "absolute",
+          left: "22%", bottom: "23%",
+          width: "56%", height: 2.5,
+          backgroundColor: "#8A6050",
+          borderRadius: 1.25, opacity: 0.65,
+        }} />
+        {/* Lip crack mark 1 */}
+        <View style={{
+          position: "absolute",
+          left: "35%", bottom: "19%",
+          width: "5%", height: 8,
+          backgroundColor: "#A07868",
+          borderRadius: 1, opacity: 0.48,
+        }} />
+        {/* Lip crack mark 2 */}
+        <View style={{
+          position: "absolute",
+          left: "58%", bottom: "19%",
+          width: "4%", height: 6,
+          backgroundColor: "#A07868",
+          borderRadius: 1, opacity: 0.40,
         }} />
       </View>
 
@@ -1216,41 +1282,108 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
         position: "absolute",
         left: U * 0.469, top: U * 0.420,
         width: U * 0.062, height: U * 0.054,
-        backgroundColor: "#B8886A",
+        backgroundColor: "#A89070",
         borderRadius: 4,
       }} />
 
-      {/* Shoulders — drooped (weak posture) */}
+      {/* ── SWEAT DROPS — forehead/temple (dehydration, fever-sweat) ── */}
+      {/* Drop 1 — left temple */}
       <View style={{
         position: "absolute",
-        left: U * 0.258, top: U * 0.464,
+        left: U * 0.432, top: U * 0.276,
+        width: 5, height: 7,
+        borderRadius: 3,
+        backgroundColor: "#D4C8A8",
+        opacity: 0.70,
+      }} />
+      {/* Drop 2 — upper forehead center-left */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.455, top: U * 0.268,
+        width: 4, height: 5,
+        borderRadius: 2.5,
+        backgroundColor: "#CEC0A0",
+        opacity: 0.58,
+      }} />
+      {/* Drop 3 — right forehead */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.528, top: U * 0.274,
+        width: 3, height: 4,
+        borderRadius: 2,
+        backgroundColor: "#D0C4A4",
+        opacity: 0.52,
+      }} />
+
+      {/* ── DIZZINESS AURA — pale-gold motes near upper-right of head ── */}
+      {/* Largest star */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.562, top: U * 0.248,
+        width: 7, height: 7,
+        borderRadius: 3.5,
+        backgroundColor: "#D8CC60",
+        opacity: 0.52,
+      }} />
+      {/* Middle star */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.578, top: U * 0.234,
+        width: 5, height: 5,
+        borderRadius: 2.5,
+        backgroundColor: "#D8CC60",
+        opacity: 0.42,
+      }} />
+      {/* Small star */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.560, top: U * 0.222,
+        width: 4, height: 4,
+        borderRadius: 2,
+        backgroundColor: "#D0C858",
+        opacity: 0.34,
+      }} />
+      {/* Tiny trailing dot */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.548, top: U * 0.234,
+        width: 3, height: 3,
+        borderRadius: 1.5,
+        backgroundColor: "#C8C050",
+        opacity: 0.28,
+      }} />
+
+      {/* Shoulders — notably drooped/slumped (weak posture clue) */}
+      <View style={{
+        position: "absolute",
+        left: U * 0.258, top: U * 0.472,
         width: U * 0.484, height: U * 0.094,
         borderRadius: U * 0.047,
         overflow: "hidden",
-        transform: [{ rotate: "2.5deg" }],
+        transform: [{ rotate: "5deg" }],
       }}>
         <LinearGradient
-          colors={["#C4DED8", "#B0CAC4"]}
+          colors={["#B4CCC8", "#A0B8B4"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        {/* Shoulder shadow inward */}
+        {/* Shoulder shadow — deeper slump shading on right */}
         <LinearGradient
-          colors={["transparent", "#90B8B228"]}
+          colors={["transparent", "#6A9A9438"]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
       </View>
 
-      {/* Body / robe — main garment */}
+      {/* Body / robe — slumped garment (weak posture reads in the lean) */}
       <View style={{
         position: "absolute",
         left: U * 0.332, top: U * 0.532,
         width: U * 0.336, height: U * 0.370,
         borderRadius: 11,
-        transform: [{ rotate: "1.5deg" }],
+        transform: [{ rotate: "3deg" }],
         overflow: "hidden",
       }}>
         <LinearGradient

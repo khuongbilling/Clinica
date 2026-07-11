@@ -206,6 +206,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const prevTurn = useRef(state.turnsTaken);
   const tsFirstAction = useRef(false);
   const tsPrevClueCount = useRef(state.visibleClues.length);
+  // Allows finish() to pass through the beforeRemove guard when it calls
+  // router.replace() — prevents the guard from trapping the player on the
+  // battle screen after the scripted-loss prologue boss collapses.
+  const allowNavigateRef = useRef(false);
   // Auto-start the guided prologueBattle tutorial for the Push 1 tutorial
   // fight, otherwise fall back to the normal firstBattle tutorial.
   useEffect(() => {
@@ -255,7 +259,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   useEffect(() => {
     if (!isPrologueBoss) return;
-    const onBeforeRemove = (e: any) => { e.preventDefault(); };
+    // Only block user-initiated back gestures / hardware-back button.
+    // Do NOT block the programmatic router.replace() that finish() calls after
+    // the scripted collapse — React Navigation fires beforeRemove for that
+    // replace too, and unconditional preventDefault would trap the player on
+    // the battle screen with no way to proceed (the "patient could not be
+    // saved" blocking bug). allowNavigateRef is set to true by finish() before
+    // any router.replace() call so the guard knows to stand aside.
+    const onBeforeRemove = (e: any) => {
+      if (!allowNavigateRef.current) e.preventDefault();
+    };
     navigation.addListener("beforeRemove", onBeforeRemove);
     return () => navigation.removeListener("beforeRemove", onBeforeRemove);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -542,6 +555,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   };
 
   const finish = async () => {
+    // Signal the beforeRemove guard that this navigation is intentional (not a
+    // user-initiated back gesture). Must be set before any router.replace call.
+    allowNavigateRef.current = true;
     // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
     // Route straight into the Lotus Recall cutscene regardless of outcome.
     if (isPrologueBoss) {
@@ -1512,7 +1528,7 @@ const styles = StyleSheet.create({
   continueBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
 
   // ── Prologue boss scripted-collapse cinematic overlay ──
-  bossCollapseOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.94)", alignItems: "center", justifyContent: "center", padding: SPACING.lg },
+  bossCollapseOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.94)", alignItems: "center", justifyContent: "center", padding: SPACING.lg, zIndex: 9600 },
   bossCollapseInner: { width: "100%", maxWidth: 400, alignItems: "center", gap: SPACING.lg },
   bossCollapseTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "400", lineHeight: 26 },
   bossCollapseBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },

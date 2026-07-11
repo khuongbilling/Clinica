@@ -43,6 +43,9 @@ export default function Result() {
   const won = outcome === "win";
   const isTraining = training === "1";
   const isPrologueTutorial = prologue === "tutorial";
+  // Safety net: if the scripted-loss boss somehow routes here instead of
+  // directly to /lotus-recall, we detect it and offer the correct forward path.
+  const isPrologueBoss = prologue === "boss";
   // Push 6 — Replay Prologue keeps a rewards-free flag threaded all the way
   // into the next battle leg (the scripted boss fight) so it also skips
   // granting anything.
@@ -486,13 +489,28 @@ export default function Result() {
         )}
 
         <View style={styles.actions}>
-          {showTraining && enemy && (
+          {/* ── Scripted-loss prologue boss safety net ──────────────────────
+              battle.tsx normally routes directly to /lotus-recall via finish()
+              before result.tsx is ever reached. This branch fires only if that
+              path was bypassed (regression guard). Retry/return buttons are
+              intentionally suppressed for the scripted mandatory loss.       */}
+          {!won && isPrologueBoss && (
+            <Pressable
+              style={styles.primary}
+              onPress={() => router.replace({ pathname: "/lotus-recall", params: { enemyId: enemyId ?? "", replay: isReplay ? "1" : "" } })}
+              testID="result-lotus-recall"
+            >
+              <Ionicons name="flower" size={16} color={COLORS.onBrand} />
+              <Text style={styles.primaryTxt}>ANSWER THE CALL</Text>
+            </Pressable>
+          )}
+          {showTraining && enemy && !isPrologueBoss && (
             <Pressable style={styles.training} onPress={retryTraining} testID="result-try-training">
               <Ionicons name="sparkles" size={16} color={COLORS.onBrand} />
               <Text style={styles.primaryTxt}>TRY TRAINING BATTLE</Text>
             </Pressable>
           )}
-          {!won && enemy && (
+          {!won && enemy && !isPrologueBoss && (
             <Pressable style={styles.primary} onPress={retryNormal} testID="result-retry">
               <Text style={styles.primaryTxt}>TRY AGAIN</Text>
             </Pressable>
@@ -513,7 +531,7 @@ export default function Result() {
               <Text style={styles.primaryTxt}>NEXT MISSION</Text>
             </Pressable>
           )}
-          {!(won && isPrologueTutorial) && (
+          {!(won && isPrologueTutorial) && !isPrologueBoss && (
             <>
               <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
                 <Text style={styles.secondaryTxt}>RETURN TO KINGDOM</Text>
