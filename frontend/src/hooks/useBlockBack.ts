@@ -37,7 +37,23 @@ export function useBlockBack(options?: BlockBackOptions) {
 
   useFocusEffect(
     useCallback(() => {
-      if (!active) return;
+      if (!active) {
+        // Re-enable the native dismiss gesture when the guard is switched off
+        // in place (e.g. story scenes after the prologue completes).
+        if (Platform.OS !== "web") {
+          navigation.setOptions({ gestureEnabled: true });
+        }
+        return;
+      }
+
+      // 0) iOS swipe-back gesture. On native-stack, beforeRemove cannot
+      // reliably cancel an already-in-progress dismiss gesture (the native
+      // animation has started), so the gesture is disabled outright while the
+      // guard is active. beforeRemove below stays as defense-in-depth for
+      // programmatic back()/pop dispatches.
+      if (Platform.OS !== "web") {
+        navigation.setOptions({ gestureEnabled: false, fullScreenGestureEnabled: false });
+      }
 
       // 1) Android hardware back button.
       const sub = BackHandler.addEventListener("hardwareBackPress", () => {

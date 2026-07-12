@@ -5,7 +5,7 @@ description: How gameplay/onboarding screens block back navigation and clean up 
 
 **Rule:** Gameplay/onboarding screens use two shared hooks: `useBlockBack` (blocks browser back via a popstate sentinel, Android hardware back via BackHandler, and iOS swipe-back/in-app pops via `beforeRemove` filtered to GO_BACK/POP/POP_TO_TOP action types only) and `useClearTutorialOnExit` (blur cleanup calling `clearActiveTutorial()`, which clears the overlay WITHOUT marking the tutorial done).
 
-**Why:** Mid-game back navigation skipped scripted prologue beats and stranded tutorial overlays/scrims on the next screen. Filtering `beforeRemove` by action type means `router.replace`/`push` forward exits always pass — no allow-flag needed for replaces.
+**Why:** Mid-game back navigation skipped scripted prologue beats and stranded tutorial overlays/scrims on the next screen. Filtering `beforeRemove` by action type means `router.replace`/`push` forward exits always pass — no allow-flag needed for replaces. On native-stack iOS, `beforeRemove` preventDefault cannot cancel an in-progress swipe-dismiss gesture, so the hook also sets `navigation.setOptions({ gestureEnabled: false })` while active (and restores it when `active` flips false); `beforeRemove` stays as defense-in-depth for programmatic pops.
 
 **How to apply:**
 - Blocked screens' in-app back arrows must use `router.replace(hub)` (a pop would be swallowed by the guard).
