@@ -1,20 +1,16 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
+
 import { useTutorial } from "@/src/game/tutorialStore";
 
 /**
- * Clears any active tutorial overlay when the calling screen loses navigation
- * focus (i.e. the player navigates away from that screen).
+ * Clears any in-progress tutorial (overlay, highlight target, blocking scrim,
+ * guided-step state) the moment the screen loses focus or unmounts.
  *
- * This prevents stale tutorial state — scrim, forced-target highlight, and
- * input-blocking — from bleeding into unrelated screens.
- *
- * The tutorial is NOT marked as completed, so if the player re-enters the
- * section, `startTutorial` will restart it from step 0 as per the existing
- * progression rules.
- *
- * Usage — add one line inside any screen component that runs a tutorial:
- *   useClearTutorialOnExit();
+ * Use on every screen that starts or hosts a tutorial so a mid-flow exit —
+ * back navigation, deep link, tab switch — never leaks a stale overlay onto
+ * the next screen. Completion is NOT recorded, so the tutorial auto-restarts
+ * the next time its screen mounts.
  */
 export function useClearTutorialOnExit() {
   const { clearActiveTutorial } = useTutorial();

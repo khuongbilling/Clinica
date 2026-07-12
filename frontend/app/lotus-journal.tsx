@@ -30,9 +30,11 @@ export default function LotusJournalPage() {
   const router = useRouter();
   const { player, logWellnessActivity } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
-  useClearTutorialOnExit();
   const [lessonOpen, setLessonOpen] = useState<string | null>(null);
   const [lessonMsg, setLessonMsg] = useState<string | null>(null);
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   useEffect(() => {
     if (!isCompleted("firstLotusEntry")) {

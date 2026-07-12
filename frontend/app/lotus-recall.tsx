@@ -18,13 +18,16 @@ import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 // the post-recall home state to begin their real training.
 export default function LotusRecall() {
   const router = useRouter();
-  useBlockBack();
   const { completePrologue } = usePlayer();
   const { replay } = useLocalSearchParams<{ enemyId?: string; replay?: string }>();
   // Push 6 — Replay Prologue watches this cinematic without ever writing
   // prologue_complete or entering the real (mutating) post-recall onboarding.
   const isReplay = replay === "1";
   const [ready, setReady] = useState(false);
+
+  // The prologue finale must complete — backing out would re-enter the
+  // scripted-loss boss or strand onboarding. proceed() exits via replace.
+  useBlockBack();
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 1800);

@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { goBack } from "@/src/utils/navigation";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -55,11 +54,8 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
-  const navigation = useNavigation();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
-  useBlockBack();
-  useClearTutorialOnExit();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
@@ -210,10 +206,6 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const prevTurn = useRef(state.turnsTaken);
   const tsFirstAction = useRef(false);
   const tsPrevClueCount = useRef(state.visibleClues.length);
-  // Allows finish() to pass through the beforeRemove guard when it calls
-  // router.replace() — prevents the guard from trapping the player on the
-  // battle screen after the scripted-loss prologue boss collapses.
-  const allowNavigateRef = useRef(false);
   // Auto-start the guided prologueBattle tutorial for the Push 1 tutorial
   // fight, otherwise fall back to the normal firstBattle tutorial.
   useEffect(() => {
@@ -248,34 +240,17 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     setState((s) => ({ ...s, outcome: "loss", stability: 0, log: [...s.log, "⚠ The patient's condition collapses without warning."] }));
   }, [isPrologueBoss, state.outcome, state.turnsTaken]);
 
-  // ── Mandatory battle exit guards (scripted-loss prologue boss) ───────────
-  // The scripted-loss boss must always complete so the Lotus Recall /
-  // Reminiscence scene plays and later tutorial state is valid.
-  // Three layers:
-  //   1. isMandatoryBattle hides the X/help buttons from render 0 (see below).
-  //   2. BackHandler blocks the Android hardware back button.
-  //   3. navigation.beforeRemove blocks swipe-back (iOS) and browser back (web).
-  useEffect(() => {
-    if (!isPrologueBoss) return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
-    return () => sub.remove();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!isPrologueBoss) return;
-    // Only block user-initiated back gestures / hardware-back button.
-    // Do NOT block the programmatic router.replace() that finish() calls after
-    // the scripted collapse — React Navigation fires beforeRemove for that
-    // replace too, and unconditional preventDefault would trap the player on
-    // the battle screen with no way to proceed (the "patient could not be
-    // saved" blocking bug). allowNavigateRef is set to true by finish() before
-    // any router.replace() call so the guard knows to stand aside.
-    const onBeforeRemove = (e: any) => {
-      if (!allowNavigateRef.current) e.preventDefault();
-    };
-    navigation.addListener("beforeRemove", onBeforeRemove);
-    return () => navigation.removeListener("beforeRemove", onBeforeRemove);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Battle exit guards ────────────────────────────────────────────────────
+  // Back navigation (browser back, Android hardware back, iOS swipe-back,
+  // in-app pops) is blocked for EVERY battle — mid-battle back used to strand
+  // tutorial overlays and skip the scripted prologue flow. Forward exits
+  // (finish()'s router.replace, the ✕ close button's replace) always pass
+  // through because the guard only swallows back-type actions. For mandatory
+  // battles the ✕/help buttons are additionally hidden from render 0.
+  useBlockBack();
+  // Leaving mid-tutorial (any exit path) must never leak the overlay /
+  // highlight / blocking scrim onto the next screen.
+  useClearTutorialOnExit();
 
   // On mount: introduce the goal
   useEffect(() => { tips.enqueue("battle.intro"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -559,9 +534,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   };
 
   const finish = async () => {
-    // Signal the beforeRemove guard that this navigation is intentional (not a
-    // user-initiated back gesture). Must be set before any router.replace call.
-    allowNavigateRef.current = true;
+    // finish() navigates via router.replace, which the useBlockBack guard
+    // deliberately lets through (it only swallows back-type actions).
     // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
     // Route straight into the Lotus Recall cutscene regardless of outcome.
     if (isPrologueBoss) {
@@ -732,7 +706,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         {/* Hide exit and help buttons during tutorial battles — the ✕ on
             the tutorial overlay box is the only correct exit path. */}
         {!isMandatoryBattle && (
-          <Pressable style={styles.closeBtn} onPress={() => goBack(router, "/(tabs)")} testID="battle-close">
+          <Pressable style={styles.closeBtn} onPress={() => router.replace("/(tabs)")} testID="battle-close">
             <Ionicons name="close" size={16} color={COLORS.onSurface} />
           </Pressable>
         )}

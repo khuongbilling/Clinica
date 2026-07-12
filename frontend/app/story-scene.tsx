@@ -12,6 +12,7 @@ import {
 import { pokeAmbience, startAmbience, stopAmbience } from "@/src/game/ambient";
 import { useSettings } from "@/src/game/settingsStore";
 import { usePlayer } from "@/src/game/store";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { MotionPanel } from "@/src/components/reminiscence/MotionPanel";
 import { LotusPetalOverlay } from "@/src/components/reminiscence/LotusPetalOverlay";
 import { LotusRecallBurst } from "@/src/components/reminiscence/LotusRecallBurst";
@@ -44,8 +45,14 @@ export default function StorySceneScreen() {
 
 function SceneViewer({ sceneId }: { sceneId: string }) {
   const router = useRouter();
-  const { markStorySceneSeen } = usePlayer();
+  const { player, markStorySceneSeen } = usePlayer();
   const { soundEnabled } = useSettings();
+  // During onboarding (prologue not yet complete) a story scene is part of a
+  // scripted flow — back navigation would skip or re-enter scripted beats, so
+  // it is blocked. leave() calls allowNextBack() so its own router.back() exit
+  // still works. After the prologue, scenes are replayable from the gallery
+  // and back behaves normally.
+  const { allowNextBack } = useBlockBack({ active: !player?.prologue_complete });
   const scene = getStoryScene(sceneId)!;
   const allLines = [
     ...scene.lines.map((t) => ({ t, keeper: false })),
@@ -84,6 +91,8 @@ function SceneViewer({ sceneId }: { sceneId: string }) {
     // NEW badges never re-fire; then fade to ink black before navigating.
     markStorySceneSeen(scene.id);
     Animated.timing(veil, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
+      // This exit is deliberate — let the single back-pop through the guard.
+      allowNextBack();
       if (router.canGoBack()) router.back();
       else router.replace("/(tabs)");
     });

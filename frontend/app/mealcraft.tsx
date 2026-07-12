@@ -36,7 +36,6 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
-import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,14 +297,18 @@ export default function MealcraftScreen() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
-  useBlockBack();
-  useClearTutorialOnExit();
 
   const [plate, setPlate] = useState<string[]>([]);
   const [nutrition, setNutrition] = useState<NutritionValues>(ZERO);
   const [phase, setPhase] = useState<"build" | "result">("build");
   const [feedback, setFeedback] = useState<{ good: boolean; text: string } | null>(null);
   const [doneReady, setDoneReady] = useState(false);
+
+  // Back navigation is blocked while playing — the back arrow / "Return to
+  // Journal" button are the deliberate exits (forward replace, never a pop).
+  useBlockBack();
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   // Completion badge animation
   const badgeFade = useRef(new Animated.Value(0)).current;
@@ -383,7 +386,7 @@ export default function MealcraftScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => goBack(router, "/lotus-journal")}
+          onPress={() => router.replace("/lotus-journal")}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
@@ -571,7 +574,7 @@ export default function MealcraftScreen() {
         ) : (
           <Pressable
             style={styles.continueBtn}
-            onPress={() => goBack(router, "/lotus-journal")}
+            onPress={() => router.replace("/lotus-journal")}
           >
             <Text style={styles.continueTxt}>Return to Journal</Text>
             <Ionicons name="arrow-forward" size={18} color="#0B1A18" />

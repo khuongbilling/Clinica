@@ -14,14 +14,17 @@ import {
 } from "@/src/game/lessons";
 import { LOTUS_PATHS, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
-import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function LessonsHubScreen() {
   const router = useRouter();
-  useClearTutorialOnExit();
   const { player, loading } = usePlayer();
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  // (Must run unconditionally, before the early return below.)
+  useClearTutorialOnExit();
 
   if (loading || !player) {
     return (

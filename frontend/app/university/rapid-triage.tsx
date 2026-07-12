@@ -30,7 +30,6 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
-import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -196,11 +195,15 @@ function TriageButton({ def, disabled, onPress }: TriageBtnProps) {
 export default function RapidTriageScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
-  useBlockBack();
-  useClearTutorialOnExit();
 
   const [cardIdx, setCardIdx] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+
+  // Back navigation is blocked while playing — the back arrow is the
+  // deliberate exit (forward replace to the University hub, never a pop).
+  useBlockBack();
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   const cardFade = useRef(new Animated.Value(1)).current;
   const feedbackFade = useRef(new Animated.Value(0)).current;
@@ -287,7 +290,7 @@ export default function RapidTriageScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => goBack(router, "/university")}
+          onPress={() => router.replace("/university")}
           hitSlop={10}
           testID="triage-back"
         >

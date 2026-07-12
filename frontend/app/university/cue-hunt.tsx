@@ -36,7 +36,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
-import { goBack } from "@/src/utils/navigation";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -373,14 +372,18 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 export default function CueHuntScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
-  useBlockBack();
-  useClearTutorialOnExit();
 
   const [scW, setScW] = useState(0);
   const [found, setFound] = useState<Set<string>>(new Set());
   const [phase, setPhase] = useState<"playing" | "complete">("playing");
   const [toastText, setToastText] = useState("");
   const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  // Back navigation is blocked while playing — the back links are the
+  // deliberate exits (forward replace to the University hub, never a pop).
+  useBlockBack();
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   const requiredFound = [...found].filter(
     (id) => ZONES.find((z) => z.id === id)?.isRequired,
@@ -450,7 +453,7 @@ export default function CueHuntScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => goBack(router, "/university")}
+          onPress={() => router.replace("/university")}
           hitSlop={10}
           testID="cue-hunt-back"
         >
@@ -555,7 +558,7 @@ export default function CueHuntScreen() {
               <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
             </Pressable>
             <Pressable
-              onPress={() => goBack(router, "/university")}
+              onPress={() => router.replace("/university")}
               testID="cue-hunt-finish"
             >
               <Text style={styles.completeBackTxt}>Back to University</Text>
@@ -565,7 +568,7 @@ export default function CueHuntScreen() {
       ) : (
         <Pressable
           style={styles.backToUni}
-          onPress={() => goBack(router, "/university")}
+          onPress={() => router.replace("/university")}
           testID="cue-hunt-return"
         >
           <Ionicons name="chevron-back" size={15} color={COLORS.onSurfaceTertiary} />

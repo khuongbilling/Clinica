@@ -62,10 +62,12 @@ export default function RunHome() {
   const { player, loading, openRoundsSignal } = usePlayer();
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
-  useClearTutorialOnExit();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
   const roundsSignalSeen = useRef(0);
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   // A daily-progress cue (e.g. the "all duties complete" toast) can ask the hub
   // to open the Rounds panel; honour the latest request once.

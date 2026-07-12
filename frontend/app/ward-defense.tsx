@@ -51,9 +51,9 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
-import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
@@ -2512,9 +2512,13 @@ export default function WardDefense() {
   const router = useRouter();
   const { player, applyRewards, recordWardWaves, syncInventory, setWardLoadout } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
-  useBlockBack();
-  useClearTutorialOnExit();
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
+
+  // Back navigation is blocked for the whole mode (lobby, live board, result)
+  // — the back buttons are deliberate exits and use forward replaces below.
+  useBlockBack();
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   const gsRef = useRef<GS>(freshState());
   const [, bump] = useState(0);
@@ -3107,7 +3111,7 @@ export default function WardDefense() {
     return (
       <LobbyScreen
         onStart={startGame}
-        onBack={() => router.replace("/(tabs)")}
+        onBack={() => router.replace("/mode/ward-defense")}
         inventory={player?.inventory || {}}
         pendingBoosts={pendingBoosts}
         onToggleBoost={(id) =>
@@ -3141,7 +3145,7 @@ export default function WardDefense() {
     return (
       <ResultScreen won={gs.phase === "won"} wave={gs.wave} stability={gs.stability}
         score={gs.score} rewards={rewards} learningStats={ls}
-        onReplay={startGame} onBack={() => router.replace("/(tabs)")} />
+        onReplay={startGame} onBack={() => router.replace("/shift")} />
     );
   }
 
@@ -3159,7 +3163,7 @@ export default function WardDefense() {
         style={s.hud}
       >
         {/* Back button */}
-        <Pressable style={s.hudBack} onPress={() => router.replace("/(tabs)")} hitSlop={12}>
+        <Pressable style={s.hudBack} onPress={() => router.replace("/mode/ward-defense")} hitSlop={12}>
           <Ionicons name="arrow-back" size={15} color={COLORS.onSurface} />
         </Pressable>
 

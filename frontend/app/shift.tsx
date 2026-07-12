@@ -32,9 +32,11 @@ export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
-  useClearTutorialOnExit();
   const { notice, flashNotice } = useInlineNotice();
   const [showRounds, setShowRounds] = useState(false);
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
   const roundsFresh = player ? ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state : null;

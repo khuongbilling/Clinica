@@ -19,15 +19,14 @@ interface TutorialCtx {
   markDone: (id: TutorialId) => Promise<void>;
   replayTutorial: (id: TutorialId) => Promise<void>;
   resetTutorials: () => Promise<void>;
-  isCompleted: (id: TutorialId) => boolean;
   /**
-   * Clear any in-progress tutorial without marking it as completed.
-   * Call this when the player exits a section so stale overlay / forced-target
-   * state does not bleed into unrelated screens.  The tutorial will restart
-   * from step 0 the next time the player enters the section (since it is not
-   * marked done).
+   * Abandon the in-progress tutorial WITHOUT marking it complete — used when
+   * the player leaves a tutorial screen mid-flow so the overlay / highlight /
+   * blocking scrim never leaks onto the next screen. Because completion is not
+   * recorded, the tutorial auto-restarts the next time its screen mounts.
    */
   clearActiveTutorial: () => void;
+  isCompleted: (id: TutorialId) => boolean;
   onRequiredAction: (actionType: string, skillId?: string) => void;
   /**
    * For University mini-game tutorials: call this with the tapped element's ID.
@@ -149,13 +148,6 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     setStepIndex(0);
   }, [activeTutorialId, markDone]);
 
-  const clearActiveTutorial = useCallback(() => {
-    if (!activeRef.current) return;
-    activeRef.current = null;
-    setActiveTutorialId(null);
-    setStepIndex(0);
-  }, []);
-
   const replayTutorial = useCallback(async (id: TutorialId) => {
     setCompleted(prev => {
       const next = { ...prev, [id]: false };
@@ -165,6 +157,16 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     completedRef.current = { ...completedRef.current, [id]: false };
     activeRef.current = id;
     setActiveTutorialId(id);
+    setStepIndex(0);
+  }, []);
+
+  const clearActiveTutorial = useCallback(() => {
+    // Drop any queued pre-hydration start too — the player has left the screen
+    // that requested it, so resolving it later would surface a stale overlay.
+    pendingStartRef.current = null;
+    if (!activeRef.current) return;
+    activeRef.current = null;
+    setActiveTutorialId(null);
     setStepIndex(0);
   }, []);
 
@@ -241,7 +243,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     guidedReserve,
     setGuidedReserve,
   }), [completed, activeTutorialId, stepIndex, currentStep, totalSteps,
-    startTutorial, advanceStep, skipTutorial, clearActiveTutorial, markDone, replayTutorial, resetTutorials, isCompleted,
+    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials,
+    clearActiveTutorial, isCompleted,
     onRequiredAction, onTargetTap, requiredTargetId,
     guidedReserve]);
 

@@ -94,6 +94,8 @@ export default function KingdomScreen() {
   const realmGate = useFeatureGate("realm");
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
 
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);

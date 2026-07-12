@@ -43,8 +43,10 @@ export default function HeroesScreen() {
   const { player, saveActiveTeam } = usePlayer();
   const gate = useFeatureGate("hall_of_heroes");
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
-  useClearTutorialOnExit();
   const [team, setTeam] = useState<string[]>(player?.active_team ?? []);
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   useEffect(() => {
     if (player) setTeam(player.active_team ?? []);

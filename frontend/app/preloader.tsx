@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { RealmLoadingScreen } from "@/src/components/realm/RealmLoadingScreen";
 import { usePlayer } from "@/src/game/store";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { preloadAllGameAssets } from "@/src/game/preloadAll";
 import { resolveEntryRoute } from "@/src/game/route";
 
@@ -18,6 +19,10 @@ export default function Preloader() {
   const { player, loading } = usePlayer();
   const [assetsReady, setAssetsReady] = useState(false);
   const [minElapsed, setMinElapsed] = useState(false);
+
+  // Backing out of the preloader would land on the dead title/index route —
+  // block it; the forward replace to the resolved entry route passes through.
+  useBlockBack();
   const navigated = useRef(false);
 
   useEffect(() => {

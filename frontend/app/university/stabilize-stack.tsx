@@ -615,12 +615,16 @@ const PHASE_REASONING: Record<number, string> = {
 export default function StabilizeStackScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
-  useBlockBack();
-  useClearTutorialOnExit();
 
   const [tapSequence, setTapSequence] = useState<string[]>([]);
   const [phase, setPhase] = useState<GamePhase>("playing");
   const [revealAnim] = useState(new Animated.Value(0));
+
+  // Back navigation is blocked while playing — the back arrow / "Return to
+  // University" buttons are the deliberate exits (forward replace, never a pop).
+  useBlockBack();
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  useClearTutorialOnExit();
 
   // Auto-start the forced tutorial on first visit
   useEffect(() => {

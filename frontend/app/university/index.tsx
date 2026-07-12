@@ -133,9 +133,12 @@ export default function UniversityHubScreen() {
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
   const { activeTutorialId } = useTutorial();
-  useClearTutorialOnExit();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
+
+  // Leaving mid-tutorial must never leak the overlay onto the next screen.
+  // (Must run unconditionally, before the early return below.)
+  useClearTutorialOnExit();
 
   if (!player) {
     return (
