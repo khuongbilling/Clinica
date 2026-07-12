@@ -15,7 +15,6 @@ import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
-import { goBack } from "@/src/utils/navigation";
 import {
   CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
   UNIVERSITY_HUB_MODE, WARD_SHIFT_MODE, WELLNESS_MODES,
@@ -94,7 +93,7 @@ export default function ShiftPage() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10} testID="shift-back">
+        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="shift-back">
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>

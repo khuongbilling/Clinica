@@ -7,7 +7,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
-import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardPreview } from "@/src/components/RewardPreview";
@@ -68,7 +67,7 @@ export default function LotusJournalPage() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <PlayerHeader player={player} />
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/(tabs)")} hitSlop={10}>
+        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>

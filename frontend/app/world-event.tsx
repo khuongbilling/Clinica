@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { InlineNotice, useInlineNotice, MessageDialog } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
@@ -86,7 +85,7 @@ export default function WorldEventScreen() {
         <ScrollView contentContainerStyle={styles.boardScroll} showsVerticalScrollIndicator={false}>
           {/* ── Header ── */}
           <View style={styles.boardHeader}>
-            <Pressable style={styles.backBtn} onPress={() => goBack(router, "/events")} hitSlop={10} testID="world-event-locked-back">
+            <Pressable style={styles.backBtn} onPress={() => router.replace("/events")} hitSlop={10} testID="world-event-locked-back">
               <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
             </Pressable>
             <View style={{ flex: 1 }}>
@@ -211,7 +210,7 @@ export default function WorldEventScreen() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/events")} hitSlop={10} testID="world-event-back">
+        <Pressable style={styles.backBtn} onPress={() => router.replace("/events")} hitSlop={10} testID="world-event-back">
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <LinearGradient

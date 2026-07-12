@@ -9,7 +9,6 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { getBannerImage } from "@/src/components/ModeBanners";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
-import { goBack } from "@/src/utils/navigation";
 import { findMode, MODE_STATUS_LABEL } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -38,7 +37,7 @@ export default function ModeIntroPage() {
   if (!mode) {
     return (
       <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-        <Pressable style={styles.backBtn} onPress={() => goBack(router, "/shift")} hitSlop={10}>
+        <Pressable style={styles.backBtn} onPress={() => router.replace("/shift")} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={styles.missing}>
@@ -86,7 +85,7 @@ export default function ModeIntroPage() {
             style={StyleSheet.absoluteFillObject}
           />
           <View style={styles.heroTop}>
-            <Pressable style={styles.backBtn} onPress={() => goBack(router, "/shift")} hitSlop={10} testID="mode-intro-back">
+            <Pressable style={styles.backBtn} onPress={() => router.replace("/shift")} hitSlop={10} testID="mode-intro-back">
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </Pressable>
             <StaminaPill player={player} />
