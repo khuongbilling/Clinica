@@ -102,32 +102,33 @@ export function TutorialOverlay() {
   const isMiniGameRequired = !!(currentStep?.requireAction && currentStep?.requiredTargetId);
 
   // Animation complete: text is fully visible.
-  // For mini-game required steps, also immediately auto-dismiss the narrative
-  // box so the highlighted card is directly tappable without an extra tap.
-  // The user reads the hint as it types; the box disappears on its own.
-  // (For battle tutorials and banners the box stays, requiring a manual tap.)
   const handleTypewriterComplete = useCallback(() => {
     setInstant(true);
-    if (isMiniGameRequired) {
-      setBoxDismissed(true);
-    }
-  }, [isMiniGameRequired]);
+  }, []);
 
   // Tap handler for the narrative box:
-  //   On mini-game required steps: single tap reveals+dismisses (box auto-
-  //     dismissed on complete anyway, but this lets users skip the wait).
-  //   On other requireAction steps: 1st tap → reveal; 2nd tap → dismiss box.
+  //   On mini-game required steps: tapping the box only makes the typewriter
+  //     instant. The box stays visible as a hint until the player taps the
+  //     highlighted game element, which calls onTargetTap → markDone →
+  //     activeTutorialId = null → overlay clears naturally.
+  //   On battle requireAction steps: 1st tap → reveal; 2nd tap → dismiss box.
   //   On banner/non-action steps: 1st tap → reveal; 2nd tap → advance step.
   const handleBoxTap = useCallback(() => {
     if (!instant) {
       setInstant(true);
-      // For mini-game steps, revealing all text triggers handleTypewriterComplete
-      // which auto-dismisses; no need for a second tap.
       return;
     }
-    if (currentStep?.requireAction) { setBoxDismissed(true); }
-    else { advanceStep(); }
-  }, [instant, currentStep, advanceStep]);
+    if (currentStep?.requireAction) {
+      if (!isMiniGameRequired) {
+        // Battle tutorials only — dismiss the box so the highlighted skill
+        // is directly tappable without an overlay in the way.
+        setBoxDismissed(true);
+      }
+      // Mini-game steps: box stays visible until the player taps the card.
+    } else {
+      advanceStep();
+    }
+  }, [instant, currentStep, isMiniGameRequired, advanceStep]);
 
   // Reserve is only meaningful while a bottom-placed guided box is showing.
   // Clear it whenever we're not (top/center box, banner, or overlay hidden) so
