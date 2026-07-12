@@ -173,7 +173,10 @@ export default function UniversityHubScreen() {
   // Smart chain entry — resume from the next unfinished step rather than
   // always starting from the beginning.
   const handleChainEntry = useCallback(() => {
-    if (chainProg.rapidTriageDone) {
+    if (chainProg.stabilizeDone) {
+      // Full chain complete — don't loop back into any game
+      return;
+    } else if (chainProg.rapidTriageDone) {
       router.push("/university/stabilize-stack" as any);
     } else if (chainProg.cueHuntDone) {
       router.push("/university/rapid-triage" as any);

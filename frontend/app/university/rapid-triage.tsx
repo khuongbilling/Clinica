@@ -40,10 +40,10 @@ import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-// Infirmary illustration reused with purple overlay for triage context
-const SCENE_IMG = require("../../assets/images/cue_hunt_infirmary_scene.png");
-// Aspect ratio 896×1280 → portrait. maxWidth:340 → height ≈ 485 → cap 190px
-const SCENE_AR = 896 / 1280; // width / height (portrait, < 1)
+// Per-card scene images — each triage patient gets their own setting
+const IMG_TRAINING_HALL = require("../../assets/images/banner_uni_training.png");
+const IMG_PATIENT_ROOM  = require("../../assets/images/ward_corridor_lobby.png");
+const IMG_COURTYARD     = require("../../assets/images/ward_map_garden.png");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -64,6 +64,9 @@ interface TriageCard {
     accent: string;
     setting: string;
     chips: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sceneImg: any;
+    overlayColor: string;
   };
 }
 
@@ -91,6 +94,8 @@ const CARDS: TriageCard[] = [
       icon: "fitness-outline", accent: "#F59E0B",
       setting: "Training hall · afternoon",
       chips: ["Alert", "Dizzy", "Can drink"],
+      sceneImg: IMG_TRAINING_HALL,
+      overlayColor: "#F59E0B18",
     },
   },
   {
@@ -107,6 +112,8 @@ const CARDS: TriageCard[] = [
       icon: "bed-outline", accent: "#EF4444",
       setting: "Patient room · morning rounds",
       chips: ["Confused", "BP low", "Can't drink"],
+      sceneImg: IMG_PATIENT_ROOM,
+      overlayColor: "#EF444420",
     },
   },
   {
@@ -123,6 +130,8 @@ const CARDS: TriageCard[] = [
       icon: "school-outline", accent: "#2DD4BF",
       setting: "Courtyard · after class",
       chips: ["Alert", "Well", "No symptoms"],
+      sceneImg: IMG_COURTYARD,
+      overlayColor: "#2DD4BF18",
     },
   },
 ];
@@ -192,35 +201,40 @@ function TriageButton({ def, disabled, onPress }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DonghuaTriageScene — infirmary art with purple triage overlay
+// DonghuaTriageScene — per-card setting art with accent overlay
 // ─────────────────────────────────────────────────────────────────────────────
 
-function DonghuaTriageScene() {
+function DonghuaTriageScene({ sceneImg, overlayColor, setting }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sceneImg: any;
+  overlayColor: string;
+  setting: string;
+}) {
   return (
     <View style={styles.sceneOuter}>
       <View style={styles.sceneContainer}>
-        {/* Portrait infirmary art — absoluteFill into the fixed-height container */}
+        {/* Setting-specific art */}
         <ExpoImage
-          source={SCENE_IMG}
+          source={sceneImg}
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
-          transition={250}
+          transition={300}
         />
 
-        {/* Purple tint overlay — distinguishes triage from cue-hunt green */}
+        {/* Card-accent tint — matches the urgency level colour */}
         <View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#7C3AED2A" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: overlayColor }]}
         />
         {/* Top gradient */}
         <LinearGradient
-          colors={["rgba(26,18,40,0.60)", "transparent"]}
+          colors={["rgba(26,18,40,0.65)", "transparent"]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%" }}
           pointerEvents="none"
         />
         {/* Bottom fade */}
         <LinearGradient
-          colors={["transparent", "rgba(19,14,32,0.92)"]}
+          colors={["transparent", "rgba(19,14,32,0.94)"]}
           style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%" }}
           pointerEvents="none"
         />
@@ -228,7 +242,7 @@ function DonghuaTriageScene() {
         {/* Scene label */}
         <View style={styles.sceneLabel} pointerEvents="none">
           <Text style={styles.sceneLabelKicker}>RAPID TRIAGE · The Fading Apprentice</Text>
-          <Text style={styles.sceneLabelSub}>Assess each patient. Decide how urgently they need care.</Text>
+          <Text style={styles.sceneLabelSub}>{setting}</Text>
         </View>
       </View>
     </View>
@@ -387,7 +401,7 @@ export default function RapidTriageScreen() {
           creditsEarned={creditsEarned}
           milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
-          onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
+          onLearnMore={() => router.push("/university/triage-lesson" as any)}
           learnLabel="Learn Triage"
           onContinue={() => router.replace("/university/stabilize-stack" as any)}
           continueLabel="Next: Stabilize Stack →"
@@ -425,7 +439,11 @@ export default function RapidTriageScreen() {
       </View>
 
       {/* ── DONGHUA SCENE — infirmary art, purple-tinted ─────────────────── */}
-      <DonghuaTriageScene />
+      <DonghuaTriageScene
+        sceneImg={card.visual.sceneImg}
+        overlayColor={card.visual.overlayColor}
+        setting={card.visual.setting}
+      />
 
       {/* ── PROGRESS DOTS ──────────────────────────────────────────────────── */}
       <View style={styles.dotRow}>
