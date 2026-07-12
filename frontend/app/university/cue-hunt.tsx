@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { RewardBurst } from "@/src/components/university/RewardBurst";
 import React, {
   useCallback,
   useEffect,
@@ -446,6 +447,25 @@ export default function CueHuntScreen() {
 
   const dots = Array.from({ length: REQUIRED_COUNT }, (_, i) => i < requiredFound);
 
+  // ── Complete: full-screen reward burst ────────────────────────────────────
+  if (phase === "complete") {
+    return (
+      <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+        <RewardBurst
+          grade={{ label: "Healer's Eye", color: "#2DD4BF", icon: "eye" }}
+          score={REQUIRED_COUNT}
+          total={REQUIRED_COUNT}
+          observation='"You noticed dry lips, weakness, and the tipped water flask."'
+          clinicalNote="These clinical cues signal dehydration — often missed until it's serious."
+          chainHint="Next: decide how quickly she needs help"
+          bgColors={["#162C24", "#0E2018", "#091614"]}
+          onFinish={() => router.replace("/university")}
+          onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <LinearGradient
@@ -528,62 +548,8 @@ export default function CueHuntScreen() {
         </View>
       </View>
 
-      {/* ── BOTTOM: completion feedback OR back link ──────────────────── */}
-      {phase === "complete" ? (
-        <View style={styles.completionCard}>
-          <LinearGradient
-            colors={["#0D3B38", "#152E2A"]}
-            style={StyleSheet.absoluteFillObject}
-          />
-
-          {/* Icon + kicker row */}
-          <View style={styles.completeTopRow}>
-            <View style={styles.completeIconWrap}>
-              <Ionicons name="checkmark-done" size={14} color="#2DD4BF" />
-            </View>
-            <Text style={styles.completeKicker}>ROUND COMPLETE</Text>
-            <ExpoImage
-              source={require("../../assets/images/cue_hunt_chibi_healer.png")}
-              style={styles.completeChibi}
-              contentFit="contain"
-            />
-          </View>
-
-          {/* Observation — what the player noticed */}
-          <Text style={styles.observationTxt}>
-            "You noticed dry lips, weakness, and poor intake."
-          </Text>
-
-          {/* Clinical connection */}
-          <Text style={styles.clinicalTxt}>
-            These clues suggest dehydration risk.
-          </Text>
-
-          {/* Chain progress hint */}
-          <View style={styles.nextHint}>
-            <Ionicons name="arrow-forward-circle-outline" size={13} color="#2DD4BF60" />
-            <Text style={styles.nextHintTxt}>Next: decide how quickly she needs help</Text>
-          </View>
-
-          {/* Action row */}
-          <View style={styles.completeActions}>
-            <Pressable
-              style={styles.learnWhyBtn}
-              onPress={() => router.push("/university/cue-hunt-lesson" as any)}
-              testID="cue-hunt-learn-why"
-            >
-              <Text style={styles.learnWhyTxt}>Learn Why</Text>
-              <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.replace("/university")}
-              testID="cue-hunt-finish"
-            >
-              <Text style={styles.completeBackTxt}>Back to University</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
+      {/* ── BOTTOM: completion reward OR back link ────────────────────── */}
+      {phase !== "complete" && (
         <Pressable
           style={styles.backToUni}
           onPress={() => router.replace("/university")}

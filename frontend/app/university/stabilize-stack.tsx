@@ -38,6 +38,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { RewardBurst } from "@/src/components/university/RewardBurst";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { markChainStep } from "@/src/game/chainProgress";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
@@ -650,41 +651,22 @@ export default function StabilizeStackScreen() {
   if (gamePhase === "complete") {
     return (
       <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-        <LinearGradient
-          colors={["#0B1E2E", "#071018", COLORS.surface]}
-          style={StyleSheet.absoluteFillObject}
+        <RewardBurst
+          grade={grade}
+          score={correctCount}
+          total={CARE_PHASES.length}
+          observation={
+            correctCount === CARE_PHASES.length
+              ? '"You placed every step in perfect order — safety first, then stability, then recovery."'
+              : `You got ${correctCount} of ${CARE_PHASES.length} steps right.`
+          }
+          clinicalNote="Check Safety → Confirm Stability → Support Recovery. Always assess before you act."
+          chainHint="Next: triage your next patient"
+          bgColors={["#0B1E2E", "#071018", "#060D14"]}
+          onFinish={() => router.replace("/university")}
+          onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
+          learnLabel="Learn the Chain"
         />
-        <View style={styles.header}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => router.replace("/university")}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
-          </Pressable>
-          <Text style={styles.kicker}>STABILIZE STACK · COMPLETE</Text>
-        </View>
-        <View style={styles.completeBody}>
-          <View style={[styles.completeIcon, { borderColor: grade.color + "50" }]}>
-            <Ionicons name={grade.icon} size={32} color={grade.color} />
-          </View>
-          <Text style={[styles.gradeLabel, { color: grade.color }]}>{grade.label}</Text>
-          <Text style={styles.scoreDisplay}>{correctCount} / {CARE_PHASES.length}</Text>
-          <Text style={styles.scoreCaption}>care steps placed correctly</Text>
-          <View style={styles.completeDivider} />
-          <Text style={styles.completeLearning}>
-            Check Safety → Confirm Stability → Support Recovery.{"\n"}
-            Always assess before you act.
-          </Text>
-          <Pressable
-            style={[styles.completeBtn, { backgroundColor: grade.color }]}
-            onPress={() => router.replace("/university")}
-            testID="stabilize-finish"
-          >
-            <Text style={[styles.completeBtnTxt, { color: COLORS.surface }]}>Return to University</Text>
-            <Ionicons name="arrow-forward" size={14} color={COLORS.surface} />
-          </Pressable>
-        </View>
       </SafeAreaView>
     );
   }

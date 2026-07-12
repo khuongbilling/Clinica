@@ -1,7 +1,39 @@
 ---
 name: Clinica image rendering
-description: Image component rules for Expo web, and the full image-first architecture for the Ward Defense board.
+description: Image component rules for Expo web, full image-first architecture for Ward Defense, and fixed-height scene containers for mini-games.
 ---
+
+## Fixed-height scene containers (University mini-games)
+
+For scene backgrounds that use a FIXED pixel height (not aspect-ratio-driven), the only reliable pattern on Expo web is:
+
+```tsx
+// Container: explicit height, overflow hidden
+<View style={{ width: "100%", height: 168, overflow: "hidden", borderRadius: 12 }}>
+  <ExpoImage
+    source={require("...")}
+    style={StyleSheet.absoluteFillObject}   // ← required; NOT width/height: "100%"
+    contentFit="cover"
+  />
+  {/* overlays go here */}
+</View>
+```
+
+**Why:** `width/height: "100%"` on ExpoImage inside a fixed-height flex-column container
+does NOT fill the container on Expo web — the percentage height resolves to 0 in many
+cases. `StyleSheet.absoluteFillObject` works because the parent has a concrete height.
+
+**Portrait image + maxHeight anti-pattern:** If you set `aspectRatio: w/h` (< 1 for
+portrait) with `width: "100%"` and `maxHeight`, Yoga first computes `height = width /
+aspectRatio` (very tall), then clamps to maxHeight, then re-computes
+`width = maxHeight * aspectRatio` → very narrow container. Always use `height: N` (fixed)
+for portrait images you want to crop into a banner-style frame.
+
+**Expo --tunnel → --web:** ngrok outages cause `CommandError: failed to start tunnel`.
+Switch the workflow to `--web` (no `--tunnel`) for reliable local preview.
+`cd frontend && CI=1 npx expo start --web --clear --port 5000`
+
+
 
 # Image rendering on Expo 54 web — use expo-image for ALL bundled assets
 
