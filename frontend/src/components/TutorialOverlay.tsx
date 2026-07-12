@@ -225,11 +225,13 @@ export function TutorialOverlay() {
             </>
           ) : (
             <Text style={[styles.tapPrompt, { color: instant ? accent : COLORS.onSurfaceTertiary }]} numberOfLines={1}>
-              {instant
-                ? "▸ tap to continue"
-                : currentStep.nextText
-                  ? `▸ ${currentStep.nextText}`
-                  : "▸ tap to reveal"}
+              {isMiniGameRequired
+                ? `▸ ${currentStep.nextText || "tap the highlighted card"}`
+                : instant
+                  ? "▸ tap to continue"
+                  : currentStep.nextText
+                    ? `▸ ${currentStep.nextText}`
+                    : "▸ tap to reveal"}
             </Text>
           )}
         </View>
