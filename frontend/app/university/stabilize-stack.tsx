@@ -697,7 +697,7 @@ export default function StabilizeStackScreen() {
           creditsEarned={creditsEarned}
           milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
-          onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
+          onLearnMore={() => router.push("/university/stabilize-lesson" as any)}
           learnLabel="Learn the Chain"
         />
       </SafeAreaView>
