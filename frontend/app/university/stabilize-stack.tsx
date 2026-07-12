@@ -618,7 +618,7 @@ const PHASE_REASONING: Record<number, string> = {
 
 export default function StabilizeStackScreen() {
   const router = useRouter();
-  const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
+  const { startTutorial, isCompleted, activeTutorialId, guidedReserve } = useTutorial();
 
   const [tapSequence, setTapSequence] = useState<string[]>([]);
   const [phase, setPhase] = useState<GamePhase>("playing");
@@ -761,7 +761,7 @@ export default function StabilizeStackScreen() {
 
       <ScrollView
         style={SCROLL_FIX_WEB}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, guidedReserve > 0 && { paddingBottom: guidedReserve }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Immersive patient panel */}
