@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardPreview } from "@/src/components/RewardPreview";
@@ -34,6 +35,8 @@ export default function LotusJournalPage() {
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
+  // Browser back mirrors the in-app arrow instead of popping stale gameplay screens.
+  useWebBackToHub("/(tabs)");
 
   useEffect(() => {
     if (!isCompleted("firstLotusEntry")) {

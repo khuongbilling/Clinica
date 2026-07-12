@@ -13,6 +13,7 @@ import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
@@ -138,6 +139,8 @@ export default function UniversityHubScreen() {
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   // (Must run unconditionally, before the early return below.)
   useClearTutorialOnExit();
+  // Browser back mirrors the in-app arrow instead of popping stale gameplay screens.
+  useWebBackToHub("/(tabs)");
 
   if (!player) {
     return (

@@ -9,6 +9,7 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { getBannerImage } from "@/src/components/ModeBanners";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
+import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { findMode, MODE_STATUS_LABEL } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -25,6 +26,9 @@ export default function ModeIntroPage() {
   const { player } = usePlayer();
   const { notice, flashNotice } = useInlineNotice();
   const mode = findMode(id);
+
+  // Browser back mirrors the in-app arrow instead of popping stale gameplay screens.
+  useWebBackToHub("/shift");
 
   if (!player) {
     return (

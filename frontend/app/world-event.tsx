@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { InlineNotice, useInlineNotice, MessageDialog } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
+import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { playRewardCue } from "@/src/game/cues";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -60,6 +61,9 @@ export default function WorldEventScreen() {
   const { player } = usePlayer();
   const [tab, setTab] = useState<Tab>("overview");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  // Browser back mirrors the in-app arrow instead of popping stale gameplay screens.
+  useWebBackToHub("/events");
 
   if (!player) {
     return (

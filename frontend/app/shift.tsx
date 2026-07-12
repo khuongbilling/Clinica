@@ -14,6 +14,7 @@ import { usePlayer } from "@/src/game/store";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
 import {
   CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
@@ -36,6 +37,8 @@ export default function ShiftPage() {
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
+  // Browser back mirrors the in-app arrow instead of popping stale gameplay screens.
+  useWebBackToHub("/(tabs)");
 
   const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
   const roundsFresh = player ? ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state : null;
