@@ -39,6 +39,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
+import { markChainStep } from "@/src/game/chainProgress";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 
@@ -639,6 +640,13 @@ export default function StabilizeStackScreen() {
     }, 600);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist chain step when player reaches the complete phase
+  useEffect(() => {
+    if (phase === "complete") {
+      markChainStep("stabilizeDone");
+    }
+  }, [phase]);
 
   const { requiredTargetId } = useTutorial();
 

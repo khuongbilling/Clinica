@@ -35,6 +35,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
+import { markChainStep } from "@/src/game/chainProgress";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -401,9 +402,10 @@ export default function CueHuntScreen() {
     return () => clearTimeout(t);
   }, []);
 
-  // Transition to complete when all required clues found
+  // Transition to complete when all required clues found; persist chain step
   useEffect(() => {
     if (requiredFound >= REQUIRED_COUNT && phase === "playing") {
+      markChainStep("cueHuntDone");
       setTimeout(() => setPhase("complete"), 450);
     }
   }, [requiredFound, phase]);
@@ -481,6 +483,14 @@ export default function CueHuntScreen() {
         </Text>
       </View>
 
+      {/* ── PURPOSE STRIP ─────────────────────────────────────────────── */}
+      <View style={styles.purposeStrip}>
+        <Ionicons name="sparkles-outline" size={12} color="#D4AF37" />
+        <Text style={styles.purposeTxt}>
+          Good healers notice what others overlook. Tap the signs you see.
+        </Text>
+      </View>
+
       {/* ── SCENE ─────────────────────────────────────────────────────── */}
       <View style={styles.sceneOuter}>
         {/* The scene container has a fixed aspect ratio so the Lotus
@@ -548,6 +558,12 @@ export default function CueHuntScreen() {
           <Text style={styles.clinicalTxt}>
             These clues suggest dehydration risk.
           </Text>
+
+          {/* Chain progress hint */}
+          <View style={styles.nextHint}>
+            <Ionicons name="arrow-forward-circle-outline" size={13} color="#2DD4BF60" />
+            <Text style={styles.nextHintTxt}>Next: decide how quickly she needs help</Text>
+          </View>
 
           {/* Action row */}
           <View style={styles.completeActions}>
@@ -714,4 +730,36 @@ const styles = StyleSheet.create({
     gap: 4, paddingVertical: SPACING.md, paddingBottom: SPACING.xl,
   },
   backToUniTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
+
+  // Purpose strip — shown below the progress dots
+  purposeStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 7,
+    backgroundColor: "#D4AF370C",
+    borderTopWidth: 1, borderBottomWidth: 1,
+    borderColor: "#D4AF3720",
+  },
+  purposeTxt: {
+    color: "#D4AF37CC",
+    fontSize: 12,
+    fontStyle: "italic",
+    flex: 1,
+    lineHeight: 17,
+  },
+
+  // Chain next-step hint in completion card
+  nextHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+  },
+  nextHintTxt: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 12,
+    fontStyle: "italic",
+  },
 });

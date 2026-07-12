@@ -107,28 +107,25 @@ export function TutorialOverlay() {
   }, []);
 
   // Tap handler for the narrative box:
-  //   On mini-game required steps: tapping the box only makes the typewriter
-  //     instant. The box stays visible as a hint until the player taps the
-  //     highlighted game element, which calls onTargetTap → markDone →
-  //     activeTutorialId = null → overlay clears naturally.
-  //   On battle requireAction steps: 1st tap → reveal; 2nd tap → dismiss box.
-  //   On banner/non-action steps: 1st tap → reveal; 2nd tap → advance step.
+  //   1st tap: makes typewriter instant (text fully revealed).
+  //   2nd tap on requireAction steps: dismisses the box (boxDismissed=true).
+  //     For mini-game steps the thin-strip wrapper means the box is not over
+  //     the cards, so dismissing it is safe and expected (same as cueHunt /
+  //     rapidTriage). After dismiss, activeTutorialId stays active so
+  //     isTutorialBlocked still guards wrong cards; only the highlighted card
+  //     fires onTargetPress → markDone → tutorial ends.
+  //   2nd tap on banner/non-action steps: advance to next step.
   const handleBoxTap = useCallback(() => {
     if (!instant) {
       setInstant(true);
       return;
     }
     if (currentStep?.requireAction) {
-      if (!isMiniGameRequired) {
-        // Battle tutorials only — dismiss the box so the highlighted skill
-        // is directly tappable without an overlay in the way.
-        setBoxDismissed(true);
-      }
-      // Mini-game steps: box stays visible until the player taps the card.
+      setBoxDismissed(true);
     } else {
       advanceStep();
     }
-  }, [instant, currentStep, isMiniGameRequired, advanceStep]);
+  }, [instant, currentStep, advanceStep]);
 
   // Reserve is only meaningful while a bottom-placed guided box is showing.
   // Clear it whenever we're not (top/center box, banner, or overlay hidden) so

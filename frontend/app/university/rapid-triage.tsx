@@ -26,6 +26,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
+import { markChainStep } from "@/src/game/chainProgress";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -45,6 +46,12 @@ interface TriageCard {
   correct: TriageLevel;
   correctFeedback: string;
   wrongFeedback: Partial<Record<TriageLevel, string>>;
+  visual: {
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    accent: string;
+    setting: string;
+    chips: string[];
+  };
 }
 
 interface FeedbackState {
@@ -70,6 +77,12 @@ const CARDS: TriageCard[] = [
       routine:
         "Not routine. Dizziness after training can worsen if ignored.",
     },
+    visual: {
+      icon: "fitness-outline",
+      accent: "#F59E0B",
+      setting: "Training hall · afternoon",
+      chips: ["Alert", "Dizzy", "Can drink"],
+    },
   },
   {
     id: "card_elder",
@@ -84,6 +97,12 @@ const CARDS: TriageCard[] = [
       routine:
         "Not routine. This patient is unstable — treat as an emergency.",
     },
+    visual: {
+      icon: "bed-outline",
+      accent: "#EF4444",
+      setting: "Patient room · morning rounds",
+      chips: ["Confused", "BP low", "Can't drink"],
+    },
   },
   {
     id: "card_student",
@@ -97,6 +116,12 @@ const CARDS: TriageCard[] = [
         "Not an emergency. This is a wellness question with no active symptoms.",
       urgent:
         "Not urgent. No signs of illness — this is routine guidance.",
+    },
+    visual: {
+      icon: "school-outline",
+      accent: "#2DD4BF",
+      setting: "Courtyard · after class",
+      chips: ["Alert", "Well", "No symptoms"],
     },
   },
 ];
@@ -260,6 +285,7 @@ export default function RapidTriageScreen() {
         setFeedback({ correct: true, text: card.correctFeedback });
         setTimeout(() => {
           if (cardIdx >= CARDS.length - 1) {
+            markChainStep("rapidTriageDone");
             router.replace("/university/triage-complete" as any);
           } else {
             advanceCard();
@@ -331,13 +357,28 @@ export default function RapidTriageScreen() {
           <Text style={styles.roleChipTxt}>PATIENT</Text>
         </View>
 
-        {/* Avatar */}
-        <View style={styles.avatarWrap}>
+        {/* Patient scene visual — icon + setting + clinical chips */}
+        <View style={[styles.sceneStrip, { borderColor: card.visual.accent + "30" }]}>
           <LinearGradient
-            colors={["#A78BFA20", "#7C3AED10"]}
+            colors={[card.visual.accent + "18", card.visual.accent + "08"]}
             style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          <Ionicons name="person" size={44} color="#A78BFA" />
+          <View style={[styles.sceneIcon, { backgroundColor: card.visual.accent + "18", borderColor: card.visual.accent + "35" }]}>
+            <Ionicons name={card.visual.icon} size={30} color={card.visual.accent} />
+          </View>
+          <View style={styles.sceneInfo}>
+            <Text style={[styles.sceneSettingTxt, { color: card.visual.accent }]}>
+              {card.visual.setting}
+            </Text>
+            <View style={styles.chipRow}>
+              {card.visual.chips.map((chip, i) => (
+                <View key={i} style={[styles.chip, { borderColor: card.visual.accent + "40" }]}>
+                  <Text style={[styles.chipTxt, { color: card.visual.accent }]}>{chip}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
 
         {/* Role label */}
@@ -516,4 +557,32 @@ const styles = StyleSheet.create({
   triageBtnLabel: {
     fontSize: 16, fontWeight: "700", letterSpacing: 0.3, flex: 1,
   },
+
+  // Patient scene visual strip
+  sceneStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: SPACING.md,
+    alignSelf: "stretch",
+    overflow: "hidden",
+    marginTop: SPACING.md,
+  },
+  sceneIcon: {
+    width: 56, height: 56, borderRadius: RADIUS.md,
+    borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  sceneInfo: { flex: 1, gap: 6 },
+  sceneSettingTxt: { fontSize: 12, fontWeight: "600", letterSpacing: 0.3 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  chip: {
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+  },
+  chipTxt: { fontSize: 10, fontWeight: "600" },
 });

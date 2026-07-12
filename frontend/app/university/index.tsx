@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +18,7 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
 import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
+import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
@@ -25,7 +26,13 @@ import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 // ── Cue Hunt featured hero banner ────────────────────────────────────────────
 // Shown above every other University section so the first tap a new learner
 // makes leads to a visual, playable hook rather than a reading passage.
-function CueHuntHeroBanner({ onPress }: { onPress: () => void }) {
+function CueHuntHeroBanner({
+  onPress,
+  isContinue,
+}: {
+  onPress: () => void;
+  isContinue?: boolean;
+}) {
   return (
     <Pressable style={styles.cueCard} onPress={onPress} testID="university-banner-cue-hunt">
       <LinearGradient
@@ -38,21 +45,32 @@ function CueHuntHeroBanner({ onPress }: { onPress: () => void }) {
       <View style={styles.cueGlow} pointerEvents="none" />
 
       <View style={styles.cueTop}>
-        <View style={styles.cueBadge}>
-          <Ionicons name="eye-outline" size={11} color="#2DD4BF" />
-          <Text style={styles.cueBadgeTxt}>PLAY FIRST</Text>
+        <View style={[
+          styles.cueBadge,
+          isContinue && { backgroundColor: "#D4AF3722", borderColor: "#D4AF3740" },
+        ]}>
+          <Ionicons
+            name={isContinue ? "play-circle-outline" : "eye-outline"}
+            size={11}
+            color={isContinue ? "#D4AF37" : "#2DD4BF"}
+          />
+          <Text style={[styles.cueBadgeTxt, isContinue && { color: "#D4AF37" }]}>
+            {isContinue ? "CONTINUE" : "PLAY FIRST"}
+          </Text>
         </View>
       </View>
 
       <View style={styles.cueBody}>
         <Text style={styles.cueKicker}>CUE HUNT</Text>
         <Text style={styles.cueTitle}>The Fading Apprentice</Text>
-        <Text style={styles.cueSub}>Find what others missed.</Text>
+        <Text style={styles.cueSub}>
+          {isContinue ? "Resume the case chain." : "Find what others missed."}
+        </Text>
       </View>
 
       <View style={styles.cueCtaRow}>
         <View style={styles.cueCtaBtn}>
-          <Text style={styles.cueCtaTxt}>Start Cue Hunt</Text>
+          <Text style={styles.cueCtaTxt}>{isContinue ? "Continue" : "Start Cue Hunt"}</Text>
           <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
         </View>
       </View>
@@ -136,6 +154,31 @@ export default function UniversityHubScreen() {
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
 
+  // Chain progress — reload every time this screen gains focus so the banner
+  // updates after the player returns from a completed mini-game.
+  const [chainProg, setChainProg] = useState<ChainProgress>({
+    cueHuntDone: false,
+    rapidTriageDone: false,
+    stabilizeDone: false,
+  });
+  useFocusEffect(
+    useCallback(() => {
+      getChainProgress().then(setChainProg);
+    }, []),
+  );
+
+  // Smart chain entry — resume from the next unfinished step rather than
+  // always starting from the beginning.
+  const handleChainEntry = useCallback(() => {
+    if (chainProg.rapidTriageDone) {
+      router.push("/university/stabilize-stack" as any);
+    } else if (chainProg.cueHuntDone) {
+      router.push("/university/rapid-triage" as any);
+    } else {
+      router.push("/university/cue-hunt" as any);
+    }
+  }, [chainProg, router]);
+
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   // (Must run unconditionally, before the early return below.)
   useClearTutorialOnExit();
@@ -203,15 +246,24 @@ export default function UniversityHubScreen() {
                   ? "…This is the University. Start with Cue Hunt above — a live case where you tap the clues a real patient is showing. Or take a Lotus Lesson to study the reasoning. Both paths reward heroes."
                   : "You return to study. Good. Run a Cue Hunt, take a lesson, recruit healers, or consult the Codex. The choice is yours."
               }
-              ctaLabel={isNewLearner ? "Start Cue Hunt" : undefined}
-              onPress={isNewLearner ? () => router.push("/university/cue-hunt" as any) : undefined}
+              ctaLabel={
+                isNewLearner
+                  ? chainProg.cueHuntDone
+                    ? "Continue Case Chain"
+                    : "Start Cue Hunt"
+                  : undefined
+              }
+              onPress={isNewLearner ? handleChainEntry : undefined}
               testID="university-narrator"
             />
           </SceneTransition>
         )}
 
-        {/* CUE HUNT — featured first, the primary first-click for new learners */}
-        <CueHuntHeroBanner onPress={() => router.push("/university/cue-hunt" as any)} />
+        {/* CUE HUNT — featured first; banner adapts to chain progress */}
+        <CueHuntHeroBanner
+          onPress={handleChainEntry}
+          isContinue={chainProg.cueHuntDone && !chainProg.stabilizeDone}
+        />
 
         {/* Chain track — shows the 4 steps of The Fading Apprentice case chain */}
         <ChainTrack chainDone={chainComplete} />
