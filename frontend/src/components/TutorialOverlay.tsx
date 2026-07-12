@@ -194,19 +194,87 @@ export function TutorialOverlay() {
     const showChevron = currentStep.requireAction;
     const arrowUp = placement === "bottom";
 
+    // Shared inner content for the narrative Pressable (used in both paths below).
+    const narrativeInner = (
+      <>
+        {showChevron && arrowUp && <PointerChevron dir="up" />}
+        <View style={styles.narrativeRow}>
+          <NarratorFigure art={narrator.art} color={accent} width={64} height={92} />
+          <View style={styles.narrativeContent}>
+            <View style={styles.narrativeHead}>
+              <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{narrator.name}</Text>
+              {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
+            </View>
+            <Text style={styles.systemStepTitle}>{currentStep.title}</Text>
+            <TypewriterText
+              text={currentStep.body}
+              style={styles.narrativeBody}
+              instant={instant}
+              onComplete={handleTypewriterComplete}
+            />
+          </View>
+        </View>
+        <View style={styles.narrativeFoot}>
+          {currentStep.banner ? (
+            <>
+              <View style={{ flex: 1 }} />
+              <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
+                <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Text style={[styles.tapPrompt, { color: instant ? accent : COLORS.onSurfaceTertiary }]} numberOfLines={1}>
+              {instant
+                ? "▸ tap to continue"
+                : currentStep.nextText
+                  ? `▸ ${currentStep.nextText}`
+                  : "▸ tap to reveal"}
+            </Text>
+          )}
+        </View>
+        {showChevron && !arrowUp && <PointerChevron dir="down" />}
+      </>
+    );
+
+    // ── Mini-game required steps ────────────────────────────────────────────────
+    // For steps that require tapping a specific game element (e.g. Stabilize
+    // Stack, Cue Hunt, Rapid Triage), the narrative box is rendered as a
+    // THIN-STRIP absolutely-positioned container that only covers the top or
+    // bottom edge of the screen — never the card / game area.
+    //
+    // This is the definitive fix for the tap-lock bug: instead of an
+    // absoluteFillObject wrapper with `pointerEvents:"box-none"` (whose CSS
+    // translation in React Native Web can interfere with ScrollView touch
+    // routing), we simply don't render any full-screen overlay at all.
+    // Nothing can block the cards because there is nothing over the cards.
+    if (isMiniGameRequired) {
+      const edgeStyle =
+        placement === "bottom"
+          ? { bottom: 0, paddingBottom: insets.bottom + SPACING.md }
+          : { top: 0, paddingTop: insets.top + SPACING.xs };
+      return (
+        <View style={[styles.miniGameNarratorWrap, edgeStyle]}>
+          <Pressable
+            onPress={handleBoxTap}
+            onLayout={placement === "bottom" && currentStep.requireAction
+              ? (e) => setGuidedReserve(e.nativeEvent.layout.height + insets.bottom + SPACING.xxl)
+              : undefined}
+            style={[styles.narrativeBox, { borderColor: accent, shadowColor: accent }]}
+          >
+            {narrativeInner}
+          </Pressable>
+        </View>
+      );
+    }
+
+    // ── Battle tutorials and banner steps ──────────────────────────────────────
+    // These use the full absoluteFillObject wrapper. Battle scrims block the
+    // live battle UI while the narrator speaks; banner steps appear over hub
+    // screens that have no scrollable game content to protect.
     return (
       <>
-        {/* Dim scrim while the narration box is visible.
-            Only battle tutorials show an active scrim: it blocks the live
-            battle UI while the narrator is speaking. Mini-game tutorials do NOT
-            render a scrim — wrong-tap blocking is handled by isTutorialBlocked
-            in each game screen's press handler, and an accidental active scrim
-            on web would freeze all card touches if the pointerEvents style value
-            is not propagated correctly through the ScrollView stacking context. */}
         {showScrim && (
-          <View
-            style={[styles.battleScrim, { pointerEvents: "auto" }]}
-          />
+          <View style={[styles.battleScrim, { pointerEvents: "auto" }]} />
         )}
         <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
           <Pressable
@@ -222,42 +290,7 @@ export function TutorialOverlay() {
               { pointerEvents: "auto" },
             ]}
           >
-            {showChevron && arrowUp && <PointerChevron dir="up" />}
-            <View style={styles.narrativeRow}>
-              <NarratorFigure art={narrator.art} color={accent} width={64} height={92} />
-              <View style={styles.narrativeContent}>
-                <View style={styles.narrativeHead}>
-                  <Text style={[styles.narrativeTitle, { color: accent }]} numberOfLines={1}>{narrator.name}</Text>
-                  {progress ? <Text style={styles.progressTxt}>{progress}</Text> : null}
-                </View>
-                <Text style={styles.systemStepTitle}>{currentStep.title}</Text>
-                <TypewriterText
-                  text={currentStep.body}
-                  style={styles.narrativeBody}
-                  instant={instant}
-                  onComplete={handleTypewriterComplete}
-                />
-              </View>
-            </View>
-            <View style={styles.narrativeFoot}>
-              {currentStep.banner ? (
-                <>
-                  <View style={{ flex: 1 }} />
-                  <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
-                    <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
-                  </Pressable>
-                </>
-              ) : (
-                <Text style={[styles.tapPrompt, { color: instant ? accent : COLORS.onSurfaceTertiary }]} numberOfLines={1}>
-                  {instant
-                    ? "▸ tap to continue"
-                    : currentStep.nextText
-                      ? `▸ ${currentStep.nextText}`
-                      : "▸ tap to reveal"}
-                </Text>
-              )}
-            </View>
-            {showChevron && !arrowUp && <PointerChevron dir="down" />}
+            {narrativeInner}
           </Pressable>
         </View>
       </>
@@ -385,6 +418,16 @@ const styles = StyleSheet.create({
   },
 
   // ── Guided action narrative box (positioned near the highlighted control) ──
+  // Mini-game steps: thin-strip wrapper anchored to top or bottom edge only.
+  // Does NOT cover the card/game area — nothing can block game touches.
+  miniGameNarratorWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 9000,
+    paddingHorizontal: SPACING.sm,
+    alignItems: "center",
+  },
   actionOverlay: {
     zIndex: 9000,
     alignItems: "center",
