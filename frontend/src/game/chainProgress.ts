@@ -17,12 +17,18 @@ export interface ChainProgress {
   cueHuntDone: boolean;
   rapidTriageDone: boolean;
   stabilizeDone: boolean;
+  cueHuntFirstPerfect: boolean;
+  triageFirstPerfect: boolean;
+  stabilizeFirstPerfect: boolean;
 }
 
 const DEFAULT: ChainProgress = {
   cueHuntDone: false,
   rapidTriageDone: false,
   stabilizeDone: false,
+  cueHuntFirstPerfect: false,
+  triageFirstPerfect: false,
+  stabilizeFirstPerfect: false,
 };
 
 export async function getChainProgress(): Promise<ChainProgress> {
@@ -52,4 +58,23 @@ export async function resetChain(): Promise<void> {
   try {
     await AsyncStorage.removeItem(KEY);
   } catch {}
+}
+
+/**
+ * Returns true if this is the FIRST time the player earns a perfect score
+ * on the given game, and marks it so subsequent calls return false.
+ */
+export async function checkAndMarkFirstPerfect(
+  game: "cueHunt" | "triage" | "stabilize",
+): Promise<boolean> {
+  try {
+    const current = await getChainProgress();
+    const key = `${game}FirstPerfect` as keyof ChainProgress;
+    if (current[key]) return false;
+    (current as any)[key] = true;
+    await AsyncStorage.setItem(KEY, JSON.stringify(current));
+    return true;
+  } catch {
+    return false;
+  }
 }

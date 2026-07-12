@@ -40,9 +40,11 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardBurst } from "@/src/components/university/RewardBurst";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
-import { markChainStep } from "@/src/game/chainProgress";
+import { markChainStep, checkAndMarkFirstPerfect } from "@/src/game/chainProgress";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { usePlayer } from "@/src/game/store";
+import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 
 // Donghua patient illustration: Wei on garden path — 1408 × 768 (landscape)
 const PATIENT_SCENE = require("../../assets/images/stabilize_patient_wei.png");
@@ -557,6 +559,7 @@ type GamePhase = "playing" | "review" | "complete";
 
 export default function StabilizeStackScreen() {
   const router = useRouter();
+  const { player, updateState } = usePlayer();
   const {
     startTutorial,
     isCompleted,
@@ -568,6 +571,9 @@ export default function StabilizeStackScreen() {
   const [tapSequence, setTapSequence] = useState<string[]>([]);
   const [gamePhase,   setGamePhase]   = useState<GamePhase>("playing");
   const [revealAnim]                  = useState(new Animated.Value(0));
+  const [creditsEarned, setCreditsEarned] = useState(0);
+  const [milestoneItems, setMilestoneItems] = useState<MilestoneRewardItem[] | undefined>();
+  const creditedRef = useRef(false);
 
   // Scroll ref for auto-scrolling to orb grid on tutorial step 1
   const scrollRef   = useRef<React.ElementRef<typeof ScrollView>>(null);
@@ -588,10 +594,35 @@ export default function StabilizeStackScreen() {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mark chain step when player reaches complete
+  // Mark chain step + award credits when player reaches complete
   useEffect(() => {
-    if (gamePhase === "complete") markChainStep("stabilizeDone");
-  }, [gamePhase]);
+    if (gamePhase !== "complete") return;
+    markChainStep("stabilizeDone");
+    if (creditedRef.current) return;
+    creditedRef.current = true;
+    const credits = correctCount === CARE_PHASES.length ? 30 : correctCount === 2 ? 20 : 10;
+    setCreditsEarned(credits);
+    const isPerfect = correctCount === CARE_PHASES.length;
+    (async () => {
+      if (isPerfect) {
+        const isFirst = await checkAndMarkFirstPerfect("stabilize");
+        if (isFirst) {
+          const bonus = 15;
+          setMilestoneItems([
+            { icon: "school", label: "Uni Credits", amount: String(bonus) },
+            { icon: "trophy", label: "First Perfect Bonus" },
+          ]);
+          if (player && updateState) {
+            await updateState({ ...player, university_credits: (player.university_credits || 0) + credits + bonus });
+          }
+          return;
+        }
+      }
+      if (player && updateState) {
+        await updateState({ ...player, university_credits: (player.university_credits || 0) + credits });
+      }
+    })();
+  }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When tutorial requires an orb tap, scroll orb grid into view
   useEffect(() => {
@@ -661,8 +692,10 @@ export default function StabilizeStackScreen() {
               : `You got ${correctCount} of ${CARE_PHASES.length} steps right.`
           }
           clinicalNote="Check Safety → Confirm Stability → Support Recovery. Always assess before you act."
-          chainHint="Next: triage your next patient"
+          chainHint="Case chain complete — The Fading Apprentice is stable."
           bgColors={["#0B1E2E", "#071018", "#060D14"]}
+          creditsEarned={creditsEarned}
+          milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
           onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
           learnLabel="Learn the Chain"

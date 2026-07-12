@@ -19,6 +19,7 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { MilestoneReward, MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 
 const CHIBI = require("../../../assets/images/cue_hunt_chibi_healer.png");
 
@@ -55,6 +56,8 @@ interface RewardBurstProps {
   onFinish: () => void;
   onLearnMore?: () => void;
   learnLabel?: string;
+  creditsEarned?: number;
+  milestoneItems?: MilestoneRewardItem[];
 }
 
 export function RewardBurst({
@@ -68,6 +71,8 @@ export function RewardBurst({
   onFinish,
   onLearnMore,
   learnLabel = "Learn Why",
+  creditsEarned,
+  milestoneItems,
 }: RewardBurstProps) {
   // ── Particle animations ─────────────────────────────────────────────────────
   const stars = useRef(
@@ -333,11 +338,32 @@ export function RewardBurst({
         {clinicalNote}
       </Animated.Text>
 
+      {/* ── Credits earned chip ────────────────────────────────────────────── */}
+      {!!creditsEarned && (
+        <Animated.View style={[styles.creditsRow, { opacity: scoreOp }]}>
+          <Ionicons name="school" size={13} color="#2DD4BF" />
+          <Text style={styles.creditsTxt}>
+            +{creditsEarned} University Credits
+          </Text>
+        </Animated.View>
+      )}
+
       {/* ── Chain hint ─────────────────────────────────────────────────────── */}
       {!!chainHint && (
         <Animated.View style={[styles.chainRow, { opacity: bodyOp }]}>
           <Ionicons name="arrow-forward-circle-outline" size={13} color="#2DD4BF60" />
           <Text style={styles.chainTxt}>{chainHint}</Text>
+        </Animated.View>
+      )}
+
+      {/* ── First-perfect milestone reward ─────────────────────────────────── */}
+      {!!milestoneItems && (
+        <Animated.View style={[{ width: "100%", marginTop: 4 }, { opacity: btnOp }]}>
+          <MilestoneReward
+            title="FIRST PERFECT SCORE"
+            items={milestoneItems}
+            accent="#D4AF37"
+          />
         </Animated.View>
       )}
 
@@ -450,6 +476,19 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceSecondary,
     fontSize: 13, lineHeight: 19,
     textAlign: "center",
+  },
+
+  // Credits chip
+  creditsRow: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "#2DD4BF18",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: "#2DD4BF30",
+  },
+  creditsTxt: {
+    color: "#2DD4BF",
+    fontSize: 12, fontWeight: "700", letterSpacing: 0.3,
   },
 
   // Chain hint

@@ -36,10 +36,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
-import { markChainStep } from "@/src/game/chainProgress";
+import { markChainStep, checkAndMarkFirstPerfect } from "@/src/game/chainProgress";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { usePlayer } from "@/src/game/store";
+import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -375,12 +377,17 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
 export default function CueHuntScreen() {
   const router = useRouter();
+  const { player, updateState } = usePlayer();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
 
   const [scW, setScW] = useState(0);
   const [found, setFound] = useState<Set<string>>(new Set());
+  const [wrongTaps, setWrongTaps] = useState(0);
   const [phase, setPhase] = useState<"playing" | "complete">("playing");
   const [toastText, setToastText] = useState("");
+  const [creditsEarned, setCreditsEarned] = useState(0);
+  const [milestoneItems, setMilestoneItems] = useState<MilestoneRewardItem[] | undefined>();
+  const creditedRef = useRef(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
   // Back navigation is blocked while playing — the back links are the
@@ -442,23 +449,63 @@ export default function CueHuntScreen() {
   );
 
   const handleWrong = useCallback(() => {
-    // Visual shake handled inside ClueZone — no toast, no penalty
+    setWrongTaps((n) => n + 1);
   }, []);
+
+  // Award University Credits once on completion
+  useEffect(() => {
+    if (phase !== "complete" || creditedRef.current) return;
+    creditedRef.current = true;
+    const credits = wrongTaps === 0 ? 30 : wrongTaps === 1 ? 20 : 15;
+    setCreditsEarned(credits);
+    const isPerfect = wrongTaps === 0;
+    (async () => {
+      if (isPerfect) {
+        const isFirst = await checkAndMarkFirstPerfect("cueHunt");
+        if (isFirst) {
+          const bonus = 15;
+          setMilestoneItems([
+            { icon: "school", label: "Uni Credits", amount: String(bonus) },
+            { icon: "trophy", label: "First Perfect Bonus" },
+          ]);
+          if (player && updateState) {
+            await updateState({ ...player, university_credits: (player.university_credits || 0) + credits + bonus });
+          }
+          return;
+        }
+      }
+      if (player && updateState) {
+        await updateState({ ...player, university_credits: (player.university_credits || 0) + credits });
+      }
+    })();
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dots = Array.from({ length: REQUIRED_COUNT }, (_, i) => i < requiredFound);
 
   // ── Complete: full-screen reward burst ────────────────────────────────────
   if (phase === "complete") {
+    const grade =
+      wrongTaps === 0
+        ? { label: "Healer's Eye",     color: "#2DD4BF", icon: "eye"    as const }
+        : wrongTaps === 1
+          ? { label: "Sharp Eye",      color: "#22C55E", icon: "eye-outline" as const }
+          : { label: "Good Eye",       color: "#F59E0B", icon: "eye-outline" as const };
     return (
       <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
         <RewardBurst
-          grade={{ label: "Healer's Eye", color: "#2DD4BF", icon: "eye" }}
-          score={REQUIRED_COUNT}
+          grade={grade}
+          score={REQUIRED_COUNT - Math.min(wrongTaps, REQUIRED_COUNT)}
           total={REQUIRED_COUNT}
-          observation='"You noticed dry lips, weakness, and the tipped water flask."'
+          observation={
+            wrongTaps === 0
+              ? '"You noticed dry lips, weakness, and the tipped water flask — no false alarms."'
+              : `"You found all three cues${wrongTaps === 1 ? ", with one false alarm" : " through some false starts"}."`
+          }
           clinicalNote="These clinical cues signal dehydration — often missed until it's serious."
           chainHint="Next: decide how quickly she needs help"
           bgColors={["#162C24", "#0E2018", "#091614"]}
+          creditsEarned={creditsEarned}
+          milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
           onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
         />

@@ -348,13 +348,15 @@ export default function UniversityHubScreen() {
               onPress={() => router.push("/learning-profile" as any)}
               testID="university-more-learning-profile"
             />
-            <MoreRow
-              icon="layers-outline"
-              title="Stabilize Stack: ABCDE"
-              desc="A second ordering challenge — a different patient, different stakes."
-              onPress={() => router.push("/university/stabilize-stack" as any)}
-              testID="university-more-stabilize-abcde"
-            />
+            {chainProg.rapidTriageDone && (
+              <MoreRow
+                icon="layers-outline"
+                title="Stabilize Stack: ABCDE"
+                desc="A second ordering challenge — a different patient, different stakes."
+                onPress={() => router.push("/university/stabilize-stack" as any)}
+                testID="university-more-stabilize-abcde"
+              />
+            )}
 
             {/* Future Learning — collapsed by default */}
             <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">

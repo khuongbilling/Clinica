@@ -30,12 +30,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
-import { markChainStep } from "@/src/game/chainProgress";
+import { markChainStep, checkAndMarkFirstPerfect } from "@/src/game/chainProgress";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardBurst } from "@/src/components/university/RewardBurst";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
+import { usePlayer } from "@/src/game/store";
+import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // Infirmary illustration reused with purple overlay for triage context
@@ -239,15 +241,47 @@ function DonghuaTriageScene() {
 
 export default function RapidTriageScreen() {
   const router  = useRouter();
+  const { player, updateState } = usePlayer();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
 
   const [cardIdx,   setCardIdx]   = useState(0);
   const [feedback,  setFeedback]  = useState<FeedbackState | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhase>("playing");
   const [correctCount, setCorrectCount] = useState(0);
+  const [creditsEarned, setCreditsEarned] = useState(0);
+  const [milestoneItems, setMilestoneItems] = useState<MilestoneRewardItem[] | undefined>();
+  const creditedRef = useRef(false);
 
   useBlockBack();
   useClearTutorialOnExit();
+
+  // Award University Credits once on completion
+  useEffect(() => {
+    if (gamePhase !== "complete" || creditedRef.current) return;
+    creditedRef.current = true;
+    const credits = correctCount === CARDS.length ? 30 : correctCount === 2 ? 20 : 10;
+    setCreditsEarned(credits);
+    const isPerfect = correctCount === CARDS.length;
+    (async () => {
+      if (isPerfect) {
+        const isFirst = await checkAndMarkFirstPerfect("triage");
+        if (isFirst) {
+          const bonus = 15;
+          setMilestoneItems([
+            { icon: "school", label: "Uni Credits", amount: String(bonus) },
+            { icon: "trophy", label: "First Perfect Bonus" },
+          ]);
+          if (player && updateState) {
+            await updateState({ ...player, university_credits: (player.university_credits || 0) + credits + bonus });
+          }
+          return;
+        }
+      }
+      if (player && updateState) {
+        await updateState({ ...player, university_credits: (player.university_credits || 0) + credits });
+      }
+    })();
+  }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cardFade    = useRef(new Animated.Value(1)).current;
   const feedbackFade = useRef(new Animated.Value(0)).current;
@@ -340,6 +374,8 @@ export default function RapidTriageScreen() {
           clinicalNote="Triage is the skill that decides who gets help first. Time saves lives."
           chainHint="Next: stabilise the patient"
           bgColors={["#1A1228", "#130E20", "#0D0B12"]}
+          creditsEarned={creditsEarned}
+          milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
           onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
           learnLabel="Learn Triage"
