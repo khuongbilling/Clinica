@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
@@ -29,6 +30,7 @@ export default function LotusJournalPage() {
   const router = useRouter();
   const { player, logWellnessActivity } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  useClearTutorialOnExit();
   const [lessonOpen, setLessonOpen] = useState<string | null>(null);
   const [lessonMsg, setLessonMsg] = useState<string | null>(null);
 

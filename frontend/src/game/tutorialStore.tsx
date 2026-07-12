@@ -20,6 +20,14 @@ interface TutorialCtx {
   replayTutorial: (id: TutorialId) => Promise<void>;
   resetTutorials: () => Promise<void>;
   isCompleted: (id: TutorialId) => boolean;
+  /**
+   * Clear any in-progress tutorial without marking it as completed.
+   * Call this when the player exits a section so stale overlay / forced-target
+   * state does not bleed into unrelated screens.  The tutorial will restart
+   * from step 0 the next time the player enters the section (since it is not
+   * marked done).
+   */
+  clearActiveTutorial: () => void;
   onRequiredAction: (actionType: string, skillId?: string) => void;
   /**
    * For University mini-game tutorials: call this with the tapped element's ID.
@@ -141,6 +149,13 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     setStepIndex(0);
   }, [activeTutorialId, markDone]);
 
+  const clearActiveTutorial = useCallback(() => {
+    if (!activeRef.current) return;
+    activeRef.current = null;
+    setActiveTutorialId(null);
+    setStepIndex(0);
+  }, []);
+
   const replayTutorial = useCallback(async (id: TutorialId) => {
     setCompleted(prev => {
       const next = { ...prev, [id]: false };
@@ -215,6 +230,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     startTutorial,
     advanceStep,
     skipTutorial,
+    clearActiveTutorial,
     markDone,
     replayTutorial,
     resetTutorials,
@@ -225,7 +241,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     guidedReserve,
     setGuidedReserve,
   }), [completed, activeTutorialId, stepIndex, currentStep, totalSteps,
-    startTutorial, advanceStep, skipTutorial, markDone, replayTutorial, resetTutorials, isCompleted,
+    startTutorial, advanceStep, skipTutorial, clearActiveTutorial, markDone, replayTutorial, resetTutorials, isCompleted,
     onRequiredAction, onTargetTap, requiredTargetId,
     guidedReserve]);
 

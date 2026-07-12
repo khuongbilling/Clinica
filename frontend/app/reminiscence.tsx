@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -267,6 +268,7 @@ const PANELS: Panel[] = [
 
 export default function ReminiscenceScreen() {
   const router = useRouter();
+  useBlockBack();
   const { player, markReminiscenceSeen } = usePlayer();
   const { replay } = useLocalSearchParams<{ replay?: string }>();
   // Push 6 — Profile "Replay Memory Reminiscence" watches this cutscene again

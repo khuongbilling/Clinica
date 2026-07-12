@@ -9,6 +9,7 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 
 import { IsoTile } from "@/src/components/realm/IsoTile";
@@ -93,6 +94,7 @@ export default function KingdomScreen() {
   const realmGate = useFeatureGate("realm");
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  useClearTutorialOnExit();
 
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [showInventory, setShowInventory] = useState(false);

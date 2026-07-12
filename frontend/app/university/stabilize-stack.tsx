@@ -1,15 +1,17 @@
 /**
- * Stabilize Stack — The Garden (Wei, 50M, ABCDE ordering)
+ * Stabilize Stack — The Garden (Wei, 50M)
  *
- * Visual: hand-drawn donghua fantasy-medical board. Patient panel with animated
- * Stability bar at top; illustrated action cards with fantasy-medical icons;
- * visible 5-step Care Chain track that locks cards in as the player taps them.
+ * Immersive patient-centred scene: donghua Lotus infirmary illustration,
+ * three-phase glowing care-flow path, and illustrated fantasy-medical action
+ * cards (3 correct + 4 distractor options).
  *
- * GAMEPLAY / TUTORIAL LOGIC IS UNCHANGED:
- *  - ACTIONS / correctOrder / DISPLAY_ORDER / phase machine: identical
- *  - Tutorial wiring: stabilizeIntro → requiredTargetId "action_assess_mental_status"
- *    still uses useHighlightTarget + onTargetPress (zIndex 9500 blocking scrim)
- *  - testIDs preserved: stack-tile-{id}, stabilize-back/finish/continue/return
+ * GAMEPLAY / TUTORIAL LOGIC UNCHANGED:
+ *  - Tap-to-order: player selects 3 actions; taps fill care-flow phases in order.
+ *  - Correct = right action in right phase slot; wrong = caution animation + coaching.
+ *  - Tutorial: stabilizeIntro → requiredTargetId "action_assess_mental_status"
+ *    still uses useHighlightTarget + onTargetPress (zIndex 9500 above scrim).
+ *  - testIDs preserved: stack-tile-{id}, stabilize-back/finish/continue/return.
+ *  - Phase machine: playing → review → complete.
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -34,38 +36,38 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 
-// Patient scene illustration (donghua) — 1408x768
+// Donghua patient illustration: Wei unconscious on garden path — 1408×768
 const PATIENT_SCENE = require("../../assets/images/stabilize_patient_wei.png");
 const PATIENT_SCENE_RATIO = 1408 / 768;
 
-// On web, RN-web's ScrollView base style applies `transform: translateZ(0)`,
-// which creates a CSS stacking context that TRAPS the tutorial-highlighted
-// card's zIndex 9500 below the TutorialOverlay blocking scrim (zIndex 9000)
-// — making the forced tutorial step unclickable. Overriding the transform
-// lets the highlighted card escape and sit above the scrim, exactly like the
-// non-scrolling mini-game screens (rapid-triage, mealcraft).
+// RN-web ScrollView sets transform:translateZ(0) as a base style, creating a
+// CSS stacking context that traps useHighlightTarget's zIndex:9500 below the
+// TutorialOverlay scrim (9000). Passing transform:"none" as user style overrides
+// the base and lets the highlighted card escape above the scrim on web.
 const SCROLL_FIX_WEB =
   Platform.OS === "web" ? ({ transform: "none" } as any) : undefined;
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ActionCard {
   id: string;
   label: string;
   shortDesc: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  correctOrder: number;
-  reasoning: string;
-  framework: string;
+  /** 0 / 1 / 2 = correct phase index.  -1 = distractor (wrong). */
+  phaseIndex: number;
   color: string;
+  glowDesc: string;
+  coaching: string | null;
 }
 
-// ── Case data ────────────────────────────────────────────────────────────────
+// ── Case data ─────────────────────────────────────────────────────────────────
 
 const CASE = {
   name: "Wei",
@@ -73,86 +75,103 @@ const CASE = {
   sex: "M",
   setting: "Found unresponsive in garden by neighbour",
   vitals: [
-    { label: "HR",   value: "102",   alert: true },
-    { label: "RR",   value: "8",     alert: true },
-    { label: "SpO₂", value: "88%",   alert: true },
+    { label: "HR",   value: "102",   alert: true  },
+    { label: "RR",   value: "8",     alert: true  },
+    { label: "SpO₂", value: "88%",   alert: true  },
     { label: "Temp", value: "36.8°C",alert: false },
   ],
 };
 
+// ── 3-phase glowing care-flow path ────────────────────────────────────────────
+
+const CARE_PHASES = [
+  { step: 1, label: "Check Safety",      color: "#8B5CF6", icon: "eye-outline"             as const },
+  { step: 2, label: "Confirm Stability", color: "#22D3EE", icon: "pulse-outline"           as const },
+  { step: 3, label: "Support Recovery",  color: "#2DD4BF", icon: "water-outline"           as const },
+] as const;
+
+// ── Action cards (3 correct + 4 distractors) ─────────────────────────────────
+
 const ACTIONS: ActionCard[] = [
   {
-    id: "action_assess_mental_status",
-    label: "Assess mental status",
-    shortDesc: "Check responsiveness — AVPU",
-    icon: "eye-outline",
-    correctOrder: 1,
-    reasoning: "Disability (D in ABCDE). Establish whether the patient responds to voice, pain, or not at all before acting.",
-    framework: "ABCDE · D — Disability",
-    color: "#8B5CF6",
+    id:         "action_assess_mental_status",
+    label:      "Assess mental status",
+    shortDesc:  "Check responsiveness — AVPU scale",
+    icon:       "eye-outline",
+    phaseIndex: 0,
+    color:      "#8B5CF6",
+    glowDesc:   "Diagnostic aura forms — consciousness confirmed",
+    coaching:   null,
   },
   {
-    id: "action_open_airway",
-    label: "Open the airway",
-    shortDesc: "Head-tilt chin-lift position",
-    icon: "arrow-up-circle-outline",
-    correctOrder: 2,
-    reasoning: "Airway (A). An unconscious patient loses muscle tone — the tongue can fall back. Opening the airway is always the first physical intervention.",
-    framework: "ABCDE · A — Airway",
-    color: "#B0DEFF",
+    id:         "action_check_vitals",
+    label:      "Check vitals",
+    shortDesc:  "Measure HR, RR, SpO₂, temperature",
+    icon:       "pulse-outline",
+    phaseIndex: 1,
+    color:      "#22D3EE",
+    glowDesc:   "Pulse ribbon stabilises — vital signs mapped",
+    coaching:   null,
   },
   {
-    id: "action_check_breathing",
-    label: "Check breathing",
-    shortDesc: "Look, listen, feel — 10 seconds",
-    icon: "pulse-outline",
-    correctOrder: 3,
-    reasoning: "Breathing (B). Only after a patent airway: assess rate, depth, and symmetry. Wei's RR of 8 is dangerously low.",
-    framework: "ABCDE · B — Breathing",
-    color: "#22D3EE",
+    id:         "action_oral_fluids",
+    label:      "Offer oral fluids if safe",
+    shortDesc:  "Water with lotus care — swallow intact",
+    icon:       "water-outline",
+    phaseIndex: 2,
+    color:      "#2DD4BF",
+    glowDesc:   "Healing water flows — hydration and colour improve",
+    coaching:   null,
   },
   {
-    id: "action_apply_oxygen",
-    label: "Apply high-flow O₂",
-    shortDesc: "15L/min via non-rebreather mask",
-    icon: "cloud-circle-outline",
-    correctOrder: 4,
-    reasoning: "Breathing intervention. SpO₂ 88% is critically low. High-flow oxygen is the immediate response before circulation is assessed.",
-    framework: "ABCDE · B — Breathing intervention",
-    color: "#06B6D4",
+    id:         "action_random_medication",
+    label:      "Give random medication",
+    shortDesc:  "Select a remedy from the cabinet",
+    icon:       "medical-outline",
+    phaseIndex: -1,
+    color:      "#F87171",
+    glowDesc:   "Caution rune — unverified treatment without assessment",
+    coaching:   "Medication without diagnosis can cause harm. Assess the patient first.",
   },
   {
-    id: "action_iv_access",
-    label: "Establish IV access",
-    shortDesc: "Large-bore cannula, draw bloods",
-    icon: "medical-outline",
-    correctOrder: 5,
-    reasoning: "Circulation (C). Once breathing is supported, establish intravenous access for fluids and medications. Draw bloods at this point.",
-    framework: "ABCDE · C — Circulation",
-    color: "#EF4444",
+    id:         "action_send_training",
+    label:      "Send back to training",
+    shortDesc:  "This patient needs immediate care",
+    icon:       "school-outline",
+    phaseIndex: -1,
+    color:      "#FBBF24",
+    glowDesc:   "Warning scroll — this patient cannot wait",
+    coaching:   "This patient needs urgent attention. Training can wait.",
+  },
+  {
+    id:         "action_ignore_symptoms",
+    label:      "Ignore symptoms",
+    shortDesc:  "Continue rounds as normal",
+    icon:       "eye-off-outline",
+    phaseIndex: -1,
+    color:      "#6B7280",
+    glowDesc:   "Dim pulse — neglect leaves the patient at risk",
+    coaching:   "Ignoring these signs is dangerous. Always investigate.",
+  },
+  {
+    id:         "action_reassess_fluids",
+    label:      "Reassess after fluids",
+    shortDesc:  "Circular scan — monitor and wait",
+    icon:       "refresh-circle-outline",
+    phaseIndex: -1,
+    color:      "#A78BFA",
+    glowDesc:   "Gentle scan pulse — timing is not right yet",
+    coaching:   "Reassessment follows initial stabilisation, not before.",
   },
 ];
 
-// Shuffle for display (same each play for consistency)
-const DISPLAY_ORDER = [2, 4, 0, 3, 1];
+// Shuffled display order — mixes correct + wrong options
+const DISPLAY_ORDER = [3, 0, 5, 1, 6, 2, 4];
 
-// Per-action visual extras (keeps ActionCard interface clean)
-const ACTION_VISUAL: Record<string, { glowDesc: string }> = {
-  action_assess_mental_status: { glowDesc: "Diagnostic aura appears near the head" },
-  action_open_airway:          { glowDesc: "Airway passage glows open" },
-  action_check_breathing:      { glowDesc: "Breath-wave line stabilises" },
-  action_apply_oxygen:         { glowDesc: "Oxygen halo spreads — SpO₂ rising" },
-  action_iv_access:            { glowDesc: "Circulation link established" },
-};
+// ── SymptomChip ───────────────────────────────────────────────────────────────
 
-// ── Animated patient scene — Wei in the garden, symptoms visible ─────────────
-
-/** Pulsing symptom chip pinned over the patient scene. */
 function SymptomChip({
-  icon,
-  label,
-  color,
-  delay,
+  icon, label, color, delay,
 }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
@@ -175,43 +194,33 @@ function SymptomChip({
   }, [pulse, delay]);
 
   const dotOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
-  const dotScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.25] });
+  const dotScale   = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.25] });
 
   return (
     <View style={[styles.symptomChip, { borderColor: color + "55" }]}>
-      <Animated.View
-        style={[
-          styles.symptomDot,
-          { backgroundColor: color, opacity: dotOpacity, transform: [{ scale: dotScale }] },
-        ]}
-      />
+      <Animated.View style={[styles.symptomDot, { backgroundColor: color, opacity: dotOpacity, transform: [{ scale: dotScale }] }]} />
       <Ionicons name={icon} size={11} color={color} />
       <Text style={[styles.symptomTxt, { color }]}>{label}</Text>
     </View>
   );
 }
 
-function PatientScene({ runningCorrect }: { runningCorrect: number }) {
-  // Slow, IRREGULAR breathing — shallow rise, pause, uneven fall (RR 8).
-  const breath = useRef(new Animated.Value(0)).current;
-  // Critical red vignette pulse; fades out as the patient stabilises.
-  const vignette = useRef(new Animated.Value(0)).current;
-  // Teal healing glow that grows with each correct action.
-  const heal = useRef(new Animated.Value(0)).current;
+// ── PatientScene — animated breath, vignette, heal, wrong-shake ──────────────
+
+function PatientScene({ runningCorrect, wrongCount }: { runningCorrect: number; wrongCount: number }) {
+  const breath     = useRef(new Animated.Value(0)).current;
+  const vignette   = useRef(new Animated.Value(0)).current;
+  const heal       = useRef(new Animated.Value(0)).current;
+  const wrongShake = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        // shallow inhale
         Animated.timing(breath, { toValue: 1, duration: 1400, useNativeDriver: true }),
-        // hold — apnoeic pause (the "irregular" part)
         Animated.delay(900),
-        // quick partial exhale
         Animated.timing(breath, { toValue: 0.35, duration: 500, useNativeDriver: true }),
         Animated.delay(300),
-        // slow full exhale
         Animated.timing(breath, { toValue: 0, duration: 1600, useNativeDriver: true }),
-        // long pause before the next breath
         Animated.delay(1400),
       ]),
     );
@@ -231,29 +240,32 @@ function PatientScene({ runningCorrect }: { runningCorrect: number }) {
   }, [vignette]);
 
   useEffect(() => {
-    Animated.timing(heal, {
-      toValue: runningCorrect / ACTIONS.length,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(heal, { toValue: runningCorrect / CARE_PHASES.length, duration: 600, useNativeDriver: true }).start();
   }, [runningCorrect, heal]);
 
-  // Vignette peak opacity shrinks as the patient improves.
-  const vigMax = Math.max(0.05, 0.32 - runningCorrect * 0.06);
-  const vignetteOpacity = vignette.interpolate({
-    inputRange: [0, 1],
-    outputRange: [vigMax * 0.35, vigMax],
-  });
-  const healOpacity = heal.interpolate({ inputRange: [0, 1], outputRange: [0, 0.22] });
-  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.022] });
-  const breathShift = breath.interpolate({ inputRange: [0, 1], outputRange: [0, -3] });
+  // Brief lateral shake on wrong action — dizziness worsens
+  useEffect(() => {
+    if (wrongCount === 0) return;
+    Animated.sequence([
+      Animated.timing(wrongShake, { toValue: -5, duration: 60, useNativeDriver: true }),
+      Animated.timing(wrongShake, { toValue: 5, duration: 60, useNativeDriver: true }),
+      Animated.timing(wrongShake, { toValue: -3, duration: 60, useNativeDriver: true }),
+      Animated.timing(wrongShake, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  }, [wrongCount, wrongShake]);
+
+  const vigMax        = Math.max(0.05, 0.32 - runningCorrect * 0.09);
+  const vignetteOpacity = vignette.interpolate({ inputRange: [0, 1], outputRange: [vigMax * 0.35, vigMax] });
+  const healOpacity   = heal.interpolate({ inputRange: [0, 1], outputRange: [0, 0.22] });
+  const breathScale   = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.022] });
+  const breathShift   = breath.interpolate({ inputRange: [0, 1], outputRange: [0, -3] });
 
   return (
     <View style={styles.sceneWrap}>
       <Animated.View
         style={[
           StyleSheet.absoluteFillObject,
-          { transform: [{ scale: breathScale }, { translateY: breathShift }] },
+          { transform: [{ scale: breathScale }, { translateY: breathShift }, { translateX: wrongShake }] },
         ]}
       >
         <ExpoImage
@@ -264,27 +276,17 @@ function PatientScene({ runningCorrect }: { runningCorrect: number }) {
         />
       </Animated.View>
 
-      {/* Critical red vignette — pulses, weakens as stability rises */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.sceneVignette, { opacity: vignetteOpacity }]}
-      />
-      {/* Healing teal wash — grows with correct actions */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.sceneHeal, { opacity: healOpacity }]}
-      />
-      {/* Bottom gradient so chips stay legible */}
+      <Animated.View pointerEvents="none" style={[styles.sceneVignette, { opacity: vignetteOpacity }]} />
+      <Animated.View pointerEvents="none" style={[styles.sceneHeal, { opacity: healOpacity }]} />
       <LinearGradient
-        colors={["transparent", "rgba(5,12,18,0.82)"]}
+        colors={["transparent", "rgba(5,12,18,0.85)"]}
         style={styles.sceneBottomFade}
         pointerEvents="none"
       />
 
-      {/* Symptom chips — the "description", shown ON the patient */}
       <View style={styles.symptomRow} pointerEvents="none">
-        <SymptomChip icon="moon-outline" label="Unresponsive" color="#C4B5FD" delay={0} />
-        <SymptomChip icon="pulse-outline" label="RR 8 · irregular" color="#F59E0B" delay={450} />
+        <SymptomChip icon="moon-outline"  label="Unresponsive"         color="#C4B5FD" delay={0} />
+        <SymptomChip icon="pulse-outline" label="RR 8 · irregular"     color="#F59E0B" delay={450} />
         <SymptomChip icon="water-outline" label="SpO₂ 88% · lips dusky" color="#60A5FA" delay={900} />
       </View>
     </View>
@@ -293,29 +295,22 @@ function PatientScene({ runningCorrect }: { runningCorrect: number }) {
 
 // ── PatientPanel — scene + stability bar + vitals ─────────────────────────────
 
-function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
+function PatientPanel({ runningCorrect, wrongCount }: { runningCorrect: number; wrongCount: number }) {
   const stabilityAnim = useRef(new Animated.Value(0.18)).current;
 
   useEffect(() => {
-    const target = 0.18 + runningCorrect * (0.82 / ACTIONS.length);
-    Animated.timing(stabilityAnim, {
-      toValue: target,
-      duration: 480,
-      useNativeDriver: false,
-    }).start();
-  }, [runningCorrect, stabilityAnim]);
+    const raw    = 0.18 + runningCorrect * (0.82 / CARE_PHASES.length) - wrongCount * 0.04;
+    const target = Math.max(0.08, Math.min(1, raw));
+    Animated.timing(stabilityAnim, { toValue: target, duration: 480, useNativeDriver: false }).start();
+  }, [runningCorrect, wrongCount, stabilityAnim]);
 
-  const stabPct = Math.round((0.18 + runningCorrect * (0.82 / ACTIONS.length)) * 100);
+  const stabPct   = Math.round((0.18 + runningCorrect * (0.82 / CARE_PHASES.length)) * 100);
   const stabColor = stabPct < 40 ? "#EF4444" : stabPct < 70 ? "#F59E0B" : "#2DD4BF";
 
   return (
     <View style={styles.patientCard}>
-      <LinearGradient
-        colors={["#0E1D2E", "#091420"]}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <LinearGradient colors={["#0E1D2E", "#091420"]} style={StyleSheet.absoluteFillObject} />
 
-      {/* Name row */}
       <View style={styles.patientRow}>
         <View style={styles.patientAvatar}>
           <Ionicons name="person" size={20} color="#06B6D4" />
@@ -330,54 +325,40 @@ function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
         </View>
       </View>
 
-      {/* Animated patient scene */}
-      <PatientScene runningCorrect={runningCorrect} />
+      <PatientScene runningCorrect={runningCorrect} wrongCount={wrongCount} />
 
-      {/* Stability bar */}
       <View style={styles.stabilityRow}>
-        <Text style={styles.stabilityLabel}>Patient Stability</Text>
+        <Text style={styles.stabilityLabel}>PATIENT STABILITY</Text>
         <Text style={[styles.stabilityPct, { color: stabColor }]}>{stabPct}%</Text>
       </View>
       <View style={styles.stabilityTrack}>
-        <LinearGradient
-          colors={["#0B1A14", "#122A20"]}
-          style={StyleSheet.absoluteFillObject}
-        />
+        <LinearGradient colors={["#0B1A14", "#122A20"]} style={StyleSheet.absoluteFillObject} />
         <Animated.View
           style={[
             styles.stabilityFill,
             {
-              width: stabilityAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["0%", "100%"],
-              }) as any,
+              width: stabilityAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) as any,
               backgroundColor: stabColor,
             },
           ]}
         >
           <LinearGradient
             colors={[stabColor + "CC", stabColor]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFillObject}
           />
         </Animated.View>
-        {/* Glow orb at the leading edge */}
         <Animated.View
           style={[
             styles.stabilityOrb,
             {
-              left: stabilityAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["0%", "98%"],
-              }) as any,
+              left: stabilityAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "98%"] }) as any,
               backgroundColor: stabColor,
             },
           ]}
         />
       </View>
 
-      {/* Vitals */}
       <View style={styles.vitalStrip}>
         {CASE.vitals.map((v) => (
           <View key={v.label} style={styles.vitalItem}>
@@ -390,58 +371,82 @@ function PatientPanel({ runningCorrect }: { runningCorrect: number }) {
   );
 }
 
-// ── CareChainTrack ─────────────────────────────────────────────────────────────
+// ── CareFlowPath — three glowing phase slots ──────────────────────────────────
 
-function CareChainTrack({ tapSequence }: { tapSequence: string[] }) {
+function CareFlowPath({ tapSequence }: { tapSequence: string[] }) {
   return (
-    <View style={styles.chainOuter}>
-      <LinearGradient
-        colors={["#0D2518", "#091A12"]}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <Text style={styles.chainTitle}>
-        <Ionicons name="link-outline" size={10} color="#2DD4BF" />{"  "}CARE CHAIN
-      </Text>
-      <View style={styles.chainSlots}>
-        {Array.from({ length: ACTIONS.length }, (_, i) => {
-          const filledId = tapSequence[i];
-          const action = filledId ? ACTIONS.find((a) => a.id === filledId) : null;
-          const isCorrect = action && action.correctOrder === i + 1;
-          const dotColor = action ? (isCorrect ? action.color : "#EF4444") : "#1E3830";
+    <View style={styles.flowOuter}>
+      <LinearGradient colors={["#0D1E2C", "#091420"]} style={StyleSheet.absoluteFillObject} />
+      <View style={styles.flowHeader}>
+        <Ionicons name="git-branch-outline" size={11} color="#2DD4BF" />
+        <Text style={styles.flowTitle}>CARE-FLOW PATH</Text>
+      </View>
+
+      <View style={styles.flowSlots}>
+        {CARE_PHASES.map((carePhase, phaseIdx) => {
+          const filledId    = tapSequence[phaseIdx];
+          const filledAction = filledId ? ACTIONS.find((a) => a.id === filledId) : null;
+          const isOk        = filledAction?.phaseIndex === phaseIdx;
+          const slotColor   = filledAction ? (isOk ? carePhase.color : "#EF4444") : "#1E3830";
+
           return (
-            <React.Fragment key={i}>
-              <View style={styles.chainSlot}>
+            <React.Fragment key={carePhase.step}>
+              <View style={styles.flowSlot}>
                 <View
                   style={[
-                    styles.chainDot,
+                    styles.flowDot,
                     {
-                      backgroundColor: action ? dotColor + "22" : "#1E3830",
-                      borderColor: action ? dotColor : "#2DD4BF18",
+                      backgroundColor: filledAction ? slotColor + "22" : "rgba(5,12,18,0.5)",
+                      borderColor: filledAction ? slotColor : "#2DD4BF22",
                     },
                   ]}
                 >
-                  {action ? (
-                    <Ionicons name={action.icon} size={13} color={dotColor} />
+                  {filledAction ? (
+                    <Ionicons
+                      name={isOk ? filledAction.icon : "close"}
+                      size={16}
+                      color={slotColor}
+                    />
                   ) : (
-                    <Text style={styles.chainStepNum}>{i + 1}</Text>
+                    <Text style={[styles.flowStepNum, { color: "#2DD4BF50" }]}>{carePhase.step}</Text>
                   )}
                 </View>
-                <Text style={[styles.chainStepLabel, action && { color: dotColor }]}>
-                  {action ? action.label.split(" ").slice(0, 2).join(" ") : `Step ${i + 1}`}
+                <Text
+                  style={[styles.flowLabel, { color: filledAction ? slotColor : COLORS.onSurfaceTertiary }]}
+                  numberOfLines={2}
+                >
+                  {filledAction ? filledAction.label.split(" ").slice(0, 2).join(" ") : carePhase.label}
                 </Text>
               </View>
-              {i < ACTIONS.length - 1 && (
-                <View style={[styles.chainConnector, { backgroundColor: tapSequence[i] ? "#2DD4BF30" : "#1E3830" }]} />
+
+              {phaseIdx < CARE_PHASES.length - 1 && (
+                <View
+                  style={[
+                    styles.flowConnector,
+                    { backgroundColor: tapSequence[phaseIdx] ? "#2DD4BF35" : "#1E3830" },
+                  ]}
+                />
               )}
             </React.Fragment>
           );
         })}
       </View>
+
+      <View style={styles.flowPhaseStrip}>
+        {CARE_PHASES.map((ph, i) => (
+          <Text
+            key={i}
+            style={[styles.flowPhaseTag, { color: tapSequence[i] ? ph.color : "#2DD4BF28" }]}
+          >
+            {ph.label.toUpperCase()}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
 
-// ── ActionCardTile ─────────────────────────────────────────────────────────────
+// ── ActionCardTile — illustrated fantasy-medical card ─────────────────────────
 
 function ActionCardTile({
   action,
@@ -456,57 +461,56 @@ function ActionCardTile({
 }) {
   const { isHighlighted, onTargetPress, highlightStyle } = useHighlightTarget(action.id);
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
-  const glowAnim = useMemo(() => new Animated.Value(0), []);
-  const shakeX = useMemo(() => new Animated.Value(0), []);
+  const glowAnim  = useMemo(() => new Animated.Value(0), []);
+  const shakeX    = useMemo(() => new Animated.Value(0), []);
 
-  const isTapped = tapIndex !== null;
-  const isCorrectPosition = isTapped && tapIndex + 1 === action.correctOrder;
-  const isWrong = isTapped && !isCorrectPosition;
+  const isTapped   = tapIndex !== null;
+  const isCorrect  = isTapped && action.phaseIndex >= 0 && tapIndex === action.phaseIndex;
+  const isWrong    = isTapped && !isCorrect;
 
   useEffect(() => {
     if (!isTapped) return;
-    if (isCorrectPosition) {
-      // Glow burst
+    if (isCorrect) {
       glowAnim.setValue(0);
       Animated.sequence([
         Animated.timing(glowAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
         Animated.timing(glowAnim, { toValue: 0.4, duration: 350, useNativeDriver: true }),
       ]).start();
     } else {
-      // Gentle shake + dim caution
       Animated.sequence([
         Animated.timing(shakeX, { toValue: -6, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeX, { toValue: 6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 6,  duration: 50, useNativeDriver: true }),
         Animated.timing(shakeX, { toValue: -4, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeX, { toValue: 4, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeX, { toValue: 0, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 4,  duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0,  duration: 50, useNativeDriver: true }),
       ]).start();
     }
-  }, [isTapped, isCorrectPosition, glowAnim, shakeX]);
+  }, [isTapped, isCorrect, glowAnim, shakeX]);
 
   const handlePress = useCallback(() => {
     if (disabled || isTapped) return;
     Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.94, duration: 65, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 0.93, duration: 65, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
     ]).start();
     if (isHighlighted) onTargetPress();
     onTap(action.id);
   }, [disabled, isTapped, isHighlighted, onTargetPress, onTap, action.id, scaleAnim]);
 
-  const ringColor = isWrong ? "#EF4444" : action.color;
-  const cardBg = isTapped
-    ? (isCorrectPosition ? action.color + "12" : "#EF444412")
-    : "transparent";
+  const ringColor   = isWrong ? "#EF4444" : action.color;
+  const cardBg      = isTapped
+    ? (isCorrect ? action.color + "12" : "#EF444412")
+    : "rgba(14,24,38,0.75)";
   const borderColor = isTapped
-    ? (isCorrectPosition ? action.color + "55" : "#EF444455")
+    ? (isCorrect ? action.color + "66" : "#EF444455")
     : isHighlighted
       ? "#2DD4BF"
-      : COLORS.border;
+      : action.color + "30";
 
   return (
     <Animated.View
       style={[
+        styles.cardWrap,
         { transform: [{ scale: scaleAnim }, { translateX: shakeX }] },
         isHighlighted && styles.cardHighlightShadow,
         highlightStyle,
@@ -517,106 +521,81 @@ function ActionCardTile({
         onPress={handlePress}
         testID={`stack-tile-${action.id}`}
       >
-        {/* Correct glow overlay */}
-        {isCorrectPosition && (
+        {/* Fantasy-medical top-gradient glow */}
+        <LinearGradient
+          colors={[action.color + "09", "transparent"]}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        />
+
+        {/* Correct flash overlay */}
+        {isCorrect && (
           <Animated.View
             pointerEvents="none"
             style={[
               StyleSheet.absoluteFillObject,
-              {
-                borderRadius: RADIUS.md,
-                backgroundColor: action.color + "18",
-                opacity: glowAnim,
-              },
+              { borderRadius: RADIUS.md, backgroundColor: action.color + "18", opacity: glowAnim },
             ]}
           />
         )}
 
-        {/* Wrong — caution rune overlay */}
+        {/* Wrong — caution rune corner */}
         {isWrong && (
-          <View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFillObject, styles.cautionRune]}
-          >
-            <Ionicons name="warning-outline" size={14} color="#EF444460" />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.cautionRune]}>
+            <Ionicons name="warning-outline" size={13} color="#EF444455" />
           </View>
         )}
 
-        {/* Top row: order badge + framework tag */}
-        <View style={styles.cardTopRow}>
-          <View
-            style={[
-              styles.orderBadge,
-              isTapped
-                ? { backgroundColor: ringColor, borderColor: ringColor }
-                : styles.orderBadgeEmpty,
-            ]}
-          >
-            {isTapped ? (
-              <Text style={styles.orderBadgeNum}>{tapIndex! + 1}</Text>
-            ) : (
-              <Text style={styles.orderBadgeQ}>?</Text>
-            )}
-          </View>
-
-          <Text style={[styles.frameworkTag, { color: isTapped ? ringColor : COLORS.onSurfaceTertiary }]}>
-            {action.framework}
-          </Text>
+        {/* Large illustrated icon */}
+        <View
+          style={[
+            styles.cardIconWrap,
+            {
+              backgroundColor: isTapped ? ringColor + "20" : action.color + "14",
+              borderColor: isTapped ? ringColor + "60" : action.color + "30",
+            },
+          ]}
+        >
+          <Ionicons
+            name={action.icon}
+            size={28}
+            color={isTapped ? ringColor : action.color}
+          />
         </View>
 
-        {/* Icon + label row */}
-        <View style={styles.cardBody}>
-          <View
-            style={[
-              styles.cardIconWrap,
-              {
-                backgroundColor: isTapped
-                  ? ringColor + "22"
-                  : action.color + "14",
-                borderColor: isTapped ? ringColor + "60" : action.color + "30",
-              },
-            ]}
-          >
-            <Ionicons
-              name={action.icon}
-              size={22}
-              color={isTapped ? ringColor : action.color}
-            />
-          </View>
-          <View style={styles.cardTextWrap}>
-            <Text
-              style={[
-                styles.cardLabel,
-                { color: isTapped ? COLORS.onSurface : COLORS.onSurfaceSecondary },
-              ]}
-              numberOfLines={2}
-            >
-              {action.label}
-            </Text>
-            <Text style={styles.cardDesc} numberOfLines={2}>
-              {isTapped
-                ? ACTION_VISUAL[action.id]?.glowDesc ?? action.shortDesc
-                : action.shortDesc}
-            </Text>
-          </View>
-        </View>
+        {/* Label */}
+        <Text
+          style={[styles.cardLabel, { color: isTapped ? COLORS.onSurface : COLORS.onSurfaceSecondary }]}
+          numberOfLines={2}
+        >
+          {action.label}
+        </Text>
 
-        {/* Correct: animated glow ring at bottom */}
-        {isCorrectPosition && (
+        {/* Description / effect */}
+        <Text style={styles.cardDesc} numberOfLines={2}>
+          {isTapped ? action.glowDesc : action.shortDesc}
+        </Text>
+
+        {/* Wrong coaching */}
+        {isWrong && action.coaching && (
+          <Text style={styles.cautionCoach} numberOfLines={2}>{action.coaching}</Text>
+        )}
+
+        {/* Correct bottom glow bar */}
+        {isCorrect && (
           <Animated.View
             pointerEvents="none"
-            style={[
-              styles.correctGlowBar,
-              { backgroundColor: action.color, opacity: glowAnim },
-            ]}
+            style={[styles.correctGlowBar, { backgroundColor: action.color, opacity: glowAnim }]}
           />
         )}
 
-        {/* Wrong: coaching line */}
-        {isWrong && (
-          <Text style={styles.cautionCoach}>
-            Not quite — review the ABCDE order after all cards are placed.
-          </Text>
+        {/* Phase badge on correct */}
+        {isCorrect && (
+          <View style={[styles.phaseBadge, { backgroundColor: action.color + "22", borderColor: action.color + "55" }]}>
+            <Text style={[styles.phaseBadgeTxt, { color: action.color }]}>
+              Step {action.phaseIndex + 1} · {CARE_PHASES[action.phaseIndex]?.label}
+            </Text>
+          </View>
         )}
       </Pressable>
     </Animated.View>
@@ -625,24 +604,33 @@ function ActionCardTile({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-type Phase = "playing" | "review" | "complete";
+type GamePhase = "playing" | "review" | "complete";
+
+const PHASE_REASONING: Record<number, string> = {
+  0: "Assessing mental status (AVPU) confirms consciousness and whether it is safe to act — always the first step.",
+  1: "Checking vitals (HR, RR, SpO₂, temp) maps the patient's true state. Wei's numbers are critically abnormal.",
+  2: "Once swallow is confirmed intact, oral fluids begin gentle rehydration and support colour and recovery.",
+};
 
 export default function StabilizeStackScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
 
   const [tapSequence, setTapSequence] = useState<string[]>([]);
-  const [phase, setPhase] = useState<Phase>("playing");
+  const [phase, setPhase] = useState<GamePhase>("playing");
   const [revealAnim] = useState(new Animated.Value(0));
 
+  // Auto-start the forced tutorial on first visit
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const t = setTimeout(() => {
       if (!isCompleted("stabilizeIntro") && !activeTutorialId) {
         startTutorial("stabilizeIntro");
       }
     }, 600);
-    return () => clearTimeout(timer);
-  }, []);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTap = useCallback(
     (id: string) => {
@@ -650,7 +638,7 @@ export default function StabilizeStackScreen() {
       setTapSequence((prev) => {
         if (prev.includes(id)) return prev;
         const next = [...prev, id];
-        if (next.length === ACTIONS.length) {
+        if (next.length === CARE_PHASES.length) {
           setTimeout(() => setPhase("review"), 450);
           Animated.timing(revealAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
         }
@@ -668,41 +656,35 @@ export default function StabilizeStackScreen() {
     [tapSequence],
   );
 
+  // Correct = tapped at the exact right phase position
   const correctCount = useMemo(
     () =>
-      ACTIONS.filter((a) => {
-        const idx = tapSequence.indexOf(a.id);
-        return idx !== -1 && idx + 1 === a.correctOrder;
+      tapSequence.filter((id, idx) => {
+        const a = ACTIONS.find((x) => x.id === id);
+        return a && a.phaseIndex === idx;
       }).length,
     [tapSequence],
   );
 
-  // Running correct count: updates as each action is tapped (for stability bar)
-  const runningCorrect = useMemo(() => {
-    return ACTIONS.filter((a) => {
-      const idx = tapSequence.indexOf(a.id);
-      return idx !== -1 && idx + 1 === a.correctOrder;
-    }).length;
-  }, [tapSequence]);
-
-  const reviewActions = useMemo(
-    () => [...ACTIONS].sort((a, b) => a.correctOrder - b.correctOrder),
-    [],
+  const wrongCount = useMemo(
+    () =>
+      tapSequence.filter((id, idx) => {
+        const a = ACTIONS.find((x) => x.id === id);
+        return !a || a.phaseIndex !== idx;
+      }).length,
+    [tapSequence],
   );
 
-  const displayedActions = useMemo(
-    () => DISPLAY_ORDER.map((i) => ACTIONS[i]),
-    [],
-  );
+  const displayedActions = useMemo(() => DISPLAY_ORDER.map((i) => ACTIONS[i]), []);
 
   const grade =
-    correctCount === 5
-      ? { label: "Perfect Sequence", color: "#2DD4BF", icon: "trophy" as const }
-      : correctCount >= 3
-        ? { label: "Good Instincts", color: "#22C55E", icon: "checkmark-done" as const }
-        : { label: "Keep Learning", color: "#F59E0B", icon: "school" as const };
+    correctCount === CARE_PHASES.length
+      ? { label: "Perfect Care Chain", color: "#2DD4BF", icon: "trophy"         as const }
+      : correctCount === 2
+        ? { label: "Good Instincts",   color: "#22C55E", icon: "checkmark-done" as const }
+        : { label: "Keep Learning",    color: "#F59E0B", icon: "school"         as const };
 
-  // ── Complete phase ───────────────────────────────────────────────────────────
+  // ── Complete ─────────────────────────────────────────────────────────────────
 
   if (phase === "complete") {
     return (
@@ -712,11 +694,7 @@ export default function StabilizeStackScreen() {
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.header}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => goBack(router, "/university")}
-            hitSlop={10}
-          >
+          <Pressable style={styles.backBtn} onPress={() => router.replace("/university")} hitSlop={10}>
             <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
           </Pressable>
           <Text style={styles.kicker}>STABILIZE STACK · COMPLETE</Text>
@@ -726,26 +704,27 @@ export default function StabilizeStackScreen() {
             <Ionicons name={grade.icon} size={32} color={grade.color} />
           </View>
           <Text style={[styles.gradeLabel, { color: grade.color }]}>{grade.label}</Text>
-          <Text style={styles.scoreDisplay}>{correctCount} / {ACTIONS.length}</Text>
-          <Text style={styles.scoreCaption}>actions in correct clinical order</Text>
+          <Text style={styles.scoreDisplay}>{correctCount} / {CARE_PHASES.length}</Text>
+          <Text style={styles.scoreCaption}>care steps placed correctly</Text>
           <View style={styles.completeDivider} />
           <Text style={styles.completeLearning}>
-            ABCDE — Airway, Breathing, Circulation, Disability, Exposure. This sequence saves lives because it addresses immediate threats before downstream problems.
+            Check Safety → Confirm Stability → Support Recovery. Always assess before you act — knowing the patient's mental state and vital signs guides every decision.
           </Text>
           <Pressable
             style={[styles.completeBtn, { backgroundColor: grade.color }]}
-            onPress={() => goBack(router, "/university")}
+            onPress={() => router.replace("/university")}
             testID="stabilize-finish"
           >
             <Text style={[styles.completeBtnTxt, { color: COLORS.surface }]}>Return to University</Text>
             <Ionicons name="arrow-forward" size={14} color={COLORS.surface} />
           </Pressable>
         </View>
+        <TutorialOverlay />
       </SafeAreaView>
     );
   }
 
-  // ── Playing + review phases ──────────────────────────────────────────────────
+  // ── Playing + review ─────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -758,16 +737,14 @@ export default function StabilizeStackScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => goBack(router, "/university")}
+          onPress={() => router.replace("/university")}
           hitSlop={10}
           testID="stabilize-back"
         >
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <Text style={styles.kicker}>STABILIZE STACK</Text>
-        <Text style={styles.tappedCount}>
-          {tapSequence.length}/{ACTIONS.length}
-        </Text>
+        <Text style={styles.tappedCount}>{tapSequence.length}/{CARE_PHASES.length}</Text>
       </View>
 
       <ScrollView
@@ -775,90 +752,100 @@ export default function StabilizeStackScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Patient panel with stability bar */}
-        <PatientPanel runningCorrect={runningCorrect} />
+        {/* Immersive patient panel */}
+        <PatientPanel runningCorrect={correctCount} wrongCount={wrongCount} />
 
-        {/* Care Chain track */}
-        <CareChainTrack tapSequence={tapSequence} />
+        {/* 3-phase glowing care-flow path */}
+        <CareFlowPath tapSequence={tapSequence} />
 
         {/* Instruction row */}
         <View style={styles.instructRow}>
           <Ionicons name="layers-outline" size={13} color="#2DD4BF" />
           <Text style={styles.instructTxt}>
             {phase === "playing"
-              ? "Tap each action in the order a clinician should do it."
-              : "Review: correct clinical sequence shown below."}
+              ? "Select 3 care actions in clinical order to build the path."
+              : "Review: the correct care sequence is shown below."}
           </Text>
         </View>
 
-        {/* Action cards — playing phase */}
+        {/* Action cards — 2-column illustrated grid */}
         {phase === "playing" && (
-          <View style={styles.cardList}>
+          <View style={styles.cardGrid}>
             {displayedActions.map((action) => (
               <ActionCardTile
                 key={action.id}
                 action={action}
                 tapIndex={tapIndexFor(action.id)}
                 onTap={handleTap}
-                disabled={false}
+                disabled={tapSequence.length >= CARE_PHASES.length}
               />
             ))}
           </View>
         )}
 
-        {/* Review phase — correct clinical order with reasoning */}
+        {/* Review phase */}
         {phase === "review" && (
           <Animated.View style={[styles.reviewWrap, { opacity: revealAnim }]}>
-            {reviewActions.map((action) => {
-              const idx = tapSequence.indexOf(action.id);
-              const playerOrder = idx + 1;
-              const isCorrect = playerOrder === action.correctOrder;
+            {CARE_PHASES.map((carePhase, phaseIdx) => {
+              const filledId     = tapSequence[phaseIdx];
+              const filledAction = filledId ? ACTIONS.find((a) => a.id === filledId) : null;
+              const correctAction = ACTIONS.find((a) => a.phaseIndex === phaseIdx);
+              const isOk         = filledAction?.phaseIndex === phaseIdx;
+
               return (
                 <View
-                  key={action.id}
-                  style={[
-                    styles.reviewCard,
-                    { borderColor: (isCorrect ? action.color : "#EF4444") + "40" },
-                  ]}
+                  key={phaseIdx}
+                  style={[styles.reviewCard, { borderColor: (isOk ? carePhase.color : "#EF4444") + "40" }]}
                 >
                   <LinearGradient
                     colors={
-                      isCorrect
-                        ? [action.color + "12", action.color + "06"]
+                      isOk
+                        ? [carePhase.color + "12", carePhase.color + "06"]
                         : ["#EF444412", "#EF444406"]
                     }
                     style={StyleSheet.absoluteFillObject}
                   />
                   <View style={styles.reviewTop}>
-                    <View style={[styles.reviewNum, { backgroundColor: isCorrect ? action.color : "#EF4444" }]}>
-                      <Text style={styles.reviewNumTxt}>{action.correctOrder}</Text>
+                    <View style={[styles.reviewNum, { backgroundColor: isOk ? carePhase.color : "#EF4444" }]}>
+                      <Text style={styles.reviewNumTxt}>{phaseIdx + 1}</Text>
                     </View>
                     <View style={styles.reviewTitleWrap}>
-                      <Text style={styles.reviewActionLabel}>{action.label}</Text>
-                      <Text style={[styles.reviewFramework, { color: action.color }]}>
-                        {action.framework}
+                      <Text style={[styles.reviewPhaseLabel, { color: carePhase.color }]}>
+                        {carePhase.label}
                       </Text>
+                      <Text style={styles.reviewActionLabel}>{correctAction?.label}</Text>
                     </View>
                     <View style={styles.reviewPlayerBadge}>
                       <Ionicons
-                        name={isCorrect ? "checkmark" : "close"}
+                        name={isOk ? "checkmark" : "close"}
                         size={11}
-                        color={isCorrect ? action.color : "#EF4444"}
+                        color={isOk ? carePhase.color : "#EF4444"}
                       />
-                      <Text style={[styles.reviewPlayerTxt, { color: isCorrect ? action.color : "#EF4444" }]}>
-                        You: {playerOrder}
+                      <Text style={[styles.reviewPlayerTxt, { color: isOk ? carePhase.color : "#EF4444" }]}>
+                        {isOk ? "Correct" : "Wrong"}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.reviewReasoning}>{action.reasoning}</Text>
+
+                  {!isOk && filledAction && (
+                    <Text style={styles.reviewWrongChoice}>
+                      You chose: {filledAction.label}
+                    </Text>
+                  )}
+
+                  <Text style={styles.reviewReasoning}>{PHASE_REASONING[phaseIdx]}</Text>
+
+                  {!isOk && filledAction?.coaching && (
+                    <Text style={styles.reviewCoaching}>{filledAction.coaching}</Text>
+                  )}
                 </View>
               );
             })}
 
             <View style={[styles.scoreRow, { marginTop: SPACING.sm }]}>
-              <Text style={styles.scoreLbl}>Correct sequence</Text>
+              <Text style={styles.scoreLbl}>Correct steps</Text>
               <Text style={[styles.scoreVal, { color: grade.color }]}>
-                {correctCount}/{ACTIONS.length}
+                {correctCount}/{CARE_PHASES.length}
               </Text>
             </View>
             <Pressable
@@ -874,7 +861,7 @@ export default function StabilizeStackScreen() {
 
         <Pressable
           style={styles.backToUni}
-          onPress={() => goBack(router, "/university")}
+          onPress={() => router.replace("/university")}
           testID="stabilize-return"
         >
           <Ionicons name="chevron-back" size={15} color={COLORS.onSurfaceTertiary} />
@@ -882,9 +869,9 @@ export default function StabilizeStackScreen() {
         </Pressable>
       </ScrollView>
 
-      {/* Tutorial narration + blocking scrim (stabilizeIntro, forced).
-          Must be rendered INSIDE this screen so the highlighted card
-          (zIndex 9500, via useHighlightTarget) can sit above the scrim. */}
+      {/* Tutorial narration + blocking scrim.
+          Must be inside this screen so the highlighted card (zIndex 9500)
+          can rise above the scrim. See SCROLL_FIX_WEB note at top. */}
       <TutorialOverlay />
     </SafeAreaView>
   );
@@ -904,9 +891,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
     alignItems: "center", justifyContent: "center",
   },
-  kicker: {
-    color: "#06B6D4", fontSize: 10, fontWeight: "700", letterSpacing: 2, flex: 1,
-  },
+  kicker: { color: "#06B6D4", fontSize: 10, fontWeight: "700", letterSpacing: 2, flex: 1 },
   tappedCount: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
 
   scroll: { paddingHorizontal: SPACING.lg, paddingBottom: 64, gap: SPACING.md },
@@ -917,7 +902,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#06B6D430",
     padding: SPACING.md, gap: SPACING.sm,
   },
-  patientRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
+  patientRow:   { flexDirection: "row", alignItems: "center", gap: SPACING.md },
   patientAvatar: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: "#06B6D418", borderWidth: 1.5, borderColor: "#06B6D440",
@@ -935,159 +920,111 @@ const styles = StyleSheet.create({
   criticalDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#EF4444" },
   criticalTxt: { color: "#EF4444", fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
 
-  // ── Animated patient scene ────────────────────────────────────────────────
+  // ── Patient scene ─────────────────────────────────────────────────────────
   sceneWrap: {
-    width: "100%",
-    aspectRatio: PATIENT_SCENE_RATIO,
-    borderRadius: RADIUS.md,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#06B6D425",
+    width: "100%", aspectRatio: PATIENT_SCENE_RATIO,
+    borderRadius: RADIUS.md, overflow: "hidden",
+    borderWidth: 1, borderColor: "#06B6D425",
     backgroundColor: "#091420",
   },
-  sceneVignette: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#7F1D1D",
-  },
-  sceneHeal: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#2DD4BF",
-  },
-  sceneBottomFade: {
-    position: "absolute",
-    left: 0, right: 0, bottom: 0,
-    height: "46%",
-  },
+  sceneVignette: { ...StyleSheet.absoluteFillObject, backgroundColor: "#7F1D1D" },
+  sceneHeal:     { ...StyleSheet.absoluteFillObject, backgroundColor: "#2DD4BF" },
+  sceneBottomFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "46%" },
   symptomRow: {
-    position: "absolute",
-    left: SPACING.sm, right: SPACING.sm, bottom: SPACING.sm,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
+    position: "absolute", left: SPACING.sm, right: SPACING.sm, bottom: SPACING.sm,
+    flexDirection: "row", flexWrap: "wrap", gap: 6,
   },
   symptomChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(5,12,18,0.78)",
-    borderWidth: 1,
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(5,12,18,0.78)", borderWidth: 1,
+    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 4,
   },
   symptomDot: { width: 6, height: 6, borderRadius: 3 },
   symptomTxt: { fontSize: 10, fontWeight: "700", letterSpacing: 0.3 },
 
-  // Stability bar
-  stabilityRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-  },
-  stabilityLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
-  stabilityPct: { fontSize: 11, fontWeight: "700" },
+  // ── Stability bar ─────────────────────────────────────────────────────────
+  stabilityRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  stabilityLabel:{ color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
+  stabilityPct:  { fontSize: 11, fontWeight: "700" },
   stabilityTrack: {
     height: 8, borderRadius: 4, overflow: "hidden",
-    backgroundColor: "#0B1A14",
-    borderWidth: 1, borderColor: "#2DD4BF14",
+    backgroundColor: "#0B1A14", borderWidth: 1, borderColor: "#2DD4BF14",
     position: "relative",
   },
-  stabilityFill: {
-    position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4,
-    overflow: "hidden",
-  },
-  stabilityOrb: {
-    position: "absolute", width: 10, height: 10,
-    borderRadius: 5, top: -1,
+  stabilityFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4, overflow: "hidden" },
+  stabilityOrb:  {
+    position: "absolute", width: 10, height: 10, borderRadius: 5, top: -1,
     shadowColor: "#2DD4BF", shadowOpacity: 0.9, shadowRadius: 6,
   },
 
+  // ── Vitals ────────────────────────────────────────────────────────────────
   vitalStrip: {
     flexDirection: "row", justifyContent: "space-between",
     paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border,
   },
-  vitalItem: { alignItems: "center", gap: 2 },
+  vitalItem:  { alignItems: "center", gap: 2 },
   vitalLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
   vitalValue: { color: COLORS.onSurfaceSecondary, fontSize: 15, fontWeight: "300" },
   vitalAlert: { color: "#EF4444" },
 
-  // ── Care Chain track ──────────────────────────────────────────────────────
-  chainOuter: {
+  // ── Care-flow path ────────────────────────────────────────────────────────
+  flowOuter: {
     borderRadius: RADIUS.md, overflow: "hidden",
     borderWidth: 1, borderColor: "#2DD4BF18",
-    padding: SPACING.sm, gap: SPACING.sm,
+    padding: SPACING.sm, gap: 4,
   },
-  chainTitle: {
-    color: "#2DD4BF", fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
-  },
-  chainSlots: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-  },
-  chainSlot: { alignItems: "center", gap: 4, flex: 1 },
-  chainDot: {
-    width: 34, height: 34, borderRadius: 17,
+  flowHeader:   { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 2 },
+  flowTitle:    { color: "#2DD4BF", fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  flowSlots:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  flowSlot:     { alignItems: "center", gap: 4, flex: 1 },
+  flowDot: {
+    width: 40, height: 40, borderRadius: 20,
     borderWidth: 1.5, alignItems: "center", justifyContent: "center",
   },
-  chainStepNum: {
-    color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700",
+  flowStepNum:  { fontSize: 13, fontWeight: "700" },
+  flowLabel: {
+    fontSize: 8, fontWeight: "600", textAlign: "center",
+    letterSpacing: 0.2, lineHeight: 11,
   },
-  chainStepLabel: {
-    color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "600",
-    textAlign: "center", letterSpacing: 0.2, lineHeight: 11,
+  flowConnector:   { height: 1.5, flex: 0.18, marginBottom: 22 },
+  flowPhaseStrip:  { flexDirection: "row", justifyContent: "space-around" },
+  flowPhaseTag: {
+    fontSize: 7, fontWeight: "700", letterSpacing: 0.8,
+    textAlign: "center", flex: 1,
   },
-  chainConnector: { height: 1.5, flex: 0.15, marginBottom: 16 },
 
-  // ── Instruction row ───────────────────────────────────────────────────────
-  instructRow: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-  },
+  // ── Instruction ───────────────────────────────────────────────────────────
+  instructRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   instructTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, flex: 1 },
 
-  // ── Action cards ──────────────────────────────────────────────────────────
-  cardList: { gap: SPACING.sm },
+  // ── Action cards (2-column grid) ──────────────────────────────────────────
+  cardGrid:  { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  cardWrap:  { width: "48%" },
   card: {
     borderRadius: RADIUS.md, borderWidth: 1,
     padding: SPACING.md, gap: SPACING.sm, overflow: "hidden",
-    backgroundColor: COLORS.surfaceSecondary,
+    minHeight: 128,
   },
   cardHighlightShadow: {
-    shadowColor: "#2DD4BF", shadowOpacity: 0.75, shadowRadius: 12,
-    elevation: 18,
+    shadowColor: "#2DD4BF", shadowOpacity: 0.75, shadowRadius: 12, elevation: 18,
   },
-  cardTopRow: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-  },
-  orderBadge: {
-    width: 22, height: 22, borderRadius: 11,
-    alignItems: "center", justifyContent: "center",
-  },
-  orderBadgeEmpty: {
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  orderBadgeNum: { color: COLORS.surface, fontSize: 11, fontWeight: "800" },
-  orderBadgeQ: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
-  frameworkTag: { fontSize: 9, fontWeight: "700", letterSpacing: 0.8, flex: 1 },
-
-  cardBody: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
   cardIconWrap: {
-    width: 46, height: 46, borderRadius: 23,
+    width: 54, height: 54, borderRadius: 27,
     alignItems: "center", justifyContent: "center",
-    borderWidth: 1.5,
+    borderWidth: 1.5, alignSelf: "center",
   },
-  cardTextWrap: { flex: 1, gap: 3 },
-  cardLabel: { fontSize: 14, fontWeight: "700", lineHeight: 19 },
-  cardDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
+  cardLabel: { fontSize: 13, fontWeight: "700", lineHeight: 17, textAlign: "center" },
+  cardDesc:  { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, textAlign: "center" },
 
-  correctGlowBar: {
-    height: 2, borderRadius: 1, marginTop: 2,
+  correctGlowBar: { height: 2, borderRadius: 1, marginTop: 2 },
+  cautionRune:    { alignItems: "flex-end", justifyContent: "flex-end", padding: SPACING.sm },
+  cautionCoach:   { color: "#EF4444AA", fontSize: 9, lineHeight: 13, fontStyle: "italic", textAlign: "center" },
+  phaseBadge: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 3, marginTop: 2,
   },
-
-  cautionRune: {
-    alignItems: "flex-end", justifyContent: "flex-end",
-    padding: SPACING.sm, pointerEvents: "none",
-  },
-  cautionCoach: {
-    color: "#EF4444AA", fontSize: 10, lineHeight: 15, fontStyle: "italic",
-  },
+  phaseBadgeTxt: { fontSize: 8, fontWeight: "700", letterSpacing: 0.3, textAlign: "center" },
 
   // ── Review ────────────────────────────────────────────────────────────────
   reviewWrap: { gap: SPACING.sm },
@@ -1096,25 +1033,25 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
     padding: SPACING.md, gap: SPACING.sm, overflow: "hidden",
   },
-  reviewTop: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  reviewNum: {
-    width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center",
-  },
-  reviewNumTxt: { color: COLORS.surface, fontSize: 13, fontWeight: "800" },
-  reviewTitleWrap: { flex: 1, gap: 2 },
+  reviewTop:         { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  reviewNum:         { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  reviewNumTxt:      { color: COLORS.surface, fontSize: 13, fontWeight: "800" },
+  reviewTitleWrap:   { flex: 1, gap: 2 },
+  reviewPhaseLabel:  { fontSize: 9, fontWeight: "700", letterSpacing: 0.8 },
   reviewActionLabel: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
-  reviewFramework: { fontSize: 9, fontWeight: "700", letterSpacing: 0.8 },
   reviewPlayerBadge: {
     flexDirection: "row", alignItems: "center", gap: 3,
     borderWidth: 1, borderRadius: RADIUS.pill, borderColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 6, paddingVertical: 3,
   },
-  reviewPlayerTxt: { fontSize: 10, fontWeight: "700" },
-  reviewReasoning: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  reviewPlayerTxt:  { fontSize: 10, fontWeight: "700" },
+  reviewWrongChoice:{ color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic" },
+  reviewReasoning:  { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  reviewCoaching:   { color: "#F59E0BAA", fontSize: 11, lineHeight: 16, fontStyle: "italic" },
 
-  scoreRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  scoreLbl: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
-  scoreVal: { fontSize: 20, fontWeight: "800" },
+  scoreRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  scoreLbl:    { color: COLORS.onSurfaceTertiary, fontSize: 12 },
+  scoreVal:    { fontSize: 20, fontWeight: "800" },
   continueBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: SPACING.sm, borderRadius: RADIUS.md,
@@ -1132,14 +1069,11 @@ const styles = StyleSheet.create({
     borderWidth: 2, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.04)",
   },
-  gradeLabel: { fontSize: 22, fontWeight: "800", letterSpacing: 0.5 },
-  scoreDisplay: { color: COLORS.onSurface, fontSize: 40, fontWeight: "300" },
-  scoreCaption: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: -SPACING.sm },
+  gradeLabel:      { fontSize: 22, fontWeight: "800", letterSpacing: 0.5 },
+  scoreDisplay:    { color: COLORS.onSurface, fontSize: 40, fontWeight: "300" },
+  scoreCaption:    { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: -SPACING.sm },
   completeDivider: { width: "40%", height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.sm },
-  completeLearning: {
-    color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20,
-    textAlign: "center",
-  },
+  completeLearning:{ color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20, textAlign: "center" },
   completeBtn: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     borderRadius: RADIUS.md, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
@@ -1147,7 +1081,7 @@ const styles = StyleSheet.create({
   },
   completeBtnTxt: { fontSize: 14, fontWeight: "700" },
 
-  // ── Back to Uni ───────────────────────────────────────────────────────────
+  // ── Back to university ────────────────────────────────────────────────────
   backToUni: {
     flexDirection: "row", alignItems: "center", gap: 4,
     alignSelf: "center", paddingVertical: SPACING.sm,

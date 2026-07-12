@@ -52,6 +52,8 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
@@ -2510,6 +2512,8 @@ export default function WardDefense() {
   const router = useRouter();
   const { player, applyRewards, recordWardWaves, syncInventory, setWardLoadout } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
 
   const gsRef = useRef<GS>(freshState());
@@ -3103,7 +3107,7 @@ export default function WardDefense() {
     return (
       <LobbyScreen
         onStart={startGame}
-        onBack={() => router.back()}
+        onBack={() => router.replace("/(tabs)")}
         inventory={player?.inventory || {}}
         pendingBoosts={pendingBoosts}
         onToggleBoost={(id) =>
@@ -3137,7 +3141,7 @@ export default function WardDefense() {
     return (
       <ResultScreen won={gs.phase === "won"} wave={gs.wave} stability={gs.stability}
         score={gs.score} rewards={rewards} learningStats={ls}
-        onReplay={startGame} onBack={() => router.back()} />
+        onReplay={startGame} onBack={() => router.replace("/(tabs)")} />
     );
   }
 
@@ -3155,7 +3159,7 @@ export default function WardDefense() {
         style={s.hud}
       >
         {/* Back button */}
-        <Pressable style={s.hudBack} onPress={() => router.back()} hitSlop={12}>
+        <Pressable style={s.hudBack} onPress={() => router.replace("/(tabs)")} hitSlop={12}>
           <Ionicons name="arrow-back" size={15} color={COLORS.onSurface} />
         </Pressable>
 

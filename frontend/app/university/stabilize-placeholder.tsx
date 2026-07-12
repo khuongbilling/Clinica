@@ -31,6 +31,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { playRewardCue } from "@/src/game/cues";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -261,6 +263,8 @@ function ChainSlot({ index, filledTile }: { index: number; filledTile?: ActionTi
 export default function StabilizeStackScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
 
   const [chain, setChain] = useState<ActionId[]>([]);
   const [stability, setStability] = useState(STABILITY_START);

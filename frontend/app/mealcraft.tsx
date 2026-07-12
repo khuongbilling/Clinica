@@ -33,6 +33,8 @@ import { playRewardCue } from "@/src/game/cues";
 import { usePlayer } from "@/src/game/store";
 import { useHighlightTarget, useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -296,6 +298,8 @@ export default function MealcraftScreen() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
 
   const [plate, setPlate] = useState<string[]>([]);
   const [nutrition, setNutrition] = useState<NutritionValues>(ZERO);

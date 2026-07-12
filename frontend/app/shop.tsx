@@ -9,6 +9,7 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -17,6 +18,7 @@ export default function Shop() {
   const { player } = usePlayer();
   const gate = useFeatureGate("shop");
   const { isCompleted, startTutorial } = useTutorial();
+  useClearTutorialOnExit();
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

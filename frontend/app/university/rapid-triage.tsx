@@ -27,6 +27,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -194,6 +196,8 @@ function TriageButton({ def, disabled, onPress }: TriageBtnProps) {
 export default function RapidTriageScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
 
   const [cardIdx, setCardIdx] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);

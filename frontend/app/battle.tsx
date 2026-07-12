@@ -21,6 +21,8 @@ import { computeEpidemicTokens } from "@/src/game/worldEvent";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
 import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
@@ -56,6 +58,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const navigation = useNavigation();
   const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";

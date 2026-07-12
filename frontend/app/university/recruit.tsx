@@ -13,12 +13,14 @@ import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function UniversityRecruitScreen() {
   const router = useRouter();
   const { player, recruitOnce, recruitTen } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  useClearTutorialOnExit();
   const [busy, setBusy] = useState(false);
   const [single, setSingle] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);

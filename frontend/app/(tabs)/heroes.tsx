@@ -12,6 +12,7 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import { rarityTierLabel } from "@/src/game/university";
 import { findSkin } from "@/src/game/shop";
@@ -42,6 +43,7 @@ export default function HeroesScreen() {
   const { player, saveActiveTeam } = usePlayer();
   const gate = useFeatureGate("hall_of_heroes");
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  useClearTutorialOnExit();
   const [team, setTeam] = useState<string[]>(player?.active_team ?? []);
 
   useEffect(() => {

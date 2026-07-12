@@ -17,6 +17,7 @@ import { getBannerImage } from "@/src/components/ModeBanners";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, GLOW } from "@/src/theme/ui";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
@@ -61,6 +62,7 @@ export default function RunHome() {
   const { player, loading, openRoundsSignal } = usePlayer();
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
+  useClearTutorialOnExit();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
   const roundsSignalSeen = useRef(0);

@@ -15,10 +15,12 @@ import {
 import { LOTUS_PATHS, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function LessonsHubScreen() {
   const router = useRouter();
+  useClearTutorialOnExit();
   const { player, loading } = usePlayer();
 
   if (loading || !player) {

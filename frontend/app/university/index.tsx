@@ -13,6 +13,7 @@ import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
@@ -132,6 +133,7 @@ export default function UniversityHubScreen() {
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
   const { activeTutorialId } = useTutorial();
+  useClearTutorialOnExit();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
 

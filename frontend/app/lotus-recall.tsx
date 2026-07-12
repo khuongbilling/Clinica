@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +18,7 @@ import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 // the post-recall home state to begin their real training.
 export default function LotusRecall() {
   const router = useRouter();
+  useBlockBack();
   const { completePrologue } = usePlayer();
   const { replay } = useLocalSearchParams<{ enemyId?: string; replay?: string }>();
   // Push 6 — Replay Prologue watches this cinematic without ever writing

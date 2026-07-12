@@ -37,6 +37,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { playRewardCue } from "@/src/game/cues";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { goBack } from "@/src/utils/navigation";
+import { useBlockBack } from "@/src/hooks/useBlockBack";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -371,6 +373,8 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 export default function CueHuntScreen() {
   const router = useRouter();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
+  useBlockBack();
+  useClearTutorialOnExit();
 
   const [scW, setScW] = useState(0);
   const [found, setFound] = useState<Set<string>>(new Set());

@@ -13,6 +13,7 @@ import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { usePlayer } from "@/src/game/store";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
 import {
@@ -31,6 +32,7 @@ export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();
+  useClearTutorialOnExit();
   const { notice, flashNotice } = useInlineNotice();
   const [showRounds, setShowRounds] = useState(false);
 
