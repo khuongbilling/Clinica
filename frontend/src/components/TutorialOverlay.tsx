@@ -169,26 +169,24 @@ export function TutorialOverlay() {
     const justify = placement === "bottom" ? "flex-end" : placement === "center" ? "center" : "flex-start";
     const accent = narrator.color;
     const isBattleTutorial = activeTutorialId === "prologueBattle" || activeTutorialId === "firstBattle";
-    // Mini-game steps use requiredTargetId: after the box dismisses a blocking
-    // scrim stays active — only the highlighted element (zIndex 9500, styled by
-    // useHighlightTarget) can be tapped. Battle tutorials use visual-only scrims
-    // because battle.tsx guards block wrong presses in their own handlers.
+    // Battle tutorials use a blocking scrim while the narrator box is visible so
+    // the player cannot interact with live battle UI mid-narration. Mini-game
+    // tutorials do NOT use a scrim — wrong-tap blocking is handled by
+    // isTutorialBlocked in each game screen's press handler.
     const isMiniGameStep = !!currentStep.requiredTargetId;
-    const showScrim = (isBattleTutorial || isMiniGameStep) && currentStep.requireAction;
+    const showScrim = isBattleTutorial && currentStep.requireAction;
 
-    // After the player taps a second time on a requireAction step the narrative
-    // box disappears, leaving only the dim scrim behind as a visual indicator.
-    // The scrim is ALWAYS visual-only (pointerEvents none) here — game-level
-    // guards in each mini-game screen (isTutorialBlocked from useHighlightTarget)
-    // block wrong-element taps. Using an active scrim breaks touch routing inside
-    // ScrollViews on native because the ScrollView layer prevents zIndex from
-    // propagating, so the highlighted card can never escape the scrim.
+    // After the box dismisses: battle tutorials keep a dim visual-only scrim
+    // so the player sees the highlighted skill is still the target. Mini-game
+    // tutorials return null — isTutorialBlocked in each game screen already
+    // blocks wrong-element taps, so a scrim here is both redundant and actively
+    // harmful (it becomes an accidental touch-absorber on web if the deprecated
+    // pointerEvents prop is silently ignored).
     if (boxDismissed) {
-      if (!showScrim) return null;
+      if (!isBattleTutorial) return null;
       return (
         <View
-          style={[styles.battleScrim, { zIndex: 9000 }]}
-          pointerEvents="none"
+          style={[styles.battleScrim, { zIndex: 9000, pointerEvents: "none" }]}
         />
       );
     }
@@ -199,18 +197,15 @@ export function TutorialOverlay() {
     return (
       <>
         {/* Dim scrim while the narration box is visible.
-            Battle tutorials: active (pointerEvents auto) so the scrim blocks
-            the live battle UI behind the narration box.
-            Mini-game tutorials (requiredTargetId steps): visual-only
-            (pointerEvents none) so the highlighted element — even when it sits
-            inside a ScrollView that prevents zIndex from propagating — is still
-            directly tappable. Wrong-tap blocking for mini-games is handled
-            entirely by `isTutorialBlocked` in each game screen's press handler,
-            so an active scrim here would only freeze the UI. */}
+            Only battle tutorials show an active scrim: it blocks the live
+            battle UI while the narrator is speaking. Mini-game tutorials do NOT
+            render a scrim — wrong-tap blocking is handled by isTutorialBlocked
+            in each game screen's press handler, and an accidental active scrim
+            on web would freeze all card touches if the pointerEvents style value
+            is not propagated correctly through the ScrollView stacking context. */}
         {showScrim && (
           <View
-            style={styles.battleScrim}
-            pointerEvents={isBattleTutorial ? "auto" : "none"}
+            style={[styles.battleScrim, { pointerEvents: "auto" }]}
           />
         )}
         <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
