@@ -179,10 +179,21 @@ export function TutorialOverlay() {
 
     return (
       <>
-        {/* Blocking scrim while the narration box is visible during a battle
-            tutorial. Sits below the box (z 8999 vs box z 9000) so the box
-            stays interactive, but blocks taps on all battle-UI behind it. */}
-        {showScrim && <View style={styles.battleScrim} pointerEvents="auto" />}
+        {/* Dim scrim while the narration box is visible.
+            Battle tutorials: active (pointerEvents auto) so the scrim blocks
+            the live battle UI behind the narration box.
+            Mini-game tutorials (requiredTargetId steps): visual-only
+            (pointerEvents none) so the highlighted element — even when it sits
+            inside a ScrollView that prevents zIndex from propagating — is still
+            directly tappable. Wrong-tap blocking for mini-games is handled
+            entirely by `isTutorialBlocked` in each game screen's press handler,
+            so an active scrim here would only freeze the UI. */}
+        {showScrim && (
+          <View
+            style={styles.battleScrim}
+            pointerEvents={isBattleTutorial ? "auto" : "none"}
+          />
+        )}
         <View style={[StyleSheet.absoluteFillObject, styles.actionOverlay, { justifyContent: justify, pointerEvents: "box-none" }]}>
           <Pressable
             onPress={handleBoxTap}
