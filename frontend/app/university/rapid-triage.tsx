@@ -152,14 +152,16 @@ interface TriageBtnProps {
 }
 
 function TriageButton({ def, disabled, onPress }: TriageBtnProps) {
-  const { isHighlighted, onTargetPress, highlightStyle } =
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } =
     useHighlightTarget(def.targetId);
 
   const handlePress = useCallback(() => {
     if (disabled) return;
+    // Block wrong buttons while a tutorial step requires a specific target.
+    if (isTutorialBlocked) return;
     if (isHighlighted) onTargetPress();
     onPress(def.level);
-  }, [disabled, isHighlighted, def.level, onPress, onTargetPress]);
+  }, [disabled, isHighlighted, isTutorialBlocked, def.level, onPress, onTargetPress]);
 
   return (
     <Pressable

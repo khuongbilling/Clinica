@@ -158,15 +158,18 @@ export function TutorialOverlay() {
     const showScrim = (isBattleTutorial || isMiniGameStep) && currentStep.requireAction;
 
     // After the player taps a second time on a requireAction step the narrative
-    // box disappears, leaving only the scrim + the highlighted element.
-    //   • Battle tutorial  → scrim is visual-only (pointerEvents none); battle.tsx guards block wrong presses.
-    //   • Mini-game step   → scrim is ACTIVE (pointerEvents auto); only the element at zIndex 9500 is reachable.
+    // box disappears, leaving only the dim scrim behind as a visual indicator.
+    // The scrim is ALWAYS visual-only (pointerEvents none) here — game-level
+    // guards in each mini-game screen (isTutorialBlocked from useHighlightTarget)
+    // block wrong-element taps. Using an active scrim breaks touch routing inside
+    // ScrollViews on native because the ScrollView layer prevents zIndex from
+    // propagating, so the highlighted card can never escape the scrim.
     if (boxDismissed) {
       if (!showScrim) return null;
       return (
         <View
           style={[styles.battleScrim, { zIndex: 9000 }]}
-          pointerEvents={isMiniGameStep ? "auto" : "none"}
+          pointerEvents="none"
         />
       );
     }

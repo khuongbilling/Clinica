@@ -205,16 +205,18 @@ interface FoodCardProps {
 }
 
 function FoodCard({ food, onTap, onPlate, plateFull }: FoodCardProps) {
-  const { isHighlighted, onTargetPress, highlightStyle } = useHighlightTarget(
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } = useHighlightTarget(
     food.id
   );
 
   const handlePress = useCallback(() => {
     if (onPlate) return;
+    // Block wrong food cards while a tutorial step requires a specific target.
+    if (isTutorialBlocked) return;
     if (plateFull && !isHighlighted) return;
     if (isHighlighted) onTargetPress();
     onTap(food);
-  }, [food, onPlate, plateFull, isHighlighted, onTargetPress, onTap]);
+  }, [food, onPlate, plateFull, isHighlighted, isTutorialBlocked, onTargetPress, onTap]);
 
   const dimmed = onPlate || (plateFull && !isHighlighted);
 

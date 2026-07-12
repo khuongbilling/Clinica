@@ -166,14 +166,16 @@ interface ActionTileProps {
 }
 
 function ActionTile({ tile, inChain, disabled, isShaking, shakeAnim, onPress }: ActionTileProps) {
-  const { isHighlighted, onTargetPress, highlightStyle } =
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } =
     useHighlightTarget(tile.targetId);
 
   const handlePress = useCallback(() => {
     if (disabled || inChain) return;
+    // Block wrong tiles while a tutorial step requires a specific target.
+    if (isTutorialBlocked) return;
     if (isHighlighted) onTargetPress();
     onPress(tile);
-  }, [disabled, inChain, isHighlighted, onTargetPress, onPress, tile]);
+  }, [disabled, inChain, isHighlighted, isTutorialBlocked, onTargetPress, onPress, tile]);
 
   return (
     <Animated.View

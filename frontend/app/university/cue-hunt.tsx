@@ -130,7 +130,7 @@ interface ClueZoneProps {
 }
 
 function ClueZone({ zone, scW, found, onCorrect, onWrong }: ClueZoneProps) {
-  const { isHighlighted, onTargetPress } = useHighlightTarget(zone.id);
+  const { isHighlighted, isTutorialBlocked, onTargetPress } = useHighlightTarget(zone.id);
 
   const rPx = zone.r * scW;
   const dPx = rPx * 2;
@@ -168,6 +168,8 @@ function ClueZone({ zone, scW, found, onCorrect, onWrong }: ClueZoneProps) {
   }, [found, burstScale, burstOpacity]);
 
   const handlePress = useCallback(() => {
+    // Block wrong zones while a tutorial step requires a specific target.
+    if (isTutorialBlocked) return;
     if (zone.isRequired) {
       if (found) return;
       if (isHighlighted) onTargetPress();
@@ -182,7 +184,7 @@ function ClueZone({ zone, scW, found, onCorrect, onWrong }: ClueZoneProps) {
       ]).start();
       onWrong();
     }
-  }, [zone, found, isHighlighted, onTargetPress, onCorrect, onWrong, shakeX]);
+  }, [zone, found, isHighlighted, isTutorialBlocked, onTargetPress, onCorrect, onWrong, shakeX]);
 
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.10, 0.40] });
   const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.10] });

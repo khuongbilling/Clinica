@@ -261,18 +261,18 @@ export function useTutorial() {
  * Convenience hook for any tappable element in a University mini-game screen.
  *
  * Usage:
- *   const { isHighlighted, onTargetPress } = useHighlightTarget("clue_dry_lips");
+ *   const { isHighlighted, isTutorialBlocked, onTargetPress } = useHighlightTarget("clue_dry_lips");
  *   <Pressable onPress={onTargetPress} style={[styles.chip, isHighlighted && styles.chipHighlight]}>
  *
- * When `isHighlighted` is true the element is the current forced tutorial target:
- *   - Apply zIndex: 9500 so it sits above the blocking scrim rendered by TutorialOverlay.
- *   - Apply a teal/gold glow border so the player sees what to tap.
- *   - Only `onTargetPress` advances the tutorial; all other taps on the element
- *     still call the game's own handler (so counters update etc.).
- * When `isHighlighted` is false the element behaves normally.
+ * When `isHighlighted` is true the element is the current forced tutorial target.
+ * When `isTutorialBlocked` is true a DIFFERENT element is required — this element
+ *   should return early in its press handler so wrong taps have no game effect.
+ *   This replaces the previous scrim-based blocking (which breaks inside ScrollViews
+ *   on native because the ScrollView layer context prevents zIndex from propagating).
  */
 export function useHighlightTarget(targetId: string): {
   isHighlighted: boolean;
+  isTutorialBlocked: boolean;
   onTargetPress: () => void;
   highlightStyle: ViewStyle;
 } {
@@ -282,6 +282,13 @@ export function useHighlightTarget(targetId: string): {
     !!currentStep?.requireAction &&
     !!currentStep?.requiredTargetId &&
     requiredTargetId === targetId;
+  // True when a tutorial step requires a DIFFERENT element — this element is
+  // blocked and must not fire its game handler.
+  const isTutorialBlocked =
+    !!activeTutorialId &&
+    !!currentStep?.requireAction &&
+    !!currentStep?.requiredTargetId &&
+    requiredTargetId !== targetId;
   const onTargetPress = useCallback(() => {
     if (isHighlighted) onTargetTap(targetId);
   }, [isHighlighted, onTargetTap, targetId]);
@@ -297,6 +304,6 @@ export function useHighlightTarget(targetId: string): {
         elevation: 20,
       }
     : {};
-  return { isHighlighted, onTargetPress, highlightStyle };
+  return { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle };
 }
 

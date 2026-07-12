@@ -459,7 +459,7 @@ function ActionCardTile({
   onTap: (id: string) => void;
   disabled: boolean;
 }) {
-  const { isHighlighted, onTargetPress, highlightStyle } = useHighlightTarget(action.id);
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } = useHighlightTarget(action.id);
   const scaleAnim = useMemo(() => new Animated.Value(1), []);
   const glowAnim  = useMemo(() => new Animated.Value(0), []);
   const shakeX    = useMemo(() => new Animated.Value(0), []);
@@ -489,13 +489,17 @@ function ActionCardTile({
 
   const handlePress = useCallback(() => {
     if (disabled || isTapped) return;
+    // During a tutorial forced-action step, only the highlighted card is
+    // allowed to fire — other cards are silently blocked so wrong taps have
+    // no game effect (the visual scrim is now pointer-events:none on native).
+    if (isTutorialBlocked) return;
     Animated.sequence([
       Animated.timing(scaleAnim, { toValue: 0.93, duration: 65, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
     ]).start();
     if (isHighlighted) onTargetPress();
     onTap(action.id);
-  }, [disabled, isTapped, isHighlighted, onTargetPress, onTap, action.id, scaleAnim]);
+  }, [disabled, isTapped, isHighlighted, isTutorialBlocked, onTargetPress, onTap, action.id, scaleAnim]);
 
   const ringColor   = isWrong ? "#EF4444" : action.color;
   const cardBg      = isTapped
@@ -636,9 +640,14 @@ export default function StabilizeStackScreen() {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const { requiredTargetId } = useTutorial();
+
   const handleTap = useCallback(
     (id: string) => {
       if (phase !== "playing") return;
+      // Double-guard: if a tutorial step requires a specific card, ignore any
+      // other card that somehow reaches this handler (e.g. rapid double-tap).
+      if (requiredTargetId && id !== requiredTargetId) return;
       setTapSequence((prev) => {
         if (prev.includes(id)) return prev;
         const next = [...prev, id];
@@ -649,7 +658,7 @@ export default function StabilizeStackScreen() {
         return next;
       });
     },
-    [phase, revealAnim],
+    [phase, revealAnim, requiredTargetId],
   );
 
   const tapIndexFor = useCallback(
@@ -723,7 +732,6 @@ export default function StabilizeStackScreen() {
             <Ionicons name="arrow-forward" size={14} color={COLORS.surface} />
           </Pressable>
         </View>
-        <TutorialOverlay />
       </SafeAreaView>
     );
   }
