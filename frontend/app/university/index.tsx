@@ -160,6 +160,9 @@ export default function UniversityHubScreen() {
     cueHuntDone: false,
     rapidTriageDone: false,
     stabilizeDone: false,
+    cueHuntFirstPerfect: false,
+    triageFirstPerfect: false,
+    stabilizeFirstPerfect: false,
   });
   useFocusEffect(
     useCallback(() => {

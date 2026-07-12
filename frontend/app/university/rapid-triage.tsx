@@ -343,8 +343,18 @@ export default function RapidTriageScreen() {
           }
         }, 1400);
       } else {
-        setFeedback({ correct: false, text: card.wrongFeedback[level] ?? "Not quite. Try again." });
-        setTimeout(() => setFeedback(null), 2400);
+        setFeedback({ correct: false, text: card.wrongFeedback[level] ?? "Not quite." });
+        // Auto-advance after showing wrong feedback — never trap the player on one card
+        setTimeout(() => {
+          if (cardIdx >= CARDS.length - 1) {
+            markChainStep("rapidTriageDone");
+            Animated.timing(cardFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+              setGamePhase("complete");
+            });
+          } else {
+            advanceCard();
+          }
+        }, 2400);
       }
     },
     [feedback, cardIdx, advanceCard, cardFade],
@@ -379,6 +389,8 @@ export default function RapidTriageScreen() {
           onFinish={() => router.replace("/university")}
           onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
           learnLabel="Learn Triage"
+          onContinue={() => router.replace("/university/stabilize-stack" as any)}
+          continueLabel="Next: Stabilize Stack →"
         />
       </SafeAreaView>
     );

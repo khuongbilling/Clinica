@@ -58,6 +58,8 @@ interface RewardBurstProps {
   learnLabel?: string;
   creditsEarned?: number;
   milestoneItems?: MilestoneRewardItem[];
+  onContinue?: () => void;
+  continueLabel?: string;
 }
 
 export function RewardBurst({
@@ -73,6 +75,8 @@ export function RewardBurst({
   learnLabel = "Learn Why",
   creditsEarned,
   milestoneItems,
+  onContinue,
+  continueLabel = "Continue →",
 }: RewardBurstProps) {
   // ── Particle animations ─────────────────────────────────────────────────────
   const stars = useRef(
@@ -374,6 +378,16 @@ export function RewardBurst({
 
       {/* ── Buttons ────────────────────────────────────────────────────────── */}
       <Animated.View style={[styles.btnRow, { opacity: btnOp }]}>
+        {!!onContinue && (
+          <Pressable
+            style={[styles.continueBtn]}
+            onPress={onContinue}
+            testID="reward-continue"
+          >
+            <Text style={styles.continueTxt}>{continueLabel}</Text>
+            <Ionicons name="arrow-forward-circle" size={16} color="#071018" />
+          </Pressable>
+        )}
         {!!onLearnMore && (
           <Pressable
             style={[styles.learnBtn, { backgroundColor: grade.color }]}
@@ -510,6 +524,14 @@ const styles = StyleSheet.create({
     gap: SPACING.md, marginTop: SPACING.sm,
     flexWrap: "wrap", justifyContent: "center",
   },
+  continueBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.xl, paddingVertical: 14,
+    minHeight: 44,
+    backgroundColor: "#2DD4BF",
+  },
+  continueTxt: { color: "#071018", fontSize: 14, fontWeight: "800" },
   learnBtn: {
     flexDirection: "row", alignItems: "center", gap: 6,
     borderRadius: RADIUS.pill,

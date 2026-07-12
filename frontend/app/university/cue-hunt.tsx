@@ -508,6 +508,8 @@ export default function CueHuntScreen() {
           milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
           onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
+          onContinue={() => router.replace("/university/rapid-triage" as any)}
+          continueLabel="Next: Rapid Triage →"
         />
       </SafeAreaView>
     );
