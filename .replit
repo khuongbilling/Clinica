@@ -44,7 +44,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && CI=1 npx expo start --web --clear --port 5000"
+args = "cd frontend && CI=1 npx expo start --tunnel --clear --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
