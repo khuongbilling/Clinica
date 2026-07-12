@@ -23,55 +23,113 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 
-// ── Cue Hunt featured hero banner ────────────────────────────────────────────
-// Shown above every other University section so the first tap a new learner
-// makes leads to a visual, playable hook rather than a reading passage.
-function CueHuntHeroBanner({
+// ── Next-in-chain hero banner ─────────────────────────────────────────────────
+// Always shows whichever game is next in the chain so returning players are
+// never left guessing what to do after completing a step.
+
+interface ChainGameDef {
+  kicker: string;
+  title: string;
+  sub: string;
+  badge: string;
+  badgeIcon: React.ComponentProps<typeof Ionicons>["name"];
+  ctaLabel: string;
+  accentColor: string;
+  gradientColors: readonly [string, string, string];
+  testID: string;
+}
+
+const CHAIN_GAME_DEFS: Record<"cueHunt" | "triage" | "stabilize" | "done", ChainGameDef> = {
+  cueHunt: {
+    kicker: "CUE HUNT · STEP 1 OF 3",
+    title: "The Fading Apprentice",
+    sub: "Find what others missed — spot the clinical cues.",
+    badge: "START HERE",
+    badgeIcon: "eye-outline",
+    ctaLabel: "Start Cue Hunt",
+    accentColor: "#2DD4BF",
+    gradientColors: ["#0D3B38", "#1B5550", "#0D2E2B"],
+    testID: "university-banner-cue-hunt",
+  },
+  triage: {
+    kicker: "RAPID TRIAGE · STEP 2 OF 3",
+    title: "The Fading Apprentice",
+    sub: "Cue Hunt complete ✓ — now sort patients by urgency.",
+    badge: "NEXT IN CHAIN",
+    badgeIcon: "flash-outline",
+    ctaLabel: "Start Rapid Triage",
+    accentColor: "#F59E0B",
+    gradientColors: ["#2D1F06", "#3D2A08", "#1E1504"],
+    testID: "university-banner-rapid-triage",
+  },
+  stabilize: {
+    kicker: "STABILIZE STACK · STEP 3 OF 3",
+    title: "The Fading Apprentice",
+    sub: "Triage complete ✓ — build the care sequence to save Wei.",
+    badge: "FINAL STEP",
+    badgeIcon: "layers-outline",
+    ctaLabel: "Start Stabilize Stack",
+    accentColor: "#22D3EE",
+    gradientColors: ["#071A24", "#0A2535", "#051018"],
+    testID: "university-banner-stabilize",
+  },
+  done: {
+    kicker: "CASE CHAIN COMPLETE",
+    title: "The Fading Apprentice",
+    sub: "You guided the Apprentice through every phase of care.",
+    badge: "COMPLETE ✓",
+    badgeIcon: "ribbon-outline",
+    ctaLabel: "Review Chain",
+    accentColor: "#D4AF37",
+    gradientColors: ["#1C1500", "#2A1F00", "#110E00"],
+    testID: "university-banner-done",
+  },
+};
+
+function NextChainBanner({
+  chainProg,
   onPress,
-  isContinue,
 }: {
+  chainProg: ChainProgress;
   onPress: () => void;
-  isContinue?: boolean;
 }) {
+  const key: keyof typeof CHAIN_GAME_DEFS =
+    chainProg.stabilizeDone ? "done"
+    : chainProg.rapidTriageDone ? "stabilize"
+    : chainProg.cueHuntDone ? "triage"
+    : "cueHunt";
+
+  const def = CHAIN_GAME_DEFS[key];
+  const ac = def.accentColor;
+
   return (
-    <Pressable style={styles.cueCard} onPress={onPress} testID="university-banner-cue-hunt">
+    <Pressable style={styles.cueCard} onPress={onPress} testID={def.testID}>
       <LinearGradient
-        colors={["#0D3B38", "#1B5550", "#0D2E2B"]}
+        colors={def.gradientColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      {/* subtle radial glow top-right */}
-      <View style={styles.cueGlow} pointerEvents="none" />
+      {/* Accent glow top-right */}
+      <View style={[styles.cueGlow, { backgroundColor: ac + "18" }]} pointerEvents="none" />
 
       <View style={styles.cueTop}>
-        <View style={[
-          styles.cueBadge,
-          isContinue && { backgroundColor: "#D4AF3722", borderColor: "#D4AF3740" },
-        ]}>
-          <Ionicons
-            name={isContinue ? "play-circle-outline" : "eye-outline"}
-            size={11}
-            color={isContinue ? "#D4AF37" : "#2DD4BF"}
-          />
-          <Text style={[styles.cueBadgeTxt, isContinue && { color: "#D4AF37" }]}>
-            {isContinue ? "CONTINUE" : "PLAY FIRST"}
-          </Text>
+        <View style={[styles.cueBadge, { backgroundColor: ac + "20", borderColor: ac + "44" }]}>
+          <Ionicons name={def.badgeIcon} size={11} color={ac} />
+          <Text style={[styles.cueBadgeTxt, { color: ac }]}>{def.badge}</Text>
         </View>
       </View>
 
       <View style={styles.cueBody}>
-        <Text style={styles.cueKicker}>CUE HUNT</Text>
-        <Text style={styles.cueTitle}>The Fading Apprentice</Text>
-        <Text style={styles.cueSub}>
-          {isContinue ? "Resume the case chain." : "Find what others missed."}
-        </Text>
+        <Text style={[styles.cueKicker, { color: ac }]}>{def.kicker}</Text>
+        <Text style={styles.cueTitle}>{def.title}</Text>
+        <Text style={styles.cueSub}>{def.sub}</Text>
       </View>
 
       <View style={styles.cueCtaRow}>
-        <View style={styles.cueCtaBtn}>
-          <Text style={styles.cueCtaTxt}>{isContinue ? "Continue" : "Start Cue Hunt"}</Text>
-          <Ionicons name="arrow-forward" size={13} color="#0B1A18" />
+        <View style={[styles.cueCtaBtn, { backgroundColor: ac }]}>
+          <Text style={styles.cueCtaTxt}>{def.ctaLabel}</Text>
+          <Ionicons name="arrow-forward" size={13} color="#071018" />
         </View>
       </View>
     </Pressable>
@@ -248,31 +306,44 @@ export default function UniversityHubScreen() {
 
             <NarratorGuide
               message={
-                isNewLearner
+                chainProg.stabilizeDone
+                  ? "The Fading Apprentice case chain is complete. Well done, healer. Explore lessons, recruit heroes, or take on new challenges below."
+                  : chainProg.rapidTriageDone
+                  ? "Triage is done. One step remains — Stabilize Stack. Build the care sequence that saves the Apprentice. Tap the banner above to begin."
+                  : chainProg.cueHuntDone
+                  ? "Good — you spotted the cues. Now the next phase: Rapid Triage. Sort patients by urgency before time runs out. Tap the banner above to continue."
+                  : isNewLearner
                   ? "…This is the University. Start with Cue Hunt above — a live case where you tap the clues a real patient is showing. Or take a Lotus Lesson to study the reasoning. Both paths reward heroes."
                   : "You return to study. Good. Run a Cue Hunt, take a lesson, recruit healers, or consult the Codex. The choice is yours."
               }
               ctaLabel={
-                isNewLearner
-                  ? chainProg.cueHuntDone
-                    ? "Continue Case Chain"
-                    : "Start Cue Hunt"
+                chainProg.stabilizeDone
+                  ? undefined
+                  : chainProg.rapidTriageDone
+                  ? "Start Stabilize Stack →"
+                  : chainProg.cueHuntDone
+                  ? "Start Rapid Triage →"
+                  : isNewLearner
+                  ? "Start Cue Hunt"
                   : undefined
               }
-              onPress={isNewLearner ? handleChainEntry : undefined}
+              onPress={
+                chainProg.stabilizeDone
+                  ? undefined
+                  : chainProg.cueHuntDone || isNewLearner
+                  ? handleChainEntry
+                  : undefined
+              }
               testID="university-narrator"
             />
           </SceneTransition>
         )}
 
-        {/* CUE HUNT — featured first; banner adapts to chain progress */}
-        <CueHuntHeroBanner
-          onPress={handleChainEntry}
-          isContinue={chainProg.cueHuntDone && !chainProg.stabilizeDone}
-        />
+        {/* CHAIN HERO BANNER — always shows the next uncompleted game */}
+        <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
 
-        {/* Chain track — shows the 4 steps of The Fading Apprentice case chain */}
-        <ChainTrack chainDone={chainComplete} />
+        {/* Chain track — per-step progress using live chainProg */}
+        <ChainTrack chainProg={chainProg} />
 
         {/* LESSONS — available below, not removed */}
         <Text style={styles.sectionHeading}>LESSONS</Text>
@@ -414,71 +485,93 @@ export default function UniversityHubScreen() {
 }
 
 // ── ChainTrack ──────────────────────────────────────────────────────────────
-// Shows the 4-step "Fading Apprentice" case chain below the hero banner.
-// When chainDone is true all steps glow and a completion badge appears.
+// Shows the 3-game "Fading Apprentice" case chain below the hero banner.
+// Each step lights up individually as the player completes it.
 const CHAIN_STEPS = [
-  { icon: "eye-outline" as const, label: "Cue Hunt", color: "#2DD4BF" },
-  { icon: "flash-outline" as const, label: "Triage", color: "#F59E0B" },
-  { icon: "layers-outline" as const, label: "Stabilize", color: "#38BDF8" },
-  { icon: "ribbon-outline" as const, label: "Reward", color: "#D4AF37" },
+  { icon: "eye-outline"    as const, label: "Cue Hunt",  color: "#2DD4BF", doneKey: "cueHuntDone"    as const },
+  { icon: "flash-outline"  as const, label: "Triage",    color: "#F59E0B", doneKey: "rapidTriageDone" as const },
+  { icon: "layers-outline" as const, label: "Stabilize", color: "#22D3EE", doneKey: "stabilizeDone"  as const },
+  { icon: "ribbon-outline" as const, label: "Reward",    color: "#D4AF37", doneKey: null },
 ];
 
-function ChainTrack({ chainDone }: { chainDone: boolean }) {
+function ChainTrack({ chainProg }: { chainProg: ChainProgress }) {
+  const allDone = chainProg.stabilizeDone;
+
   return (
     <View style={chainStyles.wrap}>
       <View style={chainStyles.headerRow}>
         <Text style={chainStyles.chainLabel}>THE FADING APPRENTICE · CASE CHAIN</Text>
-        {chainDone && (
+        {allDone ? (
           <View style={chainStyles.doneBadge}>
             <Ionicons name="checkmark-circle" size={11} color="#22C55E" />
             <Text style={chainStyles.doneTxt}>COMPLETE</Text>
           </View>
+        ) : (
+          <Text style={chainStyles.progressTxt}>
+            {chainProg.stabilizeDone ? 3 : chainProg.rapidTriageDone ? 2 : chainProg.cueHuntDone ? 1 : 0}/3 done
+          </Text>
         )}
       </View>
 
       <View style={chainStyles.stepsRow}>
-        {CHAIN_STEPS.map((step, i) => (
-          <React.Fragment key={step.label}>
-            <View style={chainStyles.stepWrap}>
-              <View
-                style={[
-                  chainStyles.stepCircle,
-                  {
-                    borderColor: chainDone ? step.color + "88" : step.color + "38",
-                    backgroundColor: chainDone ? step.color + "18" : "transparent",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={step.icon}
-                  size={13}
-                  color={chainDone ? step.color : COLORS.onSurfaceTertiary}
-                />
+        {CHAIN_STEPS.map((step, i) => {
+          const done = step.doneKey ? chainProg[step.doneKey] : allDone;
+          // "current" = the first undone game step (not Reward)
+          const isNext =
+            !done &&
+            step.doneKey !== null &&
+            (i === 0 || (CHAIN_STEPS[i - 1].doneKey && chainProg[CHAIN_STEPS[i - 1].doneKey!]));
+          return (
+            <React.Fragment key={step.label}>
+              <View style={chainStyles.stepWrap}>
+                <View
+                  style={[
+                    chainStyles.stepCircle,
+                    done  && { borderColor: step.color + "88", backgroundColor: step.color + "18" },
+                    isNext && { borderColor: step.color + "BB", backgroundColor: step.color + "22" },
+                  ]}
+                >
+                  {done ? (
+                    <Ionicons name="checkmark" size={13} color={step.color} />
+                  ) : (
+                    <Ionicons
+                      name={step.icon}
+                      size={13}
+                      color={isNext ? step.color : COLORS.onSurfaceTertiary}
+                    />
+                  )}
+                </View>
+                <Text
+                  style={[
+                    chainStyles.stepLabel,
+                    done   && { color: step.color },
+                    isNext && { color: step.color, fontWeight: "700" },
+                  ]}
+                >
+                  {step.label}
+                </Text>
+                {isNext && <Text style={[chainStyles.nextPip, { color: step.color }]}>▲</Text>}
               </View>
-              <Text
-                style={[
-                  chainStyles.stepLabel,
-                  { color: chainDone ? step.color : COLORS.onSurfaceTertiary },
-                ]}
-              >
-                {step.label}
-              </Text>
-            </View>
-            {i < CHAIN_STEPS.length - 1 && (
-              <View
-                style={[
-                  chainStyles.connector,
-                  chainDone && { backgroundColor: "#2DD4BF30" },
-                ]}
-              />
-            )}
-          </React.Fragment>
-        ))}
+              {i < CHAIN_STEPS.length - 1 && (
+                <View
+                  style={[
+                    chainStyles.connector,
+                    done && { backgroundColor: step.color + "40" },
+                  ]}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
       </View>
 
-      {!chainDone && (
+      {!allDone && (
         <Text style={chainStyles.hint}>
-          Start Cue Hunt above — each step unlocks the next.
+          {!chainProg.cueHuntDone
+            ? "Tap the banner above to begin — each step unlocks the next."
+            : !chainProg.rapidTriageDone
+            ? "Cue Hunt done ✓ — tap the banner to continue with Rapid Triage."
+            : "Triage done ✓ — one step left. Stabilize the patient to complete the chain."}
         </Text>
       )}
     </View>
@@ -735,5 +828,16 @@ const chainStyles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     paddingTop: 2,
+  },
+  progressTxt: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  nextPip: {
+    fontSize: 7,
+    lineHeight: 9,
+    marginTop: -2,
   },
 });
