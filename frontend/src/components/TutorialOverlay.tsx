@@ -97,15 +97,34 @@ export function TutorialOverlay() {
     setBoxDismissed(false);
   }, [stepId]);
 
-  // Animation complete: text is fully visible, hint changes to "tap to continue".
-  const handleTypewriterComplete = useCallback(() => setInstant(true), []);
+  // True when the current step requires tapping a specific game element
+  // (mini-game tutorial step, not a battle/hub step).
+  const isMiniGameRequired = !!(currentStep?.requireAction && currentStep?.requiredTargetId);
+
+  // Animation complete: text is fully visible.
+  // For mini-game required steps, also immediately auto-dismiss the narrative
+  // box so the highlighted card is directly tappable without an extra tap.
+  // The user reads the hint as it types; the box disappears on its own.
+  // (For battle tutorials and banners the box stays, requiring a manual tap.)
+  const handleTypewriterComplete = useCallback(() => {
+    setInstant(true);
+    if (isMiniGameRequired) {
+      setBoxDismissed(true);
+    }
+  }, [isMiniGameRequired]);
 
   // Tap handler for the narrative box:
-  //   1st tap → instantly reveal all remaining text
-  //   2nd tap on requireAction step → dismiss box, expose highlighted button
-  //   2nd tap on banner/non-action step → advance to next step
+  //   On mini-game required steps: single tap reveals+dismisses (box auto-
+  //     dismissed on complete anyway, but this lets users skip the wait).
+  //   On other requireAction steps: 1st tap → reveal; 2nd tap → dismiss box.
+  //   On banner/non-action steps: 1st tap → reveal; 2nd tap → advance step.
   const handleBoxTap = useCallback(() => {
-    if (!instant) { setInstant(true); return; }
+    if (!instant) {
+      setInstant(true);
+      // For mini-game steps, revealing all text triggers handleTypewriterComplete
+      // which auto-dismisses; no need for a second tap.
+      return;
+    }
     if (currentStep?.requireAction) { setBoxDismissed(true); }
     else { advanceStep(); }
   }, [instant, currentStep, advanceStep]);
