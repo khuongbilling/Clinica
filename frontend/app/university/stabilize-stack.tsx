@@ -625,6 +625,12 @@ export default function StabilizeStackScreen() {
   const [phase, setPhase] = useState<GamePhase>("playing");
   const [revealAnim] = useState(new Animated.Value(0));
 
+  // Scroll ref: used to programmatically bring the card grid into view when
+  // the tutorial step 1 fires (the strip appears at the bottom pointing up at
+  // the cards; scroll ensures the user can see them immediately).
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const cardGridY = useRef(0);
+
   // Back navigation is blocked while playing — the back arrow / "Return to
   // University" buttons are the deliberate exits (forward replace, never a pop).
   useBlockBack();
@@ -649,6 +655,16 @@ export default function StabilizeStackScreen() {
   }, [phase]);
 
   const { requiredTargetId } = useTutorial();
+
+  // Scroll the action cards into view whenever the tutorial step that requires
+  // a card tap becomes active (tutorial box dismissed → cards need to be seen).
+  useEffect(() => {
+    if (!requiredTargetId) return;
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: cardGridY.current, animated: true });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [requiredTargetId]);
 
   const handleTap = useCallback(
     (id: string) => {
@@ -768,6 +784,7 @@ export default function StabilizeStackScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={SCROLL_FIX_WEB}
         contentContainerStyle={[styles.scroll, guidedReserve > 0 && { paddingBottom: guidedReserve }]}
         showsVerticalScrollIndicator={false}
@@ -790,7 +807,10 @@ export default function StabilizeStackScreen() {
 
         {/* Action cards — 2-column illustrated grid */}
         {phase === "playing" && (
-          <View style={styles.cardGrid}>
+          <View
+            style={styles.cardGrid}
+            onLayout={(e) => { cardGridY.current = e.nativeEvent.layout.y; }}
+          >
             {displayedActions.map((action) => (
               <ActionCardTile
                 key={action.id}
@@ -943,6 +963,10 @@ const styles = StyleSheet.create({
   // ── Patient scene ─────────────────────────────────────────────────────────
   sceneWrap: {
     width: "100%", aspectRatio: PATIENT_SCENE_RATIO,
+    // Cap height so action cards remain visible without excessive scrolling.
+    // The scene is landscape (1408×768 ≈ 1.83:1) so on a 1280px-wide browser
+    // the uncapped height would be ~699px — larger than most screens.
+    maxHeight: 200,
     borderRadius: RADIUS.md, overflow: "hidden",
     borderWidth: 1, borderColor: "#06B6D425",
     backgroundColor: "#091420",

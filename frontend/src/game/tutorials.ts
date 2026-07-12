@@ -460,7 +460,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "stabilize_first_action",
       title: "Tap it now.",
-      body: "Check her mental state. Find it in the action tiles above.",
+      body: "Check her mental state. Scroll down to find Assess Mental Status in the action tiles.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "action_assess_mental_status",
