@@ -137,6 +137,27 @@ export const STORY_SCENES: StoryScene[] = [
     petals: true,
     unlock: { type: "beat", beat: "seasoned_healer", hint: "Complete five Ward Shifts" },
   },
+  // ── Chapter 9 — The Real Ward Opening ───────────────────────────────────
+  // C6: First real-world ward encounter transition scene.
+  // Art stand-in: chapter_01_opening.png (ward corridor, thematically fitting).
+  // Replace with a dedicated Chapter 9 art asset when available.
+  {
+    id: "chapter_09",
+    kicker: "CHAPTER IX · REAL WARD",
+    title: "The Ward That Does Not Reset",
+    lines: [
+      "The simulation doors opened.",
+      "For the first time, the ward did not reset.",
+      "The signs were still there — the same vital threads I had learned to read.",
+      "But now, hesitation had consequences.",
+      "And the ward did not wait.",
+    ],
+    art: require("../../assets/story/chapter_01_opening.png"),
+    effect: "panSlow",
+    rain: true,
+    ambience: "ward",
+    unlock: { type: "chapter", chapter: 9 },
+  },
 ];
 
 export function getStoryScene(id: string | undefined): StoryScene | undefined {

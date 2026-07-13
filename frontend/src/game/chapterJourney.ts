@@ -50,6 +50,7 @@ export interface Chapter {
   parts: ChapterPart[];
   phaseFinale?: boolean;         // true for Ch.10
   realWorldTransition?: boolean; // true for Ch.9
+  simulationEra?: boolean;       // true for Ch.1–8 (University-supervised simulations)
 }
 
 // ── Chapter accent palette (one per chapter, warm-dark donghua tones) ────────
@@ -83,6 +84,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Clinical chain basics",
     accentColor: C[1],
     icon: "sparkles-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c1p1",
@@ -144,6 +146,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Ward Shifts, Summoning Hall preview, Daily Rounds unlock",
     accentColor: C[2],
     icon: "pulse-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c2p1",
@@ -218,6 +221,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Breathing basics and Rapid Rounds preview",
     accentColor: C[3],
     icon: "cloud-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c3p1",
@@ -291,6 +295,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Ward Defense intro",
     accentColor: C[4],
     icon: "shield-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c4p1",
@@ -356,6 +361,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Realm intro and first building placement",
     accentColor: C[5],
     icon: "home-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c5p1",
@@ -429,6 +435,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Boss Ward intro — high-stakes multi-phase encounter",
     accentColor: C[6],
     icon: "skull-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c6p1",
@@ -502,6 +509,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Public health participation and outbreak awareness",
     accentColor: C[7],
     icon: "people-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c7p1",
@@ -583,6 +591,7 @@ export const CHAPTERS: Chapter[] = [
     purpose: "Harder simulations and Arena preview before real-world transition",
     accentColor: C[8],
     icon: "trophy-outline",
+    simulationEra: true,
     parts: [
       {
         id: "c8p1",
@@ -670,17 +679,17 @@ export const CHAPTERS: Chapter[] = [
         id: "c9p1",
         part: 1,
         type: "story",
-        title: "Cutscene: The Simulation Doors Open",
-        description: "The University's sealed simulation chamber powers down. Beyond it: the true ward.",
+        title: "The Simulation Doors Open",
+        description: "The sealed simulation chamber powers down for the last time. For the first time, the ward did not reset.",
         icon: "film-outline",
-        isPlaceholder: true,
+        route: "/story-scene?sceneId=chapter_09",
       },
       {
         id: "c9p2",
         part: 2,
         type: "story",
         title: "Real Ward Briefing",
-        description: "Your supervising healer briefs you. Real patients — no reset button, no controlled outcomes.",
+        description: "No simulation safety net. Real patients, real stakes — the signs are still there, but hesitation now has a cost.",
         icon: "book-outline",
         isPlaceholder: true,
       },
@@ -689,7 +698,7 @@ export const CHAPTERS: Chapter[] = [
         part: 3,
         type: "battle",
         title: "First Real Enemy: True Dehydration Wraith",
-        description: "The simulated Wisp had limits. The Wraith does not. Real fluids, real consequences.",
+        description: "The Dehydration Wisp was a controlled echo. This is the original — higher corruption pressure, fewer visible cues, no margin for delay.",
         icon: "skull-outline",
         route: "/shift",
         isPlaceholder: true,
@@ -698,8 +707,8 @@ export const CHAPTERS: Chapter[] = [
         id: "c9p4",
         part: 4,
         type: "battle",
-        title: "Real Ward Shift: Airway Counterpart",
-        description: "The Air Sprite's true form. Real respiratory distress — intervene before SpO₂ drops further.",
+        title: "Real Ward Shift: Breathless Gale Spirit",
+        description: "The Air Sprite's true form. Real respiratory deterioration — intervene before SpO₂ drops further. Airway does not wait.",
         icon: "medical-outline",
         route: "/shift",
         isPlaceholder: true,
@@ -726,8 +735,8 @@ export const CHAPTERS: Chapter[] = [
         id: "c9p7",
         part: 7,
         type: "battle",
-        title: "Real Enemy Finale: True Fever Imp",
-        description: "The Fever Imp's true form — systemic infection with complicating factors.",
+        title: "Real Enemy Finale: Burning Fever Shade",
+        description: "The Fever Imp's true form — systemic infection with hidden spread vectors. Read the complicating clues before treating.",
         icon: "skull-outline",
         route: "/shift",
         isPlaceholder: true,
@@ -737,7 +746,7 @@ export const CHAPTERS: Chapter[] = [
         part: 8,
         type: "reward",
         title: "Chapter Finale: The Ward That Does Not Pause",
-        description: "Reflect on the crossing. Simulations prepared you — but the real ward never waits.",
+        description: "The simulation era is behind you. The real ward does not pause, does not forgive, and does not reset. You are ready.",
         icon: "flag-outline",
         isPlaceholder: true,
       },

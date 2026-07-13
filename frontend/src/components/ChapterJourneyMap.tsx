@@ -10,7 +10,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -114,25 +114,38 @@ export function ChapterJourneyMap({
         const chestClaimed = chest ? claimedChests.includes(chest.id) : false;
         const chestClaimable = chest && !chestClaimed && status !== "locked";
         return (
-          <ChapterCard
-            key={chapter.id}
-            chapter={chapter}
-            status={status}
-            isExpanded={isExpanded}
-            isFirst={idx === 0}
-            isLast={idx === CHAPTERS.length - 1}
-            battleStars={battleStars}
-            chestId={chest?.id}
-            chestClaimed={chestClaimed}
-            chestClaimable={!!chestClaimable}
-            onToggle={() => toggle(chapter.id)}
-            onChestClaim={onChestClaim}
-            onPartPress={(part) => {
-              if (part.route && !part.isPlaceholder) {
-                router.push(part.route as any);
-              }
-            }}
-          />
+          <React.Fragment key={chapter.id}>
+            <ChapterCard
+              chapter={chapter}
+              status={status}
+              isExpanded={isExpanded}
+              isFirst={idx === 0}
+              isLast={idx === CHAPTERS.length - 1}
+              battleStars={battleStars}
+              chestId={chest?.id}
+              chestClaimed={chestClaimed}
+              chestClaimable={!!chestClaimable}
+              onToggle={() => toggle(chapter.id)}
+              onChestClaim={onChestClaim}
+              onPartPress={(part) => {
+                if (part.route && !part.isPlaceholder) {
+                  router.push(part.route as any);
+                }
+              }}
+            />
+            {/* C6 — Simulation→Real-Ward transition callout between Ch.8 and Ch.9 */}
+            {chapter.number === 8 && (
+              <View style={styles.simToRealBanner}>
+                <Ionicons name="arrow-down-circle-outline" size={20} color="#06B6D4" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.simToRealTitle}>SIMULATION ERA ENDS HERE</Text>
+                  <Text style={styles.simToRealSub}>
+                    The simulation doors open. Chapter 9 begins real-world ward encounters — no safety net, no reset button.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </React.Fragment>
         );
       })}
 
@@ -237,6 +250,11 @@ function ChapterCard({
               CH.{chapter.number}
             </Text>
             {/* Tags */}
+            {chapter.simulationEra && (
+              <View style={[styles.tag, { backgroundColor: "#3A4A5522", borderColor: "#5A7A9A55" }]}>
+                <Text style={[styles.tagTxt, { color: "#8EAEC8" }]}>SIMULATION</Text>
+              </View>
+            )}
             {chapter.realWorldTransition && (
               <View style={[styles.tag, { backgroundColor: COLORS.river + "22", borderColor: COLORS.river + "60" }]}>
                 <Text style={[styles.tagTxt, { color: COLORS.river }]}>REAL WARD</Text>
@@ -697,5 +715,32 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     lineHeight: 16,
     marginTop: 2,
+  },
+
+  // C6: Simulation→Real-Ward transition callout (between Ch.8 and Ch.9 cards)
+  simToRealBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
+    backgroundColor: "#06B6D40A",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: "#06B6D430",
+    padding: SPACING.sm,
+  },
+  simToRealTitle: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#06B6D4",
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  simToRealSub: {
+    fontSize: 11,
+    color: COLORS.onSurfaceTertiary,
+    lineHeight: 15,
   },
 });

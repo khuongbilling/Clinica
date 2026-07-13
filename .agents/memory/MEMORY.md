@@ -58,6 +58,7 @@
 - [Daily Ward Rounds](clinica-daily-rounds.md) — free daily loop (streak+3 objectives+weekly); progress credited by threading foldDailyProgress into existing reward handlers; weekly credited once/day on all-complete, not on check-in.
 - [Feedback cues (sound+haptics)](clinica-feedback-cues.md) — single playRewardCue helper (Web Audio chime + expo-haptics); mute settings live in standalone AsyncStorage settingsStore, NOT PlayerState.
 - [Narrator timeline & tutorial voice](clinica-single-system-tutorial.md) — pre-Recall = Master Bai/neutral HUD, post-prologue = System; VN cut-in overlay; startTutorial hydration guard prevents replay after reload.
+- [Clinica Chapter 9 real-ward transition](clinica-c6-ch9-transition.md) — simulationEra:true on Ch1-8; difficulty MUST equal chapter.number (ChapterJourneyMap filter); chapterGate for pool exclusion; story-scene wired to c9p1.
 - [Clinica ambient audio](clinica-ambient-audio.md) — synthesized Web Audio loops (no assets); mute read at start only, screens must react to live toggle; pokeAmbience() in tap handlers for autoplay.
 - [Recruitment-only heroes](clinica-recruitment-only-heroes.md) — heroes come ONLY from Recruitment gacha; no grant sites anywhere (creation/lessons/quiz); prologue uses pinned non-persisted loaner team; Metro CI mode needs workflow restart to see new files.
 - [Back-nav guard & tutorial exit cleanup](clinica-back-nav-guard.md) — useBlockBack (beforeRemove filtered to back-type actions so replace passes) + useClearTutorialOnExit; blocked screens' back arrows must router.replace(hub).

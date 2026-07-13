@@ -69,7 +69,8 @@ export interface Enemy {
   realWorld: string;
   primarySystem: ElementSystem;
   secondarySystem?: ElementSystem;
-  difficulty: 1 | 2 | 3 | 4 | 5;
+  // 1–8: simulation-era enemies (Ch.1–8); 9–10: real-world ward encounters (Ch.9+)
+  difficulty: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   visibleClues: ClueCard[];
   hiddenClues: ClueCard[];
   dangerTrigger: string;
@@ -91,6 +92,11 @@ export interface Enemy {
   // resolve it, but must be excluded from the normal Ward Shift encounter pool
   // and only reachable through its gated World Boss entry point.
   worldBoss?: boolean;
+  // C6: Chapter 9 real-world counterparts. simulationCounterpart links this
+  // enemy back to its simulation-era precursor. chapterGate means this enemy
+  // should only appear in encounters gated to this chapter or higher.
+  simulationCounterpart?: string; // id of the simulation-era enemy this is derived from
+  chapterGate?: number;           // minimum chapter to encounter in ward shifts
 }
 
 export interface CodexEntry {
