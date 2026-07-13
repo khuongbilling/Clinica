@@ -12,6 +12,8 @@ export type TutorialId =
   // ── University mini-game tutorials (System-narrated, forced, no skip/close) ──
   | "cueHuntIntro"
   | "rapidTriageIntro"
+  | "rapidTriageCard2"
+  | "rapidTriageCard3"
   | "stabilizeIntro"
   // ── Off-Shift mini-game tutorials ──
   | "mealcraftIntro";
@@ -58,6 +60,8 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   systemShops: "The Apothecary Market",
   cueHuntIntro: "Cue Hunt",
   rapidTriageIntro: "Rapid Triage",
+  rapidTriageCard2: "Rapid Triage",
+  rapidTriageCard3: "Rapid Triage",
   stabilizeIntro: "Stabilize Stack",
   mealcraftIntro: "Mealcraft: Lotus Plate",
 };
@@ -77,6 +81,8 @@ export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
 export const FORCED_TUTORIAL_IDS: TutorialId[] = [
   "cueHuntIntro",
   "rapidTriageIntro",
+  "rapidTriageCard2",
+  "rapidTriageCard3",
   "stabilizeIntro",
   "mealcraftIntro",
 ];
@@ -451,33 +457,39 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "triage_open",
       title: "Decide Fast",
-      body: "Triage sorts patients by urgency. Three patients need you. I'll walk you through each — pay attention to the clues, then act.",
+      body: "Triage sorts patients by urgency. Three patients need you. I'll guide each one — pay attention to the signs, then act.",
       placement: "center",
       requireAction: false,
       nextText: "READY",
     },
     {
       id: "triage_card1",
-      title: "Patient 1 — Urgent",
-      body: "Dizzy but alert, able to drink. Needs attention soon — not a crisis, but can't be ignored. Tap Urgent.",
+      title: "Patient 1 — Read Her Signs",
+      body: "Dizzy but alert, able to drink. Needs attention soon — not a crisis, not something to ignore. Tap Urgent.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_urgent",
       nextText: "TAP URGENT",
     },
+  ],
+
+  rapidTriageCard2: [
     {
-      id: "triage_card2",
-      title: "Patient 2 — Emergency",
-      body: "Confused elder, low blood pressure, unable to drink. These are danger signs requiring immediate care. Tap Emergency.",
+      id: "triage_card2_intro",
+      title: "Patient 2 — Read His Signs",
+      body: "Confused elder. Low blood pressure. Unable to drink. These are danger signs — this patient cannot wait. Tap Emergency.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_emergency",
       nextText: "TAP EMERGENCY",
     },
+  ],
+
+  rapidTriageCard3: [
     {
-      id: "triage_card3",
-      title: "Patient 3 — Routine",
-      body: "A student with zero symptoms, asking for guidance. No urgency whatsoever. Tap Routine.",
+      id: "triage_card3_intro",
+      title: "Patient 3 — Read Her Signs",
+      body: "A student with no symptoms, asking about hydration. Alert, well, no urgency whatsoever. Tap Routine.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_routine",

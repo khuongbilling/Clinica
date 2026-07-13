@@ -1056,3 +1056,21 @@ id = "vJ4SRyZAcIUNLL4YX6FSD"
 uri = "file://frontend/assets/images/stabilize_patient_wei.png"
 type = "image"
 title = "Wei unconscious garden patient"
+
+[[generated]]
+id = "K52Lb8mZxoz9exRIC55jr"
+uri = "file://frontend/assets/images/triage_patient_dizzy_apprentice.png"
+type = "image"
+title = "dizzy apprentice triage patient"
+
+[[generated]]
+id = "ZROXalgdLQZHHY4RDsrzy"
+uri = "file://frontend/assets/images/triage_patient_confused_elder.png"
+type = "image"
+title = "confused elder triage patient"
+
+[[generated]]
+id = "_aFkri8NJNlKZzviSP_sh"
+uri = "file://frontend/assets/images/triage_patient_healthy_student.png"
+type = "image"
+title = "healthy student triage patient"

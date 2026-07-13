@@ -42,10 +42,10 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { playerLevelFromXp } from "@/src/game/progression";
 
-// Per-card scene images — each triage patient gets their own setting
-const IMG_TRAINING_HALL = require("../../assets/images/banner_uni_training.png");
-const IMG_PATIENT_ROOM  = require("../../assets/images/ward_corridor_lobby.png");
-const IMG_COURTYARD     = require("../../assets/images/ward_map_garden.png");
+// Per-card patient illustrations — generated from each clinical vignette
+const IMG_DIZZY_APPRENTICE = require("../../assets/images/triage_patient_dizzy_apprentice.png");
+const IMG_CONFUSED_ELDER   = require("../../assets/images/triage_patient_confused_elder.png");
+const IMG_HEALTHY_STUDENT  = require("../../assets/images/triage_patient_healthy_student.png");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -96,7 +96,7 @@ const CARDS: TriageCard[] = [
       icon: "fitness-outline", accent: "#F59E0B",
       setting: "Training hall · afternoon",
       chips: ["Alert", "Dizzy", "Can drink"],
-      sceneImg: IMG_TRAINING_HALL,
+      sceneImg: IMG_DIZZY_APPRENTICE,
       overlayColor: "#F59E0B18",
     },
   },
@@ -114,7 +114,7 @@ const CARDS: TriageCard[] = [
       icon: "bed-outline", accent: "#EF4444",
       setting: "Patient room · morning rounds",
       chips: ["Confused", "BP low", "Can't drink"],
-      sceneImg: IMG_PATIENT_ROOM,
+      sceneImg: IMG_CONFUSED_ELDER,
       overlayColor: "#EF444420",
     },
   },
@@ -132,7 +132,7 @@ const CARDS: TriageCard[] = [
       icon: "school-outline", accent: "#2DD4BF",
       setting: "Courtyard · after class",
       chips: ["Alert", "Well", "No symptoms"],
-      sceneImg: IMG_COURTYARD,
+      sceneImg: IMG_HEALTHY_STUDENT,
       overlayColor: "#2DD4BF18",
     },
   },
@@ -348,14 +348,19 @@ export default function RapidTriageScreen() {
       setCardIdx((c) => {
         const next = c + 1;
         if (next >= CARDS.length) {
-          // All cards done — show reward
           setGamePhase("complete");
+        } else if (next === 1 && !isCompleted("rapidTriageCard2")) {
+          // Card 2 just appeared — start its forced tutorial after a brief delay
+          setTimeout(() => startTutorial("rapidTriageCard2"), 600);
+        } else if (next === 2 && !isCompleted("rapidTriageCard3")) {
+          // Card 3 just appeared — start its forced tutorial after a brief delay
+          setTimeout(() => startTutorial("rapidTriageCard3"), 600);
         }
         return next;
       });
       Animated.timing(cardFade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
     });
-  }, [cardFade, feedbackFade]);
+  }, [cardFade, feedbackFade, isCompleted, startTutorial]);
 
   // ── Triage handler ────────────────────────────────────────────────────────
   const handleTriage = useCallback(
