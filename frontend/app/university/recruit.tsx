@@ -8,6 +8,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
+import { useRef } from "react";
+import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
@@ -21,6 +23,14 @@ export default function UniversityRecruitScreen() {
   const { player, recruitOnce, recruitTen } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   useClearTutorialOnExit();
+
+  // C1 obj 11: grant once when player first visits Recruitment.
+  const recruitVisitRef = useRef(false);
+  useEffect(() => {
+    if (!player || recruitVisitRef.current) return;
+    recruitVisitRef.current = true;
+    completeObjective("obj_recruit_preview");
+  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(false);
   const [single, setSingle] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);

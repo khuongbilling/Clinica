@@ -15,12 +15,22 @@ import {
 import { LOTUS_PATHS, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { usePlayer } from "@/src/game/store";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { useEffect, useRef } from "react";
+import { completeObjective } from "@/src/game/objectiveProgress";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function LessonsHubScreen() {
   const router = useRouter();
   const { player, loading } = usePlayer();
+
+  // C1 obj 9: grant once when player first visits Lotus Lessons.
+  const lotusVisitRef = useRef(false);
+  useEffect(() => {
+    if (!player || lotusVisitRef.current) return;
+    lotusVisitRef.current = true;
+    completeObjective("obj_lotus_visited");
+  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   // (Must run unconditionally, before the early return below.)

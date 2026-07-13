@@ -2,7 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { completeObjective } from "@/src/game/objectiveProgress";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -83,6 +84,8 @@ export default function LotusLessonScreen() {
   const finish = async () => {
     const res = await completeLotusLessonNode(node.id);
     if (res.ok && res.rewards) setRewards(res.rewards);
+    // C1 obj 10: grant once when player completes any Lotus Lesson.
+    if (!alreadyDone) completeObjective("obj_lotus_first_lesson");
     setFinished(true);
   };
 

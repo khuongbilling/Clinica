@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
+import { completeObjective } from "@/src/game/objectiveProgress";
 import { CLASS_IDENTITIES, CLASS_IDS, getClassTree, type ClassId } from "@/src/game/classTree";
 import {
   QUIZ_QUESTIONS,
@@ -116,6 +117,14 @@ export default function PostRecall() {
   useEffect(() => {
     if (player?.name && player.name !== "Healer") setName(player.name);
   }, [player?.name]);
+
+  // C1: grant obj_recalled once when the player identity is restored for the first time.
+  const recalledGrantedRef = useRef(false);
+  useEffect(() => {
+    if (!player || isReplay || recalledGrantedRef.current) return;
+    recalledGrantedRef.current = true;
+    completeObjective("obj_recalled"); // fire-and-forget; XP written to AsyncStorage
+  }, [player?.id, isReplay]);
 
   // Drives the short "SYSTEM: ..." message sequence for Automated Class
   // Assignment, then reveals the (already-computed) randomized result.

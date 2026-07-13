@@ -21,6 +21,7 @@ import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { HEROES } from "@/src/game/content";
 import { VERDANTHA } from "@/src/game/worldEvent";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { completeObjective } from "@/src/game/objectiveProgress";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { MilestoneReward, type MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 
@@ -140,6 +141,10 @@ export default function Result() {
       playRewardCue(true);
       logEvent('stars_earned', 'result', { meta: { stars: starResult.stars, enemyId: enemy?.id } });
       if (mission) logEvent('region_progress_updated', 'result', { meta: { region: mission.kingdomRegion } });
+      // C1 obj 12: first real (non-prologue, non-training, non-replay) Ward Shift win.
+      if (!isTraining && !isPrologueTutorial && !isPrologueBoss && !isReplay) {
+        completeObjective("obj_ward_shift_first"); // fire-and-forget
+      }
     }
   }, []);
 

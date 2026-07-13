@@ -4,6 +4,8 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { useEffect, useRef } from "react";
+import { completeObjective } from "@/src/game/objectiveProgress";
 import { CLASS_IDENTITIES, getClassTree, type ClassId } from "@/src/game/classTree";
 import {
   CLASS_FLAVOR_TITLE, CLASS_WHY_FITS, formatResonance, fantasyClassFromClassId,
@@ -16,6 +18,14 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export default function ClassResultScreen() {
   const router = useRouter();
   const { player } = usePlayer();
+
+  // C1: grant obj_class_result once when player first sees their class.
+  const classGrantedRef = useRef(false);
+  useEffect(() => {
+    if (!player || classGrantedRef.current) return;
+    classGrantedRef.current = true;
+    completeObjective("obj_class_result"); // fire-and-forget
+  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!player) {
     return (
