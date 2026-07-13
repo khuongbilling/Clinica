@@ -220,6 +220,10 @@ export interface PlayerState {
   class_trainees?: Record<string, number>;
   // Clinica University — global progression currency
   university_credits?: number;
+  // C5 — Level 2 unlock celebration modal. True once the player has seen the
+  // "Apprentice Path Opened" moment (Summoning Hall + Daily/Weekly Rounds unlock).
+  // Backfilled as true for existing players who are already Level 2+.
+  seen_lv2_unlock?: boolean;
   // Push 5 — Memory Reminiscence: has the player seen the post-recall
   // reminiscence story scene (modern-world origin -> Silent Infarct -> Lotus
   // Recall)? Gates the one-time redirect from post-recall into /reminiscence.

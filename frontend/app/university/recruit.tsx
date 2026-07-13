@@ -88,12 +88,21 @@ export default function UniversityRecruitScreen() {
         <Text style={styles.sub}>Enroll new healers, or convert duplicates into Hero Shards, Class Trainees, and Credits.</Text>
         <View style={styles.walletRow}>
           <View style={styles.shardCard}>
-            <Ionicons name="diamond" size={18} color={COLORS.brand} />
+            <Ionicons name="sparkles" size={18} color={COLORS.brand} />
             <Text style={styles.shardVal}>{shards}</Text>
-            <Text style={styles.shardLbl}>CODEX SHARDS</Text>
+            <Text style={styles.shardLbl}>SUMMONING SHARDS</Text>
           </View>
           <UniversityCreditsBadge amount={player.university_credits || 0} compact testID="recruit-credits-badge" />
         </View>
+        {/* C5 — Summoning Shards explainer for first-time visitors */}
+        {shards < SUMMON_COST && (
+          <View style={styles.shardsInfo}>
+            <Ionicons name="information-circle-outline" size={14} color={COLORS.brand} />
+            <Text style={styles.shardsInfoTxt}>
+              Earn Summoning Shards from Ward Shifts, chapter clears, daily duties, and milestone rewards — no payment required.
+            </Text>
+          </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -221,6 +230,15 @@ const styles = StyleSheet.create({
   },
   btnOutlineTxt: { fontSize: 13, fontWeight: "700", letterSpacing: 1 },
   btnOutlineCost: { fontSize: 10, color: COLORS.onSurfaceTertiary },
+  shardsInfo: {
+    flexDirection: "row", alignItems: "flex-start", gap: 6,
+    backgroundColor: COLORS.brandTertiary + "30", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.brand + "40",
+    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginTop: SPACING.xs,
+  },
+  shardsInfoTxt: {
+    flex: 1, fontSize: 11, color: COLORS.onSurfaceSecondary, lineHeight: 16,
+  },
   oddsBox: {
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
     padding: SPACING.md, gap: 3, backgroundColor: COLORS.surfaceSecondary,

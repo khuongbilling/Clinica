@@ -78,7 +78,9 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   { id: 'ward_shift', label: 'Ward Shift Simulations', level: 1 },
   { id: 'lotus_journal', label: 'Lotus Plate Journal', level: 2 },
   { id: 'shop', label: 'Shops (Apothecary Market)', level: 2 },
-  { id: 'hall_of_heroes', label: 'Hall of Heroes', level: 3 },
+  // C5 — Summoning Hall, Daily/Weekly Rounds unlock at Level 2 (Apprentice Path).
+  { id: 'hall_of_heroes', label: 'Summoning Hall (Recruitment)', level: 2 },
+  { id: 'daily_rounds', label: 'Daily & Weekly Rounds', level: 2 },
   { id: 'ward_defense', label: 'Ward Defense', level: 4 },
   { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 5 },
   { id: 'boss', label: 'Boss Encounters', level: 7 },
@@ -125,14 +127,10 @@ export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResu
     return { unlocked: false, reason: `Reach Player Level ${needLevel} to unlock.` };
   }
   switch (id) {
-    // Hall of Heroes opens after the first University lessons (which grant the
-    // player's first two units). University itself must NOT require lessons —
-    // it's where lessons are taken, so gating it on lessonsStarted would be
-    // circular; it's Player-Level-only.
+    // C5 — Summoning Hall (hall_of_heroes) now unlocks at Level 2 with no
+    // additional narrative gate. The Level 2 gate itself is sufficient:
+    // players who reached Level 2 have necessarily done some gameplay.
     case 'hall_of_heroes':
-      if (!ctx.lessonsStarted) {
-        return { unlocked: false, reason: 'Begin your first University lessons to unlock.' };
-      }
       return { unlocked: true, reason: null };
     // Ward Shift simulations open only after the player begins their first
     // University lesson — School always comes before the (simulated) ward. This

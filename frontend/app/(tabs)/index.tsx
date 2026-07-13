@@ -24,6 +24,7 @@ import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
+import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 
@@ -59,11 +60,12 @@ const FALLBACK_SCENE = ARENA_SCENES.River;
 
 export default function RunHome() {
   const router  = useRouter();
-  const { player, loading, openRoundsSignal } = usePlayer();
+  const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
+  const [showLv2Modal, setShowLv2Modal] = useState(false);
   const roundsSignalSeen = useRef(0);
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
@@ -83,6 +85,17 @@ export default function RunHome() {
   useEffect(() => {
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
   }, []);
+
+  // C5 — Level 2 "Apprentice Path Opened" celebration. Fire once the player
+  // reaches Level 2 and hasn't yet seen the unlock moment. The intro modal
+  // is dismissed first (stacking guard via showIntro).
+  useEffect(() => {
+    if (!player || loading || showIntro) return;
+    const lvl = playerLevelFromXp(player.xp ?? 0).level;
+    if (lvl >= 2 && !player.seen_lv2_unlock) {
+      setShowLv2Modal(true);
+    }
+  }, [player?.id, player?.xp, player?.seen_lv2_unlock, loading, showIntro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     AsyncStorage.getItem(WORLD_EVENT_BANNER_KEY).then((v) => setEventBannerDismissed(!!v));
@@ -169,6 +182,10 @@ export default function RunHome() {
   // New players are steered to Clinica University first — it is the prominent
   // opening of the game until they've taken their first lesson.
   const isNewLearner = (player.lessons_completed?.length ?? 0) === 0;
+
+  // C5 — Daily/Weekly Rounds and Summoning Hall are Level 2 unlocks.
+  const roundsUnlocked = playerLevelInfo.level >= 2;
+  const summonUnlocked = playerLevelInfo.level >= 2;
 
   // Daily Ward Rounds — free daily engagement loop. Hidden until the player has
   // begun (post-University), then shows a badge for pending check-in/claims.
@@ -278,7 +295,7 @@ export default function RunHome() {
 
         {/* LEFT COLUMN — Daily Ward Rounds + Journey Map */}
         <View style={styles.sideCol}>
-          {!isNewLearner && (
+          {roundsUnlocked ? (
             <FeatureButton
               icon="today"
               label="Rounds"
@@ -286,6 +303,16 @@ export default function RunHome() {
               badge={roundsBadge}
               onPress={() => setShowRounds(true)}
               testID="home-float-rounds"
+            />
+          ) : (
+            <FeatureButton
+              icon="lock-closed"
+              label="Rounds"
+              color={COLORS.brand}
+              locked
+              lockText="Lv.2"
+              onPress={() => {}}
+              testID="home-float-rounds-locked"
             />
           )}
           <FeatureButton
@@ -330,6 +357,15 @@ export default function RunHome() {
 
         {/* RIGHT COLUMN — active gameplay events/quests */}
         <View style={styles.sideCol}>
+          <FeatureButton
+            icon={summonUnlocked ? "sparkles" : "lock-closed"}
+            label="Summon"
+            color="#D4AF37"
+            locked={!summonUnlocked}
+            lockText="Lv.2"
+            onPress={() => { if (summonUnlocked) router.push("/university/recruit" as any); }}
+            testID="home-float-summon"
+          />
           <FeatureButton
             icon={worldEventUnlocked ? "calendar-outline" : "lock-closed"}
             label="Events"
@@ -417,6 +453,15 @@ export default function RunHome() {
 
       {/* ── DAILY WARD ROUNDS PANEL ── */}
       <DailyRoundsPanel visible={showRounds} onClose={() => setShowRounds(false)} />
+
+      {/* ── C5 LEVEL 2 UNLOCK CELEBRATION ── */}
+      <Lv2UnlockModal
+        visible={showLv2Modal}
+        onDismiss={() => {
+          setShowLv2Modal(false);
+          markLv2UnlockSeen();
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -106,6 +106,14 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.battle_stars) {
     out = { ...out, battle_stars: {} };
   }
+  // C5 — backfill seen_lv2_unlock.
+  // Existing players who are already Level 2+ are treated as having seen the
+  // modal (they don't need the first-run experience). New Level 1 players get
+  // false so they'll see it the first time they cross Level 2.
+  if (out.seen_lv2_unlock == null) {
+    const lvl = out.player_level ?? playerLevelFromXp(out.xp || 0).level;
+    out = { ...out, seen_lv2_unlock: lvl >= 2 };
+  }
   // C4 — backfill the three one-time claim arrays for pre-C4 saves.
   if (!out.claimed_level_rewards) {
     out = { ...out, claimed_level_rewards: [] };
@@ -346,6 +354,8 @@ type Ctx = {
   claimLevelReward: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
   claimChapterChest: (chestId: string) => Promise<{ ok: boolean; message: string }>;
   claimChapter3Star: (rewardId: string) => Promise<{ ok: boolean; message: string }>;
+  // C5 — dismiss the Level 2 "Apprentice Path Opened" celebration modal.
+  markLv2UnlockSeen: () => Promise<void>;
 };
 
 // Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
@@ -490,6 +500,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     summon_history: [],
     enemy_mastery: {},
     battle_stars: {},
+    seen_lv2_unlock: false,
     claimed_level_rewards: [],
     claimed_chapter_chests: [],
     claimed_chapter_3star: [],
@@ -1810,10 +1821,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Chapter ${reward.chapter} ★★★ bonus claimed! +${reward.refinedLotusGems} Refined Gems` };
   }, [updateState]);
 
+  // ── C5 — mark the Level 2 unlock celebration as seen ───────────────────────
+  const markLv2UnlockSeen = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.seen_lv2_unlock) return;
+    const next: PlayerState = { ...base, seen_lv2_unlock: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, markLv2UnlockSeen,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, markLv2UnlockSeen]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

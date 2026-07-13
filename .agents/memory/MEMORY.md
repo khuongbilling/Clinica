@@ -61,3 +61,4 @@
 - [Clinica ambient audio](clinica-ambient-audio.md) — synthesized Web Audio loops (no assets); mute read at start only, screens must react to live toggle; pokeAmbience() in tap handlers for autoplay.
 - [Recruitment-only heroes](clinica-recruitment-only-heroes.md) — heroes come ONLY from Recruitment gacha; no grant sites anywhere (creation/lessons/quiz); prologue uses pinned non-persisted loaner team; Metro CI mode needs workflow restart to see new files.
 - [Back-nav guard & tutorial exit cleanup](clinica-back-nav-guard.md) — useBlockBack (beforeRemove filtered to back-type actions so replace passes) + useClearTutorialOnExit; blocked screens' back arrows must router.replace(hub).
+- [C5 Level 2 unlocks](clinica-c5-lv2-unlocks.md) — Summoning Hall + Daily/Weekly Rounds gate at Level 2 (hall_of_heroes Level 3→2, lessonsStarted removed); seen_lv2_unlock one-time modal; backfill=true for existing Lv2+ players.
