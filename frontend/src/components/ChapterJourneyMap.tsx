@@ -29,6 +29,7 @@ import {
   type ChapterPartType,
 } from "@/src/game/chapterJourney";
 import { ENEMIES } from "@/src/game/content";
+import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── Part type label + color helpers ──────────────────────────────────────────
@@ -67,11 +68,21 @@ interface Props {
   battleStars?: Record<string, number>;
   /** Called when a chapter card is pressed (for expand/collapse). */
   onChapterPress?: (chapterId: string) => void;
+  // C4 — chapter completion chest claim support.
+  /** IDs of chapter chests already claimed (e.g. ["chest_ch1"]). */
+  claimedChests?: string[];
+  /** Callback fired when the player claims a chapter completion chest. */
+  onChestClaim?: (chestId: string) => Promise<void>;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ChapterJourneyMap({ playerLevel, battleStars = {} }: Props) {
+export function ChapterJourneyMap({
+  playerLevel,
+  battleStars = {},
+  claimedChests = [],
+  onChestClaim,
+}: Props) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     // Default expand the active chapter.
@@ -99,6 +110,9 @@ export function ChapterJourneyMap({ playerLevel, battleStars = {} }: Props) {
       {CHAPTERS.map((chapter, idx) => {
         const status = getChapterStatus(chapter, playerLevel);
         const isExpanded = expandedId === chapter.id;
+        const chest = CHAPTER_CHESTS.find((c) => c.chapter === chapter.number);
+        const chestClaimed = chest ? claimedChests.includes(chest.id) : false;
+        const chestClaimable = chest && !chestClaimed && status !== "locked";
         return (
           <ChapterCard
             key={chapter.id}
@@ -108,7 +122,11 @@ export function ChapterJourneyMap({ playerLevel, battleStars = {} }: Props) {
             isFirst={idx === 0}
             isLast={idx === CHAPTERS.length - 1}
             battleStars={battleStars}
+            chestId={chest?.id}
+            chestClaimed={chestClaimed}
+            chestClaimable={!!chestClaimable}
             onToggle={() => toggle(chapter.id)}
+            onChestClaim={onChestClaim}
             onPartPress={(part) => {
               if (part.route && !part.isPlaceholder) {
                 router.push(part.route as any);
@@ -141,7 +159,11 @@ function ChapterCard({
   isFirst,
   isLast,
   battleStars,
+  chestId,
+  chestClaimed,
+  chestClaimable,
   onToggle,
+  onChestClaim,
   onPartPress,
 }: {
   chapter: Chapter;
@@ -150,7 +172,11 @@ function ChapterCard({
   isFirst: boolean;
   isLast: boolean;
   battleStars: Record<string, number>;
+  chestId?: string;
+  chestClaimed: boolean;
+  chestClaimable: boolean;
   onToggle: () => void;
+  onChestClaim?: (chestId: string) => Promise<void>;
   onPartPress: (part: ChapterPart) => void;
 }) {
   const accent = status === "locked" ? COLORS.onSurfaceTertiary : chapter.accentColor;
@@ -240,6 +266,40 @@ function ChapterCard({
             )}
           </View>
         </View>
+
+        {/* C4 — Chapter chest button (visible when not locked) */}
+        {chestId && !isLocked && (
+          <Pressable
+            style={[
+              styles.chestBtn,
+              chestClaimed && styles.chestBtnClaimed,
+              chestClaimable && styles.chestBtnClaimable,
+            ]}
+            onPress={
+              chestClaimable && onChestClaim
+                ? (e) => {
+                    e.stopPropagation?.();
+                    onChestClaim(chestId);
+                  }
+                : undefined
+            }
+            disabled={!chestClaimable || !onChestClaim}
+            hitSlop={6}
+            testID={`chapter-chest-${chapter.number}`}
+          >
+            <Ionicons
+              name={chestClaimed ? "checkmark-circle" : "gift"}
+              size={16}
+              color={
+                chestClaimed
+                  ? "#D4AF37"
+                  : chestClaimable
+                  ? "#D4AF37"
+                  : COLORS.onSurfaceTertiary
+              }
+            />
+          </Pressable>
+        )}
 
         {/* Expand chevron */}
         <Ionicons
@@ -479,6 +539,27 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+
+  // C4 — chapter chest button
+  chestBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.surfaceTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  chestBtnClaimed: {
+    backgroundColor: "#D4AF3720",
+    borderColor: "#D4AF3780",
+  },
+  chestBtnClaimable: {
+    backgroundColor: "#D4AF3730",
+    borderColor: "#D4AF37",
   },
 
   // Tags

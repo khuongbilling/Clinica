@@ -22,7 +22,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function JourneyScreen() {
   const router = useRouter();
-  const { player, loading } = usePlayer();
+  const { player, loading, claimChapterChest } = usePlayer();
 
   if (loading || !player) {
     return (
@@ -114,7 +114,18 @@ export default function JourneyScreen() {
         showsVerticalScrollIndicator={false}
         testID="journey-scroll"
       >
-        <ChapterJourneyMap playerLevel={playerLevel} battleStars={player.battle_stars ?? {}} />
+        <ChapterJourneyMap
+          playerLevel={playerLevel}
+          battleStars={player.battle_stars ?? {}}
+          claimedChests={player.claimed_chapter_chests ?? []}
+          onChestClaim={async (chestId) => {
+            const res = await claimChapterChest(chestId);
+            if (!res.ok) {
+              // Toast-style: use a console warn to avoid Alert blocking scroll
+              console.warn('[Journey] chest claim failed:', res.message);
+            }
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );

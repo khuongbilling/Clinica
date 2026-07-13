@@ -295,6 +295,13 @@ export default function RunHome() {
             onPress={() => router.push("/journey")}
             testID="home-float-journey"
           />
+          <FeatureButton
+            icon="gift-outline"
+            label="Milestones"
+            color="#D4AF37"
+            onPress={() => router.push("/milestones" as any)}
+            testID="home-float-milestones"
+          />
         </View>
 
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}

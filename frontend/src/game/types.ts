@@ -210,6 +210,11 @@ export interface PlayerState {
   // Drives replay badges, auto-sweep unlock (2★+), and sweep reward tiers.
   // Backfilled as {} for existing players in normalizeProgression.
   battle_stars?: Record<string, number>;
+  // C4 — one-time claim tracking for the 3 milestone reward categories.
+  // Backfilled as [] for existing players in normalizeProgression.
+  claimed_level_rewards?: string[];    // ids from LEVEL_MILESTONES (e.g. "lvl_2")
+  claimed_chapter_chests?: string[];  // ids from CHAPTER_CHESTS  (e.g. "chest_ch1")
+  claimed_chapter_3star?: string[];   // ids from CHAPTER_3STAR_REWARDS ("3star_ch1")
   chapter_progress?: number;
   // Clinica University — shared trainee materials keyed by trainee id (see university.ts)
   class_trainees?: Record<string, number>;

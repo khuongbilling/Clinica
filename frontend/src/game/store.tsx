@@ -106,6 +106,16 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.battle_stars) {
     out = { ...out, battle_stars: {} };
   }
+  // C4 — backfill the three one-time claim arrays for pre-C4 saves.
+  if (!out.claimed_level_rewards) {
+    out = { ...out, claimed_level_rewards: [] };
+  }
+  if (!out.claimed_chapter_chests) {
+    out = { ...out, claimed_chapter_chests: [] };
+  }
+  if (!out.claimed_chapter_3star) {
+    out = { ...out, claimed_chapter_3star: [] };
+  }
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
   // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
   // layout whose values aren't valid grid cell ids predates the rewrite and
@@ -332,6 +342,10 @@ type Ctx = {
   updateBattleStars: (enemyId: string, stars: number) => Promise<void>;
   // C3 — auto-sweep a battle: spend stamina + grant repeatable XP/crowns (no first-clear rewards).
   performSweep: (enemyId: string, baseXp: number, bestStars: number) => Promise<{ ok: boolean; xp: number; crowns: number; message: string }>;
+  // C4 — one-time milestone reward claims.
+  claimLevelReward: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
+  claimChapterChest: (chestId: string) => Promise<{ ok: boolean; message: string }>;
+  claimChapter3Star: (rewardId: string) => Promise<{ ok: boolean; message: string }>;
 };
 
 // Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
@@ -476,6 +490,9 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     summon_history: [],
     enemy_mastery: {},
     battle_stars: {},
+    claimed_level_rewards: [],
+    claimed_chapter_chests: [],
+    claimed_chapter_3star: [],
     chapter_progress: 1,
     region_progress: {},
     stamina: MAX_STAMINA,
@@ -1710,10 +1727,93 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, xp, crowns: sweepCrowns, message: `Field Practice swept! +${xp} XP, +${sweepCrowns} Crowns.` };
   }, [spendStamina, applyRewards]);
 
+  // ── C4 — one-time level milestone claim ─────────────────────────────────────
+  const claimLevelReward = useCallback(async (milestoneId: string): Promise<{ ok: boolean; message: string }> => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player.' };
+    if ((base.claimed_level_rewards ?? []).includes(milestoneId)) {
+      return { ok: false, message: 'Already claimed.' };
+    }
+    const { LEVEL_MILESTONES } = await import('./milestones');
+    const milestone = LEVEL_MILESTONES.find((m) => m.id === milestoneId);
+    if (!milestone) return { ok: false, message: 'Unknown milestone.' };
+    const level = playerLevelFromXp(base.xp ?? 0).level;
+    if (level < milestone.level) return { ok: false, message: `Reach Level ${milestone.level} first.` };
+    const next: PlayerState = {
+      ...base,
+      claimed_level_rewards: [...(base.claimed_level_rewards ?? []), milestoneId],
+      codex_shards: (base.codex_shards || 0) + (milestone.rewards.codexShards || 0),
+      crowns: (base.crowns || 0) + (milestone.rewards.crowns || 0),
+      refined_lotus_gems: (base.refined_lotus_gems || 0) + (milestone.rewards.refinedLotusGems || 0),
+      university_credits: (base.university_credits || 0) + (milestone.rewards.universityCredits || 0),
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Claimed ${milestone.label} reward!` };
+  }, [updateState, playerLevelFromXp]);
+
+  // ── C4 — one-time chapter chest claim ───────────────────────────────────────
+  const claimChapterChest = useCallback(async (chestId: string): Promise<{ ok: boolean; message: string }> => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player.' };
+    if ((base.claimed_chapter_chests ?? []).includes(chestId)) {
+      return { ok: false, message: 'Already claimed.' };
+    }
+    const { CHAPTER_CHESTS } = await import('./milestones');
+    const { CHAPTERS, getChapterStatus } = await import('./chapterJourney');
+    const chest = CHAPTER_CHESTS.find((c) => c.id === chestId);
+    if (!chest) return { ok: false, message: 'Unknown chest.' };
+    const chapter = CHAPTERS.find((ch) => ch.number === chest.chapter);
+    if (!chapter) return { ok: false, message: 'Chapter not found.' };
+    const level = playerLevelFromXp(base.xp ?? 0).level;
+    const status = getChapterStatus(chapter, level);
+    if (status === 'locked') return { ok: false, message: `Complete Chapter ${chest.chapter} first.` };
+    // Grant title if applicable (same safe-add as setActiveTitle does)
+    const ownedTitles = base.owned_titles ?? [];
+    const newTitles = chest.titleId && !ownedTitles.includes(chest.titleId)
+      ? [...ownedTitles, chest.titleId]
+      : ownedTitles;
+    const next: PlayerState = {
+      ...base,
+      claimed_chapter_chests: [...(base.claimed_chapter_chests ?? []), chestId],
+      codex_shards: (base.codex_shards || 0) + (chest.rewards.codexShards || 0),
+      crowns: (base.crowns || 0) + (chest.rewards.crowns || 0),
+      refined_lotus_gems: (base.refined_lotus_gems || 0) + (chest.rewards.refinedLotusGems || 0),
+      university_credits: (base.university_credits || 0) + (chest.rewards.universityCredits || 0),
+      owned_titles: newTitles,
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Chapter ${chest.chapter} chest claimed!` };
+  }, [updateState, playerLevelFromXp]);
+
+  // ── C4 — one-time chapter 3-star bonus claim ─────────────────────────────────
+  const claimChapter3Star = useCallback(async (rewardId: string): Promise<{ ok: boolean; message: string }> => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player.' };
+    if ((base.claimed_chapter_3star ?? []).includes(rewardId)) {
+      return { ok: false, message: 'Already claimed.' };
+    }
+    const { CHAPTER_3STAR_REWARDS, hasChapter3StarClear } = await import('./milestones');
+    const { ENEMIES } = await import('./content');
+    const reward = CHAPTER_3STAR_REWARDS.find((r) => r.id === rewardId);
+    if (!reward) return { ok: false, message: 'Unknown reward.' };
+    const has3Star = hasChapter3StarClear(base.battle_stars ?? {}, reward.chapter, ENEMIES);
+    if (!has3Star) return { ok: false, message: `Earn a 3-star clear in Chapter ${reward.chapter} first.` };
+    const next: PlayerState = {
+      ...base,
+      claimed_chapter_3star: [...(base.claimed_chapter_3star ?? []), rewardId],
+      refined_lotus_gems: (base.refined_lotus_gems || 0) + reward.refinedLotusGems,
+    };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Chapter ${reward.chapter} ★★★ bonus claimed! +${reward.refinedLotusGems} Refined Gems` };
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
