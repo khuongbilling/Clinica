@@ -39,6 +39,8 @@ import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { completeObjective } from "@/src/game/objectiveProgress";
+import { playerLevelFromXp } from "@/src/game/progression";
 
 // Per-card scene images — each triage patient gets their own setting
 const IMG_TRAINING_HALL = require("../../assets/images/banner_uni_training.png");
@@ -269,7 +271,7 @@ export default function RapidTriageScreen() {
   useBlockBack();
   useClearTutorialOnExit();
 
-  // Award University Credits once on completion
+  // Award University Credits + C1 objective XP once on completion
   useEffect(() => {
     if (gamePhase !== "complete" || creditedRef.current) return;
     creditedRef.current = true;
@@ -277,6 +279,10 @@ export default function RapidTriageScreen() {
     setCreditsEarned(credits);
     const isPerfect = correctCount === CARDS.length;
     (async () => {
+      // C1: grant 10 Player XP for completing Rapid Triage (once only)
+      const isObjNew = await completeObjective("obj_triage_done");
+      const objXp = isObjNew ? 10 : 0;
+
       if (isPerfect) {
         const isFirst = await checkAndMarkFirstPerfect("triage");
         if (isFirst) {
@@ -284,15 +290,30 @@ export default function RapidTriageScreen() {
           setMilestoneItems([
             { icon: "school", label: "Uni Credits", amount: String(bonus) },
             { icon: "trophy", label: "First Perfect Bonus" },
+            ...(isObjNew ? [{ icon: "star-outline" as const, label: "+10 XP — Rapid Triage", amount: "10" }] : []),
           ]);
           if (player && updateState) {
-            await updateState({ ...player, university_credits: (player.university_credits || 0) + credits + bonus });
+            const newXp = (player.xp ?? 0) + objXp;
+            const { level: newLevel } = playerLevelFromXp(newXp);
+            await updateState({
+              ...player,
+              university_credits: (player.university_credits || 0) + credits + bonus,
+              xp: newXp,
+              player_level: newLevel,
+            });
           }
           return;
         }
       }
       if (player && updateState) {
-        await updateState({ ...player, university_credits: (player.university_credits || 0) + credits });
+        const newXp = (player.xp ?? 0) + objXp;
+        const { level: newLevel } = playerLevelFromXp(newXp);
+        await updateState({
+          ...player,
+          university_credits: (player.university_credits || 0) + credits,
+          xp: newXp,
+          player_level: newLevel,
+        });
       }
     })();
   }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps

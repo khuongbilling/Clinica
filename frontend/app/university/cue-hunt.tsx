@@ -43,6 +43,8 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { completeObjective } from "@/src/game/objectiveProgress";
+import { playerLevelFromXp } from "@/src/game/progression";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Zone definitions
@@ -452,7 +454,7 @@ export default function CueHuntScreen() {
     setWrongTaps((n) => n + 1);
   }, []);
 
-  // Award University Credits once on completion
+  // Award University Credits + C1 objective XP once on completion
   useEffect(() => {
     if (phase !== "complete" || creditedRef.current) return;
     creditedRef.current = true;
@@ -460,6 +462,10 @@ export default function CueHuntScreen() {
     setCreditsEarned(credits);
     const isPerfect = wrongTaps === 0;
     (async () => {
+      // C1: grant 10 Player XP for completing Cue Hunt (once only)
+      const isObjNew = await completeObjective("obj_cue_hunt_done");
+      const objXp = isObjNew ? 10 : 0;
+
       if (isPerfect) {
         const isFirst = await checkAndMarkFirstPerfect("cueHunt");
         if (isFirst) {
@@ -467,15 +473,30 @@ export default function CueHuntScreen() {
           setMilestoneItems([
             { icon: "school", label: "Uni Credits", amount: String(bonus) },
             { icon: "trophy", label: "First Perfect Bonus" },
+            ...(isObjNew ? [{ icon: "star-outline" as const, label: "+10 XP — Cue Hunt", amount: "10" }] : []),
           ]);
           if (player && updateState) {
-            await updateState({ ...player, university_credits: (player.university_credits || 0) + credits + bonus });
+            const newXp = (player.xp ?? 0) + objXp;
+            const { level: newLevel } = playerLevelFromXp(newXp);
+            await updateState({
+              ...player,
+              university_credits: (player.university_credits || 0) + credits + bonus,
+              xp: newXp,
+              player_level: newLevel,
+            });
           }
           return;
         }
       }
       if (player && updateState) {
-        await updateState({ ...player, university_credits: (player.university_credits || 0) + credits });
+        const newXp = (player.xp ?? 0) + objXp;
+        const { level: newLevel } = playerLevelFromXp(newXp);
+        await updateState({
+          ...player,
+          university_credits: (player.university_credits || 0) + credits,
+          xp: newXp,
+          player_level: newLevel,
+        });
       }
     })();
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps

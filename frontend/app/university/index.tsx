@@ -22,6 +22,13 @@ import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
+import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
+import {
+  completeObjective,
+  getObjectiveProgress,
+  ObjectiveId,
+} from "@/src/game/objectiveProgress";
+import { playerLevelFromXp } from "@/src/game/progression";
 
 // ── Next-in-chain hero banner ─────────────────────────────────────────────────
 // Always shows whichever game is next in the chain so returning players are
@@ -136,6 +143,51 @@ function NextChainBanner({
   );
 }
 
+// ── FA Complete Chip ──────────────────────────────────────────────────────────
+// Compact collapsed state shown after the full Fading Apprentice chain is done.
+// Replaces the full-height NextChainBanner so it no longer dominates the page.
+function FaCompleteChip() {
+  return (
+    <View style={faChipStyles.wrap}>
+      <LinearGradient
+        colors={["#1C1500", "#120F00"]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <Ionicons name="ribbon" size={16} color="#D4AF37" />
+      <View style={{ flex: 1 }}>
+        <Text style={faChipStyles.title}>The Fading Apprentice</Text>
+        <Text style={faChipStyles.sub}>Case chain complete · +40 XP earned</Text>
+      </View>
+      <View style={faChipStyles.badge}>
+        <Ionicons name="checkmark-circle" size={12} color="#22C55E" />
+        <Text style={faChipStyles.badgeTxt}>COMPLETE</Text>
+      </View>
+    </View>
+  );
+}
+const faChipStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    borderRadius: RADIUS.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#D4AF3730",
+    padding: SPACING.md,
+  },
+  title: { color: "#D4AF37", fontSize: 13, fontWeight: "700" },
+  sub:   { color: "#A09060", fontSize: 11 },
+  badge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#22C55E18",
+    borderRadius: RADIUS.pill,
+    borderWidth: 1, borderColor: "#22C55E30",
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  badgeTxt: { color: "#22C55E", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+});
+
 // The primary "begin here" learning banner — the heart of the University.
 const LESSONS_BANNER: ModeCardDef = {
   id: "uni-lessons",
@@ -205,12 +257,15 @@ const CLASSTREE_BANNER: ModeCardDef = {
 
 export default function UniversityHubScreen() {
   const router = useRouter();
-  const { player } = usePlayer();
+  const { player, applyRewards } = usePlayer();
   const gate = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
-  const { activeTutorialId } = useTutorial();
+  const { activeTutorialId, onRequiredAction } = useTutorial();
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
+
+  // Objective progress — reloaded on focus so post-completion next-steps update.
+  const [completedObjs, setCompletedObjs] = useState<Set<ObjectiveId>>(new Set());
 
   // Chain progress — reload every time this screen gains focus so the banner
   // updates after the player returns from a completed mini-game.
@@ -222,11 +277,43 @@ export default function UniversityHubScreen() {
     triageFirstPerfect: false,
     stabilizeFirstPerfect: false,
   });
+
   useFocusEffect(
     useCallback(() => {
       getChainProgress().then(setChainProg);
-    }, []),
+      getObjectiveProgress().then(setCompletedObjs);
+      // ── C1: If systemWardHub tutorial is still waiting for the player to
+      // navigate to University, completing that action here advances the step
+      // (which marks the tutorial done, since it's the last step).
+      onRequiredAction("navigateToUniversity");
+    }, [onRequiredAction]),
   );
+
+  // ── C1 objective XP grants — run once when player first loads on this screen.
+  // Uses a ref so we don't repeat across re-renders within the same mount.
+  const objGrantedRef = React.useRef(false);
+  useEffect(() => {
+    if (!player || objGrantedRef.current) return;
+    objGrantedRef.current = true;
+    (async () => {
+      let bonus = 0;
+      const isUnivNew = await completeObjective("obj_university_arrived");
+      if (isUnivNew) bonus += 10;
+
+      // If the full FA chain is already done (returning player), grant that too.
+      const prog = await getChainProgress();
+      if (prog.stabilizeDone) {
+        const isFANew = await completeObjective("obj_fading_apprentice_done");
+        if (isFANew) bonus += 10;
+      }
+
+      // applyRewards handles XP + level recalc via the public store API.
+      if (bonus > 0) await applyRewards({ xp: bonus });
+
+      // Refresh displayed objectives after any grants.
+      getObjectiveProgress().then(setCompletedObjs);
+    })();
+  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Smart chain entry — resume from the next unfinished step rather than
   // always starting from the beginning.
@@ -339,11 +426,26 @@ export default function UniversityHubScreen() {
           </SceneTransition>
         )}
 
-        {/* CHAIN HERO BANNER — always shows the next uncompleted game */}
-        <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+        {/* ── C1 Tutorial Quest Panel ─────────────────────────────────────
+            Shown when no tutorial overlay is active.  Renders the current
+            quest objective (FA checklist or post-FA next-step hint).       */}
+        {!activeTutorialId && (
+          <TutorialQuestPanel
+            chainProg={chainProg}
+            completed={completedObjs}
+            onPressNext={handleChainEntry}
+          />
+        )}
+
+        {/* CHAIN HERO BANNER — collapses to a compact chip after completion */}
+        {chainProg.stabilizeDone ? (
+          <FaCompleteChip />
+        ) : (
+          <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+        )}
 
         {/* Chain track — per-step progress using live chainProg */}
-        <ChainTrack chainProg={chainProg} />
+        {!chainProg.stabilizeDone && <ChainTrack chainProg={chainProg} />}
 
         {/* LESSONS — available below, not removed */}
         <Text style={styles.sectionHeading}>LESSONS</Text>

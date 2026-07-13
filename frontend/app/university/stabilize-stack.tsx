@@ -45,6 +45,8 @@ import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
+import { completeObjective } from "@/src/game/objectiveProgress";
+import { playerLevelFromXp } from "@/src/game/progression";
 
 // Donghua patient illustration: Wei on garden path — 1408 × 768 (landscape)
 const PATIENT_SCENE = require("../../assets/images/stabilize_patient_wei.png");
@@ -594,7 +596,7 @@ export default function StabilizeStackScreen() {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mark chain step + award credits when player reaches complete
+  // Mark chain step + award credits + C1 objective XP when player reaches complete
   useEffect(() => {
     if (gamePhase !== "complete") return;
     markChainStep("stabilizeDone");
@@ -604,6 +606,11 @@ export default function StabilizeStackScreen() {
     setCreditsEarned(credits);
     const isPerfect = correctCount === CARE_PHASES.length;
     (async () => {
+      // C1: grant 10 XP for Stabilize Stack + 10 XP for full FA chain (both once only)
+      const isStabilizeNew = await completeObjective("obj_stabilize_done");
+      const isFANew       = await completeObjective("obj_fading_apprentice_done");
+      const objXp = (isStabilizeNew ? 10 : 0) + (isFANew ? 10 : 0);
+
       if (isPerfect) {
         const isFirst = await checkAndMarkFirstPerfect("stabilize");
         if (isFirst) {
@@ -611,15 +618,31 @@ export default function StabilizeStackScreen() {
           setMilestoneItems([
             { icon: "school", label: "Uni Credits", amount: String(bonus) },
             { icon: "trophy", label: "First Perfect Bonus" },
+            ...(isStabilizeNew ? [{ icon: "star-outline" as const, label: "+10 XP — Stabilize", amount: "10" }] : []),
+            ...(isFANew ? [{ icon: "ribbon-outline" as const, label: "+10 XP — Case Chain Done!", amount: "10" }] : []),
           ]);
           if (player && updateState) {
-            await updateState({ ...player, university_credits: (player.university_credits || 0) + credits + bonus });
+            const newXp = (player.xp ?? 0) + objXp;
+            const { level: newLevel } = playerLevelFromXp(newXp);
+            await updateState({
+              ...player,
+              university_credits: (player.university_credits || 0) + credits + bonus,
+              xp: newXp,
+              player_level: newLevel,
+            });
           }
           return;
         }
       }
       if (player && updateState) {
-        await updateState({ ...player, university_credits: (player.university_credits || 0) + credits });
+        const newXp = (player.xp ?? 0) + objXp;
+        const { level: newLevel } = playerLevelFromXp(newXp);
+        await updateState({
+          ...player,
+          university_credits: (player.university_credits || 0) + credits,
+          xp: newXp,
+          player_level: newLevel,
+        });
       }
     })();
   }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps

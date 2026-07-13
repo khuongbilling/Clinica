@@ -380,11 +380,12 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_ward_university",
       title: "Answer the Call to Learn",
-      body: "The University awaits. Your first lessons reward your first heroes — and sharpen the reasoning you will need for harder cases ahead.",
+      body: "The University awaits. Go there now — your first case chain, The Fading Apprentice, will sharpen the reasoning you need for every shift ahead.",
       placement: "center",
-      requireAction: false,
+      requireAction: true,
+      requiredActionType: "navigateToUniversity",
       banner: true,
-      nextText: "I WILL STUDY",
+      nextText: "ENTER THE UNIVERSITY",
     },
   ],
 
