@@ -308,7 +308,7 @@ export default function ReminiscenceScreen() {
     // line + arrival transition). The hub's own welcome modal + System-narrator
     // intro simply defer until the player first opens the hub. Replay mode (from
     // Profile) still returns to Profile so it never re-enters onboarding.
-    router.replace(isReplay ? "/(tabs)/profile" : "/university");
+    router.replace(isReplay ? "/(tabs)/profile" : "/(tabs)");
   };
 
   // Guard against accidental double-advance: the bottom narrative panel and the
@@ -405,7 +405,7 @@ export default function ReminiscenceScreen() {
         </Pressable>
 
         <PrimaryButton
-          label={isLast ? "Begin at the University" : "Continue"}
+          label={isLast ? "Enter Command Screen" : "Continue"}
           onPress={advance}
           iconRight="arrow-forward"
           style={styles.continueBtn}

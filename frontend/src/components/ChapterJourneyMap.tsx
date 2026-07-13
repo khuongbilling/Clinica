@@ -431,6 +431,36 @@ function PartRow({
         >
           {part.description}
         </Text>
+
+        {/* Reward chips — shown when the part has explicit reward data */}
+        {(part.rewardXp || part.rewardCredits || part.rewardCoins || part.rewardShards) && (
+          <View style={styles.rewardRow}>
+            {!!part.rewardXp && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="star-outline" size={9} color="#F59E0B" />
+                <Text style={[styles.rewardChipTxt, { color: "#F59E0B" }]}>+{part.rewardXp} XP</Text>
+              </View>
+            )}
+            {!!part.rewardCredits && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="school-outline" size={9} color="#2DD4BF" />
+                <Text style={[styles.rewardChipTxt, { color: "#2DD4BF" }]}>+{part.rewardCredits} Credits</Text>
+              </View>
+            )}
+            {!!part.rewardCoins && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="cash-outline" size={9} color="#D4AF37" />
+                <Text style={[styles.rewardChipTxt, { color: "#D4AF37" }]}>+{part.rewardCoins} Coins</Text>
+              </View>
+            )}
+            {!!part.rewardShards && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="diamond-outline" size={9} color="#A78BFA" />
+                <Text style={[styles.rewardChipTxt, { color: "#A78BFA" }]}>+{part.rewardShards} Shards</Text>
+              </View>
+            )}
+          </View>
+        )}
       </Pressable>
     </View>
   );
@@ -674,6 +704,30 @@ const styles = StyleSheet.create({
   partDesc: {
     fontSize: 11,
     lineHeight: 15,
+  },
+
+  // Reward chips
+  rewardRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 2,
+  },
+  rewardChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceTertiary,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  rewardChipTxt: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 
   // Locked message

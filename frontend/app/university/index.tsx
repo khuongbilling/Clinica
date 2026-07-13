@@ -447,6 +447,29 @@ export default function UniversityHubScreen() {
         {/* Chain track — per-step progress using live chainProg */}
         {!chainProg.stabilizeDone && <ChainTrack chainProg={chainProg} />}
 
+        {/* ── CHAPTER 1 JOURNEY — visible once FA chain is done or for returning players */}
+        {chainProg.stabilizeDone && (
+          <>
+            <Text style={styles.sectionHeading}>CHAPTER 1 JOURNEY</Text>
+            <Pressable
+              style={styles.ch1JourneyCard}
+              onPress={() => router.push("/journey" as any)}
+              testID="university-ch1-journey"
+            >
+              <View style={styles.ch1JourneyLeft}>
+                <View style={styles.ch1Badge}>
+                  <Text style={styles.ch1BadgeTxt}>CH. 1</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.ch1Title}>The Fading Apprenticeship</Text>
+                  <Text style={styles.ch1Sub}>5 parts · Learn to see before you heal</Text>
+                </View>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color="#D4AF37" />
+            </Pressable>
+          </>
+        )}
+
         {/* LESSONS — available below, not removed */}
         <Text style={styles.sectionHeading}>LESSONS</Text>
         <BannerCard
@@ -720,6 +743,48 @@ const styles = StyleSheet.create({
   sectionHeading: {
     color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800",
     letterSpacing: 1.5, marginTop: SPACING.sm,
+  },
+
+  // ── Chapter 1 Journey card ────────────────────────────────────────────────
+  ch1JourneyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: "#D4AF3740",
+    backgroundColor: "#D4AF3708",
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  ch1JourneyLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  ch1Badge: {
+    backgroundColor: "#D4AF3720",
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: "#D4AF3750",
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  ch1BadgeTxt: {
+    color: "#D4AF37",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+  ch1Title: {
+    color: COLORS.onSurface,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  ch1Sub: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11,
+    marginTop: 1,
   },
 
   // ── Cue Hunt featured hero banner ────────────────────────────────────────

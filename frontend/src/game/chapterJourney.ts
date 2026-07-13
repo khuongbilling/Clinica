@@ -37,6 +37,12 @@ export interface ChapterPart {
   icon: string;         // Ionicons glyph
   route?: string;       // deep-link to the actual screen if actionable now
   isPlaceholder?: boolean; // part content not yet built; shell only
+  // Reward preview shown on the part card (informational only — actual grants
+  // happen inside the destination screen via objectiveProgress/applyRewards)
+  rewardXp?: number;
+  rewardCredits?: number; // University Credits
+  rewardCoins?: number;   // Ward Coins
+  rewardShards?: number;  // Summoning Shards
 }
 
 export interface Chapter {
@@ -51,6 +57,8 @@ export interface Chapter {
   phaseFinale?: boolean;         // true for Ch.10
   realWorldTransition?: boolean; // true for Ch.9
   simulationEra?: boolean;       // true for Ch.1–8 (University-supervised simulations)
+  /** Bonus XP awarded on chapter completion (informational only). */
+  completionXp?: number;
 }
 
 // ── Chapter accent palette (one per chapter, warm-dark donghua tones) ────────
@@ -85,33 +93,40 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[1],
     icon: "sparkles-outline",
     simulationEra: true,
+    completionXp: 30,
     parts: [
       {
         id: "c1p1",
         part: 1,
         type: "minigame",
-        title: "Cue Hunt: The Fading Apprentice",
-        description: "Identify the three hidden clinical cues. Notice before you act.",
-        icon: "search-outline",
+        title: "Clinical Cue: The Fading Apprentice",
+        description: "Identify the three hidden clinical cues. Notice the important clue before acting.",
+        icon: "eye-outline",
         route: "/university/cue-hunt",
+        rewardXp: 10,
+        rewardCredits: 10,
       },
       {
         id: "c1p2",
         part: 2,
         type: "minigame",
         title: "Triage: What Matters First?",
-        description: "Choose the right priority order. Learn what demands your attention first.",
-        icon: "list-outline",
+        description: "Sort three patients by urgency. Decide what matters first before time runs out.",
+        icon: "flash-outline",
         route: "/university/rapid-triage",
+        rewardXp: 10,
+        rewardCredits: 10,
       },
       {
         id: "c1p3",
         part: 3,
         type: "minigame",
         title: "Stabilize Stack",
-        description: "Build the correct care sequence. Scout → Stabilize → Treat → Reassess.",
+        description: "Choose the safe care sequence in the correct order. Build the chain that saves the Apprentice.",
         icon: "layers-outline",
         route: "/university/stabilize-stack",
+        rewardXp: 10,
+        rewardCredits: 15,
       },
       {
         id: "c1p4",
@@ -121,15 +136,20 @@ export const CHAPTERS: Chapter[] = [
         description: "Reinforce early wellness and cue recognition. Fluids as the body's first language.",
         icon: "water-outline",
         route: "/university/lessons",
+        rewardXp: 15,
+        rewardCredits: 15,
+        rewardCoins: 25,
       },
       {
         id: "c1p5",
         part: 5,
         type: "battle",
         title: "First Simulation Shift",
-        description: "Enter your first supervised simulation. Face the Dehydration Wisp, earn your star rating and first XP.",
+        description: "Enter your first supervised simulation. Face the Dehydration Wisp — earn your star rating.",
         icon: "medical-outline",
         route: "/shift",
+        rewardXp: 30,
+        rewardCoins: 20,
       },
     ],
   },
