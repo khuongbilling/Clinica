@@ -276,7 +276,7 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN — Daily Ward Rounds (free) + reserved Offers placeholder */}
+        {/* LEFT COLUMN — Daily Ward Rounds + Journey Map */}
         <View style={styles.sideCol}>
           {!isNewLearner && (
             <FeatureButton
@@ -289,13 +289,11 @@ export default function RunHome() {
             />
           )}
           <FeatureButton
-            icon="pricetag-outline"
-            label="Offers"
-            color={COLORS.energy}
-            locked
-            lockText="Soon"
-            onPress={() => {}}
-            testID="home-float-offers"
+            icon="map-outline"
+            label="Journey"
+            color={COLORS.river}
+            onPress={() => router.push("/journey")}
+            testID="home-float-journey"
           />
         </View>
 
