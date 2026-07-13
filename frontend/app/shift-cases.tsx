@@ -17,6 +17,7 @@ import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLesso
 import {
   BOSS_ENCOUNTER_COST, ENCOUNTER_COST, formatCountdown, useLiveStamina,
 } from "@/src/game/stamina";
+import { getBattleBaseXp, isSweepUnlocked, getSweepXp, getSweepCrowns, SWEEP_STAMINA_COST } from "@/src/game/battleXp";
 import { chapterSimulationLabel } from "@/src/game/modeHub";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -27,10 +28,12 @@ import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 // ─────────────────────────────────────────────────────────────
 export default function ShiftCasesPage() {
   const router = useRouter();
-  const { player, spendStamina } = usePlayer();
+  const { player, spendStamina, performSweep } = usePlayer();
   const { stamina, msUntilNext, max } = useLiveStamina(player);
   const launchingRef = useRef(false);
+  const sweepingRef = useRef(false);
   const [index, setIndex] = useState(0);
+  const [sweepToast, setSweepToast] = useState<string | null>(null);
 
   const dailyShift = useMemo(() => {
     if (!player) return [];
@@ -73,6 +76,32 @@ export default function ShiftCasesPage() {
     }
     router.push({ pathname: "/battle", params: { enemyId } });
     setTimeout(() => { launchingRef.current = false; }, 1000);
+  };
+
+  // C3 — Auto-Sweep: allowed on any case the player has cleared with 2★+.
+  const battleStars = player?.battle_stars ?? {};
+  const currentBestStars = current ? (battleStars[current.id] ?? 0) : 0;
+  const canSweep = current ? isSweepUnlocked(currentBestStars) && stamina >= SWEEP_STAMINA_COST : false;
+
+  const doSweep = async (enemyId: string, difficulty: number) => {
+    if (sweepingRef.current) return;
+    sweepingRef.current = true;
+    try {
+      const bestStars = battleStars[enemyId] ?? 0;
+      const baseXp = getBattleBaseXp(difficulty, false);
+      const xpGained = getSweepXp(baseXp, bestStars);
+      const crownsGained = getSweepCrowns(baseXp);
+      const ok = await performSweep(enemyId, baseXp, bestStars);
+      if (ok) {
+        setSweepToast(`+${xpGained} XP · +${crownsGained} Crowns`);
+        setTimeout(() => setSweepToast(null), 2500);
+      } else {
+        setSweepToast("Not enough Challenges");
+        setTimeout(() => setSweepToast(null), 2000);
+      }
+    } finally {
+      sweepingRef.current = false;
+    }
   };
 
   const accent = current ? (ELEMENT_COLORS[current.primarySystem] ?? COLORS.brand) : COLORS.brand;
@@ -207,6 +236,36 @@ export default function ShiftCasesPage() {
                 </Text>
                 {canPlay && <Ionicons name="enter-outline" size={16} color={COLORS.onBrand} />}
               </Pressable>
+
+              {/* C3 — Auto-Sweep button: unlocked at 2★+ clear */}
+              {currentBestStars >= 2 && (
+                <View style={styles.sweepRow}>
+                  <View style={styles.sweepStarsBadge}>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name="star"
+                        size={11}
+                        color={i < currentBestStars ? COLORS.brand : COLORS.border}
+                      />
+                    ))}
+                  </View>
+                  <Pressable
+                    style={[styles.sweepBtn, !canSweep && styles.sweepBtnDisabled]}
+                    onPress={() => canSweep ? doSweep(current.id, current.difficulty) : undefined}
+                    disabled={!canSweep}
+                    testID={`shift-sweep-${current.id}`}
+                  >
+                    <Ionicons name="refresh" size={13} color={canSweep ? COLORS.brand : COLORS.onSurfaceTertiary} />
+                    <Text style={[styles.sweepTxt, !canSweep && { color: COLORS.onSurfaceTertiary }]}>
+                      {canSweep ? `Auto-Sweep (${SWEEP_STAMINA_COST}⚡)` : "No Challenges"}
+                    </Text>
+                  </Pressable>
+                  {sweepToast && (
+                    <Text style={styles.sweepToast} testID="shift-sweep-toast">{sweepToast}</Text>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Cycle controls */}
@@ -316,6 +375,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md, paddingVertical: SPACING.md, marginTop: SPACING.xs,
   },
   beginTxt: { fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
+  sweepRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" },
+  sweepStarsBadge: { flexDirection: "row", gap: 2 },
+  sweepBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.brand + "60",
+    backgroundColor: COLORS.brand + "12", paddingHorizontal: SPACING.sm, paddingVertical: 5,
+  },
+  sweepBtnDisabled: { borderColor: COLORS.border, backgroundColor: "transparent" },
+  sweepTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
+  sweepToast: { color: COLORS.success, fontSize: 11, fontWeight: "700" },
   arrow: {
     position: "absolute", top: 70,
     width: 40, height: 40, borderRadius: 20,

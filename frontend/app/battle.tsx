@@ -16,6 +16,7 @@ import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
+import { getBattleBaseXp, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { computeEpidemicTokens } from "@/src/game/worldEvent";
 import { useTestSession } from "@/src/game/testSession";
@@ -55,7 +56,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
-  const { player, applyRewards, recordFailure, recordCueTopics } = usePlayer();
+  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
@@ -550,10 +551,30 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     let playerXpEarned = 0;
     let heroXpEarned: Record<string, number> = {};
     let epidemicTokensEarned = 0;
-    // Push 6 replay: skip every reward/progress mutation below (XP, hero XP,
-    // shards, crowns, inventory, mastery, codex, failure counts, cue topics).
-    // Falls straight through to the outcome screen with nothing granted.
+    // C3: passed to result screen for XP breakdown display.
+    let battleBaseXp = 0;
+    let battleStarsPct = 0;
+    // C3 Replay: grants star-scaled XP (no first-clear bonus, no shards/crowns/hero XP).
+    // Stamina was already spent at the battle entry point.
     if (isReplay) {
+      const replayBaseXp = getBattleBaseXp(enemy.difficulty, isBossEnemy);
+      const replayStarResult = state.outcome === "win" ? computeStars({
+        won: true, fullChainCompleted: state.fullChainCompleted,
+        unsafeActionsUsed: state.unsafeActionsUsed, poorFitActionsUsed: state.poorFitActionsUsed,
+        turnsTaken: state.turnsTaken, reassessUsed: state.reassessUsedAnytime,
+        consultsUsed: state.consultsUsed, emergencyCallsUsed: state.emergencyCallsUsed,
+        inappropriateConsultsUsed: state.inappropriateConsultsUsed, basicAidUses: state.basicAidUses,
+      }, getStarRules((player?.learning_profile as LearningProfile | undefined) || undefined, ENEMY_CLINICAL[enemy.id])) : { stars: 0 };
+      const replayXp = state.outcome === "win"
+        ? Math.max(1, Math.round(replayBaseXp * starXpMultiplier(replayStarResult.stars) * Math.max(0.5, getDifficultyModifier(player?.difficulty as any)?.rewardMultiplier ?? 1)))
+        : 0;
+      const replayStarsPct = state.outcome === "win" ? Math.round(starXpMultiplier(replayStarResult.stars) * 100) : 0;
+      if (replayXp > 0) {
+        await applyRewards({ xp: replayXp, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name });
+      }
+      if (state.outcome === "win") {
+        await updateBattleStars(enemy.id, replayStarResult.stars);
+      }
       router.replace({
         pathname: "/result",
         params: {
@@ -564,7 +585,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           turns: String(state.turnsTaken), reassess: state.reassessUsedAnytime ? "1" : "0",
           consults: String(state.consultsUsed), emergency: String(state.emergencyCallsUsed),
           inappropriate: String(state.inappropriateConsultsUsed), basicAid: String(state.basicAidUses),
-          playerXp: "0", heroXp: "{}", playerLevelUp: "", heroLevelUps: "[]",
+          playerXp: String(replayXp), heroXp: "{}", playerLevelUp: "", heroLevelUps: "[]",
+          baseXp: String(replayBaseXp), starsPct: String(replayStarsPct),
         },
       });
       return;
@@ -574,7 +596,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       // Event world boss (Verdantha). Keyed on a shared check rather than a
       // single hardcoded id so live world bosses aren't under-rewarded.
       const isBoss = isBossEnemy;
-      const baseXp = isBoss ? 150 : 35 + enemy.difficulty * 10;
+      // C3: chapter-aware base XP scaled by enemy difficulty and boss status.
+      const baseXp = getBattleBaseXp(enemy.difficulty, isBoss);
       const baseShards = isTraining ? 10 : (isBoss ? 100 : 25);
       const chainBonus = state.fullChainCompleted ? 10 : 0;
       const shards = baseShards + chainBonus;
@@ -617,6 +640,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         isFirstClear,
         clinicalCuesCorrect: state.cuesTopicsCorrect.length,
       });
+      // C3: store for result screen XP breakdown display.
+      battleBaseXp = baseXp;
+      battleStarsPct = Math.round(starXpMultiplier(starResult.stars) * 100);
 
       // Hero EXP: split the per-hero battle contribution (skills/items/cards
       // used) proportionally, with a participation floor and reduced share
@@ -663,8 +689,18 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         playerLevelUp = rewardsResult.playerLevelUp || null;
         heroLevelUps = rewardsResult.heroLevelUps || [];
       }
+      // C3: persist best star rating for this enemy (drives replay badge + sweep unlock).
+      if (!isTraining) {
+        await updateBattleStars(enemy.id, starResult.stars);
+      }
     } else if (state.outcome === "loss") {
       await recordFailure(enemy.id);
+      // C3: small learning XP on a real (non-training, non-prologue) loss.
+      // Stamina gate (1 per attempt, 10 min regen) prevents farming.
+      if (!isTraining && !isPrologueTutorial) {
+        playerXpEarned = LOSS_LEARNING_XP;
+        await applyRewards({ xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name });
+      }
     }
     if (state.cuesTopicsCorrect.length > 0) {
       await recordCueTopics(state.cuesTopicsCorrect);
@@ -695,6 +731,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         heroXp: JSON.stringify(heroXpEarned),
         playerLevelUp: playerLevelUp ? JSON.stringify(playerLevelUp) : "",
         heroLevelUps: JSON.stringify(heroLevelUps),
+        baseXp: String(battleBaseXp),
+        starsPct: String(battleStarsPct),
       },
     });
   };

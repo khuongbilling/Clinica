@@ -35,11 +35,12 @@ export default function Result() {
   const router = useRouter();
   const { player } = usePlayer();
   const { logEvent } = useTestSession();
-  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam } = useLocalSearchParams<{
+  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string; epidemicTokens?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
     playerXp?: string; heroXp?: string; playerLevelUp?: string; heroLevelUps?: string;
+    baseXp?: string; starsPct?: string;
   }>();
   const won = outcome === "win";
   const isTraining = training === "1";
@@ -64,6 +65,9 @@ export default function Result() {
   const inappropriateConsultsUsed = parseInt(inappropriate || "0", 10);
   const basicAidUses = parseInt(basicAid || "0", 10);
   const playerXpEarned = parseInt(playerXp || "0", 10);
+  // C3 — XP breakdown display params (base XP and star multiplier %).
+  const xpBaseXp = parseInt(baseXpParam || "0", 10);
+  const xpStarsPct = parseInt(starsPctParam || "0", 10);
   const heroXpBreakdown: HeroXpAwardParsed[] = useMemo(() => {
     if (!heroXp) return [];
     try {
@@ -304,6 +308,15 @@ export default function Result() {
               <View style={styles.stat}>
                 <Text style={styles.statLbl}>PLAYER EXP</Text>
                 <Text style={styles.statVal}>+{playerXpEarned}</Text>
+                {/* C3 — XP breakdown: base × star multiplier */}
+                {xpBaseXp > 0 && xpStarsPct > 0 && (
+                  <Text style={styles.xpBreakdown} testID="result-xp-breakdown">
+                    {xpBaseXp} × {xpStarsPct}%{isReplay ? " (replay)" : ""}
+                  </Text>
+                )}
+                {won && playerXpEarned > 0 && xpStarsPct === 0 && (
+                  <Text style={styles.xpBreakdown}>Learning XP</Text>
+                )}
               </View>
             </View>
 
@@ -566,6 +579,7 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", borderWidth: 1, borderColor: COLORS.border, gap: 4 },
   statLbl: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 1, fontWeight: "700" },
   statVal: { color: COLORS.brand, fontSize: 28, fontWeight: "300" },
+  xpBreakdown: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 0.5 },
   section: { color: COLORS.onSurface, fontSize: 18, marginTop: SPACING.sm },
   codex: { flexDirection: "row", gap: SPACING.md, backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, borderLeftWidth: 3, borderLeftColor: COLORS.brand + "80" },
   codexTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },

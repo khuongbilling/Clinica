@@ -151,6 +151,7 @@ class Player(BaseModel):
     ward_loadout: List[str] = Field(default_factory=list)
     summon_history: List[Dict[str, Any]] = Field(default_factory=list)
     enemy_mastery: Dict[str, int] = Field(default_factory=dict)
+    battle_stars: Dict[str, int] = Field(default_factory=dict)
     chapter_progress: int = 1
     class_trainees: Dict[str, int] = Field(default_factory=dict)
     university_credits: int = 0
@@ -222,6 +223,7 @@ class PlayerUpdate(BaseModel):
     ward_loadout: Optional[List[str]] = None
     summon_history: Optional[List[Dict[str, Any]]] = None
     enemy_mastery: Optional[Dict[str, int]] = None
+    battle_stars: Optional[Dict[str, int]] = None
     chapter_progress: Optional[int] = None
     class_trainees: Optional[Dict[str, int]] = None
     university_credits: Optional[int] = None

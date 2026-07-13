@@ -102,6 +102,10 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.cue_topic_progress) {
     out = { ...out, cue_topic_progress: {} };
   }
+  // C3 — backfill battle_stars for existing players who pre-date this field.
+  if (!out.battle_stars) {
+    out = { ...out, battle_stars: {} };
+  }
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
   // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
   // layout whose values aren't valid grid cell ids predates the rewrite and
@@ -324,6 +328,10 @@ type Ctx = {
   applyClassDiagnostic: (profile: ClassDiagnosticInput) => Promise<void>;
   confirmClassDiagnostic: (classId: ClassId, resonance?: string, secondaryFantasyClass?: string) => Promise<{ ok: boolean; message: string }>;
   setLearningProfile: (profileId: string) => Promise<void>;
+  // C3 — record the best star rating achieved for a battle (keyed by enemy id).
+  updateBattleStars: (enemyId: string, stars: number) => Promise<void>;
+  // C3 — auto-sweep a battle: spend stamina + grant repeatable XP/crowns (no first-clear rewards).
+  performSweep: (enemyId: string, baseXp: number, bestStars: number) => Promise<{ ok: boolean; xp: number; crowns: number; message: string }>;
 };
 
 // Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
@@ -467,6 +475,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     ward_loadout: [...STARTER_UNIT_IDS],
     summon_history: [],
     enemy_mastery: {},
+    battle_stars: {},
     chapter_progress: 1,
     region_progress: {},
     stamina: MAX_STAMINA,
@@ -1665,10 +1674,46 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // C3 — Record the best star rating for a battle (keyed by enemy id).
+  // Only updates when the new stars beat the existing best; no-ops otherwise.
+  const updateBattleStars = useCallback(async (enemyId: string, stars: number) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const currentBest = (base.battle_stars ?? {})[enemyId] ?? 0;
+    if (stars <= currentBest) return;
+    const next: PlayerState = {
+      ...base,
+      battle_stars: { ...(base.battle_stars ?? {}), [enemyId]: stars },
+    };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
+  // C3 — Auto-sweep a previously cleared battle.
+  // Spends stamina, grants star-scaled XP + Ward Coins. No first-clear bonus,
+  // no Codex Shards, no hero XP — repeatable rewards only.
+  const performSweep = useCallback(async (
+    enemyId: string,
+    baseXp: number,
+    bestStars: number,
+  ): Promise<{ ok: boolean; xp: number; crowns: number; message: string }> => {
+    const { isSweepUnlocked, getSweepXp, getSweepCrowns, SWEEP_STAMINA_COST } =
+      await import('./battleXp');
+    if (!isSweepUnlocked(bestStars)) {
+      return { ok: false, xp: 0, crowns: 0, message: 'Reach 2 stars to unlock Auto Sweep.' };
+    }
+    const ok = await spendStamina(SWEEP_STAMINA_COST);
+    if (!ok) return { ok: false, xp: 0, crowns: 0, message: 'Not enough Shift Challenges.' };
+    const xp = getSweepXp(baseXp, bestStars);
+    const sweepCrowns = getSweepCrowns(baseXp);
+    await applyRewards({ xp, codexShards: 0, crowns: sweepCrowns, codex: [], enemyId, enemyName: enemyId });
+    return { ok: true, xp, crowns: sweepCrowns, message: `Field Practice swept! +${xp} XP, +${sweepCrowns} Crowns.` };
+  }, [spendStamina, applyRewards]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

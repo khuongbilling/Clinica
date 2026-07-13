@@ -28,6 +28,7 @@ import {
   PHASE_1_SUMMARY,
   type ChapterPartType,
 } from "@/src/game/chapterJourney";
+import { ENEMIES } from "@/src/game/content";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── Part type label + color helpers ──────────────────────────────────────────
@@ -62,13 +63,15 @@ const PART_TYPE_COLOR: Record<ChapterPartType, string> = {
 
 interface Props {
   playerLevel: number;
+  /** Best star ratings per enemy id — drives star badges on battle parts. */
+  battleStars?: Record<string, number>;
   /** Called when a chapter card is pressed (for expand/collapse). */
   onChapterPress?: (chapterId: string) => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ChapterJourneyMap({ playerLevel }: Props) {
+export function ChapterJourneyMap({ playerLevel, battleStars = {} }: Props) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     // Default expand the active chapter.
@@ -104,6 +107,7 @@ export function ChapterJourneyMap({ playerLevel }: Props) {
             isExpanded={isExpanded}
             isFirst={idx === 0}
             isLast={idx === CHAPTERS.length - 1}
+            battleStars={battleStars}
             onToggle={() => toggle(chapter.id)}
             onPartPress={(part) => {
               if (part.route && !part.isPlaceholder) {
@@ -136,6 +140,7 @@ function ChapterCard({
   isExpanded,
   isFirst,
   isLast,
+  battleStars,
   onToggle,
   onPartPress,
 }: {
@@ -144,12 +149,17 @@ function ChapterCard({
   isExpanded: boolean;
   isFirst: boolean;
   isLast: boolean;
+  battleStars: Record<string, number>;
   onToggle: () => void;
   onPartPress: (part: ChapterPart) => void;
 }) {
   const accent = status === "locked" ? COLORS.onSurfaceTertiary : chapter.accentColor;
   const isLocked = status === "locked";
   const isDone = status === "complete";
+  // C3: count how many enemies of this chapter's difficulty have been cleared with ★+.
+  const chapterEnemies = ENEMIES.filter((e) => e.difficulty === chapter.number && !e.worldBoss);
+  const battlesCleared = chapterEnemies.filter((e) => (battleStars[e.id] ?? 0) >= 1).length;
+  const battlesTotal = chapterEnemies.length;
 
   return (
     <View style={[styles.chapterWrap, isFirst && { marginTop: 0 }]}>
@@ -215,9 +225,20 @@ function ChapterCard({
           <Text style={[styles.chapterTheme, { color: isLocked ? COLORS.onSurfaceTertiary : COLORS.onSurface }]}>
             {chapter.theme}
           </Text>
-          <Text style={[styles.chapterMeta, { color: COLORS.onSurfaceTertiary }]}>
-            {chapter.parts.length} parts · Level {chapter.levelGate}+
-          </Text>
+          <View style={styles.chapterMetaRow}>
+            <Text style={[styles.chapterMeta, { color: COLORS.onSurfaceTertiary }]}>
+              {chapter.parts.length} parts · Level {chapter.levelGate}+
+            </Text>
+            {/* C3: battle cleared count badge */}
+            {battlesTotal > 0 && battlesCleared > 0 && (
+              <View style={[styles.battleClearedBadge, { borderColor: accent + "60", backgroundColor: accent + "12" }]}>
+                <Ionicons name="star" size={9} color={accent} />
+                <Text style={[styles.battleClearedTxt, { color: accent }]}>
+                  {battlesCleared}/{battlesTotal}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Expand chevron */}
@@ -246,9 +267,9 @@ function ChapterCard({
           {/* Locked chapter body message */}
           {isLocked && (
             <View style={styles.lockedMsg}>
-              <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceTertiary} />
+              <Ionicons name="shield-half" size={14} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.lockedMsgTxt}>
-                Reach Level {chapter.levelGate} to begin this chapter.
+                Field Practice Required — reach Level {chapter.levelGate} by completing Ward Shifts and earning ★ ratings.
               </Text>
             </View>
           )}
@@ -438,6 +459,26 @@ const styles = StyleSheet.create({
   },
   chapterMeta: {
     fontSize: 11,
+  },
+  chapterMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  battleClearedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  battleClearedTxt: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 
   // Tags

@@ -206,6 +206,10 @@ export interface PlayerState {
   ward_loadout?: string[];
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   enemy_mastery?: Record<string, number>;
+  // C3 — best star rating achieved per enemy (keyed by enemy.id).
+  // Drives replay badges, auto-sweep unlock (2★+), and sweep reward tiers.
+  // Backfilled as {} for existing players in normalizeProgression.
+  battle_stars?: Record<string, number>;
   chapter_progress?: number;
   // Clinica University — shared trainee materials keyed by trainee id (see university.ts)
   class_trainees?: Record<string, number>;

@@ -273,8 +273,12 @@ export interface PlayerXpRewardInput {
 }
 
 export function computePlayerXpReward(input: PlayerXpRewardInput): number {
-  let xp = input.baseXp * Math.max(0.5, input.difficultyMultiplier);
-  xp *= 1 + input.stars * 0.15; // up to +45% for a 3-star clear
+  // C3: strict star-based multiplier — 1★≈33%, 2★≈67%, 3★=100%.
+  // For 0★ wins (shouldn't normally occur) we still floor at 33% so a
+  // technical win always gets something; loss XP is handled separately in
+  // battle.tsx via LOSS_LEARNING_XP.
+  const starMul = input.stars <= 0 ? 1 / 3 : Math.min(3, input.stars) / 3;
+  let xp = input.baseXp * Math.max(0.5, input.difficultyMultiplier) * starMul;
   if (input.isFirstClear) xp *= 1.5;
   xp += input.clinicalCuesCorrect * 5;
   return Math.max(1, Math.round(xp));

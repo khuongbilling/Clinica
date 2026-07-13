@@ -35,6 +35,10 @@ export default function JourneyScreen() {
   const { level: playerLevel } = playerLevelFromXp(player.xp ?? 0);
   const currentChapter = getCurrentChapter(playerLevel);
   const nextStep = getNextRecommendedPart(playerLevel);
+  // C3: Field Practice Required — show a strip when the next chapter is locked
+  // and the player hasn't yet done any battles (no entries in battle_stars).
+  const hasBattleStars = Object.keys(player.battle_stars ?? {}).length > 0;
+  const showFieldPracticeStrip = !hasBattleStars && playerLevel < 2;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]} testID="journey-screen">
@@ -56,6 +60,22 @@ export default function JourneyScreen() {
           <Text style={styles.levelTxt}>Lv.{playerLevel}</Text>
         </View>
       </View>
+
+      {/* ── C3: Field Practice Required strip (new players with no battle XP) ── */}
+      {showFieldPracticeStrip && (
+        <Pressable
+          style={styles.fieldPracticeStrip}
+          onPress={() => router.push("/mode/ward-shift" as any)}
+          testID="journey-field-practice-strip"
+        >
+          <Ionicons name="shield-half" size={18} color={COLORS.error} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fieldPracticeTitle}>Field Practice Required</Text>
+            <Text style={styles.fieldPracticeSub}>Complete Ward Shifts and earn ★ ratings to progress through chapters.</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={16} color={COLORS.error} />
+        </Pressable>
+      )}
 
       {/* ── Next recommended step strip ── */}
       {nextStep && (
@@ -94,7 +114,7 @@ export default function JourneyScreen() {
         showsVerticalScrollIndicator={false}
         testID="journey-scroll"
       >
-        <ChapterJourneyMap playerLevel={playerLevel} />
+        <ChapterJourneyMap playerLevel={playerLevel} battleStars={player.battle_stars ?? {}} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -153,6 +173,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.brand,
+  },
+
+  // C3: Field Practice Required strip
+  fieldPracticeStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.xs,
+    backgroundColor: COLORS.error + "12",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.error + "50",
+    padding: SPACING.sm,
+  },
+  fieldPracticeTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.error,
+    letterSpacing: 0.3,
+  },
+  fieldPracticeSub: {
+    fontSize: 11,
+    color: COLORS.onSurfaceTertiary,
+    marginTop: 1,
+    lineHeight: 14,
   },
 
   // Next step strip
