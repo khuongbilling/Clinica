@@ -40,7 +40,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardBurst } from "@/src/components/university/RewardBurst";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
-import { markChainStep, checkAndMarkFirstPerfect } from "@/src/game/chainProgress";
+import { markChainStep, checkAndMarkFirstPerfect, getChainProgress } from "@/src/game/chainProgress";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { usePlayer } from "@/src/game/store";
@@ -585,6 +585,15 @@ export default function StabilizeStackScreen() {
   useBlockBack();
   // Prevent tutorial overlay leaking onto next screen.
   useClearTutorialOnExit();
+
+  // Lock: if already completed, bounce back to University immediately.
+  useEffect(() => {
+    getChainProgress().then((prog) => {
+      if (prog.stabilizeDone) {
+        router.replace("/university" as any);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-start forced tutorial on first visit
   useEffect(() => {

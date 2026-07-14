@@ -36,7 +36,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
-import { markChainStep, checkAndMarkFirstPerfect } from "@/src/game/chainProgress";
+import { markChainStep, checkAndMarkFirstPerfect, getChainProgress } from "@/src/game/chainProgress";
 import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -400,6 +400,15 @@ export default function CueHuntScreen() {
   useBlockBack();
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
+
+  // Lock: if already completed, bounce back to University immediately.
+  useEffect(() => {
+    getChainProgress().then((prog) => {
+      if (prog.cueHuntDone) {
+        router.replace("/university" as any);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const requiredFound = [...found].filter(
     (id) => ZONES.find((z) => z.id === id)?.isRequired,

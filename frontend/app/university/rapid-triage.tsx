@@ -30,7 +30,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
-import { markChainStep, checkAndMarkFirstPerfect } from "@/src/game/chainProgress";
+import { markChainStep, checkAndMarkFirstPerfect, getChainProgress } from "@/src/game/chainProgress";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardBurst } from "@/src/components/university/RewardBurst";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
@@ -270,6 +270,15 @@ export default function RapidTriageScreen() {
 
   useBlockBack();
   useClearTutorialOnExit();
+
+  // Lock: if already completed, bounce back to University immediately.
+  useEffect(() => {
+    getChainProgress().then((prog) => {
+      if (prog.rapidTriageDone) {
+        router.replace("/university" as any);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Award University Credits + C1 objective XP once on completion
   useEffect(() => {

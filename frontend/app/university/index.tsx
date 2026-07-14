@@ -8,7 +8,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { ModeCard } from "@/src/components/ModeCard";
 import { BannerCard } from "@/src/components/ModeBanners";
-import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -20,9 +19,6 @@ import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
 import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
-import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
-import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
 import {
   completeObjective,
   getObjectiveProgress,
@@ -266,9 +262,6 @@ export default function UniversityHubScreen() {
   const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
 
-  // Objective progress — reloaded on focus so post-completion next-steps update.
-  const [completedObjs, setCompletedObjs] = useState<Set<ObjectiveId>>(new Set());
-
   // Chain progress — reload every time this screen gains focus so the banner
   // updates after the player returns from a completed mini-game.
   const [chainProg, setChainProg] = useState<ChainProgress>({
@@ -283,7 +276,6 @@ export default function UniversityHubScreen() {
   useFocusEffect(
     useCallback(() => {
       getChainProgress().then(setChainProg);
-      getObjectiveProgress().then(setCompletedObjs);
       // ── C1: If systemWardHub tutorial is still waiting for the player to
       // navigate to University, completing that action here advances the step
       // (which marks the tutorial done, since it's the last step).
@@ -341,8 +333,6 @@ export default function UniversityHubScreen() {
       // applyRewards handles XP + level recalc via the public store API.
       if (bonus > 0) await applyRewards({ xp: bonus });
 
-      // Refresh displayed objectives after any grants.
-      getObjectiveProgress().then(setCompletedObjs);
     })();
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -415,59 +405,6 @@ export default function UniversityHubScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Only show the step-tracker and System narrator card when no tutorial
-            overlay is active — the overlay already provides the active instruction
-            and stacking a second guide card on top creates redundant guidance. */}
-        {!activeTutorialId && (
-          <SceneTransition trigger="university-arrival">
-            {isNewLearner && nextLotusNode && <OnboardingProgressBar step="University" />}
-
-            <NarratorGuide
-              message={
-                chainProg.stabilizeDone
-                  ? "The Fading Apprentice case chain is complete. Well done, healer. Explore lessons, recruit heroes, or take on new challenges below."
-                  : chainProg.rapidTriageDone
-                  ? "Triage is done. One step remains — Stabilize Stack. Build the care sequence that saves the Apprentice. Tap the banner above to begin."
-                  : chainProg.cueHuntDone
-                  ? "Good — you spotted the cues. Now the next phase: Rapid Triage. Sort patients by urgency before time runs out. Tap the banner above to continue."
-                  : isNewLearner
-                  ? "…This is the University. Start with Cue Hunt above — a live case where you tap the clues a real patient is showing. Or take a Lotus Lesson to study the reasoning. Both paths reward heroes."
-                  : "You return to study. Good. Run a Cue Hunt, take a lesson, recruit healers, or consult the Codex. The choice is yours."
-              }
-              ctaLabel={
-                chainProg.stabilizeDone
-                  ? undefined
-                  : chainProg.rapidTriageDone
-                  ? "Start Stabilize Stack →"
-                  : chainProg.cueHuntDone
-                  ? "Start Rapid Triage →"
-                  : isNewLearner
-                  ? "Start Cue Hunt"
-                  : undefined
-              }
-              onPress={
-                chainProg.stabilizeDone
-                  ? undefined
-                  : chainProg.cueHuntDone || isNewLearner
-                  ? handleChainEntry
-                  : undefined
-              }
-              testID="university-narrator"
-            />
-          </SceneTransition>
-        )}
-
-        {/* ── C1 Tutorial Quest Panel ─────────────────────────────────────
-            Shown when no tutorial overlay is active.  Renders the current
-            quest objective (FA checklist or post-FA next-step hint).       */}
-        {!activeTutorialId && (
-          <TutorialQuestPanel
-            chainProg={chainProg}
-            completed={completedObjs}
-            onPressNext={handleChainEntry}
-          />
-        )}
-
         {/* CHAIN HERO BANNER — collapses to a compact chip after completion */}
         {chainProg.stabilizeDone ? (
           <FaCompleteChip />
@@ -475,8 +412,6 @@ export default function UniversityHubScreen() {
           <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
         )}
 
-        {/* Chain track — per-step progress using live chainProg */}
-        {!chainProg.stabilizeDone && <ChainTrack chainProg={chainProg} />}
 
         {/* ── CHAPTER 1 JOURNEY — visible once FA chain is done or for returning players */}
         {chainProg.stabilizeDone && (
@@ -581,15 +516,6 @@ export default function UniversityHubScreen() {
               onPress={() => router.push("/learning-profile" as any)}
               testID="university-more-learning-profile"
             />
-            {chainProg.rapidTriageDone && (
-              <MoreRow
-                icon="layers-outline"
-                title="Stabilize Stack: ABCDE"
-                desc="A second ordering challenge — a different patient, different stakes."
-                onPress={() => router.push("/university/stabilize-stack" as any)}
-                testID="university-more-stabilize-abcde"
-              />
-            )}
 
             {/* Future Learning — collapsed by default */}
             <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
@@ -637,100 +563,6 @@ export default function UniversityHubScreen() {
 
       <TutorialOverlay />
     </SafeAreaView>
-  );
-}
-
-// ── ChainTrack ──────────────────────────────────────────────────────────────
-// Shows the 3-game "Fading Apprentice" case chain below the hero banner.
-// Each step lights up individually as the player completes it.
-const CHAIN_STEPS = [
-  { icon: "eye-outline"    as const, label: "Cue Hunt",  color: "#2DD4BF", doneKey: "cueHuntDone"    as const },
-  { icon: "flash-outline"  as const, label: "Triage",    color: "#F59E0B", doneKey: "rapidTriageDone" as const },
-  { icon: "layers-outline" as const, label: "Stabilize", color: "#22D3EE", doneKey: "stabilizeDone"  as const },
-  { icon: "ribbon-outline" as const, label: "Reward",    color: "#D4AF37", doneKey: null },
-];
-
-function ChainTrack({ chainProg }: { chainProg: ChainProgress }) {
-  const allDone = chainProg.stabilizeDone;
-
-  return (
-    <View style={chainStyles.wrap}>
-      <View style={chainStyles.headerRow}>
-        <Text style={chainStyles.chainLabel}>THE FADING APPRENTICE · CASE CHAIN</Text>
-        {allDone ? (
-          <View style={chainStyles.doneBadge}>
-            <Ionicons name="checkmark-circle" size={11} color="#22C55E" />
-            <Text style={chainStyles.doneTxt}>COMPLETE</Text>
-          </View>
-        ) : (
-          <Text style={chainStyles.progressTxt}>
-            {chainProg.stabilizeDone ? 3 : chainProg.rapidTriageDone ? 2 : chainProg.cueHuntDone ? 1 : 0}/3 done
-          </Text>
-        )}
-      </View>
-
-      <View style={chainStyles.stepsRow}>
-        {CHAIN_STEPS.map((step, i) => {
-          const done = step.doneKey ? chainProg[step.doneKey] : allDone;
-          // "current" = the first undone game step (not Reward)
-          const isNext =
-            !done &&
-            step.doneKey !== null &&
-            (i === 0 || (CHAIN_STEPS[i - 1].doneKey && chainProg[CHAIN_STEPS[i - 1].doneKey!]));
-          return (
-            <React.Fragment key={step.label}>
-              <View style={chainStyles.stepWrap}>
-                <View
-                  style={[
-                    chainStyles.stepCircle,
-                    done  && { borderColor: step.color + "88", backgroundColor: step.color + "18" },
-                    isNext && { borderColor: step.color + "BB", backgroundColor: step.color + "22" },
-                  ]}
-                >
-                  {done ? (
-                    <Ionicons name="checkmark" size={13} color={step.color} />
-                  ) : (
-                    <Ionicons
-                      name={step.icon}
-                      size={13}
-                      color={isNext ? step.color : COLORS.onSurfaceTertiary}
-                    />
-                  )}
-                </View>
-                <Text
-                  style={[
-                    chainStyles.stepLabel,
-                    done   && { color: step.color },
-                    isNext && { color: step.color, fontWeight: "700" },
-                  ]}
-                >
-                  {step.label}
-                </Text>
-                {isNext && <Text style={[chainStyles.nextPip, { color: step.color }]}>▲</Text>}
-              </View>
-              {i < CHAIN_STEPS.length - 1 && (
-                <View
-                  style={[
-                    chainStyles.connector,
-                    done && { backgroundColor: step.color + "40" },
-                  ]}
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </View>
-
-      {!allDone && (
-        <Text style={chainStyles.hint}>
-          {!chainProg.cueHuntDone
-            ? "Tap the banner above to begin — each step unlocks the next."
-            : !chainProg.rapidTriageDone
-            ? "Cue Hunt done ✓ — tap the banner to continue with Rapid Triage."
-            : "Triage done ✓ — one step left. Stabilize the patient to complete the chain."}
-        </Text>
-      )}
-    </View>
   );
 }
 
@@ -952,90 +784,3 @@ const styles = StyleSheet.create({
   footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
 });
 
-// ── ChainTrack styles ────────────────────────────────────────────────────────
-const chainStyles = StyleSheet.create({
-  wrap: {
-    backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: "#2DD4BF20",
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  chainLabel: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-  doneBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#22C55E18",
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: "#22C55E30",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  doneTxt: {
-    color: "#22C55E",
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  stepsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  stepWrap: {
-    alignItems: "center",
-    gap: 4,
-    flex: 1,
-  },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepLabel: {
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-    textAlign: "center",
-  },
-  connector: {
-    height: 1.5,
-    width: 12,
-    backgroundColor: "#2A3A4A",
-    marginBottom: 16,
-    flexShrink: 0,
-  },
-  hint: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 10,
-    fontStyle: "italic",
-    textAlign: "center",
-    paddingTop: 2,
-  },
-  progressTxt: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  nextPip: {
-    fontSize: 7,
-    lineHeight: 9,
-    marginTop: -2,
-  },
-});
