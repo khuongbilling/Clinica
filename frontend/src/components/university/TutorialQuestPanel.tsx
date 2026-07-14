@@ -40,9 +40,6 @@ const POST_FA_STEPS: { objId: ObjectiveId; icon: React.ComponentProps<typeof Ion
   { objId: "obj_lotus_first_lesson",icon: "checkmark-circle-outline", label: "Complete a Lesson", hint: "Finish your first Lotus Lesson" },
   { objId: "obj_recruit_preview",   icon: "sparkles-outline", label: "Visit Recruitment",   hint: "See the Recruitment Hall below" },
   { objId: "obj_ward_shift_first",  icon: "pulse-outline",    label: "Run a Ward Shift",    hint: "Head to the Ward and run a Shift" },
-  { objId: "obj_codex_visited",     icon: "library-outline",  label: "Open the Codex",      hint: "Browse the Research Library tab" },
-  { objId: "obj_realm_visited",     icon: "globe-outline",    label: "Visit Your Sanctuary",hint: "Enter your Realm from the hub" },
-  { objId: "obj_daily_checkin",     icon: "calendar-outline", label: "Daily Ward Rounds",   hint: "Complete your first Daily check-in" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────

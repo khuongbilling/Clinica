@@ -307,12 +307,15 @@ export default function UniversityHubScreen() {
         bonus += 10;
       }
 
-      // Catch-up grant: steps 1-3 were fire-and-forget before the XP fix.
-      // Load the done-set once, then for each step check if XP was never paid.
+      // Catch-up grant: early onboarding steps (1-6) fire outside a context with
+      // applyRewards. Load the done-set once, then pay out any unpaid XP here.
       const catchupIds: ObjectiveId[] = [
         "obj_prologue_done",
-        "obj_recalled",
+        "obj_lotus_recall",
+        "obj_identity_done",
+        "obj_diagnostic_done",
         "obj_class_result",
+        "obj_memory_seen",
       ];
       const doneSet = await getObjectiveProgress();
       for (const id of catchupIds) {

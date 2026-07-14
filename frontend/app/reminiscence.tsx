@@ -7,6 +7,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
+import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { SPACING, RADIUS } from "@/src/theme/colors";
 import { MotionPanel, PanelEffect } from "@/src/components/reminiscence/MotionPanel";
 import { LotusPetalOverlay } from "@/src/components/reminiscence/LotusPetalOverlay";
@@ -299,15 +300,16 @@ export default function ReminiscenceScreen() {
   const finish = async () => {
     if (finishingRef.current) return;
     finishingRef.current = true;
+    // C1: grant obj_memory_seen (step 6) before routing away.
+    if (!isReplay) {
+      const isNew = await completeObjective("obj_memory_seen");
+      if (isNew) {
+        await markObjectiveXpGranted("obj_memory_seen");
+        // XP applied via applyRewards not available here — university/index.tsx
+        // catch-up grant handles the payout on first University visit instead.
+      }
+    }
     await markReminiscenceSeen();
-    // The reminiscence ends on "Clinica University" — so land the player there
-    // directly, delivering on the cutscene's promise instead of detouring
-    // through the hub. University is gated only by account level 1 (always met),
-    // so a fresh post-recall player never hits the feature lock, and the
-    // University screen already greets them (the System's "you were recalled…"
-    // line + arrival transition). The hub's own welcome modal + System-narrator
-    // intro simply defer until the player first opens the hub. Replay mode (from
-    // Profile) still returns to Profile so it never re-enters onboarding.
     router.replace(isReplay ? "/(tabs)/profile" : "/(tabs)");
   };
 

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
+import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
@@ -38,6 +39,13 @@ export default function LotusRecall() {
     if (isReplay) {
       router.replace("/(tabs)/profile");
       return;
+    }
+    // C1: grant obj_lotus_recall (step 2) before routing away.
+    // XP is lightweight — fire-and-forget; completePrologue handles the heavy save.
+    const isNew = await completeObjective("obj_lotus_recall");
+    if (isNew) {
+      await markObjectiveXpGranted("obj_lotus_recall");
+      // applyRewards not available in this component; university catch-up covers it.
     }
     await completePrologue();
     router.replace("/post-recall");

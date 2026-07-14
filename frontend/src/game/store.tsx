@@ -580,12 +580,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (advanced.length > 0) {
         const allNow = allObjectivesComplete(rec.state);
         const allBefore = allObjectivesComplete(before);
-        // C1 obj 15: grant once when daily rounds are fully completed for the first time.
-        if (allNow && !allBefore) {
-          import("./objectiveProgress").then(({ completeObjective }) =>
-            completeObjective("obj_daily_checkin")
-          );
-        }
+        // Daily rounds completion is tracked by the daily_rounds state itself;
+        // the old obj_daily_checkin objective was removed from the 15-step chain.
         pulseId.current += 1;
         setDailyPulse({
           id: pulseId.current,

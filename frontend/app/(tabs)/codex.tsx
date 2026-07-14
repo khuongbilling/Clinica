@@ -4,9 +4,7 @@ import { goBack } from "@/src/utils/navigation";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useEffect, useRef } from "react";
 import { BATTLE_MECHANICS, CODEX, ENEMIES } from "@/src/game/content";
-import { completeObjective } from "@/src/game/objectiveProgress";
 import { DEPTH_INTRO, DEPTH_LABEL } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -32,13 +30,8 @@ export default function CodexScreen() {
   const { player } = usePlayer();
   const { completed, replayTutorial } = useTutorial();
 
-  // C1 obj 13: grant once when player first opens the Codex.
-  const codexVisitRef = useRef(false);
-  useEffect(() => {
-    if (!player || codexVisitRef.current) return;
-    codexVisitRef.current = true;
-    completeObjective("obj_codex_visited");
-  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Codex visits are tracked by badge_progress; the old obj_codex_visited
+  // objective was removed from the 15-step chain.
   if (!player) {
     return (
       <SafeAreaView style={[styles.container, styles.loading]} edges={["top"]}>

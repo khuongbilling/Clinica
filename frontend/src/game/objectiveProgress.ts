@@ -26,21 +26,21 @@ const XP_KEY = "clinica.objectives.xp.v1";
 // ── Objective identifiers ──────────────────────────────────────────────────
 
 export type ObjectiveId =
-  | "obj_prologue_done"          // step 1  — recall stabilised (end of prologue)
-  | "obj_recalled"               // step 2  — meet the System on the main hub
-  | "obj_class_result"           // step 3  — complete the class diagnostic
-  | "obj_university_arrived"     // step 4  — open Clinica University
-  | "obj_cue_hunt_done"          // step 5  — complete Cue Hunt
-  | "obj_triage_done"            // step 6  — complete Rapid Triage
-  | "obj_stabilize_done"         // step 7  — complete Stabilize Stack
-  | "obj_fading_apprentice_done" // step 8  — complete all 3 Fading Apprentice games
-  | "obj_lotus_visited"          // step 9  — continue chapter 1 journey / open lessons
-  | "obj_lotus_first_lesson"     // step 10 — complete Lotus Lesson: Hydration Basics
-  | "obj_recruit_preview"        // step 11 — visit the Recruitment Hall
-  | "obj_ward_shift_first"       // step 12 — complete first simulation shift
-  | "obj_codex_visited"          // step 13 — explore the Codex
-  | "obj_realm_visited"          // step 14 — visit your Realm Sanctuary
-  | "obj_daily_checkin";         // step 15 — complete Daily Ward Rounds
+  | "obj_prologue_done"          // step 1  — prologue battle complete (Recall Stabilized)
+  | "obj_lotus_recall"           // step 2  — Lotus Recall cinematic watched
+  | "obj_identity_done"          // step 3  — identity restoration complete (name saved)
+  | "obj_diagnostic_done"        // step 4  — class diagnostic quiz answered
+  | "obj_class_result"           // step 5  — class registered (confirmClassDiagnostic)
+  | "obj_memory_seen"            // step 6  — Memory Reminiscence scene completed
+  | "obj_university_arrived"     // step 7  — open Clinica University
+  | "obj_cue_hunt_done"          // step 8  — complete Cue Hunt
+  | "obj_triage_done"            // step 9  — complete Rapid Triage
+  | "obj_stabilize_done"         // step 10 — complete Stabilize Stack
+  | "obj_fading_apprentice_done" // step 11 — complete all 3 Fading Apprentice games
+  | "obj_lotus_visited"          // step 12 — continue chapter 1 journey / open lessons
+  | "obj_lotus_first_lesson"     // step 13 — complete Lotus Lesson: Hydration Basics
+  | "obj_recruit_preview"        // step 14 — visit the Recruitment Hall
+  | "obj_ward_shift_first";      // step 15 — complete first simulation shift
 
 export interface ObjectiveDef {
   id: ObjectiveId;
@@ -54,106 +54,106 @@ export const OBJECTIVES: ObjectiveDef[] = [
   {
     id: "obj_prologue_done",
     step: 1,
-    title: "Recall Stabilized",
-    description: "Your story begins. The prologue shift is over — you have been Recalled.",
+    title: "Prologue Battle",
+    description: "Your story begins. Face the Silent Infarction and answer the call of the Recall.",
     xpReward: 10,
   },
   {
-    id: "obj_recalled",
+    id: "obj_lotus_recall",
     step: 2,
-    title: "Meet the System",
-    description: "The System introduces itself on the main hub. Your guide has arrived.",
+    title: "Lotus Recall",
+    description: "The patient is gone — but the lotus light draws you back. A second chance begins.",
+    xpReward: 10,
+  },
+  {
+    id: "obj_identity_done",
+    step: 3,
+    title: "Identity Restored",
+    description: "The System registers you. Your name and presence are confirmed in the Sanctuary.",
+    xpReward: 10,
+  },
+  {
+    id: "obj_diagnostic_done",
+    step: 4,
+    title: "Class Diagnostic",
+    description: "The System reads your instincts and patterns. Your clinical aptitude takes shape.",
     xpReward: 10,
   },
   {
     id: "obj_class_result",
-    step: 3,
-    title: "Complete Your Class Diagnostic",
-    description: "Discover the clinical path that matches your aptitude.",
+    step: 5,
+    title: "Class Registered",
+    description: "Your clinical path is confirmed. This is a starting point — not a lock.",
+    xpReward: 10,
+  },
+  {
+    id: "obj_memory_seen",
+    step: 6,
+    title: "Memory Unlocked",
+    description: "Fragments of your former life surface. Understand what brought you here.",
     xpReward: 10,
   },
   {
     id: "obj_university_arrived",
-    step: 4,
+    step: 7,
     title: "Open Clinica University",
     description: "Enter Clinica University and meet The Fading Apprentice case chain.",
     xpReward: 10,
   },
   {
     id: "obj_cue_hunt_done",
-    step: 5,
+    step: 8,
     title: "Complete Clinical Cue Hunt",
     description: "Find all three clinical signs hidden in The Fading Apprentice.",
     xpReward: 10,
   },
   {
     id: "obj_triage_done",
-    step: 6,
+    step: 9,
     title: "Complete Rapid Triage",
     description: "Sort all three patients by urgency — fast and decisive.",
     xpReward: 10,
   },
   {
     id: "obj_stabilize_done",
-    step: 7,
+    step: 10,
     title: "Complete Stabilize Stack",
     description: "Build the safe care sequence that keeps the Apprentice alive.",
     xpReward: 10,
   },
   {
     id: "obj_fading_apprentice_done",
-    step: 8,
+    step: 11,
     title: "Complete The Fading Apprenticeship",
     description: "Finish all three stages of the case chain: Cue Hunt, Triage, and Stabilize.",
     xpReward: 10,
   },
   {
     id: "obj_lotus_visited",
-    step: 9,
+    step: 12,
     title: "Continue Chapter 1 Journey",
     description: "Open Lotus Lessons and start the next phase of your Chapter 1 path.",
     xpReward: 10,
   },
   {
     id: "obj_lotus_first_lesson",
-    step: 10,
+    step: 13,
     title: "Complete Lotus Lesson: Hydration Basics",
     description: "Finish your first structured lesson and reinforce what you learned.",
     xpReward: 10,
   },
   {
     id: "obj_recruit_preview",
-    step: 11,
+    step: 14,
     title: "Visit the Recruitment Hall",
     description: "See the Summoning Hall where healers answer the call.",
     xpReward: 10,
   },
   {
     id: "obj_ward_shift_first",
-    step: 12,
+    step: 15,
     title: "Complete First Simulation Shift",
     description: "Run your first real Ward Shift against a live clinical challenge.",
-    xpReward: 10,
-  },
-  {
-    id: "obj_codex_visited",
-    step: 13,
-    title: "Explore the Codex",
-    description: "Open the Research Library and read a clinical entry.",
-    xpReward: 10,
-  },
-  {
-    id: "obj_realm_visited",
-    step: 14,
-    title: "Visit Your Realm Sanctuary",
-    description: "Enter your Realm and see the kingdom you are building.",
-    xpReward: 10,
-  },
-  {
-    id: "obj_daily_checkin",
-    step: 15,
-    title: "Complete Daily Ward Rounds",
-    description: "Finish your first daily objective loop and unlock full progression.",
     xpReward: 10,
   },
 ];

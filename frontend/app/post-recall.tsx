@@ -118,18 +118,20 @@ export default function PostRecall() {
     if (player?.name && player.name !== "Healer") setName(player.name);
   }, [player?.name]);
 
-  // C1: grant obj_recalled (step 2 — Meet the System) once when identity is restored.
-  const recalledGrantedRef = useRef(false);
+  // C1: grant obj_diagnostic_done (step 4) the first time the quiz result is shown.
+  // This useEffect covers all three paths: answered quiz, skipped quiz, and automated
+  // assignment — all three land on view="result" before class confirmation.
+  const diagnosticGrantRef = useRef(false);
   useEffect(() => {
-    if (!player || isReplay || recalledGrantedRef.current) return;
-    recalledGrantedRef.current = true;
-    completeObjective("obj_recalled").then(async (isNew) => {
+    if (isReplay || view !== "result" || diagnosticGrantRef.current) return;
+    diagnosticGrantRef.current = true;
+    completeObjective("obj_diagnostic_done").then(async (isNew) => {
       if (isNew) {
-        await markObjectiveXpGranted("obj_recalled");
+        await markObjectiveXpGranted("obj_diagnostic_done");
         await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
       }
     });
-  }, [player?.id, isReplay]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view, isReplay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Drives the short "SYSTEM: ..." message sequence for Automated Class
   // Assignment, then reveals the (already-computed) randomized result.
@@ -163,6 +165,16 @@ export default function PostRecall() {
           resonanceForPreview(result, previewClass),
           result.secondaryClass,
         );
+        // C1: grant obj_class_result (step 5) right after class is confirmed.
+        // This fires here (not in /class-result screen) because post-recall
+        // routes directly to /reminiscence, bypassing /class-result entirely.
+        if (!isReplay) {
+          const isNew = await completeObjective("obj_class_result");
+          if (isNew) {
+            await markObjectiveXpGranted("obj_class_result");
+            await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+          }
+        }
         if (isReplay) router.replace("/(tabs)/profile");
       } finally {
         setSubmitting(false);
@@ -176,6 +188,12 @@ export default function PostRecall() {
     setSubmitting(true);
     try {
       await completeIdentityRestore(name.trim() || "Healer");
+      // C1: grant obj_identity_done (step 3) immediately after name is saved.
+      const isNew = await completeObjective("obj_identity_done");
+      if (isNew) {
+        await markObjectiveXpGranted("obj_identity_done");
+        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+      }
     } finally {
       setSubmitting(false);
     }

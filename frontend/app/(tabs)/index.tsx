@@ -67,20 +67,22 @@ function hubGuideMessage(obj: ObjectiveDef): string {
   switch (obj.id) {
     case "obj_prologue_done":
       return "Your story has begun. The System is here. Explore the hub — your stamina, currencies, and first heroes are waiting.";
-    case "obj_recalled":
-      return "The System has arrived. It will guide you through Clinica. Look around — then head to the University when you are ready.";
+    case "obj_lotus_recall":
+    case "obj_identity_done":
+    case "obj_diagnostic_done":
     case "obj_class_result":
-      return "Your class diagnostic awaits. Complete it to discover your clinical path — then head to Clinica University.";
+    case "obj_memory_seen":
+      return "Your onboarding is in progress. Head to Clinica University when you are ready — your path begins there.";
     case "obj_university_arrived":
       return "Your path begins at Clinica University. Learn to read the body, and your first heroes will answer the call.";
     case "obj_cue_hunt_done":
-      return "Return to Clinica University and start the Fading Apprentice case chain with the Clinical Cue Hunt — Step 5 of 15.";
+      return "Return to Clinica University and start the Fading Apprentice case chain with the Clinical Cue Hunt — Step 8 of 15.";
     case "obj_triage_done":
-      return "Cue Hunt complete. Return to University and tackle Rapid Triage next — Step 6 of 15.";
+      return "Cue Hunt complete. Return to University and tackle Rapid Triage next — Step 9 of 15.";
     case "obj_stabilize_done":
       return "Triage done. One step remains in the Fading Apprentice chain — Stabilize Stack. Return to University to finish it.";
     case "obj_fading_apprentice_done":
-      return "The Fading Apprentice case chain is almost complete. Return to University to finish Stabilize Stack and unlock Step 8.";
+      return "The Fading Apprentice case chain is almost complete. Return to University to finish Stabilize Stack and unlock Step 11.";
     case "obj_lotus_visited":
       return "The Fading Apprentice is saved! Continue Chapter 1 — open Lotus Lessons in the University to reinforce your knowledge.";
     case "obj_lotus_first_lesson":
@@ -95,9 +97,13 @@ function hubGuideMessage(obj: ObjectiveDef): string {
 function hubGuideCta(obj: ObjectiveDef): string {
   switch (obj.id) {
     case "obj_prologue_done":
-    case "obj_recalled":
-    case "obj_class_result":
       return "Explore the Hub";
+    case "obj_lotus_recall":
+    case "obj_identity_done":
+    case "obj_diagnostic_done":
+    case "obj_class_result":
+    case "obj_memory_seen":
+      return "Enter Clinica University";
     case "obj_university_arrived":
       return "Enter Clinica University";
     case "obj_cue_hunt_done":
@@ -117,15 +123,17 @@ function hubGuideCta(obj: ObjectiveDef): string {
 
 function hubGuideRoute(obj: ObjectiveDef): string {
   switch (obj.id) {
-    // Steps 1–3 are part of an automatic sequential flow (prologue → post-recall
-    // → class-result → reminiscence). Never deep-link into those screens from
-    // the hub or the player will land mid-flow and get bounced to reminiscence.
-    // The game routes them correctly on its own; the guide here is just a
-    // contextual status card, so the CTA stays on the hub.
+    // Step 1 is the only one that can genuinely show on the hub mid-onboarding.
+    // Steps 2–6 are auto-completing flow steps; if somehow shown on the hub
+    // (edge-case reload), the CTA now forwards to University rather than no-oping.
     case "obj_prologue_done":
-    case "obj_recalled":
-    case "obj_class_result":
       return "/(tabs)";
+    case "obj_lotus_recall":
+    case "obj_identity_done":
+    case "obj_diagnostic_done":
+    case "obj_class_result":
+    case "obj_memory_seen":
+      return "/university";
     case "obj_university_arrived":
     case "obj_cue_hunt_done":
     case "obj_triage_done":

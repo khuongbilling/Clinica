@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState, useEffect, useRef } from "react";
-import { completeObjective } from "@/src/game/objectiveProgress";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -96,13 +95,8 @@ export default function KingdomScreen() {
   const { logEvent } = useTestSession();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
 
-  // C1 obj 14: grant once when player first visits the Realm.
-  const realmVisitRef = useRef(false);
-  useEffect(() => {
-    if (!player || realmVisitRef.current) return;
-    realmVisitRef.current = true;
-    completeObjective("obj_realm_visited");
-  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Realm visit is tracked via player.realm_seed / layout; the old
+  // obj_realm_visited objective was removed from the 15-step chain.
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
