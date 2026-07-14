@@ -127,6 +127,18 @@ export function TutorialOverlay() {
     }
   }, [instant, currentStep, advanceStep]);
 
+  // Auto-dismiss the narrative strip for mini-game steps (those with a
+  // requiredTargetId) once the typewriter text is fully revealed.  The player
+  // can read the instruction, and 800 ms later the strip auto-closes so only
+  // the highlighted zone is visible — no manual double-tap on the box needed.
+  // The guard on `boxDismissed` prevents a double-fire if the player already
+  // tapped the box themselves before the timer fires.
+  useEffect(() => {
+    if (!isMiniGameRequired || !instant || boxDismissed) return;
+    const t = setTimeout(() => setBoxDismissed(true), 800);
+    return () => clearTimeout(t);
+  }, [isMiniGameRequired, instant, boxDismissed]);
+
   // Reserve is only meaningful while a bottom-placed guided box is showing.
   // Clear it whenever we're not (top/center box, banner, or overlay hidden) so
   // screens don't keep dead bottom padding after the step advances.

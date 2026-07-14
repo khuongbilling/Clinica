@@ -177,8 +177,11 @@ function ClueZone({ zone, scW, found, onCorrect, onWrong }: ClueZoneProps) {
     // Block wrong zones while a tutorial step requires a specific target.
     if (isTutorialBlocked) return;
     if (zone.isRequired) {
-      if (found) return;
+      // Advance the tutorial step first — even if the zone was already found
+      // (pre-tapped before the 700ms tutorial-start delay). Without this guard
+      // swap, a pre-found zone causes the tutorial to get permanently stuck.
       if (isHighlighted) onTargetPress();
+      if (found) return;
       onCorrect(zone);
     } else {
       Animated.sequence([
