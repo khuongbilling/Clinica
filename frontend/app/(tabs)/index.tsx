@@ -96,9 +96,8 @@ function hubGuideCta(obj: ObjectiveDef): string {
   switch (obj.id) {
     case "obj_prologue_done":
     case "obj_recalled":
-      return "Explore the Hub";
     case "obj_class_result":
-      return "Complete Class Diagnostic";
+      return "Explore the Hub";
     case "obj_university_arrived":
       return "Enter Clinica University";
     case "obj_cue_hunt_done":
@@ -118,11 +117,15 @@ function hubGuideCta(obj: ObjectiveDef): string {
 
 function hubGuideRoute(obj: ObjectiveDef): string {
   switch (obj.id) {
+    // Steps 1–3 are part of an automatic sequential flow (prologue → post-recall
+    // → class-result → reminiscence). Never deep-link into those screens from
+    // the hub or the player will land mid-flow and get bounced to reminiscence.
+    // The game routes them correctly on its own; the guide here is just a
+    // contextual status card, so the CTA stays on the hub.
     case "obj_prologue_done":
     case "obj_recalled":
-      return "/(tabs)";
     case "obj_class_result":
-      return "/post-recall";
+      return "/(tabs)";
     case "obj_university_arrived":
     case "obj_cue_hunt_done":
     case "obj_triage_done":
