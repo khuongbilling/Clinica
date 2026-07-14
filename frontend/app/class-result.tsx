@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { useEffect, useRef } from "react";
-import { completeObjective } from "@/src/game/objectiveProgress";
+import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { CLASS_IDENTITIES, getClassTree, type ClassId } from "@/src/game/classTree";
 import {
   CLASS_FLAVOR_TITLE, CLASS_WHY_FITS, formatResonance, fantasyClassFromClassId,
@@ -17,14 +17,19 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function ClassResultScreen() {
   const router = useRouter();
-  const { player } = usePlayer();
+  const { player, applyRewards } = usePlayer();
 
-  // C1: grant obj_class_result once when player first sees their class.
+  // C1: grant obj_class_result (step 3 — Complete Class Diagnostic) once.
   const classGrantedRef = useRef(false);
   useEffect(() => {
     if (!player || classGrantedRef.current) return;
     classGrantedRef.current = true;
-    completeObjective("obj_class_result"); // fire-and-forget
+    completeObjective("obj_class_result").then(async (isNew) => {
+      if (isNew) {
+        await markObjectiveXpGranted("obj_class_result");
+        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+      }
+    });
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!player) {

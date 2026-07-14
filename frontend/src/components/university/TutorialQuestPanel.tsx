@@ -106,7 +106,7 @@ export function TutorialQuestPanel({ chainProg, completed, onPressNext }: Props)
       <View style={styles.header}>
         <View style={styles.stepBadge}>
           <Ionicons name="git-branch-outline" size={10} color="#2DD4BF" />
-          <Text style={styles.stepBadgeTxt}>STEP 8 OBJECTIVE</Text>
+          <Text style={styles.stepBadgeTxt}>FADING APPRENTICE · STEPS 5–8</Text>
         </View>
         <Text style={styles.progress}>{doneCount}/{FA_TASKS.length}</Text>
       </View>

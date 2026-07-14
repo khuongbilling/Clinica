@@ -19,25 +19,28 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEY = "clinica.objectives.v1";
+/** Tracks which objective IDs have had their 10 XP actually paid out.
+ *  Separate from completion so we can safely backfill existing players. */
+const XP_KEY = "clinica.objectives.xp.v1";
 
 // ── Objective identifiers ──────────────────────────────────────────────────
 
 export type ObjectiveId =
-  | "obj_prologue_done"       // step 1  — complete the prologue shift
-  | "obj_recalled"            // step 2  — experience the Recall / post-recall
-  | "obj_class_result"        // step 3  — see your Class Result
-  | "obj_university_arrived"  // step 4  — enter the University for the first time
-  | "obj_cue_hunt_done"       // step 5  — complete Cue Hunt
-  | "obj_triage_done"         // step 6  — complete Rapid Triage
-  | "obj_stabilize_done"      // step 7  — complete Stabilize Stack
-  | "obj_fading_apprentice_done" // step 8 — complete all 3 Fading Apprentice games
-  | "obj_lotus_visited"       // step 9  — visit Lotus Lessons
-  | "obj_lotus_first_lesson"  // step 10 — complete a Lotus Lesson
-  | "obj_recruit_preview"     // step 11 — visit University Recruitment
-  | "obj_ward_shift_first"    // step 12 — complete first non-prologue Ward Shift
-  | "obj_codex_visited"       // step 13 — open the Codex
-  | "obj_realm_visited"       // step 14 — visit the Realm
-  | "obj_daily_checkin";      // step 15 — complete first Daily Ward Rounds
+  | "obj_prologue_done"          // step 1  — recall stabilised (end of prologue)
+  | "obj_recalled"               // step 2  — meet the System on the main hub
+  | "obj_class_result"           // step 3  — complete the class diagnostic
+  | "obj_university_arrived"     // step 4  — open Clinica University
+  | "obj_cue_hunt_done"          // step 5  — complete Cue Hunt
+  | "obj_triage_done"            // step 6  — complete Rapid Triage
+  | "obj_stabilize_done"         // step 7  — complete Stabilize Stack
+  | "obj_fading_apprentice_done" // step 8  — complete all 3 Fading Apprentice games
+  | "obj_lotus_visited"          // step 9  — continue chapter 1 journey / open lessons
+  | "obj_lotus_first_lesson"     // step 10 — complete Lotus Lesson: Hydration Basics
+  | "obj_recruit_preview"        // step 11 — visit the Recruitment Hall
+  | "obj_ward_shift_first"       // step 12 — complete first simulation shift
+  | "obj_codex_visited"          // step 13 — explore the Codex
+  | "obj_realm_visited"          // step 14 — visit your Realm Sanctuary
+  | "obj_daily_checkin";         // step 15 — complete Daily Ward Rounds
 
 export interface ObjectiveDef {
   id: ObjectiveId;
@@ -51,106 +54,106 @@ export const OBJECTIVES: ObjectiveDef[] = [
   {
     id: "obj_prologue_done",
     step: 1,
-    title: "Complete Your First Shift",
-    description: "Finish the prologue shift and experience the full care chain.",
+    title: "Recall Stabilized",
+    description: "Your story begins. The prologue shift is over — you have been Recalled.",
     xpReward: 10,
   },
   {
     id: "obj_recalled",
     step: 2,
-    title: "Experience the Recall",
-    description: "Witness the moment that binds you to the System.",
+    title: "Meet the System",
+    description: "The System introduces itself on the main hub. Your guide has arrived.",
     xpReward: 10,
   },
   {
     id: "obj_class_result",
     step: 3,
-    title: "Discover Your Class",
-    description: "Learn which clinical path fits your aptitude.",
+    title: "Complete Your Class Diagnostic",
+    description: "Discover the clinical path that matches your aptitude.",
     xpReward: 10,
   },
   {
     id: "obj_university_arrived",
     step: 4,
-    title: "Enter the University",
-    description: "Arrive at Clinica University and begin your studies.",
+    title: "Open Clinica University",
+    description: "Enter Clinica University and meet The Fading Apprentice case chain.",
     xpReward: 10,
   },
   {
     id: "obj_cue_hunt_done",
     step: 5,
-    title: "Complete Cue Hunt",
-    description: "Find all three clinical signs in The Fading Apprentice.",
+    title: "Complete Clinical Cue Hunt",
+    description: "Find all three clinical signs hidden in The Fading Apprentice.",
     xpReward: 10,
   },
   {
     id: "obj_triage_done",
     step: 6,
     title: "Complete Rapid Triage",
-    description: "Sort all three patients by urgency without hesitation.",
+    description: "Sort all three patients by urgency — fast and decisive.",
     xpReward: 10,
   },
   {
     id: "obj_stabilize_done",
     step: 7,
     title: "Complete Stabilize Stack",
-    description: "Build the care sequence that saves the Apprentice.",
+    description: "Build the safe care sequence that keeps the Apprentice alive.",
     xpReward: 10,
   },
   {
     id: "obj_fading_apprentice_done",
     step: 8,
-    title: "Complete The Fading Apprentice",
-    description: "Finish all three stages of the case chain.",
+    title: "Complete The Fading Apprenticeship",
+    description: "Finish all three stages of the case chain: Cue Hunt, Triage, and Stabilize.",
     xpReward: 10,
   },
   {
     id: "obj_lotus_visited",
     step: 9,
-    title: "Open Lotus Lessons",
-    description: "Visit the lesson library and choose where to start.",
+    title: "Continue Chapter 1 Journey",
+    description: "Open Lotus Lessons and start the next phase of your Chapter 1 path.",
     xpReward: 10,
   },
   {
     id: "obj_lotus_first_lesson",
     step: 10,
-    title: "Complete a Lotus Lesson",
-    description: "Finish your first structured learning lesson.",
+    title: "Complete Lotus Lesson: Hydration Basics",
+    description: "Finish your first structured lesson and reinforce what you learned.",
     xpReward: 10,
   },
   {
     id: "obj_recruit_preview",
     step: 11,
-    title: "Visit Recruitment",
-    description: "See the Recruitment Hall where healers are summoned.",
+    title: "Visit the Recruitment Hall",
+    description: "See the Summoning Hall where healers answer the call.",
     xpReward: 10,
   },
   {
     id: "obj_ward_shift_first",
     step: 12,
-    title: "Run a Ward Shift",
-    description: "Complete your first real clinical shift outside the prologue.",
+    title: "Complete First Simulation Shift",
+    description: "Run your first real Ward Shift against a live clinical challenge.",
     xpReward: 10,
   },
   {
     id: "obj_codex_visited",
     step: 13,
-    title: "Open the Codex",
-    description: "Browse the Research Library and read a clinical entry.",
+    title: "Explore the Codex",
+    description: "Open the Research Library and read a clinical entry.",
     xpReward: 10,
   },
   {
     id: "obj_realm_visited",
     step: 14,
-    title: "Visit Your Sanctuary",
-    description: "Enter your Realm and see the world you are building.",
+    title: "Visit Your Realm Sanctuary",
+    description: "Enter your Realm and see the kingdom you are building.",
     xpReward: 10,
   },
   {
     id: "obj_daily_checkin",
     step: 15,
     title: "Complete Daily Ward Rounds",
-    description: "Finish your first daily objective loop.",
+    description: "Finish your first daily objective loop and unlock full progression.",
     xpReward: 10,
   },
 ];
@@ -172,6 +175,49 @@ async function save(record: ObjectiveRecord): Promise<void> {
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify(record));
   } catch {}
+}
+
+// ── XP-paid tracking (separate from completion) ────────────────────────────
+// completeObjective() records that a step is done.
+// markObjectiveXpGranted() records that the 10 XP was actually added to the
+// player total.  Keeping them separate lets us backfill existing players who
+// completed a step before this XP-grant code was in place.
+
+async function loadXpRecord(): Promise<ObjectiveRecord> {
+  try {
+    const raw = await AsyncStorage.getItem(XP_KEY);
+    return raw ? (JSON.parse(raw) as ObjectiveRecord) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** True if 10 XP has already been added to the player for this objective. */
+export async function isObjectiveXpGranted(id: ObjectiveId): Promise<boolean> {
+  const rec = await loadXpRecord();
+  return rec[id] === true;
+}
+
+/**
+ * Record that 10 XP was just added for this objective.
+ * Call immediately after applyRewards / updateState succeeds.
+ */
+export async function markObjectiveXpGranted(id: ObjectiveId): Promise<void> {
+  try {
+    const rec = await loadXpRecord();
+    rec[id] = true;
+    await AsyncStorage.setItem(XP_KEY, JSON.stringify(rec));
+  } catch {}
+}
+
+/** Returns the set of objective IDs whose XP has been granted. */
+export async function getGrantedXpSet(): Promise<Set<ObjectiveId>> {
+  const rec = await loadXpRecord();
+  return new Set(
+    Object.entries(rec)
+      .filter(([, v]) => v === true)
+      .map(([k]) => k as ObjectiveId),
+  );
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────

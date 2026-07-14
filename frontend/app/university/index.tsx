@@ -26,6 +26,8 @@ import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPan
 import {
   completeObjective,
   getObjectiveProgress,
+  markObjectiveXpGranted,
+  isObjectiveXpGranted,
   ObjectiveId,
 } from "@/src/game/objectiveProgress";
 import { playerLevelFromXp } from "@/src/game/progression";
@@ -289,7 +291,7 @@ export default function UniversityHubScreen() {
     }, [onRequiredAction]),
   );
 
-  // ── C1 objective XP grants — run once when player first loads on this screen.
+  // ── C1 objective XP grants — run once per component mount.
   // Uses a ref so we don't repeat across re-renders within the same mount.
   const objGrantedRef = React.useRef(false);
   useEffect(() => {
@@ -297,14 +299,40 @@ export default function UniversityHubScreen() {
     objGrantedRef.current = true;
     (async () => {
       let bonus = 0;
-      const isUnivNew = await completeObjective("obj_university_arrived");
-      if (isUnivNew) bonus += 10;
 
-      // If the full FA chain is already done (returning player), grant that too.
+      // Step 4 — Open Clinica University (first visit grant)
+      const isUnivNew = await completeObjective("obj_university_arrived");
+      if (isUnivNew) {
+        await markObjectiveXpGranted("obj_university_arrived");
+        bonus += 10;
+      }
+
+      // Catch-up grant: steps 1-3 were fire-and-forget before the XP fix.
+      // Load the done-set once, then for each step check if XP was never paid.
+      const catchupIds: ObjectiveId[] = [
+        "obj_prologue_done",
+        "obj_recalled",
+        "obj_class_result",
+      ];
+      const doneSet = await getObjectiveProgress();
+      for (const id of catchupIds) {
+        if (doneSet.has(id)) {
+          const alreadyPaid = await isObjectiveXpGranted(id);
+          if (!alreadyPaid) {
+            await markObjectiveXpGranted(id);
+            bonus += 10;
+          }
+        }
+      }
+
+      // If the full FA chain is already done (returning player), grant step 8 too.
       const prog = await getChainProgress();
       if (prog.stabilizeDone) {
         const isFANew = await completeObjective("obj_fading_apprentice_done");
-        if (isFANew) bonus += 10;
+        if (isFANew) {
+          await markObjectiveXpGranted("obj_fading_apprentice_done");
+          bonus += 10;
+        }
       }
 
       // applyRewards handles XP + level recalc via the public store API.

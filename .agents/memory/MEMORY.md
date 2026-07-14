@@ -1,4 +1,5 @@
 - [Clinica setup](clinica-setup.md) — Expo 54 web on port 5000 (CI=1 flag required); backend FastAPI port 8000; emergentintegrations removed; yarn fails use npm.
+- [Store updateState Ctx exposure](clinica-store-updatestate.md) — updateState missing from Ctx type + useMemo value → silent undefined at call sites; must add to all 3 places.
 - [Clinica C4 milestone rewards](clinica-c4-milestones.md) — milestones.ts: LEVEL_MILESTONES/CHAPTER_CHESTS/CHAPTER_3STAR_REWARDS; 3 claimed_ arrays in PlayerState; claimLevelReward/claimChapterChest/claimChapter3Star in store Ctx.
 - [Reanimated Expo Go constraint](clinica-reanimated-expo-go.md) — MUST stay on react-native-reanimated ~3.16.7; v4 requires react-native-worklets which is NOT in Expo Go and crashes it silently on native startup.
 - [Clinica adaptive system](clinica-adaptive-system.md) — two-axis: LearningProfile→ExplanationLayer (depth/language) + DifficultyLevel (clue visibility); fully independent axes.

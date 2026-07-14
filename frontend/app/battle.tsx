@@ -17,7 +17,7 @@ import { getCard } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { getBattleBaseXp, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
-import { completeObjective } from "@/src/game/objectiveProgress";
+import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { computeEpidemicTokens } from "@/src/game/worldEvent";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
@@ -541,8 +541,13 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
     // Route straight into the Lotus Recall cutscene regardless of outcome.
     if (isPrologueBoss) {
-      // C1: grant obj_prologue_done XP before leaving the battle screen.
-      completeObjective("obj_prologue_done"); // fire-and-forget (no await needed)
+      // C1: grant obj_prologue_done XP (step 1 — Recall Stabilized). Awaited
+      // so XP is persisted before the navigation tear-down removes this screen.
+      const isPrologueNew = await completeObjective("obj_prologue_done");
+      if (isPrologueNew) {
+        await markObjectiveXpGranted("obj_prologue_done");
+        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "prologue" });
+      }
       router.replace({ pathname: "/lotus-recall", params: { enemyId: enemy.id, replay: isReplay ? "1" : "" } });
       return;
     }

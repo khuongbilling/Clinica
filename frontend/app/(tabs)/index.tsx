@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated, Modal, Pressable, StyleSheet, Text, View,
 } from "react-native";
@@ -27,6 +27,7 @@ import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
+import { getObjectiveProgress, getCurrentObjective, type ObjectiveDef } from "@/src/game/objectiveProgress";
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 function dailyRoundsUnlockedModes(player: any): string[] {
@@ -58,6 +59,84 @@ const ARENA_SCENES: Record<string, {
 
 const FALLBACK_SCENE = ARENA_SCENES.River;
 
+// ── Hub guide helpers — pure functions, no hooks ───────────────────────────
+// These drive the objective-aware NarratorGuide banner shown on the main hub
+// while the player is working through the early 15-step tutorial chain.
+
+function hubGuideMessage(obj: ObjectiveDef): string {
+  switch (obj.id) {
+    case "obj_prologue_done":
+      return "Your story has begun. The System is here. Explore the hub — your stamina, currencies, and first heroes are waiting.";
+    case "obj_recalled":
+      return "The System has arrived. It will guide you through Clinica. Look around — then head to the University when you are ready.";
+    case "obj_class_result":
+      return "Your class diagnostic awaits. Complete it to discover your clinical path — then head to Clinica University.";
+    case "obj_university_arrived":
+      return "Your path begins at Clinica University. Learn to read the body, and your first heroes will answer the call.";
+    case "obj_cue_hunt_done":
+      return "Return to Clinica University and start the Fading Apprentice case chain with the Clinical Cue Hunt — Step 5 of 15.";
+    case "obj_triage_done":
+      return "Cue Hunt complete. Return to University and tackle Rapid Triage next — Step 6 of 15.";
+    case "obj_stabilize_done":
+      return "Triage done. One step remains in the Fading Apprentice chain — Stabilize Stack. Return to University to finish it.";
+    case "obj_fading_apprentice_done":
+      return "The Fading Apprentice case chain is almost complete. Return to University to finish Stabilize Stack and unlock Step 8.";
+    case "obj_lotus_visited":
+      return "The Fading Apprentice is saved! Continue Chapter 1 — open Lotus Lessons in the University to reinforce your knowledge.";
+    case "obj_lotus_first_lesson":
+      return "You are in the University. Complete your first Lotus Lesson to deepen your understanding of the case.";
+    case "obj_recruit_preview":
+      return "Lesson done. Visit the Recruitment Hall in University and see which healers are ready to answer the call.";
+    default:
+      return "Your path continues. The System is watching.";
+  }
+}
+
+function hubGuideCta(obj: ObjectiveDef): string {
+  switch (obj.id) {
+    case "obj_prologue_done":
+    case "obj_recalled":
+      return "Explore the Hub";
+    case "obj_class_result":
+      return "Complete Class Diagnostic";
+    case "obj_university_arrived":
+      return "Enter Clinica University";
+    case "obj_cue_hunt_done":
+    case "obj_triage_done":
+    case "obj_stabilize_done":
+    case "obj_fading_apprentice_done":
+      return "Return to University";
+    case "obj_lotus_visited":
+    case "obj_lotus_first_lesson":
+      return "Open Lotus Lessons";
+    case "obj_recruit_preview":
+      return "Visit Recruitment Hall";
+    default:
+      return "Continue";
+  }
+}
+
+function hubGuideRoute(obj: ObjectiveDef): string {
+  switch (obj.id) {
+    case "obj_prologue_done":
+    case "obj_recalled":
+      return "/(tabs)";
+    case "obj_class_result":
+      return "/post-recall";
+    case "obj_university_arrived":
+    case "obj_cue_hunt_done":
+    case "obj_triage_done":
+    case "obj_stabilize_done":
+    case "obj_fading_apprentice_done":
+    case "obj_lotus_visited":
+    case "obj_lotus_first_lesson":
+    case "obj_recruit_preview":
+      return "/university";
+    default:
+      return "/(tabs)";
+  }
+}
+
 export default function RunHome() {
   const router  = useRouter();
   const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
@@ -67,6 +146,15 @@ export default function RunHome() {
   const [showRounds, setShowRounds] = useState(false);
   const [showLv2Modal, setShowLv2Modal] = useState(false);
   const roundsSignalSeen = useRef(0);
+
+  // Objective-driven first-session guide — reloads whenever the hub gains focus
+  // so returning from University / lessons always shows the freshest step.
+  const [currentObjective, setCurrentObjective] = useState<ObjectiveDef | null | undefined>(undefined);
+  useFocusEffect(
+    useCallback(() => {
+      getObjectiveProgress().then((done) => setCurrentObjective(getCurrentObjective(done)));
+    }, []),
+  );
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
@@ -179,10 +267,6 @@ export default function RunHome() {
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
-  // New players are steered to Clinica University first — it is the prominent
-  // opening of the game until they've taken their first lesson.
-  const isNewLearner = (player.lessons_completed?.length ?? 0) === 0;
-
   // C5 — Daily/Weekly Rounds and Summoning Hall are Level 2 unlocks.
   const roundsUnlocked = playerLevelInfo.level >= 2;
   const summonUnlocked = playerLevelInfo.level >= 2;
@@ -271,16 +355,25 @@ export default function RunHome() {
         </Pressable>
       )}
 
-      {/* ── UNIVERSITY ONBOARDING — the prominent first step for new players ── */}
-      {isNewLearner && (
+      {/* ── OBJECTIVE-DRIVEN FIRST-SESSION GUIDE ─────────────────────────────
+           Shows while the player is working through the early tutorial chain
+           (steps 1–11).  Content updates every time the hub gains focus so it
+           always reflects the current step rather than a stale/hardcoded state. */}
+      {currentObjective && currentObjective.step <= 11 && (
         <View style={styles.uniOnboard}>
           <NarratorGuide
-            bgImage={getBannerImage("university")}
-            message="Your path begins at Clinica University. Learn to read the body, and your first heroes will answer the call. I will guide you from here."
-            objective="Enter Clinica University and complete your first lesson."
-            ctaLabel="Enter Clinica University"
-            onPress={() => router.push("/university")}
-            testID="home-university-onboard"
+            bgImage={getBannerImage(
+              currentObjective.step <= 4 || (currentObjective.step >= 5 && currentObjective.step <= 8)
+                ? "university"
+                : currentObjective.step === 9 || currentObjective.step === 10
+                ? "university"
+                : "ward_shift",
+            )}
+            message={hubGuideMessage(currentObjective)}
+            objective={`Step ${currentObjective.step} of 15 — ${currentObjective.title}`}
+            ctaLabel={hubGuideCta(currentObjective)}
+            onPress={() => router.push(hubGuideRoute(currentObjective) as any)}
+            testID="home-objective-guide"
           />
         </View>
       )}

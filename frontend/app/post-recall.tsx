@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
-import { completeObjective } from "@/src/game/objectiveProgress";
+import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { CLASS_IDENTITIES, CLASS_IDS, getClassTree, type ClassId } from "@/src/game/classTree";
 import {
   QUIZ_QUESTIONS,
@@ -59,7 +59,7 @@ const AUTOMATED_MESSAGES = [
 
 export default function PostRecall() {
   const router = useRouter();
-  const { player, completeIdentityRestore, confirmClassDiagnostic } = usePlayer();
+  const { player, applyRewards, completeIdentityRestore, confirmClassDiagnostic } = usePlayer();
   const { replay } = useLocalSearchParams<{ replay?: string }>();
   // Push 6 — Profile "Replay Class Diagnostic" reopens this same quiz for a
   // player who already finished onboarding. It always starts on the intro
@@ -118,13 +118,18 @@ export default function PostRecall() {
     if (player?.name && player.name !== "Healer") setName(player.name);
   }, [player?.name]);
 
-  // C1: grant obj_recalled once when the player identity is restored for the first time.
+  // C1: grant obj_recalled (step 2 — Meet the System) once when identity is restored.
   const recalledGrantedRef = useRef(false);
   useEffect(() => {
     if (!player || isReplay || recalledGrantedRef.current) return;
     recalledGrantedRef.current = true;
-    completeObjective("obj_recalled"); // fire-and-forget; XP written to AsyncStorage
-  }, [player?.id, isReplay]);
+    completeObjective("obj_recalled").then(async (isNew) => {
+      if (isNew) {
+        await markObjectiveXpGranted("obj_recalled");
+        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+      }
+    });
+  }, [player?.id, isReplay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Drives the short "SYSTEM: ..." message sequence for Automated Class
   // Assignment, then reveals the (already-computed) randomized result.
