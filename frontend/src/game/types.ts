@@ -238,6 +238,9 @@ export interface PlayerState {
   // has watched. Drives one-time auto-triggers at chapter milestones and the
   // "NEW" badges in the Profile Story Gallery.
   story_scenes_seen?: string[];
+  // J2 — one-time claim tracking for Journey Map node first-clear rewards.
+  // Keyed by ChapterPart.id (e.g. "c1p1"). Backfilled as [] for existing players.
+  claimed_journey_nodes?: string[];
   // Clinica University — Lessons & Simulations MVP
   lessons_completed?: string[];
   simulations_completed?: string[];

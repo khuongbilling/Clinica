@@ -29,6 +29,7 @@ import {
   type ChapterPartType,
 } from "@/src/game/chapterJourney";
 import { ENEMIES } from "@/src/game/content";
+import { getJourneyNodeDef, computeJourneyReward } from "@/src/game/journeyRewards";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -79,6 +80,15 @@ interface Props {
   claimedChests?: string[];
   /** Callback fired when the player claims a chapter completion chest. */
   onChestClaim?: (chestId: string) => Promise<void>;
+  // J2 — journey node first-clear claim support.
+  /** IDs of journey nodes already claimed (player.claimed_journey_nodes). */
+  claimedNodes?: string[];
+  /** Story scene ids already watched (player.story_scenes_seen). */
+  storyScenesSeen?: string[];
+  /** Number of ward defense waves completed (player.ward_defense_waves). */
+  wardDefenseWaves?: number;
+  /** Callback fired when a journey node first-clear is claimed. */
+  onNodeClaim?: (nodeId: string, stars: number) => Promise<void>;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -87,7 +97,11 @@ export function ChapterJourneyMap({
   playerLevel,
   battleStars = {},
   claimedChests = [],
+  claimedNodes = [],
+  storyScenesSeen = [],
+  wardDefenseWaves = 0,
   onChestClaim,
+  onNodeClaim,
 }: Props) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(() => {
@@ -131,8 +145,12 @@ export function ChapterJourneyMap({
               chestId={chest?.id}
               chestClaimed={chestClaimed}
               chestClaimable={!!chestClaimable}
+              claimedNodes={claimedNodes}
+              storyScenesSeen={storyScenesSeen}
+              wardDefenseWaves={wardDefenseWaves}
               onToggle={() => toggle(chapter.id)}
               onChestClaim={onChestClaim}
+              onNodeClaim={onNodeClaim}
               onPartPress={(part) => {
                 if (part.route && !part.isPlaceholder) {
                   router.push(part.route as any);
@@ -181,8 +199,12 @@ function ChapterCard({
   chestId,
   chestClaimed,
   chestClaimable,
+  claimedNodes,
+  storyScenesSeen,
+  wardDefenseWaves,
   onToggle,
   onChestClaim,
+  onNodeClaim,
   onPartPress,
 }: {
   chapter: Chapter;
@@ -194,8 +216,12 @@ function ChapterCard({
   chestId?: string;
   chestClaimed: boolean;
   chestClaimable: boolean;
+  claimedNodes: string[];
+  storyScenesSeen: string[];
+  wardDefenseWaves: number;
   onToggle: () => void;
   onChestClaim?: (chestId: string) => Promise<void>;
+  onNodeClaim?: (nodeId: string, stars: number) => Promise<void>;
   onPartPress: (part: ChapterPart) => void;
 }) {
   const accent = status === "locked" ? COLORS.onSurfaceTertiary : chapter.accentColor;
@@ -205,6 +231,36 @@ function ChapterCard({
   const chapterEnemies = ENEMIES.filter((e) => e.difficulty === chapter.number && !e.worldBoss);
   const battlesCleared = chapterEnemies.filter((e) => (battleStars[e.id] ?? 0) >= 1).length;
   const battlesTotal = chapterEnemies.length;
+  // J2: best star rating achieved for any enemy at this chapter's difficulty.
+  const bestChapterStars = chapterEnemies.reduce(
+    (best, e) => Math.max(best, battleStars[e.id] ?? 0), 0,
+  );
+  const anyBattleWon = battlesCleared >= 1;
+
+  // J2: per-part eligibility check for first-clear journey node claim.
+  function isNodeEligible(part: ChapterPart): boolean {
+    if (isLocked) return false;
+    const def = getJourneyNodeDef(part.id);
+    if (!def) return false; // no reward def for this node (Ch6+)
+    switch (part.type) {
+      case 'story':
+      case 'reflection':
+        if (part.isPlaceholder) return true; // auto-eligible when chapter active
+        // Non-placeholder story: eligible if the linked scene has been watched.
+        const sceneId = part.route?.split('sceneId=')?.[1];
+        return sceneId ? storyScenesSeen.includes(sceneId) : true;
+      case 'battle':
+        return anyBattleWon;
+      case 'mini_boss':
+        return bestChapterStars >= 2;
+      case 'ward_defense':
+        return wardDefenseWaves >= 1;
+      case 'realm':
+        return true; // placeholder task — auto-eligible when chapter active
+      default:
+        return false;
+    }
+  }
 
   return (
     <View style={[styles.chapterWrap, isFirst && { marginTop: 0 }]}>
@@ -336,18 +392,31 @@ function ChapterCard({
       {/* ── Parts list (expanded) ── */}
       {isExpanded && (
         <View style={styles.partsList}>
-          {chapter.parts.map((part, idx) => (
-            <PartRow
-              key={part.id}
-              part={part}
-              index={idx}
-              chapterNumber={chapter.number}
-              chapterAccent={chapter.accentColor}
-              chapterLocked={isLocked}
-              onPress={() => onPartPress(part)}
-              isLast={idx === chapter.parts.length - 1}
-            />
-          ))}
+          {chapter.parts.map((part, idx) => {
+            const eligible = isNodeEligible(part);
+            const claimed  = claimedNodes.includes(part.id);
+            // Stars to pass on claim: use best chapter stars for battle nodes;
+            // story/realm/reflection always get 3 (flat reward, no scaling).
+            const claimStars = (
+              part.type === 'battle' || part.type === 'mini_boss' || part.type === 'ward_defense'
+            ) ? Math.max(1, bestChapterStars) : 3;
+            return (
+              <PartRow
+                key={part.id}
+                part={part}
+                index={idx}
+                chapterNumber={chapter.number}
+                chapterAccent={chapter.accentColor}
+                chapterLocked={isLocked}
+                onPress={() => onPartPress(part)}
+                isLast={idx === chapter.parts.length - 1}
+                isEligible={eligible}
+                isClaimed={claimed}
+                claimStars={claimStars}
+                onClaim={onNodeClaim ? () => onNodeClaim(part.id, claimStars) : undefined}
+              />
+            );
+          })}
 
           {/* Locked chapter body message */}
           {isLocked && (
@@ -391,6 +460,10 @@ function PartRow({
   chapterLocked,
   onPress,
   isLast,
+  isEligible = false,
+  isClaimed = false,
+  claimStars = 3,
+  onClaim,
 }: {
   part: ChapterPart;
   index: number;
@@ -399,11 +472,27 @@ function PartRow({
   chapterLocked: boolean;
   onPress: () => void;
   isLast: boolean;
+  // J2 — first-clear claim state
+  isEligible?: boolean;
+  isClaimed?: boolean;
+  claimStars?: number;
+  onClaim?: () => Promise<void>;
 }) {
+  const [claiming, setClaiming] = React.useState(false);
   const typeColor = chapterLocked ? COLORS.onSurfaceTertiary : PART_TYPE_COLOR[part.type];
   const isActionable = !!part.route && !part.isPlaceholder && !chapterLocked;
   // J1: node label "1-1", "1-2", etc.
   const nodeLabel = `${chapterNumber}-${part.part}`;
+  // J2: look up the journey reward def to display accurate reward chips.
+  const def = getJourneyNodeDef(part.id);
+  // Compute the reward preview at the player's current stars (or 3★ for story).
+  const rewardPreview = def ? computeJourneyReward(def, claimStars) : null;
+
+  async function handleClaim() {
+    if (!onClaim || claiming) return;
+    setClaiming(true);
+    try { await onClaim(); } finally { setClaiming(false); }
+  }
 
   return (
     <View style={[styles.partWrap, !isLast && styles.partDivider]}>
@@ -465,19 +554,56 @@ function PartRow({
           {part.description}
         </Text>
 
-        {/* Reward chips — shown when the part has explicit reward data */}
-        {(part.rewardXp || part.rewardCredits || part.rewardCoins || part.rewardShards) && (
+        {/* J2 — reward chips: use journeyRewards.ts values as source of truth.
+            Fall back to chapterJourney.ts display fields for Ch6+ nodes. */}
+        {rewardPreview ? (
+          <View style={styles.rewardRow}>
+            {rewardPreview.playerXp > 0 && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="star-outline" size={9} color="#F59E0B" />
+                <Text style={[styles.rewardChipTxt, { color: "#F59E0B" }]}>
+                  {def!.starsScale ? `≤${def!.playerXp}` : `+${rewardPreview.playerXp}`} XP
+                </Text>
+              </View>
+            )}
+            {rewardPreview.heroXp > 0 && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="person-outline" size={9} color="#FB923C" />
+                <Text style={[styles.rewardChipTxt, { color: "#FB923C" }]}>
+                  {def!.starsScale ? `≤${def!.heroXp}` : `+${rewardPreview.heroXp}`} Hero XP
+                </Text>
+              </View>
+            )}
+            {rewardPreview.coins > 0 && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="cash-outline" size={9} color="#D4AF37" />
+                <Text style={[styles.rewardChipTxt, { color: "#D4AF37" }]}>
+                  {def!.starsScale ? `≤${def!.coins}` : `+${rewardPreview.coins}`} Coins
+                </Text>
+              </View>
+            )}
+            {(rewardPreview.credits ?? 0) > 0 && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="school-outline" size={9} color="#2DD4BF" />
+                <Text style={[styles.rewardChipTxt, { color: "#2DD4BF" }]}>+{rewardPreview.credits} Credits</Text>
+              </View>
+            )}
+            {(rewardPreview.shards ?? 0) > 0 && (
+              <View style={styles.rewardChip}>
+                <Ionicons name="diamond-outline" size={9} color="#A78BFA" />
+                <Text style={[styles.rewardChipTxt, { color: "#A78BFA" }]}>
+                  {def!.starsScale ? `≤${def!.shards}` : `+${rewardPreview.shards}`} Shards
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : (part.rewardXp || part.rewardCredits || part.rewardCoins || part.rewardShards) ? (
+          // Fallback for Ch6+ nodes without a journeyRewards.ts def
           <View style={styles.rewardRow}>
             {!!part.rewardXp && (
               <View style={styles.rewardChip}>
                 <Ionicons name="star-outline" size={9} color="#F59E0B" />
                 <Text style={[styles.rewardChipTxt, { color: "#F59E0B" }]}>+{part.rewardXp} XP</Text>
-              </View>
-            )}
-            {!!part.rewardCredits && (
-              <View style={styles.rewardChip}>
-                <Ionicons name="school-outline" size={9} color="#2DD4BF" />
-                <Text style={[styles.rewardChipTxt, { color: "#2DD4BF" }]}>+{part.rewardCredits} Credits</Text>
               </View>
             )}
             {!!part.rewardCoins && (
@@ -486,13 +612,27 @@ function PartRow({
                 <Text style={[styles.rewardChipTxt, { color: "#D4AF37" }]}>+{part.rewardCoins} Coins</Text>
               </View>
             )}
-            {!!part.rewardShards && (
-              <View style={styles.rewardChip}>
-                <Ionicons name="diamond-outline" size={9} color="#A78BFA" />
-                <Text style={[styles.rewardChipTxt, { color: "#A78BFA" }]}>+{part.rewardShards} Shards</Text>
-              </View>
-            )}
           </View>
+        ) : null}
+
+        {/* J2 — CLAIM / CLAIMED button for first-clear journey node reward */}
+        {def && !chapterLocked && (
+          isClaimed ? (
+            <View style={styles.nodeClaimedBadge}>
+              <Ionicons name="checkmark-circle" size={11} color="#34D399" />
+              <Text style={styles.nodeClaimedTxt}>CLAIMED</Text>
+            </View>
+          ) : isEligible && onClaim ? (
+            <Pressable
+              style={[styles.nodeClaimBtn, claiming && styles.nodeClaimBtnBusy]}
+              onPress={handleClaim}
+              disabled={claiming}
+              hitSlop={6}
+            >
+              <Ionicons name="gift-outline" size={11} color="#FFFFFF" />
+              <Text style={styles.nodeClaimBtnTxt}>{claiming ? "…" : "CLAIM"}</Text>
+            </Pressable>
+          ) : null
         )}
       </Pressable>
     </View>
@@ -770,6 +910,47 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  // J2 — journey node CLAIM / CLAIMED buttons
+  nodeClaimBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    marginTop: 4,
+    backgroundColor: "#16A34A",
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  nodeClaimBtnBusy: {
+    opacity: 0.5,
+  },
+  nodeClaimBtnTxt: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.8,
+  },
+  nodeClaimedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    alignSelf: "flex-start",
+    marginTop: 4,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: "#34D39940",
+    backgroundColor: "#34D39912",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  nodeClaimedTxt: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#34D399",
+    letterSpacing: 0.8,
   },
 
   // Locked message

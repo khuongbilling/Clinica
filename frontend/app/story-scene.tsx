@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   STORY_SCENES, getStoryScene, isSceneSeen, isSceneUnlocked, sceneAmbience,
 } from "@/src/game/storyScenes";
+import { getNodeIdForScene } from "@/src/game/journeyRewards";
 import { pokeAmbience, startAmbience, stopAmbience } from "@/src/game/ambient";
 import { useSettings } from "@/src/game/settingsStore";
 import { usePlayer } from "@/src/game/store";
@@ -45,7 +46,7 @@ export default function StorySceneScreen() {
 
 function SceneViewer({ sceneId }: { sceneId: string }) {
   const router = useRouter();
-  const { player, markStorySceneSeen } = usePlayer();
+  const { player, markStorySceneSeen, claimJourneyNode } = usePlayer();
   const { soundEnabled } = useSettings();
   // During onboarding (prologue not yet complete) a story scene is part of a
   // scripted flow — back navigation would skip or re-enter scripted beats, so
@@ -90,6 +91,9 @@ function SceneViewer({ sceneId }: { sceneId: string }) {
     // Mark seen on any exit (finish, skip, or close) so one-time triggers and
     // NEW badges never re-fire; then fade to ink black before navigating.
     markStorySceneSeen(scene.id);
+    // J2: auto-claim the first-clear journey node reward for this story scene.
+    const storyNodeId = getNodeIdForScene(scene.id);
+    if (storyNodeId) { claimJourneyNode(storyNodeId, 3).catch(() => {}); }
     Animated.timing(veil, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
       // This exit is deliberate — let the single back-pop through the guard.
       allowNextBack();

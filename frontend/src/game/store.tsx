@@ -124,6 +124,10 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.claimed_chapter_3star) {
     out = { ...out, claimed_chapter_3star: [] };
   }
+  // J2 — backfill journey node claim tracking for pre-J2 saves.
+  if (!out.claimed_journey_nodes) {
+    out = { ...out, claimed_journey_nodes: [] };
+  }
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
   // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
   // layout whose values aren't valid grid cell ids predates the rewrite and
@@ -354,6 +358,8 @@ type Ctx = {
   claimLevelReward: (milestoneId: string) => Promise<{ ok: boolean; message: string }>;
   claimChapterChest: (chestId: string) => Promise<{ ok: boolean; message: string }>;
   claimChapter3Star: (rewardId: string) => Promise<{ ok: boolean; message: string }>;
+  // J2 — one-time journey node first-clear reward claim.
+  claimJourneyNode: (nodeId: string, stars: number) => Promise<{ ok: boolean; message: string; reward?: import('./journeyRewards').ComputedJourneyReward }>;
   // C5 — dismiss the Level 2 "Apprentice Path Opened" celebration modal.
   markLv2UnlockSeen: () => Promise<void>;
   // Low-level full-player write — prefer applyRewards for incremental updates.
@@ -1783,7 +1789,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const newTitles = chest.titleId && !ownedTitles.includes(chest.titleId)
       ? [...ownedTitles, chest.titleId]
       : ownedTitles;
-    const next: PlayerState = {
+    // Build currency state first, then layer XP on top so level-up is consistent.
+    let next: PlayerState = {
       ...base,
       claimed_chapter_chests: [...(base.claimed_chapter_chests ?? []), chestId],
       codex_shards: (base.codex_shards || 0) + (chest.rewards.codexShards || 0),
@@ -1792,6 +1799,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       university_credits: (base.university_credits || 0) + (chest.rewards.universityCredits || 0),
       owned_titles: newTitles,
     };
+    // J2: apply player XP from the chest reward.
+    if (chest.rewards.playerXp) {
+      next = applyXp(next, chest.rewards.playerXp);
+    }
+    // J2: split hero XP equally among active team (or first 3 owned heroes).
+    if (chest.rewards.heroXp && chest.rewards.heroXp > 0) {
+      const teamIds = (base.active_team || []).filter(Boolean);
+      const pool = teamIds.length > 0 ? teamIds : (base.heroes_owned || []).slice(0, 3);
+      if (pool.length > 0) {
+        const perHero = Math.max(1, Math.round(chest.rewards.heroXp / pool.length));
+        const prog = { ...(next.hero_progression || {}) };
+        for (const heroId of pool) {
+          const existing = prog[heroId] ?? defaultProgress() as any;
+          const cap = levelCapForStar(existing.star ?? 1);
+          const result = addHeroXp(existing.level ?? 1, existing.xp ?? 0, perHero, cap);
+          prog[heroId] = { ...existing, xp: result.xp, level: result.level };
+        }
+        next = { ...next, hero_progression: prog };
+      }
+    }
     playerRef.current = next;
     await updateState(next);
     return { ok: true, message: `Chapter ${chest.chapter} chest claimed!` };
@@ -1820,6 +1847,59 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `Chapter ${reward.chapter} ★★★ bonus claimed! +${reward.refinedLotusGems} Refined Gems` };
   }, [updateState]);
 
+  // ── J2 — one-time journey node first-clear reward claim ──────────────────────
+  const claimJourneyNode = useCallback(async (
+    nodeId: string,
+    stars: number,
+  ): Promise<{ ok: boolean; message: string; reward?: import('./journeyRewards').ComputedJourneyReward }> => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player.' };
+    const claimed = base.claimed_journey_nodes ?? [];
+    if (claimed.includes(nodeId)) {
+      return { ok: false, message: 'Already claimed.' };
+    }
+    const { getJourneyNodeDef, computeJourneyReward } = await import('./journeyRewards');
+    const def = getJourneyNodeDef(nodeId);
+    if (!def) return { ok: false, message: 'Unknown journey node.' };
+    const reward = computeJourneyReward(def, stars);
+    // Build currency state first, then layer XP.
+    let next: PlayerState = {
+      ...base,
+      claimed_journey_nodes: [...claimed, nodeId],
+      crowns: (base.crowns || 0) + reward.coins,
+      codex_shards: (base.codex_shards || 0) + reward.shards,
+      university_credits: (base.university_credits || 0) + reward.credits,
+    };
+    if (reward.playerXp > 0) {
+      next = applyXp(next, reward.playerXp);
+    }
+    // Split hero XP equally among active team (or first 3 owned heroes).
+    if (reward.heroXp > 0) {
+      const teamIds = (base.active_team || []).filter(Boolean);
+      const pool = teamIds.length > 0 ? teamIds : (base.heroes_owned || []).slice(0, 3);
+      if (pool.length > 0) {
+        const perHero = Math.max(1, Math.round(reward.heroXp / pool.length));
+        const prog = { ...(next.hero_progression || {}) };
+        for (const heroId of pool) {
+          const existing = prog[heroId] ?? defaultProgress() as any;
+          const cap = levelCapForStar(existing.star ?? 1);
+          const result = addHeroXp(existing.level ?? 1, existing.xp ?? 0, perHero, cap);
+          prog[heroId] = { ...existing, xp: result.xp, level: result.level };
+        }
+        next = { ...next, hero_progression: prog };
+      }
+    }
+    playerRef.current = next;
+    await updateState(next);
+    const parts: string[] = [];
+    if (reward.playerXp) parts.push(`+${reward.playerXp} XP`);
+    if (reward.heroXp)   parts.push(`+${reward.heroXp} Hero XP`);
+    if (reward.coins)    parts.push(`+${reward.coins} Coins`);
+    if (reward.shards)   parts.push(`+${reward.shards} Shards`);
+    if (reward.credits)  parts.push(`+${reward.credits} Credits`);
+    return { ok: true, message: parts.join(' · ') || 'Node cleared!', reward };
+  }, [updateState]);
+
   // ── C5 — mark the Level 2 unlock celebration as seen ───────────────────────
   const markLv2UnlockSeen = useCallback(async () => {
     const base = playerRef.current;
@@ -1831,8 +1911,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, markLv2UnlockSeen, updateState,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, markLv2UnlockSeen, updateState]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

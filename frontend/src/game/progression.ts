@@ -16,11 +16,13 @@
 // ---------- Player Level curve ----------
 // Cost (in Player EXP) to go from level L to L+1. Same currency as the
 // existing `xp`/RANKS field — RANKS stay as flavor text layered on top.
-// Scaling curve (Push 3.5): early levels stay fast, mid levels slow down,
-// later levels require meaningful progression. Replaces the old flat
-// `60 + (level-1)*15` linear step.
+// J2 XP curve: targets Level 2 @ 150 total XP, Level 3 @ ~360, Level 4 @ ~640,
+// Level 5 @ ~990, Level 6 @ ~1410, Level 7 @ ~1910 — comfortable early pacing
+// that rewards story + battle + journey node clears without excessive grinding.
+// Formula: 150 + 35*(L-1) + 25*(L-1)^1.2  (flat start, gentle acceleration).
 export function playerXpCostForLevel(level: number): number {
-  return Math.round(100 * Math.pow(level, 1.35) + 50 * level);
+  const l = Math.max(0, level - 1);
+  return Math.round(150 + 35 * l + 25 * Math.pow(l, 1.2));
 }
 
 export const PLAYER_LEVEL_CAP = 60;

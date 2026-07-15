@@ -6,15 +6,23 @@
  * `claimed_chapter_chests`, and `claimed_chapter_3star` on the player object.
  *
  * Currency mapping:
- *   codexShards       → codex_shards  (Summoning Shards in-game)
- *   crowns            → crowns         (Ward Coins)
- *   refinedLotusGems  → refined_lotus_gems
- *   universityCredits → university_credits
+ *   playerXp           → player.xp  (Player Level progression)
+ *   heroXp             → split equally among active team hero_progression
+ *   codexShards        → codex_shards  (Summoning Shards in-game)
+ *   crowns             → crowns         (Ward Coins)
+ *   refinedLotusGems   → refined_lotus_gems
+ *   universityCredits  → university_credits
+ *
+ * J2: playerXp and heroXp added to MilestoneReward + CHAPTER_CHESTS updated.
  */
 
 // ── Shared reward shape ───────────────────────────────────────────────────────
 
 export interface MilestoneReward {
+  /** J2: Player XP awarded from this chest/milestone. */
+  playerXp?: number;
+  /** J2: Hero XP split equally among the active team. */
+  heroXp?: number;
   codexShards?: number;
   crowns?: number;
   refinedLotusGems?: number;
@@ -85,6 +93,8 @@ export const LEVEL_MILESTONES: LevelMilestone[] = [
 ];
 
 // ── Chapter completion chests ─────────────────────────────────────────────────
+// J2: Chapters 1–5 updated to include playerXp and heroXp.
+// Chapters 6–10 retain their existing rewards (J3+ scope).
 
 export interface ChapterChest {
   id: string;       // e.g. "chest_ch1" — stored in claimed_chapter_chests
@@ -94,26 +104,61 @@ export interface ChapterChest {
 }
 
 export const CHAPTER_CHESTS: ChapterChest[] = [
-  { id: "chest_ch1",  chapter: 1,  titleId: "apprentice_healer",
-    rewards: { codexShards: 100, refinedLotusGems: 10 } },
-  { id: "chest_ch2",  chapter: 2,
-    rewards: { codexShards: 100, crowns: 200 } },
-  { id: "chest_ch3",  chapter: 3,
-    rewards: { codexShards: 125, refinedLotusGems: 15 } },
-  { id: "chest_ch4",  chapter: 4,
-    rewards: { codexShards: 150, crowns: 300, universityCredits: 15 } },
-  { id: "chest_ch5",  chapter: 5,
-    rewards: { codexShards: 150, refinedLotusGems: 20, crowns: 300 } },
-  { id: "chest_ch6",  chapter: 6,
-    rewards: { codexShards: 175, crowns: 400, universityCredits: 20 } },
-  { id: "chest_ch7",  chapter: 7,
-    rewards: { codexShards: 200, refinedLotusGems: 25 } },
-  { id: "chest_ch8",  chapter: 8,
-    rewards: { codexShards: 225, crowns: 500, universityCredits: 25 } },
-  { id: "chest_ch9",  chapter: 9,
-    rewards: { codexShards: 250, refinedLotusGems: 30, crowns: 500 } },
-  { id: "chest_ch10", chapter: 10, titleId: "recall_survivor",
-    rewards: { codexShards: 500, refinedLotusGems: 75 } },
+  {
+    id: "chest_ch1", chapter: 1, titleId: "apprentice_healer",
+    rewards: {
+      playerXp: 30, heroXp: 25,
+      codexShards: 50, crowns: 100, refinedLotusGems: 5,
+    },
+  },
+  {
+    id: "chest_ch2", chapter: 2,
+    rewards: {
+      playerXp: 60, heroXp: 40,
+      codexShards: 100, crowns: 150, universityCredits: 50, refinedLotusGems: 10,
+    },
+  },
+  {
+    id: "chest_ch3", chapter: 3,
+    rewards: {
+      playerXp: 80, heroXp: 50,
+      codexShards: 125, crowns: 200, universityCredits: 75, refinedLotusGems: 15,
+    },
+  },
+  {
+    id: "chest_ch4", chapter: 4,
+    rewards: {
+      playerXp: 100, heroXp: 75,
+      codexShards: 150, crowns: 250, universityCredits: 100, refinedLotusGems: 15,
+    },
+  },
+  {
+    id: "chest_ch5", chapter: 5,
+    rewards: {
+      playerXp: 125, heroXp: 100,
+      codexShards: 150, crowns: 300, universityCredits: 125, refinedLotusGems: 20,
+    },
+  },
+  {
+    id: "chest_ch6", chapter: 6,
+    rewards: { codexShards: 175, crowns: 400, universityCredits: 20 },
+  },
+  {
+    id: "chest_ch7", chapter: 7,
+    rewards: { codexShards: 200, refinedLotusGems: 25 },
+  },
+  {
+    id: "chest_ch8", chapter: 8,
+    rewards: { codexShards: 225, crowns: 500, universityCredits: 25 },
+  },
+  {
+    id: "chest_ch9", chapter: 9,
+    rewards: { codexShards: 250, refinedLotusGems: 30, crowns: 500 },
+  },
+  {
+    id: "chest_ch10", chapter: 10, titleId: "recall_survivor",
+    rewards: { codexShards: 500, refinedLotusGems: 75 },
+  },
 ];
 
 // ── First-time 3-star chapter bonuses ────────────────────────────────────────
@@ -157,6 +202,7 @@ export function hasChapter3StarClear(
 /** Human-readable reward summary string (e.g. "100 Shards · 10 Refined Gems"). */
 export function formatReward(rewards: MilestoneReward): string {
   const parts: string[] = [];
+  if (rewards.playerXp)         parts.push(`${rewards.playerXp} XP`);
   if (rewards.codexShards)      parts.push(`${rewards.codexShards} Shards`);
   if (rewards.crowns)           parts.push(`${rewards.crowns} Crowns`);
   if (rewards.refinedLotusGems) parts.push(`${rewards.refinedLotusGems} Refined Gems`);

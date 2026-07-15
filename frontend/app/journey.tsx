@@ -22,7 +22,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function JourneyScreen() {
   const router = useRouter();
-  const { player, loading, claimChapterChest } = usePlayer();
+  const { player, loading, claimChapterChest, claimJourneyNode } = usePlayer();
 
   if (loading || !player) {
     return (
@@ -118,11 +118,19 @@ export default function JourneyScreen() {
           playerLevel={playerLevel}
           battleStars={player.battle_stars ?? {}}
           claimedChests={player.claimed_chapter_chests ?? []}
+          claimedNodes={player.claimed_journey_nodes ?? []}
+          storyScenesSeen={player.story_scenes_seen ?? []}
+          wardDefenseWaves={player.ward_defense_waves ?? 0}
           onChestClaim={async (chestId) => {
             const res = await claimChapterChest(chestId);
             if (!res.ok) {
-              // Toast-style: use a console warn to avoid Alert blocking scroll
               console.warn('[Journey] chest claim failed:', res.message);
+            }
+          }}
+          onNodeClaim={async (nodeId, stars) => {
+            const res = await claimJourneyNode(nodeId, stars);
+            if (!res.ok) {
+              console.warn('[Journey] node claim failed:', res.message);
             }
           }}
         />
