@@ -437,7 +437,7 @@ function ChapterCard({
             <View style={styles.lockedMsg}>
               <Ionicons name="shield-half" size={14} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.lockedMsgTxt}>
-                Field Practice Required — reach Level {chapter.levelGate} by completing Ward Shifts and earning ★ ratings.
+                Field Practice Required. Complete University practice, replay cleared shifts, or improve hero skills before continuing.
               </Text>
             </View>
           )}
