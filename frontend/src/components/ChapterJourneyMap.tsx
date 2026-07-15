@@ -36,9 +36,12 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const PART_TYPE_LABEL: Record<ChapterPartType, string> = {
   battle:       "SHIFT",
+  mini_boss:    "MINI-BOSS",
+  ward_defense: "WARD DEF.",
   minigame:     "MINI-GAME",
   lesson:       "LESSON",
   story:        "STORY",
+  reflection:   "REFLECTION",
   reward:       "REWARD",
   realm:        "REALM",
   mode_preview: "PREVIEW",
@@ -49,9 +52,12 @@ const PART_TYPE_LABEL: Record<ChapterPartType, string> = {
 
 const PART_TYPE_COLOR: Record<ChapterPartType, string> = {
   battle:       COLORS.error,
+  mini_boss:    "#D4AF37",
+  ward_defense: "#EF4444",
   minigame:     COLORS.brand,
   lesson:       "#34D399",
   story:        "#B0DEFF",
+  reflection:   "#A78BFA",
   reward:       "#D4AF37",
   realm:        "#34D399",
   mode_preview: COLORS.river,
@@ -335,6 +341,7 @@ function ChapterCard({
               key={part.id}
               part={part}
               index={idx}
+              chapterNumber={chapter.number}
               chapterAccent={chapter.accentColor}
               chapterLocked={isLocked}
               onPress={() => onPartPress(part)}
@@ -351,6 +358,23 @@ function ChapterCard({
               </Text>
             </View>
           )}
+
+          {/* J1: University Prep Tips — non-node recommendations (only for unlocked chapters) */}
+          {!isLocked && chapter.prepTips && chapter.prepTips.length > 0 && (
+            <View style={styles.prepTipsSection}>
+              <View style={styles.prepTipsHeader}>
+                <Ionicons name="school-outline" size={12} color={accent} />
+                <Text style={[styles.prepTipsTitle, { color: accent }]}>UNIVERSITY PREP</Text>
+                <Text style={styles.prepTipsSub}>Recommended before chapter battles</Text>
+              </View>
+              {chapter.prepTips.map((tip, i) => (
+                <View key={i} style={styles.prepTipRow}>
+                  <View style={[styles.prepTipDot, { backgroundColor: accent + "60" }]} />
+                  <Text style={styles.prepTipTxt}>{tip}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -362,6 +386,7 @@ function ChapterCard({
 function PartRow({
   part,
   index,
+  chapterNumber,
   chapterAccent,
   chapterLocked,
   onPress,
@@ -369,6 +394,7 @@ function PartRow({
 }: {
   part: ChapterPart;
   index: number;
+  chapterNumber: number;
   chapterAccent: string;
   chapterLocked: boolean;
   onPress: () => void;
@@ -376,13 +402,20 @@ function PartRow({
 }) {
   const typeColor = chapterLocked ? COLORS.onSurfaceTertiary : PART_TYPE_COLOR[part.type];
   const isActionable = !!part.route && !part.isPlaceholder && !chapterLocked;
+  // J1: node label "1-1", "1-2", etc.
+  const nodeLabel = `${chapterNumber}-${part.part}`;
 
   return (
     <View style={[styles.partWrap, !isLast && styles.partDivider]}>
-      {/* Part number indicator */}
-      <View style={[styles.partNum, { backgroundColor: chapterLocked ? COLORS.surfaceTertiary : chapterAccent + "18" }]}>
-        <Text style={[styles.partNumTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary : chapterAccent }]}>
-          {index + 1}
+      {/* Part number indicator with X-Y node label */}
+      <View style={styles.partNumCol}>
+        <View style={[styles.partNum, { backgroundColor: chapterLocked ? COLORS.surfaceTertiary : chapterAccent + "18" }]}>
+          <Text style={[styles.partNumTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary : chapterAccent }]}>
+            {index + 1}
+          </Text>
+        </View>
+        <Text style={[styles.nodeLabelTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary + "80" : chapterAccent + "90" }]}>
+          {nodeLabel}
         </Text>
       </View>
 
@@ -642,18 +675,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
   },
+  partNumCol: {
+    alignItems: "center",
+    gap: 2,
+    flexShrink: 0,
+    marginTop: 2,
+  },
   partNum: {
     width: 24,
     height: 24,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 2,
   },
   partNumTxt: {
     fontSize: 11,
     fontWeight: "700",
+  },
+  nodeLabelTxt: {
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   partContent: {
     flex: 1,
@@ -742,6 +784,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.onSurfaceTertiary,
     fontStyle: "italic",
+  },
+
+  // J1: University Prep Tips section
+  prepTipsSection: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+    paddingHorizontal: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+    gap: 4,
+  },
+  prepTipsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  prepTipsTitle: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+  prepTipsSub: {
+    fontSize: 9,
+    color: COLORS.onSurfaceTertiary,
+    fontStyle: "italic",
+    flex: 1,
+  },
+  prepTipRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  prepTipDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  prepTipTxt: {
+    fontSize: 11,
+    color: COLORS.onSurfaceSecondary,
+    lineHeight: 15,
+    flex: 1,
   },
 
   // Phase 2 teaser
