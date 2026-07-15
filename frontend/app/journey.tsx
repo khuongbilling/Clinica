@@ -13,7 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ChapterJourneyMap } from "@/src/components/ChapterJourneyMap";
 import {
+  CHAPTERS,
   getCurrentChapter,
+  getChapterFailureHint,
   getNextRecommendedPart,
 } from "@/src/game/chapterJourney";
 import { playerLevelFromXp } from "@/src/game/progression";
@@ -35,10 +37,20 @@ export default function JourneyScreen() {
   const { level: playerLevel } = playerLevelFromXp(player.xp ?? 0);
   const currentChapter = getCurrentChapter(playerLevel);
   const nextStep = getNextRecommendedPart(playerLevel);
-  // C3: Field Practice Required — show a strip when the next chapter is locked
-  // and the player hasn't yet done any battles (no entries in battle_stars).
+  // J5: Field Practice Required — show strip when the player has done at least
+  // one battle but still needs more XP/levels to unlock the next chapter.
+  // (Previously only showed for brand-new players with no battle stars.)
   const hasBattleStars = Object.keys(player.battle_stars ?? {}).length > 0;
-  const showFieldPracticeStrip = !hasBattleStars && playerLevel < 2;
+  const nextLockedChapter = CHAPTERS.find((ch) => ch.levelGate > playerLevel);
+  const showFieldPracticeStrip = !!nextLockedChapter && hasBattleStars;
+  // J5: University support strip — show when the player has accumulated 3+
+  // total battle failures, suggesting targeted University practice.
+  const totalFailures = Object.values(player.failure_counts ?? {}).reduce(
+    (sum: number, v) => sum + ((v as number) || 0),
+    0,
+  );
+  const failureHint = getChapterFailureHint(currentChapter.number);
+  const showUniversitySupport = totalFailures >= 3 && !!failureHint && !showFieldPracticeStrip;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]} testID="journey-screen">
@@ -61,7 +73,7 @@ export default function JourneyScreen() {
         </View>
       </View>
 
-      {/* ── C3: Field Practice Required strip (new players with no battle XP) ── */}
+      {/* ── J5: Field Practice Required strip — shown when next chapter is locked ── */}
       {showFieldPracticeStrip && (
         <Pressable
           style={styles.fieldPracticeStrip}
@@ -71,10 +83,37 @@ export default function JourneyScreen() {
           <Ionicons name="shield-half" size={18} color={COLORS.error} />
           <View style={{ flex: 1 }}>
             <Text style={styles.fieldPracticeTitle}>Field Practice Required</Text>
-            <Text style={styles.fieldPracticeSub}>Complete Ward Shifts and earn ★ ratings to progress through chapters.</Text>
+            <Text style={styles.fieldPracticeSub}>
+              Reach Level {nextLockedChapter?.levelGate} to unlock Chapter {nextLockedChapter?.number}. Complete University practice, replay cleared shifts, or upgrade hero skills.
+            </Text>
           </View>
           <Ionicons name="arrow-forward" size={16} color={COLORS.error} />
         </Pressable>
+      )}
+
+      {/* ── J5: University Support strip — shown when player has frequent failures ── */}
+      {showUniversitySupport && failureHint && (
+        <View style={styles.universitySupportStrip} testID="journey-university-support">
+          <Ionicons name="school-outline" size={18} color={COLORS.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.universitySupportTitle}>Having Trouble?</Text>
+            <Text style={styles.universitySupportSub}>{failureHint.text}</Text>
+            <View style={styles.universitySupportBtnRow}>
+              <Pressable
+                style={styles.universitySupportBtn}
+                onPress={() => router.push(failureHint.primaryRoute as any)}
+              >
+                <Text style={styles.universitySupportBtnTxt}>Practice at University</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.universitySupportBtn, styles.universitySupportBtnSecondary]}
+                onPress={() => router.push(failureHint.secondaryRoute as any)}
+              >
+                <Text style={[styles.universitySupportBtnTxt, { color: "#A78BFA" }]}>Upgrade Skills</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       )}
 
       {/* ── Next recommended step strip ── */}
@@ -194,7 +233,7 @@ const styles = StyleSheet.create({
     color: COLORS.brand,
   },
 
-  // C3: Field Practice Required strip
+  // J5: Field Practice Required strip
   fieldPracticeStrip: {
     flexDirection: "row",
     alignItems: "center",
@@ -218,6 +257,55 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     marginTop: 1,
     lineHeight: 14,
+  },
+
+  // J5: University support strip (shown when 3+ failures)
+  universitySupportStrip: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.xs,
+    backgroundColor: COLORS.brand + "10",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.brand + "45",
+    padding: SPACING.sm,
+  },
+  universitySupportTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.brand,
+    letterSpacing: 0.3,
+  },
+  universitySupportSub: {
+    fontSize: 11,
+    color: COLORS.onSurfaceTertiary,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  universitySupportBtnRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 6,
+    flexWrap: "wrap",
+  },
+  universitySupportBtn: {
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  universitySupportBtnSecondary: {
+    backgroundColor: "#A78BFA20",
+    borderWidth: 1,
+    borderColor: "#A78BFA55",
+  },
+  universitySupportBtnTxt: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.onBrand,
+    letterSpacing: 0.5,
   },
 
   // Next step strip

@@ -18,6 +18,7 @@ import { useTestSession } from "@/src/game/testSession";
 import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
 import { getDifficultyModifier } from "@/src/game/difficulty";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
+import { getChapterFailureHint } from "@/src/game/chapterJourney";
 import { HEROES } from "@/src/game/content";
 import { VERDANTHA } from "@/src/game/worldEvent";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
@@ -91,6 +92,14 @@ export default function Result() {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
   }, [enemyId]);
+  // J5: chapter-themed failure hint for the "Having trouble?" recommendation panel.
+  // Only shown on a loss; uses the enemy's chapter difficulty to pick the right hint.
+  const chapterFailureHint = useMemo(() => {
+    if (won || !enemy) return null;
+    const chapterNum = (enemy as any).difficulty as number | undefined;
+    if (!chapterNum) return null;
+    return getChapterFailureHint(chapterNum);
+  }, [won, enemy]);
 
   const codexUnlocked = useMemo(() => {
     if (!enemy || !won) return [];
@@ -506,6 +515,43 @@ export default function Result() {
           </View>
         )}
 
+        {/* ── J5: "Having trouble?" University recommendation panel (loss only) ── */}
+        {!won && !isTraining && !isPrologueBoss && chapterFailureHint && (
+          <View style={styles.failureRecommendCard} testID="result-failure-recommendation">
+            <View style={styles.failureRecommendHeader}>
+              <Ionicons name="school-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.failureRecommendKicker}>HAVING TROUBLE?</Text>
+            </View>
+            <Text style={styles.failureRecommendBody}>{chapterFailureHint.text}</Text>
+            <View style={styles.failureRecommendPractices}>
+              {chapterFailureHint.practices.map((p, i) => (
+                <View key={i} style={styles.failureRecommendPracticeRow}>
+                  <View style={styles.failureRecommendDot} />
+                  <Text style={styles.failureRecommendPracticeTxt}>{p}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.failureRecommendBtnRow}>
+              <Pressable
+                style={styles.failureRecommendBtn}
+                onPress={() => router.replace(chapterFailureHint.primaryRoute as any)}
+                testID="result-go-to-university"
+              >
+                <Ionicons name="school-outline" size={13} color={COLORS.onBrand} />
+                <Text style={styles.failureRecommendBtnTxt}>Practice at University</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.failureRecommendBtn, styles.failureRecommendBtnSecondary]}
+                onPress={() => router.replace(chapterFailureHint.secondaryRoute as any)}
+                testID="result-go-to-skill-academy"
+              >
+                <Ionicons name="flash-outline" size={13} color="#A78BFA" />
+                <Text style={[styles.failureRecommendBtnTxt, { color: "#A78BFA" }]}>Upgrade Hero Skills</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         <View style={styles.actions}>
           {/* ── Scripted-loss prologue boss safety net ──────────────────────
               battle.tsx normally routes directly to /lotus-recall via finish()
@@ -607,6 +653,80 @@ const styles = StyleSheet.create({
   bossDropRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   bossDropRowTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
   shardsBreakdown: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
+
+  // J5: "Having trouble?" University recommendation panel (shown after a loss)
+  failureRecommendCard: {
+    backgroundColor: COLORS.brand + "0D",
+    borderWidth: 1,
+    borderColor: COLORS.brand + "45",
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  failureRecommendHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  failureRecommendKicker: {
+    color: COLORS.brand,
+    fontSize: 10,
+    letterSpacing: 2,
+    fontWeight: "700",
+  },
+  failureRecommendBody: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  failureRecommendPractices: {
+    gap: 4,
+  },
+  failureRecommendPracticeRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+  },
+  failureRecommendDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.brand + "80",
+    marginTop: 6,
+    flexShrink: 0,
+  },
+  failureRecommendPracticeTxt: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 12,
+    lineHeight: 18,
+    flex: 1,
+  },
+  failureRecommendBtnRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    flexWrap: "wrap",
+    marginTop: 2,
+  },
+  failureRecommendBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  failureRecommendBtnSecondary: {
+    backgroundColor: "#A78BFA15",
+    borderWidth: 1,
+    borderColor: "#A78BFA55",
+  },
+  failureRecommendBtnTxt: {
+    color: COLORS.onBrand,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   starsCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, borderTopWidth: 3, borderTopColor: COLORS.brand, alignItems: "center", gap: 4 },
   starsTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
   starsRow: { flexDirection: "row", marginTop: 4 },

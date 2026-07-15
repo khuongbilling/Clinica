@@ -141,6 +141,7 @@ export function ChapterJourneyMap({
               isExpanded={isExpanded}
               isFirst={idx === 0}
               isLast={idx === CHAPTERS.length - 1}
+              playerLevel={playerLevel}
               battleStars={battleStars}
               chestId={chest?.id}
               chestClaimed={chestClaimed}
@@ -156,6 +157,8 @@ export function ChapterJourneyMap({
                   router.push(part.route as any);
                 }
               }}
+              onUniversityPress={() => router.push("/university" as any)}
+              onSkillAcademyPress={() => router.push("/university/skill-academy" as any)}
             />
             {/* C6 — Simulation→Real-Ward transition callout between Ch.8 and Ch.9 */}
             {chapter.number === 8 && (
@@ -195,6 +198,7 @@ function ChapterCard({
   isExpanded,
   isFirst,
   isLast,
+  playerLevel,
   battleStars,
   chestId,
   chestClaimed,
@@ -206,12 +210,15 @@ function ChapterCard({
   onChestClaim,
   onNodeClaim,
   onPartPress,
+  onUniversityPress,
+  onSkillAcademyPress,
 }: {
   chapter: Chapter;
   status: ChapterStatus;
   isExpanded: boolean;
   isFirst: boolean;
   isLast: boolean;
+  playerLevel: number;
   battleStars: Record<string, number>;
   chestId?: string;
   chestClaimed: boolean;
@@ -223,6 +230,8 @@ function ChapterCard({
   onChestClaim?: (chestId: string) => Promise<void>;
   onNodeClaim?: (nodeId: string, stars: number) => Promise<void>;
   onPartPress: (part: ChapterPart) => void;
+  onUniversityPress?: () => void;
+  onSkillAcademyPress?: () => void;
 }) {
   const accent = status === "locked" ? COLORS.onSurfaceTertiary : chapter.accentColor;
   const isLocked = status === "locked";
@@ -400,6 +409,10 @@ function ChapterCard({
             const claimStars = (
               part.type === 'battle' || part.type === 'mini_boss' || part.type === 'ward_defense'
             ) ? Math.max(1, bestChapterStars) : 3;
+            // J5: Ward Defense nodes require playerLevel >= 4 (safety gate).
+            // Chapter 4 itself is locked below Level 4, so this only fires if
+            // somehow the chapter unlocks but the mode hasn't been reached yet.
+            const isWardDefenseLocked = part.type === 'ward_defense' && playerLevel < 4;
             return (
               <PartRow
                 key={part.id}
@@ -408,6 +421,7 @@ function ChapterCard({
                 chapterNumber={chapter.number}
                 chapterAccent={chapter.accentColor}
                 chapterLocked={isLocked}
+                isWardDefenseLocked={isWardDefenseLocked}
                 onPress={() => onPartPress(part)}
                 isLast={idx === chapter.parts.length - 1}
                 isEligible={eligible}
@@ -428,7 +442,8 @@ function ChapterCard({
             </View>
           )}
 
-          {/* J1: University Prep Tips — non-node recommendations (only for unlocked chapters) */}
+          {/* J1/J5: University Prep Tips — non-node recommendations (only for unlocked chapters).
+              J5 adds tappable "Practice at University" and "Upgrade Hero Skills" action links. */}
           {!isLocked && chapter.prepTips && chapter.prepTips.length > 0 && (
             <View style={styles.prepTipsSection}>
               <View style={styles.prepTipsHeader}>
@@ -442,6 +457,33 @@ function ChapterCard({
                   <Text style={styles.prepTipTxt}>{tip}</Text>
                 </View>
               ))}
+              {/* J5: "Having trouble?" — tappable shortcuts to relevant University screens */}
+              <View style={styles.prepTipsHintRow}>
+                <Ionicons name="information-circle-outline" size={11} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.prepTipsHintTxt}>
+                  Having trouble? Practice these topics at Clinica University before returning to the ward.
+                </Text>
+              </View>
+              <View style={styles.prepTipsActionRow}>
+                <Pressable
+                  style={[styles.prepTipsActionBtn, { borderColor: accent + "55" }]}
+                  onPress={onUniversityPress}
+                  hitSlop={6}
+                >
+                  <Ionicons name="school-outline" size={11} color={accent} />
+                  <Text style={[styles.prepTipsActionTxt, { color: accent }]}>Practice at University</Text>
+                  <Ionicons name="arrow-forward" size={10} color={accent} />
+                </Pressable>
+                <Pressable
+                  style={[styles.prepTipsActionBtn, { borderColor: "#A78BFA55" }]}
+                  onPress={onSkillAcademyPress}
+                  hitSlop={6}
+                >
+                  <Ionicons name="flash-outline" size={11} color="#A78BFA" />
+                  <Text style={[styles.prepTipsActionTxt, { color: "#A78BFA" }]}>Upgrade Hero Skills</Text>
+                  <Ionicons name="arrow-forward" size={10} color="#A78BFA" />
+                </Pressable>
+              </View>
             </View>
           )}
         </View>
@@ -452,12 +494,16 @@ function ChapterCard({
 
 // ── PartRow ───────────────────────────────────────────────────────────────────
 
+// J5: Minimum player level required to enter a Ward Defense node.
+const WARD_DEFENSE_MIN_LEVEL = 4;
+
 function PartRow({
   part,
   index,
   chapterNumber,
   chapterAccent,
   chapterLocked,
+  isWardDefenseLocked = false,
   onPress,
   isLast,
   isEligible = false,
@@ -470,6 +516,8 @@ function PartRow({
   chapterNumber: number;
   chapterAccent: string;
   chapterLocked: boolean;
+  /** J5: true when this ward_defense node is not yet reachable by the player's level. */
+  isWardDefenseLocked?: boolean;
   onPress: () => void;
   isLast: boolean;
   // J2 — first-clear claim state
@@ -479,8 +527,8 @@ function PartRow({
   onClaim?: () => Promise<void>;
 }) {
   const [claiming, setClaiming] = React.useState(false);
-  const typeColor = chapterLocked ? COLORS.onSurfaceTertiary : PART_TYPE_COLOR[part.type];
-  const isActionable = !!part.route && !part.isPlaceholder && !chapterLocked;
+  const typeColor = (chapterLocked || isWardDefenseLocked) ? COLORS.onSurfaceTertiary : PART_TYPE_COLOR[part.type];
+  const isActionable = !!part.route && !part.isPlaceholder && !chapterLocked && !isWardDefenseLocked;
   // J1: node label "1-1", "1-2", etc.
   const nodeLabel = `${chapterNumber}-${part.part}`;
   // J2: look up the journey reward def to display accurate reward chips.
@@ -553,6 +601,16 @@ function PartRow({
         >
           {part.description}
         </Text>
+
+        {/* J5 — Ward Defense locked banner: shown when playerLevel < 4 */}
+        {isWardDefenseLocked && (
+          <View style={styles.wardDefenseLockedBanner}>
+            <Ionicons name="lock-closed-outline" size={11} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.wardDefenseLockedTxt}>
+              Ward Defense opens at Level {WARD_DEFENSE_MIN_LEVEL}. Complete Field Practice and return when your ward readiness improves.
+            </Text>
+          </View>
+        )}
 
         {/* J2 — reward chips: use journeyRewards.ts values as source of truth.
             Fall back to chapterJourney.ts display fields for Ch6+ nodes. */}
@@ -1012,6 +1070,65 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceSecondary,
     lineHeight: 15,
     flex: 1,
+  },
+  // J5: "Having trouble?" hint row above action buttons
+  prepTipsHintRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 5,
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+  },
+  prepTipsHintTxt: {
+    fontSize: 10,
+    color: COLORS.onSurfaceTertiary,
+    fontStyle: "italic",
+    flex: 1,
+    lineHeight: 14,
+  },
+  // J5: row of "Practice at University" + "Upgrade Hero Skills" action buttons
+  prepTipsActionRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  prepTipsActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: COLORS.surfaceTertiary,
+  },
+  prepTipsActionTxt: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  // J5: Ward Defense locked banner inside a PartRow
+  wardDefenseLockedBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 5,
+    marginTop: 5,
+    backgroundColor: COLORS.surfaceTertiary,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+  },
+  wardDefenseLockedTxt: {
+    fontSize: 11,
+    color: COLORS.onSurfaceTertiary,
+    fontStyle: "italic",
+    flex: 1,
+    lineHeight: 15,
   },
 
   // Phase 2 teaser

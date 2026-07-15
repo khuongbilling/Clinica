@@ -68,6 +68,24 @@ export interface Chapter {
    * that players are encouraged to complete before tackling the chapter battles.
    */
   prepTips?: readonly string[];
+  /**
+   * J5: Failure hint shown on the result screen after a loss against an enemy
+   * at this chapter's difficulty. Encourages targeted University practice.
+   */
+  failureHint?: ChapterFailureHint;
+}
+
+// ── J5: Failure hint per chapter ─────────────────────────────────────────────
+
+export interface ChapterFailureHint {
+  /** Short encouraging text shown after a loss (1–2 sentences). */
+  text: string;
+  /** 2–4 specific practice activities to try at University. */
+  practices: readonly string[];
+  /** Primary deep link route (University hub). */
+  primaryRoute: string;
+  /** Secondary deep link route (Hero Skill Academy). */
+  secondaryRoute: string;
 }
 
 // ── Chapter accent palette (one per chapter, warm-dark donghua tones) ────────
@@ -110,6 +128,17 @@ export const CHAPTERS: Chapter[] = [
       "Stabilize Stack Lab — build the safe care sequence",
       "Lotus Lesson: Hydration Basics — fluids as first language",
     ],
+    failureHint: {
+      text: "Hydration cases hide their cues. Practice spotting the early signs before they fade — then your Scout and Stabilize actions will land much harder.",
+      practices: [
+        "Clinical Cue Lab: Hydration Signs — spot the hidden fluid cues",
+        "Rapid Triage Hall: What Matters First — urgency under time pressure",
+        "Stabilize Stack Lab: Steady Hands — safe sequencing from mild to severe",
+        "Lotus Lesson: Hydration Basics — fluids as first language",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
     parts: [
       {
         id: "c1p1",
@@ -189,6 +218,17 @@ export const CHAPTERS: Chapter[] = [
       "Rapid Triage Hall: Worsening Patient — catch the change in time",
       "Stabilize Stack Lab: Reassess Before You Celebrate",
     ],
+    failureHint: {
+      text: "Fever enemies apply pressure over time and can spike again after you stabilise. Reassessment isn't optional — it's the core skill this chapter trains.",
+      practices: [
+        "Lotus Lesson: Fever & Warmth — temperature as diagnostic signal",
+        "Clinical Cue Lab: Fever Signs — find the hidden heat clues",
+        "Rapid Triage Hall: Worsening Patient — catch the change in time",
+        "Stabilize Stack Lab: Reassess Before You Celebrate — check twice",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
     parts: [
       {
         id: "c2p1",
@@ -279,6 +319,17 @@ export const CHAPTERS: Chapter[] = [
       "Rapid Triage Hall: Airway First — ABCDE in a crowded corridor",
       "Stabilize Stack Lab: Open the Air Path — sequence matters",
     ],
+    failureHint: {
+      text: "Airway enemies hide their severity. Scout early to reveal hidden cues — once the wheeze goes silent, the window is closing fast.",
+      practices: [
+        "Lotus Lesson: Breathing Basics — SpO₂, respiratory rate, effort",
+        "Clinical Cue Lab: Shortness of Breath — spot the airway distress signs",
+        "Rapid Triage Hall: Airway First — ABCDE in a crowded corridor",
+        "Stabilize Stack Lab: Open the Air Path — sequence before treatment",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
     parts: [
       {
         id: "c3p1",
@@ -380,6 +431,17 @@ export const CHAPTERS: Chapter[] = [
       "Cue Hunt Lab: Crowded Ward Warning — spot the overload signal",
       "Lotus Lesson: Safety and Prioritization — ABCDE under volume",
     ],
+    failureHint: {
+      text: "Code Rush enemies hit in waves — priority decisions matter more than damage output. Practice triage and ward positioning before you return.",
+      practices: [
+        "Rapid Triage Hall: Who Needs the Bed First — priority under volume",
+        "Stabilize Stack Lab: Protect the Ward — sequential damage control",
+        "Clinical Cue Lab: Crowded Ward Warning — spot the overload signal",
+        "Lotus Lesson: Safety and Prioritization — ABCDE under pressure",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
     parts: [
       {
         id: "c4p1",
@@ -470,6 +532,17 @@ export const CHAPTERS: Chapter[] = [
       "Stabilize Stack Lab: Multi-Step Care Plan — four phases, two risks",
       "Rapid Triage Hall: Changing Priority — the patient who recovers and the one who doesn't",
     ],
+    failureHint: {
+      text: "Sanctuary cases need multi-step care — each intervention must build on the last. Missing one step collapses the whole chain. Practice the full sequence.",
+      practices: [
+        "Lotus Lesson: Recovery and Reassessment — healing after the storm",
+        "Clinical Cue Lab: Fatigue and Recovery — subtle signs of ongoing deterioration",
+        "Stabilize Stack Lab: Multi-Step Care Plan — four phases, two risks",
+        "Rapid Triage Hall: Changing Priority — the patient who recovers then doesn't",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
     parts: [
       {
         id: "c5p1",
@@ -1028,6 +1101,16 @@ export function getNextRecommendedPart(playerLevel: number): {
   const ch = getCurrentChapter(playerLevel);
   const part = ch.parts.find((p) => p.route && !p.isPlaceholder) ?? ch.parts[0];
   return { chapter: ch, part };
+}
+
+/**
+ * J5: Returns the failure hint for a given chapter number (1–10), or null if
+ * no hint is defined. Used by the battle result screen to surface contextual
+ * University practice recommendations after a loss.
+ */
+export function getChapterFailureHint(chapterNumber: number): ChapterFailureHint | null {
+  const ch = CHAPTERS.find((c) => c.number === chapterNumber);
+  return ch?.failureHint ?? null;
 }
 
 /** Phase 1 summary used in locked-chapter previews. */
