@@ -128,6 +128,11 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.claimed_journey_nodes) {
     out = { ...out, claimed_journey_nodes: [] };
   }
+  // J3 — backfill University practice counters and milestone claims.
+  if (out.uni_cue_lab_count == null) out = { ...out, uni_cue_lab_count: 0 };
+  if (out.uni_triage_count == null)  out = { ...out, uni_triage_count: 0 };
+  if (out.uni_stack_count == null)   out = { ...out, uni_stack_count: 0 };
+  if (!out.uni_practice_milestones_claimed) out = { ...out, uni_practice_milestones_claimed: [] };
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
   // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
   // layout whose values aren't valid grid cell ids predates the rewrite and
@@ -327,6 +332,17 @@ type Ctx = {
   toggleHeroFavorite: (heroId: string) => Promise<void>;
   completeLesson: (lessonId: string) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
   completeSimulation: (simId: string, wasCorrect: boolean) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
+  // J3 — University practice activity completion (Clinical Cue Lab, Rapid Triage, Stabilize Stack).
+  // Increments the counter, grants XP/UC/scrolls/heroXP, auto-claims newly earned practice milestones,
+  // emits a university_lesson daily event. Milestone rewards are granted exactly once per milestone.
+  completeUniPractice: (
+    activityType: 'cue_lab' | 'triage' | 'stack',
+    difficulty: 'beginner' | 'standard' | 'advanced',
+  ) => Promise<{
+    ok: boolean;
+    reward: import('./uniPractice').GrantedPracticeReward;
+    newMilestones: import('./uniPractice').UniPracticeMilestone[];
+  }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
   // Daily Ward Rounds — free-to-earn daily engagement loop.
@@ -1429,6 +1445,91 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `+${result.creditsEarned} University Credits!`, result };
   }, [player, updateState]);
 
+  // J3 — University practice activity completion.
+  const completeUniPractice = useCallback(async (
+    activityType: 'cue_lab' | 'triage' | 'stack',
+    difficulty: 'beginner' | 'standard' | 'advanced',
+  ) => {
+    const base = playerRef.current;
+    const empty = { ok: false, reward: null as any, newMilestones: [] as any[] };
+    if (!base) return empty;
+
+    const { PRACTICE_REWARDS, getNewlyEarnedMilestones } = await import('./uniPractice');
+    const countKey = activityType === 'cue_lab' ? 'uni_cue_lab_count' as const
+      : activityType === 'triage'  ? 'uni_triage_count' as const
+      : 'uni_stack_count' as const;
+    const currentCount = base[countKey] ?? 0;
+    const newCount = currentCount + 1;
+    const rewardDef = PRACTICE_REWARDS[activityType][difficulty];
+
+    // Player XP
+    let next = applyXp(base, rewardDef.playerXp);
+
+    // University Credits
+    next = { ...next, university_credits: (next.university_credits || 0) + rewardDef.universityCredits };
+
+    // Inventory: scroll + optional bonus item
+    const inv = { ...(next.inventory || {}) };
+    inv[rewardDef.scrollKey] = (inv[rewardDef.scrollKey] || 0) + rewardDef.scrollCount;
+    if (rewardDef.bonusItemKey && rewardDef.bonusItemCount) {
+      inv[rewardDef.bonusItemKey] = (inv[rewardDef.bonusItemKey] || 0) + rewardDef.bonusItemCount;
+    }
+    next = { ...next, inventory: inv };
+
+    // Hero XP split across active team (or first 3 owned heroes)
+    const teamIds = (base.active_team || []).filter(Boolean);
+    const heroPool = teamIds.length > 0 ? teamIds : (base.heroes_owned || []).slice(0, 3);
+    if (heroPool.length > 0 && rewardDef.heroXp > 0) {
+      const perHero = Math.max(1, Math.round(rewardDef.heroXp / heroPool.length));
+      const prog = { ...(next.hero_progression || {}) };
+      for (const heroId of heroPool) {
+        const ex = prog[heroId] ? { ...prog[heroId] } : { star: 1, copies: 0, level: 1, xp: 0 };
+        const cap = levelCapForStar(ex.star ?? 1);
+        const r = addHeroXp(ex.level ?? 1, ex.xp ?? 0, perHero, cap);
+        prog[heroId] = { ...ex, xp: r.xp, level: r.level };
+      }
+      next = { ...next, hero_progression: prog };
+    }
+
+    // Increment activity counter
+    next = { ...next, [countKey]: newCount };
+
+    // Auto-check and grant newly earned milestones (once-only)
+    const alreadyClaimed = base.uni_practice_milestones_claimed ?? [];
+    const newlyEarned = getNewlyEarnedMilestones(activityType, newCount, alreadyClaimed);
+    for (const ms of newlyEarned) {
+      if (ms.rewards.playerXp) next = applyXp(next, ms.rewards.playerXp);
+      if (ms.rewards.universityCredits) {
+        next = { ...next, university_credits: (next.university_credits || 0) + ms.rewards.universityCredits };
+      }
+      if (ms.rewards.codexShards) {
+        next = { ...next, codex_shards: (next.codex_shards || 0) + ms.rewards.codexShards };
+      }
+      if (ms.rewards.inventory) {
+        const msInv = { ...(next.inventory || {}) };
+        for (const [k, v] of Object.entries(ms.rewards.inventory)) {
+          msInv[k] = (msInv[k] || 0) + v;
+        }
+        next = { ...next, inventory: msInv };
+      }
+    }
+    if (newlyEarned.length > 0) {
+      next = { ...next, uni_practice_milestones_claimed: [...alreadyClaimed, ...newlyEarned.map((m) => m.id)] };
+    }
+
+    // Daily rounds — counts as a university_lesson event
+    next = foldDaily(next, 'university_lesson');
+
+    playerRef.current = next;
+    await updateState(next);
+
+    return {
+      ok: true,
+      reward: { ...rewardDef, activityType, difficulty, isFirstComplete: currentCount === 0 },
+      newMilestones: newlyEarned,
+    };
+  }, [updateState]);
+
   // Sanctuary Bank — exchanges Insight Crystals for Refined Lotus Gems using a
   // fixed row from SANCTUARY_BANK_EXCHANGE_TABLE (Push 5.5). Weekly/monthly
   // caps are shown as informational UI copy only; not enforced here yet.
@@ -1654,13 +1755,41 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const withXp = applyXpDetailed(base, node.rewards.xp).player;
     // Heroes are earned exclusively through University Recruitment — lessons
     // never grant heroes, only currencies and XP.
-    const next: PlayerState = {
+    let next: PlayerState = {
       ...withXp,
       lessons_completed: [...completed, completionId],
       insight_crystals: (base.insight_crystals || 0) + node.rewards.insightCrystals,
       crowns: (base.crowns || 0) + node.rewards.crowns,
       university_credits: (base.university_credits || 0) + node.rewards.universityCredits,
     };
+    // J3 — grant 1 Lesson Note per Lotus lesson completion and check Lotus milestones.
+    const lotusInv = { ...(next.inventory || {}) };
+    lotusInv['lesson_note'] = (lotusInv['lesson_note'] || 0) + 1;
+    next = { ...next, inventory: lotusInv };
+
+    const { getNewLotusLessonMilestones } = await import('./uniPractice');
+    const newLotusCount = (next.lessons_completed ?? []).length;
+    const alreadyClaimed = base.uni_practice_milestones_claimed ?? [];
+    const lotusMs = getNewLotusLessonMilestones(newLotusCount, alreadyClaimed);
+    for (const ms of lotusMs) {
+      if (ms.rewards.playerXp) next = applyXp(next, ms.rewards.playerXp);
+      if (ms.rewards.universityCredits) {
+        next = { ...next, university_credits: (next.university_credits || 0) + ms.rewards.universityCredits };
+      }
+      if (ms.rewards.codexShards) {
+        next = { ...next, codex_shards: (next.codex_shards || 0) + ms.rewards.codexShards };
+      }
+      if (ms.rewards.inventory) {
+        const msInv = { ...(next.inventory || {}) };
+        for (const [k, v] of Object.entries(ms.rewards.inventory)) {
+          msInv[k] = (msInv[k] || 0) + v;
+        }
+        next = { ...next, inventory: msInv };
+      }
+    }
+    if (lotusMs.length > 0) {
+      next = { ...next, uni_practice_milestones_claimed: [...alreadyClaimed, ...lotusMs.map((m) => m.id)] };
+    }
     playerRef.current = next;
     await updateState(next);
     return {
@@ -1911,8 +2040,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

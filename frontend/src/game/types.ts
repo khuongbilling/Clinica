@@ -241,6 +241,14 @@ export interface PlayerState {
   // J2 — one-time claim tracking for Journey Map node first-clear rewards.
   // Keyed by ChapterPart.id (e.g. "c1p1"). Backfilled as [] for existing players.
   claimed_journey_nodes?: string[];
+  // J3 — University practice activity completion counters.
+  // Incremented by completeUniPractice; drives milestone unlock checks.
+  uni_cue_lab_count?: number;
+  uni_triage_count?: number;
+  uni_stack_count?: number;
+  // J3 — once-only University practice milestone claims (ids from UNI_PRACTICE_MILESTONES).
+  // Also covers Lotus Lesson count milestones. Backfilled as [] for existing players.
+  uni_practice_milestones_claimed?: string[];
   // Clinica University — Lessons & Simulations MVP
   lessons_completed?: string[];
   simulations_completed?: string[];

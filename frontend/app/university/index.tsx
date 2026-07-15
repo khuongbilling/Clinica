@@ -436,6 +436,66 @@ export default function UniversityHubScreen() {
           </>
         )}
 
+        {/* PRACTICE LABS — J3: repeatable practice modes, visible once FA chain is started */}
+        {showMore && (
+          <>
+            <Text style={styles.sectionHeading}>PRACTICE LABS</Text>
+            <View style={labsStyles.grid}>
+              <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/cue-lab" as any)} testID="university-lab-cue">
+                <View style={[labsStyles.labIcon, { backgroundColor: '#2DD4BF18' }]}>
+                  <Ionicons name="eye-outline" size={20} color="#2DD4BF" />
+                </View>
+                <Text style={labsStyles.labTitle}>Cue Lab</Text>
+                <Text style={labsStyles.labDesc}>Spot the most important clinical cue</Text>
+                <View style={labsStyles.labChip}>
+                  <Ionicons name="refresh-outline" size={9} color="#2DD4BF" />
+                  <Text style={[labsStyles.labChipTxt, { color: '#2DD4BF' }]}>REPEATABLE</Text>
+                </View>
+              </Pressable>
+
+              <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/triage-hall" as any)} testID="university-lab-triage">
+                <View style={[labsStyles.labIcon, { backgroundColor: '#F59E0B18' }]}>
+                  <Ionicons name="flash-outline" size={20} color="#F59E0B" />
+                </View>
+                <Text style={labsStyles.labTitle}>Triage Hall</Text>
+                <Text style={labsStyles.labDesc}>Choose who needs care first</Text>
+                <View style={labsStyles.labChip}>
+                  <Ionicons name="refresh-outline" size={9} color="#F59E0B" />
+                  <Text style={[labsStyles.labChipTxt, { color: '#F59E0B' }]}>REPEATABLE</Text>
+                </View>
+              </Pressable>
+
+              <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/stack-lab" as any)} testID="university-lab-stack">
+                <View style={[labsStyles.labIcon, { backgroundColor: '#22D3EE18' }]}>
+                  <Ionicons name="layers-outline" size={20} color="#22D3EE" />
+                </View>
+                <Text style={labsStyles.labTitle}>Stack Lab</Text>
+                <Text style={labsStyles.labDesc}>Arrange care steps in the right order</Text>
+                <View style={labsStyles.labChip}>
+                  <Ionicons name="refresh-outline" size={9} color="#22D3EE" />
+                  <Text style={[labsStyles.labChipTxt, { color: '#22D3EE' }]}>REPEATABLE</Text>
+                </View>
+              </Pressable>
+            </View>
+            <View style={labsStyles.labFooter}>
+              <Ionicons name="school-outline" size={12} color={COLORS.onSurfaceTertiary} />
+              <Text style={labsStyles.labFooterTxt}>
+                Practice earns Cue Scrolls, Triage Scrolls, Stabilization Scrolls and University Credits. Milestone rewards unlock automatically.
+              </Text>
+              <View style={labsStyles.labMoreRow}>
+                <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-milestones" as any)}>
+                  <Ionicons name="trophy-outline" size={13} color="#D4AF37" />
+                  <Text style={labsStyles.labMoreBtnTxt}>Practice Milestones</Text>
+                </Pressable>
+                <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-shop" as any)}>
+                  <Ionicons name="storefront-outline" size={13} color="#2DD4BF" />
+                  <Text style={[labsStyles.labMoreBtnTxt, { color: '#2DD4BF' }]}>University Shop</Text>
+                </Pressable>
+              </View>
+            </View>
+          </>
+        )}
+
         {/* LESSONS — available below, not removed */}
         <Text style={styles.sectionHeading}>LESSONS</Text>
         <BannerCard
@@ -782,5 +842,40 @@ const styles = StyleSheet.create({
   futureToggleTxt: { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
   footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
+});
+
+// ── Practice Labs grid styles ─────────────────────────────────────────────────
+const labsStyles = StyleSheet.create({
+  grid: { flexDirection: "row", gap: SPACING.sm },
+  labCard: {
+    flex: 1, backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.sm, gap: 4,
+    alignItems: "center",
+  },
+  labIcon: {
+    width: 44, height: 44, borderRadius: RADIUS.sm,
+    alignItems: "center", justifyContent: "center", marginBottom: 2,
+  },
+  labTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", textAlign: "center" },
+  labDesc: { color: COLORS.onSurfaceTertiary, fontSize: 10, textAlign: "center", lineHeight: 13 },
+  labChip: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2,
+    backgroundColor: COLORS.surfaceTertiary, marginTop: 2,
+  },
+  labChipTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.5 },
+  labFooter: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: COLORS.border,
+    padding: SPACING.sm, gap: SPACING.sm,
+  },
+  labFooterTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
+  labMoreRow: { flexDirection: "row", gap: SPACING.sm },
+  labMoreBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm,
+    paddingVertical: 7,
+  },
+  labMoreBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
 });
 

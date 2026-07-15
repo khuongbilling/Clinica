@@ -411,6 +411,47 @@ const FACTION_MATERIALS: MaterialDef[] = [
     usedFor: "Limited gear sets and prestige rewards.", relatedMode: "World Boss / Epidemic (future)", status: "future" },
 ];
 
+// -----------------------------------------------------------------------------
+// J3 — University Practice learning materials (earned through practice labs)
+// -----------------------------------------------------------------------------
+const UNI_PRACTICE_MATERIALS: MaterialDef[] = [
+  { id: "cue_scroll", name: "Cue Scroll", icon: "eye-outline", category: "player_class", rarity: "common", kind: "learning",
+    source: "Clinical Cue Lab (practice activity) and Clinical Cue Lab milestones.",
+    usedFor: "Scout/cue-recognition upgrades and future hero ability development (J4+).",
+    relatedMode: "Clinica University — Clinical Cue Lab", status: "active",
+    note: "Learning material, not a broad currency. Do not display alongside coins or shards." },
+  { id: "triage_scroll", name: "Triage Scroll", icon: "flash-outline", category: "player_class", rarity: "common", kind: "learning",
+    source: "Rapid Triage Hall (practice activity) and Rapid Triage milestones.",
+    usedFor: "Readiness/priority upgrades and future hero ability development (J4+).",
+    relatedMode: "Clinica University — Rapid Triage Hall", status: "active",
+    note: "Learning material, not a broad currency." },
+  { id: "stab_scroll", name: "Stabilization Scroll", icon: "layers-outline", category: "player_class", rarity: "common", kind: "learning",
+    source: "Stabilize Stack Lab (practice activity) and Stack Lab milestones.",
+    usedFor: "Stabilize/recovery upgrades and future hero ability development (J4+).",
+    relatedMode: "Clinica University — Stabilize Stack Lab", status: "active",
+    note: "Learning material, not a broad currency." },
+  { id: "lesson_note", name: "Lesson Notes", icon: "document-text-outline", category: "player_class", rarity: "common", kind: "learning",
+    source: "Advanced Clinical Cue Lab, Lotus Lessons completion, Lotus Lesson milestones.",
+    usedFor: "Hero knowledge development and future hero ability support (J4+).",
+    relatedMode: "Clinica University — Lotus Lessons", status: "active",
+    note: "General learning material from Lotus Lessons study." },
+  { id: "care_chain_manual", name: "Care Chain Manual", icon: "reader-outline", category: "player_class", rarity: "rare", kind: "learning",
+    source: "Advanced Rapid Triage Hall, Advanced Stabilize Stack Lab, practice milestones (10-completion), University Shop (125 UC).",
+    usedFor: "Care Chain upgrade support and future hero Clinical Arts development (J4+).",
+    relatedMode: "Clinica University", status: "active",
+    note: "Rare manual. Earned through mastery milestones — not casually farmable." },
+  { id: "hero_training_page", name: "Hero Training Page", icon: "trending-up-outline", category: "player_class", rarity: "uncommon", kind: "learning",
+    source: "University Shop (40 UC) and future hero-specific mission rewards.",
+    usedFor: "Hero skill rank study and Clinical Arts reference (J4+).",
+    relatedMode: "Clinica University — Hero Skill Academy (preview)", status: "active",
+    note: "Training reference only — no hero stat effect until J4 Hero Skill Academy wires it up." },
+  { id: "sim_pass", name: "Simulation Pass", icon: "shield-checkmark-outline", category: "player_class", rarity: "uncommon", kind: "learning",
+    source: "University Shop (50 UC) and future advanced simulation completion.",
+    usedFor: "Grants access to an advanced simulation run (future advanced simulation system).",
+    relatedMode: "Clinica University — Simulations", status: "active",
+    note: "Redeemed at the simulation entry point — not a combat buff or power shortcut." },
+];
+
 export const MATERIALS: MaterialDef[] = [
   ...CORE_CURRENCY_MATERIALS,
   ...RECRUITMENT_MATERIALS,
@@ -422,6 +463,7 @@ export const MATERIALS: MaterialDef[] = [
   ...WELLNESS_MATERIALS,
   ...EVENT_MATERIALS,
   ...FACTION_MATERIALS,
+  ...UNI_PRACTICE_MATERIALS,
 ];
 
 export function getMaterialById(id: string): MaterialDef | undefined {
