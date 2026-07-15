@@ -133,6 +133,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.uni_triage_count == null)  out = { ...out, uni_triage_count: 0 };
   if (out.uni_stack_count == null)   out = { ...out, uni_stack_count: 0 };
   if (!out.uni_practice_milestones_claimed) out = { ...out, uni_practice_milestones_claimed: [] };
+  // J4 — backfill Hero Skill Academy upgrade state for pre-J4 saves.
+  if (!out.hero_skill_upgrades) out = { ...out, hero_skill_upgrades: {} };
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
   // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
   // layout whose values aren't valid grid cell ids predates the rewrite and
@@ -380,6 +382,8 @@ type Ctx = {
   markLv2UnlockSeen: () => Promise<void>;
   // Low-level full-player write — prefer applyRewards for incremental updates.
   // Exposed so mini-game completion handlers can batch credits + XP in one call.
+  // J4 — Hero Skill Academy: spend learning materials + University Credits to upgrade hero skills.
+  upgradeHeroSkill: (upgradeId: string) => Promise<{ ok: boolean; message: string }>;
   updateState: (next: PlayerState) => Promise<void>;
 };
 
@@ -1530,6 +1534,80 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [updateState]);
 
+  // J4 — Hero Skill Academy: spend learning materials + University Credits to
+  // purchase the next rank of a skill upgrade. Uses playerRef critical section
+  // to prevent double-spend on rapid taps. Grants hero XP to owned heroes when
+  // the upgrade definition includes an heroXp effect.
+  const upgradeHeroSkill = useCallback(async (upgradeId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+
+    const { SKILL_UPGRADES, maxHeroLevel } = await import('./heroSkillAcademy');
+    const upg = SKILL_UPGRADES.find(u => u.id === upgradeId);
+    if (!upg) return { ok: false, message: 'Unknown upgrade.' };
+
+    const currentRank = (base.hero_skill_upgrades ?? {})[upgradeId] ?? 0;
+    if (currentRank >= upg.maxRank) return { ok: false, message: 'Already at max rank.' };
+
+    const rankDef = upg.ranks[currentRank];
+    if (!rankDef) return { ok: false, message: 'No rank definition found.' };
+
+    const heroLevel = maxHeroLevel(base);
+    if (heroLevel < rankDef.requirements.hero_level) {
+      return { ok: false, message: `Requires a hero at level ${rankDef.requirements.hero_level}.` };
+    }
+
+    const inv = { ...(base.inventory ?? {}) };
+    const uc  = base.university_credits ?? 0;
+    const req = rankDef.requirements;
+
+    if ((inv.cue_scroll         ?? 0) < (req.cue_scroll         ?? 0)) return { ok: false, message: `Need ${req.cue_scroll} Cue Scroll(s).` };
+    if ((inv.triage_scroll      ?? 0) < (req.triage_scroll      ?? 0)) return { ok: false, message: `Need ${req.triage_scroll} Triage Scroll(s).` };
+    if ((inv.stab_scroll        ?? 0) < (req.stab_scroll        ?? 0)) return { ok: false, message: `Need ${req.stab_scroll} Stabilization Scroll(s).` };
+    if ((inv.lesson_note        ?? 0) < (req.lesson_note        ?? 0)) return { ok: false, message: `Need ${req.lesson_note} Lesson Note(s).` };
+    if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { ok: false, message: `Need ${req.care_chain_manual} Care Chain Manual(s).` };
+    if ((inv.hero_training_page ?? 0) < (req.hero_training_page ?? 0)) return { ok: false, message: `Need ${req.hero_training_page} Hero Training Page(s).` };
+    if (uc < req.university_credits)                                    return { ok: false, message: `Need ${req.university_credits} University Credits.` };
+
+    // Deduct materials
+    if (req.cue_scroll)         inv.cue_scroll         = (inv.cue_scroll         ?? 0) - req.cue_scroll;
+    if (req.triage_scroll)      inv.triage_scroll      = (inv.triage_scroll      ?? 0) - req.triage_scroll;
+    if (req.stab_scroll)        inv.stab_scroll        = (inv.stab_scroll        ?? 0) - req.stab_scroll;
+    if (req.lesson_note)        inv.lesson_note        = (inv.lesson_note        ?? 0) - req.lesson_note;
+    if (req.care_chain_manual)  inv.care_chain_manual  = (inv.care_chain_manual  ?? 0) - req.care_chain_manual;
+    if (req.hero_training_page) inv.hero_training_page = (inv.hero_training_page ?? 0) - req.hero_training_page;
+
+    let next: PlayerState = {
+      ...base,
+      inventory: inv,
+      university_credits: uc - req.university_credits,
+      hero_skill_upgrades: {
+        ...(base.hero_skill_upgrades ?? {}),
+        [upgradeId]: currentRank + 1,
+      },
+    };
+
+    // Grant hero XP to owned heroes if the rank effect includes heroXp
+    if (rankDef.effect.heroXp && rankDef.effect.heroXp > 0) {
+      const heroPool = (base.heroes_owned ?? []).slice(0, 8);
+      if (heroPool.length > 0) {
+        const prog = { ...(next.hero_progression ?? {}) };
+        for (const heroId of heroPool) {
+          const ex = prog[heroId] ? { ...prog[heroId] } : { star: 1, copies: 0, level: 1, xp: 0 };
+          const cap = levelCapForStar(ex.star ?? 1);
+          const r = addHeroXp(ex.level ?? 1, ex.xp ?? 0, rankDef.effect.heroXp, cap);
+          prog[heroId] = { ...ex, xp: r.xp, level: r.level };
+        }
+        next = { ...next, hero_progression: prog };
+      }
+    }
+
+    playerRef.current = next;
+    await updateState(next);
+
+    return { ok: true, message: `${upg.name} upgraded to Rank ${currentRank + 1}!` };
+  }, [updateState]);
+
   // Sanctuary Bank — exchanges Insight Crystals for Refined Lotus Gems using a
   // fixed row from SANCTUARY_BANK_EXCHANGE_TABLE (Push 5.5). Weekly/monthly
   // caps are shown as informational UI copy only; not enforced here yet.
@@ -2040,8 +2118,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

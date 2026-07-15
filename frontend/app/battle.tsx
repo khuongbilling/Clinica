@@ -29,6 +29,7 @@ import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import type { ActionType, Hero, HeroSkill } from "@/src/game/types";
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
+import { applySkillUpgradesToTeam } from "@/src/game/heroSkillAcademy";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -130,7 +131,13 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // Player Class ability bonuses (Guardian/Seer/Caretaker/Scholar tiers at
     // Player Level 10/20/30) — see progression.ts getClassBattleBonuses.
     const classBonuses = getClassBattleBonuses(player?.aptitude, player?.player_level ?? 1);
-    const base = initBattle(enemy, team, {
+    // J4 — apply Hero Skill Academy upgrade bonuses to team skills (pre-battle,
+    // additive-only, does not modify HEROES source data or BattleState types).
+    // Skipped for prologue loaner battles so tutorial fights are unaffected.
+    const battleTeam = !isPrologueLoanerBattle
+      ? applySkillUpgradesToTeam(team, player?.hero_skill_upgrades ?? {})
+      : team;
+    const base = initBattle(enemy, battleTeam, {
       inventory: player?.inventory || {},
       profile,
       enemyMastery: player?.enemy_mastery,

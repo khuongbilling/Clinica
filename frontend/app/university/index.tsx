@@ -227,6 +227,19 @@ const TRAINING_BANNER: ModeCardDef = {
   artBrief: "",
 };
 
+const SKILL_ACADEMY_BANNER: ModeCardDef = {
+  id: "uni-skill-academy",
+  title: "Hero Skill Academy",
+  subtitle: "Convert Scrolls, Manuals, and University Credits into stronger hero skills.",
+  icon: "flash",
+  accentColor: "#A855F7",
+  status: "active",
+  size: "medium",
+  imageKey: "uni-training",
+  route: "/university/skill-academy",
+  artBrief: "",
+};
+
 const LIBRARY_BANNER: ModeCardDef = {
   id: "uni-library",
   title: "Research Library",
@@ -491,6 +504,10 @@ export default function UniversityHubScreen() {
                   <Ionicons name="storefront-outline" size={13} color="#2DD4BF" />
                   <Text style={[labsStyles.labMoreBtnTxt, { color: '#2DD4BF' }]}>University Shop</Text>
                 </Pressable>
+                <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/skill-academy" as any)}>
+                  <Ionicons name="flash-outline" size={13} color="#A855F7" />
+                  <Text style={[labsStyles.labMoreBtnTxt, { color: '#A855F7' }]}>Skill Academy</Text>
+                </Pressable>
               </View>
             </View>
           </>
@@ -506,7 +523,7 @@ export default function UniversityHubScreen() {
         />
 
         {/* GROW YOUR HEALERS — revealed progressively */}
-        {(showRecruitment || showTraining) && (
+        {(showRecruitment || showTraining || showMore) && (
           <Text style={styles.sectionHeading}>GROW YOUR HEALERS</Text>
         )}
         {showRecruitment && (
@@ -523,6 +540,14 @@ export default function UniversityHubScreen() {
             height={120}
             onPress={() => router.push("/university/training" as any)}
             testID="university-banner-uni-training"
+          />
+        )}
+        {showMore && (
+          <BannerCard
+            mode={SKILL_ACADEMY_BANNER}
+            height={120}
+            onPress={() => router.push("/university/skill-academy" as any)}
+            testID="university-banner-skill-academy"
           />
         )}
 
