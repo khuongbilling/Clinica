@@ -17,7 +17,7 @@ import {
 
 const CATEGORY_ORDER: MaterialCategory[] = [
   "core_currency", "recruitment", "hero_growth", "player_class", "realm",
-  "clinical_supplies", "ward_defense", "wellness", "events", "faction",
+  "clinical_supplies", "ward_defense", "wellness", "events",
 ];
 
 type GuideFilter = MaterialCategory | "all" | "equipment";
