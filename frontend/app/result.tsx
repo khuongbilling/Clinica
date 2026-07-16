@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -88,6 +88,9 @@ export default function Result() {
     } catch { return []; }
   }, [heroLevelUpsParam]);
   const heroName = (id: string) => HEROES.find((h) => h.id === id)?.name || id;
+  // P5: collapsible clinical details
+  const [showReflection, setShowReflection] = useState(false);
+  const [showLearnMore, setShowLearnMore] = useState(false);
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -458,44 +461,51 @@ export default function Result() {
               </>
             )}
 
-            {/* ── What This Case Taught — clinical reflection card ── */}
-            <View style={styles.reflectionCard} testID="result-reflection-card">
-              <View style={styles.reflectionHeader}>
-                <Ionicons name="leaf-outline" size={14} color={COLORS.brand} />
-                <Text style={styles.reflectionKicker}>WHAT THIS CASE TAUGHT</Text>
+            {/* ── What This Case Taught — collapsible clinical reflection ── */}
+            <Pressable
+              style={styles.reflectionToggle}
+              onPress={() => setShowReflection((v) => !v)}
+              testID="result-reflection-toggle"
+            >
+              <Ionicons name="leaf-outline" size={13} color={COLORS.brand} />
+              <Text style={styles.reflectionToggleTxt}>WHAT THIS CASE TAUGHT</Text>
+              <Ionicons name={showReflection ? "chevron-up" : "chevron-down"} size={14} color={COLORS.brand + "90"} />
+            </Pressable>
+            {showReflection && (
+              <View style={styles.reflectionCard} testID="result-reflection-card">
+                <View style={styles.reflectionSteps}>
+                  <View style={styles.reflectionStep}>
+                    <Ionicons name="search-outline" size={12} color={COLORS.brand} />
+                    <Text style={styles.reflectionStepTxt}>Scout first — reveal cues before acting.</Text>
+                  </View>
+                  <View style={styles.reflectionStep}>
+                    <Ionicons name="shield-outline" size={12} color={COLORS.brand} />
+                    <Text style={styles.reflectionStepTxt}>Stabilize before countering — keep the patient safe first.</Text>
+                  </View>
+                  <View style={styles.reflectionStep}>
+                    <Ionicons name="refresh-outline" size={12} color={COLORS.brand} />
+                    <Text style={styles.reflectionStepTxt}>Reassess after treatment — check the patient's response.</Text>
+                  </View>
+                </View>
+                {lessonComplete && linkedLesson && (
+                  <View style={styles.reflectionLessonRow}>
+                    <Ionicons name="checkmark-circle" size={13} color={COLORS.brand} />
+                    <Text style={styles.reflectionLessonTxt}>
+                      Your Lotus Lesson <Text style={styles.reflectionLessonName}>{linkedLesson.title}</Text> prepared you for this encounter.
+                    </Text>
+                  </View>
+                )}
+                {(linkedLesson?.learningTags ?? []).length > 0 && (
+                  <View style={styles.reflectionTags}>
+                    {(linkedLesson!.learningTags!).map((tag) => (
+                      <View key={tag} style={styles.reflectionTag}>
+                        <Text style={styles.reflectionTagTxt}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
-              <View style={styles.reflectionSteps}>
-                <View style={styles.reflectionStep}>
-                  <Ionicons name="search-outline" size={12} color={COLORS.brand} />
-                  <Text style={styles.reflectionStepTxt}>Scout first — reveal cues before acting, so you treat the right system.</Text>
-                </View>
-                <View style={styles.reflectionStep}>
-                  <Ionicons name="shield-outline" size={12} color={COLORS.brand} />
-                  <Text style={styles.reflectionStepTxt}>Stabilize before countering — keep the patient safe, then address the cause.</Text>
-                </View>
-                <View style={styles.reflectionStep}>
-                  <Ionicons name="refresh-outline" size={12} color={COLORS.brand} />
-                  <Text style={styles.reflectionStepTxt}>Reassess after treatment — check whether the response improved or shifted.</Text>
-                </View>
-              </View>
-              {lessonComplete && linkedLesson && (
-                <View style={styles.reflectionLessonRow}>
-                  <Ionicons name="checkmark-circle" size={13} color={COLORS.brand} />
-                  <Text style={styles.reflectionLessonTxt}>
-                    Your Lotus Lesson <Text style={styles.reflectionLessonName}>{linkedLesson.title}</Text> prepared you for this encounter.
-                  </Text>
-                </View>
-              )}
-              {(linkedLesson?.learningTags ?? []).length > 0 && (
-                <View style={styles.reflectionTags}>
-                  {(linkedLesson!.learningTags!).map((tag) => (
-                    <View key={tag} style={styles.reflectionTag}>
-                      <Text style={styles.reflectionTagTxt}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
+            )}
           </>
         )}
 
@@ -549,6 +559,20 @@ export default function Result() {
                 <Text style={[styles.failureRecommendBtnTxt, { color: "#A78BFA" }]}>Upgrade Hero Skills</Text>
               </Pressable>
             </View>
+          </View>
+        )}
+
+        {/* P5 — NEXT UP teaser before actions (win only, non-tutorial, non-training) */}
+        {won && !isTraining && !isPrologueTutorial && !isPrologueBoss && (
+          <View style={styles.nextUpRow}>
+            <Ionicons name="arrow-forward-circle-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.nextUpTxt}>
+              {playerLevelUp
+                ? `Level ${playerLevelUp.toLevel} reached — new content is now available.`
+                : fullChainCompleted
+                ? "Care Chain cleared. The next challenge awaits."
+                : "Your journey continues — the next patient is waiting."}
+            </Text>
           </View>
         )}
 
@@ -793,4 +817,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.brand + "28",
   },
   reflectionTagTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 0.3 },
+
+  // P5 — collapsible reflection toggle
+  reflectionToggle: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.brand + "0E",
+    borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.brand + "28",
+  },
+  reflectionToggleTxt: { flex: 1, color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+
+  // P5 — NEXT UP teaser
+  nextUpRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.brand + "0E",
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "30",
+    padding: SPACING.md,
+  },
+  nextUpTxt: { flex: 1, color: COLORS.brand, fontSize: 13, lineHeight: 18 },
 });

@@ -70,27 +70,27 @@ const FALLBACK_SCENE = ARENA_SCENES.River;
 function hubGuideMessage(obj: ObjectiveDef): string {
   switch (obj.id) {
     case "obj_prologue_done":
-      return "Your story has begun. The System is here. Explore the hub — your stamina, currencies, and first heroes are waiting.";
+      return "The System is online. Explore the hub — your stamina, currencies, and first heroes are here.";
     case "obj_lotus_recall":
     case "obj_identity_done":
     case "obj_diagnostic_done":
     case "obj_class_result":
     case "obj_memory_seen":
-      return "Your onboarding is in progress. Head to Clinica University when you are ready — your path begins there.";
+      return "Head to Clinica University — your clinical path begins there.";
     case "obj_university_arrived":
-      return "Your path begins at Clinica University. The Fading Apprentice case chain is waiting — complete all three challenges to earn your foundation.";
+      return "The Fading Apprentice case is waiting — three clinical challenges, one chain.";
     case "obj_fading_apprentice_done":
-      return "Complete The Fading Apprenticeship at Clinica University — three challenges that build clinical thinking: Cue Hunt, Rapid Triage, and Stabilize Stack.";
+      return "Complete The Fading Apprentice — Cue Hunt → Rapid Triage → Stabilize Stack.";
     case "obj_lotus_visited":
-      return "The Fading Apprentice is saved! Continue Chapter 1 — open Lotus Lessons in the University to reinforce your knowledge.";
+      return "Case cleared. Open Lotus Lessons to deepen your knowledge.";
     case "obj_lotus_first_lesson":
-      return "You are in the University. Complete your first Lotus Lesson to deepen your understanding of the case.";
+      return "Start your first Lotus Lesson.";
     case "obj_recruit_preview":
-      return "Lesson done. Visit the Recruitment Hall in University and see which healers are ready to answer the call.";
+      return "Visit the Recruitment Hall — your healer roster is waiting.";
     case "obj_ward_shift_first":
-      return "Ward Shift is now unlocked. Your first simulation is waiting — step into the ward and face your first clinical challenge.";
+      return "Ward Shift unlocked — step into the ward for your first simulation.";
     default:
-      return "Your path continues. The System is watching.";
+      return "Your path continues.";
   }
 }
 
@@ -713,8 +713,7 @@ function SystemHubOrientationPanel({
             <Text style={[oriStyles.name, { color: accent }]}>{identity.name.toUpperCase()}</Text>
           </View>
           <Text style={oriStyles.message}>
-            Recall sequence stabilized.{"\n"}
-            Main ward interface restored. This is your command screen — study, train, run simulations, and return to the ward when ready.
+            Command screen restored — study, train, run simulations, and return to the ward when ready.
           </Text>
         </View>
       </View>

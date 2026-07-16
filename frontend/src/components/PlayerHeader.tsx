@@ -74,8 +74,9 @@ export function PlayerHeader({
   // Summoning Shards (codex_shards): visible at Level 2 (Summoning Hall unlocks) or if
   // player already has any — avoids showing a confusing 0-balance chip early.
   const showSummonShards = shopUnlocked || (player.codex_shards ?? 0) > 0;
-  // Refined Lotus Gems: show once Shop unlocks (level 2) OR player already has a balance
-  const showRefinedGems = shopUnlocked || (player.refined_lotus_gems ?? 0) > 0;
+  // Refined Lotus Gems: only show when player has actually earned some — never show
+  // a 0-balance chip at Level 2 (gems are earned from content, not unlocked via level).
+  const showRefinedGems = (player.refined_lotus_gems ?? 0) > 0;
   // Paid Lotus Gems: only show if player actually has some — suppress the confusing
   // 0-balance chip until premium spending has been introduced
   const showPaidGems = (player.lotus_gems_paid ?? 0) > 0;

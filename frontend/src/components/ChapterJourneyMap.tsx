@@ -457,9 +457,9 @@ function ChapterCard({
               {/* Locked chapter body message (Ch2+) */}
               {isLocked && (
                 <View style={styles.lockedMsg}>
-                  <Ionicons name="shield-half" size={14} color={COLORS.onSurfaceTertiary} />
+                  <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
                   <Text style={styles.lockedMsgTxt}>
-                    Field Practice Required. Complete University practice, replay cleared shifts, or improve hero skills before continuing.
+                    Complete Chapter {chapter.number - 1} to unlock.
                   </Text>
                 </View>
               )}
@@ -481,13 +481,6 @@ function ChapterCard({
                   <Text style={styles.prepTipTxt}>{tip}</Text>
                 </View>
               ))}
-              {/* J5: "Having trouble?" — tappable shortcuts to relevant University screens */}
-              <View style={styles.prepTipsHintRow}>
-                <Ionicons name="information-circle-outline" size={11} color={COLORS.onSurfaceTertiary} />
-                <Text style={styles.prepTipsHintTxt}>
-                  Having trouble? Practice these topics at Clinica University before returning to the ward.
-                </Text>
-              </View>
               <View style={styles.prepTipsActionRow}>
                 <Pressable
                   style={[styles.prepTipsActionBtn, { borderColor: accent + "55" }]}
@@ -631,7 +624,7 @@ function PartRow({
           <View style={styles.wardDefenseLockedBanner}>
             <Ionicons name="lock-closed-outline" size={11} color={COLORS.onSurfaceTertiary} />
             <Text style={styles.wardDefenseLockedTxt}>
-              Ward Defense opens at Level {WARD_DEFENSE_MIN_LEVEL}. Complete Field Practice and return when your ward readiness improves.
+              Unlocks at Level {WARD_DEFENSE_MIN_LEVEL}.
             </Text>
           </View>
         )}

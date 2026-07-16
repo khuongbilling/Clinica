@@ -547,7 +547,7 @@ export default function UniversityHubScreen() {
             <View style={labsStyles.labFooter}>
               <Ionicons name="school-outline" size={12} color={COLORS.onSurfaceTertiary} />
               <Text style={labsStyles.labFooterTxt}>
-                Practice earns Cue Scrolls, Triage Scrolls, Stabilization Scrolls and University Credits. Milestone rewards unlock automatically.
+                Earn scrolls and credits. Milestone rewards unlock automatically.
               </Text>
               <View style={labsStyles.labMoreRow}>
                 <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-milestones" as any)}>
