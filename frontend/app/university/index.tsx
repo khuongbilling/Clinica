@@ -527,6 +527,18 @@ export default function UniversityHubScreen() {
           </>
         )}
 
+        {/* BATTLE & JOURNEY SUPPORT — links University practice to upcoming battles */}
+        {showMore && (
+          <>
+            <Text style={styles.sectionHeading}>BATTLE {"&"} JOURNEY SUPPORT</Text>
+            <JourneyPrepSection
+              chapterProgress={player.chapter_progress ?? 1}
+              onJourneyPress={() => router.push("/journey" as any)}
+              onLabPress={(route) => router.push(route as any)}
+            />
+          </>
+        )}
+
         {/* LESSONS — available below, not removed */}
         <Text style={styles.sectionHeading}>LESSONS</Text>
         <BannerCard
@@ -662,6 +674,81 @@ export default function UniversityHubScreen() {
 
       <TutorialOverlay />
     </SafeAreaView>
+  );
+}
+
+// ── Battle & Journey Support ─────────────────────────────────────────────────
+
+interface PrepRec {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
+  title: string;
+  desc: string;
+  route: string;
+  label: string;
+}
+
+const CHAPTER_PREP: Record<number, PrepRec[]> = {
+  1: [
+    { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",     desc: "Cue recognition powers your Cue Bonus in Ward Shifts.",             route: "/university/cue-lab",     label: "Practice" },
+    { icon: "book-outline",   color: "#A78BFA", title: "Lotus Lessons",        desc: "Learn the disease systems you will face in battle.",                route: "/university/lessons",      label: "Study"    },
+  ],
+  2: [
+    { icon: "flash-outline",  color: "#F59E0B", title: "Rapid Triage Hall",    desc: "Multi-enemy encounters demand fast prioritization.",                 route: "/university/triage-hall", label: "Practice" },
+    { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",     desc: "Advanced cue spotting sharpens your Cue Bonus further.",            route: "/university/cue-lab",     label: "Practice" },
+  ],
+  3: [
+    { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab",  desc: "Care-sequence combos are key against tougher enemies.",             route: "/university/stack-lab",   label: "Practice" },
+    { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",   desc: "Upgrade hero skills before facing Chapter 3 bosses.",               route: "/university/skill-academy", label: "Upgrade"  },
+  ],
+  4: [
+    { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab",  desc: "Precise stacking keeps patient stability from collapsing.",         route: "/university/stack-lab",   label: "Practice" },
+    { icon: "flash-outline",  color: "#F59E0B", title: "Rapid Triage Hall",    desc: "Combined pressure in Ch. 4 rewards sharp triage instincts.",        route: "/university/triage-hall", label: "Practice" },
+    { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",   desc: "Max out core skills — Ch. 4 enemies hit hard.",                     route: "/university/skill-academy", label: "Upgrade"  },
+  ],
+};
+const PREP_FALLBACK: PrepRec[] = [
+  { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",     desc: "Keep cue recognition sharp at every chapter.",                      route: "/university/cue-lab",     label: "Practice" },
+  { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab",  desc: "Precise stacking is the endgame healer's signature.",               route: "/university/stack-lab",   label: "Practice" },
+  { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",   desc: "Max skill ranks before facing the final boss.",                      route: "/university/skill-academy", label: "Upgrade"  },
+];
+
+function JourneyPrepSection({
+  chapterProgress,
+  onJourneyPress,
+  onLabPress,
+}: {
+  chapterProgress: number;
+  onJourneyPress: () => void;
+  onLabPress: (route: string) => void;
+}) {
+  const recs = CHAPTER_PREP[chapterProgress] ?? PREP_FALLBACK;
+  return (
+    <View style={prepS.card}>
+      <View style={prepS.header}>
+        <Ionicons name="map-outline" size={14} color="#D4AF37" />
+        <Text style={prepS.headerTxt}>Chapter {chapterProgress} Battle Preparation</Text>
+        <Pressable onPress={onJourneyPress} hitSlop={8} style={prepS.mapBtn}>
+          <Text style={prepS.mapBtnTxt}>Journey Map</Text>
+          <Ionicons name="arrow-forward" size={11} color="#D4AF37" />
+        </Pressable>
+      </View>
+      <View style={prepS.divider} />
+      {recs.map((rec) => (
+        <Pressable key={rec.route + rec.title} style={prepS.row} onPress={() => onLabPress(rec.route)}>
+          <View style={[prepS.iconWrap, { backgroundColor: rec.color + '18' }]}>
+            <Ionicons name={rec.icon} size={15} color={rec.color} />
+          </View>
+          <View style={prepS.rowText}>
+            <Text style={prepS.rowTitle}>{rec.title}</Text>
+            <Text style={prepS.rowDesc}>{rec.desc}</Text>
+          </View>
+          <View style={[prepS.labelChip, { backgroundColor: rec.color + '20' }]}>
+            <Text style={[prepS.labelTxt, { color: rec.color }]}>{rec.label}</Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
@@ -916,5 +1003,38 @@ const labsStyles = StyleSheet.create({
     paddingVertical: 7,
   },
   labMoreBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
+});
+
+// ── Battle & Journey prep card styles ─────────────────────────────────────────
+const prepS = StyleSheet.create({
+  card: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#D4AF3730", overflow: "hidden",
+  },
+  header: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    backgroundColor: "#D4AF3708",
+  },
+  headerTxt: { flex: 1, color: "#D4AF37", fontSize: 12, fontWeight: "700" },
+  mapBtn: { flexDirection: "row", alignItems: "center", gap: 3 },
+  mapBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "600" },
+  divider: { height: 1, backgroundColor: COLORS.border },
+  row: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  iconWrap: {
+    width: 34, height: 34, borderRadius: RADIUS.sm,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  rowText: { flex: 1, gap: 1 },
+  rowTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  rowDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
+  labelChip: {
+    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0,
+  },
+  labelTxt: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
 });
 
