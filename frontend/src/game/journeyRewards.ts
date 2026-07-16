@@ -90,15 +90,20 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   { nodeId: 'c1n5', chapter: 1, playerXp:  20, heroXp:  0,  coins:   0, credits: 10,      isStory: true,  starsScale: false },
   { nodeId: 'c1n6', chapter: 1, playerXp:  55, heroXp:  35, coins:  75, shards: 25,       isStory: false, starsScale: true  },
 
-  // ── Chapter 2: The First Ward Rotation (Level 2, 6 nodes) ────────────────
-  // Approximate totals at 3★: 385 player XP, 195 hero XP, 540 Ward Coins,
-  //   85 University Credits, 185 Summoning Shards, 10 RLG.
-  { nodeId: 'c2p1', chapter: 2, playerXp:  25, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c2p2', chapter: 2, playerXp:  55, heroXp:  30, coins:  75,                   isStory: false, starsScale: true  },
-  { nodeId: 'c2p3', chapter: 2, playerXp:  25, heroXp:   0, coins:   0, shards: 25,       isStory: true,  starsScale: false },
-  { nodeId: 'c2p4', chapter: 2, playerXp:  65, heroXp:  35, coins:  90, credits: 15,      isStory: false, starsScale: true  },
-  { nodeId: 'c2p5', chapter: 2, playerXp:  70, heroXp:  40, coins: 100, shards: 20,       isStory: false, starsScale: true  },
-  { nodeId: 'c2p6', chapter: 2, playerXp:  85, heroXp:  50, coins: 125, shards: 40,       isStory: false, starsScale: true  },
+  // ── Chapter 2: The First Ward Rotation (Level 2, 8 nodes — P8 format) ───
+  // c2p1: memory_fragment (flat)  c2p2: challenge-cue-hunt (flat)
+  // c2p3: challenge-rapid-triage (flat)  c2p4: challenge-stack (flat)
+  // c2p5: battle (stars)          c2p6: memory_fragment (flat)
+  // c2p7: mini_boss (stars)       c2p8: reflection (flat)
+  // Approx totals at 3★: 265 XP, 80 hero XP, 200 coins, 95 credits, 65 shards.
+  { nodeId: 'c2p1', chapter: 2, playerXp:  25, heroXp:  0, coins:  0, credits: 10,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p2', chapter: 2, playerXp:  15, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p3', chapter: 2, playerXp:  15, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p4', chapter: 2, playerXp:  15, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p5', chapter: 2, playerXp:  55, heroXp: 30, coins: 75,                    isStory: false, starsScale: true  },
+  { nodeId: 'c2p6', chapter: 2, playerXp:  25, heroXp:  0, coins:  0, shards: 25,        isStory: true,  starsScale: false },
+  { nodeId: 'c2p7', chapter: 2, playerXp:  85, heroXp: 50, coins: 125, shards: 40,       isStory: false, starsScale: true  },
+  { nodeId: 'c2p8', chapter: 2, playerXp:  30, heroXp:  0, coins:  0, credits: 20,       isStory: true,  starsScale: false },
 
   // ── Chapter 3: Breath Before Battle (Level 3, 7 nodes) ───────────────────
   // Approximate totals at 3★: 550 player XP, 270 hero XP, 750 Ward Coins,

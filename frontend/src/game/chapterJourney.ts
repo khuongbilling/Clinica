@@ -277,8 +277,8 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 2 — The First Ward Rotation (6 nodes, Level 2)
-  // J1: story → battle → story → battle → battle → mini-boss
+  // Chapter 2 — The First Ward Rotation (8 nodes, Level 2) — P8
+  // P8: memory_fragment → challenge(cue-hunt) → challenge(triage) → challenge(stack) → battle → memory_fragment → mini_boss → reflection
   // University prep: Fever Lesson · Fever Cue Hunt · Reassess Stabilize Stack
   // ─────────────────────────────────────────────────────────────────────────
   {
@@ -308,16 +308,21 @@ export const CHAPTERS: Chapter[] = [
       primaryRoute: "/university",
       secondaryRoute: "/university/skill-academy",
     },
+    // P8: required nodes that must be cleared before Chapter 3 unlocks.
+    // c2p5 = Fever Imp Simulation (Ward Shift), c2p7 = Trial: Fever Shade (mini-boss).
+    requiredCompletionNodes: ["c2p5", "c2p7"],
     parts: [
+      // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
         id: "c2p1",
         part: 1,
-        type: "story",
+        type: "memory_fragment",
         title: "First Rotation Briefing",
-        description: "The System outlines the week ahead. Multiple patients. Multiple threats. The Apprentice's fate hangs in recent memory.",
-        icon: "book-outline",
+        description: "The System outlines the week ahead. Multiple patients. Fever is the first enemy. The Apprentice's fate hangs in recent memory.",
+        icon: "film-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        rewardCredits: 10,
         scenario: {
           prompt: "A friend texts you: 'Had a headache since yesterday, feel warm, skipped dinner.' They ask if they should just sleep it off. What do you say?",
           healthHook: "Fever and missed meals together are a signal worth taking seriously.",
@@ -340,23 +345,61 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 2 — Challenge: Cue Hunt ─────────────────────────────────────
       {
         id: "c2p2",
         part: 2,
-        type: "battle",
-        title: "Simulation — Fever Imp",
-        description: "A low-grade fever case. Treat the source, not just the symptom. Read the cues before you act.",
-        icon: "medical-outline",
-        route: "/shift",
-        rewardXp: 15,
-        rewardCoins: 15,
+        type: "challenge",
+        title: "Fever Cue Hunt",
+        description: "Hidden clinical cues in a fever case. Find the signs that other healers miss — temperature patterns, hydration, skin tone.",
+        icon: "search-outline",
+        route: "/university/cue-hunt",
+        rewardXp: 10,
+        rewardCredits: 15,
       },
+      // ── Node 3 — Challenge: Rapid Triage ─────────────────────────────────
       {
         id: "c2p3",
         part: 3,
-        type: "story",
+        type: "challenge",
+        title: "The Patient Who Changed Twice",
+        description: "A stable patient deteriorates mid-round. Read the changing signs, triage the shift, and choose who needs you most urgently.",
+        icon: "shuffle-outline",
+        route: "/university/rapid-triage",
+        rewardXp: 10,
+        rewardCredits: 15,
+      },
+      // ── Node 4 — Challenge: Stabilize Stack ──────────────────────────────
+      {
+        id: "c2p4",
+        part: 4,
+        type: "challenge",
+        title: "Reassess Before You Celebrate",
+        description: "Don't assume a fever is gone just because the temperature dipped. Build the reassessment sequence before declaring victory.",
+        icon: "layers-outline",
+        route: "/university/stabilize-stack",
+        rewardXp: 10,
+        rewardCredits: 15,
+      },
+      // ── Node 5 — Ward Shift ───────────────────────────────────────────────
+      {
+        id: "c2p5",
+        part: 5,
+        type: "battle",
+        title: "Simulation — Fever Imp",
+        description: "A low-grade fever case becomes a full ward crisis. Apply your cue-reading and reassessment — this is the real simulation.",
+        icon: "medical-outline",
+        route: "/shift",
+        rewardXp: 20,
+        rewardCoins: 30,
+      },
+      // ── Node 6 — Memory Fragment ──────────────────────────────────────────
+      {
+        id: "c2p6",
+        part: 6,
+        type: "memory_fragment",
         title: "The First Ally",
-        description: "A seasoned healer notices your technique. An alliance forms — and a warning is delivered about what lies ahead.",
+        description: "A seasoned healer notices your technique. An alliance forms — and a warning about the Fever Shade is delivered.",
         icon: "people-outline",
         isPlaceholder: true,
         rewardXp: 5,
@@ -382,39 +425,30 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 7 — Chapter Trial (Mini-Boss) ───────────────────────────────
       {
-        id: "c2p4",
-        part: 4,
-        type: "battle",
-        title: "Simulation — The Patient Who Changed Twice",
-        description: "Vitals shift mid-shift. A stable patient suddenly isn't. Reassessment is not optional — it's the skill.",
-        icon: "medical-outline",
-        route: "/shift",
-        rewardXp: 20,
-        rewardCoins: 20,
-      },
-      {
-        id: "c2p5",
-        part: 5,
-        type: "battle",
-        title: "Simulation — Warmth in the Ward",
-        description: "Fever spreads to a second patient. Multiple active cases — prioritise, monitor, don't let the ward tip.",
-        icon: "medical-outline",
-        route: "/shift",
-        rewardXp: 20,
-        rewardCoins: 20,
-      },
-      {
-        id: "c2p6",
-        part: 6,
+        id: "c2p7",
+        part: 7,
         type: "mini_boss",
         title: "Trial: Fever Shade",
         description: "The Fever Imp's heavier cousin. Higher corruption pressure, hidden spread risk — apply your full rotation knowledge.",
         icon: "skull-outline",
         route: "/shift",
         rewardXp: 35,
-        rewardCoins: 30,
-        rewardShards: 5,
+        rewardCoins: 35,
+        rewardShards: 20,
+      },
+      // ── Node 8 — Rotation Complete ────────────────────────────────────────
+      {
+        id: "c2p8",
+        part: 8,
+        type: "reflection",
+        title: "Rotation Complete",
+        description: "The ward holds. Fever is understood, not feared. The System seals the chapter — and the door to Chapter 3 begins to glow.",
+        icon: "checkmark-circle-outline",
+        isPlaceholder: true,
+        rewardXp: 10,
+        rewardCredits: 20,
       },
     ],
   },
@@ -1398,6 +1432,13 @@ export function getChapterStatus(
 
   const next = CHAPTERS[idx + 1];
   if (!next || playerLevel < next.levelGate) return "active";
+  // P8: gate "complete" on THIS chapter's own requiredCompletionNodes being cleared.
+  if (claimedNodeIds && chapter.requiredCompletionNodes?.length) {
+    const allDone = chapter.requiredCompletionNodes.every((id) =>
+      claimedNodeIds.includes(id),
+    );
+    if (!allDone) return "active";
+  }
   return "complete";
 }
 

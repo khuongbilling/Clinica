@@ -30,6 +30,7 @@ import {
   type ChapterPartType,
 } from "@/src/game/chapterJourney";
 import { Chapter1VisualMap } from "@/src/components/Chapter1VisualMap";
+import { Chapter2VisualMap } from "@/src/components/Chapter2VisualMap";
 import { ENEMIES } from "@/src/game/content";
 import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/src/game/journeyRewards";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
@@ -112,9 +113,10 @@ export function ChapterJourneyMap({
 }: Props) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(() => {
-    // Default expand the active chapter.
+    // P8: Default expand the active chapter, respecting completion gate (not level-only).
     for (let i = CHAPTERS.length - 1; i >= 0; i--) {
-      if (playerLevel >= CHAPTERS[i].levelGate) return CHAPTERS[i].id;
+      const st = getChapterStatus(CHAPTERS[i], playerLevel, claimedNodes);
+      if (st !== "locked") return CHAPTERS[i].id;
     }
     return CHAPTERS[0].id;
   });
@@ -434,9 +436,18 @@ function ChapterCard({
       {/* ── Parts list (expanded) ── */}
       {isExpanded && (
         <View style={styles.partsList}>
-          {/* P2: Chapter 1 uses the visual path map; all other chapters use PartRow list. */}
+          {/* P2/P8: Ch1 and Ch2 use visual path maps; all other chapters use PartRow list. */}
           {chapter.number === 1 ? (
             <Chapter1VisualMap
+              battleStars={battleStars}
+              claimedNodes={claimedNodes}
+              storyScenesSeen={storyScenesSeen}
+              chapterAccent={chapter.accentColor}
+              onPartPress={onPartPress}
+              onNodeClaim={onNodeClaim}
+            />
+          ) : chapter.number === 2 ? (
+            <Chapter2VisualMap
               battleStars={battleStars}
               claimedNodes={claimedNodes}
               storyScenesSeen={storyScenesSeen}
