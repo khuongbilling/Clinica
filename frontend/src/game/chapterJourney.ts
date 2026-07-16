@@ -888,6 +888,7 @@ export const CHAPTERS: Chapter[] = [
     icon: "home-outline",
     simulationEra: true,
     completionXp: 80,
+    requiredCompletionNodes: ["c5p7", "c5p8"],
     prepTips: [
       "Lotus Lesson: Recovery and Reassessment — healing after the storm",
       "Cue Hunt Lab: Fatigue and Recovery — subtle signs of ongoing deterioration",

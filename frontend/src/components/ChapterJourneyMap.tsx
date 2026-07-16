@@ -33,6 +33,7 @@ import { Chapter1VisualMap } from "@/src/components/Chapter1VisualMap";
 import { Chapter2VisualMap } from "@/src/components/Chapter2VisualMap";
 import { Chapter3VisualMap } from "@/src/components/Chapter3VisualMap";
 import { Chapter4VisualMap } from "@/src/components/Chapter4VisualMap";
+import { Chapter5VisualMap } from "@/src/components/Chapter5VisualMap";
 import { ENEMIES } from "@/src/game/content";
 import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/src/game/journeyRewards";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
@@ -468,6 +469,15 @@ function ChapterCard({
             />
           ) : chapter.number === 4 ? (
             <Chapter4VisualMap
+              battleStars={battleStars}
+              claimedNodes={claimedNodes}
+              storyScenesSeen={storyScenesSeen}
+              chapterAccent={chapter.accentColor}
+              onPartPress={onPartPress}
+              onNodeClaim={onNodeClaim}
+            />
+          ) : chapter.number === 5 ? (
+            <Chapter5VisualMap
               battleStars={battleStars}
               claimedNodes={claimedNodes}
               storyScenesSeen={storyScenesSeen}
