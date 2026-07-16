@@ -167,6 +167,7 @@ class Player(BaseModel):
     simulations_completed: List[str] = Field(default_factory=list)
     badge_progress: Dict[str, int] = Field(default_factory=dict)
     claimed_milestones: List[str] = Field(default_factory=list)
+    claimed_daily_milestones: List[str] = Field(default_factory=list)
     # C4 — one-time claim tracking for level milestones, chapter chests, 3-star bonuses.
     claimed_level_rewards: List[str] = Field(default_factory=list)
     claimed_chapter_chests: List[str] = Field(default_factory=list)
@@ -250,6 +251,7 @@ class PlayerUpdate(BaseModel):
     simulations_completed: Optional[List[str]] = None
     badge_progress: Optional[Dict[str, int]] = None
     claimed_milestones: Optional[List[str]] = None
+    claimed_daily_milestones: Optional[List[str]] = None
     claimed_level_rewards: Optional[List[str]] = None
     claimed_chapter_chests: Optional[List[str]] = None
     claimed_chapter_3star: Optional[List[str]] = None
