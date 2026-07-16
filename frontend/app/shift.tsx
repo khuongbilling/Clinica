@@ -128,20 +128,20 @@ export default function ShiftPage() {
 
         <InlineNotice notice={notice} icon="lock-closed" testID="shift-notice" />
 
-        {/* System narrator + Go to University CTA — shown when Ward Shift is still locked */}
+        {/* System narrator + Go to first Lotus Lesson CTA — shown when Ward Shift is still locked */}
         {showUniversityPrompt && (
           <>
             <SystemNarratorBar
-              message="Ward Shifts are Clinica University simulations — safe, structured clinical training. Complete your first lesson to unlock them; lessons also reward your first heroes."
+              message="The ward will not open until your first lesson stabilizes your foundation. Complete your first Lotus Lesson at Clinica University — it takes only a few minutes and unlocks Ward Shift immediately."
               testID="shift-narrator-university"
             />
             <Pressable
               style={styles.universityCtaBtn}
-              onPress={() => router.push("/university" as any)}
+              onPress={() => router.push("/university/lotus-lesson/recognizing-cues-hydration" as any)}
               testID="shift-go-to-university"
             >
-              <Ionicons name="school" size={16} color={COLORS.onBrand} />
-              <Text style={styles.universityCtaTxt}>Go to University — Start Your First Lesson</Text>
+              <Ionicons name="leaf" size={16} color={COLORS.onBrand} />
+              <Text style={styles.universityCtaTxt}>Start First Lotus Lesson</Text>
               <Ionicons name="arrow-forward" size={15} color={COLORS.onBrand} />
             </Pressable>
           </>
@@ -174,10 +174,10 @@ export default function ShiftPage() {
           mode={WARD_SHIFT_MODE}
           height={156}
           locked={!wardShiftUnlocked}
-          lockLabel={!wardShiftUnlocked ? "Begin a University lesson" : undefined}
+          lockLabel={!wardShiftUnlocked ? "Complete your first Lotus Lesson" : undefined}
           onPress={() => {
             if (!wardShiftUnlocked) {
-              flashNotice(wardShiftGate.reason || "Study your first lesson at Clinica University first.");
+              flashNotice("Complete your first Lotus Lesson to unlock Ward Shift simulations.");
               return;
             }
             openIntro(WARD_SHIFT_MODE);

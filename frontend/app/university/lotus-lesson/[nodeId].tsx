@@ -3,7 +3,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { useEffect, useRef, useState } from "react";
-import { completeObjective } from "@/src/game/objectiveProgress";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -12,6 +11,11 @@ import {
   isLotusNodeComplete,
   LOTUS_LESSON_SAFETY_NOTE,
 } from "@/src/game/lotusLessons";
+import {
+  completeObjective,
+  isObjectiveXpGranted,
+  markObjectiveXpGranted,
+} from "@/src/game/objectiveProgress";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -32,7 +36,7 @@ import type { LotusLessonRewards } from "@/src/game/lotusLessons";
 export default function LotusLessonScreen() {
   const router = useRouter();
   const { nodeId } = useLocalSearchParams<{ nodeId: string }>();
-  const { player, loading, completeLotusLessonNode } = usePlayer();
+  const { player, loading, completeLotusLessonNode, applyRewards } = usePlayer();
   const node = getLotusNode(String(nodeId));
 
   const [step, setStep] = useState(0);
@@ -84,8 +88,19 @@ export default function LotusLessonScreen() {
   const finish = async () => {
     const res = await completeLotusLessonNode(node.id);
     if (res.ok && res.rewards) setRewards(res.rewards);
-    // C1 obj 10: grant once when player completes any Lotus Lesson.
-    if (!alreadyDone) completeObjective("obj_lotus_first_lesson");
+    // C1 obj 13: grant once when player completes any Lotus Lesson.
+    // Use the XP-paid record for deduplication — completeObjective alone
+    // marks the step done but never grants the 10 XP objective reward.
+    if (!alreadyDone) {
+      const isNew = await completeObjective("obj_lotus_first_lesson");
+      if (isNew) {
+        const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
+        if (!alreadyGranted) {
+          await applyRewards({ xp: 10 });
+          await markObjectiveXpGranted("obj_lotus_first_lesson");
+        }
+      }
+    }
     setFinished(true);
   };
 
@@ -181,6 +196,14 @@ export default function LotusLessonScreen() {
             )}
             <Ionicons name="checkmark-circle" size={48} color={COLORS.brand} />
             <Text style={styles.doneTitle}>Lesson Complete</Text>
+            {!alreadyDone && (
+              <View style={styles.unlockBanner}>
+                <Ionicons name="lock-open-outline" size={15} color={COLORS.brand} />
+                <Text style={styles.unlockBannerTxt}>
+                  Your clinical foundation is stronger. First simulation shift unlocked.
+                </Text>
+              </View>
+            )}
             {rewards && (
               <MilestoneReward
                 title="LESSON REWARD"
@@ -259,6 +282,13 @@ const styles = StyleSheet.create({
   continueTxt: { color: COLORS.onBrand, fontSize: 14, fontWeight: "700" },
   doneWrap: { alignItems: "center", gap: SPACING.md, paddingTop: SPACING.lg },
   doneTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" },
+  unlockBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.brand + "18", borderWidth: 1, borderColor: COLORS.brand + "50",
+    borderRadius: RADIUS.md, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    width: "100%",
+  },
+  unlockBannerTxt: { flex: 1, color: COLORS.onSurface, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   payoffBox: {
     borderWidth: 1, borderColor: COLORS.brand + "40", borderRadius: RADIUS.md,
     padding: SPACING.md, backgroundColor: COLORS.brand + "10", width: "100%",

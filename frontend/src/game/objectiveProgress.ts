@@ -300,6 +300,8 @@ export async function reconcileEarlyObjectives(player: {
   diagnostic_intro_seen?: boolean;
   class_tree_id?: string | null;
   seen_reminiscence?: boolean;
+  lessons_completed?: string[] | null;
+  runs_completed?: number | null;
 }): Promise<ObjectiveId[]> {
   try {
     const record = await load();
@@ -324,6 +326,18 @@ export async function reconcileEarlyObjectives(player: {
     if (player.diagnostic_intro_seen && player.class_tree_id) mark("obj_class_result");
     // Step 6 — reminiscence scene completed
     if (player.seen_reminiscence) mark("obj_memory_seen");
+
+    // Steps 12–15 — backfill from later PlayerState flags so existing players
+    // whose objective storage never got written (crash, account transfer, etc.)
+    // are not hard-blocked at a step they already passed.
+    const lotusLessons = player.lessons_completed ?? [];
+    const hasLotusLesson = lotusLessons.some((id) => id.startsWith("lotus:"));
+    // Step 12 — visited Lotus Lessons (any lotus completion implies the visit)
+    if (hasLotusLesson) mark("obj_lotus_visited");
+    // Step 13 — completed first Lotus Lesson
+    if (hasLotusLesson) mark("obj_lotus_first_lesson");
+    // Step 15 — completed first Ward Shift simulation
+    if ((player.runs_completed ?? 0) > 0) mark("obj_ward_shift_first");
 
     if (newly.length > 0) await save(record);
     return newly;

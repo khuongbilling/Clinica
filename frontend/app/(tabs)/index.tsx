@@ -90,6 +90,8 @@ function hubGuideMessage(obj: ObjectiveDef): string {
       return "You are in the University. Complete your first Lotus Lesson to deepen your understanding of the case.";
     case "obj_recruit_preview":
       return "Lesson done. Visit the Recruitment Hall in University and see which healers are ready to answer the call.";
+    case "obj_ward_shift_first":
+      return "Ward Shift is now unlocked. Your first simulation is waiting — step into the ward and face your first clinical challenge.";
     default:
       return "Your path continues. The System is watching.";
   }
@@ -113,10 +115,13 @@ function hubGuideCta(obj: ObjectiveDef): string {
     case "obj_fading_apprentice_done":
       return "Return to University";
     case "obj_lotus_visited":
-    case "obj_lotus_first_lesson":
       return "Open Lotus Lessons";
+    case "obj_lotus_first_lesson":
+      return "Start First Lotus Lesson";
     case "obj_recruit_preview":
       return "Visit Recruitment Hall";
+    case "obj_ward_shift_first":
+      return "Enter Ward Shift";
     default:
       return "Continue";
   }
@@ -140,9 +145,12 @@ function hubGuideRoute(obj: ObjectiveDef): string {
     case "obj_stabilize_done":
     case "obj_fading_apprentice_done":
     case "obj_lotus_visited":
-    case "obj_lotus_first_lesson":
     case "obj_recruit_preview":
       return "/university";
+    case "obj_lotus_first_lesson":
+      return "/university/lotus-lesson/recognizing-cues-hydration";
+    case "obj_ward_shift_first":
+      return "/shift";
     default:
       return "/(tabs)";
   }
@@ -388,7 +396,7 @@ export default function RunHome() {
              always reflects the current step rather than a stale/hardcoded state.
              The obj_prologue_done card (step 1, pre-reminiscence) uses a local
              dismiss so tapping "Explore the Hub" doesn't route to the same page. */
-        !localDismissGuide && currentObjective && currentObjective.step <= 11 && (
+        !localDismissGuide && currentObjective && currentObjective.step <= 15 && (
           <View style={styles.uniOnboard}>
             <NarratorGuide
               bgImage={getBannerImage("university")}
