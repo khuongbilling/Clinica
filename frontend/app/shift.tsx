@@ -10,6 +10,7 @@ import { StaminaPill } from "@/src/components/StaminaPill";
 import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
+import { DailyRhythmCard } from "@/src/components/DailyRhythmCard";
 import { usePlayer } from "@/src/game/store";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -127,6 +128,12 @@ export default function ShiftPage() {
         </Text>
 
         <InlineNotice notice={notice} icon="lock-closed" testID="shift-notice" />
+
+        {/* P3: Daily rhythm at-a-glance strip — Level 2+ only */}
+        <DailyRhythmCard
+          player={player}
+          onPress={() => setShowRounds(true)}
+        />
 
         {/* System narrator + Go to first Lotus Lesson CTA — shown when Ward Shift is still locked */}
         {showUniversityPrompt && (

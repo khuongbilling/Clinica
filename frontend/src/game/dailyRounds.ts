@@ -115,6 +115,17 @@ export const DAILY_OBJECTIVE_POOL: DailyObjectiveTemplate[] = [
     icon: 'people',
     reward: { universityCredits: 10, playerXp: 10 },
   },
+  // P3: Journey Map-aligned objective — fires on claimJourneyNode in the store.
+  {
+    id: 'obj_journey_node',
+    mode: 'ward_shift', // available once Ward Shift unlocks (same as battle objectives)
+    event: 'journey_node',
+    target: 1,
+    label: 'Advance the Journey',
+    description: 'Claim 1 Journey Map node reward.',
+    icon: 'map',
+    reward: { crowns: 60, playerXp: 20, heroXp: 10 },
+  },
 ];
 
 export const DAILY_OBJECTIVE_COUNT = 3;
@@ -329,6 +340,42 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     icon: 'ribbon-outline',
     reward: { codexShards: 75, playerXp: 50 },
     isDone: (p) => !!(p?.daily_rounds?.weekly_all_complete_claimed),
+  },
+  // P3: Journey Map-aligned milestones — tied to the Chapter 1 node progression.
+  {
+    id: 'ms_journey_c1_battle',
+    label: 'First Ward Shift Victory',
+    description: 'Claim the Journey Map reward for winning your first clinical battle.',
+    icon: 'shield-checkmark-outline',
+    reward: { crowns: 75, playerXp: 30, heroXp: 15 },
+    isDone: (p) => (p?.claimed_journey_nodes ?? []).includes('c1n4'),
+  },
+  {
+    id: 'ms_journey_c1_all',
+    label: 'Chapter 1 Journey Complete',
+    description: 'Claim all six Chapter 1 Journey Map node rewards.',
+    icon: 'map-outline',
+    reward: { codexShards: 75, crowns: 100, playerXp: 60 },
+    isDone: (p) => {
+      const claimed: string[] = p?.claimed_journey_nodes ?? [];
+      return ['c1n1','c1n2','c1n3','c1n4','c1n5','c1n6'].every((id: string) => claimed.includes(id));
+    },
+  },
+  {
+    id: 'ms_hero_skill',
+    label: 'First Skill Upgrade',
+    description: 'Upgrade a hero skill at the Skill Academy.',
+    icon: 'flash-outline',
+    reward: { universityCredits: 50, playerXp: 25 },
+    isDone: (p) => Object.keys(p?.hero_skill_upgrades ?? {}).length > 0,
+  },
+  {
+    id: 'ms_streak_7',
+    label: 'Seven-Day Healing Streak',
+    description: 'Log in for 7 consecutive days.',
+    icon: 'flame-outline',
+    reward: { codexShards: 50, crowns: 100, playerXp: 30 },
+    isDone: (p) => (p?.daily_rounds?.streak_count ?? 0) >= 7,
   },
 ];
 

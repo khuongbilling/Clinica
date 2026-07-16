@@ -14,7 +14,56 @@ import {
   WEEKLY_TASKS, QUEST_MILESTONES,
   formatCountdown, msUntilNextDay, hasCheckedInToday, summarizeReward, streakRewardForDay,
 } from "@/src/game/dailyRounds";
+import { CHAPTERS } from "@/src/game/chapterJourney";
+import { getJourneyNodeDef } from "@/src/game/journeyRewards";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+
+// ── Journey-map helpers (P3) ──────────────────────────────────────────────────
+
+const NODE_TYPE_ICON: Record<string, string> = {
+  memory_fragment: "film-outline",
+  challenge:       "shuffle-outline",
+  battle:          "medical-outline",
+  mini_boss:       "skull-outline",
+  reflection:      "alert-circle-outline",
+  story:           "book-outline",
+  ward_defense:    "shield-half-outline",
+  realm:           "home-outline",
+};
+
+const NODE_TYPE_LABEL: Record<string, string> = {
+  memory_fragment: "Memory",
+  challenge:       "Challenge",
+  battle:          "Ward Shift",
+  mini_boss:       "Chapter Trial",
+  reflection:      "Reflection",
+  story:           "Story",
+  ward_defense:    "Defense",
+  realm:           "Realm",
+};
+
+function getNextJourneyNode(
+  player: any,
+): { id: string; title: string; type: string } | null {
+  const claimed: string[] = player?.claimed_journey_nodes ?? [];
+  const chapterNum: number = player?.chapter_progress ?? 1;
+  const chapter = CHAPTERS.find((c) => c.number === chapterNum);
+  if (!chapter) return null;
+  for (const part of chapter.parts) {
+    if (!claimed.includes(part.id) && getJourneyNodeDef(part.id)) {
+      return { id: part.id, title: part.title, type: part.type };
+    }
+  }
+  return null;
+}
+
+function getNextMilestoneTeaser(player: any): typeof QUEST_MILESTONES[number] | null {
+  const claimed: string[] = player?.claimed_daily_milestones ?? [];
+  // First unclaimed milestone that is NOT yet done (upcoming, shows as a climax teaser)
+  return (
+    QUEST_MILESTONES.find((m) => !claimed.includes(m.id) && !m.isDone(player)) ?? null
+  );
+}
 
 const SEEN_KEY = "clinica.dailyRounds.seen";
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
@@ -131,7 +180,7 @@ function WeeklyTaskCard({
   );
 }
 
-// ── Quest Milestones (claimable) ──────────────────────────────────────────────
+// ── Quest Milestones (claimable) — P3: sorted ready-to-claim first ────────────
 function QuestMilestonesSection({
   player, busy, onClaim,
 }: { player: any; busy: boolean; onClaim: (id: string) => void }) {
@@ -139,24 +188,44 @@ function QuestMilestonesSection({
   const claimedIds: string[] = player.claimed_daily_milestones ?? [];
   const doneCount = QUEST_MILESTONES.filter(m => m.isDone(player)).length;
 
+  // P3: Sort order: ready-to-claim (done + unclaimed) → achieved+claimed → upcoming
+  const sorted = [...QUEST_MILESTONES].sort((a, b) => {
+    const aDone = a.isDone(player);
+    const bDone = b.isDone(player);
+    const aClaimed = claimedIds.includes(a.id);
+    const bClaimed = claimedIds.includes(b.id);
+    const aReady = aDone && !aClaimed;
+    const bReady = bDone && !bClaimed;
+    if (aReady && !bReady) return -1;
+    if (!aReady && bReady) return  1;
+    if (aClaimed && !bClaimed) return  1;
+    if (!aClaimed && bClaimed) return -1;
+    return 0;
+  });
+
+  const readyCount = sorted.filter(m => m.isDone(player) && !claimedIds.includes(m.id)).length;
+
   return (
     <View style={styles.milestonesWrap}>
       <View style={styles.milestonesProgress}>
-        <Text style={styles.milestonesProgressTxt}>{doneCount} / {QUEST_MILESTONES.length} achieved</Text>
+        <Text style={styles.milestonesProgressTxt}>
+          {doneCount} / {QUEST_MILESTONES.length} achieved
+          {readyCount > 0 ? ` · ${readyCount} ready to claim` : ""}
+        </Text>
         <View style={styles.barBg}>
           <View style={[styles.barFill, { width: `${Math.round((doneCount / QUEST_MILESTONES.length) * 100)}%` as any, backgroundColor: COLORS.brand }]} />
         </View>
       </View>
-      {QUEST_MILESTONES.map((m) => {
+      {sorted.map((m) => {
         const done = m.isDone(player);
         const claimed = claimedIds.includes(m.id);
         return (
-          <View key={m.id} style={[styles.milestoneRow, done && styles.milestoneRowDone]}>
-            <View style={[styles.milestoneIcon, done && styles.milestoneIconDone]}>
+          <View key={m.id} style={[styles.milestoneRow, done && !claimed && styles.milestoneRowReady, done && claimed && styles.milestoneRowDone]}>
+            <View style={[styles.milestoneIcon, done && (claimed ? styles.milestoneIconClaimed : styles.milestoneIconDone)]}>
               <Ionicons name={(done ? (claimed ? 'checkmark-done' : 'checkmark') : m.icon) as any} size={14} color={done ? (claimed ? COLORS.onSurfaceTertiary : COLORS.success) : COLORS.onSurfaceTertiary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.milestoneLabel, done && styles.milestoneLabelDone]}>{m.label}</Text>
+              <Text style={[styles.milestoneLabel, done && (claimed ? styles.milestoneLabelClaimed : styles.milestoneLabelDone)]}>{m.label}</Text>
               <Text style={styles.milestoneDesc}>{m.description}</Text>
               {done && !claimed && (
                 <View style={styles.milestoneRewardRow}>
@@ -328,6 +397,45 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                     <ActivityIndicator color={COLORS.brand} size="small" />
                   )}
                 </View>
+
+                {/* P3: Next on Your Journey ─ compact card linking daily play to the map */}
+                {(() => {
+                  const nextNode = getNextJourneyNode(player);
+                  const teaser = getNextMilestoneTeaser(player);
+                  if (!nextNode && !teaser) return null;
+                  return (
+                    <View style={styles.journeyCard}>
+                      {nextNode && (
+                        <View style={styles.journeyRow}>
+                          <View style={styles.journeyIconWrap}>
+                            <Ionicons
+                              name={(NODE_TYPE_ICON[nextNode.type] ?? "map-outline") as any}
+                              size={15}
+                              color={COLORS.brand}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.journeyKicker}>NEXT ON YOUR JOURNEY</Text>
+                            <Text style={styles.journeyTitle} numberOfLines={1}>{nextNode.title}</Text>
+                            <Text style={styles.journeyType}>{NODE_TYPE_LABEL[nextNode.type] ?? nextNode.type}</Text>
+                          </View>
+                          <Ionicons name="arrow-forward" size={13} color={COLORS.brand + "99"} />
+                        </View>
+                      )}
+                      {teaser && (
+                        <View style={[styles.journeyRow, nextNode && { borderTopWidth: 1, borderTopColor: COLORS.border, marginTop: SPACING.xs, paddingTop: SPACING.xs }]}>
+                          <View style={[styles.journeyIconWrap, { backgroundColor: COLORS.energy + "18" }]}>
+                            <Ionicons name={teaser.icon as any} size={14} color={COLORS.energy} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.journeyKicker, { color: COLORS.energy }]}>UPCOMING MILESTONE</Text>
+                            <Text style={styles.journeyTitle} numberOfLines={1}>{teaser.label}</Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })()}
 
                 {/* Daily objectives */}
                 <Text style={styles.sectionLabel}>TODAY'S DUTIES</Text>
@@ -553,14 +661,55 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
     padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, opacity: 0.7,
   },
-  milestoneRowDone: { borderColor: COLORS.success + "35", backgroundColor: COLORS.success + "0C", opacity: 1 },
+  milestoneRowDone:  { borderColor: COLORS.onSurfaceTertiary + "25", opacity: 0.55 },
+  milestoneRowReady: { borderColor: COLORS.success + "55", backgroundColor: COLORS.success + "0A", opacity: 1 },
   milestoneIcon: {
     width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.surfaceTertiary,
     alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2,
   },
-  milestoneIconDone: { backgroundColor: COLORS.success + "1A" },
+  milestoneIconDone:    { backgroundColor: COLORS.success + "1A" },
+  milestoneIconClaimed: { backgroundColor: COLORS.surfaceTertiary },
   milestoneLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
-  milestoneLabelDone: { color: COLORS.onSurface },
+  milestoneLabelDone:    { color: COLORS.onSurface },
+  milestoneLabelClaimed: { color: COLORS.onSurfaceTertiary },
   milestoneDesc: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 1 },
   milestoneRewardRow: { marginTop: 4 },
+
+  // P3: Next-on-journey card
+  journeyCard: {
+    backgroundColor: COLORS.brand + "0E",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.brand + "30",
+    padding: SPACING.sm,
+    gap: 0,
+  },
+  journeyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingVertical: 2,
+  },
+  journeyIconWrap: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: COLORS.brand + "1A",
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  journeyKicker: {
+    color: COLORS.brand,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    marginBottom: 2,
+  },
+  journeyTitle: {
+    color: COLORS.onSurface,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  journeyType: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 10,
+    marginTop: 1,
+  },
 });
