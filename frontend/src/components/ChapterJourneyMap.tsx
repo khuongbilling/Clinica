@@ -427,6 +427,21 @@ function ChapterCard({
               </View>
             )}
           </View>
+
+          {/* P14: Chapter progress bar — shows required-node completion ratio */}
+          {!isLocked && requiredNodes.length > 0 && (() => {
+            const doneCount = requiredNodes.filter((id) => claimedNodes.includes(id)).length;
+            return (
+              <View style={styles.chProgressTrack}>
+                <View
+                  style={[styles.chProgressFill, {
+                    width: `${Math.round((doneCount / requiredNodes.length) * 100)}%` as any,
+                    backgroundColor: isDone ? "#34D399" : accent,
+                  }]}
+                />
+              </View>
+            );
+          })()}
         </View>
 
         {/* C4 — Chapter chest button (visible when not locked) */}
@@ -1555,6 +1570,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: "rgba(0,0,0,0.06)",
     gap: 4,
+  },
+  // P14: chapter-level required-node progress bar (in chapter card header)
+  chProgressTrack: {
+    height:          3,
+    backgroundColor: COLORS.border,
+    borderRadius:    2,
+    overflow:        "hidden" as const,
+    marginTop:       4,
+  },
+  chProgressFill: {
+    height:       3,
+    borderRadius: 2,
   },
   chapterClearHeader: {
     flexDirection: "row",

@@ -9,7 +9,7 @@
  * Used inside ChapterJourneyMap when Chapter 1 is the expanded chapter.
  */
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -27,6 +27,7 @@ import {
   getJourneyNodeDef,
 } from "@/src/game/journeyRewards";
 import { COLORS, SPACING } from "@/src/theme/colors";
+import { useVisualMapAnims } from "./VisualMapHooks";
 
 // ── SVG type shim (React 19 / rn-svg compat — same as IsoTerrain.tsx) ────────
 
@@ -180,18 +181,8 @@ export function Chapter1VisualMap({
 }: Chapter1VisualMapProps) {
   const [W, setW] = useState(0);
 
-  // Pulse animation for the "next" node glow ring
-  const pulse = useRef(new Animated.Value(0.3)).current;
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1,   duration: 950, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0.3, duration: 950, useNativeDriver: false }),
-      ]),
-    );
-    anim.start();
-    return () => anim.stop();
-  }, []);
+  // P14: shared visual map animations (pulse rings + staggered node entrance)
+  const { pulse, pulseOuter, entranceAnims } = useVisualMapAnims(NODE_LAYOUT.length);
 
   const nodes = useMemo(
     () => buildNodeData(claimedNodes, battleStars, storyScenesSeen),
@@ -207,6 +198,23 @@ export function Chapter1VisualMap({
     <View style={{ minHeight: CANVAS_H }} onLayout={onLayout}>
       {W > 0 && (
         <>
+          {/* P14: Completed-segment glow (wider translucent path, renders below main path) */}
+          <Svg width={W} height={CANVAS_H} style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            {nodes.map((nd, i) => {
+              if (i >= nodes.length - 1 || nd.status !== "complete") return null;
+              return (
+                <SvgPath
+                  key={`glow-seg-${i}`}
+                  d={bez(nd.layout.xf * W, nd.layout.y, nodes[i + 1].layout.xf * W, nodes[i + 1].layout.y)}
+                  stroke={chapterAccent + "40"}
+                  strokeWidth={9}
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+          </Svg>
+
           {/* ─── SVG path layer (bottom) ─── */}
           <Svg
             width={W}
@@ -225,7 +233,7 @@ export function Chapter1VisualMap({
                 <SvgPath
                   key={`seg-${i}`}
                   d={bez(ax, ay, bx, by)}
-                  stroke={fromDone ? "#D4AF37" : "#33415590"}
+                  stroke={fromDone ? chapterAccent : "#33415590"}
                   strokeWidth={fromDone ? 3 : 2}
                   strokeDasharray={fromDone ? undefined : "8 5"}
                   fill="none"
@@ -234,6 +242,30 @@ export function Chapter1VisualMap({
               );
             })}
           </Svg>
+
+          {/* P14: Outer pulse rings (wider radius, slower phase — renders below inner ring) */}
+          {nodes.map((nd) => {
+            if (nd.status !== "next") return null;
+            const x  = nd.layout.xf * W;
+            const { r, y } = nd.layout;
+            const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
+            return (
+              <Animated.View
+                key={`glow-outer-${nd.part.id}`}
+                style={{
+                  pointerEvents:   "none",
+                  position:        "absolute",
+                  left:            x - r - 20,
+                  top:             y - r - 20,
+                  width:           (r + 20) * 2,
+                  height:          (r + 20) * 2,
+                  borderRadius:    r + 20,
+                  backgroundColor: tc + "18",
+                  opacity:         pulseOuter,
+                }}
+              />
+            );
+          })}
 
           {/* ─── Pulse glow rings (behind circles) ─── */}
           {nodes.map((nd) => {
@@ -260,7 +292,7 @@ export function Chapter1VisualMap({
           })}
 
           {/* ─── Node circles ─── */}
-          {nodes.map((nd) => {
+          {nodes.map((nd, idx) => {
             const x = nd.layout.xf * W;
             const { r, y } = nd.layout;
             const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
@@ -268,49 +300,62 @@ export function Chapter1VisualMap({
             const isActionable = !!nd.part.route && !nd.part.isPlaceholder;
 
             const borderColor =
-              nd.status === "complete"    ? "#D4AF37"
-              : nd.status === "next"      ? tc
+              nd.status === "complete"      ? chapterAccent
+              : nd.status === "next"        ? tc
               : nd.status === "placeholder" ? tc + "50"
               : tc + "70";
 
             const bgColor =
-              nd.status === "complete" ? "#D4AF3720"
+              nd.status === "complete" ? chapterAccent + "20"
               : nd.status === "next"   ? tc + "22"
               : tc + "10";
 
-            const bw =
-              nd.status === "complete" || nd.status === "next" ? 3 : 2;
+            const bw = nd.status === "complete" || nd.status === "next" ? 3 : 2;
+
+            // P14: staggered entrance animation
+            const entrAnim = entranceAnims[idx]!;
+            const scale = entrAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
 
             return (
-              <Pressable
+              <Animated.View
                 key={`circle-${nd.part.id}`}
+                pointerEvents="box-none"
                 style={{
-                  position:        "absolute",
-                  left:            x - r,
-                  top:             y - r,
-                  width:           r * 2,
-                  height:          r * 2,
-                  borderRadius:    r,
-                  borderWidth:     bw,
-                  borderColor,
-                  backgroundColor: bgColor,
-                  alignItems:      "center",
-                  justifyContent:  "center",
+                  position:  "absolute",
+                  left:      x - r,
+                  top:       y - r,
+                  width:     r * 2,
+                  height:    r * 2,
+                  opacity:   entrAnim,
+                  transform: [{ scale }],
                 }}
-                onPress={isActionable ? () => onPartPress(nd.part) : undefined}
-                hitSlop={10}
-                testID={`ch1-node-${nd.part.id}`}
               >
-                {nd.status === "complete" ? (
-                  <Ionicons name="checkmark" size={Math.round(r * 0.78)} color="#D4AF37" />
-                ) : (
-                  <Ionicons
-                    name={nd.part.icon as any}
-                    size={Math.round(r * 0.7)}
-                    color={nd.status === "placeholder" ? tc + "55" : tc}
-                  />
-                )}
-              </Pressable>
+                <Pressable
+                  style={{
+                    width:           r * 2,
+                    height:          r * 2,
+                    borderRadius:    r,
+                    borderWidth:     bw,
+                    borderColor,
+                    backgroundColor: bgColor,
+                    alignItems:      "center",
+                    justifyContent:  "center",
+                  }}
+                  onPress={isActionable ? () => onPartPress(nd.part) : undefined}
+                  hitSlop={10}
+                  testID={`ch1-node-${nd.part.id}`}
+                >
+                  {nd.status === "complete" ? (
+                    <Ionicons name="checkmark" size={Math.round(r * 0.78)} color={chapterAccent} />
+                  ) : (
+                    <Ionicons
+                      name={nd.part.icon as any}
+                      size={Math.round(r * 0.7)}
+                      color={nd.status === "placeholder" ? tc + "55" : tc}
+                    />
+                  )}
+                </Pressable>
+              </Animated.View>
             );
           })}
 

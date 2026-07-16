@@ -15,7 +15,7 @@
  * Used inside ChapterJourneyMap when Chapter 5 is the expanded chapter.
  */
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -33,6 +33,7 @@ import {
   getJourneyNodeDef,
 } from "@/src/game/journeyRewards";
 import { COLORS, SPACING } from "@/src/theme/colors";
+import { useVisualMapAnims } from "./VisualMapHooks";
 
 // ── SVG type shim (React 19 / rn-svg compat) ─────────────────────────────────
 
@@ -204,17 +205,8 @@ export function Chapter5VisualMap({
 }: Chapter5VisualMapProps) {
   const [W, setW] = useState(0);
 
-  const pulse = useRef(new Animated.Value(0.3)).current;
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1,   duration: 1100, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0.3, duration: 1100, useNativeDriver: false }),
-      ]),
-    );
-    anim.start();
-    return () => anim.stop();
-  }, []);
+  // P14: shared visual map animations (pulse rings + staggered node entrance)
+  const { pulse, pulseOuter, entranceAnims } = useVisualMapAnims(NODE_LAYOUT.length);
 
   const nodes = useMemo(
     () => buildNodeData(claimedNodes, battleStars, storyScenesSeen),
@@ -231,6 +223,23 @@ export function Chapter5VisualMap({
       <View style={{ minHeight: CANVAS_H }}>
         {W > 0 && (
           <>
+            {/* P14: Completed-segment glow path layer */}
+            <Svg width={W} height={CANVAS_H} style={StyleSheet.absoluteFillObject} pointerEvents="none">
+              {nodes.map((nd, i) => {
+                if (i >= nodes.length - 1 || nd.status !== "complete") return null;
+                return (
+                  <SvgPath
+                    key={`glow-seg-${i}`}
+                    d={bez(nd.layout.xf * W, nd.layout.y, nodes[i + 1].layout.xf * W, nodes[i + 1].layout.y)}
+                    stroke={chapterAccent + "40"}
+                    strokeWidth={9}
+                    fill="none"
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+            </Svg>
+
             {/* ─── SVG path layer ─── */}
             <Svg
               width={W}
@@ -263,6 +272,30 @@ export function Chapter5VisualMap({
                 );
               })}
             </Svg>
+
+            {/* P14: Outer pulse rings (wider radius, slower phase) */}
+            {nodes.map((nd) => {
+              if (nd.status !== "next") return null;
+              const x  = nd.layout.xf * W;
+              const { r, y } = nd.layout;
+              const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
+              return (
+                <Animated.View
+                  key={`glow-outer-${nd.part.id}`}
+                  style={{
+                    pointerEvents:   "none",
+                    position:        "absolute",
+                    left:            x - r - 20,
+                    top:             y - r - 20,
+                    width:           (r + 20) * 2,
+                    height:          (r + 20) * 2,
+                    borderRadius:    r + 20,
+                    backgroundColor: tc + "18",
+                    opacity:         pulseOuter,
+                  }}
+                />
+              );
+            })}
 
             {/* ─── Pulse glow rings ─── */}
             {nodes.map((nd) => {
@@ -314,7 +347,7 @@ export function Chapter5VisualMap({
             })}
 
             {/* ─── Node circles ─── */}
-            {nodes.map((nd) => {
+            {nodes.map((nd, idx) => {
               const x  = nd.layout.xf * W;
               const { r, y } = nd.layout;
               const tc           = TYPE_COLOR[nd.part.type] ?? chapterAccent;
@@ -336,44 +369,56 @@ export function Chapter5VisualMap({
                 : isLocked               ? COLORS.surfaceTertiary
                 : tc + "10";
 
-              const bw =
-                nd.status === "complete" || nd.status === "next" ? 3 : 2;
+              const bw = nd.status === "complete" || nd.status === "next" ? 3 : 2;
+
+              // P14: staggered entrance animation
+              const entrAnim = entranceAnims[idx]!;
+              const scale = entrAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
 
               return (
-                <Pressable
+                <Animated.View
                   key={`circle-${nd.part.id}`}
+                  pointerEvents="box-none"
                   style={{
-                    position:        "absolute",
-                    left:            x - r,
-                    top:             y - r,
-                    width:           r * 2,
-                    height:          r * 2,
-                    borderRadius:    r,
-                    borderWidth:     bw,
-                    borderColor,
-                    backgroundColor: bgColor,
-                    alignItems:      "center",
-                    justifyContent:  "center",
-                    opacity:         isLocked ? 0.45 : 1,
+                    position:  "absolute",
+                    left:      x - r,
+                    top:       y - r,
+                    width:     r * 2,
+                    height:    r * 2,
+                    opacity:   entrAnim,
+                    transform: [{ scale }],
                   }}
-                  onPress={isActionable ? () => onPartPress(nd.part) : undefined}
-                  hitSlop={10}
-                  testID={`ch5-node-${nd.part.id}`}
                 >
-                  {nd.status === "complete" ? (
-                    <Ionicons name="checkmark" size={Math.round(r * 0.78)} color={chapterAccent} />
-                  ) : isLocked ? (
-                    isBossLocked ? (
-                      <Ionicons name="skull-outline" size={Math.round(r * 0.7)} color={tc + "60"} />
-                    ) : isWDLocked ? (
-                      <Ionicons name="shield-outline" size={Math.round(r * 0.6)} color={tc + "50"} />
+                  <Pressable
+                    style={{
+                      width:           r * 2,
+                      height:          r * 2,
+                      borderRadius:    r,
+                      borderWidth:     bw,
+                      borderColor,
+                      backgroundColor: bgColor,
+                      alignItems:      "center",
+                      justifyContent:  "center",
+                      opacity:         isLocked ? 0.45 : 1,
+                    }}
+                    onPress={isActionable ? () => onPartPress(nd.part) : undefined}
+                    hitSlop={10}
+                    testID={`ch5-node-${nd.part.id}`}
+                  >
+                    {nd.status === "complete" ? (
+                      <Ionicons name="checkmark" size={Math.round(r * 0.78)} color={chapterAccent} />
+                    ) : isLocked ? (
+                      isBossLocked ? (
+                        <Ionicons name="skull-outline" size={Math.round(r * 0.7)} color={tc + "60"} />
+                      ) : isWDLocked ? (
+                        <Ionicons name="shield-outline" size={Math.round(r * 0.6)} color={tc + "50"} />
+                      ) : (
+                        <Ionicons name="lock-closed" size={Math.round(r * 0.6)} color={COLORS.onSurfaceTertiary} />
+                      )
                     ) : (
-                      <Ionicons name="lock-closed" size={Math.round(r * 0.6)} color={COLORS.onSurfaceTertiary} />
-                    )
-                  ) : (
-                    <Ionicons
-                      name={nd.part.icon as any}
-                      size={Math.round(r * 0.7)}
+                      <Ionicons
+                        name={nd.part.icon as any}
+                        size={Math.round(r * 0.7)}
                       color={nd.status === "placeholder" ? tc + "55" : tc}
                     />
                   )}
