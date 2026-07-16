@@ -62,17 +62,17 @@ export interface UniShopItem {
 export const PRACTICE_REWARDS: Record<PracticeActivityType, Record<PracticeDifficulty, PracticeRewardDef>> = {
   cue_lab: {
     beginner: { playerXp: 10, heroXp: 5,  universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 1 },
-    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'cue_scroll', scrollCount: 2 },
+    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'cue_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
     advanced:  { playerXp: 20, heroXp: 15, universityCredits: 35, scrollKey: 'cue_scroll', scrollCount: 2, bonusItemKey: 'lesson_note', bonusItemCount: 1 },
   },
   triage: {
     beginner: { playerXp: 10, heroXp: 5,  universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 1 },
-    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'triage_scroll', scrollCount: 2 },
+    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'triage_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
     advanced:  { playerXp: 20, heroXp: 15, universityCredits: 35, scrollKey: 'triage_scroll', scrollCount: 2, bonusItemKey: 'care_chain_manual', bonusItemCount: 1 },
   },
   stack: {
     beginner: { playerXp: 10, heroXp: 5,  universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 1 },
-    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'stab_scroll', scrollCount: 2 },
+    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'stab_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
     advanced:  { playerXp: 20, heroXp: 15, universityCredits: 35, scrollKey: 'stab_scroll', scrollCount: 2, bonusItemKey: 'care_chain_manual', bonusItemCount: 1 },
   },
 };
@@ -82,17 +82,17 @@ export const PRACTICE_REPEAT_REWARDS: Record<PracticeActivityType, Record<Practi
   cue_lab: {
     beginner: { playerXp: 5, heroXp: 2,  universityCredits: 8,  scrollKey: 'cue_scroll', scrollCount: 1 },
     standard: { playerXp: 8, heroXp: 4,  universityCredits: 12, scrollKey: 'cue_scroll', scrollCount: 1 },
-    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 2 },
+    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
   },
   triage: {
     beginner: { playerXp: 5, heroXp: 2,  universityCredits: 8,  scrollKey: 'triage_scroll', scrollCount: 1 },
     standard: { playerXp: 8, heroXp: 4,  universityCredits: 12, scrollKey: 'triage_scroll', scrollCount: 1 },
-    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 2 },
+    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
   },
   stack: {
     beginner: { playerXp: 5, heroXp: 2,  universityCredits: 8,  scrollKey: 'stab_scroll', scrollCount: 1 },
     standard: { playerXp: 8, heroXp: 4,  universityCredits: 12, scrollKey: 'stab_scroll', scrollCount: 1 },
-    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 2 },
+    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
   },
 };
 
@@ -103,7 +103,7 @@ export const UNI_PRACTICE_MILESTONES: UniPracticeMilestone[] = [
   { id: 'cue_3',  activityType: 'cue_lab', threshold: 3,  label: 'Cue Spotter',   description: 'Complete 3 Clinical Cue Lab sessions.',
     rewards: { universityCredits: 50,  inventory: { cue_scroll: 1 } } },
   { id: 'cue_5',  activityType: 'cue_lab', threshold: 5,  label: 'Keen Observer', description: 'Complete 5 Clinical Cue Lab sessions.',
-    rewards: { playerXp: 25, universityCredits: 75,  inventory: { cue_scroll: 2 } } },
+    rewards: { playerXp: 25, universityCredits: 75,  inventory: { cue_scroll: 2, hero_training_page: 1 } } },
   { id: 'cue_10', activityType: 'cue_lab', threshold: 10, label: 'Cue Master',    description: 'Complete 10 Clinical Cue Lab sessions.',
     rewards: { playerXp: 50, universityCredits: 125, inventory: { care_chain_manual: 1 } } },
 
@@ -111,7 +111,7 @@ export const UNI_PRACTICE_MILESTONES: UniPracticeMilestone[] = [
   { id: 'triage_3',  activityType: 'triage', threshold: 3,  label: 'First Responder', description: 'Complete 3 Rapid Triage drills.',
     rewards: { universityCredits: 50,  inventory: { triage_scroll: 1 } } },
   { id: 'triage_5',  activityType: 'triage', threshold: 5,  label: 'Quick Read',      description: 'Complete 5 Rapid Triage drills.',
-    rewards: { playerXp: 25, universityCredits: 75,  inventory: { triage_scroll: 2 } } },
+    rewards: { playerXp: 25, universityCredits: 75,  inventory: { triage_scroll: 2, hero_training_page: 1 } } },
   { id: 'triage_10', activityType: 'triage', threshold: 10, label: 'Triage Expert',   description: 'Complete 10 Rapid Triage drills.',
     rewards: { playerXp: 50, universityCredits: 125, inventory: { care_chain_manual: 1 } } },
 
@@ -119,7 +119,7 @@ export const UNI_PRACTICE_MILESTONES: UniPracticeMilestone[] = [
   { id: 'stack_3',  activityType: 'stack', threshold: 3,  label: 'Steady Hands',    description: 'Complete 3 Stabilize Stack drills.',
     rewards: { universityCredits: 50,  inventory: { stab_scroll: 1 } } },
   { id: 'stack_5',  activityType: 'stack', threshold: 5,  label: 'Sequencer',       description: 'Complete 5 Stabilize Stack drills.',
-    rewards: { playerXp: 25, universityCredits: 75,  inventory: { stab_scroll: 2 } } },
+    rewards: { playerXp: 25, universityCredits: 75,  inventory: { stab_scroll: 2, hero_training_page: 1 } } },
   { id: 'stack_10', activityType: 'stack', threshold: 10, label: 'Care Architect',  description: 'Complete 10 Stabilize Stack drills.',
     rewards: { playerXp: 50, universityCredits: 125, inventory: { care_chain_manual: 1 } } },
 

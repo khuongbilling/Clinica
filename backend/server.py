@@ -155,6 +155,11 @@ class Player(BaseModel):
     chapter_progress: int = 1
     class_trainees: Dict[str, int] = Field(default_factory=dict)
     university_credits: int = 0
+    uni_cue_lab_count: int = 0
+    uni_triage_count: int = 0
+    uni_stack_count: int = 0
+    uni_practice_milestones_claimed: List[str] = Field(default_factory=list)
+    hero_skill_upgrades: Dict[str, int] = Field(default_factory=dict)
     seen_lv2_unlock: bool = False
     seen_reminiscence: bool = False
     story_scenes_seen: List[str] = Field(default_factory=list)
@@ -233,6 +238,11 @@ class PlayerUpdate(BaseModel):
     chapter_progress: Optional[int] = None
     class_trainees: Optional[Dict[str, int]] = None
     university_credits: Optional[int] = None
+    uni_cue_lab_count: Optional[int] = None
+    uni_triage_count: Optional[int] = None
+    uni_stack_count: Optional[int] = None
+    uni_practice_milestones_claimed: Optional[List[str]] = None
+    hero_skill_upgrades: Optional[Dict[str, int]] = None
     seen_lv2_unlock: Optional[bool] = None
     seen_reminiscence: Optional[bool] = None
     story_scenes_seen: Optional[List[str]] = None
