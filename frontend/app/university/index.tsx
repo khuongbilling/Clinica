@@ -18,6 +18,7 @@ import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate"
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
 import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
+import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
   completeObjective,
@@ -285,10 +286,12 @@ export default function UniversityHubScreen() {
     triageFirstPerfect: false,
     stabilizeFirstPerfect: false,
   });
+  const [completedObjectives, setCompletedObjectives] = useState<Set<ObjectiveId>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
       getChainProgress().then(setChainProg);
+      getObjectiveProgress().then(setCompletedObjectives);
       // ── C1: If systemWardHub tutorial is still waiting for the player to
       // navigate to University, completing that action here advances the step
       // (which marks the tutorial done, since it's the last step).
@@ -305,7 +308,7 @@ export default function UniversityHubScreen() {
     (async () => {
       let bonus = 0;
 
-      // Step 4 — Open Clinica University (first visit grant)
+      // Step 7 — Open Clinica University (first visit grant)
       const isUnivNew = await completeObjective("obj_university_arrived");
       if (isUnivNew) {
         await markObjectiveXpGranted("obj_university_arrived");
@@ -422,7 +425,18 @@ export default function UniversityHubScreen() {
         {chainProg.stabilizeDone ? (
           <FaCompleteChip />
         ) : (
-          <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+          <>
+            <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+            <TutorialQuestPanel
+              chainProg={chainProg}
+              completed={completedObjectives}
+              onPressTask={(key) => {
+                if (key === "cueHunt")   router.push("/university/cue-hunt" as any);
+                else if (key === "triage") router.push("/university/rapid-triage" as any);
+                else                       router.push("/university/stabilize-stack" as any);
+              }}
+            />
+          </>
         )}
 
 

@@ -28,7 +28,7 @@ import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
-import { getObjectiveProgress, getCurrentObjective, type ObjectiveDef } from "@/src/game/objectiveProgress";
+import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 function dailyRoundsUnlockedModes(player: any): string[] {
@@ -62,7 +62,10 @@ const FALLBACK_SCENE = ARENA_SCENES.River;
 
 // ── Hub guide helpers — pure functions, no hooks ───────────────────────────
 // These drive the objective-aware NarratorGuide banner shown on the main hub
-// while the player is working through the early 15-step tutorial chain.
+// while the player is working through the early 12-step tutorial chain.
+// Steps 8-10 (obj_cue_hunt_done / obj_triage_done / obj_stabilize_done) were
+// removed from OBJECTIVES in Fix 4; they are internal sub-step IDs only and
+// will never appear as `currentObjective`, so no switch cases needed for them.
 
 function hubGuideMessage(obj: ObjectiveDef): string {
   switch (obj.id) {
@@ -75,15 +78,9 @@ function hubGuideMessage(obj: ObjectiveDef): string {
     case "obj_memory_seen":
       return "Your onboarding is in progress. Head to Clinica University when you are ready — your path begins there.";
     case "obj_university_arrived":
-      return "Your path begins at Clinica University. Learn to read the body, and your first heroes will answer the call.";
-    case "obj_cue_hunt_done":
-      return "Return to Clinica University and start the Fading Apprentice case chain with the Clinical Cue Hunt — Step 8 of 15.";
-    case "obj_triage_done":
-      return "Cue Hunt complete. Return to University and tackle Rapid Triage next — Step 9 of 15.";
-    case "obj_stabilize_done":
-      return "Triage done. One step remains in the Fading Apprentice chain — Stabilize Stack. Return to University to finish it.";
+      return "Your path begins at Clinica University. The Fading Apprentice case chain is waiting — complete all three challenges to earn your foundation.";
     case "obj_fading_apprentice_done":
-      return "The Fading Apprentice case chain is almost complete. Return to University to finish Stabilize Stack and unlock Step 11.";
+      return "Complete The Fading Apprenticeship at Clinica University — three challenges that build clinical thinking: Cue Hunt, Rapid Triage, and Stabilize Stack.";
     case "obj_lotus_visited":
       return "The Fading Apprentice is saved! Continue Chapter 1 — open Lotus Lessons in the University to reinforce your knowledge.";
     case "obj_lotus_first_lesson":
@@ -109,11 +106,8 @@ function hubGuideCta(obj: ObjectiveDef): string {
       return "Enter Clinica University";
     case "obj_university_arrived":
       return "Enter Clinica University";
-    case "obj_cue_hunt_done":
-    case "obj_triage_done":
-    case "obj_stabilize_done":
     case "obj_fading_apprentice_done":
-      return "Return to University";
+      return "Open University";
     case "obj_lotus_visited":
       return "Open Lotus Lessons";
     case "obj_lotus_first_lesson":
@@ -140,9 +134,6 @@ function hubGuideRoute(obj: ObjectiveDef): string {
     case "obj_memory_seen":
       return "/university";
     case "obj_university_arrived":
-    case "obj_cue_hunt_done":
-    case "obj_triage_done":
-    case "obj_stabilize_done":
     case "obj_fading_apprentice_done":
     case "obj_lotus_visited":
     case "obj_recruit_preview":
@@ -401,7 +392,7 @@ export default function RunHome() {
             <NarratorGuide
               bgImage={getBannerImage("university")}
               message={hubGuideMessage(currentObjective)}
-              objective={`Step ${currentObjective.step} of 15 — ${currentObjective.title}`}
+              objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
               ctaLabel={hubGuideCta(currentObjective)}
               onPress={() => {
                 const route = hubGuideRoute(currentObjective);

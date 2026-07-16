@@ -17,6 +17,7 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getChainProgress } from "./chainProgress";
 
 const KEY = "clinica.objectives.v1";
 /** Tracks which objective IDs have had their 10 XP actually paid out.
@@ -33,14 +34,16 @@ export type ObjectiveId =
   | "obj_class_result"           // step 5  — class registered (confirmClassDiagnostic)
   | "obj_memory_seen"            // step 6  — Memory Reminiscence scene completed
   | "obj_university_arrived"     // step 7  — open Clinica University
-  | "obj_cue_hunt_done"          // step 8  — complete Cue Hunt
-  | "obj_triage_done"            // step 9  — complete Rapid Triage
-  | "obj_stabilize_done"         // step 10 — complete Stabilize Stack
-  | "obj_fading_apprentice_done" // step 11 — complete all 3 Fading Apprentice games
-  | "obj_lotus_visited"          // step 12 — continue chapter 1 journey / open lessons
-  | "obj_lotus_first_lesson"     // step 13 — complete Lotus Lesson: Hydration Basics
-  | "obj_recruit_preview"        // step 14 — visit the Recruitment Hall
-  | "obj_ward_shift_first";      // step 15 — complete first simulation shift
+  | "obj_fading_apprentice_done" // step 8  — complete all 3 Fading Apprentice games
+  | "obj_lotus_visited"          // step 9  — continue chapter 1 journey / open lessons
+  | "obj_lotus_first_lesson"     // step 10 — complete Lotus Lesson: Hydration Basics
+  | "obj_recruit_preview"        // step 11 — visit the Recruitment Hall
+  | "obj_ward_shift_first"       // step 12 — complete first simulation shift
+  // ── Internal sub-step IDs kept for backward compatibility and XP deduplication.
+  // These are NOT in the OBJECTIVES array and never appear as hub guide milestones.
+  | "obj_cue_hunt_done"          // internal — Cue Hunt complete (XP only)
+  | "obj_triage_done"            // internal — Rapid Triage complete (XP only)
+  | "obj_stabilize_done";        // internal — Stabilize Stack complete (XP only)
 
 export interface ObjectiveDef {
   id: ObjectiveId;
@@ -50,6 +53,12 @@ export interface ObjectiveDef {
   xpReward: number;
 }
 
+// ── 12-step visible chain ────────────────────────────────────────────────────
+// Steps 8-10 (individual FA sub-tasks: cue_hunt, triage, stabilize) are
+// collapsed into a single step 8 milestone so the hub guide shows ONE clear
+// goal: "Complete The Fading Apprenticeship."  The sub-task IDs remain in the
+// ObjectiveId union for XP deduplication and backward compat, but they are NOT
+// in this array and never surface as hub guide milestones.
 export const OBJECTIVES: ObjectiveDef[] = [
   {
     id: "obj_prologue_done",
@@ -97,61 +106,40 @@ export const OBJECTIVES: ObjectiveDef[] = [
     id: "obj_university_arrived",
     step: 7,
     title: "Open Clinica University",
-    description: "Enter Clinica University and meet The Fading Apprentice case chain.",
-    xpReward: 10,
-  },
-  {
-    id: "obj_cue_hunt_done",
-    step: 8,
-    title: "Complete Clinical Cue Hunt",
-    description: "Find all three clinical signs hidden in The Fading Apprentice.",
-    xpReward: 10,
-  },
-  {
-    id: "obj_triage_done",
-    step: 9,
-    title: "Complete Rapid Triage",
-    description: "Sort all three patients by urgency — fast and decisive.",
-    xpReward: 10,
-  },
-  {
-    id: "obj_stabilize_done",
-    step: 10,
-    title: "Complete Stabilize Stack",
-    description: "Build the safe care sequence that keeps the Apprentice alive.",
+    description: "Enter Clinica University and begin The Fading Apprentice case chain.",
     xpReward: 10,
   },
   {
     id: "obj_fading_apprentice_done",
-    step: 11,
+    step: 8,
     title: "Complete The Fading Apprenticeship",
-    description: "Finish all three stages of the case chain: Cue Hunt, Triage, and Stabilize.",
+    description: "Finish all three case chain challenges: Cue Hunt → notice the signs. Rapid Triage → decide what matters first. Stabilize Stack → put care steps in safe order.",
     xpReward: 10,
   },
   {
     id: "obj_lotus_visited",
-    step: 12,
+    step: 9,
     title: "Continue Chapter 1 Journey",
     description: "Open Lotus Lessons and start the next phase of your Chapter 1 path.",
     xpReward: 10,
   },
   {
     id: "obj_lotus_first_lesson",
-    step: 13,
+    step: 10,
     title: "Complete Lotus Lesson: Hydration Basics",
     description: "Finish your first structured lesson and reinforce what you learned.",
     xpReward: 10,
   },
   {
     id: "obj_recruit_preview",
-    step: 14,
+    step: 11,
     title: "Visit the Recruitment Hall",
     description: "See the Summoning Hall where healers answer the call.",
     xpReward: 10,
   },
   {
     id: "obj_ward_shift_first",
-    step: 15,
+    step: 12,
     title: "Complete First Simulation Shift",
     description: "Run your first real Ward Shift against a live clinical challenge.",
     xpReward: 10,
@@ -327,16 +315,24 @@ export async function reconcileEarlyObjectives(player: {
     // Step 6 — reminiscence scene completed
     if (player.seen_reminiscence) mark("obj_memory_seen");
 
-    // Steps 12–15 — backfill from later PlayerState flags so existing players
-    // whose objective storage never got written (crash, account transfer, etc.)
-    // are not hard-blocked at a step they already passed.
+    // Steps 8–12 — backfill from later PlayerState / ChainProgress flags so
+    // existing players whose objective storage never got written are not
+    // hard-blocked at a step they already passed.
+    const cp = await getChainProgress();
+    // Step 8 — Fading Apprentice chain complete (all 3 games done)
+    if (cp.stabilizeDone) {
+      mark("obj_cue_hunt_done");    // internal — keep storage consistent
+      mark("obj_triage_done");      // internal
+      mark("obj_stabilize_done");   // internal
+      mark("obj_fading_apprentice_done");
+    }
     const lotusLessons = player.lessons_completed ?? [];
     const hasLotusLesson = lotusLessons.some((id) => id.startsWith("lotus:"));
-    // Step 12 — visited Lotus Lessons (any lotus completion implies the visit)
+    // Step 9 — visited Lotus Lessons (any lotus completion implies the visit)
     if (hasLotusLesson) mark("obj_lotus_visited");
-    // Step 13 — completed first Lotus Lesson
+    // Step 10 — completed first Lotus Lesson
     if (hasLotusLesson) mark("obj_lotus_first_lesson");
-    // Step 15 — completed first Ward Shift simulation
+    // Step 12 — completed first Ward Shift simulation
     if ((player.runs_completed ?? 0) > 0) mark("obj_ward_shift_first");
 
     if (newly.length > 0) await save(record);
