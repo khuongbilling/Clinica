@@ -1053,6 +1053,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[6],
     icon: "skull-outline",
     simulationEra: true,
+    requiredCompletionNodes: ["c6p5", "c6p6"],
     parts: [
       {
         id: "c6p1",
@@ -1127,6 +1128,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[7],
     icon: "people-outline",
     simulationEra: true,
+    requiredCompletionNodes: ["c7p5", "c7p7"],
     parts: [
       {
         id: "c7p1",
@@ -1209,6 +1211,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[8],
     icon: "trophy-outline",
     simulationEra: true,
+    requiredCompletionNodes: ["c8p4", "c8p7"],
     parts: [
       {
         id: "c8p1",
@@ -1291,6 +1294,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[9],
     icon: "business-outline",
     realWorldTransition: true,
+    requiredCompletionNodes: ["c9p7", "c9p8"],
     parts: [
       {
         id: "c9p1",
@@ -1383,6 +1387,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[10],
     icon: "bonfire-outline",
     phaseFinale: true,
+    requiredCompletionNodes: ["c10p6", "c10p8"],
     parts: [
       {
         id: "c10p1",
