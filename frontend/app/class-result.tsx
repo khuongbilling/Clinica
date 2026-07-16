@@ -20,6 +20,7 @@ export default function ClassResultScreen() {
   const { player, applyRewards } = usePlayer();
 
   // C1: grant obj_class_result (step 3 — Complete Class Diagnostic) once.
+  // classGrantedRef prevents re-grant on revisit from Profile.
   const classGrantedRef = useRef(false);
   useEffect(() => {
     if (!player || classGrantedRef.current) return;
@@ -50,89 +51,154 @@ export default function ClassResultScreen() {
   const trait = getClassTree(classId)[0];
   const futurePath = resonance ? getFuturePathHint(resonance, fantasyClass) : null;
 
+  const handleDone = () => goBack(router, "/(tabs)/profile");
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top"]} testID="class-result-screen">
+      {/* Scrollable content — paddingBottom leaves room for the sticky footer */}
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        centerContent={false}
       >
-        {/* Constrain all content to a centered max-width column */}
         <View style={styles.inner}>
 
+          {/* Header row */}
           <View style={styles.header}>
-            <Pressable onPress={() => goBack(router, "/(tabs)/profile")} style={styles.backBtn} hitSlop={10} testID="class-result-back">
+            <Pressable
+              onPress={handleDone}
+              style={styles.backBtn}
+              hitSlop={10}
+              testID="class-result-back"
+            >
               <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
             </Pressable>
-            <View style={{ flex: 1 }}>
+            <View style={styles.headerText}>
               <Text style={styles.kicker}>YOUR CLASS</Text>
               <Text style={styles.title}>Class Result</Text>
             </View>
           </View>
 
+          {/* System narrator message */}
           <SystemNarratorBar
             message="Your resonance pattern is confirmed. What you carry into this role, you carry into every battle. This is not a lock — it is a starting point."
             testID="class-result-narrator"
           />
 
-          <View style={[styles.resultCard, { borderColor: identity.color + "40" }]} testID="class-result-card">
-            <View style={[styles.resultIcon, { backgroundColor: identity.color + "22", borderColor: identity.color }]}>
-              <Ionicons name={identity.icon as any} size={30} color={identity.color} />
+          {/* Class identity reveal card */}
+          <View
+            style={[styles.resultCard, { borderColor: identity.color + "50" }]}
+            testID="class-result-card"
+          >
+            <Text style={[styles.assignedKicker, { color: identity.color }]}>
+              SYSTEM: CLASS ASSIGNMENT CONFIRMED
+            </Text>
+
+            {/* Icon badge */}
+            <View
+              style={[
+                styles.resultIcon,
+                { backgroundColor: identity.color + "1A", borderColor: identity.color + "80" },
+              ]}
+            >
+              <Ionicons name={identity.icon as any} size={34} color={identity.color} />
             </View>
-            <Text style={[styles.pathTitle, { color: identity.color }]}>{fantasyClass}</Text>
+
+            {/* Class name — large, dominant, class color */}
+            <Text style={[styles.pathTitle, { color: identity.color }]} testID="class-result-name">
+              {fantasyClass}
+            </Text>
+
+            {/* Flavor subtitle */}
             <Text style={styles.flavorTitle}>{CLASS_FLAVOR_TITLE[fantasyClass]}</Text>
+
+            {/* Why fits — wraps naturally */}
             <Text style={styles.body}>{CLASS_WHY_FITS[fantasyClass]}</Text>
           </View>
 
-          <View style={[styles.setupCard, { borderColor: identity.color + "30" }]}>
+          {/* System Archive panel — each row is stacked (no single-line overflow) */}
+          <View
+            style={[styles.setupCard, { borderColor: identity.color + "30" }]}
+            testID="class-result-archive"
+          >
             <Text style={styles.setupCardTitle}>SYSTEM ARCHIVE</Text>
-            <View style={{ gap: SPACING.sm }}>
-              {!!resonance && (
-                <View style={styles.setupRow}>
-                  <Ionicons name="business-outline" size={14} color={COLORS.onSurfaceTertiary} />
-                  <Text style={styles.setupLabel}>Modern Department Resonance:</Text>
-                  <Text style={styles.setupValue}>{formatResonance(resonance)}</Text>
+
+            {!!resonance && (
+              <View style={styles.archiveRow}>
+                <View style={styles.archiveRowLabel}>
+                  <Ionicons name="business-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                  <Text style={styles.archiveLabel}>Modern Department Resonance</Text>
                 </View>
-              )}
-              {trait && (
-                <View style={styles.setupRow}>
-                  <Ionicons name="sparkles-outline" size={14} color={COLORS.onSurfaceTertiary} />
-                  <Text style={styles.setupLabel}>Starting Trait:</Text>
-                  <Text style={styles.setupValue}>{trait.name}</Text>
-                </View>
-              )}
-              <View style={styles.setupRow}>
-                <Ionicons name={secondaryIdentity.icon as any} size={14} color={COLORS.onSurfaceTertiary} />
-                <Text style={styles.setupLabel}>Second Closest Fit:</Text>
-                <Text style={styles.setupValue}>{secondary}</Text>
+                <Text style={styles.archiveValue}>{formatResonance(resonance)}</Text>
               </View>
-              {futurePath && (
-                <View style={styles.setupRow}>
-                  <Ionicons name="telescope-outline" size={14} color={COLORS.onSurfaceTertiary} />
-                  <Text style={styles.setupLabel}>Future Path Hint:</Text>
-                  <Text style={styles.setupValue}>{futurePath}</Text>
+            )}
+
+            {trait && (
+              <View style={styles.archiveRow}>
+                <View style={styles.archiveRowLabel}>
+                  <Ionicons name="sparkles-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                  <Text style={styles.archiveLabel}>Starting Trait</Text>
                 </View>
-              )}
+                <Text style={styles.archiveValue}>{trait.name}</Text>
+              </View>
+            )}
+
+            <View style={styles.archiveRow}>
+              <View style={styles.archiveRowLabel}>
+                <Ionicons name={secondaryIdentity.icon as any} size={13} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.archiveLabel}>Second Closest Fit</Text>
+              </View>
+              <Text style={styles.archiveValue}>{secondary}</Text>
             </View>
-            {trait && <Text style={styles.traitDesc}>{trait.description}</Text>}
+
+            {futurePath && (
+              <View style={styles.archiveRow}>
+                <View style={styles.archiveRowLabel}>
+                  <Ionicons name="telescope-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                  <Text style={styles.archiveLabel}>Future Path Hint</Text>
+                </View>
+                <Text style={styles.archiveValue}>{futurePath}</Text>
+              </View>
+            )}
+
+            {trait && (
+              <>
+                <View style={styles.archiveDivider} />
+                <Text style={styles.traitTitle}>{trait.name}</Text>
+                <Text style={styles.traitDesc}>{trait.description}</Text>
+              </>
+            )}
           </View>
 
+          {/* Reassurance note */}
           <Text style={styles.note}>
             This is a snapshot, not a lock — your class stays freely re-trainable, and every
             future path keeps evolving as you train at the University.
           </Text>
 
+          {/* Secondary action: Switch Class */}
           <Pressable
-            style={[styles.switchBtn, { backgroundColor: identity.color }]}
+            style={styles.switchBtn}
             onPress={() => router.push("/class-tree")}
             testID="class-result-switch"
           >
-            <Ionicons name="swap-horizontal" size={16} color={COLORS.onBrand} />
+            <Ionicons name="swap-horizontal" size={14} color={COLORS.onSurfaceTertiary} />
             <Text style={styles.switchBtnTxt}>Switch Class</Text>
           </Pressable>
 
         </View>
       </ScrollView>
+
+      {/* Sticky footer — outside ScrollView so it's always visible */}
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+        <Pressable
+          style={[styles.doneBtn, { backgroundColor: identity.color }]}
+          onPress={handleDone}
+          testID="class-result-done"
+        >
+          <Ionicons name="checkmark" size={17} color={COLORS.onBrand} />
+          <Text style={[styles.doneBtnTxt, { color: COLORS.onBrand }]}>Done</Text>
+        </Pressable>
+      </SafeAreaView>
     </SafeAreaView>
   );
 }
@@ -140,45 +206,184 @@ export default function ClassResultScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   loading: { alignItems: "center", justifyContent: "center" },
+
   scroll: {
     flexGrow: 1,
     alignItems: "center",
-    paddingVertical: SPACING.lg,
+    paddingTop: SPACING.md,
     paddingHorizontal: SPACING.md,
-    paddingBottom: 48,
+    paddingBottom: SPACING.xxxl,
   },
   inner: {
     width: "100%",
     maxWidth: 480,
     gap: SPACING.md,
   },
-  header: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginBottom: SPACING.xs },
-  backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary },
+
+  /* Header */
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  headerText: { flex: 1 },
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 22, fontWeight: "700" },
+
+  /* Class reveal card */
   resultCard: {
-    alignItems: "center", gap: SPACING.sm, padding: SPACING.lg, borderRadius: RADIUS.lg,
-    borderWidth: 1, backgroundColor: COLORS.surfaceSecondary,
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  assignedKicker: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: SPACING.xs,
   },
   resultIcon: {
-    width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", borderWidth: 1,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    marginBottom: SPACING.xs,
   },
-  pathTitle: { fontSize: 20, fontWeight: "800" },
-  flavorTitle: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600", textAlign: "center" },
-  body: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19, textAlign: "center" },
+  pathTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  flavorTitle: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  body: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    paddingHorizontal: SPACING.xs,
+  },
+
+  /* System Archive panel — stacked 2-line rows, no overflow */
   setupCard: {
-    padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1,
-    backgroundColor: COLORS.surfaceSecondary, gap: SPACING.sm,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    backgroundColor: COLORS.surfaceSecondary,
+    gap: SPACING.sm,
   },
-  setupCardTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
-  setupRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
-  setupLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
-  setupValue: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", flexShrink: 1 },
-  traitDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, marginTop: SPACING.xs },
-  note: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, textAlign: "center" },
+  setupCardTitle: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: SPACING.xs,
+  },
+  archiveRow: {
+    gap: 3,
+  },
+  archiveRowLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  archiveLabel: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11,
+    letterSpacing: 0.3,
+    flexShrink: 1,
+  },
+  archiveValue: {
+    color: COLORS.onSurface,
+    fontSize: 13,
+    fontWeight: "700",
+    paddingLeft: 18,
+  },
+  archiveDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: SPACING.xs,
+  },
+  traitTitle: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  traitDesc: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  /* Reassurance note */
+  note: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingHorizontal: SPACING.xs,
+  },
+
+  /* Switch Class secondary link */
   switchBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.xs,
-    paddingVertical: SPACING.md, borderRadius: RADIUS.md, marginTop: SPACING.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    alignSelf: "center",
   },
-  switchBtnTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700" },
+  switchBtnTxt: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 13,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+
+  /* Sticky footer */
+  footer: {
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+  },
+  doneBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md + 2,
+    borderRadius: RADIUS.md,
+    width: "100%",
+  },
+  doneBtnTxt: {
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
 });
