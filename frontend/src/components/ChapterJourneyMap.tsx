@@ -32,6 +32,7 @@ import { ENEMIES } from "@/src/game/content";
 import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/src/game/journeyRewards";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 // ── Part type label + color helpers ──────────────────────────────────────────
 
@@ -924,7 +925,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   comingSoonBadge: {
-    backgroundColor: COLORS.surfaceTertiary,
+    backgroundColor: UI.sanctuaryCard,
     borderRadius: RADIUS.sm,
     paddingHorizontal: 5,
     paddingVertical: 2,
@@ -964,8 +965,8 @@ const styles = StyleSheet.create({
     gap: 3,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceTertiary,
+    borderColor: UI.sanctuaryBorder,
+    backgroundColor: UI.sanctuaryCard,
     paddingHorizontal: 5,
     paddingVertical: 2,
   },
@@ -1108,7 +1109,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 5,
-    backgroundColor: COLORS.surfaceTertiary,
+    backgroundColor: UI.sanctuaryCard,
   },
   prepTipsActionTxt: {
     fontSize: 10,
@@ -1121,10 +1122,10 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 5,
     marginTop: 5,
-    backgroundColor: COLORS.surfaceTertiary,
+    backgroundColor: UI.sanctuaryCard,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: UI.sanctuaryBorder,
     paddingHorizontal: 7,
     paddingVertical: 5,
   },
@@ -1143,10 +1144,10 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginTop: SPACING.lg,
     marginHorizontal: SPACING.md,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: UI.sanctuaryBorder,
     borderStyle: "dashed",
     padding: SPACING.md,
     opacity: 0.6,

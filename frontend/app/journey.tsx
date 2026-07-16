@@ -21,6 +21,7 @@ import {
 import { playerLevelFromXp } from "@/src/game/progression";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 export default function JourneyScreen() {
   const router = useRouter();
@@ -181,7 +182,7 @@ export default function JourneyScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: UI.sanctuaryBg,
   },
   center: {
     alignItems: "center",
@@ -196,15 +197,15 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     gap: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: UI.sanctuaryBorder,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: UI.sanctuaryBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -315,10 +316,10 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginHorizontal: SPACING.md,
     marginVertical: SPACING.sm,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: UI.sanctuaryBorder,
     padding: SPACING.sm,
   },
   nextDot: {

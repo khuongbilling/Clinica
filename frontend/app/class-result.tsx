@@ -14,6 +14,7 @@ import {
 import { goBack } from "@/src/utils/navigation";
 import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 export default function ClassResultScreen() {
   const router = useRouter();
@@ -204,7 +205,7 @@ export default function ClassResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.surface },
+  container: { flex: 1, backgroundColor: UI.sanctuaryBg },
   loading: { alignItems: "center", justifyContent: "center" },
 
   scroll: {
@@ -233,7 +234,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
+    borderWidth: 1,
+    borderColor: UI.sanctuaryBorder,
   },
   headerText: { flex: 1 },
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 2, fontWeight: "700" },
@@ -246,8 +249,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xl,
     paddingHorizontal: SPACING.lg,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    backgroundColor: COLORS.surfaceSecondary,
+    borderWidth: 1.5,
+    backgroundColor: UI.sanctuaryPanel,
   },
   assignedKicker: {
     fontSize: 10,
@@ -291,7 +294,8 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
+    borderColor: UI.sanctuaryBorder,
     gap: SPACING.sm,
   },
   setupCardTitle: {
@@ -365,9 +369,9 @@ const styles = StyleSheet.create({
 
   /* Sticky footer */
   footer: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: UI.sanctuaryBg,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: UI.sanctuaryBorder,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.xs,

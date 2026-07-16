@@ -44,6 +44,17 @@ export const UI = {
   border: "rgba(232,200,104,0.20)",       // soft gold-tinted hairline
   borderStrong: "rgba(232,200,104,0.42)", // emphasized border
   divider: "rgba(246,240,228,0.08)",
+
+  // ── Healing Sanctuary / Academy sky-navy surfaces ──────────────────────────
+  // These replace the cyber-black COLORS.surface tones in non-battle screens
+  // (University, Journey Map, Class Result, Community Board). They read as
+  // "deep healing sanctuary" rather than "black dashboard" while keeping
+  // enough contrast for all body text to remain readable.
+  sanctuaryBg:     "#0B1825",                    // deepest wash — sky-navy, not black
+  sanctuaryPanel:  "#122030",                    // raised panel — sky-navy with warmth
+  sanctuaryCard:   "#192C3C",                    // card surface — highest elevation
+  sanctuaryBorder: "rgba(61,196,168,0.18)",      // jade hairline border
+  jade:            "#3DC4A8",                    // jade green accent (academy/healing)
 } as const;
 
 // Extended radius scale (card corners a touch softer than legacy lg).

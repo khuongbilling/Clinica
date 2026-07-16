@@ -20,6 +20,7 @@ import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusL
 import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 import {
   completeObjective,
   getObjectiveProgress,
@@ -411,7 +412,7 @@ export default function UniversityHubScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <PlayerHeader player={player} />
       <View style={styles.hero}>
-        <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+        <LinearGradient colors={[COLORS.brandTertiary, UI.sanctuaryBg]} style={StyleSheet.absoluteFillObject} />
         <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
@@ -777,7 +778,7 @@ function MoreRow({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.surface },
+  container: { flex: 1, backgroundColor: UI.sanctuaryBg },
   loading: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.sm },
   loadingTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
   hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
@@ -790,7 +791,7 @@ const styles = StyleSheet.create({
   sub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 2 },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   sectionHeading: {
-    color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800",
+    color: UI.jade, fontSize: 12, fontWeight: "800",
     letterSpacing: 1.5, marginTop: SPACING.sm,
   },
 
@@ -923,7 +924,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.md,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
@@ -949,21 +950,21 @@ const styles = StyleSheet.create({
 
   moreRow: {
     flexDirection: "row", gap: SPACING.md, alignItems: "center",
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
+    padding: SPACING.md, borderWidth: 1, borderColor: UI.sanctuaryBorder,
   },
   moreRowLocked: { opacity: 0.5 },
   moreIcon: {
     width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center",
-    backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.brand + "40",
+    backgroundColor: UI.sanctuaryCard, borderWidth: 1, borderColor: COLORS.brand + "40",
   },
   moreTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
   moreDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
   futureToggle: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.border, marginTop: SPACING.sm,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder, marginTop: SPACING.sm,
   },
   futureToggleTxt: { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
@@ -974,8 +975,8 @@ const styles = StyleSheet.create({
 const labsStyles = StyleSheet.create({
   grid: { flexDirection: "row", gap: SPACING.sm },
   labCard: {
-    flex: 1, backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.sm, gap: 4,
+    flex: 1, backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.sm, gap: 4,
     alignItems: "center",
   },
   labIcon: {
@@ -987,19 +988,19 @@ const labsStyles = StyleSheet.create({
   labChip: {
     flexDirection: "row", alignItems: "center", gap: 3,
     borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2,
-    backgroundColor: COLORS.surfaceTertiary, marginTop: 2,
+    backgroundColor: UI.sanctuaryCard, marginTop: 2,
   },
   labChipTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.5 },
   labFooter: {
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.sm,
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder,
     padding: SPACING.sm, gap: SPACING.sm,
   },
   labFooterTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
   labMoreRow: { flexDirection: "row", gap: SPACING.sm },
   labMoreBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder, borderRadius: RADIUS.sm,
     paddingVertical: 7,
   },
   labMoreBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
@@ -1008,7 +1009,7 @@ const labsStyles = StyleSheet.create({
 // ── Battle & Journey prep card styles ─────────────────────────────────────────
 const prepS = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
     borderWidth: 1, borderColor: "#D4AF3730", overflow: "hidden",
   },
   header: {
@@ -1019,11 +1020,11 @@ const prepS = StyleSheet.create({
   headerTxt: { flex: 1, color: "#D4AF37", fontSize: 12, fontWeight: "700" },
   mapBtn: { flexDirection: "row", alignItems: "center", gap: 3 },
   mapBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "600" },
-  divider: { height: 1, backgroundColor: COLORS.border },
+  divider: { height: 1, backgroundColor: UI.sanctuaryBorder },
   row: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    borderBottomWidth: 1, borderBottomColor: UI.sanctuaryBorder,
   },
   iconWrap: {
     width: 34, height: 34, borderRadius: RADIUS.sm,

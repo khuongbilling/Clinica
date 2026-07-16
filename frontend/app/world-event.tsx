@@ -14,6 +14,7 @@ import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { playRewardCue } from "@/src/game/cues";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 import {
   MIASMA_BLOOM_LORE,
   MIASMA_BLOOM_PHASES,
@@ -1127,7 +1128,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     marginTop: SPACING.md, padding: SPACING.md,
     borderRadius: RADIUS.md, borderWidth: 1, overflow: "hidden",
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
   },
   challengeTxt: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
   challengeSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
@@ -1165,14 +1166,14 @@ const styles = StyleSheet.create({
   loreTagTxt: { color: BLOOM_ACCENT, fontSize: 10, fontWeight: "700" },
 
   meterCard: {
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: SPACING.sm,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.md, gap: SPACING.sm,
   },
   meterHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   meterTitle:  { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", flex: 1 },
   readOnlyBadge: {
-    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill,
-    paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: UI.sanctuaryCard, borderRadius: RADIUS.pill,
+    paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: UI.sanctuaryBorder,
   },
   readOnlyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   meterSub:    { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
@@ -1187,7 +1188,7 @@ const styles = StyleSheet.create({
   helpNoticeTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, flex: 1 },
 
   unlockCard: {
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: BLOOM_ACCENT + "33", padding: SPACING.md,
   },
   unlockRow: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.md },
@@ -1205,8 +1206,8 @@ const styles = StyleSheet.create({
   eduSectionSub: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17 },
   eduStack: { gap: SPACING.sm },
   eduCard: {
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
-    borderWidth: 1, padding: SPACING.md, gap: SPACING.sm,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.md, gap: SPACING.sm,
   },
   eduCardHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   eduCardIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
@@ -1215,7 +1216,7 @@ const styles = StyleSheet.create({
   eduCardBodyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
   eduCardFrame: {
     flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start",
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
+    backgroundColor: UI.sanctuaryBg, borderRadius: RADIUS.md,
     borderWidth: 1, padding: SPACING.sm, gap: 2,
   },
   eduCardFrameTxt:  { fontSize: 11, fontWeight: "800" },
