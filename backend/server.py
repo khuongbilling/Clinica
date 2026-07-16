@@ -166,6 +166,7 @@ class Player(BaseModel):
     claimed_level_rewards: List[str] = Field(default_factory=list)
     claimed_chapter_chests: List[str] = Field(default_factory=list)
     claimed_chapter_3star: List[str] = Field(default_factory=list)
+    claimed_journey_nodes: List[str] = Field(default_factory=list)
     owned_titles: List[str] = Field(default_factory=list)
     active_title: str = ""
     stamina: int = 5
@@ -242,6 +243,7 @@ class PlayerUpdate(BaseModel):
     claimed_level_rewards: Optional[List[str]] = None
     claimed_chapter_chests: Optional[List[str]] = None
     claimed_chapter_3star: Optional[List[str]] = None
+    claimed_journey_nodes: Optional[List[str]] = None
     owned_titles: Optional[List[str]] = None
     active_title: Optional[str] = None
     stamina: Optional[int] = None
