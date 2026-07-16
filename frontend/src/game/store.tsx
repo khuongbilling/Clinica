@@ -2002,6 +2002,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const level = playerLevelFromXp(base.xp ?? 0).level;
     const status = getChapterStatus(chapter, level);
     if (status === 'locked') return { ok: false, message: `Complete Chapter ${chest.chapter} first.` };
+    // J6: gate chest on all journey-rewarded nodes being cleared first.
+    const { getChapterNodeIds } = await import('./journeyRewards');
+    const nodeIds = getChapterNodeIds(chest.chapter);
+    const claimedJourneyNodes = base.claimed_journey_nodes ?? [];
+    if (nodeIds.length > 0 && !nodeIds.every((id) => claimedJourneyNodes.includes(id))) {
+      return { ok: false, message: 'Clear all chapter nodes to unlock the chapter chest.' };
+    }
     // Grant title if applicable (same safe-add as setActiveTitle does)
     const ownedTitles = base.owned_titles ?? [];
     const newTitles = chest.titleId && !ownedTitles.includes(chest.titleId)

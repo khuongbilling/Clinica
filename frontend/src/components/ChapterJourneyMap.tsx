@@ -29,7 +29,7 @@ import {
   type ChapterPartType,
 } from "@/src/game/chapterJourney";
 import { ENEMIES } from "@/src/game/content";
-import { getJourneyNodeDef, computeJourneyReward } from "@/src/game/journeyRewards";
+import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/src/game/journeyRewards";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -132,7 +132,12 @@ export function ChapterJourneyMap({
         const isExpanded = expandedId === chapter.id;
         const chest = CHAPTER_CHESTS.find((c) => c.chapter === chapter.number);
         const chestClaimed = chest ? claimedChests.includes(chest.id) : false;
-        const chestClaimable = chest && !chestClaimed && status !== "locked";
+        // J6: chest only unlocks when every journey-rewarded node in this chapter is claimed.
+        const chapterNodeIds = getChapterNodeIds(chapter.number);
+        const allChapterNodesDone =
+          chapterNodeIds.length === 0 ||
+          chapterNodeIds.every((id) => claimedNodes.includes(id));
+        const chestClaimable = chest && !chestClaimed && status !== "locked" && allChapterNodesDone;
         return (
           <React.Fragment key={chapter.id}>
             <ChapterCard
