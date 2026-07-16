@@ -454,8 +454,9 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 3 — Breath Before Battle (7 nodes, Level 3)
-  // J1: story → battle → battle → story → battle → mini-boss → reflection
+  // Chapter 3 — Breath Before Battle (9 nodes, Level 3)
+  // P9: memory → chal/cue-hunt → chal/rapid-triage → battle →
+  //     memory → chal/stabilize-stack → battle → mini-boss → reflection
   // University prep: Breathing Lesson · Shortness Cue Hunt · Airway Triage
   // ─────────────────────────────────────────────────────────────────────────
   {
@@ -485,11 +486,15 @@ export const CHAPTERS: Chapter[] = [
       primaryRoute: "/university",
       secondaryRoute: "/university/skill-academy",
     },
+    // P9: required nodes that must be cleared before Chapter 4 unlocks.
+    // c3p7 = Breath Under Pressure (battle), c3p8 = Trial: Breathless Gale Spirit (mini-boss).
+    requiredCompletionNodes: ["c3p7", "c3p8"],
     parts: [
+      // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
         id: "c3p1",
         part: 1,
-        type: "story",
+        type: "memory_fragment",
         title: "The Breathless Hall",
         description: "A string of respiratory cases floods the ward. The air itself feels thin. The System warns: airway cannot wait.",
         icon: "book-outline",
@@ -517,20 +522,34 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 2 — Challenge: Cue Hunt ──────────────────────────────────────
       {
         id: "c3p2",
         part: 2,
-        type: "battle",
-        title: "Simulation — Air Sprite",
-        description: "Mild respiratory distress. Apply oxygen therapy, monitor SpO₂, and read the effort behind each breath.",
-        icon: "medical-outline",
-        route: "/shift",
-        rewardXp: 15,
-        rewardCoins: 15,
+        type: "challenge",
+        title: "Cue Hunt: Spot the Wheeze",
+        description: "The ward is full of respiratory patients. Train your eye to catch the early warning signs — before the wheeze goes silent.",
+        icon: "eye-outline",
+        route: "/university/cue-hunt",
+        rewardXp: 10,
+        rewardCredits: 15,
       },
+      // ── Node 3 — Challenge: Rapid Triage ─────────────────────────────────
       {
         id: "c3p3",
         part: 3,
+        type: "challenge",
+        title: "Triage Drill: Airway First",
+        description: "Three patients arrive at once. Practice the ABCDE framework under pressure — Airway always leads.",
+        icon: "list-outline",
+        route: "/university/rapid-triage",
+        rewardXp: 10,
+        rewardCredits: 15,
+      },
+      // ── Node 4 — Battle ────────────────────────────────────────────────────
+      {
+        id: "c3p4",
+        part: 4,
         type: "battle",
         title: "Simulation — The Hidden Wheeze",
         description: "A patient who looks calm but isn't. The cues are quiet. Find the wheeze before the corridor hears the alarm.",
@@ -539,10 +558,11 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 20,
         rewardCoins: 20,
       },
+      // ── Node 5 — Memory Fragment ──────────────────────────────────────────
       {
-        id: "c3p4",
-        part: 4,
-        type: "story",
+        id: "c3p5",
+        part: 5,
+        type: "memory_fragment",
         title: "A Lesson in Priority",
         description: "Master Bai drills the ABCDE framework in the corridor. Why airway always leads — and what happens when it doesn't.",
         icon: "school-outline",
@@ -570,9 +590,22 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 6 — Challenge: Stabilize Stack ───────────────────────────────
       {
-        id: "c3p5",
-        part: 5,
+        id: "c3p6",
+        part: 6,
+        type: "challenge",
+        title: "Stack Drill: Open the Air Path",
+        description: "Sequence the interventions correctly — positioning, oxygen, monitoring. The order matters as much as the action.",
+        icon: "layers-outline",
+        route: "/university/stabilize-stack",
+        rewardXp: 12,
+        rewardCredits: 20,
+      },
+      // ── Node 7 — Battle ────────────────────────────────────────────────────
+      {
+        id: "c3p7",
+        part: 7,
         type: "battle",
         title: "Simulation — Breath Under Pressure",
         description: "A deteriorating patient, two competing priorities. Apply what you know — and make the call before the window closes.",
@@ -581,9 +614,10 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 25,
         rewardCoins: 25,
       },
+      // ── Node 8 — Mini-boss ────────────────────────────────────────────────
       {
-        id: "c3p6",
-        part: 6,
+        id: "c3p8",
+        part: 8,
         type: "mini_boss",
         title: "Trial: Breathless Gale Spirit",
         description: "The Air Sprite's advanced form. Full respiratory cascade — intervene before SpO₂ drops beyond recovery.",
@@ -593,9 +627,10 @@ export const CHAPTERS: Chapter[] = [
         rewardCoins: 30,
         rewardShards: 5,
       },
+      // ── Node 9 — Reflection ───────────────────────────────────────────────
       {
-        id: "c3p7",
-        part: 7,
+        id: "c3p9",
+        part: 9,
         type: "reflection",
         title: "What Air Teaches",
         description: "A quiet moment after the storm. Reflect on the breath — and why oxygen is the first language of clinical urgency.",

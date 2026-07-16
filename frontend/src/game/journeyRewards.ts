@@ -105,17 +105,20 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   { nodeId: 'c2p7', chapter: 2, playerXp:  85, heroXp: 50, coins: 125, shards: 40,       isStory: false, starsScale: true  },
   { nodeId: 'c2p8', chapter: 2, playerXp:  30, heroXp:  0, coins:  0, credits: 20,       isStory: true,  starsScale: false },
 
-  // ── Chapter 3: Breath Before Battle (Level 3, 7 nodes) ───────────────────
-  // Approximate totals at 3★: 550 player XP, 270 hero XP, 750 Ward Coins,
-  //   170 University Credits, 200 Summoning Shards, 15 RLG.
+  // ── Chapter 3: Breath Before Battle (Level 3, 9 nodes) ───────────────────
+  // P9: memory → chal → chal → battle → memory → chal → battle → mini_boss → reflection
+  // Approximate totals at 3★: ~600 player XP, 270 hero XP, 770 Ward Coins,
+  //   230 University Credits, 200 Summoning Shards.
   { nodeId: 'c3p1', chapter: 3, playerXp:  30, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c3p2', chapter: 3, playerXp:  75, heroXp:  45, coins: 110,                   isStory: false, starsScale: true  },
-  { nodeId: 'c3p3', chapter: 3, playerXp:  85, heroXp:  50, coins: 125, credits: 20,      isStory: false, starsScale: true  },
-  { nodeId: 'c3p4', chapter: 3, playerXp:  30, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c3p5', chapter: 3, playerXp:  95, heroXp:  55, coins: 140, shards: 25,       isStory: false, starsScale: true  },
-  { nodeId: 'c3p6', chapter: 3, playerXp: 120, heroXp:  70, coins: 175, shards: 50,       isStory: false, starsScale: true  },
-  // Reflection: 35 XP, 25 Credits. Lesson Note preview deferred to J3/J4.
-  { nodeId: 'c3p7', chapter: 3, playerXp:  35, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
+  { nodeId: 'c3p2', chapter: 3, playerXp:  55, heroXp:   0, coins:   0, credits: 30,      isStory: false, starsScale: false },
+  { nodeId: 'c3p3', chapter: 3, playerXp:  60, heroXp:   0, coins:   0, credits: 30,      isStory: false, starsScale: false },
+  { nodeId: 'c3p4', chapter: 3, playerXp:  85, heroXp:  50, coins: 125,                   isStory: false, starsScale: true  },
+  { nodeId: 'c3p5', chapter: 3, playerXp:  30, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
+  { nodeId: 'c3p6', chapter: 3, playerXp:  65, heroXp:   0, coins:   0, credits: 35,      isStory: false, starsScale: false },
+  { nodeId: 'c3p7', chapter: 3, playerXp:  95, heroXp:  55, coins: 145,                   isStory: false, starsScale: true  },
+  { nodeId: 'c3p8', chapter: 3, playerXp: 125, heroXp:  75, coins: 180, shards: 55,       isStory: false, starsScale: true  },
+  // Reflection: flat XP + credits. Lesson Note preview deferred to J3/J4.
+  { nodeId: 'c3p9', chapter: 3, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
 
   // ── Chapter 4: Code Rush (Level 4, 6 nodes) ───────────────────────────────
   // Approximate totals at 3★: 655 player XP, 365 hero XP, 1035 Ward Coins,
