@@ -112,28 +112,28 @@ export const CHAPTER_CHESTS: ChapterChest[] = [
     },
   },
   {
-    id: "chest_ch2", chapter: 2,
+    id: "chest_ch2", chapter: 2, titleId: "fever_shade_victor",
     rewards: {
       playerXp: 60, heroXp: 40,
       codexShards: 100, crowns: 150, universityCredits: 50, refinedLotusGems: 10,
     },
   },
   {
-    id: "chest_ch3", chapter: 3,
+    id: "chest_ch3", chapter: 3, titleId: "airway_guardian",
     rewards: {
       playerXp: 80, heroXp: 50,
       codexShards: 125, crowns: 200, universityCredits: 75, refinedLotusGems: 15,
     },
   },
   {
-    id: "chest_ch4", chapter: 4,
+    id: "chest_ch4", chapter: 4, titleId: "ward_sentinel",
     rewards: {
       playerXp: 100, heroXp: 75,
       codexShards: 150, crowns: 250, universityCredits: 100, refinedLotusGems: 15,
     },
   },
   {
-    id: "chest_ch5", chapter: 5,
+    id: "chest_ch5", chapter: 5, titleId: "sanctuary_builder",
     rewards: {
       playerXp: 125, heroXp: 100,
       codexShards: 150, crowns: 300, universityCredits: 125, refinedLotusGems: 20,

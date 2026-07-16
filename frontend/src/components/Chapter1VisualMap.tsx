@@ -413,6 +413,20 @@ export function Chapter1VisualMap({
                   </View>
                 )}
 
+                {/* P13: Anticipation teasers — approach to the boss node */}
+                {nd.part.id === "c1n4" && nd.status === "complete" && !claimedNodes.includes("c1n6") && (
+                  <View style={[styles.teaserRow, side === "left" && { alignSelf: "flex-start" }]}>
+                    <Ionicons name="arrow-down" size={9} color="#F9731699" />
+                    <Text style={[styles.teaserTxt, { color: "#F9731699" }]}>Trial approaching...</Text>
+                  </View>
+                )}
+                {nd.part.id === "c1n5" && nd.status === "complete" && !claimedNodes.includes("c1n6") && (
+                  <View style={[styles.teaserRow, side === "right" && { alignSelf: "flex-end" }]}>
+                    <Ionicons name="arrow-down" size={9} color="#F97316" />
+                    <Text style={[styles.teaserTxt, { color: "#F97316" }]}>Chapter Trial Ahead</Text>
+                  </View>
+                )}
+
                 {/* Claim button */}
                 {nd.status !== "complete" && nd.eligible && def && onNodeClaim && (
                   <NodeClaimBtn
@@ -515,5 +529,18 @@ const styles = StyleSheet.create({
     fontWeight:    "700",
     color:         "#FFF",
     letterSpacing: 0.5,
+  },
+  // P13: anticipation teasers
+  teaserRow: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           3,
+    alignSelf:     "flex-start",
+    marginTop:     1,
+  },
+  teaserTxt: {
+    fontSize:   9,
+    fontWeight: "600",
+    fontStyle:  "italic",
   },
 });

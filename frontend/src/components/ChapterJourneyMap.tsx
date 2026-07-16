@@ -79,6 +79,40 @@ const PART_TYPE_COLOR: Record<ChapterPartType, string> = {
   arena:           "#8B5CF6",
 };
 
+// ── P13: Chapter climax metadata ─────────────────────────────────────────────
+
+const CHAPTER_CLIMAX_HINTS: Record<number, string> = {
+  1: "The ward grows quiet. The Apprenticeship Trial awaits.",
+  2: "Fever pressure rising. The Shade Trial begins.",
+  3: "Airway first. Breath before battle. The Gale Spirit stirs.",
+  4: "Hold the line. Final defense standing by.",
+  5: "The Sanctuary stirs. Final chapter moment near.",
+};
+
+const CHAPTER_HEALTH_THEMES: Record<number, string> = {
+  1: "Hydration and early cues kept the patient stable. First real success.",
+  2: "Reassessment mastery — recognizing fever patterns is never wasted.",
+  3: "Priority mastered — airway comes first, every time.",
+  4: "Ward sentinel — protecting the whole ward, not just one patient.",
+  5: "Recovery, rest, and continuing care — the ward breathes easier now.",
+};
+
+const CHAPTER_CLEAR_TEASERS: Record<number, string> = {
+  1: "Chapter 2 path opens — the ward rotation begins.",
+  2: "Breathing priority opens in Chapter 3.",
+  3: "Code Rush pressure begins in Chapter 4.",
+  4: "Sanctuary restoration opens in Chapter 5.",
+  5: "Chapters ahead move beyond training simulations toward real ward threats.",
+};
+
+const CHAPTER_TITLE_HINTS: Record<number, string> = {
+  1: "Title earned: Apprentice Healer",
+  2: "Title earned: Fever Shade Victor",
+  3: "Title earned: Airway Guardian",
+  4: "Title earned: Ward Sentinel",
+  5: "Title earned: Sanctuary Builder",
+};
+
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -440,6 +474,16 @@ function ChapterCard({
       {/* ── Parts list (expanded) ── */}
       {isExpanded && (
         <View style={styles.partsList}>
+          {/* P13: Climax anticipation strip — shown for ALL chapter types when near the final trial */}
+          {!isLocked && climaxState && (
+            <View style={[styles.climaxAnticipationStrip, { borderTopColor: accent + "40" }]}>
+              <Ionicons name="warning-outline" size={11} color={accent} />
+              <Text style={[styles.climaxAnticipationTxt, { color: accent }]}>
+                {CHAPTER_CLIMAX_HINTS[chapter.number] ?? "The ward grows quiet. One trial remains."}
+              </Text>
+            </View>
+          )}
+
           {/* P2/P8: Ch1 and Ch2 use visual path maps; all other chapters use PartRow list. */}
           {chapter.number === 1 ? (
             <Chapter1VisualMap
@@ -549,23 +593,41 @@ function ChapterCard({
                 </View>
               )}
 
-              {/* P6: chapter clear card — shown when all required nodes are done */}
-              {!isLocked && allRequiredDone && (
-                <View style={[styles.chapterClearCard, { borderColor: accent + "50" }]}>
-                  <View style={styles.chapterClearHeader}>
-                    <Ionicons name="trophy-outline" size={15} color={accent} />
-                    <Text style={[styles.chapterClearTitle, { color: accent }]}>
-                      CHAPTER {chapter.number} CLEARED
+            </>
+          )}
+
+          {/* P13: Universal chapter clear card — ALL visual map types */}
+          {!isLocked && allRequiredDone && (
+            <View style={[styles.chapterClearCard, { borderColor: accent + "50" }]}>
+              <View style={styles.chapterClearHeader}>
+                <Ionicons name="trophy-outline" size={15} color={accent} />
+                <Text style={[styles.chapterClearTitle, { color: accent }]}>
+                  CHAPTER {chapter.number} CLEARED
+                </Text>
+                {CHAPTER_TITLE_HINTS[chapter.number] && (
+                  <View style={styles.chapterClearTitleBadge}>
+                    <Ionicons name="ribbon-outline" size={9} color={accent} />
+                    <Text style={[styles.chapterClearTitleBadgeTxt, { color: accent }]}>
+                      {CHAPTER_TITLE_HINTS[chapter.number]}
                     </Text>
                   </View>
-                  <Text style={styles.chapterClearSub}>
-                    {chapter.number < CHAPTERS.length
-                      ? `Chapter ${chapter.number + 1}: ${CHAPTERS[chapter.number]?.theme ?? "the next path"} is now revealed.`
-                      : "The final chapter stands before you."}
+                )}
+              </View>
+              <Text style={styles.chapterClearSub}>
+                {CHAPTER_HEALTH_THEMES[chapter.number] ??
+                  (chapter.number < CHAPTERS.length
+                    ? `Chapter ${chapter.number + 1}: ${CHAPTERS[chapter.number]?.theme ?? "the next path"} is now revealed.`
+                    : "The final chapter stands before you.")}
+              </Text>
+              {CHAPTER_CLEAR_TEASERS[chapter.number] && (
+                <View style={styles.chapterClearTeaser}>
+                  <Ionicons name="arrow-forward-circle-outline" size={10} color={accent + "AA"} />
+                  <Text style={[styles.chapterClearTeaserTxt, { color: accent + "BB" }]}>
+                    {CHAPTER_CLEAR_TEASERS[chapter.number]}
                   </Text>
                 </View>
               )}
-            </>
+            </View>
           )}
 
           {/* J1/J5: University Prep Tips — non-node recommendations (only for unlocked chapters).
@@ -1509,6 +1571,34 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     lineHeight: 15,
     fontStyle: "italic",
+  },
+  // P13: chapter clear card extras
+  chapterClearTitleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(0,0,0,0.10)",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  chapterClearTitleBadgeTxt: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  chapterClearTeaser: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  chapterClearTeaserTxt: {
+    fontSize: 10,
+    fontStyle: "italic",
+    lineHeight: 14,
+    flex: 1,
   },
   // P6: wellness micro-lines (Ch1 prep section)
   wellnessMicroSection: {

@@ -544,6 +544,23 @@ export function GenericChapterVisualMap({
         )}
       </View>
 
+      {/* P13: Chapter clear card — shown when all required nodes are done */}
+      {requiredNodes.length > 0 && requiredNodes.every((id) => claimedNodes.includes(id)) && (
+        <View style={[styles.chClearCard, { borderColor: chapterAccent + "50" }]}>
+          <View style={styles.chClearHeader}>
+            <Ionicons name="trophy-outline" size={14} color={chapterAccent} />
+            <Text style={[styles.chClearTitle, { color: chapterAccent }]}>
+              CHAPTER {chapter.number} CLEARED
+            </Text>
+          </View>
+          <Text style={styles.chClearSub}>
+            {nextChapter
+              ? `${nextChapter.theme} is now revealed.`
+              : "The final chapter stands before you."}
+          </Text>
+        </View>
+      )}
+
       {/* ─── Misted next-chapter gate ─── */}
       <View style={styles.nextChGate}>
         <View style={styles.nextChDivider} />
@@ -705,5 +722,31 @@ const styles = StyleSheet.create({
     color:      COLORS.onSurfaceTertiary + "AA",
     marginTop:  2,
     lineHeight: 13,
+  },
+  // P13: chapter clear card
+  chClearCard: {
+    marginTop:        8,
+    marginHorizontal: 4,
+    padding:          10,
+    borderRadius:     6,
+    borderWidth:      1,
+    backgroundColor:  "rgba(0,0,0,0.06)",
+    gap:              4,
+  },
+  chClearHeader: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           6,
+  },
+  chClearTitle: {
+    fontSize:      11,
+    fontWeight:    "800",
+    letterSpacing: 1,
+  },
+  chClearSub: {
+    fontSize:   11,
+    color:      COLORS.onSurfaceTertiary,
+    lineHeight: 15,
+    fontStyle:  "italic",
   },
 });

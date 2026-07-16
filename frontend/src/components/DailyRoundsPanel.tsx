@@ -65,6 +65,31 @@ function getNextMilestoneTeaser(player: any): typeof QUEST_MILESTONES[number] | 
   );
 }
 
+/** P13: Returns a short proximity hint when a major moment is 1–2 nodes away. */
+function getJourneyProximityHint(player: any): string | null {
+  const claimed: string[] = player?.claimed_journey_nodes ?? [];
+  const chapterNum: number = player?.chapter_progress ?? 1;
+  const chapter = CHAPTERS.find((c) => c.number === chapterNum);
+  if (!chapter) return null;
+  const unclaimed = chapter.parts.filter((p) => !claimed.includes(p.id));
+  if (unclaimed.length === 0) return null;
+  for (let i = 0; i < Math.min(2, unclaimed.length); i++) {
+    const node = unclaimed[i];
+    if (node.type === "mini_boss") {
+      return i === 0 ? "Chapter trial is next!" : "Chapter trial approaching — 1 node away.";
+    }
+    if (node.type === "memory_fragment") {
+      return i === 0 ? "Memory fragment ready." : "Memory fragment nearby.";
+    }
+  }
+  // Chest ready?
+  const required = chapter.requiredCompletionNodes ?? [];
+  if (required.length > 0 && required.every((id) => claimed.includes(id))) {
+    return "Chapter cleared — chest reward ready!";
+  }
+  return null;
+}
+
 const SEEN_KEY = "clinica.dailyRounds.seen";
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 const LEVEL_GATE = 2;
@@ -404,6 +429,7 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                 {(() => {
                   const nextNode = getNextJourneyNode(player);
                   const teaser = getNextMilestoneTeaser(player);
+                  const proximityHint = getJourneyProximityHint(player);
                   if (!nextNode && !teaser) return null;
                   return (
                     <View style={styles.journeyCard}>
@@ -420,6 +446,9 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                             <Text style={styles.journeyKicker}>NEXT ON YOUR JOURNEY</Text>
                             <Text style={styles.journeyTitle} numberOfLines={1}>{nextNode.title}</Text>
                             <Text style={styles.journeyType}>{NODE_TYPE_LABEL[nextNode.type] ?? nextNode.type}</Text>
+                            {!!proximityHint && (
+                              <Text style={styles.journeyProximityHint}>{proximityHint}</Text>
+                            )}
                           </View>
                           <Ionicons name="arrow-forward" size={13} color={COLORS.brand + "99"} />
                         </View>
@@ -742,5 +771,12 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     fontSize: 10,
     marginTop: 1,
+  },
+  // P13: proximity hint line
+  journeyProximityHint: {
+    color: "#F97316",
+    fontSize: 10,
+    fontStyle: "italic",
+    marginTop: 2,
   },
 });
