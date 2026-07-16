@@ -316,26 +316,48 @@ export default function RunHome() {
         <Text style={[styles.sceneLabel, { color: scene.accent }]}>{scene.name.toUpperCase()}</Text>
       </View>
 
-      {/* ── WORLD EVENT BANNER — dismissible, links to the live event preview ── */}
-      {WORLD_EVENT_ACTIVE && worldEventUnlocked && eventBannerDismissed === false && (
+      {/* ── WORLD EVENT / COMMUNITY BOARD BANNER ─────────────────────────────
+           Lv10+ (unlocked): full "WORLD EVENT · LIVE" banner linking to the
+           active event dashboard.
+           Lv1–9 (pre-unlock): softer "COMMUNITY HEALTH BOARD · READ-ONLY"
+           banner linking to the same /world-event route, which already shows
+           the rich public-health education view for pre-unlock players.
+           Both states are dismissible with the same per-event key.          */}
+      {WORLD_EVENT_ACTIVE && eventBannerDismissed === false && (
         <Pressable
-          style={styles.eventBanner}
+          style={[styles.eventBanner, !worldEventUnlocked && styles.eventBannerBoard]}
           onPress={() => router.push(ACTIVE_WORLD_EVENT.route as any)}
           testID="home-world-event-banner"
         >
           <View style={styles.eventBannerIcon}>
-            <Ionicons name="earth" size={22} color={ACTIVE_WORLD_EVENT.accentColor} />
-            <View style={[styles.eventLiveDot, { backgroundColor: ACTIVE_WORLD_EVENT.accentColor }]} />
+            <Ionicons
+              name={worldEventUnlocked ? "earth" : "newspaper-outline"}
+              size={22}
+              color={ACTIVE_WORLD_EVENT.accentColor}
+            />
+            {worldEventUnlocked && (
+              <View style={[styles.eventLiveDot, { backgroundColor: ACTIVE_WORLD_EVENT.accentColor }]} />
+            )}
           </View>
           <View style={{ flex: 1, gap: 1 }}>
             <View style={styles.eventBannerTopRow}>
-              <Text style={styles.eventBannerKicker}>WORLD EVENT · LIVE</Text>
-              <View style={styles.eventBannerBadge}>
-                <Text style={styles.eventBannerBadgeTxt}>{ACTIVE_WORLD_EVENT.badge.toUpperCase()}</Text>
+              <Text style={styles.eventBannerKicker}>
+                {worldEventUnlocked ? "WORLD EVENT · LIVE" : "COMMUNITY HEALTH BOARD"}
+              </Text>
+              <View style={[styles.eventBannerBadge, !worldEventUnlocked && styles.eventBannerBadgeBoard]}>
+                <Text style={styles.eventBannerBadgeTxt}>
+                  {worldEventUnlocked ? ACTIVE_WORLD_EVENT.badge.toUpperCase() : "READ-ONLY"}
+                </Text>
               </View>
             </View>
-            <Text style={styles.eventBannerTitle}>{ACTIVE_WORLD_EVENT.title}</Text>
-            <Text style={styles.eventBannerSub} numberOfLines={1}>{ACTIVE_WORLD_EVENT.subtitle}</Text>
+            <Text style={styles.eventBannerTitle}>
+              {worldEventUnlocked ? ACTIVE_WORLD_EVENT.title : "Public Health Watch"}
+            </Text>
+            <Text style={styles.eventBannerSub} numberOfLines={1}>
+              {worldEventUnlocked
+                ? ACTIVE_WORLD_EVENT.subtitle
+                : "Follow the Miasma Bloom — learn how communities fight outbreaks."}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={ACTIVE_WORLD_EVENT.accentColor} />
           <Pressable
@@ -915,6 +937,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 1,
   },
   eventBannerBadgeTxt: { color: "#5B9BD5", fontSize: 7, fontWeight: "800", letterSpacing: 1 },
+  eventBannerBoard: {
+    backgroundColor: "#065F4625", borderColor: "#34D39933",
+  },
+  eventBannerBadgeBoard: {
+    backgroundColor: "#34D39918", borderColor: "#34D39944",
+  },
   eventBannerTitle: { color: "#34D399", fontSize: 15, fontWeight: "700" },
   eventBannerSub:   { color: COLORS.onSurfaceSecondary, fontSize: 10, lineHeight: 13 },
   eventBannerClose: {
