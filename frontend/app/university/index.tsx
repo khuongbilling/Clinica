@@ -471,6 +471,38 @@ export default function UniversityHubScreen() {
           </>
         )}
 
+        {/* P4: PRACTICE CURRICULUM — structured learning path above the free labs */}
+        {showMore && (
+          <>
+            <Text style={styles.sectionHeading}>PRACTICE CURRICULUM</Text>
+            <Pressable
+              style={pracStyles.curriculumCard}
+              onPress={() => router.push("/university/practice" as any)}
+              testID="university-practice-curriculum"
+            >
+              <LinearGradient
+                colors={["#0D2E38", "#062030"]}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <View style={pracStyles.curriculumLeft}>
+                <View style={pracStyles.curriculumBadge}>
+                  <Ionicons name="school" size={14} color="#2DD4BF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={pracStyles.curriculumKicker}>STRUCTURED TRAINING</Text>
+                  <Text style={pracStyles.curriculumTitle}>Practice Curriculum</Text>
+                  <Text style={pracStyles.curriculumSub}>
+                    3 tracks · Assessment · Priority · Sequencing
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color="#2DD4BF" />
+            </Pressable>
+          </>
+        )}
+
         {/* PRACTICE LABS — J3: repeatable practice modes, visible once FA chain is started */}
         {showMore && (
           <>
@@ -1011,6 +1043,24 @@ const labsStyles = StyleSheet.create({
     paddingVertical: 7,
   },
   labMoreBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
+});
+
+// ── P4: Practice Curriculum card styles ───────────────────────────────────────
+const pracStyles = StyleSheet.create({
+  curriculumCard: {
+    flexDirection: "row", alignItems: "center",
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: "#2DD4BF30",
+    padding: SPACING.md, gap: SPACING.sm, overflow: "hidden",
+    marginBottom: SPACING.xs,
+  },
+  curriculumLeft: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flex: 1 },
+  curriculumBadge: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "#2DD4BF18", alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  curriculumKicker: { color: "#2DD4BF", fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  curriculumTitle:  { color: COLORS.onSurface, fontSize: 16, fontWeight: "800" },
+  curriculumSub:    { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
 });
 
 // ── Battle & Journey prep card styles ─────────────────────────────────────────

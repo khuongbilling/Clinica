@@ -162,6 +162,9 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.uni_practice_milestones_claimed) out = { ...out, uni_practice_milestones_claimed: [] };
   // J4 — backfill Hero Skill Academy upgrade state for pre-J4 saves.
   if (!out.hero_skill_upgrades) out = { ...out, hero_skill_upgrades: {} };
+  // Push 4 — backfill Practice Curriculum completion list for pre-P4 saves.
+  if (!out.practice_modules_completed) out = { ...out, practice_modules_completed: [] };
+  if (out.seen_practice_curriculum == null) out = { ...out, seen_practice_curriculum: false };
   // Fix 9 — backfill quest milestone claim tracking.
   if (!out.claimed_daily_milestones) out = { ...out, claimed_daily_milestones: [] };
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
@@ -384,6 +387,8 @@ type Ctx = {
   claimWeeklyTask: (taskId: string) => Promise<{ ok: boolean; message: string; reward?: DailyReward }>;
   claimWeeklyAllComplete: () => Promise<{ ok: boolean; message: string; reward?: DailyReward }>;
   claimQuestMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string; reward?: DailyReward }>;
+  claimPracticeModule: (moduleId: string) => Promise<{ ok: boolean; message: string }>;
+  markPracticeCurriculumSeen: () => Promise<void>;
   exchangeInsightCrystals: (insightCrystalsCost: number) => Promise<{ ok: boolean; message: string }>;
   recordCueTopics: (topics: string[]) => Promise<void>;
   resetPlayer: () => Promise<void>;
@@ -2231,10 +2236,44 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: 'Milestone reward claimed!', reward: ms.reward };
   }, [updateState]);
 
+  // Push 4 — Claim a Practice Curriculum module one-time reward.
+  const claimPracticeModule = useCallback(async (moduleId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player.' };
+    const { ALL_CURRICULUM_MODULES, isModuleReadyToClaim } = await import('./practiceCurriculum');
+    const mod = ALL_CURRICULUM_MODULES.find((m) => m.id === moduleId);
+    if (!mod) return { ok: false, message: 'Unknown module.' };
+    const already = base.practice_modules_completed ?? [];
+    if (already.includes(moduleId)) return { ok: false, message: 'Already claimed.' };
+    if (!isModuleReadyToClaim(base, mod)) {
+      return { ok: false, message: `Complete ${mod.requiredCount} ${mod.activity.kind.replace('_', ' ')} session(s) first.` };
+    }
+    let next: PlayerState = { ...base, practice_modules_completed: [...already, moduleId] };
+    next = applyXp(next, mod.reward.playerXp);
+    next = { ...next, university_credits: (next.university_credits || 0) + mod.reward.universityCredits };
+    if (mod.reward.codexShards) {
+      next = { ...next, codex_shards: (next.codex_shards || 0) + mod.reward.codexShards };
+    }
+    // Curriculum module completions count as a university_lesson for daily objectives.
+    next = foldDaily(next, 'university_lesson');
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: `Module complete! +${mod.reward.universityCredits} University Credits.` };
+  }, [updateState, foldDaily]);
+
+  // Push 4 — Mark the Practice Curriculum intro card as seen (one-time dismiss).
+  const markPracticeCurriculumSeen = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.seen_practice_curriculum) return;
+    const next: PlayerState = { ...base, seen_practice_curriculum: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

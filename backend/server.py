@@ -160,6 +160,8 @@ class Player(BaseModel):
     uni_stack_count: int = 0
     uni_practice_milestones_claimed: List[str] = Field(default_factory=list)
     hero_skill_upgrades: Dict[str, int] = Field(default_factory=dict)
+    practice_modules_completed: List[str] = Field(default_factory=list)
+    seen_practice_curriculum: bool = False
     seen_lv2_unlock: bool = False
     seen_reminiscence: bool = False
     story_scenes_seen: List[str] = Field(default_factory=list)
@@ -244,6 +246,8 @@ class PlayerUpdate(BaseModel):
     uni_stack_count: Optional[int] = None
     uni_practice_milestones_claimed: Optional[List[str]] = None
     hero_skill_upgrades: Optional[Dict[str, int]] = None
+    practice_modules_completed: Optional[List[str]] = None
+    seen_practice_curriculum: Optional[bool] = None
     seen_lv2_unlock: Optional[bool] = None
     seen_reminiscence: Optional[bool] = None
     story_scenes_seen: Optional[List[str]] = None

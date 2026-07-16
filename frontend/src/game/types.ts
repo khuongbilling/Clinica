@@ -274,6 +274,13 @@ export interface PlayerState {
   // Value = current rank (0 = not purchased; 1 = Rank I active; 2 = Rank II active).
   // Backfilled as {} for existing players in normalizeProgression.
   hero_skill_upgrades?: Record<string, number>;
+  // Push 4 — University Practice Curriculum. Tracks which structured curriculum
+  // modules the player has claimed rewards for (ids from practiceCurriculum.ts).
+  // Backfilled as [] for existing players in normalizeProgression.
+  practice_modules_completed?: string[];
+  // Push 4 — one-time "seen" flag for the Practice Curriculum guided intro.
+  // Set true once the player dismisses the intro narrator card on first visit.
+  seen_practice_curriculum?: boolean;
   // Push 3.6 — Realm plot system. buildingId -> plotId, and plotId -> decorationId.
   // Both are cosmetic/layout-only; they never gate gameplay.
   realm_layout?: Record<string, string>;
