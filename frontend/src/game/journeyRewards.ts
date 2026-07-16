@@ -120,15 +120,19 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   // Reflection: flat XP + credits. Lesson Note preview deferred to J3/J4.
   { nodeId: 'c3p9', chapter: 3, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
 
-  // ── Chapter 4: Code Rush (Level 4, 6 nodes) ───────────────────────────────
-  // Approximate totals at 3★: 655 player XP, 365 hero XP, 1035 Ward Coins,
-  //   160 University Credits, 285 Summoning Shards, 15 RLG.
+  // ── Chapter 4: Code Rush (Level 4, 9 nodes) ───────────────────────────────
+  // P10: memory → chal → battle → ward_def → memory → chal → ward_def → mini_boss → reflection
+  // Approximate totals at 3★: ~730 player XP, 370 hero XP, 1065 Ward Coins,
+  //   225 University Credits, 295 Summoning Shards.
   { nodeId: 'c4p1', chapter: 4, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c4p2', chapter: 4, playerXp: 100, heroXp:  60, coins: 160,                   isStory: false, starsScale: true  },
-  { nodeId: 'c4p3', chapter: 4, playerXp: 110, heroXp:  65, coins: 175, shards: 25,       isStory: false, starsScale: true  },
-  { nodeId: 'c4p4', chapter: 4, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c4p5', chapter: 4, playerXp: 125, heroXp:  75, coins: 200, shards: 35,       isStory: false, starsScale: true  },
-  { nodeId: 'c4p6', chapter: 4, playerXp: 150, heroXp:  90, coins: 250, shards: 75,       isStory: false, starsScale: true  },
+  { nodeId: 'c4p2', chapter: 4, playerXp:  60, heroXp:   0, coins:   0, credits: 35,      isStory: false, starsScale: false },
+  { nodeId: 'c4p3', chapter: 4, playerXp: 100, heroXp:  60, coins: 160,                   isStory: false, starsScale: true  },
+  { nodeId: 'c4p4', chapter: 4, playerXp: 110, heroXp:  65, coins: 175, shards: 25,       isStory: false, starsScale: false },
+  { nodeId: 'c4p5', chapter: 4, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  { nodeId: 'c4p6', chapter: 4, playerXp:  65, heroXp:   0, coins:   0, credits: 40,      isStory: false, starsScale: false },
+  { nodeId: 'c4p7', chapter: 4, playerXp: 125, heroXp:  75, coins: 200, shards: 35,       isStory: false, starsScale: false },
+  { nodeId: 'c4p8', chapter: 4, playerXp: 155, heroXp:  90, coins: 255, shards: 80,       isStory: false, starsScale: false },
+  { nodeId: 'c4p9', chapter: 4, playerXp:  40, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
 
   // ── Chapter 5: Building the Sanctuary (Level 5, 8 nodes) ─────────────────
   // Approximate totals at 3★: 1035 player XP, 590 hero XP, 1850 Ward Coins,

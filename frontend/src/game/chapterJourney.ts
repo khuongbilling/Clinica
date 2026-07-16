@@ -664,8 +664,9 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 4 — Code Rush (6 nodes, Level 4)
-  // J1: story → battle → ward_defense → story → ward_defense → mini-boss
+  // Chapter 4 — Code Rush (9 nodes, Level 4)
+  // P10: memory → chal/rapid-triage → battle → ward_defense →
+  //      memory → chal/stabilize-stack → ward_defense → mini-boss(WD) → reflection
   // University prep: Crowded Ward Triage · Protect the Ward Stabilize Stack
   // ─────────────────────────────────────────────────────────────────────────
   {
@@ -695,11 +696,15 @@ export const CHAPTERS: Chapter[] = [
       primaryRoute: "/university",
       secondaryRoute: "/university/skill-academy",
     },
+    // P10: required nodes that must be cleared before Chapter 5 unlocks.
+    // c4p7 = Code Rush Second Wave (WD), c4p8 = Trial: Hold the Line (WD mini-boss).
+    requiredCompletionNodes: ["c4p7", "c4p8"],
     parts: [
+      // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
         id: "c4p1",
         part: 1,
-        type: "story",
+        type: "memory_fragment",
         title: "The Ward Doors Shake",
         description: "An alert rings across the corridor. Multiple disease-forms breach the perimeter at once. The ward must hold its ground.",
         icon: "book-outline",
@@ -727,9 +732,22 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 2 — Challenge: Rapid Triage ─────────────────────────────────
       {
         id: "c4p2",
         part: 2,
+        type: "challenge",
+        title: "Triage Drill: Crowded Ward",
+        description: "Three patients deteriorate at once. Rank by urgency before the corridor tips into chaos — who gets the bed first?",
+        icon: "list-outline",
+        route: "/university/rapid-triage",
+        rewardXp: 10,
+        rewardCredits: 15,
+      },
+      // ── Node 3 — Battle ────────────────────────────────────────────────────
+      {
+        id: "c4p3",
+        part: 3,
         type: "battle",
         title: "Simulation — Crowded Ward Warning",
         description: "Volume pressure mounts. Multiple active patients, single team. Triage hard and don't let the overload tip into chaos.",
@@ -738,9 +756,10 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 20,
         rewardCoins: 20,
       },
+      // ── Node 4 — Ward Defense: First Wave ────────────────────────────────
       {
-        id: "c4p3",
-        part: 3,
+        id: "c4p4",
+        part: 4,
         type: "ward_defense",
         title: "Code Rush — First Wave",
         description: "Deploy your heroes. Intercept the first disease-wave before it reaches your patients. Position matters.",
@@ -749,10 +768,11 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 25,
         rewardCoins: 25,
       },
+      // ── Node 5 — Memory Fragment ──────────────────────────────────────────
       {
-        id: "c4p4",
-        part: 4,
-        type: "story",
+        id: "c4p5",
+        part: 5,
+        type: "memory_fragment",
         title: "Holding the Line",
         description: "The first wave repelled. But the System confirms: a second wave is forming. The corridor must hold once more.",
         icon: "flag-outline",
@@ -780,9 +800,22 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 6 — Challenge: Stabilize Stack ───────────────────────────────
       {
-        id: "c4p5",
-        part: 5,
+        id: "c4p6",
+        part: 6,
+        type: "challenge",
+        title: "Stack Drill: Protect the Ward",
+        description: "Sequential damage control — the order of interventions determines whether the ward holds or falls.",
+        icon: "layers-outline",
+        route: "/university/stabilize-stack",
+        rewardXp: 12,
+        rewardCredits: 20,
+      },
+      // ── Node 7 — Ward Defense: Second Wave ───────────────────────────────
+      {
+        id: "c4p7",
+        part: 7,
         type: "ward_defense",
         title: "Code Rush — Second Wave",
         description: "Stronger. Faster. The second wave doesn't stop at the corridor. Fortify your deployment — protect every patient.",
@@ -791,9 +824,10 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 30,
         rewardCoins: 30,
       },
+      // ── Node 8 — Mini-boss (Ward Defense finale) ─────────────────────────
       {
-        id: "c4p6",
-        part: 6,
+        id: "c4p8",
+        part: 8,
         type: "mini_boss",
         title: "Trial: Hold the Line",
         description: "The Code Rush finale. An overwhelming surge tests every defensive skill you have. The ward survives — or it doesn't.",
@@ -802,6 +836,39 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 40,
         rewardCoins: 35,
         rewardShards: 10,
+      },
+      // ── Node 9 — Reflection ───────────────────────────────────────────────
+      {
+        id: "c4p9",
+        part: 9,
+        type: "reflection",
+        title: "After the Rush",
+        description: "The ward is quiet. The corridor holds. A moment to breathe — and remember what made the difference.",
+        icon: "leaf-outline",
+        isPlaceholder: true,
+        rewardXp: 10,
+        rewardCredits: 10,
+        scenario: {
+          prompt: "You've just finished a demanding and chaotic shift. A colleague suggests grabbing a meal together before heading home. Beyond just being social, what's the clinical reason this might be genuinely good advice?",
+          healthHook: "How you recover after stress affects your next performance — and your long-term health.",
+          choices: [
+            {
+              text: "It's just a social habit — eating together doesn't affect recovery",
+              correct: false,
+              feedback: "Shared meals measurably reduce cortisol compared to eating alone, which is directly relevant to post-shift physiological recovery.",
+            },
+            {
+              text: "Eating after sustained stress helps replenish glucose, and sharing it with someone accelerates nervous-system recovery",
+              correct: true,
+              feedback: "Both nutrition and social connection are active recovery tools — not luxuries. This is the same advice we give patients after procedures.",
+            },
+            {
+              text: "You should go straight home — rest is more important than food",
+              correct: false,
+              feedback: "Both matter. Skipping food after sustained cortisol stress delays recovery. Rest and refuelling work together.",
+            },
+          ],
+        },
       },
     ],
   },
