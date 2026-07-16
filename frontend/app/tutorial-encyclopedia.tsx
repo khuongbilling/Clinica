@@ -210,7 +210,7 @@ export default function TutorialEncyclopedia() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
     flexDirection: "row",

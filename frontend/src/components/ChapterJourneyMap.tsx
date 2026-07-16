@@ -28,6 +28,7 @@ import {
   PHASE_1_SUMMARY,
   type ChapterPartType,
 } from "@/src/game/chapterJourney";
+import { Chapter1VisualMap } from "@/src/components/Chapter1VisualMap";
 import { ENEMIES } from "@/src/game/content";
 import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/src/game/journeyRewards";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
@@ -262,12 +263,16 @@ function ChapterCard({
     const def = getJourneyNodeDef(part.id);
     if (!def) return false; // no reward def for this node (Ch6+)
     switch (part.type) {
+      case 'memory_fragment':
       case 'story':
-      case 'reflection':
+      case 'reflection': {
         if (part.isPlaceholder) return true; // auto-eligible when chapter active
-        // Non-placeholder story: eligible if the linked scene has been watched.
+        // Non-placeholder: eligible if the linked scene has been watched.
         const sceneId = part.route?.split('sceneId=')?.[1];
         return sceneId ? storyScenesSeen.includes(sceneId) : true;
+      }
+      case 'challenge':
+        return true; // challenge mini-games: always eligible when chapter active
       case 'battle':
         return anyBattleWon;
       case 'mini_boss':
@@ -411,45 +416,54 @@ function ChapterCard({
       {/* ── Parts list (expanded) ── */}
       {isExpanded && (
         <View style={styles.partsList}>
-          {chapter.parts.map((part, idx) => {
-            const eligible = isNodeEligible(part);
-            const claimed  = claimedNodes.includes(part.id);
-            // Stars to pass on claim: use best chapter stars for battle nodes;
-            // story/realm/reflection always get 3 (flat reward, no scaling).
-            const claimStars = (
-              part.type === 'battle' || part.type === 'mini_boss' || part.type === 'ward_defense'
-            ) ? Math.max(1, bestChapterStars) : 3;
-            // J5: Ward Defense nodes require playerLevel >= 4 (safety gate).
-            // Chapter 4 itself is locked below Level 4, so this only fires if
-            // somehow the chapter unlocks but the mode hasn't been reached yet.
-            const isWardDefenseLocked = part.type === 'ward_defense' && playerLevel < 4;
-            return (
-              <PartRow
-                key={part.id}
-                part={part}
-                index={idx}
-                chapterNumber={chapter.number}
-                chapterAccent={chapter.accentColor}
-                chapterLocked={isLocked}
-                isWardDefenseLocked={isWardDefenseLocked}
-                onPress={() => onPartPress(part)}
-                isLast={idx === chapter.parts.length - 1}
-                isEligible={eligible}
-                isClaimed={claimed}
-                claimStars={claimStars}
-                onClaim={onNodeClaim ? () => onNodeClaim(part.id, claimStars) : undefined}
-              />
-            );
-          })}
+          {/* P2: Chapter 1 uses the visual path map; all other chapters use PartRow list. */}
+          {chapter.number === 1 ? (
+            <Chapter1VisualMap
+              battleStars={battleStars}
+              claimedNodes={claimedNodes}
+              storyScenesSeen={storyScenesSeen}
+              chapterAccent={chapter.accentColor}
+              onPartPress={onPartPress}
+              onNodeClaim={onNodeClaim}
+            />
+          ) : (
+            <>
+              {chapter.parts.map((part, idx) => {
+                const eligible = isNodeEligible(part);
+                const claimed  = claimedNodes.includes(part.id);
+                const claimStars = (
+                  part.type === 'battle' || part.type === 'mini_boss' || part.type === 'ward_defense'
+                ) ? Math.max(1, bestChapterStars) : 3;
+                const isWardDefenseLocked = part.type === 'ward_defense' && playerLevel < 4;
+                return (
+                  <PartRow
+                    key={part.id}
+                    part={part}
+                    index={idx}
+                    chapterNumber={chapter.number}
+                    chapterAccent={chapter.accentColor}
+                    chapterLocked={isLocked}
+                    isWardDefenseLocked={isWardDefenseLocked}
+                    onPress={() => onPartPress(part)}
+                    isLast={idx === chapter.parts.length - 1}
+                    isEligible={eligible}
+                    isClaimed={claimed}
+                    claimStars={claimStars}
+                    onClaim={onNodeClaim ? () => onNodeClaim(part.id, claimStars) : undefined}
+                  />
+                );
+              })}
 
-          {/* Locked chapter body message */}
-          {isLocked && (
-            <View style={styles.lockedMsg}>
-              <Ionicons name="shield-half" size={14} color={COLORS.onSurfaceTertiary} />
-              <Text style={styles.lockedMsgTxt}>
-                Field Practice Required. Complete University practice, replay cleared shifts, or improve hero skills before continuing.
-              </Text>
-            </View>
+              {/* Locked chapter body message (Ch2+) */}
+              {isLocked && (
+                <View style={styles.lockedMsg}>
+                  <Ionicons name="shield-half" size={14} color={COLORS.onSurfaceTertiary} />
+                  <Text style={styles.lockedMsgTxt}>
+                    Field Practice Required. Complete University practice, replay cleared shifts, or improve hero skills before continuing.
+                  </Text>
+                </View>
+              )}
+            </>
           )}
 
           {/* J1/J5: University Prep Tips — non-node recommendations (only for unlocked chapters).
