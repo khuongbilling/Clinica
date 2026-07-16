@@ -574,6 +574,16 @@ function ChapterCard({
   );
 }
 
+// ── P7: Challenge sub-label helper ───────────────────────────────────────────
+
+/** Returns a more specific badge label for challenge nodes based on their route. */
+function getChallengeSubLabel(route?: string): string {
+  if (route?.includes("rapid-triage") || route?.includes("triage-hall")) return "TRIAGE DRILL";
+  if (route?.includes("stabilize-stack") || route?.includes("stack-lab")) return "STACK DRILL";
+  if (route?.includes("cue-hunt") || route?.includes("cue-lab")) return "CUE DRILL";
+  return "CHALLENGE";
+}
+
 // ── PartRow ───────────────────────────────────────────────────────────────────
 
 // J5: Minimum player level required to enter a Ward Defense node.
@@ -617,6 +627,9 @@ function PartRow({
   const flashAnim = React.useRef(new Animated.Value(0)).current;
   // P6 — next-node pulse animation
   const pulseAnim = React.useRef(new Animated.Value(0.35)).current;
+  // P7 — inline health scenario: which choice index was selected (null = not yet answered)
+  const [scenarioAnswer, setScenarioAnswer] = React.useState<number | null>(null);
+  const scenarioDone = scenarioAnswer !== null;
 
   React.useEffect(() => {
     if (!isNextNode || isClaimed || chapterLocked) return;
@@ -637,6 +650,10 @@ function PartRow({
   const def = getJourneyNodeDef(part.id);
   // Compute the reward preview at the player's current stars (or 3★ for story).
   const rewardPreview = def ? computeJourneyReward(def, claimStars) : null;
+  // P7: scenario gating — scenario panel is shown when eligible + unclaimed; CLAIM requires scenario done
+  const hasScenario = !!part.scenario;
+  const showScenarioPanel = hasScenario && !chapterLocked && isEligible && !isClaimed;
+  const claimReady = isEligible && (!hasScenario || scenarioDone);
 
   async function handleClaim() {
     if (!onClaim || claiming) return;
@@ -687,12 +704,22 @@ function PartRow({
           testID={`chapter-part-${part.id}`}
         >
         <View style={styles.partTopRow}>
+          {/* P7: challenge nodes get specific sub-labels based on their route */}
           <View style={[styles.partTypeBadge, { backgroundColor: typeColor + "18" }]}>
             <Text style={[styles.partTypeTxt, { color: typeColor }]}>
-              {PART_TYPE_LABEL[part.type]}
+              {part.type === "challenge"
+                ? getChallengeSubLabel(part.route)
+                : PART_TYPE_LABEL[part.type]}
             </Text>
           </View>
-          {part.isPlaceholder && !chapterLocked && (
+          {/* P7: SCENARIO badge replaces COMING SOON for nodes with inline scenarios */}
+          {hasScenario && !chapterLocked && !isClaimed && (
+            <View style={styles.scenarioBadge}>
+              <Ionicons name="help-circle-outline" size={9} color="#A78BFA" />
+              <Text style={styles.scenarioBadgeTxt}>SCENARIO</Text>
+            </View>
+          )}
+          {part.isPlaceholder && !chapterLocked && !hasScenario && (
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonTxt}>COMING SOON</Text>
             </View>
@@ -725,6 +752,65 @@ function PartRow({
         >
           {part.description}
         </Text>
+
+        {/* P7 — inline health scenario: shown for eligible unclaimed nodes with a scenario */}
+        {showScenarioPanel && part.scenario && (
+          <View style={styles.scenarioPanel}>
+            <View style={styles.scenarioPanelHeader}>
+              <Ionicons name="medical-outline" size={10} color="#A78BFA" />
+              <Text style={styles.scenarioPanelTitle}>HEALTH SCENARIO</Text>
+            </View>
+            <Text style={styles.scenarioPrompt}>{part.scenario.prompt}</Text>
+            {part.scenario.healthHook && (
+              <Text style={styles.scenarioHook}>{part.scenario.healthHook}</Text>
+            )}
+            <View style={styles.scenarioChoices}>
+              {part.scenario.choices.map((choice, ci) => {
+                const isSelected = scenarioAnswer === ci;
+                const answered = scenarioDone;
+                const btnBorderColor = !answered
+                  ? chapterAccent + "50"
+                  : isSelected
+                    ? (choice.correct ? "#34D399" : "#EF4444")
+                    : choice.correct ? "#34D39960" : COLORS.border;
+                const btnBgColor = !answered
+                  ? COLORS.surfaceTertiary
+                  : isSelected
+                    ? (choice.correct ? "#34D39918" : "#EF444418")
+                    : choice.correct ? "#34D39908" : "transparent";
+                return (
+                  <Pressable
+                    key={ci}
+                    style={[styles.scenarioChoiceBtn, { borderColor: btnBorderColor, backgroundColor: btnBgColor }]}
+                    onPress={answered ? undefined : () => setScenarioAnswer(ci)}
+                    disabled={answered}
+                  >
+                    <Text style={[styles.scenarioChoiceLbl, { color: answered && choice.correct ? "#34D399" : chapterAccent }]}>
+                      {String.fromCharCode(65 + ci)}.
+                    </Text>
+                    <Text style={[styles.scenarioChoiceTxt, { color: answered && isSelected && !choice.correct ? "#F87171" : COLORS.onSurfaceSecondary }]} numberOfLines={4}>
+                      {choice.text}
+                    </Text>
+                    {answered && choice.correct && (
+                      <Ionicons name="checkmark-circle" size={13} color="#34D399" />
+                    )}
+                    {answered && isSelected && !choice.correct && (
+                      <Ionicons name="close-circle" size={13} color="#EF4444" />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+            {scenarioDone && (
+              <Text style={[
+                styles.scenarioFeedback,
+                { color: part.scenario.choices[scenarioAnswer].correct ? "#34D399" : "#F87171" },
+              ]}>
+                {part.scenario.choices[scenarioAnswer].feedback}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* J5 — Ward Defense locked banner: shown when playerLevel < 4 */}
         {isWardDefenseLocked && (
@@ -797,14 +883,14 @@ function PartRow({
           </View>
         ) : null}
 
-        {/* J2 — CLAIM / CLAIMED button for first-clear journey node reward */}
+        {/* J2 — CLAIM / CLAIMED button — P7: gated behind scenario completion when node has a scenario */}
         {def && !chapterLocked && (
           isClaimed ? (
             <View style={styles.nodeClaimedBadge}>
               <Ionicons name="checkmark-circle" size={11} color="#34D399" />
               <Text style={styles.nodeClaimedTxt}>CLAIMED</Text>
             </View>
-          ) : isEligible && onClaim ? (
+          ) : claimReady && onClaim ? (
             <Pressable
               style={[styles.nodeClaimBtn, claiming && styles.nodeClaimBtnBusy]}
               onPress={handleClaim}
@@ -814,6 +900,13 @@ function PartRow({
               <Ionicons name="gift-outline" size={11} color="#FFFFFF" />
               <Text style={styles.nodeClaimBtnTxt}>{claiming ? "…" : "CLAIM"}</Text>
             </Pressable>
+          ) : isEligible && hasScenario && !scenarioDone ? (
+            <View style={styles.scenarioClaimHint}>
+              <Ionicons name="arrow-up-outline" size={9} color={chapterAccent + "80"} />
+              <Text style={[styles.scenarioClaimHintTxt, { color: chapterAccent + "90" }]}>
+                Answer the scenario above to unlock claim
+              </Text>
+            </View>
           ) : null
         )}
         </Pressable>
@@ -1418,5 +1511,97 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.onSurfaceTertiary,
     lineHeight: 15,
+  },
+
+  // P7: scenario badge (replaces COMING SOON for playable nodes)
+  scenarioBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    backgroundColor: "#A78BFA18",
+    borderWidth: 1,
+    borderColor: "#A78BFA40",
+  },
+  scenarioBadgeTxt: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#A78BFA",
+    letterSpacing: 0.8,
+  },
+  // P7: inline scenario panel container
+  scenarioPanel: {
+    marginTop: SPACING.xs,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: "#A78BFA30",
+    backgroundColor: "#A78BFA08",
+    padding: SPACING.xs,
+    gap: 6,
+  },
+  scenarioPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  scenarioPanelTitle: {
+    fontSize: 8,
+    fontWeight: "800",
+    color: "#A78BFA",
+    letterSpacing: 1.2,
+  },
+  scenarioPrompt: {
+    fontSize: 11,
+    color: COLORS.onSurface,
+    lineHeight: 16,
+    fontWeight: "500",
+  },
+  scenarioHook: {
+    fontSize: 10,
+    color: COLORS.onSurfaceTertiary,
+    fontStyle: "italic",
+    lineHeight: 14,
+  },
+  scenarioChoices: {
+    gap: 4,
+  },
+  scenarioChoiceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+  },
+  scenarioChoiceLbl: {
+    fontSize: 10,
+    fontWeight: "800",
+    flexShrink: 0,
+    width: 14,
+  },
+  scenarioChoiceTxt: {
+    fontSize: 11,
+    lineHeight: 15,
+    flex: 1,
+  },
+  scenarioFeedback: {
+    fontSize: 10,
+    fontStyle: "italic",
+    lineHeight: 14,
+    paddingTop: 2,
+  },
+  // P7: hint shown below CLAIM when scenario is pending
+  scenarioClaimHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  scenarioClaimHintTxt: {
+    fontSize: 9,
+    fontStyle: "italic",
   },
 });

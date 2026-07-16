@@ -33,6 +33,32 @@ export type ChapterPartType =
 
 // ── Data interfaces ──────────────────────────────────────────────────────────
 
+// ── P7: Inline health scenario (story/reflection/realm placeholder nodes) ─────
+
+export interface NodeScenarioChoice {
+  text: string;
+  /** True for the single correct answer. */
+  correct: boolean;
+  /** One-sentence feedback shown after the player selects this choice. */
+  feedback: string;
+}
+
+/**
+ * A relatable everyday health scenario attached to a story / reflection node.
+ * Shown as an inline choose-A/B/C panel in ChapterJourneyMap.
+ * Completing it (any answer) gates the CLAIM button — no wrong-answer lock.
+ */
+export interface NodeScenario {
+  /** 2–3 sentence relatable health prompt (no clinical jargon). */
+  prompt: string;
+  /** Optional one-liner grounding the scenario in real-world / healer life. */
+  healthHook?: string;
+  /** Exactly 3 choices; exactly one should have correct: true. */
+  choices: [NodeScenarioChoice, NodeScenarioChoice, NodeScenarioChoice];
+}
+
+// ── Part definition ───────────────────────────────────────────────────────────
+
 export interface ChapterPart {
   id: string;
   part: number;         // 1-indexed within the chapter
@@ -48,6 +74,8 @@ export interface ChapterPart {
   rewardCredits?: number; // University Credits
   rewardCoins?: number;   // Ward Coins
   rewardShards?: number;  // Summoning Shards
+  /** P7: Optional inline health scenario that gates the CLAIM button. */
+  scenario?: NodeScenario;
 }
 
 export interface Chapter {
@@ -210,6 +238,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "alert-circle-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "A patient who just finished their IV fluids is quiet and not asking for anything. Before you chart them as stable, what should you do?",
+          healthHook: "Silence isn't always recovery — in wards and in daily life.",
+          choices: [
+            {
+              text: "Ask the nurse if they need another IV bag started",
+              correct: false,
+              feedback: "More IV fluid is given on clinical need — not just because the last bag finished.",
+            },
+            {
+              text: "Reassess their vitals and ask how they're feeling",
+              correct: true,
+              feedback: "Reassessment after treatment is the clinical standard before charting any patient stable.",
+            },
+            {
+              text: "Let them rest — they've had enough attention for now",
+              correct: false,
+              feedback: "Rest is helpful, but 'resting' and 'stable' aren't the same — evidence must support the status.",
+            },
+          ],
+        },
       },
       // ── Node 6 — Chapter Trial (Mini-Boss) ───────────────────────────────
       {
@@ -269,6 +318,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "book-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "A friend texts you: 'Had a headache since yesterday, feel warm, skipped dinner.' They ask if they should just sleep it off. What do you say?",
+          healthHook: "Fever and missed meals together are a signal worth taking seriously.",
+          choices: [
+            {
+              text: "Just drink water and you'll be fine",
+              correct: false,
+              feedback: "Hydration helps, but this combination of symptoms needs temperature measurement and food too.",
+            },
+            {
+              text: "Check your temperature, have a light meal, and rest — let me know if it gets worse",
+              correct: true,
+              feedback: "Clear, practical, and appropriate — this is what good clinical sense looks like in everyday life.",
+            },
+            {
+              text: "Go to A&E immediately",
+              correct: false,
+              feedback: "Escalation is important, but these symptoms aren't yet an emergency — monitoring and self-care come first.",
+            },
+          ],
+        },
       },
       {
         id: "c2p2",
@@ -290,6 +360,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "people-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "You treated a patient with a fever earlier. Their temperature is now normal. Two hours later they mention feeling cold and shivery. What does this suggest?",
+          healthHook: "Conditions reassert themselves — recovery isn't always linear.",
+          choices: [
+            {
+              text: "They're probably just cold from the air conditioning",
+              correct: false,
+              feedback: "Environmental cold is possible, but new chills after fever treatment require clinical reassessment first.",
+            },
+            {
+              text: "The fever may be returning — reassess their vitals now",
+              correct: true,
+              feedback: "Chills after treatment can signal a returning or worsening condition. Reassess before assuming all is well.",
+            },
+            {
+              text: "The medication worked — this is a normal recovery phase",
+              correct: false,
+              feedback: "Don't attribute new symptoms to recovery without evidence. The clinical picture must guide your thinking.",
+            },
+          ],
+        },
       },
       {
         id: "c2p4",
@@ -370,6 +461,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "book-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "Your colleague says they feel 'a bit short of breath' while sitting at their desk. They haven't exercised and seem slightly anxious. What's your first thought?",
+          healthHook: "Unexplained shortness of breath at rest is always worth a second look.",
+          choices: [
+            {
+              text: "They're probably just stressed — breathing exercises should help",
+              correct: false,
+              feedback: "Anxiety can cause breathlessness, but physical causes must be ruled out first when it occurs at rest.",
+            },
+            {
+              text: "Ask if they feel chest tightness or pain, and observe their breathing rate",
+              correct: true,
+              feedback: "This is the right first step — screen for red flags before attributing rest-onset breathlessness to stress.",
+            },
+            {
+              text: "Offer them water and suggest a 10-minute break",
+              correct: false,
+              feedback: "Comfort measures are kind, but don't delay assessment of unexplained breathlessness at rest.",
+            },
+          ],
+        },
       },
       {
         id: "c3p2",
@@ -402,6 +514,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "school-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "Three things need attention at once: a patient alarm is going off, a colleague is calling from across the ward, and a medication needs your signature. What do you attend to first?",
+          healthHook: "Priority frameworks aren't just clinical — they help in any high-pressure situation.",
+          choices: [
+            {
+              text: "Sign the medication — it's quick and then I'm free",
+              correct: false,
+              feedback: "Speed alone doesn't set priority. A patient alarm signals a direct safety need that can't be queued.",
+            },
+            {
+              text: "Respond to the patient alarm — safety comes before tasks",
+              correct: true,
+              feedback: "ABCDE in practice: the patient's physiological safety outranks administrative tasks every time.",
+            },
+            {
+              text: "Answer my colleague first — they might have critical information",
+              correct: false,
+              feedback: "Verbal communication can wait seconds. A patient in alarm cannot.",
+            },
+          ],
+        },
       },
       {
         id: "c3p5",
@@ -436,6 +569,27 @@ export const CHAPTERS: Chapter[] = [
         isPlaceholder: true,
         rewardXp: 10,
         rewardCredits: 10,
+        scenario: {
+          prompt: "After a long shift you notice your own breathing getting faster and shallower — you're stressed. What's the quickest way to slow it down physiologically?",
+          healthHook: "The techniques we use for patients work for healers too.",
+          choices: [
+            {
+              text: "Drink coffee — it clears your head and helps you focus",
+              correct: false,
+              feedback: "Caffeine can worsen anxious breathing by increasing heart rate — the opposite of what you need right now.",
+            },
+            {
+              text: "Breathe out slowly for longer than you breathe in",
+              correct: true,
+              feedback: "A longer exhale activates the calming reflex (parasympathetic nervous system). This is also what we teach patients.",
+            },
+            {
+              text: "Hold your breath for 10 seconds to reset the pattern",
+              correct: false,
+              feedback: "Breath-holding raises CO₂ and anxiety. Controlled extended exhale is the correct clinical approach.",
+            },
+          ],
+        },
       },
     ],
   },
@@ -482,6 +636,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "book-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "Three patients need attention: one has a wound that's actively bleeding, one hasn't had their morning medication, and one is asking about discharge paperwork. Who do you see first?",
+          healthHook: "Triage isn't just a ward skill — it applies in family, work, and daily life.",
+          choices: [
+            {
+              text: "The medication — skipping doses can be dangerous",
+              correct: false,
+              feedback: "Delayed medication is a concern, but visible active bleeding takes immediate priority over scheduled tasks.",
+            },
+            {
+              text: "The bleeding patient — visible blood loss is an urgent safety need",
+              correct: true,
+              feedback: "Active bleeding is always prioritised. Medication and paperwork wait when direct patient safety is at stake.",
+            },
+            {
+              text: "The discharge paperwork — then everyone moves on faster",
+              correct: false,
+              feedback: "Administrative efficiency never overrides patient safety needs.",
+            },
+          ],
+        },
       },
       {
         id: "c4p2",
@@ -514,6 +689,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "flag-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "After managing a difficult first wave of patients, you feel the urge to relax. But a junior colleague looks worried about another patient in the corner. What do you do?",
+          healthHook: "In healthcare and in life, the second wave often follows the first.",
+          choices: [
+            {
+              text: "You've done your part — let the junior handle it",
+              correct: false,
+              feedback: "Stepping back after one success is a common error. Clinical responsibility doesn't stop when you feel tired.",
+            },
+            {
+              text: "Ask your colleague what they see — then assess together",
+              correct: true,
+              feedback: "Collaborative assessment and curiosity are core clinical habits. Two pairs of eyes catch more than one.",
+            },
+            {
+              text: "Finish your documentation first, then check on the patient",
+              correct: false,
+              feedback: "Documentation matters, but an actively worried colleague signals that patient safety responds now — not later.",
+            },
+          ],
+        },
       },
       {
         id: "c4p5",
@@ -583,6 +779,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "book-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "A patient who was very unwell last week is now sitting up, eating, and chatting with visitors. A family member asks if they can go home today. What's the thoughtful answer?",
+          healthHook: "Looking well and being clinically ready for discharge are not the same thing.",
+          choices: [
+            {
+              text: "They look great — I'd say yes!",
+              correct: false,
+              feedback: "Visual improvement is encouraging but never sufficient for discharge without a proper clinical review.",
+            },
+            {
+              text: "The clinical team needs to assess their vitals and recovery markers before we can say",
+              correct: true,
+              feedback: "Discharge requires systematic review, not just visual impression. This is the right answer to give families.",
+            },
+            {
+              text: "They need at least another week just to be safe",
+              correct: false,
+              feedback: "Unnecessary hospital stays carry their own risks — evidence-based timing always matters more than assumed safety.",
+            },
+          ],
+        },
       },
       {
         id: "c5p2",
@@ -616,6 +833,27 @@ export const CHAPTERS: Chapter[] = [
         icon: "leaf-outline",
         isPlaceholder: true,
         rewardXp: 5,
+        scenario: {
+          prompt: "After a particularly hard shift, you feel drained but have another shift tomorrow. A colleague offers to cover your last 30 minutes. What's the clinically wise thing to do?",
+          healthHook: "Healer wellbeing is a patient safety issue, not a personal comfort one.",
+          choices: [
+            {
+              text: "Push through — you started it, you finish it",
+              correct: false,
+              feedback: "Fatigue impairs clinical decision-making. Accepting help is professional, not weak.",
+            },
+            {
+              text: "Accept the offer — rest is part of the care cycle",
+              correct: true,
+              feedback: "A rested healer makes safer decisions. Recognising your limits is a clinical skill, not a failure.",
+            },
+            {
+              text: "Accept but feel guilty — you should have managed better",
+              correct: false,
+              feedback: "Guilt over appropriate rest is counterproductive and unsustainable. Self-care enables patient care.",
+            },
+          ],
+        },
       },
       {
         id: "c5p5",
