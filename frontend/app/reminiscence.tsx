@@ -270,7 +270,7 @@ const PANELS: Panel[] = [
 export default function ReminiscenceScreen() {
   const router = useRouter();
   useBlockBack();
-  const { player, markReminiscenceSeen } = usePlayer();
+  const { player, markReminiscenceSeen, applyRewards } = usePlayer();
   const { replay } = useLocalSearchParams<{ replay?: string }>();
   // Push 6 — Profile "Replay Memory Reminiscence" watches this cutscene again
   // without breaking University/Lotus Lessons state: markReminiscenceSeen is
@@ -304,9 +304,8 @@ export default function ReminiscenceScreen() {
     if (!isReplay) {
       const isNew = await completeObjective("obj_memory_seen");
       if (isNew) {
+        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
         await markObjectiveXpGranted("obj_memory_seen");
-        // XP applied via applyRewards not available here — university/index.tsx
-        // catch-up grant handles the payout on first University visit instead.
       }
     }
     await markReminiscenceSeen();

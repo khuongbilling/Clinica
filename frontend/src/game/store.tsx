@@ -25,6 +25,7 @@ import { isValidCellId } from './realmGrid';
 import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
 } from './classTree';
+import { reconcileEarlyObjectives } from './objectiveProgress';
 import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
 import { TokenExchangeItem, MIASMA_BLOOM_MILESTONES, getMilestoneProgress } from './worldEvent';
 
@@ -624,12 +625,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     try {
       const local = await loadLocal();
       if (!local) { setPlayer(null); setLoading(false); return; }
-      setPlayer(normalizeProgression(local));
+      const normalized = normalizeProgression(local);
+      setPlayer(normalized);
+
+      // Reconcile early objectives (steps 1-6) against PlayerState flags so the
+      // hub never shows a regressed step for players whose objective storage is
+      // behind their actual progress (crash, existing account backfill, etc.).
+      // Fire-and-forget: the hub rereads objective progress on every focus.
+      reconcileEarlyObjectives(normalized).catch(() => {});
 
       try {
         const remote = normalizeProgression(await api.getPlayer(local.id));
         setPlayer(remote);
         await saveLocal(remote);
+        // Also reconcile against the backend-authoritative snapshot in case
+        // flags differ between local and remote (e.g. resumed on a new device).
+        reconcileEarlyObjectives(remote).catch(() => {});
       } catch {
         // Backend unavailable — use local data
       }

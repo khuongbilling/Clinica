@@ -276,3 +276,58 @@ export async function resetObjectives(): Promise<void> {
     await AsyncStorage.removeItem(KEY);
   } catch {}
 }
+
+/**
+ * Reconcile the first 6 onboarding objectives against PlayerState flags.
+ *
+ * If a player bypassed a flow step (crash, replay, existing account backfill),
+ * the objective may never have been written to `clinica.objectives.v1` even
+ * though the PlayerState flag proves the step was completed.  This call fills
+ * any such gaps so `getCurrentObjective` never regresses to a step the player
+ * already passed.
+ *
+ * Idempotent — safe to call on every boot.  Only writes to AsyncStorage when
+ * at least one gap is found.  Does NOT touch the XP-paid record; the
+ * university/index.tsx catch-up grant handles missing XP on first University
+ * visit (objectives 1–6 are in its catch-up loop by design).
+ *
+ * Returns the list of objective IDs that were newly written by this call,
+ * so callers that want immediate XP recovery can iterate the list.
+ */
+export async function reconcileEarlyObjectives(player: {
+  prologue_complete?: boolean;
+  identity_restored?: boolean;
+  diagnostic_intro_seen?: boolean;
+  class_tree_id?: string | null;
+  seen_reminiscence?: boolean;
+}): Promise<ObjectiveId[]> {
+  try {
+    const record = await load();
+    const newly: ObjectiveId[] = [];
+
+    const mark = (id: ObjectiveId) => {
+      if (!record[id]) { record[id] = true; newly.push(id); }
+    };
+
+    // Step 1 — prologue battle finished
+    if (player.prologue_complete) mark("obj_prologue_done");
+    // Step 2 — Lotus Recall cinematic: no direct flag, but identity_restored
+    //           implies the player passed through lotus-recall first
+    if (player.identity_restored) mark("obj_lotus_recall");
+    // Step 3 — identity name saved
+    if (player.identity_restored) mark("obj_identity_done");
+    // Step 4 — class diagnostic quiz answered
+    if (player.diagnostic_intro_seen) mark("obj_diagnostic_done");
+    // Step 5 — class registered (class_tree_id is written by confirmClassDiagnostic;
+    //           it is also backfilled by normalizeProgression for legacy accounts,
+    //           so diagnostic_intro_seen is the binding gate here)
+    if (player.diagnostic_intro_seen && player.class_tree_id) mark("obj_class_result");
+    // Step 6 — reminiscence scene completed
+    if (player.seen_reminiscence) mark("obj_memory_seen");
+
+    if (newly.length > 0) await save(record);
+    return newly;
+  } catch {
+    return [];
+  }
+}
