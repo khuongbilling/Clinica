@@ -358,13 +358,11 @@ export default function RapidTriageScreen() {
         const next = c + 1;
         if (next >= CARDS.length) {
           setGamePhase("complete");
-        } else if (next === 1 && !isCompleted("rapidTriageCard2")) {
-          // Card 2 just appeared — start its forced tutorial after a brief delay
-          setTimeout(() => startTutorial("rapidTriageCard2"), 600);
-        } else if (next === 2 && !isCompleted("rapidTriageCard3")) {
-          // Card 3 just appeared — start its forced tutorial after a brief delay
-          setTimeout(() => startTutorial("rapidTriageCard3"), 600);
         }
+        // P1: mid-game startTutorial("rapidTriageCard2/Card3") calls removed.
+        // Those separate 1-step tutorials caused the counter to show "1 / 1" for
+        // cards 2 and 3 — inconsistent with card 1. rapidTriageIntro now carries
+        // progressLabel overrides ("Card 1/2/3 of 3") for consistent display.
         return next;
       });
       Animated.timing(cardFade, { toValue: 1, duration: 220, useNativeDriver: true }).start();

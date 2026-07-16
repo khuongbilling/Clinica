@@ -37,35 +37,39 @@ import { UI } from "@/src/theme/ui";
 // ── Part type label + color helpers ──────────────────────────────────────────
 
 const PART_TYPE_LABEL: Record<ChapterPartType, string> = {
-  battle:       "SHIFT",
-  mini_boss:    "MINI-BOSS",
-  ward_defense: "WARD DEF.",
-  minigame:     "MINI-GAME",
-  lesson:       "LESSON",
-  story:        "STORY",
-  reflection:   "REFLECTION",
-  reward:       "REWARD",
-  realm:        "REALM",
-  mode_preview: "PREVIEW",
-  chain:        "CHAIN",
-  community:    "COMMUNITY",
-  arena:        "ARENA",
+  battle:          "SHIFT",
+  mini_boss:       "MINI-BOSS",
+  ward_defense:    "WARD DEF.",
+  minigame:        "MINI-GAME",
+  lesson:          "LESSON",
+  story:           "STORY",
+  memory_fragment: "MEMORY",
+  challenge:       "CHALLENGE",
+  reflection:      "REFLECTION",
+  reward:          "REWARD",
+  realm:           "REALM",
+  mode_preview:    "PREVIEW",
+  chain:           "CHAIN",
+  community:       "COMMUNITY",
+  arena:           "ARENA",
 };
 
 const PART_TYPE_COLOR: Record<ChapterPartType, string> = {
-  battle:       COLORS.error,
-  mini_boss:    "#D4AF37",
-  ward_defense: "#EF4444",
-  minigame:     COLORS.brand,
-  lesson:       "#34D399",
-  story:        "#B0DEFF",
-  reflection:   "#A78BFA",
-  reward:       "#D4AF37",
-  realm:        "#34D399",
-  mode_preview: COLORS.river,
-  chain:        COLORS.fire,
-  community:    "#F472B6",
-  arena:        "#8B5CF6",
+  battle:          COLORS.error,
+  mini_boss:       "#D4AF37",
+  ward_defense:    "#EF4444",
+  minigame:        COLORS.brand,
+  lesson:          "#34D399",
+  story:           "#B0DEFF",
+  memory_fragment: "#D4AF37",
+  challenge:       "#F59E0B",
+  reflection:      "#A78BFA",
+  reward:          "#D4AF37",
+  realm:           "#34D399",
+  mode_preview:    COLORS.river,
+  chain:           COLORS.fire,
+  community:       "#F472B6",
+  arena:           "#8B5CF6",
 };
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -129,7 +133,7 @@ export function ChapterJourneyMap({
 
       {/* ── Chapter list ── */}
       {CHAPTERS.map((chapter, idx) => {
-        const status = getChapterStatus(chapter, playerLevel);
+        const status = getChapterStatus(chapter, playerLevel, claimedNodes);
         const isExpanded = expandedId === chapter.id;
         const chest = CHAPTER_CHESTS.find((c) => c.chapter === chapter.number);
         const chestClaimed = chest ? claimedChests.includes(chest.id) : false;

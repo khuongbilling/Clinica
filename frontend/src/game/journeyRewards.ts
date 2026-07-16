@@ -65,7 +65,7 @@ export const JOURNEY_REPLAY_FACTOR = 0.32;
 // Only scenes with a live non-placeholder ChapterPart entry need a mapping.
 
 const SCENE_TO_NODE: Record<string, string> = {
-  'chapter_01': 'c1p1',
+  'chapter_01': 'c1n1', // P1: updated to new 6-node Chapter 1 format
 };
 
 /** Returns the journey node id linked to a story scene, or null. */
@@ -78,14 +78,17 @@ export function getNodeIdForScene(sceneId: string): string | null {
 
 const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
 
-  // ── Chapter 1: The Fading Apprenticeship (Level 1, 5 nodes) ──────────────
-  // Approximate totals at 3★: 210 player XP, 105 hero XP, 310 Ward Coins,
-  //   10 University Credits, 85 Summoning Shards, 5 RLG.
-  { nodeId: 'c1p1', chapter: 1, playerXp:  20, heroXp:   0, coins:  25,                   isStory: true,  starsScale: false },
-  { nodeId: 'c1p2', chapter: 1, playerXp:  40, heroXp:  20, coins:  50,                   isStory: false, starsScale: true  },
-  { nodeId: 'c1p3', chapter: 1, playerXp:  20, heroXp:   0, coins:   0, credits: 10,      isStory: true,  starsScale: false },
-  { nodeId: 'c1p4', chapter: 1, playerXp:  45, heroXp:  25, coins:  60, shards: 10,       isStory: false, starsScale: true  },
-  { nodeId: 'c1p5', chapter: 1, playerXp:  55, heroXp:  35, coins:  75, shards: 25,       isStory: false, starsScale: true  },
+  // ── Chapter 1: The Fading Apprenticeship (Level 1, 6 nodes — P1 format) ──
+  // c1n1: memory_fragment (flat)  c1n2: challenge-triage (flat)
+  // c1n3: challenge-stack (flat)  c1n4: battle (stars)
+  // c1n5: reflection (flat)       c1n6: mini_boss (stars)
+  // Approx totals at 3★: 180 XP, 60 hero XP, 195 coins, 30 credits, 25 shards.
+  { nodeId: 'c1n1', chapter: 1, playerXp:  20, heroXp:  0,  coins:  25,                   isStory: true,  starsScale: false },
+  { nodeId: 'c1n2', chapter: 1, playerXp:  20, heroXp:  0,  coins:  15, credits: 10,      isStory: true,  starsScale: false },
+  { nodeId: 'c1n3', chapter: 1, playerXp:  20, heroXp:  0,  coins:  15, credits: 10,      isStory: true,  starsScale: false },
+  { nodeId: 'c1n4', chapter: 1, playerXp:  45, heroXp:  25, coins:  65,                   isStory: false, starsScale: true  },
+  { nodeId: 'c1n5', chapter: 1, playerXp:  20, heroXp:  0,  coins:   0, credits: 10,      isStory: true,  starsScale: false },
+  { nodeId: 'c1n6', chapter: 1, playerXp:  55, heroXp:  35, coins:  75, shards: 25,       isStory: false, starsScale: true  },
 
   // ── Chapter 2: The First Ward Rotation (Level 2, 6 nodes) ────────────────
   // Approximate totals at 3★: 385 player XP, 195 hero XP, 540 Ward Coins,

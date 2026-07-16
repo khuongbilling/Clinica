@@ -290,6 +290,16 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
+            onPress={() => router.push("/tutorial-encyclopedia" as any)}
+            testID="profile-encyclopedia-button"
+          >
+            <Ionicons name="compass-outline" size={18} color={COLORS.brand} />
+            <Text style={styles.settingsRowTxt}>Tutorial Encyclopedia</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+          <View style={styles.settingsDivider} />
+          <Pressable
+            style={styles.settingsRow}
             onPress={() => router.push("/(tabs)/codex")}
             testID="profile-codex-button"
           >

@@ -36,8 +36,9 @@ export default function JourneyScreen() {
   }
 
   const { level: playerLevel } = playerLevelFromXp(player.xp ?? 0);
-  const currentChapter = getCurrentChapter(playerLevel);
-  const nextStep = getNextRecommendedPart(playerLevel);
+  const claimedNodes = player.claimed_journey_nodes ?? [];
+  const currentChapter = getCurrentChapter(playerLevel, claimedNodes);
+  const nextStep = getNextRecommendedPart(playerLevel, claimedNodes);
   // J5: Field Practice Required — show strip when the player has done at least
   // one battle but still needs more XP/levels to unlock the next chapter.
   // (Previously only showed for brand-new players with no battle stars.)

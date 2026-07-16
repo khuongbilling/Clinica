@@ -131,6 +131,30 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.claimed_journey_nodes) {
     out = { ...out, claimed_journey_nodes: [] };
   }
+  // P1 — migrate legacy Chapter 1 node IDs (c1p*) to the revised 6-node format.
+  // Old: c1p1 (story), c1p2 (battle), c1p3 (placeholder), c1p4 (battle), c1p5 (mini_boss)
+  // New: c1n1 (memory_fragment), c1n2 (challenge), c1n3 (challenge),
+  //      c1n4 (battle), c1n5 (reflection), c1n6 (mini_boss)
+  // c1p3 was always isPlaceholder with no route so it was never claimable.
+  // c1p4 (intermediate battle) maps to c1n4 as the equivalent ward-shift slot.
+  if ((out.claimed_journey_nodes as string[]).some((id: string) => id.startsWith("c1p"))) {
+    const nodeMap: Record<string, string> = {
+      c1p1: "c1n1",
+      c1p2: "c1n4",
+      c1p4: "c1n4",
+      c1p5: "c1n6",
+    };
+    const current = out.claimed_journey_nodes as string[];
+    let changed = false;
+    const migrated = [...current];
+    for (const [oldId, newId] of Object.entries(nodeMap)) {
+      if (current.includes(oldId) && !migrated.includes(newId)) {
+        migrated.push(newId);
+        changed = true;
+      }
+    }
+    if (changed) out = { ...out, claimed_journey_nodes: migrated };
+  }
   // J3 — backfill University practice counters and milestone claims.
   if (out.uni_cue_lab_count == null) out = { ...out, uni_cue_lab_count: 0 };
   if (out.uni_triage_count == null)  out = { ...out, uni_triage_count: 0 };

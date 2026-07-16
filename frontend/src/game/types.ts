@@ -239,7 +239,7 @@ export interface PlayerState {
   // "NEW" badges in the Profile Story Gallery.
   story_scenes_seen?: string[];
   // J2 — one-time claim tracking for Journey Map node first-clear rewards.
-  // Keyed by ChapterPart.id (e.g. "c1p1"). Backfilled as [] for existing players.
+  // Keyed by ChapterPart.id (e.g. "c1n1"). Backfilled as [] for existing players.
   claimed_journey_nodes?: string[];
   // J3 — University practice activity completion counters.
   // Incremented by completeUniPractice; drives milestone unlock checks.

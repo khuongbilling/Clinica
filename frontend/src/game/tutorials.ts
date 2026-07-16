@@ -45,6 +45,14 @@ export interface TutorialStep {
    */
   banner?: boolean;
   nextText?: string;
+  /**
+   * Override the "X / Y" step counter shown in the tutorial overlay.
+   * Use for multi-part tutorial sequences where steps belong to different
+   * TutorialIds but should show a single consistent counter to the player
+   * (e.g. Rapid Triage cards: "Card 1 / 3", "Card 2 / 3", "Card 3 / 3").
+   * When absent the default "stepIndex+1 / totalSteps" label is shown.
+   */
+  progressLabel?: string;
 }
 
 export const TUTORIAL_LABELS: Record<TutorialId, string> = {
@@ -470,9 +478,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredTargetId: "triage_urgent",
       nextText: "TAP URGENT",
+      progressLabel: "Card 1 / 3",
     },
   ],
 
+  // P1: rapidTriageCard2 and rapidTriageCard3 were previously started mid-game
+  // as separate 1-step tutorials, which caused the counter to show "1 / 1"
+  // for cards 2 and 3 — inconsistent with card 1's "2 / 2" display.
+  // The mid-game startTutorial() calls have been removed from rapid-triage.tsx.
+  // These entries are kept in the union for backward-compat (existing saves that
+  // have rapidTriageCard2/Card3 = true in storage remain valid).
   rapidTriageCard2: [
     {
       id: "triage_card2_intro",
@@ -482,6 +497,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredTargetId: "triage_emergency",
       nextText: "TAP EMERGENCY",
+      progressLabel: "Card 2 / 3",
     },
   ],
 
@@ -494,6 +510,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredTargetId: "triage_routine",
       nextText: "TAP ROUTINE",
+      progressLabel: "Card 3 / 3",
     },
   ],
 

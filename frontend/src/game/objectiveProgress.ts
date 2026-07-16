@@ -332,6 +332,10 @@ export async function reconcileEarlyObjectives(player: {
     if (hasLotusLesson) mark("obj_lotus_visited");
     // Step 10 — completed first Lotus Lesson
     if (hasLotusLesson) mark("obj_lotus_first_lesson");
+    // Step 11 — visited Recruitment Hall.
+    // No direct PlayerState flag exists; use runs_completed > 0 as proxy:
+    // a player who completed a run must have had access to the hall first.
+    if ((player.runs_completed ?? 0) > 0) mark("obj_recruit_preview");
     // Step 12 — completed first Ward Shift simulation
     if ((player.runs_completed ?? 0) > 0) mark("obj_ward_shift_first");
 

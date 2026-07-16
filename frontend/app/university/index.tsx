@@ -319,12 +319,19 @@ export default function UniversityHubScreen() {
       // Catch-up grant: early onboarding steps (1-6) fire outside a context with
       // applyRewards. Load the done-set once, then pay out any unpaid XP here.
       const catchupIds: ObjectiveId[] = [
+        // Steps 1-6: early onboarding, fire outside a context with applyRewards.
         "obj_prologue_done",
         "obj_lotus_recall",
         "obj_identity_done",
         "obj_diagnostic_done",
         "obj_class_result",
         "obj_memory_seen",
+        // Steps 9-12: reconcileEarlyObjectives (run at boot) already writes the
+        // completion records; we just need to pay out any XP not yet granted.
+        "obj_lotus_visited",
+        "obj_lotus_first_lesson",
+        "obj_recruit_preview",
+        "obj_ward_shift_first",
       ];
       const doneSet = await getObjectiveProgress();
       for (const id of catchupIds) {

@@ -21,6 +21,8 @@ export type ChapterPartType =
   | "minigame"        // Cue Hunt / Rapid Triage / Stabilize Stack (University only — not on map)
   | "lesson"          // Lotus Lesson node
   | "story"           // Story cutscene / narrative beat
+  | "memory_fragment" // P1: first-memory / recall story beat (replaces plain "story" for anchor nodes)
+  | "challenge"       // P1: skill-challenge mini-game node (Rapid Triage, Stabilize Stack, Cue Hunt)
   | "reflection"      // Post-chapter reflection / debrief beat
   | "reward"          // Chapter reward node
   | "realm"           // Realm task
@@ -73,6 +75,14 @@ export interface Chapter {
    * at this chapter's difficulty. Encourages targeted University practice.
    */
   failureHint?: ChapterFailureHint;
+  /**
+   * P1: Node IDs that must appear in the player's claimed_journey_nodes before
+   * the NEXT chapter can be unlocked.  The level gate still controls overall
+   * access; this is an additional completion gate layered on top.
+   * Callers must pass claimedNodeIds to getChapterStatus / getCurrentChapter
+   * for this gate to take effect (backward-compat: omitting the param skips it).
+   */
+  requiredCompletionNodes?: string[];
 }
 
 // ── J5: Failure hint per chapter ─────────────────────────────────────────────
@@ -139,55 +149,75 @@ export const CHAPTERS: Chapter[] = [
       primaryRoute: "/university",
       secondaryRoute: "/university/skill-academy",
     },
+    // P1: required nodes that must be cleared before Chapter 2 unlocks.
+    // c1n4 = First Ward Shift (Dehydration Wisp), c1n6 = Chapter Trial.
+    requiredCompletionNodes: ["c1n4", "c1n6"],
     parts: [
+      // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
-        id: "c1p1",
+        id: "c1n1",
         part: 1,
-        type: "story",
-        title: "The System Awakens",
+        type: "memory_fragment",
+        title: "The Recall Awakens",
         description: "You are summoned into the Kingdom of Healing. The System speaks for the first time — the ward is already under threat.",
         icon: "film-outline",
         route: "/story-scene?sceneId=chapter_01",
         rewardXp: 5,
       },
+      // ── Node 2 — Challenge: Rapid Triage ─────────────────────────────────
       {
-        id: "c1p2",
+        id: "c1n2",
         part: 2,
-        type: "battle",
-        title: "First Simulation — Dehydration Wisp",
-        description: "Your first supervised encounter. The Wisp feeds on lost fluids. Read the cues, act fast, earn your star.",
-        icon: "medical-outline",
-        route: "/shift",
-        rewardXp: 15,
-        rewardCoins: 15,
+        type: "challenge",
+        title: "Rapid Triage Drill",
+        description: "Three patients, one correct order. Read the signs and decide who needs help first — urgency determines survival.",
+        icon: "shuffle-outline",
+        route: "/university/rapid-triage",
+        rewardXp: 10,
+        rewardCredits: 10,
       },
+      // ── Node 3 — Challenge: Stabilize Stack ──────────────────────────────
       {
-        id: "c1p3",
+        id: "c1n3",
         part: 3,
-        type: "story",
-        title: "Mentor Bai's Warning",
-        description: "Master Bai appears in the ward corridor. Something darker than a Wisp is stirring deeper in the realm.",
-        icon: "book-outline",
-        isPlaceholder: true,
-        rewardXp: 5,
+        type: "challenge",
+        title: "Stabilize Stack",
+        description: "The right care steps in the right order. Build the safe sequence before the patient deteriorates further.",
+        icon: "layers-outline",
+        route: "/university/stabilize-stack",
+        rewardXp: 10,
+        rewardCredits: 10,
       },
+      // ── Node 4 — Ward Shift ───────────────────────────────────────────────
       {
-        id: "c1p4",
+        id: "c1n4",
         part: 4,
         type: "battle",
-        title: "Simulation — The Fading Apprentice",
-        description: "A student healer is deteriorating. The cues are subtler this time — don't let the silence mislead you.",
+        title: "First Shift — Dehydration Wisp",
+        description: "Your first supervised encounter. The Wisp feeds on lost fluids. Read the cues, act fast, earn your star.",
         icon: "medical-outline",
         route: "/shift",
         rewardXp: 20,
         rewardCoins: 20,
       },
+      // ── Node 5 — Reflection ───────────────────────────────────────────────
       {
-        id: "c1p5",
+        id: "c1n5",
         part: 5,
+        type: "reflection",
+        title: "Mentor Bai's Warning",
+        description: "Master Bai appears in the ward corridor. Something darker than a Wisp is stirring deeper in the realm.",
+        icon: "alert-circle-outline",
+        isPlaceholder: true,
+        rewardXp: 5,
+      },
+      // ── Node 6 — Chapter Trial (Mini-Boss) ───────────────────────────────
+      {
+        id: "c1n6",
+        part: 6,
         type: "mini_boss",
         title: "Trial: The Fading Apprentice",
-        description: "The chapter trial. Face a harder form of the Apprentice's condition — apply everything the ward has taught you.",
+        description: "The chapter trial. Face the apprentice's condition at full severity — apply everything the ward has taught you.",
         icon: "skull-outline",
         route: "/shift",
         rewardXp: 30,
@@ -1063,13 +1093,33 @@ export const CHAPTERS: Chapter[] = [
 
 /**
  * Returns the chapter a player is currently on based on their Player Level.
- * A chapter is "active" if the player meets its level gate but not the next.
+ *
+ * P1: Accepts an optional claimedNodeIds array. When provided, the function
+ * also enforces each chapter's requiredCompletionNodes gate — a chapter is
+ * only considered "reached" if the previous chapter's required nodes are all
+ * in claimedNodeIds.  Omitting the parameter preserves the original level-only
+ * behaviour for call sites that haven't been updated yet.
  */
-export function getCurrentChapter(playerLevel: number): Chapter {
+export function getCurrentChapter(
+  playerLevel: number,
+  claimedNodeIds?: string[],
+): Chapter {
   let active = CHAPTERS[0];
-  for (const ch of CHAPTERS) {
-    if (playerLevel >= ch.levelGate) active = ch;
-    else break;
+  for (let i = 0; i < CHAPTERS.length; i++) {
+    const ch = CHAPTERS[i];
+    if (playerLevel < ch.levelGate) break;
+    // Completion gate: if claimedNodeIds are provided, ensure the previous
+    // chapter's requiredCompletionNodes are all cleared before advancing.
+    if (i > 0 && claimedNodeIds) {
+      const prev = CHAPTERS[i - 1];
+      if (prev.requiredCompletionNodes?.length) {
+        const allDone = prev.requiredCompletionNodes.every((id) =>
+          claimedNodeIds.includes(id),
+        );
+        if (!allDone) break;
+      }
+    }
+    active = ch;
   }
   return active;
 }
@@ -1078,28 +1128,68 @@ export function getCurrentChapter(playerLevel: number): Chapter {
  * Returns the status of a chapter relative to a given player level.
  * "complete" = player has surpassed this chapter's range (next chapter also unlocked).
  * "active"   = this is the player's current chapter.
- * "locked"   = player hasn't met the level gate yet.
+ * "locked"   = player hasn't met the level gate yet (or completion gate blocked it).
+ *
+ * P1: Pass claimedNodeIds to enable the completion gate — Chapter N+1 is locked
+ * until all of Chapter N's requiredCompletionNodes appear in claimedNodeIds.
+ * Omitting the parameter preserves level-only logic for un-updated call sites.
  */
 export type ChapterStatus = "complete" | "active" | "locked";
 
-export function getChapterStatus(chapter: Chapter, playerLevel: number): ChapterStatus {
+export function getChapterStatus(
+  chapter: Chapter,
+  playerLevel: number,
+  claimedNodeIds?: string[],
+): ChapterStatus {
   const idx = CHAPTERS.findIndex((c) => c.id === chapter.id);
-  const next = CHAPTERS[idx + 1];
+
+  // Base level gate.
   if (playerLevel < chapter.levelGate) return "locked";
+
+  // Completion gate: check that the previous chapter's requiredCompletionNodes
+  // are all cleared before treating this chapter as accessible.
+  if (idx > 0 && claimedNodeIds) {
+    const prev = CHAPTERS[idx - 1];
+    if (prev.requiredCompletionNodes?.length) {
+      const allDone = prev.requiredCompletionNodes.every((id) =>
+        claimedNodeIds.includes(id),
+      );
+      if (!allDone) return "locked";
+    }
+  }
+
+  const next = CHAPTERS[idx + 1];
   if (!next || playerLevel < next.levelGate) return "active";
   return "complete";
 }
 
 /**
  * Returns the next actionable part for the active chapter.
- * Chapters 2–10 are all placeholders for now; Chapter 1's first 3 parts have routes.
+ *
+ * P1: Pass claimedNodeIds to skip already-claimed nodes and return the first
+ * unclaimed part with a route instead of always the first routable part.
  */
-export function getNextRecommendedPart(playerLevel: number): {
+export function getNextRecommendedPart(
+  playerLevel: number,
+  claimedNodeIds?: string[],
+): {
   chapter: Chapter;
   part: ChapterPart;
 } | null {
-  const ch = getCurrentChapter(playerLevel);
-  const part = ch.parts.find((p) => p.route && !p.isPlaceholder) ?? ch.parts[0];
+  const ch = getCurrentChapter(playerLevel, claimedNodeIds);
+
+  // First unclaimed non-placeholder part that has a navigable route.
+  const unclaimed = claimedNodeIds
+    ? ch.parts.find(
+        (p) => p.route && !p.isPlaceholder && !claimedNodeIds.includes(p.id),
+      )
+    : null;
+
+  const part =
+    unclaimed ??
+    ch.parts.find((p) => p.route && !p.isPlaceholder) ??
+    ch.parts[0];
+
   return { chapter: ch, part };
 }
 

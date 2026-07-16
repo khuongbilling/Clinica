@@ -150,7 +150,7 @@ export function TutorialOverlay() {
 
   if (!activeTutorialId || !currentStep) return null;
 
-  const progress = totalSteps > 1 ? `${stepIndex + 1} / ${totalSteps}` : "";
+  const progress = currentStep?.progressLabel ?? (totalSteps > 1 ? `${stepIndex + 1} / ${totalSteps}` : "");
   const isSystem = isSystemTutorial(activeTutorialId);
 
   // Resolve the System narrator's identity (dark silhouette until Player L10,
