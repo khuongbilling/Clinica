@@ -42,7 +42,7 @@ export function formatCompactNumber(n: number): string {
   return `${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
 }
 
-type InfoModal = "stamina" | "level" | "crowns" | "refined_gems" | "lotus_gems" | null;
+type InfoModal = "stamina" | "level" | "crowns" | "summon_shards" | "refined_gems" | "lotus_gems" | null;
 
 export function PlayerHeader({
   player,
@@ -71,6 +71,9 @@ export function PlayerHeader({
   // ── Progressive reveal gates ──────────────────────────────
   // Shop gate: crowns chip links to Shop only if unlocked (level 2)
   const shopUnlocked = checkFeatureGate("shop", buildGateContext(player)).unlocked;
+  // Summoning Shards (codex_shards): visible at Level 2 (Summoning Hall unlocks) or if
+  // player already has any — avoids showing a confusing 0-balance chip early.
+  const showSummonShards = shopUnlocked || (player.codex_shards ?? 0) > 0;
   // Refined Lotus Gems: show once Shop unlocks (level 2) OR player already has a balance
   const showRefinedGems = shopUnlocked || (player.refined_lotus_gems ?? 0) > 0;
   // Paid Lotus Gems: only show if player actually has some — suppress the confusing
@@ -131,6 +134,14 @@ export function PlayerHeader({
             text={formatCompactNumber(player.crowns)}
             onPress={() => setInfoModal("crowns")}
           />
+          {/* Progressively revealed: Summoning Shards (Level 2 or already has some) */}
+          {showSummonShards && (
+            <ShardChip
+              testID="player-header-shards"
+              count={player.codex_shards ?? 0}
+              onPress={() => setInfoModal("summon_shards")}
+            />
+          )}
           {/* Progressively revealed: Refined Lotus Gems (Shop unlocked or already has some) */}
           {showRefinedGems && (
             <Chip
@@ -217,6 +228,30 @@ export function PlayerHeader({
                 <Ionicons name="lock-closed-outline" size={13} color={COLORS.onSurfaceTertiary} />
                 <Text style={styles.modalLockedTxt}>Shop unlocks at Level 2</Text>
               </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Summoning Shards info modal ── */}
+      <Modal visible={infoModal === "summon_shards"} transparent animationType="fade" onRequestClose={() => setInfoModal(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setInfoModal(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Ionicons name="diamond" size={22} color="#9F7AEA" />
+            <Text style={styles.modalTitle}>Summoning Shards</Text>
+            <Text style={styles.modalBody}>
+              Summoning Shards are earned by completing Ward Shifts, Daily Rounds, and milestone
+              rewards. Use them at the Recruitment Hall to summon new healer heroes to your team.
+            </Text>
+            <Text style={styles.modalHint}>Free to earn through play — no purchase required.</Text>
+            {shopUnlocked && (
+              <Pressable
+                style={styles.modalBtn}
+                onPress={() => { setInfoModal(null); router.push("/university/recruit" as any); }}
+                testID="player-header-shards-goto-recruit"
+              >
+                <Text style={styles.modalBtnTxt}>Go to Recruitment Hall</Text>
+              </Pressable>
             )}
           </Pressable>
         </Pressable>
@@ -314,6 +349,29 @@ function Chip({
     <Pressable style={[styles.chip, { borderColor: tint + "40" }]} onPress={onPress} hitSlop={4} testID={testID}>
       <ExpoImage source={icon} style={styles.chipIcon} contentFit="contain" />
       <Text style={styles.chipTxt}>{text}</Text>
+    </Pressable>
+  );
+}
+
+// Summoning Shards chip — uses Ionicons (no separate asset) with a purple tint.
+// Shown at Level 2+ or when the player already has shards.
+function ShardChip({
+  count, onPress, testID,
+}: {
+  count: number;
+  onPress: () => void;
+  testID?: string;
+}) {
+  const SHARD_COLOR = "#9F7AEA";
+  return (
+    <Pressable
+      style={[styles.chip, { borderColor: SHARD_COLOR + "40" }]}
+      onPress={onPress}
+      hitSlop={4}
+      testID={testID}
+    >
+      <Ionicons name="diamond" size={13} color={SHARD_COLOR} />
+      <Text style={styles.chipTxt}>{formatCompactNumber(count)}</Text>
     </Pressable>
   );
 }

@@ -274,9 +274,14 @@ export default function RunHome() {
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;
 
-  // C5 — Daily/Weekly Rounds and Summoning Hall are Level 2 unlocks.
-  const roundsUnlocked = playerLevelInfo.level >= 2;
-  const summonUnlocked = playerLevelInfo.level >= 2;
+  // Progressive feature reveal — fix 10
+  // Rounds / Summoning Hall unlock at Level 2.
+  const roundsUnlocked   = playerLevelInfo.level >= 2;
+  const summonUnlocked   = playerLevelInfo.level >= 2;
+  // Ward Defense unlocks at Level 4.
+  const wardDefUnlocked  = isFeatureUnlocked("ward_defense", playerLevelInfo.level);
+  // Ward Shift requires first University lesson (narrative gate).
+  const wardShiftGate    = checkFeatureGate("ward_shift", buildGateContext(player));
 
   // Daily Ward Rounds — free daily engagement loop. Hidden until the player has
   // begun (post-University), then shows a badge for pending check-in/claims.
@@ -416,9 +421,11 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN — Daily Ward Rounds + Journey Map */}
+        {/* LEFT COLUMN — progressive reveal
+             Lv1: Journey only (clean, focused on the objective)
+             Lv2+: add Rounds (with badge) + Milestones              */}
         <View style={styles.sideCol}>
-          {roundsUnlocked ? (
+          {roundsUnlocked && (
             <FeatureButton
               icon="today"
               label="Rounds"
@@ -426,16 +433,6 @@ export default function RunHome() {
               badge={roundsBadge}
               onPress={() => setShowRounds(true)}
               testID="home-float-rounds"
-            />
-          ) : (
-            <FeatureButton
-              icon="lock-closed"
-              label="Rounds"
-              color={COLORS.brand}
-              locked
-              lockText="Lv.2"
-              onPress={() => {}}
-              testID="home-float-rounds-locked"
             />
           )}
           <FeatureButton
@@ -445,13 +442,15 @@ export default function RunHome() {
             onPress={() => router.push("/journey")}
             testID="home-float-journey"
           />
-          <FeatureButton
-            icon="gift-outline"
-            label="Milestones"
-            color="#D4AF37"
-            onPress={() => router.push("/milestones" as any)}
-            testID="home-float-milestones"
-          />
+          {roundsUnlocked && (
+            <FeatureButton
+              icon="gift-outline"
+              label="Milestones"
+              color="#D4AF37"
+              onPress={() => router.push("/milestones" as any)}
+              testID="home-float-milestones"
+            />
+          )}
         </View>
 
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
@@ -478,36 +477,50 @@ export default function RunHome() {
           </Animated.View>
         </Pressable>
 
-        {/* RIGHT COLUMN — active gameplay events/quests */}
+        {/* RIGHT COLUMN — progressive reveal
+             Lv1:   nothing (hub is clean, objective card dominates)
+             Lv2+:  Summon (Recruitment Hall)
+             Lv4+:  Ward Defense
+             Lv7+:  Boss Ward
+             Lv10+: World Events (only when an event is active)     */}
         <View style={styles.sideCol}>
-          <FeatureButton
-            icon={summonUnlocked ? "sparkles" : "lock-closed"}
-            label="Summon"
-            color="#D4AF37"
-            locked={!summonUnlocked}
-            lockText="Lv.2"
-            onPress={() => { if (summonUnlocked) router.push("/university/recruit" as any); }}
-            testID="home-float-summon"
-          />
-          <FeatureButton
-            icon={worldEventUnlocked ? "calendar-outline" : "lock-closed"}
-            label="Events"
-            color={COLORS.air}
-            live={WORLD_EVENT_ACTIVE && worldEventUnlocked}
-            locked={!worldEventUnlocked}
-            lockText="Lv.10"
-            onPress={() => { if (worldEventUnlocked) router.push("/events"); }}
-            testID="home-float-events"
-          />
-          <FeatureButton
-            icon={bossUnlocked ? "skull" : "lock-closed"}
-            label="Boss"
-            color={COLORS.error}
-            locked={!bossUnlocked}
-            lockText="Lv.7"
-            onPress={() => { if (bossUnlocked) router.push("/boss"); }}
-            testID="home-float-boss"
-          />
+          {summonUnlocked && (
+            <FeatureButton
+              icon="sparkles"
+              label="Summon"
+              color="#D4AF37"
+              onPress={() => router.push("/university/recruit" as any)}
+              testID="home-float-summon"
+            />
+          )}
+          {wardDefUnlocked && (
+            <FeatureButton
+              icon="shield-checkmark"
+              label="Defense"
+              color={COLORS.river}
+              onPress={() => router.push("/ward-defense" as any)}
+              testID="home-float-ward-defense"
+            />
+          )}
+          {bossUnlocked && (
+            <FeatureButton
+              icon="skull"
+              label="Boss"
+              color={COLORS.error}
+              onPress={() => router.push("/boss")}
+              testID="home-float-boss"
+            />
+          )}
+          {WORLD_EVENT_ACTIVE && worldEventUnlocked && (
+            <FeatureButton
+              icon="calendar-outline"
+              label="Events"
+              color={COLORS.air}
+              live
+              onPress={() => router.push("/events")}
+              testID="home-float-events"
+            />
+          )}
         </View>
       </View>
 
@@ -531,14 +544,26 @@ export default function RunHome() {
         </View>
       </Pressable>
 
-      {/* ── START SHIFT ── */}
-      <PrimaryButton
-        label="ENTER THE WARD"
-        icon="medical"
-        onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
-        style={styles.startBtn}
-        testID="run-random-encounter"
-      />
+      {/* ── START SHIFT — gated: first University lesson required ── */}
+      {wardShiftGate.unlocked ? (
+        <PrimaryButton
+          label="ENTER THE WARD"
+          icon="medical"
+          onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
+          style={styles.startBtn}
+          testID="run-random-encounter"
+        />
+      ) : (
+        <View style={styles.wardLockedRow}>
+          <View style={styles.wardLockedBtn}>
+            <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.wardLockedLabel}>ENTER THE WARD</Text>
+          </View>
+          <Text style={styles.wardLockedHint}>
+            {wardShiftGate.reason ?? "Complete your first University lesson to unlock Ward Shift."}
+          </Text>
+        </View>
+      )}
 
       {/* ── INTRO MODAL ── */}
       <Modal visible={showIntro} transparent animationType="slide" statusBarTranslucent>
@@ -934,6 +959,30 @@ const styles = StyleSheet.create({
   startBtn: {
     marginHorizontal: SPACING.md,
     marginTop: SPACING.sm, marginBottom: SPACING.xs,
+  },
+
+  /* Ward Shift locked state (before first University lesson) */
+  wardLockedRow: {
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm, marginBottom: SPACING.xs,
+    gap: 5,
+  },
+  wardLockedBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 13,
+    opacity: 0.55,
+  },
+  wardLockedLabel: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 14, fontWeight: "800", letterSpacing: 1.5,
+  },
+  wardLockedHint: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11, textAlign: "center", lineHeight: 15,
   },
 
   /* Ward Defense card */

@@ -10,11 +10,13 @@ export default function TabsLayout() {
   const bottomPad = Math.max(insets.bottom, 8);
   const tabH = 50 + bottomPad;
 
-  // Guided-onboarding tab gating. Tabs stay hidden (href:null keeps their route
-  // alive for deep links) until the player meets each feature's Player-Level +
-  // narrative-milestone gate: Shops L2, Heroes (Hall) L3 + first lessons, Realm
-  // L5 + first Ward Shift (after Ward Defense, before the Boss). Shift tab is
-  // always available.
+  // Guided-onboarding tab gating (Fix 10). Tabs stay hidden (href:null keeps
+  // their route alive for deep links) until the player meets each feature's gate:
+  //   Shop   → Level 2 (Apprentice Path)
+  //   Heroes → Level 2 via hall_of_heroes gate (no additional narrative gate)
+  //   Realm  → Level 5 + first Ward Shift (buildGateContext)
+  //   Faction → always hidden (future chapter — href:null permanently for now)
+  // Shift tab is always available.
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
     level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
