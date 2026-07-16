@@ -270,6 +270,8 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
   const [showExplainer, setShowExplainer] = useState(false);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
+  // P6: weekly completion burst (brief celebration when weekly all-complete is claimed)
+  const [weeklyBurstActive, setWeeklyBurstActive] = useState(false);
   const checkedInThisOpen = useRef(false);
 
   // Live countdown
@@ -521,11 +523,21 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                   {state.weekly_all_complete_claimed ? (
                     <ClaimedPill />
                   ) : allWeeklyComplete ? (
-                    <ClaimButton busy={busy} onPress={() => runClaim(claimWeeklyAllComplete)} />
+                    <ClaimButton busy={busy} onPress={() => {
+                      runClaim(claimWeeklyAllComplete).then(() => setWeeklyBurstActive(true));
+                    }} />
                   ) : (
                     <Text style={styles.lockHint}>Finish all</Text>
                   )}
                 </View>
+
+                {/* P6: weekly completion burst celebration */}
+                {weeklyBurstActive && (
+                  <View style={styles.weeklyBurstRow}>
+                    <Ionicons name="ribbon" size={15} color="#A78BFA" />
+                    <Text style={styles.weeklyBurstTxt}>Weekly Training Complete — well done, Healer!</Text>
+                  </View>
+                )}
 
                 {/* Journey Milestones */}
                 <Text style={styles.sectionLabel}>JOURNEY MILESTONES</Text>
@@ -645,6 +657,25 @@ const styles = StyleSheet.create({
   },
   bonusCardReady: { borderColor: COLORS.energy + "55", backgroundColor: COLORS.energy + "12" },
   bonusCardWeekly: { borderColor: "#A78BFA44", backgroundColor: "#A78BFA12" },
+  weeklyBurstRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: "#A78BFA50",
+    backgroundColor: "#A78BFA12",
+    marginTop: 4,
+  },
+  weeklyBurstTxt: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#C4B5FD",
+    flex: 1,
+    lineHeight: 16,
+  },
   bonusTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", marginBottom: 1 },
   weeklySub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginBottom: 3 },
 

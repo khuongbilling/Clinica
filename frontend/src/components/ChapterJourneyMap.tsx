@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -257,6 +258,18 @@ function ChapterCard({
   );
   const anyBattleWon = battlesCleared >= 1;
 
+  // P6 — chapter climax + clear state for reward moment polish
+  const requiredNodes = chapter.requiredCompletionNodes ?? [];
+  const allRequiredDone = requiredNodes.length > 0 &&
+    requiredNodes.every(id => claimedNodes.includes(id));
+  const lastRequired  = requiredNodes.length > 0 ? requiredNodes[requiredNodes.length - 1] : "";
+  const prevRequired  = requiredNodes.length >= 2 ? requiredNodes[requiredNodes.length - 2] : (requiredNodes[0] ?? "");
+  // climaxState: all required nodes done except the very last one
+  const climaxState = !isLocked && !allRequiredDone && !!(
+    lastRequired && prevRequired &&
+    claimedNodes.includes(prevRequired) && !claimedNodes.includes(lastRequired)
+  );
+
   // J2: per-part eligibility check for first-clear journey node claim.
   function isNodeEligible(part: ChapterPart): boolean {
     if (isLocked) return false;
@@ -285,6 +298,11 @@ function ChapterCard({
         return false;
     }
   }
+
+  // P6: index of first eligible unclaimed node — receives the pulse ring
+  const nextNodeIdx = isLocked ? -1 : chapter.parts.findIndex(
+    (part) => isNodeEligible(part) && !claimedNodes.includes(part.id)
+  );
 
   return (
     <View style={[styles.chapterWrap, isFirst && { marginTop: 0 }]}>
@@ -435,22 +453,34 @@ function ChapterCard({
                   part.type === 'battle' || part.type === 'mini_boss' || part.type === 'ward_defense'
                 ) ? Math.max(1, bestChapterStars) : 3;
                 const isWardDefenseLocked = part.type === 'ward_defense' && playerLevel < 4;
+                // P6: show climax anticipation strip before the final required node
+                const showClimax = climaxState && part.id === lastRequired;
                 return (
-                  <PartRow
-                    key={part.id}
-                    part={part}
-                    index={idx}
-                    chapterNumber={chapter.number}
-                    chapterAccent={chapter.accentColor}
-                    chapterLocked={isLocked}
-                    isWardDefenseLocked={isWardDefenseLocked}
-                    onPress={() => onPartPress(part)}
-                    isLast={idx === chapter.parts.length - 1}
-                    isEligible={eligible}
-                    isClaimed={claimed}
-                    claimStars={claimStars}
-                    onClaim={onNodeClaim ? () => onNodeClaim(part.id, claimStars) : undefined}
-                  />
+                  <React.Fragment key={part.id}>
+                    {showClimax && (
+                      <View style={[styles.climaxAnticipationStrip, { borderTopColor: accent + "40" }]}>
+                        <Ionicons name="warning-outline" size={11} color={accent} />
+                        <Text style={[styles.climaxAnticipationTxt, { color: accent }]}>
+                          The ward grows quiet. One trial remains.
+                        </Text>
+                      </View>
+                    )}
+                    <PartRow
+                      part={part}
+                      index={idx}
+                      chapterNumber={chapter.number}
+                      chapterAccent={chapter.accentColor}
+                      chapterLocked={isLocked}
+                      isWardDefenseLocked={isWardDefenseLocked}
+                      onPress={() => onPartPress(part)}
+                      isLast={idx === chapter.parts.length - 1}
+                      isEligible={eligible}
+                      isClaimed={claimed}
+                      isNextNode={idx === nextNodeIdx}
+                      claimStars={claimStars}
+                      onClaim={onNodeClaim ? () => onNodeClaim(part.id, claimStars) : undefined}
+                    />
+                  </React.Fragment>
                 );
               })}
 
@@ -459,7 +489,27 @@ function ChapterCard({
                 <View style={styles.lockedMsg}>
                   <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
                   <Text style={styles.lockedMsgTxt}>
-                    Complete Chapter {chapter.number - 1} to unlock.
+                    Complete Chapter {chapter.number - 1} to unlock.{"\n"}
+                    <Text style={{ fontStyle: "normal", color: accent + "80" }}>
+                      A harder trial waits on the other side.
+                    </Text>
+                  </Text>
+                </View>
+              )}
+
+              {/* P6: chapter clear card — shown when all required nodes are done */}
+              {!isLocked && allRequiredDone && (
+                <View style={[styles.chapterClearCard, { borderColor: accent + "50" }]}>
+                  <View style={styles.chapterClearHeader}>
+                    <Ionicons name="trophy-outline" size={15} color={accent} />
+                    <Text style={[styles.chapterClearTitle, { color: accent }]}>
+                      CHAPTER {chapter.number} CLEARED
+                    </Text>
+                  </View>
+                  <Text style={styles.chapterClearSub}>
+                    {chapter.number < CHAPTERS.length
+                      ? `Chapter ${chapter.number + 1}: ${CHAPTERS[chapter.number]?.theme ?? "the next path"} is now revealed.`
+                      : "The final chapter stands before you."}
                   </Text>
                 </View>
               )}
@@ -481,6 +531,21 @@ function ChapterCard({
                   <Text style={styles.prepTipTxt}>{tip}</Text>
                 </View>
               ))}
+              {/* P6: clinical wellness micro-lines (Ch1 only — hydration theme connects to real practice) */}
+              {chapter.number === 1 && (
+                <View style={styles.wellnessMicroSection}>
+                  {[
+                    "Hydration cues matter before action.",
+                    "Reassess after each symptom changes.",
+                    "Small consistent habits build the ward.",
+                  ].map((line, i) => (
+                    <View key={i} style={styles.wellnessMicroRow}>
+                      <View style={[styles.wellnessMicroDot, { backgroundColor: accent + "70" }]} />
+                      <Text style={styles.wellnessMicroTxt}>{line}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
               <View style={styles.prepTipsActionRow}>
                 <Pressable
                   style={[styles.prepTipsActionBtn, { borderColor: accent + "55" }]}
@@ -525,6 +590,7 @@ function PartRow({
   isLast,
   isEligible = false,
   isClaimed = false,
+  isNextNode = false,
   claimStars = 3,
   onClaim,
 }: {
@@ -540,10 +606,29 @@ function PartRow({
   // J2 — first-clear claim state
   isEligible?: boolean;
   isClaimed?: boolean;
+  /** P6: true when this is the next recommended node to act on (pulse ring). */
+  isNextNode?: boolean;
   claimStars?: number;
   onClaim?: () => Promise<void>;
 }) {
   const [claiming, setClaiming] = React.useState(false);
+  // P6 — node-clear flash state + animation
+  const [justClaimed, setJustClaimed] = React.useState(false);
+  const flashAnim = React.useRef(new Animated.Value(0)).current;
+  // P6 — next-node pulse animation
+  const pulseAnim = React.useRef(new Animated.Value(0.35)).current;
+
+  React.useEffect(() => {
+    if (!isNextNode || isClaimed || chapterLocked) return;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1, duration: 750, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 0.35, duration: 750, useNativeDriver: true }),
+      Animated.delay(500),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [isNextNode, isClaimed, chapterLocked]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const typeColor = (chapterLocked || isWardDefenseLocked) ? COLORS.onSurfaceTertiary : PART_TYPE_COLOR[part.type];
   const isActionable = !!part.route && !part.isPlaceholder && !chapterLocked && !isWardDefenseLocked;
   // J1: node label "1-1", "1-2", etc.
@@ -556,29 +641,51 @@ function PartRow({
   async function handleClaim() {
     if (!onClaim || claiming) return;
     setClaiming(true);
-    try { await onClaim(); } finally { setClaiming(false); }
+    try {
+      await onClaim();
+      // P6: trigger node-clear flash
+      setJustClaimed(true);
+      Animated.sequence([
+        Animated.timing(flashAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.delay(1000),
+        Animated.timing(flashAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
+      ]).start();
+    } finally {
+      setClaiming(false);
+    }
   }
 
   return (
     <View style={[styles.partWrap, !isLast && styles.partDivider]}>
       {/* Part number indicator with X-Y node label */}
       <View style={styles.partNumCol}>
-        <View style={[styles.partNum, { backgroundColor: chapterLocked ? COLORS.surfaceTertiary : chapterAccent + "18" }]}>
-          <Text style={[styles.partNumTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary : chapterAccent }]}>
-            {index + 1}
-          </Text>
+        <View style={{ position: "relative", alignItems: "center", justifyContent: "center" }}>
+          {/* P6: pulse ring on the next recommended node */}
+          {isNextNode && !isClaimed && !chapterLocked && (
+            <Animated.View style={[styles.nextNodeRing, { borderColor: chapterAccent, opacity: pulseAnim }]} />
+          )}
+          <View style={[styles.partNum, { backgroundColor: chapterLocked ? COLORS.surfaceTertiary : chapterAccent + "18" }]}>
+            {isClaimed ? (
+              <Ionicons name="checkmark" size={12} color={chapterAccent} />
+            ) : (
+              <Text style={[styles.partNumTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary : chapterAccent }]}>
+                {index + 1}
+              </Text>
+            )}
+          </View>
         </View>
         <Text style={[styles.nodeLabelTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary + "80" : chapterAccent + "90" }]}>
           {nodeLabel}
         </Text>
       </View>
 
-      {/* Part content */}
-      <Pressable
-        style={[styles.partContent, isActionable && styles.partActionable]}
-        onPress={isActionable ? onPress : undefined}
-        testID={`chapter-part-${part.id}`}
-      >
+      {/* Part content + P6 node-clear flash wrapper */}
+      <View style={{ flex: 1, position: "relative" }}>
+        <Pressable
+          style={[styles.partContent, isActionable && styles.partActionable]}
+          onPress={isActionable ? onPress : undefined}
+          testID={`chapter-part-${part.id}`}
+        >
         <View style={styles.partTopRow}>
           <View style={[styles.partTypeBadge, { backgroundColor: typeColor + "18" }]}>
             <Text style={[styles.partTypeTxt, { color: typeColor }]}>
@@ -709,7 +816,18 @@ function PartRow({
             </Pressable>
           ) : null
         )}
-      </Pressable>
+        </Pressable>
+
+        {/* P6 — node-clear flash overlay (fades in then out after claim) */}
+        {justClaimed && (
+          <Animated.View
+            style={[styles.nodeClearFlash, { opacity: flashAnim, pointerEvents: "none" }]}
+          >
+            <Ionicons name="checkmark-circle" size={13} color="#34D399" />
+            <Text style={styles.nodeClearTxt}>NODE CLEARED · Clinical Insight Strengthened</Text>
+          </Animated.View>
+        )}
+      </View>
     </View>
   );
 }
@@ -1173,6 +1291,106 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     lineHeight: 16,
     marginTop: 2,
+  },
+
+  // P6: next-node pulse ring — absolute behind the part-number circle
+  nextNodeRing: {
+    position: "absolute",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    zIndex: 0,
+  },
+  // P6: node-clear flash overlay
+  nodeClearFlash: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: "#34D39918",
+    borderRadius: RADIUS.sm,
+    zIndex: 10,
+  },
+  nodeClearTxt: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#34D399",
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  // P6: climax anticipation strip — shown before the final required node
+  climaxAnticipationStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 7,
+    borderTopWidth: 1,
+    backgroundColor: "rgba(0,0,0,0.06)",
+  },
+  climaxAnticipationTxt: {
+    fontSize: 11,
+    fontWeight: "700",
+    fontStyle: "italic",
+    letterSpacing: 0.3,
+  },
+  // P6: chapter clear card
+  chapterClearCard: {
+    margin: SPACING.sm,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    gap: 4,
+  },
+  chapterClearHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  chapterClearTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  chapterClearSub: {
+    fontSize: 11,
+    color: COLORS.onSurfaceTertiary,
+    lineHeight: 15,
+    fontStyle: "italic",
+  },
+  // P6: wellness micro-lines (Ch1 prep section)
+  wellnessMicroSection: {
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+    gap: 3,
+  },
+  wellnessMicroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 1,
+  },
+  wellnessMicroDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    flexShrink: 0,
+  },
+  wellnessMicroTxt: {
+    fontSize: 10,
+    color: COLORS.onSurfaceTertiary,
+    fontStyle: "italic",
+    lineHeight: 14,
+    flex: 1,
   },
 
   // C6: Simulation→Real-Ward transition callout (between Ch.8 and Ch.9 cards)

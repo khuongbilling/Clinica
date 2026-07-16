@@ -159,6 +159,9 @@ export default function RunHome() {
   // (tapping "Explore the Hub" on that card stays on the hub without navigating).
   const [localDismissGuide, setLocalDismissGuide] = useState(false);
   const roundsSignalSeen = useRef(0);
+  // P6: return-session motivation card (session-scoped, resets each app open)
+  const [showReturnCard, setShowReturnCard] = useState(false);
+  const returnCardInitRef = useRef(false);
 
   // Objective-driven first-session guide — reloads whenever the hub gains focus
   // so returning from University / lessons always shows the freshest step.
@@ -167,6 +170,20 @@ export default function RunHome() {
     useCallback(() => {
       getObjectiveProgress().then((done) => setCurrentObjective(getCurrentObjective(done)));
     }, []),
+  );
+
+  // P6: return-session motivation card — shown once per app session for Lv2+ players
+  // who have finished the systemHubIntro orientation. Does NOT repeat on re-focus.
+  useFocusEffect(
+    useCallback(() => {
+      if (returnCardInitRef.current || loading || !player) return;
+      returnCardInitRef.current = true;
+      const lvl = playerLevelFromXp(player.xp ?? 0).level;
+      if (lvl >= 2 && player.seen_reminiscence && isCompleted("systemHubIntro")) {
+        setShowReturnCard(true);
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, player?.id, player?.xp, player?.seen_reminiscence]),
   );
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
@@ -433,6 +450,18 @@ export default function RunHome() {
             />
           </View>
         )
+      )}
+
+      {/* P6: return-session motivation card — once per session for Lv2+ returning players */}
+      {showReturnCard && isCompleted("systemHubIntro") && !(currentObjective && currentObjective.step <= 15) && (
+        <View style={styles.uniOnboard}>
+          <ReturnSessionCard
+            roundsBadge={roundsBadge}
+            onRounds={() => { setShowRounds(true); setShowReturnCard(false); }}
+            onJourney={() => { router.push("/journey" as any); setShowReturnCard(false); }}
+            onDismiss={() => setShowReturnCard(false)}
+          />
+        </View>
       )}
 
       {/* ── MAIN ARENA — layered: scenic bg → side cols → hero portrait ── */}
@@ -740,6 +769,112 @@ function SystemHubOrientationPanel({
     </View>
   );
 }
+
+// ── ReturnSessionCard ─────────────────────────────────────────────────────────
+// P6: compact dismissible card shown once per app session for Lv2+ returning players.
+// Surfaces the highest-value next action (claim rounds → continue journey).
+function ReturnSessionCard({
+  roundsBadge, onRounds, onJourney, onDismiss,
+}: {
+  roundsBadge: number;
+  onRounds: () => void;
+  onJourney: () => void;
+  onDismiss: () => void;
+}) {
+  const hasRewards = roundsBadge > 0;
+  return (
+    <View style={rcStyles.card}>
+      <Pressable style={rcStyles.dismiss} onPress={onDismiss} hitSlop={10}>
+        <Ionicons name="close" size={14} color={COLORS.onSurfaceTertiary} />
+      </Pressable>
+      <View style={rcStyles.row}>
+        <View style={rcStyles.iconWrap}>
+          <Ionicons
+            name={hasRewards ? "gift-outline" : "map-outline"}
+            size={16}
+            color={COLORS.brand}
+          />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={rcStyles.label}>
+            {hasRewards ? "Daily rewards ready to claim" : "Continue your chapter journey"}
+          </Text>
+          <Text style={rcStyles.sub}>
+            {hasRewards
+              ? `${roundsBadge} unclaimed reward${roundsBadge > 1 ? "s" : ""} in Ward Rounds`
+              : "Open the Journey Map to advance"}
+          </Text>
+        </View>
+        <Pressable
+          style={rcStyles.btn}
+          onPress={hasRewards ? onRounds : onJourney}
+        >
+          <Text style={rcStyles.btnTxt}>GO</Text>
+          <Ionicons name="arrow-forward" size={12} color="#FFFFFF" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const rcStyles = StyleSheet.create({
+  card: {
+    borderWidth: 1,
+    borderColor: COLORS.brand + "44",
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.brand + "0C",
+    padding: SPACING.sm,
+    position: "relative",
+  },
+  dismiss: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 1,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingRight: 20,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.brand + "1A",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.onSurface,
+    lineHeight: 18,
+  },
+  sub: {
+    fontSize: 11,
+    color: COLORS.onSurfaceTertiary,
+    lineHeight: 15,
+  },
+  btn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    flexShrink: 0,
+  },
+  btnTxt: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+  },
+});
 
 const oriStyles = StyleSheet.create({
   card: {
