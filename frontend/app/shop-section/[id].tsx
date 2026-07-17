@@ -7,6 +7,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { FeatureLockedView } from "@/src/components/FeatureGate";
+import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
 import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
@@ -70,6 +72,22 @@ export default function ShopSection() {
         <ActivityIndicator color={COLORS.brand} />
       </SafeAreaView>
     );
+  }
+
+  // P24: Route guard — block access if the section has a featureGate that
+  // hasn't been met yet. Covers deep-links, shortcuts, and legacy routes that
+  // might bypass the hub's locked-card UI.
+  if (section?.featureGate) {
+    const sectionGate = checkFeatureGate(section.featureGate, buildGateContext(player));
+    if (!sectionGate.unlocked) {
+      return (
+        <FeatureLockedView
+          title={section.title}
+          reason={sectionGate.reason}
+          fallback="/(tabs)/shop"
+        />
+      );
+    }
   }
 
   if (!section || !section.groups) {
