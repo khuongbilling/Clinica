@@ -8,6 +8,7 @@ import { usePlayer } from "@/src/game/store";
 import { getSystemIdentity } from "@/src/game/systemNarrator";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 export interface NarratorGuideProps {
   /** What the System says — a directive line guiding the player. */
@@ -76,7 +77,7 @@ export function NarratorGuide({
 
       {objective ? (
         <View style={styles.objectiveChip}>
-          <Ionicons name="flag" size={12} color={COLORS.brand} />
+          <Ionicons name="flag" size={12} color={UI.jade} />
           <Text style={styles.objectiveTxt} numberOfLines={2}>
             <Text style={styles.objectiveLabel}>OBJECTIVE  </Text>
             {objective}
@@ -87,7 +88,7 @@ export function NarratorGuide({
       {ctaLabel && onPress ? (
         <Pressable style={styles.cta} onPress={onPress} testID={testID ? `${testID}-cta` : undefined}>
           <Text style={styles.ctaTxt}>{ctaLabel}</Text>
-          <Ionicons name="arrow-forward" size={16} color={COLORS.onBrand} />
+          <Ionicons name="arrow-forward" size={16} color="#082019" />
         </Pressable>
       ) : null}
     </>
@@ -119,16 +120,16 @@ export function NarratorGuide({
 
 const styles = StyleSheet.create({
   panelWrap: {
-    borderWidth: 1,
-    borderColor: COLORS.brand + "45",
+    borderWidth: 1.5,
+    borderColor: UI.jade + "55",
     borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.brand + "12",
+    backgroundColor: UI.sanctuaryCard,
     padding: SPACING.md,
     gap: SPACING.sm,
   },
   bannerWrap: {
-    borderWidth: 1.5,
-    borderColor: COLORS.brand + "66",
+    borderWidth: 2,
+    borderColor: UI.jade + "70",
     borderRadius: RADIUS.lg,
     overflow: "hidden",
   },
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     borderWidth: 2,
     overflow: "hidden",
-    backgroundColor: "#0B1420",
+    backgroundColor: UI.sanctuaryBg,
     flexShrink: 0,
   },
   portraitImg: { width: 58, height: 58 },
@@ -152,23 +153,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(212,175,55,0.14)",
+    backgroundColor: "rgba(61,196,168,0.13)",
     borderWidth: 1,
-    borderColor: COLORS.brand + "55",
+    borderColor: UI.jade + "55",
     borderRadius: RADIUS.md,
     paddingVertical: 7,
     paddingHorizontal: SPACING.sm,
   },
   objectiveTxt: { flex: 1, color: COLORS.onSurface, fontSize: 12, lineHeight: 16 },
-  objectiveLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  objectiveLabel: { color: UI.jade, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   cta: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING.sm,
-    backgroundColor: COLORS.brand,
+    backgroundColor: UI.jade,
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.md,
   },
-  ctaTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "800", letterSpacing: 1.5 },
+  ctaTxt: { color: "#082019", fontSize: 13, fontWeight: "800", letterSpacing: 1.5 },
 });

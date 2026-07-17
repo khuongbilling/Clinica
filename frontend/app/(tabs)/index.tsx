@@ -309,6 +309,12 @@ export default function RunHome() {
   // "new memory" prompt; it disappears once the scene is watched (or skipped).
   const newMemory = nextUnseenSideScene(player);
 
+  // P16: Hide Community Health Board banner for very early players (pre-Ward Shift)
+  // — avoids showing confusing public-health community content to Day-1 players
+  // still on the core tutorial chain. Shows once player hits Level 3+.
+  const showCommunityBanner = WORLD_EVENT_ACTIVE && eventBannerDismissed === false
+    && (worldEventUnlocked || playerLevelInfo.level >= 3);
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
 
@@ -340,7 +346,7 @@ export default function RunHome() {
            banner linking to the same /world-event route, which already shows
            the rich public-health education view for pre-unlock players.
            Both states are dismissible with the same per-event key.          */}
-      {WORLD_EVENT_ACTIVE && eventBannerDismissed === false && (
+      {showCommunityBanner && (
         <Pressable
           style={[styles.eventBanner, !worldEventUnlocked && styles.eventBannerBoard]}
           onPress={() => router.push(ACTIVE_WORLD_EVENT.route as any)}
@@ -577,21 +583,30 @@ export default function RunHome() {
 
       {/* ── HERO INFO PANEL ── */}
       <Pressable
-        style={[styles.infoPanel, { borderColor: elementColor + "35" }]}
+        style={[styles.infoPanel, {
+          borderColor: elementColor + "45",
+          shadowColor: elementColor,
+          shadowOpacity: 0.22,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 5,
+        }]}
         onPress={() => router.push("/hero-select")}
       >
-        <View style={[styles.elementBadge, { borderColor: elementColor + "80", backgroundColor: elementColor + "15" }]}>
+        <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
+        <View style={[styles.elementBadge, { borderColor: elementColor + "90", backgroundColor: elementColor + "20" }]}>
           <Text style={[styles.elementTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.heroName}>{leadHero?.name ?? "Your Hero"}</Text>
-          <Text style={styles.heroTitle}>{leadHero?.title ?? apt?.title ?? ""}</Text>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={styles.heroName} numberOfLines={1}>{leadHero?.name ?? "Your Hero"}</Text>
+          <Text style={styles.heroTitle} numberOfLines={1}>{leadHero?.title ?? apt?.title ?? ""}</Text>
         </View>
         <View style={styles.xpCol}>
           <View style={styles.xpBg}>
             <View style={[styles.xpBar, { width: `${Math.round(progress * 100)}%` as any, backgroundColor: elementColor }]} />
           </View>
           <Text style={styles.xpTxt}>{nextRank ? `${player.xp}/${nextRank.xpRequired} XP` : "MAX"}</Text>
+          <Text style={[styles.heroTapHint, { color: elementColor + "AA" }]}>TAP TO CHANGE</Text>
         </View>
       </Pressable>
 
@@ -605,14 +620,20 @@ export default function RunHome() {
           testID="run-random-encounter"
         />
       ) : (
-        <View style={styles.wardLockedRow}>
-          <View style={styles.wardLockedBtn}>
-            <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceTertiary} />
-            <Text style={styles.wardLockedLabel}>ENTER THE WARD</Text>
+        <View style={styles.wardLockedCard}>
+          <View style={styles.wardLockedIconWrap}>
+            <Ionicons name="lock-closed" size={20} color={UI.jade} />
           </View>
-          <Text style={styles.wardLockedHint}>
-            {wardShiftGate.reason ?? "Complete your first University lesson to unlock Ward Shift."}
-          </Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.wardLockedCardTitle}>WARD SHIFT · LOCKED</Text>
+            <Text style={styles.wardLockedCardSub}>
+              {wardShiftGate.reason ?? "Finish your first Clinica University lesson to unlock the ward."}
+            </Text>
+          </View>
+          <Pressable style={styles.wardLockedCardCta} onPress={() => router.push("/university" as any)}>
+            <Text style={styles.wardLockedCardCtaTxt}>TRAIN</Text>
+            <Ionicons name="arrow-forward" size={12} color="#082019" />
+          </Pressable>
         </View>
       )}
 
@@ -820,9 +841,9 @@ function ReturnSessionCard({
 const rcStyles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderColor: COLORS.brand + "44",
+    borderColor: UI.jade + "50",
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.brand + "0C",
+    backgroundColor: UI.sanctuaryCard,
     padding: SPACING.sm,
     position: "relative",
   },
@@ -862,7 +883,7 @@ const rcStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: COLORS.brand,
+    backgroundColor: UI.jade,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -878,10 +899,10 @@ const rcStyles = StyleSheet.create({
 
 const oriStyles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderColor: COLORS.brand + "55",
+    borderWidth: 1.5,
+    borderColor: UI.jade + "60",
     borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.brand + "10",
+    backgroundColor: UI.sanctuaryCard,
     padding: SPACING.md,
     gap: SPACING.sm,
   },
@@ -903,15 +924,15 @@ const oriStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(212,175,55,0.12)",
+    backgroundColor: "rgba(61,196,168,0.12)",
     borderWidth: 1,
-    borderColor: COLORS.brand + "50",
+    borderColor: UI.jade + "55",
     borderRadius: RADIUS.md,
     paddingVertical: 7,
     paddingHorizontal: SPACING.sm,
   },
   objectiveTxt: { flex: 1, color: COLORS.onSurface, fontSize: 12, lineHeight: 16 },
-  objectiveLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  objectiveLabel: { color: UI.jade, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   btnRow: {
     flexDirection: "row",
     gap: SPACING.sm,
@@ -921,13 +942,13 @@ const oriStyles = StyleSheet.create({
   },
   secondaryBtn: {
     borderWidth: 1,
-    borderColor: COLORS.brand + "60",
+    borderColor: UI.jade + "60",
     borderRadius: RADIUS.pill,
     paddingVertical: 9,
     paddingHorizontal: SPACING.md,
   },
   secondaryBtnTxt: {
-    color: COLORS.brand,
+    color: UI.jade,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1,
@@ -991,7 +1012,7 @@ function FeatureButton({
 
 /* ── Styles ── */
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: UI.bgDeep },
+  root: { flex: 1, backgroundColor: UI.sanctuaryBg },
 
   /* Tutorial shortcut row (identity/stamina/currencies now live in PlayerHeader) */
   tutorialRow: {
@@ -1010,10 +1031,10 @@ const styles = StyleSheet.create({
   /* Scene label */
   sceneLabelRow: {
     flexDirection: "row", alignItems: "center",
-    gap: 5, paddingHorizontal: SPACING.lg, paddingBottom: 4,
+    gap: 6, paddingHorizontal: SPACING.lg, paddingBottom: 6, paddingTop: 2,
   },
-  sceneDot:  { width: 5, height: 5, borderRadius: 3 },
-  sceneLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  sceneDot:  { width: 6, height: 6, borderRadius: 3, opacity: 0.9 },
+  sceneLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 2.5, opacity: 0.9 },
 
   /* University onboarding banner (prominent first step for new players) */
   uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
@@ -1106,21 +1127,27 @@ const styles = StyleSheet.create({
   tapDot:   { width: 5, height: 5, borderRadius: 3, opacity: 0.85 },
   tapLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.6 },
 
-  /* Hero info panel */
+  /* Hero info panel — RPG character card with element glow */
   infoPanel: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md, marginTop: SPACING.xs,
-    backgroundColor: UI.panel,
-    borderRadius: UI_RADIUS.card, padding: SPACING.md, borderWidth: 1,
+    backgroundColor: UI.sanctuaryCard,
+    borderRadius: UI_RADIUS.card, padding: SPACING.md, borderWidth: 1.5,
+    overflow: "hidden", position: "relative",
+  },
+  infoPanelAccent: {
+    position: "absolute", left: 0, top: 0, bottom: 0,
+    width: 3, borderRadius: 1.5, opacity: 0.85,
   },
   elementBadge: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 4, alignSelf: "center" },
   elementTxt:   { fontSize: 9, fontWeight: "700", letterSpacing: 1.4 },
   heroName:     { color: UI.text, fontSize: 15, fontWeight: "700" },
-  heroTitle:    { color: UI.textSoft, fontSize: 11, marginTop: 1 },
-  xpCol:        { alignItems: "flex-end", gap: 3 },
-  xpBg:         { width: 64, height: 3, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
+  heroTitle:    { color: UI.textDim, fontSize: 11 },
+  xpCol:        { alignItems: "flex-end", gap: 2 },
+  xpBg:         { width: 64, height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
   xpBar:        { height: "100%", borderRadius: 2 },
   xpTxt:        { color: UI.textDim, fontSize: 9, letterSpacing: 0.6 },
+  heroTapHint:  { fontSize: 7, fontWeight: "700", letterSpacing: 0.8 },
 
   /* Start button — layout only; visuals come from PrimaryButton */
   startBtn: {
@@ -1128,28 +1155,39 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm, marginBottom: SPACING.xs,
   },
 
-  /* Ward Shift locked state (before first University lesson) */
-  wardLockedRow: {
+  /* Ward Shift locked state — RPG locked gate card */
+  wardLockedCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md,
     marginTop: SPACING.sm, marginBottom: SPACING.xs,
-    gap: 5,
+    backgroundColor: UI.sanctuaryCard,
+    borderWidth: 1.5, borderColor: UI.jade + "35",
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
   },
-  wardLockedBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8,
-    backgroundColor: UI.sanctuaryPanel,
-    borderWidth: 1, borderColor: UI.sanctuaryBorder,
+  wardLockedIconWrap: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: UI.jade + "18",
+    borderWidth: 1.5, borderColor: UI.jade + "50",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  wardLockedCardTitle: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11, fontWeight: "800", letterSpacing: 1.5,
+  },
+  wardLockedCardSub: {
+    color: UI.textDim, fontSize: 12, lineHeight: 17,
+  },
+  wardLockedCardCta: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: UI.jade,
     borderRadius: RADIUS.pill,
-    paddingVertical: 13,
-    opacity: 0.55,
+    paddingHorizontal: 12, paddingVertical: 8,
+    flexShrink: 0,
   },
-  wardLockedLabel: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 14, fontWeight: "800", letterSpacing: 1.5,
-  },
-  wardLockedHint: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 11, textAlign: "center", lineHeight: 15,
+  wardLockedCardCtaTxt: {
+    color: "#082019", fontSize: 11, fontWeight: "800", letterSpacing: 0.5,
   },
 
   /* Ward Defense card */
