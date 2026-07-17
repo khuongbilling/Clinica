@@ -454,15 +454,18 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 3 — Breath Before Battle (9 nodes, Level 3)
+  // Chapter 3 — Breath Before Battle (9 nodes, Level 4)
   // P9: memory → chal/cue-hunt → chal/rapid-triage → battle →
   //     memory → chal/stabilize-stack → battle → mini-boss → reflection
   // University prep: Breathing Lesson · Shortness Cue Hunt · Airway Triage
+  // Level gate raised to 4 (P23): players must grind ~200 XP after Ch2 via
+  // University practice, daily quests, or shift replays — creates intentional
+  // pacing gap before the airway difficulty spike.
   // ─────────────────────────────────────────────────────────────────────────
   {
     number: 3,
     id: "chapter_3",
-    levelGate: 3,
+    levelGate: 4,
     theme: "Breath Before Battle",
     purpose: "Airway and respiratory cases; ABCDE priority in practice",
     accentColor: C[3],
@@ -664,15 +667,18 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 4 — Code Rush (9 nodes, Level 4)
+  // Chapter 4 — Code Rush (9 nodes, Level 6)
   // P10: memory → chal/rapid-triage → battle → ward_defense →
   //      memory → chal/stabilize-stack → ward_defense → mini-boss(WD) → reflection
   // University prep: Crowded Ward Triage · Protect the Ward Stabilize Stack
+  // Level gate raised to 6 (P23): players completing Ch3 will be ~Level 5;
+  // ~340 XP grind to Level 6 via University practice, replays, daily/weekly
+  // quests before Ward Defense content begins.
   // ─────────────────────────────────────────────────────────────────────────
   {
     number: 4,
     id: "chapter_4",
-    levelGate: 4,
+    levelGate: 6,
     theme: "Code Rush",
     purpose: "Ward Defense introduction; multi-threat corridor management",
     accentColor: C[4],
@@ -874,14 +880,16 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 5 — Building the Sanctuary (8 nodes, Level 5)
+  // Chapter 5 — Building the Sanctuary (8 nodes, Level 7)
   // J1: story → realm → battle → story → battle → ward_defense → battle → mini-boss
   // University prep: Recovery Lesson · Fatigue Cue Hunt · Multi-Step Stabilize Stack
+  // Level gate raised to 7 (P23): players completing Ch4 will be ~Level 6;
+  // ~450 XP grind to Level 7 via Realm, replays, University, daily quests.
   // ─────────────────────────────────────────────────────────────────────────
   {
     number: 5,
     id: "chapter_5",
-    levelGate: 5,
+    levelGate: 7,
     theme: "Building the Sanctuary",
     purpose: "Realm foundation; recovery and circulation cases; Sanctuary as base of operations",
     accentColor: C[5],
@@ -1041,13 +1049,16 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 6 — First Boss Ward (6 parts, Level 7)
+  // Chapter 6 — First Boss Ward (6 parts, Level 10)
   // Boss Ward intro
+  // Level gate raised to 10 (P23): significant milestone before Boss Ward;
+  // players completing Ch5 will be ~Level 8-9; grind to Level 10 via Realm
+  // production, Ward Defense replays, University, daily/weekly quests.
   // ─────────────────────────────────────────────────────────────────────────
   {
     number: 6,
     id: "chapter_6",
-    levelGate: 7,
+    levelGate: 10,
     theme: "First Boss Ward",
     purpose: "Boss Ward intro — high-stakes multi-phase encounter",
     accentColor: C[6],

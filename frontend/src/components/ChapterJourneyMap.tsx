@@ -387,6 +387,36 @@ function ChapterCard({
     claimedNodes.includes(prevRequired) && !claimedNodes.includes(lastRequired)
   );
 
+  // P23: compute lock reason for actionable messaging — distinguish between
+  // level gate, completion gate, or both so the player knows exactly what to do.
+  const prevChapter = chapter.number > 1
+    ? CHAPTERS.find((c) => c.number === chapter.number - 1)
+    : null;
+  const prevRequiredNodes = prevChapter?.requiredCompletionNodes ?? [];
+  const levelLocked = playerLevel < chapter.levelGate;
+  const completionLocked = prevRequiredNodes.length > 0 &&
+    !prevRequiredNodes.every((id) => claimedNodes.includes(id));
+
+  let lockReasonLine = '';
+  let lockActionLine = '';
+  if (isLocked) {
+    if (levelLocked && completionLocked) {
+      lockReasonLine = `Complete Chapter ${chapter.number - 1} required battles and reach Level ${chapter.levelGate}.`;
+      lockActionLine = `Return to Chapter ${chapter.number - 1} to defeat its ward shift battle and chapter trial, then grind XP via University practice, daily quests, and shift replays.`;
+    } else if (levelLocked) {
+      lockReasonLine = `Reach Player Level ${chapter.levelGate} to unlock Chapter ${chapter.number}.`;
+      lockActionLine = `Replay cleared shifts, complete University practice sessions, and finish daily quests to earn XP.`;
+    } else if (completionLocked) {
+      const missing = prevRequiredNodes.filter((id) => !claimedNodes.includes(id));
+      const mLabel = missing.length === 1 ? 'required node' : `${missing.length} required nodes`;
+      lockReasonLine = `Complete Chapter ${chapter.number - 1}'s ${mLabel} first.`;
+      lockActionLine = `Return to Chapter ${chapter.number - 1} and clear its ward shift battle and chapter trial to unlock the next path.`;
+    } else {
+      lockReasonLine = `Complete Chapter ${chapter.number - 1} to open this path.`;
+      lockActionLine = 'Defeat the ward shift battle and chapter trial in the previous chapter.';
+    }
+  }
+
   // J2: per-part eligibility check for first-clear journey node claim.
   function isNodeEligible(part: ChapterPart): boolean {
     if (isLocked) return false;
@@ -492,7 +522,7 @@ function ChapterCard({
           </Text>
           <View style={styles.chapterMetaRow}>
             <Text style={[styles.chapterMeta, { color: COLORS.onSurfaceTertiary }]}>
-              {chapter.parts.length} parts · Level {chapter.levelGate}+
+              {chapter.parts.length} parts · Lv.{chapter.levelGate}+{completionLocked ? ` · Ch.${chapter.number - 1} battles required` : ''}
             </Text>
             {/* C3: battle cleared count badge */}
             {battlesTotal > 0 && battlesCleared > 0 && (
@@ -566,6 +596,21 @@ function ChapterCard({
       {/* ── Parts list (expanded) ── */}
       {isExpanded && (
         <View style={styles.partsList}>
+          {/* P23: Locked chapter explanation — appears above the grayed preview
+              so the player sees exactly what to do next instead of just a lock icon. */}
+          {isLocked && lockReasonLine.length > 0 && (
+            <View style={styles.lockedExplainPanel}>
+              <View style={styles.lockedExplainHeader}>
+                <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.lockedExplainTitle}>
+                  CHAPTER {chapter.number} LOCKED
+                </Text>
+              </View>
+              <Text style={styles.lockedExplainReason}>{lockReasonLine}</Text>
+              <Text style={styles.lockedExplainAction}>{lockActionLine}</Text>
+            </View>
+          )}
+
           {/* P13: Climax anticipation strip — shown for ALL chapter types when near the final trial */}
           {!isLocked && climaxState && (
             <View style={[styles.climaxAnticipationStrip, { borderTopColor: accent + "40" }]}>
@@ -678,16 +723,16 @@ function ChapterCard({
                 );
               })}
 
-              {/* Locked chapter body message (Ch2+) */}
+              {/* P23: dead-code fallback (all chapters 1-10 are covered above);
+                  kept for future chapter additions beyond 10. */}
               {isLocked && (
-                <View style={styles.lockedMsg}>
-                  <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
-                  <Text style={styles.lockedMsgTxt}>
-                    Complete Chapter {chapter.number - 1} to unlock.{"\n"}
-                    <Text style={{ fontStyle: "normal", color: accent + "80" }}>
-                      A harder trial waits on the other side.
-                    </Text>
-                  </Text>
+                <View style={styles.lockedExplainPanel}>
+                  <View style={styles.lockedExplainHeader}>
+                    <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
+                    <Text style={styles.lockedExplainTitle}>CHAPTER {chapter.number} LOCKED</Text>
+                  </View>
+                  <Text style={styles.lockedExplainReason}>{lockReasonLine}</Text>
+                  <Text style={styles.lockedExplainAction}>{lockActionLine}</Text>
                 </View>
               )}
 
@@ -1496,20 +1541,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  // Locked message
-  lockedMsg: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    padding: SPACING.sm,
-    paddingTop: 0,
-  },
-  lockedMsgTxt: {
-    fontSize: 12,
-    color: COLORS.onSurfaceTertiary,
-    fontStyle: "italic",
-  },
-
   // J1: University Prep Tips section
   prepTipsSection: {
     borderTopWidth: 1,
@@ -1674,6 +1705,41 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     flex: 1,
   },
+  // P23: locked chapter explanation panel (shown inside expanded locked chapters)
+  lockedExplainPanel: {
+    margin: SPACING.sm,
+    marginBottom: 0,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceTertiary + "80",
+    gap: 4,
+  },
+  lockedExplainHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  lockedExplainTitle: {
+    fontSize: 9,
+    fontWeight: "800" as const,
+    color: COLORS.onSurfaceTertiary,
+    letterSpacing: 1.2,
+  },
+  lockedExplainReason: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: COLORS.onSurface,
+    lineHeight: 16,
+  },
+  lockedExplainAction: {
+    fontSize: 10,
+    color: COLORS.onSurfaceTertiary,
+    lineHeight: 14,
+    fontStyle: "italic" as const,
+  },
+
   // P6: climax anticipation strip — shown before the final required node
   climaxAnticipationStrip: {
     flexDirection: "row",

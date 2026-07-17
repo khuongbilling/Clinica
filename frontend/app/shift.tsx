@@ -194,16 +194,16 @@ export default function ShiftPage() {
 
         {activeClinical.map((m) => {
           // Ward Defense opens at Level 4; the Realm opens at Level 5 (before the
-          // Boss); Boss Ward is the exam at Level 7.
+          // Boss); Boss Ward unlocks at Level 9 (P23 — bumped from 7).
           const isWardDefense = m.id === "ward-defense";
           const isBossWard = m.id === "boss-ward";
           const modeLocked =
             (isWardDefense && !wardDefenseUnlocked) ||
             (isBossWard && !bossUnlocked);
           const modeLockLabel = isWardDefense && !wardDefenseUnlocked
-            ? "Unlocks at Level 4"
+            ? "Unlocks at Level 4 — replay shifts & daily quests to advance"
             : isBossWard && !bossUnlocked
-              ? "Unlocks at Level 7"
+              ? "Unlocks at Level 9 — keep progressing through chapters"
               : undefined;
           return (
             <BannerCard
@@ -216,8 +216,8 @@ export default function ShiftPage() {
                 if (modeLocked) {
                   flashNotice(
                     isWardDefense
-                      ? "Ward Defense unlocks at Player Level 4."
-                      : "Boss Encounters unlock at Player Level 7.",
+                      ? "Ward Defense unlocks at Player Level 4. Replay cleared shifts, complete University practice, and finish daily quests to gain XP."
+                      : "Boss Encounters unlock at Player Level 9. Continue chapter progression, daily quests, and Realm production to reach this milestone.",
                   );
                   return;
                 }

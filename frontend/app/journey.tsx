@@ -17,6 +17,7 @@ import {
   CHAPTERS,
   getCurrentChapter,
   getChapterFailureHint,
+  getChapterStatus,
   getNextRecommendedPart,
 } from "@/src/game/chapterJourney";
 import { playerLevelFromXp } from "@/src/game/progression";
@@ -42,12 +43,35 @@ export default function JourneyScreen() {
   const claimedNodes = player.claimed_journey_nodes ?? [];
   const currentChapter = getCurrentChapter(playerLevel, claimedNodes);
   const nextStep = getNextRecommendedPart(playerLevel, claimedNodes);
-  // J5: Field Practice Required — show strip when the player has done at least
-  // one battle but still needs more XP/levels to unlock the next chapter.
-  // (Previously only showed for brand-new players with no battle stars.)
+  // P23: Field Practice Required — show strip when the player has done at least
+  // one battle but the next chapter is locked (by level OR completion gate).
   const hasBattleStars = Object.keys(player.battle_stars ?? {}).length > 0;
-  const nextLockedChapter = CHAPTERS.find((ch) => ch.levelGate > playerLevel);
+  // Use getChapterStatus so completion gates are respected, not just levelGate.
+  const nextLockedChapter = CHAPTERS.find(
+    (ch) => getChapterStatus(ch, playerLevel, claimedNodes) === 'locked',
+  );
   const showFieldPracticeStrip = !!nextLockedChapter && hasBattleStars;
+
+  // P23: determine why the next chapter is locked so the strip gives actionable guidance.
+  const nextLockLevelGate = nextLockedChapter?.levelGate ?? 0;
+  const nextLockIsLevelGate = !!nextLockedChapter && playerLevel < nextLockLevelGate;
+  const prevChapterForNextLock = nextLockedChapter
+    ? CHAPTERS.find((c) => c.number === nextLockedChapter.number - 1)
+    : null;
+  const prevRequired = prevChapterForNextLock?.requiredCompletionNodes ?? [];
+  const nextLockIsCompletionGate = prevRequired.length > 0 &&
+    !prevRequired.every((id) => claimedNodes.includes(id));
+
+  const fieldPracticeTitle = nextLockIsCompletionGate && !nextLockIsLevelGate
+    ? 'Complete Required Battles'
+    : 'Field Practice Required';
+  const fieldPracticeSubtext = nextLockIsLevelGate && nextLockIsCompletionGate
+    ? `Complete Chapter ${(nextLockedChapter?.number ?? 1) - 1} required battles and reach Level ${nextLockLevelGate} to unlock Chapter ${nextLockedChapter?.number}. Replay shifts, do University practice, or finish daily quests to advance.`
+    : nextLockIsLevelGate
+    ? `Reach Level ${nextLockLevelGate} to unlock Chapter ${nextLockedChapter?.number}. Replay cleared shifts, complete University practice, or finish daily quests to earn XP.`
+    : nextLockIsCompletionGate
+    ? `Complete Chapter ${(nextLockedChapter?.number ?? 1) - 1}'s required ward shift battle and chapter trial to unlock Chapter ${nextLockedChapter?.number}.`
+    : `Keep progressing through the current chapter to continue.`;
   // J5: University support strip — show when the player has accumulated 3+
   // total battle failures, suggesting targeted University practice.
   const totalFailures = Object.values(player.failure_counts ?? {}).reduce(
@@ -78,19 +102,25 @@ export default function JourneyScreen() {
         </View>
       </View>
 
-      {/* ── J5: Field Practice Required strip — shown when next chapter is locked ── */}
+      {/* ── P23: Field Practice strip — shown when next chapter is locked (level OR completion) ── */}
       {showFieldPracticeStrip && (
         <Pressable
           style={styles.fieldPracticeStrip}
-          onPress={() => router.push("/mode/ward-shift" as any)}
+          onPress={() =>
+            nextLockIsCompletionGate && !nextLockIsLevelGate
+              ? router.push("/journey" as any)  // scroll to current chapter
+              : router.push("/mode/ward-shift" as any)
+          }
           testID="journey-field-practice-strip"
         >
-          <Ionicons name="shield-half" size={18} color={COLORS.error} />
+          <Ionicons
+            name={nextLockIsCompletionGate && !nextLockIsLevelGate ? "medical" : "shield-half"}
+            size={18}
+            color={COLORS.error}
+          />
           <View style={{ flex: 1 }}>
-            <Text style={styles.fieldPracticeTitle}>Field Practice Required</Text>
-            <Text style={styles.fieldPracticeSub}>
-              Reach Level {nextLockedChapter?.levelGate} to unlock Chapter {nextLockedChapter?.number}. Complete University practice, replay cleared shifts, or upgrade hero skills.
-            </Text>
+            <Text style={styles.fieldPracticeTitle}>{fieldPracticeTitle}</Text>
+            <Text style={styles.fieldPracticeSub}>{fieldPracticeSubtext}</Text>
           </View>
           <Ionicons name="arrow-forward" size={16} color={COLORS.error} />
         </Pressable>

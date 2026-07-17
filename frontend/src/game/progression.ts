@@ -75,21 +75,37 @@ export interface FeatureUnlock {
 //   Boss exam → living-world endgame. Ward Shift is Level 1 but gated behind
 //   the first University lesson (narrative gate in checkFeatureGate) so School
 //   always comes first. Realm sits AFTER Ward Defense but BEFORE the Boss.
+// P23 unlock ladder (spread side systems so each level has something to look
+// forward to rather than everything arriving at once):
+//   Lv1  → University, Ward Shift (lesson-gated narrative)
+//   Lv2  → Lotus Journal, Daily & Weekly Rounds, Hall of Heroes (team building)
+//   Lv3  → Apothecary Market / Shops  ← bumped from Lv2
+//   Lv4  → Ward Defense standalone     ← aligns with Ward Defense feature
+//   Lv5  → Realm (also needs first shift done)
+//   Lv7  → World Events (Miasma Bloom) ← bumped from Lv5
+//   Lv9  → Boss Encounters              ← bumped from Lv7 (Ch6 story = Lv10)
+//   Lv12 → Full 10-pull Recruitment     (unchanged)
 export const FEATURE_UNLOCKS: FeatureUnlock[] = [
-  { id: 'university', label: 'Clinica University & Training Hall', level: 1 },
-  { id: 'ward_shift', label: 'Ward Shift Simulations', level: 1 },
-  { id: 'lotus_journal', label: 'Lotus Plate Journal', level: 2 },
-  { id: 'shop', label: 'Shops (Apothecary Market)', level: 2 },
-  // C5 — Summoning Hall, Daily/Weekly Rounds unlock at Level 2 (Apprentice Path).
-  { id: 'hall_of_heroes', label: 'Summoning Hall (Recruitment)', level: 2 },
-  { id: 'daily_rounds', label: 'Daily & Weekly Rounds', level: 2 },
-  { id: 'ward_defense', label: 'Ward Defense', level: 4 },
-  { id: 'realm', label: 'Realm — Grand Ward Atrium', level: 5 },
-  { id: 'boss', label: 'Boss Encounters', level: 7 },
-  { id: 'world_event', label: 'World Events (Miasma Bloom)', level: 5 },
-  { id: 'ten_pull', label: 'Full Class Recruitment (10-pull)', level: 12 },
-  { id: 'advanced_traits', label: 'Advanced Hero Traits', level: 15 },
-  { id: 'advanced_sims', label: 'Advanced Simulations', level: 25 },
+  { id: 'university',       label: 'Clinica University & Training Hall', level: 1 },
+  { id: 'ward_shift',       label: 'Ward Shift Simulations',             level: 1 },
+  { id: 'lotus_journal',    label: 'Lotus Plate Journal',                level: 2 },
+  // C5 — Hall of Heroes and Daily/Weekly Rounds stay at Level 2 (Apprentice
+  // Path). Team-building via Summoning Hall is essential early; daily quests
+  // provide meaningful inter-chapter grinding XP from the start.
+  { id: 'hall_of_heroes',   label: 'Summoning Hall (Recruitment)',       level: 2 },
+  { id: 'daily_rounds',     label: 'Daily & Weekly Rounds',              level: 2 },
+  // P23 — Shop bumped to Lv3 so players have something new to unlock after
+  // their first grinding session between Ch2 and Ch3.
+  { id: 'shop',             label: 'Apothecary Market (Shops)',          level: 3 },
+  { id: 'ward_defense',     label: 'Ward Defense',                       level: 4 },
+  { id: 'realm',            label: 'Realm — Grand Ward Atrium',          level: 5 },
+  // P23 — World Events and Boss both bumped so the unlock ladder stays
+  // meaningful through the mid-game (Ch5–Ch6 range).
+  { id: 'world_event',      label: 'World Events (Miasma Bloom)',        level: 7 },
+  { id: 'boss',             label: 'Boss Encounters',                    level: 9 },
+  { id: 'ten_pull',         label: 'Full Class Recruitment (10-pull)',   level: 12 },
+  { id: 'advanced_traits',  label: 'Advanced Hero Traits',               level: 15 },
+  { id: 'advanced_sims',    label: 'Advanced Simulations',               level: 25 },
 ];
 
 export function isFeatureUnlocked(id: string, level: number): boolean {
@@ -126,7 +142,17 @@ export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResu
   const f = FEATURE_UNLOCKS.find((x) => x.id === id);
   const needLevel = f ? f.level : 1;
   if (!levelOk) {
-    return { unlocked: false, reason: `Reach Player Level ${needLevel} to unlock.` };
+    // P23: action-oriented reason strings — tell the player what to DO, not
+    // just what level to reach.
+    const earlyGrindTip = needLevel <= 3
+      ? 'Replay cleared shifts, finish University practice, and complete daily quests to gain XP.'
+      : needLevel <= 6
+      ? 'Complete chapter battles, run daily quests, and upgrade hero skills to advance.'
+      : 'Continue chapter progression, daily quests, and Realm production to reach this milestone.';
+    return {
+      unlocked: false,
+      reason: `Reach Player Level ${needLevel} to unlock. ${earlyGrindTip}`,
+    };
   }
   switch (id) {
     // C5 — Summoning Hall (hall_of_heroes) now unlocks at Level 2 with no
@@ -140,12 +166,18 @@ export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResu
     // never happened to open a lesson isn't hard-blocked (level is already met).
     case 'ward_shift':
       if (!ctx.lessonsStarted) {
-        return { unlocked: false, reason: 'Begin your first University lesson to open Ward Shift simulations.' };
+        return {
+          unlocked: false,
+          reason: 'Begin your first Lotus Lesson at Clinica University to open Ward Shift simulations.',
+        };
       }
       return { unlocked: true, reason: null };
     case 'realm':
       if (!ctx.firstWardShiftDone) {
-        return { unlocked: false, reason: 'Complete your first Ward Shift to unlock the Realm.' };
+        return {
+          unlocked: false,
+          reason: 'Complete your first Ward Shift simulation to unlock the Realm.',
+        };
       }
       return { unlocked: true, reason: null };
     default:
