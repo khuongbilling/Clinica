@@ -569,7 +569,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
       'Isolation Kit': 1,
       'Lab Token': 2,
     },
-    codex_shards: 50,
+    codex_shards: 100,
     crowns: 0,
     insight_crystals: 0,
     refined_lotus_gems: 0,

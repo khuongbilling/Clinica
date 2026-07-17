@@ -2,13 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
-import { useRef } from "react";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
@@ -51,6 +50,20 @@ export default function UniversityRecruitScreen() {
     return `${h}h ${m}m`;
   })();
 
+  // P18: pulse animation for the FREE button ring when daily draw is available
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!freeAvailable) { pulseAnim.setValue(0); return; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1100, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 1100, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [freeAvailable]);
+
   useEffect(() => {
     if (!isCompleted("firstSummon")) {
       const t = setTimeout(() => startTutorial("firstSummon"), 600);
@@ -68,6 +81,10 @@ export default function UniversityRecruitScreen() {
 
   const shards = player.codex_shards || 0;
   const tenCost = SUMMON_COST * 10;
+  // P18: affordability helpers
+  const canAffordSingle = shards >= SUMMON_COST;
+  const canAffordTen    = shards >= tenCost;
+  const needMore        = Math.max(0, SUMMON_COST - shards);
 
   const doFree = async () => {
     if (busy) return;
@@ -121,8 +138,16 @@ export default function UniversityRecruitScreen() {
           </View>
           <UniversityCreditsBadge amount={player.university_credits || 0} compact testID="recruit-credits-badge" />
         </View>
-        {/* C5 — Summoning Shards explainer for first-time visitors */}
-        {shards < SUMMON_COST && (
+        {/* P18: show free-draw banner when available + shards low; show earn-hint only when broke and free draw is spent */}
+        {freeAvailable && !canAffordSingle && (
+          <View style={styles.freeReadyBanner}>
+            <Ionicons name="sparkles" size={13} color="#4FD8C4" />
+            <Text style={styles.freeReadyBannerTxt}>
+              ✦ Your free daily draw is ready — no shards needed! Tap FREE DAILY below.
+            </Text>
+          </View>
+        )}
+        {!freeAvailable && !canAffordSingle && (
           <View style={styles.shardsInfo}>
             <Ionicons name="information-circle-outline" size={14} color={COLORS.brand} />
             <Text style={styles.shardsInfoTxt}>
@@ -133,8 +158,57 @@ export default function UniversityRecruitScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {error && <Text style={styles.errorTxt}>{error}</Text>}
 
+        {/* P18: FREE DAILY RECRUITMENT — always first, visually dominant when available */}
+        <View style={styles.freeSummonWrap}>
+          {/* Animated pulse ring — only visible when freeAvailable */}
+          {freeAvailable && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.freePulseRing,
+                {
+                  opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.45] }),
+                  transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }],
+                },
+              ]}
+            />
+          )}
+          <Pressable
+            style={[
+              styles.freeSummonBtn,
+              freeAvailable && styles.freeSummonBtnActive,
+              (!freeAvailable || busy) && !freeAvailable && { opacity: 0.65 },
+            ]}
+            onPress={doFree}
+            disabled={busy}
+            testID="recruit-free-btn"
+          >
+            <View style={styles.freeSummonInner}>
+              <View style={[styles.freeBadge, freeAvailable && styles.freeBadgeActive]}>
+                <Text style={styles.freeBadgeTxt}>{freeAvailable ? "FREE ✦" : "FREE"}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.freeSummonTxt, freeAvailable && { color: "#4FD8C4" }]}>DAILY RECRUITMENT</Text>
+                <Text style={styles.freeSummonSub}>
+                  {freeAvailable
+                    ? "Available now — no shards needed. Tap to draw!"
+                    : `Next free draw in ${freeCountdown}`}
+                </Text>
+              </View>
+              {busy
+                ? <ActivityIndicator size="small" color="#4FD8C4" />
+                : <Ionicons
+                    name={freeAvailable ? "sparkles" : "time-outline"}
+                    size={22}
+                    color={freeAvailable ? "#4FD8C4" : COLORS.onSurfaceTertiary}
+                  />
+              }
+            </View>
+          </Pressable>
+        </View>
+
+        {/* Result cards */}
         {single && <ResultCard result={single} />}
         {batch && (
           <View style={styles.batchGrid}>
@@ -144,41 +218,60 @@ export default function UniversityRecruitScreen() {
           </View>
         )}
 
-        {/* P16: Free Daily Summon */}
-        <Pressable
-          style={[styles.freeSummonBtn, (!freeAvailable || busy) && { opacity: 0.65 }]}
-          onPress={doFree}
-          disabled={busy}
-          testID="recruit-free-btn"
-        >
-          <View style={styles.freeSummonInner}>
-            <View style={styles.freeBadge}>
-              <Text style={styles.freeBadgeTxt}>FREE</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.freeSummonTxt}>DAILY RECRUITMENT</Text>
-              <Text style={styles.freeSummonSub}>
-                {freeAvailable ? "One free summon per day — no shards needed." : `Next free summon in ${freeCountdown}`}
-              </Text>
-            </View>
-            <Ionicons name={freeAvailable ? "sparkles" : "time-outline"} size={20} color={freeAvailable ? "#4FD8C4" : COLORS.onSurfaceTertiary} />
-          </View>
-        </Pressable>
+        {error && <Text style={styles.errorTxt}>{error}</Text>}
 
-        <Pressable style={[styles.btn, busy && { opacity: 0.5 }]} onPress={doSingle} disabled={busy} testID="recruit-single-btn">
-          <LinearGradient colors={[COLORS.brand, COLORS.brandSecondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+        {/* P18: SINGLE RECRUITMENT — locked visual when insufficient shards */}
+        <Pressable
+          style={[styles.btn, (busy || !canAffordSingle) && { opacity: canAffordSingle ? 0.5 : 0.45 }]}
+          onPress={doSingle}
+          disabled={busy}
+          testID="recruit-single-btn"
+        >
+          <LinearGradient
+            colors={canAffordSingle ? [COLORS.brand, COLORS.brandSecondary] : ["#334155", "#1E293B"]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
           {busy ? <ActivityIndicator color={COLORS.onBrand} /> : (
             <>
-              <Text style={styles.btnTxt}>SINGLE RECRUITMENT</Text>
-              <Text style={styles.btnCost}>{SUMMON_COST} SHARDS</Text>
+              {!canAffordSingle && <Ionicons name="lock-closed" size={13} color="#94A3B8" style={{ marginRight: 4 }} />}
+              <View style={{ alignItems: "center" }}>
+                <Text style={[styles.btnTxt, !canAffordSingle && { color: "#94A3B8" }]}>SINGLE RECRUITMENT</Text>
+                <Text style={[styles.btnCost, !canAffordSingle && { color: "#64748B" }]}>
+                  {canAffordSingle
+                    ? `${SUMMON_COST} SHARDS`
+                    : `Need ${needMore} more shards  ·  ${SUMMON_COST} total`}
+                </Text>
+              </View>
             </>
           )}
         </Pressable>
 
-        <Pressable style={[styles.btnOutline, busy && { opacity: 0.5 }, { borderColor: COLORS.brand }]} onPress={doTen} disabled={busy} testID="recruit-ten-btn">
-          <Text style={[styles.btnOutlineTxt, { color: COLORS.brand }]}>FULL CLASS RECRUITMENT (×10)</Text>
+        {/* P18: TEN RECRUITMENT — locked visual when insufficient */}
+        <Pressable
+          style={[styles.btnOutline, (busy || !canAffordTen) && { opacity: 0.45 }, { borderColor: canAffordTen ? COLORS.brand : "#334155" }]}
+          onPress={doTen}
+          disabled={busy}
+          testID="recruit-ten-btn"
+        >
+          {!canAffordTen && <Ionicons name="lock-closed" size={12} color="#64748B" />}
+          <Text style={[styles.btnOutlineTxt, { color: canAffordTen ? COLORS.brand : "#64748B" }]}>FULL CLASS RECRUITMENT (×10)</Text>
           <Text style={styles.btnOutlineCost}>{tenCost} SHARDS · guarantees a Class Trainee + Credits</Text>
         </Pressable>
+
+        {/* P18: Earn-shards CTA when player is broke and free draw already used */}
+        {!canAffordSingle && !freeAvailable && (
+          <View style={styles.earnCard}>
+            <View style={styles.earnCardHeader}>
+              <Ionicons name="trending-up-outline" size={14} color={COLORS.brand} />
+              <Text style={styles.earnCardTitle}>Earn more Summoning Shards</Text>
+            </View>
+            <Text style={styles.earnCardLine}>• Ward Shifts — 10–20 shards per run</Text>
+            <Text style={styles.earnCardLine}>• Chapter milestones — 25–50 shards on clear</Text>
+            <Text style={styles.earnCardLine}>• Daily duties &amp; weekly tasks — up to 100 shards</Text>
+            <Text style={styles.earnCardNote}>All sources are free — no payment ever required.</Text>
+          </View>
+        )}
 
         <View style={styles.oddsBox}>
           <Text style={styles.oddsTitle}>Recruitment Odds</Text>
@@ -293,19 +386,60 @@ const styles = StyleSheet.create({
   },
   oddsTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", marginBottom: 2 },
   oddsLine: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  // P18: FREE button wrapper + pulse ring
+  freeSummonWrap: { position: "relative" as const },
+  freePulseRing: {
+    position:     "absolute" as const,
+    top:          -4, bottom: -4, left: -4, right: -4,
+    borderRadius: RADIUS.md + 4,
+    borderWidth:  3,
+    borderColor:  "#3DC4A8",
+  },
   freeSummonBtn: {
-    borderRadius: RADIUS.md, borderWidth: 2, borderColor: "#3DC4A8",
-    backgroundColor: "#3DC4A80A", overflow: "hidden",
+    borderRadius: RADIUS.md, borderWidth: 2, borderColor: "#3DC4A840",
+    backgroundColor: "#3DC4A808", overflow: "hidden",
+  },
+  freeSummonBtnActive: {
+    borderColor: "#3DC4A8",
+    backgroundColor: "#3DC4A812",
+    shadowColor: "#3DC4A8",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   freeSummonInner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
   },
   freeBadge: {
-    backgroundColor: "#3DC4A8", borderRadius: RADIUS.pill,
+    backgroundColor: "#3DC4A840", borderRadius: RADIUS.pill,
     paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: "#3DC4A880",
+  },
+  freeBadgeActive: {
+    backgroundColor: "#3DC4A8",
   },
   freeBadgeTxt: { color: "#082019", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
-  freeSummonTxt: { color: "#4FD8C4", fontSize: 14, fontWeight: "700", letterSpacing: 0.4 },
-  freeSummonSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 2 },
+  freeSummonTxt: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontWeight: "700", letterSpacing: 0.4 },
+  freeSummonSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  // P18: header banner when free draw available and shards low
+  freeReadyBanner: {
+    flexDirection: "row" as const, alignItems: "flex-start", gap: 6,
+    backgroundColor: "#3DC4A815", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#3DC4A840",
+    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginTop: SPACING.xs,
+  },
+  freeReadyBannerTxt: {
+    flex: 1, fontSize: 11, color: "#4FD8C4", lineHeight: 16, fontWeight: "600" as const,
+  },
+  // P18: earn-shards helper card
+  earnCard: {
+    borderWidth: 1, borderColor: COLORS.brand + "35", borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, gap: 4,
+  },
+  earnCardHeader: { flexDirection: "row" as const, alignItems: "center", gap: 6, marginBottom: 2 },
+  earnCardTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" as const },
+  earnCardLine: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
+  earnCardNote: { color: COLORS.brand, fontSize: 10, fontStyle: "italic" as const, marginTop: 2 },
 });

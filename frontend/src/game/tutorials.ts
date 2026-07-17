@@ -249,11 +249,11 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "summon_action",
       title: "Call a Healer",
-      body: "Tap the SINGLE RECRUITMENT button below to call a new hero to your team. Duplicate heroes refund Shards. Add new heroes to your active team before the next battle.",
+      body: "Tap FREE DAILY RECRUITMENT (no shards needed!) or SINGLE RECRUITMENT below to enroll a new healer. Duplicates convert to Hero Shards. Add your heroes to the active team before the next battle.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "summon",
-      nextText: "TAP SINGLE RECRUITMENT",
+      nextText: "TAP FREE OR SINGLE RECRUITMENT",
     },
   ],
 
