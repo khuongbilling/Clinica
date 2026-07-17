@@ -5,11 +5,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { COLORS } from "@/src/theme/colors";
+import { usePlayer } from "@/src/game/store";
+import { RANKS } from "@/src/game/content";
 
 const SPLASH = require("../assets/images/title_splash.png");
 
 export default function Title() {
   const router = useRouter();
+  const { player } = usePlayer();
+
+  // Returning players: seen the full prologue flow and have a saved identity.
+  const isReturning = !!(player?.seen_reminiscence);
+  const playerName = isReturning && player?.name && player.name !== "Healer" ? player.name : null;
+  const rankTitle = isReturning && player ? (RANKS[player.rank_index]?.title ?? null) : null;
 
   return (
     <View style={styles.root}>
@@ -29,20 +37,38 @@ export default function Title() {
 
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Text style={styles.kicker}>THE KINGDOM CALLS FOR A HEALER</Text>
+          <Text style={styles.kicker}>
+            {isReturning ? "WELCOME BACK TO THE KINGDOM" : "THE KINGDOM CALLS FOR A HEALER"}
+          </Text>
           <Text style={styles.title}>CLINICA</Text>
           <Text style={styles.subtitle}>Kingdom of Healing</Text>
         </View>
 
         <View style={styles.footer}>
+          {/* Returning-player identity pill — shown only for players who completed onboarding */}
+          {isReturning && (playerName || rankTitle) && (
+            <View style={styles.identityPill}>
+              <View style={styles.identityDot} />
+              <Text style={styles.identityTxt} numberOfLines={1}>
+                {playerName ? `${playerName}` : ""}
+                {playerName && rankTitle ? "  ·  " : ""}
+                {rankTitle ?? ""}
+              </Text>
+            </View>
+          )}
+
           <Pressable
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
             onPress={() => router.replace("/preloader" as never)}
             testID="start-game"
           >
-            <Text style={styles.buttonText}>START GAME</Text>
+            <Text style={styles.buttonText}>
+              {isReturning ? "CONTINUE JOURNEY" : "START GAME"}
+            </Text>
           </Pressable>
-          <Text style={styles.tagline}>Answer the call. Restore the realm.</Text>
+          <Text style={styles.tagline}>
+            {isReturning ? "The ward awaits." : "Answer the call. Restore the realm."}
+          </Text>
         </View>
       </SafeAreaView>
     </View>
@@ -63,6 +89,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 3,
+    textAlign: "center",
   },
   title: {
     color: "#F4F7FB",
@@ -79,6 +106,33 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   footer: { alignItems: "center", gap: 16, marginBottom: 8 },
+
+  /* Returning-player name / rank badge */
+  identityPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  identityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.brand,
+    opacity: 0.9,
+  },
+  identityTxt: {
+    color: "#C8CDD8",
+    fontSize: 12,
+    letterSpacing: 1,
+    fontStyle: "italic",
+  },
+
   button: {
     backgroundColor: COLORS.brand,
     paddingVertical: 17,

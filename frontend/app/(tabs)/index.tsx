@@ -17,7 +17,6 @@ import { getBannerImage } from "@/src/components/ModeBanners";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
-import { getSystemIdentity } from "@/src/game/systemNarrator";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, GLOW } from "@/src/theme/ui";
@@ -200,9 +199,22 @@ export default function RunHome() {
   const [eventBannerDismissed, setEventBannerDismissed] = useState<boolean | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // Push 26 — post-prologue orientation cleanup.
+  // Players who reach the hub via the full flow always have seen_reminiscence=true.
+  // Auto-dismiss the "Welcome to Clinica" intro modal and complete systemHubIntro so
+  // neither fires on top of the NarratorGuide objective chain — both are redundant
+  // after the prologue → recall → identity → reminiscence arc the player just finished.
+  // For edge-case players without seen_reminiscence (shouldn't reach hub), fall back
+  // to the legacy INTRO_KEY check so the modal still shows.
   useEffect(() => {
+    if (player?.seen_reminiscence) {
+      // Post-prologue player: suppress both intro-modal and orientation-panel
+      AsyncStorage.setItem(INTRO_KEY, "1");
+      if (!isCompleted("systemHubIntro")) markDone("systemHubIntro");
+      return;
+    }
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // C5 — Level 2 "Apprentice Path Opened" celebration. Fire once the player
   // reaches Level 2 and hasn't yet seen the unlock moment. The intro modal
@@ -223,12 +235,6 @@ export default function RunHome() {
     setEventBannerDismissed(true);
     await AsyncStorage.setItem(WORLD_EVENT_BANNER_KEY, "1");
   };
-
-  // The System hub orientation is now handled by the inline SystemHubOrientationPanel
-  // (rendered in JSX below). It shows when !isCompleted("systemHubIntro") &&
-  // player.seen_reminiscence — no TutorialOverlay is used for this tutorial because
-  // the hub previously had no <TutorialOverlay /> and the 3-step modal chain was
-  // invisible and could never complete.
 
   // Manhwa story layer — chapter scenes auto-play once when their chapter
   // milestone is reached. Deferred until the welcome intro and the System's
@@ -309,10 +315,13 @@ export default function RunHome() {
   // "new memory" prompt; it disappears once the scene is watched (or skipped).
   const newMemory = nextUnseenSideScene(player);
 
-  // P16: Hide Community Health Board banner for very early players (pre-Ward Shift)
-  // — avoids showing confusing public-health community content to Day-1 players
-  // still on the core tutorial chain. Shows once player hits Level 3+.
+  // Push 26 — Community board banner is hidden while the tutorial chain is active.
+  // `currentObjective === null` is the signal that all 12 steps are done.
+  // While `currentObjective` is `undefined` (still loading) or a live step,
+  // the banner stays hidden so it never competes with the NarratorGuide card.
+  const tutorialChainDone = currentObjective === null;
   const showCommunityBanner = WORLD_EVENT_ACTIVE && eventBannerDismissed === false
+    && tutorialChainDone
     && (worldEventUnlocked || playerLevelInfo.level >= 3);
 
   return (
@@ -412,50 +421,31 @@ export default function RunHome() {
         </Pressable>
       )}
 
-      {/* ── SYSTEM HUB ORIENTATION — one-time panel after reminiscence ─────────
-           Replaces the NarratorGuide while the player hasn't yet acknowledged
-           the hub orientation. The 3-step systemHubIntro TutorialOverlay flow
-           was never visible on the hub (no <TutorialOverlay /> here), so we
-           render a dedicated two-button card instead.                          */}
-      {!isCompleted("systemHubIntro") && player.seen_reminiscence && !showIntro ? (
+      {/* ── OBJECTIVE-DRIVEN FIRST-SESSION GUIDE ─────────────────────────────
+           Single step-by-step card that drives the player through the 12-step
+           tutorial chain.  Content refreshes on every hub focus so returning
+           from University / lessons always shows the current step.
+           systemHubIntro and the intro modal are auto-dismissed in the
+           useEffect above for all post-prologue players (seen_reminiscence=true),
+           so this card is the ONLY orientation layer a new player sees.         */}
+      {!localDismissGuide && currentObjective && currentObjective.step <= 15 && (
         <View style={styles.uniOnboard}>
-          <SystemHubOrientationPanel
-            player={player}
-            onGoToUniversity={() => {
-              markDone("systemHubIntro");
-              router.push("/university" as any);
+          <NarratorGuide
+            bgImage={getBannerImage("university")}
+            message={hubGuideMessage(currentObjective)}
+            objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
+            ctaLabel={hubGuideCta(currentObjective)}
+            onPress={() => {
+              const route = hubGuideRoute(currentObjective);
+              if (!route) {
+                setLocalDismissGuide(true);
+              } else {
+                router.push(route as any);
+              }
             }}
-            onExploreHub={() => {
-              markDone("systemHubIntro");
-            }}
+            testID="home-objective-guide"
           />
         </View>
-      ) : (
-        /* ── OBJECTIVE-DRIVEN FIRST-SESSION GUIDE ───────────────────────────
-             Shows while the player is working through the early tutorial chain
-             (steps 1–11).  Content updates every time the hub gains focus so it
-             always reflects the current step rather than a stale/hardcoded state.
-             The obj_prologue_done card (step 1, pre-reminiscence) uses a local
-             dismiss so tapping "Explore the Hub" doesn't route to the same page. */
-        !localDismissGuide && currentObjective && currentObjective.step <= 15 && (
-          <View style={styles.uniOnboard}>
-            <NarratorGuide
-              bgImage={getBannerImage("university")}
-              message={hubGuideMessage(currentObjective)}
-              objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
-              ctaLabel={hubGuideCta(currentObjective)}
-              onPress={() => {
-                const route = hubGuideRoute(currentObjective);
-                if (!route) {
-                  setLocalDismissGuide(true);
-                } else {
-                  router.push(route as any);
-                }
-              }}
-              testID="home-objective-guide"
-            />
-          </View>
-        )
       )}
 
       {/* P6: return-session motivation card — once per session for Lv2+ returning players */}
@@ -732,64 +722,6 @@ function SceneBg({
   );
 }
 
-// ── SystemHubOrientationPanel ─────────────────────────────────────────────────
-// One-time System narrator orientation card shown on the first hub visit after
-// reminiscence. Has two CTAs: "GO TO UNIVERSITY" (primary) and "EXPLORE THE HUB"
-// (secondary dismiss). Replaces the broken 3-step TutorialOverlay flow that was
-// starting silently because the hub had no <TutorialOverlay /> renderer.
-function SystemHubOrientationPanel({
-  player,
-  onGoToUniversity,
-  onExploreHub,
-}: {
-  player: any;
-  onGoToUniversity: () => void;
-  onExploreHub: () => void;
-}) {
-  const playerLevel = player?.player_level ?? playerLevelFromXp(player?.xp ?? 0).level;
-  const identity = getSystemIdentity(playerLevel, player?.aptitude);
-  const accent = identity.color;
-
-  return (
-    <View style={oriStyles.card}>
-      {/* Narrator row */}
-      <View style={oriStyles.row}>
-        <View style={[oriStyles.portrait, { borderColor: accent + "AA" }]}>
-          <Image source={identity.art} style={oriStyles.portraitImg} contentFit="cover" />
-        </View>
-        <View style={{ flex: 1, gap: 4 }}>
-          <View style={oriStyles.nameRow}>
-            <Ionicons name="sparkles" size={11} color={accent} />
-            <Text style={[oriStyles.name, { color: accent }]}>{identity.name.toUpperCase()}</Text>
-          </View>
-          <Text style={oriStyles.message}>
-            Command screen restored — study, train, run simulations, and return to the ward when ready.
-          </Text>
-        </View>
-      </View>
-
-      {/* Objective chip */}
-      <View style={oriStyles.objectiveChip}>
-        <Ionicons name="flag" size={12} color={COLORS.brand} />
-        <Text style={oriStyles.objectiveTxt}>
-          <Text style={oriStyles.objectiveLabel}>OBJECTIVE  </Text>
-          Begin corrective training at Clinica University
-        </Text>
-      </View>
-
-      {/* Two-button row */}
-      <View style={oriStyles.btnRow}>
-        <Pressable style={oriStyles.secondaryBtn} onPress={onExploreHub} testID="orientation-explore-hub">
-          <Text style={oriStyles.secondaryBtnTxt}>EXPLORE THE HUB</Text>
-        </Pressable>
-        <Pressable style={[oriStyles.primaryBtn, { backgroundColor: accent }]} onPress={onGoToUniversity} testID="orientation-go-university">
-          <Text style={oriStyles.primaryBtnTxt}>GO TO UNIVERSITY</Text>
-          <Ionicons name="arrow-forward" size={14} color={COLORS.onBrand} />
-        </Pressable>
-      </View>
-    </View>
-  );
-}
 
 // ── ReturnSessionCard ─────────────────────────────────────────────────────────
 // P6: compact dismissible card shown once per app session for Lv2+ returning players.
@@ -897,77 +829,6 @@ const rcStyles = StyleSheet.create({
   },
 });
 
-const oriStyles = StyleSheet.create({
-  card: {
-    borderWidth: 1.5,
-    borderColor: UI.jade + "60",
-    borderRadius: RADIUS.lg,
-    backgroundColor: UI.sanctuaryCard,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  row: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.md },
-  portrait: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: 2,
-    overflow: "hidden",
-    backgroundColor: "#0B1420",
-    flexShrink: 0,
-  },
-  portraitImg: { width: 54, height: 54 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  name: { fontSize: 10, fontWeight: "800", letterSpacing: 2 },
-  message: { color: COLORS.onSurface, fontSize: 13, lineHeight: 18 },
-  objectiveChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(61,196,168,0.12)",
-    borderWidth: 1,
-    borderColor: UI.jade + "55",
-    borderRadius: RADIUS.md,
-    paddingVertical: 7,
-    paddingHorizontal: SPACING.sm,
-  },
-  objectiveTxt: { flex: 1, color: COLORS.onSurface, fontSize: 12, lineHeight: 16 },
-  objectiveLabel: { color: UI.jade, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
-  btnRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    marginTop: 2,
-  },
-  secondaryBtn: {
-    borderWidth: 1,
-    borderColor: UI.jade + "60",
-    borderRadius: RADIUS.pill,
-    paddingVertical: 9,
-    paddingHorizontal: SPACING.md,
-  },
-  secondaryBtnTxt: {
-    color: UI.jade,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 9,
-    paddingHorizontal: SPACING.md,
-  },
-  primaryBtnTxt: {
-    color: COLORS.onBrand,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-});
 
 /** Shared structural styles for SceneBg */
 const sc = StyleSheet.create({
