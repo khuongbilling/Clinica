@@ -8,7 +8,7 @@ import * as Haptics from "expo-haptics";
 import { BOSS_LORD_IMBALANCE, BOSS_SILENT_INFARCT, ENEMIES, HEROES, getWaveAdditionalEnemies } from "@/src/game/content";
 import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
-import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, SCOUT_FEEDBACK, STABILIZE_FEEDBACK, COUNTER_FEEDBACK, REASSESS_FEEDBACK } from "@/src/game/explanationLayers";
+import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, COUNTER_FEEDBACK, getContextualScoutFeedback, getContextualStabilizeFeedback, getContextualReassessFeedback } from "@/src/game/explanationLayers";
 import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
@@ -166,7 +166,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   const [activeTab, setActiveTab] = useState<Tab>("actions");
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [feedbackIsChain, setFeedbackIsChain] = useState(false);
   const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const turnActionsRef = useRef<string[]>([]);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
   const [detail, setDetail] = useState<DetailEntry | null>(null);
@@ -344,16 +346,29 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   }, [state.basicAidUses]);
 
   const showFeedback = (actionType: string) => {
+    const prior = turnActionsRef.current;
+    const treatedThisTurn = prior.some(a => a === 'strike' || a === 'stabilize' || a === 'support');
+    const scoutedThisTurn = prior.some(a => a === 'scout');
+    const ctx = { scoutedThisTurn, treatedThisTurn, stabilityLow: state.stability < 50 };
     let msg: string | null = null;
-    if (actionType === 'scout')    msg = SCOUT_FEEDBACK[explanationLayer];
-    else if (actionType === 'stabilize') msg = STABILIZE_FEEDBACK[explanationLayer];
-    else if (actionType === 'strike')    msg = COUNTER_FEEDBACK[explanationLayer];
-    else if (actionType === 'analyze')   msg = REASSESS_FEEDBACK[explanationLayer];
-    else msg = getGuidedFeedback(enemy.id, actionType) ?? null;
+    let isChain = false;
+    if (actionType === 'scout') {
+      msg = getContextualScoutFeedback(explanationLayer, ctx);
+    } else if (actionType === 'stabilize') {
+      msg = getContextualStabilizeFeedback(explanationLayer, ctx);
+    } else if (actionType === 'strike') {
+      msg = COUNTER_FEEDBACK[explanationLayer];
+    } else if (actionType === 'analyze') {
+      msg = getContextualReassessFeedback(explanationLayer, ctx);
+      isChain = treatedThisTurn;
+    } else {
+      msg = getGuidedFeedback(enemy.id, actionType) ?? null;
+    }
     if (!msg) return;
     if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    setFeedbackIsChain(isChain);
     setFeedbackMsg(msg);
-    feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 3500);
+    feedbackTimeout.current = setTimeout(() => { setFeedbackMsg(null); setFeedbackIsChain(false); }, isChain ? 4500 : 3500);
   };
 
   // ---- Guided tutorial battle: force a specific care-chain sequence ----
@@ -391,6 +406,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setState((s) => applySkill(s, effective, hero, castQuality).state);
     triggerFx(hero.id, effective.type);
+    turnActionsRef.current = [...turnActionsRef.current, effective.type];
     showFeedback(skill.type);
     if (!tsFirstAction.current) {
       tsFirstAction.current = true;
@@ -506,6 +522,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     const res = applyItem(state, item);
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "stabilize");
+    const itemActionType = item.target === 'corruption' ? 'strike' : item.target === 'clue' ? 'scout' : 'stabilize';
+    turnActionsRef.current = [...turnActionsRef.current, itemActionType];
     setDetail(null);
   };
   const decideCallItem = () => {
@@ -530,6 +548,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.outcome !== "ongoing") return;
     if (guidedStep && !guidedEndTurnStep) { tutorialNudge(); return; }
     onRequiredAction("endTurn");
+    turnActionsRef.current = [];
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     triggerEnemyAttack(getEnemySignatureAttack(enemy).kind);
     setState((s) => {
@@ -965,9 +984,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             player through every step), the goal strip is redundant noise —
             hide it and let the narrator carry the objective. */}
         {feedbackMsg ? (
-          <View style={styles.feedbackBanner}>
-            <Ionicons name="information-circle" size={11} color={COLORS.brand} />
-            <Text style={styles.feedbackText} numberOfLines={2}>{feedbackMsg}</Text>
+          <View style={[styles.feedbackBanner, feedbackIsChain && styles.feedbackBannerChain]}>
+            <Ionicons name={feedbackIsChain ? "sparkles" : "information-circle"} size={11} color={feedbackIsChain ? COLORS.runeGold : COLORS.brand} />
+            <Text style={[styles.feedbackText, feedbackIsChain && styles.feedbackTextChain]} numberOfLines={2}>{feedbackMsg}</Text>
           </View>
         ) : activeTutorialId ? null : (
           <View style={styles.objectiveStrip}>
@@ -1610,7 +1629,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm, paddingVertical: 5,
     borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: 4,
   },
+  feedbackBannerChain: {
+    backgroundColor: COLORS.runeGold + "18",
+    borderColor: COLORS.runeGold + "60",
+    borderWidth: 1.5,
+  },
   feedbackText: { color: COLORS.brand, fontSize: 10, lineHeight: 14, flex: 1 },
+  feedbackTextChain: { color: COLORS.runeGold, fontWeight: "700" },
 
   guidedHighlight: { borderColor: COLORS.brand, borderWidth: 2, backgroundColor: "rgba(88,166,255,0.10)" },
   guidedDim: { opacity: 0.35 },

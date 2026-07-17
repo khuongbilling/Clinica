@@ -15,7 +15,7 @@ import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type Lear
 import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getMission } from "@/src/game/missions";
 import { useTestSession } from "@/src/game/testSession";
-import { getExplanationLayer, getVictorySummary } from "@/src/game/explanationLayers";
+import { getExplanationLayer, getVictorySummary, buildClinicalReflection } from "@/src/game/explanationLayers";
 import { getDifficultyModifier } from "@/src/game/difficulty";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { getChapterFailureHint } from "@/src/game/chapterJourney";
@@ -91,6 +91,18 @@ export default function Result() {
   // P5: collapsible clinical details
   const [showReflection, setShowReflection] = useState(false);
   const [showLearnMore, setShowLearnMore] = useState(false);
+
+  const clinicalReflection = useMemo(() => buildClinicalReflection({
+    won,
+    fullChainCompleted,
+    reassessUsed: reassess === "1",
+    unsafeCount: parseInt(unsafe || "0", 10),
+    poorFitCount: parseInt(poorFit || "0", 10),
+    turnsCount: parseInt(turns || "0", 10),
+    consultsUsed,
+    inappropriateConsultsUsed,
+    basicAidUses,
+  }), [won, fullChainCompleted, reassess, unsafe, poorFit, turns, consultsUsed, inappropriateConsultsUsed, basicAidUses]);
   const enemy = useMemo(() => {
     if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
     return ENEMIES.find((e) => e.id === enemyId);
@@ -474,17 +486,21 @@ export default function Result() {
             {showReflection && (
               <View style={styles.reflectionCard} testID="result-reflection-card">
                 <View style={styles.reflectionSteps}>
+                  {clinicalReflection.bestAction && (
+                    <View style={styles.reflectionStep}>
+                      <Ionicons name="checkmark-circle" size={13} color={COLORS.success} />
+                      <Text style={[styles.reflectionStepTxt, styles.reflectionStepGood]} numberOfLines={2}>{clinicalReflection.bestAction}</Text>
+                    </View>
+                  )}
+                  {clinicalReflection.missedOpportunity && (
+                    <View style={styles.reflectionStep}>
+                      <Ionicons name="alert-circle-outline" size={13} color={COLORS.warning} />
+                      <Text style={[styles.reflectionStepTxt, styles.reflectionStepWarn]} numberOfLines={2}>{clinicalReflection.missedOpportunity}</Text>
+                    </View>
+                  )}
                   <View style={styles.reflectionStep}>
-                    <Ionicons name="search-outline" size={12} color={COLORS.brand} />
-                    <Text style={styles.reflectionStepTxt}>Scout first — reveal cues before acting.</Text>
-                  </View>
-                  <View style={styles.reflectionStep}>
-                    <Ionicons name="shield-outline" size={12} color={COLORS.brand} />
-                    <Text style={styles.reflectionStepTxt}>Stabilize before countering — keep the patient safe first.</Text>
-                  </View>
-                  <View style={styles.reflectionStep}>
-                    <Ionicons name="refresh-outline" size={12} color={COLORS.brand} />
-                    <Text style={styles.reflectionStepTxt}>Reassess after treatment — check the patient's response.</Text>
+                    <Ionicons name="arrow-forward-circle-outline" size={13} color={COLORS.brand} />
+                    <Text style={styles.reflectionStepTxt} numberOfLines={2}>{clinicalReflection.nextTip}</Text>
                   </View>
                 </View>
                 {lessonComplete && linkedLesson && (
@@ -494,6 +510,19 @@ export default function Result() {
                       Your Lotus Lesson <Text style={styles.reflectionLessonName}>{linkedLesson.title}</Text> prepared you for this encounter.
                     </Text>
                   </View>
+                )}
+                {!lessonComplete && linkedLesson && (
+                  <Pressable
+                    style={styles.reflectionLessonCta}
+                    onPress={() => router.push({ pathname: "/lotus-lesson/[nodeId]", params: { nodeId: linkedLesson.id } } as any)}
+                    testID="result-reflection-lesson-cta"
+                  >
+                    <Ionicons name="book-outline" size={13} color={COLORS.brand} />
+                    <Text style={styles.reflectionLessonCtaTxt}>
+                      Study <Text style={styles.reflectionLessonName}>{linkedLesson.title}</Text> in Lotus Lessons
+                    </Text>
+                    <Ionicons name="chevron-forward" size={12} color={COLORS.brand + "80"} />
+                  </Pressable>
                 )}
                 {(linkedLesson?.learningTags ?? []).length > 0 && (
                   <View style={styles.reflectionTags}>
@@ -821,6 +850,15 @@ const styles = StyleSheet.create({
   reflectionSteps: { gap: 6, marginTop: 2 },
   reflectionStep: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
   reflectionStepTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, flex: 1 },
+  reflectionStepGood: { color: COLORS.success },
+  reflectionStepWarn: { color: "#F59E0B" },
+  reflectionLessonCta: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: COLORS.brand + "10", borderRadius: 6,
+    padding: SPACING.sm, marginTop: 2,
+    borderWidth: 1, borderColor: COLORS.brand + "28",
+  },
+  reflectionLessonCtaTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, flex: 1 },
   reflectionLessonRow: {
     flexDirection: "row", alignItems: "flex-start", gap: 6,
     backgroundColor: COLORS.brand + "0E", borderRadius: 6,

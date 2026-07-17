@@ -285,3 +285,116 @@ export const HERO_LAYER_DESCRIPTIONS: Record<string, Partial<Record<ExplanationL
 export function getHeroLayerDescription(heroId: string, layer: ExplanationLayer): string | null {
   return HERO_LAYER_DESCRIPTIONS[heroId]?.[layer] ?? null;
 }
+
+// ── Contextual consequence feedback ──────────────────────────────────────────
+// These replace the generic per-action strings when we have turn-level context
+// (what actions already happened this turn, whether stability is critical, etc.).
+
+export interface ActionFeedbackContext {
+  scoutedThisTurn: boolean;
+  treatedThisTurn: boolean;
+  stabilityLow: boolean;   // stability < 50
+}
+
+export function getContextualScoutFeedback(layer: ExplanationLayer, ctx: ActionFeedbackContext): string {
+  if (ctx.treatedThisTurn) {
+    const msgs: Record<ExplanationLayer, string> = {
+      fantasy:       'Checking clues after acting — findings now can still redirect your next step.',
+      simpleMedical: 'Data gathered after treatment. Use these findings to guide what you do next.',
+      nursing:       'Late assessment still valuable — use new cues to evaluate response and redirect care.',
+      nclex:         'Post-intervention assessment: recognize new cues and evaluate effectiveness.',
+      professional:  'Post-intervention assessment: integrate findings to determine next priority.',
+    };
+    return msgs[layer];
+  }
+  return SCOUT_FEEDBACK[layer];
+}
+
+export function getContextualStabilizeFeedback(layer: ExplanationLayer, ctx: ActionFeedbackContext): string {
+  if (!ctx.stabilityLow) {
+    const msgs: Record<ExplanationLayer, string> = {
+      fantasy:       'The patient was already holding steady — this keeps the margin safe.',
+      simpleMedical: 'Stability was comfortable, but keeping it high extends your window to treat.',
+      nursing:       'Stability maintained. Weigh whether targeting the underlying cause has higher priority here.',
+      nclex:         'Consider whether stabilization was the top priority at this stability level.',
+      professional:  'Stability adequate — weigh stabilization vs targeted intervention priority.',
+    };
+    return msgs[layer];
+  }
+  return STABILIZE_FEEDBACK[layer];
+}
+
+// Returns a Care-Chain–flagged message when reassess fires after treatment,
+// or falls back to the standard reassess string otherwise.
+export function getContextualReassessFeedback(layer: ExplanationLayer, ctx: ActionFeedbackContext): string {
+  if (ctx.treatedThisTurn) {
+    const msgs: Record<ExplanationLayer, string> = {
+      fantasy:       '✦ Care Chain — treatment then reassessment. Bonus AP next turn!',
+      simpleMedical: '✦ Care Chain — you treated, then checked the response. Bonus AP awarded!',
+      nursing:       '✦ Care Chain — targeted intervention followed by reassessment. Clinical reasoning rewarded.',
+      nclex:         '✦ Care Chain — Intervene → Evaluate Outcomes. This is clinical judgment in action.',
+      professional:  '✦ Care Chain — intervention with reassessment confirms systematic clinical reasoning.',
+    };
+    return msgs[layer];
+  }
+  return REASSESS_FEEDBACK[layer];
+}
+
+// ── Result-screen Clinical Reflection ────────────────────────────────────────
+
+export interface ClinicalReflectionResult {
+  bestAction: string | null;
+  missedOpportunity: string | null;
+  nextTip: string;
+}
+
+export function buildClinicalReflection(params: {
+  won: boolean;
+  fullChainCompleted: boolean;
+  reassessUsed: boolean;
+  unsafeCount: number;
+  poorFitCount: number;
+  turnsCount: number;
+  consultsUsed: number;
+  inappropriateConsultsUsed: number;
+  basicAidUses: number;
+}): ClinicalReflectionResult {
+  const { won, fullChainCompleted, reassessUsed, unsafeCount, poorFitCount, consultsUsed, inappropriateConsultsUsed } = params;
+
+  let bestAction: string | null = null;
+  if (fullChainCompleted) {
+    bestAction = 'Full Care Chain — Scout, Stabilize, Treat, and Reassess in sequence.';
+  } else if (reassessUsed && won) {
+    bestAction = 'You reassessed after treatment — that\'s the loop the Codex rewards.';
+  } else if (consultsUsed > 0 && inappropriateConsultsUsed === 0) {
+    bestAction = 'Smart Support Call — right resource, right situation.';
+  } else if (unsafeCount === 0 && poorFitCount === 0 && won) {
+    bestAction = 'Clean approach — no unsafe or poor-fit actions used.';
+  }
+
+  let missedOpportunity: string | null = null;
+  if (!reassessUsed && won) {
+    missedOpportunity = 'No Reassess used — checking after treatment earns Care Chain bonus AP next turn.';
+  } else if (unsafeCount > 0) {
+    missedOpportunity = `${unsafeCount} unsafe action${unsafeCount > 1 ? 's' : ''} taken — these weaken progress and risk the patient.`;
+  } else if (!fullChainCompleted && won && reassessUsed) {
+    missedOpportunity = 'Care Chain incomplete — try Scout → Stabilize → Treat → Reassess for max bonus.';
+  } else if (inappropriateConsultsUsed > 0) {
+    missedOpportunity = 'A Support Call didn\'t match the situation — the Codex noted it.';
+  } else if (poorFitCount > 0 && won) {
+    missedOpportunity = `${poorFitCount} poor-fit action${poorFitCount > 1 ? 's' : ''} — matching the enemy system deals more corruption damage.`;
+  }
+
+  let nextTip: string;
+  if (!reassessUsed) {
+    nextTip = 'Next time: use Analyze after a treatment skill to close the care loop and earn bonus AP.';
+  } else if (!fullChainCompleted) {
+    nextTip = 'Try opening with Scout → Stabilize → Treat → Reassess for the full chain bonus.';
+  } else if (unsafeCount === 0 && poorFitCount === 0) {
+    nextTip = 'Perfect sequence. Push to a higher-difficulty enemy to test your clinical reasoning.';
+  } else {
+    nextTip = 'Revisit the Codex and match your actions to the enemy\'s primary system each turn.';
+  }
+
+  return { bestAction, missedOpportunity, nextTip };
+}
