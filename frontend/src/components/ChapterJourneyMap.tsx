@@ -18,6 +18,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ImageSourcePropType,
 } from "react-native";
 
 import {
@@ -154,6 +155,8 @@ interface Props {
   wardDefenseWaves?: number;
   /** Callback fired when a journey node first-clear is claimed. */
   onNodeClaim?: (nodeId: string, stars: number) => Promise<void>;
+  /** P17: Lead hero portrait shown as traveler sprite on the active node. */
+  leadHeroSprite?: ImageSourcePropType;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -167,6 +170,7 @@ export function ChapterJourneyMap({
   wardDefenseWaves = 0,
   onChestClaim,
   onNodeClaim,
+  leadHeroSprite,
 }: Props) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(() => {
@@ -203,11 +207,22 @@ export function ChapterJourneyMap({
     <View style={styles.root}>
       {/* ── Phase 1 header ── */}
       <View style={styles.phaseHeader}>
+        {/* Decorative divider row */}
+        <View style={styles.phaseDecoDividerRow}>
+          <View style={styles.phaseDecoDividerLine} />
+          <Text style={styles.phaseDecoGlyph}>✦</Text>
+          <View style={styles.phaseDecoDividerLine} />
+        </View>
         <View style={styles.phaseBadge}>
           <Text style={styles.phaseBadgeTxt}>PHASE 1</Text>
         </View>
         <Text style={styles.phaseTitle}>Kingdom of Healing</Text>
         <Text style={styles.phaseSub} numberOfLines={3}>{PHASE_1_SUMMARY}</Text>
+        <View style={styles.phaseFooterRow}>
+          <Ionicons name="person-circle-outline" size={11} color={UI.jade + "90"} />
+          <Text style={styles.phaseFooterTxt}>10 chapters · your healer walks this path</Text>
+          <Ionicons name="leaf-outline" size={11} color={UI.jade + "90"} />
+        </View>
       </View>
 
       {/* ── Chapter list ── */}
@@ -241,6 +256,7 @@ export function ChapterJourneyMap({
               onToggle={() => toggle(chapter.id)}
               onChestClaim={onChestClaim}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
               onPartPress={(part) => {
                 if (part.route && !part.isPlaceholder) {
                   // P15: story/memory nodes launched from the Journey Map return
@@ -314,6 +330,7 @@ function ChapterCard({
   onToggle,
   onChestClaim,
   onNodeClaim,
+  leadHeroSprite,
   onPartPress,
   onUniversityPress,
   onSkillAcademyPress,
@@ -336,6 +353,7 @@ function ChapterCard({
   onToggle: () => void;
   onChestClaim?: (chestId: string) => Promise<void>;
   onNodeClaim?: (nodeId: string, stars: number) => Promise<void>;
+  leadHeroSprite?: ImageSourcePropType;
   onPartPress: (part: ChapterPart) => void;
   onUniversityPress?: () => void;
   onSkillAcademyPress?: () => void;
@@ -567,6 +585,7 @@ function ChapterCard({
               chapterAccent={chapter.accentColor}
               onPartPress={onPartPress}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
             />
           ) : chapter.number === 2 ? (
             <Chapter2VisualMap
@@ -576,6 +595,7 @@ function ChapterCard({
               chapterAccent={chapter.accentColor}
               onPartPress={onPartPress}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
             />
           ) : chapter.number === 3 ? (
             <Chapter3VisualMap
@@ -585,6 +605,7 @@ function ChapterCard({
               chapterAccent={chapter.accentColor}
               onPartPress={onPartPress}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
             />
           ) : chapter.number === 4 ? (
             <Chapter4VisualMap
@@ -594,6 +615,7 @@ function ChapterCard({
               chapterAccent={chapter.accentColor}
               onPartPress={onPartPress}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
             />
           ) : chapter.number === 5 ? (
             <Chapter5VisualMap
@@ -603,6 +625,7 @@ function ChapterCard({
               chapterAccent={chapter.accentColor}
               onPartPress={onPartPress}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
             />
           ) : chapter.number >= 6 ? (
             <GenericChapterVisualMap
@@ -613,6 +636,7 @@ function ChapterCard({
               chapterAccent={chapter.accentColor}
               onPartPress={onPartPress}
               onNodeClaim={onNodeClaim}
+              leadHeroSprite={leadHeroSprite}
             />
           ) : (
             <>
@@ -1148,10 +1172,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   phaseBadge: {
-    backgroundColor: COLORS.brandTertiary,
+    backgroundColor: UI.jade + "18",
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.brand + "60",
+    borderColor: UI.jade + "55",
     paddingHorizontal: SPACING.sm,
     paddingVertical: 3,
   },
@@ -1159,7 +1183,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.5,
-    color: COLORS.brand,
+    color: UI.jade,
   },
   phaseTitle: {
     fontSize: 20,
@@ -1172,6 +1196,35 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceTertiary,
     textAlign: "center",
     lineHeight: 18,
+  },
+  // P17: decorative divider + footer
+  phaseDecoDividerRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: SPACING.sm,
+    alignSelf: "stretch" as const,
+    marginBottom: SPACING.xs,
+  },
+  phaseDecoDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: UI.jade + "35",
+  },
+  phaseDecoGlyph: {
+    fontSize: 11,
+    color: UI.jade + "90",
+  },
+  phaseFooterRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    marginTop: SPACING.xs,
+  },
+  phaseFooterTxt: {
+    fontSize: 10,
+    color: COLORS.onSurfaceTertiary,
+    fontStyle: "italic" as const,
+    letterSpacing: 0.3,
   },
 
   // Chapter wrapper

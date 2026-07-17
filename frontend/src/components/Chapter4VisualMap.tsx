@@ -17,10 +17,12 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import {
   Animated,
+  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type ImageSourcePropType,
   type LayoutChangeEvent,
 } from "react-native";
 import * as RNSvg from "react-native-svg";
@@ -194,6 +196,7 @@ export interface Chapter4VisualMapProps {
   chapterAccent:   string;
   onPartPress:     (part: ChapterPart) => void;
   onNodeClaim?:    (nodeId: string, stars: number) => Promise<void>;
+  leadHeroSprite?: ImageSourcePropType;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -205,6 +208,7 @@ export function Chapter4VisualMap({
   chapterAccent,
   onPartPress,
   onNodeClaim,
+  leadHeroSprite,
 }: Chapter4VisualMapProps) {
   const [W, setW] = useState(0);
 
@@ -561,6 +565,39 @@ export function Chapter4VisualMap({
                 </View>
               );
             })}
+
+          {/* P17: Lead hero traveler sprite — shown at the active "next" node */}
+          {leadHeroSprite && nodes.map((nd) => {
+            if (nd.status !== "next") return null;
+            const x = nd.layout.xf * W;
+            const { r, y } = nd.layout;
+            const SR = 15;
+            return (
+              <View
+                key={`hero-sprite-${nd.part.id}`}
+                pointerEvents="none"
+                style={{
+                  position:        "absolute",
+                  left:            x - SR,
+                  top:             y - r - SR * 2 - 8,
+                  width:           SR * 2,
+                  height:          SR * 2,
+                  borderRadius:    SR,
+                  overflow:        "hidden",
+                  borderWidth:     2,
+                  borderColor:     "#D4AF37",
+                  backgroundColor: "#0B1825",
+                  zIndex:          30,
+                }}
+              >
+                <Image
+                  source={leadHeroSprite}
+                  style={{ width: SR * 2, height: SR * 2 }}
+                  resizeMode="cover"
+                />
+              </View>
+            );
+          })}
           </>
         )}
       </View>
