@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   clinicalNoteHeader: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   clinicalNoteLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  clinicalNoteText: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  clinicalNoteText: { color: COLORS.onSurfaceSecondary, fontSize: 15, lineHeight: 22 },
 
   // Choice beat card
   choiceCard: {
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3,
   },
   choicePromptLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  choicePrompt: { color: COLORS.onSurface, fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  choicePrompt: { color: COLORS.onSurface, fontSize: 17, fontWeight: '600', lineHeight: 25 },
   choiceList: { gap: SPACING.sm },
   choiceOption: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
@@ -494,16 +494,16 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
   },
-  choiceLabelTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: '800' },
-  choiceText: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19, flex: 1 },
+  choiceLabelTxt: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontWeight: '800' },
+  choiceText: { color: COLORS.onSurface, fontSize: 15, lineHeight: 22, flex: 1 },
 
   // Feedback box
   feedbackBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
     borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.md,
   },
-  feedbackTitle: { fontSize: 12, fontWeight: '800' },
-  feedbackText:  { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
+  feedbackTitle: { fontSize: 14, fontWeight: '800' },
+  feedbackText:  { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 20 },
 
   // Continue button
   primaryBtn: {

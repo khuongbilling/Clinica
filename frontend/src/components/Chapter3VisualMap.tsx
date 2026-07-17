@@ -32,7 +32,11 @@ import {
   computeJourneyReward,
   getJourneyNodeDef,
 } from "@/src/game/journeyRewards";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
+import { MapNodeShape, type MapNodeStatus } from "./MapNodeShape";
+import { MissionPopupModal } from "./MissionPopupModal";
 import { useVisualMapAnims } from "./VisualMapHooks";
 
 // ── SVG type shim (React 19 / rn-svg compat) ─────────────────────────────────
@@ -201,6 +205,15 @@ export function Chapter3VisualMap({
   leadHeroSprite,
 }: Chapter3VisualMapProps) {
   const [W, setW] = useState(0);
+  const [missionPart, setMissionPart] = useState<ChapterPart | null>(null);
+
+  const handleNodePress = (part: ChapterPart) => {
+    if (part.type === "battle" || part.type === "mini_boss" || part.type === "ward_defense") {
+      setMissionPart(part);
+    } else {
+      onPartPress(part);
+    }
+  };
 
   // P14: shared visual map animations (pulse rings + staggered node entrance)
   const { pulse, pulseOuter, entranceAnims } = useVisualMapAnims(NODE_LAYOUT.length);
@@ -360,38 +373,15 @@ export function Chapter3VisualMap({
                     transform: [{ scale }],
                   }}
                 >
-                  <Pressable
-                    style={{
-                      width:           r * 2,
-                      height:          r * 2,
-                      borderRadius:    r,
-                      borderWidth:     bw,
-                      borderColor,
-                      backgroundColor: bgColor,
-                      alignItems:      "center",
-                      justifyContent:  "center",
-                      opacity:         isLocked ? 0.45 : 1,
-                    }}
-                    onPress={isActionable ? () => onPartPress(nd.part) : undefined}
-                    hitSlop={10}
+                  <MapNodeShape
+                    type={nd.part.type}
+                    status={isLocked ? "available" : (nd.status as MapNodeStatus)}
+                    accentColor={tc}
+                    r={r}
+                    isActionable={isActionable && !isLocked}
+                    onPress={() => handleNodePress(nd.part)}
                     testID={`ch3-node-${nd.part.id}`}
-                  >
-                    {nd.status === "complete" ? (
-                      <Ionicons name="checkmark" size={Math.round(r * 0.78)} color={chapterAccent} />
-                    ) : isLocked ? (
-                      isBossLocked ? (
-                        <Ionicons name="skull-outline" size={Math.round(r * 0.7)} color={tc + "60"} />
-                      ) : (
-                        <Ionicons name="lock-closed" size={Math.round(r * 0.6)} color={COLORS.onSurfaceTertiary} />
-                      )
-                    ) : (
-                      <Ionicons
-                        name={nd.part.icon as any}
-                        size={Math.round(r * 0.7)}
-                        color={nd.status === "placeholder" ? tc + "55" : tc}
-                      />
-                    )}
-                  </Pressable>
+                  />
                 </Animated.View>
               );
             })}
@@ -600,6 +590,13 @@ export function Chapter3VisualMap({
           </View>
         </View>
       </View>
+    <MissionPopupModal
+      part={missionPart}
+      chapterAccent={chapterAccent}
+      chapterNumber={3}
+      battleStars={battleStars}
+      onClose={() => setMissionPart(null)}
+    />
     </View>
   );
 }

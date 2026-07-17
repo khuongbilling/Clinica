@@ -120,8 +120,8 @@ const lcStyles = StyleSheet.create({
   doneTxt: { color: COLORS.success, fontSize: 9, fontWeight: '800' },
   startPill: { borderRadius: RADIUS.pill, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
   startTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  title: { color: COLORS.onSurface, fontSize: 13, fontWeight: '700', lineHeight: 18 },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
+  title: { color: COLORS.onSurface, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+  sub: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
   rewardRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, flexWrap: 'wrap', marginTop: 2 },
 });
 
@@ -331,8 +331,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2, lineHeight: 17 },
+  title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300" },
+  sub: { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 2, lineHeight: 20 },
   scroll: { padding: SPACING.lg, gap: SPACING.xl, paddingBottom: SPACING.xxxl },
   fallback: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
 
@@ -343,8 +343,8 @@ const styles = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2,
   },
-  sectionTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: '700' },
-  sectionSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 1, lineHeight: 15 },
+  sectionTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: '700' },
+  sectionSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 1, lineHeight: 17 },
   progressPill: {
     backgroundColor: COLORS.brand + '1A', borderRadius: RADIUS.pill,
     paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 2,
