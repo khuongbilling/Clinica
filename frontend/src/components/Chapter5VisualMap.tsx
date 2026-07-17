@@ -423,6 +423,7 @@ export function Chapter5VisualMap({
                     />
                   )}
                 </Pressable>
+                </Animated.View>
               );
             })}
 
@@ -538,6 +539,18 @@ export function Chapter5VisualMap({
                       <Text style={[styles.teaserTxt, { color: "#F97316BB" }]}>
                         Finale Approaches
                       </Text>
+                    </View>
+                  )}
+
+                  {/* P14: TAP pill — shown on the active next-node */}
+                  {nd.status === "next" && !!nd.part.route && !nd.part.isPlaceholder && (
+                    <View style={[
+                      styles.tapPill,
+                      side === "right"  && { alignSelf: "flex-end" },
+                      side === "center" && { alignSelf: "center"   },
+                    ]}>
+                      <Ionicons name="play" size={8} color={tc} />
+                      <Text style={[styles.tapPillTxt, { color: tc }]}>TAP</Text>
                     </View>
                   )}
 
@@ -716,5 +729,23 @@ const styles = StyleSheet.create({
     color:      COLORS.onSurfaceTertiary + "AA",
     marginTop:  2,
     lineHeight: 13,
+  },
+  // P14: TAP call-to-action pill
+  tapPill: {
+    flexDirection:     "row",
+    alignItems:        "center",
+    gap:               3,
+    borderWidth:       1,
+    borderColor:       "rgba(255,255,255,0.20)",
+    borderRadius:      4,
+    paddingHorizontal: 5,
+    paddingVertical:   2,
+    backgroundColor:   "rgba(0,0,0,0.22)",
+    alignSelf:         "flex-start",
+  },
+  tapPillTxt: {
+    fontSize:      8,
+    fontWeight:    "800",
+    letterSpacing: 0.8,
   },
 });
