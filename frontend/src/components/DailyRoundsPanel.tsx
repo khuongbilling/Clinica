@@ -270,6 +270,158 @@ function QuestMilestonesSection({
   );
 }
 
+// ── P20: Milestone Hall ───────────────────────────────────────────────────────
+const JADE = "#3DC4A8";
+
+const MILESTONE_CATS: Array<{ label: string; icon: string; ids: string[] }> = [
+  {
+    label: "Story Path",
+    icon: "book-outline",
+    ids: [
+      "ms_prologue","ms_lotus_recall","ms_identity",
+      "ms_class_diagnostic","ms_class_confirm","ms_reminiscence","ms_main_hub",
+    ],
+  },
+  {
+    label: "Clinical Firsts",
+    icon: "flask-outline",
+    ids: [
+      "ms_visit_uni","ms_lotus_lesson","ms_fading_apprenticeship",
+      "ms_first_ward_shift","ms_journey_map","ms_hero_skill",
+    ],
+  },
+  {
+    label: "Chapter Progress",
+    icon: "map-outline",
+    ids: [
+      "ms_chapter1","ms_level2","ms_summoning_hall",
+      "ms_journey_c1_battle","ms_journey_c1_all",
+    ],
+  },
+  {
+    label: "Consistency",
+    icon: "flame-outline",
+    ids: ["ms_first_daily","ms_first_weekly","ms_streak_7"],
+  },
+];
+
+const MILESTONE_BY_ID = Object.fromEntries(QUEST_MILESTONES.map(m => [m.id, m]));
+
+function MilestoneHall({
+  player, busy, onClaim,
+}: { player: any; busy: boolean; onClaim: (id: string) => void }) {
+  if (!player) return null;
+  const claimedIds: string[] = player.claimed_daily_milestones ?? [];
+  const totalClaimed = QUEST_MILESTONES.filter(m => claimedIds.includes(m.id)).length;
+  const totalDone    = QUEST_MILESTONES.filter(m => m.isDone(player)).length;
+  const readyCount   = QUEST_MILESTONES.filter(m => m.isDone(player) && !claimedIds.includes(m.id)).length;
+
+  return (
+    <View style={styles.milestoneHallWrap}>
+      {/* Hall overview bar */}
+      <View style={styles.hallProgressCard}>
+        <View style={styles.hallProgressRow}>
+          <Ionicons name="trophy-outline" size={18} color={JADE} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.hallProgressTitle}>
+              {totalClaimed}/{QUEST_MILESTONES.length}{" "}
+              <Text style={styles.hallProgressSub}>milestones earned</Text>
+            </Text>
+            {readyCount > 0 && (
+              <Text style={styles.hallReadyHint}>✦ {readyCount} ready to claim</Text>
+            )}
+          </View>
+        </View>
+        <View style={[styles.barBg, { marginTop: 8 }]}>
+          <View style={[
+            styles.barFill,
+            { width: `${Math.round((totalDone / QUEST_MILESTONES.length) * 100)}%` as any, backgroundColor: JADE },
+          ]} />
+        </View>
+      </View>
+
+      {MILESTONE_CATS.map((cat) => {
+        const catMilestones = cat.ids.map(id => MILESTONE_BY_ID[id]).filter(Boolean);
+        if (catMilestones.length === 0) return null;
+
+        const sorted = [...catMilestones].sort((a, b) => {
+          const aReady = a.isDone(player) && !claimedIds.includes(a.id);
+          const bReady = b.isDone(player) && !claimedIds.includes(b.id);
+          const aClaimed = claimedIds.includes(a.id);
+          const bClaimed = claimedIds.includes(b.id);
+          if (aReady && !bReady) return -1;
+          if (!aReady && bReady) return  1;
+          if (aClaimed && !bClaimed) return  1;
+          if (!aClaimed && bClaimed) return -1;
+          return 0;
+        });
+
+        const catClaimed = catMilestones.filter(m => claimedIds.includes(m.id)).length;
+
+        return (
+          <View key={cat.label} style={styles.hallCategory}>
+            <View style={styles.catHeader}>
+              <Ionicons name={cat.icon as any} size={12} color={COLORS.brand} />
+              <Text style={styles.catLabel}>{cat.label.toUpperCase()}</Text>
+              <Text style={styles.catProgress}>{catClaimed}/{catMilestones.length}</Text>
+            </View>
+
+            {sorted.map((m) => {
+              const done    = m.isDone(player);
+              const claimed = claimedIds.includes(m.id);
+              const ready   = done && !claimed;
+              return (
+                <View
+                  key={m.id}
+                  style={[
+                    styles.plaqueCard,
+                    ready   && styles.plaqueCardReady,
+                    claimed && styles.plaqueCardClaimed,
+                  ]}
+                >
+                  <View style={[
+                    styles.plaqueIcon,
+                    ready   && styles.plaqueIconReady,
+                    claimed && styles.plaqueIconClaimed,
+                  ]}>
+                    <Ionicons
+                      name={(claimed ? "checkmark-done" : done ? "checkmark" : m.icon) as any}
+                      size={15}
+                      color={claimed ? COLORS.onSurfaceTertiary : done ? JADE : COLORS.onSurfaceTertiary + "88"}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[
+                      styles.plaqueTitle,
+                      ready   && styles.plaqueTitleReady,
+                      claimed && styles.plaqueTitleClaimed,
+                    ]}>
+                      {m.label}
+                    </Text>
+                    <Text style={styles.plaqueDesc}>{m.description}</Text>
+                    {ready && (
+                      <View style={styles.plaqueRewardRow}>
+                        <RewardChips reward={m.reward} />
+                      </View>
+                    )}
+                  </View>
+
+                  {ready ? (
+                    <ClaimButton busy={busy} onPress={() => onClaim(m.id)} />
+                  ) : claimed ? (
+                    <ClaimedPill />
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ── Level 2 gate ─────────────────────────────────────────────────────────────
 function LockedPreview() {
   return (
@@ -295,8 +447,10 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
   const [showExplainer, setShowExplainer] = useState(false);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
-  // P6: weekly completion burst (brief celebration when weekly all-complete is claimed)
+  // P6: weekly completion burst
   const [weeklyBurstActive, setWeeklyBurstActive] = useState(false);
+  // P20: reward summary banner shown briefly after Claim All
+  const [claimSummary, setClaimSummary] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'milestones'>('daily');
   const checkedInThisOpen = useRef(false);
 
@@ -365,29 +519,106 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
     ? state.weekly_tasks
     : WEEKLY_TASKS.map(t => ({ ...t, progress: 0, claimed: false }));
 
-  const canClaimAnyDaily = state.objectives.some(o => o.progress >= o.target && !o.claimed)
-    || (allComplete && !state.all_complete_claimed);
-  const canClaimAnyWeekly = weeklyTasks.some(t => (t.progress ?? 0) >= t.target && !t.claimed)
-    || (allWeeklyComplete && !state.weekly_all_complete_claimed);
+  // P20: per-tab claimable counts + milestone state
+  const claimedMilestoneIds: string[] = player?.claimed_daily_milestones ?? [];
+  const dailyClaimable = state.objectives.filter(o => o.progress >= o.target && !o.claimed).length
+    + (allComplete && !state.all_complete_claimed ? 1 : 0);
+  const weeklyClaimable = weeklyTasks.filter(t => (t.progress ?? 0) >= t.target && !t.claimed).length
+    + (allWeeklyComplete && !state.weekly_all_complete_claimed ? 1 : 0);
+  const milestoneClaimable = QUEST_MILESTONES.filter(m => m.isDone(player) && !claimedMilestoneIds.includes(m.id)).length;
+
+  const canClaimAnyDaily = dailyClaimable > 0;
+  const canClaimAnyWeekly = weeklyClaimable > 0;
+  const canClaimAnyMilestone = milestoneClaimable > 0;
+
+  function buildSummaryLabel(crowns: number, shards: number, xp: number, uc: number): string {
+    return [
+      crowns ? `${crowns} Crowns` : null,
+      shards ? `${shards} Shards` : null,
+      xp ? `+${xp} XP` : null,
+      uc ? `${uc} UC` : null,
+    ].filter(Boolean).join(' · ');
+  }
 
   const claimAllDaily = async () => {
     if (busy) return;
     setBusy(true);
+    let crowns = 0, shards = 0, xp = 0, uc = 0, count = 0;
     try {
       for (const o of state.objectives) {
-        if (o.progress >= o.target && !o.claimed) await claimDailyObjective(o.id);
+        if (o.progress >= o.target && !o.claimed) {
+          await claimDailyObjective(o.id);
+          crowns += o.reward.crowns ?? 0; shards += o.reward.codexShards ?? 0;
+          xp += o.reward.playerXp ?? 0; uc += o.reward.universityCredits ?? 0;
+          count++;
+        }
       }
-      if (allComplete && !state.all_complete_claimed) await claimDailyAllComplete();
+      if (allComplete && !state.all_complete_claimed) {
+        await claimDailyAllComplete();
+        crowns += ALL_COMPLETE_BONUS.crowns ?? 0; shards += ALL_COMPLETE_BONUS.codexShards ?? 0;
+        xp += ALL_COMPLETE_BONUS.playerXp ?? 0; count++;
+      }
+      if (count === 0) {
+        flashNotice("Nothing to claim right now.");
+      } else {
+        const summary = buildSummaryLabel(crowns, shards, xp, uc);
+        flashNotice(summary ? `Claimed ${count} · ${summary}` : `${count} reward${count !== 1 ? 's' : ''} claimed`);
+        setClaimSummary(summary || null);
+      }
     } finally { setBusy(false); }
   };
+
   const claimAllWeekly = async () => {
     if (busy) return;
     setBusy(true);
+    let crowns = 0, shards = 0, xp = 0, uc = 0, count = 0;
     try {
       for (const task of weeklyTasks) {
-        if ((task.progress ?? 0) >= task.target && !task.claimed) await claimWeeklyTask(task.id);
+        if ((task.progress ?? 0) >= task.target && !task.claimed) {
+          await claimWeeklyTask(task.id);
+          crowns += task.reward.crowns ?? 0; shards += task.reward.codexShards ?? 0;
+          xp += task.reward.playerXp ?? 0; uc += task.reward.universityCredits ?? 0;
+          count++;
+        }
       }
-      if (allWeeklyComplete && !state.weekly_all_complete_claimed) await claimWeeklyAllComplete();
+      if (allWeeklyComplete && !state.weekly_all_complete_claimed) {
+        await claimWeeklyAllComplete();
+        crowns += WEEKLY_ALL_COMPLETE_REWARD.crowns ?? 0;
+        shards += WEEKLY_ALL_COMPLETE_REWARD.codexShards ?? 0;
+        count++;
+        setWeeklyBurstActive(true);
+      }
+      if (count === 0) {
+        flashNotice("Nothing to claim right now.");
+      } else {
+        const summary = buildSummaryLabel(crowns, shards, xp, uc);
+        flashNotice(summary ? `Weekly claimed ${count} · ${summary}` : `${count} reward${count !== 1 ? 's' : ''} claimed`);
+        setClaimSummary(summary || null);
+      }
+    } finally { setBusy(false); }
+  };
+
+  const claimAllMilestones = async () => {
+    if (busy) return;
+    setBusy(true);
+    let crowns = 0, shards = 0, xp = 0, uc = 0, count = 0;
+    try {
+      for (const m of QUEST_MILESTONES) {
+        if (m.isDone(player) && !claimedMilestoneIds.includes(m.id)) {
+          await claimQuestMilestone(m.id);
+          crowns += m.reward.crowns ?? 0; shards += m.reward.codexShards ?? 0;
+          xp += m.reward.playerXp ?? 0; uc += m.reward.universityCredits ?? 0;
+          count++;
+        }
+      }
+      if (count === 0) {
+        flashNotice("All milestones up to date!");
+      } else {
+        const summary = buildSummaryLabel(crowns, shards, xp, uc);
+        const label = summary ? `${count} milestone${count !== 1 ? 's' : ''} · ${summary}` : `${count} milestone${count !== 1 ? 's' : ''} claimed`;
+        flashNotice(label);
+        setClaimSummary(label);
+      }
     } finally { setBusy(false); }
   };
 
@@ -415,11 +646,20 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
 
           {!isLocked && (
             <View style={styles.tabRow}>
-              {(['daily', 'weekly', 'milestones'] as const).map((tab) => (
-                <Pressable key={tab} style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]} onPress={() => setActiveTab(tab)}>
-                  <Text style={[styles.tabTxt, activeTab === tab && styles.tabTxtActive]}>
-                    {tab === 'daily' ? 'DUTIES' : tab === 'weekly' ? 'WEEKLY' : 'JOURNEY'}
-                  </Text>
+              {([
+                { key: 'daily' as const,      label: 'DAILY',      badge: dailyClaimable },
+                { key: 'weekly' as const,      label: 'WEEKLY',     badge: weeklyClaimable },
+                { key: 'milestones' as const,  label: 'MILESTONES', badge: milestoneClaimable },
+              ]).map(({ key: tab, label, badge }) => (
+                <Pressable key={tab} style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]} onPress={() => { setActiveTab(tab); setClaimSummary(null); }}>
+                  <View style={styles.tabInner}>
+                    <Text style={[styles.tabTxt, activeTab === tab && styles.tabTxtActive]}>{label}</Text>
+                    {badge > 0 && (
+                      <View style={styles.tabBadge}>
+                        <Text style={styles.tabBadgeTxt}>{badge}</Text>
+                      </View>
+                    )}
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -511,12 +751,23 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                 {activeTab === 'daily' && (<>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={styles.sectionLabel}>TODAY'S DUTIES</Text>
-                  {canClaimAnyDaily && (
+                  {canClaimAnyDaily ? (
                     <Pressable style={styles.claimAllBtn} onPress={claimAllDaily} disabled={busy}>
                       <Text style={styles.claimAllTxt}>CLAIM ALL</Text>
                     </Pressable>
+                  ) : (
+                    <View style={styles.claimAllBtnDim}>
+                      <Text style={styles.claimAllTxtDim}>ALL CLAIMED</Text>
+                    </View>
                   )}
                 </View>
+                {claimSummary && (
+                  <Pressable style={styles.claimSummaryBanner} onPress={() => setClaimSummary(null)}>
+                    <Ionicons name="gift-outline" size={14} color={JADE} />
+                    <Text style={styles.claimSummaryTxt}>{claimSummary}</Text>
+                    <Ionicons name="close" size={12} color={JADE + "80"} />
+                  </Pressable>
+                )}
                 {state.objectives.length === 0 ? (
                   <View style={styles.emptyBox}>
                     <Text style={styles.emptyTxt}>
@@ -579,12 +830,23 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                 {activeTab === 'weekly' && (<>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={styles.sectionLabel}>WEEKLY TASKS</Text>
-                  {canClaimAnyWeekly && (
+                  {canClaimAnyWeekly ? (
                     <Pressable style={styles.claimAllBtn} onPress={claimAllWeekly} disabled={busy}>
                       <Text style={styles.claimAllTxt}>CLAIM ALL</Text>
                     </Pressable>
+                  ) : (
+                    <View style={styles.claimAllBtnDim}>
+                      <Text style={styles.claimAllTxtDim}>ALL CLAIMED</Text>
+                    </View>
                   )}
                 </View>
+                {claimSummary && (
+                  <Pressable style={styles.claimSummaryBanner} onPress={() => setClaimSummary(null)}>
+                    <Ionicons name="gift-outline" size={14} color={JADE} />
+                    <Text style={styles.claimSummaryTxt}>{claimSummary}</Text>
+                    <Ionicons name="close" size={12} color={JADE + "80"} />
+                  </Pressable>
+                )}
                 {weeklyTasks.map((task) => (
                   <WeeklyTaskCard
                     key={task.id}
@@ -625,15 +887,32 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                 )}
 
                 </>)}
-                {/* Journey Milestones */}
+                {/* Milestone Hall */}
                 {activeTab === 'milestones' && (<>
-                <Text style={styles.sectionLabel}>JOURNEY MILESTONES</Text>
-                <QuestMilestonesSection
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionLabel}>MILESTONE HALL</Text>
+                  {canClaimAnyMilestone ? (
+                    <Pressable style={styles.claimAllBtn} onPress={claimAllMilestones} disabled={busy}>
+                      <Text style={styles.claimAllTxt}>CLAIM ALL</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={styles.claimAllBtnDim}>
+                      <Text style={styles.claimAllTxtDim}>ALL CLAIMED</Text>
+                    </View>
+                  )}
+                </View>
+                {claimSummary && (
+                  <Pressable style={styles.claimSummaryBanner} onPress={() => setClaimSummary(null)}>
+                    <Ionicons name="gift-outline" size={14} color={JADE} />
+                    <Text style={styles.claimSummaryTxt}>{claimSummary}</Text>
+                    <Ionicons name="close" size={12} color={JADE + "80"} />
+                  </Pressable>
+                )}
+                <MilestoneHall
                   player={player}
                   busy={busy}
                   onClaim={(id) => runClaim(() => claimQuestMilestone(id))}
                 />
-
                 </>)}
                 <Text style={styles.footNote}>
                   All rewards are free — no purchases involved. Duties are drawn only from wards you've unlocked.
@@ -805,6 +1084,77 @@ const styles = StyleSheet.create({
   milestoneLabelClaimed: { color: COLORS.onSurfaceTertiary },
   milestoneDesc: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 1 },
   milestoneRewardRow: { marginTop: 4 },
+
+  // P20: Tab badges
+  tabInner: { flexDirection: "row", alignItems: "center", gap: 4 },
+  tabBadge: {
+    backgroundColor: "#EF4444", borderRadius: 8,
+    minWidth: 16, height: 16,
+    alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  tabBadgeTxt: { color: "#fff", fontSize: 9, fontWeight: "900" as const },
+
+  // P20: Claim All disabled state
+  claimAllBtnDim: {
+    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  claimAllTxtDim: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800" as const, letterSpacing: 1 },
+
+  // P20: Claim summary banner (tap to dismiss)
+  claimSummaryBanner: {
+    flexDirection: "row", alignItems: "center", gap: 7,
+    backgroundColor: "#3DC4A814", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#3DC4A835",
+    paddingHorizontal: SPACING.sm, paddingVertical: 7,
+  },
+  claimSummaryTxt: { flex: 1, color: "#3DC4A8", fontSize: 12, fontWeight: "600" as const },
+
+  // P20: Milestone Hall outer wrapper
+  milestoneHallWrap: { gap: SPACING.xs },
+
+  // P20: Hall overview / progress card
+  hallProgressCard: {
+    backgroundColor: COLORS.brand + "0D", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.brand + "28",
+    padding: SPACING.sm,
+  },
+  hallProgressRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  hallProgressTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" as const },
+  hallProgressSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "400" as const },
+  hallReadyHint: { color: "#3DC4A8", fontSize: 10, fontWeight: "700" as const, marginTop: 3 },
+
+  // P20: Category block
+  hallCategory: { gap: 4, marginTop: 4 },
+  catHeader: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingVertical: 2, paddingHorizontal: 2,
+    marginTop: SPACING.xs,
+  },
+  catLabel: { flex: 1, color: COLORS.brand, fontSize: 9, fontWeight: "800" as const, letterSpacing: 1.5 },
+  catProgress: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700" as const },
+
+  // P20: Individual plaque cards
+  plaqueCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, opacity: 0.65,
+  },
+  plaqueCardReady:   { borderColor: "#3DC4A855", backgroundColor: "#3DC4A80A", opacity: 1 },
+  plaqueCardClaimed: { opacity: 0.4 },
+  plaqueIcon: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: COLORS.surfaceTertiary,
+    alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2,
+  },
+  plaqueIconReady:   { backgroundColor: "#3DC4A81A" },
+  plaqueIconClaimed: { backgroundColor: COLORS.surfaceTertiary },
+  plaqueTitle:        { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" as const },
+  plaqueTitleReady:   { color: COLORS.onSurface, fontWeight: "700" as const },
+  plaqueTitleClaimed: { color: COLORS.onSurfaceTertiary },
+  plaqueDesc:        { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14 },
+  plaqueRewardRow:   { marginTop: 4 },
 
   // P3: Next-on-journey card
   journeyCard: {
