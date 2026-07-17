@@ -165,10 +165,17 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     // that requested it, so resolving it later would surface a stale overlay.
     pendingStartRef.current = null;
     if (!activeRef.current) return;
+    // Mark the tutorial done so it never auto-restarts on the next visit.
+    // The player has "seen" it — deliberate replay goes through replayTutorial()
+    // which un-completes first. This is the fix for the "tutorial replays on
+    // every tab/screen revisit" bug.
+    const id = activeRef.current;
+    markDone(id);
+    completedRef.current = { ...completedRef.current, [id]: true };
     activeRef.current = null;
     setActiveTutorialId(null);
     setStepIndex(0);
-  }, []);
+  }, [markDone]);
 
   const resetTutorials = useCallback(async () => {
     try {

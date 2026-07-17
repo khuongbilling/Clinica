@@ -10,35 +10,71 @@ import { TUTORIAL_LABELS, TUTORIALS, type TutorialId } from "@/src/game/tutorial
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-const TUTORIAL_ORDER: TutorialId[] = [
-  "prologueBattle",
-  "firstBattle",
-  "firstKingdom",
-  "firstSummon",
-  "firstWardDefense",
-  "firstHeroTeam",
-  "firstLotusEntry",
-];
-
-// System-narrated onboarding tutorials (systemHubIntro/systemWardHub/systemShops)
-// are one-time, non-skippable story beats and are intentionally omitted from the
-// replay center, so this map is partial.
-const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
-  prologueBattle: "The very first guided shift — Scout, Stabilize, Counter, Reassess.",
-  firstBattle: "Care Chain basics: matching skills to what a patient needs.",
-  firstKingdom: "Sanctuary Core, inventory, placing a building, and how your realm grows.",
-  firstSummon: "Recruitment Hall — calling new healers to your ward.",
-  firstWardDefense: "Ward Defense basics — deploying units and Care Synthesis merges.",
-  firstHeroTeam: "Hall of Heroes — setting your active team for clinical shifts.",
-  firstLotusEntry: "Lotus Plate Journal — logging your first meal or check-in.",
+// Route to navigate to after marking a tutorial for replay, so the overlay
+// actually fires on the correct screen.
+const REPLAY_ROUTES: Partial<Record<TutorialId, string>> = {
+  prologueBattle:   "/battle?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1",
+  firstBattle:      "/shift",
+  firstKingdom:     "/(tabs)/kingdom",
+  firstSummon:      "/university/recruit",
+  firstWardDefense: "/ward-defense",
+  firstHeroTeam:    "/(tabs)/heroes",
+  firstLotusEntry:  "/lotus-journal",
+  systemWardHub:    "/shift",
+  systemShops:      "/shop",
+  cueHuntIntro:     "/university/cue-hunt",
+  rapidTriageIntro: "/university/rapid-triage",
+  stabilizeIntro:   "/university/stabilize-stack",
+  mealcraftIntro:   "/mealcraft",
 };
 
-// Push 6 — Tutorial Replay Center. Lists every in-app coach-mark tutorial
-// with its own "Replay" action (tutorialStore.replayTutorial just flips that
-// one id back to incomplete and re-arms it — it never touches PlayerState,
-// so nothing about the save is at risk) plus one non-destructive "Reset All
-// Tutorials" action (tutorialStore.resetTutorials only wipes the local
-// tutorial-progress AsyncStorage key, again leaving the player save alone).
+// Grouped list of tutorials. System onboarding (systemHubIntro) is a
+// one-time story beat that re-runs only via a full account reset, so it is
+// omitted intentionally; all others are replayable.
+interface TutorialGroup {
+  label: string;
+  ids: TutorialId[];
+}
+
+const TUTORIAL_GROUPS: TutorialGroup[] = [
+  {
+    label: "Onboarding",
+    ids: ["prologueBattle", "firstBattle", "systemWardHub", "systemShops"],
+  },
+  {
+    label: "Heroes & Recruitment",
+    ids: ["firstHeroTeam", "firstSummon"],
+  },
+  {
+    label: "University Mini-Games",
+    ids: ["cueHuntIntro", "rapidTriageIntro", "stabilizeIntro", "mealcraftIntro"],
+  },
+  {
+    label: "Game Modes",
+    ids: ["firstWardDefense"],
+  },
+  {
+    label: "Realm & Wellness",
+    ids: ["firstKingdom", "firstLotusEntry"],
+  },
+];
+
+const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
+  prologueBattle:   "The guided first shift — Scout, Stabilize, Counter, Reassess.",
+  firstBattle:      "Care Chain basics: matching skills to what the patient needs.",
+  systemWardHub:    "The System introduces the Ward and sends you to the University.",
+  systemShops:      "The System introduces the Apothecary Market and currency spending.",
+  firstHeroTeam:    "Hall of Heroes — setting up your active team for clinical shifts.",
+  firstSummon:      "Recruitment Hall — calling new healers with Summoning Shards.",
+  cueHuntIntro:     "Spot three hidden clinical cues in the scene; tap each one.",
+  rapidTriageIntro: "Sort three patients by urgency — Emergency, Urgent, or Routine.",
+  stabilizeIntro:   "Arrange three care steps in the correct safe sequence.",
+  mealcraftIntro:   "Build a balanced plate starting with protein.",
+  firstWardDefense: "Deploy healer units, manage AP, and synthesize stronger units.",
+  firstKingdom:     "Sanctuary basics: inventory, placing a building, realm growth.",
+  firstLotusEntry:  "Lotus Plate Journal — logging your first meal or check-in.",
+};
+
 export default function TutorialCenterScreen() {
   const router = useRouter();
   const { completed, replayTutorial, resetTutorials } = useTutorial();
@@ -47,7 +83,8 @@ export default function TutorialCenterScreen() {
 
   async function handleReplay(id: TutorialId) {
     await replayTutorial(id);
-    router.replace("/(tabs)");
+    const route = REPLAY_ROUTES[id] ?? "/(tabs)";
+    router.replace(route as any);
   }
 
   async function doResetAll() {
@@ -60,9 +97,13 @@ export default function TutorialCenterScreen() {
     }
   }
 
+  const allIds = TUTORIAL_GROUPS.flatMap((g) => g.ids);
+  const doneCount = allIds.filter((id) => completed[id]).length;
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => goBack(router, "/(tabs)/profile")} style={styles.backBtn} hitSlop={10} testID="tutorial-center-back">
             <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
@@ -71,6 +112,9 @@ export default function TutorialCenterScreen() {
             <Text style={styles.kicker}>SETTINGS</Text>
             <Text style={styles.title}>Tutorial Replay Center</Text>
           </View>
+          <View style={styles.progressPill}>
+            <Text style={styles.progressPillTxt}>{doneCount}/{allIds.length} done</Text>
+          </View>
         </View>
 
         <Text style={styles.note}>
@@ -78,29 +122,47 @@ export default function TutorialCenterScreen() {
           changes anything about your saved healer.
         </Text>
 
-        <View style={styles.list}>
-          {TUTORIAL_ORDER.map((id, i) => (
-            <View key={id}>
-              <View style={styles.row} testID={`tutorial-center-row-${id}`}>
-                <View style={[styles.statusDot, { backgroundColor: completed[id] ? COLORS.success : COLORS.onSurfaceTertiary }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>{TUTORIAL_LABELS[id]}</Text>
-                  <Text style={styles.rowDesc}>{TUTORIAL_DESC[id]}</Text>
-                  <Text style={styles.rowMeta}>{TUTORIALS[id].length} steps · {completed[id] ? "Completed" : "Not yet completed"}</Text>
+        {TUTORIAL_GROUPS.map((group) => (
+          <View key={group.label}>
+            <Text style={styles.groupLabel}>{group.label.toUpperCase()}</Text>
+            <View style={styles.list}>
+              {group.ids.map((id, i) => (
+                <View key={id}>
+                  <View style={styles.row} testID={`tutorial-center-row-${id}`}>
+                    <View style={[styles.statusDot, { backgroundColor: completed[id] ? COLORS.success : COLORS.onSurfaceTertiary }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowTitle}>{TUTORIAL_LABELS[id]}</Text>
+                      <Text style={styles.rowDesc}>{TUTORIAL_DESC[id]}</Text>
+                      <Text style={styles.rowMeta}>
+                        {TUTORIALS[id].length} step{TUTORIALS[id].length !== 1 ? "s" : ""}
+                        {" · "}
+                        {completed[id] ? "✓ Completed" : "Not yet completed"}
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={styles.replayBtn}
+                      onPress={() => handleReplay(id)}
+                      testID={`tutorial-center-replay-${id}`}
+                    >
+                      <Ionicons name="play" size={13} color={COLORS.onBrand} />
+                      <Text style={styles.replayBtnTxt}>Replay</Text>
+                    </Pressable>
+                  </View>
+                  {i < group.ids.length - 1 && <View style={styles.divider} />}
                 </View>
-                <Pressable style={styles.replayBtn} onPress={() => handleReplay(id)} testID={`tutorial-center-replay-${id}`}>
-                  <Ionicons name="play" size={13} color={COLORS.onBrand} />
-                  <Text style={styles.replayBtnTxt}>Replay</Text>
-                </Pressable>
-              </View>
-              {i < TUTORIAL_ORDER.length - 1 && <View style={styles.divider} />}
+              ))}
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerLabel}>RESET</Text>
-          <Pressable style={styles.resetBtn} onPress={() => setConfirmReset(true)} disabled={resetting} testID="tutorial-center-reset-all">
+          <Pressable
+            style={styles.resetBtn}
+            onPress={() => setConfirmReset(true)}
+            disabled={resetting}
+            testID="tutorial-center-reset-all"
+          >
             <Ionicons name="refresh" size={14} color={COLORS.error} />
             <Text style={styles.resetTxt}>Reset All Tutorials</Text>
           </Pressable>
@@ -129,7 +191,10 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surfaceSecondary },
   kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 22, fontWeight: "700" },
+  progressPill: { backgroundColor: COLORS.brand + "20", borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.brand + "40" },
+  progressPillTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "700" },
   note: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18 },
+  groupLabel: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 4 },
   list: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.md },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginTop: 4, alignSelf: "flex-start" },
