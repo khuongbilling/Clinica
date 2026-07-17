@@ -211,6 +211,8 @@ export interface PlayerState {
   unit_shards?: Record<string, number>;
   ward_loadout?: string[];
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
+  // P16: ISO datetime of last free daily recruitment (undefined = never used; cooldown 24 h).
+  last_free_summon_at?: string;
   enemy_mastery?: Record<string, number>;
   // C3 — best star rating achieved per enemy (keyed by enemy.id).
   // Drives replay badges, auto-sweep unlock (2★+), and sweep reward tiers.

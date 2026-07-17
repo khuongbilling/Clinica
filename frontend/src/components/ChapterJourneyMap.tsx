@@ -61,6 +61,25 @@ const PART_TYPE_LABEL: Record<ChapterPartType, string> = {
   arena:           "ARENA",
 };
 
+// P16: illustrated icon per node type (shown inside the node circle when unclaimed).
+const NODE_TYPE_ICON: Partial<Record<ChapterPartType, string>> = {
+  battle:          "flash",
+  mini_boss:       "skull",
+  ward_defense:    "shield-checkmark",
+  minigame:        "game-controller",
+  lesson:          "book",
+  story:           "book-outline",
+  memory_fragment: "sparkles",
+  challenge:       "shuffle",
+  reflection:      "eye",
+  reward:          "gift",
+  realm:           "home",
+  mode_preview:    "compass",
+  chain:           "link",
+  community:       "people",
+  arena:           "trophy",
+};
+
 const PART_TYPE_COLOR: Record<ChapterPartType, string> = {
   battle:          COLORS.error,
   mini_boss:       "#D4AF37",
@@ -864,13 +883,18 @@ function PartRow({
           {isNextNode && !isClaimed && !chapterLocked && (
             <Animated.View style={[styles.nextNodeRing, { borderColor: chapterAccent, opacity: pulseAnim }]} />
           )}
-          <View style={[styles.partNum, { backgroundColor: chapterLocked ? COLORS.surfaceTertiary : chapterAccent + "18" }]}>
+          <View style={[styles.partNum, {
+            backgroundColor: (chapterLocked || isWardDefenseLocked) ? COLORS.surfaceTertiary : chapterAccent + "22",
+            borderColor: (chapterLocked || isWardDefenseLocked) ? COLORS.border : chapterAccent + "80",
+          }]}>
             {isClaimed ? (
-              <Ionicons name="checkmark" size={12} color={chapterAccent} />
+              <Ionicons name="checkmark-circle" size={15} color={chapterAccent} />
             ) : (
-              <Text style={[styles.partNumTxt, { color: chapterLocked ? COLORS.onSurfaceTertiary : chapterAccent }]}>
-                {index + 1}
-              </Text>
+              <Ionicons
+                name={(NODE_TYPE_ICON[part.type] ?? "ellipse") as any}
+                size={15}
+                color={(chapterLocked || isWardDefenseLocked) ? COLORS.onSurfaceTertiary : chapterAccent}
+              />
             )}
           </View>
         </View>
@@ -1291,15 +1315,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   partNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-  },
-  partNumTxt: {
-    fontSize: 11,
-    fontWeight: "700",
   },
   nodeLabelTxt: {
     fontSize: 8,

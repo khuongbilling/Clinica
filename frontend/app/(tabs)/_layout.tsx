@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
 import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
 
@@ -34,8 +35,8 @@ export default function TabsLayout() {
         tabBarActiveTintColor: COLORS.brand,
         tabBarInactiveTintColor: COLORS.onSurfaceTertiary,
         tabBarStyle: {
-          backgroundColor: COLORS.surfaceSecondary,
-          borderTopColor: COLORS.border,
+          backgroundColor: UI.sanctuaryBg,
+          borderTopColor: UI.sanctuaryBorder,
           borderTopWidth: 1,
           height: tabH,
           paddingTop: 6,

@@ -297,6 +297,7 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
   const [now, setNow] = useState(Date.now());
   // P6: weekly completion burst (brief celebration when weekly all-complete is claimed)
   const [weeklyBurstActive, setWeeklyBurstActive] = useState(false);
+  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'milestones'>('daily');
   const checkedInThisOpen = useRef(false);
 
   // Live countdown
@@ -364,6 +365,32 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
     ? state.weekly_tasks
     : WEEKLY_TASKS.map(t => ({ ...t, progress: 0, claimed: false }));
 
+  const canClaimAnyDaily = state.objectives.some(o => o.progress >= o.target && !o.claimed)
+    || (allComplete && !state.all_complete_claimed);
+  const canClaimAnyWeekly = weeklyTasks.some(t => (t.progress ?? 0) >= t.target && !t.claimed)
+    || (allWeeklyComplete && !state.weekly_all_complete_claimed);
+
+  const claimAllDaily = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      for (const o of state.objectives) {
+        if (o.progress >= o.target && !o.claimed) await claimDailyObjective(o.id);
+      }
+      if (allComplete && !state.all_complete_claimed) await claimDailyAllComplete();
+    } finally { setBusy(false); }
+  };
+  const claimAllWeekly = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      for (const task of weeklyTasks) {
+        if ((task.progress ?? 0) >= task.target && !task.claimed) await claimWeeklyTask(task.id);
+      }
+      if (allWeeklyComplete && !state.weekly_all_complete_claimed) await claimWeeklyAllComplete();
+    } finally { setBusy(false); }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -383,6 +410,18 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
             <View style={styles.refreshRow}>
               <Ionicons name="time-outline" size={12} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.refreshTxt}>Objectives refresh in {formatCountdown(msUntilNextDay(new Date(now)))}</Text>
+            </View>
+          )}
+
+          {!isLocked && (
+            <View style={styles.tabRow}>
+              {(['daily', 'weekly', 'milestones'] as const).map((tab) => (
+                <Pressable key={tab} style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]} onPress={() => setActiveTab(tab)}>
+                  <Text style={[styles.tabTxt, activeTab === tab && styles.tabTxtActive]}>
+                    {tab === 'daily' ? 'DUTIES' : tab === 'weekly' ? 'WEEKLY' : 'JOURNEY'}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           )}
 
@@ -469,7 +508,15 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                 })()}
 
                 {/* Daily objectives */}
-                <Text style={styles.sectionLabel}>TODAY'S DUTIES</Text>
+                {activeTab === 'daily' && (<>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionLabel}>TODAY'S DUTIES</Text>
+                  {canClaimAnyDaily && (
+                    <Pressable style={styles.claimAllBtn} onPress={claimAllDaily} disabled={busy}>
+                      <Text style={styles.claimAllTxt}>CLAIM ALL</Text>
+                    </Pressable>
+                  )}
+                </View>
                 {state.objectives.length === 0 ? (
                   <View style={styles.emptyBox}>
                     <Text style={styles.emptyTxt}>
@@ -527,8 +574,17 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                   </View>
                 )}
 
+                </>)}
                 {/* Weekly tasks */}
-                <Text style={styles.sectionLabel}>WEEKLY TASKS</Text>
+                {activeTab === 'weekly' && (<>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionLabel}>WEEKLY TASKS</Text>
+                  {canClaimAnyWeekly && (
+                    <Pressable style={styles.claimAllBtn} onPress={claimAllWeekly} disabled={busy}>
+                      <Text style={styles.claimAllTxt}>CLAIM ALL</Text>
+                    </Pressable>
+                  )}
+                </View>
                 {weeklyTasks.map((task) => (
                   <WeeklyTaskCard
                     key={task.id}
@@ -568,7 +624,9 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                   </View>
                 )}
 
+                </>)}
                 {/* Journey Milestones */}
+                {activeTab === 'milestones' && (<>
                 <Text style={styles.sectionLabel}>JOURNEY MILESTONES</Text>
                 <QuestMilestonesSection
                   player={player}
@@ -576,6 +634,7 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
                   onClaim={(id) => runClaim(() => claimQuestMilestone(id))}
                 />
 
+                </>)}
                 <Text style={styles.footNote}>
                   All rewards are free — no purchases involved. Duties are drawn only from wards you've unlocked.
                 </Text>
@@ -645,7 +704,19 @@ const styles = StyleSheet.create({
   },
   checkPillTxt: { color: COLORS.success, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
 
-  sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 2, marginTop: SPACING.sm },
+  sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: SPACING.sm },
+  claimAllBtn: {
+    backgroundColor: COLORS.success + "22", borderRadius: RADIUS.pill,
+    borderWidth: 1, borderColor: COLORS.success + "55",
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  claimAllTxt: { color: COLORS.success, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  tabRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  tabBtn: { flex: 1, alignItems: "center", paddingVertical: 10 },
+  tabBtnActive: { borderBottomWidth: 2.5, borderBottomColor: COLORS.brand },
+  tabTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  tabTxtActive: { color: COLORS.brand },
 
   emptyBox: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
   emptyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },

@@ -966,10 +966,15 @@ function FeatureButton({
   return (
     <Pressable style={[styles.featBtn, locked && { opacity: 0.5 }]} onPress={onPress} testID={testID} hitSlop={6}>
       <View style={[styles.featCircle, {
-        borderColor: locked ? COLORS.border : color + "70",
-        backgroundColor: locked ? COLORS.surfaceTertiary : color + "18",
+        borderColor: locked ? COLORS.border : color + "A0",
+        backgroundColor: locked ? COLORS.surfaceTertiary : color + "28",
+        shadowColor: locked ? "transparent" : color,
+        shadowOpacity: locked ? 0 : 0.36,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: locked ? 0 : 4,
       }]}>
-        <Ionicons name={icon as any} size={22} color={locked ? COLORS.onSurfaceTertiary : color} />
+        <Ionicons name={icon as any} size={24} color={locked ? COLORS.onSurfaceTertiary : color} />
         {live && !locked ? <View style={styles.featLiveDot} /> : null}
         {!locked && badge && badge > 0 ? (
           <View style={styles.featBadge}>
@@ -1019,7 +1024,7 @@ const styles = StyleSheet.create({
   /* Side columns */
   sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm },
   featBtn:    { alignItems: "center", gap: 4 },
-  featCircle: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  featCircle: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   featLabel:  { fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textAlign: "center" },
   featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 9 },
   featLiveDot: {

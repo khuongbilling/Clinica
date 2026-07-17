@@ -14,6 +14,7 @@ import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
 import { getUiIcon } from "@/src/game/uiIcons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 // ────────────────────────────────────────────────────────────
 // PlayerHeader — persistent global top bar for hub/non-battle pages
@@ -383,17 +384,18 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.sm,
     gap: 7,
-    backgroundColor: COLORS.surface,
+    backgroundColor: UI.sanctuaryBg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: UI.sanctuaryBorder,
   },
   topRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: SPACING.sm, rowGap: 7 },
   identityRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexGrow: 1, flexShrink: 1, flexBasis: 160, minWidth: 0 },
   identityText: { flexShrink: 1, minWidth: 0 },
   avatar: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
     borderWidth: 1.5,
+    borderColor: UI.jade,
     alignItems: "center", justifyContent: "center",
     overflow: "hidden",
   },
@@ -404,8 +406,9 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, flexGrow: 1, justifyContent: "flex-end" },
   chip: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: COLORS.surfaceSecondary,
+    backgroundColor: UI.sanctuaryPanel,
     borderWidth: 1,
+    borderColor: UI.sanctuaryBorder,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -414,7 +417,7 @@ const styles = StyleSheet.create({
   chipTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
   expRow: { gap: 3 },
   expBarBg: {
-    height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden",
+    height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden",
   },
   expBarFill: { height: "100%", backgroundColor: COLORS.brand, borderRadius: 2 },
   expTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "600", letterSpacing: 0.2 },

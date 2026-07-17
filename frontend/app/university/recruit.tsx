@@ -20,7 +20,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function UniversityRecruitScreen() {
   const router = useRouter();
-  const { player, recruitOnce, recruitTen } = usePlayer();
+  const { player, recruitOnce, freeRecruitOnce, recruitTen } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   useClearTutorialOnExit();
 
@@ -35,6 +35,21 @@ export default function UniversityRecruitScreen() {
   const [single, setSingle] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // P16: free daily summon availability
+  const freeAvailable = (() => {
+    if (!player) return false;
+    const last = player.last_free_summon_at;
+    if (!last) return true;
+    return Date.now() - new Date(last).getTime() >= 24 * 60 * 60 * 1000;
+  })();
+  const freeCountdown = (() => {
+    if (!player?.last_free_summon_at || freeAvailable) return null;
+    const msLeft = 24 * 60 * 60 * 1000 - (Date.now() - new Date(player.last_free_summon_at).getTime());
+    const h = Math.floor(msLeft / (60 * 60 * 1000));
+    const m = Math.floor((msLeft % (60 * 60 * 1000)) / 60000);
+    return `${h}h ${m}m`;
+  })();
 
   useEffect(() => {
     if (!isCompleted("firstSummon")) {
@@ -53,6 +68,18 @@ export default function UniversityRecruitScreen() {
 
   const shards = player.codex_shards || 0;
   const tenCost = SUMMON_COST * 10;
+
+  const doFree = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setBatch(null);
+    setSingle(null);
+    const res = await freeRecruitOnce();
+    if (!res.ok) setError(res.message);
+    else { setSingle(res.result || null); playRewardCue(false); onRequiredAction("summon"); }
+    setBusy(false);
+  };
 
   const doSingle = async () => {
     if (busy) return;
@@ -116,6 +143,27 @@ export default function UniversityRecruitScreen() {
             ))}
           </View>
         )}
+
+        {/* P16: Free Daily Summon */}
+        <Pressable
+          style={[styles.freeSummonBtn, (!freeAvailable || busy) && { opacity: 0.65 }]}
+          onPress={doFree}
+          disabled={busy}
+          testID="recruit-free-btn"
+        >
+          <View style={styles.freeSummonInner}>
+            <View style={styles.freeBadge}>
+              <Text style={styles.freeBadgeTxt}>FREE</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.freeSummonTxt}>DAILY RECRUITMENT</Text>
+              <Text style={styles.freeSummonSub}>
+                {freeAvailable ? "One free summon per day — no shards needed." : `Next free summon in ${freeCountdown}`}
+              </Text>
+            </View>
+            <Ionicons name={freeAvailable ? "sparkles" : "time-outline"} size={20} color={freeAvailable ? "#4FD8C4" : COLORS.onSurfaceTertiary} />
+          </View>
+        </Pressable>
 
         <Pressable style={[styles.btn, busy && { opacity: 0.5 }]} onPress={doSingle} disabled={busy} testID="recruit-single-btn">
           <LinearGradient colors={[COLORS.brand, COLORS.brandSecondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
@@ -245,4 +293,19 @@ const styles = StyleSheet.create({
   },
   oddsTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", marginBottom: 2 },
   oddsLine: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  freeSummonBtn: {
+    borderRadius: RADIUS.md, borderWidth: 2, borderColor: "#3DC4A8",
+    backgroundColor: "#3DC4A80A", overflow: "hidden",
+  },
+  freeSummonInner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
+  },
+  freeBadge: {
+    backgroundColor: "#3DC4A8", borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  freeBadgeTxt: { color: "#082019", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  freeSummonTxt: { color: "#4FD8C4", fontSize: 14, fontWeight: "700", letterSpacing: 0.4 },
+  freeSummonSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 2 },
 });
