@@ -162,6 +162,24 @@ export function ChapterJourneyMap({
   const toggle = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
+  // P15: When newly-claimed nodes unlock the next chapter, auto-expand it so
+  // the player doesn't have to hunt for it manually after a chapter clear.
+  const prevClaimedLen = React.useRef(claimedNodes.length);
+  React.useEffect(() => {
+    if (claimedNodes.length <= prevClaimedLen.current) {
+      prevClaimedLen.current = claimedNodes.length;
+      return;
+    }
+    prevClaimedLen.current = claimedNodes.length;
+    for (let i = CHAPTERS.length - 1; i >= 0; i--) {
+      const st = getChapterStatus(CHAPTERS[i], playerLevel, claimedNodes);
+      if (st !== "locked") {
+        setExpandedId(CHAPTERS[i].id);
+        break;
+      }
+    }
+  }, [claimedNodes, playerLevel]);
+
   return (
     <View style={styles.root}>
       {/* ── Phase 1 header ── */}
@@ -206,11 +224,27 @@ export function ChapterJourneyMap({
               onNodeClaim={onNodeClaim}
               onPartPress={(part) => {
                 if (part.route && !part.isPlaceholder) {
-                  router.push(part.route as any);
+                  // P15: story/memory nodes launched from the Journey Map return
+                  // to /journey after the scene finishes, so the player lands
+                  // back on the map ready to claim their node reward.
+                  const isStoryNode =
+                    part.type === "story" ||
+                    part.type === "memory_fragment";
+                  const storyRoute =
+                    isStoryNode && part.route.includes("story-scene")
+                      ? part.route + "&returnTo=%2Fjourney"
+                      : null;
+                  router.push((storyRoute ?? part.route) as any);
                 }
               }}
               onUniversityPress={() => router.push("/university" as any)}
               onSkillAcademyPress={() => router.push("/university/skill-academy" as any)}
+              onNextChapterOpen={
+                CHAPTERS[idx + 1]
+                  ? () => setExpandedId(CHAPTERS[idx + 1].id)
+                  : undefined
+              }
+              nextChapterNumber={CHAPTERS[idx + 1]?.number}
             />
             {/* C6 — Simulation→Real-Ward transition callout between Ch.8 and Ch.9 */}
             {chapter.number === 8 && (
@@ -264,6 +298,8 @@ function ChapterCard({
   onPartPress,
   onUniversityPress,
   onSkillAcademyPress,
+  onNextChapterOpen,
+  nextChapterNumber,
 }: {
   chapter: Chapter;
   status: ChapterStatus;
@@ -284,6 +320,10 @@ function ChapterCard({
   onPartPress: (part: ChapterPart) => void;
   onUniversityPress?: () => void;
   onSkillAcademyPress?: () => void;
+  /** P15: Opens and scrolls to the next chapter when the clear card CTA is tapped. */
+  onNextChapterOpen?: () => void;
+  /** P15: Number of the next chapter (for CTA label). */
+  nextChapterNumber?: number;
 }) {
   const accent = status === "locked" ? COLORS.onSurfaceTertiary : chapter.accentColor;
   const isLocked = status === "locked";
@@ -641,6 +681,20 @@ function ChapterCard({
                     {CHAPTER_CLEAR_TEASERS[chapter.number]}
                   </Text>
                 </View>
+              )}
+              {/* P15: CTA to open the next chapter card after clearing this one. */}
+              {onNextChapterOpen && nextChapterNumber && (
+                <Pressable
+                  style={[styles.nextChapterBtn, { borderColor: accent + "60" }]}
+                  onPress={onNextChapterOpen}
+                  testID={`chapter-clear-next-ch${chapter.number}`}
+                >
+                  <Ionicons name="chevron-down-circle-outline" size={14} color={accent} />
+                  <Text style={[styles.nextChapterBtnTxt, { color: accent }]}>
+                    OPEN CHAPTER {nextChapterNumber}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={12} color={accent + "BB"} />
+                </Pressable>
               )}
             </View>
           )}
@@ -1626,6 +1680,24 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     lineHeight: 14,
     flex: 1,
+  },
+  // P15: "Open Chapter N+1" CTA on the clear card
+  nextChapterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: SPACING.xs,
+    borderWidth: 1,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    backgroundColor: "transparent",
+  },
+  nextChapterBtnTxt: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
   },
   // P6: wellness micro-lines (Ch1 prep section)
   wellnessMicroSection: {

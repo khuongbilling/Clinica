@@ -619,8 +619,23 @@ export default function Result() {
               <Text style={styles.primaryTxt}>NEXT MISSION</Text>
             </Pressable>
           )}
+          {won && !isPrologueTutorial && !isTraining && (
+            <Pressable style={styles.journeyBtn} onPress={() => router.replace("/journey" as any)} testID="result-journey-map">
+              <Ionicons name="map-outline" size={15} color="#D4AF37" />
+              <Text style={styles.journeyBtnTxt}>CLAIM JOURNEY REWARDS</Text>
+            </Pressable>
+          )}
           {!(won && isPrologueTutorial) && !isPrologueBoss && (
             <>
+              {/* P15: On a loss, offer Journey Map so the player can see their
+                  progress and decide which nodes or University prep to tackle next.
+                  On a win it's already covered by the gold "CLAIM JOURNEY REWARDS"
+                  button above, so avoid duplicating it here. */}
+              {!won && !isTraining && (
+                <Pressable style={styles.secondary} onPress={() => router.replace("/journey" as any)} testID="result-journey-map-loss">
+                  <Text style={styles.secondaryTxt}>VIEW JOURNEY MAP</Text>
+                </Pressable>
+              )}
               <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
                 <Text style={styles.secondaryTxt}>RETURN TO KINGDOM</Text>
               </Pressable>
@@ -664,6 +679,8 @@ const styles = StyleSheet.create({
   primaryTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
   secondary: { borderWidth: 1, borderColor: COLORS.borderStrong, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
   secondaryTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
+  journeyBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: "#D4AF3780", backgroundColor: "#D4AF3712", padding: SPACING.md, borderRadius: RADIUS.md },
+  journeyBtnTxt: { color: "#D4AF37", fontSize: 13, fontWeight: "700", letterSpacing: 2 },
   shardsCard: { flexDirection: "column", gap: 6, backgroundColor: COLORS.brand + "14", borderColor: COLORS.brand + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },
   shardsTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600" },
   crownsCard: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, backgroundColor: COLORS.energy + "14", borderColor: COLORS.energy + "40", borderWidth: 1, padding: SPACING.md, borderRadius: RADIUS.md },

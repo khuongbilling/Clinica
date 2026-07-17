@@ -124,7 +124,16 @@ export default function JourneyScreen() {
           style={styles.nextStepStrip}
           onPress={() => {
             if (nextStep.part.route && !nextStep.part.isPlaceholder) {
-              router.push(nextStep.part.route as any);
+              // P15: story/memory nodes return to /journey after the scene
+              // so the player lands back on the map ready to claim their reward.
+              const isStoryNode =
+                nextStep.part.type === "story" ||
+                nextStep.part.type === "memory_fragment";
+              const route =
+                isStoryNode && nextStep.part.route.includes("story-scene")
+                  ? nextStep.part.route + "&returnTo=%2Fjourney"
+                  : nextStep.part.route;
+              router.push(route as any);
             }
           }}
           testID="journey-next-step"

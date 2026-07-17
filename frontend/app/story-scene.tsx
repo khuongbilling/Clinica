@@ -37,14 +37,14 @@ const INK = {
 } as const;
 
 export default function StorySceneScreen() {
-  const { sceneId } = useLocalSearchParams<{ sceneId?: string }>();
+  const { sceneId, returnTo } = useLocalSearchParams<{ sceneId?: string; returnTo?: string }>();
   const scene = getStoryScene(sceneId);
 
   if (!scene) return <StoryGallery />;
-  return <SceneViewer key={scene.id} sceneId={scene.id} />;
+  return <SceneViewer key={scene.id} sceneId={scene.id} returnTo={returnTo} />;
 }
 
-function SceneViewer({ sceneId }: { sceneId: string }) {
+function SceneViewer({ sceneId, returnTo }: { sceneId: string; returnTo?: string }) {
   const router = useRouter();
   const { player, markStorySceneSeen, claimJourneyNode } = usePlayer();
   const { soundEnabled } = useSettings();
@@ -97,8 +97,15 @@ function SceneViewer({ sceneId }: { sceneId: string }) {
     Animated.timing(veil, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
       // This exit is deliberate — let the single back-pop through the guard.
       allowNextBack();
-      if (router.canGoBack()) router.back();
-      else router.replace("/(tabs)");
+      // P15: returnTo param lets the caller specify where to land after the
+      // scene (e.g. /journey so the map is open right after a memory fragment).
+      if (returnTo) {
+        router.replace(returnTo as any);
+      } else if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)");
+      }
     });
   }
 
