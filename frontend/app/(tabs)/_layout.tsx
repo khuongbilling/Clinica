@@ -27,6 +27,10 @@ export default function TabsLayout() {
   const shopUnlocked = checkFeatureGate("shop", ctx).unlocked;
   const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
   const realmUnlocked = checkFeatureGate("realm", ctx).unlocked;
+  // P25 — Community Board tab visible at Lv3 (same as Shop). Active participation
+  // inside the screen gates separately at Lv7 (world_event) with a rich preview
+  // state below that level. href:null only while player hasn't reached Lv3 yet.
+  const communityBoardUnlocked = checkFeatureGate("community_board", ctx).unlocked;
 
   return (
     <Tabs
@@ -83,10 +87,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="faction"
         options={{
-          title: "FACTION",
-          href: null,
+          title: "COMMUNITY",
+          href: communityBoardUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-faction",
-          tabBarIcon: ({ color, size }) => <Ionicons name="flag" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="earth" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

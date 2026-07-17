@@ -97,6 +97,10 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   // P23 — Shop bumped to Lv3 so players have something new to unlock after
   // their first grinding session between Ch2 and Ch3.
   { id: 'shop',             label: 'Apothecary Market (Shops)',          level: 3 },
+  // P25 — Community Board tab appears alongside the Shop so players have a
+  // reason to explore the outer wards from the very start. Active participation
+  // in the Miasma Bloom outbreak response is gated separately at Lv7 (world_event).
+  { id: 'community_board',  label: 'Community Health Board',             level: 3 },
   { id: 'ward_defense',     label: 'Ward Defense',                       level: 4 },
   { id: 'realm',            label: 'Realm — Grand Ward Atrium',          level: 5 },
   // P23 — World Events and Boss both bumped so the unlock ladder stays
