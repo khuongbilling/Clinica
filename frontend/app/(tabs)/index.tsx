@@ -28,10 +28,26 @@ import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
-import {
-  JourneyEmblem, SummoningEmblem, WardDefenseEmblem, BossWardEmblem,
-  DailyRoundsEmblem, MilestonesEmblem, WorldEventsEmblem,
-} from "@/src/components/ClinicaEmblems";
+
+const EMBLEM_IMAGES = {
+  journey:     require("../../assets/ui-icons/emblems/journey.png"),
+  dailyRounds: require("../../assets/ui-icons/emblems/daily-rounds.png"),
+  milestones:  require("../../assets/ui-icons/emblems/milestones.png"),
+  summoning:   require("../../assets/ui-icons/emblems/summoning.png"),
+  wardDefense: require("../../assets/ui-icons/emblems/ward-defense.png"),
+  bossWard:    require("../../assets/ui-icons/emblems/boss-ward.png"),
+  worldEvents: require("../../assets/ui-icons/emblems/world-events.png"),
+} as const;
+
+function HubEmblem({ source }: { source: ReturnType<typeof require> }) {
+  return (
+    <Image
+      source={source}
+      style={{ width: 44, height: 44 }}
+      contentFit="contain"
+    />
+  );
+}
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 function dailyRoundsUnlockedModes(player: any): string[] {
@@ -479,7 +495,7 @@ export default function RunHome() {
         <View style={styles.sideCol}>
           {roundsUnlocked && (
             <FeatureButton
-              emblem={<DailyRoundsEmblem size={24} color={COLORS.brand} />}
+              emblem={<HubEmblem source={EMBLEM_IMAGES.dailyRounds} />}
               label="Rounds"
               color={COLORS.brand}
               badge={roundsBadge}
@@ -488,7 +504,7 @@ export default function RunHome() {
             />
           )}
           <FeatureButton
-            emblem={<JourneyEmblem size={24} color={COLORS.river} />}
+            emblem={<HubEmblem source={EMBLEM_IMAGES.journey} />}
             label="Journey"
             color={COLORS.river}
             onPress={() => router.push("/journey")}
@@ -496,7 +512,7 @@ export default function RunHome() {
           />
           {roundsUnlocked && (
             <FeatureButton
-              emblem={<MilestonesEmblem size={24} color="#D4AF37" />}
+              emblem={<HubEmblem source={EMBLEM_IMAGES.milestones} />}
               label="Milestones"
               color="#D4AF37"
               onPress={() => router.push("/milestones" as any)}
@@ -538,7 +554,7 @@ export default function RunHome() {
         <View style={styles.sideCol}>
           {summonUnlocked && (
             <FeatureButton
-              emblem={<SummoningEmblem size={24} color="#D4AF37" />}
+              emblem={<HubEmblem source={EMBLEM_IMAGES.summoning} />}
               label="Summon"
               color="#D4AF37"
               onPress={() => router.push("/university/recruit" as any)}
@@ -547,7 +563,7 @@ export default function RunHome() {
           )}
           {wardDefUnlocked && (
             <FeatureButton
-              emblem={<WardDefenseEmblem size={24} color={COLORS.river} />}
+              emblem={<HubEmblem source={EMBLEM_IMAGES.wardDefense} />}
               label="Defense"
               color={COLORS.river}
               onPress={() => router.push("/ward-defense" as any)}
@@ -556,7 +572,7 @@ export default function RunHome() {
           )}
           {bossUnlocked && (
             <FeatureButton
-              emblem={<BossWardEmblem size={24} color={COLORS.error} />}
+              emblem={<HubEmblem source={EMBLEM_IMAGES.bossWard} />}
               label="Boss"
               color={COLORS.error}
               onPress={() => router.push("/boss")}
@@ -565,7 +581,7 @@ export default function RunHome() {
           )}
           {WORLD_EVENT_ACTIVE && worldEventUnlocked && (
             <FeatureButton
-              emblem={<WorldEventsEmblem size={24} color={COLORS.air} />}
+              emblem={<HubEmblem source={EMBLEM_IMAGES.worldEvents} />}
               label="Events"
               color={COLORS.air}
               live

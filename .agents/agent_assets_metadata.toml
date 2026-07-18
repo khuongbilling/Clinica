@@ -1350,3 +1350,45 @@ id = "wZEKwopXNwhi9OaKQ1kiQ"
 uri = "file://frontend/assets/map-sprites/map_sprite_medic.png"
 type = "image"
 title = "medic map sprite"
+
+[[generated]]
+id = "6LSJssZwvkoWXJM84bEwH"
+uri = "file://frontend/assets/ui-icons/emblems/journey.png"
+type = "image"
+title = "journey journal emblem"
+
+[[generated]]
+id = "oX0_4ZvmOa88mobbM9j3-"
+uri = "file://frontend/assets/ui-icons/emblems/daily-rounds.png"
+type = "image"
+title = "daily rounds calendar emblem"
+
+[[generated]]
+id = "QzanYr4UAuWVXf0H_t6HD"
+uri = "file://frontend/assets/ui-icons/emblems/milestones.png"
+type = "image"
+title = "milestones trophy emblem"
+
+[[generated]]
+id = "PBNblP4eFFZOTUYgcdZdA"
+uri = "file://frontend/assets/ui-icons/emblems/summoning.png"
+type = "image"
+title = "summoning portal emblem"
+
+[[generated]]
+id = "aHUBOjl3MC_2kHp7Notkl"
+uri = "file://frontend/assets/ui-icons/emblems/ward-defense.png"
+type = "image"
+title = "ward defense shield emblem"
+
+[[generated]]
+id = "F8MTcCugxZKRc4vg_3XVi"
+uri = "file://frontend/assets/ui-icons/emblems/boss-ward.png"
+type = "image"
+title = "boss ward dragon emblem"
+
+[[generated]]
+id = "-zMXaOoAkKhP45n_zs67P"
+uri = "file://frontend/assets/ui-icons/emblems/world-events.png"
+type = "image"
+title = "world events celestial orb emblem"
