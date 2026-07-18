@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -259,12 +258,7 @@ export default function CommunityBoardScreen() {
             onPress={() => router.push("/world-event" as any)}
             testID="community-board-world-event-link"
           >
-            <LinearGradient
-              colors={[JADE_DIM + "66", "transparent"]}
-              style={StyleSheet.absoluteFillObject}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-            />
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: JADE_DIM + "30", pointerEvents: "none" }]} />
             <View style={styles.eventLinkIconWrap}>
               <Ionicons name="earth" size={20} color={JADE} />
             </View>
@@ -291,11 +285,7 @@ export default function CommunityBoardScreen() {
 // ─── 1. Map Hero Section ──────────────────────────────────────────────────────
 function MapHeroSection() {
   return (
-    <View style={styles.mapHero} testID="community-board-map">
-      <LinearGradient
-        colors={[UI.sanctuaryBg, "#0D2035", UI.sanctuaryPanel + "CC"]}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <View style={[styles.mapHero, { backgroundColor: "#0D2035" }]} testID="community-board-map">
 
       {/* Header text */}
       <View style={styles.mapHeaderRow}>
@@ -344,11 +334,7 @@ function DistrictTile({ district }: { district: typeof WARD_DISTRICTS[number] })
   const inf = district.infectionPct;
   const col = inf > 0.65 ? "#EF4444" : inf > 0.4 ? AMBER : JADE;
   return (
-    <View style={[styles.districtTile, { borderColor: col + "55" }]}>
-      <LinearGradient
-        colors={[col + "20", "transparent"]}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <View style={[styles.districtTile, { borderColor: col + "55", backgroundColor: col + "12" }]}>
       <Ionicons name={district.icon as any} size={15} color={col} />
       <Text style={styles.districtName} numberOfLines={1}>{district.name}</Text>
       <View style={styles.districtTrack}>
@@ -387,14 +373,13 @@ function MeterSection({ active, pts, worldEventLevel }: {
             {Math.round(bloomSpreadPct * 100)}%
           </Text>
         </View>
-        {/* gradient bar: jade → amber → red shows health-to-danger */}
+        {/* tri-color bar: jade → amber → red shows health-to-danger */}
         <View style={styles.meterTrackWrap}>
-          <LinearGradient
-            colors={[JADE, AMBER, "#EF4444"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.meterGradientFull]}
-          />
+          <View style={{ flexDirection: "row", flex: 1, borderRadius: 4, overflow: "hidden" }}>
+            <View style={{ flex: 1, backgroundColor: JADE }} />
+            <View style={{ flex: 1, backgroundColor: AMBER }} />
+            <View style={{ flex: 1, backgroundColor: "#EF4444" }} />
+          </View>
           {/* dark overlay on the "not yet spread" portion */}
           <View style={[styles.meterUnspread, { width: `${(1 - bloomSpreadPct) * 100}%` as any }]} />
         </View>
@@ -479,12 +464,7 @@ function NoticeCard({ notice }: { notice: typeof NPC_NOTICES[number] }) {
       style={[styles.noticeCard, { borderColor: notice.color + "35" }]}
       testID={`community-notice-${notice.id}`}
     >
-      <LinearGradient
-        colors={[notice.color + "10", "transparent"]}
-        style={StyleSheet.absoluteFillObject}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0.6 }}
-      />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: notice.color + "08", pointerEvents: "none" }]} />
       <View style={styles.noticeTop}>
         <View style={[styles.noticeAvatar, { backgroundColor: notice.color + "20", borderColor: notice.color + "55" }]}>
           <Ionicons name={notice.icon as any} size={16} color={notice.color} />
@@ -520,10 +500,6 @@ function MissionsSection({ player, active, worldEventLevel }: {
       {/* Locked state: hopeful teaser, not a dead wall */}
       {!active && (
         <View style={styles.previewBanner} testID="community-board-preview-banner">
-          <LinearGradient
-            colors={[JADE + "18", "transparent"]}
-            style={StyleSheet.absoluteFillObject}
-          />
           <Ionicons name="earth-outline" size={22} color={JADE} />
           <View style={{ flex: 1 }}>
             <Text style={styles.previewBannerTitle}>The Bloom is spreading — but you can help.</Text>
@@ -560,12 +536,7 @@ function MissionCard({ mission, player, active }: {
       style={[styles.missionCard, { borderColor: statusCol + "35" }]}
       testID={`community-mission-${mission.id}`}
     >
-      <LinearGradient
-        colors={[statusCol + "0E", "transparent"]}
-        style={StyleSheet.absoluteFillObject}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0.5 }}
-      />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: statusCol + "08", pointerEvents: "none" }]} />
       {/* Header */}
       <View style={styles.missionTop}>
         <View style={[styles.missionIconBox, { backgroundColor: statusCol + "20" }]}>
@@ -654,10 +625,7 @@ function MilestonesSection({ pts, nextMs, active, worldEventLevel }: {
 
               {/* Milestone card */}
               <View style={[styles.msCard, { borderColor: dimCol + "35" }]}>
-                <LinearGradient
-                  colors={[dimCol + "0A", "transparent"]}
-                  style={StyleSheet.absoluteFillObject}
-                />
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: dimCol + "08", pointerEvents: "none" }]} />
                 <View style={styles.msCardTop}>
                   <Text style={[styles.msPts, { color: dimCol }]}>{ms.pts} pts</Text>
                   <Text style={[styles.msName, { color: reached ? UI.text : UI.textDim }]}>
@@ -821,7 +789,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  meterGradientFull: { position: "absolute", left: 0, top: 0, right: 0, bottom: 0 },
   meterUnspread: {
     position: "absolute",
     right: 0,

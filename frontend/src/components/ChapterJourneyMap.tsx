@@ -8,7 +8,7 @@
  * Designed for mobile: full-width scrollable list, no horizontal scroll.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -41,6 +41,16 @@ import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/sr
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
+
+// ── Chapter background thumbnails ─────────────────────────────────────────────
+const CHAPTER_BG: Record<number, ReturnType<typeof require>> = {
+  1: require("../../assets/map-bg/ch1_lotus_sanctuary.png"),
+  2: require("../../assets/map-bg/ch2_amber_ward.png"),
+  3: require("../../assets/map-bg/ch3_sky_citadel.png"),
+  4: require("../../assets/map-bg/ch4_crimson_rush.png"),
+  5: require("../../assets/map-bg/ch5_emerald_forest.png"),
+};
+const CHAPTER_BG_FALLBACK = require("../../assets/map-bg/ch_generic.png");
 
 // ── Part type label + color helpers ──────────────────────────────────────────
 
@@ -467,30 +477,31 @@ function ChapterCard({
         onPress={onToggle}
         testID={`chapter-card-${chapter.number}`}
       >
-        {/* Accent glow for active */}
+        {/* Accent glow for active — solid tint overlay */}
         {!isLocked && !isDone && (
-          <LinearGradient
-            colors={[accent + "18", "transparent"]}
-            style={StyleSheet.absoluteFillObject}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: accent + "12", pointerEvents: "none" }]} />
         )}
 
-        {/* Chapter number circle */}
+        {/* Chapter thumbnail (replaces circular icon badge) */}
         <View style={[
-          styles.chapterNumCircle,
-          {
-            backgroundColor: isLocked ? COLORS.surfaceTertiary : accent + "22",
-            borderColor: isLocked ? COLORS.border : accent + "70",
-          },
+          styles.chapterThumb,
+          { borderColor: isLocked ? COLORS.border : accent + "70" },
+          isDone && { opacity: 0.65 },
         ]}>
-          {isDone ? (
-            <Ionicons name="checkmark" size={16} color={accent} />
-          ) : isLocked ? (
-            <Ionicons name="lock-closed" size={14} color={COLORS.onSurfaceTertiary} />
-          ) : (
-            <Ionicons name={chapter.icon as any} size={16} color={accent} />
+          <Image
+            source={CHAPTER_BG[chapter.number] ?? CHAPTER_BG_FALLBACK}
+            style={{ width: 40, height: 40 }}
+            contentFit="cover"
+          />
+          {isLocked && (
+            <View style={styles.thumbOverlay}>
+              <Ionicons name="lock-closed" size={11} color="#FFFFFF" />
+            </View>
+          )}
+          {isDone && (
+            <View style={styles.thumbOverlay}>
+              <Ionicons name="checkmark" size={13} color="#34D399" />
+            </View>
           )}
         </View>
 
@@ -1305,14 +1316,19 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  chapterNumCircle: {
+  chapterThumb: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 6,
     borderWidth: 1.5,
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  thumbOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#00000066",
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
   },
   chapterTopRow: {
     flexDirection: "row",
