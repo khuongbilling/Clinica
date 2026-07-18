@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: 2,
   },
-  kicker: { color: COLORS.brand, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  kicker: { color: COLORS.brand, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 },
   title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "700", marginTop: 2 },
   closeBtn: {
     width: 34, height: 34, borderRadius: 17,
@@ -981,9 +981,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.success + "1E", borderRadius: RADIUS.pill,
     paddingHorizontal: 8, paddingVertical: 4,
   },
-  checkPillTxt: { color: COLORS.success, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  checkPillTxt: { color: COLORS.success, fontSize: 13, fontWeight: "700", letterSpacing: 0.2 },
 
-  sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 },
+  sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700", letterSpacing: 0.5 },
   sectionHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: SPACING.sm },
   claimAllBtn: {
     backgroundColor: COLORS.success + "22", borderRadius: RADIUS.pill,
@@ -1093,7 +1093,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     paddingHorizontal: 3,
   },
-  tabBadgeTxt: { color: "#fff", fontSize: 11, fontWeight: "800" as const },
+  tabBadgeTxt: { color: "#fff", fontSize: 12, fontWeight: "800" as const },
 
   // P20: Claim All disabled state
   claimAllBtnDim: {
@@ -1123,7 +1123,7 @@ const styles = StyleSheet.create({
   hallProgressRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   hallProgressTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" as const },
   hallProgressSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "400" as const },
-  hallReadyHint: { color: "#3DC4A8", fontSize: 12, fontWeight: "700" as const, marginTop: 3 },
+  hallReadyHint: { color: "#3DC4A8", fontSize: 13, fontWeight: "700" as const, marginTop: 3 },
 
   // P20: Category block
   hallCategory: { gap: 4, marginTop: 4 },
@@ -1132,8 +1132,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2, paddingHorizontal: 2,
     marginTop: SPACING.xs,
   },
-  catLabel: { flex: 1, color: COLORS.brand, fontSize: 12, fontWeight: "700" as const, letterSpacing: 0.5 },
-  catProgress: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700" as const },
+  catLabel: { flex: 1, color: COLORS.brand, fontSize: 13, fontWeight: "700" as const, letterSpacing: 0.3 },
+  catProgress: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700" as const },
 
   // P20: Individual plaque cards
   plaqueCard: {
@@ -1178,25 +1178,25 @@ const styles = StyleSheet.create({
   },
   journeyKicker: {
     color: COLORS.brand,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     marginBottom: 2,
   },
   journeyTitle: {
     color: COLORS.onSurface,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
   },
   journeyType: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 1,
   },
   // P13: proximity hint line
   journeyProximityHint: {
     color: "#F97316",
-    fontSize: 12,
+    fontSize: 13,
     fontStyle: "italic",
     marginTop: 2,
   },

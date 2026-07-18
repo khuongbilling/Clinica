@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
-  kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 1, fontWeight: "700" },
+  kicker: { color: COLORS.brand, fontSize: 12, letterSpacing: 0.6, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 30, fontWeight: "700" },
   sub: { color: COLORS.onSurfaceSecondary, fontSize: 15, marginTop: 2 },
   walletRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" },
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     paddingHorizontal: 10, paddingVertical: 3,
   },
-  ceremonyBadgeTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.8 },
+  ceremonyBadgeTxt: { color: "#D4AF37", fontSize: 13, fontWeight: "700" as const, letterSpacing: 0.4 },
   ceremonyCardTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" as const, letterSpacing: 0.1 },
   ceremonyCardDesc: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21 },
   ceremonyPulseRing: {
@@ -573,19 +573,19 @@ const styles = StyleSheet.create({
   ceremonyBtnTxt: { color: "#0D1200", fontSize: 16, fontWeight: "800" as const, letterSpacing: 0.3 },
   ceremonyBtnFree: {
     backgroundColor: "#0D1200", color: "#D4AF37",
-    fontSize: 10, fontWeight: "800" as const, letterSpacing: 0.8,
+    fontSize: 12, fontWeight: "800" as const, letterSpacing: 0.4,
     borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 2,
   },
   ceremonyNote: {
-    color: COLORS.onSurfaceTertiary, fontSize: 11, textAlign: "center" as const,
-    lineHeight: 16, fontStyle: "italic" as const,
+    color: COLORS.onSurfaceTertiary, fontSize: 13, textAlign: "center" as const,
+    lineHeight: 19, fontStyle: "italic" as const,
   },
   ceremonySectionDivider: {
     flexDirection: "row" as const, alignItems: "center", gap: 8, marginTop: 4,
   },
   ceremonySectionLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
   ceremonySectionDividerTxt: {
-    color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.8,
+    color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700" as const, letterSpacing: 0.4,
   },
 
   // Ceremony result

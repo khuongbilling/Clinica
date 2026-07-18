@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   left: { flex: 1, gap: 2 },
-  kicker: { color: UI.gold, fontSize: 10, fontWeight: "800", letterSpacing: 2.5 },
-  title: { color: UI.text, fontSize: 18, fontWeight: "800" },
+  kicker: { color: UI.gold, fontSize: 12, fontWeight: "800", letterSpacing: 1.2 },
+  title: { color: UI.text, fontSize: 21, fontWeight: "800" },
 });

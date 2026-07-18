@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
   },
   kicker: {
     color: "#F59E0B",
-    fontSize: 10, fontWeight: "700", letterSpacing: 2,
+    fontSize: 12, fontWeight: "700", letterSpacing: 1,
   },
   title: {
     color: COLORS.onSurface,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   },
   ticketBadgeTxt: {
     color: "#F59E0B",
-    fontSize: 9, fontWeight: "800", letterSpacing: 1.5,
+    fontSize: 12, fontWeight: "800", letterSpacing: 0.8,
   },
   ticketRole: {
     color: COLORS.onSurfaceSecondary,
@@ -696,11 +696,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 10, fontWeight: "700", letterSpacing: 1.5,
+    fontSize: 12, fontWeight: "700", letterSpacing: 0.8,
   },
   plateFull: {
     color: "#F59E0B",
-    fontSize: 11, fontStyle: "italic",
+    fontSize: 13, fontStyle: "italic",
   },
 
   // Food Grid
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   },
   riskTxt: {
     color: "#EF4444",
-    fontSize: 10, fontWeight: "900",
+    fontSize: 12, fontWeight: "900",
   },
 
   // Tray
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
   },
   trayHint: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 10, fontStyle: "italic",
+    fontSize: 13, fontStyle: "italic",
   },
   trayEmpty: {
     color: COLORS.onSurfaceTertiary,
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   },
   trayEmoji: { fontSize: 14 },
   trayLabel: {
-    fontSize: 11, fontWeight: "600",
+    fontSize: 13, fontWeight: "600",
   },
 
   // Nutrition Meters
@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
   },
   metersTitle: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
+    fontSize: 12, fontWeight: "700", letterSpacing: 0.8,
     marginBottom: 2,
   },
   meterRow: {
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
     width: 76,
   },
   meterLabel: {
-    fontSize: 11, fontWeight: "600",
+    fontSize: 13, fontWeight: "600",
   },
   meterTrack: {
     flex: 1,
@@ -843,8 +843,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   meterVal: {
-    fontSize: 11, fontWeight: "700",
-    width: 16, textAlign: "right",
+    fontSize: 13, fontWeight: "700",
+    width: 20, textAlign: "right",
   },
   metersLegend: {
     flexDirection: "row",
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
   },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
+  legendTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
 
   // Feedback
   feedbackCard: {
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
   },
   completionKicker: {
     color: "#F59E0B",
-    fontSize: 9, fontWeight: "800", letterSpacing: 2,
+    fontSize: 12, fontWeight: "800", letterSpacing: 1,
   },
   completionLabel: {
     color: COLORS.onSurface,

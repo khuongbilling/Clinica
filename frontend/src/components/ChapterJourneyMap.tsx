@@ -1249,9 +1249,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   phaseBadgeTxt: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    letterSpacing: 1,
     color: UI.jade,
   },
   phaseTitle: {
@@ -1261,10 +1261,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   phaseSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: COLORS.onSurfaceTertiary,
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 20,
   },
   // P17: decorative divider + footer
   phaseDecoDividerRow: {
@@ -1280,7 +1280,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI.jade + "35",
   },
   phaseDecoGlyph: {
-    fontSize: 11,
+    fontSize: 12,
     color: UI.jade + "90",
   },
   phaseFooterRow: {
@@ -1290,10 +1290,10 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   phaseFooterTxt: {
-    fontSize: 10,
+    fontSize: 12,
     color: COLORS.onSurfaceTertiary,
     fontStyle: "italic" as const,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 
   // Chapter wrapper
@@ -1359,16 +1359,16 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   chapterNum: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1,
+    letterSpacing: 0.6,
   },
   chapterTheme: {
     fontSize: 14,
     fontWeight: "600",
   },
   chapterMeta: {
-    fontSize: 11,
+    fontSize: 12,
   },
   chapterMetaRow: {
     flexDirection: "row",
@@ -1386,9 +1386,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   battleClearedTxt: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 
   // C4 — chapter chest button
@@ -1420,9 +1420,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   tagTxt: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
 
   // Parts list

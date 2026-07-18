@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
   },
   portraitImg: { width: 58, height: 58 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  name: { fontSize: 10, fontWeight: "800", letterSpacing: 2 },
-  message: { color: COLORS.onSurface, fontSize: 13, lineHeight: 19 },
+  name: { fontSize: 12, fontWeight: "800", letterSpacing: 1.2 },
+  message: { color: COLORS.onSurface, fontSize: 15, lineHeight: 22 },
   messageOnArt: { color: "#F2F5FA", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 4 },
   objectiveChip: {
     flexDirection: "row",
@@ -157,11 +157,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: UI.jade + "55",
     borderRadius: RADIUS.md,
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: SPACING.sm,
   },
-  objectiveTxt: { flex: 1, color: COLORS.onSurface, fontSize: 12, lineHeight: 16 },
-  objectiveLabel: { color: UI.jade, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  objectiveTxt: { flex: 1, color: COLORS.onSurface, fontSize: 14, lineHeight: 20 },
+  objectiveLabel: { color: UI.jade, fontSize: 12, fontWeight: "800", letterSpacing: 0.8 },
   cta: {
     flexDirection: "row",
     alignItems: "center",
@@ -171,5 +171,5 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.md,
   },
-  ctaTxt: { color: "#082019", fontSize: 13, fontWeight: "800", letterSpacing: 1.5 },
+  ctaTxt: { color: "#082019", fontSize: 15, fontWeight: "800", letterSpacing: 1 },
 });

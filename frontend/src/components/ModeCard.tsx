@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 3,
     borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 3,
   },
-  badgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  badgeTxt: { fontSize: 12, fontWeight: "800", letterSpacing: 0.3 },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.sm },
 
   largeCard: {
@@ -151,25 +151,25 @@ const styles = StyleSheet.create({
   },
   largeBody: { padding: SPACING.md, gap: 6 },
   largeTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: "700" },
-  largeSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
+  largeSub: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 20 },
   rewardRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
-  rewardTxt: { color: COLORS.brand, fontSize: 11, fontWeight: "600" },
-  reqTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  rewardTxt: { color: COLORS.brand, fontSize: 13, fontWeight: "600" },
+  reqTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   enterBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    borderRadius: RADIUS.md, paddingVertical: 10, marginTop: 6,
+    borderRadius: RADIUS.md, paddingVertical: 11, marginTop: 6,
   },
-  enterBtnTxt: { fontSize: 13, fontWeight: "800" },
+  enterBtnTxt: { fontSize: 15, fontWeight: "800" },
 
   mediumCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     borderRadius: RADIUS.md, borderWidth: 1.5, overflow: "hidden", backgroundColor: COLORS.surfaceSecondary,
   },
-  mediumBody: { flex: 1, paddingVertical: SPACING.sm, paddingRight: SPACING.xs, gap: 3 },
-  mediumTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", flexShrink: 1 },
-  mediumSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
-  rewardTxtSmall: { color: COLORS.brand, fontSize: 10, fontWeight: "600", marginTop: 1 },
-  reqTxtSmall: { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 1 },
+  mediumBody: { flex: 1, paddingVertical: SPACING.sm, paddingRight: SPACING.xs, gap: 4 },
+  mediumTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700", flexShrink: 1 },
+  mediumSub: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 18 },
+  rewardTxtSmall: { color: COLORS.brand, fontSize: 13, fontWeight: "600", marginTop: 1 },
+  reqTxtSmall: { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: 1 },
 
   smallCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
@@ -179,8 +179,8 @@ const styles = StyleSheet.create({
   smallIcon: {
     width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center",
   },
-  smallTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
-  smallSub: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 13, marginTop: 1 },
+  smallTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
+  smallSub: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 18, marginTop: 1 },
 
   dimmed: { opacity: 0.7 },
 });

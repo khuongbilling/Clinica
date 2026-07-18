@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   loading: { alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.sm },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surfaceSecondary, alignItems: "center", justifyContent: "center" },
-  kicker: { color: COLORS.growth, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  kicker: { color: COLORS.growth, fontSize: 12, fontWeight: "700", letterSpacing: 1 },
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
   scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, marginBottom: SPACING.sm },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border,
   },
   currencyVal: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" },
-  currencyLbl: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  currencyLbl: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   actionCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, padding: SPACING.md,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,
   },
   gardenLbl: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1 },
-  gardenVal: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  gardenVal: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   gardenBarTrack: { height: 6, borderRadius: 3, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden" },
   gardenBarFill: { height: "100%", borderRadius: 3 },
   lessonCard: {
@@ -298,12 +298,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: 10,
   },
   boutiqueChipTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
-  boutiqueFoot: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", lineHeight: 16 },
+  boutiqueFoot: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontStyle: "italic", lineHeight: 19 },
   creditsCard: {
     flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
     backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, padding: SPACING.md,
   },
-  creditsTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 17, flex: 1 },
+  creditsTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19, flex: 1 },
   safetyCard: {
     flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md,

@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
   },
   headerCenter: { flex: 1, alignItems: "center" },
   kicker: {
-    color: "#7C3AED", fontSize: 10, fontWeight: "800",
-    letterSpacing: 1.5, textTransform: "uppercase",
+    color: "#7C3AED", fontSize: 12, fontWeight: "800",
+    letterSpacing: 0.8, textTransform: "uppercase",
   },
   subtitle: { color: COLORS.onSurfaceSecondary, fontSize: 12 },
   counter: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600", width: 36, textAlign: "right" },
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, alignItems: "center", justifyContent: "center",
     marginBottom: SPACING.sm,
   },
-  stepLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase" },
+  stepLabel: { fontSize: 13, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" },
   heading: {
     color: COLORS.onSurface, fontSize: 22, fontWeight: "700",
     textAlign: "center", lineHeight: 28,

@@ -132,14 +132,14 @@ const faChipStyles = StyleSheet.create({
     borderColor: "#D4AF3730", padding: SPACING.md,
   },
   title:    { color: "#D4AF37", fontSize: 13, fontWeight: "700" },
-  sub:      { color: "#A09060", fontSize: 11 },
+  sub:      { color: "#A09060", fontSize: 13 },
   badge:    {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: "#22C55E18", borderRadius: RADIUS.pill,
     borderWidth: 1, borderColor: "#22C55E30",
     paddingHorizontal: 8, paddingVertical: 4,
   },
-  badgeTxt: { color: "#22C55E", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  badgeTxt: { color: "#22C55E", fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
 });
 
 const LESSONS_BANNER: ModeCardDef = {
@@ -655,10 +655,10 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
-  kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
+  kicker: { color: COLORS.brand, fontSize: 12, letterSpacing: 1, fontWeight: "700" },
   title:  { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
-  sectionHeading: { color: UI.jade, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.xs },
+  sectionHeading: { color: UI.jade, fontSize: 13, fontWeight: "800", letterSpacing: 0.8, marginTop: SPACING.xs },
 
   ch1JourneyCard: {
     flexDirection: "row", alignItems: "center", borderRadius: RADIUS.lg,
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#D4AF3750",
     paddingHorizontal: 7, paddingVertical: 4,
   },
-  ch1BadgeTxt: { color: "#D4AF37", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  ch1BadgeTxt: { color: "#D4AF37", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
   ch1Title:    { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
   ch1Sub:      { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 1 },
 
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.brand + "15", alignItems: "center", justifyContent: "center",
   },
-  nextLessonKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  nextLessonKicker: { color: COLORS.brand, fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
   nextLessonTitle:  { color: COLORS.onSurface, fontSize: 15, fontWeight: "700", marginTop: 2 },
 
   lockedTabCard: {
@@ -710,9 +710,9 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4,
     borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1,
   },
-  cueBadgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  cueBadgeTxt: { fontSize: 12, fontWeight: "800", letterSpacing: 0.8 },
   cueBody:     { flex: 1, paddingHorizontal: SPACING.md, justifyContent: "center", gap: 2 },
-  cueKicker:   { fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  cueKicker:   { fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   cueTitle:    { color: COLORS.onSurface, fontSize: 20, fontWeight: "300", letterSpacing: 0.3 },
   cueSub:      { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginTop: 1 },
   cueCtaRow:   { padding: SPACING.md, paddingTop: SPACING.sm, alignItems: "flex-start" },

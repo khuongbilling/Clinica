@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
   },
-  label: { fontSize: 15, fontWeight: "800", letterSpacing: 1 },
+  label: { fontSize: 16, fontWeight: "800", letterSpacing: 0.8 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
 });

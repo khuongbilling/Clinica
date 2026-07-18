@@ -245,14 +245,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill, borderWidth: 1,
     marginBottom: SPACING.sm,
   },
-  phaseLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  phaseLabel: { fontSize: 13, fontWeight: "700", letterSpacing: 0.4 },
 
   iconCircle: {
     width: 84, height: 84, borderRadius: 42,
     borderWidth: 1.5, alignItems: "center", justifyContent: "center",
   },
   stepLabel: {
-    fontSize: 9, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase",
+    fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase",
     marginTop: SPACING.sm,
   },
   actionChip: {

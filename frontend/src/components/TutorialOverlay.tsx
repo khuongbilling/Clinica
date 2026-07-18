@@ -384,20 +384,20 @@ const styles = StyleSheet.create({
   },
   progressTxtDark: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
   },
   popoverTitle: {
     color: COLORS.onSurface,
     fontSize: 20,
     fontWeight: "400",
-    lineHeight: 24,
+    lineHeight: 26,
     marginTop: SPACING.xs,
   },
   popoverBody: {
     color: COLORS.onSurfaceSecondary,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 16,
+    lineHeight: 24,
     minHeight: 57,
   },
   popoverActions: {
@@ -415,9 +415,9 @@ const styles = StyleSheet.create({
   },
   nextBtnTxt: {
     color: COLORS.onBrand,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
 
   // Full-screen scrim rendered below the tutorial box during battle tutorials.
@@ -478,15 +478,15 @@ const styles = StyleSheet.create({
   },
   systemStepTitle: {
     color: COLORS.onSurface,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     marginTop: 2,
   },
   systemName: {
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   narrativeHead: {
     flexDirection: "row",
@@ -498,30 +498,30 @@ const styles = StyleSheet.create({
     color: COLORS.onSurface,
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   narrativeBody: {
     color: COLORS.onSurfaceSecondary,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 24,
     minHeight: 40,
   },
   narrativeFoot: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 2,
+    marginTop: 4,
   },
   tapPrompt: {
     flex: 1,
     color: COLORS.brand,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   progressTxt: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
   },
   chevron: {

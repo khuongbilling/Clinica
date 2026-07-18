@@ -151,10 +151,10 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   tabTxt: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: UI.gold,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   tabTxtActive: {
     color: UI.onGold,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   badgeTxt: {
     color: "#fff",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "800",
   },
   divider: {

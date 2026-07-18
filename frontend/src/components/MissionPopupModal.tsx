@@ -112,7 +112,7 @@ function RewardChip({ icon, value, color }: { icon: string; value: string | numb
 }
 const chip = StyleSheet.create({
   wrap: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: RADIUS.pill, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
-  txt:  { fontSize: 11, fontWeight: "700" },
+  txt:  { fontSize: 13, fontWeight: "700" },
 });
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -368,26 +368,26 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   typeTxt: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   missionTitle: {
     color: UI.text,
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: "700",
-    lineHeight: 26,
+    lineHeight: 28,
   },
   chapterLabel: {
     color: UI.textDim,
-    fontSize: 13,
+    fontSize: 14,
   },
 
   // Description
   flavor: {
     color: UI.textSoft,
-    fontSize: 15,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 25,
   },
 
   // Locked banner
@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
   lockedTxt: {
     flex: 1,
     color: UI.textDim,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
   },
 
   // Rewards
@@ -414,9 +414,9 @@ const styles = StyleSheet.create({
   },
   rewardLabel: {
     color: UI.textDim,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   rewardRow: {
     flexDirection: "row",

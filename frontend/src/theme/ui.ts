@@ -100,30 +100,42 @@ export const GRADIENTS = {
   storyScrim: ["rgba(16,11,24,0)", "rgba(16,11,24,0.55)", "rgba(12,8,18,0.94)"],
 } as const;
 
-// ── Global type scale — all new screens and the global readability pass use these.
-// Minimum readable size is 12px for any visible UI text. Tutorial/story minimum 16px.
+// ── Global type scale — Push 1 Readability Pass.
+// Clinica reads like a luminous portrait-mode donghua RPG academy, not a
+// compact dark dashboard. Every size here is a minimum floor — individual
+// screens can go larger, never smaller.
+//
+// Rules enforced here:
+//   • No gameplay instruction text below 14 px.
+//   • No tutorial / cutscene / story text below 16 px.
+//   • Letter spacing on small ALL-CAPS kickers kept ≤ 1.5 to avoid over-spacing.
+//   • Line heights for body copy provide comfortable clinical reading.
 export const TYPO = {
   // Screen / page level
-  screenTitle:  30,   // H1 — main page title (tab home, hub headers)
+  screenTitle:  32,   // H1 — main page title (tab home, hub headers)
   heroTitle:    28,   // H1 variant — large hero-section heading
   pageTitle:    26,   // H1 compact — when screen estate is tight
 
   // Section level
-  sectionHead:  20,   // H2 — section group header
+  sectionHead:  21,   // H2 — section group header
+  subtitle:     18,   // page-level subtitle / intro line
+
+  // Card level
   cardTitle:    18,   // H3 — card/item title
   cardSubtitle: 15,   // card secondary text / brief description
 
-  // Body
-  body:         15,   // primary paragraph / description text
-  bodySmall:    13,   // compact body (flavor text, lore, requirements)
-  bodyMin:      13,   // absolute minimum for any readable body copy
+  // Body — 16 is the minimum for any multi-line explanatory text (clinical,
+  // tutorial, story). Short single-line labels may use 14.
+  body:         16,   // primary paragraph / description / tutorial text (min)
+  bodySmall:    14,   // compact body (requirements, lore, flavor text)
+  bodyMin:      14,   // absolute minimum for any readable gameplay instruction
 
-  // UI chrome
-  label:        13,   // UI labels, stat names
-  meta:         12,   // metadata, counters, secondary stats (never below 12)
-  chip:         12,   // reward chips, small status badges (never below 12)
-  kicker:       11,   // decorative ALL-CAPS kickers (accent color only)
-  micro:        10,   // absolute last resort — only for decorative overlay text
+  // UI chrome — meta/label text on badges, stat lines, timestamps
+  label:        14,   // UI labels, stat names
+  meta:         13,   // metadata, counters, secondary stats
+  chip:         13,   // reward chips, small status badges
+  kicker:       12,   // decorative ALL-CAPS kickers (accent color, ≤1.5 tracking)
+  micro:        12,   // absolute floor — only for decorative overlay text
 
   // Interactive
   button:       16,   // primary CTA button text
@@ -131,27 +143,43 @@ export const TYPO = {
   tab:          13,   // tab bar labels
 } as const;
 
+// ── Line heights — pair with TYPO values for comfortable reading.
+export const LINE = {
+  tight:    1.25,   // compact single-line labels
+  snug:     1.35,   // card subtitles, short descriptions
+  normal:   1.5,    // body text, clinical explanations
+  relaxed:  1.65,   // tutorial / story / cutscene text (max comfort)
+} as const;
+
+// Convenience: absolute line height values pre-paired with TYPO body sizes.
+export const LH = {
+  body:      24,    // TYPO.body (16) × 1.5
+  bodySmall: 21,    // TYPO.bodySmall (14) × 1.5
+  narrative: 26,    // story / cutscene paragraphs — extra air
+  label:     20,    // TYPO.label (14) in multi-line contexts
+} as const;
+
 // Convenience: text style presets used across refreshed screens.
 export const TEXT = {
   kicker: {
     color: UI.gold,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800" as const,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
   title: {
     color: UI.text,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "800" as const,
   },
   body: {
     color: UI.textSoft,
-    fontSize: 15,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 25,
   },
   caption: {
     color: UI.textDim,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600" as const,
     letterSpacing: 0.3,
   },

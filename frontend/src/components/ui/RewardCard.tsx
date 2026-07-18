@@ -17,7 +17,7 @@ export function RewardCard({
 }) {
   return (
     <View style={[styles.wrap, { borderColor: tint + "55", backgroundColor: tint + "18" }]}>
-      <Ionicons name={icon} size={12} color={tint} />
+      <Ionicons name={icon} size={14} color={tint} />
       <Text style={[styles.label, { color: tint }]} numberOfLines={1}>
         {label}
       </Text>
@@ -35,5 +35,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
-  label: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  label: { fontSize: 13, fontWeight: "700", letterSpacing: 0.2 },
 });

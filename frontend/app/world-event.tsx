@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
     backgroundColor: BLOOM_ACCENT + "1A", borderWidth: 1, borderColor: BLOOM_ACCENT + "55",
     alignItems: "center", justifyContent: "center", marginBottom: SPACING.sm,
   },
-  lockedKicker: { color: BLOOM_ACCENT, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  lockedKicker: { color: BLOOM_ACCENT, fontSize: 12, fontWeight: "700", letterSpacing: 1 },
   lockedTitle:  { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", textAlign: "center" },
   lockedBody:   {
     color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21,
@@ -885,9 +885,9 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceSecondary,
     alignItems: "center", justifyContent: "center",
   },
-  kicker:   { color: BLOOM_ACCENT, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  kicker:   { color: BLOOM_ACCENT, fontSize: 12, fontWeight: "700", letterSpacing: 1 },
   title:    { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", lineHeight: 26 },
-  subtitle: { color: BLOOM_ACCENT + "BB", fontSize: 11, marginTop: 2 },
+  subtitle: { color: BLOOM_ACCENT + "BB", fontSize: 13, marginTop: 2 },
 
   noticeBar: {
     flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
     backgroundColor: BLOOM_DARK + "44", borderRadius: RADIUS.md,
     borderWidth: 1, borderColor: BLOOM_ACCENT + "44", padding: SPACING.md,
   },
-  noticeTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, flex: 1 },
+  noticeTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, flex: 1 },
 
   tabBar: {
     flexDirection: "row", paddingHorizontal: SPACING.md,
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     gap: 4, paddingVertical: SPACING.sm, borderBottomWidth: 2, borderBottomColor: "transparent",
   },
   tabBtnActive: { borderBottomColor: BLOOM_ACCENT },
-  tabTxt:       { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+  tabTxt:       { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700", letterSpacing: 0.3 },
   tabTxtActive: { color: BLOOM_ACCENT },
 
   scroll:  { padding: SPACING.lg, gap: SPACING.md, paddingBottom: 100 },
@@ -920,11 +920,11 @@ const styles = StyleSheet.create({
 
   // Badge
   badge:    { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2 },
-  badgeTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  badgeTxt: { fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
 
   // Lore card
   headerTokenPill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: BLOOM_ACCENT + "1F", borderColor: BLOOM_ACCENT + "55", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  headerTokenTxt: { color: BLOOM_ACCENT, fontSize: 11, fontWeight: "800" },
+  headerTokenTxt: { color: BLOOM_ACCENT, fontSize: 13, fontWeight: "800" },
   contributionCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, borderWidth: 1,
@@ -932,8 +932,8 @@ const styles = StyleSheet.create({
   },
   contributionIconBox: { width: 44, height: 44, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
   contributionValue: { color: BLOOM_ACCENT, fontSize: 24, fontWeight: "800" },
-  contributionLabel: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600" },
-  contributionHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, flex: 1, textAlign: "right", lineHeight: 14 },
+  contributionLabel: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600" },
+  contributionHint: { color: COLORS.onSurfaceTertiary, fontSize: 13, flex: 1, textAlign: "right", lineHeight: 19 },
 
   // Sanctuary Corruption Meter
   corruptionCard: {
@@ -942,21 +942,21 @@ const styles = StyleSheet.create({
   },
   corruptionTopRow: { flexDirection: "row", alignItems: "baseline", gap: SPACING.xs },
   corruptionValue:  { color: BLOOM_ACCENT, fontSize: 22, fontWeight: "800" },
-  corruptionMax:    { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600" },
+  corruptionMax:    { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "600" },
   corruptionTrack:  { height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 4, overflow: "hidden" },
   corruptionFill:   { height: "100%", borderRadius: 4, backgroundColor: "#EF4444", alignSelf: "flex-end" },
-  corruptionHint:   { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14 },
+  corruptionHint:   { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19 },
 
   loreCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg, borderWidth: 1,
     padding: SPACING.lg, gap: SPACING.sm, overflow: "hidden",
   },
-  loreChapter: { color: BLOOM_ACCENT, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  loreChapter: { color: BLOOM_ACCENT, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 },
   loreFlavor:  { color: COLORS.onSurface, fontSize: 13, lineHeight: 20, fontStyle: "italic" },
   loreDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.xs },
   infoRow:     { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
-  infoRowLabel:{ color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", minWidth: 54 },
-  infoRowValue:{ color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, flex: 1 },
+  infoRowLabel:{ color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700", minWidth: 60 },
+  infoRowValue:{ color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, flex: 1 },
 
   // Threat
   threatCard: {

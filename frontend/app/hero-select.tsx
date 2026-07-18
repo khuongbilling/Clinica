@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
     alignItems: "center", justifyContent: "center",
   },
-  kicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
+  kicker: { color: COLORS.brand, fontSize: 12, fontWeight: "700", letterSpacing: 1 },
   title: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", marginTop: 2 },
   lead: {
     color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start", borderWidth: 1,
     borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2, marginTop: 2,
   },
-  elementTxt: { fontSize: 9, fontWeight: "700", letterSpacing: 1 },
+  elementTxt: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   footer: {
     padding: SPACING.lg, paddingTop: SPACING.md,
     borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.sm,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.border,
   },
   previewThumb: { width: 44, height: 56, borderRadius: RADIUS.sm },
-  previewLabel: { color: COLORS.brand, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  previewLabel: { color: COLORS.brand, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 },
   previewName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "500", marginTop: 2 },
   confirmBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",

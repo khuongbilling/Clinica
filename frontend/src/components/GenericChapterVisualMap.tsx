@@ -685,17 +685,17 @@ const styles = StyleSheet.create({
     alignSelf:         "flex-start",
   },
   typeTxt: {
-    fontSize:      8,
+    fontSize:      12,
     fontWeight:    "700",
-    letterSpacing: 0.9,
+    letterSpacing: 0.5,
   },
   nodeTitle: {
-    fontSize:   12,
+    fontSize:   13,
     fontWeight: "700",
-    lineHeight: 16,
+    lineHeight: 18,
   },
   xpChip: {
-    fontSize:   10,
+    fontSize:   12,
     fontWeight: "600",
     color:      "#F59E0B",
   },
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     marginTop:     1,
   },
   teaserTxt: {
-    fontSize:   9,
+    fontSize:   12,
     fontWeight: "600",
     fontStyle:  "italic",
   },
@@ -718,10 +718,10 @@ const styles = StyleSheet.create({
     alignSelf:     "flex-start",
   },
   clearedTxt: {
-    fontSize:      9,
+    fontSize:      12,
     fontWeight:    "700",
     color:         "#34D399",
-    letterSpacing: 0.6,
+    letterSpacing: 0.3,
   },
   claimBtn: {
     flexDirection:     "row",
@@ -734,10 +734,10 @@ const styles = StyleSheet.create({
     marginTop:         2,
   },
   claimBtnTxt: {
-    fontSize:      10,
+    fontSize:      13,
     fontWeight:    "700",
     color:         "#FFF",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   // ── Next-chapter mist gate ────────────────────────────────────────────────
   nextChGate: {
@@ -757,16 +757,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   nextChLabel: {
-    fontSize:      10,
+    fontSize:      12,
     fontWeight:    "700",
     color:         COLORS.onSurfaceTertiary,
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
   nextChSub: {
-    fontSize:   9,
+    fontSize:   12,
     color:      COLORS.onSurfaceTertiary + "AA",
     marginTop:  2,
-    lineHeight: 13,
+    lineHeight: 18,
   },
   // P13: chapter clear card
   chClearCard: {
@@ -784,14 +784,14 @@ const styles = StyleSheet.create({
     gap:           6,
   },
   chClearTitle: {
-    fontSize:      11,
+    fontSize:      13,
     fontWeight:    "800",
-    letterSpacing: 1,
+    letterSpacing: 0.6,
   },
   chClearSub: {
-    fontSize:   11,
+    fontSize:   13,
     color:      COLORS.onSurfaceTertiary,
-    lineHeight: 15,
+    lineHeight: 19,
     fontStyle:  "italic",
   },
   // P14: TAP call-to-action pill
@@ -808,8 +808,8 @@ const styles = StyleSheet.create({
     alignSelf:         "flex-start",
   },
   tapPillTxt: {
-    fontSize:      8,
+    fontSize:      12,
     fontWeight:    "800",
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
 });

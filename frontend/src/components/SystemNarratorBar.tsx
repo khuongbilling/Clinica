@@ -103,14 +103,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   prefix: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: 1.2,
   },
   msg: {
     color: COLORS.onSurfaceSecondary,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 20,
   },
   dismiss: {
     paddingTop: 2,
