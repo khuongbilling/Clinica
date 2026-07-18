@@ -184,8 +184,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   firstBattle: [
     {
       id: "first_battle_brief",
-      title: "Remember the Chain",
-      body: "Scout first — reveal what the patient truly needs. Then Stabilize to buy time. Then Strike to drive back the illness. That sequence is your clinical chain. This patient is in a bad way. Do what you can. I won't guide your hand from here.",
+      title: "You Know the Chain",
+      body: "Scout first. Reveal what the patient actually needs before you act. Then Stabilize, to protect them while you work. Then Counter, to push the disease back. Then Reassess, because good care confirms before it moves on. This case is harder than the last. I won't be guiding your hand from here. Trust the chain.",
       placement: "center",
       requireAction: false,
       banner: true,
