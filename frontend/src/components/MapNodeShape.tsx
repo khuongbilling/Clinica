@@ -1,24 +1,13 @@
 /**
- * MapNodeShape — illustrated 2.5D map node component
+ * MapNodeShape — illustrated 2.5D map node using generated PNG icons.
  *
- * Replaces plain circles with type-specific illustrated shapes.
- * Each ChapterPartType gets a distinct visual frame identity
- * inspired by donghua/anime RPG adventure maps.
+ * Each node type displays a unique painted icon badge (PNG asset).
+ * Status is shown via frame glow, dimming, and overlay badges.
  *
- * Shape vocabulary (border-radius, double-ring, decorative accents):
- *  · battle         → Rounded shield/pentagon (r*0.28) — war crest
- *  · mini_boss      → Octagonal seal (r*0.42) — corrupted gate
- *  · ward_defense   → Rounded tower (r*0.18) — sentinel post
- *  · memory_fragment → Oval lotus crystal (r*0.85) — memory orb
- *  · challenge      → Hex gem (r*0.38) — triage rune
- *  · reflection     → Circle lotus ring (r) — reflection seal
- *  · story          → Oval scroll (r*0.7) — ward scroll
- *  · reward         → Ornate octagon (r*0.45) — supply chest
- *  · lesson         → Rounded book (r*0.55) — clinic tome
- *  · Others         → Decorated circle
+ * Drop-in replacement for the old border-radius + Ionicons approach.
  */
-import { Ionicons } from "@expo/vector-icons";
-import { Pressable, View } from "react-native";
+import { Image } from "expo-image";
+import { Pressable, Text, View } from "react-native";
 
 export type MapNodeStatus = "complete" | "next" | "available" | "placeholder";
 
@@ -32,7 +21,27 @@ interface MapNodeShapeProps {
   testID?: string;
 }
 
-// Icon per node type (large, illustrated feel)
+// ── Node PNG assets ────────────────────────────────────────────────────────────
+
+const NODE_ICON: Record<string, any> = {
+  battle:          require("@/assets/map-nodes/node_battle.png"),
+  mini_boss:       require("@/assets/map-nodes/node_miniboss.png"),
+  ward_defense:    require("@/assets/map-nodes/node_ward_defense.png"),
+  memory_fragment: require("@/assets/map-nodes/node_memory.png"),
+  challenge:       require("@/assets/map-nodes/node_challenge.png"),
+  reflection:      require("@/assets/map-nodes/node_reflection.png"),
+  story:           require("@/assets/map-nodes/node_story.png"),
+  reward:          require("@/assets/map-nodes/node_reward.png"),
+  lesson:          require("@/assets/map-nodes/node_story.png"),
+  realm:           require("@/assets/map-nodes/node_reward.png"),
+  chain:           require("@/assets/map-nodes/node_challenge.png"),
+  minigame:        require("@/assets/map-nodes/node_challenge.png"),
+  mode_preview:    require("@/assets/map-nodes/node_story.png"),
+};
+
+const FALLBACK_ICON = require("@/assets/map-nodes/node_story.png");
+
+// ── Exported icon map (used by legacy callers) ─────────────────────────────────
 export const NODE_TYPE_ICON: Record<string, string> = {
   battle:          "flash",
   mini_boss:       "skull",
@@ -45,37 +54,9 @@ export const NODE_TYPE_ICON: Record<string, string> = {
   lesson:          "school",
   realm:           "home",
   chain:           "link",
-  community:       "people",
-  arena:           "trophy",
   mode_preview:    "compass",
   minigame:        "game-controller",
 };
-
-// Border-radius (as fraction of r) — creates distinct shapes
-function getNodeBorderRadius(type: string, r: number): number {
-  switch (type) {
-    case "battle":          return Math.round(r * 0.28); // shield
-    case "mini_boss":       return Math.round(r * 0.42); // octagon
-    case "ward_defense":    return Math.round(r * 0.18); // tower
-    case "memory_fragment": return Math.round(r * 0.85); // oval orb
-    case "challenge":       return Math.round(r * 0.38); // hex gem
-    case "reflection":      return r;                     // full circle
-    case "story":           return Math.round(r * 0.70); // scroll oval
-    case "reward":          return Math.round(r * 0.45); // ornate chest
-    case "lesson":          return Math.round(r * 0.55); // tome
-    case "realm":           return Math.round(r * 0.60); // arch
-    case "chain":           return Math.round(r * 0.35);
-    case "community":       return Math.round(r * 0.65);
-    case "arena":           return Math.round(r * 0.45);
-    case "mode_preview":    return Math.round(r * 0.65);
-    default:                return r;
-  }
-}
-
-// Outer decorative ring border-style — dashed for "next", solid for others
-function getOuterRingBr(type: string, r: number): number {
-  return getNodeBorderRadius(type, r) + 4;
-}
 
 export function MapNodeShape({
   type,
@@ -86,164 +67,126 @@ export function MapNodeShape({
   onPress,
   testID,
 }: MapNodeShapeProps) {
-  const isComplete = status === "complete";
-  const isNext     = status === "next";
-  const isDim      = status === "placeholder";
+  const icon   = NODE_ICON[type] ?? FALLBACK_ICON;
+  const SIZE   = r * 2;
+  const isLocked = status === "placeholder";
+  const isDone   = status === "complete";
+  const isNext   = status === "next";
 
-  const icon = NODE_TYPE_ICON[type] ?? "star";
-  const br   = getNodeBorderRadius(type, r);
-  const obr  = getOuterRingBr(type, r);
+  const frameGlowColor = isDone
+    ? "#E8C868"
+    : isNext
+    ? accentColor
+    : isLocked
+    ? "#3A4A55"
+    : accentColor + "80";
 
-  // ── Colours ──────────────────────────────────────────────────────────────
-
-  const borderColor =
-    isComplete ? accentColor :
-    isNext     ? accentColor :
-    isDim      ? accentColor + "35" :
-                 accentColor + "60";
-
-  const bgColor =
-    isComplete ? accentColor + "30" :
-    isNext     ? accentColor + "25" :
-    isDim      ? accentColor + "08" :
-                 accentColor + "12";
-
-  const iconColor =
-    isDim      ? accentColor + "45" :
-    isComplete ? accentColor :
-                 accentColor;
-
-  const bw      = isComplete || isNext ? 2.5 : 1.5;
-  const iconSize = Math.round(r * 0.72);
-  const outerSz  = r * 2 + 10;
-
-  // ── Render ────────────────────────────────────────────────────────────────
+  const frameWidth = isDone ? 2.5 : isNext ? 2 : 1.5;
 
   return (
-    <View style={{ width: r * 2, height: r * 2, alignItems: "center", justifyContent: "center" }}>
-      {/* Outer decorative ring — dashed border */}
-      {!isDim && (
+    <Pressable
+      onPress={isActionable ? onPress : undefined}
+      disabled={!isActionable}
+      testID={testID}
+      style={{
+        width:          SIZE,
+        height:         SIZE,
+        alignItems:     "center",
+        justifyContent: "center",
+      }}
+    >
+      {/* Glow halo for next/active nodes */}
+      {isNext && (
         <View
-          pointerEvents="none"
           style={{
             position:        "absolute",
-            width:           outerSz,
-            height:          outerSz,
-            borderRadius:    obr,
-            borderWidth:     1,
-            borderColor:     borderColor + (isNext ? "80" : "40"),
-            borderStyle:     "dashed",
-            transform:       type === "battle" ? [{ rotate: "5deg" }] : [],
+            width:           SIZE + 20,
+            height:          SIZE + 20,
+            borderRadius:    (SIZE + 20) / 2,
+            backgroundColor: accentColor + "28",
+            top:             -10,
+            left:            -10,
           }}
         />
       )}
 
-      {/* Corner accent marks for shield/tower types */}
-      {(type === "battle" || type === "ward_defense" || type === "mini_boss") && !isDim && (
-        <>
-          <View
-            pointerEvents="none"
-            style={{
-              position:      "absolute",
-              top:           0,
-              left:          0,
-              width:         8,
-              height:        8,
-              borderTopWidth: 2,
-              borderLeftWidth: 2,
-              borderColor:   accentColor + "90",
-            }}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position:       "absolute",
-              top:            0,
-              right:          0,
-              width:          8,
-              height:         8,
-              borderTopWidth: 2,
-              borderRightWidth: 2,
-              borderColor:    accentColor + "90",
-            }}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position:        "absolute",
-              bottom:          0,
-              left:            0,
-              width:           8,
-              height:          8,
-              borderBottomWidth: 2,
-              borderLeftWidth:   2,
-              borderColor:      accentColor + "90",
-            }}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position:          "absolute",
-              bottom:            0,
-              right:             0,
-              width:             8,
-              height:            8,
-              borderBottomWidth: 2,
-              borderRightWidth:  2,
-              borderColor:       accentColor + "90",
-            }}
-          />
-        </>
-      )}
-
-      {/* Main node shape */}
-      <Pressable
+      {/* Outer frame ring */}
+      <View
         style={{
-          width:           r * 2,
-          height:          r * 2,
-          borderRadius:    br,
-          borderWidth:     bw,
-          borderColor,
-          backgroundColor: bgColor,
+          width:           SIZE,
+          height:          SIZE,
+          borderRadius:    SIZE / 2,
+          borderWidth:     frameWidth,
+          borderColor:     frameGlowColor,
           alignItems:      "center",
           justifyContent:  "center",
+          backgroundColor: isLocked ? "#0B1825CC" : "#0B182590",
           overflow:        "hidden",
         }}
-        onPress={isActionable && !isDim ? onPress : undefined}
-        hitSlop={12}
-        testID={testID}
       >
-        {/* Inner glow for next node */}
-        {isNext && (
+        {/* PNG icon */}
+        <Image
+          source={icon}
+          style={{
+            width:   SIZE * 0.82,
+            height:  SIZE * 0.82,
+            opacity: isLocked ? 0.3 : isDone ? 0.95 : 1,
+          }}
+          contentFit="contain"
+        />
+
+        {/* Locked dim overlay */}
+        {isLocked && (
           <View
-            pointerEvents="none"
             style={{
               position:        "absolute",
               inset:           0,
-              borderRadius:    br,
-              backgroundColor: accentColor + "14",
-            }}
-          />
-        )}
-
-        {/* Icon or checkmark */}
-        {isComplete ? (
-          <View
-            style={{
-              width:           r * 1.1,
-              height:          r * 1.1,
-              borderRadius:    r,
-              backgroundColor: accentColor + "25",
+              backgroundColor: "#0B1825AA",
               alignItems:      "center",
               justifyContent:  "center",
             }}
-          >
-            <Ionicons name="checkmark" size={iconSize} color={accentColor} />
-          </View>
-        ) : (
-          <Ionicons name={icon as any} size={iconSize} color={iconColor} />
+          />
         )}
-      </Pressable>
-    </View>
+      </View>
+
+      {/* Complete — gold star badge */}
+      {isDone && (
+        <View
+          style={{
+            position:        "absolute",
+            bottom:          -4,
+            right:           -4,
+            backgroundColor: "#E8C868",
+            borderRadius:    8,
+            width:           16,
+            height:          16,
+            alignItems:      "center",
+            justifyContent:  "center",
+            shadowColor:     "#E8C868",
+            shadowOpacity:   0.9,
+            shadowRadius:    4,
+            elevation:       4,
+          }}
+        >
+          <Text style={{ fontSize: 8, color: "#0B1020", fontWeight: "900" }}>✓</Text>
+        </View>
+      )}
+
+      {/* Next — pulsing bottom tag */}
+      {isNext && isActionable && (
+        <View
+          style={{
+            position:          "absolute",
+            bottom:            -14,
+            backgroundColor:   accentColor,
+            borderRadius:      3,
+            paddingHorizontal: 4,
+            paddingVertical:   1,
+          }}
+        >
+          <Text style={{ fontSize: 7, color: "#fff", fontWeight: "900", letterSpacing: 0.5 }}>▶</Text>
+        </View>
+      )}
+    </Pressable>
   );
 }

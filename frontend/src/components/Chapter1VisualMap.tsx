@@ -12,11 +12,10 @@
  * All progression logic (eligibility, claim, stars, scenarios) is preserved.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
 import {
   Animated,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -24,7 +23,6 @@ import {
   type ImageSourcePropType,
   type LayoutChangeEvent,
 } from "react-native";
-import * as RNSvg from "react-native-svg";
 
 import { CHAPTERS, type ChapterPart } from "@/src/game/chapterJourney";
 import { ENEMIES } from "@/src/game/content";
@@ -36,13 +34,9 @@ import { COLORS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { MapNodeShape, type MapNodeStatus } from "./MapNodeShape";
 import { MissionPopupModal } from "./MissionPopupModal";
+import { PaintedMapPath } from "./PaintedMapPath";
 import { useVisualMapAnims } from "./VisualMapHooks";
 
-// ── SVG type shim ─────────────────────────────────────────────────────────────
-
-const Svg      = (RNSvg as any).default as React.ComponentType<any>;
-const SvgPath  = (RNSvg as any).Path   as React.ComponentType<any>;
-const SvgCircle = (RNSvg as any).Circle as React.ComponentType<any>;
 
 // ── Chapter 1 theme ───────────────────────────────────────────────────────────
 // Lotus Recall Sanctuary & Training Grounds
@@ -155,27 +149,10 @@ function buildNodeData(
   });
 }
 
-// ── SVG bezier path ───────────────────────────────────────────────────────────
+// ── Token size for hero map marker ────────────────────────────────────────────
 
-function bez(x1: number, y1: number, x2: number, y2: number): string {
-  const my = ((y1 + y2) / 2).toFixed(1);
-  return `M ${x1.toFixed(1)} ${y1} C ${x1.toFixed(1)} ${my} ${x2.toFixed(1)} ${my} ${x2.toFixed(1)} ${y2}`;
-}
-
-// ── Waypoint dots along path ──────────────────────────────────────────────────
-
-/** Compute 3 evenly-spaced points along a cubic bezier (rough approximation). */
-function bezPoints(x1: number, y1: number, x2: number, y2: number): Array<{ x: number; y: number }> {
-  const my = (y1 + y2) / 2;
-  const pts: Array<{ x: number; y: number }> = [];
-  for (const t of [0.25, 0.5, 0.75]) {
-    // De Casteljau: C x1,my x2,my x2,y2
-    const bx = (1 - t) ** 3 * x1 + 3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) * t ** 2 * x2 + t ** 3 * x2;
-    const by = (1 - t) ** 3 * y1 + 3 * (1 - t) ** 2 * t * my + 3 * (1 - t) * t ** 2 * my + t ** 3 * y2;
-    pts.push({ x: bx, y: by });
-  }
-  return pts;
-}
+const TOKEN_W = 48;
+const TOKEN_H = 64;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -226,93 +203,37 @@ export function Chapter1VisualMap({
 
   return (
     <View style={{ minHeight: CANVAS_H }} onLayout={onLayout}>
-      {/* ── Chapter 1 background: Lotus Sanctuary gradient ── */}
-      <LinearGradient
-        colors={[CH1_BG_TOP, CH1_BG_MID, CH1_BG_BOTTOM]}
+      {/* ── Chapter 1 background: Lotus Sanctuary illustrated scene ── */}
+      <Image
+        source={require("@/assets/map-bg/ch1_lotus_sanctuary.png")}
         style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.4, y: 1 }}
+        contentFit="cover"
+      />
+      {/* Readability overlay */}
+      <View
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: "#0B182565", borderRadius: 12 }]}
         pointerEvents="none"
       />
 
-      {/* Decorative lotus mist circles in background */}
-      {W > 0 && (
-        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          {[
-            { x: W * 0.1, y: 120, r: 80, op: "06" },
-            { x: W * 0.85, y: 340, r: 60, op: "05" },
-            { x: W * 0.3, y: 580, r: 90, op: "06" },
-            { x: W * 0.7, y: 700, r: 50, op: "04" },
-          ].map((c, i) => (
-            <View
-              key={i}
-              style={{
-                position:        "absolute",
-                left:            c.x - c.r,
-                top:             c.y - c.r,
-                width:           c.r * 2,
-                height:          c.r * 2,
-                borderRadius:    c.r,
-                backgroundColor: chapterAccent + c.op,
-              }}
-            />
-          ))}
-        </View>
-      )}
-
       {W > 0 && (
         <>
-          {/* ── Completed-segment glow (wide translucent path) ── */}
-          <Svg width={W} height={CANVAS_H} style={StyleSheet.absoluteFillObject} pointerEvents="none">
-            {nodes.map((nd, i) => {
-              if (i >= nodes.length - 1 || nd.status !== "complete") return null;
-              return (
-                <SvgPath
-                  key={`glow-seg-${i}`}
-                  d={bez(nd.layout.xf * W, nd.layout.y, nodes[i + 1].layout.xf * W, nodes[i + 1].layout.y)}
-                  stroke={chapterAccent + "35"}
-                  strokeWidth={10}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-              );
-            })}
-          </Svg>
-
-          {/* ── Main SVG path layer ── */}
-          <Svg width={W} height={CANVAS_H} style={StyleSheet.absoluteFillObject} pointerEvents="none">
-            {nodes.map((nd, i) => {
-              if (i >= nodes.length - 1) return null;
-              const ax = nd.layout.xf * W;
-              const ay = nd.layout.y;
-              const bx = nodes[i + 1].layout.xf * W;
-              const by = nodes[i + 1].layout.y;
-              const fromDone = nd.status === "complete";
-              return (
-                <React.Fragment key={`seg-${i}`}>
-                  {/* Main path stroke */}
-                  <SvgPath
-                    d={bez(ax, ay, bx, by)}
-                    stroke={fromDone ? chapterAccent + "CC" : "#3DC4A830"}
-                    strokeWidth={fromDone ? 3 : 1.5}
-                    strokeDasharray={fromDone ? undefined : "6 7"}
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  {/* Waypoint dots along uncompleted path segments */}
-                  {!fromDone && bezPoints(ax, ay, bx, by).map((pt, di) => (
-                    <SvgCircle
-                      key={`dot-${i}-${di}`}
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={2}
-                      fill={"#3DC4A840"}
-                    />
-                  ))}
-                </React.Fragment>
-              );
-            })}
-          </Svg>
+          {/* ── Painted stone-stamp path connectors ── */}
+          {nodes.map((nd, i) => {
+            if (i >= nodes.length - 1) return null;
+            return (
+              <PaintedMapPath
+                key={`path-${i}`}
+                ax={nd.layout.xf * W}
+                ay={nd.layout.y}
+                bx={nodes[i + 1].layout.xf * W}
+                by={nodes[i + 1].layout.y}
+                complete={nd.status === "complete"}
+                accentColor={chapterAccent}
+                canvasW={W}
+                canvasH={CANVAS_H}
+              />
+            );
+          })}
 
           {/* ── Outer pulse rings (wider, slower phase) ── */}
           {nodes.map((nd) => {
@@ -533,34 +454,32 @@ export function Chapter1VisualMap({
             );
           })}
 
-          {/* ── Lead hero traveler sprite ── */}
+          {/* ── Lead hero traveler token (full sprite, no circular crop) ── */}
           {leadHeroSprite && nodes.map((nd) => {
             if (nd.status !== "next") return null;
             const x = nd.layout.xf * W;
             const { r, y } = nd.layout;
-            const SR = 18;
             return (
               <View
                 key={`hero-sprite-${nd.part.id}`}
                 pointerEvents="none"
                 style={{
-                  position:        "absolute",
-                  left:            x - SR,
-                  top:             y - r - SR * 2 - 10,
-                  width:           SR * 2,
-                  height:          SR * 2,
-                  borderRadius:    SR,
-                  overflow:        "hidden",
-                  borderWidth:     2.5,
-                  borderColor:     UI.gold,
-                  backgroundColor: UI.bgDeep,
-                  zIndex:          30,
+                  position:      "absolute",
+                  left:          x - TOKEN_W / 2,
+                  top:           y - r - TOKEN_H - 4,
+                  width:         TOKEN_W,
+                  height:        TOKEN_H,
+                  zIndex:        30,
+                  shadowColor:   UI.gold,
+                  shadowOpacity: 0.7,
+                  shadowRadius:  8,
+                  elevation:     8,
                 }}
               >
                 <Image
-                  source={leadHeroSprite}
-                  style={{ width: SR * 2, height: SR * 2 }}
-                  resizeMode="cover"
+                  source={leadHeroSprite as any}
+                  style={{ width: TOKEN_W, height: TOKEN_H }}
+                  contentFit="contain"
                 />
               </View>
             );

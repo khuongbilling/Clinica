@@ -1074,3 +1074,87 @@ id = "_aFkri8NJNlKZzviSP_sh"
 uri = "file://frontend/assets/images/triage_patient_healthy_student.png"
 type = "image"
 title = "healthy student triage patient"
+
+[[generated]]
+id = "igJaLAtrScH5vEYMGCkO4"
+uri = "file://frontend/assets/map-bg/ch1_lotus_sanctuary.png"
+type = "image"
+title = "ch1 jade lotus bg"
+
+[[generated]]
+id = "NabOLKl-bNEBwxPcylDHB"
+uri = "file://frontend/assets/map-bg/ch2_amber_ward.png"
+type = "image"
+title = "ch2 amber ward bg"
+
+[[generated]]
+id = "CwWfDmdfMMKypwv1U49SX"
+uri = "file://frontend/assets/map-bg/ch3_sky_citadel.png"
+type = "image"
+title = "ch3 sky citadel bg"
+
+[[generated]]
+id = "CSw3clX2L6eYWeGd6hIdy"
+uri = "file://frontend/assets/map-bg/ch4_crimson_rush.png"
+type = "image"
+title = "ch4 crimson rush bg"
+
+[[generated]]
+id = "hm-Cj_AHLnH5dAbGTt1-V"
+uri = "file://frontend/assets/map-bg/ch5_emerald_forest.png"
+type = "image"
+title = "ch5 emerald forest bg"
+
+[[generated]]
+id = "ioAaf62YagSL7ih5QKpgi"
+uri = "file://frontend/assets/map-bg/ch_generic.png"
+type = "image"
+title = "generic chapter map bg"
+
+[[generated]]
+id = "jnt7Qvrk0ZKwTbEo1Yk-C"
+uri = "file://frontend/assets/map-nodes/node_battle.png"
+type = "image"
+title = "battle node icon"
+
+[[generated]]
+id = "fS_1sczs7qN-ITrHUUe-k"
+uri = "file://frontend/assets/map-nodes/node_miniboss.png"
+type = "image"
+title = "miniboss node icon"
+
+[[generated]]
+id = "b41-QsbSwhckA6zXu80aP"
+uri = "file://frontend/assets/map-nodes/node_ward_defense.png"
+type = "image"
+title = "ward defense node icon"
+
+[[generated]]
+id = "OhZz-mYYTWjK9Dtnq4huO"
+uri = "file://frontend/assets/map-nodes/node_story.png"
+type = "image"
+title = "story node icon"
+
+[[generated]]
+id = "iKsknLKwigagI79bJfvrB"
+uri = "file://frontend/assets/map-nodes/node_reflection.png"
+type = "image"
+title = "reflection node icon"
+
+[[generated]]
+id = "K_EeyJ3iZX2JN90iUgTig"
+uri = "file://frontend/assets/map-nodes/node_reward.png"
+type = "image"
+title = "reward node icon"
+
+[[generated]]
+id = "-0H_K5GgJBalKd83arGPT"
+uri = "file://frontend/assets/map-nodes/node_challenge.png"
+type = "image"
+title = "challenge node icon"
+
+[[generated]]
+id = "jbalA-pYYsHamWB1mEbcj"
+uri = "file://frontend/assets/map-nodes/node_memory.png"
+type = "image"
+title = "memory fragment node icon"

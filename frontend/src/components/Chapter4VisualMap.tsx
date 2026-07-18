@@ -14,10 +14,10 @@
  * Used inside ChapterJourneyMap when Chapter 4 is the expanded chapter.
  */
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
 import {
   Animated,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -25,7 +25,6 @@ import {
   type ImageSourcePropType,
   type LayoutChangeEvent,
 } from "react-native";
-import * as RNSvg from "react-native-svg";
 
 import { CHAPTERS, type ChapterPart } from "@/src/game/chapterJourney";
 import { ENEMIES } from "@/src/game/content";
@@ -33,17 +32,12 @@ import {
   computeJourneyReward,
   getJourneyNodeDef,
 } from "@/src/game/journeyRewards";
-import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { MapNodeShape, type MapNodeStatus } from "./MapNodeShape";
 import { MissionPopupModal } from "./MissionPopupModal";
+import { PaintedMapPath } from "./PaintedMapPath";
 import { useVisualMapAnims } from "./VisualMapHooks";
-
-// ── SVG type shim (React 19 / rn-svg compat) ─────────────────────────────────
-
-const Svg     = (RNSvg as any).default as React.ComponentType<any>;
-const SvgPath = (RNSvg as any).Path   as React.ComponentType<any>;
 
 // ── Type visual config ────────────────────────────────────────────────────────
 
@@ -184,12 +178,8 @@ function buildNodeData(
   });
 }
 
-// ── SVG bezier path ───────────────────────────────────────────────────────────
-
-function bez(x1: number, y1: number, x2: number, y2: number): string {
-  const my = ((y1 + y2) / 2).toFixed(1);
-  return `M ${x1.toFixed(1)} ${y1} C ${x1.toFixed(1)} ${my} ${x2.toFixed(1)} ${my} ${x2.toFixed(1)} ${y2}`;
-}
+const TOKEN_W = 48;
+const TOKEN_H = 64;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -241,57 +231,35 @@ export function Chapter4VisualMap({
   return (
     <View onLayout={onLayout}>
       <View style={{ minHeight: CANVAS_H }}>
+        {/* ── Illustrated chapter background ── */}
+        <Image
+          source={require("../../assets/map-bg/ch4_crimson_rush.png")}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
+        />
+        <View
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A050565" }]}
+          pointerEvents="none"
+        />
         {W > 0 && (
           <>
-            {/* P14: Completed-segment glow path layer */}
-            <Svg width={W} height={CANVAS_H} style={StyleSheet.absoluteFillObject} pointerEvents="none">
-              {nodes.map((nd, i) => {
-                if (i >= nodes.length - 1 || nd.status !== "complete") return null;
-                return (
-                  <SvgPath
-                    key={`glow-seg-${i}`}
-                    d={bez(nd.layout.xf * W, nd.layout.y, nodes[i + 1].layout.xf * W, nodes[i + 1].layout.y)}
-                    stroke={chapterAccent + "40"}
-                    strokeWidth={9}
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-            </Svg>
-
-            {/* ─── SVG path layer ─── */}
-            <Svg
-              width={W}
-              height={CANVAS_H}
-              style={StyleSheet.absoluteFillObject}
-              pointerEvents="none"
-            >
-              {nodes.map((nd, i) => {
-                if (i >= nodes.length - 1) return null;
-                const ax = nd.layout.xf * W;
-                const ay = nd.layout.y;
-                const bx = nodes[i + 1].layout.xf * W;
-                const by = nodes[i + 1].layout.y;
-                const fromDone = nd.status === "complete";
-                const toLocked = nodes[i + 1].status === "locked";
-                return (
-                  <SvgPath
-                    key={`seg-${i}`}
-                    d={bez(ax, ay, bx, by)}
-                    stroke={
-                      fromDone ? chapterAccent
-                      : toLocked ? "#33415555"
-                      : "#33415590"
-                    }
-                    strokeWidth={fromDone ? 3 : 2}
-                    strokeDasharray={fromDone ? undefined : "8 5"}
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-            </Svg>
+            {/* ── Painted stone-stamp path connectors ── */}
+            {nodes.map((nd, i) => {
+              if (i >= nodes.length - 1) return null;
+              return (
+                <PaintedMapPath
+                  key={`path-${i}`}
+                  ax={nd.layout.xf * W}
+                  ay={nd.layout.y}
+                  bx={nodes[i + 1].layout.xf * W}
+                  by={nodes[i + 1].layout.y}
+                  complete={nd.status === "complete"}
+                  accentColor={chapterAccent}
+                  canvasW={W}
+                  canvasH={CANVAS_H}
+                />
+              );
+            })}
 
             {/* P14: Outer pulse rings (wider radius, slower phase) */}
             {nodes.map((nd) => {
@@ -553,34 +521,32 @@ export function Chapter4VisualMap({
               );
             })}
 
-          {/* P17: Lead hero traveler sprite — shown at the active "next" node */}
+          {/* ── Lead hero traveler token (full sprite, no circular crop) ── */}
           {leadHeroSprite && nodes.map((nd) => {
             if (nd.status !== "next") return null;
             const x = nd.layout.xf * W;
             const { r, y } = nd.layout;
-            const SR = 15;
             return (
               <View
                 key={`hero-sprite-${nd.part.id}`}
                 pointerEvents="none"
                 style={{
-                  position:        "absolute",
-                  left:            x - SR,
-                  top:             y - r - SR * 2 - 8,
-                  width:           SR * 2,
-                  height:          SR * 2,
-                  borderRadius:    SR,
-                  overflow:        "hidden",
-                  borderWidth:     2,
-                  borderColor:     "#D4AF37",
-                  backgroundColor: "#0B1825",
-                  zIndex:          30,
+                  position:      "absolute",
+                  left:          x - TOKEN_W / 2,
+                  top:           y - r - TOKEN_H - 4,
+                  width:         TOKEN_W,
+                  height:        TOKEN_H,
+                  zIndex:        30,
+                  shadowColor:   UI.gold,
+                  shadowOpacity: 0.7,
+                  shadowRadius:  8,
+                  elevation:     8,
                 }}
               >
                 <Image
-                  source={leadHeroSprite}
-                  style={{ width: SR * 2, height: SR * 2 }}
-                  resizeMode="cover"
+                  source={leadHeroSprite as any}
+                  style={{ width: TOKEN_W, height: TOKEN_H }}
+                  contentFit="contain"
                 />
               </View>
             );

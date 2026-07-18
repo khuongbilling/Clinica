@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
@@ -32,12 +32,20 @@ function RewardPill({ icon, value, color }: { icon: string; value: string | numb
   );
 }
 
+// ── Node icon PNGs ────────────────────────────────────────────────────────────
+const NODE_ICONS = {
+  story:    require("../../assets/map-nodes/node_story.png"),
+  memory:   require("../../assets/map-nodes/node_memory.png"),
+  reward:   require("../../assets/map-nodes/node_reward.png"),
+};
+
 // ── Individual lesson card in the path ───────────────────────────────────────
 function LessonPathCard({
   node, done, isNext, locked, onPress,
 }: { node: LotusLessonNode; done: boolean; isNext: boolean; locked: boolean; onPress: () => void }) {
   const meta = NODE_META[node.id] ?? { icon: 'leaf-outline', color: COLORS.brand, label: 'Lesson' };
   const accentColor = done ? COLORS.success : locked ? COLORS.border : meta.color;
+  const nodeIcon = done ? NODE_ICONS.reward : NODE_ICONS.story;
   return (
     <Pressable
       disabled={locked}
@@ -49,12 +57,17 @@ function LessonPathCard({
       ]}
       testID={`lotus-node-${node.id}`}
     >
-      {/* Icon circle */}
-      <View style={[lcStyles.iconCircle, { backgroundColor: accentColor + '1E' }]}>
-        {done ? (
-          <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
-        ) : (
-          <Ionicons name={meta.icon as any} size={22} color={locked ? COLORS.onSurfaceTertiary : meta.color} />
+      {/* Node icon PNG (replaces icon circle) */}
+      <View style={lcStyles.nodeIconWrap}>
+        <Image
+          source={nodeIcon}
+          style={{ width: 46, height: 46 }}
+          contentFit="contain"
+        />
+        {locked && (
+          <View style={lcStyles.lockOverlay}>
+            <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
+          </View>
         )}
       </View>
 
@@ -110,7 +123,11 @@ const lcStyles = StyleSheet.create({
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
     borderLeftWidth: 3,
   },
-  iconCircle: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  nodeIconWrap: { width: 46, height: 46, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject, borderRadius: 6,
+    backgroundColor: '#00000066', alignItems: 'center', justifyContent: 'center',
+  },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   topicTag: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
   donePill: {
@@ -142,8 +159,7 @@ export default function LessonsHubScreen() {
   if (loading || !player) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.hero}>
-          <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+        <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
           <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university")} testID="lessons-back">
             <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
           </Pressable>
@@ -168,8 +184,7 @@ export default function LessonsHubScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.hero}>
-        <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+      <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
         <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university")} testID="lessons-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
