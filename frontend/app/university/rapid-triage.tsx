@@ -182,12 +182,12 @@ function TriageButton({ def, disabled, onPress }: {
   }, [disabled, isHighlighted, isTutorialBlocked, def.level, onPress, onTargetPress, scaleAnim]);
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, highlightStyle]}>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, highlightStyle, isTutorialBlocked && { opacity: 0.22 }]}>
       <Pressable
         style={({ pressed }) => [
           styles.triageBtn,
           { backgroundColor: def.bg, borderColor: def.accent + "55" },
-          pressed && !disabled && { opacity: 0.80 },
+          pressed && !disabled && !isTutorialBlocked && { opacity: 0.80 },
         ]}
         onPress={handlePress}
         testID={`triage-btn-${def.level}`}
@@ -367,7 +367,7 @@ export default function RapidTriageScreen() {
       });
       Animated.timing(cardFade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
     });
-  }, [cardFade, feedbackFade, isCompleted, startTutorial]);
+  }, [cardFade, feedbackFade]);
 
   // ── Triage handler ────────────────────────────────────────────────────────
   const handleTriage = useCallback(

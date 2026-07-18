@@ -496,6 +496,7 @@ function ActionOrb({
         { transform: [{ scale: scaleAnim }, { translateX: shakeX }] },
         isHighlighted && styles.orbGlow,
         highlightStyle,
+        isTutorialBlocked && { opacity: 0.22 },
       ]}
     >
       <Pressable
