@@ -58,6 +58,12 @@ export default function ShiftPage() {
   const universityGate    = checkFeatureGate("university", gateCtx);
   const wardShiftGate     = checkFeatureGate("ward_shift", gateCtx);
   const wardShiftUnlocked = wardShiftGate.unlocked;
+  // Push 5 — if Ward Shift is unlocked but the player hasn't done their second
+  // tutorial summon and still has fewer than 2 heroes, prompt them to visit the
+  // Recruitment Ceremony before entering their first shift.
+  const needsSecondSummon = wardShiftUnlocked
+    && !(player?.tutorial_summon_2_done ?? false)
+    && (player?.heroes_owned?.length ?? 0) < 2;
   const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevel);
   const bossUnlocked        = isFeatureUnlocked("boss", playerLevel);
 
@@ -139,6 +145,24 @@ export default function ShiftPage() {
             </>
           )}
 
+          {needsSecondSummon && (
+            <>
+              <SystemNarratorBar
+                message="Complete your second Recruitment Ceremony to enter Ward Shift with a full team."
+                testID="shift-narrator-summon2"
+              />
+              <Pressable
+                style={styles.universityCtaBtn}
+                onPress={() => router.push("/university/recruit" as any)}
+                testID="shift-go-to-recruit"
+              >
+                <Ionicons name="sparkles" size={16} color={COLORS.onBrand} />
+                <Text style={styles.universityCtaTxt}>Complete Recruitment Ceremony</Text>
+                <Ionicons name="arrow-forward" size={15} color={COLORS.onBrand} />
+              </Pressable>
+            </>
+          )}
+
           <Text style={styles.section}>Ward Shift</Text>
           <BannerCard
             mode={WARD_SHIFT_MODE}
@@ -148,6 +172,10 @@ export default function ShiftPage() {
             onPress={() => {
               if (!wardShiftUnlocked) {
                 flashNotice("Complete your first Lotus Lesson to unlock Ward Shift simulations.");
+                return;
+              }
+              if (needsSecondSummon) {
+                router.push("/university/recruit" as any);
                 return;
               }
               openIntro(WARD_SHIFT_MODE);

@@ -165,6 +165,16 @@ function normalizeProgression(p: PlayerState): PlayerState {
   // Push 4 — backfill Practice Curriculum completion list for pre-P4 saves.
   if (!out.practice_modules_completed) out = { ...out, practice_modules_completed: [] };
   if (out.seen_practice_curriculum == null) out = { ...out, seen_practice_curriculum: false };
+  // Push 5 — Tutorial Recruitment Ceremony flags. Returning players who already
+  // own the relevant heroes are backfilled as "done" so they never get extra
+  // duplicate guaranteed heroes. New players start with both false.
+  if (out.tutorial_summon_1_done == null) {
+    const ownedCount = (out.heroes_owned || []).length;
+    out = { ...out, tutorial_summon_1_done: ownedCount >= 1, tutorial_summon_2_done: ownedCount >= 2 };
+  } else if (out.tutorial_summon_2_done == null) {
+    const ownedCount = (out.heroes_owned || []).length;
+    out = { ...out, tutorial_summon_2_done: ownedCount >= 2 };
+  }
   // Fix 9 — backfill quest milestone claim tracking.
   if (!out.claimed_daily_milestones) out = { ...out, claimed_daily_milestones: [] };
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
@@ -360,6 +370,7 @@ type Ctx = {
   evolveHero: (heroId: string) => Promise<{ ok: boolean; message: string; star?: number }>;
   recruitOnce: () => Promise<{ ok: boolean; message: string; result?: import('./university').RecruitResult }>;
   freeRecruitOnce: () => Promise<{ ok: boolean; message: string; result?: import('./university').RecruitResult }>;
+  tutorialRecruitOnce: (summonIndex: 1 | 2) => Promise<{ ok: boolean; message: string; result?: import('./university').RecruitResult }>;
   recruitTen: () => Promise<{ ok: boolean; message: string; results?: import('./university').RecruitResult[] }>;
   promoteHeroCert: (heroId: string) => Promise<{ ok: boolean; message: string }>;
   trainHero: (heroId: string) => Promise<{ ok: boolean; message: string }>;
@@ -597,6 +608,8 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     wellness: defaultWellnessState(),
     daily_rounds: defaultDailyRoundsState(),
     realm_seed: Math.floor(Math.random() * 2_000_000_000) + 1,
+    tutorial_summon_1_done: false,
+    tutorial_summon_2_done: false,
   };
 }
 
@@ -938,6 +951,43 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       class_trainees: nextTrainees,
       university_credits: nextCredits,
       summon_history: nextHistory,
+    }, 'hero_action'));
+    return { ok: true, message: result.message, result };
+  }, [player, updateState]);
+
+  // Push 5 — Tutorial Recruitment Ceremony. Guaranteed-hero pull (summon 1 & 2).
+  // Idempotent: re-calling after the flag is set returns an error, not a free hero.
+  // Summon 2 tries to pick a different role from the first enrolled hero.
+  const tutorialRecruitOnce = useCallback(async (summonIndex: 1 | 2) => {
+    if (!player) return { ok: false, message: 'No player loaded.' };
+    if (summonIndex === 1 && player.tutorial_summon_1_done) {
+      return { ok: false, message: 'First ceremony summon already claimed.' };
+    }
+    if (summonIndex === 2 && player.tutorial_summon_2_done) {
+      return { ok: false, message: 'Second ceremony summon already claimed.' };
+    }
+    const { tutorialRecruitOnce: pull, applyRecruitResultToProgression } = await import('./university');
+    const { FOUNDATION_BANNER } = await import('./gacha');
+    const ownedSet = new Set(player.heroes_owned);
+    let preferDifferentRole: string | undefined;
+    if (summonIndex === 2 && player.heroes_owned.length > 0) {
+      const firstHeroId = player.heroes_owned[0];
+      const firstEntry = FOUNDATION_BANNER.find(e => e.heroId === firstHeroId);
+      preferDifferentRole = firstEntry?.role;
+    }
+    const result = pull(ownedSet, preferDifferentRole);
+    const { heroesOwned, progression } = applyRecruitResultToProgression(player.hero_progression, player.heroes_owned, result);
+    const nextHistory = [...(player.summon_history || [])];
+    if (result.entry) {
+      nextHistory.push({ hero: result.entry.name, rarity: result.entry.rarity, duplicate: false, date: new Date().toISOString() });
+    }
+    await updateState(foldDaily({
+      ...player,
+      heroes_owned: heroesOwned,
+      hero_progression: progression,
+      summon_history: nextHistory,
+      tutorial_summon_1_done: summonIndex === 1 ? true : (player.tutorial_summon_1_done ?? false),
+      tutorial_summon_2_done: summonIndex === 2 ? true : (player.tutorial_summon_2_done ?? false),
     }, 'hero_action'));
     return { ok: true, message: result.message, result };
   }, [player, updateState]);
@@ -2308,8 +2358,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, updateState]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

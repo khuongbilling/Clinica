@@ -261,6 +261,36 @@ function rollCreditsOutcome(): RecruitResult {
   return { kind: 'credits', creditsAmount, message: `Earned ${creditsAmount} University Credits!` };
 }
 
+// Tutorial Recruitment Ceremony — guaranteed hero pull, never trainee/credits.
+// For summon 2 (preferDifferentRole set), prefers a hero with a different role
+// than the first enrolled healer to give the starter party complementary skills.
+// Falls back to any un-owned hero when role-filtering would leave the pool empty,
+// and falls back to the normal hero-outcome roll if the player owns every hero.
+export function tutorialRecruitOnce(ownedHeroIds: Set<string>, preferDifferentRole?: string): RecruitResult {
+  const available = FOUNDATION_BANNER.filter(e => !ownedHeroIds.has(e.heroId));
+  if (available.length === 0) {
+    return rollHeroOutcome(ownedHeroIds);
+  }
+  let pool = available;
+  if (preferDifferentRole) {
+    const diffRole = available.filter(e => e.role !== preferDifferentRole);
+    if (diffRole.length > 0) pool = diffRole;
+  }
+  const totalWeight = pool.reduce((sum, h) => sum + h.weight, 0);
+  let roll = Math.random() * totalWeight;
+  let entry = pool[0];
+  for (const e of pool) {
+    roll -= e.weight;
+    if (roll <= 0) { entry = e; break; }
+  }
+  return {
+    kind: 'hero',
+    entry,
+    isNewHero: true,
+    message: `${entry.name} has answered the call of the Realm — they join your ward as a 1-Star healer!`,
+  };
+}
+
 export function recruitOnce(ownedHeroIds: Set<string>): RecruitResult {
   const roll = Math.random();
   if (roll < 0.7) return rollHeroOutcome(ownedHeroIds);

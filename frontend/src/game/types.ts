@@ -213,6 +213,11 @@ export interface PlayerState {
   summon_history: { hero: string; rarity: number; duplicate: boolean; date: string }[];
   // P16: ISO datetime of last free daily recruitment (undefined = never used; cooldown 24 h).
   last_free_summon_at?: string;
+  // Push 5 — Tutorial Recruitment Ceremony. Two guaranteed-hero summons given
+  // before the first Ward Shift so the player enters with a real party.
+  // Backfilled true for returning players who already own the relevant heroes.
+  tutorial_summon_1_done?: boolean;
+  tutorial_summon_2_done?: boolean;
   enemy_mastery?: Record<string, number>;
   // C3 — best star rating achieved per enemy (keyed by enemy.id).
   // Drives replay badges, auto-sweep unlock (2★+), and sweep reward tiers.

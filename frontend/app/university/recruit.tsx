@@ -19,23 +19,23 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function UniversityRecruitScreen() {
   const router = useRouter();
-  const { player, recruitOnce, freeRecruitOnce, recruitTen } = usePlayer();
+  const { player, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   useClearTutorialOnExit();
 
-  // C1 obj 11: grant once when player first visits Recruitment.
   const recruitVisitRef = useRef(false);
   useEffect(() => {
     if (!player || recruitVisitRef.current) return;
     recruitVisitRef.current = true;
     completeObjective("obj_recruit_preview");
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [busy, setBusy] = useState(false);
   const [single, setSingle] = useState<RecruitResult | null>(null);
+  const [ceremonyResult, setCeremonyResult] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // P16: free daily summon availability
   const freeAvailable = (() => {
     if (!player) return false;
     const last = player.last_free_summon_at;
@@ -50,7 +50,6 @@ export default function UniversityRecruitScreen() {
     return `${h}h ${m}m`;
   })();
 
-  // P18: pulse animation for the FREE button ring when daily draw is available
   const pulseAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!freeAvailable) { pulseAnim.setValue(0); return; }
@@ -63,6 +62,21 @@ export default function UniversityRecruitScreen() {
     loop.start();
     return () => loop.stop();
   }, [freeAvailable]);
+
+  const ceremonyPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!player) return;
+    const needsCeremony = !player.tutorial_summon_1_done || !player.tutorial_summon_2_done;
+    if (!needsCeremony) { ceremonyPulse.setValue(0); return; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ceremonyPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(ceremonyPulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [player?.tutorial_summon_1_done, player?.tutorial_summon_2_done]);
 
   useEffect(() => {
     if (!isCompleted("firstSummon")) {
@@ -81,10 +95,32 @@ export default function UniversityRecruitScreen() {
 
   const shards = player.codex_shards || 0;
   const tenCost = SUMMON_COST * 10;
-  // P18: affordability helpers
   const canAffordSingle = shards >= SUMMON_COST;
   const canAffordTen    = shards >= tenCost;
   const needMore        = Math.max(0, SUMMON_COST - shards);
+
+  // Ceremony state
+  const ceremony1Needed = !player.tutorial_summon_1_done;
+  const ceremony2Needed = (player.tutorial_summon_1_done ?? false) && !(player.tutorial_summon_2_done ?? false);
+  const anyCeremonyNeeded = ceremony1Needed || ceremony2Needed;
+  const activeSummonIndex: 1 | 2 = ceremony1Needed ? 1 : 2;
+
+  const doTutorialSummon = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setBatch(null);
+    setSingle(null);
+    setCeremonyResult(null);
+    const res = await tutorialRecruitOnce(activeSummonIndex);
+    if (!res.ok) setError(res.message);
+    else {
+      setCeremonyResult(res.result || null);
+      playRewardCue(true);
+      onRequiredAction("summon");
+    }
+    setBusy(false);
+  };
 
   const doFree = async () => {
     if (busy) return;
@@ -92,6 +128,7 @@ export default function UniversityRecruitScreen() {
     setError(null);
     setBatch(null);
     setSingle(null);
+    setCeremonyResult(null);
     const res = await freeRecruitOnce();
     if (!res.ok) setError(res.message);
     else { setSingle(res.result || null); playRewardCue(false); onRequiredAction("summon"); }
@@ -103,6 +140,7 @@ export default function UniversityRecruitScreen() {
     setBusy(true);
     setError(null);
     setBatch(null);
+    setCeremonyResult(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
     else { setSingle(res.result || null); playRewardCue(false); onRequiredAction("summon"); }
@@ -114,6 +152,7 @@ export default function UniversityRecruitScreen() {
     setBusy(true);
     setError(null);
     setSingle(null);
+    setCeremonyResult(null);
     const res = await recruitTen();
     if (!res.ok) setError(res.message);
     else { setBatch(res.results || null); playRewardCue(true); }
@@ -129,7 +168,11 @@ export default function UniversityRecruitScreen() {
         </Pressable>
         <Text style={styles.kicker}>UNIVERSITY RECRUITMENT</Text>
         <Text style={styles.title}>Recruitment Hall</Text>
-        <Text style={styles.sub}>Enroll new healers, or convert duplicates into Hero Shards, Class Trainees, and Credits.</Text>
+        <Text style={styles.sub}>
+          {anyCeremonyNeeded
+            ? "The Realm has called — enroll your founding healers through the Academy Ceremony."
+            : "Enroll new healers, or convert duplicates into Hero Shards, Class Trainees, and Credits."}
+        </Text>
         <View style={styles.walletRow}>
           <View style={styles.shardCard}>
             <Ionicons name="sparkles" size={18} color={COLORS.brand} />
@@ -138,8 +181,7 @@ export default function UniversityRecruitScreen() {
           </View>
           <UniversityCreditsBadge amount={player.university_credits || 0} compact testID="recruit-credits-badge" />
         </View>
-        {/* P18: show free-draw banner when available + shards low; show earn-hint only when broke and free draw is spent */}
-        {freeAvailable && !canAffordSingle && (
+        {freeAvailable && !canAffordSingle && !anyCeremonyNeeded && (
           <View style={styles.freeReadyBanner}>
             <Ionicons name="sparkles" size={13} color="#4FD8C4" />
             <Text style={styles.freeReadyBannerTxt}>
@@ -147,7 +189,7 @@ export default function UniversityRecruitScreen() {
             </Text>
           </View>
         )}
-        {!freeAvailable && !canAffordSingle && (
+        {!freeAvailable && !canAffordSingle && !anyCeremonyNeeded && (
           <View style={styles.shardsInfo}>
             <Ionicons name="information-circle-outline" size={14} color={COLORS.brand} />
             <Text style={styles.shardsInfoTxt}>
@@ -159,10 +201,117 @@ export default function UniversityRecruitScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* P18: FREE DAILY RECRUITMENT — always first, visually dominant when available */}
+        {/* ── RECRUITMENT CEREMONY (tutorial summons 1 & 2) ── */}
+        {anyCeremonyNeeded && (
+          <View style={styles.ceremonySection}>
+            {/* Step tracker */}
+            <View style={styles.ceremonyStepRow}>
+              <View style={[styles.ceremonyStep, { backgroundColor: "#D4AF3740" }]}>
+                <Ionicons
+                  name={player.tutorial_summon_1_done ? "checkmark-circle" : "person-add"}
+                  size={14}
+                  color={player.tutorial_summon_1_done ? "#4FD8C4" : "#D4AF37"}
+                />
+                <Text style={[styles.ceremonyStepTxt, player.tutorial_summon_1_done && { color: "#4FD8C4" }]}>
+                  {player.tutorial_summon_1_done ? "1st Healer Enrolled" : "1st Enrollment"}
+                </Text>
+              </View>
+              <View style={styles.ceremonyStepLine} />
+              <View style={[styles.ceremonyStep, { backgroundColor: ceremony2Needed ? "#D4AF3740" : "#1E293B" }]}>
+                <Ionicons
+                  name={player.tutorial_summon_2_done ? "checkmark-circle" : "people"}
+                  size={14}
+                  color={player.tutorial_summon_2_done ? "#4FD8C4" : ceremony2Needed ? "#D4AF37" : COLORS.onSurfaceTertiary}
+                />
+                <Text style={[
+                  styles.ceremonyStepTxt,
+                  player.tutorial_summon_2_done && { color: "#4FD8C4" },
+                  !ceremony2Needed && !player.tutorial_summon_2_done && { color: COLORS.onSurfaceTertiary },
+                ]}>
+                  {player.tutorial_summon_2_done ? "2nd Healer Enrolled" : "2nd Enrollment"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Ceremony card */}
+            <View style={styles.ceremonyCard}>
+              <LinearGradient
+                colors={["#1A1A0E", "#0D1A1A"]}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.ceremonyCardBorder} />
+
+              <View style={styles.ceremonyCardTop}>
+                <View style={styles.ceremonyBadge}>
+                  <Text style={styles.ceremonyBadgeTxt}>GUARANTEED HEALER</Text>
+                </View>
+                <Text style={styles.ceremonyCardTitle}>
+                  {ceremony1Needed
+                    ? "First Enrollment Ceremony"
+                    : "Second Enrollment Ceremony"}
+                </Text>
+                <Text style={styles.ceremonyCardDesc}>
+                  {ceremony1Needed
+                    ? "Every healer begins with a calling. The Realm selects your first ward member — always a real healer, never a material."
+                    : "A complete ward team needs complementary skills. Your second enrollment favors a healer of a different specialization."}
+                </Text>
+              </View>
+
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.ceremonyPulseRing,
+                  {
+                    opacity: ceremonyPulse.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.5] }),
+                    transform: [{ scale: ceremonyPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }],
+                  },
+                ]}
+              />
+              <Pressable
+                style={[styles.ceremonyBtn, busy && { opacity: 0.6 }]}
+                onPress={doTutorialSummon}
+                disabled={busy}
+                testID="recruit-ceremony-btn"
+              >
+                <LinearGradient
+                  colors={["#B8952A", "#D4AF37", "#B8952A"]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                {busy
+                  ? <ActivityIndicator color="#0D1200" />
+                  : (
+                    <View style={styles.ceremonyBtnInner}>
+                      <Ionicons name="sparkles" size={18} color="#0D1200" />
+                      <Text style={styles.ceremonyBtnTxt}>
+                        {ceremony1Needed ? "ENROLL FIRST HEALER" : "ENROLL SECOND HEALER"}
+                      </Text>
+                      <Text style={styles.ceremonyBtnFree}>FREE</Text>
+                    </View>
+                  )}
+              </Pressable>
+
+              <Text style={styles.ceremonyNote}>
+                ✦ One-time Academy ceremony · No shards required · After both enrollments, normal recruitment resumes
+              </Text>
+            </View>
+
+            {/* Ceremony result */}
+            {ceremonyResult && (
+              <CeremonyResultCard result={ceremonyResult} />
+            )}
+
+            <View style={styles.ceremonySectionDivider}>
+              <View style={styles.ceremonySectionLine} />
+              <Text style={styles.ceremonySectionDividerTxt}>DAILY RECRUITMENT</Text>
+              <View style={styles.ceremonySectionLine} />
+            </View>
+          </View>
+        )}
+
+        {/* ── FREE DAILY RECRUITMENT ── */}
         <View style={styles.freeSummonWrap}>
-          {/* Animated pulse ring — only visible when freeAvailable */}
-          {freeAvailable && (
+          {freeAvailable && !anyCeremonyNeeded && (
             <Animated.View
               pointerEvents="none"
               style={[
@@ -208,7 +357,7 @@ export default function UniversityRecruitScreen() {
           </Pressable>
         </View>
 
-        {/* Result cards */}
+        {/* Result cards (free / single / batch) */}
         {single && <ResultCard result={single} />}
         {batch && (
           <View style={styles.batchGrid}>
@@ -220,7 +369,6 @@ export default function UniversityRecruitScreen() {
 
         {error && <Text style={styles.errorTxt}>{error}</Text>}
 
-        {/* P18: SINGLE RECRUITMENT — locked visual when insufficient shards */}
         <Pressable
           style={[styles.btn, (busy || !canAffordSingle) && { opacity: canAffordSingle ? 0.5 : 0.45 }]}
           onPress={doSingle}
@@ -247,7 +395,6 @@ export default function UniversityRecruitScreen() {
           )}
         </Pressable>
 
-        {/* P18: TEN RECRUITMENT — locked visual when insufficient */}
         <Pressable
           style={[styles.btnOutline, (busy || !canAffordTen) && { opacity: 0.45 }, { borderColor: canAffordTen ? COLORS.brand : "#334155" }]}
           onPress={doTen}
@@ -259,8 +406,7 @@ export default function UniversityRecruitScreen() {
           <Text style={styles.btnOutlineCost}>{tenCost} SHARDS · guarantees a Class Trainee + Credits</Text>
         </Pressable>
 
-        {/* P18: Earn-shards CTA when player is broke and free draw already used */}
-        {!canAffordSingle && !freeAvailable && (
+        {!canAffordSingle && !freeAvailable && !anyCeremonyNeeded && (
           <View style={styles.earnCard}>
             <View style={styles.earnCardHeader}>
               <Ionicons name="trending-up-outline" size={14} color={COLORS.brand} />
@@ -275,14 +421,48 @@ export default function UniversityRecruitScreen() {
 
         <View style={styles.oddsBox}>
           <Text style={styles.oddsTitle}>Recruitment Odds</Text>
+          {anyCeremonyNeeded && (
+            <Text style={[styles.oddsLine, { color: "#D4AF37", fontWeight: "700" }]}>
+              ✦ Ceremony draws always grant a healer — guaranteed.
+            </Text>
+          )}
           <Text style={styles.oddsLine}>70% — Roll a healer (new hero, or duplicate → Hero Shards)</Text>
           <Text style={styles.oddsLine}>20% — Class Trainees for a random department</Text>
           <Text style={styles.oddsLine}>10% — University Credits</Text>
+          {anyCeremonyNeeded && (
+            <Text style={styles.oddsCeremonyNote}>
+              Normal mixed odds apply after both Academy Ceremony draws are claimed.
+            </Text>
+          )}
         </View>
       </ScrollView>
 
       <TutorialOverlay />
     </SafeAreaView>
+  );
+}
+
+function CeremonyResultCard({ result }: { result: RecruitResult }) {
+  const rc = result.entry ? rarityColor(result.entry.rarity) : "#D4AF37";
+  return (
+    <View style={[styles.ceremonyResultCard, { borderColor: rc }]} testID="recruit-ceremony-result">
+      <View style={styles.ceremonyResultHeader}>
+        <Ionicons name="sparkles" size={16} color={rc} />
+        <Text style={[styles.ceremonyResultLabel, { color: rc }]}>HEALER ENROLLED</Text>
+        <Ionicons name="sparkles" size={16} color={rc} />
+      </View>
+      {result.entry && (
+        <>
+          <Text style={[styles.ceremonyResultName, { color: rc }]}>{result.entry.name}</Text>
+          <View style={[styles.tierPill, { borderColor: rc + "70" }]}>
+            <Text style={[styles.tierPillTxt, { color: rc }]}>
+              {result.entry.role} · {rarityTierLabel(result.entry.rarity)}
+            </Text>
+          </View>
+        </>
+      )}
+      <Text style={styles.ceremonyResultMsg}>{result.message}</Text>
+    </View>
   );
 }
 
@@ -348,6 +528,78 @@ const styles = StyleSheet.create({
   shardLbl: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.5, fontWeight: "700" },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   errorTxt: { color: COLORS.brandSecondary, fontSize: 13, textAlign: "center" },
+
+  // Ceremony section
+  ceremonySection: { gap: SPACING.md },
+  ceremonyStepRow: { flexDirection: "row" as const, alignItems: "center", gap: 6 },
+  ceremonyStep: {
+    flex: 1, flexDirection: "row" as const, alignItems: "center", gap: 6,
+    borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: 7,
+  },
+  ceremonyStepLine: { width: 16, height: 1, backgroundColor: "#D4AF3750" },
+  ceremonyStepTxt: { fontSize: 12, fontWeight: "700" as const, color: "#D4AF37", flex: 1 },
+  ceremonyCard: {
+    borderRadius: RADIUS.lg, overflow: "hidden" as const,
+    borderWidth: 1.5, borderColor: "#D4AF3760",
+    padding: SPACING.lg, gap: SPACING.md,
+    position: "relative" as const,
+  },
+  ceremonyCardBorder: {
+    position: "absolute" as const, top: 0, left: 0, right: 0,
+    height: 2, backgroundColor: "#D4AF37",
+  },
+  ceremonyCardTop: { gap: 8 },
+  ceremonyBadge: {
+    alignSelf: "flex-start" as const,
+    backgroundColor: "#D4AF3725",
+    borderWidth: 1, borderColor: "#D4AF3770",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10, paddingVertical: 3,
+  },
+  ceremonyBadgeTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.8 },
+  ceremonyCardTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" as const, letterSpacing: 0.1 },
+  ceremonyCardDesc: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21 },
+  ceremonyPulseRing: {
+    position: "absolute" as const,
+    top: -3, bottom: -3, left: -3, right: -3,
+    borderRadius: RADIUS.lg + 3,
+    borderWidth: 2, borderColor: "#D4AF37",
+  },
+  ceremonyBtn: {
+    height: 52, borderRadius: RADIUS.md, overflow: "hidden" as const,
+    alignItems: "center" as const, justifyContent: "center" as const,
+  },
+  ceremonyBtnInner: { flexDirection: "row" as const, alignItems: "center", gap: 8 },
+  ceremonyBtnTxt: { color: "#0D1200", fontSize: 16, fontWeight: "800" as const, letterSpacing: 0.3 },
+  ceremonyBtnFree: {
+    backgroundColor: "#0D1200", color: "#D4AF37",
+    fontSize: 10, fontWeight: "800" as const, letterSpacing: 0.8,
+    borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  ceremonyNote: {
+    color: COLORS.onSurfaceTertiary, fontSize: 11, textAlign: "center" as const,
+    lineHeight: 16, fontStyle: "italic" as const,
+  },
+  ceremonySectionDivider: {
+    flexDirection: "row" as const, alignItems: "center", gap: 8, marginTop: 4,
+  },
+  ceremonySectionLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  ceremonySectionDividerTxt: {
+    color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.8,
+  },
+
+  // Ceremony result
+  ceremonyResultCard: {
+    backgroundColor: COLORS.surfaceSecondary,
+    padding: SPACING.lg, borderRadius: RADIUS.md, borderWidth: 2,
+    alignItems: "center" as const, gap: 8,
+  },
+  ceremonyResultHeader: { flexDirection: "row" as const, alignItems: "center", gap: 8 },
+  ceremonyResultLabel: { fontSize: 12, fontWeight: "700" as const, letterSpacing: 0.8 },
+  ceremonyResultName: { fontSize: 22, fontWeight: "400" as const, letterSpacing: 0.1 },
+  ceremonyResultMsg: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center" as const, marginTop: 2 },
+
+  // Normal result cards
   resultCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.lg, borderRadius: RADIUS.md, borderWidth: 2, alignItems: "center", gap: 6 },
   resultName: { fontSize: 20, fontWeight: "400" },
   tierPill: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
@@ -360,6 +612,8 @@ const styles = StyleSheet.create({
   },
   tileName: { fontSize: 13, fontWeight: "700" },
   tileMeta: { fontSize: 12, color: COLORS.onSurfaceTertiary, textAlign: "center" },
+
+  // Buttons
   btn: {
     height: 56, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center",
     overflow: "hidden", flexDirection: "row", gap: SPACING.md,
@@ -386,27 +640,22 @@ const styles = StyleSheet.create({
   },
   oddsTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", marginBottom: 2 },
   oddsLine: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
-  // P18: FREE button wrapper + pulse ring
+  oddsCeremonyNote: { color: "#D4AF3799", fontSize: 12, fontStyle: "italic", marginTop: 4 },
   freeSummonWrap: { position: "relative" as const },
   freePulseRing: {
-    position:     "absolute" as const,
-    top:          -4, bottom: -4, left: -4, right: -4,
+    position: "absolute" as const,
+    top: -4, bottom: -4, left: -4, right: -4,
     borderRadius: RADIUS.md + 4,
-    borderWidth:  3,
-    borderColor:  "#3DC4A8",
+    borderWidth: 3, borderColor: "#3DC4A8",
   },
   freeSummonBtn: {
     borderRadius: RADIUS.md, borderWidth: 2, borderColor: "#3DC4A840",
     backgroundColor: "#3DC4A808", overflow: "hidden",
   },
   freeSummonBtnActive: {
-    borderColor: "#3DC4A8",
-    backgroundColor: "#3DC4A812",
-    shadowColor: "#3DC4A8",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
+    borderColor: "#3DC4A8", backgroundColor: "#3DC4A812",
+    shadowColor: "#3DC4A8", shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
   },
   freeSummonInner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
@@ -417,13 +666,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3,
     borderWidth: 1, borderColor: "#3DC4A880",
   },
-  freeBadgeActive: {
-    backgroundColor: "#3DC4A8",
-  },
+  freeBadgeActive: { backgroundColor: "#3DC4A8" },
   freeBadgeTxt: { color: "#082019", fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   freeSummonTxt: { color: COLORS.onSurfaceSecondary, fontSize: 16, fontWeight: "700", letterSpacing: 0.2 },
   freeSummonSub: { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: 2 },
-  // P18: header banner when free draw available and shards low
   freeReadyBanner: {
     flexDirection: "row" as const, alignItems: "flex-start", gap: 6,
     backgroundColor: "#3DC4A815", borderRadius: RADIUS.md,
@@ -433,7 +679,6 @@ const styles = StyleSheet.create({
   freeReadyBannerTxt: {
     flex: 1, fontSize: 13, color: "#4FD8C4", lineHeight: 20, fontWeight: "600" as const,
   },
-  // P18: earn-shards helper card
   earnCard: {
     borderWidth: 1, borderColor: COLORS.brand + "35", borderRadius: RADIUS.md,
     backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, gap: 4,
