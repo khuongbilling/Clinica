@@ -18,18 +18,18 @@ export type ChapterPartType =
   | "battle"          // Ward Shift simulation or real enemy fight
   | "mini_boss"       // Chapter mini-boss encounter (harder Ward Shift node)
   | "ward_defense"    // Ward Defense wave / encounter node
-  | "minigame"        // Cue Hunt / Rapid Triage / Stabilize Stack (University only — not on map)
-  | "lesson"          // Lotus Lesson node
-  | "story"           // Story cutscene / narrative beat
-  | "memory_fragment" // P1: first-memory / recall story beat (replaces plain "story" for anchor nodes)
-  | "challenge"       // P1: skill-challenge mini-game node (Rapid Triage, Stabilize Stack, Cue Hunt)
+  | "minigame"        // LEGACY — use "story" type; kept in union for type safety
+  | "lesson"          // LEGACY — use "story" type; kept in union for type safety
+  | "story"           // Story cutscene / narrative beat (also used for converted challenge/minigame beats)
+  | "memory_fragment" // First-memory / recall story beat (anchor nodes for Chapters 1–4)
+  | "challenge"       // LEGACY — all challenge nodes converted to story beats; kept for type safety
   | "reflection"      // Post-chapter reflection / debrief beat
   | "reward"          // Chapter reward node
   | "realm"           // Realm task
-  | "mode_preview"    // First intro to a new mode (Boss Ward, etc.)
-  | "chain"           // Clinical chain mini-sequence
-  | "community"       // Community Board / public health task
-  | "arena";          // Arena / duel format
+  | "mode_preview"    // LEGACY — use "story" type; kept in union for type safety
+  | "chain"           // LEGACY — use "story" type; kept in union for type safety
+  | "community"       // Community Board / public health task (Ch7 placeholder only)
+  | "arena";          // LEGACY — use "story" type; kept in union for type safety
 
 // ── Data interfaces ──────────────────────────────────────────────────────────
 
@@ -146,8 +146,8 @@ const C: Record<number, string> = {
 export const CHAPTERS: Chapter[] = [
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 1 — The Fading Apprentice (5 nodes, Level 1)
-  // J1: story → battle → story → battle → mini-boss
+  // Chapter 1 — The Fading Apprentice (6 nodes, Level 1)
+  // memory_fragment → story → story → battle → reflection → mini_boss
   // University prep (NOT map nodes): Cue Hunt · Rapid Triage · Stabilize Stack · Hydration Lesson
   // ─────────────────────────────────────────────────────────────────────────
   {
@@ -192,29 +192,69 @@ export const CHAPTERS: Chapter[] = [
         route: "/story-scene?sceneId=chapter_01",
         rewardXp: 5,
       },
-      // ── Node 2 — Challenge: Rapid Triage ─────────────────────────────────
+      // ── Node 2 — Story Beat ───────────────────────────────────────────────
       {
         id: "c1n2",
         part: 2,
-        type: "challenge",
-        title: "Rapid Triage Drill",
-        description: "Three patients, one correct order. Read the signs and decide who needs help first — urgency determines survival.",
-        icon: "shuffle-outline",
-        route: "/university/rapid-triage",
+        type: "story",
+        title: "Your First Triage Call",
+        description: "The ward throws three demands at you at once. The System watches — not to score you, but to see how you think.",
+        icon: "book-outline",
         rewardXp: 10,
-        rewardCredits: 10,
+        rewardCoins: 20,
+        scenario: {
+          prompt: "A patient presses their call button, a monitor alarm sounds across the corridor, and the charge nurse asks for a status update — all at the same moment. What do you attend to first?",
+          healthHook: "Urgency is a skill. Knowing what cannot wait is the core of clinical priority.",
+          choices: [
+            {
+              text: "Answer the charge nurse — they're senior and their request comes first",
+              correct: false,
+              feedback: "Hierarchy matters, but a direct patient safety alert overrides task queuing. The physiological alarm comes first.",
+            },
+            {
+              text: "Go to the monitor alarm — a physiological alert signals an immediate safety need",
+              correct: true,
+              feedback: "Clinical alarms are designed to flag time-sensitive events. Address direct patient safety before communication tasks.",
+            },
+            {
+              text: "Respond to the call button — they asked, so they need help now",
+              correct: false,
+              feedback: "A call button is important, but a monitor alarm represents a measurable change in condition — that takes priority.",
+            },
+          ],
+        },
       },
-      // ── Node 3 — Challenge: Stabilize Stack ──────────────────────────────
+      // ── Node 3 — Story Beat ───────────────────────────────────────────────
       {
         id: "c1n3",
         part: 3,
-        type: "challenge",
-        title: "Stabilize Stack",
-        description: "The right care steps in the right order. Build the safe sequence before the patient deteriorates further.",
-        icon: "layers-outline",
-        route: "/university/stabilize-stack",
+        type: "story",
+        title: "The Right Order",
+        description: "Master Bai murmurs in the corridor: 'Sequence is not a preference — it is protection.' You begin to understand what that means.",
+        icon: "book-outline",
         rewardXp: 10,
-        rewardCredits: 10,
+        rewardCoins: 20,
+        scenario: {
+          prompt: "A dehydrated patient is asking for food. They haven't had any fluids yet. A junior colleague wants to bring a meal first — it'll cheer them up. What's the clinically sound approach?",
+          healthHook: "Order of care isn't pedantic — it's safety. The sequence exists because bodies respond differently when steps are skipped.",
+          choices: [
+            {
+              text: "Food first — it's what they want, and it'll help their mood",
+              correct: false,
+              feedback: "Well-meaning, but feeding before rehydration in a dehydrated patient can worsen nausea and delay recovery.",
+            },
+            {
+              text: "Rehydrate first, then reassess before introducing food",
+              correct: true,
+              feedback: "Correct sequencing is a clinical skill. Fluids before food is standard practice in dehydration — it's kinder in the long run.",
+            },
+            {
+              text: "Both at the same time — they can eat while the IV runs",
+              correct: false,
+              feedback: "This skips the reason the sequence matters. Without rehydrating first, food tolerance is unpredictable and reassessment is bypassed.",
+            },
+          ],
+        },
       },
       // ── Node 4 — Ward Shift ───────────────────────────────────────────────
       {
@@ -277,9 +317,9 @@ export const CHAPTERS: Chapter[] = [
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Chapter 2 — The First Ward Rotation (8 nodes, Level 2) — P8
-  // P8: memory_fragment → challenge(cue-hunt) → challenge(triage) → challenge(stack) → battle → memory_fragment → mini_boss → reflection
-  // University prep: Fever Lesson · Fever Cue Hunt · Reassess Stabilize Stack
+  // Chapter 2 — The First Ward Rotation (8 nodes, Level 2)
+  // memory_fragment → story → story → story → battle → memory_fragment → mini_boss → reflection
+  // University prep (NOT map nodes): Fever Lesson · Fever Cue Hunt · Reassess Stabilize Stack
   // ─────────────────────────────────────────────────────────────────────────
   {
     number: 2,
@@ -345,41 +385,101 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
-      // ── Node 2 — Challenge: Cue Hunt ─────────────────────────────────────
+      // ── Node 2 — Story Beat ───────────────────────────────────────────────
       {
         id: "c2p2",
         part: 2,
-        type: "challenge",
-        title: "Fever Cue Hunt",
-        description: "Hidden clinical cues in a fever case. Find the signs that other healers miss — temperature patterns, hydration, skin tone.",
-        icon: "search-outline",
-        route: "/university/cue-hunt",
+        type: "story",
+        title: "Reading the Signs",
+        description: "The Fever Imp's calling card isn't always temperature — it's the pattern. A flushed face, an unusual quiet, a missed meal. The System teaches you to see before the charts catch up.",
+        icon: "book-outline",
         rewardXp: 10,
-        rewardCredits: 15,
+        rewardCoins: 15,
+        scenario: {
+          prompt: "A family member who seemed fine this morning is now slightly flushed, unusually quiet, and says they feel 'a bit warm' when you ask. They insist they're okay. What's the thoughtful response?",
+          healthHook: "Early fever looks subtle. The quiet ones are sometimes the ones to watch.",
+          choices: [
+            {
+              text: "Trust them — they know their own body best",
+              correct: false,
+              feedback: "Self-report is valuable, but flushing plus behaviour change plus warmth together is a pattern worth assessing — not just accepting.",
+            },
+            {
+              text: "Note the change from their earlier state and ask a few more questions — this pattern is worth a closer look",
+              correct: true,
+              feedback: "Change from baseline is a key clinical signal. Quiet, flushed, and warm together deserves more than 'I'm fine.'",
+            },
+            {
+              text: "Offer them water and suggest they rest — probably just tired",
+              correct: false,
+              feedback: "Rest and fluids are supportive, but this dismisses a recognisable symptom pattern without assessing it first.",
+            },
+          ],
+        },
       },
-      // ── Node 3 — Challenge: Rapid Triage ─────────────────────────────────
+      // ── Node 3 — Story Beat ───────────────────────────────────────────────
       {
         id: "c2p3",
         part: 3,
-        type: "challenge",
-        title: "The Patient Who Changed Twice",
-        description: "A stable patient deteriorates mid-round. Read the changing signs, triage the shift, and choose who needs you most urgently.",
-        icon: "shuffle-outline",
-        route: "/university/rapid-triage",
+        type: "story",
+        title: "The Changing Patient",
+        description: "The ward shifts. A patient who was improving an hour ago now seems different — harder to read. The System says: 'Numbers don't change their mind. Patients do.'",
+        icon: "book-outline",
         rewardXp: 10,
-        rewardCredits: 15,
+        rewardCoins: 15,
+        scenario: {
+          prompt: "A patient's temperature normalised after treatment and you've moved on to other tasks. Two hours later, a colleague mentions the patient 'seems a bit off' but hasn't asked for anything. What do you do?",
+          healthHook: "Improvement isn't always permanent. Reassessment is part of the care cycle, not an interruption to it.",
+          choices: [
+            {
+              text: "They're stable — don't disturb their rest unless they call",
+              correct: false,
+              feedback: "A report of 'seeming off' after treatment is a clinical prompt, not just a social observation. It requires assessment.",
+            },
+            {
+              text: "Go to them and reassess — a colleague's concern is a valid clinical cue",
+              correct: true,
+              feedback: "Colleague observations are part of the clinical picture. 'Seems off' after treatment is exactly the change that warrants reassessment.",
+            },
+            {
+              text: "Chart them stable — the vital signs from before were fine",
+              correct: false,
+              feedback: "Previous readings don't cover current state. Charting stable without reassessment is a documentation gap and a care gap.",
+            },
+          ],
+        },
       },
-      // ── Node 4 — Challenge: Stabilize Stack ──────────────────────────────
+      // ── Node 4 — Story Beat ───────────────────────────────────────────────
       {
         id: "c2p4",
         part: 4,
-        type: "challenge",
-        title: "Reassess Before You Celebrate",
-        description: "Don't assume a fever is gone just because the temperature dipped. Build the reassessment sequence before declaring victory.",
-        icon: "layers-outline",
-        route: "/university/stabilize-stack",
+        type: "story",
+        title: "Before You Chart Stable",
+        description: "The Imp cools. But the System flags a pattern: low-grade fever can mask its return. 'Stable is a conclusion,' it says, 'not a hope.'",
+        icon: "book-outline",
         rewardXp: 10,
-        rewardCredits: 15,
+        rewardCoins: 15,
+        scenario: {
+          prompt: "A patient's fever resolved overnight and they're chatting comfortably this morning. A junior colleague is about to chart 'stable — no further action.' What do you check first?",
+          healthHook: "A good outcome isn't complete until you know why it happened and confirmed it's holding.",
+          choices: [
+            {
+              text: "Nothing — if they're comfortable and the fever's gone, stable is accurate",
+              correct: false,
+              feedback: "Comfort is encouraging, but 'stable' requires confirmed observations across multiple parameters, not just temperature.",
+            },
+            {
+              text: "Verify that the underlying cause was identified and addressed — not just the symptom",
+              correct: true,
+              feedback: "Treating a fever without identifying its source leaves the patient vulnerable to relapse. Stability means cause addressed, not just numbers normal.",
+            },
+            {
+              text: "Just double-check the temperature reading to be sure",
+              correct: false,
+              feedback: "Temperature is one data point. Stable status requires a full reassessment — vital signs, symptoms, and clinical impression.",
+            },
+          ],
+        },
       },
       // ── Node 5 — Ward Shift ───────────────────────────────────────────────
       {
@@ -455,8 +555,8 @@ export const CHAPTERS: Chapter[] = [
 
   // ─────────────────────────────────────────────────────────────────────────
   // Chapter 3 — Breath Before Battle (9 nodes, Level 4)
-  // P9: memory → chal/cue-hunt → chal/rapid-triage → battle →
-  //     memory → chal/stabilize-stack → battle → mini-boss → reflection
+  // memory → story → story → battle →
+  //     memory → story → battle → mini-boss → reflection
   // University prep: Breathing Lesson · Shortness Cue Hunt · Airway Triage
   // Level gate raised to 4 (P23): players must grind ~200 XP after Ch2 via
   // University practice, daily quests, or shift replays — creates intentional
@@ -525,29 +625,69 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
-      // ── Node 2 — Challenge: Cue Hunt ──────────────────────────────────────
+      // ── Node 2 — Story Beat ───────────────────────────────────────────────
       {
         id: "c3p2",
         part: 2,
-        type: "challenge",
-        title: "Cue Hunt: Spot the Wheeze",
-        description: "The ward is full of respiratory patients. Train your eye to catch the early warning signs — before the wheeze goes silent.",
-        icon: "eye-outline",
-        route: "/university/cue-hunt",
-        rewardXp: 10,
-        rewardCredits: 15,
+        type: "story",
+        title: "Eyes on the Ward",
+        description: "Respiratory distress is rarely announced — it's observed. The System walks you through the posture, the colour, the effort. By the time the patient speaks, you should already know.",
+        icon: "book-outline",
+        rewardXp: 20,
+        rewardCoins: 20,
+        scenario: {
+          prompt: "You're walking through the ward and notice a patient across the room sitting forward with their elbows on their knees, breathing visibly harder than before. They haven't pressed the call button. What do you do?",
+          healthHook: "Respiratory distress is a posture before it's a complaint. The forward-lean tripod position is a textbook sign.",
+          choices: [
+            {
+              text: "Wait — if they needed help, they'd call for it",
+              correct: false,
+              feedback: "Patients in respiratory distress often can't spare the breath to call. The tripod posture is a clinical cue, not a social one.",
+            },
+            {
+              text: "Go to them immediately — forward posture and visible breathing effort are respiratory distress cues",
+              correct: true,
+              feedback: "The tripod position is one of the clearest non-verbal signs of breathing difficulty. Don't wait for the patient to ask.",
+            },
+            {
+              text: "Alert the charge nurse and wait for their instructions",
+              correct: false,
+              feedback: "Alerting the team is appropriate — but go to the patient first. Direct assessment cannot wait for delegation.",
+            },
+          ],
+        },
       },
-      // ── Node 3 — Challenge: Rapid Triage ─────────────────────────────────
+      // ── Node 3 — Story Beat ───────────────────────────────────────────────
       {
         id: "c3p3",
         part: 3,
-        type: "challenge",
-        title: "Triage Drill: Airway First",
-        description: "Three patients arrive at once. Practice the ABCDE framework under pressure — Airway always leads.",
-        icon: "list-outline",
-        route: "/university/rapid-triage",
-        rewardXp: 10,
-        rewardCredits: 15,
+        type: "story",
+        title: "Airway First",
+        description: "Master Bai's voice cuts through the rush: 'Nothing else matters if the airway is closed.' The ABCDE framework isn't a mnemonic — it's a survival order.",
+        icon: "book-outline",
+        rewardXp: 20,
+        rewardCoins: 20,
+        scenario: {
+          prompt: "A patient is unresponsive after a procedure. Your colleague immediately reaches for the medication chart to check what they were given. What do you do first?",
+          healthHook: "ABCDE starts with Airway for a reason — without a patent airway, every other intervention is irrelevant.",
+          choices: [
+            {
+              text: "Help with the medication chart — knowing what they took is essential",
+              correct: false,
+              feedback: "Medication review matters, but not before confirming the airway is open and breathing is present.",
+            },
+            {
+              text: "Check the airway first — tilt the head, look for movement, listen for breath",
+              correct: true,
+              feedback: "A is for Airway. Before anything else, confirm the airway is patent. This is the non-negotiable first step.",
+            },
+            {
+              text: "Call the emergency team immediately and stand back",
+              correct: false,
+              feedback: "Calling for help is right, but you must simultaneously check the airway — delay in the first seconds can be fatal.",
+            },
+          ],
+        },
       },
       // ── Node 4 — Battle ────────────────────────────────────────────────────
       {
@@ -593,17 +733,37 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
-      // ── Node 6 — Challenge: Stabilize Stack ───────────────────────────────
+      // ── Node 6 — Story Beat ───────────────────────────────────────────────
       {
         id: "c3p6",
         part: 6,
-        type: "challenge",
-        title: "Stack Drill: Open the Air Path",
-        description: "Sequence the interventions correctly — positioning, oxygen, monitoring. The order matters as much as the action.",
-        icon: "layers-outline",
-        route: "/university/stabilize-stack",
-        rewardXp: 12,
-        rewardCredits: 20,
+        type: "story",
+        title: "Ordering the Breath",
+        description: "The System pauses the memory. 'You have three tools,' it says. 'Position. Oxygen. Monitor. All matter — but only one can open the path before the others reach it.'",
+        icon: "book-outline",
+        rewardXp: 20,
+        rewardCoins: 20,
+        scenario: {
+          prompt: "A patient is breathless and anxious. You have three things to do: sit them upright, apply supplemental oxygen, and attach a SpO₂ monitor. In what order do you act?",
+          healthHook: "Positioning before oxygen isn't just a rule — an upright patient uses their airways more efficiently, making the oxygen more effective when it arrives.",
+          choices: [
+            {
+              text: "Oxygen first — that's the most critical intervention",
+              correct: false,
+              feedback: "Oxygen is essential, but if the patient is slumped, delivery is compromised. Positioning first maximises oxygen benefit.",
+            },
+            {
+              text: "Sit them upright first, then oxygen, then monitor",
+              correct: true,
+              feedback: "Correct sequence. Position opens the airway and reduces work of breathing; oxygen then works as intended; the monitor confirms effect.",
+            },
+            {
+              text: "Monitor first — you need a baseline SpO₂ before any intervention",
+              correct: false,
+              feedback: "Monitoring while the patient continues to deteriorate costs precious seconds. Intervene first, monitor as you go.",
+            },
+          ],
+        },
       },
       // ── Node 7 — Battle ────────────────────────────────────────────────────
       {
@@ -668,8 +828,8 @@ export const CHAPTERS: Chapter[] = [
 
   // ─────────────────────────────────────────────────────────────────────────
   // Chapter 4 — Code Rush (9 nodes, Level 6)
-  // P10: memory → chal/rapid-triage → battle → ward_defense →
-  //      memory → chal/stabilize-stack → ward_defense → mini-boss(WD) → reflection
+  // memory → story → battle → ward_defense →
+  //      memory → story → ward_defense → mini-boss(WD) → reflection
   // University prep: Crowded Ward Triage · Protect the Ward Stabilize Stack
   // Level gate raised to 6 (P23): players completing Ch3 will be ~Level 5;
   // ~340 XP grind to Level 6 via University practice, replays, daily/weekly
@@ -738,17 +898,37 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
-      // ── Node 2 — Challenge: Rapid Triage ─────────────────────────────────
+      // ── Node 2 — Story Beat ───────────────────────────────────────────────
       {
         id: "c4p2",
         part: 2,
-        type: "challenge",
-        title: "Triage Drill: Crowded Ward",
-        description: "Three patients deteriorate at once. Rank by urgency before the corridor tips into chaos — who gets the bed first?",
-        icon: "list-outline",
-        route: "/university/rapid-triage",
-        rewardXp: 10,
-        rewardCredits: 15,
+        type: "story",
+        title: "The Surge Begins",
+        description: "Three alerts at once. The corridor feels smaller. The System speaks quietly: 'Everyone thinks they're the most urgent. Only one is right.'",
+        icon: "book-outline",
+        rewardXp: 22,
+        rewardCoins: 25,
+        scenario: {
+          prompt: "Three patients need attention at the same time: one is asking for pain relief, one has a monitor alarm sounding, and one is overdue for a wound dressing. You're the only one free. Who do you see first?",
+          healthHook: "Pain, safety alerts, and scheduled care are all real needs — but they don't carry equal urgency.",
+          choices: [
+            {
+              text: "The patient asking for pain relief — they're suffering right now",
+              correct: false,
+              feedback: "Pain is important, but it's rarely immediately life-threatening. Physiological alarms signal potential emergencies that can't wait.",
+            },
+            {
+              text: "The monitor alarm — physiological alerts signal immediate safety needs",
+              correct: true,
+              feedback: "A monitor alarm indicates a measurable change in a patient's condition. It demands immediate assessment before pain relief or scheduled tasks.",
+            },
+            {
+              text: "The wound dressing — it's overdue and delay could cause complications",
+              correct: false,
+              feedback: "Wound care is important, but scheduled tasks give way to active physiological events. Address the alarm first.",
+            },
+          ],
+        },
       },
       // ── Node 3 — Battle ────────────────────────────────────────────────────
       {
@@ -806,17 +986,37 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
-      // ── Node 6 — Challenge: Stabilize Stack ───────────────────────────────
+      // ── Node 6 — Story Beat ───────────────────────────────────────────────
       {
         id: "c4p6",
         part: 6,
-        type: "challenge",
-        title: "Stack Drill: Protect the Ward",
-        description: "Sequential damage control — the order of interventions determines whether the ward holds or falls.",
-        icon: "layers-outline",
-        route: "/university/stabilize-stack",
-        rewardXp: 12,
-        rewardCredits: 20,
+        type: "story",
+        title: "Holding Position",
+        description: "The second wave is forming. A junior colleague wants to do everything at once to save time. The System flags the instinct — then shows what sequential care actually prevents.",
+        icon: "book-outline",
+        rewardXp: 22,
+        rewardCoins: 25,
+        scenario: {
+          prompt: "A patient is deteriorating under pressure. A colleague says 'let's do everything at once — it'll be faster.' Three active interventions are queued. What's the more reliable approach?",
+          healthHook: "Parallel action feels efficient — but in clinical care, layered interventions without sequencing create unpredictable effects and missed feedback.",
+          choices: [
+            {
+              text: "Do everything simultaneously — speed saves lives",
+              correct: false,
+              feedback: "Simultaneous interventions without sequencing make it impossible to attribute effect or catch unexpected responses before they escalate.",
+            },
+            {
+              text: "Prioritise the most urgent intervention, apply it, then reassess before the next",
+              correct: true,
+              feedback: "Sequential care lets you see what's working and adapt. It's not slower — it's more accurate under pressure.",
+            },
+            {
+              text: "Wait for a senior before acting — this is too complex to handle alone",
+              correct: false,
+              feedback: "Escalating is appropriate, but not at the cost of inaction when immediate interventions are available and indicated.",
+            },
+          ],
+        },
       },
       // ── Node 7 — Ward Defense: Second Wave ───────────────────────────────
       {
@@ -1078,7 +1278,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c6p2",
         part: 2,
-        type: "mode_preview",
+        type: "story",
         title: "Boss Ward Tutorial",
         description: "Boss Wards are multi-phase clinical emergencies. Understand the phases before the encounter begins.",
         icon: "skull-outline",
@@ -1088,7 +1288,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c6p3",
         part: 3,
-        type: "minigame",
+        type: "story",
         title: "Cue Hunt: Hidden Deterioration",
         description: "Some clinical changes hide behind stable-looking readings. Find what the chart conceals.",
         icon: "search-outline",
@@ -1153,7 +1353,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c7p2",
         part: 2,
-        type: "mode_preview",
+        type: "story",
         title: "Community Health Board Tutorial",
         description: "The Community Board lets you contribute to population-level health interventions.",
         icon: "people-outline",
@@ -1162,7 +1362,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c7p3",
         part: 3,
-        type: "lesson",
+        type: "story",
         title: "Lesson: What Is an Outbreak?",
         description: "Epidemiology basics — how disease spreads from patient to community to population.",
         icon: "cellular-outline",
@@ -1172,7 +1372,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c7p4",
         part: 4,
-        type: "chain",
+        type: "story",
         title: "Clinical Chain: Handwashing and Spread",
         description: "Infection control as intervention. Practice the Infection Control skill sequence.",
         icon: "hand-left-outline",
@@ -1236,7 +1436,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c8p2",
         part: 2,
-        type: "minigame",
+        type: "story",
         title: "Cue Hunt: Competing Priorities",
         description: "Two patients, overlapping cues. Which signal is urgent? Which is incidental?",
         icon: "search-outline",
@@ -1245,7 +1445,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c8p3",
         part: 3,
-        type: "minigame",
+        type: "story",
         title: "Triage: Who First?",
         description: "A more complex triage — acuity levels blend. Apply your full clinical reasoning.",
         icon: "list-outline",
@@ -1264,7 +1464,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c8p5",
         part: 5,
-        type: "mode_preview",
+        type: "story",
         title: "Arena Preview",
         description: "The Arena opens for a single diagnostic duel. Speed and precision decide your score.",
         icon: "flash-outline",
@@ -1273,11 +1473,10 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c8p6",
         part: 6,
-        type: "minigame",
+        type: "story",
         title: "Stabilize Stack: Multi-Step Plan",
         description: "The most complex stabilization yet. Four care phases, two complicating factors.",
         icon: "layers-outline",
-        route: "/university/stabilize-stack",
         isPlaceholder: true,
       },
       {
@@ -1348,7 +1547,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c9p5",
         part: 5,
-        type: "mode_preview",
+        type: "story",
         title: "Rapid Rounds: Real Ward Rush",
         description: "Your first Rapid Rounds session on a real ward. Prioritise faster — stakes are real.",
         icon: "timer-outline",
@@ -1357,7 +1556,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c9p6",
         part: 6,
-        type: "minigame",
+        type: "story",
         title: "Triage: No Reset Button",
         description: "Real triage means a wrong call stays wrong. Apply ABCDE — and commit.",
         icon: "list-outline",
@@ -1412,7 +1611,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c10p2",
         part: 2,
-        type: "chain",
+        type: "story",
         title: "Clinical Chain: Hidden Cardiac Cue",
         description: "Troponin. ST changes. A quiet, dangerous presentation. Catch it before the cascade.",
         icon: "heart-outline",
@@ -1431,7 +1630,7 @@ export const CHAPTERS: Chapter[] = [
       {
         id: "c10p4",
         part: 4,
-        type: "arena",
+        type: "story",
         title: "Arena Duel: Diagnostic Trial",
         description: "One-on-one: your clinical reasoning versus a simulated adversary. Speed and precision.",
         icon: "flash-outline",
