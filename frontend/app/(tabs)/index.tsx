@@ -100,12 +100,12 @@ function hubGuideMessage(obj: ObjectiveDef): string {
       return "The Fading Apprentice case is waiting — three clinical challenges, one chain.";
     case "obj_fading_apprentice_done":
       return "Complete The Fading Apprentice — Cue Hunt → Rapid Triage → Stabilize Stack.";
-    case "obj_lotus_visited":
-      return "Case cleared. Open Lotus Lessons to deepen your knowledge.";
-    case "obj_lotus_first_lesson":
-      return "Start your first Lotus Lesson.";
     case "obj_recruit_preview":
-      return "Visit the Recruitment Hall — your healer roster is waiting.";
+      return "Case chain complete. Build your team — visit the Recruitment Hall and enlist your first healer before entering Ward Shift.";
+    case "obj_lotus_visited":
+      return "Team assembled. Open Lotus Lessons — completing one will unlock Ward Shift simulations.";
+    case "obj_lotus_first_lesson":
+      return "Complete your first Lotus Lesson to unlock Ward Shift.";
     case "obj_ward_shift_first":
       return "Ward Shift unlocked — step into the ward for your first simulation.";
     default:

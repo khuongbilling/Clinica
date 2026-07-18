@@ -729,7 +729,7 @@ export default function StabilizeStackScreen() {
           bgColors={["#0B1E2E", "#071018", "#060D14"]}
           creditsEarned={creditsEarned}
           milestoneItems={milestoneItems}
-          onFinish={() => router.replace("/university")}
+          onFinish={() => router.replace("/(tabs)")}
           onLearnMore={() => router.push("/university/stabilize-lesson" as any)}
           learnLabel="Learn the Chain"
         />
@@ -750,7 +750,7 @@ export default function StabilizeStackScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.replace("/university")}
+          onPress={() => router.replace("/(tabs)")}
           hitSlop={10}
           testID="stabilize-back"
         >

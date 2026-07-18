@@ -35,9 +35,9 @@ export type ObjectiveId =
   | "obj_memory_seen"            // step 6  — Memory Reminiscence scene completed
   | "obj_university_arrived"     // step 7  — open Clinica University
   | "obj_fading_apprentice_done" // step 8  — complete all 3 Fading Apprentice games
-  | "obj_lotus_visited"          // step 9  — continue chapter 1 journey / open lessons
-  | "obj_lotus_first_lesson"     // step 10 — complete Lotus Lesson: Hydration Basics
-  | "obj_recruit_preview"        // step 11 — visit the Recruitment Hall
+  | "obj_recruit_preview"        // step 9  — visit the Recruitment Hall
+  | "obj_lotus_visited"          // step 10 — continue chapter 1 journey / open lessons
+  | "obj_lotus_first_lesson"     // step 11 — complete Lotus Lesson: Hydration Basics
   | "obj_ward_shift_first"       // step 12 — complete first simulation shift
   // ── Internal sub-step IDs kept for backward compatibility and XP deduplication.
   // These are NOT in the OBJECTIVES array and never appear as hub guide milestones.
@@ -117,24 +117,24 @@ export const OBJECTIVES: ObjectiveDef[] = [
     xpReward: 6,
   },
   {
-    id: "obj_lotus_visited",
+    id: "obj_recruit_preview",
     step: 9,
+    title: "Visit the Recruitment Hall",
+    description: "The Fading Apprentice is stable. Now build your team — visit the Recruitment Hall and enlist your first healer before entering Ward Shift.",
+    xpReward: 6,
+  },
+  {
+    id: "obj_lotus_visited",
+    step: 10,
     title: "Continue Chapter 1 Journey",
-    description: "Open Lotus Lessons and start the next phase of your Chapter 1 path.",
+    description: "Open Lotus Lessons — completing one unlocks Ward Shift simulations.",
     xpReward: 6,
   },
   {
     id: "obj_lotus_first_lesson",
-    step: 10,
-    title: "Complete Lotus Lesson: Hydration Basics",
-    description: "Finish your first structured lesson and reinforce what you learned.",
-    xpReward: 6,
-  },
-  {
-    id: "obj_recruit_preview",
     step: 11,
-    title: "Visit the Recruitment Hall",
-    description: "See the Summoning Hall where healers answer the call.",
+    title: "Complete Lotus Lesson: Hydration Basics",
+    description: "Finish your first structured lesson and unlock Ward Shift.",
     xpReward: 6,
   },
   {
@@ -328,14 +328,14 @@ export async function reconcileEarlyObjectives(player: {
     }
     const lotusLessons = player.lessons_completed ?? [];
     const hasLotusLesson = lotusLessons.some((id) => id.startsWith("lotus:"));
-    // Step 9 — visited Lotus Lessons (any lotus completion implies the visit)
+    // Step 9 — visited Recruitment Hall (comes right after FA chain, before
+    // lotus lessons). No direct flag; backfill via lotus lessons or runs, both
+    // of which imply the player already passed step 9.
+    if ((player.runs_completed ?? 0) > 0 || hasLotusLesson) mark("obj_recruit_preview");
+    // Step 10 — visited Lotus Lessons (any lotus completion implies the visit)
     if (hasLotusLesson) mark("obj_lotus_visited");
-    // Step 10 — completed first Lotus Lesson
+    // Step 11 — completed first Lotus Lesson
     if (hasLotusLesson) mark("obj_lotus_first_lesson");
-    // Step 11 — visited Recruitment Hall.
-    // No direct PlayerState flag exists; use runs_completed > 0 as proxy:
-    // a player who completed a run must have had access to the hall first.
-    if ((player.runs_completed ?? 0) > 0) mark("obj_recruit_preview");
     // Step 12 — completed first Ward Shift simulation
     if ((player.runs_completed ?? 0) > 0) mark("obj_ward_shift_first");
 
