@@ -943,14 +943,14 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: 2,
   },
-  kicker: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 2 },
-  title: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300", marginTop: 2 },
+  kicker: { color: COLORS.brand, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "700", marginTop: 2 },
   closeBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: COLORS.surfaceSecondary, alignItems: "center", justifyContent: "center",
   },
   refreshRow: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
-  refreshTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  refreshTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   scroll: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.md, gap: SPACING.sm },
 
   lockedWrap: {
@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   lockedTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: "700", textAlign: "center" },
-  lockedDesc: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18, textAlign: "center" },
+  lockedDesc: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21, textAlign: "center" },
 
   streakCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
@@ -975,26 +975,26 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   streakDays: { color: COLORS.onSurface, fontSize: 17, fontWeight: "700" },
-  streakSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginTop: 2, lineHeight: 15 },
+  streakSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 2, lineHeight: 19 },
   checkPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: COLORS.success + "1E", borderRadius: RADIUS.pill,
     paddingHorizontal: 8, paddingVertical: 4,
   },
-  checkPillTxt: { color: COLORS.success, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
+  checkPillTxt: { color: COLORS.success, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
 
-  sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 },
   sectionHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: SPACING.sm },
   claimAllBtn: {
     backgroundColor: COLORS.success + "22", borderRadius: RADIUS.pill,
     borderWidth: 1, borderColor: COLORS.success + "55",
     paddingHorizontal: 10, paddingVertical: 4,
   },
-  claimAllTxt: { color: COLORS.success, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  claimAllTxt: { color: COLORS.success, fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   tabRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: COLORS.border },
   tabBtn: { flex: 1, alignItems: "center", paddingVertical: 10 },
   tabBtnActive: { borderBottomWidth: 2.5, borderBottomColor: COLORS.brand },
-  tabTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  tabTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "700", letterSpacing: 0.3 },
   tabTxtActive: { color: COLORS.brand },
 
   emptyBox: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
@@ -1012,22 +1012,22 @@ const styles = StyleSheet.create({
   },
   objIconDone: { backgroundColor: COLORS.success + "1E" },
   objTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  objLabel: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", flex: 1 },
-  objCount: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700" },
-  objDesc: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 15 },
+  objLabel: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700", flex: 1 },
+  objCount: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "700" },
+  objDesc: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
   objBottomRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 },
 
   rewardRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap", flex: 1 },
   rewardChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   rewardIcon: { width: 15, height: 15 },
-  rewardTxt: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
+  rewardTxt: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
   rewardTxtDim: { color: COLORS.onSurfaceTertiary, fontWeight: "600" },
 
   claimBtn: { backgroundColor: COLORS.brand, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 6 },
-  claimBtnTxt: { color: COLORS.onBrand, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  claimBtnTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 0.3 },
   claimedPill: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 8, paddingVertical: 5 },
-  claimedTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
-  lockHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic" },
+  claimedTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.2 },
+  lockHint: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontStyle: "italic" },
 
   bonusCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
@@ -1055,17 +1055,17 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 16,
   },
-  bonusTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", marginBottom: 1 },
-  weeklySub: { color: COLORS.onSurfaceSecondary, fontSize: 11, marginBottom: 3 },
+  bonusTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700", marginBottom: 1 },
+  weeklySub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginBottom: 3 },
 
   barBg: { height: 6, borderRadius: 3, backgroundColor: COLORS.border, overflow: "hidden" },
   barFill: { height: "100%", borderRadius: 3 },
 
-  footNote: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic", lineHeight: 14, marginTop: SPACING.sm },
+  footNote: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontStyle: "italic", lineHeight: 19, marginTop: SPACING.sm },
 
   milestonesWrap: { gap: SPACING.xs },
   milestonesProgress: { gap: 5, marginBottom: SPACING.xs },
-  milestonesProgressTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700" },
+  milestonesProgressTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700" },
   milestoneRow: {
     flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
@@ -1079,10 +1079,10 @@ const styles = StyleSheet.create({
   },
   milestoneIconDone:    { backgroundColor: COLORS.success + "1A" },
   milestoneIconClaimed: { backgroundColor: COLORS.surfaceTertiary },
-  milestoneLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
+  milestoneLabel: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
   milestoneLabelDone:    { color: COLORS.onSurface },
   milestoneLabelClaimed: { color: COLORS.onSurfaceTertiary },
-  milestoneDesc: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 1 },
+  milestoneDesc: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19, marginTop: 1 },
   milestoneRewardRow: { marginTop: 4 },
 
   // P20: Tab badges
@@ -1093,14 +1093,14 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     paddingHorizontal: 3,
   },
-  tabBadgeTxt: { color: "#fff", fontSize: 9, fontWeight: "900" as const },
+  tabBadgeTxt: { color: "#fff", fontSize: 11, fontWeight: "800" as const },
 
   // P20: Claim All disabled state
   claimAllBtnDim: {
     borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: 10, paddingVertical: 4,
   },
-  claimAllTxtDim: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800" as const, letterSpacing: 1 },
+  claimAllTxtDim: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700" as const, letterSpacing: 0.3 },
 
   // P20: Claim summary banner (tap to dismiss)
   claimSummaryBanner: {
@@ -1109,7 +1109,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#3DC4A835",
     paddingHorizontal: SPACING.sm, paddingVertical: 7,
   },
-  claimSummaryTxt: { flex: 1, color: "#3DC4A8", fontSize: 12, fontWeight: "600" as const },
+  claimSummaryTxt: { flex: 1, color: "#3DC4A8", fontSize: 13, fontWeight: "600" as const },
 
   // P20: Milestone Hall outer wrapper
   milestoneHallWrap: { gap: SPACING.xs },
@@ -1121,9 +1121,9 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
   },
   hallProgressRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  hallProgressTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" as const },
-  hallProgressSub: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "400" as const },
-  hallReadyHint: { color: "#3DC4A8", fontSize: 10, fontWeight: "700" as const, marginTop: 3 },
+  hallProgressTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" as const },
+  hallProgressSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "400" as const },
+  hallReadyHint: { color: "#3DC4A8", fontSize: 12, fontWeight: "700" as const, marginTop: 3 },
 
   // P20: Category block
   hallCategory: { gap: 4, marginTop: 4 },
@@ -1132,8 +1132,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2, paddingHorizontal: 2,
     marginTop: SPACING.xs,
   },
-  catLabel: { flex: 1, color: COLORS.brand, fontSize: 9, fontWeight: "800" as const, letterSpacing: 1.5 },
-  catProgress: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "700" as const },
+  catLabel: { flex: 1, color: COLORS.brand, fontSize: 12, fontWeight: "700" as const, letterSpacing: 0.5 },
+  catProgress: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700" as const },
 
   // P20: Individual plaque cards
   plaqueCard: {
@@ -1150,10 +1150,10 @@ const styles = StyleSheet.create({
   },
   plaqueIconReady:   { backgroundColor: "#3DC4A81A" },
   plaqueIconClaimed: { backgroundColor: COLORS.surfaceTertiary },
-  plaqueTitle:        { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" as const },
+  plaqueTitle:        { color: COLORS.onSurfaceTertiary, fontSize: 13, fontWeight: "600" as const },
   plaqueTitleReady:   { color: COLORS.onSurface, fontWeight: "700" as const },
   plaqueTitleClaimed: { color: COLORS.onSurfaceTertiary },
-  plaqueDesc:        { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14 },
+  plaqueDesc:        { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19 },
   plaqueRewardRow:   { marginTop: 4 },
 
   // P3: Next-on-journey card
@@ -1178,25 +1178,25 @@ const styles = StyleSheet.create({
   },
   journeyKicker: {
     color: COLORS.brand,
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1.4,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
   journeyTitle: {
     color: COLORS.onSurface,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
   },
   journeyType: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 1,
   },
   // P13: proximity hint line
   journeyProximityHint: {
     color: "#F97316",
-    fontSize: 10,
+    fontSize: 12,
     fontStyle: "italic",
     marginTop: 2,
   },

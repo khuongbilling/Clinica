@@ -224,10 +224,10 @@ const sl = StyleSheet.create({
     justifyContent: "center",
   },
   name: {
-    fontSize: 8,
+    fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
-    lineHeight: 11,
+    lineHeight: 16,
   },
   num: {
     color: "rgba(255,255,255,0.22)",
@@ -237,9 +237,9 @@ const sl = StyleSheet.create({
   },
   empty: {
     color: "rgba(255,255,255,0.18)",
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
 });
 
@@ -358,9 +358,9 @@ const hc = StyleSheet.create({
     paddingVertical: 2,
   },
   roleTxt: {
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
 });
 
@@ -472,14 +472,14 @@ const ic = StyleSheet.create({
     lineHeight: 16,
   },
   subtitle: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "600",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   effect: {
     color: UI.textDim,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 18,
   },
   footer: {
     flexDirection: "row",
@@ -494,9 +494,9 @@ const ic = StyleSheet.create({
     paddingVertical: 2,
   },
   sysTxt: {
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0.4,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   qty: {
     fontSize: 11,
@@ -814,9 +814,9 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   typeTxt: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   missionTitle: {
     color: UI.text,
@@ -833,7 +833,7 @@ const s = StyleSheet.create({
   rack:         { gap: 8, marginTop: SPACING.xs },
   rackTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   rackRule:     { flex: 1, height: 1 },
-  rackLabel:    { fontSize: 8, fontWeight: "800", letterSpacing: 1.4 },
+  rackLabel:    { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   slotRow:      { flexDirection: "row", gap: 8 },
 
   // Scroll

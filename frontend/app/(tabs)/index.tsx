@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
     gap: 6, paddingHorizontal: SPACING.lg, paddingBottom: 6, paddingTop: 2,
   },
   sceneDot:  { width: 6, height: 6, borderRadius: 3, opacity: 0.9 },
-  sceneLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 2.5, opacity: 0.9 },
+  sceneLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 1.2, opacity: 0.9 },
 
   /* University onboarding banner (prominent first step for new players) */
   uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
@@ -907,15 +907,15 @@ const styles = StyleSheet.create({
   sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm },
   featBtn:    { alignItems: "center", gap: 4 },
   featCircle: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  featLabel:  { fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textAlign: "center" },
-  featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+  featLabel:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.2, textAlign: "center" },
+  featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
   featLiveDot: {
     position: "absolute", top: 2, right: 2,
     width: 9, height: 9, borderRadius: 5,
     backgroundColor: "#34D399",
     borderWidth: 1.5, borderColor: COLORS.surface,
   },
-  featLiveTxt: { color: "#34D399", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  featLiveTxt: { color: "#34D399", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   featBadge: {
     position: "absolute", top: -3, right: -3,
     minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 4,
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: COLORS.surface,
     alignItems: "center", justifyContent: "center",
   },
-  featBadgeTxt: { color: "#FFFFFF", fontSize: 9, fontWeight: "800" },
+  featBadgeTxt: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
 
   /* World Event banner (Shift hub entry point) */
   memoryBanner: {
@@ -933,8 +933,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#E0B45C55",
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
   },
-  memoryBannerKicker: { color: "#E0B45C", fontSize: 10, fontWeight: "800", letterSpacing: 2 },
-  memoryBannerTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  memoryBannerKicker: { color: "#E0B45C", fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  memoryBannerTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "600" },
   eventBanner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2,
@@ -952,20 +952,20 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: COLORS.surface,
   },
   eventBannerTopRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  eventBannerKicker: { color: "#34D399", fontSize: 8, fontWeight: "800", letterSpacing: 1.5 },
+  eventBannerKicker: { color: "#34D399", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   eventBannerBadge: {
     backgroundColor: "#5B9BD522", borderWidth: 1, borderColor: "#5B9BD555",
     borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 1,
   },
-  eventBannerBadgeTxt: { color: "#5B9BD5", fontSize: 7, fontWeight: "800", letterSpacing: 1 },
+  eventBannerBadgeTxt: { color: "#5B9BD5", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
   eventBannerBoard: {
     backgroundColor: "#065F4625", borderColor: "#34D39933",
   },
   eventBannerBadgeBoard: {
     backgroundColor: "#34D39918", borderColor: "#34D39944",
   },
-  eventBannerTitle: { color: "#34D399", fontSize: 15, fontWeight: "700" },
-  eventBannerSub:   { color: COLORS.onSurfaceSecondary, fontSize: 10, lineHeight: 13 },
+  eventBannerTitle: { color: "#34D399", fontSize: 18, fontWeight: "700" },
+  eventBannerSub:   { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
   eventBannerClose: {
     width: 24, height: 24, borderRadius: 12,
     backgroundColor: COLORS.surfaceSecondary,
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
   },
   tapDot:   { width: 5, height: 5, borderRadius: 3, opacity: 0.85 },
-  tapLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, letterSpacing: 0.6 },
+  tapLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.3 },
 
   /* Hero info panel — RPG character card with element glow */
   infoPanel: {
@@ -1001,14 +1001,14 @@ const styles = StyleSheet.create({
     width: 3, borderRadius: 1.5, opacity: 0.85,
   },
   elementBadge: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 4, alignSelf: "center" },
-  elementTxt:   { fontSize: 9, fontWeight: "700", letterSpacing: 1.4 },
-  heroName:     { color: UI.text, fontSize: 15, fontWeight: "700" },
-  heroTitle:    { color: UI.textDim, fontSize: 11 },
+  elementTxt:   { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  heroName:     { color: UI.text, fontSize: 17, fontWeight: "700" },
+  heroTitle:    { color: UI.textDim, fontSize: 13 },
   xpCol:        { alignItems: "flex-end", gap: 2 },
   xpBg:         { width: 64, height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
   xpBar:        { height: "100%", borderRadius: 2 },
-  xpTxt:        { color: UI.textDim, fontSize: 9, letterSpacing: 0.6 },
-  heroTapHint:  { fontSize: 7, fontWeight: "700", letterSpacing: 0.8 },
+  xpTxt:        { color: UI.textDim, fontSize: 12, letterSpacing: 0.3 },
+  heroTapHint:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
 
   /* Start button — layout only; visuals come from PrimaryButton */
   startBtn: {
@@ -1035,10 +1035,10 @@ const styles = StyleSheet.create({
   },
   wardLockedCardTitle: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 11, fontWeight: "800", letterSpacing: 1.5,
+    fontSize: 13, fontWeight: "700", letterSpacing: 0.5,
   },
   wardLockedCardSub: {
-    color: UI.textDim, fontSize: 12, lineHeight: 17,
+    color: UI.textDim, fontSize: 13, lineHeight: 20,
   },
   wardLockedCardCta: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   wardLockedCardCtaTxt: {
-    color: "#082019", fontSize: 11, fontWeight: "800", letterSpacing: 0.5,
+    color: "#082019", fontSize: 13, fontWeight: "700", letterSpacing: 0.3,
   },
 
   /* Ward Defense card */
@@ -1061,9 +1061,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
   },
   wardDefLeft:  { flex: 1, gap: 2 },
-  wardDefNew:   { color: COLORS.air, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
-  wardDefTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
-  wardDefSub:   { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  wardDefNew:   { color: COLORS.air, fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  wardDefTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: "700" },
+  wardDefSub:   { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   wardDefRight: { flexDirection: "row", alignItems: "center", gap: 4 },
 
   /* Lotus Plate Journal card */
@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI.sanctuaryPanel,
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
   },
-  lotusNew: { color: COLORS.growth, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  lotusNew: { color: COLORS.growth, fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
 
   /* Intro modal */
   introOverlay: { flex: 1, backgroundColor: "rgba(10,7,16,0.9)", justifyContent: "flex-end" },
@@ -1087,18 +1087,18 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   introHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: UI.divider, alignSelf: "center", marginBottom: SPACING.sm },
-  introKicker:  { color: UI.gold, fontSize: 10, fontWeight: "800", letterSpacing: 2.5 },
-  introTitle:   { color: UI.text, fontSize: 26, fontWeight: "800" },
-  introBody:    { color: UI.textSoft, fontSize: 14, lineHeight: 22 },
+  introKicker:  { color: UI.gold, fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
+  introTitle:   { color: UI.text, fontSize: 30, fontWeight: "800" },
+  introBody:    { color: UI.textSoft, fontSize: 15, lineHeight: 23 },
   introSystems: { flexDirection: "row", gap: SPACING.xs, flexWrap: "wrap" },
   sysPill:  { alignItems: "center", gap: 3, minWidth: 46 },
   sysDot:   { width: 8, height: 8, borderRadius: 4 },
-  sysName:  { fontSize: 11, fontWeight: "700" },
-  sysDesc:  { color: UI.textDim, fontSize: 9 },
+  sysName:  { fontSize: 13, fontWeight: "700" },
+  sysDesc:  { color: UI.textDim, fontSize: 13 },
   introCta: {
     backgroundColor: UI.gold, borderRadius: UI_RADIUS.pill,
     paddingVertical: SPACING.md + 2, alignItems: "center", marginTop: SPACING.sm,
     ...GLOW.gold,
   },
-  introCtaTxt: { color: UI.onGold, fontSize: 13, fontWeight: "800", letterSpacing: 2 },
+  introCtaTxt: { color: UI.onGold, fontSize: 16, fontWeight: "800", letterSpacing: 0.5 },
 });

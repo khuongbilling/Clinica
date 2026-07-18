@@ -171,13 +171,13 @@ const bannerStyles = StyleSheet.create({
     borderRadius: RADIUS.pill, borderWidth: 1,
     paddingHorizontal: 9, paddingVertical: 3,
   },
-  topicTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1.4 },
+  topicTxt: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderRadius: RADIUS.pill, borderWidth: 1,
     paddingHorizontal: 9, paddingVertical: 3,
   },
-  statusTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+  statusTxt: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   bottomBlock: { gap: 3 },
   title: {
     color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 26,
@@ -196,7 +196,7 @@ const bannerStyles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 5,
   },
-  ctaTxt: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+  ctaTxt: { color: '#fff', fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
 });
 
 // ── V8: Per-department accent colors ─────────────────────────────────────────
@@ -511,9 +511,9 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
-  kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 2, lineHeight: 20 },
+  kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 1.2, fontWeight: "700" },
+  title: { color: COLORS.onSurface, fontSize: 30, fontWeight: "700" },
+  sub: { color: COLORS.onSurfaceSecondary, fontSize: 15, marginTop: 2, lineHeight: 22 },
   scroll: { padding: SPACING.lg, gap: SPACING.xl, paddingBottom: SPACING.xxxl },
   fallback: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
 
@@ -524,13 +524,13 @@ const styles = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2,
   },
-  sectionTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: '700' },
-  sectionSub: { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 1, lineHeight: 19 },
+  sectionTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: '700' },
+  sectionSub: { color: COLORS.onSurfaceSecondary, fontSize: 15, marginTop: 1, lineHeight: 22 },
   progressPill: {
     backgroundColor: COLORS.brand + '1A', borderRadius: RADIUS.pill,
     paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 2,
   },
-  progressPillTxt: { color: COLORS.brand, fontSize: 11, fontWeight: '700' },
+  progressPillTxt: { color: COLORS.brand, fontSize: 13, fontWeight: '700' },
 
   // Path
   pathBar: { height: 4, borderRadius: 2, backgroundColor: COLORS.border },
@@ -549,15 +549,15 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center",
     backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.brand + "40",
   },
-  deptName: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
-  deptNameDim: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontWeight: "600" },
-  deptDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
-  deptMeta: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
+  deptName: { color: COLORS.onSurface, fontSize: 16, fontWeight: "600" },
+  deptNameDim: { color: COLORS.onSurfaceSecondary, fontSize: 16, fontWeight: "600" },
+  deptDesc: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
+  deptMeta: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
   deptBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: COLORS.border },
   deptBarFill: { height: '100%', borderRadius: 2, backgroundColor: COLORS.brand },
-  deptBarTxt: { color: COLORS.brand, fontSize: 10, fontWeight: '700' },
+  deptBarTxt: { color: COLORS.brand, fontSize: 12, fontWeight: '700' },
   soonBadge: { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 2 },
-  soonTxt: { color: COLORS.onSurfaceTertiary, fontSize: 8, fontWeight: "800" },
+  soonTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700" },
 
   // Badges
   badgeGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
@@ -572,10 +572,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceTertiary, alignItems: 'center', justifyContent: 'center',
   },
   badgeIconUnlocked: { backgroundColor: COLORS.brand + '1A' },
-  badgeName: { color: COLORS.onSurfaceSecondary, fontSize: 10, fontWeight: "600", textAlign: "center", lineHeight: 13 },
+  badgeName: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "600", textAlign: "center", lineHeight: 16 },
   badgeBar: { width: '80%', height: 3, borderRadius: 2, backgroundColor: COLORS.border },
   badgeBarFill: { height: '100%', borderRadius: 2, backgroundColor: COLORS.brand },
-  badgeCount: { color: COLORS.onSurfaceTertiary, fontSize: 9 },
+  badgeCount: { color: COLORS.onSurfaceTertiary, fontSize: 12 },
 
   // Safety note
   safetyBox: {
@@ -583,5 +583,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
     padding: SPACING.sm, backgroundColor: COLORS.surfaceSecondary,
   },
-  safetyTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
+  safetyTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19 },
 });

@@ -368,26 +368,26 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   typeTxt: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   missionTitle: {
     color: UI.text,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
-    lineHeight: 24,
+    lineHeight: 26,
   },
   chapterLabel: {
     color: UI.textDim,
-    fontSize: 11,
+    fontSize: 13,
   },
 
   // Description
   flavor: {
     color: UI.textSoft,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 23,
   },
 
   // Locked banner
@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
   lockedTxt: {
     flex: 1,
     color: UI.textDim,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   // Rewards
@@ -414,9 +414,9 @@ const styles = StyleSheet.create({
   },
   rewardLabel: {
     color: UI.textDim,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   rewardRow: {
     flexDirection: "row",
@@ -452,8 +452,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   primaryBtnTxt: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 });

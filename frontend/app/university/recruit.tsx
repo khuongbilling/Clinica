@@ -335,9 +335,9 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
-  kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 2 },
+  kicker: { color: COLORS.brand, fontSize: 11, letterSpacing: 1, fontWeight: "700" },
+  title: { color: COLORS.onSurface, fontSize: 30, fontWeight: "700" },
+  sub: { color: COLORS.onSurfaceSecondary, fontSize: 15, marginTop: 2 },
   walletRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" },
   shardCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
@@ -345,32 +345,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, marginTop: SPACING.sm, alignSelf: "flex-start",
   },
   shardVal: { color: COLORS.brand, fontSize: 18, fontWeight: "300" },
-  shardLbl: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 1, fontWeight: "700" },
+  shardLbl: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.5, fontWeight: "700" },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   errorTxt: { color: COLORS.brandSecondary, fontSize: 13, textAlign: "center" },
   resultCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.lg, borderRadius: RADIUS.md, borderWidth: 2, alignItems: "center", gap: 6 },
   resultName: { fontSize: 20, fontWeight: "400" },
   tierPill: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  tierPillTxt: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  tierPillTxt: { fontSize: 12, fontWeight: "700", letterSpacing: 0.2 },
   resultMsg: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", marginTop: 4 },
   batchGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   tile: {
     width: "31%", borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.sm,
     backgroundColor: COLORS.surfaceSecondary, alignItems: "center", gap: 4, minHeight: 64, justifyContent: "center",
   },
-  tileName: { fontSize: 11, fontWeight: "700" },
-  tileMeta: { fontSize: 9, color: COLORS.onSurfaceTertiary, textAlign: "center" },
+  tileName: { fontSize: 13, fontWeight: "700" },
+  tileMeta: { fontSize: 12, color: COLORS.onSurfaceTertiary, textAlign: "center" },
   btn: {
     height: 56, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center",
     overflow: "hidden", flexDirection: "row", gap: SPACING.md,
   },
-  btnTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 1.5 },
-  btnCost: { color: COLORS.onBrand, fontSize: 11, opacity: 0.85 },
+  btnTxt: { color: COLORS.onBrand, fontSize: 16, fontWeight: "700", letterSpacing: 0.3 },
+  btnCost: { color: COLORS.onBrand, fontSize: 13, opacity: 0.85 },
   btnOutline: {
     height: 56, borderRadius: RADIUS.md, borderWidth: 2, alignItems: "center", justifyContent: "center", gap: 2,
   },
-  btnOutlineTxt: { fontSize: 13, fontWeight: "700", letterSpacing: 1 },
-  btnOutlineCost: { fontSize: 10, color: COLORS.onSurfaceTertiary },
+  btnOutlineTxt: { fontSize: 16, fontWeight: "700", letterSpacing: 0.3 },
+  btnOutlineCost: { fontSize: 12, color: COLORS.onSurfaceTertiary },
   shardsInfo: {
     flexDirection: "row", alignItems: "flex-start", gap: 6,
     backgroundColor: COLORS.brandTertiary + "30", borderRadius: RADIUS.md,
@@ -384,8 +384,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
     padding: SPACING.md, gap: 3, backgroundColor: COLORS.surfaceSecondary,
   },
-  oddsTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", marginBottom: 2 },
-  oddsLine: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  oddsTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", marginBottom: 2 },
+  oddsLine: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
   // P18: FREE button wrapper + pulse ring
   freeSummonWrap: { position: "relative" as const },
   freePulseRing: {
@@ -420,9 +420,9 @@ const styles = StyleSheet.create({
   freeBadgeActive: {
     backgroundColor: "#3DC4A8",
   },
-  freeBadgeTxt: { color: "#082019", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
-  freeSummonTxt: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontWeight: "700", letterSpacing: 0.4 },
-  freeSummonSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  freeBadgeTxt: { color: "#082019", fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
+  freeSummonTxt: { color: COLORS.onSurfaceSecondary, fontSize: 16, fontWeight: "700", letterSpacing: 0.2 },
+  freeSummonSub: { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: 2 },
   // P18: header banner when free draw available and shards low
   freeReadyBanner: {
     flexDirection: "row" as const, alignItems: "flex-start", gap: 6,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginTop: SPACING.xs,
   },
   freeReadyBannerTxt: {
-    flex: 1, fontSize: 11, color: "#4FD8C4", lineHeight: 16, fontWeight: "600" as const,
+    flex: 1, fontSize: 13, color: "#4FD8C4", lineHeight: 20, fontWeight: "600" as const,
   },
   // P18: earn-shards helper card
   earnCard: {
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, gap: 4,
   },
   earnCardHeader: { flexDirection: "row" as const, alignItems: "center", gap: 6, marginBottom: 2 },
-  earnCardTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700" as const },
-  earnCardLine: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
-  earnCardNote: { color: COLORS.brand, fontSize: 10, fontStyle: "italic" as const, marginTop: 2 },
+  earnCardTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" as const },
+  earnCardLine: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
+  earnCardNote: { color: COLORS.brand, fontSize: 12, fontStyle: "italic" as const, marginTop: 2 },
 });

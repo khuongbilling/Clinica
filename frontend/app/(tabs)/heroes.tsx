@@ -257,9 +257,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  kicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  title:  { color: COLORS.onSurface, fontSize: 26, fontWeight: "300", marginTop: 2 },
-  sub:    { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
+  kicker: { color: COLORS.brand, fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
+  title:  { color: COLORS.onSurface, fontSize: 30, fontWeight: "700", marginTop: 2 },
+  sub:    { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: 2 },
 
   scroll: { padding: SPACING.md, paddingBottom: 120 },
   grid:   { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
@@ -269,13 +269,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.brand + "50", borderRadius: RADIUS.md,
     backgroundColor: COLORS.brand + "12", padding: SPACING.md, marginBottom: SPACING.md,
   },
-  emptyTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
-  emptyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  emptyTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" },
+  emptyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20, marginTop: 2 },
   emptyBtn: {
     borderRadius: RADIUS.pill, backgroundColor: COLORS.brand,
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
   },
-  emptyBtnTxt: { color: COLORS.onBrand, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  emptyBtnTxt: { color: COLORS.onBrand, fontSize: 13, fontWeight: "700", letterSpacing: 0.3 },
 
   cardWrap: { width: "47.5%" },
 
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
   },
-  slotTxt: { color: COLORS.surface, fontSize: 11, fontWeight: "700" },
+  slotTxt: { color: COLORS.surface, fontSize: 12, fontWeight: "700" },
 
   starBadge: {
     position: "absolute", top: 6, right: 6,
@@ -320,9 +320,9 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     paddingHorizontal: 5, paddingVertical: 2,
   },
-  starBadgeTxt: { color: COLORS.brand, fontSize: 10, fontWeight: "800" },
+  starBadgeTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "800" },
   tierBadge: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginBottom: 2 },
-  tierBadgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  tierBadgeTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
 
   evolveBadge: {
     position: "absolute", bottom: 6, left: 6,
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
   },
-  lockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 0.5 },
+  lockTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.2 },
 
   viewHint: {
     position: "absolute",
@@ -357,10 +357,10 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.xs,
     gap: SPACING.xs,
   },
-  heroName:   { color: COLORS.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 },
+  heroName:   { color: COLORS.onSurface, fontSize: 15, fontWeight: "600", marginTop: 2 },
   elementTag: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 },
-  elementTxt: { fontSize: 8, fontWeight: "700", letterSpacing: 1 },
-  roleTag:    { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 1 },
+  elementTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  roleTag:    { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 1 },
 
   toggleBtn: {
     width: 26, height: 26, borderRadius: 13,

@@ -100,28 +100,59 @@ export const GRADIENTS = {
   storyScrim: ["rgba(16,11,24,0)", "rgba(16,11,24,0.55)", "rgba(12,8,18,0.94)"],
 } as const;
 
+// ── Global type scale — all new screens and the global readability pass use these.
+// Minimum readable size is 12px for any visible UI text. Tutorial/story minimum 16px.
+export const TYPO = {
+  // Screen / page level
+  screenTitle:  30,   // H1 — main page title (tab home, hub headers)
+  heroTitle:    28,   // H1 variant — large hero-section heading
+  pageTitle:    26,   // H1 compact — when screen estate is tight
+
+  // Section level
+  sectionHead:  20,   // H2 — section group header
+  cardTitle:    18,   // H3 — card/item title
+  cardSubtitle: 15,   // card secondary text / brief description
+
+  // Body
+  body:         15,   // primary paragraph / description text
+  bodySmall:    13,   // compact body (flavor text, lore, requirements)
+  bodyMin:      13,   // absolute minimum for any readable body copy
+
+  // UI chrome
+  label:        13,   // UI labels, stat names
+  meta:         12,   // metadata, counters, secondary stats (never below 12)
+  chip:         12,   // reward chips, small status badges (never below 12)
+  kicker:       11,   // decorative ALL-CAPS kickers (accent color only)
+  micro:        10,   // absolute last resort — only for decorative overlay text
+
+  // Interactive
+  button:       16,   // primary CTA button text
+  buttonSm:     14,   // secondary / ghost button text
+  tab:          13,   // tab bar labels
+} as const;
+
 // Convenience: text style presets used across refreshed screens.
 export const TEXT = {
   kicker: {
     color: UI.gold,
     fontSize: 11,
     fontWeight: "800" as const,
-    letterSpacing: 2.5,
+    letterSpacing: 1.5,
   },
   title: {
     color: UI.text,
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: "800" as const,
   },
   body: {
     color: UI.textSoft,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 23,
   },
   caption: {
     color: UI.textDim,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600" as const,
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
 } as const;

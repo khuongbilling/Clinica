@@ -869,7 +869,7 @@ function CorruptionPortal({ aw, ah }: { aw: number; ah: number }) {
   return (
     <View style={{ position: "absolute", left: px - 40, top: py < 50 ? 4 : py - 30, alignItems: "center", zIndex: 8 }}>
       {/* Label */}
-      <Text style={{ color: "#f87171", fontSize: 6, fontWeight: "700", letterSpacing: 0.8, marginBottom: 2 }}>BREACH</Text>
+      <Text style={{ color: "#f87171", fontSize: 11, fontWeight: "700", letterSpacing: 0.3, marginBottom: 2 }}>BREACH</Text>
       {/* Fixed-size 80×80 container — spikes + circle all anchored here */}
       <View style={{ width: 80, height: 80, alignItems: "center", justifyContent: "center" }}>
         {/* Outer halo */}
@@ -940,7 +940,7 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
       <View style={{ position: "absolute", top: 20, width: 64, height: 64, borderRadius: 32,
         backgroundColor: glow + "20" }} />
       {/* Label */}
-      <Text style={{ color: glow, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.8, marginBottom: 3 }}>VITAL LANTERN — {stabState.label.toUpperCase()}</Text>
+      <Text style={{ color: glow, fontSize: 11, fontWeight: "700", letterSpacing: 0.3, marginBottom: 3 }}>VITAL LANTERN — {stabState.label.toUpperCase()}</Text>
       {/* Lantern cap — decorative top bar */}
       <View style={{ width: 56, height: 8, borderRadius: 4,
         backgroundColor: "#2e2212", borderWidth: 1.5, borderColor: glow60, marginBottom: 1 }}>
@@ -2060,7 +2060,7 @@ function EnemyOnPath({
         borderColor: def.color + "70", borderRadius: 4,
         paddingHorizontal: 4, paddingVertical: 1.5, marginBottom: 1.5,
       }}>
-        <Text style={{ color: def.color, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.4 }}>
+        <Text style={{ color: def.color, fontSize: 11, fontWeight: "700", letterSpacing: 0.2 }}>
           {def.clue}
         </Text>
       </View>
@@ -2088,7 +2088,7 @@ function EnemyOnPath({
       )}
       {/* Boss HP counter */}
       {isBoss && (
-        <Text style={{ color: def.color, fontSize: 8, fontWeight: "700",
+        <Text style={{ color: def.color, fontSize: 12, fontWeight: "700",
           marginBottom: 1, textShadowColor: "#000", textShadowRadius: 2 }}>
           {enemy.hp}
         </Text>
@@ -2150,7 +2150,7 @@ function DeploymentTileView({
           left: px - TILE_SIZE / 2, top: py - TILE_SIZE / 2 - 14,
           zIndex: 5,
         }}>
-          <Text style={{ color: "#d4a840", fontSize: 7, fontWeight: "700", letterSpacing: 1.2 }}>
+          <Text style={{ color: "#d4a840", fontSize: 11, fontWeight: "700", letterSpacing: 0.4 }}>
             {isZoneA ? "WARD-A" : "WARD-B"}
           </Text>
         </View>
@@ -2214,7 +2214,7 @@ function DeploymentTileView({
               <View style={{ position: "absolute", top: 3, left: 3, borderRadius: 3,
                 backgroundColor: (unit!.level ?? 1) >= MERGE_RANK_CAP ? "#FFD700" : "#a78bfa",
                 paddingHorizontal: 3, paddingVertical: 1 }}>
-                <Text style={{ color: "#0a0a1a", fontSize: 5, fontWeight: "800" }}>
+                <Text style={{ color: "#0a0a1a", fontSize: 10, fontWeight: "700" }}>
                   {mergeRankName(unit!.level ?? 1)}
                 </Text>
               </View>
@@ -2222,7 +2222,7 @@ function DeploymentTileView({
             {/* Category badge top-right */}
             <View style={{ position: "absolute", top: 3, right: 3,
               backgroundColor: unitColor + "35", borderRadius: 3, paddingHorizontal: 3 }}>
-              <Text style={{ color: unitColor, fontSize: 5.5, fontWeight: "700" }}>
+              <Text style={{ color: unitColor, fontSize: 10, fontWeight: "700" }}>
                 {UNIT_DATA[unit!.typeId].category.slice(0, 3)}
               </Text>
             </View>
@@ -2320,8 +2320,8 @@ function HandPanel({
                         transform: [{ rotate: `${i*60}deg` }] }} />
                     ))}
                   </View>
-                  <Text style={{ color: "#FFD700", fontSize: 6, fontWeight: "800",
-                    letterSpacing: 0.8, textAlign: "center" }}>CARE{"\n"}SYNTHESIS</Text>
+                  <Text style={{ color: "#FFD700", fontSize: 11, fontWeight: "700",
+                    letterSpacing: 0.3, textAlign: "center" }}>CARE{"\n"}SYNTHESIS</Text>
                   <View style={[s.apRune, { borderColor: "#FFD700", backgroundColor: "#FFD70022", marginTop: 3 }]}>
                     <Text style={[s.apRuneTxt, { color: "#FFD700" }]}>✦</Text>
                     <Text style={[s.apRuneLabel, { color: "#FFD700CC" }]}>FREE</Text>
@@ -2379,7 +2379,7 @@ function HandPanel({
                   style={[s.abilityCard, { borderColor: canAfford ? ab.color + "70" : COLORS.border,
                     backgroundColor: canAfford ? "#080e18" : "#060a12", opacity: canAfford ? 1 : 0.45 }]}
                   onPress={() => onUseAbility(id)} disabled={!canAfford}>
-                  <Text style={{ fontSize: 7.5, fontWeight: "700", color: canAfford ? ab.color : COLORS.onSurfaceTertiary, letterSpacing: 0.8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: canAfford ? ab.color : COLORS.onSurfaceTertiary, letterSpacing: 0.3 }}>
                     {ab.category}
                   </Text>
                   <Text style={{ fontSize: 20, marginVertical: 3 }}>{ab.icon}</Text>
@@ -3141,7 +3141,7 @@ export default function WardDefense() {
           {gs.treatmentFieldTicks > 0 && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3 }}>
               <Text style={{ fontSize: 8 }}>🌫️</Text>
-              <Text style={{ color: "#67e8f9", fontSize: 7.5, fontWeight: "700" }}>
+              <Text style={{ color: "#67e8f9", fontSize: 12, fontWeight: "700" }}>
                 Treatment Field active ({gs.treatmentFieldTicks})
               </Text>
             </View>
@@ -3155,7 +3155,7 @@ export default function WardDefense() {
             <Text style={{ color: "#60A5FA", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>
               {gs.ap}
             </Text>
-            <Text style={{ color: "#60A5FA60", fontSize: 9, fontWeight: "700" }}>
+            <Text style={{ color: "#60A5FA60", fontSize: 12, fontWeight: "700" }}>
               /{MAX_AP}
             </Text>
           </View>
@@ -3341,7 +3341,7 @@ function ClinicalQuestionPanel({
           </View>
         )}
         {answered && answeredCorrect && (
-          <Text style={{ color: "#155a38", fontSize: 9, fontWeight: "800" }}>✓ +{PREWAVE_AP_BONUS} AP earned</Text>
+          <Text style={{ color: "#155a38", fontSize: 12, fontWeight: "700" }}>✓ +{PREWAVE_AP_BONUS} AP earned</Text>
         )}
         <Pressable onPress={onClose} hitSlop={10} style={s.clinicalClose}>
           <Ionicons name="close" size={14} color="#4a2e00" />
@@ -3358,17 +3358,17 @@ function ClinicalQuestionPanel({
               backgroundColor: answeredCorrect ? "#0a3020e0" : "#3a0a0ae0",
             }]}>
               <Text style={{ color: answeredCorrect ? "#34d399" : "#f87171",
-                fontSize: 9, fontWeight: "800", marginBottom: 2 }}>
+                fontSize: 12, fontWeight: "700", marginBottom: 2 }}>
                 {answeredCorrect
                   ? "✓ Correct! Great clinical judgment."
                   : `✗ Correct answer: ${question.opts[question.correct]}`}
               </Text>
-              <Text style={{ color: answeredCorrect ? "#a7f3d0" : "#fca5a5", fontSize: 8, lineHeight: 11.5 }}>
+              <Text style={{ color: answeredCorrect ? "#a7f3d0" : "#fca5a5", fontSize: 12, lineHeight: 18 }}>
                 {question.rationale}
               </Text>
               {answeredCorrect && (
                 <View style={{ marginTop: 6 }}>
-                  <Text style={{ color: "#a7f3d0", fontSize: 8, fontWeight: "800", marginBottom: 3 }}>
+                  <Text style={{ color: "#a7f3d0", fontSize: 12, fontWeight: "700", marginBottom: 3 }}>
                     CHOOSE YOUR TACTICAL EDGE:
                   </Text>
                   <View style={{ flexDirection: "row", gap: 5 }}>
@@ -3383,8 +3383,8 @@ function ClinicalQuestionPanel({
                         opacity: cueChoice && cueChoice !== "empower" ? 0.4 : 1,
                       }}
                     >
-                      <Text style={{ color: "#67e8f9", fontSize: 8, fontWeight: "800" }}>⚔ Empower Next Strong Hit</Text>
-                      <Text style={{ color: "#a7f3d0", fontSize: 7 }}>+20% dmg on next strong-match hit</Text>
+                      <Text style={{ color: "#67e8f9", fontSize: 12, fontWeight: "700" }}>⚔ Empower Next Strong Hit</Text>
+                      <Text style={{ color: "#a7f3d0", fontSize: 11 }}>+20% dmg on next strong-match hit</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => onChooseCue("stabilize")}
@@ -3397,8 +3397,8 @@ function ClinicalQuestionPanel({
                         opacity: cueChoice && cueChoice !== "stabilize" ? 0.4 : 1,
                       }}
                     >
-                      <Text style={{ color: "#67e8f9", fontSize: 8, fontWeight: "800" }}>🌊 Stability Surge</Text>
-                      <Text style={{ color: "#a7f3d0", fontSize: 7 }}>+{CUE_STABILIZE_BONUS} Stability now</Text>
+                      <Text style={{ color: "#67e8f9", fontSize: 12, fontWeight: "700" }}>🌊 Stability Surge</Text>
+                      <Text style={{ color: "#a7f3d0", fontSize: 11 }}>+{CUE_STABILIZE_BONUS} Stability now</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -3845,7 +3845,7 @@ function LobbyScreen({
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={[s.lobbyListName, { color: u.color }]}>{u.name}</Text>
                     <View style={{ backgroundColor: u.color + "22", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                      <Text style={{ color: u.color, fontSize: 8, fontWeight: "700" }}>{u.apCost} AP · {u.category}</Text>
+                      <Text style={{ color: u.color, fontSize: 12, fontWeight: "700" }}>{u.apCost} AP · {u.category}</Text>
                     </View>
                   </View>
                   <Text style={s.lobbyListDesc}>{u.flavor}</Text>
@@ -3880,16 +3880,16 @@ function LobbyScreen({
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={[s.lobbyListName, { color: def.color }]}>{def.name}</Text>
                   <View style={{ backgroundColor: def.color + "20", borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
-                    <Text style={{ color: def.color, fontSize: 7, fontWeight: "700" }}>{def.clue}</Text>
+                    <Text style={{ color: def.color, fontSize: 11, fontWeight: "700" }}>{def.clue}</Text>
                   </View>
                   {def.isBoss && (
                     <View style={{ backgroundColor: COLORS.error + "22", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                      <Text style={{ color: COLORS.error, fontSize: 8, fontWeight: "700" }}>BOSS</Text>
+                      <Text style={{ color: COLORS.error, fontSize: 11, fontWeight: "700" }}>BOSS</Text>
                     </View>
                   )}
                   {def.behavior && (
                     <View style={{ backgroundColor: "#ffffff14", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                      <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 8, fontWeight: "700" }}>
+                      <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }}>
                         {BEHAVIOR_META[def.behavior].icon} {BEHAVIOR_META[def.behavior].label}
                       </Text>
                     </View>
@@ -3902,10 +3902,10 @@ function LobbyScreen({
                   borderLeftWidth: 2, borderLeftColor: def.color + "88",
                   paddingVertical: 4, paddingHorizontal: 6,
                 }}>
-                  <Text style={{ color: def.color, fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 }}>
+                  <Text style={{ color: def.color, fontSize: 12, fontWeight: "700", letterSpacing: 0.2 }}>
                     {def.ability.name.toUpperCase()}
                   </Text>
-                  <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 9, flex: 1, lineHeight: 12 }}>
+                  <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>
                     {def.ability.desc}
                   </Text>
                 </View>
@@ -3916,10 +3916,10 @@ function LobbyScreen({
                     borderLeftWidth: 2, borderLeftColor: "#22c55e88",
                     paddingVertical: 4, paddingHorizontal: 6,
                   }}>
-                    <Text style={{ color: "#4ade80", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 }}>
+                    <Text style={{ color: "#4ade80", fontSize: 12, fontWeight: "700", letterSpacing: 0.2 }}>
                       COUNTER
                     </Text>
-                    <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 9, flex: 1, lineHeight: 12 }}>
+                    <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>
                       {BEHAVIOR_META[def.behavior].counter}
                     </Text>
                   </View>
@@ -4070,7 +4070,7 @@ function ResultScreen({
                   backgroundColor: m.color + "12", borderRadius: 8,
                   borderWidth: 1, borderColor: m.color + "30", paddingVertical: 8 }}>
                   <Text style={{ color: m.color, fontSize: 18, fontWeight: "700" }}>{m.count}</Text>
-                  <Text style={{ color: m.color, fontSize: 7, fontWeight: "700", letterSpacing: 0.8 }}>
+                  <Text style={{ color: m.color, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 }}>
                     {m.sym} {m.label}
                   </Text>
                 </View>
@@ -4125,7 +4125,7 @@ function ResultScreen({
                       <View style={{ backgroundColor: (m.correctDefeated ? COLORS.success : COLORS.onSurfaceTertiary) + "18",
                         borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
                         <Text style={{ color: m.correctDefeated ? COLORS.success : COLORS.onSurfaceTertiary,
-                          fontSize: 8, fontWeight: "700" }}>
+                          fontSize: 12, fontWeight: "700" }}>
                           {m.correctDefeated ? "✦ CORRECT" : "◌ MATCHED"}
                         </Text>
                       </View>
@@ -4432,11 +4432,11 @@ const s = StyleSheet.create({
   hudSpeedTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800" },
   hudWave: { flex: 1 },
   hudTitle: { color: COLORS.onSurface, fontSize: 11, fontWeight: "800", letterSpacing: 0.2 },
-  hudKicker: { color: COLORS.air, fontSize: 7, fontWeight: "800", letterSpacing: 1.8 },
-  hudWaveTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
+  hudKicker: { color: COLORS.air, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  hudWaveTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.2, marginTop: 1 },
   hudStability: { flex: 1.4 },
-  hudBarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 7, fontWeight: "700", letterSpacing: 0.8 },
-  hudBarVal: { fontSize: 9, fontWeight: "800" },
+  hudBarLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  hudBarVal: { fontSize: 12, fontWeight: "800" },
   hudStabilityBg: { height: 8, backgroundColor: "#0a1428", borderRadius: 5, overflow: "hidden" },
   hudStabilityFill: { height: "100%", borderRadius: 5 },
   hudAp: { width: 52, alignItems: "flex-end" },
@@ -4475,8 +4475,8 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderColor: "#0e2040",
   },
   feedbackRow: { borderLeftWidth: 2, paddingLeft: SPACING.sm },
-  feedbackTxt: { fontSize: 10, lineHeight: 14, fontWeight: "500" },
-  feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic" },
+  feedbackTxt: { fontSize: 13, lineHeight: 19, fontWeight: "500" },
+  feedbackHint: { color: COLORS.onSurfaceTertiary, fontSize: 13, fontStyle: "italic" },
 
   /* Clinical cue check — floats over the whole battle as a centered modal-style overlay */
   clinicalOverlay: {
@@ -4506,21 +4506,21 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: "#22d3ee60",
   },
   clinicalBadgeTxt: {
-    color: "#e0fffa", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.8,
+    color: "#e0fffa", fontSize: 12, fontWeight: "700", letterSpacing: 0.3,
   },
   clinicalTimerBadge: {
     backgroundColor: "#5a2e00cc", borderRadius: 6,
     paddingHorizontal: 7, paddingVertical: 3,
     borderWidth: 1, borderColor: "#c8700060",
   },
-  clinicalTimerTxt: { color: "#fbbf24", fontSize: 9, fontWeight: "800" },
+  clinicalTimerTxt: { color: "#fbbf24", fontSize: 12, fontWeight: "700" },
   clinicalClose: {
     width: 22, height: 22, borderRadius: 11,
     alignItems: "center", justifyContent: "center",
     backgroundColor: "#00000018", borderWidth: 1, borderColor: "#4a2e0033",
   },
   clinicalQ: {
-    color: "#2d1200", fontSize: 10, fontWeight: "700", lineHeight: 14,
+    color: "#2d1200", fontSize: 13, fontWeight: "700", lineHeight: 19,
     marginBottom: 6,
   },
   clinicalResult: {
@@ -4540,8 +4540,8 @@ const s = StyleSheet.create({
     backgroundColor: "#6b3200", borderWidth: 1.5, borderColor: "#c8700080",
     alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  clinicalLetterTxt: { color: "#fde68a", fontSize: 8, fontWeight: "900" },
-  clinicalOptTxt: { color: "#2d1200", fontSize: 9, flex: 1, lineHeight: 12 },
+  clinicalLetterTxt: { color: "#fde68a", fontSize: 11, fontWeight: "700" },
+  clinicalOptTxt: { color: "#2d1200", fontSize: 12, flex: 1, lineHeight: 18 },
   clinicalLotus: { width: 48, alignItems: "center", justifyContent: "center" },
   clinicalLotusBg: {
     width: 44, height: 44, borderRadius: 22,
@@ -4549,8 +4549,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: "#c8700060",
   },
   clinicalLotusLabel: {
-    color: "#6b3200", fontSize: 7.5, fontWeight: "800",
-    textAlign: "center", marginTop: 2, lineHeight: 10,
+    color: "#6b3200", fontSize: 11, fontWeight: "700",
+    textAlign: "center", marginTop: 2, lineHeight: 15,
   },
 
   /* Hand */
@@ -4562,13 +4562,13 @@ const s = StyleSheet.create({
   },
   handTabBtn: { flex: 1, paddingVertical: 8, alignItems: "center" },
   handTabActive: { borderBottomWidth: 2, borderColor: COLORS.air },
-  handTabTxt: { fontSize: 9.5, fontWeight: "700", letterSpacing: 1.2 },
+  handTabTxt: { fontSize: 13, fontWeight: "700", letterSpacing: 0.3 },
   handApBadge: {
     flexDirection: "row", alignItems: "center", gap: 2,
     paddingVertical: 6, paddingHorizontal: 8,
   },
   handApTxt: { color: COLORS.runeGold, fontSize: 14, fontWeight: "700" },
-  handApLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
+  handApLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   handCards: { flex: 1, flexDirection: "row", gap: 5 },
   handSidebar: {
     width: 52, alignItems: "center", justifyContent: "space-around",
@@ -4580,8 +4580,8 @@ const s = StyleSheet.create({
     backgroundColor: "#0d1e30", borderWidth: 1, borderColor: "#1e3a5a",
   },
   handSideBtnTxt: {
-    color: COLORS.onSurfaceTertiary, fontSize: 6, fontWeight: "700",
-    letterSpacing: 0.4, marginTop: 1,
+    color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700",
+    letterSpacing: 0.2, marginTop: 1,
   },
   handItemsBadge: {
     alignItems: "center", justifyContent: "center",
@@ -4590,9 +4590,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 4,
   },
   handItemsNum: { color: COLORS.onSurface, fontSize: 13, fontWeight: "800" },
-  handItemsLabel: { color: COLORS.onSurfaceTertiary, fontSize: 6, fontWeight: "700", letterSpacing: 0.5 },
+  handItemsLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 0.2 },
   handPauseBtn: { alignItems: "center" },
-  handPauseTxt: { color: COLORS.onSurfaceTertiary, fontSize: 6.5, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
+  handPauseTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 0.2, marginTop: 1 },
   unitCard: {
     flex: 1, alignItems: "center", gap: 3,
     paddingVertical: 5, paddingTop: 5, paddingHorizontal: 4,
@@ -4605,15 +4605,15 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.md, borderWidth: 1.5,
     minHeight: 105,
   },
-  cardCatBadge: { fontSize: 7.5, fontWeight: "800", letterSpacing: 0.8 },
-  unitCardName: { fontSize: 8, fontWeight: "700", textAlign: "center", lineHeight: 11, paddingHorizontal: 3 },
+  cardCatBadge: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  unitCardName: { fontSize: 12, fontWeight: "700", textAlign: "center", lineHeight: 16, paddingHorizontal: 3 },
   apRune: {
     flexDirection: "row", alignItems: "center", gap: 2,
     borderWidth: 1, borderRadius: RADIUS.pill,
     paddingHorizontal: 6, paddingVertical: 2, marginTop: 1,
   },
   apRuneTxt: { fontSize: 11, fontWeight: "700" },
-  apRuneLabel: { fontSize: 6.5, fontWeight: "700", letterSpacing: 0.5, marginTop: 1 },
+  apRuneLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.2, marginTop: 1 },
 
   /* Lobby */
   lobbyContent: { padding: SPACING.lg, gap: SPACING.lg },
@@ -4623,14 +4623,14 @@ const s = StyleSheet.create({
     alignItems: "center", justifyContent: "center", overflow: "hidden",
     borderWidth: 1.5, borderColor: "#60A5FA40", marginBottom: 8,
   },
-  lobbyKicker: { color: COLORS.air, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
-  lobbyTitle: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
+  lobbyKicker: { color: COLORS.air, fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  lobbyTitle: { color: COLORS.onSurface, fontSize: 28, fontWeight: "700" },
   lobbySubtitle: { color: COLORS.onSurfaceSecondary, fontSize: 12 },
   lobbyCard: {
     backgroundColor: "#080e1c", borderRadius: RADIUS.md,
     padding: SPACING.md, borderWidth: 1, borderColor: "#1a3050",
   },
-  lobbySectionTitle: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2 },
+  lobbySectionTitle: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 },
   lobbyBodyTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
   lobbyListRow: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginBottom: 10 },
   lobbyEnemyChip: {

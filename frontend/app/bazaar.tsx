@@ -109,8 +109,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
   header: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.lg, paddingBottom: SPACING.sm },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surfaceSecondary, alignItems: "center", justifyContent: "center" },
-  kicker: { color: COLORS.storm, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
+  kicker: { color: COLORS.storm, fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  title: { color: COLORS.onSurface, fontSize: 28, fontWeight: "700", marginTop: 2 },
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   previewBanner: {
     flexDirection: "row", alignItems: "flex-start", gap: SPACING.md,
@@ -124,10 +124,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: COLORS.border, padding: SPACING.lg, gap: 6,
   },
-  heroKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  heroKicker: { color: COLORS.brand, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   heroTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" },
   heroBody: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20, marginTop: 2 },
-  sectionLbl: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  sectionLbl: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   pillarGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   pillar: {
     flexBasis: "47%", flexGrow: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm,
@@ -149,5 +149,5 @@ const styles = StyleSheet.create({
   },
   returnBtnTxt: { color: COLORS.onBrand, fontSize: 15, fontWeight: "700" },
   footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
-  footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16, fontStyle: "italic" },
+  footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 20, fontStyle: "italic" },
 });
