@@ -324,9 +324,9 @@ const deptBStyles = StyleSheet.create({
     paddingHorizontal: 9, paddingVertical: 3,
   },
   statBadgeTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  bottomBlock: { gap: 2 },
-  name: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', lineHeight: 24 },
-  desc: { color: 'rgba(255,255,255,0.70)', fontSize: 12, lineHeight: 17 },
+  bottomBlock: { gap: 4 },
+  name: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 26 },
+  desc: { color: 'rgba(255,255,255,0.70)', fontSize: 13, lineHeight: 18 },
   metaRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: 4, flexWrap: 'nowrap',
   },
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2,
   },
   sectionTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: '700' },
-  sectionSub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 1, lineHeight: 17 },
+  sectionSub: { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 1, lineHeight: 19 },
   progressPill: {
     backgroundColor: COLORS.brand + '1A', borderRadius: RADIUS.pill,
     paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 2,

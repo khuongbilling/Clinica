@@ -809,8 +809,8 @@ const styles = StyleSheet.create({
   },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: 2 },
-  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  sub: { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 2, lineHeight: 20 },
+  scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
   sectionHeading: {
     color: UI.jade, fontSize: 12, fontWeight: "800",
     letterSpacing: 1.5, marginTop: SPACING.sm,
@@ -849,12 +849,12 @@ const styles = StyleSheet.create({
   },
   ch1Title: {
     color: COLORS.onSurface,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
   },
   ch1Sub: {
     color: COLORS.onSurfaceTertiary,
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 1,
   },
 
@@ -917,7 +917,8 @@ const styles = StyleSheet.create({
   },
   cueSub: {
     color: COLORS.onSurfaceSecondary,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
     marginTop: 1,
   },
   cueCtaRow: {
@@ -936,7 +937,7 @@ const styles = StyleSheet.create({
   },
   cueCtaTxt: {
     color: "#0B1A18",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
@@ -979,8 +980,8 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center",
     backgroundColor: UI.sanctuaryCard, borderWidth: 1, borderColor: COLORS.brand + "40",
   },
-  moreTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600" },
-  moreDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2 },
+  moreTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
+  moreDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
   futureToggle: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
@@ -1004,8 +1005,8 @@ const labsStyles = StyleSheet.create({
     width: 44, height: 44, borderRadius: RADIUS.sm,
     alignItems: "center", justifyContent: "center", marginBottom: 2,
   },
-  labTitle: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", textAlign: "center" },
-  labDesc: { color: COLORS.onSurfaceTertiary, fontSize: 10, textAlign: "center", lineHeight: 13 },
+  labTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", textAlign: "center" },
+  labDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, textAlign: "center", lineHeight: 15 },
   labChip: {
     flexDirection: "row", alignItems: "center", gap: 3,
     borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2,

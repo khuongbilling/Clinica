@@ -107,8 +107,8 @@ const sbStyles = StyleSheet.create({
   },
   futureBadgeTxt: { color: '#ffffff88', fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
   bottomBlock: { gap: 3 },
-  name: { color: '#FFFFFF', fontSize: 17, fontWeight: '700', lineHeight: 22 },
-  subtitle: { color: 'rgba(255,255,255,0.68)', fontSize: 11, lineHeight: 16 },
+  name: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', lineHeight: 24 },
+  subtitle: { color: 'rgba(255,255,255,0.68)', fontSize: 13, lineHeight: 18 },
   chipRow: { flexDirection: 'row', marginTop: 4 },
   roleChip: {
     borderRadius: RADIUS.pill, borderWidth: 1,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
   sub: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2, lineHeight: 18 },
-  scroll: { padding: SPACING.lg, gap: SPACING.sm, paddingBottom: SPACING.xxxl },
+  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
   previewBanner: {
     flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
     backgroundColor: COLORS.brand + "15", borderRadius: RADIUS.md,

@@ -30,7 +30,6 @@ const LESSON_META: Record<string, { icon: string; color: string; label: string }
   'breathing-basics':           { icon: 'pulse-outline',       color: '#B0DEFF', label: 'Breathing Basics' },
 };
 
-// Letter labels for choice options
 const CHOICE_LABELS = ['A', 'B', 'C', 'D'];
 
 // ── Learning tag chip ─────────────────────────────────────────────────────────
@@ -54,7 +53,7 @@ const tagStyles = StyleSheet.create({
     paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, gap: 2,
   },
   category: { fontSize: 8, fontWeight: '800', letterSpacing: 1 },
-  label: { fontSize: 11, fontWeight: '700' },
+  label: { fontSize: 12, fontWeight: '700' },
 });
 
 // ── Main lesson screen ────────────────────────────────────────────────────────
@@ -159,7 +158,6 @@ export default function LotusLessonScreen() {
 
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        {/* Header with topic colour accent */}
         <View style={styles.hero}>
           <LinearGradient
             colors={[meta.color + '28', COLORS.surface]}
@@ -169,7 +167,6 @@ export default function LotusLessonScreen() {
             <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
           </Pressable>
 
-          {/* Kicker row: topic tag + step counter */}
           <View style={styles.heroMetaRow}>
             <View style={[styles.topicChip, { backgroundColor: meta.color + '22', borderColor: meta.color + '55' }]}>
               <Ionicons name={meta.icon as any} size={11} color={meta.color} />
@@ -180,7 +177,6 @@ export default function LotusLessonScreen() {
 
           <Text style={styles.heroTitle} numberOfLines={2}>{node.title}</Text>
 
-          {/* Segmented progress bar */}
           <View style={styles.segBarRow}>
             {node.interactions.map((_, i) => (
               <View
@@ -196,10 +192,8 @@ export default function LotusLessonScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <SceneTransition trigger={step}>
-            {/* ── Info beat ──────────────────────────────────────────────── */}
             {!isChoice ? (
               <View style={styles.infoCard}>
-                {/* Large topic icon */}
                 <View style={[styles.infoIconWrap, { backgroundColor: meta.color + '1C' }]}>
                   <Ionicons name={meta.icon as any} size={32} color={meta.color} />
                 </View>
@@ -217,7 +211,6 @@ export default function LotusLessonScreen() {
                 )}
               </View>
             ) : (
-              /* ── Choice beat ───────────────────────────────────────────── */
               <View style={styles.choiceCard}>
                 <View style={[styles.choicePromptBadge, { backgroundColor: meta.color + '18' }]}>
                   <Ionicons name="help-circle-outline" size={14} color={meta.color} />
@@ -242,7 +235,6 @@ export default function LotusLessonScreen() {
                         ]}
                         testID={`lotus-choice-${i}`}
                       >
-                        {/* Letter label */}
                         <View style={[
                           styles.choiceLabel,
                           showCorrect && { backgroundColor: COLORS.success + '30', borderColor: COLORS.success },
@@ -266,7 +258,6 @@ export default function LotusLessonScreen() {
                   })}
                 </View>
 
-                {/* Feedback box after selection */}
                 {hasAnswered && interaction.choices && (
                   <View style={[
                     styles.feedbackBox,
@@ -276,10 +267,10 @@ export default function LotusLessonScreen() {
                   ]}>
                     <Ionicons
                       name={isCorrectSelected ? 'checkmark-circle' : 'close-circle'}
-                      size={16}
+                      size={18}
                       color={isCorrectSelected ? COLORS.success : COLORS.error}
                     />
-                    <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flex: 1, gap: 3 }}>
                       <Text style={[
                         styles.feedbackTitle,
                         { color: isCorrectSelected ? COLORS.success : COLORS.error },
@@ -295,7 +286,6 @@ export default function LotusLessonScreen() {
               </View>
             )}
 
-            {/* Continue / Finish button */}
             {canContinue && (
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: meta.color }]}
@@ -303,11 +293,10 @@ export default function LotusLessonScreen() {
                 testID="lotus-lesson-continue"
               >
                 <Text style={styles.primaryBtnTxt}>{isLast ? 'Finish Lesson' : 'Continue'}</Text>
-                <Ionicons name="arrow-forward" size={16} color="#000" />
+                <Ionicons name="arrow-forward" size={18} color="#000" />
               </Pressable>
             )}
 
-            {/* Safety disclaimer — small, at bottom */}
             <View style={styles.disclaimerRow}>
               <Ionicons name="shield-checkmark-outline" size={11} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.disclaimerTxt}>{LOTUS_LESSON_SAFETY_NOTE}</Text>
@@ -325,12 +314,10 @@ export default function LotusLessonScreen() {
         <SceneTransition trigger="lesson-complete" style={styles.doneWrap}>
           <View testID="lotus-lesson-complete" style={styles.doneInner}>
 
-            {/* Onboarding progress (first lesson only) */}
             {!alreadyDone && (player.lessons_completed?.length ?? 0) <= 1 && (
               <OnboardingProgressBar step="Lessons" />
             )}
 
-            {/* Big topic icon */}
             <View style={[styles.doneIconWrap, { backgroundColor: meta.color + '1C' }]}>
               <Ionicons name={meta.icon as any} size={36} color={meta.color} />
               <View style={styles.doneCheckBadge}>
@@ -338,21 +325,18 @@ export default function LotusLessonScreen() {
               </View>
             </View>
 
-            {/* Title */}
             <Text style={styles.doneKicker}>LESSON COMPLETE</Text>
             <Text style={styles.doneTitle}>{node.title}</Text>
 
-            {/* Unlock banner (first time only) */}
             {!alreadyDone && (
               <View style={[styles.unlockBanner, { borderColor: meta.color + '44', backgroundColor: meta.color + '10' }]}>
-                <Ionicons name="lock-open-outline" size={15} color={meta.color} />
+                <Ionicons name="lock-open-outline" size={16} color={meta.color} />
                 <Text style={[styles.unlockBannerTxt, { color: meta.color }]}>
                   Clinical foundation strengthened — Ward Shift simulation unlocked.
                 </Text>
               </View>
             )}
 
-            {/* What You Practiced — learning tags */}
             {node.learningTags && node.learningTags.length > 0 && (
               <View style={styles.tagsSection}>
                 <Text style={styles.tagsSectionTitle}>WHAT YOU PRACTICED</Text>
@@ -362,7 +346,6 @@ export default function LotusLessonScreen() {
               </View>
             )}
 
-            {/* Milestone reward */}
             {rewards && (
               <MilestoneReward
                 title="LESSON REWARD"
@@ -375,7 +358,6 @@ export default function LotusLessonScreen() {
               />
             )}
 
-            {/* Ward Shift connection */}
             {node.payoffCopy && (
               <View style={[styles.payoffBox, { borderColor: meta.color + '35', backgroundColor: meta.color + '0A' }]}>
                 <View style={styles.payoffHeader}>
@@ -386,14 +368,13 @@ export default function LotusLessonScreen() {
               </View>
             )}
 
-            {/* CTAs */}
             {node.linkedCaseId && (
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: meta.color }]}
                 onPress={goToShift}
                 testID="lotus-lesson-go-shift"
               >
-                <Ionicons name="pulse" size={16} color="#000" />
+                <Ionicons name="pulse" size={18} color="#000" />
                 <Text style={styles.primaryBtnTxt}>Try It in a Ward Shift</Text>
               </Pressable>
             )}
@@ -417,13 +398,12 @@ export default function LotusLessonScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
 
-  // Hero / header
   hero: {
     padding: SPACING.lg, paddingTop: SPACING.xl, gap: SPACING.sm,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 36, height: 36, borderRadius: 18,
     alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.3)",
   },
@@ -431,142 +411,115 @@ const styles = StyleSheet.create({
   topicChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1, borderRadius: RADIUS.pill,
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: 9, paddingVertical: 4,
   },
-  topicChipTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
-  stepCounter: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  heroTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: '700', lineHeight: 24, marginTop: 2 },
-  kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: '700' },
+  topicChipTxt:  { fontSize: 9,  fontWeight: '800', letterSpacing: 1.2 },
+  stepCounter:   { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, color: COLORS.onSurfaceTertiary },
+  heroTitle:     { fontSize: 20, fontWeight: '700', lineHeight: 27, marginTop: 4, color: COLORS.onSurface },
+  kicker:        { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: COLORS.brand },
 
-  // Segmented progress bar
-  segBarRow: { flexDirection: 'row', gap: 3, marginTop: SPACING.xs },
+  segBarRow: { flexDirection: 'row', gap: 3, marginTop: SPACING.sm },
   segBarSeg: { height: 4, borderRadius: 2 },
 
-  // Scroll area
   scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
 
-  // Info beat card
+  // ── Info beat ──────────────────────────────────────────────────────────────
   infoCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
     padding: SPACING.lg, gap: SPACING.md,
     borderWidth: 1, borderColor: COLORS.border,
     alignItems: 'center',
   },
-  infoIconWrap: {
-    width: 64, height: 64, borderRadius: 32,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  infoPrompt: {
-    color: COLORS.onSurface, fontSize: 17, fontWeight: '700',
-    lineHeight: 25, textAlign: 'center',
-  },
+  infoIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+  infoPrompt: { color: COLORS.onSurface, fontSize: 17, fontWeight: '700', lineHeight: 25, textAlign: 'center' },
   clinicalNoteBox: {
     borderLeftWidth: 3, borderRadius: RADIUS.sm,
     backgroundColor: COLORS.surfaceTertiary,
     padding: SPACING.md, gap: SPACING.xs, width: '100%',
   },
-  clinicalNoteHeader: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  clinicalNoteLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  clinicalNoteText: { color: COLORS.onSurfaceSecondary, fontSize: 15, lineHeight: 22 },
+  clinicalNoteHeader: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  clinicalNoteLabel:  { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  clinicalNoteText:   { color: COLORS.onSurfaceSecondary, fontSize: 16, lineHeight: 24 },
 
-  // Choice beat card
+  // ── Choice beat ────────────────────────────────────────────────────────────
   choiceCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
     padding: SPACING.lg, gap: SPACING.md,
     borderWidth: 1, borderColor: COLORS.border,
   },
   choicePromptBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
-    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3,
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 4,
   },
   choicePromptLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  choicePrompt: { color: COLORS.onSurface, fontSize: 17, fontWeight: '600', lineHeight: 25 },
-  choiceList: { gap: SPACING.sm },
+  choicePrompt:      { color: COLORS.onSurface, fontSize: 17, fontWeight: '600', lineHeight: 25 },
+  choiceList:        { gap: SPACING.sm },
   choiceOption: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
-    padding: SPACING.md, backgroundColor: COLORS.surface,
+    paddingVertical: 14, paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surface,
   },
   choiceCorrect: { borderColor: COLORS.success + '66', backgroundColor: COLORS.success + '0C' },
   choiceWrong:   { borderColor: COLORS.error   + '66', backgroundColor: COLORS.error   + '0C' },
   choiceLabel: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 30, height: 30, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: COLORS.surfaceTertiary, borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
   },
   choiceLabelTxt: { color: COLORS.onSurfaceSecondary, fontSize: 14, fontWeight: '800' },
-  choiceText: { color: COLORS.onSurface, fontSize: 15, lineHeight: 22, flex: 1 },
+  choiceText:     { color: COLORS.onSurface, fontSize: 16, lineHeight: 23, flex: 1 },
 
-  // Feedback box
+  // ── Feedback ───────────────────────────────────────────────────────────────
   feedbackBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
     borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.md,
   },
-  feedbackTitle: { fontSize: 14, fontWeight: '800' },
-  feedbackText:  { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 20 },
+  feedbackTitle: { fontSize: 15, fontWeight: '800' },
+  feedbackText:  { color: COLORS.onSurfaceSecondary, fontSize: 15, lineHeight: 21 },
 
-  // Continue button
+  // ── CTA buttons ────────────────────────────────────────────────────────────
   primaryBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.sm,
     backgroundColor: COLORS.brand, borderRadius: RADIUS.pill,
-    paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg,
+    paddingVertical: 15, paddingHorizontal: SPACING.lg,
   },
-  primaryBtnTxt: { color: "#000", fontSize: 14, fontWeight: "800" },
+  primaryBtnTxt: { color: "#000", fontSize: 16, fontWeight: "800" },
 
-  // Safety disclaimer
-  disclaimerRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 5,
-    paddingHorizontal: SPACING.sm,
-  },
+  secondaryBtn:    { paddingVertical: SPACING.md },
+  secondaryBtnTxt: { color: COLORS.onSurfaceTertiary, fontSize: 14, fontWeight: '600' },
+
+  // ── Disclaimer ─────────────────────────────────────────────────────────────
+  disclaimerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, paddingHorizontal: SPACING.sm },
   disclaimerTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 9, lineHeight: 13 },
 
-  // Fallback
-  fallback: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.md, padding: SPACING.xl },
-  fallbackTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  // ── Fallback ───────────────────────────────────────────────────────────────
+  fallback:    { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.md, padding: SPACING.xl },
+  fallbackTxt: { color: COLORS.onSurfaceSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
   // ── Completion screen ──────────────────────────────────────────────────────
   doneScroll: { paddingBottom: SPACING.xxxl },
-  doneWrap: { flex: 1 },
-  doneInner: { alignItems: 'center', gap: SPACING.lg, paddingTop: SPACING.xl },
+  doneWrap:   { flex: 1 },
+  doneInner:  { alignItems: 'center', gap: SPACING.lg, paddingTop: SPACING.xl },
 
-  doneIconWrap: {
-    width: 88, height: 88, borderRadius: 44,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  doneCheckBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    backgroundColor: COLORS.surface, borderRadius: 12,
-  },
+  doneIconWrap: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
+  doneCheckBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: COLORS.surface, borderRadius: 13 },
   doneKicker: { color: COLORS.success, fontSize: 11, fontWeight: '800', letterSpacing: 2 },
-  doneTitle: {
-    color: COLORS.onSurface, fontSize: 20, fontWeight: '700',
-    textAlign: 'center', lineHeight: 27,
-  },
+  doneTitle:  { color: COLORS.onSurface, fontSize: 22, fontWeight: '700', textAlign: 'center', lineHeight: 30 },
 
   unlockBanner: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
     borderWidth: 1, borderRadius: RADIUS.md,
-    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, width: '100%',
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.md, width: '100%',
   },
-  unlockBannerTxt: { flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  unlockBannerTxt: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: '600' },
 
-  // What You Practiced
-  tagsSection: { width: '100%', gap: SPACING.sm },
-  tagsSectionTitle: {
-    color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  tagsSection:     { width: '100%', gap: SPACING.sm },
+  tagsSectionTitle: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  tagsRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
 
-  // Payoff box
-  payoffBox: {
-    borderWidth: 1, borderRadius: RADIUS.md,
-    padding: SPACING.md, gap: SPACING.sm, width: '100%',
-  },
-  payoffHeader: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  payoffBox:    { borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.md, gap: SPACING.sm, width: '100%' },
+  payoffHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   payoffHeaderTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  payoffTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
-
-  secondaryBtn: { paddingVertical: SPACING.sm },
-  secondaryBtnTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: '600' },
+  payoffTxt:    { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 21 },
 });

@@ -55,12 +55,12 @@ export default function DepartmentDetailScreen() {
               onPress={() => router.push(`/university/lesson/${l.id}` as any)}
               testID={`department-lesson-${l.id}`}
             >
-              <Ionicons name={done ? "checkmark-circle" : "book-outline"} size={20} color={done ? COLORS.brand : COLORS.onSurfaceTertiary} />
-              <View style={{ flex: 1 }}>
+              <Ionicons name={done ? "checkmark-circle" : "book-outline"} size={22} color={done ? COLORS.brand : COLORS.onSurfaceTertiary} />
+              <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.cardTitle}>{l.title}</Text>
                 {badge && <Text style={styles.cardMeta}>Badge: {badge.name}</Text>}
               </View>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+              <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
             </Pressable>
           );
         })}
@@ -77,12 +77,12 @@ export default function DepartmentDetailScreen() {
                   onPress={() => router.push(`/university/simulation/${s.id}` as any)}
                   testID={`department-sim-${s.id}`}
                 >
-                  <Ionicons name={done ? "checkmark-circle" : "flask-outline"} size={20} color={done ? COLORS.brand : COLORS.onSurfaceTertiary} />
-                  <View style={{ flex: 1 }}>
+                  <Ionicons name={done ? "checkmark-circle" : "flask-outline"} size={22} color={done ? COLORS.brand : COLORS.onSurfaceTertiary} />
+                  <View style={{ flex: 1, gap: 2 }}>
                     <Text style={styles.cardTitle}>{s.title}</Text>
                     <Text style={styles.cardMeta}>Simulation case</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
                 </Pressable>
               );
             })}
@@ -96,32 +96,37 @@ export default function DepartmentDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   hero: {
-    padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4,
+    padding: SPACING.lg, paddingTop: SPACING.xl, gap: 6,
     backgroundColor: COLORS.brandTertiary + "28",
     borderBottomWidth: 1, borderBottomColor: COLORS.brandTertiary + "40",
   },
   backBtn: {
-    width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
+    width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2 },
-  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  title:  { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
+  sub:    { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 2, lineHeight: 20 },
+
+  scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
+
   assocBox: {
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
-    padding: SPACING.md, backgroundColor: COLORS.surfaceSecondary, gap: 6,
+    padding: SPACING.md, backgroundColor: COLORS.surfaceSecondary, gap: 8,
   },
-  assocTitle: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
-  assocRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  assocChip: { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  assocChipTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600" },
-  section: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700", marginTop: SPACING.sm },
+  assocTitle:   { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
+  assocRow:     { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  assocChip:    { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  assocChipTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "600" },
+
+  section: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700", marginTop: SPACING.xs },
+
   card: {
     flexDirection: "row", gap: SPACING.md, alignItems: "center",
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
+    paddingVertical: 14, paddingHorizontal: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  cardTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
-  cardMeta: { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 2 },
+  cardTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
+  cardMeta:  { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
 });
