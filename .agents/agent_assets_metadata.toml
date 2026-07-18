@@ -1158,3 +1158,195 @@ id = "jbalA-pYYsHamWB1mEbcj"
 uri = "file://frontend/assets/map-nodes/node_memory.png"
 type = "image"
 title = "memory fragment node icon"
+
+[[generated]]
+id = "RthaVB749KuyzH5lpm4Tk"
+uri = "file://frontend/assets/map-bg/journey_map_ch1_sanctuary.png"
+type = "image"
+title = "ch1 lotus sanctuary map bg"
+
+[[generated]]
+id = "zupFy57J5cUDc95gLLO2w"
+uri = "file://frontend/assets/map-bg/journey_map_ch2_university_courtyard.png"
+type = "image"
+title = "ch2 university courtyard map bg"
+
+[[generated]]
+id = "J3SOsXo0tng56XiLEOJ4r"
+uri = "file://frontend/assets/map-bg/journey_map_ch3_breathing_garden.png"
+type = "image"
+title = "ch3 breathing garden map bg"
+
+[[generated]]
+id = "PYwVPqv9baeSfcbfVjpM7"
+uri = "file://frontend/assets/map-bg/journey_map_ch4_code_rush_tower.png"
+type = "image"
+title = "ch4 code rush tower map bg"
+
+[[generated]]
+id = "-O5ilq1KL7T5zwh-mz6_X"
+uri = "file://frontend/assets/map-bg/journey_map_ch5_community_bloom.png"
+type = "image"
+title = "ch5 community bloom map bg"
+
+[[generated]]
+id = "LvK4uxMsc6fQDubUdXwb1"
+uri = "file://frontend/assets/map-nodes/node_memory_lotus_shard.png"
+type = "image"
+title = "memory lotus shard node"
+
+[[generated]]
+id = "UuvCFbpisb1xJntzBmNP1"
+uri = "file://frontend/assets/map-nodes/node_rapid_triage_assessment_desk.png"
+type = "image"
+title = "triage assessment desk node"
+
+[[generated]]
+id = "B2T1VfxpOYxCqg5oHpkFj"
+uri = "file://frontend/assets/map-nodes/node_stabilize_ward_shield.png"
+type = "image"
+title = "stabilize ward shield node"
+
+[[generated]]
+id = "V2wEYXMjblEoiTRyvVdAH"
+uri = "file://frontend/assets/map-nodes/node_ward_shift_gate.png"
+type = "image"
+title = "ward shift gate node"
+
+[[generated]]
+id = "qx-ueqqdB05dOPU0JPUaq"
+uri = "file://frontend/assets/map-nodes/node_reflection_lotus_journal.png"
+type = "image"
+title = "reflection lotus journal node"
+
+[[generated]]
+id = "h_LIMvLGu331uWMBXL9_0"
+uri = "file://frontend/assets/map-nodes/node_trial_corrupted_gate.png"
+type = "image"
+title = "trial corrupted gate node"
+
+[[generated]]
+id = "gtNb_PUIatBkDjGGr_a1j"
+uri = "file://frontend/assets/map-nodes/node_reward_medical_chest.png"
+type = "image"
+title = "reward medical chest node"
+
+[[generated]]
+id = "a9pEwv7omzyNRkEZ6Xi0f"
+uri = "file://frontend/assets/lesson-banners/lesson_banner_hydration.png"
+type = "image"
+title = "hydration lesson banner"
+
+[[generated]]
+id = "Kt5744uiwJXXDwSe6yiD8"
+uri = "file://frontend/assets/lesson-banners/lesson_banner_fever.png"
+type = "image"
+title = "fever lesson banner"
+
+[[generated]]
+id = "_Z-k6fnTMfOlKodlesIxD"
+uri = "file://frontend/assets/lesson-banners/lesson_banner_breathing.png"
+type = "image"
+title = "breathing lesson banner"
+
+[[generated]]
+id = "pzZ3pVYEasJXd0LJyDYNs"
+uri = "file://frontend/assets/lesson-banners/lesson_banner_assessment.png"
+type = "image"
+title = "assessment lesson banner"
+
+[[generated]]
+id = "KkRIKbpWrvyWgtZpfpqAL"
+uri = "file://frontend/assets/lesson-banners/lesson_banner_stabilization.png"
+type = "image"
+title = "stabilization lesson banner"
+
+[[generated]]
+id = "A4T4FtIrkdCf7Z3wzoXZV"
+uri = "file://frontend/assets/lesson-banners/lesson_banner_nutrition.png"
+type = "image"
+title = "nutrition lesson banner"
+
+[[generated]]
+id = "DLiZlBriugBxqVkVcHp01"
+uri = "file://frontend/assets/school-banners/school_banner_assessment.png"
+type = "image"
+title = "assessment school banner"
+
+[[generated]]
+id = "Q32liN8O6aRmHXk4OKVj6"
+uri = "file://frontend/assets/school-banners/school_banner_airway.png"
+type = "image"
+title = "airway school banner"
+
+[[generated]]
+id = "zEysQ65yEvMim7cIxYjpA"
+uri = "file://frontend/assets/school-banners/school_banner_nutrition.png"
+type = "image"
+title = "nutrition school banner"
+
+[[generated]]
+id = "hKWHIOJ0HaR6eTJZxW8RJ"
+uri = "file://frontend/assets/school-banners/school_banner_stabilization.png"
+type = "image"
+title = "stabilization school banner"
+
+[[generated]]
+id = "WlyjVAVqY2Kf-oBxzoivI"
+uri = "file://frontend/assets/school-banners/school_banner_pharmacology.png"
+type = "image"
+title = "pharmacology school banner"
+
+[[generated]]
+id = "xCEcew2FY-uOvTXpAUf2R"
+uri = "file://frontend/assets/school-banners/school_banner_emergency.png"
+type = "image"
+title = "emergency school banner"
+
+[[generated]]
+id = "MoGX931-PvGuZu8Dffzrl"
+uri = "file://frontend/assets/school-banners/school_banner_mental_wellness.png"
+type = "image"
+title = "mental wellness school banner"
+
+[[generated]]
+id = "B6Bqnssf_6QJ2nOFtN16N"
+uri = "file://frontend/assets/school-banners/school_banner_chronic_disease.png"
+type = "image"
+title = "chronic disease school banner"
+
+[[generated]]
+id = "Ohbh66HHscOa4XkOYrdn6"
+uri = "file://frontend/assets/map-sprites/map_sprite_guardian.png"
+type = "image"
+title = "guardian map sprite"
+
+[[generated]]
+id = "wxVds5eiRCY1Z38vglJJk"
+uri = "file://frontend/assets/map-sprites/map_sprite_seer.png"
+type = "image"
+title = "seer map sprite"
+
+[[generated]]
+id = "PuATX4F4s0qRLRZlVxkFF"
+uri = "file://frontend/assets/map-sprites/map_sprite_caretaker.png"
+type = "image"
+title = "caretaker map sprite"
+
+[[generated]]
+id = "sTIww9iuAiSIrBZ8ieJUF"
+uri = "file://frontend/assets/map-sprites/map_sprite_scholar.png"
+type = "image"
+title = "scholar map sprite"
+
+[[generated]]
+id = "zEDJPwV63QzjjqcOejOG9"
+uri = "file://frontend/assets/map-sprites/map_sprite_alchemist.png"
+type = "image"
+title = "alchemist map sprite"
+
+[[generated]]
+id = "wZEKwopXNwhi9OaKQ1kiQ"
+uri = "file://frontend/assets/map-sprites/map_sprite_medic.png"
+type = "image"
+title = "medic map sprite"
