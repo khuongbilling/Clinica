@@ -36,8 +36,6 @@ export interface JourneyNodeDef {
   heroXp: number;
   /** Ward Coins at 3★ for battle nodes; flat otherwise. */
   coins: number;
-  /** University Credits (reflection/WD nodes only — NOT story/challenge nodes). */
-  credits?: number;
   /** Summoning Shards (battle/mini-boss/WD; never from story nodes). */
   shards?: number;
   /** True → flat reward, non-farmable, no replay. */
@@ -83,109 +81,106 @@ export function getNodeIdForScene(sceneId: string): string | null {
 const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
 
   // ── Chapter 1: The Fading Apprentice (Level 1, 6 nodes) ──────────────────
-  // c1n1: memory_fragment (flat)  c1n2: story beat (flat)
-  // c1n3: story beat (flat)       c1n4: battle (stars)
-  // c1n5: reflection (flat)       c1n6: mini_boss (stars)
-  { nodeId: 'c1n1', chapter: 1, playerXp:  10, heroXp:  0,  coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c1n2', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20,                   isStory: true,  starsScale: false },
-  { nodeId: 'c1n3', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20,                   isStory: true,  starsScale: false },
-  { nodeId: 'c1n4', chapter: 1, playerXp:  45, heroXp:  25, coins:  65,                   isStory: false, starsScale: true  },
-  { nodeId: 'c1n5', chapter: 1, playerXp:  10, heroXp:  0,  coins:   0, credits: 15,      isStory: true,  starsScale: false },
-  { nodeId: 'c1n6', chapter: 1, playerXp:  55, heroXp:  35, coins:  75, shards: 25,       isStory: false, starsScale: true  },
+  // c1n1: memory_fragment  c1n2: story  c1n3: story
+  // c1n4: battle (stars)   c1n5: reflection  c1n6: mini_boss (stars)
+  { nodeId: 'c1n1', chapter: 1, playerXp:  10, heroXp:  0,  coins:  30,                  isStory: true,  starsScale: false },
+  { nodeId: 'c1n2', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20,                  isStory: true,  starsScale: false },
+  { nodeId: 'c1n3', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20,                  isStory: true,  starsScale: false },
+  { nodeId: 'c1n4', chapter: 1, playerXp:  45, heroXp:  25, coins:  65,                  isStory: false, starsScale: true  },
+  { nodeId: 'c1n5', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20,                  isStory: true,  starsScale: false },
+  { nodeId: 'c1n6', chapter: 1, playerXp:  55, heroXp:  35, coins:  75, shards: 25,      isStory: false, starsScale: true  },
 
   // ── Chapter 2: The First Ward Rotation (Level 2, 8 nodes) ────────────────
-  // c2p1: memory_fragment (flat)  c2p2: story beat (flat)
-  // c2p3: story beat (flat)       c2p4: story beat (flat)
-  // c2p5: battle (stars)          c2p6: memory_fragment (flat)
-  // c2p7: mini_boss (stars)       c2p8: reflection (flat)
-  { nodeId: 'c2p1', chapter: 2, playerXp:  12, heroXp:  0, coins:  0, credits: 10,       isStory: true,  starsScale: false },
-  { nodeId: 'c2p2', chapter: 2, playerXp:  10, heroXp:  0, coins: 15,                    isStory: true,  starsScale: false },
-  { nodeId: 'c2p3', chapter: 2, playerXp:  10, heroXp:  0, coins: 15,                    isStory: true,  starsScale: false },
-  { nodeId: 'c2p4', chapter: 2, playerXp:  10, heroXp:  0, coins: 15,                    isStory: true,  starsScale: false },
-  { nodeId: 'c2p5', chapter: 2, playerXp:  40, heroXp: 30, coins: 75,                    isStory: false, starsScale: true  },
-  { nodeId: 'c2p6', chapter: 2, playerXp:  12, heroXp:  0, coins:  0, shards: 25,        isStory: true,  starsScale: false },
+  // c2p1: memory_fragment  c2p2–p4: story  c2p5: battle (stars)
+  // c2p6: memory_fragment  c2p7: mini_boss (stars)  c2p8: reflection
+  { nodeId: 'c2p1', chapter: 2, playerXp:  12, heroXp:  0, coins:  20,                   isStory: true,  starsScale: false },
+  { nodeId: 'c2p2', chapter: 2, playerXp:  10, heroXp:  0, coins:  15,                   isStory: true,  starsScale: false },
+  { nodeId: 'c2p3', chapter: 2, playerXp:  10, heroXp:  0, coins:  15,                   isStory: true,  starsScale: false },
+  { nodeId: 'c2p4', chapter: 2, playerXp:  10, heroXp:  0, coins:  15,                   isStory: true,  starsScale: false },
+  { nodeId: 'c2p5', chapter: 2, playerXp:  40, heroXp: 30, coins:  75,                   isStory: false, starsScale: true  },
+  { nodeId: 'c2p6', chapter: 2, playerXp:  12, heroXp:  0, coins:  20, shards: 25,       isStory: true,  starsScale: false },
   { nodeId: 'c2p7', chapter: 2, playerXp:  65, heroXp: 50, coins: 125, shards: 40,       isStory: false, starsScale: true  },
-  { nodeId: 'c2p8', chapter: 2, playerXp:  12, heroXp:  0, coins:  0, credits: 20,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p8', chapter: 2, playerXp:  12, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
 
   // ── Chapter 3: Breath Before Battle (Level 4, 9 nodes) ───────────────────
   // memory → story → story → battle → memory → story → battle → mini_boss → reflection
-  { nodeId: 'c3p1', chapter: 3, playerXp:  15, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c3p2', chapter: 3, playerXp:  20, heroXp:   0, coins:  20,                   isStory: true,  starsScale: false },
-  { nodeId: 'c3p3', chapter: 3, playerXp:  20, heroXp:   0, coins:  20,                   isStory: true,  starsScale: false },
-  { nodeId: 'c3p4', chapter: 3, playerXp:  65, heroXp:  50, coins: 125,                   isStory: false, starsScale: true  },
-  { nodeId: 'c3p5', chapter: 3, playerXp:  15, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c3p6', chapter: 3, playerXp:  20, heroXp:   0, coins:  20,                   isStory: true,  starsScale: false },
-  { nodeId: 'c3p7', chapter: 3, playerXp:  70, heroXp:  55, coins: 145,                   isStory: false, starsScale: true  },
-  { nodeId: 'c3p8', chapter: 3, playerXp:  95, heroXp:  75, coins: 180, shards: 55,       isStory: false, starsScale: true  },
-  { nodeId: 'c3p9', chapter: 3, playerXp:  18, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  { nodeId: 'c3p1', chapter: 3, playerXp:  15, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c3p2', chapter: 3, playerXp:  20, heroXp:  0, coins:  20,                   isStory: true,  starsScale: false },
+  { nodeId: 'c3p3', chapter: 3, playerXp:  20, heroXp:  0, coins:  20,                   isStory: true,  starsScale: false },
+  { nodeId: 'c3p4', chapter: 3, playerXp:  65, heroXp: 50, coins: 125,                   isStory: false, starsScale: true  },
+  { nodeId: 'c3p5', chapter: 3, playerXp:  15, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c3p6', chapter: 3, playerXp:  20, heroXp:  0, coins:  20,                   isStory: true,  starsScale: false },
+  { nodeId: 'c3p7', chapter: 3, playerXp:  70, heroXp: 55, coins: 145,                   isStory: false, starsScale: true  },
+  { nodeId: 'c3p8', chapter: 3, playerXp:  95, heroXp: 75, coins: 180, shards: 55,       isStory: false, starsScale: true  },
+  { nodeId: 'c3p9', chapter: 3, playerXp:  18, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
 
   // ── Chapter 4: Code Rush (Level 6, 9 nodes) ───────────────────────────────
   // memory → story → battle → ward_def → memory → story → ward_def → mini_boss → reflection
-  { nodeId: 'c4p1', chapter: 4, playerXp:  18, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c4p2', chapter: 4, playerXp:  22, heroXp:   0, coins:  25,                   isStory: true,  starsScale: false },
-  { nodeId: 'c4p3', chapter: 4, playerXp:  75, heroXp:  60, coins: 160,                   isStory: false, starsScale: true  },
-  { nodeId: 'c4p4', chapter: 4, playerXp:  80, heroXp:  65, coins: 175, shards: 25,       isStory: false, starsScale: false },
-  { nodeId: 'c4p5', chapter: 4, playerXp:  18, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c4p6', chapter: 4, playerXp:  22, heroXp:   0, coins:  25,                   isStory: true,  starsScale: false },
-  { nodeId: 'c4p7', chapter: 4, playerXp:  95, heroXp:  75, coins: 200, shards: 35,       isStory: false, starsScale: false },
-  { nodeId: 'c4p8', chapter: 4, playerXp: 115, heroXp:  90, coins: 255, shards: 80,       isStory: false, starsScale: false },
-  { nodeId: 'c4p9', chapter: 4, playerXp:  20, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  { nodeId: 'c4p1', chapter: 4, playerXp:  18, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
+  { nodeId: 'c4p2', chapter: 4, playerXp:  22, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
+  { nodeId: 'c4p3', chapter: 4, playerXp:  75, heroXp: 60, coins: 160,                   isStory: false, starsScale: true  },
+  { nodeId: 'c4p4', chapter: 4, playerXp:  80, heroXp: 65, coins: 175, shards: 25,       isStory: false, starsScale: false },
+  { nodeId: 'c4p5', chapter: 4, playerXp:  18, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
+  { nodeId: 'c4p6', chapter: 4, playerXp:  22, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
+  { nodeId: 'c4p7', chapter: 4, playerXp:  95, heroXp: 75, coins: 200, shards: 35,       isStory: false, starsScale: false },
+  { nodeId: 'c4p8', chapter: 4, playerXp: 115, heroXp: 90, coins: 255, shards: 80,       isStory: false, starsScale: false },
+  { nodeId: 'c4p9', chapter: 4, playerXp:  20, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
 
   // ── Chapter 5: Building the Sanctuary (Level 7, 8 nodes) ─────────────────
-  { nodeId: 'c5p1', chapter: 5, playerXp:  20, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
-  { nodeId: 'c5p2', chapter: 5, playerXp:  35, heroXp:  20, coins: 150,                   isStory: true,  starsScale: false },
-  { nodeId: 'c5p3', chapter: 5, playerXp:  90, heroXp:  80, coins: 225,                   isStory: false, starsScale: true  },
-  { nodeId: 'c5p4', chapter: 5, playerXp:  20, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
-  { nodeId: 'c5p5', chapter: 5, playerXp: 100, heroXp:  85, coins: 250, shards: 25,       isStory: false, starsScale: true  },
-  { nodeId: 'c5p6', chapter: 5, playerXp: 110, heroXp:  90, coins: 275, shards: 40,       isStory: false, starsScale: true  },
-  { nodeId: 'c5p7', chapter: 5, playerXp: 120, heroXp:  95, coins: 300, shards: 50,       isStory: false, starsScale: true  },
-  { nodeId: 'c5p8', chapter: 5, playerXp: 140, heroXp: 120, coins: 350, shards: 100,      isStory: false, starsScale: true  },
+  { nodeId: 'c5p1', chapter: 5, playerXp:  20, heroXp:  0, coins:  40,                   isStory: true,  starsScale: false },
+  { nodeId: 'c5p2', chapter: 5, playerXp:  35, heroXp: 20, coins: 150,                   isStory: true,  starsScale: false },
+  { nodeId: 'c5p3', chapter: 5, playerXp:  90, heroXp: 80, coins: 225,                   isStory: false, starsScale: true  },
+  { nodeId: 'c5p4', chapter: 5, playerXp:  20, heroXp:  0, coins:  40,                   isStory: true,  starsScale: false },
+  { nodeId: 'c5p5', chapter: 5, playerXp: 100, heroXp: 85, coins: 250, shards: 25,       isStory: false, starsScale: true  },
+  { nodeId: 'c5p6', chapter: 5, playerXp: 110, heroXp: 90, coins: 275, shards: 40,       isStory: false, starsScale: true  },
+  { nodeId: 'c5p7', chapter: 5, playerXp: 120, heroXp: 95, coins: 300, shards: 50,       isStory: false, starsScale: true  },
+  { nodeId: 'c5p8', chapter: 5, playerXp: 140, heroXp: 120, coins: 350, shards: 100,     isStory: false, starsScale: true  },
 
   // ── Chapter 6: First Boss Ward (Level 10, 6 nodes) ────────────────────────
-  { nodeId: 'c6p1', chapter: 6, playerXp:  30, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c6p2', chapter: 6, playerXp:  20, heroXp:   0, coins:   0, credits: 15,      isStory: true,  starsScale: false },
-  { nodeId: 'c6p3', chapter: 6, playerXp:  40, heroXp:   0, coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c6p4', chapter: 6, playerXp: 100, heroXp:  60, coins: 200,                   isStory: false, starsScale: true  },
-  { nodeId: 'c6p5', chapter: 6, playerXp: 180, heroXp: 110, coins: 350, shards:  80,      isStory: false, starsScale: true  },
-  { nodeId: 'c6p6', chapter: 6, playerXp:  50, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  { nodeId: 'c6p1', chapter: 6, playerXp:  30, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c6p2', chapter: 6, playerXp:  20, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
+  { nodeId: 'c6p3', chapter: 6, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c6p4', chapter: 6, playerXp: 100, heroXp: 60, coins: 200,                   isStory: false, starsScale: true  },
+  { nodeId: 'c6p5', chapter: 6, playerXp: 180, heroXp: 110, coins: 350, shards: 80,      isStory: false, starsScale: true  },
+  { nodeId: 'c6p6', chapter: 6, playerXp:  50, heroXp:  0, coins:  40,                   isStory: true,  starsScale: false },
 
   // ── Chapter 7: The Community Board (Level 9, 7 nodes) ─────────────────────
-  { nodeId: 'c7p1', chapter: 7, playerXp:  35, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c7p2', chapter: 7, playerXp:  20, heroXp:   0, coins:   0, credits: 15,      isStory: true,  starsScale: false },
-  { nodeId: 'c7p3', chapter: 7, playerXp:  40, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c7p4', chapter: 7, playerXp:  40, heroXp:   0, coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c7p5', chapter: 7, playerXp: 110, heroXp:  70, coins: 220,                   isStory: false, starsScale: true  },
-  { nodeId: 'c7p6', chapter: 7, playerXp:  30, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c7p7', chapter: 7, playerXp:  55, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
+  { nodeId: 'c7p1', chapter: 7, playerXp:  35, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c7p2', chapter: 7, playerXp:  20, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
+  { nodeId: 'c7p3', chapter: 7, playerXp:  40, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
+  { nodeId: 'c7p4', chapter: 7, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c7p5', chapter: 7, playerXp: 110, heroXp: 70, coins: 220,                   isStory: false, starsScale: true  },
+  { nodeId: 'c7p6', chapter: 7, playerXp:  30, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c7p7', chapter: 7, playerXp:  55, heroXp:  0, coins:  50,                   isStory: true,  starsScale: false },
 
   // ── Chapter 8: Advanced Simulation Trials (Level 12, 7 nodes) ─────────────
-  { nodeId: 'c8p1', chapter: 8, playerXp:  40, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c8p2', chapter: 8, playerXp:  40, heroXp:   0, coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c8p3', chapter: 8, playerXp:  40, heroXp:   0, coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c8p4', chapter: 8, playerXp: 130, heroXp:  80, coins: 260,                   isStory: false, starsScale: true  },
-  { nodeId: 'c8p5', chapter: 8, playerXp:  25, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c8p6', chapter: 8, playerXp:  40, heroXp:   0, coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c8p7', chapter: 8, playerXp:  65, heroXp:   0, coins:   0, credits: 40,      isStory: true,  starsScale: false },
+  { nodeId: 'c8p1', chapter: 8, playerXp:  40, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
+  { nodeId: 'c8p2', chapter: 8, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c8p3', chapter: 8, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c8p4', chapter: 8, playerXp: 130, heroXp: 80, coins: 260,                   isStory: false, starsScale: true  },
+  { nodeId: 'c8p5', chapter: 8, playerXp:  25, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c8p6', chapter: 8, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c8p7', chapter: 8, playerXp:  65, heroXp:  0, coins:  50,                   isStory: true,  starsScale: false },
 
   // ── Chapter 9: First Real Ward (Level 15, 8 nodes) ────────────────────────
-  { nodeId: 'c9p1', chapter: 9, playerXp:  45, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c9p2', chapter: 9, playerXp:  30, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c9p3', chapter: 9, playerXp: 150, heroXp:  90, coins: 300,                   isStory: false, starsScale: true  },
-  { nodeId: 'c9p4', chapter: 9, playerXp: 160, heroXp: 100, coins: 320,                   isStory: false, starsScale: true  },
-  { nodeId: 'c9p5', chapter: 9, playerXp:  25, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
-  { nodeId: 'c9p6', chapter: 9, playerXp:  40, heroXp:   0, coins:  30,                   isStory: true,  starsScale: false },
-  { nodeId: 'c9p7', chapter: 9, playerXp: 170, heroXp: 110, coins: 350, shards:  60,      isStory: false, starsScale: true  },
-  { nodeId: 'c9p8', chapter: 9, playerXp:  75, heroXp:   0, coins:   0, credits: 50,      isStory: true,  starsScale: false },
+  { nodeId: 'c9p1', chapter: 9, playerXp:  45, heroXp:  0, coins:  40,                   isStory: true,  starsScale: false },
+  { nodeId: 'c9p2', chapter: 9, playerXp:  30, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c9p3', chapter: 9, playerXp: 150, heroXp: 90, coins: 300,                   isStory: false, starsScale: true  },
+  { nodeId: 'c9p4', chapter: 9, playerXp: 160, heroXp: 100, coins: 320,                  isStory: false, starsScale: true  },
+  { nodeId: 'c9p5', chapter: 9, playerXp:  25, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c9p6', chapter: 9, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c9p7', chapter: 9, playerXp: 170, heroXp: 110, coins: 350, shards: 60,      isStory: false, starsScale: true  },
+  { nodeId: 'c9p8', chapter: 9, playerXp:  75, heroXp:  0, coins:  60,                   isStory: true,  starsScale: false },
 
   // ── Chapter 10: Return to the Silent Infarction (Level 18, 8 nodes) ───────
-  { nodeId: 'c10p1', chapter: 10, playerXp:  50, heroXp:   0, coins:   0, credits: 35,     isStory: true,  starsScale: false },
-  { nodeId: 'c10p2', chapter: 10, playerXp:  40, heroXp:   0, coins:  30,                  isStory: true,  starsScale: false },
-  { nodeId: 'c10p3', chapter: 10, playerXp: 180, heroXp: 120, coins: 380,                  isStory: false, starsScale: true  },
-  { nodeId: 'c10p4', chapter: 10, playerXp:  40, heroXp:   0, coins:  30,                  isStory: true,  starsScale: false },
-  { nodeId: 'c10p5', chapter: 10, playerXp:  40, heroXp:   0, coins:   0, credits: 30,     isStory: true,  starsScale: false },
-  { nodeId: 'c10p6', chapter: 10, playerXp: 220, heroXp: 140, coins: 450, shards: 120,     isStory: false, starsScale: true  },
-  { nodeId: 'c10p7', chapter: 10, playerXp:  50, heroXp:   0, coins:   0, credits: 30,     isStory: true,  starsScale: false },
-  { nodeId: 'c10p8', chapter: 10, playerXp: 280, heroXp: 160, coins: 600, shards: 200,     isStory: false, starsScale: true  },
+  { nodeId: 'c10p1', chapter: 10, playerXp:  50, heroXp:  0, coins:  45,                 isStory: true,  starsScale: false },
+  { nodeId: 'c10p2', chapter: 10, playerXp:  40, heroXp:  0, coins:  30,                 isStory: true,  starsScale: false },
+  { nodeId: 'c10p3', chapter: 10, playerXp: 180, heroXp: 120, coins: 380,                isStory: false, starsScale: true  },
+  { nodeId: 'c10p4', chapter: 10, playerXp:  40, heroXp:  0, coins:  30,                 isStory: true,  starsScale: false },
+  { nodeId: 'c10p5', chapter: 10, playerXp:  40, heroXp:  0, coins:  40,                 isStory: true,  starsScale: false },
+  { nodeId: 'c10p6', chapter: 10, playerXp: 220, heroXp: 140, coins: 450, shards: 120,   isStory: false, starsScale: true  },
+  { nodeId: 'c10p7', chapter: 10, playerXp:  50, heroXp:  0, coins:  40,                 isStory: true,  starsScale: false },
+  { nodeId: 'c10p8', chapter: 10, playerXp: 280, heroXp: 160, coins: 600, shards: 200,   isStory: false, starsScale: true  },
 ];
 
 const NODE_DEF_MAP: Record<string, JourneyNodeDef> = Object.fromEntries(
@@ -213,7 +208,7 @@ export function computeJourneyReward(
     playerXp: Math.max(1, Math.round(def.playerXp * mul)),
     heroXp:   Math.max(0, Math.round(def.heroXp   * mul)),
     coins:    Math.max(0, Math.round(def.coins     * mul)),
-    credits:  def.credits ?? 0,
+    credits:  0,
     shards:   def.shards  ?? 0,
   };
 }
