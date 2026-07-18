@@ -34,6 +34,7 @@ import {
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { MapNodeShape, type MapNodeStatus } from "./MapNodeShape";
+import { HeroMapToken } from "./HeroMapToken";
 import { MissionPopupModal } from "./MissionPopupModal";
 import { PaintedMapPath } from "./PaintedMapPath";
 import { useVisualMapAnims } from "./VisualMapHooks";
@@ -168,8 +169,6 @@ function buildNodeData(
   });
 }
 
-const TOKEN_W = 48;
-const TOKEN_H = 64;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -515,34 +514,19 @@ export function Chapter3VisualMap({
               );
             })}
 
-          {/* ── Lead hero traveler token (full sprite, no circular crop) ── */}
+          {/* ── Lead hero map token (V6: class-matched chibi sprite on node) ── */}
           {leadHeroSprite && nodes.map((nd) => {
             if (nd.status !== "next") return null;
             const x = nd.layout.xf * W;
             const { r, y } = nd.layout;
             return (
-              <View
-                key={`hero-sprite-${nd.part.id}`}
-                pointerEvents="none"
-                style={{
-                  position:      "absolute",
-                  left:          x - TOKEN_W / 2,
-                  top:           y - r - TOKEN_H - 4,
-                  width:         TOKEN_W,
-                  height:        TOKEN_H,
-                  zIndex:        30,
-                  shadowColor:   UI.gold,
-                  shadowOpacity: 0.7,
-                  shadowRadius:  8,
-                  elevation:     8,
-                }}
-              >
-                <Image
-                  source={leadHeroSprite as any}
-                  style={{ width: TOKEN_W, height: TOKEN_H }}
-                  contentFit="contain"
-                />
-              </View>
+              <HeroMapToken
+                key={`hero-token-${nd.part.id}`}
+                sprite={leadHeroSprite as any}
+                x={x}
+                y={y}
+                r={r}
+              />
             );
           })}
           </>

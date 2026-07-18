@@ -12,7 +12,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ChapterJourneyMap } from "@/src/components/ChapterJourneyMap";
-import { getHeroSprite } from "@/src/components/HeroSprites";
+import { getMapSprite } from "@/src/game/illustratedAssets";
 import {
   CHAPTERS,
   getCurrentChapter,
@@ -39,7 +39,7 @@ export default function JourneyScreen() {
 
   const { level: playerLevel } = playerLevelFromXp(player.xp ?? 0);
   const leadHeroId = player.active_team?.[0] ?? "novice_guardian";
-  const leadHeroSprite = getHeroSprite(leadHeroId);
+  const leadHeroSprite = getMapSprite(leadHeroId);
   const claimedNodes = player.claimed_journey_nodes ?? [];
   const currentChapter = getCurrentChapter(playerLevel, claimedNodes);
   const nextStep = getNextRecommendedPart(playerLevel, claimedNodes);
