@@ -261,16 +261,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   firstWardDefense: [
     {
       id: "wd_intro",
-      title: "Ward Defense: Airway Code Rush",
-      body: "Disease spirits advance along the road toward the Vital Lantern — your patient's lifeline. Deploy healer units on tiles to intercept and defeat them before they reach it.",
+      title: "Ward Defense",
+      body: "SYSTEM: Ward Defense interface loaded. Disease entities advance along the road toward the Vital Lantern. If they reach it, the patient is lost. Deploy healer units on the board to intercept them.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
     },
     {
       id: "wd_ap",
-      title: "Action Points & Deployment",
-      body: "Each healer unit costs Action Points (AP) to deploy. AP regenerates slowly over time and spikes when you answer a Clinical Question correctly before a wave. Choose your units wisely.",
+      title: "Action Points",
+      body: "SYSTEM: Resource system active. Each healer unit costs Action Points (AP) to deploy. AP regenerates over time and increases when you answer a Clinical Question correctly before a wave. Deploy strategically.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
@@ -278,7 +278,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "wd_deploy",
       title: "Deploy a Healer",
-      body: "Select a unit from the dock at the bottom, then tap an empty tile on the board to deploy it. Ward Scout is affordable — try deploying one now.",
+      body: "Select a unit from the dock at the bottom, then tap an empty tile on the board to place it. Ward Scout is a low-cost starting option. Deploy one now.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "deploy",
@@ -286,8 +286,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "wd_merge",
-      title: "Care Synthesis — Merge & Upgrade",
-      body: "Deploy two identical same-level units and tap SYNTHESIZE to merge them into a stronger one. Stronger units deal more damage and have greater range. Try it whenever the button appears.",
+      title: "Care Synthesis",
+      body: "Deploy two identical same-level units and tap SYNTHESIZE to merge them into a stronger one. Stronger units deal more damage and cover greater range. Use this whenever the option appears.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "merge",
@@ -296,7 +296,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "wd_done",
       title: "Protect the Vital Lantern",
-      body: "Matched units deal bonus damage — Assess units reveal weaknesses first, then Treat units hit hard. Watch the Corruption and Stability bars above. Good luck!",
+      body: "Matched units deal bonus damage. Assess units reveal enemy weaknesses first; Treat units follow with increased impact. Monitor the Corruption and Stability bars above. Begin when ready.",
       placement: "center",
       requireAction: false,
       nextText: "BEGIN THE DEFENSE",
@@ -328,8 +328,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   firstLotusEntry: [
     {
       id: "lotus_intro",
-      title: "The Lotus Plate Journal",
-      body: "This is your off-shift wellness space. Log meals, hydration, and habits to grow your Nutrition Garden and earn Nourishment Petals. No stamina cost — ever.",
+      title: "Lotus Plate Journal",
+      body: "SYSTEM: Wellness interface loaded. This is your off-shift space. Log meals, hydration, and habits to grow your Nutrition Garden and earn Nourishment Petals. No Stamina cost.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
@@ -337,7 +337,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "lotus_garden",
       title: "Nutrition Garden",
-      body: "The four garden meters — Hydration, Fiber, Protein, and Heart — grow as you log entries. Keep them healthy and the garden flourishes. Purely for your well-being, never for combat power.",
+      body: "SYSTEM: Garden metrics active. Four meters track your logged inputs: Hydration, Fiber, Protein, and Heart. Consistent logging keeps them healthy. This space supports your well-being, not combat performance.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
@@ -345,7 +345,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "lotus_log",
       title: "Log Your First Entry",
-      body: "Tap LOG A MEAL OR CHECK-IN to build your first plate or log a habit check-in. Every entry earns Nourishment Petals for cosmetic rewards.",
+      body: "Tap LOG A MEAL OR CHECK-IN to build your first plate or record a habit check-in. Every entry earns Nourishment Petals for cosmetic rewards.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "logEntry",
