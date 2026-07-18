@@ -295,50 +295,57 @@ export function UniversityEmblem({ size = 24, color = "#E8C868" }: EmblemProps) 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// JOURNEY — Parchment Scroll Chapter Map
-// Wide unfurled scroll with bold thick curled ends, large lotus path marker,
-// winding dotted route, and a prominent chapter seal in the corner.
+// JOURNEY — 2.5D Isometric Journal / Chapter Map
+// Three-face isometric book: bright top cover, medium left spine,
+// darker right page-edge. Lotus compass rose on the top cover face.
 // ─────────────────────────────────────────────────────────────────────────────
 export function JourneyEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const scrollFill = color + "35";
-  const lotusFill  = color + "65";
-  const sealFill   = color + "50";
+  const topFill   = color + "52";   // lightest — visible cover
+  const leftFill  = color + "30";   // spine face
+  const rightFill = color + "18";   // page-edge face
+  const petalFill = color + "85";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Scroll body */}
-      <Rect x="3.5" y="5" width="17" height="14" rx="1.5" stroke={color} strokeWidth="1.6" fill={scrollFill} />
-      {/* Left scroll roll — thick, prominent */}
-      <Ellipse cx="3.5" cy="12" rx="1.8" ry="7" stroke={color} strokeWidth="1.4" fill={color + "40"} />
-      <Ellipse cx="3.5" cy="12" rx="0.8" ry="5.5" stroke={color} strokeWidth="0.7" fill={color + "20"} />
-      {/* Right scroll roll */}
-      <Ellipse cx="20.5" cy="12" rx="1.8" ry="7" stroke={color} strokeWidth="1.4" fill={color + "40"} />
-      <Ellipse cx="20.5" cy="12" rx="0.8" ry="5.5" stroke={color} strokeWidth="0.7" fill={color + "20"} />
-      {/* Winding path across scroll */}
+      {/* ── Three-face isometric book ── */}
+      {/* Right face — page edges (drawn first, behind) */}
       <Path
-        d="M5.5 17 L8 14 L12 11 L16 9 L18.5 7.5"
-        stroke={color}
-        strokeWidth="1.1"
-        strokeDasharray="1.5 1.8"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.8"
+        d="M12 13 L12 21.5 L20.5 17 L20.5 8.5 Z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round" fill={rightFill}
       />
-      {/* Lotus bloom on path — large, visible */}
-      {/* 4 petals */}
-      <Path d="M12 8.5 Q14 10 12 12 Q10 10 12 8.5" fill={lotusFill} stroke={color} strokeWidth="1.0" />
-      <Path d="M15 11 Q13 12.5 12 12 Q14 10.5 15 11" fill={lotusFill} stroke={color} strokeWidth="1.0" />
-      <Path d="M12 13.5 Q10 12 12 12 Q14 12 12 13.5" fill={lotusFill} stroke={color} strokeWidth="1.0" />
-      <Path d="M9 11 Q11 12.5 12 12 Q10 10.5 9 11" fill={lotusFill} stroke={color} strokeWidth="1.0" />
-      {/* Lotus center */}
-      <Circle cx="12" cy="11.5" r="1.4" fill={color} />
-      {/* Chapter seal — bold octagon in bottom-right */}
+      {/* Left face — spine */}
       <Path
-        d="M16 15 L17 14 L18.5 14 L19.5 15 L19.5 16.5 L18.5 17.5 L17 17.5 L16 16.5 Z"
-        stroke={color} strokeWidth="1.0" fill={sealFill}
+        d="M3.5 8.5 L3.5 17 L12 21.5 L12 13 Z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round" fill={leftFill}
       />
-      <Circle cx="17.75" cy="15.75" r="1.0" fill={color} opacity="0.9" />
-      {/* Start marker dot */}
-      <Circle cx="6" cy="16.5" r="1.0" fill={color} opacity="0.8" />
+      {/* Top face — cover (brightest, most visible) */}
+      <Path
+        d="M3.5 8.5 L12 4 L20.5 8.5 L12 13 Z"
+        stroke={color} strokeWidth="1.9" strokeLinejoin="round" fill={topFill}
+      />
+      {/* Gold trim on front two edges of cover */}
+      <Path d="M3.5 8.5 L12 4 L20.5 8.5" stroke={color} strokeWidth="2.2"
+        strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.75" />
+      {/* Spine vertical rule */}
+      <Path d="M6.5 10 L6.5 19" stroke={color} strokeWidth="0.9" opacity="0.5"
+        strokeLinecap="round" />
+      {/* Page-edge horizontal lines */}
+      <Path d="M13 14 L20 10" stroke={color} strokeWidth="0.55" opacity="0.38" />
+      <Path d="M13 15.5 L20 11.5" stroke={color} strokeWidth="0.55" opacity="0.3" />
+      <Path d="M13 17 L20 13" stroke={color} strokeWidth="0.55" opacity="0.22" />
+      {/* Lotus compass on top cover face — center at (12, 8.8) */}
+      <Path d="M12 6 Q14 7 12 9 Q10 7 12 6"
+        fill={petalFill} stroke={color} strokeWidth="1.2" />
+      <Path d="M15 9 Q13 10 12 9 Q14 7.5 15 9"
+        fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M12 12 Q10 10.5 12 9 Q14 10.5 12 12"
+        fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M9 9 Q11 7.5 12 9 Q10 10 9 9"
+        fill={petalFill} stroke={color} strokeWidth="1.0" />
+      {/* Center gem */}
+      <Circle cx="12" cy="9" r="1.6" fill={color} />
+      {/* Gold corner clasp */}
+      <Circle cx="19.5" cy="8.5" r="1.3" fill={color} opacity="0.85" />
+      <Circle cx="19.5" cy="8.5" r="0.6" fill={topFill} />
     </Svg>
   );
 }
