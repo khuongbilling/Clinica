@@ -104,7 +104,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_welcome",
       title: "Your First Patient",
-      body: "I won't sugarcoat it — this patient needs real help. Two numbers tell you how they're doing: Stability is how safe they are, Corruption is how far the disease has taken hold. Keep Stability from hitting zero and bring Corruption to zero. I'll walk you through each step.",
+      body: "I won't sugarcoat it. This patient needs real help. Two numbers tell you how they're doing: Stability is how safe they are, Corruption is how far the disease has taken hold. Keep Stability from hitting zero and bring Corruption to zero. I'll walk you through each step.",
       placement: "center",
       requireAction: false,
       nextText: "I'M READY",
@@ -112,7 +112,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_cue",
       title: "Read the Signs First",
-      body: "Before you act, a clinical question will appear. Take a moment — there's always a reason one answer is better than the others. A correct answer strengthens your actions this turn. An explanation follows either way. It won't delay you.",
+      body: "Before you act, a clinical question will appear. Take a moment. There's always a reason one answer is better than the others. A correct answer strengthens your actions this turn. An explanation follows either way. It won't delay you.",
       placement: "top",
       requireAction: true,
       requiredActionType: "cue",
@@ -121,7 +121,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_skills",
       title: "Your Team's Skills",
-      body: "Each healer brings clinical skills to the shift. Tap a skill to use it. Long-press any skill or item if you want to read the reasoning behind it first. Reading costs you nothing — use it whenever you're unsure.",
+      body: "Each healer brings clinical skills to the shift. Tap a skill to use it. Long-press any skill or item if you want to read the reasoning behind it first. Reading costs you nothing; use it whenever you're unsure.",
       placement: "center",
       requireAction: false,
       nextText: "UNDERSTOOD",
@@ -129,7 +129,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_scout",
       title: "Step 1: Scout",
-      body: "Don't rush to treat what you haven't assessed. Novice Guardian has Lantern of Clues ready — use it to surface what this patient actually needs before you do anything else.",
+      body: "Don't rush to treat what you haven't assessed. Novice Guardian has Lantern of Clues ready. Use it to surface what this patient actually needs before you do anything else.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "lantern_of_clues",
@@ -138,7 +138,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_stabilize",
       title: "Step 2: Stabilize",
-      body: "Good. Now you know the picture. Village Caretaker's Guardian's Touch will shore up Stability — buy the patient some time. Stability before everything else.",
+      body: "Good. Now you know the picture. Village Caretaker's Guardian's Touch will shore up Stability. Buy the patient some time. Stability before everything else.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "guardians_touch",
@@ -147,7 +147,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_endturn",
       title: "Pass the Time",
-      body: "Both healers have done what they can this turn. End the turn and let the team reset. Disease doesn't wait — neither should you.",
+      body: "Both healers have done what they can this turn. End the turn and let the team reset. Disease doesn't wait. Neither should you.",
       placement: "center",
       requireAction: true,
       requiredActionType: "endTurn",
@@ -156,7 +156,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_counter",
       title: "Step 3: Counter",
-      body: "The patient is steadier. Now push the disease back. Novice Guardian's Breath of Dawn reduces Corruption directly — this is where you go on the offensive.",
+      body: "The patient is steadier. Now push the disease back. Novice Guardian's Breath of Dawn reduces Corruption directly. This is where you go on the offensive.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "breath_of_dawn",
@@ -165,7 +165,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_reassess",
       title: "Step 4: Reassess",
-      body: "Never assume improvement — confirm it. Village Caretaker's Reassess will check on the patient and close the care chain. This completes the shift.",
+      body: "Never assume improvement. Confirm it. Village Caretaker's Reassess will check on the patient and close the care chain. This completes the shift.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "reassess",
@@ -174,7 +174,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_done",
       title: "Scout. Stabilize. Counter. Reassess.",
-      body: "That's the care chain. Four steps, in that order, every shift. It's not complicated — it's just good clinical practice. The patient is safe. You did well.",
+      body: "That's the care chain. Four steps, in that order, every shift. It's not complicated. It's just good clinical practice. The patient is safe. You did well.",
       placement: "center",
       requireAction: false,
       nextText: "FINISH THE SHIFT",
