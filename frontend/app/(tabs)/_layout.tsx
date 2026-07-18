@@ -1,4 +1,6 @@
+import React from "react";
 import { Tabs } from "expo-router";
+import { Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
@@ -12,91 +14,173 @@ import {
   CommunityEmblem,
 } from "@/src/components/ClinicaEmblems";
 
+// ── Illustrated medallion-style tab icon ──────────────────────────────────────
+// Renders as: [decorative circular medallion frame + emblem] + label text.
+// The active tab gets a gold border, warm glow, and corner accent dots.
+// tabBarShowLabel is false so the native tab label is hidden — the label is
+// baked into this icon element, matching the reference gacha-RPG style.
+
+const GOLD = "#E8C868";
+const DIM  = "#5A6070";
+
+function mkTabIcon(
+  Emblem: React.ComponentType<{ size?: number; color?: string }>,
+  label:  string,
+  color:  string,
+  focused: boolean,
+) {
+  const iconColor  = focused ? GOLD : DIM;
+  const ringColor  = focused ? GOLD : "#2E3545";
+  const ringBorder = focused ? 2    : 1.5;
+  const bg         = focused ? GOLD + "1A" : "#141922";
+
+  return (
+    <View style={icon.wrap}>
+      {/* Illustrated medallion frame */}
+      <View style={[icon.medallion, {
+        borderColor:     ringColor,
+        borderWidth:     ringBorder,
+        backgroundColor: bg,
+        shadowColor:     focused ? GOLD : "#000",
+        shadowOpacity:   focused ? 0.45 : 0.15,
+        shadowRadius:    focused ? 10 : 3,
+        elevation:       focused ? 5 : 1,
+      }]}>
+        {/* Inner decorative ring */}
+        <View style={[icon.innerRing, {
+          borderColor: focused ? GOLD + "45" : "#ffffff0A",
+        }]} />
+        {/* Corner accent dots (active state only) */}
+        {focused && (
+          <>
+            <View style={[icon.dot, { top: 4, left: 4 }]} />
+            <View style={[icon.dot, { top: 4, right: 4 }]} />
+            <View style={[icon.dot, { bottom: 4, left: 4 }]} />
+            <View style={[icon.dot, { bottom: 4, right: 4 }]} />
+          </>
+        )}
+        <Emblem size={22} color={iconColor} />
+      </View>
+      {/* Label — baked into the icon element, not the native tab label */}
+      <Text style={[icon.label, { color: iconColor }]}>{label}</Text>
+    </View>
+  );
+}
+
+const icon = StyleSheet.create({
+  wrap: {
+    alignItems: "center",
+    gap:        3,
+    paddingTop: 2,
+  },
+  medallion: {
+    width:          46,
+    height:         46,
+    borderRadius:   23,
+    alignItems:     "center",
+    justifyContent: "center",
+  },
+  innerRing: {
+    position:     "absolute",
+    width:        36,
+    height:       36,
+    borderRadius: 18,
+    borderWidth:  1,
+  },
+  dot: {
+    position:        "absolute",
+    width:           3,
+    height:          3,
+    borderRadius:    1.5,
+    backgroundColor: GOLD + "90",
+  },
+  label: {
+    fontSize:      7.5,
+    fontWeight:    "800",
+    letterSpacing: 0.7,
+  },
+});
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 8);
-  const tabH = 50 + bottomPad;
+  const tabH = 74 + bottomPad;
 
-  // Guided-onboarding tab gating (Fix 10). Tabs stay hidden (href:null keeps
-  // their route alive for deep links) until the player meets each feature's gate:
-  //   Shop   → Level 2 (Apprentice Path)
-  //   Heroes → Level 2 via hall_of_heroes gate (no additional narrative gate)
-  //   Realm  → Level 5 + first Ward Shift (buildGateContext)
-  //   Faction → always hidden (future chapter — href:null permanently for now)
-  // Shift tab is always available.
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
     level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
     lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
   };
-  const shopUnlocked = checkFeatureGate("shop", ctx).unlocked;
-  const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
-  const realmUnlocked = checkFeatureGate("realm", ctx).unlocked;
-  // P25 — Community Board tab visible at Lv3 (same as Shop). Active participation
-  // inside the screen gates separately at Lv7 (world_event) with a rich preview
-  // state below that level. href:null only while player hasn't reached Lv3 yet.
+  const shopUnlocked       = checkFeatureGate("shop",           ctx).unlocked;
+  const heroesUnlocked     = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const realmUnlocked      = checkFeatureGate("realm",          ctx).unlocked;
   const communityBoardUnlocked = checkFeatureGate("community_board", ctx).unlocked;
 
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: COLORS.brand,
-        tabBarInactiveTintColor: COLORS.onSurfaceTertiary,
+        headerShown:        false,
+        tabBarShowLabel:    false,
+        tabBarActiveTintColor:   COLORS.brand,
+        tabBarInactiveTintColor: DIM,
         tabBarStyle: {
           backgroundColor: UI.sanctuaryBg,
-          borderTopColor: UI.sanctuaryBorder,
-          borderTopWidth: 1,
-          height: tabH,
-          paddingTop: 6,
-          paddingBottom: bottomPad,
+          borderTopWidth:  1.5,
+          borderTopColor:  GOLD + "30",
+          height:          tabH,
+          paddingTop:      4,
+          paddingBottom:   bottomPad,
         },
-        tabBarLabelStyle: { fontSize: 10, letterSpacing: 1, fontWeight: "600" },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
       }}
     >
       <Tabs.Screen
         name="shop"
         options={{
-          title: "SHOP",
           href: shopUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-shop",
-          tabBarIcon: ({ color, size }) => <ShopEmblem size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            mkTabIcon(ShopEmblem, "SHOP", color, focused),
         }}
       />
       <Tabs.Screen
         name="heroes"
         options={{
-          title: "HEROES",
           href: heroesUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-heroes",
-          tabBarIcon: ({ color, size }) => <HeroesEmblem size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            mkTabIcon(HeroesEmblem, "HEROES", color, focused),
         }}
       />
       <Tabs.Screen
         name="index"
         options={{
-          title: "SHIFT",
           tabBarButtonTestID: "tab-shift",
-          tabBarIcon: ({ color, size }) => <ShiftEmblem size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            mkTabIcon(ShiftEmblem, "SHIFT", color, focused),
         }}
       />
       <Tabs.Screen
         name="kingdom"
         options={{
-          title: "REALM",
           href: realmUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-kingdom",
-          tabBarIcon: ({ color, size }) => <RealmEmblem size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            mkTabIcon(RealmEmblem, "REALM", color, focused),
         }}
       />
       <Tabs.Screen
         name="faction"
         options={{
-          title: "COMMUNITY",
           href: communityBoardUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-faction",
-          tabBarIcon: ({ color, size }) => <CommunityEmblem size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            mkTabIcon(CommunityEmblem, "GUILD", color, focused),
         }}
       />
       <Tabs.Screen

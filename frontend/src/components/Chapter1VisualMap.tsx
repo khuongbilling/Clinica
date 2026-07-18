@@ -239,53 +239,6 @@ export function Chapter1VisualMap({
             );
           })}
 
-          {/* ── Outer pulse rings (wider, slower phase) ── */}
-          {nodes.map((nd) => {
-            if (nd.status !== "next") return null;
-            const x  = nd.layout.xf * W;
-            const { r, y } = nd.layout;
-            const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
-            return (
-              <Animated.View
-                key={`glow-outer-${nd.part.id}`}
-                style={{
-                  pointerEvents:   "none",
-                  position:        "absolute",
-                  left:            x - r - 24,
-                  top:             y - r - 24,
-                  width:           (r + 24) * 2,
-                  height:          (r + 24) * 2,
-                  borderRadius:    r + 24,
-                  backgroundColor: tc + "12",
-                  opacity:         pulseOuter,
-                }}
-              />
-            );
-          })}
-
-          {/* ── Inner pulse glow rings ── */}
-          {nodes.map((nd) => {
-            if (nd.status !== "next") return null;
-            const x  = nd.layout.xf * W;
-            const { r, y } = nd.layout;
-            const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
-            return (
-              <Animated.View
-                key={`glow-${nd.part.id}`}
-                style={{
-                  pointerEvents:   "none",
-                  position:        "absolute",
-                  left:            x - r - 12,
-                  top:             y - r - 12,
-                  width:           (r + 12) * 2,
-                  height:          (r + 12) * 2,
-                  borderRadius:    r + 12,
-                  backgroundColor: tc + "28",
-                  opacity:         pulse,
-                }}
-              />
-            );
-          })}
 
           {/* ── Illustrated node shapes (replaces plain circles) ── */}
           {nodes.map((nd, idx) => {

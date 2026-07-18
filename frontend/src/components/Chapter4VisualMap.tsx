@@ -266,53 +266,6 @@ export function Chapter4VisualMap({
               );
             })}
 
-            {/* P14: Outer pulse rings (wider radius, slower phase) */}
-            {nodes.map((nd) => {
-              if (nd.status !== "next") return null;
-              const x  = nd.layout.xf * W;
-              const { r, y } = nd.layout;
-              const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
-              return (
-                <Animated.View
-                  key={`glow-outer-${nd.part.id}`}
-                  style={{
-                    pointerEvents:   "none",
-                    position:        "absolute",
-                    left:            x - r - 20,
-                    top:             y - r - 20,
-                    width:           (r + 20) * 2,
-                    height:          (r + 20) * 2,
-                    borderRadius:    r + 20,
-                    backgroundColor: tc + "18",
-                    opacity:         pulseOuter,
-                  }}
-                />
-              );
-            })}
-
-            {/* ─── Pulse glow rings ─── */}
-            {nodes.map((nd) => {
-              if (nd.status !== "next") return null;
-              const x  = nd.layout.xf * W;
-              const { r, y } = nd.layout;
-              const tc = TYPE_COLOR[nd.part.type] ?? chapterAccent;
-              return (
-                <Animated.View
-                  key={`glow-${nd.part.id}`}
-                  style={{
-                    pointerEvents:   "none",
-                    position:        "absolute",
-                    left:            x - r - 10,
-                    top:             y - r - 10,
-                    width:           (r + 10) * 2,
-                    height:          (r + 10) * 2,
-                    borderRadius:    r + 10,
-                    backgroundColor: tc + "33",
-                    opacity:         pulse,
-                  }}
-                />
-              );
-            })}
 
             {/* ─── Node circles ─── */}
             {nodes.map((nd, idx) => {

@@ -76,6 +76,26 @@ const NODE_ICON: Record<string, ReturnType<typeof require>> = {
 
 const FALLBACK_ICON = require("@/assets/map-nodes/node_reflection_lotus_journal.png");
 
+// ── Node type label shown at bottom of each illustrated icon ─────────────────
+const NODE_LABEL: Record<string, string> = {
+  battle:          "Ward Shift",
+  mini_boss:       "Boss Trial",
+  ward_defense:    "Defense",
+  memory_fragment: "Memory",
+  challenge:       "Challenge",
+  reflection:      "Reflection",
+  story:           "Story",
+  reward:          "Reward",
+  lesson:          "Lesson",
+  realm:           "Realm",
+  chain:           "Chain",
+  mode_preview:    "Mode",
+  minigame:        "Minigame",
+  stabilize:       "Stabilize",
+  community:       "Community",
+  arena:           "Arena",
+};
+
 // ── Ionicon names kept for legacy callers (not used in V5 rendering) ──────────
 export const NODE_TYPE_ICON: Record<string, string> = {
   battle:          "flash",
@@ -126,42 +146,6 @@ export function MapNodeShape({
         justifyContent: "center",
       }}
     >
-      {/* ── Boss: wide dark aura ring (always for mini_boss when not locked) ── */}
-      {isBoss && !isLocked && (
-        <View
-          style={{
-            position:        "absolute",
-            width:           SIZE + 48,
-            height:          SIZE + 48,
-            borderRadius:    (SIZE + 48) / 2,
-            borderWidth:     1,
-            borderColor:     "#C0392B38",
-            backgroundColor: "#C0392B0A",
-            top:             -24,
-            left:            -24,
-            pointerEvents:   "none",
-          } as any}
-        />
-      )}
-
-      {/* ── Next/current OR boss: inner glow ring ── */}
-      {(isNext || (isBoss && !isLocked)) && (
-        <View
-          style={{
-            position:        "absolute",
-            width:           SIZE + 26,
-            height:          SIZE + 26,
-            borderRadius:    (SIZE + 26) / 2,
-            borderWidth:     2,
-            borderColor:     glowColor + "88",
-            backgroundColor: glowColor + "16",
-            top:             -13,
-            left:            -13,
-            pointerEvents:   "none",
-          } as any}
-        />
-      )}
-
       {/* ── Main illustrated 2.5D node — the art IS the node ── */}
       <Image
         source={icon}
@@ -198,6 +182,35 @@ export function MapNodeShape({
             letterSpacing: 0.3,
           }}>
             LOCKED
+          </Text>
+        </View>
+      )}
+
+      {/* ── Node type label — caption band at bottom of art ── */}
+      {!isLocked && (
+        <View
+          style={{
+            position:          "absolute",
+            bottom:            4,
+            alignSelf:         "center",
+            backgroundColor:   "rgba(0,0,0,0.58)",
+            borderRadius:      4,
+            paddingHorizontal: 5,
+            paddingVertical:   2,
+            pointerEvents:     "none",
+          } as any}
+        >
+          <Text
+            style={{
+              fontSize:      7,
+              fontWeight:    "800",
+              letterSpacing: 0.7,
+              color:         isDone ? accentColor + "BB" : accentColor,
+              textTransform: "uppercase" as const,
+            }}
+            numberOfLines={1}
+          >
+            {NODE_LABEL[type] ?? type.replace(/_/g, " ")}
           </Text>
         </View>
       )}

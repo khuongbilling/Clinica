@@ -17,6 +17,7 @@ import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { ModeCardDef, UNIVERSITY_FUTURE_MODES } from "@/src/game/modeHub";
+import { HubBottomNav } from "@/src/components/HubBottomNav";
 import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
@@ -655,6 +656,7 @@ export default function UniversityHubScreen() {
         testID="university-info-dialog"
       />
       <TutorialOverlay />
+      <HubBottomNav activeTab="shift" />
     </SafeAreaView>
   );
 }
