@@ -1,23 +1,28 @@
 /**
  * ClinicaEmblems — Donghua/anime fantasy-medical RPG seal icons.
  *
- * Each emblem is an SVG component (24×24 viewBox) that accepts `size` and
- * `color` props, matching the same API as `<Ionicons size={n} color={c} />`.
- * All shapes use soft-curved linework with a light tinted fill for depth,
- * evoking hand-drawn academy-seal calligraphy in jade/gold palette.
+ * Design principles (redesigned for bold mobile readability):
+ *   • Main outlines: strokeWidth 1.6–2.0 (not 1.0)
+ *   • Key fills: 35–65 % opacity (not 10 %)
+ *   • Accent / glow fills: 70–100 % for focal elements
+ *   • Distinctive non-circular silhouettes — no plain rings as primary shape
+ *   • 1–2 dominant shapes readable at 14–28 px
  *
- * Exported:
- *   ShiftEmblem       — Healer's ward lantern sigil
- *   HeroesEmblem      — Twin-healer crest seal
- *   RealmEmblem       — Sanctuary torii gate emblem
- *   ShopEmblem        — Apothecary bottle seal
- *   CommunityEmblem   — World-lotus eight-petal rosette
- *   UniversityEmblem  — Lotus academy tower crest
- *   JourneyEmblem     — Parchment scroll chapter map
- *   SummoningEmblem   — Hero-gate lotus star seal
- *   WardDefenseEmblem — Diamond shield with lotus
- *   BossWardEmblem    — Tri-flame dragon seal
- *   LotusJournalEmblem— Open lotus plate flower
+ * Each emblem accepts `size` and `color`, matching <Ionicons size={n} color={c} />.
+ *
+ * Exports:
+ *   ShiftEmblem       — Healer's ward lantern (bold hexagonal body + cross)
+ *   HeroesEmblem      — Twin-healer crest (oval frame, two robed silhouettes)
+ *   RealmEmblem       — Sanctuary torii gate (thick posts, lotus crown)
+ *   ShopEmblem        — Apothecary bottle (solid cork, cross label)
+ *   CommunityEmblem   — Guild banner pennant (hanging flag + lotus rosette)
+ *   UniversityEmblem  — Lotus academy pagoda (3-tier, bold eaves)
+ *   JourneyEmblem     — Parchment scroll (thick curls, big lotus, chapter seal)
+ *   SummoningEmblem   — Academy gate portal (arch + lotus star + hero glow)
+ *   WardDefenseEmblem — Shield with lotus (bold shield, solid petal center)
+ *   BossWardEmblem    — Triple-flame dragon seal (filled flames, coil mark)
+ *   LotusJournalEmblem— Open lotus flower (wide petals, filled, stem)
+ *   LotusLessonsEmblem— Lesson scroll tablet (open scroll + lotus + lines)
  *
  *   ClinicaEmblem     — Unified lookup component: <ClinicaEmblem id="shift" />
  *   getModeEmblem     — Returns a ReactNode for a given mode ID
@@ -41,91 +46,98 @@ export interface EmblemProps {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHIFT — Healer's Ward Lantern
-// Hexagonal lantern body, arched handle, healing cross, tassel drops.
+// Bold hexagonal lantern body, arched handle, prominent cross, tassel drops.
 // ─────────────────────────────────────────────────────────────────────────────
 export function ShiftEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "1A";
+  const body  = color + "45";   // 27 % fill — lantern body glow
+  const glass = color + "25";   // subtle inner glow
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Handle arc */}
+      {/* Handle arc — thick */}
       <Path
-        d="M9.5 7 Q12 3 14.5 7"
+        d="M9 7 Q12 2.5 15 7"
         stroke={color}
-        strokeWidth="1.4"
+        strokeWidth="1.8"
         strokeLinecap="round"
         fill="none"
       />
-      {/* Lantern body — octagonal */}
+      {/* Cap ring at top of lantern */}
+      <Rect x="9.5" y="6.5" width="5" height="1.4" rx="0.7" fill={color} />
+      {/* Lantern body — broad hexagon */}
       <Path
-        d="M8.5 7 L5.5 10.5 L5.5 16 L8.5 19.5 L15.5 19.5 L18.5 16 L18.5 10.5 L15.5 7 Z"
+        d="M8 7.9 L5 11.5 L5 16.5 L8 20.1 L16 20.1 L19 16.5 L19 11.5 L16 7.9 Z"
         stroke={color}
-        strokeWidth="1.3"
+        strokeWidth="1.7"
         strokeLinejoin="round"
-        fill={fill}
+        fill={body}
       />
-      {/* Decorative slats */}
-      <Line x1="5.5" y1="10.5" x2="18.5" y2="10.5" stroke={color} strokeWidth="0.8" opacity="0.55" />
-      <Line x1="5.5" y1="16" x2="18.5" y2="16" stroke={color} strokeWidth="0.8" opacity="0.55" />
-      {/* Healing cross */}
-      <Path d="M12 11 L12 17.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-      <Path d="M9.5 14 L14.5 14" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      {/* Inner glass glow */}
+      <Path
+        d="M9.5 9.5 L7.5 12 L7.5 16 L9.5 18.5 L14.5 18.5 L16.5 16 L16.5 12 L14.5 9.5 Z"
+        fill={glass}
+        stroke="none"
+      />
+      {/* Horizontal slats — visible at larger sizes */}
+      <Line x1="5.5" y1="11.5" x2="18.5" y2="11.5" stroke={color} strokeWidth="1.0" opacity="0.5" />
+      <Line x1="5.5" y1="16.5" x2="18.5" y2="16.5" stroke={color} strokeWidth="1.0" opacity="0.5" />
+      {/* Healing cross — bold */}
+      <Path d="M12 12 L12 19" stroke={color} strokeWidth="2.0" strokeLinecap="round" />
+      <Path d="M9 15 L15 15" stroke={color} strokeWidth="2.0" strokeLinecap="round" />
+      {/* Base cap */}
+      <Rect x="9.5" y="20.1" width="5" height="1.3" rx="0.6" fill={color} opacity="0.8" />
       {/* Tassel drops */}
       <Path
-        d="M10.5 19.5 L10 22 M12 19.5 L12 22.5 M13.5 19.5 L14 22"
+        d="M10.5 21.4 L10 23.5 M12 21.4 L12 23.5 M13.5 21.4 L14 23.5"
         stroke={color}
-        strokeWidth="0.9"
+        strokeWidth="1.1"
         strokeLinecap="round"
-        opacity="0.7"
+        opacity="0.75"
       />
-      {/* Small bead at bottom of each tassel */}
-      <Circle cx="10" cy="22.2" r="0.6" fill={color} opacity="0.7" />
-      <Circle cx="12" cy="22.7" r="0.6" fill={color} opacity="0.7" />
-      <Circle cx="14" cy="22.2" r="0.6" fill={color} opacity="0.7" />
+      <Circle cx="10" cy="23.5" r="0.7" fill={color} opacity="0.75" />
+      <Circle cx="12" cy="23.5" r="0.7" fill={color} opacity="0.75" />
+      <Circle cx="14" cy="23.5" r="0.7" fill={color} opacity="0.75" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HEROES — Twin-Healer Crest Seal
-// Two healer silhouettes inside an oval crest, lotus star between them.
+// Thick oval frame, two prominent healer figures, bold lotus star at top.
 // ─────────────────────────────────────────────────────────────────────────────
 export function HeroesEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "18";
+  const frameFill = color + "30";
+  const robeFill  = color + "50";
+  const headFill  = color + "60";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Oval crest frame */}
-      <Ellipse cx="12" cy="12" rx="10.5" ry="11" stroke={color} strokeWidth="1.1" fill={fill} />
-      {/* Inner accent ring */}
-      <Ellipse cx="12" cy="12" rx="8.5" ry="9" stroke={color} strokeWidth="0.5" opacity="0.35" fill="none" />
+      {/* Oval crest frame — thick */}
+      <Ellipse
+        cx="12" cy="13"
+        rx="10.5" ry="11"
+        stroke={color} strokeWidth="1.7" fill={frameFill}
+      />
       {/* Left healer head */}
-      <Circle cx="8.5" cy="7.5" r="2.2" stroke={color} strokeWidth="1.1" fill={fill} />
+      <Circle cx="8.5" cy="7.5" r="2.4" stroke={color} strokeWidth="1.3" fill={headFill} />
       {/* Right healer head */}
-      <Circle cx="15.5" cy="7.5" r="2.2" stroke={color} strokeWidth="1.1" fill={fill} />
+      <Circle cx="15.5" cy="7.5" r="2.4" stroke={color} strokeWidth="1.3" fill={headFill} />
       {/* Left healer robe */}
       <Path
-        d="M5.8 11 Q8.5 9.5 11.2 11 L10.8 17 Q8.5 18.5 6.2 17 Z"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M5.5 11.5 Q8.5 9.5 11.5 11.5 L11 19 Q8.5 20.5 6 19 Z"
+        stroke={color} strokeWidth="1.2" strokeLinejoin="round" fill={robeFill}
       />
       {/* Right healer robe */}
       <Path
-        d="M12.8 11 Q15.5 9.5 18.2 11 L17.8 17 Q15.5 18.5 13.2 17 Z"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M12.5 11.5 Q15.5 9.5 18.5 11.5 L18 19 Q15.5 20.5 13 19 Z"
+        stroke={color} strokeWidth="1.2" strokeLinejoin="round" fill={robeFill}
       />
-      {/* Small healing cross on each robe */}
-      <Path d="M8.5 12.5 V15.5 M7 14 H10" stroke={color} strokeWidth="0.85" strokeLinecap="round" opacity="0.75" />
-      <Path d="M15.5 12.5 V15.5 M14 14 H17" stroke={color} strokeWidth="0.85" strokeLinecap="round" opacity="0.75" />
-      {/* Lotus star between heads at top */}
+      {/* Healing cross on left robe */}
+      <Path d="M8.5 13 V17 M6.8 15 H10.2" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+      {/* Healing cross on right robe */}
+      <Path d="M15.5 13 V17 M13.8 15 H17.2" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+      {/* Lotus 5-point star between heads */}
       <Path
-        d="M12 3 L12.9 5.2 L15.2 5.2 L13.5 6.7 L14.2 9 L12 7.8 L9.8 9 L10.5 6.7 L8.8 5.2 L11.1 5.2 Z"
-        stroke={color}
-        strokeWidth="0.7"
-        fill={color + "55"}
+        d="M12 1.5 L13.1 4.5 L16.2 4.5 L13.7 6.5 L14.7 9.5 L12 7.8 L9.3 9.5 L10.3 6.5 L7.8 4.5 L10.9 4.5 Z"
+        stroke={color} strokeWidth="0.9" fill={color + "70"}
       />
     </Svg>
   );
@@ -133,410 +145,406 @@ export function HeroesEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REALM — Sanctuary Torii Gate
-// Two posts, curved kasagi, middle nuki bar, lotus crown above.
+// Bold thick posts + double curved beam, large lotus crown, ground sill.
 // ─────────────────────────────────────────────────────────────────────────────
 export function RealmEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "18";
+  const fill = color + "45";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Lotus crown petals above gate */}
-      <Path d="M12 1 Q13.3 3.5 12 5.5 Q10.7 3.5 12 1" fill={color + "70"} stroke={color} strokeWidth="0.8" />
-      <Path d="M9 3 Q11 4.5 10 6.5 Q8.5 5 9 3" fill={color + "50"} stroke={color} strokeWidth="0.7" />
-      <Path d="M15 3 Q13 4.5 14 6.5 Q15.5 5 15 3" fill={color + "50"} stroke={color} strokeWidth="0.7" />
-      {/* Kasagi — top curved beam */}
+      {/* Lotus crown — three large petals above gate */}
+      <Path d="M12 0.5 Q14 3.5 12 6 Q10 3.5 12 0.5" fill={color + "80"} stroke={color} strokeWidth="1.2" />
+      <Path d="M8.5 2 Q11 4 9.5 7 Q7.5 5 8.5 2" fill={color + "55"} stroke={color} strokeWidth="1.0" />
+      <Path d="M15.5 2 Q13 4 14.5 7 Q16.5 5 15.5 2" fill={color + "55"} stroke={color} strokeWidth="1.0" />
+      <Circle cx="12" cy="5.5" r="1.3" fill={color} />
+      {/* Kasagi — upper curved beam, bold */}
       <Path
-        d="M4 9.5 Q12 5.5 20 9.5 L20 11 Q12 7 4 11 Z"
-        stroke={color}
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M2.5 10 Q12 5 21.5 10 L22 11.8 Q12 7 2 11.8 Z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round" fill={fill}
       />
-      {/* Nuki — middle straight bar */}
-      <Rect x="7.5" y="13" width="9" height="1.8" rx="0.6" stroke={color} strokeWidth="1.0" fill={fill} />
-      {/* Left post */}
-      <Rect x="7.5" y="9" width="2" height="13" rx="0.8" stroke={color} strokeWidth="1.0" fill={fill} />
-      {/* Right post */}
-      <Rect x="14.5" y="9" width="2" height="13" rx="0.8" stroke={color} strokeWidth="1.0" fill={fill} />
-      {/* Ground sill */}
-      <Path d="M6.5 21.5 Q12 21 17.5 21.5" stroke={color} strokeWidth="1.0" strokeLinecap="round" fill="none" />
+      {/* Nuki — lower straight bar */}
+      <Rect x="7" y="14" width="10" height="2.2" rx="0.8" stroke={color} strokeWidth="1.3" fill={fill} />
+      {/* Left post — thick */}
+      <Rect x="7" y="9" width="2.5" height="13" rx="0.9" stroke={color} strokeWidth="1.3" fill={fill} />
+      {/* Right post — thick */}
+      <Rect x="14.5" y="9" width="2.5" height="13" rx="0.9" stroke={color} strokeWidth="1.3" fill={fill} />
+      {/* Base foot caps */}
+      <Rect x="6" y="21.5" width="4.5" height="1.5" rx="0.6" fill={color} opacity="0.7" />
+      <Rect x="13.5" y="21.5" width="4.5" height="1.5" rx="0.6" fill={color} opacity="0.7" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHOP — Apothecary Bottle Seal
-// Round-bottomed medicine bottle, cork stopper, healing cross, leaf curls.
+// Fat round bottle with solid cork, bold cross label, leaf flanks.
 // ─────────────────────────────────────────────────────────────────────────────
 export function ShopEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "18";
+  const body = color + "45";
+  const cork = color + "75";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Cork / stopper */}
+      {/* Cork stopper — solid */}
       <Path
-        d="M9.8 4 Q12 3 14.2 4 L14.2 6.5 L9.8 6.5 Z"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinejoin="round"
-        fill={color + "45"}
+        d="M9.5 3 Q12 2 14.5 3 L14 6.5 L10 6.5 Z"
+        stroke={color} strokeWidth="1.2" strokeLinejoin="round" fill={cork}
       />
       {/* Neck */}
-      <Rect x="10.5" y="6.5" width="3" height="3" stroke={color} strokeWidth="1.0" fill={fill} />
-      {/* Shoulder transition */}
+      <Rect x="10.5" y="6.5" width="3" height="2.5" stroke={color} strokeWidth="1.3" fill={body} />
+      {/* Bottle body — wide round bottom */}
       <Path
-        d="M10.5 9.5 Q8.5 9.8 8 11 L8 20 Q8 22 12 22 Q16 22 16 20 L16 11 Q15.5 9.8 13.5 9.5 Z"
-        stroke={color}
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M10.5 9 Q7.5 10 7 12.5 L7 19.5 Q7 22.5 12 22.5 Q17 22.5 17 19.5 L17 12.5 Q16.5 10 13.5 9 Z"
+        stroke={color} strokeWidth="1.6" strokeLinejoin="round" fill={body}
       />
-      {/* Decorative horizontal rings on body */}
-      <Path d="M8.2 13 Q12 12.5 15.8 13" stroke={color} strokeWidth="0.7" opacity="0.5" fill="none" />
-      <Path d="M8.2 17.5 Q12 17 15.8 17.5" stroke={color} strokeWidth="0.7" opacity="0.5" fill="none" />
-      {/* Healing cross on body */}
-      <Path d="M12 13.5 V18.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-      <Path d="M9.5 16 H14.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+      {/* Decorative band rings */}
+      <Path d="M7.3 13.5 Q12 13 16.7 13.5" stroke={color} strokeWidth="1.0" opacity="0.55" fill="none" />
+      <Path d="M7.3 18 Q12 17.5 16.7 18" stroke={color} strokeWidth="1.0" opacity="0.55" fill="none" />
+      {/* Bold healing cross on bottle */}
+      <Path d="M12 14 L12 20" stroke={color} strokeWidth="2.0" strokeLinecap="round" />
+      <Path d="M9.5 17 L14.5 17" stroke={color} strokeWidth="2.0" strokeLinecap="round" />
       {/* Leaf curls flanking bottle */}
-      <Path d="M8 13 Q5.5 14 6 17" stroke={color} strokeWidth="0.85" strokeLinecap="round" fill="none" opacity="0.65" />
-      <Path d="M16 13 Q18.5 14 18 17" stroke={color} strokeWidth="0.85" strokeLinecap="round" fill="none" opacity="0.65" />
+      <Path d="M7 13 Q4.5 15 5.5 18" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.7" />
+      <Path d="M17 13 Q19.5 15 18.5 18" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.7" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMMUNITY — World-Lotus Eight-Petal Rosette
-// Eight-point starburst with outer ring and center lotus dot.
+// COMMUNITY — Guild Banner Pennant
+// A hanging rectangular pennant with split/notched bottom, lotus rosette
+// at center, and top crossbar — NOT a circle/starburst.
 // ─────────────────────────────────────────────────────────────────────────────
 export function CommunityEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
+  const bannerFill = color + "40";
+  const petalFill  = color + "70";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Outer circle ring */}
-      <Circle cx="12" cy="12" r="10.5" stroke={color} strokeWidth="1.0" fill="none" />
-      {/* Eight-point lotus star */}
+      {/* Top crossbar / pole */}
+      <Rect x="3" y="1.5" width="18" height="2" rx="1" fill={color} />
+      {/* Banner body */}
       <Path
-        d="M12 2.5 L13.3 8.8 L18.7 5.3 L15.2 10.7 L21.5 12 L15.2 13.3 L18.7 18.7 L13.3 15.2 L12 21.5 L10.7 15.2 L5.3 18.7 L8.8 13.3 L2.5 12 L8.8 10.7 L5.3 5.3 L10.7 8.8 Z"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinejoin="round"
-        fill={color + "22"}
+        d="M4.5 3.5 L4.5 18.5 L12 22.5 L19.5 18.5 L19.5 3.5 Z"
+        stroke={color} strokeWidth="1.5" strokeLinejoin="round" fill={bannerFill}
       />
-      {/* Inner accent circle */}
-      <Circle cx="12" cy="12" r="3.5" stroke={color} strokeWidth="0.8" fill={color + "30"} />
-      {/* Center lotus dot */}
-      <Circle cx="12" cy="12" r="1.4" fill={color} />
+      {/* Inner border line */}
+      <Path
+        d="M6 5 L6 17 L12 20 L18 17 L18 5 Z"
+        stroke={color} strokeWidth="0.6" strokeLinejoin="round" fill="none" opacity="0.45"
+      />
+      {/* Lotus rosette — 8 petals at center */}
+      <Path d="M12 7.5 Q13.8 9.5 12 12 Q10.2 9.5 12 7.5" fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M15.5 9.5 Q13.5 11 12 12 Q13 9 15.5 9.5" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M15.5 14.5 Q13.5 13 12 12 Q14 13.5 15.5 14.5" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M12 16.5 Q10.2 14.5 12 12 Q13.8 14.5 12 16.5" fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M8.5 14.5 Q10.5 13 12 12 Q10 13.5 8.5 14.5" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M8.5 9.5 Q10.5 11 12 12 Q11 9 8.5 9.5" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      {/* Center seed */}
+      <Circle cx="12" cy="12" r="1.6" fill={color} />
+      {/* Hanging tassel strings at bottom corners */}
+      <Line x1="6" y1="18" x2="5.5" y2="21" stroke={color} strokeWidth="0.9" opacity="0.65" />
+      <Line x1="18" y1="18" x2="18.5" y2="21" stroke={color} strokeWidth="0.9" opacity="0.65" />
+      <Circle cx="5.5" cy="21.5" r="0.8" fill={color} opacity="0.65" />
+      <Circle cx="18.5" cy="21.5" r="0.8" fill={color} opacity="0.65" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UNIVERSITY — Lotus Academy Tower Crest
-// Three-tiered pagoda with upswept eaves and lotus-tip spire.
+// UNIVERSITY — Lotus Academy Pagoda
+// Three-tier pagoda with bold upswept eaves, solid lotus spire, doorway arch.
 // ─────────────────────────────────────────────────────────────────────────────
 export function UniversityEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "1A";
+  const roofFill = color + "45";
+  const bodyFill = color + "28";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Lotus spire at apex */}
-      <Path d="M12 1 Q13 2.5 12 4 Q11 2.5 12 1" fill={color} stroke={color} strokeWidth="0.6" />
-      <Path d="M10.5 2.5 Q12 3.5 11 5 Q9.5 4 10.5 2.5" fill={color + "55"} stroke={color} strokeWidth="0.5" />
-      <Path d="M13.5 2.5 Q12 3.5 13 5 Q14.5 4 13.5 2.5" fill={color + "55"} stroke={color} strokeWidth="0.5" />
-      {/* Top tier roof */}
+      {/* Lotus spire at apex — solid */}
+      <Path d="M12 0.5 Q13.2 2.5 12 4.5 Q10.8 2.5 12 0.5" fill={color} stroke={color} strokeWidth="0.8" />
+      <Path d="M10 2 Q12 3.5 10.8 5.5 Q9 4 10 2" fill={color + "70"} stroke={color} strokeWidth="0.7" />
+      <Path d="M14 2 Q12 3.5 13.2 5.5 Q15 4 14 2" fill={color + "70"} stroke={color} strokeWidth="0.7" />
+      {/* Top tier roof — upswept eaves */}
       <Path
-        d="M9 5 Q12 2.5 15 5 L16.5 7.5 L7.5 7.5 Z"
-        stroke={color}
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M8.5 4.5 Q12 1.5 15.5 4.5 L17 8 L7 8 Z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round" fill={roofFill}
       />
       {/* Top tier body */}
-      <Rect x="10.5" y="7.5" width="3" height="2.5" stroke={color} strokeWidth="1.0" fill={fill} />
+      <Rect x="10.5" y="8" width="3" height="2.5" stroke={color} strokeWidth="1.1" fill={bodyFill} />
       {/* Mid tier roof */}
       <Path
-        d="M6.5 10 Q12 7 17.5 10 L19 13 L5 13 Z"
-        stroke={color}
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M6 10.5 Q12 7 18 10.5 L20 14 L4 14 Z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round" fill={roofFill}
       />
       {/* Mid tier body */}
-      <Rect x="9.5" y="13" width="5" height="2.5" stroke={color} strokeWidth="1.0" fill={fill} />
+      <Rect x="9" y="14" width="6" height="2.5" stroke={color} strokeWidth="1.1" fill={bodyFill} />
       {/* Base tier roof */}
       <Path
-        d="M3.5 15.5 Q12 12 20.5 15.5 L22 19.5 L2 19.5 Z"
-        stroke={color}
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M2.5 16.5 Q12 13 21.5 16.5 L23 21 L1 21 Z"
+        stroke={color} strokeWidth="1.4" strokeLinejoin="round" fill={roofFill}
       />
-      {/* Doorway base */}
+      {/* Doorway */}
       <Path
-        d="M10 19.5 L10 23 L14 23 L14 19.5"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
+        d="M10.5 21 L10.5 24 L13.5 24 L13.5 21"
+        stroke={color} strokeWidth="1.1" strokeLinejoin="round" fill="none"
       />
       {/* Door arch */}
-      <Path d="M10 22 Q12 20 14 22" stroke={color} strokeWidth="0.8" fill="none" opacity="0.6" />
+      <Path d="M10.5 23 Q12 21 13.5 23" stroke={color} strokeWidth="1.0" fill="none" opacity="0.7" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // JOURNEY — Parchment Scroll Chapter Map
-// Unfurled scroll with curled ends, a lotus-marked path, and a chapter seal.
+// Wide unfurled scroll with bold thick curled ends, large lotus path marker,
+// winding dotted route, and a prominent chapter seal in the corner.
 // ─────────────────────────────────────────────────────────────────────────────
 export function JourneyEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "18";
+  const scrollFill = color + "35";
+  const lotusFill  = color + "65";
+  const sealFill   = color + "50";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {/* Scroll body */}
-      <Rect x="4" y="5.5" width="16" height="13" rx="1.5" stroke={color} strokeWidth="1.2" fill={fill} />
-      {/* Left scroll curl */}
+      <Rect x="3.5" y="5" width="17" height="14" rx="1.5" stroke={color} strokeWidth="1.6" fill={scrollFill} />
+      {/* Left scroll roll — thick, prominent */}
+      <Ellipse cx="3.5" cy="12" rx="1.8" ry="7" stroke={color} strokeWidth="1.4" fill={color + "40"} />
+      <Ellipse cx="3.5" cy="12" rx="0.8" ry="5.5" stroke={color} strokeWidth="0.7" fill={color + "20"} />
+      {/* Right scroll roll */}
+      <Ellipse cx="20.5" cy="12" rx="1.8" ry="7" stroke={color} strokeWidth="1.4" fill={color + "40"} />
+      <Ellipse cx="20.5" cy="12" rx="0.8" ry="5.5" stroke={color} strokeWidth="0.7" fill={color + "20"} />
+      {/* Winding path across scroll */}
       <Path
-        d="M4 5.5 Q2 6.5 2.5 9 Q3 11 4 11"
+        d="M5.5 17 L8 14 L12 11 L16 9 L18.5 7.5"
         stroke={color}
-        strokeWidth="1.0"
+        strokeWidth="1.1"
+        strokeDasharray="1.5 1.8"
         strokeLinecap="round"
         fill="none"
+        opacity="0.8"
       />
+      {/* Lotus bloom on path — large, visible */}
+      {/* 4 petals */}
+      <Path d="M12 8.5 Q14 10 12 12 Q10 10 12 8.5" fill={lotusFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M15 11 Q13 12.5 12 12 Q14 10.5 15 11" fill={lotusFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M12 13.5 Q10 12 12 12 Q14 12 12 13.5" fill={lotusFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M9 11 Q11 12.5 12 12 Q10 10.5 9 11" fill={lotusFill} stroke={color} strokeWidth="1.0" />
+      {/* Lotus center */}
+      <Circle cx="12" cy="11.5" r="1.4" fill={color} />
+      {/* Chapter seal — bold octagon in bottom-right */}
       <Path
-        d="M4 12.5 Q2 13 2.5 15.5 Q3 17.5 4 18.5"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinecap="round"
-        fill="none"
+        d="M16 15 L17 14 L18.5 14 L19.5 15 L19.5 16.5 L18.5 17.5 L17 17.5 L16 16.5 Z"
+        stroke={color} strokeWidth="1.0" fill={sealFill}
       />
-      {/* Right scroll curl */}
-      <Path
-        d="M20 5.5 Q22 6.5 21.5 9 Q21 11 20 11"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <Path
-        d="M20 12.5 Q22 13 21.5 15.5 Q21 17.5 20 18.5"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Dotted path line across scroll */}
-      <Path
-        d="M5.5 16 L8 13.5 L11.5 11 L15 9 L18.5 7.5"
-        stroke={color}
-        strokeWidth="0.8"
-        strokeDasharray="1.2 1.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.75"
-      />
-      {/* Lotus flower on path midpoint */}
-      <Circle cx="12" cy="11.5" r="1.8" stroke={color} strokeWidth="0.9" fill={color + "30"} />
-      <Path d="M12 9 Q13 10 12 11.5 Q11 10 12 9" fill={color + "60"} stroke="none" />
-      <Path d="M14 11.5 Q13 12.5 12 11.5 Q13 10.5 14 11.5" fill={color + "60"} stroke="none" />
-      <Path d="M12 14 Q11 13 12 11.5 Q13 13 12 14" fill={color + "60"} stroke="none" />
-      <Path d="M10 11.5 Q11 10.5 12 11.5 Q11 12.5 10 11.5" fill={color + "60"} stroke="none" />
-      {/* Chapter seal — small octagon in bottom-right corner */}
-      <Path
-        d="M16.5 15.5 L17.5 14.5 L18.8 14.5 L19.8 15.5 L19.8 16.8 L18.8 17.8 L17.5 17.8 L16.5 16.8 Z"
-        stroke={color}
-        strokeWidth="0.7"
-        fill={color + "25"}
-      />
-      <Circle cx="18.15" cy="16.15" r="0.8" fill={color} opacity="0.8" />
+      <Circle cx="17.75" cy="15.75" r="1.0" fill={color} opacity="0.9" />
+      {/* Start marker dot */}
+      <Circle cx="6" cy="16.5" r="1.0" fill={color} opacity="0.8" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUMMONING — Hero Gate Lotus Star Seal
-// Circular gate ring with eight radial lotus petals and inner hero silhouette.
+// SUMMONING — Academy Gate Portal
+// Two bold pillars + curved arch, large lotus star burst above arch apex,
+// glowing hero silhouette within the portal — NOT a plain circle.
 // ─────────────────────────────────────────────────────────────────────────────
 export function SummoningEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "1A";
+  const pillarFill = color + "55";
+  const glowFill   = color + "30";
+  const petalFill  = color + "70";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Outer seal ring */}
-      <Circle cx="12" cy="12" r="10.5" stroke={color} strokeWidth="1.3" fill={fill} />
-      {/* Inner ring */}
-      <Circle cx="12" cy="12" r="8" stroke={color} strokeWidth="0.7" fill="none" opacity="0.5" />
-      {/* Eight radial lotus petals */}
-      <Path d="M12 2.5 Q13.5 6 12 8 Q10.5 6 12 2.5" fill={color + "55"} stroke={color} strokeWidth="0.8" />
-      <Path d="M21.5 12 Q18 13.5 16 12 Q18 10.5 21.5 12" fill={color + "55"} stroke={color} strokeWidth="0.8" />
-      <Path d="M12 21.5 Q10.5 18 12 16 Q13.5 18 12 21.5" fill={color + "55"} stroke={color} strokeWidth="0.8" />
-      <Path d="M2.5 12 Q6 10.5 8 12 Q6 13.5 2.5 12" fill={color + "55"} stroke={color} strokeWidth="0.8" />
-      <Path d="M19.1 4.9 Q17 8 14.8 7.2 Q16 4.5 19.1 4.9" fill={color + "40"} stroke={color} strokeWidth="0.7" />
-      <Path d="M19.1 19.1 Q16 17 16.8 14.8 Q19.5 16 19.1 19.1" fill={color + "40"} stroke={color} strokeWidth="0.7" />
-      <Path d="M4.9 19.1 Q7 17 9.2 17.8 Q8 20.5 4.9 19.1" fill={color + "40"} stroke={color} strokeWidth="0.7" />
-      <Path d="M4.9 4.9 Q8 7 7.2 9.2 Q4.5 8 4.9 4.9" fill={color + "40"} stroke={color} strokeWidth="0.7" />
-      {/* Central hero silhouette — simplified standing figure */}
-      <Circle cx="12" cy="9.5" r="1.8" stroke={color} strokeWidth="1.0" fill={color + "30"} />
+      {/* ── Lotus star burst above arch ── */}
+      {/* 8 radiating petals from apex */}
+      <Path d="M12 0.5 Q13 3 12 5 Q11 3 12 0.5" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M14.5 1.5 Q14 4 12 5 Q13.5 3 14.5 1.5" fill={petalFill} stroke={color} strokeWidth="0.8" />
+      <Path d="M9.5 1.5 Q10 4 12 5 Q10.5 3 9.5 1.5" fill={petalFill} stroke={color} strokeWidth="0.8" />
+      <Path d="M17 3.5 Q15 5.5 12 5 Q15 4 17 3.5" fill={color + "55"} stroke={color} strokeWidth="0.7" />
+      <Path d="M7 3.5 Q9 5.5 12 5 Q9 4 7 3.5" fill={color + "55"} stroke={color} strokeWidth="0.7" />
+      {/* Center star gem */}
+      <Circle cx="12" cy="5" r="1.5" fill={color} />
+
+      {/* ── Arch / Gate ── */}
+      {/* Portal arch beam — curved */}
       <Path
-        d="M9.5 13 Q12 11 14.5 13 L14 17 Q12 18 10 17 Z"
-        stroke={color}
-        strokeWidth="0.9"
-        strokeLinejoin="round"
-        fill={color + "25"}
+        d="M4.5 16 Q4.5 6.5 12 6.5 Q19.5 6.5 19.5 16"
+        stroke={color} strokeWidth="1.8" fill="none" strokeLinecap="butt"
       />
-      {/* Glow rays between petals */}
-      <Line x1="12" y1="4" x2="12" y2="2" stroke={color} strokeWidth="0.5" opacity="0.4" />
+      {/* Portal inner glow — filled arch area */}
+      <Path
+        d="M6.5 16 Q6.5 8.5 12 8.5 Q17.5 8.5 17.5 16 Z"
+        fill={glowFill} stroke="none"
+      />
+      {/* Left pillar */}
+      <Rect x="3" y="14" width="3.5" height="10" rx="1" stroke={color} strokeWidth="1.6" fill={pillarFill} />
+      {/* Right pillar */}
+      <Rect x="17.5" y="14" width="3.5" height="10" rx="1" stroke={color} strokeWidth="1.6" fill={pillarFill} />
+      {/* Pillar cap ornaments */}
+      <Rect x="2.5" y="13" width="4.5" height="1.5" rx="0.5" fill={color} opacity="0.85" />
+      <Rect x="17" y="13" width="4.5" height="1.5" rx="0.5" fill={color} opacity="0.85" />
+
+      {/* ── Hero figure inside portal ── */}
+      {/* Head */}
+      <Circle cx="12" cy="11" r="2.0" stroke={color} strokeWidth="1.0" fill={color + "50"} />
+      {/* Robe */}
+      <Path
+        d="M9.5 14 Q12 12.5 14.5 14 L14 18.5 Q12 19.5 10 18.5 Z"
+        stroke={color} strokeWidth="1.0" strokeLinejoin="round" fill={color + "40"}
+      />
+
+      {/* Ground sill */}
+      <Rect x="2" y="23.5" width="20" height="1.5" rx="0.6" fill={color} opacity="0.6" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WARD DEFENSE — Diamond Shield with Lotus
-// Pointed shield outline, inner lotus motif, corner flanges.
+// WARD DEFENSE — Shield with Lotus
+// Bold pointed shield, solid inner lotus, top crest flange.
 // ─────────────────────────────────────────────────────────────────────────────
 export function WardDefenseEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "18";
+  const shieldFill = color + "40";
+  const petalFill  = color + "70";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Shield outer */}
+      {/* Shield outer — bold */}
       <Path
-        d="M12 2 L20 6 L20 14 Q20 19.5 12 23 Q4 19.5 4 14 L4 6 Z"
-        stroke={color}
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-        fill={fill}
+        d="M12 1.5 L20.5 5.5 L20.5 14 Q20.5 20.5 12 23.5 Q3.5 20.5 3.5 14 L3.5 5.5 Z"
+        stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill={shieldFill}
       />
-      {/* Shield inner inset */}
+      {/* Shield inner bevel */}
       <Path
-        d="M12 4.5 L18 7.5 L18 14 Q18 18.5 12 21 Q6 18.5 6 14 L6 7.5 Z"
-        stroke={color}
-        strokeWidth="0.6"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.4"
+        d="M12 3.8 L18.5 7 L18.5 14 Q18.5 19 12 21.5 Q5.5 19 5.5 14 L5.5 7 Z"
+        stroke={color} strokeWidth="0.8" strokeLinejoin="round" fill="none" opacity="0.5"
       />
-      {/* Lotus center — 4 petals */}
-      <Path d="M12 8 Q13.5 10 12 12 Q10.5 10 12 8" fill={color + "60"} stroke={color} strokeWidth="0.8" />
-      <Path d="M16 12 Q14 13.5 12 12 Q14 10.5 16 12" fill={color + "60"} stroke={color} strokeWidth="0.8" />
-      <Path d="M12 16 Q10.5 14 12 12 Q13.5 14 12 16" fill={color + "60"} stroke={color} strokeWidth="0.8" />
-      <Path d="M8 12 Q10 10.5 12 12 Q10 13.5 8 12" fill={color + "60"} stroke={color} strokeWidth="0.8" />
-      <Circle cx="12" cy="12" r="1.5" fill={color} />
-      {/* Top corner flanges */}
-      <Path d="M12 2 L13.5 4 L12 4.5 L10.5 4 Z" fill={color + "55"} stroke="none" />
+      {/* Top crest flange */}
+      <Path d="M12 1.5 L14 4 L12 5 L10 4 Z" fill={color} opacity="0.9" />
+      {/* Lotus center — 4 bold petals */}
+      <Path d="M12 7.5 Q14.5 9.5 12 12.5 Q9.5 9.5 12 7.5" fill={petalFill} stroke={color} strokeWidth="1.1" />
+      <Path d="M16.5 12 Q14 13.5 12 12.5 Q14.5 10.5 16.5 12" fill={petalFill} stroke={color} strokeWidth="1.1" />
+      <Path d="M12 17 Q9.5 15 12 12.5 Q14.5 15 12 17" fill={petalFill} stroke={color} strokeWidth="1.1" />
+      <Path d="M7.5 12 Q10 10.5 12 12.5 Q9.5 13.5 7.5 12" fill={petalFill} stroke={color} strokeWidth="1.1" />
+      {/* Center gem */}
+      <Circle cx="12" cy="12.5" r="1.8" fill={color} />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOSS WARD — Triple-Flame Dragon Seal
-// Three flame peaks, coiled inner mark, lotus base — danger / final encounter.
+// Thick ring with three bold filled flames, tight coil mark, lotus base.
 // ─────────────────────────────────────────────────────────────────────────────
 export function BossWardEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "1A";
+  const sealFill  = color + "30";
+  const flameFill = color + "80";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Circular seal ring */}
-      <Circle cx="12" cy="13" r="9.5" stroke={color} strokeWidth="1.1" fill={fill} />
-      {/* Triple flame peaks */}
+      {/* Seal ring — thick */}
+      <Circle cx="12" cy="13.5" r="9.5" stroke={color} strokeWidth="1.6" fill={sealFill} />
+      {/* Triple flame peaks — bold filled */}
       <Path
-        d="M12 2 Q13.5 5 12 7.5 Q10.5 5 12 2"
-        fill={color + "70"}
-        stroke={color}
-        strokeWidth="1.0"
+        d="M12 2 Q14 5 12 8 Q10 5 12 2"
+        fill={flameFill} stroke={color} strokeWidth="1.2"
       />
       <Path
-        d="M8.5 4 Q9.5 6.5 8 8.5 Q6.5 6.5 8.5 4"
-        fill={color + "50"}
-        stroke={color}
-        strokeWidth="0.9"
+        d="M8 4 Q9.5 7 8 9.5 Q6.5 7 8 4"
+        fill={color + "60"} stroke={color} strokeWidth="1.0"
       />
       <Path
-        d="M15.5 4 Q14.5 6.5 16 8.5 Q17.5 6.5 15.5 4"
-        fill={color + "50"}
-        stroke={color}
-        strokeWidth="0.9"
+        d="M16 4 Q14.5 7 16 9.5 Q17.5 7 16 4"
+        fill={color + "60"} stroke={color} strokeWidth="1.0"
       />
-      {/* Inner coil/spiral — dragon mark */}
+      {/* Dragon coil spiral */}
       <Path
-        d="M12 10 C14.5 10 16 11.5 16 13.5 C16 15.5 14 17 12 17 C10 17 8.5 15.5 9 14 C9.5 12.5 11 12 12 12.5 C13 13 13 14 12 14.5"
-        stroke={color}
-        strokeWidth="1.1"
-        strokeLinecap="round"
-        fill="none"
+        d="M12 10.5 C15 10.5 17 12 17 14.5 C17 17 14.5 18.5 12 18.5 C9.5 18.5 8 17 8.5 15 C9 13 11 12.5 12 13.5 C13 14.5 13 15.5 12 16"
+        stroke={color} strokeWidth="1.4" strokeLinecap="round" fill="none"
       />
-      {/* Dragon eye dot */}
-      <Circle cx="13.5" cy="11.5" r="0.8" fill={color} />
-      {/* Lotus base beneath seal */}
-      <Path
-        d="M7.5 21.5 Q12 19.5 16.5 21.5"
-        stroke={color}
-        strokeWidth="1.0"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.6"
-      />
-      <Path d="M12 19.5 Q13.5 20.5 12 22 Q10.5 20.5 12 19.5" fill={color + "45"} stroke={color} strokeWidth="0.7" />
+      {/* Dragon eye */}
+      <Circle cx="14" cy="11.5" r="1.0" fill={color} />
+      {/* Lotus base */}
+      <Path d="M9 22 Q12 20 15 22" stroke={color} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.7" />
+      <Path d="M12 20 Q13.8 21 12 22.5 Q10.2 21 12 20" fill={color + "55"} stroke={color} strokeWidth="0.8" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LOTUS JOURNAL — Open Lotus Plate Flower
-// Five open petals, stamens, leaf base, stem — wellness / off-shift.
+// LOTUS JOURNAL — Open Lotus Flower
+// Five wide filled petals, prominent stamen center, stem, leaf base.
 // ─────────────────────────────────────────────────────────────────────────────
 export function LotusJournalEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "30";
+  const petalFill = color + "55";
+  const innerFill = color + "70";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Five petals */}
-      <Path d="M12 4 Q14 7 12 10 Q10 7 12 4" fill={fill} stroke={color} strokeWidth="1.1" />
-      <Path d="M18 7.5 Q16.5 10.5 13.5 10.5 Q15 7 18 7.5" fill={fill} stroke={color} strokeWidth="1.0" />
-      <Path d="M17 15.5 Q14 15 13 12 Q16 12.5 17 15.5" fill={fill} stroke={color} strokeWidth="1.0" />
-      <Path d="M7 15.5 Q10 15 11 12 Q8 12.5 7 15.5" fill={fill} stroke={color} strokeWidth="1.0" />
-      <Path d="M6 7.5 Q7.5 10.5 10.5 10.5 Q9 7 6 7.5" fill={fill} stroke={color} strokeWidth="1.0" />
-      {/* Center */}
-      <Circle cx="12" cy="11" r="2.2" stroke={color} strokeWidth="1.0" fill={color + "45"} />
-      <Circle cx="12" cy="11" r="0.9" fill={color} />
-      {/* Stamens dots */}
-      <Circle cx="10.5" cy="9.5" r="0.4" fill={color} opacity="0.7" />
-      <Circle cx="13.5" cy="9.5" r="0.4" fill={color} opacity="0.7" />
-      <Circle cx="12" cy="9" r="0.4" fill={color} opacity="0.7" />
-      {/* Leaf */}
+      {/* Five wide petals */}
       <Path
-        d="M9.5 15.5 Q12 18 14.5 15.5 Q12 17 9.5 15.5"
-        stroke={color}
-        strokeWidth="1.1"
-        fill={color + "22"}
-        strokeLinecap="round"
+        d="M12 3 Q15 6.5 12 11 Q9 6.5 12 3"
+        fill={petalFill} stroke={color} strokeWidth="1.3"
+      />
+      <Path
+        d="M19 7 Q17 11 13.5 10.5 Q15.5 6.5 19 7"
+        fill={petalFill} stroke={color} strokeWidth="1.1"
+      />
+      <Path
+        d="M17.5 16 Q13.5 15 13 11.5 Q16.5 12.5 17.5 16"
+        fill={petalFill} stroke={color} strokeWidth="1.1"
+      />
+      <Path
+        d="M6.5 16 Q10.5 15 11 11.5 Q7.5 12.5 6.5 16"
+        fill={petalFill} stroke={color} strokeWidth="1.1"
+      />
+      <Path
+        d="M5 7 Q7 11 10.5 10.5 Q8.5 6.5 5 7"
+        fill={petalFill} stroke={color} strokeWidth="1.1"
+      />
+      {/* Center disc */}
+      <Circle cx="12" cy="11" r="2.5" stroke={color} strokeWidth="1.2" fill={innerFill} />
+      {/* Center gem */}
+      <Circle cx="12" cy="11" r="1.0" fill={color} />
+      {/* Stamen dots */}
+      <Circle cx="10.3" cy="9.5" r="0.5" fill={color} opacity="0.8" />
+      <Circle cx="13.7" cy="9.5" r="0.5" fill={color} opacity="0.8" />
+      <Circle cx="12" cy="9" r="0.5" fill={color} opacity="0.8" />
+      {/* Leaf base */}
+      <Path
+        d="M8.5 16 Q12 18.5 15.5 16 Q12 18 8.5 16"
+        stroke={color} strokeWidth="1.3" fill={color + "30"} strokeLinecap="round"
       />
       {/* Stem */}
-      <Path d="M12 17.5 L12 22" stroke={color} strokeWidth="1.0" strokeLinecap="round" />
-      <Path d="M10.5 20 Q12 21 13.5 20" stroke={color} strokeWidth="0.8" fill="none" opacity="0.6" />
+      <Path d="M12 18.5 L12 23" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+      {/* Side leaf */}
+      <Path d="M10 21 Q12 22 14 21" stroke={color} strokeWidth="1.0" fill="none" opacity="0.65" />
     </Svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LOTUS LESSONS — Academy Lesson Seal
-// Round seal ring, horizontal lesson lines, five-petal lotus bloom, flourish.
+// LOTUS LESSONS — Lesson Scroll Tablet
+// Open parchment scroll (landscape) with ruled lesson lines, lotus bloom center,
+// seal stamp at corner — reads as a SCROLL not a circle.
 // ─────────────────────────────────────────────────────────────────────────────
 export function LotusLessonsEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
-  const fill = color + "1A";
+  const scrollFill = color + "35";
+  const petalFill  = color + "65";
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Outer seal ring */}
-      <Circle cx="12" cy="12" r="10.5" stroke={color} strokeWidth="1.1" fill={fill} />
-      {/* Inner inset ring */}
-      <Circle cx="12" cy="12" r="8.5" stroke={color} strokeWidth="0.5" fill="none" opacity="0.3" />
-      {/* Lesson text lines (scroll content) */}
-      <Path d="M7.5 7.5 L16.5 7.5" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.65" />
-      <Path d="M8.5 9 L15.5 9" stroke={color} strokeWidth="0.7" strokeLinecap="round" opacity="0.5" />
-      {/* Lotus bloom — 5 petals */}
-      <Path d="M12 10.5 Q14 12.5 12 15 Q10 12.5 12 10.5" fill={color + "60"} stroke={color} strokeWidth="1.0" />
-      <Path d="M9 12.5 Q11 11 12.5 13.5 Q10 14.5 9 12.5" fill={color + "50"} stroke={color} strokeWidth="0.85" />
-      <Path d="M15 12.5 Q13 11 11.5 13.5 Q14 14.5 15 12.5" fill={color + "50"} stroke={color} strokeWidth="0.85" />
-      <Path d="M10 15.5 Q12 14.5 12 16.5 Q11 17 10 15.5" fill={color + "40"} stroke={color} strokeWidth="0.7" />
-      <Path d="M14 15.5 Q12 14.5 12 16.5 Q13 17 14 15.5" fill={color + "40"} stroke={color} strokeWidth="0.7" />
+      {/* Scroll body */}
+      <Rect x="2" y="5.5" width="20" height="13" rx="1.8" stroke={color} strokeWidth="1.6" fill={scrollFill} />
+      {/* Top roll cylinder */}
+      <Ellipse cx="12" cy="5.5" rx="10" ry="1.8" stroke={color} strokeWidth="1.2" fill={color + "50"} />
+      {/* Bottom roll cylinder */}
+      <Ellipse cx="12" cy="18.5" rx="10" ry="1.8" stroke={color} strokeWidth="1.2" fill={color + "50"} />
+      {/* Lesson text lines — left column */}
+      <Path d="M4 9 L10.5 9" stroke={color} strokeWidth="1.0" strokeLinecap="round" opacity="0.7" />
+      <Path d="M4 11 L10 11" stroke={color} strokeWidth="0.8" strokeLinecap="round" opacity="0.55" />
+      <Path d="M4 13 L10.5 13" stroke={color} strokeWidth="0.8" strokeLinecap="round" opacity="0.55" />
+      <Path d="M4 15 L9 15" stroke={color} strokeWidth="0.7" strokeLinecap="round" opacity="0.45" />
+      {/* Lotus bloom — right side of scroll */}
+      {/* 4 petals */}
+      <Path d="M16.5 9.5 Q18.5 11 16.5 13 Q14.5 11 16.5 9.5" fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M19.5 12 Q18 13.5 16.5 12 Q18 10.5 19.5 12" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M16.5 14.5 Q15 13 16.5 12 Q18 13 16.5 14.5" fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M13.5 12 Q15 10.5 16.5 12 Q15 13.5 13.5 12" fill={petalFill} stroke={color} strokeWidth="0.9" />
       {/* Center seed */}
-      <Circle cx="12" cy="13.2" r="1.0" fill={color} />
-      {/* Bottom seal flourish */}
-      <Path d="M8.5 18.5 Q12 17.2 15.5 18.5" stroke={color} strokeWidth="0.8" strokeLinecap="round" opacity="0.55" />
+      <Circle cx="16.5" cy="12" r="1.3" fill={color} />
     </Svg>
   );
 }
@@ -572,6 +580,7 @@ const EMBLEM_BY_ID: Record<string, React.FC<EmblemProps>> = {
   journey: JourneyEmblem,
   summoning: SummoningEmblem,
   recruit: SummoningEmblem,
+  recruitment: SummoningEmblem,
   // Lotus Lessons
   "lotus-lessons": LotusLessonsEmblem,
   "lotus-scroll": LotusLessonsEmblem,
@@ -588,6 +597,7 @@ const EMBLEM_BY_ID: Record<string, React.FC<EmblemProps>> = {
   "regalia-upgrades": WardDefenseEmblem,
   "sanctuary-bank": ShopEmblem,
   "night-market": CommunityEmblem,
+  "event-shop": ShopEmblem,
 };
 
 interface ClinicaEmblemProps extends EmblemProps {
