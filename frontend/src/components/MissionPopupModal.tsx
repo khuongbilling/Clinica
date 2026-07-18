@@ -12,6 +12,7 @@
  * Locked nodes still cannot start — they show the lock reason instead.
  */
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
   Modal,
@@ -29,7 +30,27 @@ import {
 } from "@/src/game/journeyRewards";
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
-import { NODE_TYPE_ICON } from "./MapNodeShape";
+
+// ── Illustrated node PNG emblem map (mirrors MapNodeShape's NODE_ICON) ─────────
+
+const NODE_EMBLEM: Partial<Record<string, ReturnType<typeof require>>> = {
+  battle:          require("@/assets/map-nodes/node_ward_shift_gate.png"),
+  mini_boss:       require("@/assets/map-nodes/node_trial_corrupted_gate.png"),
+  ward_defense:    require("@/assets/map-nodes/node_ward_shift_gate.png"),
+  challenge:       require("@/assets/map-nodes/node_rapid_triage_assessment_desk.png"),
+  chain:           require("@/assets/map-nodes/node_rapid_triage_assessment_desk.png"),
+  minigame:        require("@/assets/map-nodes/node_rapid_triage_assessment_desk.png"),
+  story:           require("@/assets/map-nodes/node_memory_lotus_shard.png"),
+  memory_fragment: require("@/assets/map-nodes/node_memory_lotus_shard.png"),
+  lesson:          require("@/assets/map-nodes/node_reflection_lotus_journal.png"),
+  reflection:      require("@/assets/map-nodes/node_reflection_lotus_journal.png"),
+  community:       require("@/assets/map-nodes/node_reflection_lotus_journal.png"),
+  realm:           require("@/assets/map-nodes/node_stabilize_ward_shield.png"),
+  reward:          require("@/assets/map-nodes/node_reward_medical_chest.png"),
+  mode_preview:    require("@/assets/map-nodes/node_ward_shift_gate.png"),
+  arena:           require("@/assets/map-nodes/node_ward_shift_gate.png"),
+};
+const NODE_EMBLEM_FALLBACK = require("@/assets/map-nodes/node_reflection_lotus_journal.png");
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
 
@@ -111,7 +132,7 @@ export function MissionPopupModal({
   const isActionable  = !!part.route && !part.isPlaceholder;
   const typeLabel     = TYPE_LABEL[part.type] ?? part.type.replace(/_/g, " ").toUpperCase();
   const flavor        = TYPE_FLAVOR[part.type] ?? part.description;
-  const icon          = NODE_TYPE_ICON[part.type] ?? "star";
+  const nodeImg       = NODE_EMBLEM[part.type] ?? NODE_EMBLEM_FALLBACK;
 
   // Compute rewards
   const def = getJourneyNodeDef(part.id);
@@ -172,10 +193,11 @@ export function MissionPopupModal({
               {/* Inner corner marks — RPG banner frame detail */}
               <View style={[styles.cornerTL, { borderColor: chapterAccent }]} />
               <View style={[styles.cornerBR, { borderColor: chapterAccent }]} />
-              {/* Horizontal rule above icon */}
+              {/* Horizontal rule above illustration */}
               <View style={[styles.ruleTop, { backgroundColor: chapterAccent + "50" }]} />
-              <Ionicons name={icon as any} size={34} color={chapterAccent} />
-              {/* Horizontal rule below icon */}
+              {/* Illustrated node PNG — replaces Ionicons emblem */}
+              <Image source={nodeImg} style={{ width: 54, height: 54 }} contentFit="contain" />
+              {/* Horizontal rule below illustration */}
               <View style={[styles.ruleBot, { backgroundColor: chapterAccent + "50" }]} />
             </View>
 
