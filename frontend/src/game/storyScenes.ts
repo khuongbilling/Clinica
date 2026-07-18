@@ -172,7 +172,16 @@ export function isSceneSeen(player: PlayerState | null | undefined, sceneId: str
 export function isSceneUnlocked(scene: StoryScene, player: PlayerState | null | undefined): boolean {
   if (!player) return false;
   const u = scene.unlock;
-  if (u.type === "chapter") return (player.chapter_progress ?? 1) >= u.chapter;
+  if (u.type === "chapter") {
+    // P6 — Chapter 2 cutscene requires c1n6 (Chapter Trial) actually cleared.
+    // Belt-and-suspenders: also accept chapter_progress >= 2 for returning
+    // players who progressed before this push (normalizeProgression never resets down).
+    if (u.chapter === 2) {
+      const claimed: string[] = player.claimed_journey_nodes ?? [];
+      return claimed.includes("c1n6") || (player.chapter_progress ?? 1) >= 2;
+    }
+    return (player.chapter_progress ?? 1) >= u.chapter;
+  }
   switch (u.beat) {
     case "class_confirmed":
       return !!player.class_tree_id && !!player.class_diagnostic_resonance;

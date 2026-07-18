@@ -210,7 +210,9 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete the Prologue',
     description: 'Answer the first call and face the Infarct.',
     icon: 'sparkles',
-    reward: { crowns: 50, playerXp: 20 },
+    // P6 — onboarding milestones reward currencies, not XP; levels gate systems
+    // while chapter progress gates story. XP comes from battles and journey nodes.
+    reward: { crowns: 75 },
     isDone: (p) => !!p?.prologue_complete,
   },
   {
@@ -218,7 +220,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete Lotus Recall',
     description: 'Follow the memory through the Lotus Recall.',
     icon: 'flower-outline',
-    reward: { universityCredits: 30, playerXp: 20 },
+    reward: { universityCredits: 50 },
     isDone: (p) => !!p?.identity_restored || (p?.story_scenes_seen ?? []).includes('lotus_recall'),
   },
   {
@@ -226,7 +228,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Restore Your Identity',
     description: 'Reclaim your name and face in the ward.',
     icon: 'person-circle-outline',
-    reward: { universityCredits: 30, playerXp: 20 },
+    reward: { universityCredits: 50 },
     isDone: (p) => !!p?.identity_restored,
   },
   {
@@ -234,7 +236,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete Class Diagnostic',
     description: 'Take the clinical resonance assessment.',
     icon: 'flask-outline',
-    reward: { universityCredits: 40, playerXp: 25 },
+    reward: { universityCredits: 65 },
     isDone: (p) => !!p?.diagnostic_intro_seen,
   },
   {
@@ -242,7 +244,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Confirm Class Assignment',
     description: 'Choose your clinical path in the class tree.',
     icon: 'git-branch-outline',
-    reward: { universityCredits: 50, playerXp: 25 },
+    reward: { universityCredits: 75 },
     isDone: (p) => !!p?.class_tree_id,
   },
   {
@@ -250,7 +252,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete Reminiscence',
     description: 'Recover the memory of your calling.',
     icon: 'eye-outline',
-    reward: { universityCredits: 50, playerXp: 25 },
+    reward: { universityCredits: 75 },
     isDone: (p) => !!p?.seen_reminiscence,
   },
   {
@@ -258,7 +260,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Reach the Main Hub',
     description: 'Enter the Shift hub and begin your career.',
     icon: 'home-outline',
-    reward: { codexShards: 25, playerXp: 30 },
+    reward: { codexShards: 40 },
     isDone: (p) => !!p?.onboarding_complete && !!p?.identity_restored,
   },
   {
@@ -266,7 +268,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Visit Clinica University',
     description: 'Open the University and start learning.',
     icon: 'school-outline',
-    reward: { universityCredits: 30, playerXp: 20 },
+    reward: { universityCredits: 50 },
     isDone: (p) => (p?.lessons_completed?.length ?? 0) > 0 || (p?.uni_cue_lab_count ?? 0) > 0,
   },
   {
@@ -274,7 +276,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete First Lotus Lesson',
     description: 'Finish a lesson in Vital Foundations.',
     icon: 'leaf',
-    reward: { universityCredits: 50, playerXp: 30 },
+    reward: { universityCredits: 75 },
     isDone: (p) => (p?.lessons_completed ?? []).some((id: string) => id.startsWith('lotus:')),
   },
   {
@@ -282,7 +284,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete The Fading Apprenticeship',
     description: 'Win your first simulation battle.',
     icon: 'shield-checkmark-outline',
-    reward: { crowns: 50, playerXp: 30 },
+    reward: { crowns: 100 },
     isDone: (p) => (p?.runs_completed ?? 0) >= 1,
   },
   {
@@ -290,7 +292,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Enter Chapter 1 Journey Map',
     description: 'Begin your first Journey Map node.',
     icon: 'map-outline',
-    reward: { crowns: 50, playerXp: 30 },
+    reward: { crowns: 75 },
     isDone: (p) => (p?.claimed_journey_nodes?.length ?? 0) > 0,
   },
   {
@@ -298,7 +300,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete First Ward Shift',
     description: 'Purify a disease in a clinical simulation case.',
     icon: 'medkit-outline',
-    reward: { crowns: 75, playerXp: 30, heroXp: 10 },
+    reward: { crowns: 100, heroXp: 15 },
     isDone: (p) => (p?.runs_completed ?? 0) >= 1,
   },
   {
@@ -306,15 +308,20 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete Chapter 1',
     description: 'Advance to Chapter 2 of the healing journey.',
     icon: 'trophy-outline',
-    reward: { codexShards: 50, playerXp: 50 },
-    isDone: (p) => (p?.chapter_progress ?? 1) >= 2,
+    // P6 — big completion reward in currencies, not XP. Story gates on c1n6 node.
+    reward: { codexShards: 75, crowns: 100 },
+    isDone: (p) =>
+      (p?.claimed_journey_nodes ?? []).includes('c1n6') ||
+      (p?.chapter_progress ?? 1) >= 2,
   },
   {
     id: 'ms_level2',
     label: 'Reach Level 2',
     description: 'Grow your healer rank through victories.',
     icon: 'trending-up',
-    reward: { codexShards: 25, crowns: 50, playerXp: 25 },
+    // P6 — level milestones grant currencies; XP from level milestones
+    // creates an XP feedback loop that speeds up early progression.
+    reward: { codexShards: 50, crowns: 100 },
     isDone: (p) => playerLevelFromXp(p?.xp ?? 0).level >= 2,
   },
   {
@@ -322,7 +329,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Unlock Summoning Hall',
     description: 'Open the Hall of Heroes and recruit your team.',
     icon: 'people-outline',
-    reward: { codexShards: 50, playerXp: 50 },
+    reward: { codexShards: 75 },
     isDone: (p) => playerLevelFromXp(p?.xp ?? 0).level >= 2,
   },
   {
@@ -330,7 +337,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete First Daily Set',
     description: 'Finish all three daily duties in one day.',
     icon: 'checkmark-circle-outline',
-    reward: { crowns: 50, playerXp: 25 },
+    reward: { crowns: 75 },
     isDone: (p) => (p?.daily_rounds?.weekly_days_completed ?? 0) >= 1,
   },
   {
@@ -338,7 +345,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Complete First Weekly Set',
     description: 'Claim the weekly clinical growth reward.',
     icon: 'ribbon-outline',
-    reward: { codexShards: 75, playerXp: 50 },
+    reward: { codexShards: 100 },
     isDone: (p) => !!(p?.daily_rounds?.weekly_all_complete_claimed),
   },
   // P3: Journey Map-aligned milestones — tied to the Chapter 1 node progression.
@@ -347,7 +354,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'First Ward Shift Victory',
     description: 'Claim the Journey Map reward for winning your first clinical battle.',
     icon: 'shield-checkmark-outline',
-    reward: { crowns: 75, playerXp: 30, heroXp: 15 },
+    reward: { crowns: 100, heroXp: 20 },
     isDone: (p) => (p?.claimed_journey_nodes ?? []).includes('c1n4'),
   },
   {
@@ -355,7 +362,9 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Chapter 1 Journey Complete',
     description: 'Claim all six Chapter 1 Journey Map node rewards.',
     icon: 'map-outline',
-    reward: { codexShards: 75, crowns: 100, playerXp: 60 },
+    // P6 — Chapter 1 journey complete is a major milestone: big currency reward,
+    // no XP boost (XP from battle nodes already compensated the player during play).
+    reward: { codexShards: 100, crowns: 150 },
     isDone: (p) => {
       const claimed: string[] = p?.claimed_journey_nodes ?? [];
       return ['c1n1','c1n2','c1n3','c1n4','c1n5','c1n6'].every((id: string) => claimed.includes(id));
@@ -366,7 +375,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'First Skill Upgrade',
     description: 'Upgrade a hero skill at the Skill Academy.',
     icon: 'flash-outline',
-    reward: { universityCredits: 50, playerXp: 25 },
+    reward: { universityCredits: 75 },
     isDone: (p) => Object.keys(p?.hero_skill_upgrades ?? {}).length > 0,
   },
   {
@@ -374,7 +383,7 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     label: 'Seven-Day Healing Streak',
     description: 'Log in for 7 consecutive days.',
     icon: 'flame-outline',
-    reward: { codexShards: 50, crowns: 100, playerXp: 30 },
+    reward: { codexShards: 75, crowns: 125 },
     isDone: (p) => (p?.daily_rounds?.streak_count ?? 0) >= 7,
   },
 ];

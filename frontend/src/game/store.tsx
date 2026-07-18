@@ -177,6 +177,16 @@ function normalizeProgression(p: PlayerState): PlayerState {
   }
   // Fix 9 — backfill quest milestone claim tracking.
   if (!out.claimed_daily_milestones) out = { ...out, claimed_daily_milestones: [] };
+  // P6 — Normalize chapter_progress based on actual journey node completion.
+  // Only ever advances forward; never resets down. Corrects saves where
+  // chapter_progress was set to 2 via run count before this push without the
+  // player having actually cleared the Chapter 1 Trial (c1n6).
+  {
+    const claimed: string[] = (out.claimed_journey_nodes as string[]) ?? [];
+    if (claimed.includes('c1n6') && (out.chapter_progress ?? 1) < 2) {
+      out = { ...out, chapter_progress: 2 };
+    }
+  }
   // Push 5.5 structural correction — realm_layout now stores buildingId ->
   // origin cellId ("r{row}_c{col}"), not the old fixed plotId. Any saved
   // layout whose values aren't valid grid cell ids predates the rewrite and
@@ -815,8 +825,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       next.region_progress[rewards.regionId] = (next.region_progress[rewards.regionId] || 0) + 1;
     }
     next.runs_completed = next.runs_completed + 1;
-    const newChapter = next.runs_completed >= 10 ? 3 : next.runs_completed >= 3 ? 2 : 1;
-    next.chapter_progress = Math.max(next.chapter_progress || 1, newChapter);
+    // P6 — chapter_progress now advances only via journey node claims (claimJourneyNode),
+    // NOT from run count. Run count alone never equals chapter completion.
     next = foldDaily(next, 'ward_shift_win');
     await updateState(next);
     return { playerLevelUp, heroLevelUps };
@@ -2260,6 +2270,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     // Fix 9 — credit weekly w_battles task for journey node completions.
     next = foldDaily(next, 'journey_node');
+    // P6 — advance chapter_progress when a chapter-final node is claimed.
+    // c1n6 = Chapter 1 Trial (mini_boss) → unlocks Chapter 2 content + cutscene.
+    // c2p7 = Chapter 2 Trial (boss)      → unlocks Chapter 3 content.
+    if (nodeId === 'c1n6') {
+      next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 2) };
+    } else if (nodeId === 'c2p7' || nodeId === 'c2p8') {
+      next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 3) };
+    }
     playerRef.current = next;
     await updateState(next);
     const parts: string[] = [];

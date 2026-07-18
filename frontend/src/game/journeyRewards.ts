@@ -82,12 +82,15 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   // c1n1: memory_fragment (flat)  c1n2: challenge-triage (flat)
   // c1n3: challenge-stack (flat)  c1n4: battle (stars)
   // c1n5: reflection (flat)       c1n6: mini_boss (stars)
-  // Approx totals at 3★: 180 XP, 60 hero XP, 195 coins, 30 credits, 25 shards.
-  { nodeId: 'c1n1', chapter: 1, playerXp:  20, heroXp:  0,  coins:  25,                   isStory: true,  starsScale: false },
-  { nodeId: 'c1n2', chapter: 1, playerXp:  20, heroXp:  0,  coins:  15, credits: 10,      isStory: true,  starsScale: false },
-  { nodeId: 'c1n3', chapter: 1, playerXp:  20, heroXp:  0,  coins:  15, credits: 10,      isStory: true,  starsScale: false },
+  // Approx totals at 3★: 140 XP, 60 hero XP, 210 coins, 60 credits, 25 shards. (P6: story nodes 20→10 XP)
+  // P6 — Ch1 story/reflection nodes: XP halved (10 vs 20). Battle nodes keep
+  // their full XP — earned XP from actual combat stays; passive reading nodes
+  // shouldn't accelerate levels as fast as real gameplay.
+  { nodeId: 'c1n1', chapter: 1, playerXp:  10, heroXp:  0,  coins:  30,                   isStory: true,  starsScale: false },
+  { nodeId: 'c1n2', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20, credits: 15,      isStory: true,  starsScale: false },
+  { nodeId: 'c1n3', chapter: 1, playerXp:  10, heroXp:  0,  coins:  20, credits: 15,      isStory: true,  starsScale: false },
   { nodeId: 'c1n4', chapter: 1, playerXp:  45, heroXp:  25, coins:  65,                   isStory: false, starsScale: true  },
-  { nodeId: 'c1n5', chapter: 1, playerXp:  20, heroXp:  0,  coins:   0, credits: 10,      isStory: true,  starsScale: false },
+  { nodeId: 'c1n5', chapter: 1, playerXp:  10, heroXp:  0,  coins:   0, credits: 15,      isStory: true,  starsScale: false },
   { nodeId: 'c1n6', chapter: 1, playerXp:  55, heroXp:  35, coins:  75, shards: 25,       isStory: false, starsScale: true  },
 
   // ── Chapter 2: The First Ward Rotation (Level 2, 8 nodes — P8 format) ───
