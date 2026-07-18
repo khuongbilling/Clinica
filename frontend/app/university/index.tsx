@@ -9,6 +9,7 @@ import { ModeCard } from "@/src/components/ModeCard";
 import { BannerCard } from "@/src/components/ModeBanners";
 import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
@@ -30,9 +31,6 @@ import {
 import { playerLevelFromXp } from "@/src/game/progression";
 
 // ── Next-in-chain hero banner ─────────────────────────────────────────────────
-// Always shows whichever game is next in the chain so returning players are
-// never left guessing what to do after completing a step.
-
 interface ChainGameDef {
   kicker: string;
   title: string;
@@ -47,85 +45,61 @@ interface ChainGameDef {
 
 const CHAIN_GAME_DEFS: Record<"cueHunt" | "triage" | "stabilize" | "done", ChainGameDef> = {
   cueHunt: {
-    kicker: "CUE HUNT · STEP 1 OF 3",
-    title: "The Fading Apprentice",
+    kicker: "CUE HUNT · STEP 1 OF 3", title: "The Fading Apprentice",
     sub: "Find what others missed — spot the clinical cues.",
-    badge: "START HERE",
-    badgeIcon: "eye-outline",
-    ctaLabel: "Start Cue Hunt",
-    accentColor: "#2DD4BF",
+    badge: "START HERE", badgeIcon: "eye-outline",
+    ctaLabel: "Start Cue Hunt", accentColor: "#2DD4BF",
     gradientColors: ["#0D3B38", "#1B5550", "#0D2E2B"],
     testID: "university-banner-cue-hunt",
   },
   triage: {
-    kicker: "RAPID TRIAGE · STEP 2 OF 3",
-    title: "The Fading Apprentice",
+    kicker: "RAPID TRIAGE · STEP 2 OF 3", title: "The Fading Apprentice",
     sub: "Cue Hunt complete ✓ — now sort patients by urgency.",
-    badge: "NEXT IN CHAIN",
-    badgeIcon: "flash-outline",
-    ctaLabel: "Start Rapid Triage",
-    accentColor: "#F59E0B",
+    badge: "NEXT IN CHAIN", badgeIcon: "flash-outline",
+    ctaLabel: "Start Rapid Triage", accentColor: "#F59E0B",
     gradientColors: ["#2D1F06", "#3D2A08", "#1E1504"],
     testID: "university-banner-rapid-triage",
   },
   stabilize: {
-    kicker: "STABILIZE STACK · STEP 3 OF 3",
-    title: "The Fading Apprentice",
+    kicker: "STABILIZE STACK · STEP 3 OF 3", title: "The Fading Apprentice",
     sub: "Triage complete ✓ — build the care sequence to save Wei.",
-    badge: "FINAL STEP",
-    badgeIcon: "layers-outline",
-    ctaLabel: "Start Stabilize Stack",
-    accentColor: "#22D3EE",
+    badge: "FINAL STEP", badgeIcon: "layers-outline",
+    ctaLabel: "Start Stabilize Stack", accentColor: "#22D3EE",
     gradientColors: ["#071A24", "#0A2535", "#051018"],
     testID: "university-banner-stabilize",
   },
   done: {
-    kicker: "CASE CHAIN COMPLETE",
-    title: "The Fading Apprentice",
+    kicker: "CASE CHAIN COMPLETE", title: "The Fading Apprentice",
     sub: "You guided the Apprentice through every phase of care.",
-    badge: "COMPLETE ✓",
-    badgeIcon: "ribbon-outline",
-    ctaLabel: "Review Chain",
-    accentColor: "#D4AF37",
+    badge: "COMPLETE ✓", badgeIcon: "ribbon-outline",
+    ctaLabel: "Review Chain", accentColor: "#D4AF37",
     gradientColors: ["#1C1500", "#2A1F00", "#110E00"],
     testID: "university-banner-done",
   },
 };
 
-function NextChainBanner({
-  chainProg,
-  onPress,
-}: {
-  chainProg: ChainProgress;
-  onPress: () => void;
-}) {
+function NextChainBanner({ chainProg, onPress }: { chainProg: ChainProgress; onPress: () => void }) {
   const key: keyof typeof CHAIN_GAME_DEFS =
     chainProg.stabilizeDone ? "done"
     : chainProg.rapidTriageDone ? "stabilize"
     : chainProg.cueHuntDone ? "triage"
     : "cueHunt";
-
   const def = CHAIN_GAME_DEFS[key];
   const ac = def.accentColor;
-
   return (
     <Pressable style={[styles.cueCard, { backgroundColor: def.gradientColors[0] }]} onPress={onPress} testID={def.testID}>
-      {/* Accent glow top-right */}
       <View style={[styles.cueGlow, { backgroundColor: ac + "18" }]} pointerEvents="none" />
-
       <View style={styles.cueTop}>
         <View style={[styles.cueBadge, { backgroundColor: ac + "20", borderColor: ac + "44" }]}>
           <Ionicons name={def.badgeIcon} size={11} color={ac} />
           <Text style={[styles.cueBadgeTxt, { color: ac }]}>{def.badge}</Text>
         </View>
       </View>
-
       <View style={styles.cueBody}>
         <Text style={[styles.cueKicker, { color: ac }]}>{def.kicker}</Text>
         <Text style={styles.cueTitle}>{def.title}</Text>
         <Text style={styles.cueSub}>{def.sub}</Text>
       </View>
-
       <View style={styles.cueCtaRow}>
         <View style={[styles.cueCtaBtn, { backgroundColor: ac }]}>
           <Text style={styles.cueCtaTxt}>{def.ctaLabel}</Text>
@@ -136,9 +110,6 @@ function NextChainBanner({
   );
 }
 
-// ── FA Complete Chip ──────────────────────────────────────────────────────────
-// Compact collapsed state shown after the full Fading Apprentice chain is done.
-// Replaces the full-height NextChainBanner so it no longer dominates the page.
 function FaCompleteChip() {
   return (
     <View style={[faChipStyles.wrap, { backgroundColor: "#1C1500" }]}>
@@ -156,593 +127,89 @@ function FaCompleteChip() {
 }
 const faChipStyles = StyleSheet.create({
   wrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderRadius: RADIUS.md,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#D4AF3730",
-    padding: SPACING.md,
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    borderRadius: RADIUS.md, overflow: "hidden", borderWidth: 1,
+    borderColor: "#D4AF3730", padding: SPACING.md,
   },
-  title: { color: "#D4AF37", fontSize: 13, fontWeight: "700" },
-  sub:   { color: "#A09060", fontSize: 11 },
-  badge: {
+  title:    { color: "#D4AF37", fontSize: 13, fontWeight: "700" },
+  sub:      { color: "#A09060", fontSize: 11 },
+  badge:    {
     flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: "#22C55E18",
-    borderRadius: RADIUS.pill,
+    backgroundColor: "#22C55E18", borderRadius: RADIUS.pill,
     borderWidth: 1, borderColor: "#22C55E30",
     paddingHorizontal: 8, paddingVertical: 4,
   },
   badgeTxt: { color: "#22C55E", fontSize: 8, fontWeight: "800", letterSpacing: 1 },
 });
 
-// The primary "begin here" learning banner — the heart of the University.
 const LESSONS_BANNER: ModeCardDef = {
-  id: "uni-lessons",
-  title: "Lotus Lessons",
+  id: "uni-lessons", title: "Lotus Lessons",
   subtitle: "Short, gentle lessons that teach real care — and reward your first heroes.",
-  icon: "book",
-  accentColor: COLORS.brand,
-  status: "active",
-  size: "large",
-  imageKey: "uni-lessons",
-  route: "/university/lessons",
-  rewardPreview: "Start here · earn your first heroes",
-  artBrief: "",
+  icon: "book", accentColor: COLORS.brand, status: "active", size: "large",
+  imageKey: "uni-lessons", route: "/university/lessons", rewardPreview: "Start here · earn your first heroes", artBrief: "",
 };
-
 const RECRUIT_BANNER: ModeCardDef = {
-  id: "uni-recruit",
-  title: "University Recruitment",
+  id: "uni-recruit", title: "University Recruitment",
   subtitle: "Enroll new healers with Hero Shards, Trainees, and Credits.",
-  icon: "sparkles",
-  accentColor: "#F59E0B",
-  status: "active",
-  size: "medium",
-  imageKey: "uni-recruit",
-  route: "/university/recruit",
-  artBrief: "",
+  icon: "sparkles", accentColor: "#F59E0B", status: "active", size: "medium",
+  imageKey: "uni-recruit", route: "/university/recruit", artBrief: "",
 };
-
 const TRAINING_BANNER: ModeCardDef = {
-  id: "uni-training",
-  title: "Training Hall",
+  id: "uni-training", title: "Training Hall",
   subtitle: "Level up your healers toward their Certification Star's cap.",
-  icon: "trending-up",
-  accentColor: "#5B9BD5",
-  status: "active",
-  size: "medium",
-  imageKey: "uni-training",
-  route: "/university/training",
-  artBrief: "",
+  icon: "trending-up", accentColor: "#5B9BD5", status: "active", size: "medium",
+  imageKey: "uni-training", route: "/university/training", artBrief: "",
 };
-
 const SKILL_ACADEMY_BANNER: ModeCardDef = {
-  id: "uni-skill-academy",
-  title: "Hero Skill Academy",
-  subtitle: "Convert Scrolls, Manuals, and University Credits into stronger hero skills.",
-  icon: "flash",
-  accentColor: "#A855F7",
-  status: "active",
-  size: "medium",
-  imageKey: "uni-training",
-  route: "/university/skill-academy",
-  artBrief: "",
+  id: "uni-skill-academy", title: "Hero Skill Academy",
+  subtitle: "Upgrade hero skills into stronger combat abilities.",
+  icon: "flash", accentColor: "#A855F7", status: "active", size: "medium",
+  imageKey: "uni-training", route: "/university/skill-academy", artBrief: "",
 };
-
 const LIBRARY_BANNER: ModeCardDef = {
-  id: "uni-library",
-  title: "Research Library",
+  id: "uni-library", title: "Research Library",
   subtitle: "Browse the Great Codex — knowledge, battle mechanics, field notes.",
-  icon: "library",
-  accentColor: "#22D3EE",
-  status: "active",
-  size: "medium",
-  imageKey: "uni-library",
-  route: "/(tabs)/codex",
-  artBrief: "",
+  icon: "library", accentColor: "#22D3EE", status: "active", size: "medium",
+  imageKey: "uni-library", route: "/(tabs)/codex", artBrief: "",
 };
-
 const CLASSTREE_BANNER: ModeCardDef = {
-  id: "uni-classtree",
-  title: "Class Tree",
+  id: "uni-classtree", title: "Class Tree",
   subtitle: "Choose a Player Class and unlock its ability tree as you level.",
-  icon: "git-network",
-  accentColor: "#A78BFA",
-  status: "active",
-  size: "medium",
-  imageKey: "uni-classtree",
-  route: "/class-tree",
-  artBrief: "",
+  icon: "git-network", accentColor: "#A78BFA", status: "active", size: "medium",
+  imageKey: "uni-classtree", route: "/class-tree", artBrief: "",
 };
-
-export default function UniversityHubScreen() {
-  const router = useRouter();
-  const { player, applyRewards } = usePlayer();
-  const gate = useFeatureGate("university");
-  const heroesGate = useFeatureGate("hall_of_heroes");
-  const { activeTutorialId, onRequiredAction } = useTutorial();
-  const [info, setInfo] = useState<{ title: string; message: string } | null>(null);
-  const [showFuture, setShowFuture] = useState(false);
-
-  // Chain progress — reload every time this screen gains focus so the banner
-  // updates after the player returns from a completed mini-game.
-  const [chainProg, setChainProg] = useState<ChainProgress>({
-    cueHuntDone: false,
-    rapidTriageDone: false,
-    stabilizeDone: false,
-    cueHuntFirstPerfect: false,
-    triageFirstPerfect: false,
-    stabilizeFirstPerfect: false,
-  });
-  const [completedObjectives, setCompletedObjectives] = useState<Set<ObjectiveId>>(new Set());
-
-  useFocusEffect(
-    useCallback(() => {
-      getChainProgress().then(setChainProg);
-      getObjectiveProgress().then(setCompletedObjectives);
-      // ── C1: If systemWardHub tutorial is still waiting for the player to
-      // navigate to University, completing that action here advances the step
-      // (which marks the tutorial done, since it's the last step).
-      onRequiredAction("navigateToUniversity");
-    }, [onRequiredAction]),
-  );
-
-  // ── C1 objective XP grants — run once per component mount.
-  // Uses a ref so we don't repeat across re-renders within the same mount.
-  const objGrantedRef = React.useRef(false);
-  useEffect(() => {
-    if (!player || objGrantedRef.current) return;
-    objGrantedRef.current = true;
-    (async () => {
-      let bonus = 0;
-
-      // Step 7 — Open Clinica University (first visit grant)
-      const isUnivNew = await completeObjective("obj_university_arrived");
-      if (isUnivNew) {
-        await markObjectiveXpGranted("obj_university_arrived");
-        bonus += 10;
-      }
-
-      // Catch-up grant: early onboarding steps (1-6) fire outside a context with
-      // applyRewards. Load the done-set once, then pay out any unpaid XP here.
-      const catchupIds: ObjectiveId[] = [
-        // Steps 1-6: early onboarding, fire outside a context with applyRewards.
-        "obj_prologue_done",
-        "obj_lotus_recall",
-        "obj_identity_done",
-        "obj_diagnostic_done",
-        "obj_class_result",
-        "obj_memory_seen",
-        // Steps 9-12: reconcileEarlyObjectives (run at boot) already writes the
-        // completion records; we just need to pay out any XP not yet granted.
-        "obj_lotus_visited",
-        "obj_lotus_first_lesson",
-        "obj_recruit_preview",
-        "obj_ward_shift_first",
-      ];
-      const doneSet = await getObjectiveProgress();
-      for (const id of catchupIds) {
-        if (doneSet.has(id)) {
-          const alreadyPaid = await isObjectiveXpGranted(id);
-          if (!alreadyPaid) {
-            await markObjectiveXpGranted(id);
-            bonus += 10;
-          }
-        }
-      }
-
-      // If the full FA chain is already done (returning player), grant step 8 too.
-      const prog = await getChainProgress();
-      if (prog.stabilizeDone) {
-        const isFANew = await completeObjective("obj_fading_apprentice_done");
-        if (isFANew) {
-          await markObjectiveXpGranted("obj_fading_apprentice_done");
-          bonus += 10;
-        }
-      }
-
-      // applyRewards handles XP + level recalc via the public store API.
-      if (bonus > 0) await applyRewards({ xp: bonus });
-
-    })();
-  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Smart chain entry — resume from the next unfinished step rather than
-  // always starting from the beginning.
-  const handleChainEntry = useCallback(() => {
-    if (chainProg.stabilizeDone) {
-      // Full chain complete — don't loop back into any game
-      return;
-    } else if (chainProg.rapidTriageDone) {
-      router.push("/university/stabilize-stack" as any);
-    } else if (chainProg.cueHuntDone) {
-      router.push("/university/rapid-triage" as any);
-    } else {
-      router.push("/university/cue-hunt" as any);
-    }
-  }, [chainProg, router]);
-
-  // Leaving mid-tutorial must never leak the overlay onto the next screen.
-  // (Must run unconditionally, before the early return below.)
-  useClearTutorialOnExit();
-  // Browser back mirrors the in-app arrow instead of popping stale gameplay screens.
-  useWebBackToHub("/(tabs)");
-
-  if (!player) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loading}>
-          <Ionicons name="school-outline" size={28} color={COLORS.brand} />
-          <ActivityIndicator size="small" color={COLORS.brand} style={{ marginTop: 4 }} />
-          <Text style={styles.loadingTxt}>Opening Clinica University…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-  if (!gate.unlocked) return <FeatureLockedView title="Clinica University" reason={gate.reason} />;
-
-  const nextLotusNode = firstIncompleteLotusNode(player);
-  const lessonsCompleted = player.lessons_completed?.length ?? 0;
-  const isNewLearner = lessonsCompleted === 0;
-  // True once the player finishes the full Fading Apprentice chain (Step 9 reward screen)
-  const chainComplete = isLotusNodeComplete(player, "recognizing-cues-hydration");
-  const heroCount = player.heroes_owned?.length ?? 0;
-  // Show Recruitment once the player has completed at least one lesson.
-  const showRecruitment = !isNewLearner;
-  // Show Training Hall once the player has at least 2 heroes to train.
-  const showTraining = heroCount >= 2;
-  // Show Codex link as an optional reference once any lesson is done.
-  const showCodex = !isNewLearner;
-  // Class Tree is display-only until Level 5 and not useful to new learners early.
-  const showClassTree = (player.player_level ?? 1) >= 5;
-  // Career Explorer is informational; surface it at Level 3 or after 3+ lessons.
-  const showCareerExplorer = (player.player_level ?? 1) >= 3 || lessonsCompleted >= 3;
-  // Hall of Heroes is gated by its own feature gate.
-  const showHeroes = heroesGate.unlocked;
-  // "More" section is relevant once the player has progressed beyond the first lesson.
-  const showMore = !isNewLearner;
-
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <PlayerHeader player={player} />
-      <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
-        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
-          <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
-        </Pressable>
-        <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>
-        <Text style={styles.title}>Where Your Story Begins</Text>
-        <Text style={styles.sub}>Learn the way of the healer, one living case at a time.</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* CHAIN HERO BANNER — collapses to a compact chip after completion */}
-        {chainProg.stabilizeDone ? (
-          <FaCompleteChip />
-        ) : (
-          <>
-            <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
-            <TutorialQuestPanel
-              chainProg={chainProg}
-              completed={completedObjectives}
-              onPressTask={(key) => {
-                if (key === "cueHunt")   router.push("/university/cue-hunt" as any);
-                else if (key === "triage") router.push("/university/rapid-triage" as any);
-                else                       router.push("/university/stabilize-stack" as any);
-              }}
-            />
-          </>
-        )}
-
-
-        {/* ── CHAPTER 1 JOURNEY — visible once FA chain is done or for returning players */}
-        {chainProg.stabilizeDone && (
-          <>
-            <Text style={styles.sectionHeading}>CHAPTER 1 JOURNEY</Text>
-            <Pressable
-              style={styles.ch1JourneyCard}
-              onPress={() => router.push("/journey" as any)}
-              testID="university-ch1-journey"
-            >
-              <View style={styles.ch1JourneyLeft}>
-                <View style={styles.ch1Badge}>
-                  <Text style={styles.ch1BadgeTxt}>CH. 1</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.ch1Title}>The Fading Apprenticeship</Text>
-                  <Text style={styles.ch1Sub}>5 parts · Learn to see before you heal</Text>
-                </View>
-              </View>
-              <Ionicons name="arrow-forward" size={16} color="#D4AF37" />
-            </Pressable>
-          </>
-        )}
-
-        {/* P4: PRACTICE CURRICULUM — structured learning path above the free labs */}
-        {showMore && (
-          <>
-            <Text style={styles.sectionHeading}>PRACTICE CURRICULUM</Text>
-            <Pressable
-              style={pracStyles.curriculumCard}
-              onPress={() => router.push("/university/practice" as any)}
-              testID="university-practice-curriculum"
-            >
-              <View style={pracStyles.curriculumLeft}>
-                <View style={pracStyles.curriculumBadge}>
-                  <Ionicons name="school" size={14} color="#2DD4BF" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={pracStyles.curriculumKicker}>STRUCTURED TRAINING</Text>
-                  <Text style={pracStyles.curriculumTitle}>Practice Curriculum</Text>
-                  <Text style={pracStyles.curriculumSub}>
-                    3 tracks · Assessment · Priority · Sequencing
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name="arrow-forward" size={16} color="#2DD4BF" />
-            </Pressable>
-          </>
-        )}
-
-        {/* PRACTICE LABS — J3: repeatable practice modes, visible once FA chain is started */}
-        {showMore && (
-          <>
-            <Text style={styles.sectionHeading}>PRACTICE LABS</Text>
-            <View style={labsStyles.grid}>
-              <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/cue-lab" as any)} testID="university-lab-cue">
-                <View style={[labsStyles.labIcon, { backgroundColor: '#2DD4BF18' }]}>
-                  <Ionicons name="eye-outline" size={20} color="#2DD4BF" />
-                </View>
-                <Text style={labsStyles.labTitle}>Cue Lab</Text>
-                <Text style={labsStyles.labDesc}>Spot the most important clinical cue</Text>
-                <View style={labsStyles.labChip}>
-                  <Ionicons name="refresh-outline" size={9} color="#2DD4BF" />
-                  <Text style={[labsStyles.labChipTxt, { color: '#2DD4BF' }]}>REPEATABLE</Text>
-                </View>
-              </Pressable>
-
-              <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/triage-hall" as any)} testID="university-lab-triage">
-                <View style={[labsStyles.labIcon, { backgroundColor: '#F59E0B18' }]}>
-                  <Ionicons name="flash-outline" size={20} color="#F59E0B" />
-                </View>
-                <Text style={labsStyles.labTitle}>Triage Hall</Text>
-                <Text style={labsStyles.labDesc}>Choose who needs care first</Text>
-                <View style={labsStyles.labChip}>
-                  <Ionicons name="refresh-outline" size={9} color="#F59E0B" />
-                  <Text style={[labsStyles.labChipTxt, { color: '#F59E0B' }]}>REPEATABLE</Text>
-                </View>
-              </Pressable>
-
-              <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/stack-lab" as any)} testID="university-lab-stack">
-                <View style={[labsStyles.labIcon, { backgroundColor: '#22D3EE18' }]}>
-                  <Ionicons name="layers-outline" size={20} color="#22D3EE" />
-                </View>
-                <Text style={labsStyles.labTitle}>Stack Lab</Text>
-                <Text style={labsStyles.labDesc}>Arrange care steps in the right order</Text>
-                <View style={labsStyles.labChip}>
-                  <Ionicons name="refresh-outline" size={9} color="#22D3EE" />
-                  <Text style={[labsStyles.labChipTxt, { color: '#22D3EE' }]}>REPEATABLE</Text>
-                </View>
-              </Pressable>
-            </View>
-            <View style={labsStyles.labFooter}>
-              <Ionicons name="school-outline" size={12} color={COLORS.onSurfaceTertiary} />
-              <Text style={labsStyles.labFooterTxt}>
-                Earn scrolls and credits. Milestone rewards unlock automatically.
-              </Text>
-              <View style={labsStyles.labMoreRow}>
-                <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-milestones" as any)}>
-                  <Ionicons name="trophy-outline" size={13} color="#D4AF37" />
-                  <Text style={labsStyles.labMoreBtnTxt}>Practice Milestones</Text>
-                </Pressable>
-                <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-shop" as any)}>
-                  <Ionicons name="storefront-outline" size={13} color="#2DD4BF" />
-                  <Text style={[labsStyles.labMoreBtnTxt, { color: '#2DD4BF' }]}>University Shop</Text>
-                </Pressable>
-                <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/skill-academy" as any)}>
-                  <Ionicons name="flash-outline" size={13} color="#A855F7" />
-                  <Text style={[labsStyles.labMoreBtnTxt, { color: '#A855F7' }]}>Skill Academy</Text>
-                </Pressable>
-              </View>
-            </View>
-          </>
-        )}
-
-        {/* BATTLE & JOURNEY SUPPORT — links University practice to upcoming battles */}
-        {showMore && (
-          <>
-            <Text style={styles.sectionHeading}>BATTLE {"&"} JOURNEY SUPPORT</Text>
-            <JourneyPrepSection
-              chapterProgress={player.chapter_progress ?? 1}
-              onJourneyPress={() => router.push("/journey" as any)}
-              onLabPress={(route) => router.push(route as any)}
-            />
-          </>
-        )}
-
-        {/* LESSONS — available below, not removed */}
-        <Text style={styles.sectionHeading}>LESSONS</Text>
-        <BannerCard
-          mode={LESSONS_BANNER}
-          height={120}
-          onPress={() => router.push("/university/lessons" as any)}
-          testID="university-banner-lessons"
-        />
-
-        {/* GROW YOUR HEALERS — revealed progressively */}
-        {(showRecruitment || showTraining || showMore) && (
-          <Text style={styles.sectionHeading}>GROW YOUR HEALERS</Text>
-        )}
-        {showRecruitment && (
-          <BannerCard
-            mode={RECRUIT_BANNER}
-            height={120}
-            onPress={() => router.push("/university/recruit" as any)}
-            testID="university-banner-uni-recruit"
-          />
-        )}
-        {showTraining && (
-          <BannerCard
-            mode={TRAINING_BANNER}
-            height={120}
-            onPress={() => router.push("/university/training" as any)}
-            testID="university-banner-uni-training"
-          />
-        )}
-        {showMore && (
-          <BannerCard
-            mode={SKILL_ACADEMY_BANNER}
-            height={120}
-            onPress={() => router.push("/university/skill-academy" as any)}
-            testID="university-banner-skill-academy"
-          />
-        )}
-
-        {/* KNOWLEDGE & PATHS — revealed after first lesson */}
-        {(showCodex || showClassTree) && (
-          <Text style={styles.sectionHeading}>KNOWLEDGE & PATHS</Text>
-        )}
-        {showCodex && (
-          <BannerCard
-            mode={LIBRARY_BANNER}
-            height={120}
-            onPress={() => router.push("/(tabs)/codex" as any)}
-            testID="university-banner-uni-library"
-          />
-        )}
-        {showClassTree && (
-          <BannerCard
-            mode={CLASSTREE_BANNER}
-            height={120}
-            onPress={() => router.push("/class-tree" as any)}
-            testID="university-banner-uni-classtree"
-          />
-        )}
-
-        {/* MORE — revealed after first lesson */}
-        {showMore && (
-          <>
-            <Text style={styles.sectionHeading}>MORE AT UNIVERSITY</Text>
-            {showHeroes && (
-              <MoreRow
-                icon="ribbon"
-                title="Hall of Heroes"
-                desc="Certify heroes and raise their star."
-                onPress={() => router.push("/(tabs)/heroes" as any)}
-                testID="university-more-heroes"
-              />
-            )}
-            {showCareerExplorer && (
-              <MoreRow
-                icon="compass"
-                title="Career Explorer"
-                desc="Healthcare is not one road. Discover the many paths a healer can walk."
-                onPress={() => router.push("/university/career-explorer" as any)}
-                testID="university-more-career-explorer"
-              />
-            )}
-            <MoreRow
-              icon="options-outline"
-              title="Learning Style"
-              desc="Personalize explanation depth and clue visibility to match how you learn."
-              onPress={() => router.push("/learning-profile" as any)}
-              testID="university-more-learning-profile"
-            />
-
-            {/* Future Learning — collapsed by default */}
-            <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
-              <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceSecondary} />
-              <Text style={styles.futureToggleTxt}>Future Learning ({UNIVERSITY_FUTURE_MODES.length})</Text>
-              <Ionicons name={showFuture ? "chevron-up" : "chevron-down"} size={16} color={COLORS.onSurfaceTertiary} />
-            </Pressable>
-            {showFuture && (
-              <View style={{ gap: SPACING.sm }}>
-                {UNIVERSITY_FUTURE_MODES.map((m) => (
-                  <ModeCard
-                    key={m.id}
-                    mode={m}
-                    testID={`university-future-${m.id}`}
-                    onPress={() =>
-                      setInfo({
-                        title: `${m.title} — Coming Soon`,
-                        message: m.subtitle + "\n\nThis feature is still in development.",
-                      })
-                    }
-                  />
-                ))}
-              </View>
-            )}
-          </>
-        )}
-
-        <View style={styles.footNote}>
-          <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
-          <Text style={styles.footNoteTxt}>
-            Clinica University is a game progression system only. It does not offer CME/CE credit
-            or real-world continuing education certification.
-          </Text>
-        </View>
-      </ScrollView>
-
-      <MessageDialog
-        visible={!!info}
-        title={info?.title ?? ""}
-        message={info?.message ?? ""}
-        confirmLabel="Got it"
-        onConfirm={() => setInfo(null)}
-        testID="university-info-dialog"
-      />
-
-      <TutorialOverlay />
-    </SafeAreaView>
-  );
-}
-
-// ── Battle & Journey Support ─────────────────────────────────────────────────
 
 interface PrepRec {
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  color: string;
-  title: string;
-  desc: string;
-  route: string;
-  label: string;
+  color: string; title: string; desc: string; route: string; label: string;
 }
-
 const CHAPTER_PREP: Record<number, PrepRec[]> = {
   1: [
-    { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",     desc: "Cue recognition powers your Cue Bonus in Ward Shifts.",             route: "/university/cue-lab",     label: "Practice" },
-    { icon: "book-outline",   color: "#A78BFA", title: "Lotus Lessons",        desc: "Learn the disease systems you will face in battle.",                route: "/university/lessons",      label: "Study"    },
+    { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",    desc: "Cue recognition powers your Cue Bonus in Ward Shifts.", route: "/university/cue-lab",     label: "Practice" },
+    { icon: "book-outline",   color: "#A78BFA", title: "Lotus Lessons",       desc: "Learn the disease systems you'll face in battle.",      route: "/university/lessons",      label: "Study" },
   ],
   2: [
-    { icon: "flash-outline",  color: "#F59E0B", title: "Rapid Triage Hall",    desc: "Multi-enemy encounters demand fast prioritization.",                 route: "/university/triage-hall", label: "Practice" },
-    { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",     desc: "Advanced cue spotting sharpens your Cue Bonus further.",            route: "/university/cue-lab",     label: "Practice" },
+    { icon: "flash-outline",  color: "#F59E0B", title: "Rapid Triage Hall",   desc: "Multi-enemy encounters demand fast prioritization.",    route: "/university/triage-hall", label: "Practice" },
+    { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",    desc: "Advanced cue spotting sharpens your Cue Bonus.",        route: "/university/cue-lab",     label: "Practice" },
   ],
   3: [
-    { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab",  desc: "Care-sequence combos are key against tougher enemies.",             route: "/university/stack-lab",   label: "Practice" },
-    { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",   desc: "Upgrade hero skills before facing Chapter 3 bosses.",               route: "/university/skill-academy", label: "Upgrade"  },
+    { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab", desc: "Care-sequence combos are key against tougher enemies.", route: "/university/stack-lab",   label: "Practice" },
+    { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",  desc: "Upgrade hero skills before facing Chapter 3 bosses.",  route: "/university/skill-academy", label: "Upgrade" },
   ],
   4: [
-    { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab",  desc: "Precise stacking keeps patient stability from collapsing.",         route: "/university/stack-lab",   label: "Practice" },
-    { icon: "flash-outline",  color: "#F59E0B", title: "Rapid Triage Hall",    desc: "Combined pressure in Ch. 4 rewards sharp triage instincts.",        route: "/university/triage-hall", label: "Practice" },
-    { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",   desc: "Max out core skills — Ch. 4 enemies hit hard.",                     route: "/university/skill-academy", label: "Upgrade"  },
+    { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab", desc: "Precise stacking keeps patient stability from collapsing.", route: "/university/stack-lab", label: "Practice" },
+    { icon: "flash-outline",  color: "#F59E0B", title: "Rapid Triage Hall",   desc: "Combined pressure rewards sharp triage instincts.",     route: "/university/triage-hall", label: "Practice" },
+    { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",  desc: "Max out core skills — Ch. 4 enemies hit hard.",         route: "/university/skill-academy", label: "Upgrade" },
   ],
 };
 const PREP_FALLBACK: PrepRec[] = [
-  { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",     desc: "Keep cue recognition sharp at every chapter.",                      route: "/university/cue-lab",     label: "Practice" },
-  { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab",  desc: "Precise stacking is the endgame healer's signature.",               route: "/university/stack-lab",   label: "Practice" },
-  { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",   desc: "Max skill ranks before facing the final boss.",                      route: "/university/skill-academy", label: "Upgrade"  },
+  { icon: "eye-outline",    color: "#2DD4BF", title: "Clinical Cue Lab",    desc: "Keep cue recognition sharp at every chapter.",    route: "/university/cue-lab",       label: "Practice" },
+  { icon: "layers-outline", color: "#22D3EE", title: "Stabilize Stack Lab", desc: "Precise stacking is the endgame healer's skill.", route: "/university/stack-lab",     label: "Practice" },
+  { icon: "flash-outline",  color: "#A855F7", title: "Hero Skill Academy",  desc: "Max skill ranks before the final boss.",          route: "/university/skill-academy", label: "Upgrade"  },
 ];
 
-function JourneyPrepSection({
-  chapterProgress,
-  onJourneyPress,
-  onLabPress,
-}: {
-  chapterProgress: number;
-  onJourneyPress: () => void;
-  onLabPress: (route: string) => void;
+function JourneyPrepSection({ chapterProgress, onJourneyPress, onLabPress }: {
+  chapterProgress: number; onJourneyPress: () => void; onLabPress: (route: string) => void;
 }) {
   const recs = CHAPTER_PREP[chapterProgress] ?? PREP_FALLBACK;
   return (
@@ -758,14 +225,14 @@ function JourneyPrepSection({
       <View style={prepS.divider} />
       {recs.map((rec) => (
         <Pressable key={rec.route + rec.title} style={prepS.row} onPress={() => onLabPress(rec.route)}>
-          <View style={[prepS.iconWrap, { backgroundColor: rec.color + '18' }]}>
+          <View style={[prepS.iconWrap, { backgroundColor: rec.color + "18" }]}>
             <Ionicons name={rec.icon} size={15} color={rec.color} />
           </View>
           <View style={prepS.rowText}>
             <Text style={prepS.rowTitle}>{rec.title}</Text>
             <Text style={prepS.rowDesc}>{rec.desc}</Text>
           </View>
-          <View style={[prepS.labelChip, { backgroundColor: rec.color + '20' }]}>
+          <View style={[prepS.labelChip, { backgroundColor: rec.color + "20" }]}>
             <Text style={[prepS.labelTxt, { color: rec.color }]}>{rec.label}</Text>
           </View>
         </Pressable>
@@ -774,18 +241,11 @@ function JourneyPrepSection({
   );
 }
 
-function MoreRow({
-  icon, title, desc, locked, onPress, testID,
-}: {
+function MoreRow({ icon, title, desc, locked, onPress, testID }: {
   icon: string; title: string; desc: string; locked?: boolean; onPress: () => void; testID?: string;
 }) {
   return (
-    <Pressable
-      style={[styles.moreRow, locked && styles.moreRowLocked]}
-      disabled={locked}
-      onPress={onPress}
-      testID={testID}
-    >
+    <Pressable style={[styles.moreRow, locked && styles.moreRowLocked]} disabled={locked} onPress={onPress} testID={testID}>
       <View style={styles.moreIcon}>
         <Ionicons name={icon as any} size={18} color={COLORS.brand} />
       </View>
@@ -798,285 +258,530 @@ function MoreRow({
   );
 }
 
+export default function UniversityHubScreen() {
+  const router = useRouter();
+  const { player, applyRewards } = usePlayer();
+  const gate       = useFeatureGate("university");
+  const heroesGate = useFeatureGate("hall_of_heroes");
+  const { activeTutorialId, onRequiredAction } = useTutorial();
+  const [info, setInfo]         = useState<{ title: string; message: string } | null>(null);
+  const [showFuture, setShowFuture] = useState(false);
+  const [activeTab, setActiveTab]   = useState("lessons");
+  const [chainProg, setChainProg] = useState<ChainProgress>({
+    cueHuntDone: false, rapidTriageDone: false, stabilizeDone: false,
+    cueHuntFirstPerfect: false, triageFirstPerfect: false, stabilizeFirstPerfect: false,
+  });
+  const [completedObjectives, setCompletedObjectives] = useState<Set<ObjectiveId>>(new Set());
+
+  useFocusEffect(
+    useCallback(() => {
+      getChainProgress().then(setChainProg);
+      getObjectiveProgress().then(setCompletedObjectives);
+      onRequiredAction("navigateToUniversity");
+    }, [onRequiredAction]),
+  );
+
+  const objGrantedRef = React.useRef(false);
+  useEffect(() => {
+    if (!player || objGrantedRef.current) return;
+    objGrantedRef.current = true;
+    (async () => {
+      let bonus = 0;
+      const isUnivNew = await completeObjective("obj_university_arrived");
+      if (isUnivNew) { await markObjectiveXpGranted("obj_university_arrived"); bonus += 10; }
+      const catchupIds: ObjectiveId[] = [
+        "obj_prologue_done", "obj_lotus_recall", "obj_identity_done",
+        "obj_diagnostic_done", "obj_class_result", "obj_memory_seen",
+        "obj_lotus_visited", "obj_lotus_first_lesson", "obj_recruit_preview", "obj_ward_shift_first",
+      ];
+      const doneSet = await getObjectiveProgress();
+      for (const id of catchupIds) {
+        if (doneSet.has(id)) {
+          const alreadyPaid = await isObjectiveXpGranted(id);
+          if (!alreadyPaid) { await markObjectiveXpGranted(id); bonus += 10; }
+        }
+      }
+      const prog = await getChainProgress();
+      if (prog.stabilizeDone) {
+        const isFANew = await completeObjective("obj_fading_apprentice_done");
+        if (isFANew) { await markObjectiveXpGranted("obj_fading_apprentice_done"); bonus += 10; }
+      }
+      if (bonus > 0) await applyRewards({ xp: bonus });
+    })();
+  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleChainEntry = useCallback(() => {
+    if (chainProg.stabilizeDone) return;
+    else if (chainProg.rapidTriageDone) router.push("/university/stabilize-stack" as any);
+    else if (chainProg.cueHuntDone)     router.push("/university/rapid-triage" as any);
+    else                                router.push("/university/cue-hunt" as any);
+  }, [chainProg, router]);
+
+  useClearTutorialOnExit();
+  useWebBackToHub("/(tabs)");
+
+  if (!player) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loading}>
+          <Ionicons name="school-outline" size={28} color={COLORS.brand} />
+          <ActivityIndicator size="small" color={COLORS.brand} style={{ marginTop: 4 }} />
+          <Text style={styles.loadingTxt}>Opening Clinica University…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  if (!gate.unlocked) return <FeatureLockedView title="Clinica University" reason={gate.reason} />;
+
+  const nextLotusNode    = firstIncompleteLotusNode(player);
+  const lessonsCompleted = player.lessons_completed?.length ?? 0;
+  const isNewLearner     = lessonsCompleted === 0;
+  const heroCount        = player.heroes_owned?.length ?? 0;
+  const showRecruitment  = !isNewLearner;
+  const showTraining     = heroCount >= 2;
+  const showCodex        = !isNewLearner;
+  const showClassTree    = (player.player_level ?? 1) >= 5;
+  const showCareerExplorer = (player.player_level ?? 1) >= 3 || lessonsCompleted >= 3;
+  const showHeroes       = heroesGate.unlocked;
+  const showMore         = !isNewLearner;
+
+  const TABS: RPGTab[] = [
+    { key: "lessons",     label: "Lessons",     icon: "book" },
+    { key: "simulations", label: "Simulations", icon: "flask", locked: isNewLearner },
+    { key: "schools",     label: "Schools",     icon: "school", locked: isNewLearner },
+    { key: "more",        label: "More",        icon: "grid", locked: isNewLearner },
+  ];
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <PlayerHeader player={player} />
+
+      <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
+        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
+          <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
+        </Pressable>
+        <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>
+        <Text style={styles.title}>Where Your Story Begins</Text>
+      </View>
+
+      <RPGTabBar tabs={TABS} activeTab={activeTab} onTabPress={setActiveTab} />
+
+      {/* ── LESSONS TAB ── */}
+      {activeTab === "lessons" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {chainProg.stabilizeDone ? <FaCompleteChip /> : (
+            <>
+              <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+              <TutorialQuestPanel
+                chainProg={chainProg}
+                completed={completedObjectives}
+                onPressTask={(key) => {
+                  if (key === "cueHunt") router.push("/university/cue-hunt" as any);
+                  else if (key === "triage") router.push("/university/rapid-triage" as any);
+                  else router.push("/university/stabilize-stack" as any);
+                }}
+              />
+            </>
+          )}
+
+          {chainProg.stabilizeDone && (
+            <>
+              <Text style={styles.sectionHeading}>CHAPTER 1 JOURNEY</Text>
+              <Pressable style={styles.ch1JourneyCard} onPress={() => router.push("/journey" as any)} testID="university-ch1-journey">
+                <View style={styles.ch1JourneyLeft}>
+                  <View style={styles.ch1Badge}><Text style={styles.ch1BadgeTxt}>CH. 1</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.ch1Title}>The Fading Apprenticeship</Text>
+                    <Text style={styles.ch1Sub}>5 parts · Learn to see before you heal</Text>
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#D4AF37" />
+              </Pressable>
+            </>
+          )}
+
+          <Text style={styles.sectionHeading}>LOTUS LESSONS</Text>
+          <BannerCard
+            mode={LESSONS_BANNER} height={120}
+            onPress={() => router.push("/university/lessons" as any)}
+            testID="university-banner-lessons"
+          />
+
+          {nextLotusNode && (
+            <Pressable style={styles.nextLessonCard}
+              onPress={() => router.push(`/university/lotus-lesson/${nextLotusNode.id}` as any)}
+              testID="university-next-lesson">
+              <View style={styles.nextLessonIcon}>
+                <Ionicons name="play-circle" size={22} color={COLORS.brand} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nextLessonKicker}>UP NEXT</Text>
+                <Text style={styles.nextLessonTitle}>{nextLotusNode.title}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color={COLORS.brand} />
+            </Pressable>
+          )}
+
+          <View style={styles.footNote}>
+            <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.footNoteTxt}>
+              Clinica University is a game progression system only — not CME/CE credit.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ── SIMULATIONS TAB ── */}
+      {activeTab === "simulations" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {showMore && (
+            <>
+              <Text style={styles.sectionHeading}>PRACTICE CURRICULUM</Text>
+              <Pressable style={pracStyles.curriculumCard}
+                onPress={() => router.push("/university/practice" as any)}
+                testID="university-practice-curriculum">
+                <View style={pracStyles.curriculumLeft}>
+                  <View style={pracStyles.curriculumBadge}>
+                    <Ionicons name="school" size={14} color="#2DD4BF" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={pracStyles.curriculumKicker}>STRUCTURED TRAINING</Text>
+                    <Text style={pracStyles.curriculumTitle}>Practice Curriculum</Text>
+                    <Text style={pracStyles.curriculumSub}>3 tracks · Assessment · Priority · Sequencing</Text>
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#2DD4BF" />
+              </Pressable>
+
+              <Text style={styles.sectionHeading}>PRACTICE LABS</Text>
+              <View style={labsStyles.grid}>
+                <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/cue-lab" as any)} testID="university-lab-cue">
+                  <View style={[labsStyles.labIcon, { backgroundColor: "#2DD4BF18" }]}>
+                    <Ionicons name="eye-outline" size={20} color="#2DD4BF" />
+                  </View>
+                  <Text style={labsStyles.labTitle}>Cue Lab</Text>
+                  <Text style={labsStyles.labDesc}>Spot the most important clinical cue</Text>
+                  <View style={labsStyles.labChip}>
+                    <Ionicons name="refresh-outline" size={9} color="#2DD4BF" />
+                    <Text style={[labsStyles.labChipTxt, { color: "#2DD4BF" }]}>REPEATABLE</Text>
+                  </View>
+                </Pressable>
+                <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/triage-hall" as any)} testID="university-lab-triage">
+                  <View style={[labsStyles.labIcon, { backgroundColor: "#F59E0B18" }]}>
+                    <Ionicons name="flash-outline" size={20} color="#F59E0B" />
+                  </View>
+                  <Text style={labsStyles.labTitle}>Triage Hall</Text>
+                  <Text style={labsStyles.labDesc}>Choose who needs care first</Text>
+                  <View style={labsStyles.labChip}>
+                    <Ionicons name="refresh-outline" size={9} color="#F59E0B" />
+                    <Text style={[labsStyles.labChipTxt, { color: "#F59E0B" }]}>REPEATABLE</Text>
+                  </View>
+                </Pressable>
+                <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/stack-lab" as any)} testID="university-lab-stack">
+                  <View style={[labsStyles.labIcon, { backgroundColor: "#22D3EE18" }]}>
+                    <Ionicons name="layers-outline" size={20} color="#22D3EE" />
+                  </View>
+                  <Text style={labsStyles.labTitle}>Stack Lab</Text>
+                  <Text style={labsStyles.labDesc}>Arrange care steps in the right order</Text>
+                  <View style={labsStyles.labChip}>
+                    <Ionicons name="refresh-outline" size={9} color="#22D3EE" />
+                    <Text style={[labsStyles.labChipTxt, { color: "#22D3EE" }]}>REPEATABLE</Text>
+                  </View>
+                </Pressable>
+              </View>
+              <View style={labsStyles.labFooter}>
+                <Text style={labsStyles.labFooterTxt}>Earn scrolls and credits. Milestone rewards unlock automatically.</Text>
+                <View style={labsStyles.labMoreRow}>
+                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-milestones" as any)}>
+                    <Ionicons name="trophy-outline" size={13} color="#D4AF37" />
+                    <Text style={labsStyles.labMoreBtnTxt}>Milestones</Text>
+                  </Pressable>
+                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-shop" as any)}>
+                    <Ionicons name="storefront-outline" size={13} color="#2DD4BF" />
+                    <Text style={[labsStyles.labMoreBtnTxt, { color: "#2DD4BF" }]}>Uni Shop</Text>
+                  </Pressable>
+                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/skill-academy" as any)}>
+                    <Ionicons name="flash-outline" size={13} color="#A855F7" />
+                    <Text style={[labsStyles.labMoreBtnTxt, { color: "#A855F7" }]}>Skills</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <Text style={styles.sectionHeading}>BATTLE {"&"} JOURNEY SUPPORT</Text>
+              <JourneyPrepSection
+                chapterProgress={player.chapter_progress ?? 1}
+                onJourneyPress={() => router.push("/journey" as any)}
+                onLabPress={(route) => router.push(route as any)}
+              />
+            </>
+          )}
+
+          {isNewLearner && (
+            <View style={styles.lockedTabCard}>
+              <Ionicons name="flask-outline" size={32} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.lockedTabTitle}>Simulations</Text>
+              <Text style={styles.lockedTabSub}>Complete your first Lotus Lesson to unlock practice labs and simulations.</Text>
+              <Pressable style={styles.lockedTabCta} onPress={() => setActiveTab("lessons")}>
+                <Text style={styles.lockedTabCtaTxt}>Start Lessons</Text>
+              </Pressable>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* ── SCHOOLS TAB ── */}
+      {activeTab === "schools" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {isNewLearner ? (
+            <View style={styles.lockedTabCard}>
+              <Ionicons name="school-outline" size={32} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.lockedTabTitle}>Schools & Departments</Text>
+              <Text style={styles.lockedTabSub}>Finish your first Lotus Lesson to unlock recruitment, training, and the codex.</Text>
+              <Pressable style={styles.lockedTabCta} onPress={() => setActiveTab("lessons")}>
+                <Text style={styles.lockedTabCtaTxt}>Start Lessons</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              {(showRecruitment || showTraining) && (
+                <>
+                  <Text style={styles.sectionHeading}>GROW YOUR HEALERS</Text>
+                  {showRecruitment && (
+                    <BannerCard mode={RECRUIT_BANNER} height={120}
+                      onPress={() => router.push("/university/recruit" as any)}
+                      testID="university-banner-uni-recruit" />
+                  )}
+                  {showTraining && (
+                    <BannerCard mode={TRAINING_BANNER} height={120}
+                      onPress={() => router.push("/university/training" as any)}
+                      testID="university-banner-uni-training" />
+                  )}
+                  <BannerCard mode={SKILL_ACADEMY_BANNER} height={120}
+                    onPress={() => router.push("/university/skill-academy" as any)}
+                    testID="university-banner-skill-academy" />
+                </>
+              )}
+
+              {(showCodex || showClassTree) && (
+                <>
+                  <Text style={styles.sectionHeading}>KNOWLEDGE {"&"} PATHS</Text>
+                  {showCodex && (
+                    <BannerCard mode={LIBRARY_BANNER} height={120}
+                      onPress={() => router.push("/(tabs)/codex" as any)}
+                      testID="university-banner-uni-library" />
+                  )}
+                  {showClassTree && (
+                    <BannerCard mode={CLASSTREE_BANNER} height={120}
+                      onPress={() => router.push("/class-tree" as any)}
+                      testID="university-banner-uni-classtree" />
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </ScrollView>
+      )}
+
+      {/* ── MORE TAB ── */}
+      {activeTab === "more" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {isNewLearner ? (
+            <View style={styles.lockedTabCard}>
+              <Ionicons name="grid-outline" size={32} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.lockedTabTitle}>More</Text>
+              <Text style={styles.lockedTabSub}>Complete your first lesson to unlock more University features.</Text>
+              <Pressable style={styles.lockedTabCta} onPress={() => setActiveTab("lessons")}>
+                <Text style={styles.lockedTabCtaTxt}>Start Lessons</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.sectionHeading}>MORE AT UNIVERSITY</Text>
+              {showHeroes && (
+                <MoreRow icon="ribbon" title="Hall of Heroes" desc="Certify heroes and raise their star."
+                  onPress={() => router.push("/(tabs)/heroes" as any)} testID="university-more-heroes" />
+              )}
+              {showCareerExplorer && (
+                <MoreRow icon="compass" title="Career Explorer" desc="Discover the many paths a healer can walk."
+                  onPress={() => router.push("/university/career-explorer" as any)} testID="university-more-career-explorer" />
+              )}
+              <MoreRow icon="options-outline" title="Learning Style" desc="Personalize explanation depth and clue visibility."
+                onPress={() => router.push("/learning-profile" as any)} testID="university-more-learning-profile" />
+
+              <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
+                <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceSecondary} />
+                <Text style={styles.futureToggleTxt}>Future Learning ({UNIVERSITY_FUTURE_MODES.length})</Text>
+                <Ionicons name={showFuture ? "chevron-up" : "chevron-down"} size={16} color={COLORS.onSurfaceTertiary} />
+              </Pressable>
+              {showFuture && (
+                <View style={{ gap: SPACING.sm }}>
+                  {UNIVERSITY_FUTURE_MODES.map((m) => (
+                    <ModeCard key={m.id} mode={m} testID={`university-future-${m.id}`}
+                      onPress={() => setInfo({ title: `${m.title} — Coming Soon`, message: m.subtitle + "\n\nThis feature is still in development." })} />
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.footNote}>
+                <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.footNoteTxt}>
+                  Clinica University is a game progression system only — not CME/CE credit.
+                </Text>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      )}
+
+      <MessageDialog
+        visible={!!info}
+        title={info?.title ?? ""}
+        message={info?.message ?? ""}
+        confirmLabel="Got it"
+        onConfirm={() => setInfo(null)}
+        testID="university-info-dialog"
+      />
+      <TutorialOverlay />
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: UI.sanctuaryBg },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.sm },
+  loading:   { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.sm },
   loadingTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
-  hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
+  hero: { padding: SPACING.lg, paddingTop: SPACING.md, gap: 4 },
   backBtn: {
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
-  title: { color: COLORS.onSurface, fontSize: 26, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 14, marginTop: 2, lineHeight: 20 },
-  scroll: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxxl },
-  sectionHeading: {
-    color: UI.jade, fontSize: 12, fontWeight: "800",
-    letterSpacing: 1.5, marginTop: SPACING.sm,
-  },
+  title:  { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },
+  scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  sectionHeading: { color: UI.jade, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.xs },
 
-  // ── Chapter 1 Journey card ────────────────────────────────────────────────
   ch1JourneyCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: "#D4AF3740",
-    backgroundColor: "#D4AF3708",
-    padding: SPACING.md,
-    gap: SPACING.sm,
+    flexDirection: "row", alignItems: "center", borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: "#D4AF3740", backgroundColor: "#D4AF3708",
+    padding: SPACING.md, gap: SPACING.sm,
   },
-  ch1JourneyLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
+  ch1JourneyLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   ch1Badge: {
-    backgroundColor: "#D4AF3720",
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: "#D4AF3750",
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    backgroundColor: "#D4AF3720", borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: "#D4AF3750",
+    paddingHorizontal: 7, paddingVertical: 4,
   },
-  ch1BadgeTxt: {
-    color: "#D4AF37",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-  },
-  ch1Title: {
-    color: COLORS.onSurface,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  ch1Sub: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 12,
-    marginTop: 1,
-  },
+  ch1BadgeTxt: { color: "#D4AF37", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  ch1Title:    { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
+  ch1Sub:      { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 1 },
 
-  // ── Cue Hunt featured hero banner ────────────────────────────────────────
+  nextLessonCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.brand + "30", padding: SPACING.md,
+  },
+  nextLessonIcon: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: COLORS.brand + "15", alignItems: "center", justifyContent: "center",
+  },
+  nextLessonKicker: { color: COLORS.brand, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  nextLessonTitle:  { color: COLORS.onSurface, fontSize: 15, fontWeight: "700", marginTop: 2 },
+
+  lockedTabCard: {
+    alignItems: "center", gap: SPACING.md, padding: SPACING.xxl,
+    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: UI.sanctuaryBorder,
+  },
+  lockedTabTitle: { color: COLORS.onSurface, fontSize: 20, fontWeight: "700" },
+  lockedTabSub:   { color: COLORS.onSurfaceTertiary, fontSize: 14, lineHeight: 21, textAlign: "center" },
+  lockedTabCta:   { backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: 11, paddingHorizontal: SPACING.xl },
+  lockedTabCtaTxt: { color: COLORS.onBrand, fontSize: 15, fontWeight: "700" },
+
   cueCard: {
-    borderRadius: RADIUS.lg,
-    overflow: "hidden",
-    height: 172,
-    borderWidth: 1.5,
-    borderColor: "#2DD4BF35",
+    borderRadius: RADIUS.lg, overflow: "hidden", height: 172,
+    borderWidth: 1.5, borderColor: "#2DD4BF35",
   },
   cueGlow: {
-    position: "absolute",
-    top: -40,
-    right: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#2DD4BF18",
+    position: "absolute", top: -40, right: -40,
+    width: 160, height: 160, borderRadius: 80,
   },
-  cueTop: {
-    padding: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  cueTop: { padding: SPACING.md, flexDirection: "row", alignItems: "center" },
   cueBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#2DD4BF20",
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: "#2DD4BF40",
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1,
   },
-  cueBadgeTxt: {
-    color: "#2DD4BF",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-  cueBody: {
-    flex: 1,
-    paddingHorizontal: SPACING.md,
-    justifyContent: "center",
-    gap: 2,
-  },
-  cueKicker: {
-    color: "#2DD4BF",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2,
-  },
-  cueTitle: {
-    color: COLORS.onSurface,
-    fontSize: 20,
-    fontWeight: "300",
-    letterSpacing: 0.3,
-  },
-  cueSub: {
-    color: COLORS.onSurfaceSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 1,
-  },
-  cueCtaRow: {
-    padding: SPACING.md,
-    paddingTop: SPACING.sm,
-    alignItems: "flex-start",
-  },
+  cueBadgeTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  cueBody:     { flex: 1, paddingHorizontal: SPACING.md, justifyContent: "center", gap: 2 },
+  cueKicker:   { fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  cueTitle:    { color: COLORS.onSurface, fontSize: 20, fontWeight: "300", letterSpacing: 0.3 },
+  cueSub:      { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  cueCtaRow:   { padding: SPACING.md, paddingTop: SPACING.sm, alignItems: "flex-start" },
   cueCtaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#2DD4BF",
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderRadius: RADIUS.pill, paddingHorizontal: SPACING.md, paddingVertical: 8,
   },
-  cueCtaTxt: {
-    color: "#0B1A18",
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  // ── Rapid Triage compact row ──────────────────────────────────────────────
-  triageCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    backgroundColor: UI.sanctuaryPanel,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: "#F59E0B25",
-  },
-  triageIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  triageInfo: { flex: 1, gap: 2 },
-  triageTitle: {
-    color: COLORS.onSurface,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  triageSub: {
-    color: COLORS.onSurfaceTertiary,
-    fontSize: 11,
-  },
+  cueCtaTxt: { color: "#0B1A18", fontSize: 13, fontWeight: "800", letterSpacing: 0.5 },
 
-  moreRow: {
-    flexDirection: "row", gap: SPACING.md, alignItems: "center",
-    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
-    padding: SPACING.md, borderWidth: 1, borderColor: UI.sanctuaryBorder,
-  },
+  moreRow:       { flexDirection: "row", gap: SPACING.md, alignItems: "center", backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: UI.sanctuaryBorder },
   moreRowLocked: { opacity: 0.5 },
-  moreIcon: {
-    width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center",
-    backgroundColor: UI.sanctuaryCard, borderWidth: 1, borderColor: COLORS.brand + "40",
-  },
-  moreTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
-  moreDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
-  futureToggle: {
+  moreIcon:      { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: UI.sanctuaryCard, borderWidth: 1, borderColor: COLORS.brand + "40" },
+  moreTitle:     { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
+  moreDesc:      { color: COLORS.onSurfaceTertiary, fontSize: 12, marginTop: 2 },
+  futureToggle:  {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
     borderWidth: 1, borderColor: UI.sanctuaryBorder, marginTop: SPACING.sm,
   },
   futureToggleTxt: { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
-  footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
-  footNoteTxt: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 15 },
+  footNote:     { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
+  footNoteTxt:  { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
 });
 
-// ── Practice Labs grid styles ─────────────────────────────────────────────────
 const labsStyles = StyleSheet.create({
   grid: { flexDirection: "row", gap: SPACING.sm },
   labCard: {
     flex: 1, backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.sm, gap: 4,
-    alignItems: "center",
+    borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.sm, gap: 4, alignItems: "center",
   },
-  labIcon: {
-    width: 44, height: 44, borderRadius: RADIUS.sm,
-    alignItems: "center", justifyContent: "center", marginBottom: 2,
-  },
+  labIcon: { width: 44, height: 44, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center", marginBottom: 2 },
   labTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", textAlign: "center" },
-  labDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, textAlign: "center", lineHeight: 15 },
-  labChip: {
-    flexDirection: "row", alignItems: "center", gap: 3,
-    borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2,
-    backgroundColor: UI.sanctuaryCard, marginTop: 2,
-  },
-  labChipTxt: { fontSize: 8, fontWeight: "800", letterSpacing: 0.5 },
-  labFooter: {
-    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.sm,
-    borderWidth: 1, borderColor: UI.sanctuaryBorder,
-    padding: SPACING.sm, gap: SPACING.sm,
-  },
+  labDesc:  { color: COLORS.onSurfaceTertiary, fontSize: 11, textAlign: "center", lineHeight: 15 },
+  labChip: { flexDirection: "row", alignItems: "center", gap: 3, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: UI.sanctuaryCard, marginTop: 2 },
+  labChipTxt:   { fontSize: 8, fontWeight: "800", letterSpacing: 0.5 },
+  labFooter:    { backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.sm, gap: SPACING.sm },
   labFooterTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
-  labMoreRow: { flexDirection: "row", gap: SPACING.sm },
-  labMoreBtn: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
-    borderWidth: 1, borderColor: UI.sanctuaryBorder, borderRadius: RADIUS.sm,
-    paddingVertical: 7,
-  },
+  labMoreRow:   { flexDirection: "row", gap: SPACING.sm },
+  labMoreBtn:   { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderColor: UI.sanctuaryBorder, borderRadius: RADIUS.sm, paddingVertical: 7 },
   labMoreBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "700" },
 });
 
-// ── P4: Practice Curriculum card styles ───────────────────────────────────────
 const pracStyles = StyleSheet.create({
   curriculumCard: {
     flexDirection: "row", alignItems: "center",
     borderRadius: RADIUS.md, borderWidth: 1, borderColor: "#2DD4BF30",
     backgroundColor: "#0D2E38",
     padding: SPACING.md, gap: SPACING.sm, overflow: "hidden",
-    marginBottom: SPACING.xs,
   },
-  curriculumLeft: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flex: 1 },
-  curriculumBadge: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: "#2DD4BF18", alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
+  curriculumLeft:  { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flex: 1 },
+  curriculumBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#2DD4BF18", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   curriculumKicker: { color: "#2DD4BF", fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
   curriculumTitle:  { color: COLORS.onSurface, fontSize: 16, fontWeight: "800" },
   curriculumSub:    { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
 });
 
-// ── Battle & Journey prep card styles ─────────────────────────────────────────
 const prepS = StyleSheet.create({
-  card: {
-    backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: "#D4AF3730", overflow: "hidden",
-  },
-  header: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    backgroundColor: "#D4AF3708",
-  },
+  card:   { backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md, borderWidth: 1, borderColor: "#D4AF3730", overflow: "hidden" },
+  header: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, backgroundColor: "#D4AF3708" },
   headerTxt: { flex: 1, color: "#D4AF37", fontSize: 12, fontWeight: "700" },
-  mapBtn: { flexDirection: "row", alignItems: "center", gap: 3 },
+  mapBtn:    { flexDirection: "row", alignItems: "center", gap: 3 },
   mapBtnTxt: { color: "#D4AF37", fontSize: 11, fontWeight: "600" },
-  divider: { height: 1, backgroundColor: UI.sanctuaryBorder },
-  row: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    borderBottomWidth: 1, borderBottomColor: UI.sanctuaryBorder,
-  },
-  iconWrap: {
-    width: 34, height: 34, borderRadius: RADIUS.sm,
-    alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
-  rowText: { flex: 1, gap: 1 },
-  rowTitle: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
-  rowDesc: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
-  labelChip: {
-    borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0,
-  },
-  labelTxt: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  divider:   { height: 1, backgroundColor: UI.sanctuaryBorder },
+  row: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: UI.sanctuaryBorder },
+  iconWrap:  { width: 34, height: 34, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  rowText:   { flex: 1, gap: 1 },
+  rowTitle:  { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
+  rowDesc:   { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
+  labelChip: { borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
+  labelTxt:  { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
 });
-

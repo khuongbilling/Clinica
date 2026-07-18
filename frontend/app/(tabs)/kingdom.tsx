@@ -38,7 +38,9 @@ import {
   cellDepth, footprintDepth,
 } from "@/src/game/realmIso";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
+import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 const ISO_CANVAS = computeIsoCanvas(GRID_ROWS, GRID_COLS);
 const GRID_W = ISO_CANVAS.width;
@@ -101,6 +103,7 @@ export default function KingdomScreen() {
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
   useClearTutorialOnExit();
 
+  const [activeTab, setActiveTab] = useState("build");
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [showInventory, setShowInventory] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
@@ -310,15 +313,6 @@ export default function KingdomScreen() {
           <Text style={styles.title}>Grand Ward Atrium · Lv.{atriumLevel}</Text>
         </View>
         <View style={styles.topBarActions}>
-          <Pressable
-            style={styles.modeBtn}
-            onPress={() => setShowInventory(true)}
-            testID="realm-build-mode-button"
-            hitSlop={6}
-          >
-            <Ionicons name="hammer-outline" size={16} color={COLORS.brand} />
-            <Text style={styles.modeBtnTxt}>Sanctuary Inventory</Text>
-          </Pressable>
           {placement && (
             <Pressable style={styles.cancelBtn} onPress={exitPlacement} testID="realm-mode-cancel">
               <Text style={styles.cancelBtnTxt}>Cancel</Text>
@@ -329,6 +323,23 @@ export default function KingdomScreen() {
           </Pressable>
         </View>
       </View>
+
+      <RPGTabBar
+        tabs={[
+          { key: "build",   label: "Build",   icon: "hammer" },
+          { key: "upgrade", label: "Upgrade",  icon: "trending-up" },
+          { key: "assign",  label: "Assign",   icon: "people" },
+          { key: "decor",   label: "Decor",    icon: "color-palette" },
+        ] satisfies RPGTab[]}
+        activeTab={activeTab}
+        onTabPress={(key) => {
+          setActiveTab(key);
+          if (key === "build")   { setShowInventory(true); }
+          if (key === "upgrade") { setShowInventory(true); }
+          if (key === "decor")   { setShowCustomize(true); }
+          if (key === "assign")  { setBanner(REALM_HERO_ASSIGNMENT_NOTE); }
+        }}
+      />
 
       {banner && (
         <View style={styles.bannerBox}>

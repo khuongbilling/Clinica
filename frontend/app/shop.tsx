@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BannerCard } from "@/src/components/ModeBanners";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
+import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -14,6 +15,7 @@ import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { UI } from "@/src/theme/ui";
 
 export default function Shop() {
   const router = useRouter();
@@ -21,10 +23,10 @@ export default function Shop() {
   const gate = useFeatureGate("shop");
   const { isCompleted, startTutorial } = useTutorial();
   useClearTutorialOnExit();
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice]     = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("open");
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // The System narrates the Market only after the guided flow reaches it.
   const lessonsStarted = (player?.lessons_completed?.length ?? 0) > 0;
   useEffect(() => {
     if (!player) return;
@@ -41,21 +43,12 @@ export default function Shop() {
       </SafeAreaView>
     );
   }
-  // Block direct navigation into a still-locked Shop (tab hidden, route alive).
   if (!gate.unlocked) return <FeatureLockedView title="The Apothecary Market" reason={gate.reason} />;
 
-  // ── P24: Per-section gate classification ──────────────────────────────────
-  // Build gate context once to avoid per-section hook calls.
-  const gateCtx = buildGateContext(player);
+  const gateCtx    = buildGateContext(player);
   const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
 
-  // Classify each section:
-  //   hidden       — minLevelToShow not met; hide entirely (no Coming Soon clutter)
-  //   lockedActive — status=active but featureGate not met; show as disabled card
-  //   visibleActive — status=active and gate met; show as interactive card
-  //   comingSoon   — status=coming_soon and minLevelToShow met; tease in Coming Soon
   type SectionClass = "hidden" | "lockedActive" | "visibleActive" | "comingSoon";
-
   function classifySection(s: ShopSectionDef): SectionClass {
     if (s.minLevelToShow && playerLevel < s.minLevelToShow) return "hidden";
     if (s.status === "coming_soon") return "comingSoon";
@@ -70,7 +63,6 @@ export default function Shop() {
     if (!s.featureGate) return undefined;
     const r = checkFeatureGate(s.featureGate, gateCtx);
     if (r.unlocked) return undefined;
-    // Derive a short label from the feature id for the lock pill on the banner.
     const featureLabels: Record<string, string> = {
       ward_defense: "Unlocks at Level 4 — Ward Defense",
       realm:        "Unlocks at Level 5 — Realm",
@@ -91,7 +83,6 @@ export default function Shop() {
   }
 
   const openSection = (s: ShopSectionDef) => {
-    // P24: hard-block any attempt to open a locked or coming-soon section.
     const cls = classifySection(s);
     if (cls === "lockedActive") {
       const r = s.featureGate ? checkFeatureGate(s.featureGate, gateCtx) : null;
@@ -99,21 +90,23 @@ export default function Shop() {
       return;
     }
     if (cls === "comingSoon" || cls === "hidden") {
-      flashNotice(
-        `${s.title} is coming soon — this stall is still being stocked. Nothing is spent and no wares are for sale yet.`,
-      );
+      flashNotice(`${s.title} is coming soon — tapping never spends currency or grants rewards.`);
       return;
     }
-    if (!s.route) {
-      flashNotice(`${s.title} has no route yet.`);
-      return;
-    }
+    if (!s.route) { flashNotice(`${s.title} has no route yet.`); return; }
     router.push(s.route as any);
   };
+
+  const TABS: RPGTab[] = [
+    { key: "open",    label: "Open",    icon: "storefront" },
+    { key: "locked",  label: "Locked",  icon: "lock-closed", badge: activeLocked.length || undefined },
+    { key: "preview", label: "Preview", icon: "telescope" },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <PlayerHeader player={player} />
+
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.kicker}>APOTHECARY MARKET</Text>
@@ -124,113 +117,149 @@ export default function Shop() {
         </Pressable>
       </View>
 
+      <RPGTabBar tabs={TABS} activeTab={activeTab} onTabPress={setActiveTab} />
+
       {notice && (
         <View style={styles.notice} testID="shop-notice">
-          <Ionicons name="time-outline" size={16} color={COLORS.brand} />
+          <Ionicons name="time-outline" size={15} color={COLORS.brand} />
           <Text style={styles.noticeTxt}>{notice}</Text>
         </View>
       )}
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.lead}>
-          Each stall opens its own market. Spend your Crowns on supplies, or exchange currencies.
-        </Text>
-
-        {/* ── Open stalls ── */}
-        {activeUnlocked.length > 0 && (
-          <>
-            <Text style={styles.section}>Open Stalls</Text>
-            {activeUnlocked.map((s) => (
+      {/* ── OPEN STALLS ── */}
+      {activeTab === "open" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {activeUnlocked.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="storefront-outline" size={32} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.emptyTxt}>No stalls open yet. Progress to unlock market stalls.</Text>
+            </View>
+          ) : (
+            activeUnlocked.map((s) => (
               <BannerCard
-                key={s.id}
-                mode={s}
+                key={s.id} mode={s}
                 height={s.size === "large" ? 152 : 128}
                 onPress={() => openSection(s)}
                 testID={`shop-mode-${s.id}`}
               />
-            ))}
-          </>
-        )}
+            ))
+          )}
+          <View style={styles.footNote}>
+            <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.footNoteTxt}>Tap any stall to browse its wares.</Text>
+          </View>
+        </ScrollView>
+      )}
 
-        {/* ── P24: Locked stalls — active sections gated behind a feature ── */}
-        {activeLocked.length > 0 && (
-          <>
-            <Text style={styles.section}>Locked Stalls</Text>
-            <View style={styles.lockedNote}>
-              <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
-              <Text style={styles.lockedNoteTxt}>
-                These stalls unlock as you progress. Tap any locked card to see the full requirement.
-              </Text>
+      {/* ── LOCKED STALLS ── */}
+      {activeTab === "locked" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {activeLocked.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="checkmark-circle-outline" size={32} color={COLORS.success} />
+              <Text style={styles.emptyTxt}>All available stalls are unlocked!</Text>
             </View>
-            {activeLocked.map((s) => (
-              <BannerCard
-                key={s.id}
-                mode={s}
-                height={128}
-                locked
-                lockLabel={lockLabelForSection(s)}
-                onPress={() => openSection(s)}
-                testID={`shop-mode-${s.id}`}
-              />
-            ))}
-          </>
-        )}
+          ) : (
+            <>
+              <View style={styles.lockedNote}>
+                <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceTertiary} />
+                <Text style={styles.lockedNoteTxt}>
+                  These stalls unlock as you progress. Tap to see requirements.
+                </Text>
+              </View>
+              {activeLocked.map((s) => (
+                <BannerCard
+                  key={s.id} mode={s}
+                  height={128} locked
+                  lockLabel={lockLabelForSection(s)}
+                  onPress={() => openSection(s)}
+                  testID={`shop-mode-${s.id}`}
+                />
+              ))}
+            </>
+          )}
+        </ScrollView>
+      )}
 
-        {/* ── Coming Soon stalls (content-pending, not feature-gated) ── */}
-        {comingSoon.length > 0 && (
-          <>
-            <Text style={styles.section}>Coming Soon</Text>
-            {comingSoon.map((s) => (
+      {/* ── PREVIEW ── */}
+      {activeTab === "preview" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.previewNote}>
+            <Ionicons name="telescope-outline" size={15} color={UI.lavender} />
+            <Text style={styles.previewNoteTxt}>
+              Preview of upcoming stalls — nothing is for sale yet. Tapping never spends currency.
+            </Text>
+          </View>
+          {comingSoon.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTxt}>No upcoming stalls to preview right now.</Text>
+            </View>
+          ) : (
+            comingSoon.map((s) => (
               <BannerCard
-                key={s.id}
-                mode={s}
+                key={s.id} mode={s}
                 height={120}
                 onPress={() => openSection(s)}
                 testID={`shop-mode-${s.id}`}
               />
-            ))}
-          </>
-        )}
-
-        <View style={styles.footNote}>
-          <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
-          <Text style={styles.footNoteTxt}>
-            Locked stalls unlock as you level up and unlock new game modes. Coming Soon stalls are
-            placeholders only — tapping them never spends currency or grants rewards.
-          </Text>
-        </View>
-      </ScrollView>
+            ))
+          )}
+          <Pressable style={styles.economyLink}
+            onPress={() => router.push("/economy")} testID="shop-economy-guide-2">
+            <Ionicons name="book-outline" size={16} color={COLORS.brand} />
+            <Text style={styles.economyLinkTxt}>Economy Guide — learn how currencies work</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
+          </Pressable>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.surface },
-  loading: { alignItems: "center", justifyContent: "center" },
+  container: { flex: 1, backgroundColor: UI.bgBase },
+  loading:   { alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  kicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
+  kicker: { color: COLORS.brand, fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  title:  { color: COLORS.onSurface, fontSize: 24, fontWeight: "300", marginTop: 2 },
   notice: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.lg, marginTop: SPACING.sm,
     padding: SPACING.sm, borderRadius: RADIUS.md, borderWidth: 1,
     borderColor: COLORS.brandSecondary, backgroundColor: COLORS.brandTertiary + "40",
   },
-  noticeTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "600", flex: 1, lineHeight: 16 },
-  scroll: { padding: SPACING.lg, paddingTop: SPACING.sm, gap: SPACING.md, paddingBottom: SPACING.xxxl },
-  lead: { color: COLORS.onSurfaceSecondary, fontSize: 14, lineHeight: 22, fontStyle: "italic", marginBottom: SPACING.xs },
-  section: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginTop: SPACING.sm, marginBottom: 2 },
+  noticeTxt: { color: COLORS.brand, fontSize: 13, fontWeight: "600", flex: 1, lineHeight: 18 },
+  scroll:    { padding: SPACING.lg, paddingTop: SPACING.md, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+  emptyState: {
+    alignItems: "center", gap: SPACING.sm, padding: SPACING.xxl,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  emptyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 14, textAlign: "center", lineHeight: 21 },
   lockedNote: {
     flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
     backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.sm, padding: SPACING.sm,
-    marginBottom: SPACING.xs,
+    borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.sm,
   },
-  lockedNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, flex: 1 },
-  footNote: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.sm },
-  footNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },
+  lockedNoteTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 18, flex: 1 },
+  previewNote: {
+    flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start",
+    backgroundColor: UI.lavender + "15",
+    borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.sm,
+    borderWidth: 1, borderColor: UI.lavender + "30",
+  },
+  previewNoteTxt: { color: UI.textSoft, fontSize: 13, lineHeight: 18, flex: 1 },
+  footNote:      { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start", marginTop: SPACING.xs },
+  footNoteTxt:   { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, flex: 1, fontStyle: "italic" },
+  economyLink: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    padding: SPACING.md, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.brand + "12", borderWidth: 1, borderColor: COLORS.brand + "40",
+    marginTop: SPACING.md,
+  },
+  economyLinkTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600", flex: 1 },
 });
