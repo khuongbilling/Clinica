@@ -14,55 +14,124 @@ import {
   CommunityEmblem,
 } from "@/src/components/ClinicaEmblems";
 
-// ── Illustrated medallion-style tab icon ──────────────────────────────────────
-// Renders as: [decorative circular medallion frame + emblem] + label text.
-// The active tab gets a gold border, warm glow, and corner accent dots.
+// ── Illustrated carved medallion tab icon ─────────────────────────────────────
+//
+// Design: 2.5D Genshin-quality carved gold coin medallion.
+//   · 60px main frame ring (gold border, warm dark fill)
+//   · Inner bevel ring (46px, 1px accent gold)
+//   · Inner warm center disc (36px, subtle fill)
+//   · N/S/E/W cardinal knob marks — small pill shapes at compass points
+//   · Active: outer ambient glow bloom, brighter rings, stronger fill
+//   · Wrapper: 70×70 to accommodate cardinal marks outside the frame
+//
 // tabBarShowLabel is false so the native tab label is hidden — the label is
-// baked into this icon element, matching the reference gacha-RPG style.
+// baked into this icon element.
 
-const GOLD = "#E8C868";
-const DIM  = "#5A6070";
+const GOLD    = "#E8C868";
+const GOLD_DIM = "#C8A840";
+const DIM     = "#4A5568";
+
+const FRAME  = 60;   // main medallion diameter
+const WRAP   = 70;   // wrapper including cardinal marks clearance
+const INNER1 = 46;   // first inner bevel ring
+const INNER2 = 36;   // warm center disc
 
 function mkTabIcon(
-  Emblem: React.ComponentType<{ size?: number; color?: string }>,
-  label:  string,
-  color:  string,
+  Emblem:  React.ComponentType<{ size?: number; color?: string }>,
+  label:   string,
+  color:   string,
   focused: boolean,
 ) {
-  const iconColor  = focused ? GOLD : DIM;
-  const ringColor  = focused ? GOLD : "#2E3545";
-  const ringBorder = focused ? 2    : 1.5;
-  const bg         = focused ? GOLD + "1A" : "#141922";
+  const iconColor   = focused ? GOLD : DIM;
+  const frameColor  = focused ? GOLD : "#2A3245";
+  const frame2Color = focused ? GOLD + "60" : GOLD + "1A";
+  const centerFill  = focused ? "#1E160A" : "#0D1018";
+  const innerFill   = focused ? GOLD + "18" : "#FFFFFF05";
+  const cardinalCol = focused ? GOLD : GOLD + "38";
+
+  // Cardinal mark positions (absolute in WRAP container):
+  //  FRAME (60px) is centered in WRAP (70px) → 5px inset each side
+  //  Mark sits at the edge of the frame, centered on that edge
+  const markN  = { top: 2,            left:  (WRAP - 10) / 2 } as const; // horizontal pill
+  const markS  = { bottom: 2,         left:  (WRAP - 10) / 2 } as const;
+  const markE  = { right: 2,          top:   (WRAP - 10) / 2 } as const; // vertical pill
+  const markW  = { left:  2,          top:   (WRAP - 10) / 2 } as const;
 
   return (
     <View style={icon.wrap}>
-      {/* Illustrated medallion frame */}
-      <View style={[icon.medallion, {
-        borderColor:     ringColor,
-        borderWidth:     ringBorder,
-        backgroundColor: bg,
-        shadowColor:     focused ? GOLD : "#000",
-        shadowOpacity:   focused ? 0.45 : 0.15,
-        shadowRadius:    focused ? 10 : 3,
-        elevation:       focused ? 5 : 1,
-      }]}>
-        {/* Inner decorative ring */}
-        <View style={[icon.innerRing, {
-          borderColor: focused ? GOLD + "45" : "#ffffff0A",
-        }]} />
-        {/* Corner accent dots (active state only) */}
+      {/* 70×70 wrapper holds medallion + cardinal marks */}
+      <View style={{ width: WRAP, height: WRAP, alignItems: "center", justifyContent: "center" }}>
+
+        {/* Outer ambient glow bloom — active only */}
         {focused && (
-          <>
-            <View style={[icon.dot, { top: 4, left: 4 }]} />
-            <View style={[icon.dot, { top: 4, right: 4 }]} />
-            <View style={[icon.dot, { bottom: 4, left: 4 }]} />
-            <View style={[icon.dot, { bottom: 4, right: 4 }]} />
-          </>
+          <View style={{
+            position:        "absolute",
+            width:           WRAP + 24,
+            height:          WRAP + 24,
+            borderRadius:    (WRAP + 24) / 2,
+            backgroundColor: GOLD + "16",
+            left:            -12,
+            top:             -12,
+            pointerEvents:   "none",
+          } as any} />
         )}
-        <Emblem size={22} color={iconColor} />
+        {focused && (
+          <View style={{
+            position:        "absolute",
+            width:           WRAP + 6,
+            height:          WRAP + 6,
+            borderRadius:    (WRAP + 6) / 2,
+            backgroundColor: GOLD + "10",
+            left:            -3,
+            top:             -3,
+            pointerEvents:   "none",
+          } as any} />
+        )}
+
+        {/* Cardinal knob marks — N / S (horizontal pills) */}
+        <View style={[icon.cardinalH, markN,  { backgroundColor: cardinalCol }]} />
+        <View style={[icon.cardinalH, markS,  { backgroundColor: cardinalCol }]} />
+        {/* Cardinal knob marks — E / W (vertical pills) */}
+        <View style={[icon.cardinalV, markE,  { backgroundColor: cardinalCol }]} />
+        <View style={[icon.cardinalV, markW,  { backgroundColor: cardinalCol }]} />
+
+        {/* Main carved medallion frame */}
+        <View style={{
+          width:           FRAME,
+          height:          FRAME,
+          borderRadius:    FRAME / 2,
+          borderWidth:     2.5,
+          borderColor:     frameColor,
+          backgroundColor: centerFill,
+          alignItems:      "center",
+          justifyContent:  "center",
+        }}>
+          {/* Inner bevel ring 1 */}
+          <View style={{
+            position:     "absolute",
+            width:        INNER1,
+            height:       INNER1,
+            borderRadius: INNER1 / 2,
+            borderWidth:  1,
+            borderColor:  frame2Color,
+            pointerEvents:"none",
+          } as any} />
+          {/* Inner warm center disc */}
+          <View style={{
+            position:        "absolute",
+            width:           INNER2,
+            height:          INNER2,
+            borderRadius:    INNER2 / 2,
+            backgroundColor: innerFill,
+            pointerEvents:   "none",
+          } as any} />
+          {/* Emblem */}
+          <Emblem size={26} color={iconColor} />
+        </View>
       </View>
-      {/* Label — baked into the icon element, not the native tab label */}
-      <Text style={[icon.label, { color: iconColor }]}>{label}</Text>
+
+      {/* Label — baked into the icon element */}
+      <Text style={[icon.label, { color: focused ? GOLD_DIM : DIM }]}>{label}</Text>
     </View>
   );
 }
@@ -70,34 +139,26 @@ function mkTabIcon(
 const icon = StyleSheet.create({
   wrap: {
     alignItems: "center",
-    gap:        3,
+    gap:        2,
     paddingTop: 2,
   },
-  medallion: {
-    width:          46,
-    height:         46,
-    borderRadius:   23,
-    alignItems:     "center",
-    justifyContent: "center",
-  },
-  innerRing: {
+  cardinalH: {
     position:     "absolute",
-    width:        36,
-    height:       36,
-    borderRadius: 18,
-    borderWidth:  1,
+    width:        10,
+    height:       5,
+    borderRadius: 2.5,
   },
-  dot: {
-    position:        "absolute",
-    width:           3,
-    height:          3,
-    borderRadius:    1.5,
-    backgroundColor: GOLD + "90",
+  cardinalV: {
+    position:     "absolute",
+    width:        5,
+    height:       10,
+    borderRadius: 2.5,
   },
   label: {
-    fontSize:      7.5,
+    fontSize:      8,
     fontWeight:    "800",
-    letterSpacing: 0.7,
+    letterSpacing: 0.9,
+    textTransform: "uppercase" as const,
   },
 });
 
@@ -106,7 +167,7 @@ const icon = StyleSheet.create({
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 8);
-  const tabH = 74 + bottomPad;
+  const tabH = 84 + bottomPad;
 
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
@@ -114,24 +175,24 @@ export default function TabsLayout() {
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
     lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
   };
-  const shopUnlocked       = checkFeatureGate("shop",           ctx).unlocked;
-  const heroesUnlocked     = checkFeatureGate("hall_of_heroes", ctx).unlocked;
-  const realmUnlocked      = checkFeatureGate("realm",          ctx).unlocked;
+  const shopUnlocked           = checkFeatureGate("shop",           ctx).unlocked;
+  const heroesUnlocked         = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const realmUnlocked          = checkFeatureGate("realm",          ctx).unlocked;
   const communityBoardUnlocked = checkFeatureGate("community_board", ctx).unlocked;
 
   return (
     <Tabs
       screenOptions={{
-        headerShown:        false,
-        tabBarShowLabel:    false,
+        headerShown:             false,
+        tabBarShowLabel:         false,
         tabBarActiveTintColor:   COLORS.brand,
         tabBarInactiveTintColor: DIM,
         tabBarStyle: {
           backgroundColor: UI.sanctuaryBg,
           borderTopWidth:  1.5,
-          borderTopColor:  GOLD + "30",
+          borderTopColor:  GOLD + "35",
           height:          tabH,
-          paddingTop:      4,
+          paddingTop:      6,
           paddingBottom:   bottomPad,
         },
         tabBarItemStyle: {

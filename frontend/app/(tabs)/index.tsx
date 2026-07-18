@@ -363,10 +363,13 @@ export default function RunHome() {
       {/* ── GLOBAL PLAYER HEADER — identity/stamina/currencies/EXP (Push 3.5) ── */}
       <PlayerHeader player={player} />
 
-      {/* ── SCENE LOCATION LABEL ── */}
+      {/* ── SCENE LOCATION LABEL — donghua white title style ── */}
       <View style={styles.sceneLabelRow}>
-        <View style={[styles.sceneDot, { backgroundColor: scene.accent }]} />
-        <Text style={[styles.sceneLabel, { color: scene.accent }]}>{scene.name.toUpperCase()}</Text>
+        <View style={styles.sceneTitleLine} />
+        <Text style={styles.sceneTitleDiamond}>◆</Text>
+        <Text style={styles.sceneLabel}>{scene.name.toUpperCase()}</Text>
+        <Text style={styles.sceneTitleDiamond}>◆</Text>
+        <View style={styles.sceneTitleLine} />
       </View>
 
       {/* ── WORLD EVENT / COMMUNITY BOARD BANNER ─────────────────────────────
@@ -858,7 +861,7 @@ const sc = StyleSheet.create({
   topVignette: { position: "absolute", top: 0, left: 0, right: 0,   height: "22%" },
 });
 
-/* ── FeatureButton ── */
+/* ── FeatureButton ── no circle ring — illustrated emblem floats with soft glow */
 function FeatureButton({
   icon, emblem, label, color, locked, lockText, live, badge, onPress, testID,
 }: {
@@ -868,18 +871,15 @@ function FeatureButton({
 }) {
   return (
     <Pressable style={[styles.featBtn, locked && { opacity: 0.5 }]} onPress={onPress} testID={testID} hitSlop={6}>
-      <View style={[styles.featCircle, {
-        borderColor: locked ? COLORS.border : color + "A0",
-        backgroundColor: locked ? COLORS.surfaceTertiary : color + "28",
-        shadowColor: locked ? "transparent" : color,
-        shadowOpacity: locked ? 0 : 0.36,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 3 },
-        elevation: locked ? 0 : 4,
-      }]}>
+      {/* Illustrated emblem — NO circle border, just floating art with a soft glow bloom */}
+      <View style={styles.featEmblemWrap}>
+        {/* Soft glow bloom behind the art (active/unlocked only) */}
+        {!locked && (
+          <View style={[styles.featGlowBloom, { backgroundColor: color + "28" }]} />
+        )}
         {emblem !== undefined
           ? emblem
-          : <Ionicons name={icon as any} size={24} color={locked ? COLORS.onSurfaceTertiary : color} />
+          : <Ionicons name={icon as any} size={28} color={locked ? COLORS.onSurfaceTertiary : color} />
         }
         {live && !locked ? <View style={styles.featLiveDot} /> : null}
         {!locked && badge && badge > 0 ? (
@@ -913,13 +913,18 @@ const styles = StyleSheet.create({
 
   lockedFeatureBtn: { opacity: 0.55 },
 
-  /* Scene label */
+  /* Scene label — donghua white title style */
   sceneLabelRow: {
     flexDirection: "row", alignItems: "center",
-    gap: 6, paddingHorizontal: SPACING.lg, paddingBottom: 6, paddingTop: 2,
+    paddingHorizontal: SPACING.md, paddingBottom: 6, paddingTop: 2,
+    gap: 6,
   },
-  sceneDot:  { width: 6, height: 6, borderRadius: 3, opacity: 0.9 },
-  sceneLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 1.2, opacity: 0.9 },
+  sceneTitleLine:    { flex: 1, height: 1, backgroundColor: "#FFFFFF28", borderRadius: 1 },
+  sceneTitleDiamond: { color: "#FFFFFF60", fontSize: 8, lineHeight: 14 },
+  sceneLabel: {
+    color: "#FFFFFF", fontSize: 11, fontWeight: "700",
+    letterSpacing: 1.8, opacity: 0.92,
+  },
 
   /* University onboarding banner (prominent first step for new players) */
   uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
@@ -929,8 +934,17 @@ const styles = StyleSheet.create({
 
   /* Side columns */
   sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm },
-  featBtn:    { alignItems: "center", gap: 4 },
-  featCircle: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  featBtn:        { alignItems: "center", gap: 4 },
+  featEmblemWrap: {
+    width: 56, height: 56,
+    alignItems: "center", justifyContent: "center",
+  },
+  featGlowBloom: {
+    position: "absolute",
+    width: 72, height: 72,
+    borderRadius: 36,
+    left: -8, top: -8,
+  },
   featLabel:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.2, textAlign: "center" },
   featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
   featLiveDot: {
