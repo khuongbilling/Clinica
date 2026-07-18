@@ -347,9 +347,9 @@ export default function UniversityHubScreen() {
 
   const TABS: RPGTab[] = [
     { key: "lessons",     label: "Lessons",     icon: "book" },
-    { key: "simulations", label: "Simulations", icon: "flask", locked: isNewLearner },
-    { key: "schools",     label: "Schools",     icon: "school", locked: isNewLearner },
-    { key: "more",        label: "More",        icon: "grid", locked: isNewLearner },
+    { key: "schools",     label: "Schools",     icon: "school",  locked: isNewLearner },
+    { key: "simulations", label: "Simulations", icon: "flask",   locked: isNewLearner },
+    { key: "badges",      label: "Badges",      icon: "ribbon",  locked: isNewLearner },
   ];
 
   return (
@@ -582,31 +582,43 @@ export default function UniversityHubScreen() {
         </ScrollView>
       )}
 
-      {/* ── MORE TAB ── */}
-      {activeTab === "more" && (
+      {/* ── BADGES TAB ── */}
+      {activeTab === "badges" && (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {isNewLearner ? (
             <View style={styles.lockedTabCard}>
-              <Ionicons name="grid-outline" size={32} color={COLORS.onSurfaceTertiary} />
-              <Text style={styles.lockedTabTitle}>More</Text>
-              <Text style={styles.lockedTabSub}>Complete your first lesson to unlock more University features.</Text>
+              <Ionicons name="ribbon-outline" size={32} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.lockedTabTitle}>Badges & Progress</Text>
+              <Text style={styles.lockedTabSub}>Complete your first lesson to unlock badges and milestone tracking.</Text>
               <Pressable style={styles.lockedTabCta} onPress={() => setActiveTab("lessons")}>
                 <Text style={styles.lockedTabCtaTxt}>Start Lessons</Text>
               </Pressable>
             </View>
           ) : (
             <>
-              <Text style={styles.sectionHeading}>MORE AT UNIVERSITY</Text>
+              <Text style={styles.sectionHeading}>MILESTONES</Text>
+              <MoreRow icon="trophy-outline" title="University Milestones" desc="Track lab completions and earn milestone rewards."
+                onPress={() => router.push("/university/uni-milestones" as any)} testID="university-badges-milestones" />
+              <MoreRow icon="storefront-outline" title="University Shop" desc="Spend scrolls on items and bonuses."
+                onPress={() => router.push("/university/uni-shop" as any)} testID="university-badges-shop" />
+
+              <Text style={styles.sectionHeading}>YOUR PATH</Text>
+              {showClassTree && (
+                <MoreRow icon="git-network-outline" title="Class Tree" desc="Choose your Player Class and unlock abilities."
+                  onPress={() => router.push("/class-tree" as any)} testID="university-badges-classtree" />
+              )}
               {showHeroes && (
-                <MoreRow icon="ribbon" title="Hall of Heroes" desc="Certify heroes and raise their star."
-                  onPress={() => router.push("/(tabs)/heroes" as any)} testID="university-more-heroes" />
+                <MoreRow icon="people-outline" title="Hall of Heroes" desc="Certify heroes and raise their star rank."
+                  onPress={() => router.push("/(tabs)/heroes" as any)} testID="university-badges-heroes" />
               )}
               {showCareerExplorer && (
-                <MoreRow icon="compass" title="Career Explorer" desc="Discover the many paths a healer can walk."
-                  onPress={() => router.push("/university/career-explorer" as any)} testID="university-more-career-explorer" />
+                <MoreRow icon="compass-outline" title="Career Explorer" desc="Discover the many paths a healer can walk."
+                  onPress={() => router.push("/university/career-explorer" as any)} testID="university-badges-career" />
               )}
-              <MoreRow icon="options-outline" title="Learning Style" desc="Personalize explanation depth and clue visibility."
-                onPress={() => router.push("/learning-profile" as any)} testID="university-more-learning-profile" />
+
+              <Text style={styles.sectionHeading}>SETTINGS</Text>
+              <MoreRow icon="options-outline" title="Learning Style" desc="Adjust explanation depth and clue visibility."
+                onPress={() => router.push("/learning-profile" as any)} testID="university-badges-learning-profile" />
 
               <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
                 <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceSecondary} />

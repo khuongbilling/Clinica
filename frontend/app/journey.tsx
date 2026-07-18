@@ -13,6 +13,7 @@ import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { JourneyEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { getMapSprite } from "@/src/game/illustratedAssets";
+import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
 import {
   CHAPTERS,
   getCurrentChapter,
@@ -98,10 +99,14 @@ export default function JourneyScreen() {
     ch.parts.filter((p) => p.type === "memory_fragment" && !claimedNodes.includes(p.id)),
   );
 
+  const nextLotusNode    = firstIncompleteLotusNode(player);
+  const lessonsCompleted = player.lessons_completed?.length ?? 0;
+
   const TABS_WITH_BADGE: RPGTab[] = [
     { key: "chapter",  label: "Chapter",  icon: "map" },
+    { key: "lessons",  label: "Lessons",  icon: "book" },
     { key: "quests",   label: "Quests",   icon: "list-circle", badge: roundsBadge || undefined },
-    { key: "memories", label: "Memories", icon: "book" },
+    { key: "memories", label: "Memories", icon: "book-outline" },
   ];
 
   return (
@@ -221,6 +226,54 @@ export default function JourneyScreen() {
             />
           </ScrollView>
         </>
+      )}
+
+      {/* ── LESSONS TAB ── */}
+      {activeTab === "lessons" && (
+        <ScrollView contentContainerStyle={styles.questsScroll} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionLbl}>Progress</Text>
+          <View style={[styles.chapterCard, { borderLeftColor: COLORS.brand }]}>
+            <Text style={[styles.chapterNum, { color: COLORS.brand }]}>
+              {lessonsCompleted} {lessonsCompleted === 1 ? "Lesson" : "Lessons"} Complete
+            </Text>
+            <Text style={styles.chapterName}>Lotus Lessons</Text>
+            {nextLotusNode && (
+              <Text style={styles.chapterNext}>Up next: {nextLotusNode.title}</Text>
+            )}
+            {!nextLotusNode && lessonsCompleted > 0 && (
+              <Text style={styles.chapterNext}>All current lessons complete ✓</Text>
+            )}
+          </View>
+
+          {nextLotusNode && (
+            <>
+              <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Continue</Text>
+              <Pressable
+                style={styles.practiceBtn}
+                onPress={() => router.push(`/university/lotus-lesson/${nextLotusNode.id}` as any)}
+              >
+                <Ionicons name="play-circle" size={18} color={COLORS.onBrand} />
+                <Text style={styles.practiceBtnTxt}>{nextLotusNode.title}</Text>
+              </Pressable>
+            </>
+          )}
+
+          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>All Lessons</Text>
+          <Pressable
+            style={[styles.practiceBtn, styles.practiceBtnSecondary]}
+            onPress={() => router.push("/university/lessons" as any)}
+          >
+            <Ionicons name="book" size={18} color={COLORS.brand} />
+            <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>Browse All Lotus Lessons</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.practiceBtn, styles.practiceBtnSecondary]}
+            onPress={() => router.push("/university" as any)}
+          >
+            <Ionicons name="school" size={18} color={COLORS.brand} />
+            <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>Open Clinica University</Text>
+          </Pressable>
+        </ScrollView>
       )}
 
       {/* ── QUESTS TAB ── */}

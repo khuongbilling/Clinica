@@ -24,7 +24,7 @@ export default function Shop() {
   const { isCompleted, startTutorial } = useTutorial();
   useClearTutorialOnExit();
   const [notice, setNotice]     = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("open");
+  const [activeTab, setActiveTab] = useState("supplies");
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lessonsStarted = (player?.lessons_completed?.length ?? 0) > 0;
@@ -98,9 +98,10 @@ export default function Shop() {
   };
 
   const TABS: RPGTab[] = [
-    { key: "open",    label: "Open",    icon: "storefront" },
-    { key: "locked",  label: "Locked",  icon: "lock-closed", badge: activeLocked.length || undefined },
-    { key: "preview", label: "Preview", icon: "telescope" },
+    { key: "supplies", label: "Supplies",  icon: "storefront" },
+    { key: "exchange", label: "Exchange",  icon: "swap-horizontal" },
+    { key: "locked",   label: "Locked",   icon: "lock-closed", badge: activeLocked.length || undefined },
+    { key: "premium",  label: "Premium",  icon: "telescope" },
   ];
 
   return (
@@ -126,8 +127,8 @@ export default function Shop() {
         </View>
       )}
 
-      {/* ── OPEN STALLS ── */}
-      {activeTab === "open" && (
+      {/* ── SUPPLIES STALLS ── */}
+      {activeTab === "supplies" && (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {activeUnlocked.length === 0 ? (
             <View style={styles.emptyState}>
@@ -181,8 +182,49 @@ export default function Shop() {
         </ScrollView>
       )}
 
-      {/* ── PREVIEW ── */}
-      {activeTab === "preview" && (
+      {/* ── EXCHANGE ── */}
+      {activeTab === "exchange" && (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.previewNote}>
+            <Ionicons name="swap-horizontal-outline" size={15} color={UI.jade} />
+            <Text style={[styles.previewNoteTxt, { color: UI.jade }]}>
+              Exchange — trade surplus currencies and items between stalls. Coming soon.
+            </Text>
+          </View>
+          <View style={styles.exchangeSection}>
+            <Text style={styles.exchangeHeading}>CURRENCIES</Text>
+            {[
+              { icon: "leaf",            color: COLORS.brand,   name: "Jade Scrolls",    how: "Earn from lessons and daily quests" },
+              { icon: "star",            color: "#D4AF37",       name: "Gold Crowns",     how: "Earn from battles and chapter milestones" },
+              { icon: "sparkles",        color: "#A855F7",       name: "Hero Shards",     how: "Earn from Recruitment and evolutions" },
+              { icon: "shield-half",     color: "#22D3EE",       name: "Ward Tokens",     how: "Earn from Ward Defense and Boss encounters" },
+            ].map((c) => (
+              <View key={c.name} style={styles.currencyRow}>
+                <View style={[styles.currencyIcon, { backgroundColor: c.color + "18" }]}>
+                  <Ionicons name={c.icon as any} size={18} color={c.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.currencyName}>{c.name}</Text>
+                  <Text style={styles.currencyHow}>{c.how}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+          <Pressable style={styles.economyLink}
+            onPress={() => router.push("/economy")} testID="shop-economy-guide-exchange">
+            <Ionicons name="book-outline" size={16} color={COLORS.brand} />
+            <Text style={styles.economyLinkTxt}>Economy Guide — how currencies work</Text>
+            <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
+          </Pressable>
+          <View style={styles.footNote}>
+            <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.footNoteTxt}>Exchange features expand as more stalls open.</Text>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ── PREMIUM PREVIEW ── */}
+      {activeTab === "premium" && (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.previewNote}>
             <Ionicons name="telescope-outline" size={15} color={UI.lavender} />
@@ -262,4 +304,24 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   economyLinkTxt: { color: COLORS.brand, fontSize: 14, fontWeight: "600", flex: 1 },
+
+  exchangeSection: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, overflow: "hidden",
+  },
+  exchangeHeading: {
+    color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "800",
+    letterSpacing: 0.8, paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.sm,
+  },
+  currencyRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  currencyIcon: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: "center", justifyContent: "center",
+  },
+  currencyName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
+  currencyHow:  { color: COLORS.onSurfaceTertiary, fontSize: 13, marginTop: 1 },
 });
