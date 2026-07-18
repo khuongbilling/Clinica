@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ModeCardDef, MODE_STATUS_LABEL } from "@/src/game/modeHub";
@@ -75,19 +74,11 @@ export function BannerCard({ mode, onPress, height = 132, locked, lockLabel, tes
       {art ? (
         <ExpoImage source={art} style={StyleSheet.absoluteFillObject} contentFit="cover" />
       ) : (
-        <LinearGradient
-          colors={[mode.accentColor + "55", mode.accentColor + "18", COLORS.surfaceSecondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: mode.accentColor + "30" }]} />
       )}
 
-      {/* Bottom scrim for legible text over art */}
-      <LinearGradient
-        colors={["rgba(8,10,14,0.05)", "rgba(8,10,14,0.55)", "rgba(8,10,14,0.92)"]}
-        style={StyleSheet.absoluteFillObject}
-      />
+      {/* Bottom scrim — dark band so text stays legible over art */}
+      <View style={styles.bottomScrim} />
 
       {/* Top-right status badge */}
       <View style={styles.topRow}>
@@ -168,6 +159,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  bottomScrim: {
+    position: "absolute",
+    left: 0, right: 0, bottom: 0,
+    height: "60%",
+    backgroundColor: "rgba(8,10,14,0.72)",
   },
   body: { padding: SPACING.md, gap: 3 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },

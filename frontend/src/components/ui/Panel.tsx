@@ -1,7 +1,6 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, View, ViewStyle } from "react-native";
 
-import { GLOW, GRADIENTS, UI, UI_RADIUS, SPACING } from "@/src/theme/ui";
+import { GLOW, UI, UI_RADIUS, SPACING } from "@/src/theme/ui";
 
 export type PanelTone = "default" | "gold" | "teal";
 
@@ -23,8 +22,6 @@ export function Panel({
   style?: ViewStyle | ViewStyle[];
   testID?: string;
 }) {
-  const ramp =
-    tone === "gold" ? GRADIENTS.panelGold : tone === "teal" ? GRADIENTS.panelTeal : GRADIENTS.panel;
   const borderColor = tone === "default" ? UI.border : tone === "teal" ? "rgba(79,216,196,0.34)" : UI.borderStrong;
 
   return (
@@ -32,7 +29,6 @@ export function Panel({
       style={[styles.wrap, { borderColor }, glow && GLOW.ambient, style]}
       testID={testID}
     >
-      <LinearGradient colors={ramp} style={StyleSheet.absoluteFill} />
       <View style={padded ? styles.pad : undefined}>{children}</View>
     </View>
   );

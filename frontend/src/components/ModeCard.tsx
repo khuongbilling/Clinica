@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ModeCardDef, MODE_STATUS_LABEL } from "@/src/game/modeHub";
@@ -12,14 +11,8 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 // is a drop-in change.
 function ModeBanner({ mode, height }: { mode: ModeCardDef; height: number }) {
   return (
-    <View style={[styles.banner, { height }]}>
-      <LinearGradient
-        colors={[mode.accentColor + "3A", mode.accentColor + "10", COLORS.surfaceSecondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <View style={[styles.bannerIconWrap, { borderColor: mode.accentColor + "70", backgroundColor: mode.accentColor + "22" }]}>
+    <View style={[styles.banner, { height, backgroundColor: mode.accentColor + "22" }]}>
+      <View style={[styles.bannerIconWrap, { borderColor: mode.accentColor + "70", backgroundColor: mode.accentColor + "30" }]}>
         <Ionicons name={mode.icon as any} size={height >= 100 ? 30 : 22} color={mode.accentColor} />
       </View>
     </View>

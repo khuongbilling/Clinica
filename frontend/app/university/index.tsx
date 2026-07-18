@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -110,13 +109,7 @@ function NextChainBanner({
   const ac = def.accentColor;
 
   return (
-    <Pressable style={styles.cueCard} onPress={onPress} testID={def.testID}>
-      <LinearGradient
-        colors={def.gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <Pressable style={[styles.cueCard, { backgroundColor: def.gradientColors[0] }]} onPress={onPress} testID={def.testID}>
       {/* Accent glow top-right */}
       <View style={[styles.cueGlow, { backgroundColor: ac + "18" }]} pointerEvents="none" />
 
@@ -148,11 +141,7 @@ function NextChainBanner({
 // Replaces the full-height NextChainBanner so it no longer dominates the page.
 function FaCompleteChip() {
   return (
-    <View style={faChipStyles.wrap}>
-      <LinearGradient
-        colors={["#1C1500", "#120F00"]}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <View style={[faChipStyles.wrap, { backgroundColor: "#1C1500" }]}>
       <Ionicons name="ribbon" size={16} color="#D4AF37" />
       <View style={{ flex: 1 }}>
         <Text style={faChipStyles.title}>The Fading Apprentice</Text>
@@ -418,8 +407,7 @@ export default function UniversityHubScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <PlayerHeader player={player} />
-      <View style={styles.hero}>
-        <LinearGradient colors={[COLORS.brandTertiary, UI.sanctuaryBg]} style={StyleSheet.absoluteFillObject} />
+      <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
         <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
@@ -480,12 +468,6 @@ export default function UniversityHubScreen() {
               onPress={() => router.push("/university/practice" as any)}
               testID="university-practice-curriculum"
             >
-              <LinearGradient
-                colors={["#0D2E38", "#062030"]}
-                style={StyleSheet.absoluteFillObject}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
               <View style={pracStyles.curriculumLeft}>
                 <View style={pracStyles.curriculumBadge}>
                   <Ionicons name="school" size={14} color="#2DD4BF" />
@@ -1050,6 +1032,7 @@ const pracStyles = StyleSheet.create({
   curriculumCard: {
     flexDirection: "row", alignItems: "center",
     borderRadius: RADIUS.md, borderWidth: 1, borderColor: "#2DD4BF30",
+    backgroundColor: "#0D2E38",
     padding: SPACING.md, gap: SPACING.sm, overflow: "hidden",
     marginBottom: SPACING.xs,
   },
