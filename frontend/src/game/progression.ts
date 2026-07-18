@@ -16,9 +16,14 @@
 // ---------- Player Level curve ----------
 // Cost (in Player EXP) to go from level L to L+1. Same currency as the
 // existing `xp`/RANKS field — RANKS stay as flavor text layered on top.
-// J2 XP curve: targets Level 2 @ 150 total XP, Level 3 @ ~360, Level 4 @ ~640,
-// Level 5 @ ~990, Level 6 @ ~1410, Level 7 @ ~1910 — comfortable early pacing
-// that rewards story + battle + journey node clears without excessive grinding.
+// XP curve targets (J2 formula, P6 pacing): Level 2 @ 150 total XP,
+// Level 3 @ ~360, Level 4 @ ~640, Level 5 @ ~990, Level 6 @ ~1410.
+// P6 rebalance cuts early battle XP (Ch1: 30→15/run, Ch2: 40→25) and
+// tutorial objective XP (10→6) + lotus lesson XP (15→8) so the earned-XP
+// sources align with these targets:
+//   Level 2 — end of onboarding (objectives + first FA battle + first node)
+//   Level 3 — Ch1 journey complete + a few ward shift encounters
+//   Level 4 — meaningful Ch2 progress or sustained Ch1 grinding
 // Formula: 150 + 35*(L-1) + 25*(L-1)^1.2  (flat start, gentle acceleration).
 export function playerXpCostForLevel(level: number): number {
   const l = Math.max(0, level - 1);

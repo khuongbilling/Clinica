@@ -70,7 +70,7 @@ export const LOTUS_PATHS: LotusPath[] = [
         linkedCaseId: 'dehydration_wisp',
         payoffCopy: 'Your Lotus Lesson helped you recognize the dehydration cue — thirst, dry lips, low energy. You\'ll meet that pattern in the ward very soon.',
         learningTags: ['Health Skill: Noticing Cues', 'NCLEX Concept: Assessment'],
-        rewards: { insightCrystals: 2, crowns: 25, universityCredits: 10, xp: 15 },
+        rewards: { insightCrystals: 2, crowns: 25, universityCredits: 10, xp: 8 },
         interactions: [
           {
             type: 'info',
@@ -118,7 +118,7 @@ export const LOTUS_PATHS: LotusPath[] = [
         linkedCaseId: 'fire_imp',
         payoffCopy: 'The warmth cue you studied here is exactly what you\'ll see in the Fire Ward — the body\'s fever response, made visible. Scout first, then act.',
         learningTags: ['Health Skill: Noticing Cues', 'Clinical Habit: Reassess', 'NCLEX Concept: Assessment'],
-        rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 15 },
+        rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 8 },
         interactions: [
           {
             type: 'info',
@@ -166,7 +166,7 @@ export const LOTUS_PATHS: LotusPath[] = [
         linkedCaseId: 'air_sprite',
         payoffCopy: 'The breathing cues you studied here — rate, effort, unusual sounds — are the same ones you\'ll use to Scout the Air Sprite in the ward. Notice first, then act.',
         learningTags: ['NCLEX Concept: Priority', 'Health Skill: Noticing Cues', 'NCLEX Concept: Assessment'],
-        rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 15 },
+        rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 8 },
         interactions: [
           {
             type: 'info',

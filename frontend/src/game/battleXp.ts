@@ -6,11 +6,15 @@
  */
 
 // ── Chapter XP table ─────────────────────────────────────────────────────────
-// [normalBattleXp, finaleOrBossXp] per chapter (matches C3 spec exactly)
+// [normalBattleXp, finaleOrBossXp] per chapter
+// P6 rebalance — Ch1-Ch3 XP cut to prevent reaching Level 4 before meaningful
+// Chapter 1 completion.  A 5-battle Ch1 run now gives 75 XP (was 150 XP),
+// so Level 4 (637 XP) requires real Ch2 progress or sustained grinding,
+// not just a pair of early runs.  Ch4+ unchanged (mid-game, not the concern).
 const CHAPTER_XP_TABLE: Record<number, [number, number]> = {
-  1:  [30,  35],
-  2:  [40,  50],
-  3:  [55,  70],
+  1:  [15,  20],   // was [30, 35]  — 5-battle run: 75 XP (was 150 XP)
+  2:  [25,  32],   // was [40, 50]  — mid-early cap
+  3:  [40,  52],   // was [55, 70]  — gentle step up
   4:  [70,  90],
   5:  [90,  115],
   6:  [115, 145],
