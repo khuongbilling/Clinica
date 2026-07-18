@@ -66,6 +66,7 @@ export default function LotusLessonScreen() {
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [rewards, setRewards] = useState<LotusLessonRewards | null>(null);
   const [reviewMode, setReviewMode] = useState(false);
   const { onRequiredAction } = useTutorial();
@@ -136,31 +137,39 @@ export default function LotusLessonScreen() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const finish = async () => {
-    const res = await completeLotusLessonNode(node.id);
-    if (res.ok && res.rewards) setRewards(res.rewards);
-    // Always write the objective — completeObjective is idempotent, so this
-    // is safe even if alreadyDone=true.  The !alreadyDone guard was the root
-    // cause of the re-trigger loop: if the lesson was completed via the
-    // stabilize-chain path (which calls completeLotusLessonNode but not
-    // completeObjective), the objective record was never written, the hub
-    // kept showing "Start First Lotus Lesson", and the player looped forever.
-    if (node.id === "recognizing-cues-hydration") {
-      const isNew = await completeObjective("obj_lotus_first_lesson");
-      if (isNew) {
-        const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
-        if (!alreadyGranted) {
-          await applyRewards({ xp: 10 });
-          await markObjectiveXpGranted("obj_lotus_first_lesson");
+    try {
+      const res = await completeLotusLessonNode(node.id);
+      if (res.ok && res.rewards) setRewards(res.rewards);
+      // Always write the objective — completeObjective is idempotent, so this
+      // is safe even if alreadyDone=true.  The !alreadyDone guard was the root
+      // cause of the re-trigger loop: if the lesson was completed via the
+      // stabilize-chain path (which calls completeLotusLessonNode but not
+      // completeObjective), the objective record was never written, the hub
+      // kept showing "Start First Lotus Lesson", and the player looped forever.
+      if (node.id === "recognizing-cues-hydration") {
+        const isNew = await completeObjective("obj_lotus_first_lesson");
+        if (isNew) {
+          const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
+          if (!alreadyGranted) {
+            await applyRewards({ xp: 10 });
+            await markObjectiveXpGranted("obj_lotus_first_lesson");
+          }
         }
       }
+    } catch (_e) {
+      // Completion screen still shows even if a non-critical async step fails.
+    } finally {
+      setFinished(true);
+      setSubmitting(false);
     }
-    setFinished(true);
   };
 
-  const advance = () => {
+  const advance = async () => {
+    if (submitting) return;
     setSelected(null);
     if (isLast) {
-      finish();
+      setSubmitting(true);
+      await finish();
     } else {
       setStep((s) => s + 1);
     }
@@ -362,11 +371,12 @@ export default function LotusLessonScreen() {
 
             {canContinue && (
               <Pressable
-                style={[styles.primaryBtn, { backgroundColor: meta.color }]}
+                style={[styles.primaryBtn, { backgroundColor: meta.color, opacity: submitting ? 0.6 : 1 }]}
                 onPress={advance}
+                disabled={submitting}
                 testID="lotus-lesson-continue"
               >
-                <Text style={styles.primaryBtnTxt}>{isLast ? 'Finish Lesson' : 'Continue'}</Text>
+                <Text style={styles.primaryBtnTxt}>{submitting ? 'Saving…' : isLast ? 'Finish Lesson' : 'Continue'}</Text>
                 <Ionicons name="arrow-forward" size={18} color="#000" />
               </Pressable>
             )}

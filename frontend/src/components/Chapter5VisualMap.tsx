@@ -439,7 +439,8 @@ export function Chapter5VisualMap({
               return (
                 <View
                   key={`lbl-${nd.part.id}`}
-                  style={[styles.labelBase, posStyle, { pointerEvents: "box-none" }]}
+                  pointerEvents="box-none"
+                  style={[styles.labelBase, posStyle]}
                 >
                   {/* Type badge */}
                   <View

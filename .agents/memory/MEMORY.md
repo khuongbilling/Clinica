@@ -69,3 +69,4 @@
 - [Back-nav guard & tutorial exit cleanup](clinica-back-nav-guard.md) — useBlockBack (beforeRemove filtered to back-type actions so replace passes) + useClearTutorialOnExit; blocked screens' back arrows must router.replace(hub).
 - [C5 Level 2 unlocks](clinica-c5-lv2-unlocks.md) — Summoning Hall + Daily/Weekly Rounds gate at Level 2 (hall_of_heroes Level 3→2, lessonsStarted removed); seen_lv2_unlock one-time modal; backfill=true for existing Lv2+ players.
 - [Tutorial Recruitment Ceremony](clinica-tutorial-summon-ceremony.md) — two one-time guaranteed-hero pulls before first Ward Shift; tutorialRecruitOnce in university.ts; idempotent store action; backfill via heroes_owned.length; shift.tsx needsSecondSummon gate.
+- [pointerEvents box-none must be a View prop](clinica-pointer-events-prop.md) — on Expo web, `pointerEvents` in a style object inherits via CSS; only the View prop form correctly isolates the box while allowing children touches.

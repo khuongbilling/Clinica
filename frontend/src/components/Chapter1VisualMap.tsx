@@ -371,7 +371,8 @@ export function Chapter1VisualMap({
             return (
               <View
                 key={`lbl-${nd.part.id}`}
-                style={[styles.labelBase, posStyle, { pointerEvents: "box-none" }]}
+                pointerEvents="box-none"
+                style={[styles.labelBase, posStyle]}
               >
                 {/* Type badge */}
                 <View style={[styles.typeBadge, { backgroundColor: tc + "22", borderColor: tc + "40" }]}>
