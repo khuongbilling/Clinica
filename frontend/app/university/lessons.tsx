@@ -14,7 +14,7 @@ import { useEffect, useRef } from "react";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { getLessonBanner } from "@/src/game/illustratedAssets";
+import { getLessonBanner, getSchoolBanner } from "@/src/game/illustratedAssets";
 
 // ── Topic metadata per lotus lesson node ──────────────────────────────────────
 const NODE_META: Record<string, { icon: string; color: string; label: string }> = {
@@ -199,6 +199,148 @@ const bannerStyles = StyleSheet.create({
   ctaTxt: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
 });
 
+// ── V8: Per-department accent colors ─────────────────────────────────────────
+const DEPT_ACCENT: Record<string, string> = {
+  assessment:        '#8B5CF6',
+  airway:            '#7DD3FC',
+  nutrition:         '#34D399',
+  stabilization:     '#06B6D4',
+  pharmacology:      '#F59E0B',
+  emergency:         '#EF4444',
+  mental_wellness:   '#A78BFA',
+  chronic_disease:   '#10B981',
+  professional_track:'#94A3B8',
+};
+
+// ── V8: Wide illustrated department banner card ───────────────────────────────
+function DeptBannerCard({ d, completedLessons, onPress }: {
+  d: { id: string; name: string; description: string; status: string };
+  completedLessons: string[];
+  onPress?: () => void;
+}) {
+  const isAvailable = d.status === 'available';
+  const accent = DEPT_ACCENT[d.id] ?? COLORS.brand;
+  const banner = getSchoolBanner(d.id);
+  const deptLessons = isAvailable ? lessonsForDepartment(d.id) : [];
+  const deptSims    = isAvailable ? simulationsForDepartment(d.id) : [];
+  const doneCount   = deptLessons.filter((l) => completedLessons.includes(l.id)).length;
+  const pct         = deptLessons.length ? Math.round((doneCount / deptLessons.length) * 100) : 0;
+
+  return (
+    <Pressable
+      disabled={!isAvailable}
+      onPress={onPress}
+      testID={isAvailable ? `lessons-dept-${d.id}` : `lessons-dept-locked-${d.id}`}
+      style={[
+        deptBStyles.card,
+        !isAvailable && { opacity: 0.56 },
+        isAvailable && { borderColor: accent + '55' },
+      ]}
+    >
+      {/* Illustrated background */}
+      {banner ? (
+        <Image source={banner} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: accent + '18' }]} />
+      )}
+      <View style={deptBStyles.scrimTop} />
+      <View style={deptBStyles.scrimBottom} />
+
+      {/* Content */}
+      <View style={deptBStyles.content}>
+
+        {/* Top row: SCHOOL label + open/soon badge */}
+        <View style={deptBStyles.topRow}>
+          <View style={[deptBStyles.schoolPill, { backgroundColor: '#00000066', borderColor: accent + '80' }]}>
+            <Text style={[deptBStyles.schoolPillTxt, { color: accent }]}>SCHOOL</Text>
+          </View>
+          {isAvailable ? (
+            <View style={[deptBStyles.statBadge, { backgroundColor: accent + '22', borderColor: accent + '66' }]}>
+              <Ionicons name="library" size={9} color={accent} />
+              <Text style={[deptBStyles.statBadgeTxt, { color: accent }]}>OPEN</Text>
+            </View>
+          ) : (
+            <View style={[deptBStyles.statBadge, { backgroundColor: '#00000055', borderColor: '#ffffff22' }]}>
+              <Ionicons name="time-outline" size={9} color="#ffffff88" />
+              <Text style={[deptBStyles.statBadgeTxt, { color: '#ffffff88' }]}>COMING SOON</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Bottom: name + desc + progress/meta */}
+        <View style={deptBStyles.bottomBlock}>
+          <Text style={deptBStyles.name} numberOfLines={1}>{d.name}</Text>
+          <Text style={deptBStyles.desc} numberOfLines={1}>{d.description}</Text>
+
+          {isAvailable && deptLessons.length > 0 && (
+            <View style={deptBStyles.metaRow}>
+              <Text style={deptBStyles.metaTxt}>
+                {deptLessons.length} lesson{deptLessons.length !== 1 ? 's' : ''}
+                {deptSims.length > 0 ? `  ·  ${deptSims.length} sim${deptSims.length !== 1 ? 's' : ''}` : ''}
+              </Text>
+              <View style={deptBStyles.progressBar}>
+                <View style={[deptBStyles.progressFill, { width: `${pct}%` as any, backgroundColor: accent }]} />
+              </View>
+              <Text style={[deptBStyles.progressTxt, { color: accent }]}>{doneCount}/{deptLessons.length}</Text>
+              <View style={[deptBStyles.ctaBtn, { backgroundColor: accent }]}>
+                <Ionicons name="chevron-forward" size={13} color="#fff" />
+              </View>
+            </View>
+          )}
+          {!isAvailable && (
+            <Text style={deptBStyles.soonCopy}>Unlocks in a future update</Text>
+          )}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+const deptBStyles = StyleSheet.create({
+  card: {
+    width: '100%', height: 152,
+    borderRadius: RADIUS.md, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: '#FFFFFF18',
+    backgroundColor: '#0B1825',
+  },
+  scrimTop: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    height: '58%', backgroundColor: 'rgba(10,20,30,0.28)',
+  },
+  scrimBottom: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    height: '55%', backgroundColor: 'rgba(8,16,26,0.84)',
+  },
+  content: { flex: 1, padding: SPACING.md, justifyContent: 'space-between' },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  schoolPill: {
+    borderRadius: RADIUS.pill, borderWidth: 1,
+    paddingHorizontal: 9, paddingVertical: 3,
+  },
+  schoolPillTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1.4 },
+  statBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: RADIUS.pill, borderWidth: 1,
+    paddingHorizontal: 9, paddingVertical: 3,
+  },
+  statBadgeTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+  bottomBlock: { gap: 2 },
+  name: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', lineHeight: 24 },
+  desc: { color: 'rgba(255,255,255,0.70)', fontSize: 12, lineHeight: 17 },
+  metaRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: 4, flexWrap: 'nowrap',
+  },
+  metaTxt: { color: 'rgba(255,255,255,0.60)', fontSize: 10, flexShrink: 1 },
+  progressBar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)' },
+  progressFill: { height: '100%', borderRadius: 2 },
+  progressTxt: { fontSize: 10, fontWeight: '700' },
+  ctaBtn: {
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  soonCopy: { color: 'rgba(255,255,255,0.42)', fontSize: 10, marginTop: 4, fontStyle: 'italic' },
+});
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function LessonsHubScreen() {
   const router = useRouter();
@@ -310,48 +452,15 @@ export default function LessonsHubScreen() {
             </View>
           </View>
 
-          {available.map((d) => {
-            const lessons = lessonsForDepartment(d.id);
-            const sims = simulationsForDepartment(d.id);
-            const doneCount = lessons.filter((l) => completedLessons.includes(l.id)).length;
-            const pct = lessons.length ? Math.round((doneCount / lessons.length) * 100) : 0;
-            return (
-              <Pressable
-                key={d.id}
-                style={styles.deptCard}
-                onPress={() => router.push(`/university/department/${d.id}` as any)}
-                testID={`lessons-dept-${d.id}`}
-              >
-                <View style={styles.deptIcon}>
-                  <Ionicons name={d.icon as any} size={22} color={COLORS.brand} />
-                </View>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={styles.deptName}>{d.name}</Text>
-                  <Text style={styles.deptDesc} numberOfLines={1}>{d.description}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
-                    <Text style={styles.deptMeta}>{lessons.length} lessons · {sims.length} sims</Text>
-                    <View style={styles.deptBar}><View style={[styles.deptBarFill, { width: `${pct}%` as any }]} /></View>
-                    <Text style={styles.deptBarTxt}>{doneCount}/{lessons.length}</Text>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
-              </Pressable>
-            );
-          })}
-
-          {comingSoon.map((d) => (
-            <View key={d.id} style={[styles.deptCard, { opacity: 0.5 }]} testID={`lessons-dept-locked-${d.id}`}>
-              <View style={[styles.deptIcon, { borderColor: COLORS.border, backgroundColor: COLORS.surfaceTertiary }]}>
-                <Ionicons name={d.icon as any} size={22} color={COLORS.onSurfaceTertiary} />
-              </View>
-              <View style={{ flex: 1, gap: 3 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.deptNameDim}>{d.name}</Text>
-                  <View style={styles.soonBadge}><Text style={styles.soonTxt}>SOON</Text></View>
-                </View>
-                <Text style={styles.deptDesc} numberOfLines={1}>{d.description}</Text>
-              </View>
-            </View>
+          {DEPARTMENTS.map((d) => (
+            <DeptBannerCard
+              key={d.id}
+              d={d}
+              completedLessons={completedLessons}
+              onPress={d.status === 'available'
+                ? () => router.push(`/university/department/${d.id}` as any)
+                : undefined}
+            />
           ))}
         </View>
 
