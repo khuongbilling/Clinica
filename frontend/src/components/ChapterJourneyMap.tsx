@@ -42,13 +42,14 @@ import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
-// ── Chapter background thumbnails ─────────────────────────────────────────────
+// ── Chapter background thumbnails (V3: illustrated map plates) ───────────────
+// Sourced from illustratedAssets.ts V2 slots — swap here to update everywhere.
 const CHAPTER_BG: Record<number, ReturnType<typeof require>> = {
-  1: require("../../assets/map-bg/ch1_lotus_sanctuary.png"),
-  2: require("../../assets/map-bg/ch2_amber_ward.png"),
-  3: require("../../assets/map-bg/ch3_sky_citadel.png"),
-  4: require("../../assets/map-bg/ch4_crimson_rush.png"),
-  5: require("../../assets/map-bg/ch5_emerald_forest.png"),
+  1: require("../../assets/map-bg/journey_map_ch1_sanctuary.png"),
+  2: require("../../assets/map-bg/journey_map_ch2_university_courtyard.png"),
+  3: require("../../assets/map-bg/journey_map_ch3_breathing_garden.png"),
+  4: require("../../assets/map-bg/journey_map_ch4_code_rush_tower.png"),
+  5: require("../../assets/map-bg/journey_map_ch5_community_bloom.png"),
 };
 const CHAPTER_BG_FALLBACK = require("../../assets/map-bg/ch_generic.png");
 

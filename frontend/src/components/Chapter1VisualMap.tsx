@@ -203,15 +203,15 @@ export function Chapter1VisualMap({
 
   return (
     <View style={{ minHeight: CANVAS_H }} onLayout={onLayout}>
-      {/* ── Chapter 1 background: Lotus Sanctuary illustrated scene ── */}
+      {/* ── Ch1 background: V3 Lotus Recall Sanctuary illustrated map ── */}
       <Image
-        source={require("@/assets/map-bg/ch1_lotus_sanctuary.png")}
+        source={require("@/assets/map-bg/journey_map_ch1_sanctuary.png")}
         style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]}
         contentFit="cover"
       />
-      {/* Readability overlay */}
+      {/* Teal-jade sanctuary readability overlay */}
       <View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: "#0B182565", borderRadius: 12 }]}
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: "#081E1555", borderRadius: 12 }]}
         pointerEvents="none"
       />
 

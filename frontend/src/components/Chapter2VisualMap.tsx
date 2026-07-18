@@ -220,14 +220,15 @@ export function Chapter2VisualMap({
   return (
     <View onLayout={onLayout}>
       <View style={{ minHeight: CANVAS_H }}>
-        {/* ── Illustrated chapter background ── */}
+        {/* ── Ch2 background: V3 University Courtyard & Ward Bridge illustrated map ── */}
         <Image
-          source={require("../../assets/map-bg/ch2_amber_ward.png")}
+          source={require("../../assets/map-bg/journey_map_ch2_university_courtyard.png")}
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
+        {/* Cool academy sky-blue readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A0E0565" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#0A182555" }]}
           pointerEvents="none"
         />
         {W > 0 && (

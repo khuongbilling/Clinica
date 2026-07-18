@@ -231,14 +231,15 @@ export function Chapter4VisualMap({
   return (
     <View onLayout={onLayout}>
       <View style={{ minHeight: CANVAS_H }}>
-        {/* ── Illustrated chapter background ── */}
+        {/* ── Ch4 background: V3 Code Rush Tower / Ward Defense illustrated map ── */}
         <Image
-          source={require("../../assets/map-bg/ch4_crimson_rush.png")}
+          source={require("../../assets/map-bg/journey_map_ch4_code_rush_tower.png")}
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
+        {/* Urgent deep-red readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A050565" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A050855" }]}
           pointerEvents="none"
         />
         {W > 0 && (

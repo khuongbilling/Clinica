@@ -228,14 +228,15 @@ export function Chapter5VisualMap({
   return (
     <View onLayout={onLayout}>
       <View style={{ minHeight: CANVAS_H }}>
-        {/* ── Illustrated chapter background ── */}
+        {/* ── Ch5 background: V3 Community Bloom / Public Health District illustrated map ── */}
         <Image
-          source={require("../../assets/map-bg/ch5_emerald_forest.png")}
+          source={require("../../assets/map-bg/journey_map_ch5_community_bloom.png")}
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
+        {/* Warm civic jade-green readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#041A0A65" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#051A0C55" }]}
           pointerEvents="none"
         />
         {W > 0 && (

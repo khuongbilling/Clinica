@@ -221,14 +221,15 @@ export function Chapter3VisualMap({
   return (
     <View onLayout={onLayout}>
       <View style={{ minHeight: CANVAS_H }}>
-        {/* ── Illustrated chapter background ── */}
+        {/* ── Ch3 background: V3 Breathing Garden / Airway Temple illustrated map ── */}
         <Image
-          source={require("../../assets/map-bg/ch3_sky_citadel.png")}
+          source={require("../../assets/map-bg/journey_map_ch3_breathing_garden.png")}
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
+        {/* Pale-blue mist readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#050B1865" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#050F2055" }]}
           pointerEvents="none"
         />
         {W > 0 && (
