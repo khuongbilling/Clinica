@@ -358,7 +358,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_awaken",
       title: "The System",
-      body: "SYSTEM: Recall sequence stabilized.\n\nI am the System — the presence bound to you since the Recall. My true form is still shadow to you; prove yourself, and I will come into focus.",
+      body: "SYSTEM: Recall sequence stabilized.\n\nI am the System, the entity bound to you since the Recall. My full designation remains restricted. Demonstrate competency; access will expand.",
       placement: "center",
       requireAction: false,
       nextText: "CONTINUE",
@@ -366,7 +366,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_topbar",
       title: "Your Command Screen",
-      body: "SYSTEM: Main ward interface restored.\n\nThis is your command screen. From here you will study, train, enter simulations, and return to the ward when ready. The bar above tracks your Stamina and currencies.",
+      body: "SYSTEM: Command interface restored.\n\nCommand screen active. Available functions: study, training, simulation entry, ward return. The bar above monitors your Stamina and resource currencies.",
       placement: "top",
       requireAction: false,
       banner: true,
@@ -375,7 +375,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_to_university",
       title: "First Objective",
-      body: "First objective: begin corrective training at Clinica University. The Fading Apprentice case chain awaits — learn to see before you heal.",
+      body: "SYSTEM: Corrective training required.\n\nReport to Clinica University. The Fading Apprentice case chain is your first assigned objective. Complete it.",
       placement: "center",
       requireAction: false,
       nextText: "GO TO UNIVERSITY",
@@ -386,15 +386,15 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_ward_intro",
       title: "The Ward",
-      body: "This is the Ward — where you take clinical shifts against the corruption. Choose a case, read the patient, and hold the line. Each shift you complete makes you stronger and reveals more of the Realm.",
+      body: "SYSTEM: Ward operations interface loaded.\n\nClinical shifts are conducted here. Select a case, assess the patient, and prevent Corruption from advancing. Completed shifts yield progression data and Realm access.",
       placement: "center",
       requireAction: false,
       nextText: "GO ON",
     },
     {
       id: "system_ward_university",
-      title: "Answer the Call to Learn",
-      body: "The University awaits. Go there now — your first case chain, The Fading Apprentice, will sharpen the reasoning you need for every shift ahead.",
+      title: "Training Required",
+      body: "SYSTEM: Prerequisite training incomplete.\n\nNavigate to Clinica University now. The Fading Apprentice case chain must be completed before shift access is granted.",
       placement: "center",
       requireAction: true,
       requiredActionType: "navigateToUniversity",
@@ -407,7 +407,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "system_shops_intro",
       title: "The Apothecary Market",
-      body: "You've grown enough to trade. The Market spends your hard-earned currency on supplies, upgrades, and cosmetics — never on shortcuts to victory. Spend wisely; a healer's resources are precious.",
+      body: "SYSTEM: Market access unlocked.\n\nCurrency expenditure options: supplies, upgrades, cosmetics. No performance shortcuts are available. Allocate resources with precision.",
       placement: "center",
       requireAction: false,
       nextText: "SHOW ME",
