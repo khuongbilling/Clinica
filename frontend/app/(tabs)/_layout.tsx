@@ -1,100 +1,70 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Text, View, StyleSheet, Platform } from "react-native";
+import { Image, Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { COLORS } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
 import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
-import {
-  ShopEmblem,
-  HeroesEmblem,
-  ShiftEmblem,
-  RealmEmblem,
-  CommunityEmblem,
-} from "@/src/components/ClinicaEmblems";
 
-// ── Donghua tab icon ──────────────────────────────────────────────────────────
-//
-// Design: clean illustrated emblem (no frame, no ring, no glow) +
-// hand-drawn-style donghua text below with a dark outline/shadow for
-// readability — matching the League-of-Angels / celestial-RPG aesthetic
-// from the reference.
+// ── Illustrated hand-drawn tab icons ─────────────────────────────────────────
+// Each icon is an AI-generated donghua/anime illustrated PNG with transparent
+// background. Active = full opacity; inactive = dimmed. No SVG, no rings.
 
-const GOLD     = "#E8C868";
-const GOLD_DIM = "#C4A040";
-const DIM      = "#4A5568";
+const TAB_IMAGES = {
+  shift:   require("../../assets/ui-icons/tab-shift.png"),
+  heroes:  require("../../assets/ui-icons/tab-heroes.png"),
+  shop:    require("../../assets/ui-icons/tab-shop.png"),
+  realm:   require("../../assets/ui-icons/tab-realm.png"),
+  guild:   require("../../assets/ui-icons/tab-guild.png"),
+} as const;
 
-// Text-outline approximation: render the label 4×, slightly offset in dark,
-// then the real color on top — gives the hand-drawn stroke look on all platforms.
-function OutlinedLabel({
-  children,
-  color,
-  style,
-}: {
-  children: string;
-  color: string;
-  style?: object;
-}) {
-  const offsets = [
-    { x: -0.6, y: -0.6 },
-    { x:  0.6, y: -0.6 },
-    { x: -0.6, y:  0.6 },
-    { x:  0.6, y:  0.6 },
-  ];
+// Hand-drawn stroke label: 4 dark offset copies + color copy on top.
+// Gives the painted-text look of celestial RPG nav bars.
+function StrokeLabel({ children, focused }: { children: string; focused: boolean }) {
+  const color   = focused ? "#E8C050" : "#8A95A8";
+  const offsets = [[-0.6,-0.6],[0.6,-0.6],[-0.6,0.6],[0.6,0.6]] as const;
   return (
     <View style={{ position: "relative" }}>
-      {offsets.map(({ x, y }, i) => (
+      {offsets.map(([x, y], i) => (
         <Text
           key={i}
-          style={[
-            icon.label,
-            style,
-            {
-              position: "absolute",
-              color: "#000000CC",
-              transform: [{ translateX: x }, { translateY: y }],
-            },
-          ]}
+          style={[s.label, {
+            position: "absolute",
+            color: "#000000BB",
+            transform: [{ translateX: x }, { translateY: y }],
+          }]}
           numberOfLines={1}
         >
           {children}
         </Text>
       ))}
-      <Text style={[icon.label, style, { color }]} numberOfLines={1}>
-        {children}
-      </Text>
+      <Text style={[s.label, { color }]} numberOfLines={1}>{children}</Text>
     </View>
   );
 }
 
-function mkTabIcon(
-  Emblem:  React.ComponentType<{ size?: number; color?: string }>,
-  label:   string,
-  color:   string,
-  focused: boolean,
-) {
-  const iconColor = focused ? GOLD : DIM;
-  const labelColor = focused ? GOLD_DIM : "#6B7A94";
+type TabKey = keyof typeof TAB_IMAGES;
 
+function mkTabIcon(key: TabKey, label: string, focused: boolean) {
   return (
-    <View style={icon.wrap}>
-      <Emblem size={32} color={iconColor} />
-      <OutlinedLabel color={labelColor}>{label}</OutlinedLabel>
+    <View style={s.wrap}>
+      <Image
+        source={TAB_IMAGES[key]}
+        style={[s.icon, { opacity: focused ? 1 : 0.38 }]}
+        resizeMode="contain"
+      />
+      <StrokeLabel focused={focused}>{label}</StrokeLabel>
     </View>
   );
 }
 
-const icon = StyleSheet.create({
-  wrap: {
-    alignItems: "center",
-    gap:        4,
-    paddingTop: 2,
-  },
+const s = StyleSheet.create({
+  wrap: { alignItems: "center", gap: 3, paddingTop: 2 },
+  icon: { width: 44, height: 44 },
   label: {
-    fontSize:      9,
-    fontWeight:    "800",
-    letterSpacing: 0.8,
+    fontSize:      9.5,
+    fontWeight:    "900",
+    letterSpacing: 0.7,
     textAlign:     "center",
     textTransform: "uppercase" as const,
   },
@@ -103,39 +73,34 @@ const icon = StyleSheet.create({
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 export default function TabsLayout() {
-  const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, 8);
-  const tabH = 72 + bottomPad;
+  const insets     = useSafeAreaInsets();
+  const bottomPad  = Math.max(insets.bottom, 8);
 
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
     level: player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1,
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
-    lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
+    lessonsStarted:     (player?.lessons_completed?.length ?? 0) > 0,
   };
-  const shopUnlocked           = checkFeatureGate("shop",            ctx).unlocked;
-  const heroesUnlocked         = checkFeatureGate("hall_of_heroes",  ctx).unlocked;
-  const realmUnlocked          = checkFeatureGate("realm",           ctx).unlocked;
-  const communityBoardUnlocked = checkFeatureGate("community_board", ctx).unlocked;
+  const shopUnlocked      = checkFeatureGate("shop",            ctx).unlocked;
+  const heroesUnlocked    = checkFeatureGate("hall_of_heroes",  ctx).unlocked;
+  const realmUnlocked     = checkFeatureGate("realm",           ctx).unlocked;
+  const communityUnlocked = checkFeatureGate("community_board", ctx).unlocked;
 
   return (
     <Tabs
       screenOptions={{
         headerShown:             false,
         tabBarShowLabel:         false,
-        tabBarActiveTintColor:   COLORS.brand,
-        tabBarInactiveTintColor: DIM,
         tabBarStyle: {
           backgroundColor: UI.sanctuaryBg,
           borderTopWidth:  1,
-          borderTopColor:  GOLD + "30",
-          height:          tabH,
-          paddingTop:      6,
+          borderTopColor:  "#E8C86830",
+          height:          68 + bottomPad,
+          paddingTop:      4,
           paddingBottom:   bottomPad,
         },
-        tabBarItemStyle: {
-          paddingVertical: 2,
-        },
+        tabBarItemStyle: { paddingVertical: 2 },
       }}
     >
       <Tabs.Screen
@@ -143,8 +108,7 @@ export default function TabsLayout() {
         options={{
           href: shopUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-shop",
-          tabBarIcon: ({ color, focused }) =>
-            mkTabIcon(ShopEmblem, "SHOP", color, focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused),
         }}
       />
       <Tabs.Screen
@@ -152,16 +116,14 @@ export default function TabsLayout() {
         options={{
           href: heroesUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-heroes",
-          tabBarIcon: ({ color, focused }) =>
-            mkTabIcon(HeroesEmblem, "HEROES", color, focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused),
         }}
       />
       <Tabs.Screen
         name="index"
         options={{
           tabBarButtonTestID: "tab-shift",
-          tabBarIcon: ({ color, focused }) =>
-            mkTabIcon(ShiftEmblem, "SHIFT", color, focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("shift", "SHIFT", focused),
         }}
       />
       <Tabs.Screen
@@ -169,32 +131,24 @@ export default function TabsLayout() {
         options={{
           href: realmUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-kingdom",
-          tabBarIcon: ({ color, focused }) =>
-            mkTabIcon(RealmEmblem, "REALM", color, focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("realm", "REALM", focused),
         }}
       />
       <Tabs.Screen
         name="faction"
         options={{
-          href: communityBoardUnlocked ? undefined : null,
+          href: communityUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-faction",
-          tabBarIcon: ({ color, focused }) =>
-            mkTabIcon(CommunityEmblem, "GUILD", color, focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("guild", "GUILD", focused),
         }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          href: null,
-          tabBarButtonTestID: "tab-profile",
-        }}
+        options={{ href: null, tabBarButtonTestID: "tab-profile" }}
       />
       <Tabs.Screen
         name="codex"
-        options={{
-          href: null,
-          tabBarButtonTestID: "tab-codex",
-        }}
+        options={{ href: null, tabBarButtonTestID: "tab-codex" }}
       />
     </Tabs>
   );

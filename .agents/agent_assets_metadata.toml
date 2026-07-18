@@ -1392,3 +1392,33 @@ id = "-zMXaOoAkKhP45n_zs67P"
 uri = "file://frontend/assets/ui-icons/emblems/world-events.png"
 type = "image"
 title = "world events celestial orb emblem"
+
+[[generated]]
+id = "UOfKe2eheOecUJTBe53Eg"
+uri = "file://frontend/assets/ui-icons/tab-shift.png"
+type = "image"
+title = "tab-shift-lantern"
+
+[[generated]]
+id = "LevrU9AEmARrYj8R4cmvs"
+uri = "file://frontend/assets/ui-icons/tab-heroes.png"
+type = "image"
+title = "tab-heroes-healers"
+
+[[generated]]
+id = "lMHQIKDnjKBDIbcpfQrDs"
+uri = "file://frontend/assets/ui-icons/tab-shop.png"
+type = "image"
+title = "tab-shop-potion"
+
+[[generated]]
+id = "0WEypep36NmX49R4_OqW5"
+uri = "file://frontend/assets/ui-icons/tab-realm.png"
+type = "image"
+title = "tab-realm-sanctuary"
+
+[[generated]]
+id = "cXNyVnLi4MhXPVoz1Ae72"
+uri = "file://frontend/assets/ui-icons/tab-guild.png"
+type = "image"
+title = "tab-guild-banner"

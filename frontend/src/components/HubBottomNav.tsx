@@ -1,11 +1,12 @@
 /**
- * HubBottomNav — clean donghua-style bottom navigation for non-tab hub screens.
+ * HubBottomNav — illustrated hand-drawn bottom navigation for non-tab screens.
  *
- * Design: bare illustrated emblem + hand-drawn outlined text label.
- * No frame, no ring, no glow — matching the celestial-RPG reference aesthetic.
+ * Icons: AI-generated donghua/anime PNGs (tab-shift/heroes/shop/realm/guild).
+ * Active = full opacity, inactive = dimmed (38%). No SVG, no rings, no glow.
+ * StrokeLabel gives the painted-text look of celestial RPG nav bars.
  */
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UI } from "@/src/theme/ui";
@@ -15,13 +16,6 @@ import {
   playerLevelFromXp,
   type CompoundGateContext,
 } from "@/src/game/progression";
-import {
-  ShopEmblem,
-  HeroesEmblem,
-  ShiftEmblem,
-  RealmEmblem,
-  CommunityEmblem,
-} from "@/src/components/ClinicaEmblems";
 
 export type HubTabId = "shift" | "heroes" | "shop" | "realm" | "community";
 
@@ -29,47 +23,41 @@ interface HubBottomNavProps {
   activeTab?: HubTabId;
 }
 
-const GOLD     = "#E8C868";
-const GOLD_DIM = "#C4A040";
-const DIM      = "#4A5568";
+const TAB_IMAGES = {
+  shift:   require("../../assets/ui-icons/tab-shift.png"),
+  heroes:  require("../../assets/ui-icons/tab-heroes.png"),
+  shop:    require("../../assets/ui-icons/tab-shop.png"),
+  realm:   require("../../assets/ui-icons/tab-realm.png"),
+  guild:   require("../../assets/ui-icons/tab-guild.png"),
+} as const;
 
-// Hand-drawn stroke effect: render label text 4× offset in dark then once in color.
-function OutlinedLabel({ children, color }: { children: string; color: string }) {
-  const offsets = [
-    { x: -0.6, y: -0.6 },
-    { x:  0.6, y: -0.6 },
-    { x: -0.6, y:  0.6 },
-    { x:  0.6, y:  0.6 },
-  ];
+function StrokeLabel({ children, focused }: { children: string; focused: boolean }) {
+  const color   = focused ? "#E8C050" : "#8A95A8";
+  const offsets = [[-0.6,-0.6],[0.6,-0.6],[-0.6,0.6],[0.6,0.6]] as const;
   return (
     <View style={{ position: "relative" }}>
-      {offsets.map(({ x, y }, i) => (
+      {offsets.map(([x, y], i) => (
         <Text
           key={i}
-          style={[
-            s.label,
-            {
-              position: "absolute",
-              color: "#000000CC",
-              transform: [{ translateX: x }, { translateY: y }],
-            },
-          ]}
+          style={[s.label, {
+            position:  "absolute",
+            color:     "#000000BB",
+            transform: [{ translateX: x }, { translateY: y }],
+          }]}
           numberOfLines={1}
         >
           {children}
         </Text>
       ))}
-      <Text style={[s.label, { color }]} numberOfLines={1}>
-        {children}
-      </Text>
+      <Text style={[s.label, { color }]} numberOfLines={1}>{children}</Text>
     </View>
   );
 }
 
 export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
-  const router     = useRouter();
-  const insets     = useSafeAreaInsets();
-  const bottomPad  = Math.max(insets.bottom, 8);
+  const router    = useRouter();
+  const insets    = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 8);
   const { player } = usePlayer();
 
   const ctx: CompoundGateContext = {
@@ -85,30 +73,27 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
 
   interface TabDef {
     id:       HubTabId;
+    imgKey:   keyof typeof TAB_IMAGES;
     label:    string;
     route:    string;
     unlocked: boolean;
-    Emblem:   React.ComponentType<{ size?: number; color?: string }>;
   }
 
   const tabs: TabDef[] = [
-    { id: "shop",      label: "SHOP",   route: "/(tabs)/shop",    unlocked: shopUnlocked,      Emblem: ShopEmblem      },
-    { id: "heroes",    label: "HEROES", route: "/(tabs)/heroes",  unlocked: heroesUnlocked,    Emblem: HeroesEmblem    },
-    { id: "shift",     label: "SHIFT",  route: "/(tabs)/",        unlocked: true,              Emblem: ShiftEmblem     },
-    { id: "realm",     label: "REALM",  route: "/(tabs)/kingdom", unlocked: realmUnlocked,     Emblem: RealmEmblem     },
-    { id: "community", label: "GUILD",  route: "/(tabs)/faction", unlocked: communityUnlocked, Emblem: CommunityEmblem },
+    { id: "shop",      imgKey: "shop",   label: "SHOP",   route: "/(tabs)/shop",    unlocked: shopUnlocked      },
+    { id: "heroes",    imgKey: "heroes", label: "HEROES", route: "/(tabs)/heroes",  unlocked: heroesUnlocked    },
+    { id: "shift",     imgKey: "shift",  label: "SHIFT",  route: "/(tabs)/",        unlocked: true              },
+    { id: "realm",     imgKey: "realm",  label: "REALM",  route: "/(tabs)/kingdom", unlocked: realmUnlocked     },
+    { id: "community", imgKey: "guild",  label: "GUILD",  route: "/(tabs)/faction", unlocked: communityUnlocked },
   ];
 
   return (
     <View style={[s.bar, { paddingBottom: bottomPad }]}>
       <View style={s.topBorder} />
       <View style={s.row}>
-        {tabs.map(({ id, label, route, unlocked, Emblem }) => {
+        {tabs.map(({ id, imgKey, label, route, unlocked }) => {
           if (!unlocked) return null;
-          const focused    = activeTab === id;
-          const iconColor  = focused ? GOLD : DIM;
-          const labelColor = focused ? GOLD_DIM : "#6B7A94";
-
+          const focused = activeTab === id;
           return (
             <Pressable
               key={id}
@@ -116,8 +101,12 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
               style={s.tabBtn}
               accessibilityLabel={label}
             >
-              <Emblem size={32} color={iconColor} />
-              <OutlinedLabel color={labelColor}>{label}</OutlinedLabel>
+              <Image
+                source={TAB_IMAGES[imgKey]}
+                style={[s.icon, { opacity: focused ? 1 : 0.38 }]}
+                resizeMode="contain"
+              />
+              <StrokeLabel focused={focused}>{label}</StrokeLabel>
             </Pressable>
           );
         })}
@@ -129,11 +118,11 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
 const s = StyleSheet.create({
   bar: {
     backgroundColor: UI.sanctuaryBg,
-    paddingTop:      6,
+    paddingTop:      4,
   },
   topBorder: {
     height:          1,
-    backgroundColor: GOLD + "30",
+    backgroundColor: "#E8C86830",
     marginBottom:    4,
   },
   row: {
@@ -144,14 +133,15 @@ const s = StyleSheet.create({
   },
   tabBtn: {
     alignItems:      "center",
-    gap:             4,
+    gap:             3,
     flex:            1,
     paddingVertical: 2,
   },
+  icon:  { width: 44, height: 44 },
   label: {
-    fontSize:      9,
-    fontWeight:    "800",
-    letterSpacing: 0.8,
+    fontSize:      9.5,
+    fontWeight:    "900",
+    letterSpacing: 0.7,
     textAlign:     "center",
     textTransform: "uppercase",
   },
