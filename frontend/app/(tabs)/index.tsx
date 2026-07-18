@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Animated, Modal, Pressable, StyleSheet, Text, View,
 } from "react-native";
@@ -28,6 +28,10 @@ import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
+import {
+  JourneyEmblem, SummoningEmblem, WardDefenseEmblem, BossWardEmblem,
+  DailyRoundsEmblem, MilestonesEmblem, WorldEventsEmblem,
+} from "@/src/components/ClinicaEmblems";
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 function dailyRoundsUnlockedModes(player: any): string[] {
@@ -475,7 +479,7 @@ export default function RunHome() {
         <View style={styles.sideCol}>
           {roundsUnlocked && (
             <FeatureButton
-              icon="today"
+              emblem={<DailyRoundsEmblem size={24} color={COLORS.brand} />}
               label="Rounds"
               color={COLORS.brand}
               badge={roundsBadge}
@@ -484,7 +488,7 @@ export default function RunHome() {
             />
           )}
           <FeatureButton
-            icon="map-outline"
+            emblem={<JourneyEmblem size={24} color={COLORS.river} />}
             label="Journey"
             color={COLORS.river}
             onPress={() => router.push("/journey")}
@@ -492,7 +496,7 @@ export default function RunHome() {
           />
           {roundsUnlocked && (
             <FeatureButton
-              icon="gift-outline"
+              emblem={<MilestonesEmblem size={24} color="#D4AF37" />}
               label="Milestones"
               color="#D4AF37"
               onPress={() => router.push("/milestones" as any)}
@@ -534,7 +538,7 @@ export default function RunHome() {
         <View style={styles.sideCol}>
           {summonUnlocked && (
             <FeatureButton
-              icon="sparkles"
+              emblem={<SummoningEmblem size={24} color="#D4AF37" />}
               label="Summon"
               color="#D4AF37"
               onPress={() => router.push("/university/recruit" as any)}
@@ -543,7 +547,7 @@ export default function RunHome() {
           )}
           {wardDefUnlocked && (
             <FeatureButton
-              icon="shield-checkmark"
+              emblem={<WardDefenseEmblem size={24} color={COLORS.river} />}
               label="Defense"
               color={COLORS.river}
               onPress={() => router.push("/ward-defense" as any)}
@@ -552,7 +556,7 @@ export default function RunHome() {
           )}
           {bossUnlocked && (
             <FeatureButton
-              icon="skull"
+              emblem={<BossWardEmblem size={24} color={COLORS.error} />}
               label="Boss"
               color={COLORS.error}
               onPress={() => router.push("/boss")}
@@ -561,7 +565,7 @@ export default function RunHome() {
           )}
           {WORLD_EVENT_ACTIVE && worldEventUnlocked && (
             <FeatureButton
-              icon="calendar-outline"
+              emblem={<WorldEventsEmblem size={24} color={COLORS.air} />}
               label="Events"
               color={COLORS.air}
               live
@@ -840,9 +844,9 @@ const sc = StyleSheet.create({
 
 /* ── FeatureButton ── */
 function FeatureButton({
-  icon, label, color, locked, lockText, live, badge, onPress, testID,
+  icon, emblem, label, color, locked, lockText, live, badge, onPress, testID,
 }: {
-  icon: string; label: string; color: string;
+  icon?: string; emblem?: ReactNode; label: string; color: string;
   locked?: boolean; lockText?: string; live?: boolean; badge?: number;
   onPress: () => void; testID?: string;
 }) {
@@ -857,7 +861,10 @@ function FeatureButton({
         shadowOffset: { width: 0, height: 3 },
         elevation: locked ? 0 : 4,
       }]}>
-        <Ionicons name={icon as any} size={24} color={locked ? COLORS.onSurfaceTertiary : color} />
+        {emblem !== undefined
+          ? emblem
+          : <Ionicons name={icon as any} size={24} color={locked ? COLORS.onSurfaceTertiary : color} />
+        }
         {live && !locked ? <View style={styles.featLiveDot} /> : null}
         {!locked && badge && badge > 0 ? (
           <View style={styles.featBadge}>

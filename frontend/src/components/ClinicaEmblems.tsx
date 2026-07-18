@@ -23,6 +23,9 @@
  *   BossWardEmblem    — Triple-flame dragon seal (filled flames, coil mark)
  *   LotusJournalEmblem— Open lotus flower (wide petals, filled, stem)
  *   LotusLessonsEmblem— Lesson scroll tablet (open scroll + lotus + lines)
+ *   DailyRoundsEmblem — Bold calendar (header band, binding rings, lotus center)
+ *   MilestonesEmblem  — Trophy cup (U-body, two handles, stepped base, lotus)
+ *   WorldEventsEmblem — Celestial orb (8-point starburst rays, lotus rosette)
  *
  *   ClinicaEmblem     — Unified lookup component: <ClinicaEmblem id="shift" />
  *   getModeEmblem     — Returns a ReactNode for a given mode ID
@@ -550,6 +553,130 @@ export function LotusLessonsEmblem({ size = 24, color = "#E8C868" }: EmblemProps
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DAILY ROUNDS — Bold Calendar with Lotus Center
+// Thick calendar box, solid header band, two binding rings, lotus bloom center.
+// ─────────────────────────────────────────────────────────────────────────────
+export function DailyRoundsEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
+  const bodyFill  = color + "28";
+  const headFill  = color + "88";
+  const petalFill = color + "70";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Calendar body */}
+      <Rect x="2" y="5" width="20" height="17.5" rx="1.8"
+        stroke={color} strokeWidth="1.8" fill={bodyFill} />
+      {/* Header band — solid accent */}
+      <Path d="M2 5 Q2 3.2 3.8 3.2 L20.2 3.2 Q22 3.2 22 5 L22 9.5 L2 9.5 Z"
+        fill={headFill} stroke="none" />
+      {/* Separator line under header */}
+      <Path d="M2 9.5 L22 9.5" stroke={color} strokeWidth="0.6" opacity="0.5" />
+      {/* Left binding ring */}
+      <Rect x="7" y="2" width="2.5" height="5.5" rx="1.2"
+        stroke={color} strokeWidth="1.5" fill={bodyFill} />
+      {/* Right binding ring */}
+      <Rect x="14.5" y="2" width="2.5" height="5.5" rx="1.2"
+        stroke={color} strokeWidth="1.5" fill={bodyFill} />
+      {/* Day dots — bottom row */}
+      <Circle cx="6.5"  cy="20" r="1.1" fill={color} opacity="0.5" />
+      <Circle cx="12"   cy="20" r="1.1" fill={color} opacity="0.5" />
+      <Circle cx="17.5" cy="20" r="1.1" fill={color} opacity="0.5" />
+      {/* Lotus bloom — calendar center */}
+      <Path d="M12 11.5 Q14 13.5 12 16 Q10 13.5 12 11.5"
+        fill={petalFill} stroke={color} strokeWidth="1.2" />
+      <Path d="M15.5 14 Q13.5 15.5 12 15 Q14 13 15.5 14"
+        fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M12 17.5 Q10 16 12 15 Q14 16 12 17.5"
+        fill={petalFill} stroke={color} strokeWidth="1.0" />
+      <Path d="M8.5 14 Q10.5 13 12 15 Q10.5 15.5 8.5 14"
+        fill={petalFill} stroke={color} strokeWidth="1.0" />
+      {/* Center gem */}
+      <Circle cx="12" cy="15" r="1.5" fill={color} />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MILESTONES — Trophy Cup
+// Bold U-shaped cup, two arced side handles, two-tier stepped base, lotus inside.
+// ─────────────────────────────────────────────────────────────────────────────
+export function MilestonesEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
+  const cupFill   = color + "38";
+  const baseFill  = color + "60";
+  const petalFill = color + "70";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Top rim flange */}
+      <Rect x="6" y="1.5" width="12" height="1.8" rx="0.8" fill={color} opacity="0.85" />
+      {/* Cup body — U shape */}
+      <Path
+        d="M7 3.3 L17 3.3 L17 12.5 Q17 17.5 12 19 Q7 17.5 7 12.5 Z"
+        stroke={color} strokeWidth="1.8" strokeLinejoin="round" fill={cupFill}
+      />
+      {/* Left handle */}
+      <Path d="M7 5 Q3 6 3.5 10 Q4 13 7 13"
+        stroke={color} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      {/* Right handle */}
+      <Path d="M17 5 Q21 6 20.5 10 Q20 13 17 13"
+        stroke={color} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      {/* Stem */}
+      <Rect x="10.5" y="19" width="3" height="2.5" rx="0.3"
+        stroke={color} strokeWidth="1.2" fill={cupFill} />
+      {/* Base tier 1 (narrow) */}
+      <Rect x="8.5" y="21.5" width="7" height="1.5" rx="0.6"
+        stroke={color} strokeWidth="1.2" fill={baseFill} />
+      {/* Lotus inside cup */}
+      <Path d="M12 5.5 Q14 7.5 12 10 Q10 7.5 12 5.5"
+        fill={petalFill} stroke={color} strokeWidth="1.1" />
+      <Path d="M15 8 Q13 9.5 12 9 Q14 7.5 15 8"
+        fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M12 11 Q10.5 9.5 12 9 Q13.5 9.5 12 11"
+        fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M9 8 Q11 7.5 12 9 Q10 9.5 9 8"
+        fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Circle cx="12" cy="8.8" r="1.5" fill={color} />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WORLD EVENTS — Celestial Starburst Orb
+// 8 radiating diamond rays, inner glowing orb, lotus rosette center.
+// ─────────────────────────────────────────────────────────────────────────────
+export function WorldEventsEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
+  const orbFill   = color + "35";
+  const rayFill   = color + "65";
+  const petalFill = color + "75";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* 8 radiating diamond rays — cardinal + diagonal */}
+      <Path d="M12 1 L13 5.5 L12 10 L11 5.5 Z" fill={rayFill} />
+      <Path d="M23 12 L18.5 13 L14 12 L18.5 11 Z" fill={rayFill} />
+      <Path d="M12 23 L11 18.5 L12 14 L13 18.5 Z" fill={rayFill} />
+      <Path d="M1 12 L5.5 11 L10 12 L5.5 13 Z" fill={rayFill} />
+      <Path d="M20.2 3.8 L17.5 7.5 L14 11 L16.5 7 Z" fill={color + "45"} />
+      <Path d="M20.2 20.2 L16.5 17 L14 13 L17.5 16.5 Z" fill={color + "45"} />
+      <Path d="M3.8 20.2 L7 16.5 L10 13 L6.5 17 Z" fill={color + "45"} />
+      <Path d="M3.8 3.8 L7.5 7 L10 11 L6.5 7.5 Z" fill={color + "45"} />
+      {/* Central orb */}
+      <Circle cx="12" cy="12" r="6" stroke={color} strokeWidth="1.8" fill={orbFill} />
+      {/* Inner glow ring */}
+      <Circle cx="12" cy="12" r="4.5" stroke={color} strokeWidth="0.6" fill="none" opacity="0.45" />
+      {/* Lotus rosette inside orb — 4 petals */}
+      <Path d="M12 9 Q13.8 10.5 12 12.5 Q10.2 10.5 12 9"
+        fill={petalFill} stroke={color} strokeWidth="1.1" />
+      <Path d="M15 12 Q13.5 13.8 12 12.5 Q14 11 15 12"
+        fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M12 15 Q10.2 13.5 12 12.5 Q13.8 13.5 12 15"
+        fill={petalFill} stroke={color} strokeWidth="0.9" />
+      <Path d="M9 12 Q10.5 11 12 12.5 Q10 13.8 9 12"
+        fill={petalFill} stroke={color} strokeWidth="0.9" />
+      {/* Center gem */}
+      <Circle cx="12" cy="12" r="1.6" fill={color} />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UNIFIED LOOKUP
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -581,6 +708,10 @@ const EMBLEM_BY_ID: Record<string, React.FC<EmblemProps>> = {
   summoning: SummoningEmblem,
   recruit: SummoningEmblem,
   recruitment: SummoningEmblem,
+  // Hub feature buttons
+  "daily-rounds": DailyRoundsEmblem,
+  milestones: MilestonesEmblem,
+  "world-events": WorldEventsEmblem,
   // Lotus Lessons
   "lotus-lessons": LotusLessonsEmblem,
   "lotus-scroll": LotusLessonsEmblem,
