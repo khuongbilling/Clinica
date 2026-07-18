@@ -513,6 +513,35 @@ export function LotusJournalEmblem({ size = 24, color = "#E8C868" }: EmblemProps
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// LOTUS LESSONS — Academy Lesson Seal
+// Round seal ring, horizontal lesson lines, five-petal lotus bloom, flourish.
+// ─────────────────────────────────────────────────────────────────────────────
+export function LotusLessonsEmblem({ size = 24, color = "#E8C868" }: EmblemProps) {
+  const fill = color + "1A";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Outer seal ring */}
+      <Circle cx="12" cy="12" r="10.5" stroke={color} strokeWidth="1.1" fill={fill} />
+      {/* Inner inset ring */}
+      <Circle cx="12" cy="12" r="8.5" stroke={color} strokeWidth="0.5" fill="none" opacity="0.3" />
+      {/* Lesson text lines (scroll content) */}
+      <Path d="M7.5 7.5 L16.5 7.5" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.65" />
+      <Path d="M8.5 9 L15.5 9" stroke={color} strokeWidth="0.7" strokeLinecap="round" opacity="0.5" />
+      {/* Lotus bloom — 5 petals */}
+      <Path d="M12 10.5 Q14 12.5 12 15 Q10 12.5 12 10.5" fill={color + "60"} stroke={color} strokeWidth="1.0" />
+      <Path d="M9 12.5 Q11 11 12.5 13.5 Q10 14.5 9 12.5" fill={color + "50"} stroke={color} strokeWidth="0.85" />
+      <Path d="M15 12.5 Q13 11 11.5 13.5 Q14 14.5 15 12.5" fill={color + "50"} stroke={color} strokeWidth="0.85" />
+      <Path d="M10 15.5 Q12 14.5 12 16.5 Q11 17 10 15.5" fill={color + "40"} stroke={color} strokeWidth="0.7" />
+      <Path d="M14 15.5 Q12 14.5 12 16.5 Q13 17 14 15.5" fill={color + "40"} stroke={color} strokeWidth="0.7" />
+      {/* Center seed */}
+      <Circle cx="12" cy="13.2" r="1.0" fill={color} />
+      {/* Bottom seal flourish */}
+      <Path d="M8.5 18.5 Q12 17.2 15.5 18.5" stroke={color} strokeWidth="0.8" strokeLinecap="round" opacity="0.55" />
+    </Svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UNIFIED LOOKUP
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -543,6 +572,22 @@ const EMBLEM_BY_ID: Record<string, React.FC<EmblemProps>> = {
   journey: JourneyEmblem,
   summoning: SummoningEmblem,
   recruit: SummoningEmblem,
+  // Lotus Lessons
+  "lotus-lessons": LotusLessonsEmblem,
+  "lotus-scroll": LotusLessonsEmblem,
+  // University section banners (imageKey → emblem mapping)
+  "uni-lessons": LotusLessonsEmblem,
+  "uni-recruit": SummoningEmblem,
+  "uni-training": HeroesEmblem,
+  "uni-library": JourneyEmblem,
+  "uni-classtree": UniversityEmblem,
+  "uni-skill-academy": UniversityEmblem,
+  // Shop / Apothecary Market banners
+  "apothecary-market": ShopEmblem,
+  "summoning-altar": SummoningEmblem,
+  "regalia-upgrades": WardDefenseEmblem,
+  "sanctuary-bank": ShopEmblem,
+  "night-market": CommunityEmblem,
 };
 
 interface ClinicaEmblemProps extends EmblemProps {

@@ -12,6 +12,7 @@ import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { DailyRhythmCard } from "@/src/components/DailyRhythmCard";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
+import { ShiftEmblem, UniversityEmblem, BossWardEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { usePlayer } from "@/src/game/store";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -98,10 +99,10 @@ export default function ShiftPage() {
   };
 
   const TABS: RPGTab[] = [
-    { key: "cases",    label: "Cases",    icon: "medical" },
-    { key: "practice", label: "Practice", icon: "school" },
-    { key: "boss",     label: "Boss",     icon: "skull", locked: !bossUnlocked },
-    { key: "journal",  label: "Journal",  icon: "leaf", badge: roundsBadge || undefined },
+    { key: "cases",    label: "Cases",    emblem: (a) => <ShiftEmblem        size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "practice", label: "Practice", emblem: (a) => <UniversityEmblem   size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "boss",     label: "Boss",     emblem: (a) => <BossWardEmblem     size={14} color={a ? UI.onGold : UI.gold} />, locked: !bossUnlocked },
+    { key: "journal",  label: "Journal",  emblem: (a) => <LotusJournalEmblem size={14} color={a ? UI.onGold : UI.gold} />, badge: roundsBadge || undefined },
   ];
 
   return (

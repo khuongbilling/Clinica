@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ModeCardDef, MODE_STATUS_LABEL } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { getModeEmblem } from "@/src/components/ClinicaEmblems";
 
 // Illustrated donghua banner art per mode, keyed by ModeCardDef.imageKey.
 // require() paths must be static string literals so Metro can bundle them.
@@ -99,7 +100,7 @@ export function BannerCard({ mode, onPress, height = 132, locked, lockLabel, tes
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <View style={[styles.iconChip, { borderColor: mode.accentColor + "80", backgroundColor: mode.accentColor + "2A" }]}>
-            <Ionicons name={mode.icon as any} size={16} color={mode.accentColor} />
+            {getModeEmblem(mode.id, 17, mode.accentColor) ?? getModeEmblem(mode.imageKey ?? "", 17, mode.accentColor) ?? <Ionicons name={mode.icon as any} size={16} color={mode.accentColor} />}
           </View>
           <Text style={styles.title} numberOfLines={1}>{mode.title}</Text>
         </View>

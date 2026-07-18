@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ChapterJourneyMap } from "@/src/components/ChapterJourneyMap";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
-import { JourneyEmblem } from "@/src/components/ClinicaEmblems";
+import { JourneyEmblem, LotusLessonsEmblem, WardDefenseEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { getMapSprite } from "@/src/game/illustratedAssets";
 import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
@@ -103,10 +103,10 @@ export default function JourneyScreen() {
   const lessonsCompleted = player.lessons_completed?.length ?? 0;
 
   const TABS_WITH_BADGE: RPGTab[] = [
-    { key: "chapter",  label: "Chapter",  icon: "map" },
-    { key: "lessons",  label: "Lessons",  icon: "book" },
-    { key: "quests",   label: "Quests",   icon: "list-circle", badge: roundsBadge || undefined },
-    { key: "memories", label: "Memories", icon: "book-outline" },
+    { key: "chapter",  label: "Chapter",  emblem: (a) => <JourneyEmblem      size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "lessons",  label: "Lessons",  emblem: (a) => <LotusLessonsEmblem size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "quests",   label: "Quests",   emblem: (a) => <WardDefenseEmblem  size={14} color={a ? UI.onGold : UI.gold} />, badge: roundsBadge || undefined },
+    { key: "memories", label: "Memories", emblem: (a) => <LotusJournalEmblem size={14} color={a ? UI.onGold : UI.gold} /> },
   ];
 
   return (

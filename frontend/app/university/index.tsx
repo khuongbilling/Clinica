@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { ModeCard } from "@/src/components/ModeCard";
 import { BannerCard } from "@/src/components/ModeBanners";
+import { LotusLessonsEmblem, ShiftEmblem, HeroesEmblem, SummoningEmblem } from "@/src/components/ClinicaEmblems";
 import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
@@ -346,10 +347,10 @@ export default function UniversityHubScreen() {
   const showMore         = !isNewLearner;
 
   const TABS: RPGTab[] = [
-    { key: "lessons",     label: "Lessons",     icon: "book" },
-    { key: "schools",     label: "Schools",     icon: "school",  locked: isNewLearner },
-    { key: "simulations", label: "Simulations", icon: "flask",   locked: isNewLearner },
-    { key: "badges",      label: "Badges",      icon: "ribbon",  locked: isNewLearner },
+    { key: "lessons",     label: "Lessons",     emblem: (a) => <LotusLessonsEmblem size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "schools",     label: "Schools",     emblem: (a) => <HeroesEmblem       size={14} color={a ? UI.onGold : UI.gold} />, locked: isNewLearner },
+    { key: "simulations", label: "Simulations", emblem: (a) => <ShiftEmblem        size={14} color={a ? UI.onGold : UI.gold} />, locked: isNewLearner },
+    { key: "badges",      label: "Badges",      emblem: (a) => <SummoningEmblem    size={14} color={a ? UI.onGold : UI.gold} />, locked: isNewLearner },
   ];
 
   return (

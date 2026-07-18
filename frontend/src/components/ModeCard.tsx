@@ -121,7 +121,7 @@ export function ModeCard({ mode, onPress, testID, overrideUnlockRequirement }: M
       testID={testID}
     >
       <View style={[styles.smallIcon, { backgroundColor: mode.accentColor + "18", borderColor: mode.accentColor + "45" }]}>
-        <Ionicons name={mode.icon as any} size={16} color={mode.accentColor} />
+        {getModeEmblem(mode.id, 16, mode.accentColor) ?? <Ionicons name={mode.icon as any} size={16} color={mode.accentColor} />}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.smallTitle}>{mode.title}</Text>

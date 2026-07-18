@@ -8,6 +8,7 @@ import { BannerCard } from "@/src/components/ModeBanners";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
+import { ShopEmblem, CommunityEmblem, SummoningEmblem } from "@/src/components/ClinicaEmblems";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -98,10 +99,10 @@ export default function Shop() {
   };
 
   const TABS: RPGTab[] = [
-    { key: "supplies", label: "Supplies",  icon: "storefront" },
-    { key: "exchange", label: "Exchange",  icon: "swap-horizontal" },
-    { key: "locked",   label: "Locked",   icon: "lock-closed", badge: activeLocked.length || undefined },
-    { key: "premium",  label: "Premium",  icon: "telescope" },
+    { key: "supplies", label: "Supplies", emblem: (a) => <ShopEmblem      size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "exchange", label: "Exchange", emblem: (a) => <CommunityEmblem size={14} color={a ? UI.onGold : UI.gold} /> },
+    { key: "locked",   label: "Locked",  icon: "lock-closed", badge: activeLocked.length || undefined },
+    { key: "premium",  label: "Premium", emblem: (a) => <SummoningEmblem size={14} color={a ? UI.onGold : UI.gold} /> },
   ];
 
   return (
