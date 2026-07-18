@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { getLessonBanner } from "@/src/game/illustratedAssets";
 
 // ── Topic metadata per lotus lesson node ──────────────────────────────────────
 const NODE_META: Record<string, { icon: string; color: string; label: string }> = {
@@ -32,114 +33,170 @@ function RewardPill({ icon, value, color }: { icon: string; value: string | numb
   );
 }
 
-// ── Node icon PNGs ────────────────────────────────────────────────────────────
-const NODE_ICONS = {
-  story:    require("../../assets/map-nodes/node_story.png"),
-  memory:   require("../../assets/map-nodes/node_memory.png"),
-  reward:   require("../../assets/map-nodes/node_reward.png"),
-};
-
-// ── Individual lesson card in the path ───────────────────────────────────────
+// ── V7: Wide illustrated banner lesson card ───────────────────────────────────
 function LessonPathCard({
   node, done, isNext, locked, onPress,
 }: { node: LotusLessonNode; done: boolean; isNext: boolean; locked: boolean; onPress: () => void }) {
-  const meta = NODE_META[node.id] ?? { icon: 'leaf-outline', color: COLORS.brand, label: 'Lesson' };
-  const accentColor = done ? COLORS.success : locked ? COLORS.border : meta.color;
-  const nodeIcon = done ? NODE_ICONS.reward : NODE_ICONS.story;
+  const meta = NODE_META[node.id] ?? { icon: 'leaf-outline', color: '#06B6D4', label: 'Lesson' };
+  const accentColor = done ? '#34D399' : locked ? '#3A4A55' : meta.color;
+  const banner = getLessonBanner(node.id);
+
   return (
     <Pressable
       disabled={locked}
       onPress={onPress}
-      style={[
-        lcStyles.card,
-        { borderLeftColor: accentColor, opacity: locked ? 0.5 : 1 },
-        isNext && !done && { backgroundColor: meta.color + '0C' },
-      ]}
       testID={`lotus-node-${node.id}`}
+      style={[
+        bannerStyles.card,
+        locked && { opacity: 0.52 },
+        isNext && !done && { borderColor: meta.color + '90' },
+        done && { borderColor: '#34D39940' },
+      ]}
     >
-      {/* Node icon PNG (replaces icon circle) */}
-      <View style={lcStyles.nodeIconWrap}>
+      {/* Illustrated banner background */}
+      {banner ? (
         <Image
-          source={nodeIcon}
-          style={{ width: 46, height: 46 }}
-          contentFit="contain"
+          source={banner}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
         />
-        {locked && (
-          <View style={lcStyles.lockOverlay}>
-            <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
-          </View>
-        )}
-      </View>
+      ) : (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: accentColor + '22' }]} />
+      )}
 
-      {/* Content */}
-      <View style={{ flex: 1, gap: 4 }}>
-        {/* Top row: topic tag + status badge */}
-        <View style={lcStyles.topRow}>
-          <Text style={[lcStyles.topicTag, { color: locked ? COLORS.onSurfaceTertiary : accentColor }]}>
-            {meta.label.toUpperCase()}
-          </Text>
+      {/* Art-zone scrim: light overlay on the top two-thirds */}
+      <View style={bannerStyles.scrimTop} />
+      {/* Text-zone scrim: heavy dark gradient on the bottom third */}
+      <View style={bannerStyles.scrimBottom} />
+
+      {/* Content layer */}
+      <View style={bannerStyles.content}>
+
+        {/* ── Top row: topic pill + status badge ── */}
+        <View style={bannerStyles.topRow}>
+          <View style={[bannerStyles.topicPill, { backgroundColor: '#00000055', borderColor: accentColor + '80' }]}>
+            <Text style={[bannerStyles.topicTxt, { color: accentColor }]}>
+              {meta.label.toUpperCase()}
+            </Text>
+          </View>
+
           {done && (
-            <View style={lcStyles.donePill}>
-              <Ionicons name="checkmark" size={9} color={COLORS.success} />
-              <Text style={lcStyles.doneTxt}>DONE</Text>
+            <View style={[bannerStyles.statusBadge, { backgroundColor: '#34D39922', borderColor: '#34D39966' }]}>
+              <Ionicons name="checkmark-circle" size={11} color="#34D399" />
+              <Text style={[bannerStyles.statusTxt, { color: '#34D399' }]}>CLEARED</Text>
             </View>
           )}
           {isNext && !done && !locked && (
-            <View style={[lcStyles.startPill, { backgroundColor: meta.color + '22', borderColor: meta.color + '55' }]}>
-              <Text style={[lcStyles.startTxt, { color: meta.color }]}>START</Text>
+            <View style={[bannerStyles.statusBadge, { backgroundColor: meta.color + '25', borderColor: meta.color + '80' }]}>
+              <Ionicons name="play-circle" size={11} color={meta.color} />
+              <Text style={[bannerStyles.statusTxt, { color: meta.color }]}>ACTIVE</Text>
             </View>
           )}
-          {locked && <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceTertiary} />}
+          {locked && (
+            <View style={[bannerStyles.statusBadge, { backgroundColor: '#00000055', borderColor: '#ffffff25' }]}>
+              <Ionicons name="lock-closed" size={10} color="#ffffff77" />
+              <Text style={[bannerStyles.statusTxt, { color: '#ffffff77' }]}>LOCKED</Text>
+            </View>
+          )}
         </View>
 
-        {/* Title + subtitle */}
-        <Text style={[lcStyles.title, locked && { color: COLORS.onSurfaceTertiary }]} numberOfLines={2}>
-          {node.title}
-        </Text>
-        <Text style={lcStyles.sub} numberOfLines={1}>{node.subtitle}</Text>
+        {/* ── Bottom block: title + subtitle + rewards + CTA ── */}
+        <View style={bannerStyles.bottomBlock}>
+          <Text style={bannerStyles.title} numberOfLines={2}>{node.title}</Text>
+          <Text style={bannerStyles.subtitle} numberOfLines={1}>{node.subtitle}</Text>
 
-        {/* Reward chips */}
-        {!locked && (
-          <View style={lcStyles.rewardRow}>
-            <RewardPill icon="diamond-outline"  value={node.rewards.insightCrystals}               color="#A78BFA" />
-            <RewardPill icon="cash-outline"     value={node.rewards.crowns}                        color={COLORS.energy} />
-            <RewardPill icon="school-outline"   value={`${node.rewards.universityCredits} UC`}    color="#06B6D4" />
-            <RewardPill icon="trending-up-outline" value={`+${node.rewards.xp} XP`}               color={COLORS.brand} />
-          </View>
-        )}
+          {!locked && (
+            <View style={bannerStyles.bottomRow}>
+              {/* Reward chips */}
+              <View style={bannerStyles.rewardRow}>
+                <RewardPill icon="diamond-outline"     value={node.rewards.insightCrystals}  color="#A78BFA" />
+                <RewardPill icon="cash-outline"        value={node.rewards.crowns}            color="#F59E0B" />
+                <RewardPill icon="trending-up-outline" value={`+${node.rewards.xp} XP`}      color="#34D399" />
+              </View>
+
+              {/* Call-to-action */}
+              {!done && (
+                <View style={[
+                  bannerStyles.ctaBtn,
+                  isNext
+                    ? { backgroundColor: meta.color }
+                    : { backgroundColor: '#ffffff18', borderWidth: 1, borderColor: '#ffffff30' },
+                ]}>
+                  <Text style={[bannerStyles.ctaTxt, !isNext && { color: '#ffffffaa' }]}>
+                    {isNext ? 'BEGIN' : 'STUDY'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={11} color={isNext ? '#fff' : '#ffffff88'} />
+                </View>
+              )}
+              {done && (
+                <View style={[bannerStyles.ctaBtn, { backgroundColor: '#34D39918', borderWidth: 1, borderColor: '#34D39944' }]}>
+                  <Text style={[bannerStyles.ctaTxt, { color: '#34D399' }]}>REVIEW</Text>
+                  <Ionicons name="refresh-outline" size={11} color="#34D399" />
+                </View>
+              )}
+            </View>
+          )}
+        </View>
       </View>
-
-      {!locked && !done && (
-        <Ionicons name="chevron-forward" size={16} color={isNext ? meta.color : COLORS.onSurfaceTertiary} />
-      )}
     </Pressable>
   );
 }
 
-const lcStyles = StyleSheet.create({
+const bannerStyles = StyleSheet.create({
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
-    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
-    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
-    borderLeftWidth: 3,
+    width: '100%', height: 172,
+    borderRadius: RADIUS.md, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: '#FFFFFF18',
+    backgroundColor: '#0B1825',
   },
-  nodeIconWrap: { width: 46, height: 46, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
-  lockOverlay: {
-    ...StyleSheet.absoluteFillObject, borderRadius: 6,
-    backgroundColor: '#00000066', alignItems: 'center', justifyContent: 'center',
+  scrimTop: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    height: '62%',
+    backgroundColor: 'rgba(10,20,30,0.30)',
   },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  topicTag: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
-  donePill: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: COLORS.success + '1A', borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 2,
+  scrimBottom: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    height: '52%',
+    backgroundColor: 'rgba(8,16,26,0.82)',
   },
-  doneTxt: { color: COLORS.success, fontSize: 9, fontWeight: '800' },
-  startPill: { borderRadius: RADIUS.pill, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
-  startTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  title: { color: COLORS.onSurface, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
-  rewardRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, flexWrap: 'wrap', marginTop: 2 },
+  content: {
+    flex: 1, padding: SPACING.md,
+    justifyContent: 'space-between',
+  },
+  topRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  topicPill: {
+    borderRadius: RADIUS.pill, borderWidth: 1,
+    paddingHorizontal: 9, paddingVertical: 3,
+  },
+  topicTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1.4 },
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: RADIUS.pill, borderWidth: 1,
+    paddingHorizontal: 9, paddingVertical: 3,
+  },
+  statusTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+  bottomBlock: { gap: 3 },
+  title: {
+    color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 26,
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 18,
+  },
+  bottomRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginTop: 6,
+  },
+  rewardRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, flexWrap: 'wrap',
+  },
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  ctaTxt: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
 });
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
