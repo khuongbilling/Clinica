@@ -1,15 +1,8 @@
 /**
- * HubBottomNav — 2.5D Genshin-quality carved medallion bottom navigation bar
- * for non-tab hub screens (university, lotus-lesson, etc.).
+ * HubBottomNav — clean donghua-style bottom navigation for non-tab hub screens.
  *
- * Mirrors the same 5 tabs as `(tabs)/_layout.tsx` with identical
- * carved medallion styling:
- *   · 60px main frame ring (gold border, warm dark fill)
- *   · Inner bevel ring + warm center disc
- *   · Cardinal N/S/E/W knob marks
- *   · Active: ambient glow bloom, brighter accents
- *
- * Pass `activeTab` to highlight the conceptually "current" tab.
+ * Design: bare illustrated emblem + hand-drawn outlined text label.
+ * No frame, no ring, no glow — matching the celestial-RPG reference aesthetic.
  */
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -37,13 +30,41 @@ interface HubBottomNavProps {
 }
 
 const GOLD     = "#E8C868";
-const GOLD_DIM = "#C8A840";
+const GOLD_DIM = "#C4A040";
 const DIM      = "#4A5568";
 
-const FRAME  = 60;
-const WRAP   = 70;
-const INNER1 = 46;
-const INNER2 = 36;
+// Hand-drawn stroke effect: render label text 4× offset in dark then once in color.
+function OutlinedLabel({ children, color }: { children: string; color: string }) {
+  const offsets = [
+    { x: -0.6, y: -0.6 },
+    { x:  0.6, y: -0.6 },
+    { x: -0.6, y:  0.6 },
+    { x:  0.6, y:  0.6 },
+  ];
+  return (
+    <View style={{ position: "relative" }}>
+      {offsets.map(({ x, y }, i) => (
+        <Text
+          key={i}
+          style={[
+            s.label,
+            {
+              position: "absolute",
+              color: "#000000CC",
+              transform: [{ translateX: x }, { translateY: y }],
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {children}
+        </Text>
+      ))}
+      <Text style={[s.label, { color }]} numberOfLines={1}>
+        {children}
+      </Text>
+    </View>
+  );
+}
 
 export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
   const router     = useRouter();
@@ -84,18 +105,9 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
       <View style={s.row}>
         {tabs.map(({ id, label, route, unlocked, Emblem }) => {
           if (!unlocked) return null;
-          const focused     = activeTab === id;
-          const iconColor   = focused ? GOLD : DIM;
-          const frameColor  = focused ? GOLD : "#2A3245";
-          const frame2Color = focused ? GOLD + "60" : GOLD + "1A";
-          const centerFill  = focused ? "#1E160A" : "#0D1018";
-          const innerFill   = focused ? GOLD + "18" : "#FFFFFF05";
-          const cardinalCol = focused ? GOLD : GOLD + "38";
-
-          const markN = { top: 2,           left:  (WRAP - 10) / 2 } as const;
-          const markS = { bottom: 2,        left:  (WRAP - 10) / 2 } as const;
-          const markE = { right: 2,         top:   (WRAP - 10) / 2 } as const;
-          const markW = { left:  2,         top:   (WRAP - 10) / 2 } as const;
+          const focused    = activeTab === id;
+          const iconColor  = focused ? GOLD : DIM;
+          const labelColor = focused ? GOLD_DIM : "#6B7A94";
 
           return (
             <Pressable
@@ -104,74 +116,8 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
               style={s.tabBtn}
               accessibilityLabel={label}
             >
-              <View style={{ width: WRAP, height: WRAP, alignItems: "center", justifyContent: "center" }}>
-                {/* Outer ambient glow bloom (active only) */}
-                {focused && (
-                  <View style={{
-                    position:        "absolute",
-                    width:           WRAP + 24,
-                    height:          WRAP + 24,
-                    borderRadius:    (WRAP + 24) / 2,
-                    backgroundColor: GOLD + "16",
-                    left:            -12,
-                    top:             -12,
-                    pointerEvents:   "none",
-                  } as any} />
-                )}
-                {focused && (
-                  <View style={{
-                    position:        "absolute",
-                    width:           WRAP + 6,
-                    height:          WRAP + 6,
-                    borderRadius:    (WRAP + 6) / 2,
-                    backgroundColor: GOLD + "10",
-                    left:            -3,
-                    top:             -3,
-                    pointerEvents:   "none",
-                  } as any} />
-                )}
-
-                {/* Cardinal knob marks — N/S (horizontal), E/W (vertical) */}
-                <View style={[s.cardinalH, markN, { backgroundColor: cardinalCol }]} />
-                <View style={[s.cardinalH, markS, { backgroundColor: cardinalCol }]} />
-                <View style={[s.cardinalV, markE, { backgroundColor: cardinalCol }]} />
-                <View style={[s.cardinalV, markW, { backgroundColor: cardinalCol }]} />
-
-                {/* Main carved medallion frame */}
-                <View style={{
-                  width:           FRAME,
-                  height:          FRAME,
-                  borderRadius:    FRAME / 2,
-                  borderWidth:     2.5,
-                  borderColor:     frameColor,
-                  backgroundColor: centerFill,
-                  alignItems:      "center",
-                  justifyContent:  "center",
-                }}>
-                  {/* Inner bevel ring */}
-                  <View style={{
-                    position:     "absolute",
-                    width:        INNER1,
-                    height:       INNER1,
-                    borderRadius: INNER1 / 2,
-                    borderWidth:  1,
-                    borderColor:  frame2Color,
-                    pointerEvents:"none",
-                  } as any} />
-                  {/* Warm center disc */}
-                  <View style={{
-                    position:        "absolute",
-                    width:           INNER2,
-                    height:          INNER2,
-                    borderRadius:    INNER2 / 2,
-                    backgroundColor: innerFill,
-                    pointerEvents:   "none",
-                  } as any} />
-                  <Emblem size={26} color={iconColor} />
-                </View>
-              </View>
-
-              <Text style={[s.label, { color: focused ? GOLD_DIM : DIM }]}>{label}</Text>
+              <Emblem size={32} color={iconColor} />
+              <OutlinedLabel color={labelColor}>{label}</OutlinedLabel>
             </Pressable>
           );
         })}
@@ -186,8 +132,8 @@ const s = StyleSheet.create({
     paddingTop:      6,
   },
   topBorder: {
-    height:          1.5,
-    backgroundColor: GOLD + "35",
+    height:          1,
+    backgroundColor: GOLD + "30",
     marginBottom:    4,
   },
   row: {
@@ -198,26 +144,14 @@ const s = StyleSheet.create({
   },
   tabBtn: {
     alignItems:      "center",
-    gap:             2,
+    gap:             4,
     flex:            1,
     paddingVertical: 2,
   },
-  cardinalH: {
-    position:     "absolute",
-    width:        10,
-    height:       5,
-    borderRadius: 2.5,
-  },
-  cardinalV: {
-    position:     "absolute",
-    width:        5,
-    height:       10,
-    borderRadius: 2.5,
-  },
   label: {
-    fontSize:      8,
+    fontSize:      9,
     fontWeight:    "800",
-    letterSpacing: 0.9,
+    letterSpacing: 0.8,
     textAlign:     "center",
     textTransform: "uppercase",
   },

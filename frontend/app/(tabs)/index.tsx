@@ -871,12 +871,7 @@ function FeatureButton({
 }) {
   return (
     <Pressable style={[styles.featBtn, locked && { opacity: 0.5 }]} onPress={onPress} testID={testID} hitSlop={6}>
-      {/* Illustrated emblem — NO circle border, just floating art with a soft glow bloom */}
       <View style={styles.featEmblemWrap}>
-        {/* Soft glow bloom behind the art (active/unlocked only) */}
-        {!locked && (
-          <View style={[styles.featGlowBloom, { backgroundColor: color + "28" }]} />
-        )}
         {emblem !== undefined
           ? emblem
           : <Ionicons name={icon as any} size={28} color={locked ? COLORS.onSurfaceTertiary : color} />
@@ -938,12 +933,6 @@ const styles = StyleSheet.create({
   featEmblemWrap: {
     width: 56, height: 56,
     alignItems: "center", justifyContent: "center",
-  },
-  featGlowBloom: {
-    position: "absolute",
-    width: 72, height: 72,
-    borderRadius: 36,
-    left: -8, top: -8,
   },
   featLabel:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.2, textAlign: "center" },
   featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
