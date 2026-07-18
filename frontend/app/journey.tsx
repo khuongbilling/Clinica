@@ -13,7 +13,7 @@ import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { JourneyEmblem, LotusLessonsEmblem, WardDefenseEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { getMapSprite } from "@/src/game/illustratedAssets";
-import { firstIncompleteLotusNode } from "@/src/game/lotusLessons";
+import { firstIncompleteLotusNode, isLotusNodeComplete, LOTUS_PATHS } from "@/src/game/lotusLessons";
 import {
   CHAPTERS,
   getCurrentChapter,
@@ -100,7 +100,7 @@ export default function JourneyScreen() {
   );
 
   const nextLotusNode    = firstIncompleteLotusNode(player);
-  const lessonsCompleted = player.lessons_completed?.length ?? 0;
+  const lotusCompleted   = (player.lessons_completed ?? []).filter(id => id.startsWith('lotus:')).length;
 
   const TABS_WITH_BADGE: RPGTab[] = [
     { key: "chapter",  label: "Chapter",  emblem: (a) => <JourneyEmblem      size={14} color={a ? UI.onGold : UI.gold} /> },
@@ -234,37 +234,63 @@ export default function JourneyScreen() {
           <Text style={styles.sectionLbl}>Progress</Text>
           <View style={[styles.chapterCard, { borderLeftColor: COLORS.brand }]}>
             <Text style={[styles.chapterNum, { color: COLORS.brand }]}>
-              {lessonsCompleted} {lessonsCompleted === 1 ? "Lesson" : "Lessons"} Complete
+              {lotusCompleted} {lotusCompleted === 1 ? "Lesson" : "Lessons"} Complete
             </Text>
-            <Text style={styles.chapterName}>Lotus Lessons</Text>
+            <Text style={styles.chapterName}>Lotus Lessons — Vital Foundations</Text>
+            {!nextLotusNode && lotusCompleted > 0 && (
+              <Text style={styles.chapterNext}>All current lessons complete ✓</Text>
+            )}
             {nextLotusNode && (
               <Text style={styles.chapterNext}>Up next: {nextLotusNode.title}</Text>
             )}
-            {!nextLotusNode && lessonsCompleted > 0 && (
-              <Text style={styles.chapterNext}>All current lessons complete ✓</Text>
-            )}
           </View>
 
-          {nextLotusNode && (
-            <>
-              <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Continue</Text>
+          {/* Per-lesson status list — shows completion state and lets players
+              optionally review completed lessons or start the next one */}
+          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Lessons</Text>
+          {LOTUS_PATHS.flatMap((path) => path.nodes).map((node) => {
+            const done  = isLotusNodeComplete(player, node.id);
+            const isNext = nextLotusNode?.id === node.id;
+            return (
               <Pressable
-                style={styles.practiceBtn}
-                onPress={() => router.push(`/university/lotus-lesson/${nextLotusNode.id}` as any)}
+                key={node.id}
+                style={[styles.practiceBtn, done && styles.practiceBtnSecondary]}
+                onPress={() => router.push(`/university/lotus-lesson/${node.id}` as any)}
+                testID={`journey-lesson-${node.id}`}
               >
-                <Ionicons name="play-circle" size={18} color={COLORS.onBrand} />
-                <Text style={styles.practiceBtnTxt}>{nextLotusNode.title}</Text>
+                <Ionicons
+                  name={done ? "checkmark-circle" : isNext ? "play-circle" : "ellipse-outline"}
+                  size={18}
+                  color={done ? COLORS.success : isNext ? COLORS.onBrand : COLORS.onSurfaceTertiary}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.practiceBtnTxt,
+                      done  && { color: COLORS.success },
+                      !done && !isNext && { color: COLORS.onSurfaceTertiary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {node.title}
+                  </Text>
+                  <Text style={{ color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 }}>
+                    {done ? "Complete — tap to review" : isNext ? "Up next" : "Coming soon"}
+                  </Text>
+                </View>
+                {done  && <Ionicons name="refresh-outline" size={14} color={COLORS.brand} />}
+                {isNext && <Ionicons name="arrow-forward"  size={14} color={COLORS.onBrand} />}
               </Pressable>
-            </>
-          )}
+            );
+          })}
 
-          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>All Lessons</Text>
+          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Browse</Text>
           <Pressable
             style={[styles.practiceBtn, styles.practiceBtnSecondary]}
             onPress={() => router.push("/university/lessons" as any)}
           >
             <Ionicons name="book" size={18} color={COLORS.brand} />
-            <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>Browse All Lotus Lessons</Text>
+            <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>All Lotus Lessons</Text>
           </Pressable>
           <Pressable
             style={[styles.practiceBtn, styles.practiceBtnSecondary]}
@@ -303,7 +329,7 @@ export default function JourneyScreen() {
             <Text style={[styles.chapterNum, { color: currentChapter.accentColor }]}>
               Chapter {currentChapter.number}
             </Text>
-            <Text style={styles.chapterName}>{currentChapter.title}</Text>
+            <Text style={styles.chapterName}>{currentChapter.theme}</Text>
             {nextStep && (
               <Text style={styles.chapterNext}>Next: {nextStep.part.title}</Text>
             )}

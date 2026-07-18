@@ -67,12 +67,32 @@ export default function LotusLessonScreen() {
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
   const [rewards, setRewards] = useState<LotusLessonRewards | null>(null);
+  const [reviewMode, setReviewMode] = useState(false);
   const { onRequiredAction } = useTutorial();
 
   const lessonStarted = !loading && !!player && !!node;
   useEffect(() => {
     if (lessonStarted) onRequiredAction("openLesson");
   }, [lessonStarted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fire the objective the moment we confirm this lesson is already done — so
+  // the hub guide advances even if the player navigates away without tapping
+  // the CTA button (back-swipe, hardware back, etc.).
+  const alreadyDoneEarly = !loading && !!player && !!node && isLotusNodeComplete(player, String(nodeId));
+  useEffect(() => {
+    if (!alreadyDoneEarly || String(nodeId) !== 'recognizing-cues-hydration') return;
+    const run = async () => {
+      const isNew = await completeObjective('obj_lotus_first_lesson');
+      if (isNew) {
+        const alreadyGranted = await isObjectiveXpGranted('obj_lotus_first_lesson');
+        if (!alreadyGranted) {
+          await applyRewards({ xp: 10 });
+          await markObjectiveXpGranted('obj_lotus_first_lesson');
+        }
+      }
+    };
+    run().catch(() => {});
+  }, [alreadyDoneEarly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Loading / not-found fallback ──────────────────────────────────────────
   if (loading || !player || !node) {
@@ -161,19 +181,7 @@ export default function LotusLessonScreen() {
   // skip the replay entirely.  We still write the objective here so the hub
   // guide advances — this is the last-resort safety net for any path that
   // marked the node complete without writing clinica.objectives.v1.
-  if (alreadyDone && !finished) {
-    const ensureObjective = async () => {
-      if (node.id === "recognizing-cues-hydration") {
-        const isNew = await completeObjective("obj_lotus_first_lesson");
-        if (isNew) {
-          const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
-          if (!alreadyGranted) {
-            await applyRewards({ xp: 10 });
-            await markObjectiveXpGranted("obj_lotus_first_lesson");
-          }
-        }
-      }
-    };
+  if (alreadyDone && !finished && !reviewMode) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={[styles.hero, { borderBottomColor: meta.color + "30" }]}>
@@ -196,14 +204,19 @@ export default function LotusLessonScreen() {
           </View>
           <Pressable
             style={styles.primaryBtn}
-            onPress={async () => {
-              await ensureObjective();
-              goBack(router, "/university/lessons");
-            }}
+            onPress={() => goBack(router, "/university/lessons")}
             testID="lotus-lesson-already-done-continue"
           >
             <Ionicons name="arrow-back" size={16} color={COLORS.onBrand} />
             <Text style={styles.primaryBtnTxt}>Back to Lessons</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.primaryBtn, { backgroundColor: "transparent", borderWidth: 1, borderColor: meta.color + "60" }]}
+            onPress={() => setReviewMode(true)}
+            testID="lotus-lesson-review-btn"
+          >
+            <Ionicons name="refresh-outline" size={16} color={meta.color} />
+            <Text style={[styles.primaryBtnTxt, { color: meta.color }]}>Review Lesson</Text>
           </Pressable>
         </View>
       </SafeAreaView>

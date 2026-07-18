@@ -135,8 +135,9 @@ function hubGuideRoute(obj: ObjectiveDef): string {
     case "obj_university_arrived":
     case "obj_fading_apprentice_done":
     case "obj_lotus_visited":
-    case "obj_recruit_preview":
       return "/university";
+    case "obj_recruit_preview":
+      return "/university/recruit";
     case "obj_lotus_first_lesson":
       return "/university/lotus-lesson/recognizing-cues-hydration";
     case "obj_ward_shift_first":
