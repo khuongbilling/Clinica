@@ -42,6 +42,15 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (p.prologue_complete === undefined) { p = { ...p, prologue_complete: true }; changed = true; }
   if (p.identity_restored === undefined) { p = { ...p, identity_restored: true }; changed = true; }
   if (p.diagnostic_intro_seen === undefined) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
+  // Safety-net: if the player already has a confirmed class_tree_id they
+  // definitely completed the diagnostic — promote any stale false values.
+  // Also covers: player has a custom name (completed identity phase), or has
+  // played at least one run (well past onboarding).  These are one-way flags
+  // so promoting them here is always safe.
+  if (p.class_tree_id && !p.diagnostic_intro_seen) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
+  if (p.class_tree_id && !p.identity_restored)     { p = { ...p, identity_restored: true };     changed = true; }
+  if ((p.runs_completed ?? 0) > 0 && !p.diagnostic_intro_seen) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
+  if ((p.runs_completed ?? 0) > 0 && !p.identity_restored)     { p = { ...p, identity_restored: true };     changed = true; }
   if (p.avatar_id === undefined) { p = { ...p, avatar_id: '' }; changed = true; }
   // Push 5 — existing players (created before this push) never had the
   // reminiscence scene, so backfill them as "already seen" rather than
@@ -716,11 +725,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const remote = normalizeProgression(await api.getPlayer(local.id));
-        setPlayer(remote);
-        await saveLocal(remote);
+        // One-way completion flags: never regress a locally-advanced value
+        // with a stale backend copy.  This happens when the fire-and-forget
+        // trySyncToBackend call didn't finish before the previous session
+        // ended (e.g. user force-closed the app mid-diagnostic).  Taking the
+        // logical OR is safe because these flags only ever move false → true,
+        // never the other way around.
+        const merged: PlayerState = {
+          ...remote,
+          identity_restored:     (normalized.identity_restored     || remote.identity_restored)     ?? remote.identity_restored,
+          diagnostic_intro_seen: (normalized.diagnostic_intro_seen || remote.diagnostic_intro_seen) ?? remote.diagnostic_intro_seen,
+          seen_reminiscence:     (normalized.seen_reminiscence     || remote.seen_reminiscence)     ?? remote.seen_reminiscence,
+        };
+        setPlayer(merged);
+        await saveLocal(merged);
         // Also reconcile against the backend-authoritative snapshot in case
         // flags differ between local and remote (e.g. resumed on a new device).
-        reconcileEarlyObjectives(remote).catch(() => {});
+        reconcileEarlyObjectives(merged).catch(() => {});
       } catch {
         // Backend unavailable — use local data
       }
