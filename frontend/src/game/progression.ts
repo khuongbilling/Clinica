@@ -17,13 +17,17 @@
 // Cost (in Player EXP) to go from level L to L+1. Same currency as the
 // existing `xp`/RANKS field — RANKS stay as flavor text layered on top.
 // XP curve targets (J2 formula, P6 pacing): Level 2 @ 150 total XP,
-// Level 3 @ ~360, Level 4 @ ~640, Level 5 @ ~990, Level 6 @ ~1410.
-// P6 rebalance cuts early battle XP (Ch1: 30→15/run, Ch2: 40→25) and
-// tutorial objective XP (10→6) + lotus lesson XP (15→8) so the earned-XP
-// sources align with these targets:
-//   Level 2 — end of onboarding (objectives + first FA battle + first node)
-//   Level 3 — Ch1 journey complete + a few ward shift encounters
-//   Level 4 — meaningful Ch2 progress or sustained Ch1 grinding
+// Level 3 @ ~360, Level 4 @ ~640, Level 5 @ ~990, Level 6 @ ~1410, Level 7 @ ~1910.
+// P6 rebalance (battleXp.ts + journeyRewards.ts + objectiveProgress.ts +
+// lotusLessons.ts) aligns all early XP sources with these narrative gates:
+//   Level 2 — end of onboarding (objectives 72 XP + first FA battle + first node)
+//   Level 3 — Ch1 journey complete (140 XP) + a few ward shift encounters
+//   Level 4 — Ch2 journey complete (171 XP) + a handful of Ch2 runs
+//   Level 5 — near end of Ch3 journey (348 XP), first-clear of Ch3 mini-boss
+//   Level 6 — late Ch4 or early Ch5 (Ch4 journey 481 XP + chest 100 XP)
+//   Level 7 — mid Ch5 battle stretch (Ch5 journey 635 XP)
+// Battle XP per chapter: Ch1 15 XP, Ch2 25 XP, Ch3 40 XP, Ch4-5 unchanged (70/90).
+// Journey node XP: story/passive ≈50% of original, battle/boss ≈75% of original.
 // Formula: 150 + 35*(L-1) + 25*(L-1)^1.2  (flat start, gentle acceleration).
 export function playerXpCostForLevel(level: number): number {
   const l = Math.max(0, level - 1);

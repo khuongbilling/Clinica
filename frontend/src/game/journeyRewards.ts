@@ -98,57 +98,66 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   // c2p3: challenge-rapid-triage (flat)  c2p4: challenge-stack (flat)
   // c2p5: battle (stars)          c2p6: memory_fragment (flat)
   // c2p7: mini_boss (stars)       c2p8: reflection (flat)
-  // Approx totals at 3★: 265 XP, 80 hero XP, 200 coins, 95 credits, 65 shards.
-  { nodeId: 'c2p1', chapter: 2, playerXp:  25, heroXp:  0, coins:  0, credits: 10,       isStory: true,  starsScale: false },
-  { nodeId: 'c2p2', chapter: 2, playerXp:  15, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
-  { nodeId: 'c2p3', chapter: 2, playerXp:  15, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
-  { nodeId: 'c2p4', chapter: 2, playerXp:  15, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
-  { nodeId: 'c2p5', chapter: 2, playerXp:  55, heroXp: 30, coins: 75,                    isStory: false, starsScale: true  },
-  { nodeId: 'c2p6', chapter: 2, playerXp:  25, heroXp:  0, coins:  0, shards: 25,        isStory: true,  starsScale: false },
-  { nodeId: 'c2p7', chapter: 2, playerXp:  85, heroXp: 50, coins: 125, shards: 40,       isStory: false, starsScale: true  },
-  { nodeId: 'c2p8', chapter: 2, playerXp:  30, heroXp:  0, coins:  0, credits: 20,       isStory: true,  starsScale: false },
+  // P6: Story/passive nodes ≈50%, battle nodes ≈70–75%.
+  // Approx totals at 3★: 171 XP (was 265), 80 hero XP, 200 coins, 95 credits, 65 shards.
+  // Pacing: Ch2 story + mini-games gives ~54 XP; first-clear battles add 105 XP.
+  // Level 4 (637 XP) reached after completing Ch2 journey + a handful of runs.
+  { nodeId: 'c2p1', chapter: 2, playerXp:  12, heroXp:  0, coins:  0, credits: 10,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p2', chapter: 2, playerXp:  10, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p3', chapter: 2, playerXp:  10, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p4', chapter: 2, playerXp:  10, heroXp:  0, coins:  0, credits: 15,       isStory: true,  starsScale: false },
+  { nodeId: 'c2p5', chapter: 2, playerXp:  40, heroXp: 30, coins: 75,                    isStory: false, starsScale: true  },
+  { nodeId: 'c2p6', chapter: 2, playerXp:  12, heroXp:  0, coins:  0, shards: 25,        isStory: true,  starsScale: false },
+  { nodeId: 'c2p7', chapter: 2, playerXp:  65, heroXp: 50, coins: 125, shards: 40,       isStory: false, starsScale: true  },
+  { nodeId: 'c2p8', chapter: 2, playerXp:  12, heroXp:  0, coins:  0, credits: 20,       isStory: true,  starsScale: false },
 
   // ── Chapter 3: Breath Before Battle (Level 3, 9 nodes) ───────────────────
   // P9: memory → chal → chal → battle → memory → chal → battle → mini_boss → reflection
-  // Approximate totals at 3★: ~600 player XP, 270 hero XP, 770 Ward Coins,
-  //   230 University Credits, 200 Summoning Shards.
-  { nodeId: 'c3p1', chapter: 3, playerXp:  30, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c3p2', chapter: 3, playerXp:  55, heroXp:   0, coins:   0, credits: 30,      isStory: false, starsScale: false },
-  { nodeId: 'c3p3', chapter: 3, playerXp:  60, heroXp:   0, coins:   0, credits: 30,      isStory: false, starsScale: false },
-  { nodeId: 'c3p4', chapter: 3, playerXp:  85, heroXp:  50, coins: 125,                   isStory: false, starsScale: true  },
-  { nodeId: 'c3p5', chapter: 3, playerXp:  30, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
-  { nodeId: 'c3p6', chapter: 3, playerXp:  65, heroXp:   0, coins:   0, credits: 35,      isStory: false, starsScale: false },
-  { nodeId: 'c3p7', chapter: 3, playerXp:  95, heroXp:  55, coins: 145,                   isStory: false, starsScale: true  },
-  { nodeId: 'c3p8', chapter: 3, playerXp: 125, heroXp:  75, coins: 180, shards: 55,       isStory: false, starsScale: true  },
-  // Reflection: flat XP + credits. Lesson Note preview deferred to J3/J4.
-  { nodeId: 'c3p9', chapter: 3, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  // P6: Story/memory ≈50%, challenge mini-games ≈40%, battle/boss ≈75%.
+  // Approx totals at 3★: 348 XP (was 580), 180 hero XP, 450 Ward Coins,
+  //   145 University Credits, 55 Summoning Shards.
+  // Pacing: Level 5 (990 XP) reached near end of Ch3 after first-clear of mini-boss.
+  { nodeId: 'c3p1', chapter: 3, playerXp:  15, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
+  { nodeId: 'c3p2', chapter: 3, playerXp:  25, heroXp:   0, coins:   0, credits: 30,      isStory: false, starsScale: false },
+  { nodeId: 'c3p3', chapter: 3, playerXp:  25, heroXp:   0, coins:   0, credits: 30,      isStory: false, starsScale: false },
+  { nodeId: 'c3p4', chapter: 3, playerXp:  65, heroXp:  50, coins: 125,                   isStory: false, starsScale: true  },
+  { nodeId: 'c3p5', chapter: 3, playerXp:  15, heroXp:   0, coins:   0, credits: 25,      isStory: true,  starsScale: false },
+  { nodeId: 'c3p6', chapter: 3, playerXp:  25, heroXp:   0, coins:   0, credits: 35,      isStory: false, starsScale: false },
+  { nodeId: 'c3p7', chapter: 3, playerXp:  70, heroXp:  55, coins: 145,                   isStory: false, starsScale: true  },
+  { nodeId: 'c3p8', chapter: 3, playerXp:  95, heroXp:  75, coins: 180, shards: 55,       isStory: false, starsScale: true  },
+  // Reflection: flat XP + credits.
+  { nodeId: 'c3p9', chapter: 3, playerXp:  18, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
 
   // ── Chapter 4: Code Rush (Level 4, 9 nodes) ───────────────────────────────
   // P10: memory → chal → battle → ward_def → memory → chal → ward_def → mini_boss → reflection
-  // Approximate totals at 3★: ~730 player XP, 370 hero XP, 1065 Ward Coins,
-  //   225 University Credits, 295 Summoning Shards.
-  { nodeId: 'c4p1', chapter: 4, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c4p2', chapter: 4, playerXp:  60, heroXp:   0, coins:   0, credits: 35,      isStory: false, starsScale: false },
-  { nodeId: 'c4p3', chapter: 4, playerXp: 100, heroXp:  60, coins: 160,                   isStory: false, starsScale: true  },
-  { nodeId: 'c4p4', chapter: 4, playerXp: 110, heroXp:  65, coins: 175, shards: 25,       isStory: false, starsScale: false },
-  { nodeId: 'c4p5', chapter: 4, playerXp:  35, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
-  { nodeId: 'c4p6', chapter: 4, playerXp:  65, heroXp:   0, coins:   0, credits: 40,      isStory: false, starsScale: false },
-  { nodeId: 'c4p7', chapter: 4, playerXp: 125, heroXp:  75, coins: 200, shards: 35,       isStory: false, starsScale: false },
-  { nodeId: 'c4p8', chapter: 4, playerXp: 155, heroXp:  90, coins: 255, shards: 80,       isStory: false, starsScale: false },
-  { nodeId: 'c4p9', chapter: 4, playerXp:  40, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  // P6: Story ≈50%, challenge ≈50%, battle/WD/boss ≈75%.
+  // Approx totals at 3★: 481 XP (was 730), 290 hero XP, 790 Ward Coins,
+  //   165 University Credits, 140 Summoning Shards.
+  // Pacing: Level 6 (1410 XP) reached during late Ch4 or early Ch5.
+  { nodeId: 'c4p1', chapter: 4, playerXp:  18, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  { nodeId: 'c4p2', chapter: 4, playerXp:  30, heroXp:   0, coins:   0, credits: 35,      isStory: false, starsScale: false },
+  { nodeId: 'c4p3', chapter: 4, playerXp:  75, heroXp:  60, coins: 160,                   isStory: false, starsScale: true  },
+  { nodeId: 'c4p4', chapter: 4, playerXp:  80, heroXp:  65, coins: 175, shards: 25,       isStory: false, starsScale: false },
+  { nodeId: 'c4p5', chapter: 4, playerXp:  18, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
+  { nodeId: 'c4p6', chapter: 4, playerXp:  30, heroXp:   0, coins:   0, credits: 40,      isStory: false, starsScale: false },
+  { nodeId: 'c4p7', chapter: 4, playerXp:  95, heroXp:  75, coins: 200, shards: 35,       isStory: false, starsScale: false },
+  { nodeId: 'c4p8', chapter: 4, playerXp: 115, heroXp:  90, coins: 255, shards: 80,       isStory: false, starsScale: false },
+  { nodeId: 'c4p9', chapter: 4, playerXp:  20, heroXp:   0, coins:   0, credits: 30,      isStory: true,  starsScale: false },
 
   // ── Chapter 5: Building the Sanctuary (Level 5, 8 nodes) ─────────────────
-  // Approximate totals at 3★: 1035 player XP, 590 hero XP, 1850 Ward Coins,
-  //   195 University Credits, 365 Summoning Shards, 20 RLG.
-  { nodeId: 'c5p1', chapter: 5, playerXp:  40, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
+  // P6: Story/realm ≈50–60%, battle nodes ≈70–75%.
+  // Approx totals at 3★: 635 XP (was 910), 410 hero XP, 1150 Ward Coins,
+  //   70 University Credits, 215 Summoning Shards.
+  // Pacing: Level 7 (1910 XP) reached in the middle of Ch5 battle stretch.
+  { nodeId: 'c5p1', chapter: 5, playerXp:  20, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
   // Realm task: one-time, flat (no stars), has heroXp unlike other story nodes.
-  { nodeId: 'c5p2', chapter: 5, playerXp:  60, heroXp:  20, coins: 150,                   isStory: true,  starsScale: false },
-  { nodeId: 'c5p3', chapter: 5, playerXp: 130, heroXp:  80, coins: 225,                   isStory: false, starsScale: true  },
-  { nodeId: 'c5p4', chapter: 5, playerXp:  40, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
-  { nodeId: 'c5p5', chapter: 5, playerXp: 140, heroXp:  85, coins: 250, shards: 25,       isStory: false, starsScale: true  },
-  { nodeId: 'c5p6', chapter: 5, playerXp: 150, heroXp:  90, coins: 275, shards: 40,       isStory: false, starsScale: true  },
-  { nodeId: 'c5p7', chapter: 5, playerXp: 160, heroXp:  95, coins: 300, shards: 50,       isStory: false, starsScale: true  },
-  { nodeId: 'c5p8', chapter: 5, playerXp: 190, heroXp: 120, coins: 350, shards: 100,      isStory: false, starsScale: true  },
+  { nodeId: 'c5p2', chapter: 5, playerXp:  35, heroXp:  20, coins: 150,                   isStory: true,  starsScale: false },
+  { nodeId: 'c5p3', chapter: 5, playerXp:  90, heroXp:  80, coins: 225,                   isStory: false, starsScale: true  },
+  { nodeId: 'c5p4', chapter: 5, playerXp:  20, heroXp:   0, coins:   0, credits: 35,      isStory: true,  starsScale: false },
+  { nodeId: 'c5p5', chapter: 5, playerXp: 100, heroXp:  85, coins: 250, shards: 25,       isStory: false, starsScale: true  },
+  { nodeId: 'c5p6', chapter: 5, playerXp: 110, heroXp:  90, coins: 275, shards: 40,       isStory: false, starsScale: true  },
+  { nodeId: 'c5p7', chapter: 5, playerXp: 120, heroXp:  95, coins: 300, shards: 50,       isStory: false, starsScale: true  },
+  { nodeId: 'c5p8', chapter: 5, playerXp: 140, heroXp: 120, coins: 350, shards: 100,      isStory: false, starsScale: true  },
   // ── Chapter 6: First Boss Ward (Level 7, 6 nodes) ─────────────────────────
   { nodeId: 'c6p1', chapter: 6, playerXp:  30, heroXp:   0, coins:   0, credits: 20,      isStory: true,  starsScale: false },
   { nodeId: 'c6p2', chapter: 6, playerXp:  20, heroXp:   0, coins:   0, credits: 15,      isStory: true,  starsScale: false },
