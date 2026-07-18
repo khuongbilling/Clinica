@@ -118,7 +118,13 @@ export default function LotusLessonScreen() {
   const finish = async () => {
     const res = await completeLotusLessonNode(node.id);
     if (res.ok && res.rewards) setRewards(res.rewards);
-    if (!alreadyDone) {
+    // Always write the objective — completeObjective is idempotent, so this
+    // is safe even if alreadyDone=true.  The !alreadyDone guard was the root
+    // cause of the re-trigger loop: if the lesson was completed via the
+    // stabilize-chain path (which calls completeLotusLessonNode but not
+    // completeObjective), the objective record was never written, the hub
+    // kept showing "Start First Lotus Lesson", and the player looped forever.
+    if (node.id === "recognizing-cues-hydration") {
       const isNew = await completeObjective("obj_lotus_first_lesson");
       if (isNew) {
         const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
@@ -148,6 +154,61 @@ export default function LotusLessonScreen() {
   const goToShift = () => {
     router.replace({ pathname: "/battle", params: { enemyId: node.linkedCaseId } } as any);
   };
+
+  // ── Render: already-complete skip card ───────────────────────────────────
+  // If the player arrives here but the lesson is already done (e.g. they
+  // completed it via the stabilize-chain path and the hub re-prompted them),
+  // skip the replay entirely.  We still write the objective here so the hub
+  // guide advances — this is the last-resort safety net for any path that
+  // marked the node complete without writing clinica.objectives.v1.
+  if (alreadyDone && !finished) {
+    const ensureObjective = async () => {
+      if (node.id === "recognizing-cues-hydration") {
+        const isNew = await completeObjective("obj_lotus_first_lesson");
+        if (isNew) {
+          const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
+          if (!alreadyGranted) {
+            await applyRewards({ xp: 10 });
+            await markObjectiveXpGranted("obj_lotus_first_lesson");
+          }
+        }
+      }
+    };
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={[styles.hero, { borderBottomColor: meta.color + "30" }]}>
+          <LinearGradient colors={[meta.color + "28", COLORS.surface]} style={StyleSheet.absoluteFillObject} />
+          <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university/lessons")} hitSlop={10} testID="lotus-lesson-already-done-back">
+            <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
+          </Pressable>
+          <Text style={styles.kicker}>LOTUS LESSON</Text>
+          <Text style={styles.heroTitle}>{node.title}</Text>
+        </View>
+        <View style={styles.fallback}>
+          <View style={{ alignItems: "center", gap: 12, paddingHorizontal: 24 }}>
+            <Ionicons name="checkmark-circle" size={52} color={COLORS.success} />
+            <Text style={{ color: COLORS.onSurface, fontSize: 18, fontWeight: "700", textAlign: "center" }}>
+              Lesson Already Complete
+            </Text>
+            <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 14, textAlign: "center", lineHeight: 21 }}>
+              You've already finished this lesson. Your knowledge is saved — no need to repeat it.
+            </Text>
+          </View>
+          <Pressable
+            style={styles.primaryBtn}
+            onPress={async () => {
+              await ensureObjective();
+              goBack(router, "/university/lessons");
+            }}
+            testID="lotus-lesson-already-done-continue"
+          >
+            <Ionicons name="arrow-back" size={16} color={COLORS.onBrand} />
+            <Text style={styles.primaryBtnTxt}>Back to Lessons</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // ── Render: playing ───────────────────────────────────────────────────────
   if (!finished) {
