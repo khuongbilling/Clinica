@@ -12,7 +12,6 @@
  * Locked nodes still cannot start — they show the lock reason instead.
  */
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Modal,
@@ -126,7 +125,6 @@ export function MissionPopupModal({
 
   const handlePrepare = () => {
     onClose();
-    // Navigate to mission loadout
     router.push({
       pathname: "/mission-loadout" as any,
       params: {
@@ -157,13 +155,8 @@ export function MissionPopupModal({
 
       {/* Sheet */}
       <View style={styles.sheet}>
-        {/* Chapter accent top bar */}
-        <LinearGradient
-          colors={[chapterAccent + "30", "transparent"]}
-          style={styles.topGlow}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
+        {/* Chapter accent top bar — solid tint instead of gradient */}
+        <View style={[styles.topGlow, { backgroundColor: chapterAccent + "22" }]} />
 
         {/* Drag handle */}
         <View style={styles.handle} />
@@ -174,12 +167,16 @@ export function MissionPopupModal({
         >
           {/* Header row */}
           <View style={styles.headerRow}>
-            {/* Large illustrated icon */}
-            <View style={[styles.iconFrame, { borderColor: chapterAccent + "60", backgroundColor: chapterAccent + "18" }]}>
-              <Ionicons name={icon as any} size={36} color={chapterAccent} />
-              {/* Corner marks */}
+            {/* Illustrated mission emblem — rounded-square banner frame */}
+            <View style={[styles.iconFrame, { borderColor: chapterAccent + "70", backgroundColor: chapterAccent + "20" }]}>
+              {/* Inner corner marks — RPG banner frame detail */}
               <View style={[styles.cornerTL, { borderColor: chapterAccent }]} />
               <View style={[styles.cornerBR, { borderColor: chapterAccent }]} />
+              {/* Horizontal rule above icon */}
+              <View style={[styles.ruleTop, { backgroundColor: chapterAccent + "50" }]} />
+              <Ionicons name={icon as any} size={34} color={chapterAccent} />
+              {/* Horizontal rule below icon */}
+              <View style={[styles.ruleBot, { backgroundColor: chapterAccent + "50" }]} />
             </View>
 
             {/* Title area */}
@@ -298,9 +295,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   iconFrame: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
+    width: 76,
+    height: 76,
+    borderRadius: 14,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
@@ -309,25 +306,37 @@ const styles = StyleSheet.create({
   },
   cornerTL: {
     position: "absolute",
-    top: -1,
-    left: -1,
+    top: 3,
+    left: 3,
     width: 10,
     height: 10,
     borderTopWidth: 2,
     borderLeftWidth: 2,
     borderTopLeftRadius: 4,
-    opacity: 0.8,
   },
   cornerBR: {
     position: "absolute",
-    bottom: -1,
-    right: -1,
+    bottom: 3,
+    right: 3,
     width: 10,
     height: 10,
     borderBottomWidth: 2,
     borderRightWidth: 2,
     borderBottomRightRadius: 4,
-    opacity: 0.8,
+  },
+  ruleTop: {
+    position: "absolute",
+    top: 16,
+    left: 8,
+    right: 8,
+    height: 1,
+  },
+  ruleBot: {
+    position: "absolute",
+    bottom: 16,
+    left: 8,
+    right: 8,
+    height: 1,
   },
   typeBadge: {
     alignSelf: "flex-start",

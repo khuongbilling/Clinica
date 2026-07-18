@@ -1,13 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 
-import { GLOW, GRADIENTS, UI, UI_RADIUS, SPACING } from "@/src/theme/ui";
+import { GLOW, UI, UI_RADIUS, SPACING } from "@/src/theme/ui";
 import { RewardCard } from "./RewardCard";
 
-// QuestCard — a single tappable objective / mode / destination row. Icon medallion,
-// clear title + one short subtitle, optional reward chip, and a locked state.
-// Built for mobile scanability: one idea per card, obvious tap affordance.
+// QuestCard — a single tappable objective / mode / destination row. Illustrated
+// emblem tile (rounded-square sigil with solid accent fill), clear title + subtitle,
+// optional reward chip, locked state. Built for mobile scanability.
 export function QuestCard({
   icon,
   title,
@@ -50,8 +49,12 @@ export function QuestCard({
         style,
       ]}
     >
-      <LinearGradient colors={GRADIENTS.panel} style={StyleSheet.absoluteFill} />
-      <View style={[styles.medallion, { borderColor: tint + "70", backgroundColor: tint + "1E" }]}>
+      {/* Emblem tile — rounded-square sigil, solid accent fill */}
+      <View style={[styles.emblem, { backgroundColor: tint + "28", borderColor: tint + "55" }]}>
+        {/* Corner accent marks — top-left */}
+        <View style={[styles.cornerTL, { borderColor: tint + "90" }]} />
+        {/* Corner accent marks — bottom-right */}
+        <View style={[styles.cornerBR, { borderColor: tint + "90" }]} />
         <Ionicons name={locked ? "lock-closed" : icon} size={22} color={tint} />
         {live && !locked ? <View style={styles.liveDot} /> : null}
         {!locked && badge && badge > 0 ? (
@@ -98,24 +101,46 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: SPACING.md,
     minHeight: 76,
+    backgroundColor: UI.panel,
   },
   pressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
-  medallion: {
+  emblem: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 12,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    position: "relative",
+  },
+  cornerTL: {
+    position: "absolute",
+    top: 2,
+    left: 2,
+    width: 8,
+    height: 8,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderTopLeftRadius: 3,
+  },
+  cornerBR: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    borderBottomRightRadius: 3,
   },
   liveDot: {
     position: "absolute",
     top: 2,
     right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: UI.teal,
     borderWidth: 1.5,
     borderColor: UI.panel,

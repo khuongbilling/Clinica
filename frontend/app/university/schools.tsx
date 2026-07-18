@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
@@ -23,7 +22,6 @@ export default function DepartmentSchoolsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.hero}>
-        <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
         <Pressable style={styles.backBtn} onPress={() => goBack(router, "/university")} testID="schools-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
@@ -94,7 +92,11 @@ export default function DepartmentSchoolsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
-  hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
+  hero: {
+    padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4,
+    backgroundColor: COLORS.brandTertiary + "28",
+    borderBottomWidth: 1, borderBottomColor: COLORS.brandTertiary + "40",
+  },
   backBtn: {
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
