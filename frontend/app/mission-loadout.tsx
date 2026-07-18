@@ -14,8 +14,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -26,6 +26,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getHeroSprite } from "@/src/components/HeroSprites";
+import { getLoadoutItems } from "@/src/game/loadoutStore";
 import { HEROES } from "@/src/game/content";
 import { ITEMS } from "@/src/game/items";
 import { usePlayer } from "@/src/game/store";
@@ -531,10 +532,11 @@ export default function MissionLoadoutScreen() {
   const nodeImg = NODE_EMBLEM[String(partType)] ?? NODE_EMBLEM["battle"]!;
   const bgImg   = CHAPTER_BG[chNum] ?? CHAPTER_BG_FALLBACK;
 
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [deployedTeam,  setDeployedTeam]  = useState<string[]>(() =>
-    player?.active_team?.slice(0, 3) ?? []
-  );
+  const [selectedItems, setSelectedItems] = useState<string[]>(() => getLoadoutItems());
+
+  useFocusEffect(useCallback(() => {
+    setSelectedItems(getLoadoutItems());
+  }, []));
 
   if (loading || !player) {
     return (
@@ -551,29 +553,10 @@ export default function MissionLoadoutScreen() {
   const ownedItems = ITEMS.filter((it) => (inventory[it.name] ?? 0) > 0);
   const activeTeam = player.active_team ?? [];
 
-  const toggleItem = (id: string) => {
-    setSelectedItems((prev) => {
-      if (prev.includes(id)) return prev.filter((i) => i !== id);
-      if (prev.length >= 3)  return prev;
-      return [...prev, id];
-    });
-  };
-
-  const toggleHero = (id: string) => {
-    setDeployedTeam((prev) =>
-      prev.includes(id) ? prev.filter((h) => h !== id) : [...prev, id]
-    );
-  };
-
   const handleStart = () => {
     if (missionRoute) router.push(missionRoute as any);
     else router.back();
   };
-
-  const slotItems = [0, 1, 2].map((i) => {
-    const id = selectedItems[i];
-    return id ? (ITEMS.find((it) => it.id === id) ?? null) : null;
-  });
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
@@ -631,18 +614,23 @@ export default function MissionLoadoutScreen() {
             <View style={[s.rackRule, { backgroundColor: accent + "40" }]} />
           </View>
           <View style={s.slotRow}>
-            {slotItems.map((item, i) => (
-              <ItemSlot
-                key={i}
-                item={item}
-                slotNum={i + 1}
-                accent={accent}
-                onRemove={() => {
-                  const id = selectedItems[i];
-                  if (id) setSelectedItems((prev) => prev.filter((x) => x !== id));
-                }}
-              />
-            ))}
+            {[0, 1, 2].map((i) => {
+              const item = selectedItems[i]
+                ? (ITEMS.find((it) => it.id === selectedItems[i]) ?? null)
+                : null;
+              return (
+                <ItemSlot
+                  key={i}
+                  item={item}
+                  slotNum={i + 1}
+                  accent={accent}
+                  onRemove={() => {
+                    const id = selectedItems[i];
+                    if (id) setSelectedItems((prev) => prev.filter((x) => x !== id));
+                  }}
+                />
+              );
+            })}
           </View>
         </View>
       </View>
@@ -655,25 +643,43 @@ export default function MissionLoadoutScreen() {
           <View style={s.sectionHead}>
             <View style={[s.pip, { backgroundColor: UI.teal }]} />
             <Text style={s.sectionTitle}>Healer Formation</Text>
-            <Text style={s.sectionSub}>tap to toggle</Text>
           </View>
 
           {activeTeam.length > 0 ? (
-            <View style={s.heroRow}>
-              {activeTeam.map((heroId) => (
-                <HeroCard
-                  key={heroId}
-                  heroId={heroId}
-                  selected={deployedTeam.includes(heroId)}
-                  onSelect={() => toggleHero(heroId)}
-                />
-              ))}
+            <View style={s.navCard}>
+              <View style={s.navCardInfo}>
+                {activeTeam.slice(0, 3).map((heroId) => {
+                  const hero = HEROES.find((h) => h.id === heroId);
+                  return (
+                    <View key={heroId} style={s.heroChip}>
+                      <Ionicons name="heart" size={11} color={UI.teal} />
+                      <Text style={s.heroChipTxt} numberOfLines={1}>
+                        {hero?.displayName ?? heroId}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {activeTeam.length > 3 && (
+                  <Text style={s.moreTxt}>+{activeTeam.length - 3} more</Text>
+                )}
+              </View>
+              <Pressable
+                style={[s.navBtn, { borderColor: UI.teal + "60" }]}
+                onPress={() => router.push("/hero-select" as any)}
+              >
+                <Text style={[s.navBtnTxt, { color: UI.teal }]}>Edit Formation</Text>
+                <Ionicons name="chevron-forward" size={13} color={UI.teal} />
+              </Pressable>
             </View>
           ) : (
-            <View style={s.empty}>
-              <Ionicons name="people-outline" size={28} color={UI.textDim} />
-              <Text style={s.emptyTxt}>Recruit heroes in Summoning Hall first</Text>
-            </View>
+            <Pressable
+              style={[s.navCard, s.emptyNavCard]}
+              onPress={() => router.push("/summon" as any)}
+            >
+              <Ionicons name="people-outline" size={20} color={UI.textDim} />
+              <Text style={s.emptyNavTxt}>No heroes recruited — Go to Summoning Hall</Text>
+              <Ionicons name="chevron-forward" size={13} color={UI.textDim} />
+            </Pressable>
           )}
         </View>
 
@@ -691,32 +697,42 @@ export default function MissionLoadoutScreen() {
             </View>
           </View>
           <Text style={s.sectionDesc}>
-            Select up to 3 disposable items — tap a slot above to remove
+            Select up to 3 disposable items. Tap the slots above to remove.
           </Text>
 
-          {ownedItems.length > 0 ? (
-            <View style={s.itemGrid}>
-              {ownedItems.map((item) => {
-                const qty   = inventory[item.name] ?? 0;
-                const isSel = selectedItems.includes(item.id);
-                const atMax = selectedItems.length >= 3 && !isSel;
-                return (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    qty={qty}
-                    selected={isSel}
-                    disabled={atMax}
-                    onToggle={() => toggleItem(item.id)}
-                  />
-                );
-              })}
+          <View style={s.navCard}>
+            <View style={s.navCardInfo}>
+              {selectedItems.length === 0 ? (
+                <Text style={s.emptyNavTxt}>No items selected</Text>
+              ) : (
+                selectedItems.map((id) => {
+                  const item = ITEMS.find((it) => it.id === id);
+                  if (!item) return null;
+                  return (
+                    <View key={id} style={s.heroChip}>
+                      <Ionicons name="medical" size={11} color={accent} />
+                      <Text style={[s.heroChipTxt, { color: accent }]} numberOfLines={1}>
+                        {item.displayName}
+                      </Text>
+                    </View>
+                  );
+                })
+              )}
             </View>
-          ) : (
+            <Pressable
+              style={[s.navBtn, { borderColor: accent + "60" }]}
+              onPress={() => router.push("/item-bag" as any)}
+            >
+              <Text style={[s.navBtnTxt, { color: accent }]}>Browse Bag</Text>
+              <Ionicons name="chevron-forward" size={13} color={accent} />
+            </Pressable>
+          </View>
+
+          {ownedItems.length === 0 && (
             <View style={s.empty}>
-              <Ionicons name="medkit-outline" size={28} color={UI.textDim} />
+              <Ionicons name="medkit-outline" size={24} color={UI.textDim} />
               <Text style={s.emptyTxt}>
-                No items in inventory.{"\n"}Win battles or visit the Apothecary to stock up.
+                No items in inventory — win battles or visit the Apothecary.
               </Text>
             </View>
           )}
@@ -908,6 +924,52 @@ const s = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
+
+  // Nav cards — hero formation + item bag
+  navCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    padding: SPACING.sm,
+    flexWrap: "wrap",
+  },
+  navCardInfo: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    alignItems: "center",
+  },
+  navBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  navBtnTxt: { fontSize: 12, fontWeight: "700" },
+  heroChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(79,216,196,0.12)",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  heroChipTxt: { color: "#4FD8C4", fontSize: 11, fontWeight: "600", maxWidth: 80 },
+  moreTxt:     { color: UI.textDim, fontSize: 11 },
+  emptyNavCard: {
+    gap: 8,
+    justifyContent: "center",
+  },
+  emptyNavTxt: { color: UI.textDim, fontSize: 12, flex: 1 },
 
   // Tip
   tip: {

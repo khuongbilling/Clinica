@@ -180,7 +180,10 @@ export default function LotusLessonScreen() {
     setSelected(i);
   };
 
+  const noHeroes = (player?.heroes_owned ?? []).length === 0;
+
   const goToShift = () => {
+    if (noHeroes) return;
     router.replace({ pathname: "/battle", params: { enemyId: node.linkedCaseId } } as any);
   };
 
@@ -452,7 +455,7 @@ export default function LotusLessonScreen() {
               </View>
             )}
 
-            {node.linkedCaseId && (
+            {node.linkedCaseId && !noHeroes && (
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: meta.color }]}
                 onPress={goToShift}
@@ -461,6 +464,21 @@ export default function LotusLessonScreen() {
                 <Ionicons name="pulse" size={18} color="#000" />
                 <Text style={styles.primaryBtnTxt}>Try It in a Ward Shift</Text>
               </Pressable>
+            )}
+            {node.linkedCaseId && noHeroes && (
+              <View style={[styles.primaryBtn, { backgroundColor: "rgba(0,0,0,0.3)", borderWidth: 1, borderColor: meta.color + "50" }]}>
+                <Ionicons name="people-outline" size={16} color={meta.color} />
+                <Text style={[styles.primaryBtnTxt, { color: meta.color, fontSize: 13 }]}>
+                  Recruit a hero first to try Ward Shift.
+                </Text>
+                <Pressable
+                  onPress={() => router.replace("/summon" as any)}
+                  style={{ backgroundColor: meta.color + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginTop: 6 }}
+                  testID="lotus-lesson-go-summon"
+                >
+                  <Text style={{ color: meta.color, fontSize: 12, fontWeight: "700" }}>Go to Summoning Hall →</Text>
+                </Pressable>
+              </View>
             )}
 
             <Pressable

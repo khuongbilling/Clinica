@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WardBoardV2 } from "@/src/components/WardBoardV2";
+import { markEnemiesDefeated } from "@/src/game/compendiumStore";
 import {
   RoleId, WARD_UNIT_META, WARD_UNIT_IDS, STARTER_UNIT_IDS,
   LOADOUT_SIZE, UNIT_LEVEL_DMG_STEP, sanitizeLoadout,
@@ -2859,6 +2860,11 @@ export default function WardDefense() {
       rewardsApplied.current = true;
       const r = calcRewards(gs.phase === "won", gs.stability);
       applyRewards({ xp: r.playerXp, codexShards: r.codexShards }).catch(() => {});
+      // Unlock defeated enemies in the Clinical Compendium
+      const defeatedIds = Object.entries(gs.enemyMastery)
+        .filter(([, m]) => m.defeated)
+        .map(([id]) => id);
+      if (defeatedIds.length > 0) markEnemiesDefeated(defeatedIds).catch(() => {});
     }
   }, [gs.phase, player]);
 
@@ -3515,6 +3521,7 @@ function LobbyScreen({
   onToggleUnit: (id: string) => void;
 }) {
   const { player } = usePlayer();
+  const lobbyRouter = useRouter();
   const [caseVisible,   setCaseVisible]   = useState(false);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [mapExpanded,   setMapExpanded]   = useState(false);
@@ -3823,111 +3830,24 @@ function LobbyScreen({
           ))}
         </Pressable>
 
-        {/* Healer units */}
-        <View style={s.lobbyCard}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.brand }} />
-            <Text style={s.lobbySectionTitle}>HEALER UNITS — DEPLOY ON TILES</Text>
+        {/* ── CLINICAL COMPENDIUM ──────────────────────────────────── */}
+        <Pressable
+          style={[s.lobbyCard, { flexDirection: "row", alignItems: "center", gap: 12 }]}
+          onPress={() => lobbyRouter.push("/compendium" as any)}
+        >
+          <View style={{ width: 38, height: 38, borderRadius: 19,
+            backgroundColor: "#1e1a40", borderWidth: 1, borderColor: "#4c3d9060",
+            alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 20 }}>📖</Text>
           </View>
-          {UNIT_TYPES.map(typeId => {
-            const u = UNIT_DATA[typeId];
-            return (
-              <View key={typeId} style={s.lobbyListRow}>
-                <View style={[s.lobbyEnemyChip, { borderColor: u.color + "55", backgroundColor: u.color + "18", overflow: "hidden" }]}>
-                  <ExpoImage
-                    source={CARD_PORTRAITS[typeId]}
-                    style={{ width: "128%", height: "128%" }}
-                    contentFit="contain"
-                    cachePolicy="none"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={[s.lobbyListName, { color: u.color }]}>{u.name}</Text>
-                    <View style={{ backgroundColor: u.color + "22", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                      <Text style={{ color: u.color, fontSize: 12, fontWeight: "700" }}>{u.apCost} AP · {u.category}</Text>
-                    </View>
-                  </View>
-                  <Text style={s.lobbyListDesc}>{u.flavor}</Text>
-                  <Text style={[s.lobbyListDesc, { color: COLORS.air, marginTop: 2 }]}>{u.concept}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Disease spirits */}
-        <View style={s.lobbyCard}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: COLORS.error }} />
-            <Text style={s.lobbySectionTitle}>DISEASE SPIRITS — RECOGNIZE CUES</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.lobbySectionTitle, { color: "#a78bfa" }]}>CLINICAL COMPENDIUM</Text>
+            <Text style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+              Pathophysiology · Pharmacology · Unlock entries by defeating disease spirits
+            </Text>
           </View>
-          {Object.entries(ENEMY_DATA).map(([eid, def]) => (
-            <View key={def.name} style={s.lobbyListRow}>
-              <View style={[s.lobbyEnemyChip, { borderColor: def.color + "55", backgroundColor: def.color + "12", overflow: "hidden" }]}>
-                {ENEMY_PORTRAITS[eid] ? (
-                  <ExpoImage
-                    source={ENEMY_PORTRAITS[eid]}
-                    style={{ width: "120%", height: "120%" }}
-                    contentFit="contain"
-                    cachePolicy="none"
-                  />
-                ) : (
-                  <Text style={{ fontSize: 18 }}>{def.icon}</Text>
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={[s.lobbyListName, { color: def.color }]}>{def.name}</Text>
-                  <View style={{ backgroundColor: def.color + "20", borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
-                    <Text style={{ color: def.color, fontSize: 11, fontWeight: "700" }}>{def.clue}</Text>
-                  </View>
-                  {def.isBoss && (
-                    <View style={{ backgroundColor: COLORS.error + "22", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                      <Text style={{ color: COLORS.error, fontSize: 11, fontWeight: "700" }}>BOSS</Text>
-                    </View>
-                  )}
-                  {def.behavior && (
-                    <View style={{ backgroundColor: "#ffffff14", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-                      <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }}>
-                        {BEHAVIOR_META[def.behavior].icon} {BEHAVIOR_META[def.behavior].label}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={s.lobbyListDesc}>{def.flavor}</Text>
-                <View style={{
-                  flexDirection: "row", alignItems: "flex-start", gap: 5, marginTop: 4,
-                  backgroundColor: def.color + "10", borderRadius: 6,
-                  borderLeftWidth: 2, borderLeftColor: def.color + "88",
-                  paddingVertical: 4, paddingHorizontal: 6,
-                }}>
-                  <Text style={{ color: def.color, fontSize: 12, fontWeight: "700", letterSpacing: 0.2 }}>
-                    {def.ability.name.toUpperCase()}
-                  </Text>
-                  <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>
-                    {def.ability.desc}
-                  </Text>
-                </View>
-                {def.behavior && (
-                  <View style={{
-                    flexDirection: "row", alignItems: "flex-start", gap: 5, marginTop: 3,
-                    backgroundColor: "#22c55e10", borderRadius: 6,
-                    borderLeftWidth: 2, borderLeftColor: "#22c55e88",
-                    paddingVertical: 4, paddingHorizontal: 6,
-                  }}>
-                    <Text style={{ color: "#4ade80", fontSize: 12, fontWeight: "700", letterSpacing: 0.2 }}>
-                      COUNTER
-                    </Text>
-                    <Text style={{ color: COLORS.onSurfaceSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>
-                      {BEHAVIOR_META[def.behavior].counter}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          ))}
-        </View>
+          <Ionicons name="chevron-forward" size={16} color="#a78bfa" />
+        </Pressable>
 
         {/* ── ROADMAP ────────────────────────────────────────────────── */}
         <Pressable style={[s.lobbyCard, { gap:0 }]} onPress={() => setMapExpanded(v => !v)}>
