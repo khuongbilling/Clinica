@@ -426,15 +426,15 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   cueHuntIntro: [
     {
       id: "cue_hunt_open",
-      title: "The System",
-      body: "Before you treat, learn to see. Three signs of dehydration are hidden in this scene. I will guide you to each one — tap exactly where I point.",
+      title: "Cue Hunt",
+      body: "SYSTEM: Diagnostic scan initiated. Three signs of dehydration are present in this scene. Each will be highlighted in sequence. Tap exactly where indicated.",
       placement: "center",
       requireAction: false,
       nextText: "SHOW ME",
     },
     {
       id: "cue_hunt_clue1",
-      title: "Clue 1 of 3 — Dry Lips",
+      title: "Clue 1 of 3: Dry Lips",
       body: "Cracked, dry lips are an early sign of fluid loss. Tap them now.",
       placement: "top",
       requireAction: true,
@@ -443,8 +443,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "cue_hunt_clue2",
-      title: "Clue 2 of 3 — Weak Posture",
-      body: "A slumped, weak posture signals fatigue and dehydration. Tap the posture zone.",
+      title: "Clue 2 of 3: Weak Posture",
+      body: "Slumped, weak posture indicates fatigue and dehydration. Tap the posture zone.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "clue_weak_posture",
@@ -452,8 +452,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "cue_hunt_clue3",
-      title: "Clue 3 of 3 — Water Flask",
-      body: "Something nearby tells you she desperately needs water. Find it and tap it.",
+      title: "Clue 3 of 3: Water Flask",
+      body: "Something nearby confirms she needs fluid urgently. Find it and tap it.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "clue_water_flask",
@@ -464,16 +464,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   rapidTriageIntro: [
     {
       id: "triage_open",
-      title: "Decide Fast",
-      body: "Triage sorts patients by urgency. Three patients need you. I'll guide each one — only the correct answer is available. Pay attention to the signs, then act.",
+      title: "Rapid Triage",
+      body: "SYSTEM: Triage exercise loaded. Three patients require urgency classification. Only the correct option is active for each. Read the clinical signs, then act.",
       placement: "center",
       requireAction: false,
       nextText: "READY",
     },
     {
       id: "triage_card1",
-      title: "Patient 1 — Read Her Signs",
-      body: "Dizzy but alert, able to drink. Needs attention soon — not a crisis, not something to ignore. Tap Urgent.",
+      title: "Patient 1: Read Her Signs",
+      body: "Dizzy but alert, able to drink. Needs attention soon; not a critical emergency. Tap Urgent.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_urgent",
@@ -482,8 +482,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "triage_card2",
-      title: "Patient 2 — Read His Signs",
-      body: "Confused elder. Low blood pressure. Unable to drink. These are danger signs — this patient cannot wait. Tap Emergency.",
+      title: "Patient 2: Read His Signs",
+      body: "Confused elder. Low blood pressure. Unable to drink. These are danger signs; this patient cannot wait. Tap Emergency.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_emergency",
@@ -492,8 +492,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "triage_card3",
-      title: "Patient 3 — Read Her Signs",
-      body: "A student with no symptoms, asking about hydration. Alert, well, no urgency whatsoever. Tap Routine.",
+      title: "Patient 3: Read Her Signs",
+      body: "A student with no symptoms, asking about hydration. Alert, well, no clinical urgency. Tap Routine.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_routine",
@@ -511,8 +511,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   rapidTriageCard2: [
     {
       id: "triage_card2_intro",
-      title: "Patient 2 — Read His Signs",
-      body: "Confused elder. Low blood pressure. Unable to drink. These are danger signs — this patient cannot wait. Tap Emergency.",
+      title: "Patient 2: Read His Signs",
+      body: "Confused elder. Low blood pressure. Unable to drink. These are danger signs; this patient cannot wait. Tap Emergency.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_emergency",
@@ -524,8 +524,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   rapidTriageCard3: [
     {
       id: "triage_card3_intro",
-      title: "Patient 3 — Read Her Signs",
-      body: "A student with no symptoms, asking about hydration. Alert, well, no urgency whatsoever. Tap Routine.",
+      title: "Patient 3: Read Her Signs",
+      body: "A student with no symptoms, asking about hydration. Alert, well, no clinical urgency. Tap Routine.",
       placement: "top",
       requireAction: true,
       requiredTargetId: "triage_routine",
@@ -537,16 +537,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   stabilizeIntro: [
     {
       id: "stabilize_open",
-      title: "The System",
-      body: "Three actions in the correct order will stabilize this patient. I will guide each step — follow the glow.",
+      title: "Stabilize Stack",
+      body: "SYSTEM: Stabilization protocol loaded. Three actions must be performed in the correct order. Follow the highlighted step.",
       placement: "center",
       requireAction: false,
       nextText: "UNDERSTOOD",
     },
     {
       id: "stabilize_step1",
-      title: "Step 1 — Check Safety",
-      body: "Always assess responsiveness first — before anything else. Tap Assess mental status.",
+      title: "Step 1: Check Safety",
+      body: "Assess responsiveness before anything else. Tap Assess mental status.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "action_assess_mental_status",
@@ -554,8 +554,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "stabilize_step2",
-      title: "Step 2 — Confirm Stability",
-      body: "Now map the patient's vital signs. Tap Check vitals.",
+      title: "Step 2: Confirm Stability",
+      body: "Map the patient's vital signs. Tap Check vitals.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "action_check_vitals",
@@ -563,8 +563,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "stabilize_step3",
-      title: "Step 3 — Support Recovery",
-      body: "Once swallowing is confirmed safe, begin gentle rehydration. Tap Offer oral fluids.",
+      title: "Step 3: Support Recovery",
+      body: "With swallowing confirmed safe, begin gentle rehydration. Tap Offer oral fluids.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "action_oral_fluids",
@@ -575,15 +575,15 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   mealcraftIntro: [
     {
       id: "mealcraft_open",
-      title: "The System",
-      body: "Build a plate that keeps blood sugar steady. Start with a protein.",
+      title: "Mealcraft: Lotus Plate",
+      body: "SYSTEM: Plate-building interface loaded. Objective: construct a balanced meal that supports stable blood sugar. Begin with a protein source.",
       placement: "center",
       requireAction: false,
       nextText: "GOT IT",
     },
     {
       id: "mealcraft_first_tap",
-      title: "Add protein first.",
+      title: "Add Protein First",
       body: "Tap the grilled chicken to anchor the plate.",
       placement: "top",
       requireAction: true,
