@@ -17,7 +17,10 @@ import { UI } from "@/src/theme/ui";
 export interface RPGTab {
   key: string;
   label: string;
+  /** Ionicons glyph name — used when `emblem` is not provided. */
   icon?: React.ComponentProps<typeof Ionicons>["name"];
+  /** Custom emblem factory — receives isActive so the icon can swap color. */
+  emblem?: (isActive: boolean) => React.ReactNode;
   locked?: boolean;
   badge?: number;
 }
@@ -57,7 +60,9 @@ export function RPGTabBar({ tabs, activeTab, onTabPress }: Props) {
               {isActive && <View style={styles.topAccent} />}
 
               <View style={styles.tabInner}>
-                {tab.icon && (
+                {/* Custom emblem factory takes priority over Ionicons icon */}
+                {tab.emblem && !isLocked && tab.emblem(isActive)}
+                {!tab.emblem && tab.icon && (
                   <Ionicons
                     name={isLocked ? "lock-closed" : tab.icon}
                     size={13}
@@ -70,7 +75,7 @@ export function RPGTabBar({ tabs, activeTab, onTabPress }: Props) {
                     }
                   />
                 )}
-                {isLocked && !tab.icon && (
+                {isLocked && (
                   <Ionicons name="lock-closed" size={11} color={UI.textDim} />
                 )}
                 <Text

@@ -1,10 +1,16 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
 import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
+import {
+  ShopEmblem,
+  HeroesEmblem,
+  ShiftEmblem,
+  RealmEmblem,
+  CommunityEmblem,
+} from "@/src/components/ClinicaEmblems";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -55,7 +61,7 @@ export default function TabsLayout() {
           title: "SHOP",
           href: shopUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-shop",
-          tabBarIcon: ({ color, size }) => <Ionicons name="storefront" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <ShopEmblem size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -64,7 +70,7 @@ export default function TabsLayout() {
           title: "HEROES",
           href: heroesUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-heroes",
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <HeroesEmblem size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -72,7 +78,7 @@ export default function TabsLayout() {
         options={{
           title: "SHIFT",
           tabBarButtonTestID: "tab-shift",
-          tabBarIcon: ({ color, size }) => <Ionicons name="flame" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <ShiftEmblem size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -81,7 +87,7 @@ export default function TabsLayout() {
           title: "REALM",
           href: realmUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-kingdom",
-          tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <RealmEmblem size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -90,7 +96,7 @@ export default function TabsLayout() {
           title: "COMMUNITY",
           href: communityBoardUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-faction",
-          tabBarIcon: ({ color, size }) => <Ionicons name="earth" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <CommunityEmblem size={size} color={color} />,
         }}
       />
       <Tabs.Screen

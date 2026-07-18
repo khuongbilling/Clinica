@@ -3,17 +3,22 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ModeCardDef, MODE_STATUS_LABEL } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { getModeEmblem } from "@/src/components/ClinicaEmblems";
 
 // Illustrated-banner placeholder: a jade/gold gradient wash tinted by the
-// mode's accent color, with the mode icon centered. This is a stand-in for
-// the future commissioned banner art described in `mode.artBrief` — same
-// dimensions/frame regardless of size variant, so swapping in real art later
+// mode's accent color, with the mode icon centered. Uses Clinica emblem SVGs
+// when available; falls back to Ionicons for any mode without a custom emblem.
+// Same dimensions/frame regardless of size variant — swapping in real art later
 // is a drop-in change.
 function ModeBanner({ mode, height }: { mode: ModeCardDef; height: number }) {
+  const iconSize = height >= 100 ? 52 : 38;
+  const emblem = getModeEmblem(mode.id, iconSize, mode.accentColor);
   return (
-    <View style={[styles.banner, { height, backgroundColor: mode.accentColor + "22" }]}>
-      <View style={[styles.bannerIconWrap, { borderColor: mode.accentColor + "70", backgroundColor: mode.accentColor + "30" }]}>
-        <Ionicons name={mode.icon as any} size={height >= 100 ? 30 : 22} color={mode.accentColor} />
+    <View style={[styles.banner, { height, backgroundColor: mode.accentColor + "18" }]}>
+      <View style={[styles.bannerIconWrap, { borderColor: mode.accentColor + "60", backgroundColor: mode.accentColor + "25" }]}>
+        {emblem ?? (
+          <Ionicons name={mode.icon as any} size={height >= 100 ? 30 : 22} color={mode.accentColor} />
+        )}
       </View>
     </View>
   );
@@ -132,7 +137,7 @@ const styles = StyleSheet.create({
     width: "100%", alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
   bannerIconWrap: {
-    width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, alignItems: "center", justifyContent: "center",
+    width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, alignItems: "center", justifyContent: "center",
   },
   badge: {
     flexDirection: "row", alignItems: "center", gap: 3,

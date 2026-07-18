@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ChapterJourneyMap } from "@/src/components/ChapterJourneyMap";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
+import { JourneyEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { getMapSprite } from "@/src/game/illustratedAssets";
 import {
@@ -27,7 +28,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
 const TABS: RPGTab[] = [
-  { key: "chapter",  label: "Chapter",  icon: "map" },
+  { key: "chapter",  label: "Chapter",  emblem: (a) => <JourneyEmblem size={14} color={a ? "#1B1308" : "#E8C868"} /> },
   { key: "quests",   label: "Quests",   icon: "list-circle" },
   { key: "memories", label: "Memories", icon: "book" },
 ];

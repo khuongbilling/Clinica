@@ -11,6 +11,7 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
+import { SummoningEmblem, HeroesEmblem } from "@/src/components/ClinicaEmblems";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -21,9 +22,9 @@ import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
 const TABS: RPGTab[] = [
-  { key: "roster",  label: "Roster",  icon: "people" },
+  { key: "roster",  label: "Roster",  emblem: (a) => <HeroesEmblem    size={14} color={a ? "#1B1308" : "#E8C868"} /> },
   { key: "team",    label: "Team",    icon: "shield-half" },
-  { key: "recruit", label: "Recruit", icon: "add-circle" },
+  { key: "recruit", label: "Recruit", emblem: (a) => <SummoningEmblem size={14} color={a ? "#1B1308" : "#E8C868"} /> },
   { key: "upgrade", label: "Upgrade", icon: "arrow-up-circle" },
 ];
 
