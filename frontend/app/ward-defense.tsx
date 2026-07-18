@@ -5,7 +5,6 @@
    ═══════════════════════════════════════════════════════════════════ */
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -897,10 +896,7 @@ function CorruptionPortal({ aw, ah }: { aw: number; ah: number }) {
           backgroundColor: "#0d0008",
           borderWidth: 2.5, borderColor: "#ef4444",
           alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-          {/* Void gradient interior */}
-          <LinearGradient colors={["#2d0318", "#180010", "#050008"]}
-            start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          {/* Void interior */}
           {/* Inner corruption ring */}
           <View style={{ position: "absolute", width: 48, height: 48, borderRadius: 24,
             borderWidth: 1.5, borderColor: "#7c1d3560" }} />
@@ -948,8 +944,6 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
       {/* Lantern cap — decorative top bar */}
       <View style={{ width: 56, height: 8, borderRadius: 4,
         backgroundColor: "#2e2212", borderWidth: 1.5, borderColor: glow60, marginBottom: 1 }}>
-        <LinearGradient colors={["#5a4820", "#3a2c10"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 4 }} />
         {/* Cap bead dots */}
         {[-14, -7, 0, 7, 14].map((x, i) => (
           <View key={i} style={{ position: "absolute", left: 28 + x - 2, top: 2,
@@ -961,9 +955,6 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
         backgroundColor: "#0c0e0a",
         borderWidth: 2.5, borderColor: glow60,
         alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <LinearGradient colors={[glow + "55", glow + "22", glow + "44"]}
-          start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         {/* Vertical ribs */}
         {[-22, -11, 0, 11, 22].map((x, i) => (
           <View key={i} style={{ position: "absolute", left: 34 + x - 0.5, top: 0,
@@ -980,8 +971,7 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
       {/* Lantern base cap */}
       <View style={{ width: 46, height: 7, borderRadius: 3, marginTop: 1,
         backgroundColor: "#2e2212", borderWidth: 1, borderColor: glow + "80" }}>
-        <LinearGradient colors={["#2a1e10", "#1e1608"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 3 }} />
+
       </View>
       {/* Tassels */}
       <View style={{ flexDirection: "row", gap: 20, marginTop: 2 }}>
@@ -999,8 +989,7 @@ function VitalLanternShrine({ stability, aw, ah }: { stability: number; aw: numb
       <View style={{ width: 72, height: 18, borderRadius: 6,
         backgroundColor: "#201808", borderWidth: 1.5, borderColor: "#4a3c18",
         alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <LinearGradient colors={["#4a3c18", "#2e2410", "#1a1208"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+
         {/* Pedestal rune mark */}
         <View style={{ width: 28, height: 1.5, backgroundColor: glow + "60", borderRadius: 1 }} />
       </View>
@@ -1063,9 +1052,6 @@ function BreathlessWispSprite({ hitFlash, bobY }: SpriteProps) {
         borderBottomLeftRadius:20, borderBottomRightRadius:20,
         borderWidth:2, borderColor:c, overflow:"hidden",
         backgroundColor:"#1e3a8a50" }}>
-        <LinearGradient colors={[c+"80","#3b82f630","#1e3a8a15"]}
-          start={{x:0.15,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
         {/* Top highlight */}
         <View style={{ position:"absolute", top:5, left:8, width:14, height:8,
           borderRadius:7, backgroundColor:"#ffffff30" }}/>
@@ -1130,9 +1116,6 @@ function WheezeSpriteSprite({ hitFlash, bobY }: SpriteProps) {
         borderTopLeftRadius:8, borderTopRightRadius:16,
         borderWidth:2, borderColor:c, overflow:"hidden",
         backgroundColor:"#166534" }}>
-        <LinearGradient colors={[c+"55","#1a6b4a","#065f46"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
         {/* Heavy brow ridge */}
         <View style={{ position:"absolute", top:2, left:3, right:3, height:7,
           borderRadius:4, borderBottomLeftRadius:2, borderBottomRightRadius:2,
@@ -1170,9 +1153,6 @@ function WheezeSpriteSprite({ hitFlash, bobY }: SpriteProps) {
         borderBottomLeftRadius:4, borderBottomRightRadius:4,
         borderWidth:2, borderColor:c, marginTop:-3, overflow:"hidden",
         backgroundColor:"#065f4660" }}>
-        <LinearGradient colors={[c+"40","#065f4672","#064e3b20"]}
-          start={{x:0.25,y:0}} end={{x:0.75,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
         {/* Vortex swirl lines */}
         {[4,11,18,24].map((t,i)=>(
           <View key={i} style={{ position:"absolute", top:t, left:6, right:6, height:1.5,
@@ -1234,9 +1214,6 @@ function MucusSlimeSprite({ hitFlash, bobY }: SpriteProps) {
         borderBottomLeftRadius:9, borderBottomRightRadius:17,
         borderWidth:2.5, borderColor:c, overflow:"hidden",
         backgroundColor:mid }}>
-        <LinearGradient colors={[c+"60","#166534","#14532d"]}
-          start={{x:0.15,y:0}} end={{x:0.85,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
         {/* Highlight bubble */}
         <View style={{ position:"absolute", top:5, left:8, width:15, height:8,
           borderRadius:8, backgroundColor:"#ffffff30" }}/>
@@ -1327,9 +1304,7 @@ function HypoxiaWraithSprite({ hitFlash, bobY }: SpriteProps) {
         borderBottomLeftRadius:8, borderBottomRightRadius:16,
         borderWidth:2, borderColor:c+"90",
         overflow:"hidden", backgroundColor:cloak }}>
-        <LinearGradient colors={["#4c1d9565","#1a004098","#0d001a"]}
-          start={{x:0.2,y:0}} end={{x:0.8,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Deep hood shadow */}
         <View style={{ position:"absolute", top:0, left:0, right:0, height:30,
           borderTopLeftRadius:4, borderTopRightRadius:20,
@@ -1395,9 +1370,7 @@ function FeverImpSprite({ hitFlash, bobY }: SpriteProps) {
       <View style={{ width:34, height:34, borderRadius:16,
         borderTopLeftRadius:8, borderTopRightRadius:20,
         borderWidth:2, borderColor:c, overflow:"hidden", backgroundColor:mid }}>
-        <LinearGradient colors={[c+"70", mid, dark]}
-          start={{x:0.2,y:0}} end={{x:0.8,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Cracked ember lines */}
         <View style={{ position:"absolute", top:6, left:14, width:10, height:1.5,
           backgroundColor:c+"90", transform:[{rotate:"25deg"}]}}/>
@@ -1453,9 +1426,7 @@ function ShockShadeSprite({ hitFlash, bobY }: SpriteProps) {
         borderTopLeftRadius:3, borderTopRightRadius:18,
         borderBottomLeftRadius:6, borderBottomRightRadius:14,
         borderWidth:2, borderColor:c+"85", overflow:"hidden", backgroundColor:body }}>
-        <LinearGradient colors={[c+"30", body, dark]}
-          start={{x:0.2,y:0}} end={{x:0.8,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Faint pulse vein */}
         <View style={{ position:"absolute", top:8, bottom:8, left:"48%", width:1.5,
           backgroundColor:c+"40" }}/>
@@ -1491,9 +1462,7 @@ function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
         borderWidth:2, borderColor:c+"85",
         overflow:"hidden", backgroundColor:"#7c2d1238",
         transform:[{rotate:"-10deg"}]}}>
-        <LinearGradient colors={[c+"38","#7c2d1210","transparent"]}
-          start={{x:0,y:0}} end={{x:1,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {[{t:8,l:10,w:38,r:-36},{t:19,l:14,w:30,r:-23},{t:29,l:18,w:22,r:-13}].map((b,i)=>(
           <View key={i} style={{ position:"absolute", top:b.t, left:b.l,
             width:b.w, height:2, borderRadius:1,
@@ -1506,9 +1475,7 @@ function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
         borderWidth:2, borderColor:c+"85",
         overflow:"hidden", backgroundColor:"#7c2d1238",
         transform:[{rotate:"10deg"}]}}>
-        <LinearGradient colors={[c+"38","#7c2d1210","transparent"]}
-          start={{x:1,y:0}} end={{x:0,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {[{t:8,r:10,w:38,rot:36},{t:19,r:14,w:30,rot:23},{t:29,r:18,w:22,rot:13}].map((b,i)=>(
           <View key={i} style={{ position:"absolute", top:b.t, right:b.r,
             width:b.w, height:2, borderRadius:1,
@@ -1533,9 +1500,7 @@ function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
         borderTopLeftRadius:27, borderTopRightRadius:27,
         borderWidth:2.5, borderColor:c, overflow:"hidden",
         backgroundColor:mid, zIndex:5 }}>
-        <LinearGradient colors={[c+"45","#92330a","#431407"]}
-          start={{x:0.15,y:0}} end={{x:0.85,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Scale rows */}
         {[14,24,38].map((t,i)=>(
           <View key={i} style={{ position:"absolute", top:t, left:"8%", right:"8%",
@@ -1578,9 +1543,7 @@ function BronchospasmDrakeSprite({ hitFlash, bobY }: SpriteProps) {
       <View style={{ width:52, height:26, borderRadius:12,
         borderWidth:2, borderColor:c+"80", overflow:"hidden",
         backgroundColor:mid, marginTop:-6, zIndex:4 }}>
-        <LinearGradient colors={[c+"32","#92330a","#431407"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         <View style={{ position:"absolute", top:4, left:10, width:14, height:7,
           borderRadius:7, backgroundColor:c+"30" }}/>
       </View>
@@ -1676,9 +1639,7 @@ function WardScoutSprite({ castFlash }: { castFlash: boolean }) {
         borderRadius:8, borderTopLeftRadius:16, borderTopRightRadius:6,
         borderWidth:2, borderColor:trim, overflow:"hidden",
         backgroundColor:coat }}>
-        <LinearGradient colors={["#ffffff","#e0f0ff","#bfdbfe80"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Left lapel shadow */}
         <View style={{ position:"absolute", top:0, left:4, width:10, height:18,
           borderRadius:4, borderTopLeftRadius:10, backgroundColor:trim+"45" }}/>
@@ -1719,9 +1680,7 @@ function WardScoutSprite({ castFlash }: { castFlash: boolean }) {
       <View style={{ position:"absolute", top:0, left:11, width:32, height:28,
         borderRadius:14, backgroundColor:skin, borderWidth:2, borderColor:"#e9a84c",
         overflow:"hidden" }}>
-        <LinearGradient colors={["#fef3c7","#fde8c8","#e9a84c40"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Hair back */}
         <View style={{ position:"absolute", top:-10, left:-3, width:38, height:18,
           borderRadius:999, backgroundColor:hair }}/>
@@ -1812,9 +1771,7 @@ function MistCasterSprite({ castFlash }: { castFlash: boolean }) {
         borderRadius:10, borderTopLeftRadius:14, borderTopRightRadius:6,
         borderWidth:2, borderColor:accent+"70", overflow:"hidden",
         backgroundColor:robe }}>
-        <LinearGradient colors={["#312e8160","#1e1b4b","#12103a"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Amber hem trim */}
         <View style={{ position:"absolute", bottom:0, left:0, right:0, height:7,
           borderBottomLeftRadius:9, borderBottomRightRadius:9,
@@ -1855,9 +1812,7 @@ function MistCasterSprite({ castFlash }: { castFlash: boolean }) {
       <View style={{ position:"absolute", top:2, left:10, width:28, height:26,
         borderRadius:13, backgroundColor:skin, borderWidth:2, borderColor:"#e9a84c",
         overflow:"hidden" }}>
-        <LinearGradient colors={["#fef3c7","#fde8c8","#e9a84c40"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Hair */}
         <View style={{ position:"absolute", top:-8, left:-2, width:32, height:16,
           borderRadius:999, backgroundColor:hair }}/>
@@ -1962,9 +1917,7 @@ function O2HealerSprite({ castFlash }: { castFlash: boolean }) {
         borderRadius:8, borderTopLeftRadius:16, borderTopRightRadius:8,
         borderWidth:2, borderColor:accent, overflow:"hidden",
         backgroundColor:vest }}>
-        <LinearGradient colors={["#10b98140","#064e3b","#022c22"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Chest pocket */}
         <View style={{ position:"absolute", top:5, left:3, width:12, height:9,
           borderRadius:3, borderWidth:1.5, borderColor:accent+"70" }}>
@@ -2006,9 +1959,7 @@ function O2HealerSprite({ castFlash }: { castFlash: boolean }) {
       <View style={{ position:"absolute", top:0, left:10, width:32, height:26,
         borderRadius:13, backgroundColor:skin, borderWidth:2, borderColor:"#e9a84c",
         overflow:"hidden" }}>
-        <LinearGradient colors={["#fef3c7","#fde8c8","#e9a84c40"]}
-          start={{x:0.1,y:0}} end={{x:0.9,y:1}}
-          style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }}/>
+
         {/* Hair */}
         <View style={{ position:"absolute", top:-8, left:-2, width:36, height:16,
           borderRadius:999, backgroundColor:hair }}/>
@@ -2227,15 +2178,7 @@ function DeploymentTileView({
         }}
         onPress={onPress}
       >
-        {/* Stone pad base gradient — warm raised platform look */}
-        <LinearGradient
-          colors={isOccupied
-            ? [unitColor + "40", unitColor + "18"]
-            : canAfford
-              ? ["#7a6030", "#4a3820"]
-              : ["#4a3c1c", "#2e2412"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: TILE_SIZE / 2 }}
-        />
+
         {/* Inner rune ring */}
         <View style={{ position: "absolute", width: TILE_SIZE - 12, height: TILE_SIZE - 12,
           borderRadius: (TILE_SIZE - 12) / 2, borderWidth: 1.5,
@@ -2403,11 +2346,7 @@ function HandPanel({
                       overflow: "hidden", marginVertical: 2,
                       alignItems: "center", justifyContent: "flex-end",
                     }}>
-                      <LinearGradient
-                        colors={[u.color + "0a", u.color + "30"]}
-                        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-                        style={StyleSheet.absoluteFillObject}
-                      />
+                      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: u.color + "18" }]} />
                       <ExpoImage
                         source={CARD_PORTRAITS[typeId]}
                         style={{ width: 60, height: 78 }}
@@ -2494,8 +2433,7 @@ function WavePauseOverlay({ wave }: { wave: number }) {
   const isBossNext = WAVES[nextWave]?.isBoss;
   return (
     <View style={s.pauseOverlay}>
-      <LinearGradient colors={["rgba(4,10,22,0.90)", "rgba(4,10,22,0.96)"]}
-        style={StyleSheet.absoluteFillObject} />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(4,10,22,0.93)" }]} />
       <Text style={s.pauseTitle}>
         {isBossNext ? "⚠ BOSS WAVE INCOMING" : nextWave < WAVES.length
           ? `WAVE ${nextWave + 1} INCOMING` : "FINAL WAVE CLEARED…"}
@@ -3158,10 +3096,7 @@ export default function WardDefense() {
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
 
       {/* ── HUD bar ── */}
-      <LinearGradient
-        colors={["#060e1aff", "#040c14f0"]}
-        style={s.hud}
-      >
+      <View style={[s.hud, { backgroundColor: "#060e1a" }]}>
         {/* Back button */}
         <Pressable style={s.hudBack} onPress={() => router.replace("/mode/ward-defense")} hitSlop={12}>
           <Ionicons name="arrow-back" size={15} color={COLORS.onSurface} />
@@ -3190,11 +3125,7 @@ export default function WardDefense() {
             borderWidth: 1, borderColor: "#F97316", shadowColor: "#F97316",
             shadowOpacity: 0.9, shadowRadius: 4, elevation: 4,
           }]}>
-            <LinearGradient
-              colors={[stabilityColor + "cc", stabilityColor]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={[s.hudStabilityFill, { width: `${cl(gs.stability, 0, 100)}%` as any }]}
-            />
+            <View style={[s.hudStabilityFill, { width: `${cl(gs.stability, 0, 100)}%` as any, backgroundColor: stabilityColor }]} />
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, marginBottom: 2 }}>
             <Text style={s.hudBarLabel}>Corruption</Text>
@@ -3205,11 +3136,7 @@ export default function WardDefense() {
             borderWidth: 1, borderColor: "#C084FC", shadowColor: "#C084FC",
             shadowOpacity: 0.9, shadowRadius: 4, elevation: 4,
           }]}>
-            <LinearGradient
-              colors={[corruptionColor + "cc", corruptionColor]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={[s.hudStabilityFill, { width: `${cl(gs.corruption, 0, 100)}%` as any }]}
-            />
+            <View style={[s.hudStabilityFill, { width: `${cl(gs.corruption, 0, 100)}%` as any, backgroundColor: corruptionColor }]} />
           </View>
           {gs.treatmentFieldTicks > 0 && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3 }}>
@@ -3247,7 +3174,7 @@ export default function WardDefense() {
           />
           <Text style={[s.hudSpeedTxt, speedMul === 2 && { color: "#0a0e14" }]}>{speedMul}×</Text>
         </Pressable>
-      </LinearGradient>
+      </View>
 
       {/* ── Ward Defense V2 Board — Lotus Healing Sanctum ── */}
       <View style={s.ward}>
@@ -3401,7 +3328,7 @@ function ClinicalQuestionPanel({
   }
 
   return (
-    <LinearGradient colors={["#e8d5a8", "#d4b870"]} style={s.clinicalPanel}>
+    <View style={[s.clinicalPanel, { backgroundColor: "#c4a050" }]}>
       {/* Header row */}
       <View style={s.clinicalHeaderRow}>
         <View style={s.clinicalBadge}>
@@ -3500,17 +3427,13 @@ function ClinicalQuestionPanel({
 
         {/* Right lotus badge */}
         <View style={s.clinicalLotus}>
-          <LinearGradient
-            colors={["#2d1500", "#6b3800", "#c8700040"]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={s.clinicalLotusBg}
-          >
+          <View style={[s.clinicalLotusBg, { backgroundColor: "#6b3800" }]}>
             <Text style={{ fontSize: 18, textAlign: "center" }}>✿</Text>
             <Text style={s.clinicalLotusLabel}>+{PREWAVE_AP_BONUS}{"\n"}AP</Text>
-          </LinearGradient>
+          </View>
         </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -3603,8 +3526,7 @@ function LobbyScreen({
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <Image source={require("../assets/images/ward_lobby_bg.png")}
         style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-      <LinearGradient colors={["#00000000", "#00000000", "#010610cc", "#010610f0"]}
-        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#010610a8" }]} />
       {player && <PlayerHeader player={player} compact />}
 
       {/* ── CASE INTRO MODAL ─────────────────────────────────────────── */}
@@ -3614,13 +3536,12 @@ function LobbyScreen({
           <View style={{ backgroundColor:"#0a1628", borderRadius:16, borderWidth:1.5,
             borderColor:"#1e3a5f", maxWidth:480, width:"100%", overflow:"hidden" }}>
             {/* Header */}
-            <LinearGradient colors={["#0e2a4a","#081828"]}
-              style={{ padding:18, paddingBottom:14 }}>
+            <View style={{ padding:18, paddingBottom:14, backgroundColor: "#0e2a4a" }}>
               <Text style={{ color:"#60a5fa", fontSize:9, fontWeight:"700",
                 letterSpacing:1.4, marginBottom:4 }}>{WINDWAY_CASE.kicker}</Text>
               <Text style={{ color:"#f0f9ff", fontSize:20, fontWeight:"800",
                 letterSpacing:0.3 }}>{WINDWAY_CASE.title}</Text>
-            </LinearGradient>
+            </View>
             <ScrollView style={{ maxHeight:480 }} contentContainerStyle={{ padding:16, gap:12 }}
               showsVerticalScrollIndicator={false}>
               {/* Story + findings */}
@@ -3672,7 +3593,7 @@ function LobbyScreen({
 
         <View style={s.lobbyHeroArea}>
           <View style={s.lobbyEmblem}>
-            <LinearGradient colors={["#0e2040", "#081828"]} style={StyleSheet.absoluteFillObject} />
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#0e2040" }]} />
             <View style={{ width: 48, height: 14, borderRadius: 2, backgroundColor: "#60A5FA" }} />
             <View style={{ position: "absolute", width: 14, height: 48, borderRadius: 2, backgroundColor: "#60A5FA" }} />
           </View>
@@ -4097,15 +4018,8 @@ function ResultScreen({
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
-      <LinearGradient
-        colors={won ? ["#041c10", "#062a18", "#041410"] : ["#180608", "#26090c", "#120406"]}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <LinearGradient
-        colors={won ? ["#34D39920", "#00000000"] : ["#F8717120", "#00000000"]}
-        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-        style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "40%" }}
-      />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: won ? "#062a18" : "#26090c" }]} />
+      <View style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "40%", backgroundColor: won ? "#34D39920" : "#F8717120" }} />
       <ScrollView contentContainerStyle={s.resultContent} showsVerticalScrollIndicator={false}>
         <Text style={s.resultEmoji}>{won ? "🏆" : "💔"}</Text>
         <Text style={[s.resultTitle, { color: won ? COLORS.success : COLORS.error }]}>
