@@ -191,9 +191,9 @@ export function Chapter1VisualMap({
     if (w > 0 && w !== W) setW(w);
   };
 
-  // Intercept part press: show popup for battle/boss/ward nodes; direct launch for others
+  // Intercept part press: show popup for every actionable node before launching
   const handleNodePress = (part: ChapterPart) => {
-    if (part.type === "battle" || part.type === "mini_boss" || part.type === "ward_defense") {
+    if (part.route && !part.isPlaceholder) {
       setMissionPart(part);
     } else {
       onPartPress(part);

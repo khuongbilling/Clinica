@@ -207,7 +207,7 @@ export function Chapter4VisualMap({
   const [missionPart, setMissionPart] = useState<ChapterPart | null>(null);
 
   const handleNodePress = (part: ChapterPart) => {
-    if (part.type === "battle" || part.type === "mini_boss" || part.type === "ward_defense") {
+    if (part.route && !part.isPlaceholder) {
       setMissionPart(part);
     } else {
       onPartPress(part);
