@@ -464,8 +464,20 @@ function ChapterCard({
 
   return (
     <View style={[styles.chapterWrap, isFirst && { marginTop: 0 }]}>
-      {/* Vertical connector line */}
-      {!isLast && <View style={[styles.connector, { backgroundColor: isLocked ? COLORS.border : accent + "40" }]} />}
+      {/* Painted journey connector — ornamental diamond route dots */}
+      {!isLast && (
+        <View style={styles.connector}>
+          {[0, 1, 2, 3].map((k) => (
+            <View
+              key={k}
+              style={[
+                styles.connectorDot,
+                { backgroundColor: isLocked ? COLORS.border + "80" : accent + "65" },
+              ]}
+            />
+          ))}
+        </View>
+      )}
 
       {/* Chapter header row */}
       <Pressable
@@ -1290,12 +1302,21 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.md,
   },
   connector: {
-    position: "absolute",
-    left: 19,
-    top: 56,
-    bottom: -SPACING.sm,
-    width: 2,
-    zIndex: 0,
+    position:       "absolute",
+    left:           15,
+    top:            58,
+    bottom:         -SPACING.sm,
+    width:          10,
+    zIndex:         0,
+    flexDirection:  "column",
+    justifyContent: "space-evenly",
+    alignItems:     "center",
+  },
+  connectorDot: {
+    width:        7,
+    height:       7,
+    borderRadius: 1.5,
+    transform:    [{ rotate: "45deg" }],
   },
 
   // Chapter card

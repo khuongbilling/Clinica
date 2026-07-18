@@ -301,7 +301,12 @@ export function GenericChapterVisualMap({
                   ay={nd.layout.y}
                   bx={nodes[i + 1].layout.xf * W}
                   by={nodes[i + 1].layout.y}
-                  complete={nd.status === "complete"}
+                  pathState={
+                    nd.status === "complete" ? "complete" :
+                    (nd.status === "next" || nd.status === "available") ? "available" :
+                    "locked"
+                  }
+                  chapter={chapter.number}
                   accentColor={chapterAccent}
                   canvasW={W}
                   canvasH={CANVAS_H}
