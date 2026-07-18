@@ -78,17 +78,17 @@ interface NL {
 }
 
 const NODE_LAYOUT: NL[] = [
-  { id: "c5p1", xf: 0.65, y:   62, side: "right",  r: 28 }, // Story: The Empty Atrium
-  { id: "c5p2", xf: 0.27, y:  190, side: "left",   r: 36 }, // Realm: First Ward Space (large — special!)
-  { id: "c5p3", xf: 0.68, y:  316, side: "right",  r: 30 }, // Battle: River Sludge
-  { id: "c5p4", xf: 0.50, y:  424, side: "center", r: 26 }, // Story: Healing Beyond Battle
-  { id: "c5p5", xf: 0.68, y:  530, side: "right",  r: 30 }, // Battle: Tired After Treatment
-  { id: "c5p6", xf: 0.27, y:  644, side: "left",   r: 32 }, // WD: Supply Hall Under Pressure
-  { id: "c5p7", xf: 0.68, y:  756, side: "right",  r: 30 }, // Battle: Multi-Step Care Plan (REQUIRED)
-  { id: "c5p8", xf: 0.50, y:  880, side: "center", r: 38 }, // Mini-boss: The Sanctuary Breathes (REQUIRED)
+  { id: "c5p1", xf: 0.74, y:   78, side: "right",  r: 44 }, // Story: The Empty Atrium
+  { id: "c5p2", xf: 0.20, y:  260, side: "left",   r: 58 }, // Realm: First Ward Space (large — special!)
+  { id: "c5p3", xf: 0.76, y:  455, side: "right",  r: 46 }, // Battle: River Sludge
+  { id: "c5p4", xf: 0.50, y:  625, side: "center", r: 42 }, // Story: Healing Beyond Battle
+  { id: "c5p5", xf: 0.74, y:  800, side: "right",  r: 46 }, // Battle: Tired After Treatment
+  { id: "c5p6", xf: 0.20, y:  980, side: "left",   r: 52 }, // WD: Supply Hall Under Pressure
+  { id: "c5p7", xf: 0.74, y: 1165, side: "right",  r: 46 }, // Battle: Multi-Step Care Plan (REQUIRED)
+  { id: "c5p8", xf: 0.50, y: 1365, side: "center", r: 62 }, // Mini-boss: The Sanctuary Breathes (REQUIRED)
 ];
 
-const CANVAS_H = 970;
+const CANVAS_H = 1510;
 
 // ── Chapter 5 data ────────────────────────────────────────────────────────────
 

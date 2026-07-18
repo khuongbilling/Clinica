@@ -75,17 +75,17 @@ interface NL {
 }
 
 const NODE_LAYOUT: NL[] = [
-  { id: "c2p1", xf: 0.67, y:  65, side: "right",  r: 28 }, // Memory: Briefing
-  { id: "c2p2", xf: 0.24, y: 195, side: "left",   r: 28 }, // Challenge: Cue Hunt
-  { id: "c2p3", xf: 0.71, y: 315, side: "right",  r: 28 }, // Challenge: Rapid Triage
-  { id: "c2p4", xf: 0.22, y: 430, side: "left",   r: 28 }, // Challenge: Stabilize Stack
-  { id: "c2p5", xf: 0.69, y: 545, side: "right",  r: 28 }, // Battle: Fever Imp
-  { id: "c2p6", xf: 0.26, y: 655, side: "left",   r: 28 }, // Memory Fragment: First Ally
-  { id: "c2p7", xf: 0.48, y: 790, side: "center", r: 34 }, // Mini-boss: Fever Shade
-  { id: "c2p8", xf: 0.48, y: 940, side: "center", r: 26 }, // Reflection: Rotation Complete
+  { id: "c2p1", xf: 0.74, y:  75, side: "right",  r: 44 }, // Memory: Briefing
+  { id: "c2p2", xf: 0.20, y: 255, side: "left",   r: 44 }, // Challenge: Cue Hunt
+  { id: "c2p3", xf: 0.76, y: 435, side: "right",  r: 44 }, // Challenge: Rapid Triage
+  { id: "c2p4", xf: 0.18, y: 615, side: "left",   r: 44 }, // Challenge: Stabilize Stack
+  { id: "c2p5", xf: 0.74, y: 795, side: "right",  r: 44 }, // Battle: Fever Imp
+  { id: "c2p6", xf: 0.20, y: 975, side: "left",   r: 44 }, // Memory Fragment: First Ally
+  { id: "c2p7", xf: 0.50, y:1175, side: "center", r: 54 }, // Mini-boss: Fever Shade
+  { id: "c2p8", xf: 0.50, y:1385, side: "center", r: 42 }, // Reflection: Rotation Complete
 ];
 
-const CANVAS_H = 1060;
+const CANVAS_H = 1510;
 
 // ── Chapter 2 data ────────────────────────────────────────────────────────────
 

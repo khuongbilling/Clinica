@@ -77,18 +77,18 @@ interface NL {
 }
 
 const NODE_LAYOUT: NL[] = [
-  { id: "c3p1", xf: 0.64, y:   60, side: "right",  r: 28 }, // Memory: Breathless Hall
-  { id: "c3p2", xf: 0.28, y:  180, side: "left",   r: 28 }, // Challenge: Cue Hunt
-  { id: "c3p3", xf: 0.70, y:  300, side: "right",  r: 28 }, // Challenge: Rapid Triage
-  { id: "c3p4", xf: 0.28, y:  415, side: "left",   r: 30 }, // Battle: The Hidden Wheeze
-  { id: "c3p5", xf: 0.70, y:  525, side: "right",  r: 28 }, // Memory: A Lesson in Priority
-  { id: "c3p6", xf: 0.28, y:  640, side: "left",   r: 28 }, // Challenge: Stabilize Stack
-  { id: "c3p7", xf: 0.70, y:  752, side: "right",  r: 30 }, // Battle: Breath Under Pressure
-  { id: "c3p8", xf: 0.50, y:  882, side: "center", r: 36 }, // Mini-boss: Breathless Gale Spirit
-  { id: "c3p9", xf: 0.50, y: 1010, side: "center", r: 26 }, // Reflection: What Air Teaches
+  { id: "c3p1", xf: 0.74, y:   75, side: "right",  r: 44 }, // Memory: Breathless Hall
+  { id: "c3p2", xf: 0.20, y:  255, side: "left",   r: 44 }, // Challenge: Cue Hunt
+  { id: "c3p3", xf: 0.76, y:  435, side: "right",  r: 44 }, // Challenge: Rapid Triage
+  { id: "c3p4", xf: 0.20, y:  615, side: "left",   r: 46 }, // Battle: The Hidden Wheeze
+  { id: "c3p5", xf: 0.74, y:  795, side: "right",  r: 44 }, // Memory: A Lesson in Priority
+  { id: "c3p6", xf: 0.20, y:  975, side: "left",   r: 44 }, // Challenge: Stabilize Stack
+  { id: "c3p7", xf: 0.74, y: 1155, side: "right",  r: 46 }, // Battle: Breath Under Pressure
+  { id: "c3p8", xf: 0.50, y: 1355, side: "center", r: 58 }, // Mini-boss: Breathless Gale Spirit
+  { id: "c3p9", xf: 0.50, y: 1570, side: "center", r: 42 }, // Reflection: What Air Teaches
 ];
 
-const CANVAS_H = 1100;
+const CANVAS_H = 1700;
 
 // ── Chapter 3 data ────────────────────────────────────────────────────────────
 

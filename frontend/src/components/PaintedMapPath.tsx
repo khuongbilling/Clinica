@@ -1,7 +1,12 @@
 /**
- * PaintedMapPath — V4 illustrated chapter-specific path connector.
+ * PaintedMapPath — V5 illustrated chapter-specific path connector.
  *
- * Three visual states × five chapter stamp themes. No dashes or dots anywhere.
+ * Upgraded for larger node spacing (~180–200 px between nodes):
+ *  · Thicker road bands (shadow 32, surface 24, glow 12, spine 4)
+ *  · More stamps per segment (complete=9, available=7)
+ *  · Larger stamp radius (r=10)
+ *
+ * Three visual states × five chapter stamp themes. No dashes or dots.
  *
  * States:
  *   complete   → full painted road band + vivid thematic stamps (cleared segment)
@@ -124,16 +129,16 @@ export function PaintedMapPath({
         style={{ position: "absolute", top: 0, left: 0 }}
         pointerEvents="none"
       >
-        <SvgPath d={d} stroke={"#00000020"} strokeWidth={18} fill="none" strokeLinecap="round" />
-        <SvgPath d={d} stroke={roadColor + "1E"} strokeWidth={12} fill="none" strokeLinecap="round" />
-        <SvgPath d={d} stroke={"#FFFFFF07"} strokeWidth={5}   fill="none" strokeLinecap="round" />
+        <SvgPath d={d} stroke={"#00000020"} strokeWidth={26} fill="none" strokeLinecap="round" />
+        <SvgPath d={d} stroke={roadColor + "1E"} strokeWidth={18} fill="none" strokeLinecap="round" />
+        <SvgPath d={d} stroke={"#FFFFFF07"} strokeWidth={7}   fill="none" strokeLinecap="round" />
       </Svg>
     );
   }
 
   const isComplete = pathState === "complete";
-  const STAMP_N    = isComplete ? 6 : 5;
-  const STAMP_R    = 6;
+  const STAMP_N    = isComplete ? 9 : 7;
+  const STAMP_R    = 10;
   const points     = bezSample(ax, ay, bx, by, STAMP_N);
 
   return (
@@ -146,29 +151,31 @@ export function PaintedMapPath({
       {isComplete ? (
         <>
           {/* Dark earth grounding shadow */}
-          <SvgPath d={d} stroke={"#00000045"} strokeWidth={24} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={"#00000050"} strokeWidth={32} fill="none" strokeLinecap="round" />
           {/* Painted road surface */}
-          <SvgPath d={d} stroke={roadColor + "85"} strokeWidth={18} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={roadColor + "90"} strokeWidth={24} fill="none" strokeLinecap="round" />
           {/* Glowing accent lane */}
-          <SvgPath d={d} stroke={accentColor + "80"} strokeWidth={7}   fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={accentColor + "88"} strokeWidth={12}  fill="none" strokeLinecap="round" />
           {/* Luminous center spine */}
-          <SvgPath d={d} stroke={accentColor + "CC"} strokeWidth={2.5} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={accentColor + "CC"} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+          {/* Bright highlight spine */}
+          <SvgPath d={d} stroke={"#FFFFFF30"} strokeWidth={1.5} fill="none" strokeLinecap="round" />
         </>
       ) : (
         <>
           {/* Faint earth bed */}
-          <SvgPath d={d} stroke={"#00000025"} strokeWidth={18} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={"#00000030"} strokeWidth={26} fill="none" strokeLinecap="round" />
           {/* Soft available-ahead road surface */}
-          <SvgPath d={d} stroke={roadColor + "48"} strokeWidth={13} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={roadColor + "55"} strokeWidth={18} fill="none" strokeLinecap="round" />
           {/* Dim accent lane */}
-          <SvgPath d={d} stroke={accentColor + "42"} strokeWidth={5} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={accentColor + "48"} strokeWidth={7}  fill="none" strokeLinecap="round" />
         </>
       )}
 
       {/* ── Thematic stamp markers along path ────────────────────────────── */}
       {points.map((pt, i) => {
         // Slight size variation for hand-painted, non-algorithmic look
-        const r  = STAMP_R * (i % 3 === 1 ? 0.84 : i % 3 === 2 ? 1.08 : 1.0);
+        const r  = STAMP_R * (i % 3 === 1 ? 0.80 : i % 3 === 2 ? 1.12 : 1.0);
         // rotate(angle+90): aligns stamp long axis (+y) with path tangent
         const tf = `translate(${pt.x.toFixed(1)}, ${pt.y.toFixed(1)}) rotate(${(pt.angle + 90).toFixed(1)})`;
         const sd = stampD(chapter, r);
@@ -179,11 +186,11 @@ export function PaintedMapPath({
               <>
                 <SvgPath d={sd} fill={accentColor + "E0"} />
                 {/* Inner highlight — smaller, lighter center */}
-                <SvgPath d={stampD(chapter, r * 0.42)} fill={accentColor + "60"} />
+                <SvgPath d={stampD(chapter, r * 0.40)} fill={accentColor + "60"} />
               </>
             ) : (
               /* Dim outline-only — available-ahead look */
-              <SvgPath d={sd} fill={accentColor + "22"} stroke={accentColor + "55"} strokeWidth={1} />
+              <SvgPath d={sd} fill={accentColor + "25"} stroke={accentColor + "55"} strokeWidth={1.5} />
             )}
           </SvgG>
         );

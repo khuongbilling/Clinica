@@ -92,18 +92,18 @@ interface NL {
   r:    number;
 }
 
-const NODE_SPACING = 120;
-const START_Y      = 62;
+const NODE_SPACING = 190;
+const START_Y      = 80;
 
 function getNodeRadius(type: string): number {
   switch (type) {
-    case "mini_boss":    return 36;
-    case "battle":       return 30;
-    case "ward_defense": return 30;
-    case "realm":        return 32;
-    case "arena":        return 28;
-    case "minigame":     return 28;
-    default:             return 26;
+    case "mini_boss":    return 58;
+    case "battle":       return 46;
+    case "ward_defense": return 46;
+    case "realm":        return 50;
+    case "arena":        return 44;
+    case "minigame":     return 44;
+    default:             return 42;
   }
 }
 
@@ -111,7 +111,7 @@ function computeLayout(parts: ChapterPart[]): NL[] {
   return parts.map((p, i) => {
     const isLast = i === parts.length - 1;
     const side: NodeSide = isLast ? "center" : (i % 2 === 0 ? "right" : "left");
-    const xf              = isLast ? 0.50 : (i % 2 === 0 ? 0.65 : 0.27);
+    const xf              = isLast ? 0.50 : (i % 2 === 0 ? 0.73 : 0.22);
     return {
       id:   p.id,
       xf,

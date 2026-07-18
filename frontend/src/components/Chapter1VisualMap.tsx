@@ -78,15 +78,15 @@ interface NL {
 }
 
 const NODE_LAYOUT: NL[] = [
-  { id: "c1n1", xf: 0.67, y: 60,  side: "right",  r: 28 },
-  { id: "c1n2", xf: 0.24, y: 180, side: "left",   r: 28 },
-  { id: "c1n3", xf: 0.70, y: 300, side: "right",  r: 28 },
-  { id: "c1n4", xf: 0.21, y: 420, side: "left",   r: 28 },
-  { id: "c1n5", xf: 0.68, y: 530, side: "right",  r: 28 },
-  { id: "c1n6", xf: 0.47, y: 665, side: "center", r: 34 },
+  { id: "c1n1", xf: 0.74, y:  75, side: "right",  r: 44 },
+  { id: "c1n2", xf: 0.20, y: 255, side: "left",   r: 44 },
+  { id: "c1n3", xf: 0.76, y: 435, side: "right",  r: 44 },
+  { id: "c1n4", xf: 0.18, y: 615, side: "left",   r: 44 },
+  { id: "c1n5", xf: 0.74, y: 785, side: "right",  r: 44 },
+  { id: "c1n6", xf: 0.50, y: 975, side: "center", r: 56 },
 ];
 
-const CANVAS_H = 800;
+const CANVAS_H = 1110;
 
 // ── Chapter 1 data ────────────────────────────────────────────────────────────
 

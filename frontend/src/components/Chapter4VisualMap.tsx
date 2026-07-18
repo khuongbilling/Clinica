@@ -80,18 +80,18 @@ interface NL {
 }
 
 const NODE_LAYOUT: NL[] = [
-  { id: "c4p1", xf: 0.65, y:   60, side: "right",  r: 28 }, // Memory: Ward Doors Shake
-  { id: "c4p2", xf: 0.27, y:  178, side: "left",   r: 28 }, // Challenge: Triage Drill
-  { id: "c4p3", xf: 0.68, y:  294, side: "right",  r: 30 }, // Battle: Crowded Ward Warning
-  { id: "c4p4", xf: 0.27, y:  408, side: "left",   r: 30 }, // WD: First Wave
-  { id: "c4p5", xf: 0.68, y:  520, side: "right",  r: 28 }, // Memory: Holding the Line
-  { id: "c4p6", xf: 0.27, y:  635, side: "left",   r: 28 }, // Challenge: Stack Drill
-  { id: "c4p7", xf: 0.68, y:  748, side: "right",  r: 32 }, // WD: Second Wave (REQUIRED)
-  { id: "c4p8", xf: 0.50, y:  878, side: "center", r: 36 }, // Mini-boss WD: Final Stand (REQUIRED)
-  { id: "c4p9", xf: 0.50, y: 1006, side: "center", r: 26 }, // Reflection: After the Rush
+  { id: "c4p1", xf: 0.74, y:   75, side: "right",  r: 44 }, // Memory: Ward Doors Shake
+  { id: "c4p2", xf: 0.20, y:  255, side: "left",   r: 44 }, // Challenge: Triage Drill
+  { id: "c4p3", xf: 0.74, y:  435, side: "right",  r: 46 }, // Battle: Crowded Ward Warning
+  { id: "c4p4", xf: 0.20, y:  615, side: "left",   r: 46 }, // WD: First Wave
+  { id: "c4p5", xf: 0.74, y:  795, side: "right",  r: 44 }, // Memory: Holding the Line
+  { id: "c4p6", xf: 0.20, y:  975, side: "left",   r: 44 }, // Challenge: Stack Drill
+  { id: "c4p7", xf: 0.74, y: 1155, side: "right",  r: 50 }, // WD: Second Wave (REQUIRED)
+  { id: "c4p8", xf: 0.50, y: 1355, side: "center", r: 58 }, // Mini-boss WD: Final Stand (REQUIRED)
+  { id: "c4p9", xf: 0.50, y: 1570, side: "center", r: 42 }, // Reflection: After the Rush
 ];
 
-const CANVAS_H = 1090;
+const CANVAS_H = 1700;
 
 // ── Chapter 4 data ────────────────────────────────────────────────────────────
 

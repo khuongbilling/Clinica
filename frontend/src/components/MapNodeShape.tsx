@@ -1,5 +1,5 @@
 /**
- * MapNodeShape — V5 illustrated 2.5D map node.
+ * MapNodeShape — V6 illustrated 2.5D map node.
  *
  * Each node type displays a unique transparent-bg illustrated PNG.
  * The PNG IS the node — no circle container, no square icon box.
@@ -16,11 +16,13 @@
  * Visual states:
  *   locked       → ghost mist (opacity 0.18) + small LOCKED pill
  *   available    → full opacity, no container ring
- *   next/current → outer glow ring + accent border + ▶ START tag
+ *   next/current → soft radial glow bloom + ▶ START tag
  *   complete     → softly dimmed (0.88) + gold ✦ lotus seal badge
  *
- * Boss/trial (mini_boss): crimson dual-aura ring; layout data already
- * gives boss nodes a larger r value so no size override needed here.
+ * V6 changes:
+ *   · UI elements (labels, badges, tags) scale proportionally with r
+ *   · "next" node gets a soft radial glow bloom behind the PNG art
+ *   · No decorative rings/circles anywhere (removed in V5)
  */
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -96,7 +98,7 @@ const NODE_LABEL: Record<string, string> = {
   arena:           "Arena",
 };
 
-// ── Ionicon names kept for legacy callers (not used in V5 rendering) ──────────
+// ── Ionicon names kept for legacy callers (not used in V6 rendering) ──────────
 export const NODE_TYPE_ICON: Record<string, string> = {
   battle:          "flash",
   mini_boss:       "skull",
@@ -134,6 +136,26 @@ export function MapNodeShape({
   // Boss nodes use dark crimson glow; others use per-chapter accent
   const glowColor = isBoss ? "#C0392B" : accentColor;
 
+  // ── Scale UI elements proportionally with node size ──────────────────────
+  // Base reference: r=44 → label font 10, badge 28, lock icon 10, start font 9
+  const scale      = r / 44;
+  const labelFont  = Math.round(10 * scale);
+  const labelPadH  = Math.round(7  * scale);
+  const labelPadV  = Math.round(3  * scale);
+  const labelRad   = Math.round(6  * scale);
+  const badgeSize  = Math.round(28 * scale);
+  const badgeFont  = Math.round(14 * scale);
+  const lockIcon   = Math.max(8, Math.round(10 * scale));
+  const lockFont   = Math.max(7, Math.round(8  * scale));
+  const startFont  = Math.round(9  * scale);
+  const startPadH  = Math.round(8  * scale);
+  const startPadV  = Math.round(3  * scale);
+  const startBelow = Math.round(22 * scale);
+  const badgeOff   = Math.round(6  * scale);
+
+  // Glow bloom size behind "next" node (larger soft halo, not a ring)
+  const bloomSize  = SIZE + Math.round(36 * scale);
+
   return (
     <Pressable
       onPress={isActionable ? onPress : undefined}
@@ -146,6 +168,36 @@ export function MapNodeShape({
         justifyContent: "center",
       }}
     >
+      {/* ── NEXT: soft radial glow bloom behind art (Genshin-style) ── */}
+      {isNext && (
+        <View
+          style={{
+            position:      "absolute",
+            width:         bloomSize,
+            height:        bloomSize,
+            borderRadius:  bloomSize / 2,
+            backgroundColor: glowColor + "28",
+            left:          (SIZE - bloomSize) / 2,
+            top:           (SIZE - bloomSize) / 2,
+            pointerEvents: "none",
+          } as any}
+        />
+      )}
+      {isNext && (
+        <View
+          style={{
+            position:      "absolute",
+            width:         SIZE + Math.round(16 * scale),
+            height:        SIZE + Math.round(16 * scale),
+            borderRadius:  (SIZE + Math.round(16 * scale)) / 2,
+            backgroundColor: glowColor + "18",
+            left:          -Math.round(8 * scale),
+            top:           -Math.round(8 * scale),
+            pointerEvents: "none",
+          } as any}
+        />
+      )}
+
       {/* ── Main illustrated 2.5D node — the art IS the node ── */}
       <Image
         source={icon}
@@ -165,20 +217,20 @@ export function MapNodeShape({
             bottom:            2,
             alignSelf:         "center",
             backgroundColor:   "#1A2A3A99",
-            borderRadius:      8,
-            paddingHorizontal: 5,
-            paddingVertical:   2,
+            borderRadius:      labelRad,
+            paddingHorizontal: labelPadH,
+            paddingVertical:   labelPadV,
             flexDirection:     "row",
             alignItems:        "center",
             gap:               3,
             pointerEvents:     "none",
           } as any}
         >
-          <Ionicons name="lock-closed" size={7} color="#8AABB8" />
+          <Ionicons name="lock-closed" size={lockIcon} color="#8AABB8" />
           <Text style={{
-            fontSize:    6,
-            color:       "#8AABB8",
-            fontWeight:  "700",
+            fontSize:      lockFont,
+            color:         "#8AABB8",
+            fontWeight:    "700",
             letterSpacing: 0.3,
           }}>
             LOCKED
@@ -191,20 +243,20 @@ export function MapNodeShape({
         <View
           style={{
             position:          "absolute",
-            bottom:            4,
+            bottom:            labelPadV + 2,
             alignSelf:         "center",
-            backgroundColor:   "rgba(0,0,0,0.58)",
-            borderRadius:      4,
-            paddingHorizontal: 5,
-            paddingVertical:   2,
+            backgroundColor:   "rgba(0,0,0,0.62)",
+            borderRadius:      labelRad,
+            paddingHorizontal: labelPadH,
+            paddingVertical:   labelPadV,
             pointerEvents:     "none",
           } as any}
         >
           <Text
             style={{
-              fontSize:      7,
+              fontSize:      labelFont,
               fontWeight:    "800",
-              letterSpacing: 0.7,
+              letterSpacing: 0.8,
               color:         isDone ? accentColor + "BB" : accentColor,
               textTransform: "uppercase" as const,
             }}
@@ -220,26 +272,22 @@ export function MapNodeShape({
         <View
           style={{
             position:        "absolute",
-            bottom:          -4,
-            right:           -4,
-            width:           22,
-            height:          22,
-            borderRadius:    11,
+            bottom:          -badgeOff,
+            right:           -badgeOff,
+            width:           badgeSize,
+            height:          badgeSize,
+            borderRadius:    badgeSize / 2,
             backgroundColor: "#E8C868",
             alignItems:      "center",
             justifyContent:  "center",
-            shadowColor:     "#E8C868",
-            shadowOpacity:   0.95,
-            shadowRadius:    6,
-            elevation:       6,
             pointerEvents:   "none",
           } as any}
         >
           <Text style={{
-            fontSize:   11,
+            fontSize:   badgeFont,
             color:      "#0B1020",
             fontWeight: "900",
-            lineHeight: 14,
+            lineHeight: badgeFont * 1.2,
           }}>
             ✦
           </Text>
@@ -251,21 +299,21 @@ export function MapNodeShape({
         <View
           style={{
             position:          "absolute",
-            bottom:            -18,
-            backgroundColor:   accentColor,
-            borderRadius:      4,
-            paddingHorizontal: 6,
-            paddingVertical:   2,
+            bottom:            -startBelow,
+            backgroundColor:   glowColor,
+            borderRadius:      5,
+            paddingHorizontal: startPadH,
+            paddingVertical:   startPadV,
             flexDirection:     "row",
             alignItems:        "center",
             pointerEvents:     "none",
           } as any}
         >
           <Text style={{
-            fontSize:     7,
-            color:        "#fff",
-            fontWeight:   "900",
-            letterSpacing: 0.5,
+            fontSize:      startFont,
+            color:         "#fff",
+            fontWeight:    "900",
+            letterSpacing: 0.6,
           }}>
             ▶ START
           </Text>
