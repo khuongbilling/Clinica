@@ -1,0 +1,73 @@
+Clinica Push 8: Lotus Recall Character Creation
+
+Goal:
+Move permanent character creation after the scripted defeat and make it feel like identity reconstruction inside Lotus Recall.
+
+Intro text:
+“Your strength has been taken from you.”
+
+“Your title has been forgotten.”
+
+“Your achievements belong to a life that has already ended.”
+
+“Yet something remains.”
+
+“A will to heal.”
+
+“A desire to understand.”
+
+“And one final opportunity to begin again.”
+
+Display:
+Who will you become this time?
+
+Visual environment:
+- Shallow reflective water
+- Floating lotus petals
+- Broken fragments of Former Self armor
+- Luminous medical symbols
+- Faint silhouettes of past companions
+- A large reflection or mirror made from light
+- Dark background with teal, violet, gold, and white illumination
+- Slow camera movement
+- Ripples with each selection
+
+Character reconstruction animation:
+Start with featureless humanoid silhouette.
+As player makes selections:
+1. Former Self mask dissolves
+2. Legendary armor breaks into particles
+3. Body shape changes
+4. Facial features appear
+5. Hair and skin options materialize
+6. Beginner outfit replaces legendary gear
+7. Starting tool or clinical focus forms from broken fragments
+8. High-level aura fades
+9. Smaller beginner aura remains
+10. New character opens eyes after confirmation
+
+Character creation options:
+- Name
+- Pronouns
+- Appearance
+- Body and face options
+- Hair
+- Skin tone
+- Starting outfit
+- Starting weapon, tool, or clinical focus
+- Personality-oriented questions
+- Initial learner or healthcare pathway recommendation
+
+Rules:
+- This creates the permanent Level 1 identity.
+- The Former Self is gone, but potential remains.
+- Questionnaire may recommend a class/pathway but should not permanently lock the player.
+- Player can choose another option.
+- Preserve choices if player closes the app mid-creation.
+
+Acceptance checks:
+- Character creation happens only after defeat.
+- It feels connected to Lotus Recall, not a generic form.
+- Permanent player identity is created after confirmation.
+- Choices persist through reload.
+- Returning players are not forced into creation again.

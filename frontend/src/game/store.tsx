@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/src/api/client';
-import { PlayerState } from './types';
+import { Aptitude, PlayerState } from './types';
 import { RANKS } from './content';
 import { isValidAvatarId } from './avatars';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
@@ -57,6 +57,10 @@ function normalizeProgression(p: PlayerState): PlayerState {
   // surprising returning players with it. Brand-new players get `false`
   // explicitly in createPlayer below, so they DO see it once.
   if (p.seen_reminiscence === undefined) { p = { ...p, seen_reminiscence: true }; changed = true; }
+  // Push 8 — character-creation fields; null backfill for pre-existing players.
+  if (p.pronouns      === undefined) { p = { ...p, pronouns: null };       changed = true; }
+  if (p.char_skin_tone === undefined) { p = { ...p, char_skin_tone: null }; changed = true; }
+  if (p.char_hair_style === undefined) { p = { ...p, char_hair_style: null }; changed = true; }
   // Manhwa story layer — backfill the seen-scenes list as empty so chapter
   // scenes at already-passed milestones still play once for existing players
   // (they have never seen them), then never again.
@@ -501,6 +505,18 @@ type Ctx = {
   // J4 — Hero Skill Academy: spend learning materials + University Credits to upgrade hero skills.
   upgradeHeroSkill: (upgradeId: string) => Promise<{ ok: boolean; message: string }>;
   updateState: (next: PlayerState) => Promise<void>;
+  // Push 8 — Save all choices from the Lotus Recall identity-reconstruction screen.
+  confirmIdentityReconstruction: (data: IdentityReconstructionInput) => Promise<void>;
+};
+
+// Push 8 — Full set of identity choices made during Lotus Recall character creation.
+export type IdentityReconstructionInput = {
+  name: string;
+  pronouns: string;
+  skinTone: number;
+  hairStyle: number;
+  aptitude: Aptitude;
+  recommendedAptitude: Aptitude;
 };
 
 // Result of the post-recall class-diagnostic quiz. Mirrors the class-relevant
@@ -598,6 +614,9 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     name: (args.name || 'Healer').trim().slice(0, 24) || 'Healer',
     aptitude: args.aptitude as any,
     avatar_id: '',
+    pronouns: null,
+    char_skin_tone: null,
+    char_hair_style: null,
     recommended_aptitude: args.recommended_aptitude as any || null,
     learning_goal: args.learning_goal || null,
     learning_profile: args.learning_profile || null,
@@ -2029,6 +2048,27 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // Push 8 — Save all identity-reconstruction choices in one atomic write.
+  // Called from IdentityReconstructionScreen just before onComplete() advances
+  // the prologue phase. Idempotent: calling it again only overwrites fields.
+  const confirmIdentityReconstruction = useCallback(async (data: IdentityReconstructionInput) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const cleanName = (data.name || '').trim().slice(0, 24) || 'Healer';
+    const next: PlayerState = {
+      ...base,
+      name:                 cleanName,
+      pronouns:             data.pronouns || null,
+      char_skin_tone:       data.skinTone,
+      char_hair_style:      data.hairStyle,
+      aptitude:             data.aptitude,
+      recommended_aptitude: data.recommendedAptitude,
+      identity_restored:    true,
+    };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   // Persist the player's chosen hand-drawn portrait avatar. `id` is an avatar
   // registry key (see game/avatars.ts); '' clears back to the aptitude icon.
   const setAvatar = useCallback(async (id: string) => {
@@ -2582,7 +2622,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
     setEquippedCards, markCardTutorialSeen, markCallTutorialSeen,
     advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards]);
+    confirmIdentityReconstruction,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

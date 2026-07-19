@@ -122,6 +122,10 @@ class Player(BaseModel):
     opening_prologue_phase: Optional[str] = None
     prologue_rewards_claimed: bool = True
     avatar_id: str = ""
+    # Push 8 — Lotus Recall character-creation choices
+    pronouns: Optional[str] = None
+    char_skin_tone: Optional[int] = None
+    char_hair_style: Optional[int] = None
     rank: str = "Sprout Healer"
     rank_index: int = 0
     xp: int = 0
@@ -218,6 +222,10 @@ class PlayerUpdate(BaseModel):
     opening_prologue_phase: Optional[str] = None
     prologue_rewards_claimed: Optional[bool] = None
     avatar_id: Optional[str] = None
+    # Push 8 — Lotus Recall character-creation choices
+    pronouns: Optional[str] = None
+    char_skin_tone: Optional[int] = None
+    char_hair_style: Optional[int] = None
     rank: Optional[str] = None
     rank_index: Optional[int] = None
     xp: Optional[int] = None

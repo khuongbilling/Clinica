@@ -154,6 +154,12 @@ export interface PlayerState {
   // Chosen hand-drawn portrait avatar id (see game/avatars.ts). Empty string
   // falls back to the aptitude Ionicon in the header/profile.
   avatar_id?: string;
+  // Push 8 — Lotus Recall character-creation choices (set once during
+  // identity_reconstruction_character_creation prologue phase). All optional
+  // so pre-existing players are never disrupted by a missing field.
+  pronouns?: string | null;
+  char_skin_tone?: number | null;   // index 0-5 into SKIN_TONES palette
+  char_hair_style?: number | null;  // index 0-4 into HAIR_STYLES list
   rank: string;
   rank_index: number;
   xp: number;

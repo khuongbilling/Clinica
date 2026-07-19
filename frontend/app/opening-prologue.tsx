@@ -43,7 +43,8 @@ import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfar
 import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
 import PrologueBattleTutorial        from "@/src/components/prologue/PrologueBattleTutorial";
 import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScriptedBattle";
-import LotusRecallCinematic          from "@/src/components/prologue/LotusRecallCinematic";
+import LotusRecallCinematic             from "@/src/components/prologue/LotusRecallCinematic";
+import IdentityReconstructionScreen    from "@/src/components/prologue/IdentityReconstructionScreen";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -182,6 +183,16 @@ export default function OpeningPrologue() {
   //                      Gold "RECALL AND CONTINUE" button → identity_reconstruction
   if (activePhase === "lotus_recall_cinematic") {
     return <LotusRecallCinematic onComplete={handleContinue} />;
+  }
+
+  // ── Phase 8: Identity Reconstruction — Character Creation ─────────────────
+  // Full cinematic character-creation screen.  7 narrative intro beats lead
+  // into a multi-step form (name / pronouns / appearance / pathway quiz /
+  // aptitude confirm / summary).  All choices are persisted via
+  // confirmIdentityReconstruction before onComplete() advances the phase.
+  // Draft is auto-saved so the player never loses progress across app closes.
+  if (activePhase === "identity_reconstruction_character_creation") {
+    return <IdentityReconstructionScreen onComplete={handleContinue} />;
   }
 
   return (
