@@ -944,7 +944,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         const lvl = getProgress(heroProgression, id).level ?? 1;
         return lvl > enemyLevelBand + 10;
       });
-      const heroAwards = isTraining ? [] : splitContributionToHeroXp({
+      // Prologue tutorial uses loaner heroes that are never owned — skip hero
+      // XP so novice_guardian/village_caretaker don't get progression entries.
+      const heroAwards = (isTraining || isPrologueTutorial) ? [] : splitContributionToHeroXp({
         totalPlayerXp: baseXp,
         contribution: state.heroContribution,
         participantIds,
