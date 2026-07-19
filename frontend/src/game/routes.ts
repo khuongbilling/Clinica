@@ -261,6 +261,25 @@ export const ROUTES = {
 } as const;
 
 /**
+ * Dev-mode validator: checks that every realm building's linkRoute is a known
+ * ROUTES value. Called once at app startup from _layout.tsx so stale strings
+ * surface immediately rather than silently producing dead navigation.
+ */
+export function validateRealmRoutes(
+  buildings: ReadonlyArray<{ id?: string; linkRoute?: string }>
+): void {
+  const known = new Set<string>(Object.values(ROUTES) as string[]);
+  for (const b of buildings) {
+    if (b.linkRoute && !known.has(b.linkRoute)) {
+      console.warn(
+        `[routes] Building "${b.id ?? "?"}" has unknown linkRoute: "${b.linkRoute}". ` +
+        `Add it to ROUTES in routes.ts or fix the value.`
+      );
+    }
+  }
+}
+
+/**
  * Helpers for dynamic (parameterised) routes.
  * These return `AppRoute` so call sites stay type-safe without `as any`.
  */

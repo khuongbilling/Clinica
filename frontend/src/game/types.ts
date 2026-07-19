@@ -59,6 +59,8 @@ export interface Hero {
   bondExp?: number;
   // Evolution overlay — set when a hero is materialized with its owner's star progression.
   star?: number;
+  // Locked legendary heroes: not grantable, not in gacha pool — teaser/preview only.
+  locked?: boolean;
 }
 
 export interface ClueCard {

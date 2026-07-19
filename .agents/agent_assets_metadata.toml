@@ -1448,6 +1448,7 @@ type = "image"
 title = "ward cascade boss enemy sprite"
 
 [[generated]]
+[[generated]]
 id = "3U6hu3X-rh-vFUwfsFT2L"
 uri = "file://frontend/assets/heroes/wardlight_apprentice.png"
 type = "image"
@@ -2370,3 +2371,14 @@ id = "Ul-muGsGZkw_dvZ-T7M2v"
 uri = "file://frontend/assets/heroes/battle/return_path_scribe.png"
 type = "image"
 title = "return_path_scribe battle"
+[[generated]]
+id = "rmqrjOMvD9UB1fAN4qQtT"
+uri = "file://frontend/assets/heroes/florence_nightingale.png"
+type = "image"
+title = "florence_nightingale_hero_portrait"
+
+[[generated]]
+id = "EX5oxj5wKSWGQPPsEt55K"
+uri = "file://frontend/assets/heroes/battle/florence_nightingale.png"
+type = "image"
+title = "florence_nightingale_battle_sprite"

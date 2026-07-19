@@ -82,8 +82,10 @@ export default function HeroesScreen() {
     onRequiredAction("setTeam");
   };
 
-  const ownedHeroes = HEROES.filter((h) => owned.has(h.id));
-  const teamHeroes  = HEROES.filter((h) => team.includes(h.id));
+  const ownedHeroes    = HEROES.filter((h) => owned.has(h.id));
+  const teamHeroes     = HEROES.filter((h) => team.includes(h.id));
+  const regularHeroes  = HEROES.filter((h) => !h.locked);
+  const legendaryHeroes = HEROES.filter((h) => h.locked);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -97,7 +99,7 @@ export default function HeroesScreen() {
         <View style={styles.statRow}>
           <View style={styles.statPill}>
             <Ionicons name="people" size={13} color={COLORS.brand} />
-            <Text style={styles.statTxt}>{player.heroes_owned.length}/{HEROES.length}</Text>
+            <Text style={styles.statTxt}>{player.heroes_owned.length}/{regularHeroes.length}</Text>
           </View>
           <View style={styles.statPill}>
             <Ionicons name="shield-half" size={13} color={COLORS.brand} />
@@ -128,7 +130,7 @@ export default function HeroesScreen() {
             </Pressable>
           )}
           <View style={styles.grid}>
-            {HEROES.map((h) => {
+            {regularHeroes.map((h) => {
               const isOwned  = owned.has(h.id);
               const inTeam   = team.includes(h.id);
               const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
@@ -217,6 +219,59 @@ export default function HeroesScreen() {
               );
             })}
           </View>
+
+          {/* ── Legendary Coming-Soon Section ──────────────────────────────── */}
+          {legendaryHeroes.length > 0 && (
+            <View style={styles.legendarySection}>
+              <View style={styles.legendarySectionHead}>
+                <View style={[styles.legendaryPip, { backgroundColor: UI.gold }]} />
+                <Text style={styles.legendarySectionTitle}>LEGENDARY HEALERS</Text>
+                <View style={[styles.legendaryComingSoonChip]}>
+                  <Text style={styles.legendaryComingSoonTxt}>COMING SOON</Text>
+                </View>
+              </View>
+              <Text style={styles.legendarySectionDesc}>
+                Historical healers of legend. Unlock them in future Recruitment events.
+              </Text>
+              <View style={styles.grid}>
+                {legendaryHeroes.map((h) => {
+                  const accent = UI.gold;
+                  const sprite = getHeroBattleSprite(h.id);
+                  return (
+                    <View key={h.id} style={[styles.cardWrap]}>
+                      <View style={[styles.card, styles.legendaryCard, { borderColor: UI.gold + "60" }]}>
+                        <View style={[styles.spriteBox, { backgroundColor: UI.gold + "12" }]}>
+                          {sprite ? (
+                            <Image source={sprite} style={[styles.sprite, styles.legendarySprite]} contentFit="contain" contentPosition="center" />
+                          ) : (
+                            <View style={styles.spriteFallback} />
+                          )}
+                          <View style={styles.legendaryGlowOverlay} pointerEvents="none" />
+                          <View style={styles.legendaryLockOverlay}>
+                            <Ionicons name="star" size={18} color={UI.gold} />
+                            <Text style={styles.legendaryLockLabel}>LEGENDARY</Text>
+                            <Text style={styles.legendaryLockSub}>Coming Soon</Text>
+                          </View>
+                        </View>
+                        <View style={styles.infoRow}>
+                          <View style={{ flex: 1 }}>
+                            <View style={[styles.tierBadge, { borderColor: UI.gold + "70", backgroundColor: UI.gold + "18" }]}>
+                              <Text style={[styles.tierBadgeTxt, { color: UI.gold }]}>LEGENDARY</Text>
+                            </View>
+                            <Text style={[styles.heroName, { color: UI.gold + "CC" }]} numberOfLines={1}>{h.name}</Text>
+                            <View style={[styles.elementTag, { borderColor: accent + "50" }]}>
+                              <Text style={[styles.elementTxt, { color: accent + "BB" }]}>{h.element.toUpperCase()}</Text>
+                            </View>
+                            <Text style={styles.roleTag}>{h.role}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          )}
         </ScrollView>
       )}
 
@@ -296,7 +351,7 @@ export default function HeroesScreen() {
           </Pressable>
 
           <Text style={styles.sectionLbl} style={{ marginTop: SPACING.lg }}>All Healers</Text>
-          {HEROES.map((h) => {
+          {regularHeroes.map((h) => {
             const isOwned = owned.has(h.id);
             const accent  = ELEMENT_COLORS[h.element] ?? COLORS.brand;
             return (
@@ -502,6 +557,34 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   tipTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 20 },
+
+  legendarySection: { marginTop: SPACING.xl },
+  legendarySectionHead: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  legendaryPip: { width: 3, height: 14, borderRadius: 2 },
+  legendarySectionTitle: { color: UI.gold, fontSize: 11, fontWeight: "700", letterSpacing: 1.5, flex: 1 },
+  legendaryComingSoonChip: {
+    borderWidth: 1, borderColor: UI.gold + "60",
+    backgroundColor: UI.gold + "14", borderRadius: RADIUS.pill,
+    paddingHorizontal: 7, paddingVertical: 2,
+  },
+  legendaryComingSoonTxt: { color: UI.gold, fontSize: 10, fontWeight: "700", letterSpacing: 0.8 },
+  legendarySectionDesc: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 18, marginBottom: SPACING.md },
+  legendaryCard: { opacity: 0.85 },
+  legendarySprite: { width: "85%", height: "85%" },
+  legendaryGlowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: UI.gold + "10",
+  },
+  legendaryLockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(12,10,4,0.55)",
+    alignItems: "center", justifyContent: "center", gap: 3,
+  },
+  legendaryLockLabel: { color: UI.gold, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  legendaryLockSub:   { color: UI.gold + "99", fontSize: 10, letterSpacing: 0.3 },
 
   // Recruit tab
   recruitBanner: {

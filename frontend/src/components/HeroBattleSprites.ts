@@ -130,6 +130,7 @@ const BATTLE_SPRITES: Record<string, any> = {
   pattern_seer: require('../../assets/heroes/battle/pattern_seer.png'),
   environmental_seal_warden: require('../../assets/heroes/battle/environmental_seal_warden.png'),
   chartweave_analyst: require('../../assets/heroes/battle/chartweave_analyst.png'),
+  florence_nightingale: require('../../assets/heroes/battle/florence_nightingale.png'),
 };
 
 // All battle-sprite modules, for cache preloading at game start.

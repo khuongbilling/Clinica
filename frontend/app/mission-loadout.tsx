@@ -279,20 +279,23 @@ function HeroSlot({
   heroId,
   slotNum,
   locked = false,
+  loanerLabel,
   onAdd,
   onRemove,
 }: {
-  heroId?:   string;
-  slotNum:   number;
-  locked?:   boolean;
-  onAdd?:    () => void;
-  onRemove?: () => void;
+  heroId?:      string;
+  slotNum:      number;
+  locked?:      boolean;
+  loanerLabel?: string;
+  onAdd?:       () => void;
+  onRemove?:    () => void;
 }) {
   const hero   = heroId ? HEROES.find((h) => h.id === heroId) : null;
   const sprite = heroId ? getHeroSprite(heroId) : undefined;
   const rc     = hero ? (ROLE_COLOR[hero.role] ?? UI.teal) : UI.teal;
   const ri     = hero ? (ROLE_ICON[hero.role]  ?? "star") : "star";
   const color  = hero ? rc : "rgba(255,255,255,0.14)";
+  const isLegendaryLoaner = loanerLabel && loanerLabel.includes("LEGENDARY");
 
   return (
     <Pressable
@@ -302,12 +305,19 @@ function HeroSlot({
           ? { borderColor: color + "80", backgroundColor: color + "10" }
           : { borderColor: "rgba(255,255,255,0.10)" },
         locked && { borderColor: UI.gold + "60", backgroundColor: UI.gold + "08" },
+        isLegendaryLoaner && { borderColor: UI.gold + "90", backgroundColor: UI.gold + "12" },
       ]}
       onPress={locked ? undefined : hero ? onRemove : onAdd}
       hitSlop={4}
     >
       <View style={[hs.tl, { borderColor: locked ? UI.gold + "70" : hero ? color + "90" : "rgba(255,255,255,0.16)" }]} />
       <View style={[hs.br, { borderColor: locked ? UI.gold + "70" : hero ? color + "90" : "rgba(255,255,255,0.16)" }]} />
+
+      {loanerLabel && (
+        <View style={[hs.loanerBadge, isLegendaryLoaner && hs.loanerBadgeLegendary]}>
+          <Text style={[hs.loanerBadgeTxt, isLegendaryLoaner && hs.loanerBadgeTxtLegendary]}>{loanerLabel}</Text>
+        </View>
+      )}
 
       {hero ? (
         <>
@@ -319,9 +329,14 @@ function HeroSlot({
                 <Ionicons name={ri as any} size={20} color={rc} />
               </View>
             )}
-            {locked && (
+            {locked && !loanerLabel && (
               <View style={hs.lockOverlay}>
                 <Ionicons name="lock-closed" size={14} color={UI.gold} />
+              </View>
+            )}
+            {isLegendaryLoaner && (
+              <View style={hs.loanerLegendaryOverlay}>
+                <Ionicons name="star" size={12} color={UI.gold} />
               </View>
             )}
           </View>
@@ -397,6 +412,39 @@ const hs = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.4,
+  },
+  loanerBadge: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: UI.teal + "70",
+    backgroundColor: UI.teal + "18",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    marginBottom: 2,
+  },
+  loanerBadgeLegendary: {
+    borderColor: UI.gold + "80",
+    backgroundColor: UI.gold + "1A",
+  },
+  loanerBadgeTxt: {
+    color: UI.teal,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  loanerBadgeTxtLegendary: {
+    color: UI.gold,
+  },
+  loanerLegendaryOverlay: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 8,
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 
@@ -783,12 +831,18 @@ export default function MissionLoadoutScreen() {
           {isTutorial ? (
             <>
               <Text style={s.sectionDesc}>
-                These loaner healers guide you through your first shift. Recruit your own team after the tutorial.
+                Two legendary healers lend you their power for your first shift. Recruit your own team after the tutorial.
               </Text>
               <View style={s.heroSlotRow}>
-                <HeroSlot heroId="novice_guardian"   slotNum={1} locked />
-                <HeroSlot heroId="village_caretaker" slotNum={2} locked />
-                <HeroSlot slotNum={3} locked />
+                <HeroSlot heroId="novice_guardian"      slotNum={1} locked loanerLabel="LOANER" />
+                <HeroSlot heroId="village_caretaker"    slotNum={2} locked loanerLabel="LOANER" />
+                <HeroSlot heroId="florence_nightingale" slotNum={3} locked loanerLabel="LEGENDARY LOANER" />
+              </View>
+              <View style={[s.tutorialNotice, { borderColor: UI.gold + "30", backgroundColor: UI.gold + "0A", marginTop: 8 }]}>
+                <Ionicons name="star" size={14} color={UI.gold} />
+                <Text style={[s.tutorialNoticeTxt, { color: UI.gold + "CC" }]}>
+                  A legendary healer lends their power for your first shift. Complete the tutorial to begin recruiting your own team.
+                </Text>
               </View>
             </>
           ) : owned.size === 0 ? (

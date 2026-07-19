@@ -135,6 +135,7 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   pattern_seer: require('../../assets/heroes/pattern_seer.png'),
   environmental_seal_warden: require('../../assets/heroes/environmental_seal_warden.png'),
   chartweave_analyst: require('../../assets/heroes/chartweave_analyst.png'),
+  florence_nightingale: require('../../assets/heroes/florence_nightingale.png'),
 };
 
 // All portrait modules, for cache preloading at game start.
