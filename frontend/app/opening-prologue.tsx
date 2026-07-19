@@ -37,8 +37,10 @@ import {
   prologuePhaseIndex,
   type ProloguePhase,
 } from "@/src/game/prologueTypes";
-import OpeningMemoryCinematic from "@/src/components/prologue/OpeningMemoryCinematic";
-import TacticalWarningScene   from "@/src/components/prologue/TacticalWarningScene";
+import OpeningMemoryCinematic        from "@/src/components/prologue/OpeningMemoryCinematic";
+import TacticalWarningScene          from "@/src/components/prologue/TacticalWarningScene";
+import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfarctionRevealScene";
+import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -128,9 +130,24 @@ export default function OpeningPrologue() {
   // ── Phase 2: full-screen battlefield dialogue scene ───────────────────────
   // Five-character visual-novel exchange on the emergency treatment plaza.
   // When the last dialogue beat completes it calls handleContinue, which
-  // persists the phase advance to `former_self_support_loadout`.
+  // persists the phase advance to `silent_infarction_initial_reveal`.
   if (activePhase === "former_self_battlefield_cutscene") {
     return <TacticalWarningScene onComplete={handleContinue} />;
+  }
+
+  // ── Phase 3: Silent Infarction trap reveal ────────────────────────────────
+  // Red heartbeat sweep, hero reactions, the SI reveals itself and speaks.
+  // Ends with a white freeze-flash → fade to black → advances to loadout.
+  if (activePhase === "silent_infarction_initial_reveal") {
+    return <SilentInfarctionRevealScene onComplete={handleContinue} />;
+  }
+
+  // ── Phase 4: Story loadout before prologue battle ─────────────────────────
+  // Nightingale and Fleming join as locked temporary legendary units.
+  // Temporary — must NOT enter the permanent roster.
+  // Confirm button advances to `opening_battle_tutorial`.
+  if (activePhase === "former_self_support_loadout") {
+    return <PrologueLoadout onComplete={handleContinue} />;
   }
 
   return (

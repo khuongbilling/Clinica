@@ -1,0 +1,99 @@
+Clinica Push 4: Silent Infarction Reveal and Temporary Prologue Loadout
+
+Goal:
+After the warning scene, reveal the Silent Infarction trap and show a temporary story loadout before the prologue battle.
+
+Silent Infarction reveal:
+Visible enemies should look weak and easy at first.
+Then:
+- Red heartbeat pulse crosses battlefield
+- Injured civilians deteriorate
+- Monitoring crystals show conflicting information
+- Safe tiles become unstable
+- Dark energy travels beneath the player
+- Fog reveals new silhouettes
+- Escape path becomes blocked
+
+Dialogue:
+Nightingale:
+“Their condition is deteriorating!”
+
+Fleming:
+“The visible creatures are not the source!”
+
+Master Bai:
+“Fall back! Now!”
+
+Silent Infarction:
+“The strongest healers are often the easiest to deceive.”
+“They see what they expect to see.”
+“And act before they understand.”
+
+Freeze the battle as the trap closes.
+
+Temporary loadout:
+Show a prologue loadout screen over the blurred or darkened isometric battlefield. Keep the Former Self trapped in the distance with fog and red pulse effects.
+
+Required temporary units:
+1. The Former Self
+2. Florence Nightingale, temporary legendary support hero
+3. Sir Alexander Fleming, temporary legendary assessment/debuff hero
+
+Rules:
+- Nightingale and Fleming are required.
+- Nightingale and Fleming cannot be removed.
+- These temporary legendary units must not enter the permanent roster.
+- This is a story loadout, not the permanent player loadout.
+
+Former Self strengths:
+- Powerful direct attacks
+- Strong healing
+- High stats
+- Spectacular skills
+
+Former Self weaknesses:
+- Limited assessment
+- Poor reassessment
+- Weak team synergy
+- Resource-heavy abilities
+- Bonuses encourage acting alone
+- Reduced ability to identify concealed threats
+
+Nightingale role:
+- Observation
+- Environmental assessment
+- Hidden-hazard detection
+- Stabilization
+- Reassessment
+
+Fleming role:
+- Enemy analysis
+- Resistance identification
+- Targeted intervention
+- Preventing adaptation
+- Treatment correction
+
+Loadout dialogue:
+When Nightingale is added:
+“I will watch for the dangers hidden between the obvious ones.”
+
+When Fleming is added:
+“And I will ensure that our response is guided by evidence rather than assumption.”
+
+After both:
+Master Bai:
+“A capable team does not exist to admire your strength.”
+“It exists to challenge your judgment.”
+
+Confirm button:
+Enter the Battlefield
+
+Subtext:
+Assess. Prioritize. Intervene. Reassess.
+
+Acceptance checks:
+- Silent Infarction trap feels hidden and intelligent.
+- Loadout preserves battlefield context.
+- Nightingale and Fleming are required and cannot be removed.
+- Temporary units do not transfer into permanent roster.
+- Confirm button enters prologue battle.
