@@ -325,7 +325,7 @@ export default function HeroesScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionLbl}>Power Up Your Team</Text>
 
-          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push("/skill-academy" as any)}>
+          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push("/university/skill-academy" as any)}>
             <View style={[styles.upgradeIconBox, { backgroundColor: COLORS.mind + "22" }]}>
               <Ionicons name="flash" size={22} color={COLORS.mind} />
             </View>
@@ -336,7 +336,7 @@ export default function HeroesScreen() {
             <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
           </Pressable>
 
-          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push("/training-hall" as any)}>
+          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push("/university/training" as any)}>
             <View style={[styles.upgradeIconBox, { backgroundColor: COLORS.fire + "22" }]}>
               <Ionicons name="fitness" size={22} color={COLORS.fire} />
             </View>
