@@ -3,19 +3,50 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
+import { LAUNCH_ROSTER, FAMILY_COLORS } from "@/src/game/heroRoster";
+import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+
+// ── Portrait asset map — keyed by heroId ────────────────────────────────────
+const HERO_PORTRAITS: Record<string, ReturnType<typeof require>> = {
+  novice_guardian:   require("../../assets/heroes/novice_guardian.png"),
+  apprentice_seer:   require("../../assets/heroes/apprentice_seer.png"),
+  junior_warden:     require("../../assets/heroes/junior_warden.png"),
+  data_acolyte:      require("../../assets/heroes/data_acolyte.png"),
+  village_caretaker: require("../../assets/heroes/village_caretaker.png"),
+  night_watcher:     require("../../assets/heroes/night_watcher.png"),
+  storm_runner:      require("../../assets/heroes/storm_runner.png"),
+  infection_warden:  require("../../assets/heroes/infection_warden.png"),
+  wound_sage:        require("../../assets/heroes/wound_sage.png"),
+  mindkeeper:        require("../../assets/heroes/mindkeeper.png"),
+};
+
+// Collect unique chain roles from a hero's skills (max 3 displayed).
+function getHeroChainRoles(heroId: string): string[] {
+  const hero = LAUNCH_ROSTER.find(h => h.id === heroId);
+  if (!hero) return [];
+  const seen = new Set<string>();
+  for (const skill of hero.skills) {
+    const clinical = SKILL_CLINICAL[skill.id];
+    if (clinical?.chainRoles) clinical.chainRoles.forEach(r => seen.add(r));
+  }
+  return Array.from(seen).slice(0, 3);
+}
+
+const TRAINEE_SEEN_KEY = "clinica.seen_trainee_reveal";
 
 export default function UniversityRecruitScreen() {
   const router = useRouter();
@@ -35,6 +66,7 @@ export default function UniversityRecruitScreen() {
   const [ceremonyResult, setCeremonyResult] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [revealResult, setRevealResult] = useState<RecruitResult | null>(null);
 
   const freeAvailable = (() => {
     if (!player) return false;
@@ -115,7 +147,9 @@ export default function UniversityRecruitScreen() {
     const res = await tutorialRecruitOnce(activeSummonIndex);
     if (!res.ok) setError(res.message);
     else {
-      setCeremonyResult(res.result || null);
+      const r = res.result || null;
+      setCeremonyResult(r);
+      setRevealResult(r);
       playRewardCue(true);
       onRequiredAction("summon");
     }
@@ -131,7 +165,7 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await freeRecruitOnce();
     if (!res.ok) setError(res.message);
-    else { setSingle(res.result || null); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; setSingle(r); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 
@@ -143,7 +177,7 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else { setSingle(res.result || null); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; setSingle(r); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 
@@ -437,9 +471,224 @@ export default function UniversityRecruitScreen() {
         </View>
       </ScrollView>
 
+      <RecruitRevealModal result={revealResult} onDismiss={() => setRevealResult(null)} />
       <TutorialOverlay />
     </SafeAreaView>
   );
+}
+
+// ── Gacha-style reveal popup ─────────────────────────────────────────────────
+function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | null; onDismiss: () => void }) {
+  const scaleAnim   = useRef(new Animated.Value(0.82)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim    = useRef(new Animated.Value(0)).current;
+  const [showTraineeInfo, setShowTraineeInfo] = useState(false);
+
+  useEffect(() => {
+    if (!result) {
+      scaleAnim.setValue(0.82);
+      opacityAnim.setValue(0);
+      glowAnim.setValue(0);
+      return;
+    }
+    if (result.kind === "trainee") {
+      AsyncStorage.getItem(TRAINEE_SEEN_KEY).then(v => setShowTraineeInfo(!v));
+    }
+    const spring = Animated.spring(scaleAnim, { toValue: 1, tension: 95, friction: 8, useNativeDriver: true });
+    const fade   = Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true });
+    Animated.parallel([spring, fade]).start(() => {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, { toValue: 1, duration: 1300, useNativeDriver: true }),
+          Animated.timing(glowAnim, { toValue: 0, duration: 1300, useNativeDriver: true }),
+        ])
+      );
+      pulse.start();
+    });
+    return () => { glowAnim.stopAnimation(); };
+  }, [result]);
+
+  const handleDismiss = () => {
+    if (result?.kind === "trainee") AsyncStorage.setItem(TRAINEE_SEEN_KEY, "1");
+    onDismiss();
+  };
+
+  if (!result) return null;
+
+  // ── HERO reveal ────────────────────────────────────────────────────────────
+  if (result.kind === "hero" && result.entry) {
+    const entry      = result.entry;
+    const hero       = LAUNCH_ROSTER.find(h => h.id === entry.heroId);
+    const rc         = rarityColor(entry.rarity);
+    const rLabel     = entry.rarity === 5 ? "LEGENDARY" : entry.rarity === 4 ? "RARE" : "COMMON";
+    const portrait   = HERO_PORTRAITS[entry.heroId];
+    const famColor   = hero ? FAMILY_COLORS[hero.family] : rc;
+    const chainRoles = getHeroChainRoles(entry.heroId);
+    const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] });
+
+    return (
+      <View style={revealStyles.overlay}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleDismiss} />
+        <Animated.View style={[revealStyles.card, { borderColor: rc, transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+          {/* Glow ring */}
+          <Animated.View style={[revealStyles.glowRing, { borderColor: rc, opacity: glowOpacity }]} />
+
+          {/* Rarity bar */}
+          <View style={[revealStyles.rarityBar, { backgroundColor: rc + "20" }]}>
+            <Ionicons name="sparkles" size={11} color={rc} />
+            <Text style={[revealStyles.rarityLabel, { color: rc }]}>{rLabel} HEALER ENROLLED</Text>
+            <Ionicons name="sparkles" size={11} color={rc} />
+          </View>
+
+          {/* Portrait */}
+          {portrait ? (
+            <View style={[revealStyles.portraitWrap, { borderColor: rc + "55" }]}>
+              <Image source={portrait} style={revealStyles.portrait} resizeMode="cover" />
+              <LinearGradient
+                colors={["transparent", rc + "28"]}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                pointerEvents="none"
+              />
+            </View>
+          ) : (
+            <View style={[revealStyles.portraitPlaceholder, { borderColor: rc + "55", backgroundColor: rc + "12" }]}>
+              <Ionicons name="person" size={56} color={rc + "80"} />
+            </View>
+          )}
+
+          {/* Name + title */}
+          <View style={{ gap: 2 }}>
+            <Text style={[revealStyles.heroName, { color: rc }]}>{entry.name}</Text>
+            {hero?.title && <Text style={revealStyles.heroTitle}>{hero.title}</Text>}
+          </View>
+
+          {/* Family + role badges */}
+          <View style={revealStyles.badgeRow}>
+            {hero && (
+              <View style={[revealStyles.badge, { borderColor: famColor + "55", backgroundColor: famColor + "15" }]}>
+                <Text style={[revealStyles.badgeTxt, { color: famColor }]}>{hero.family}</Text>
+              </View>
+            )}
+            <View style={[revealStyles.badge, { borderColor: rc + "55", backgroundColor: rc + "15" }]}>
+              <Text style={[revealStyles.badgeTxt, { color: rc }]}>{entry.role}</Text>
+            </View>
+          </View>
+
+          {/* Chain roles */}
+          {chainRoles.length > 0 && (
+            <View style={revealStyles.chainRow}>
+              <Text style={revealStyles.chainLabel}>CARE CHAIN</Text>
+              {chainRoles.map(cr => (
+                <View key={cr} style={revealStyles.chainChip}>
+                  <Text style={revealStyles.chainChipTxt}>{cr}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Description */}
+          {hero?.description && (
+            <Text style={revealStyles.desc} numberOfLines={3}>{hero.description}</Text>
+          )}
+
+          {/* Quote */}
+          {hero?.quote && (
+            <Text style={revealStyles.quote}>"{hero.quote}"</Text>
+          )}
+
+          {/* CTA */}
+          <Pressable style={[revealStyles.ctaBtn, { backgroundColor: rc }]} onPress={handleDismiss} testID="reveal-cta">
+            <Text style={revealStyles.ctaTxt}>WELCOME TO THE WARD</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // ── TRAINEE reveal ─────────────────────────────────────────────────────────
+  if (result.kind === "trainee" && result.trainee) {
+    const trainee = result.trainee;
+    return (
+      <View style={revealStyles.overlay}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleDismiss} />
+        <Animated.View style={[revealStyles.card, { borderColor: COLORS.brand, transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+          <View style={[revealStyles.rarityBar, { backgroundColor: COLORS.brand + "18" }]}>
+            <Text style={[revealStyles.rarityLabel, { color: COLORS.brand }]}>CLASS TRAINEES</Text>
+          </View>
+          <View style={revealStyles.iconWrap}>
+            <Ionicons name="people" size={54} color={COLORS.brand} />
+          </View>
+          <Text style={[revealStyles.heroName, { color: COLORS.brand, textAlign: "center" }]}>
+            +{result.traineeAmount} {trainee.label}
+          </Text>
+          <View style={[revealStyles.badge, { borderColor: COLORS.brand + "55", backgroundColor: COLORS.brand + "15", alignSelf: "center" }]}>
+            <Text style={[revealStyles.badgeTxt, { color: COLORS.brand }]}>{trainee.role} Class</Text>
+          </View>
+          <Text style={revealStyles.desc}>
+            {showTraineeInfo
+              ? `Class Trainees are shared training materials for your ward team. Use them at the Training Hall to raise a healer's Certification Star — unlocking higher level caps and greater power. They can also power hero evolution in future systems.`
+              : `${trainee.label}s are used to promote ${trainee.role} healers. Use them at the Training Hall.`}
+          </Text>
+          <Pressable style={[revealStyles.ctaBtn, { backgroundColor: COLORS.brand }]} onPress={handleDismiss} testID="reveal-cta">
+            <Text style={revealStyles.ctaTxt}>GOT IT</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // ── DUPLICATE → SHARDS reveal ──────────────────────────────────────────────
+  if (result.kind === "shards" && result.entry) {
+    const rc = rarityColor(result.entry.rarity);
+    return (
+      <View style={revealStyles.overlay}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleDismiss} />
+        <Animated.View style={[revealStyles.card, { borderColor: rc, transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+          <View style={[revealStyles.rarityBar, { backgroundColor: rc + "20" }]}>
+            <Text style={[revealStyles.rarityLabel, { color: rc }]}>DUPLICATE → HERO SHARDS</Text>
+          </View>
+          <View style={revealStyles.iconWrap}>
+            <Ionicons name="sparkles" size={54} color={rc} />
+          </View>
+          <Text style={[revealStyles.heroName, { color: rc, textAlign: "center" }]}>+{result.shardAmount} Hero Shards</Text>
+          <Text style={revealStyles.heroTitle} numberOfLines={1}>{result.entry.name} · already enrolled</Text>
+          <Text style={revealStyles.desc}>
+            You already have this healer on your ward team. The duplicate was converted into Hero Shards — use them at the Training Hall to raise their Certification Star and unlock higher power.
+          </Text>
+          <Pressable style={[revealStyles.ctaBtn, { backgroundColor: rc }]} onPress={handleDismiss} testID="reveal-cta">
+            <Text style={revealStyles.ctaTxt}>GOT IT</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // ── CREDITS reveal ─────────────────────────────────────────────────────────
+  if (result.kind === "credits") {
+    return (
+      <View style={revealStyles.overlay}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleDismiss} />
+        <Animated.View style={[revealStyles.card, { borderColor: "#D4AF37", transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+          <View style={[revealStyles.rarityBar, { backgroundColor: "#D4AF3718" }]}>
+            <Text style={[revealStyles.rarityLabel, { color: "#D4AF37" }]}>UNIVERSITY CREDITS</Text>
+          </View>
+          <View style={revealStyles.iconWrap}>
+            <Ionicons name="school" size={54} color="#D4AF37" />
+          </View>
+          <Text style={[revealStyles.heroName, { color: "#D4AF37", textAlign: "center" }]}>+{result.creditsAmount} Credits</Text>
+          <Text style={revealStyles.desc}>
+            University Credits fund hero certification upgrades and research. Spend them at the Training Hall to promote your healers to higher Certification Stars.
+          </Text>
+          <Pressable style={[revealStyles.ctaBtn, { backgroundColor: "#D4AF37" }]} onPress={handleDismiss} testID="reveal-cta">
+            <Text style={revealStyles.ctaTxt}>GOT IT</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  return null;
 }
 
 function CeremonyResultCard({ result }: { result: RecruitResult }) {
@@ -687,4 +936,145 @@ const styles = StyleSheet.create({
   earnCardTitle: { color: COLORS.onSurface, fontSize: 14, fontWeight: "700" as const },
   earnCardLine: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
   earnCardNote: { color: COLORS.brand, fontSize: 12, fontStyle: "italic" as const, marginTop: 2 },
+});
+
+// ── Reveal modal styles ───────────────────────────────────────────────────────
+const revealStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(5,10,15,0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3000,
+    padding: SPACING.lg,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.xl,
+    borderWidth: 2,
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    alignItems: "stretch",
+  },
+  glowRing: {
+    position: "absolute",
+    top: -4, bottom: -4, left: -4, right: -4,
+    borderRadius: RADIUS.xl + 4,
+    borderWidth: 2,
+  },
+  rarityBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: RADIUS.md,
+    paddingVertical: 6,
+  },
+  rarityLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+  },
+  portraitWrap: {
+    width: "100%",
+    height: 190,
+    borderRadius: RADIUS.lg,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  portrait: {
+    width: "100%",
+    height: "100%",
+  },
+  portraitPlaceholder: {
+    width: "100%",
+    height: 140,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroName: {
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    color: COLORS.onSurface,
+  },
+  heroTitle: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 13,
+    fontStyle: "italic",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    flexWrap: "wrap",
+  },
+  badge: {
+    borderWidth: 1,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  badgeTxt: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  chainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  chainLabel: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  chainChip: {
+    backgroundColor: "#0F2420",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "#3DC4A845",
+  },
+  chainChipTxt: {
+    color: "#4FD8C4",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  desc: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  quote: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 12,
+    fontStyle: "italic",
+    lineHeight: 18,
+  },
+  iconWrap: {
+    alignItems: "center",
+    paddingVertical: SPACING.md,
+  },
+  ctaBtn: {
+    height: 50,
+    borderRadius: RADIUS.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: SPACING.xs,
+  },
+  ctaTxt: {
+    color: "#07120F",
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.9,
+  },
 });
