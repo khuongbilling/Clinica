@@ -13,9 +13,17 @@ import { preloadTabAssets } from "@/src/game/tabAssets";
 import { TutorialProvider } from "@/src/game/tutorialStore";
 import { TestSessionProvider } from "@/src/game/testSession";
 import { COLORS } from "@/src/theme/colors";
+import { validateRealmRoutes } from "@/src/game/routes";
+import { REALM_BUILDINGS } from "@/src/game/realm";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
+
+// Validate realm building deep-links at startup so stale route strings
+// surface immediately in dev rather than silently breaking building modals.
+if (__DEV__) {
+  validateRealmRoutes(REALM_BUILDINGS);
+}
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();

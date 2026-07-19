@@ -18,6 +18,7 @@
 // than hardcoding building copy, positions, or unlock rules.
 
 import { cellId, DEFAULT_ATRIUM_ORIGIN, DEFAULT_UNIVERSITY_ORIGIN } from "./realmGrid";
+import { ROUTES } from "./routes";
 
 export const REALM_LOOP_NOTE =
   "The Realm loop: Build a Sanctuary Plot, Assign a hero or trainee, let it Research/Prepare passive " +
@@ -234,7 +235,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 2, materials: ["Ward Timber", "Spirit Stone", "University Credits"] }),
     atriumLevelRequired: 3,
     linkKind: "route",
-    linkRoute: "/university",
+    linkRoute: ROUTES.university,
     linkLabel: "Open Clinica University",
     linkFeature: "university",
     heroSlots: [
@@ -261,7 +262,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 1, materials: ["Ward Timber", "Codex Shards"] }),
     atriumLevelRequired: 1,
     linkKind: "route",
-    linkRoute: "/(tabs)/codex",
+    linkRoute: ROUTES.tabCodex,
     linkLabel: "Open Codex & Manuals",
     heroSlots: [
       { role: "Seer", flavor: "A Seer hero here improves research and Codex progress.", slotType: "hero" },
@@ -286,7 +287,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 1, materials: ["Ward Timber", "Ward Coins"] }),
     atriumLevelRequired: 1,
     linkKind: "route",
-    linkRoute: "/(tabs)/index",
+    linkRoute: ROUTES.tabHome,
     linkLabel: "Go to Ward Shift",
     heroSlots: [
       { role: "Village Caretaker", flavor: "A Village Caretaker hero here improves Stability rewards.", slotType: "hero" },
@@ -309,7 +310,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 2, materials: ["Spirit Stone", "Skill Books"] }),
     atriumLevelRequired: 2,
     linkKind: "route",
-    linkRoute: "/(tabs)/heroes",
+    linkRoute: ROUTES.tabHeroes,
     linkLabel: "Open Hall of Heroes",
     linkFeature: "hall_of_heroes",
     heroSlots: [
@@ -335,7 +336,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 1, materials: ["Ward Coins", "Herbal Extract"] }),
     atriumLevelRequired: 1,
     linkKind: "route",
-    linkRoute: "/(tabs)/shop",
+    linkRoute: ROUTES.tabShop,
     linkLabel: "Open the Shop",
     linkFeature: "shop",
     heroSlots: [
@@ -359,7 +360,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 3, materials: ["Ward Coins", "Insight Crystals"] }),
     atriumLevelRequired: 3,
     linkKind: "route",
-    linkRoute: "/economy",
+    linkRoute: ROUTES.economy,
     linkLabel: "Open Economy Guide",
     heroSlots: [{ role: "Treasurer", flavor: "A Treasurer hero here improves exchange rates slightly.", slotType: "hero" }],
     production: { resource: "Insight Crystals", currency: "insight_crystals", icon: "diamond", ratePerHour: 4, cap: 120 },
@@ -380,7 +381,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: () => ({ atriumLevel: 5, materials: [] }),
     atriumLevelRequired: 5,
     linkKind: "route",
-    linkRoute: "/bazaar",
+    linkRoute: ROUTES.bazaar,
     linkLabel: "Preview the Bazaar",
     heroSlots: [],
     skinPlaceholder: true,
@@ -402,7 +403,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 2, materials: ["Ward Coins", "Garden Seeds"] }),
     atriumLevelRequired: 2,
     linkKind: "route",
-    linkRoute: "/lotus-journal",
+    linkRoute: ROUTES.lotusJournal,
     linkLabel: "Open Lotus Plate Journal",
     heroSlots: [
       { role: "Gardener", flavor: "A Gardener hero here improves nutrition rewards.", slotType: "hero" },
@@ -425,7 +426,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 4, materials: ["Ward Sigils", "Spirit Stone"] }),
     atriumLevelRequired: 4,
     linkKind: "route",
-    linkRoute: "/ward-defense",
+    linkRoute: ROUTES.wardDefense,
     linkLabel: "Open Ward Defense",
     heroSlots: [{ role: "Sentinel", flavor: "A Sentinel hero here improves Ward Defense preparation.", slotType: "hero" }],
     skinPlaceholder: true,
@@ -445,7 +446,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: () => ({ atriumLevel: 6, materials: [] }),
     atriumLevelRequired: 6,
     linkKind: "route",
-    linkRoute: "/embassy",
+    linkRoute: ROUTES.embassy,
     linkLabel: "Preview the Embassy",
     heroSlots: [],
     skinPlaceholder: true,
