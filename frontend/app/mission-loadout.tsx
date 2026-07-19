@@ -856,10 +856,12 @@ export default function MissionLoadoutScreen() {
                     </View>
                   ) : (
                     availableHeroes.map((hero) => {
-                      const sprite = getHeroSprite(hero.id);
-                      const rc     = ROLE_COLOR[hero.role]    ?? UI.teal;
-                      const ri     = ROLE_ICON[hero.role]     ?? "star";
-                      const sysCo  = SYSTEM_COLOR[hero.element] ?? UI.gold;
+                      const sprite      = getHeroSprite(hero.id);
+                      const rc          = ROLE_COLOR[hero.role]    ?? UI.teal;
+                      const ri          = ROLE_ICON[hero.role]     ?? "star";
+                      const sysCo       = SYSTEM_COLOR[hero.element] ?? UI.gold;
+                      const keySkill    = hero.skills?.[0];
+                      const chainRoles  = getHeroChainRoles(hero);
                       return (
                         <Pressable
                           key={hero.id}
@@ -886,11 +888,13 @@ export default function MissionLoadoutScreen() {
                               </View>
                             )}
                           </View>
-                          <View style={{ flex: 1, gap: 4 }}>
+                          <View style={{ flex: 1, gap: 5 }}>
                             <Text style={[s.heroPickerName, { color: rc }]} numberOfLines={1}>
                               {hero.name}
                             </Text>
                             <Text style={s.heroPickerTitle} numberOfLines={1}>{hero.title}</Text>
+
+                            {/* Role + Element badges */}
                             <View style={s.heroPickerBadges}>
                               <View style={[s.heroPickerPill, { backgroundColor: rc + "18", borderColor: rc + "40" }]}>
                                 <Text style={[s.heroPickerPillTxt, { color: rc }]}>{hero.role}</Text>
@@ -899,8 +903,32 @@ export default function MissionLoadoutScreen() {
                                 <Text style={[s.heroPickerPillTxt, { color: sysCo }]}>{hero.element}</Text>
                               </View>
                             </View>
+
+                            {/* Key skill shortEffect */}
+                            {keySkill?.shortEffect ? (
+                              <View style={s.heroPickerSkillRow}>
+                                <Ionicons name="flash-outline" size={10} color={rc + "90"} />
+                                <Text style={[s.heroPickerSkillTxt, { color: rc + "CC" }]} numberOfLines={2}>
+                                  {keySkill.shortEffect}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {/* Chain roles */}
+                            {chainRoles.length > 0 && (
+                              <View style={s.heroPickerChainRow}>
+                                <Ionicons name="link-outline" size={10} color="rgba(255,255,255,0.35)" />
+                                <View style={s.heroPickerChainPills}>
+                                  {chainRoles.map((cr) => (
+                                    <View key={cr} style={s.heroPickerChainPill}>
+                                      <Text style={s.heroPickerChainTxt}>{cr}</Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                            )}
                           </View>
-                          <Ionicons name="chevron-forward" size={14} color={rc + "70"} />
+                          <Ionicons name="chevron-forward" size={14} color={rc + "70"} style={{ alignSelf: "center" }} />
                         </Pressable>
                       );
                     })
@@ -1353,7 +1381,7 @@ const s = StyleSheet.create({
   },
   heroPickerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: SPACING.md,
     backgroundColor: UI.panel,
     borderRadius: RADIUS.md,
@@ -1396,6 +1424,41 @@ const s = StyleSheet.create({
   heroPickerPillTxt: {
     fontSize: 10,
     fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  heroPickerSkillRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 4,
+  },
+  heroPickerSkillTxt: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+    fontStyle: "italic",
+  },
+  heroPickerChainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  heroPickerChainPills: {
+    flexDirection: "row",
+    gap: 4,
+    flexWrap: "wrap",
+  },
+  heroPickerChainPill: {
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  heroPickerChainTxt: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.55)",
     letterSpacing: 0.3,
   },
   heroPickerEmpty: {
