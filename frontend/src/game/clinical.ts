@@ -1614,6 +1614,31 @@ export const ULTIMATE_BY_ROLE: Record<import('./types').HeroRole, UltimateDef> =
     rpgFlavor: 'The Specialist channels every ounce of expertise into one perfect strike.',
     description: 'Corruption -30, ignoring resistance.',
   },
+  Scout: {
+    name: 'Eyes of the Ward',
+    rpgFlavor: 'The Scout reads the room before anyone else even looks up.',
+    description: 'Reveals all hidden clues.',
+  },
+  Striker: {
+    name: 'Decisive Blow',
+    rpgFlavor: 'The Striker commits everything to one devastating intervention.',
+    description: 'Corruption -35.',
+  },
+  Restorer: {
+    name: 'Full Recovery',
+    rpgFlavor: 'The Restorer pours every last drop of energy into the patient.',
+    description: 'Stability +35.',
+  },
+  Preventer: {
+    name: 'Protective Seal',
+    rpgFlavor: 'The Preventer raises a barrier the disease cannot cross.',
+    description: 'Shield 30 and blocks next spread.',
+  },
+  SystemsLeader: {
+    name: 'Grand Rounds',
+    rpgFlavor: 'The Systems Leader organizes the entire ward in one sweeping motion.',
+    description: 'Resets all hero actions and grants bonus AP.',
+  },
 };
 
 export const ULTIMATE_CHARGE_MAX = 100;

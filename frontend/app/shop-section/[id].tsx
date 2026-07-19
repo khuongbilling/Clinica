@@ -8,7 +8,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
-import { ROUTES } from "@/src/game/routes";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView } from "@/src/components/FeatureGate";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";

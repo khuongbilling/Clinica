@@ -203,6 +203,76 @@ const ABILITY_TABLE: Record<HeroRole, AbilityTemplate[]> = {
       nclexExplanation: 'Expert-level management combines definitive treatment with supportive care.',
     },
   ],
+  Scout: [
+    {
+      minStar: 3, key: 'quick_scan', name: 'Quick Scan', type: 'scout', cost: 1,
+      base: { reveal: 2 },
+      description: 'A fast sweep that surfaces hidden findings.',
+      shortEffect: 'Reveal 2 clues',
+    },
+    {
+      minStar: 5, key: 'deep_scan', name: 'Deep Scan', type: 'scout', cost: 2,
+      base: { reveal: 3, stabilize: 6 },
+      description: 'A thorough sweep that reveals clues and steadies the patient.',
+      shortEffect: 'Reveal 3 · Stabilize +6',
+    },
+  ],
+  Striker: [
+    {
+      minStar: 3, key: 'power_strike', name: 'Power Strike', type: 'strike', cost: 1,
+      base: { strike: 20 },
+      description: 'A forceful intervention aimed straight at the corruption.',
+      shortEffect: 'Strike 20',
+    },
+    {
+      minStar: 5, key: 'overwhelming_force', name: 'Overwhelming Force', type: 'strike', cost: 2,
+      base: { strike: 34 },
+      description: 'An overwhelming offensive that crushes the affliction.',
+      shortEffect: 'Strike 34',
+    },
+  ],
+  Restorer: [
+    {
+      minStar: 3, key: 'steady_hands', name: 'Steady Hands', type: 'stabilize', cost: 1,
+      base: { stabilize: 14 },
+      description: 'Careful, steady care that keeps the patient from slipping.',
+      shortEffect: 'Stabilize +14',
+    },
+    {
+      minStar: 5, key: 'healing_surge', name: 'Healing Surge', type: 'stabilize', cost: 2,
+      base: { stabilize: 24, shield: 10 },
+      description: 'A surge of restorative energy that heals and shields.',
+      shortEffect: 'Stabilize +24 · Shield 10',
+    },
+  ],
+  Preventer: [
+    {
+      minStar: 3, key: 'barrier', name: 'Barrier', type: 'shield', cost: 1,
+      base: { shield: 18 },
+      description: 'Raises a protective barrier against the next threat.',
+      shortEffect: 'Shield 18',
+    },
+    {
+      minStar: 5, key: 'ward_seal', name: 'Ward Seal', type: 'shield', cost: 2,
+      base: { shield: 24, stabilize: 8 },
+      description: 'Seals the ward against harm while restoring stability.',
+      shortEffect: 'Shield 24 · Stabilize +8',
+    },
+  ],
+  SystemsLeader: [
+    {
+      minStar: 3, key: 'delegate', name: 'Delegate', type: 'command', cost: 1,
+      base: { shield: 12, stabilize: 8 },
+      description: 'Coordinates the team to protect and stabilize.',
+      shortEffect: 'Shield 12 · Stabilize +8',
+    },
+    {
+      minStar: 5, key: 'systems_command', name: 'Systems Command', type: 'command', cost: 2,
+      base: { shield: 16, stabilize: 14 },
+      description: 'A masterful command action that shields and heals.',
+      shortEffect: 'Shield 16 · Stabilize +14',
+    },
+  ],
 };
 
 function scaleNum(n: number | undefined, mult: number): number | undefined {

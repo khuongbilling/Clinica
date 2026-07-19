@@ -40,7 +40,12 @@ export const CLASS_TRAINEE_BY_ROLE: Record<HeroRole, TraineeDef> = {
   Analyst:     { id: 'treat_trainee',     label: 'Treat Trainee',     role: 'Analyst' },
   Coordinator: { id: 'protect_trainee',   label: 'Protect Trainee',   role: 'Coordinator' },
   Educator:    { id: 'support_trainee',   label: 'Support Trainee',   role: 'Educator' },
-  Specialist:  { id: 'reassess_trainee',  label: 'Reassess Trainee',  role: 'Specialist' },
+  Specialist:      { id: 'reassess_trainee',      label: 'Reassess Trainee',      role: 'Specialist' },
+  Scout:           { id: 'scout_trainee',          label: 'Scout Trainee',          role: 'Scout' },
+  Striker:         { id: 'striker_trainee',        label: 'Striker Trainee',        role: 'Striker' },
+  Restorer:        { id: 'restorer_trainee',       label: 'Restorer Trainee',       role: 'Restorer' },
+  Preventer:       { id: 'preventer_trainee',      label: 'Preventer Trainee',      role: 'Preventer' },
+  SystemsLeader:   { id: 'systems_leader_trainee', label: 'Systems Leader Trainee', role: 'SystemsLeader' },
 };
 
 export const ALL_TRAINEES: TraineeDef[] = Object.values(CLASS_TRAINEE_BY_ROLE);

@@ -14,7 +14,6 @@ import { usePlayer } from "@/src/game/store";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { playRewardCue } from "@/src/game/cues";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import {

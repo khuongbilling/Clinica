@@ -1171,7 +1171,7 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
     const revealed = next.hiddenClueIds.length > 0;
     if (revealed) {
       const revealId = next.hiddenClueIds[0];
-      const revealedClue = next.clues.find(c => c.id === revealId);
+      const revealedClue = [...next.enemy.visibleClues, ...next.enemy.hiddenClues].find(c => c.id === revealId);
       next.hiddenClueIds = next.hiddenClueIds.slice(1);
       next.visibleClues = [...next.visibleClues, revealId];
       if (revealedClue) {

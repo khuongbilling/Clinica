@@ -15,7 +15,6 @@ import { usePlayer } from "@/src/game/store";
 import { useSettings } from "@/src/game/settingsStore";
 import { playRewardCue } from "@/src/game/cues";
 import { useTutorial } from "@/src/game/tutorialStore";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
   nextClassAbility, playerClassForAptitude, playerLevelFromXp,

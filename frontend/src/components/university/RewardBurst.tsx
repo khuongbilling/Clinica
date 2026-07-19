@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1,
     textTransform: "uppercase",
-    marginTop: -SPACING.xs ?? -4,
+    marginTop: -SPACING.xs,
   },
 
   // Divider

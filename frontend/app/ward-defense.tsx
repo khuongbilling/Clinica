@@ -58,7 +58,6 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost, findSkin } from "@/src/game/shop";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 /* ── Tick speed ── */

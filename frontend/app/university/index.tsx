@@ -22,7 +22,6 @@ import { HubBottomNav } from "@/src/components/HubBottomNav";
 import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import {

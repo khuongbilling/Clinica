@@ -19,7 +19,6 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import { rarityTierLabel } from "@/src/game/university";
 import { findSkin } from "@/src/game/shop";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -324,7 +323,7 @@ export default function HeroesScreen() {
               <Text style={styles.addSlotTxt}>Add {3 - team.length} more healer{3 - team.length > 1 ? "s" : ""} from Roster</Text>
             </Pressable>
           )}
-          <Text style={styles.sectionLbl} style={{ marginTop: SPACING.lg }}>Team Tips</Text>
+          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Team Tips</Text>
           <View style={styles.tipCard}>
             <Text style={styles.tipTxt}>⚕ Your team's element composition affects Ward Shift synergies.</Text>
           </View>
@@ -350,7 +349,7 @@ export default function HeroesScreen() {
             <Ionicons name="arrow-forward" size={18} color={COLORS.brand} />
           </Pressable>
 
-          <Text style={styles.sectionLbl} style={{ marginTop: SPACING.lg }}>All Healers</Text>
+          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>All Healers</Text>
           {regularHeroes.map((h) => {
             const isOwned = owned.has(h.id);
             const accent  = ELEMENT_COLORS[h.element] ?? COLORS.brand;
@@ -404,7 +403,7 @@ export default function HeroesScreen() {
             <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
           </Pressable>
 
-          <Text style={styles.sectionLbl} style={{ marginTop: SPACING.lg }}>Evolution-Ready</Text>
+          <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Evolution-Ready</Text>
           {ownedHeroes.filter((h) => canEvolve(getProgress(player.hero_progression, h.id))).length === 0 && (
             <View style={styles.tipCard}>
               <Text style={styles.tipTxt}>No heroes ready for evolution yet. Earn duplicate summons to evolve.</Text>

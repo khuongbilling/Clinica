@@ -14,7 +14,6 @@ import {
 import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
 import { getUiIcon } from "@/src/game/uiIcons";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 

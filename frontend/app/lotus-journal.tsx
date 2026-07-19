@@ -13,7 +13,6 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { DAILY_INSIGHT_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const GARDEN_METERS = [

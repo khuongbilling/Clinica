@@ -19,7 +19,6 @@ import { ROUTES } from "@/src/game/routes";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { ROUTES } from "@/src/game/routes";
 import { RewardBurst } from "@/src/components/university/RewardBurst";
 import React, {
   useCallback,
@@ -633,7 +632,7 @@ export default function CueHuntScreen() {
       </View>
 
       {/* ── BOTTOM: completion reward OR back link ────────────────────── */}
-      {phase !== "complete" && (
+      {(phase as "playing" | "complete") !== "complete" && (
         <Pressable
           style={styles.backToUni}
           onPress={() => router.replace(ROUTES.university)}

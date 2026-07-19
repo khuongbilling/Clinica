@@ -18,7 +18,6 @@ import {
 } from "@/src/game/objectiveProgress";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { MilestoneReward } from "@/src/components/onboarding/MilestoneReward";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";

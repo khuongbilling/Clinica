@@ -293,3 +293,24 @@ export const dynRoute = {
   simulation:  (id: string): AppRoute => `/university/simulation/${id}` as AppRoute,
   department:  (id: string): AppRoute => `/university/department/${id}` as AppRoute,
 } as const;
+
+/**
+ * Validates that all `linkRoute` values in the given building list resolve to
+ * a known ROUTES path.  Throws in __DEV__ if any route is unrecognised.
+ */
+export function validateRealmRoutes(buildings: Array<{ id: string; linkRoute?: string }>): void {
+  const knownRoutes = new Set(Object.values(ROUTES) as string[]);
+  const bad: string[] = [];
+  for (const b of buildings) {
+    if (b.linkRoute && !knownRoutes.has(b.linkRoute)) {
+      bad.push(`${b.id}: "${b.linkRoute}"`);
+    }
+  }
+  if (bad.length > 0) {
+    const msg = `validateRealmRoutes: unknown linkRoutes — ${bad.join(', ')}`;
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      throw new Error(msg);
+    }
+    console.warn(msg);
+  }
+}

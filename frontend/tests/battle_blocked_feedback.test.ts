@@ -70,7 +70,7 @@ const base  = () => initBattle(enemy, team, { chapter: 1, inventory: { 'Lab Toke
 // ── 6. Call: already used ────────────────────────────────────────────────
 {
   const phar = CALL_OPTIONS.find(o => o.id === 'call_pharmacy')!;
-  const s = { ...base(), callsUsed: { pharmacy: true, respiratory: false, rapidResponse: false, infectionControl: false } };
+  const s = { ...base(), callsUsed: { pharmacy: true, respiratory: false, rapidResponse: false, infectionControl: false, lab: false, rehab: false, social: false } };
   const r = applyCall(s, phar);
   check('CALL-USED: aborted=true', r.aborted === true, `aborted=${r.aborted}`);
   check('CALL-USED: message is non-empty', r.message.length > 0, `msg="${r.message}"`);

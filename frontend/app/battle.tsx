@@ -60,6 +60,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
+  const isFirstBattleGuided = activeTutorialId === "firstBattle";
+  const isFirstBattleActionStep =
+    isFirstBattleGuided &&
+    !!(currentStep?.requireAction) &&
+    !!currentStep?.requiredActionType &&
+    !["cue", "endTurn"].includes(currentStep.requiredActionType as string);
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
@@ -580,13 +586,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   // firstBattle guided rehearsal: lock the action panel to exactly one skill
   // type at a time (scout/stabilize/strike/analyze). Wrong-type buttons are
   // fully disabled (not just nudged), and the correct type pulses gold.
-  const isFirstBattleGuided = activeTutorialId === "firstBattle";
   const guidedActionType = (guidedStep?.requiredActionType ?? null) as string | null;
-  const isFirstBattleActionStep =
-    isFirstBattleGuided &&
-    !!guidedStep &&
-    !!guidedActionType &&
-    !["cue", "endTurn"].includes(guidedActionType);
 
   // Pulse animation for the required battle target (skill card or End Turn).
   // Scales the highlighted element gently so the player's eye is drawn to it

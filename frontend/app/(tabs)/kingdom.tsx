@@ -27,7 +27,6 @@ import {
   REALM_PRODUCTION_NOTE, getProducerBuildings, productionRatePerHour,
   productionCap, computeAccruedPoints, assignedHeroCount, HERO_ASSIGNMENT_RATE_BONUS,
 } from "@/src/game/realm";
-import { ROUTES } from "@/src/game/routes";
 import { HEROES } from "@/src/game/content";
 import {
   GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,

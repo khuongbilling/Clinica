@@ -19,7 +19,6 @@ import { ROUTES } from "@/src/game/routes";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { ROUTES } from "@/src/game/routes";
 import React, {
   useCallback,
   useEffect,

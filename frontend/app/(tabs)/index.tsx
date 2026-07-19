@@ -29,7 +29,6 @@ import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
-import { ROUTES } from "@/src/game/routes";
 
 const EMBLEM_IMAGES = {
   journey:     require("../../assets/ui-icons/emblems/journey.png"),
@@ -41,7 +40,7 @@ const EMBLEM_IMAGES = {
   worldEvents: require("../../assets/ui-icons/emblems/world-events.png"),
 } as const;
 
-function HubEmblem({ source }: { source: ReturnType<typeof require> }) {
+function HubEmblem({ source }: { source: any }) {
   return (
     <Image
       source={source}

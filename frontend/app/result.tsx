@@ -11,7 +11,6 @@ import { getEnemyHint } from "@/src/game/onboarding";
 import { playRewardCue } from "@/src/game/cues";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
 import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";

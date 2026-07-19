@@ -24,7 +24,6 @@ import {
   CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
   UNIVERSITY_HUB_MODE, WARD_SHIFT_MODE, WELLNESS_MODES,
 } from "@/src/game/modeHub";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 

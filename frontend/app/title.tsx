@@ -18,7 +18,7 @@ export default function Title() {
   // Returning players: seen the full prologue flow and have a saved identity.
   const isReturning = !!(player?.seen_reminiscence);
   const playerName = isReturning && player?.name && player.name !== "Healer" ? player.name : null;
-  const rankTitle = isReturning && player ? (RANKS[player.rank_index]?.title ?? null) : null;
+  const rankTitle = isReturning && player ? (RANKS[player.rank_index]?.name ?? null) : null;
 
   return (
     <View style={styles.root}>
