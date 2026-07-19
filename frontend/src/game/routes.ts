@@ -69,6 +69,7 @@ const UNI_STABILIZE_PLACEHOLDER: AppRoute = "/university/stabilize-placeholder";
 const UNI_STABILIZE_COMPLETE:   AppRoute = "/university/stabilize-complete";
 const UNI_TRIAGE_COMPLETE:      AppRoute = "/university/triage-complete";
 const UNI_CAREER_EXPLORER:      AppRoute = "/university/career-explorer";
+const UNI_SCHOOLS:              AppRoute = "/university/schools";
 
 // ── Other screens ─────────────────────────────────────────────────────────────
 const TITLE:               AppRoute = "/title";
@@ -155,6 +156,7 @@ export const ROUTES = {
   UNI_STABILIZE_COMPLETE,
   UNI_TRIAGE_COMPLETE,
   UNI_CAREER_EXPLORER,
+  UNI_SCHOOLS,
 
   // ── Other screens ─────────────────────────────────────────────────────────
   TITLE,
@@ -242,6 +244,7 @@ export const ROUTES = {
   universityPractice:             UNI_PRACTICE,
   universitySkillAcademy:         UNI_SKILL_ACADEMY,
   universityCareerExplorer:       UNI_CAREER_EXPLORER,
+  universitySchools:              UNI_SCHOOLS,
   universityCueHunt:              UNI_CUE_HUNT,
   universityCueHuntLesson:        UNI_CUE_HUNT_LESSON,
   universityRapidTriage:          UNI_RAPID_TRIAGE,

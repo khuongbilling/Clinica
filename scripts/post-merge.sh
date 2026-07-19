@@ -16,4 +16,7 @@ pip install -r requirements.txt
 echo "[post-merge] Checking routes (routes.ts ↔ app/ file tree)..."
 node "$ROOT/frontend/scripts/check-routes.js"
 
+echo "[post-merge] Installing git hooks..."
+bash "$ROOT/scripts/install-hooks.sh"
+
 echo "[post-merge] Done."
