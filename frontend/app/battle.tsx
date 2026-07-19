@@ -1285,7 +1285,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             player through every step), the goal strip is redundant noise —
             hide it and let the narrator carry the objective. */}
         {feedbackMsg ? (
-          <View style={[styles.feedbackBanner, feedbackIsChain && styles.feedbackBannerChain]}>
+          <View pointerEvents="none" style={[styles.feedbackBanner, feedbackIsChain && styles.feedbackBannerChain]}>
             <Ionicons name={feedbackIsChain ? "sparkles" : "information-circle"} size={11} color={feedbackIsChain ? COLORS.runeGold : COLORS.brand} />
             <Text style={[styles.feedbackText, feedbackIsChain && styles.feedbackTextChain]} numberOfLines={2}>{feedbackMsg}</Text>
           </View>
