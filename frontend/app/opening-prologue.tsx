@@ -45,6 +45,7 @@ import PrologueBattleTutorial        from "@/src/components/prologue/PrologueBat
 import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScriptedBattle";
 import LotusRecallCinematic             from "@/src/components/prologue/LotusRecallCinematic";
 import IdentityReconstructionScreen    from "@/src/components/prologue/IdentityReconstructionScreen";
+import PostRebirthAwakening            from "@/src/components/prologue/PostRebirthAwakening";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -193,6 +194,16 @@ export default function OpeningPrologue() {
   // Draft is auto-saved so the player never loses progress across app closes.
   if (activePhase === "identity_reconstruction_character_creation") {
     return <IdentityReconstructionScreen onComplete={handleContinue} />;
+  }
+
+  // ── Phase 9: Post-Rebirth Awakening ────────────────────────────────────────
+  // Plays immediately after character creation. The player awakens in the
+  // Lotus Recovery Chamber as their new customised Level 1 self, discovers
+  // that former abilities are sealed, and hears Master Bai reframe the
+  // journey: "This time, we will begin with understanding."
+  // Advances to memory_echo_award_scene.
+  if (activePhase === "post_rebirth_awakening") {
+    return <PostRebirthAwakening onComplete={handleContinue} />;
   }
 
   return (
