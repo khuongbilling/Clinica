@@ -28,8 +28,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { getLoadoutItems } from "@/src/game/loadoutStore";
 import { HEROES } from "@/src/game/content";
+import { SKILL_CLINICAL } from "@/src/game/clinical";
+import { rarityColor } from "@/src/game/gacha";
 import { ITEMS } from "@/src/game/items";
 import { usePlayer } from "@/src/game/store";
+import type { Hero } from "@/src/game/types";
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -44,10 +47,26 @@ const CHAPTER_BG: Record<number, ReturnType<typeof require>> = {
 };
 const CHAPTER_BG_FALLBACK = require("@/assets/map-bg/ch_generic.png");
 
+// ── Rarity label + chain-role helper ─────────────────────────────────────────
+
+const RARITY_LABEL: Record<number, string> = {
+  3: "COMMON", 4: "RARE", 5: "LEGENDARY", 6: "MYTHIC", 7: "TRANSCENDENT",
+};
+
+function getHeroChainRoles(hero: Hero): string[] {
+  const roles = new Set<string>();
+  (hero.skills ?? []).forEach((sk) => {
+    const clin = SKILL_CLINICAL[sk.id];
+    if (clin?.chainRoles) (clin.chainRoles as string[]).forEach((r) => roles.add(r));
+  });
+  return [...roles].slice(0, 3);
+}
+
 // ── Node type illustrated emblem ──────────────────────────────────────────────
 
 const NODE_EMBLEM: Partial<Record<string, ReturnType<typeof require>>> = {
   battle:          require("@/assets/map-nodes/node_ward_shift_gate.png"),
+  boss:            require("@/assets/map-nodes/node_trial_corrupted_gate.png"),
   mini_boss:       require("@/assets/map-nodes/node_trial_corrupted_gate.png"),
   ward_defense:    require("@/assets/map-nodes/node_ward_defense.png"),
   challenge:       require("@/assets/map-nodes/node_rapid_triage_assessment_desk.png"),
@@ -64,6 +83,7 @@ const NODE_EMBLEM: Partial<Record<string, ReturnType<typeof require>>> = {
 
 const TYPE_LABEL: Record<string, string> = {
   battle:          "Ward Shift",
+  boss:            "Boss Encounter",
   mini_boss:       "Chapter Trial",
   ward_defense:    "Ward Defense",
   challenge:       "Clinical Challenge",
@@ -250,30 +270,38 @@ function HeroCard({
   heroId,
   selected,
   onSelect,
+  locked = false,
 }: {
-  heroId:   string;
-  selected: boolean;
-  onSelect: () => void;
+  heroId:    string;
+  selected:  boolean;
+  onSelect?: () => void;
+  locked?:   boolean;
 }) {
-  const hero   = HEROES.find((h) => h.id === heroId);
-  const sprite = getHeroSprite(heroId);
+  const hero       = HEROES.find((h) => h.id === heroId);
+  const sprite     = getHeroSprite(heroId);
   if (!hero) return null;
 
-  const rc = ROLE_COLOR[hero.role] ?? UI.teal;
-  const ri = ROLE_ICON[hero.role]  ?? "star";
+  const rc         = ROLE_COLOR[hero.role] ?? UI.teal;
+  const ri         = ROLE_ICON[hero.role]  ?? "star";
+  const rColor     = rarityColor(hero.rarity);
+  const rLabel     = RARITY_LABEL[hero.rarity] ?? "COMMON";
+  const sysCo      = SYSTEM_COLOR[hero.element] ?? UI.gold;
+  const chainRoles = getHeroChainRoles(hero);
 
   return (
     <Pressable
       style={[
         hc.card,
-        selected && { borderColor: rc + "90", backgroundColor: rc + "0D" },
+        selected && !locked && { borderColor: rc + "90", backgroundColor: rc + "0D" },
+        locked && { borderColor: UI.gold + "40", backgroundColor: UI.gold + "06" },
       ]}
-      onPress={onSelect}
+      onPress={!locked ? onSelect : undefined}
     >
-      <View style={[hc.tl, { borderColor: selected ? rc + "80" : "rgba(255,255,255,0.10)" }]} />
-      <View style={[hc.br, { borderColor: selected ? rc + "80" : "rgba(255,255,255,0.10)" }]} />
+      <View style={[hc.tl, { borderColor: locked ? UI.gold + "50" : selected ? rc + "80" : "rgba(255,255,255,0.10)" }]} />
+      <View style={[hc.br, { borderColor: locked ? UI.gold + "50" : selected ? rc + "80" : "rgba(255,255,255,0.10)" }]} />
 
-      <View style={[hc.portrait, { borderColor: selected ? rc + "AA" : "rgba(255,255,255,0.14)" }]}>
+      {/* Portrait */}
+      <View style={[hc.portrait, { borderColor: locked ? UI.gold + "70" : selected ? rc + "AA" : rColor + "50" }]}>
         {sprite ? (
           <Image source={sprite} style={{ width: "100%", height: "100%" }} contentFit="cover" />
         ) : (
@@ -281,32 +309,61 @@ function HeroCard({
             <Ionicons name={ri as any} size={26} color={rc} />
           </View>
         )}
-        {selected && (
+        {locked ? (
+          <View style={[hc.badge, { backgroundColor: UI.gold }]}>
+            <Ionicons name="lock-closed" size={8} color="#0B1020" />
+          </View>
+        ) : selected ? (
           <View style={[hc.badge, { backgroundColor: rc }]}>
             <Ionicons name="checkmark" size={9} color="#000" />
           </View>
-        )}
+        ) : null}
       </View>
 
+      {/* Rarity stars */}
+      <Text style={[hc.rarity, { color: rColor }]} numberOfLines={1}>
+        {"★".repeat(Math.max(1, hero.rarity - 2))}
+        {"  "}
+        <Text style={[hc.rarityLabel, { color: rColor + "CC" }]}>{rLabel}</Text>
+      </Text>
+
+      {/* Name */}
       <Text style={hc.name} numberOfLines={1}>{hero.name}</Text>
 
+      {/* Role badge */}
       <View style={[hc.role, { backgroundColor: rc + "18", borderColor: rc + "40" }]}>
         <Ionicons name={ri as any} size={8} color={rc} />
         <Text style={[hc.roleTxt, { color: rc }]}>{hero.role}</Text>
       </View>
+
+      {/* Element badge */}
+      <View style={[hc.elemBadge, { backgroundColor: sysCo + "14", borderColor: sysCo + "32" }]}>
+        <Text style={[hc.elemTxt, { color: sysCo }]}>{hero.element}</Text>
+      </View>
+
+      {/* Chain roles */}
+      {chainRoles.length > 0 && (
+        <View style={hc.chainRow}>
+          {chainRoles.map((cr) => (
+            <View key={cr} style={hc.chainChip}>
+              <Text style={hc.chainTxt}>{cr}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </Pressable>
   );
 }
 const hc = StyleSheet.create({
   card: {
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: UI.panel,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.07)",
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     flex: 1,
     minWidth: "28%",
     position: "relative",
@@ -324,7 +381,7 @@ const hc = StyleSheet.create({
     borderBottomRightRadius: 3,
   },
   portrait: {
-    width: 60, height: 60,
+    width: 64, height: 64,
     borderRadius: 12,
     borderWidth: 2,
     overflow: "hidden",
@@ -343,6 +400,17 @@ const hc = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  rarity: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textAlign: "center",
+    marginTop: -1,
+  },
+  rarityLabel: {
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
   name: {
     color: UI.text,
     fontSize: 11,
@@ -359,9 +427,37 @@ const hc = StyleSheet.create({
     paddingVertical: 2,
   },
   roleTxt: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.2,
+  },
+  elemBadge: {
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  elemTxt: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  chainRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 3,
+    justifyContent: "center",
+  },
+  chainChip: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  chainTxt: {
+    color: UI.textDim,
+    fontSize: 9,
+    fontWeight: "600",
   },
 });
 
@@ -518,6 +614,7 @@ export default function MissionLoadoutScreen() {
     partType      = "battle",
     chapterAccent = UI.gold,
     chapterNumber = "1",
+    tutorial      = "",
   } = useLocalSearchParams<{
     partId:        string;
     title:         string;
@@ -526,7 +623,10 @@ export default function MissionLoadoutScreen() {
     partType:      string;
     chapterAccent: string;
     chapterNumber: string;
+    tutorial:      string;
   }>();
+
+  const isTutorial = tutorial === "1";
 
   const accent  = String(chapterAccent);
   const chNum   = Number(chapterNumber) || 1;
@@ -556,7 +656,11 @@ export default function MissionLoadoutScreen() {
   const activeTeam = player.active_team ?? [];
 
   const handleStart = () => {
-    if (enemyId) {
+    if (isTutorial) {
+      // Tutorial mode — always replace into battle with prologue+training flags so
+      // the guided Ward Shift scripted sequence runs correctly.
+      router.replace({ pathname: "/battle" as any, params: { enemyId: String(enemyId || "dehydration_wisp"), training: "1", prologue: "tutorial" } });
+    } else if (enemyId) {
       // Battle node with a specific enemy — push with typed params to avoid
       // URL-encoding issues when enemyId was separated from the route string.
       router.push({ pathname: "/battle" as any, params: { enemyId: String(enemyId) } });
@@ -652,34 +756,42 @@ export default function MissionLoadoutScreen() {
           <View style={s.sectionHead}>
             <View style={[s.pip, { backgroundColor: UI.teal }]} />
             <Text style={s.sectionTitle}>Healer Formation</Text>
+            {isTutorial && (
+              <View style={[s.lockChip, { borderColor: UI.gold + "60", backgroundColor: UI.gold + "14" }]}>
+                <Ionicons name="lock-closed" size={9} color={UI.gold} />
+                <Text style={[s.lockChipTxt, { color: UI.gold }]}>TRAINING</Text>
+              </View>
+            )}
           </View>
 
-          {activeTeam.length > 0 ? (
-            <View style={s.navCard}>
-              <View style={s.navCardInfo}>
-                {activeTeam.slice(0, 3).map((heroId) => {
-                  const hero = HEROES.find((h) => h.id === heroId);
-                  return (
-                    <View key={heroId} style={s.heroChip}>
-                      <Ionicons name="heart" size={11} color={UI.teal} />
-                      <Text style={s.heroChipTxt} numberOfLines={1}>
-                        {hero?.displayName ?? heroId}
-                      </Text>
-                    </View>
-                  );
-                })}
-                {activeTeam.length > 3 && (
-                  <Text style={s.moreTxt}>+{activeTeam.length - 3} more</Text>
-                )}
+          {isTutorial ? (
+            <>
+              <Text style={s.sectionDesc}>
+                These loaner healers guide you through your first shift. Recruit your own team after the tutorial.
+              </Text>
+              <View style={s.heroRow}>
+                {["novice_guardian", "village_caretaker"].map((id) => (
+                  <HeroCard key={id} heroId={id} selected locked />
+                ))}
+                <View style={{ flex: 1 }} />
+              </View>
+            </>
+          ) : activeTeam.length > 0 ? (
+            <>
+              <View style={s.heroRow}>
+                {activeTeam.slice(0, 3).map((heroId) => (
+                  <HeroCard key={heroId} heroId={heroId} selected onSelect={() => {}} />
+                ))}
               </View>
               <Pressable
-                style={[s.navBtn, { borderColor: UI.teal + "60" }]}
+                style={[s.editBtn, { borderColor: UI.teal + "50" }]}
                 onPress={() => router.push("/hero-select" as any)}
               >
-                <Text style={[s.navBtnTxt, { color: UI.teal }]}>Edit Formation</Text>
+                <Ionicons name="create-outline" size={13} color={UI.teal} />
+                <Text style={[s.editBtnTxt, { color: UI.teal }]}>Edit Formation</Text>
                 <Ionicons name="chevron-forward" size={13} color={UI.teal} />
               </Pressable>
-            </View>
+            </>
           ) : (
             <Pressable
               style={[s.navCard, s.emptyNavCard]}
@@ -705,6 +817,15 @@ export default function MissionLoadoutScreen() {
               </Text>
             </View>
           </View>
+          {isTutorial ? (
+            <View style={[s.tutorialNotice, { borderColor: UI.gold + "30", backgroundColor: UI.gold + "0A" }]}>
+              <Ionicons name="lock-closed" size={14} color={UI.gold} />
+              <Text style={[s.tutorialNoticeTxt, { color: UI.gold + "CC" }]}>
+                Items are not available in Training Mode. You'll unlock your clinical bag after recruiting your first hero.
+              </Text>
+            </View>
+          ) : (
+            <>
           <Text style={s.sectionDesc}>
             Select up to 3 disposable items. Tap the slots above to remove.
           </Text>
@@ -745,6 +866,8 @@ export default function MissionLoadoutScreen() {
               </Text>
             </View>
           )}
+            </>
+          )}
         </View>
 
         {/* ── Tip ─────────────────────────────────────────────────────────── */}
@@ -764,11 +887,11 @@ export default function MissionLoadoutScreen() {
           <Text style={s.backFooterTxt}>Back</Text>
         </Pressable>
         <Pressable
-          style={[s.startBtn, { backgroundColor: accent }]}
+          style={[s.startBtn, { backgroundColor: isTutorial ? UI.gold : accent }]}
           onPress={handleStart}
         >
-          <Ionicons name="shield-checkmark" size={18} color="#0B1020" />
-          <Text style={[s.startBtnTxt, { color: "#0B1020" }]}>Deploy to Ward</Text>
+          <Ionicons name={isTutorial ? "school-outline" : "shield-checkmark"} size={18} color="#0B1020" />
+          <Text style={[s.startBtnTxt, { color: "#0B1020" }]}>{isTutorial ? "Begin Training" : "Deploy to Ward"}</Text>
         </Pressable>
       </View>
 
@@ -979,6 +1102,42 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   emptyNavTxt: { color: UI.textDim, fontSize: 12, flex: 1 },
+
+  // Tutorial mode
+  lockChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  lockChipTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    gap: 4,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  editBtnTxt: { fontSize: 12, fontWeight: "700" },
+  tutorialNotice: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    alignItems: "flex-start",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: SPACING.sm,
+  },
+  tutorialNoticeTxt: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+  },
 
   // Tip
   tip: {

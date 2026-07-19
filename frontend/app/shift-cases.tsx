@@ -74,7 +74,7 @@ export default function ShiftCasesPage() {
       launchingRef.current = false;
       return;
     }
-    router.push({ pathname: "/battle", params: { enemyId } });
+    router.push({ pathname: "/mission-loadout" as any, params: { enemyId, title: current?.name ?? "Ward Shift", partType: "battle", chapterAccent: accent } });
     setTimeout(() => { launchingRef.current = false; }, 1000);
   };
 

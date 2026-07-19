@@ -173,7 +173,7 @@ export default function LotusLessonScreen() {
 
   const goToShift = () => {
     if (noHeroes) return;
-    router.replace({ pathname: "/battle", params: { enemyId: node.linkedCaseId } } as any);
+    router.replace({ pathname: "/mission-loadout" as any, params: { enemyId: node.linkedCaseId, title: node.title ?? "Lotus Lesson", partType: "battle", chapterAccent: "#4FD8C4" } });
   };
 
   // ── Render: already-complete skip card ───────────────────────────────────

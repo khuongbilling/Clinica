@@ -65,7 +65,7 @@ export default function BossPage() {
       flashNotice(`Not enough Shift Challenges — a boss encounter costs ${BOSS_ENCOUNTER_COST}.`);
       return;
     }
-    router.push({ pathname: "/battle", params: { enemyId: boss.id } });
+    router.push({ pathname: "/mission-loadout" as any, params: { enemyId: boss.id, title: boss.name, partType: "boss", chapterAccent: accent } });
   };
 
   return (

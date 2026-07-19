@@ -22,7 +22,7 @@ export default function Prologue() {
     if (startedRef.current) return;
     if (player && player.prologue_complete === false) {
       startedRef.current = true;
-      router.replace({ pathname: "/battle", params: { enemyId: "dehydration_wisp", training: "1", prologue: "tutorial" } });
+      router.replace({ pathname: "/mission-loadout" as any, params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
       return;
     }
     if (!player) {
@@ -36,7 +36,7 @@ export default function Prologue() {
         identity_restored: false,
         diagnostic_intro_seen: false,
       }).then(() => {
-        router.replace({ pathname: "/battle", params: { enemyId: "dehydration_wisp", training: "1", prologue: "tutorial" } });
+        router.replace({ pathname: "/mission-loadout" as any, params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
       }).catch(() => {
         setStarting(false);
         startedRef.current = false;
