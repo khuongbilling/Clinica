@@ -2,13 +2,23 @@
 /**
  * check-routes.js
  *
- * Cross-references every static ROUTES value declared in
- * frontend/src/game/routes.ts against the actual file-system tree under
- * frontend/app/.
+ * Two-way cross-reference between ROUTES in frontend/src/game/routes.ts
+ * and screen files in frontend/app/.
  *
- * Exits 0  — all constants resolve to a real file.
- * Exits 1  — one or more constants have no matching file (stale after a rename
- *             or delete) and prints the offending paths.
+ * Check A — stale constants  (original check)
+ *   Every static route string declared in routes.ts must resolve to a real
+ *   file in frontend/app/.
+ *
+ * Check B — orphan screens  (new reverse check)
+ *   Every navigable screen file in frontend/app/ must have a matching value
+ *   in routes.ts.
+ *   Exempt from this check:
+ *     - _layout.tsx, +html.tsx  (framework files, not navigable screens)
+ *     - index.tsx               (parent folder path already appears in ROUTES)
+ *     - [param].tsx / [param]/  (dynamic segments; covered by dynRoute helpers)
+ *
+ * Exits 0  — both checks pass.
+ * Exits 1  — one or more violations found.
  *
  * Add to CI / workflow:  node frontend/scripts/check-routes.js
  * Run as npm script:     cd frontend && npm run check:routes
@@ -23,16 +33,20 @@ const ROOT      = path.resolve(__dirname, '..');
 const APP_DIR   = path.join(ROOT, 'app');
 const ROUTES_TS = path.join(ROOT, 'src', 'game', 'routes.ts');
 
-// ── 1. Walk frontend/app/ and build the set of known route patterns ──────────
+// ── 1. Walk frontend/app/ — two passes ──────────────────────────────────────
 //
 // Rules mirroring Expo Router's file-based conventions:
 //   app/foo.tsx              → /foo
 //   app/foo/index.tsx        → /foo
 //   app/(tabs)/foo.tsx       → /(tabs)/foo
 //   app/(tabs)/index.tsx     → /(tabs)
-//   app/foo/[id].tsx         → /foo/[id]   (kept as a glob for matching below)
+//   app/foo/[id].tsx         → /foo/[id]   (kept as a glob for check A matching)
 //   _layout.tsx, +html.tsx   → ignored (not navigable routes)
 
+/**
+ * Full walk — includes dynamic segments, excludes layout/html.
+ * Used for Check A (stale-constant resolution).
+ */
 function walkAppDir(dir, prefix) {
   const knownRoutes = [];
 
@@ -58,7 +72,42 @@ function walkAppDir(dir, prefix) {
   return knownRoutes;
 }
 
-const knownRouteSet = new Set(walkAppDir(APP_DIR, ''));
+/**
+ * Orphan walk — excludes dynamic segments AND index files in addition to
+ * framework files. Only static, non-index screen files are candidates for
+ * Check B (orphan-screen detection).
+ */
+function walkOrphanCandidates(dir, prefix) {
+  const candidates = [];
+
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const name = entry.name;
+
+    // Skip framework/layout files
+    if (name.startsWith('+') || name.startsWith('_')) continue;
+
+    const fullPath = path.join(dir, name);
+    const segment  = name.replace(/\.(tsx?|jsx?)$/, '');
+
+    if (entry.isDirectory()) {
+      // Skip dynamic segment directories like [id]/
+      if (name.startsWith('[') && name.endsWith(']')) continue;
+      candidates.push(...walkOrphanCandidates(fullPath, `${prefix}/${name}`));
+    } else if (/\.(tsx?|jsx?)$/.test(name)) {
+      // Skip index files (parent folder path already appears in ROUTES)
+      if (segment === 'index') continue;
+      // Skip dynamic segment files like [id].tsx
+      if (segment.startsWith('[') && segment.endsWith(']')) continue;
+
+      candidates.push(`${prefix}/${segment}`);
+    }
+  }
+
+  return candidates;
+}
+
+const knownRouteSet      = new Set(walkAppDir(APP_DIR, ''));
+const orphanCandidates   = walkOrphanCandidates(APP_DIR, '');
 
 // ── 2. Extract static route strings from routes.ts ───────────────────────────
 //
@@ -81,7 +130,7 @@ while ((m = STRING_RE.exec(src)) !== null) {
   if (s.startsWith('/')) candidateRoutes.add(s);
 }
 
-// ── 3. Cross-reference: does each candidate route have a backing file? ───────
+// ── 3. Check A: does each ROUTES constant resolve to a real file? ─────────────
 //
 // Match strategy (in order):
 //   a) Exact match against knownRouteSet.
@@ -111,16 +160,51 @@ function resolves(route) {
 
 const missing = [...candidateRoutes].filter(r => !resolves(r)).sort();
 
-// ── 4. Report ─────────────────────────────────────────────────────────────────
+// ── 4. Check B: does each static screen file have a ROUTES entry? ─────────────
+//
+// For each orphan candidate route (static, non-index screen file) we check
+// whether any value in candidateRoutes covers it.  A group-segment path like
+// /(tabs)/codex is an exact match; we also allow matching where group
+// parentheses are stripped (some ROUTES entries omit the group).
+
+function isInRoutes(screenRoute) {
+  // Direct exact match
+  if (candidateRoutes.has(screenRoute)) return true;
+
+  // Strip group-folder segments like (tabs) from the screen route and retry,
+  // because ROUTES might omit the group prefix in some entries.
+  const stripped = '/' + screenRoute.split('/').filter(Boolean)
+    .filter(seg => !(seg.startsWith('(') && seg.endsWith(')')))
+    .join('/');
+  if (stripped !== screenRoute && candidateRoutes.has(stripped)) return true;
+
+  // Also accept if a ROUTES value with group stripped matches this screen's
+  // stripped path (handles symmetrical cases).
+  for (const r of candidateRoutes) {
+    const rStripped = '/' + r.split('/').filter(Boolean)
+      .filter(seg => !(seg.startsWith('(') && seg.endsWith(')')))
+      .join('/');
+    if (rStripped === stripped && stripped !== '/') return true;
+  }
+
+  return false;
+}
+
+const orphans = orphanCandidates.filter(r => !isInRoutes(r)).sort();
+
+// ── 5. Report ─────────────────────────────────────────────────────────────────
+
+let exitCode = 0;
+
 if (missing.length === 0) {
   console.log(
-    `✓ check-routes: all ${candidateRoutes.size} route strings in routes.ts` +
+    `✓ check-routes [A]: all ${candidateRoutes.size} route string(s) in routes.ts` +
     ` resolve to a real file in app/.`
   );
-  process.exit(0);
 } else {
+  exitCode = 1;
   console.error(
-    `✗ check-routes: ${missing.length} route string(s) in routes.ts` +
+    `✗ check-routes [A]: ${missing.length} route string(s) in routes.ts` +
     ` have no matching file in app/:\n`
   );
   for (const r of missing) {
@@ -130,5 +214,26 @@ if (missing.length === 0) {
     '\nFix: either rename/restore the file in frontend/app/, or update the' +
     ' constant in frontend/src/game/routes.ts.'
   );
-  process.exit(1);
 }
+
+if (orphans.length === 0) {
+  console.log(
+    `✓ check-routes [B]: all ${orphanCandidates.length} static screen file(s) in app/` +
+    ` have a matching entry in routes.ts.`
+  );
+} else {
+  exitCode = 1;
+  console.error(
+    `\n✗ check-routes [B]: ${orphans.length} screen file(s) in app/ have no` +
+    ` matching entry in routes.ts:\n`
+  );
+  for (const r of orphans) {
+    console.error(`  ${r}`);
+  }
+  console.error(
+    '\nFix: add a constant for each path to ROUTES in frontend/src/game/routes.ts,' +
+    '\nor if the screen is intentionally un-navigable, rename it to start with "_".'
+  );
+}
+
+process.exit(exitCode);
