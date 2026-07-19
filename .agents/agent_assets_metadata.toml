@@ -1428,3 +1428,21 @@ id = "DBrDqebmUocWoEdIt-DDZ"
 uri = "file://frontend/assets/enemies/dehydration_specter.png"
 type = "image"
 title = "dehydration specter enemy sprite"
+
+[[generated]]
+id = "MrowbAeNCiKv3U5TCGN12"
+uri = "file://frontend/assets/enemies/fever_shade.png"
+type = "image"
+title = "fever shade enemy sprite"
+
+[[generated]]
+id = "AnAnNgfsPa5RqC5CrAmsb"
+uri = "file://frontend/assets/enemies/gale_spirit.png"
+type = "image"
+title = "gale spirit enemy sprite"
+
+[[generated]]
+id = "nC8XGYyzsnPaqgLrS2iZ7"
+uri = "file://frontend/assets/enemies/ward_cascade.png"
+type = "image"
+title = "ward cascade boss enemy sprite"

@@ -558,6 +558,89 @@ export const ENEMIES: Enemy[] = [
     teaches: ['fatigue_recognition', 'multi_step_care'],
   },
 
+  // ── Chapter mini-boss enemies (one per sim-era chapter trial node) ──────────
+  // Each mini_boss node in chapterJourney.ts routes to /battle?enemyId=<id> so
+  // the battle screen can render a distinct sprite. Difficulty is one step above
+  // the chapter's normal enemy pool to signal elevated threat.
+
+  // c2p7 — Trial: Fever Shade (Fire/River, difficulty 3 — Fever Imp's evolved cousin)
+  {
+    id: 'fever_shade',
+    name: 'Fever Shade',
+    realWorld: 'Systemic infection with early sepsis features',
+    primarySystem: 'Fire',
+    secondarySystem: 'River',
+    difficulty: 3,
+    startingStability: 45,
+    instability: 10,
+    corruption: 155,
+    weakSystem: 'Fire',
+    visibleClues: [
+      { id: 'c1', label: 'Fever 39.8°C', detail: 'Sustained high fever despite antipyretics.', hidden: false },
+      { id: 'c2', label: 'Rigors', detail: 'Uncontrolled shivering — systemic inflammatory response.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'HR 118, RR 22', detail: 'Two SIRS criteria — early systemic spread.', hidden: true },
+      { id: 'h2', label: 'BP Softening', detail: 'Systolic trending toward 95 — perfusion at risk.', hidden: true },
+      { id: 'h3', label: 'Occult Source', detail: 'No obvious wound or focus — assessment reveals a hidden infection site.', hidden: true },
+    ],
+    dangerTrigger: 'Septic shock',
+    bestCounters: ['scout', 'strike', 'stabilize'],
+    teaches: ['sepsis_recognition', 'systemic_infection'],
+  },
+
+  // c3p8 — Trial: Gale Spirit (Air, difficulty 4 — Air Sprite's advanced form)
+  {
+    id: 'gale_spirit',
+    name: 'Gale Spirit',
+    realWorld: 'Severe acute asthma / early respiratory failure',
+    primarySystem: 'Air',
+    difficulty: 4,
+    startingStability: 42,
+    instability: 11,
+    corruption: 165,
+    weakSystem: 'Air',
+    visibleClues: [
+      { id: 'c1', label: 'Silent Wheeze', detail: 'Air entry critically reduced — breath sounds nearly absent.', hidden: false },
+      { id: 'c2', label: 'SpO₂ 83%', detail: 'Profound hypoxia despite high-flow oxygen.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Accessory Muscles', detail: 'Sternocleidomastoid and scalene working hard — near-failure work of breathing.', hidden: true },
+      { id: 'h2', label: 'PaCO₂ Rising', detail: 'CO₂ retention: respiratory muscle fatigue approaching collapse.', hidden: true },
+      { id: 'h3', label: 'Peak Flow <33%', detail: 'Severe obstruction — life-threatening threshold crossed.', hidden: true },
+    ],
+    dangerTrigger: 'Respiratory arrest',
+    bestCounters: ['stabilize', 'scout', 'shield'],
+    teaches: ['respiratory_failure', 'oxygenation_advanced'],
+  },
+
+  // c5p8 — Trial: Ward Cascade (multi-system, difficulty 6 — chapter 5 finale)
+  {
+    id: 'ward_cascade',
+    name: 'Ward Cascade',
+    realWorld: 'Multi-system deterioration (circulation + airway + metabolic)',
+    primarySystem: 'River',
+    secondarySystem: 'Air',
+    difficulty: 6,
+    startingStability: 40,
+    instability: 13,
+    corruption: 190,
+    stabilityResistance: 0.1,
+    weakSystem: 'River',
+    visibleClues: [
+      { id: 'c1', label: 'Rapid Multi-System Alarm', detail: 'Cardiac monitor, respiratory alarm, and metabolic panel all flagging simultaneously.', hidden: false },
+      { id: 'c2', label: 'BP 88/54', detail: 'Circulatory pressure dropping — the body is losing its footing on multiple fronts.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'SpO₂ 84%', detail: 'Airways compromised under circulatory failure — hypoxia compounding the picture.', hidden: true },
+      { id: 'h2', label: 'K⁺ 5.9', detail: 'Electrolyte imbalance riding beneath the haemodynamic collapse.', hidden: true },
+      { id: 'h3', label: 'Lactic Acidosis', detail: 'Lactate 4.1 — tissue perfusion failing across all systems.', hidden: true },
+    ],
+    dangerTrigger: 'Multi-organ failure cascade',
+    bestCounters: ['stabilize', 'scout', 'shield', 'strike'],
+    teaches: ['multi_system_priority', 'triage_basics'],
+  },
+
   // ---------- WORLD EVENT BOSS — Verdantha, the Bloom Matriarch ----------
   // Playable-but-gated Phase III World Boss for the Miasma Bloom event. Lives in
   // ENEMIES so battle.tsx/result.tsx can resolve it by id, but carries

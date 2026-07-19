@@ -19,6 +19,9 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   dehydration_specter: require('../../assets/enemies/dehydration_specter.png'),
   silent_infarct: require('../../assets/enemies/silent_infarct.png'),
   verdantha: require('../../assets/enemies/verdantha.png'),
+  fever_shade: require('../../assets/enemies/fever_shade.png'),
+  gale_spirit: require('../../assets/enemies/gale_spirit.png'),
+  ward_cascade: require('../../assets/enemies/ward_cascade.png'),
 };
 
 // All enemy portrait modules, for cache preloading at game start.
