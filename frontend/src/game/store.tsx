@@ -325,6 +325,17 @@ function normalizeProgression(p: PlayerState): PlayerState {
       class_diagnostic_secondary: out.class_diagnostic_secondary || secondary,
     };
   }
+  // P8 — Battle card deck (mission loadout). Empty list for all existing players
+  // so no cards are pre-loaded (legacy random-draw mode stays active until the
+  // player explicitly sets a loadout). New players also start with [].
+  if (!Array.isArray(out.equipped_cards)) {
+    out = { ...out, equipped_cards: [] };
+  }
+  // P8 — Card tutorial: all players (new and returning) should see the one-time
+  // "what are cards?" modal the first time they open the Cards tab.
+  if (out.seen_card_tutorial == null) {
+    out = { ...out, seen_card_tutorial: false };
+  }
   return out;
 }
 
@@ -387,6 +398,8 @@ type Ctx = {
   pullGacha: () => Promise<{ ok: boolean; message: string; typeId?: string; isNew?: boolean; level?: number }>;
   upgradeUnitMastery: (typeId: string) => Promise<{ ok: boolean; message: string; level?: number }>;
   setWardLoadout: (ids: string[]) => Promise<{ ok: boolean; message: string }>;
+  setEquippedCards: (cardIds: string[]) => Promise<{ ok: boolean; message: string }>;
+  markCardTutorialSeen: () => Promise<void>;
   setRealmLayout: (layoutPatch: Record<string, string | null>, decorPatch?: Record<string, string | null>) => Promise<{ ok: boolean; message: string }>;
   setRealmAssignment: (buildingId: string, heroIds: string[]) => Promise<{ ok: boolean; message: string }>;
   collectRealmProduction: (buildingId: string) => Promise<{ ok: boolean; message: string; amount?: number }>;
@@ -2447,10 +2460,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // P8 — Persist the player's card loadout (up to 3 card IDs for limited-use battle).
+  const setEquippedCards = useCallback(async (cardIds: string[]) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const clean = cardIds.filter(Boolean).slice(0, 3);
+    const next: PlayerState = { ...base, equipped_cards: clean };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true, message: 'Card deck saved.' };
+  }, [updateState]);
+
+  // P8 — Mark the first-time "what are cards?" tutorial modal as seen.
+  const markCardTutorialSeen = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.seen_card_tutorial) return;
+    const next: PlayerState = { ...base, seen_card_tutorial: true };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState]);
+    setEquippedCards, markCardTutorialSeen,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

@@ -15,8 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,6 +32,7 @@ import { HEROES } from "@/src/game/content";
 import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { rarityColor } from "@/src/game/gacha";
 import { ITEMS } from "@/src/game/items";
+import { CARD_POOL, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { usePlayer } from "@/src/game/store";
 import type { Hero } from "@/src/game/types";
 import { RADIUS, SPACING } from "@/src/theme/colors";
@@ -605,7 +607,7 @@ const ic = StyleSheet.create({
 
 export default function MissionLoadoutScreen() {
   const router = useRouter();
-  const { player, loading } = usePlayer();
+  const { player, loading, setEquippedCards } = usePlayer();
 
   const {
     title         = "Mission",
@@ -635,10 +637,28 @@ export default function MissionLoadoutScreen() {
   const bgImg   = CHAPTER_BG[chNum] ?? CHAPTER_BG_FALLBACK;
 
   const [selectedItems, setSelectedItems] = useState<string[]>(() => getLoadoutItems());
+  const [equippedCards, setLocalEquippedCards] = useState<string[]>(
+    () => player?.equipped_cards ?? []
+  );
+  const [cardPickerOpen, setCardPickerOpen] = useState(false);
 
   useFocusEffect(useCallback(() => {
     setSelectedItems(getLoadoutItems());
-  }, []));
+    setLocalEquippedCards(player?.equipped_cards ?? []);
+  }, [player?.equipped_cards]));
+
+  function toggleCard(cardId: string) {
+    setLocalEquippedCards((prev) => {
+      if (prev.includes(cardId)) return prev.filter((id) => id !== cardId);
+      if (prev.length >= 3) return prev; // max 3
+      return [...prev, cardId];
+    });
+  }
+
+  async function saveCardDeck() {
+    await setEquippedCards(equippedCards);
+    setCardPickerOpen(false);
+  }
 
   if (loading || !player) {
     return (
@@ -870,11 +890,150 @@ export default function MissionLoadoutScreen() {
           )}
         </View>
 
+        <SectionDivider accent={accent} />
+
+        {/* ── Card Deck ─────────────────────────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={[s.pip, { backgroundColor: "#BBA7EA" }]} />
+            <Text style={s.sectionTitle}>Card Deck</Text>
+            <View style={[s.countPill, { borderColor: "#BBA7EA50" }]}>
+              <Text style={[s.countTxt, { color: "#BBA7EA" }]}>
+                {equippedCards.length}/3
+              </Text>
+            </View>
+          </View>
+
+          {isTutorial ? (
+            <View style={[s.tutorialNotice, { borderColor: UI.gold + "30", backgroundColor: UI.gold + "0A" }]}>
+              <Ionicons name="lock-closed" size={14} color={UI.gold} />
+              <Text style={[s.tutorialNoticeTxt, { color: UI.gold + "CC" }]}>
+                Cards are not available in Training Mode. You'll unlock your card deck after completing your first battle.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={s.sectionDesc}>
+                Load up to 3 cards for this battle. Each card can only be played once per run — choose wisely.
+              </Text>
+
+              {/* Currently selected cards summary */}
+              <View style={s.navCard}>
+                <View style={s.navCardInfo}>
+                  {equippedCards.length === 0 ? (
+                    <Text style={s.emptyNavTxt}>No cards loaded — random pool will be used</Text>
+                  ) : (
+                    equippedCards.map((id) => {
+                      const card = CARD_POOL.find(c => c.id === id);
+                      if (!card) return null;
+                      const chainCfg = CHAIN_TYPE_CONFIG[card.cardChainType];
+                      return (
+                        <View key={id} style={s.heroChip}>
+                          <Ionicons name={chainCfg.icon as any} size={11} color={chainCfg.color} />
+                          <Text style={[s.heroChipTxt, { color: chainCfg.color }]} numberOfLines={1}>
+                            {card.name}
+                          </Text>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+                <Pressable
+                  style={[s.navBtn, { borderColor: "#BBA7EA60" }]}
+                  onPress={() => setCardPickerOpen(true)}
+                >
+                  <Text style={[s.navBtnTxt, { color: "#BBA7EA" }]}>Edit Deck</Text>
+                  <Ionicons name="chevron-forward" size={13} color="#BBA7EA" />
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Card picker modal */}
+        <Modal visible={cardPickerOpen} transparent animationType="slide" onRequestClose={() => setCardPickerOpen(false)}>
+          <View style={s.cardModalOverlay}>
+            <View style={s.cardModalSheet}>
+              <View style={s.cardModalHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardModalTitle}>Select Card Deck</Text>
+                  <Text style={s.cardModalSub}>Choose up to 3 cards · {equippedCards.length}/3 selected</Text>
+                </View>
+                <Pressable onPress={() => setCardPickerOpen(false)} hitSlop={10}>
+                  <Ionicons name="close" size={20} color={UI.textSoft} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                <View style={s.cardPickerGrid}>
+                  {CARD_POOL.map((card) => {
+                    const chainCfg = CHAIN_TYPE_CONFIG[card.cardChainType];
+                    const selected = equippedCards.includes(card.id);
+                    const maxed = !selected && equippedCards.length >= 3;
+                    return (
+                      <Pressable
+                        key={card.id}
+                        style={[
+                          s.cardPickerCard,
+                          selected
+                            ? { borderColor: chainCfg.color + "AA", backgroundColor: chainCfg.color + "12" }
+                            : { borderColor: "rgba(255,255,255,0.08)" },
+                          maxed && s.cardPickerCardDisabled,
+                        ]}
+                        onPress={() => !maxed && toggleCard(card.id)}
+                      >
+                        {/* Chain type badge */}
+                        <View style={[s.cardChainBadge, { backgroundColor: chainCfg.color + "1A", borderColor: chainCfg.color + "55" }]}>
+                          <Ionicons name={chainCfg.icon as any} size={10} color={chainCfg.color} />
+                          <Text style={[s.cardChainLbl, { color: chainCfg.color }]}>
+                            {card.cardChainType.toUpperCase()}
+                          </Text>
+                        </View>
+
+                        <Text style={s.cardPickerName} numberOfLines={2}>{card.name}</Text>
+                        <Text style={s.cardPickerEffect} numberOfLines={2}>{card.shortEffect}</Text>
+
+                        <View style={s.cardPickerFooter}>
+                          <Text style={[s.cardPickerSource, { color: UI.textDim }]}>{card.source}</Text>
+                          <View style={[s.cardPickerAP, { backgroundColor: chainCfg.color + "22" }]}>
+                            <Text style={[s.cardPickerAPTxt, { color: chainCfg.color }]}>{card.costAP} AP</Text>
+                          </View>
+                        </View>
+
+                        {selected && (
+                          <View style={[s.cardPickerCheck, { backgroundColor: chainCfg.color }]}>
+                            <Ionicons name="checkmark" size={11} color="#000" />
+                          </View>
+                        )}
+                        {!chainCfg.advancesChain && (
+                          <View style={s.cardSupportTag}>
+                            <Text style={s.cardSupportTagTxt}>SUPPORT</Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              <View style={s.cardModalFooter}>
+                <Pressable style={s.cardModalClearBtn} onPress={() => setLocalEquippedCards([])}>
+                  <Text style={s.cardModalClearTxt}>Clear</Text>
+                </Pressable>
+                <Pressable style={[s.cardModalSaveBtn, { backgroundColor: "#BBA7EA" }]} onPress={saveCardDeck}>
+                  <Ionicons name="checkmark-circle" size={16} color="#0B1020" />
+                  <Text style={s.cardModalSaveTxt}>Save Deck</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {/* ── Tip ─────────────────────────────────────────────────────────── */}
         <View style={s.tip}>
           <Ionicons name="information-circle-outline" size={14} color={UI.textDim} />
           <Text style={s.tipTxt}>
-            Items are consumed when used in battle. Your selections here determine what's available as in-battle actions — you still choose when to use them.
+            Items are consumed when used in battle. Cards are single-use per battle. Your selections here determine what's available as in-battle actions.
           </Text>
         </View>
 
@@ -1155,6 +1314,164 @@ const s = StyleSheet.create({
     color: UI.textDim,
     fontSize: 11,
     lineHeight: 16,
+  },
+
+  // Card picker modal
+  cardModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "flex-end",
+  },
+  cardModalSheet: {
+    backgroundColor: UI.bgDeep,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: 1,
+    borderColor: "rgba(187,167,234,0.25)",
+    maxHeight: "85%",
+    paddingBottom: SPACING.lg,
+  },
+  cardModalHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+    gap: SPACING.sm,
+  },
+  cardModalTitle: {
+    color: UI.text,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  cardModalSub: {
+    color: "#BBA7EA",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  cardPickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    justifyContent: "space-between",
+  },
+  cardPickerCard: {
+    width: "47%",
+    backgroundColor: UI.panel,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    padding: 11,
+    gap: 5,
+    position: "relative",
+    overflow: "hidden",
+  },
+  cardPickerCardDisabled: {
+    opacity: 0.45,
+  },
+  cardChainBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  cardChainLbl: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  cardPickerName: {
+    color: UI.text,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
+  cardPickerEffect: {
+    color: UI.textDim,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  cardPickerFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  cardPickerSource: {
+    fontSize: 10,
+    fontStyle: "italic",
+    flex: 1,
+  },
+  cardPickerAP: {
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  cardPickerAPTxt: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  cardPickerCheck: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardSupportTag: {
+    position: "absolute",
+    bottom: 6,
+    right: 6,
+    backgroundColor: "rgba(232,200,104,0.18)",
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  cardSupportTagTxt: {
+    color: "#E8C868",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  cardModalFooter: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+  },
+  cardModalClearBtn: {
+    borderRadius: RADIUS.pill,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+  },
+  cardModalClearTxt: {
+    color: UI.textSoft,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  cardModalSaveBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 12,
+  },
+  cardModalSaveTxt: {
+    color: "#0B1020",
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   // Footer

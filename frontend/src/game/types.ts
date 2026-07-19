@@ -313,4 +313,11 @@ export interface PlayerState {
   // for this player's Realm (see generatePlayerTerrain). Purely cosmetic —
   // never changes what/where a building can be placed.
   realm_seed?: number;
+  // P8 — Battle Card Deck: up to 3 card IDs loaded before each battle via the
+  // loadout screen. Limited-use (each card can only be played once per battle).
+  // Empty array or undefined → battle uses legacy random-draw pool.
+  equipped_cards?: string[];
+  // One-time "what are cards?" tutorial shown the first time the Cards tab is
+  // opened in battle. Undefined/false means not yet seen.
+  seen_card_tutorial?: boolean;
 }

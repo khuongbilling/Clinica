@@ -107,6 +107,12 @@ export interface BattleState {
 
   // Active skill cards (hand/tray)
   hand: string[];
+  // P8 — remaining loaded cards not yet in hand (drawn from equippedCards overflow).
+  // Empty array in legacy random-draw mode.
+  cardDeck: string[];
+  // True when this battle was started with player-equipped cards (limited use);
+  // false means legacy random-draw mode (infinite cycling from the global pool).
+  limitedCardMode: boolean;
 
   // Question-to-power (Clinical Cue)
   pendingCue: ClinicalCueQuestion | null;
@@ -141,6 +147,9 @@ export interface InitBattleOptions {
   // Player Class ability bonus (see progression.ts getClassBattleBonuses) —
   // seeds the shield the patient starts battle with (Guardian/Caretaker tiers).
   startShield?: number;
+  // P8 — card IDs the player loaded in the mission loadout (limited-use mode).
+  // When provided, these become the battle hand; when empty/undefined, random draw.
+  equippedCards?: string[];
 }
 
 // ============================================================
@@ -263,7 +272,12 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   const ultimateUsedCount: Record<string, number> = {};
   team.forEach(h => { heroUltimateCharge[h.id] = 0; ultimateUsedCount[h.id] = 0; });
 
-  const hand = drawCards(3);
+  // P8 — limited-use card mode: if the player equipped cards in the loadout,
+  // use those as the starting hand (one use each). Otherwise random-draw (legacy).
+  const equippedCards = opts.equippedCards ?? [];
+  const limitedCardMode = equippedCards.length > 0;
+  const hand = limitedCardMode ? equippedCards.slice(0, 3) : drawCards(3);
+  const cardDeck = limitedCardMode ? equippedCards.slice(3) : [];
   const pendingCue = getRandomClinicalCue([], { chapter, topicHint: SYSTEM_TO_CUE_TOPIC[enemy.primarySystem] });
 
   return {
@@ -314,6 +328,8 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     basicAidUses: 0,
 
     hand,
+    cardDeck,
+    limitedCardMode,
     pendingCue,
     // Opening cue counts as the first presentation: next cue rolls 2–4 turns later.
     nextCueTurn: 1 + rollCueGap(),
@@ -865,13 +881,32 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   if (aborted) return { state: post, message: `${card.name} is locked.`, status: 'locked', aborted: true };
 
   const handAfterPlay = post.hand.filter((id, idx) => !(id === cardId && idx === post.hand.indexOf(cardId)));
-  const [redrawn] = drawCards(1, handAfterPlay);
+
+  // P8 — limited-use vs. legacy draw:
+  // · limitedCardMode: draw from pre-loaded deck; if exhausted hand shrinks (no random fill).
+  // · legacy (limitedCardMode=false): randomly redraw to keep 3 cards in hand.
+  let newHand: string[];
+  let newDeck: string[];
+  if (post.limitedCardMode) {
+    if (post.cardDeck.length > 0) {
+      newHand = [...handAfterPlay, post.cardDeck[0]];
+      newDeck = post.cardDeck.slice(1);
+    } else {
+      newHand = handAfterPlay; // hand shrinks — this card is gone for this battle
+      newDeck = [];
+    }
+  } else {
+    const [redrawn] = drawCards(1, handAfterPlay);
+    newHand = [...handAfterPlay, redrawn];
+    newDeck = [];
+  }
 
   let next: BattleState = consumeHeroAction({
     ...post,
     ap: post.ap - card.costAP,
     turnsTaken: post.turnsTaken + 1,
-    hand: [...handAfterPlay, redrawn],
+    hand: newHand,
+    cardDeck: newDeck,
     log: [...post.log, `${hero?.name || 'Hero'} plays ${card.name}.`],
   }, heroId);
 

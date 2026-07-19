@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -13,7 +13,7 @@ import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } 
 import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
-import { getCard } from "@/src/game/cards";
+import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type ChainRole } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { getBattleBaseXp, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
@@ -57,7 +57,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
-  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars } = usePlayer();
+  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
@@ -149,6 +149,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       startShield: classBonuses.startShield,
       difficulty: player?.difficulty || undefined,
       additionalEnemies: getWaveAdditionalEnemies(enemy.id),
+      // P8 — pass equipped cards from loadout (limited-use per battle).
+      // Empty array → skip, let initBattle use random draw (legacy).
+      equippedCards: (player?.equipped_cards?.length ?? 0) > 0 ? player!.equipped_cards : undefined,
     });
     let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
@@ -164,7 +167,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });
 
-  const [activeTab, setActiveTab] = useState<Tab>("actions");
+  const [activeTab, setActiveTabRaw] = useState<Tab>("actions");
+  const cardTabOpenedRef = useRef(false);
+  const [showCardTutorial, setShowCardTutorial] = useState(false);
+  function setActiveTab(tab: Tab) {
+    if (tab === "cards" && !cardTabOpenedRef.current) {
+      cardTabOpenedRef.current = true;
+      if (!player?.seen_card_tutorial) setShowCardTutorial(true);
+    }
+    setActiveTabRaw(tab);
+  }
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [feedbackIsChain, setFeedbackIsChain] = useState(false);
   const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1341,32 +1353,102 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           </ScrollView>
         )}
         {activeTab === "cards" && (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
-            {(() => {
-              const selHero = state.team.find(h => h.id === state.selectedHeroId);
-              if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — skill cards use the chosen hero's action.</Text>;
-              if (state.heroActionsUsed[selHero.id]) return <Text style={styles.emptyTab}>{selHero.name} has already acted.</Text>;
-              return null;
-            })()}
-            {state.hand.map((cardId, idx) => {
-              const card = getCard(cardId);
-              if (!card) return null;
-              const sel = state.team.find(h => h.id === state.selectedHeroId);
-              const heroBlocked = !sel || !!state.heroActionsUsed[sel.id];
-              const disabled = state.ap < card.costAP || state.outcome !== "ongoing" || heroBlocked;
-              return (
-                <Pressable key={`${cardId}-${idx}`} style={[styles.actionBtn, { borderColor: COLORS.runeGold }, disabled && styles.disabled]} onPress={() => disabled ? null : handleCard(cardId)} testID={`battle-card-${cardId}`}>
-                  <View style={styles.basicTag}><Text style={styles.basicTagTxt}>CARD</Text></View>
-                  <View style={styles.actionHead}>
-                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{card.name}</Text>
-                    <Text style={styles.apTag}>{card.costAP} AP</Text>
+          <>
+            {/* First-time card tutorial modal */}
+            <Modal visible={showCardTutorial} transparent animationType="fade" onRequestClose={() => {}}>
+              <View style={styles.cardTutModalOverlay}>
+                <View style={styles.cardTutModal}>
+                  <View style={styles.cardTutHeader}>
+                    <Ionicons name="card" size={22} color={COLORS.runeGold} />
+                    <Text style={styles.cardTutTitle}>Battle Card Deck</Text>
                   </View>
-                  <Text style={styles.actionEffect} numberOfLines={2}>{card.shortEffect}</Text>
-                  <Text style={styles.actionHero} numberOfLines={1}>{card.systemType || "Universal"}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                  <Text style={styles.cardTutBody}>
+                    Cards are powerful one-use tools loaded before each battle in your Mission Loadout.
+                  </Text>
+                  <Text style={styles.cardTutBody}>
+                    Cards marked <Text style={{ color: "#A6D8F6" }}>Scout</Text>, <Text style={{ color: "#4FD8C4" }}>Stabilize</Text>, <Text style={{ color: "#F97316" }}>Counter</Text>, or <Text style={{ color: "#BBA7EA" }}>Reassess</Text> count toward your clinical chain. <Text style={{ color: "#E8C868" }}>Support</Text> cards provide direct aid — shields, buffs, emergency calls — but do not advance the chain.
+                  </Text>
+                  <Text style={styles.cardTutBody}>
+                    Once played, each card is spent for this battle. Choose your deck wisely in the loadout.
+                  </Text>
+                  <Pressable style={styles.cardTutBtn} onPress={() => { setShowCardTutorial(false); markCardTutorialSeen(); }}>
+                    <Text style={styles.cardTutBtnTxt}>Understood</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+              {/* Hero-not-selected / already-acted guard */}
+              {(() => {
+                const selHero = state.team.find(h => h.id === state.selectedHeroId);
+                if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above first — skill cards use the chosen hero's action.</Text>;
+                if (state.heroActionsUsed[selHero.id]) return <Text style={styles.emptyTab}>{selHero.name} has already acted.</Text>;
+                return null;
+              })()}
+
+              {/* Empty hand (all limited-use cards spent) */}
+              {state.hand.length === 0 && (
+                <View style={styles.cardEmptyWrap}>
+                  <Ionicons name="card-outline" size={28} color={COLORS.runeGold + "60"} />
+                  <Text style={styles.cardEmptyTxt}>
+                    {state.limitedCardMode
+                      ? "All cards have been played this battle."
+                      : "No cards available."}
+                  </Text>
+                </View>
+              )}
+
+              {/* Card hand */}
+              {state.hand.map((cardId, idx) => {
+                const card = getCard(cardId);
+                if (!card) return null;
+                const chainCfg = CHAIN_TYPE_CONFIG[card.cardChainType];
+                const sel = state.team.find(h => h.id === state.selectedHeroId);
+                const heroBlocked = !sel || !!state.heroActionsUsed[sel.id];
+                const disabled = state.ap < card.costAP || state.outcome !== "ongoing" || heroBlocked;
+                return (
+                  <Pressable
+                    key={`${cardId}-${idx}`}
+                    style={[styles.actionBtn, { borderColor: chainCfg.color + "80" }, disabled && styles.disabled]}
+                    onPress={() => disabled ? null : handleCard(cardId)}
+                    testID={`battle-card-${cardId}`}
+                  >
+                    {/* Chain-type badge */}
+                    <View style={[styles.cardChainBadge, { backgroundColor: chainCfg.color + "22", borderColor: chainCfg.color + "55" }]}>
+                      <Ionicons name={chainCfg.icon as any} size={10} color={chainCfg.color} />
+                      <Text style={[styles.cardChainLabel, { color: chainCfg.color }]}>{chainCfg.label.toUpperCase()}</Text>
+                    </View>
+
+                    <View style={styles.actionHead}>
+                      <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{card.name}</Text>
+                      <Text style={styles.apTag}>{card.costAP} AP</Text>
+                    </View>
+                    <Text style={styles.actionEffect} numberOfLines={2}>{card.shortEffect}</Text>
+
+                    <View style={styles.cardFooterRow}>
+                      <Text style={styles.actionHero} numberOfLines={1}>{card.systemType || "Universal"}</Text>
+                      <Text style={[styles.cardChainNote, { color: chainCfg.advancesChain ? "#4FD8C4" : COLORS.runeGold + "A0" }]}>
+                        {chainCfg.advancesChain ? "Advances chain" : "Support only"}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+
+              {/* Limited-mode deck indicator */}
+              {state.limitedCardMode && state.hand.length > 0 && (
+                <View style={styles.cardDeckIndicator}>
+                  <Ionicons name="layers-outline" size={12} color={COLORS.runeGold + "70"} />
+                  <Text style={styles.cardDeckTxt}>
+                    {state.cardDeck.length > 0
+                      ? `${state.cardDeck.length} card${state.cardDeck.length > 1 ? "s" : ""} remaining in deck`
+                      : "Last card in deck"}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </>
         )}
         {activeTab === "call" && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
@@ -2364,5 +2446,117 @@ const styles = StyleSheet.create({
   cinematicFlash: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1500,
+  },
+
+  // ── P8 Card system ──
+  cardChainBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 3,
+  },
+  cardChainLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  cardFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+    marginTop: 2,
+  },
+  cardChainNote: {
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  cardEmptyWrap: {
+    width: "100%",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 24,
+    opacity: 0.7,
+  },
+  cardEmptyTxt: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  cardDeckIndicator: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingTop: 8,
+    opacity: 0.7,
+  },
+  cardDeckTxt: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11,
+    fontStyle: "italic",
+  },
+  // Card tutorial modal
+  cardTutModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.md,
+    zIndex: 9999,
+  },
+  cardTutModal: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    gap: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: COLORS.runeGold + "50",
+    maxWidth: 340,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  cardTutHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: 4,
+  },
+  cardTutTitle: {
+    color: COLORS.runeGold,
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  cardTutBody: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  cardTutBtn: {
+    marginTop: 6,
+    backgroundColor: COLORS.runeGold,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  cardTutBtnTxt: {
+    color: "#0B1020",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
 });

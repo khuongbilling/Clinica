@@ -1,12 +1,24 @@
 import { ActionClinical } from './clinical';
 
+// ── Card chain-role type ───────────────────────────────────────────────────────
+// Scout / Stabilize / Counter / Reassess → count toward the clinical chain.
+// Support → does NOT advance the chain (shields, buffs, emergency calls).
+
+export type CardChainType = 'Scout' | 'Stabilize' | 'Counter' | 'Reassess' | 'Support';
+
 export type SkillCardType =
   | 'oxygen_support'
   | 'airway_clearance'
   | 'positioning'
   | 'reassess'
   | 'rapid_response'
-  | 'protective_ward';
+  | 'protective_ward'
+  // P8 starter cards
+  | 'focused_assessment'
+  | 'hydration_support'
+  | 'treatment_protocol'
+  | 'reassessment_checklist'
+  | 'emergency_call';
 
 export interface SkillCard {
   id: string;
@@ -16,6 +28,9 @@ export interface SkillCard {
   shortEffect: string;
   costAP: number;
   systemType: string;
+  // P8 — clinical chain classification and how this card was/can be acquired.
+  cardChainType: CardChainType;
+  source: string;
   stabilize?: number;
   strike?: number;
   shield?: number;
@@ -23,6 +38,7 @@ export interface SkillCard {
 }
 
 export const CARD_POOL: SkillCard[] = [
+  // ── Legacy pool cards ─────────────────────────────────────────────────────────
   {
     id: 'card_oxygen_support',
     type: 'oxygen_support',
@@ -31,6 +47,8 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: '+12 Stability',
     costAP: 1,
     systemType: 'Air',
+    cardChainType: 'Stabilize',
+    source: 'University Research',
     stabilize: 12,
   },
   {
@@ -41,6 +59,8 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: '-10 Corruption',
     costAP: 1,
     systemType: 'Air',
+    cardChainType: 'Counter',
+    source: 'Apothecary Market',
     strike: 10,
   },
   {
@@ -51,6 +71,8 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: '+8 Stability',
     costAP: 1,
     systemType: 'Universal',
+    cardChainType: 'Stabilize',
+    source: 'Battle Reward',
     stabilize: 8,
   },
   {
@@ -61,16 +83,20 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: 'Reveal 1 clue, disarm rebound',
     costAP: 1,
     systemType: 'Universal',
+    cardChainType: 'Reassess',
+    source: 'University Research',
     reveal: 1,
   },
   {
     id: 'card_rapid_response',
     type: 'rapid_response',
     name: 'Rapid Response',
-    rpgFlavor: 'Calls the ward\u2019s emergency guard to shield the patient.',
+    rpgFlavor: 'Calls the ward\'s emergency guard to shield the patient.',
     shortEffect: 'Shield 50% next hit',
     costAP: 2,
     systemType: 'Universal',
+    cardChainType: 'Support',
+    source: 'Event Reward',
     shield: 50,
   },
   {
@@ -81,20 +107,115 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: '+6 Stability, Shield 25%',
     costAP: 2,
     systemType: 'Protection',
+    cardChainType: 'Support',
+    source: 'Faction Research',
     stabilize: 6,
     shield: 25,
   },
+
+  // ── P8 Starter Cards ──────────────────────────────────────────────────────────
+  // These five cards are the foundational clinical-chain tools given to every
+  // player. Each one slots into a specific chain role (Scout/Stabilize/Counter/
+  // Reassess/Support) and can be loaded into the 3 card slots in the loadout.
+  {
+    id: 'card_focused_assessment',
+    type: 'focused_assessment',
+    name: 'Focused Assessment Card',
+    rpgFlavor: 'A methodical sweep of the patient\'s signs — nothing escapes the trained eye.',
+    shortEffect: 'Reveal 2 clues',
+    costAP: 1,
+    systemType: 'Universal',
+    cardChainType: 'Scout',
+    source: 'University Research',
+    reveal: 2,
+  },
+  {
+    id: 'card_hydration_support',
+    type: 'hydration_support',
+    name: 'Hydration Support Card',
+    rpgFlavor: 'A steady infusion restores the patient\'s inner equilibrium.',
+    shortEffect: '+14 Stability',
+    costAP: 1,
+    systemType: 'River',
+    cardChainType: 'Stabilize',
+    source: 'Apothecary Market',
+    stabilize: 14,
+  },
+  {
+    id: 'card_treatment_protocol',
+    type: 'treatment_protocol',
+    name: 'Treatment Protocol Card',
+    rpgFlavor: 'The correct intervention, delivered with clinical precision, strikes at the heart of disease.',
+    shortEffect: '-12 Corruption',
+    costAP: 1,
+    systemType: 'Universal',
+    cardChainType: 'Counter',
+    source: 'Battle Reward',
+    strike: 12,
+  },
+  {
+    id: 'card_reassessment_checklist',
+    type: 'reassessment_checklist',
+    name: 'Reassessment Checklist Card',
+    rpgFlavor: 'Systematic re-evaluation closes old gaps and disarms lurking danger.',
+    shortEffect: 'Reveal 1 clue, disarm rebound, Shield 15%',
+    costAP: 1,
+    systemType: 'Universal',
+    cardChainType: 'Reassess',
+    source: 'University Research',
+    reveal: 1,
+    shield: 15,
+  },
+  {
+    id: 'card_emergency_call',
+    type: 'emergency_call',
+    name: 'Emergency Call Card',
+    rpgFlavor: 'Reinforcements arrive, buying precious time — but the diagnosis must still be made.',
+    shortEffect: 'Shield 35% — does not advance chain',
+    costAP: 1,
+    systemType: 'Universal',
+    cardChainType: 'Support',
+    source: 'Event Reward',
+    shield: 35,
+  },
 ];
 
+// ── Clinical metadata (chain roles, tags, system affinity) ────────────────────
+// chainRoles drives canAdvanceChain().
+// Support cards MUST have chainRoles: [] — they never advance the care chain.
+
 export const CARD_CLINICAL: Record<string, ActionClinical> = {
-  card_oxygen_support: { clinicalTags: ['oxygenation', 'respiratory'], appropriateForSystems: ['Air'], chainRoles: ['Stabilize'] },
-  card_airway_clearance: { clinicalTags: ['airway', 'respiratory'], appropriateForSystems: ['Air'], chainRoles: ['Counter'] },
-  card_positioning: { clinicalTags: ['general support', 'comfort'], chainRoles: ['Stabilize'] },
-  card_reassess: { clinicalTags: ['reassessment', 'assessment'], chainRoles: ['Reassess', 'Scout'] },
-  card_rapid_response: { clinicalTags: ['escalation', 'emergency'], chainRoles: ['Protect'] },
-  card_protective_ward: { clinicalTags: ['safety', 'protect'], appropriateForSystems: ['Protection'], chainRoles: ['Protect'] },
+  card_oxygen_support:         { clinicalTags: ['oxygenation', 'respiratory'], appropriateForSystems: ['Air'], chainRoles: ['Stabilize'] },
+  card_airway_clearance:       { clinicalTags: ['airway', 'respiratory'],      appropriateForSystems: ['Air'], chainRoles: ['Counter'] },
+  card_positioning:            { clinicalTags: ['general support', 'comfort'],                                chainRoles: ['Stabilize'] },
+  card_reassess:               { clinicalTags: ['reassessment', 'assessment'],                                chainRoles: ['Reassess', 'Scout'] },
+  // Support cards — explicitly empty chainRoles so they never advance the chain.
+  card_rapid_response:         { clinicalTags: ['escalation', 'emergency'],                                   chainRoles: [] },
+  card_protective_ward:        { clinicalTags: ['safety', 'protect'],          appropriateForSystems: ['Protection'], chainRoles: [] },
+  // P8 starter cards
+  card_focused_assessment:     { clinicalTags: ['assessment', 'observation'],                                 chainRoles: ['Scout'] },
+  card_hydration_support:      { clinicalTags: ['hydration', 'fluid support'], appropriateForSystems: ['River'], chainRoles: ['Stabilize'] },
+  card_treatment_protocol:     { clinicalTags: ['treatment', 'intervention'],                                 chainRoles: ['Counter'] },
+  card_reassessment_checklist: { clinicalTags: ['reassessment', 'systematic review'],                         chainRoles: ['Reassess'] },
+  card_emergency_call:         { clinicalTags: ['emergency', 'escalation'],                                   chainRoles: [] },
 };
 
+// Cards every player has access to in their loadout picker (P8 starter set).
+// Advanced cards from shops, events, or faction research will be added in later pushes.
+export const STARTER_CARD_IDS: string[] = [
+  'card_focused_assessment',
+  'card_hydration_support',
+  'card_treatment_protocol',
+  'card_reassessment_checklist',
+  'card_emergency_call',
+];
+
+// All card IDs available to players right now (starter + legacy pool).
+export const ALL_AVAILABLE_CARD_IDS: string[] = CARD_POOL.map(c => c.id);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Random draw — used as legacy fallback when no cards are equipped. */
 export function drawCards(count: number, exclude: string[] = []): string[] {
   const pool = CARD_POOL.filter(c => !exclude.includes(c.id));
   const source = pool.length > 0 ? pool : CARD_POOL;
@@ -108,3 +229,12 @@ export function drawCards(count: number, exclude: string[] = []): string[] {
 export function getCard(id: string): SkillCard | undefined {
   return CARD_POOL.find(c => c.id === id);
 }
+
+// Chain-type config for UI rendering.
+export const CHAIN_TYPE_CONFIG: Record<CardChainType, { icon: string; color: string; label: string; advancesChain: boolean }> = {
+  Scout:     { icon: 'eye',               color: '#A6D8F6', label: 'Scout',     advancesChain: true },
+  Stabilize: { icon: 'heart',             color: '#4FD8C4', label: 'Stabilize', advancesChain: true },
+  Counter:   { icon: 'flash',             color: '#F97316', label: 'Counter',   advancesChain: true },
+  Reassess:  { icon: 'refresh-circle',    color: '#BBA7EA', label: 'Reassess',  advancesChain: true },
+  Support:   { icon: 'shield-checkmark',  color: '#E8C868', label: 'Support',   advancesChain: false },
+};

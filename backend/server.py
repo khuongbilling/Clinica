@@ -189,6 +189,9 @@ class Player(BaseModel):
     realm_assignments: Dict[str, List[str]] = Field(default_factory=dict)
     realm_production: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     realm_seed: int = 0
+    # P8 — battle card deck (up to 3 card IDs loaded in mission loadout)
+    equipped_cards: List[str] = Field(default_factory=list)
+    seen_card_tutorial: bool = False
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -277,6 +280,8 @@ class PlayerUpdate(BaseModel):
     realm_assignments: Optional[Dict[str, List[str]]] = None
     realm_production: Optional[Dict[str, Dict[str, Any]]] = None
     realm_seed: Optional[int] = None
+    equipped_cards: Optional[List[str]] = None
+    seen_card_tutorial: Optional[bool] = None
 
 
 # ---------- Routes ----------
