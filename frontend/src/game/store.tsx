@@ -1019,6 +1019,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       summon_history: nextHistory,
       tutorial_summon_1_done: summonIndex === 1 ? true : (player.tutorial_summon_1_done ?? false),
       tutorial_summon_2_done: summonIndex === 2 ? true : (player.tutorial_summon_2_done ?? false),
+      // Each ceremony pull consumes the daily free slot so the player cannot
+      // claim an additional free recruitment on the same day.
+      last_free_summon_at: new Date().toISOString(),
     }, 'hero_action'));
     return { ok: true, message: result.message, result };
   }, [player, updateState]);
