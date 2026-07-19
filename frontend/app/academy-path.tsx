@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -14,7 +15,7 @@ function StepRow({ step, done, active }: { step: JourneyStep; done: boolean; act
   return (
     <Pressable
       style={[styles.stepRow, done && styles.stepDone]}
-      onPress={() => step.route ? router.push(step.route as any) : undefined}
+      onPress={() => step.route ? router.push(step.route as AppRoute) : undefined}
       disabled={!step.route || done}
     >
       <View style={[styles.stepIcon, done && styles.stepIconDone, active && !done && styles.stepIconActive]}>
@@ -132,7 +133,7 @@ export default function AcademyPathScreen() {
         {progress.nextStep && (
           <Pressable
             style={styles.nextStepBanner}
-            onPress={() => progress.nextStep?.route ? router.push(progress.nextStep.route as any) : undefined}
+            onPress={() => progress.nextStep?.route ? router.push(progress.nextStep.route as AppRoute) : undefined}
             disabled={!progress.nextStep?.route}
             testID="academy-next-step"
           >

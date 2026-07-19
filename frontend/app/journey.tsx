@@ -5,6 +5,7 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -135,8 +136,8 @@ export default function JourneyScreen() {
               style={styles.fieldPracticeStrip}
               onPress={() =>
                 nextLockIsCompletionGate && !nextLockIsLevelGate
-                  ? router.push("/journey" as any)
-                  : router.push("/mode/ward-shift" as any)
+                  ? router.push(ROUTES.JOURNEY)
+                  : router.push(dynRoute.mode("ward-shift"))
               }
               testID="journey-field-practice-strip"
             >
@@ -160,11 +161,11 @@ export default function JourneyScreen() {
                 <Text style={styles.universitySupportSub}>{failureHint.text}</Text>
                 <View style={styles.universitySupportBtnRow}>
                   <Pressable style={styles.universitySupportBtn}
-                    onPress={() => router.push(failureHint.primaryRoute as any)}>
+                    onPress={() => router.push(failureHint.primaryRoute)}>
                     <Text style={styles.universitySupportBtnTxt}>Practice at University</Text>
                   </Pressable>
                   <Pressable style={[styles.universitySupportBtn, styles.universitySupportBtnSecondary]}
-                    onPress={() => router.push(failureHint.secondaryRoute as any)}>
+                    onPress={() => router.push(failureHint.secondaryRoute)}>
                     <Text style={[styles.universitySupportBtnTxt, { color: "#A78BFA" }]}>Upgrade Skills</Text>
                   </Pressable>
                 </View>
@@ -183,7 +184,7 @@ export default function JourneyScreen() {
                     isStoryNode && nextStep.part.route.includes("story-scene")
                       ? nextStep.part.route + "&returnTo=%2Fjourney"
                       : nextStep.part.route;
-                  router.push(route as any);
+                  router.push(route as AppRoute);
                 }
               }}
               testID="journey-next-step"
@@ -255,7 +256,7 @@ export default function JourneyScreen() {
               <Pressable
                 key={node.id}
                 style={[styles.practiceBtn, done && styles.practiceBtnSecondary]}
-                onPress={() => router.push(`/university/lotus-lesson/${node.id}` as any)}
+                onPress={() => router.push(dynRoute.lotusLesson(node.id))}
                 testID={`journey-lesson-${node.id}`}
               >
                 <Ionicons
@@ -287,14 +288,14 @@ export default function JourneyScreen() {
           <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Browse</Text>
           <Pressable
             style={[styles.practiceBtn, styles.practiceBtnSecondary]}
-            onPress={() => router.push("/university/lessons" as any)}
+            onPress={() => router.push(ROUTES.UNI_LESSONS)}
           >
             <Ionicons name="book" size={18} color={COLORS.brand} />
             <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>All Lotus Lessons</Text>
           </Pressable>
           <Pressable
             style={[styles.practiceBtn, styles.practiceBtnSecondary]}
-            onPress={() => router.push("/university" as any)}
+            onPress={() => router.push(ROUTES.UNIVERSITY)}
           >
             <Ionicons name="school" size={18} color={COLORS.brand} />
             <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>Open Clinica University</Text>
@@ -337,12 +338,12 @@ export default function JourneyScreen() {
 
           <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>Field Practice</Text>
           <Pressable style={styles.practiceBtn}
-            onPress={() => router.push("/mode/ward-shift" as any)}>
+            onPress={() => router.push(dynRoute.mode("ward-shift"))}>
             <Ionicons name="shield-half" size={18} color={COLORS.onBrand} />
             <Text style={styles.practiceBtnTxt}>Enter Ward Shift</Text>
           </Pressable>
           <Pressable style={[styles.practiceBtn, styles.practiceBtnSecondary]}
-            onPress={() => router.push("/university" as any)}>
+            onPress={() => router.push(ROUTES.UNIVERSITY)}>
             <Ionicons name="school" size={18} color={COLORS.brand} />
             <Text style={[styles.practiceBtnTxt, { color: COLORS.brand }]}>Practice at University</Text>
           </Pressable>
@@ -366,7 +367,7 @@ export default function JourneyScreen() {
               key={node.id}
               style={styles.memoryCard}
               onPress={() => {
-                if (node.route) router.push(node.route as any);
+                if (node.route) router.push(node.route as AppRoute);
               }}
             >
               <Ionicons name="book" size={16} color={UI.lavender} />

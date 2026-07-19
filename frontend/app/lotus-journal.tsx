@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -109,7 +110,7 @@ export default function LotusJournalPage() {
         <RewardPreview mode="Lotus Plate Journal" />
 
         {/* Main actions */}
-        <Pressable style={styles.actionCard} onPress={() => router.push("/mealcraft" as any)}>
+        <Pressable style={styles.actionCard} onPress={() => router.push(ROUTES.MEALCRAFT)}>
           <View style={[styles.actionIcon, { backgroundColor: "#F59E0B20" }]}>
             <Ionicons name="fast-food" size={22} color="#F59E0B" />
           </View>

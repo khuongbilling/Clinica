@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -275,7 +276,7 @@ export default function RapidTriageScreen() {
   useEffect(() => {
     getChainProgress().then((prog) => {
       if (prog.rapidTriageDone) {
-        router.replace("/university" as any);
+        router.replace(ROUTES.UNIVERSITY);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -434,9 +435,9 @@ export default function RapidTriageScreen() {
           creditsEarned={creditsEarned}
           milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
-          onLearnMore={() => router.push("/university/triage-lesson" as any)}
+          onLearnMore={() => router.push(ROUTES.UNI_TRIAGE_LESSON)}
           learnLabel="Learn Triage"
-          onContinue={() => router.replace("/university/stabilize-stack" as any)}
+          onContinue={() => router.replace(ROUTES.UNI_STABILIZE_STACK)}
           continueLabel="Next: Stabilize Stack →"
         />
       </SafeAreaView>

@@ -17,6 +17,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -346,7 +347,7 @@ export default function StabilizeStackScreen() {
           setCompleted(true);
           Animated.timing(completeFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
           setTimeout(() => {
-            router.replace("/university/stabilize-complete" as any);
+            router.replace(ROUTES.UNI_STABILIZE_COMPLETE);
           }, 2000);
         }
       } else {

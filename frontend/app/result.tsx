@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ROUTES, dynRoute } from "@/src/game/routes";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
@@ -514,7 +515,7 @@ export default function Result() {
                 {!lessonComplete && linkedLesson && (
                   <Pressable
                     style={styles.reflectionLessonCta}
-                    onPress={() => router.push({ pathname: "/lotus-lesson/[nodeId]", params: { nodeId: linkedLesson.id } } as any)}
+                    onPress={() => router.push(dynRoute.lotusLesson(linkedLesson.id))}
                     testID="result-reflection-lesson-cta"
                   >
                     <Ionicons name="book-outline" size={13} color={COLORS.brand} />
@@ -573,7 +574,7 @@ export default function Result() {
             <View style={styles.failureRecommendBtnRow}>
               <Pressable
                 style={styles.failureRecommendBtn}
-                onPress={() => router.replace(chapterFailureHint.primaryRoute as any)}
+                onPress={() => router.replace(chapterFailureHint.primaryRoute)}
                 testID="result-go-to-university"
               >
                 <Ionicons name="school-outline" size={13} color={COLORS.onBrand} />
@@ -581,7 +582,7 @@ export default function Result() {
               </Pressable>
               <Pressable
                 style={[styles.failureRecommendBtn, styles.failureRecommendBtnSecondary]}
-                onPress={() => router.replace(chapterFailureHint.secondaryRoute as any)}
+                onPress={() => router.replace(chapterFailureHint.secondaryRoute)}
                 testID="result-go-to-skill-academy"
               >
                 <Ionicons name="flash-outline" size={13} color="#A78BFA" />
@@ -649,7 +650,7 @@ export default function Result() {
             </Pressable>
           )}
           {won && !isPrologueTutorial && !isTraining && (
-            <Pressable style={styles.journeyBtn} onPress={() => router.replace("/journey" as any)} testID="result-journey-map">
+            <Pressable style={styles.journeyBtn} onPress={() => router.replace(ROUTES.JOURNEY)} testID="result-journey-map">
               <Ionicons name="map-outline" size={15} color="#D4AF37" />
               <Text style={styles.journeyBtnTxt}>CLAIM JOURNEY REWARDS</Text>
             </Pressable>
@@ -661,7 +662,7 @@ export default function Result() {
                   On a win it's already covered by the gold "CLAIM JOURNEY REWARDS"
                   button above, so avoid duplicating it here. */}
               {!won && !isTraining && (
-                <Pressable style={styles.secondary} onPress={() => router.replace("/journey" as any)} testID="result-journey-map-loss">
+                <Pressable style={styles.secondary} onPress={() => router.replace(ROUTES.JOURNEY)} testID="result-journey-map-loss">
                   <Text style={styles.secondaryTxt}>VIEW JOURNEY MAP</Text>
                 </Pressable>
               )}

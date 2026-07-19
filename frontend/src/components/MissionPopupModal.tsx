@@ -14,6 +14,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import {
   Modal,
   Pressable,
@@ -169,7 +170,7 @@ export function MissionPopupModal({
 
   const handleDirectLaunch = () => {
     onClose();
-    if (part.route) router.push(part.route as any);
+    if (part.route) router.push(part.route as AppRoute);
   };
 
   return (

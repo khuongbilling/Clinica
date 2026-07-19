@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { goBack } from "@/src/utils/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -173,7 +174,7 @@ export default function LotusLessonScreen() {
 
   const goToShift = () => {
     if (noHeroes) return;
-    router.replace({ pathname: "/mission-loadout" as any, params: { enemyId: node.linkedCaseId, title: node.title ?? "Lotus Lesson", partType: "battle", chapterAccent: "#4FD8C4" } });
+    router.replace({ pathname: ROUTES.MISSION_LOADOUT, params: { enemyId: node.linkedCaseId, title: node.title ?? "Lotus Lesson", partType: "battle", chapterAccent: "#4FD8C4" } });
   };
 
   // ── Render: already-complete skip card ───────────────────────────────────
@@ -462,7 +463,7 @@ export default function LotusLessonScreen() {
                   Recruit a hero first to try Ward Shift.
                 </Text>
                 <Pressable
-                  onPress={() => router.replace("/summon" as any)}
+                  onPress={() => router.replace(ROUTES.SUMMON)}
                   style={{ backgroundColor: meta.color + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginTop: 6 }}
                   testID="lotus-lesson-go-summon"
                 >

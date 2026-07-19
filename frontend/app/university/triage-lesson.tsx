@@ -12,6 +12,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, { useRef, useState } from "react";
 import {
   Animated,
@@ -78,7 +79,7 @@ export default function TriageLessonScreen() {
   const advance = () => {
     Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }).start(() => {
       if (isLast) {
-        router.replace("/university" as any);
+        router.replace(ROUTES.UNIVERSITY);
         setBeatIdx(0);
         fadeAnim.setValue(1);
       } else {

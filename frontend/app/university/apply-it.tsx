@@ -9,6 +9,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React from "react";
 import {
   Pressable,
@@ -69,7 +70,7 @@ export default function ApplyItScreen() {
         {/* Primary CTA */}
         <Pressable
           style={styles.startBtn}
-          onPress={() => router.push("/university/rapid-triage" as any)}
+          onPress={() => router.push(ROUTES.UNI_RAPID_TRIAGE)}
           testID="apply-start-triage"
         >
           <Text style={styles.startBtnTxt}>Begin Rapid Triage</Text>

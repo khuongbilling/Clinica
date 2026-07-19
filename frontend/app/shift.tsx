@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES, dynRoute } from "@/src/game/routes";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -95,7 +96,7 @@ export default function ShiftPage() {
       flashNotice(`${mode.title} — Coming Soon.${when}`);
       return;
     }
-    router.push(`/mode/${mode.id}` as any);
+    router.push(dynRoute.mode(mode.id));
   };
 
   const TABS: RPGTab[] = [
@@ -136,7 +137,7 @@ export default function ShiftPage() {
               />
               <Pressable
                 style={styles.universityCtaBtn}
-                onPress={() => router.push("/university/lotus-lesson/recognizing-cues-hydration" as any)}
+                onPress={() => router.push(dynRoute.lotusLesson("recognizing-cues-hydration"))}
                 testID="shift-go-to-university"
               >
                 <Ionicons name="leaf" size={16} color={COLORS.onBrand} />
@@ -154,7 +155,7 @@ export default function ShiftPage() {
               />
               <Pressable
                 style={styles.universityCtaBtn}
-                onPress={() => router.push("/university/recruit" as any)}
+                onPress={() => router.push(ROUTES.UNI_RECRUIT)}
                 testID="shift-go-to-recruit"
               >
                 <Ionicons name="sparkles" size={16} color={COLORS.onBrand} />
@@ -176,7 +177,7 @@ export default function ShiftPage() {
                 return;
               }
               if (needsSecondSummon) {
-                router.push("/university/recruit" as any);
+                router.push(ROUTES.UNI_RECRUIT);
                 return;
               }
               openIntro(WARD_SHIFT_MODE);
@@ -236,7 +237,7 @@ export default function ShiftPage() {
                 flashNotice(universityGate.reason || "Clinica University is locked.");
                 return;
               }
-              router.push("/university" as any);
+              router.push(ROUTES.UNIVERSITY);
             }}
             testID="ward-hub-university"
           />
@@ -283,7 +284,7 @@ export default function ShiftPage() {
                   <BannerCard key={m.id} mode={m} height={156} onPress={() => openIntro(m)} testID={`mode-${m.id}`} />
                 ))}
               <Text style={styles.section}>Events & Offers</Text>
-              <Pressable style={styles.eventBanner} onPress={() => router.push("/events" as any)} testID="ward-hub-events">
+              <Pressable style={styles.eventBanner} onPress={() => router.push(ROUTES.EVENTS)} testID="ward-hub-events">
                 <View style={styles.eventIcon}>
                   <Ionicons name="calendar" size={26} color={COLORS.brand} />
                 </View>
@@ -323,7 +324,7 @@ export default function ShiftPage() {
             <BannerCard key={m.id} mode={m} height={120} onPress={() => openIntro(m)} testID={`mode-${m.id}`} />
           ))}
 
-          <Pressable style={styles.eventBanner} onPress={() => router.push("/events" as any)} testID="ward-hub-events-journal">
+          <Pressable style={styles.eventBanner} onPress={() => router.push(ROUTES.EVENTS)} testID="ward-hub-events-journal">
             <View style={styles.eventIcon}>
               <Ionicons name="calendar" size={24} color={COLORS.brand} />
             </View>

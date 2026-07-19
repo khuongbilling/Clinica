@@ -6,6 +6,7 @@
  * StrokeLabel gives the painted-text look of celestial RPG nav bars.
  */
 import React from "react";
+import { type AppRoute } from "@/src/game/routes";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -97,7 +98,7 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
           return (
             <Pressable
               key={id}
-              onPress={() => router.replace(route as any)}
+              onPress={() => router.replace(route as AppRoute)}
               style={s.tabBtn}
               accessibilityLabel={label}
             >

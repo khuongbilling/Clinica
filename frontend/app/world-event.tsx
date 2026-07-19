@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useState } from "react";
 import {
   ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View,
@@ -423,7 +424,7 @@ function SystemsTab({ router }: { router: any }) {
         <Pressable
           key={sys.id}
           style={[styles.systemCard, { borderColor: sys.accentColor + "44" }]}
-          onPress={() => sys.route && router.push(sys.route as any)}
+          onPress={() => sys.route && router.push(sys.route as AppRoute)}
           testID={`world-event-system-${sys.id}`}
         >
           <LinearGradient

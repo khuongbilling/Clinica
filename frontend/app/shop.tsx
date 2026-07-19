@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -95,7 +96,7 @@ export default function Shop() {
       return;
     }
     if (!s.route) { flashNotice(`${s.title} has no route yet.`); return; }
-    router.push(s.route as any);
+    router.push(s.route as AppRoute);
   };
 
   const TABS: RPGTab[] = [

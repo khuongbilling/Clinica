@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { dynRoute } from "@/src/game/routes";
 import { goBack } from "@/src/utils/navigation";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -170,7 +171,7 @@ export default function DepartmentDetailScreen() {
                   done={done}
                   accent={accent}
                   banner={banner}
-                  onPress={() => router.push(`/university/lesson/${l.id}` as any)}
+                  onPress={() => router.push(dynRoute.lesson(l.id))}
                   testID={`department-lesson-${l.id}`}
                 />
               );
@@ -199,7 +200,7 @@ export default function DepartmentDetailScreen() {
                   done={done}
                   accent={accent}
                   banner={banner}
-                  onPress={() => router.push(`/university/simulation/${s.id}` as any)}
+                  onPress={() => router.push(dynRoute.simulation(s.id))}
                   testID={`department-sim-${s.id}`}
                 />
               );

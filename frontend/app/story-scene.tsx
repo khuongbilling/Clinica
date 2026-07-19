@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -100,7 +101,7 @@ function SceneViewer({ sceneId, returnTo }: { sceneId: string; returnTo?: string
       // P15: returnTo param lets the caller specify where to land after the
       // scene (e.g. /journey so the map is open right after a memory fragment).
       if (returnTo) {
-        router.replace(returnTo as any);
+        router.replace(returnTo as AppRoute);
       } else if (router.canGoBack()) {
         router.back();
       } else {

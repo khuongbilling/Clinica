@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, {
   useCallback,
   useEffect,
@@ -590,7 +591,7 @@ export default function StabilizeStackScreen() {
   useEffect(() => {
     getChainProgress().then((prog) => {
       if (prog.stabilizeDone) {
-        router.replace("/university" as any);
+        router.replace(ROUTES.UNIVERSITY);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -729,7 +730,7 @@ export default function StabilizeStackScreen() {
           creditsEarned={creditsEarned}
           milestoneItems={milestoneItems}
           onFinish={() => router.replace("/(tabs)")}
-          onLearnMore={() => router.push("/university/stabilize-lesson" as any)}
+          onLearnMore={() => router.push(ROUTES.UNI_STABILIZE_LESSON)}
           learnLabel="Learn the Chain"
         />
       </SafeAreaView>

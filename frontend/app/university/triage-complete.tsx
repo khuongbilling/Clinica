@@ -8,6 +8,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -72,7 +73,7 @@ export default function TriageCompleteScreen() {
         {/* Primary CTA — Stabilize the Patient */}
         <Pressable
           style={styles.stabilizeBtn}
-          onPress={() => router.push("/university/stabilize-placeholder" as any)}
+          onPress={() => router.push(ROUTES.UNI_STABILIZE_PLACEHOLDER)}
           testID="triage-complete-stabilize"
         >
           <Ionicons name="pulse-outline" size={16} color="#0B1A18" />
@@ -84,7 +85,7 @@ export default function TriageCompleteScreen() {
       {/* ── BACK LINK ───────────────────────────────────────────────── */}
       <Pressable
         style={styles.backBtn}
-        onPress={() => router.replace("/university" as any)}
+        onPress={() => router.replace(ROUTES.UNIVERSITY)}
         testID="triage-complete-back"
       >
         <Ionicons name="chevron-back" size={15} color={COLORS.onSurfaceTertiary} />

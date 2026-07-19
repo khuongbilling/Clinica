@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useState } from "react";
 import { ImageSourcePropType, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -196,7 +197,7 @@ export function PlayerHeader({
             <Text style={styles.modalHint}>Spend it on Ward Shift battles to earn Ward Coins, Codex Shards, and Hero EXP.</Text>
             <Pressable
               style={styles.modalBtn}
-              onPress={() => { setInfoModal(null); router.push("/(tabs)/index" as any); }}
+              onPress={() => { setInfoModal(null); router.push(ROUTES.HOME); }}
               testID="player-header-stamina-goto-shift"
             >
               <Text style={styles.modalBtnTxt}>Go to Ward Shift</Text>
@@ -249,7 +250,7 @@ export function PlayerHeader({
             {shopUnlocked && (
               <Pressable
                 style={styles.modalBtn}
-                onPress={() => { setInfoModal(null); router.push("/university/recruit" as any); }}
+                onPress={() => { setInfoModal(null); router.push(ROUTES.UNI_RECRUIT); }}
                 testID="player-header-shards-goto-recruit"
               >
                 <Text style={styles.modalBtnTxt}>Go to Recruitment Hall</Text>

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -325,7 +326,7 @@ export default function HeroesScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionLbl}>Power Up Your Team</Text>
 
-          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push("/university/skill-academy" as any)}>
+          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push(ROUTES.UNI_SKILL_ACADEMY)}>
             <View style={[styles.upgradeIconBox, { backgroundColor: COLORS.mind + "22" }]}>
               <Ionicons name="flash" size={22} color={COLORS.mind} />
             </View>
@@ -336,7 +337,7 @@ export default function HeroesScreen() {
             <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceTertiary} />
           </Pressable>
 
-          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push("/university/training" as any)}>
+          <Pressable style={styles.upgradeLinkCard} onPress={() => router.push(ROUTES.UNI_TRAINING)}>
             <View style={[styles.upgradeIconBox, { backgroundColor: COLORS.fire + "22" }]}>
               <Ionicons name="fitness" size={22} color={COLORS.fire} />
             </View>

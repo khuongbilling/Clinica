@@ -287,7 +287,7 @@ export const REALM_BUILDINGS: RealmBuilding[] = [
     requirementsForLevel: (lvl) => ({ atriumLevel: 1, materials: ["Ward Timber", "Ward Coins"] }),
     atriumLevelRequired: 1,
     linkKind: "route",
-    linkRoute: ROUTES.tabHome,
+    linkRoute: "/(tabs)",
     linkLabel: "Go to Ward Shift",
     heroSlots: [
       { role: "Village Caretaker", flavor: "A Village Caretaker hero here improves Stability rewards.", slotType: "hero" },

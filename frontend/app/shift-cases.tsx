@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,7 +75,7 @@ export default function ShiftCasesPage() {
       launchingRef.current = false;
       return;
     }
-    router.push({ pathname: "/mission-loadout" as any, params: { enemyId, title: current?.name ?? "Ward Shift", partType: "battle", chapterAccent: accent } });
+    router.push({ pathname: "/mission-loadout", params: { enemyId, title: current?.name ?? "Ward Shift", partType: "battle", chapterAccent: accent } });
     setTimeout(() => { launchingRef.current = false; }, 1000);
   };
 

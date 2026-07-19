@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
+import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Animated, Modal, Pressable, StyleSheet, Text, View,
@@ -270,7 +271,7 @@ export default function RunHome() {
     const scene = nextAutoStoryScene(player);
     if (scene) {
       autoScenePushed.current = true;
-      const t = setTimeout(() => router.push(`/story-scene?sceneId=${scene.id}` as any), 400);
+      const t = setTimeout(() => router.push(dynRoute.storyScene(scene.id)), 400);
       return () => clearTimeout(t);
     }
   }, [loading, player, showIntro, isCompleted, router]);
@@ -382,7 +383,7 @@ export default function RunHome() {
       {showCommunityBanner && (
         <Pressable
           style={[styles.eventBanner, !worldEventUnlocked && styles.eventBannerBoard]}
-          onPress={() => router.push(ACTIVE_WORLD_EVENT.route as any)}
+          onPress={() => router.push(ACTIVE_WORLD_EVENT.route as AppRoute)}
           testID="home-world-event-banner"
         >
           <View style={styles.eventBannerIcon}>
@@ -431,7 +432,7 @@ export default function RunHome() {
       {newMemory && (
         <Pressable
           style={styles.memoryBanner}
-          onPress={() => router.push(`/story-scene?sceneId=${newMemory.id}` as any)}
+          onPress={() => router.push(dynRoute.storyScene(newMemory.id))}
           testID="home-new-memory-banner"
         >
           <Ionicons name="sparkles" size={18} color="#E0B45C" />
@@ -464,7 +465,7 @@ export default function RunHome() {
               if (!route) {
                 setLocalDismissGuide(true);
               } else {
-                router.push(route as any);
+                router.push(route as AppRoute);
               }
             }}
             testID="home-objective-guide"
@@ -478,7 +479,7 @@ export default function RunHome() {
           <ReturnSessionCard
             roundsBadge={roundsBadge}
             onRounds={() => { setShowRounds(true); setShowReturnCard(false); }}
-            onJourney={() => { router.push("/journey" as any); setShowReturnCard(false); }}
+            onJourney={() => { router.push(ROUTES.JOURNEY); setShowReturnCard(false); }}
             onDismiss={() => setShowReturnCard(false)}
           />
         </View>
@@ -518,7 +519,7 @@ export default function RunHome() {
               emblem={<HubEmblem source={EMBLEM_IMAGES.milestones} />}
               label="Milestones"
               color="#D4AF37"
-              onPress={() => router.push("/milestones" as any)}
+              onPress={() => router.push(ROUTES.MILESTONES)}
               testID="home-float-milestones"
             />
           )}
@@ -560,7 +561,7 @@ export default function RunHome() {
               emblem={<HubEmblem source={EMBLEM_IMAGES.summoning} />}
               label="Summon"
               color="#D4AF37"
-              onPress={() => router.push("/university/recruit" as any)}
+              onPress={() => router.push(ROUTES.UNI_RECRUIT)}
               testID="home-float-summon"
             />
           )}
@@ -569,7 +570,7 @@ export default function RunHome() {
               emblem={<HubEmblem source={EMBLEM_IMAGES.wardDefense} />}
               label="Defense"
               color={COLORS.river}
-              onPress={() => router.push("/ward-defense" as any)}
+              onPress={() => router.push(ROUTES.WARD_DEFENSE)}
               testID="home-float-ward-defense"
             />
           )}
@@ -644,7 +645,7 @@ export default function RunHome() {
               {wardShiftGate.reason ?? "Finish your first Clinica University lesson to unlock the ward."}
             </Text>
           </View>
-          <Pressable style={styles.wardLockedCardCta} onPress={() => router.push("/university" as any)}>
+          <Pressable style={styles.wardLockedCardCta} onPress={() => router.push(ROUTES.UNIVERSITY)}>
             <Text style={styles.wardLockedCardCtaTxt}>TRAIN</Text>
             <Ionicons name="arrow-forward" size={12} color="#082019" />
           </Pressable>

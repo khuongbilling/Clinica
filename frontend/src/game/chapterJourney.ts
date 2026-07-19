@@ -12,6 +12,8 @@
  * Lotus Gems, and Refined Lotus Gems. No new currencies added.
  */
 
+import type { AppRoute } from './routes';
+
 // ── Part types ───────────────────────────────────────────────────────────────
 
 export type ChapterPartType =
@@ -121,9 +123,9 @@ export interface ChapterFailureHint {
   /** 2–4 specific practice activities to try at University. */
   practices: readonly string[];
   /** Primary deep link route (University hub). */
-  primaryRoute: string;
+  primaryRoute: AppRoute;
   /** Secondary deep link route (Hero Skill Academy). */
-  secondaryRoute: string;
+  secondaryRoute: AppRoute;
 }
 
 // ── Chapter accent palette (one per chapter, warm-dark donghua tones) ────────

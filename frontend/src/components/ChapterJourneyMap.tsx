@@ -10,6 +10,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import React, { useState } from "react";
 import {
   Animated,
@@ -280,11 +281,11 @@ export function ChapterJourneyMap({
                     isStoryNode && part.route.includes("story-scene")
                       ? part.route + "&returnTo=%2Fjourney"
                       : null;
-                  router.push((storyRoute ?? part.route) as any);
+                  router.push((storyRoute ?? part.route) as AppRoute);
                 }
               }}
-              onUniversityPress={() => router.push("/university" as any)}
-              onSkillAcademyPress={() => router.push("/university/skill-academy" as any)}
+              onUniversityPress={() => router.push(ROUTES.UNIVERSITY)}
+              onSkillAcademyPress={() => router.push(ROUTES.UNI_SKILL_ACADEMY)}
               onNextChapterOpen={
                 CHAPTERS[idx + 1]
                   ? () => setExpandedId(CHAPTERS[idx + 1].id)

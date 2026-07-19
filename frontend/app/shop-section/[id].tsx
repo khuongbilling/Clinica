@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -640,7 +641,7 @@ export default function ShopSection() {
                 </Text>
                 <Pressable
                   style={styles.equipBtn}
-                  onPress={() => { setBazaarOpen(false); router.push("/bazaar" as any); }}
+                  onPress={() => { setBazaarOpen(false); router.push(ROUTES.BAZAAR); }}
                   testID="shop-open-full-bazaar"
                 >
                   <Text style={styles.equipBtnTxt}>Open full Sanctuary Bazaar preview →</Text>

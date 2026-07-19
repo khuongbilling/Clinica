@@ -11,6 +11,7 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import React, { useState } from "react";
 import {
   Pressable, ScrollView, StyleSheet, Text, View,
@@ -364,7 +365,7 @@ export default function TutorialEncyclopedia() {
   async function handleReplay(entry: EncyclopediaEntry) {
     if (!entry.tutorialId || !entry.replayRoute) return;
     await replayTutorial(entry.tutorialId);
-    router.replace(entry.replayRoute as any);
+    router.replace(entry.replayRoute as AppRoute);
   }
 
   return (
@@ -499,7 +500,7 @@ export default function TutorialEncyclopedia() {
                         {entry.practiceRoute && entry.practiceLabel && (
                           <Pressable
                             style={[styles.practiceBtn, { backgroundColor: entry.accentColor + "14", borderColor: entry.accentColor + "40" }]}
-                            onPress={() => router.push(entry.practiceRoute as any)}
+                            onPress={() => router.push(entry.practiceRoute as AppRoute)}
                             testID={`encyclopedia-practice-${entry.id}`}
                           >
                             <Ionicons name="arrow-forward-circle-outline" size={14} color={entry.accentColor} />

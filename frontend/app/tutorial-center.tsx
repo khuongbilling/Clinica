@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -84,7 +85,7 @@ export default function TutorialCenterScreen() {
   async function handleReplay(id: TutorialId) {
     await replayTutorial(id);
     const route = REPLAY_ROUTES[id] ?? "/(tabs)";
-    router.replace(route as any);
+    router.replace(route as AppRoute);
   }
 
   async function doResetAll() {

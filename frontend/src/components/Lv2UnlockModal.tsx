@@ -8,6 +8,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -72,7 +73,7 @@ export function Lv2UnlockModal({ visible, onDismiss }: Props) {
 
   const goToSummoning = () => {
     onDismiss();
-    setTimeout(() => router.push("/university/recruit" as any), 300);
+    setTimeout(() => router.push(ROUTES.UNI_RECRUIT), 300);
   };
 
   return (

@@ -19,7 +19,7 @@ export interface CurriculumActivity {
   kind: PracticeActivityKind;
   label: string;
   description: string;
-  route: string;          // existing route
+  route: string;            // existing route
   difficulty: 'beginner' | 'standard' | 'advanced';
 }
 

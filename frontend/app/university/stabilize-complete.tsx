@@ -17,6 +17,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -203,7 +204,7 @@ export default function StabilizeCompleteScreen() {
       <Animated.View style={[styles.ctaWrap, { opacity: ctaFade }]} pointerEvents={ctaReady ? "auto" : "none"}>
         <Pressable
           style={styles.ctaBtn}
-          onPress={() => router.replace("/university" as any)}
+          onPress={() => router.replace(ROUTES.UNIVERSITY)}
           testID="chain-complete-continue"
         >
           <Text style={styles.ctaBtnTxt}>Continue</Text>

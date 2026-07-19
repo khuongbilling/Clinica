@@ -6,6 +6,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated, Image, Pressable, ScrollView,
@@ -3839,7 +3840,7 @@ function LobbyScreen({
         {/* ── CLINICAL COMPENDIUM ──────────────────────────────────── */}
         <Pressable
           style={[s.lobbyCard, { flexDirection: "row", alignItems: "center", gap: 12 }]}
-          onPress={() => lobbyRouter.push("/compendium" as any)}
+          onPress={() => lobbyRouter.push(ROUTES.COMPENDIUM)}
         >
           <View style={{ width: 38, height: 38, borderRadius: 19,
             backgroundColor: "#1e1a40", borderWidth: 1, borderColor: "#4c3d9060",

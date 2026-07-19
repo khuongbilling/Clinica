@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef } from "react";
 import { Platform } from "react-native";
+import type { AppRoute } from "@/src/game/routes";
 
 /**
  * Web-only: makes the browser's native back button behave exactly like the
@@ -26,7 +27,7 @@ import { Platform } from "react-native";
  * Does nothing on native — Android hardware back / iOS gestures are handled
  * by `useBlockBack` on the screens that need it.
  */
-export function useWebBackToHub(target: string) {
+export function useWebBackToHub(target: AppRoute) {
   const router = useRouter();
   const targetRef = useRef(target);
   targetRef.current = target;
@@ -40,7 +41,7 @@ export function useWebBackToHub(target: string) {
       }
 
       const onPop = () => {
-        router.replace(targetRef.current as any);
+        router.replace(targetRef.current);
       };
       window.addEventListener("popstate", onPop);
       return () => window.removeEventListener("popstate", onPop);

@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { RewardBurst } from "@/src/components/university/RewardBurst";
 import React, {
   useCallback,
@@ -405,7 +406,7 @@ export default function CueHuntScreen() {
   useEffect(() => {
     getChainProgress().then((prog) => {
       if (prog.cueHuntDone) {
-        router.replace("/university" as any);
+        router.replace(ROUTES.UNIVERSITY);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -540,8 +541,8 @@ export default function CueHuntScreen() {
           creditsEarned={creditsEarned}
           milestoneItems={milestoneItems}
           onFinish={() => router.replace("/university")}
-          onLearnMore={() => router.push("/university/cue-hunt-lesson" as any)}
-          onContinue={() => router.replace("/university/rapid-triage" as any)}
+          onLearnMore={() => router.push(ROUTES.UNI_CUE_HUNT_LESSON)}
+          onContinue={() => router.replace(ROUTES.UNI_RAPID_TRIAGE)}
           continueLabel="Next: Rapid Triage →"
         />
       </SafeAreaView>

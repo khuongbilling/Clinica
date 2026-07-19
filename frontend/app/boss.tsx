@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -65,7 +66,7 @@ export default function BossPage() {
       flashNotice(`Not enough Shift Challenges — a boss encounter costs ${BOSS_ENCOUNTER_COST}.`);
       return;
     }
-    router.push({ pathname: "/mission-loadout" as any, params: { enemyId: boss.id, title: boss.name, partType: "boss", chapterAccent: accent } });
+    router.push({ pathname: "/mission-loadout", params: { enemyId: boss.id, title: boss.name, partType: "boss", chapterAccent: accent } });
   };
 
   return (

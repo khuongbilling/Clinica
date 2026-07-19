@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Modal,
@@ -673,13 +674,13 @@ export default function MissionLoadoutScreen() {
     if (isTutorial) {
       // Tutorial mode — always replace into battle with prologue+training flags so
       // the guided Ward Shift scripted sequence runs correctly.
-      router.replace({ pathname: "/battle" as any, params: { enemyId: String(enemyId || "dehydration_wisp"), training: "1", prologue: "tutorial" } });
+      router.replace({ pathname: "/battle", params: { enemyId: String(enemyId || "dehydration_wisp"), training: "1", prologue: "tutorial" } });
     } else if (enemyId) {
       // Battle node with a specific enemy — push with typed params to avoid
       // URL-encoding issues when enemyId was separated from the route string.
-      router.push({ pathname: "/battle" as any, params: { enemyId: String(enemyId) } });
+      router.push({ pathname: "/battle", params: { enemyId: String(enemyId) } });
     } else if (missionRoute) {
-      router.push(missionRoute as any);
+      router.push(missionRoute as AppRoute);
     } else {
       router.back();
     }
@@ -792,7 +793,7 @@ export default function MissionLoadoutScreen() {
           ) : owned.size === 0 ? (
             <Pressable
               style={[s.navCard, s.emptyNavCard]}
-              onPress={() => router.push("/summon" as any)}
+              onPress={() => router.push(ROUTES.SUMMON)}
             >
               <Ionicons name="people-outline" size={20} color={UI.textDim} />
               <Text style={s.emptyNavTxt}>No heroes recruited — Go to Summoning Hall</Text>
@@ -1124,7 +1125,7 @@ export default function MissionLoadoutScreen() {
                 </View>
                 <Pressable
                   style={[s.navBtn, { borderColor: accent + "60" }]}
-                  onPress={() => router.push("/item-bag" as any)}
+                  onPress={() => router.push(ROUTES.ITEM_BAG)}
                 >
                   <Text style={[s.navBtnTxt, { color: accent }]}>Browse Bag</Text>
                   <Ionicons name="chevron-forward" size={13} color={accent} />

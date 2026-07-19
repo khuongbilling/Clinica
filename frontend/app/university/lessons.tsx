@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { dynRoute } from "@/src/game/routes";
 import { goBack } from "@/src/utils/navigation";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -426,7 +427,7 @@ export default function LessonsHubScreen() {
                   <View key={node.id}>
                     <LessonPathCard
                       node={node} done={done} isNext={isNext} locked={locked}
-                      onPress={() => router.push(`/university/lotus-lesson/${node.id}` as any)}
+                      onPress={() => router.push(dynRoute.lotusLesson(node.id))}
                     />
                     {i < vfNodes.length - 1 && (
                       <View style={styles.connectorWrap}>
@@ -458,7 +459,7 @@ export default function LessonsHubScreen() {
               d={d}
               completedLessons={completedLessons}
               onPress={d.status === 'available'
-                ? () => router.push(`/university/department/${d.id}` as any)
+                ? () => router.push(dynRoute.department(d.id))
                 : undefined}
             />
           ))}

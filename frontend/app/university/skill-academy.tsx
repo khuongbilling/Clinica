@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useState } from "react";
 import {
   Pressable,
@@ -163,7 +164,7 @@ function MissingHints({
             <Ionicons name="arrow-forward-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
             <Text style={hints.txt}>{src}</Text>
             {route && (
-              <Pressable onPress={() => router.push(route as any)}>
+              <Pressable onPress={() => router.push(route as AppRoute)}>
                 <Text style={hints.go}>Go →</Text>
               </Pressable>
             )}
@@ -477,7 +478,7 @@ export default function SkillAcademy() {
             <Text style={styles.lockedDesc}>
               Skill upgrades apply to your hero team. Recruit your first healers from the Summoning Hall or complete Lotus Lessons to earn loaner heroes, then return here to upgrade their skills.
             </Text>
-            <Pressable style={styles.lockedBtn} onPress={() => router.push("/university/lessons" as any)}>
+            <Pressable style={styles.lockedBtn} onPress={() => router.push(ROUTES.UNI_LESSONS)}>
               <Ionicons name="book-outline" size={14} color="#2DD4BF" />
               <Text style={styles.lockedBtnTxt}>Go to Lotus Lessons</Text>
             </Pressable>
@@ -514,15 +515,15 @@ export default function SkillAcademy() {
         <View style={styles.footer}>
           <Text style={styles.footerTitle}>Need more materials?</Text>
           <View style={styles.footerBtns}>
-            <Pressable style={styles.footerBtn} onPress={() => router.push("/university/cue-lab" as any)}>
+            <Pressable style={styles.footerBtn} onPress={() => router.push(ROUTES.UNI_CUE_LAB)}>
               <Ionicons name="eye-outline" size={13} color="#2DD4BF" />
               <Text style={[styles.footerBtnTxt, { color: "#2DD4BF" }]}>Cue Lab</Text>
             </Pressable>
-            <Pressable style={styles.footerBtn} onPress={() => router.push("/university/triage-hall" as any)}>
+            <Pressable style={styles.footerBtn} onPress={() => router.push(ROUTES.UNI_TRIAGE_HALL)}>
               <Ionicons name="flash-outline" size={13} color="#F59E0B" />
               <Text style={[styles.footerBtnTxt, { color: "#F59E0B" }]}>Triage Hall</Text>
             </Pressable>
-            <Pressable style={styles.footerBtn} onPress={() => router.push("/university/stack-lab" as any)}>
+            <Pressable style={styles.footerBtn} onPress={() => router.push(ROUTES.UNI_STACK_LAB)}>
               <Ionicons name="layers-outline" size={13} color="#22D3EE" />
               <Text style={[styles.footerBtnTxt, { color: "#22D3EE" }]}>Stack Lab</Text>
             </Pressable>

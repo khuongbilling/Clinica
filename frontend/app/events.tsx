@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,7 +47,7 @@ export default function EventsPage() {
   const worldEventBanner = (
     <Pressable
       style={styles.worldEventBanner}
-      onPress={() => router.push("/world-event" as any)}
+      onPress={() => router.push(ROUTES.WORLD_EVENT)}
       testID="events-world-event-banner"
     >
       <View style={styles.worldEventLeft}>
@@ -86,7 +87,7 @@ export default function EventsPage() {
     // the player to the hub (where the Rounds panel lives) instead of the
     // static design preview dialog.
     if (event.id === "daily-orders") {
-      router.push("/(tabs)" as any);
+      router.push(ROUTES.HOME);
       return;
     }
     setInfo({

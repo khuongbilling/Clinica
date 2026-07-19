@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -255,7 +256,7 @@ export default function CommunityBoardScreen() {
         {active && (
           <Pressable
             style={styles.eventLink}
-            onPress={() => router.push("/world-event" as any)}
+            onPress={() => router.push(ROUTES.WORLD_EVENT)}
             testID="community-board-world-event-link"
           >
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: JADE_DIM + "30", pointerEvents: "none" }]} />

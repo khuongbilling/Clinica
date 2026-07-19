@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
@@ -22,7 +23,7 @@ export default function Prologue() {
     if (startedRef.current) return;
     if (player && player.prologue_complete === false) {
       startedRef.current = true;
-      router.replace({ pathname: "/mission-loadout" as any, params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
+      router.replace({ pathname: "/mission-loadout", params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
       return;
     }
     if (!player) {
@@ -36,7 +37,7 @@ export default function Prologue() {
         identity_restored: false,
         diagnostic_intro_seen: false,
       }).then(() => {
-        router.replace({ pathname: "/mission-loadout" as any, params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
+        router.replace({ pathname: "/mission-loadout", params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
       }).catch(() => {
         setStarting(false);
         startedRef.current = false;

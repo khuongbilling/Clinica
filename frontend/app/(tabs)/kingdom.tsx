@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -906,7 +907,7 @@ function BuildingActionSheet({
                 linkGate.unlocked ? (
                   <Pressable
                     style={[styles.linkBtn, { borderColor: color, flex: 1 }]}
-                    onPress={() => { onClose(); router.push(building.linkRoute as any); }}
+                    onPress={() => { onClose(); router.push(building.linkRoute! as AppRoute); }}
                     testID={`realm-link-${building.id}`}
                   >
                     <Text style={[styles.linkBtnTxt, { color }]}>{building.linkLabel}</Text>

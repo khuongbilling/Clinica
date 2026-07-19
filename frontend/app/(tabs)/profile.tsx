@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import { useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -269,7 +270,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/learning-profile" as any)}
+            onPress={() => router.push(ROUTES.LEARNING_PROFILE)}
             testID="profile-learning-profile-button"
           >
             <Ionicons name="options-outline" size={18} color={COLORS.brand} />
@@ -290,7 +291,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/tutorial-encyclopedia" as any)}
+            onPress={() => router.push(ROUTES.TUTORIAL_ENCYCLOPEDIA)}
             testID="profile-encyclopedia-button"
           >
             <Ionicons name="compass-outline" size={18} color={COLORS.brand} />

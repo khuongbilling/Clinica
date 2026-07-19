@@ -10,6 +10,7 @@
 // teal-green-gold palette, soft clean linework). NOT western comic-book style.
 // ────────────────────────────────────────────────────────────────────────────
 
+
 export type WorldEventBadge = "Preview" | "Planned" | "Coming Soon";
 
 // ── Lore ────────────────────────────────────────────────────────────────────

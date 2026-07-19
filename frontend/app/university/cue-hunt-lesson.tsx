@@ -12,6 +12,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ROUTES } from "@/src/game/routes";
 import React, { useRef, useState } from "react";
 import {
   Animated,
@@ -84,7 +85,7 @@ export default function CueHuntLessonScreen() {
     }).start(() => {
       if (isLast) {
         // Navigate to Apply It placeholder
-        router.push("/university/apply-it" as any);
+        router.push(ROUTES.UNI_APPLY_IT);
         // Reset for if user navigates back
         setBeatIdx(0);
         fadeAnim.setValue(1);

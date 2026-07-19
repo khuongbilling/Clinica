@@ -9,6 +9,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
+import { type AppRoute } from "@/src/game/routes";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -303,7 +304,7 @@ export default function PracticeCurriculumScreen() {
 
   const handlePlay = useCallback(
     (route: string) => {
-      router.push(route as any);
+      router.push(route as AppRoute);
     },
     [router],
   );

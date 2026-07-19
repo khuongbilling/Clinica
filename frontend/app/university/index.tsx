@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -390,9 +391,9 @@ export default function UniversityHubScreen() {
 
   const handleChainEntry = useCallback(() => {
     if (chainProg.stabilizeDone) return;
-    else if (chainProg.rapidTriageDone) router.push("/university/stabilize-stack" as any);
-    else if (chainProg.cueHuntDone)     router.push("/university/rapid-triage" as any);
-    else                                router.push("/university/cue-hunt" as any);
+    else if (chainProg.rapidTriageDone) router.push(ROUTES.UNI_STABILIZE_STACK);
+    else if (chainProg.cueHuntDone)     router.push(ROUTES.UNI_RAPID_TRIAGE);
+    else                                router.push(ROUTES.UNI_CUE_HUNT);
   }, [chainProg, router]);
 
   useClearTutorialOnExit();
@@ -459,9 +460,9 @@ export default function UniversityHubScreen() {
                 chainProg={chainProg}
                 completed={completedObjectives}
                 onPressTask={(key) => {
-                  if (key === "cueHunt") router.push("/university/cue-hunt" as any);
-                  else if (key === "triage") router.push("/university/rapid-triage" as any);
-                  else router.push("/university/stabilize-stack" as any);
+                  if (key === "cueHunt") router.push(ROUTES.UNI_CUE_HUNT);
+                  else if (key === "triage") router.push(ROUTES.UNI_RAPID_TRIAGE);
+                  else router.push(ROUTES.UNI_STABILIZE_STACK);
                 }}
               />
             </>
@@ -470,7 +471,7 @@ export default function UniversityHubScreen() {
           {chainProg.stabilizeDone && (
             <>
               <Text style={styles.sectionHeading}>CHAPTER 1 JOURNEY</Text>
-              <Pressable style={styles.ch1JourneyCard} onPress={() => router.push("/journey" as any)} testID="university-ch1-journey">
+              <Pressable style={styles.ch1JourneyCard} onPress={() => router.push(ROUTES.JOURNEY)} testID="university-ch1-journey">
                 <View style={styles.ch1JourneyLeft}>
                   <View style={styles.ch1Badge}><Text style={styles.ch1BadgeTxt}>CH. 1</Text></View>
                   <View style={{ flex: 1 }}>
@@ -486,13 +487,13 @@ export default function UniversityHubScreen() {
           <Text style={styles.sectionHeading}>LOTUS LESSONS</Text>
           <BannerCard
             mode={LESSONS_BANNER} height={120}
-            onPress={() => router.push("/university/lessons" as any)}
+            onPress={() => router.push(ROUTES.UNI_LESSONS)}
             testID="university-banner-lessons"
           />
 
           {nextLotusNode && (
             <Pressable style={styles.nextLessonCard}
-              onPress={() => router.push(`/university/lotus-lesson/${nextLotusNode.id}` as any)}
+              onPress={() => router.push(dynRoute.lotusLesson(nextLotusNode.id))}
               testID="university-next-lesson">
               <View style={styles.nextLessonIcon}>
                 <Ionicons name="play-circle" size={22} color={COLORS.brand} />
@@ -521,7 +522,7 @@ export default function UniversityHubScreen() {
             <>
               <Text style={styles.sectionHeading}>PRACTICE CURRICULUM</Text>
               <Pressable style={pracStyles.curriculumCard}
-                onPress={() => router.push("/university/practice" as any)}
+                onPress={() => router.push(ROUTES.UNI_PRACTICE)}
                 testID="university-practice-curriculum">
                 <View style={pracStyles.curriculumLeft}>
                   <View style={pracStyles.curriculumBadge}>
@@ -538,7 +539,7 @@ export default function UniversityHubScreen() {
 
               <Text style={styles.sectionHeading}>PRACTICE LABS</Text>
               <View style={labsStyles.grid}>
-                <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/cue-lab" as any)} testID="university-lab-cue">
+                <Pressable style={labsStyles.labCard} onPress={() => router.push(ROUTES.UNI_CUE_LAB)} testID="university-lab-cue">
                   <View style={[labsStyles.labIcon, { backgroundColor: "#2DD4BF18" }]}>
                     <Ionicons name="eye-outline" size={20} color="#2DD4BF" />
                   </View>
@@ -549,7 +550,7 @@ export default function UniversityHubScreen() {
                     <Text style={[labsStyles.labChipTxt, { color: "#2DD4BF" }]}>REPEATABLE</Text>
                   </View>
                 </Pressable>
-                <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/triage-hall" as any)} testID="university-lab-triage">
+                <Pressable style={labsStyles.labCard} onPress={() => router.push(ROUTES.UNI_TRIAGE_HALL)} testID="university-lab-triage">
                   <View style={[labsStyles.labIcon, { backgroundColor: "#F59E0B18" }]}>
                     <Ionicons name="flash-outline" size={20} color="#F59E0B" />
                   </View>
@@ -560,7 +561,7 @@ export default function UniversityHubScreen() {
                     <Text style={[labsStyles.labChipTxt, { color: "#F59E0B" }]}>REPEATABLE</Text>
                   </View>
                 </Pressable>
-                <Pressable style={labsStyles.labCard} onPress={() => router.push("/university/stack-lab" as any)} testID="university-lab-stack">
+                <Pressable style={labsStyles.labCard} onPress={() => router.push(ROUTES.UNI_STACK_LAB)} testID="university-lab-stack">
                   <View style={[labsStyles.labIcon, { backgroundColor: "#22D3EE18" }]}>
                     <Ionicons name="layers-outline" size={20} color="#22D3EE" />
                   </View>
@@ -575,15 +576,15 @@ export default function UniversityHubScreen() {
               <View style={labsStyles.labFooter}>
                 <Text style={labsStyles.labFooterTxt}>Earn scrolls and credits. Milestone rewards unlock automatically.</Text>
                 <View style={labsStyles.labMoreRow}>
-                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-milestones" as any)}>
+                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push(ROUTES.UNI_MILESTONES)}>
                     <Ionicons name="trophy-outline" size={13} color="#D4AF37" />
                     <Text style={labsStyles.labMoreBtnTxt}>Milestones</Text>
                   </Pressable>
-                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/uni-shop" as any)}>
+                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push(ROUTES.UNI_SHOP)}>
                     <Ionicons name="storefront-outline" size={13} color="#2DD4BF" />
                     <Text style={[labsStyles.labMoreBtnTxt, { color: "#2DD4BF" }]}>Uni Shop</Text>
                   </Pressable>
-                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push("/university/skill-academy" as any)}>
+                  <Pressable style={labsStyles.labMoreBtn} onPress={() => router.push(ROUTES.UNI_SKILL_ACADEMY)}>
                     <Ionicons name="flash-outline" size={13} color="#A855F7" />
                     <Text style={[labsStyles.labMoreBtnTxt, { color: "#A855F7" }]}>Skills</Text>
                   </Pressable>
@@ -593,8 +594,8 @@ export default function UniversityHubScreen() {
               <Text style={styles.sectionHeading}>BATTLE {"&"} JOURNEY SUPPORT</Text>
               <JourneyPrepSection
                 chapterProgress={player.chapter_progress ?? 1}
-                onJourneyPress={() => router.push("/journey" as any)}
-                onLabPress={(route) => router.push(route as any)}
+                onJourneyPress={() => router.push(ROUTES.JOURNEY)}
+                onLabPress={(route) => router.push(route as AppRoute)}
               />
             </>
           )}
@@ -631,16 +632,16 @@ export default function UniversityHubScreen() {
                   <Text style={styles.sectionHeading}>GROW YOUR HEALERS</Text>
                   {showRecruitment && (
                     <BannerCard mode={RECRUIT_BANNER} height={120}
-                      onPress={() => router.push("/university/recruit" as any)}
+                      onPress={() => router.push(ROUTES.UNI_RECRUIT)}
                       testID="university-banner-uni-recruit" />
                   )}
                   {showTraining && (
                     <BannerCard mode={TRAINING_BANNER} height={120}
-                      onPress={() => router.push("/university/training" as any)}
+                      onPress={() => router.push(ROUTES.UNI_TRAINING)}
                       testID="university-banner-uni-training" />
                   )}
                   <BannerCard mode={SKILL_ACADEMY_BANNER} height={120}
-                    onPress={() => router.push("/university/skill-academy" as any)}
+                    onPress={() => router.push(ROUTES.UNI_SKILL_ACADEMY)}
                     testID="university-banner-skill-academy" />
                 </>
               )}
@@ -650,12 +651,12 @@ export default function UniversityHubScreen() {
                   <Text style={styles.sectionHeading}>KNOWLEDGE {"&"} PATHS</Text>
                   {showCodex && (
                     <BannerCard mode={LIBRARY_BANNER} height={120}
-                      onPress={() => router.push("/(tabs)/codex" as any)}
+                      onPress={() => router.push(ROUTES.CODEX)}
                       testID="university-banner-uni-library" />
                   )}
                   {showClassTree && (
                     <BannerCard mode={CLASSTREE_BANNER} height={120}
-                      onPress={() => router.push("/class-tree" as any)}
+                      onPress={() => router.push(ROUTES.CLASS_TREE)}
                       testID="university-banner-uni-classtree" />
                   )}
                 </>
@@ -681,27 +682,27 @@ export default function UniversityHubScreen() {
             <>
               <Text style={styles.sectionHeading}>MILESTONES</Text>
               <MoreRow icon="trophy-outline" title="University Milestones" desc="Track lab completions and earn milestone rewards."
-                onPress={() => router.push("/university/uni-milestones" as any)} testID="university-badges-milestones" />
+                onPress={() => router.push(ROUTES.UNI_MILESTONES)} testID="university-badges-milestones" />
               <MoreRow icon="storefront-outline" title="University Shop" desc="Spend scrolls on items and bonuses."
-                onPress={() => router.push("/university/uni-shop" as any)} testID="university-badges-shop" />
+                onPress={() => router.push(ROUTES.UNI_SHOP)} testID="university-badges-shop" />
 
               <Text style={styles.sectionHeading}>YOUR PATH</Text>
               {showClassTree && (
                 <MoreRow icon="git-network-outline" title="Class Tree" desc="Choose your Player Class and unlock abilities."
-                  onPress={() => router.push("/class-tree" as any)} testID="university-badges-classtree" />
+                  onPress={() => router.push(ROUTES.CLASS_TREE)} testID="university-badges-classtree" />
               )}
               {showHeroes && (
                 <MoreRow icon="people-outline" title="Hall of Heroes" desc="Certify heroes and raise their star rank."
-                  onPress={() => router.push("/(tabs)/heroes" as any)} testID="university-badges-heroes" />
+                  onPress={() => router.push(ROUTES.HEROES)} testID="university-badges-heroes" />
               )}
               {showCareerExplorer && (
                 <MoreRow icon="compass-outline" title="Career Explorer" desc="Discover the many paths a healer can walk."
-                  onPress={() => router.push("/university/career-explorer" as any)} testID="university-badges-career" />
+                  onPress={() => router.push(ROUTES.UNI_CAREER_EXPLORER)} testID="university-badges-career" />
               )}
 
               <Text style={styles.sectionHeading}>SETTINGS</Text>
               <MoreRow icon="options-outline" title="Learning Style" desc="Adjust explanation depth and clue visibility."
-                onPress={() => router.push("/learning-profile" as any)} testID="university-badges-learning-profile" />
+                onPress={() => router.push(ROUTES.LEARNING_PROFILE)} testID="university-badges-learning-profile" />
 
               <Pressable style={styles.futureToggle} onPress={() => setShowFuture((v) => !v)} testID="university-future-toggle">
                 <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceSecondary} />
