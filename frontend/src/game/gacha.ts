@@ -1,6 +1,9 @@
-import { Hero } from './types';
+import { Hero, LaunchRarity } from './types';
+import { LaunchRarity as LR } from './types';
+import { LAUNCH_ROSTER, RosterHero, RARITY_PULL_RATES } from './heroRoster';
+import { DUPLICATE_CONVERSION, DuplicateConversion } from './evolutionLines';
 
-// ---------- Gacha Pool ----------
+// ---------- Legacy Foundation Gacha Pool ----------
 export interface GachaEntry {
   id: string;
   heroId: string; // ID matching HEROES in content.ts

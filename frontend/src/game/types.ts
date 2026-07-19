@@ -4,7 +4,14 @@ export type ElementSystem =
   | 'Air' | 'River' | 'Fire' | 'Energy' | 'Storm'
   | 'Mind' | 'Filter' | 'Forge' | 'Protection' | 'Growth';
 
-export type HeroRole = 'Assessor' | 'Stabilizer' | 'Analyst' | 'Coordinator' | 'Educator' | 'Specialist';
+export type HeroRole = 'Assessor' | 'Stabilizer' | 'Analyst' | 'Coordinator' | 'Educator' | 'Specialist'
+  | 'Scout' | 'Striker' | 'Restorer' | 'Preventer' | 'SystemsLeader';
+
+export type ClassFamily =
+  | 'Wardborn' | 'Lifebreath' | 'Truthseer'
+  | 'Remedybound' | 'Restorebound' | 'Realmbound';
+
+export type LaunchRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
 export type ActionType = 'scout' | 'strike' | 'stabilize' | 'shield' | 'cleanse' | 'command' | 'analyze' | 'support';
 
