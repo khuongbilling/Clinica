@@ -201,6 +201,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const [enemyAttackTs, setEnemyAttackTs] = useState(0);
   const [enemyAttackKind, setEnemyAttackKind] = useState<EnemyAttackKind | null>(null);
 
+  // ── Pre-battle objective popup (shown once at battle start) ─────────────
+  const [showObjective, setShowObjective] = useState(true);
+
   // ── Battle Help glossary ──────────────────────────────────────────────────
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [termTooltip, setTermTooltip] = useState<{ term: string; desc: string } | null>(null);
@@ -1073,14 +1076,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
-          <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "Lower this to zero to win the encounter.")} testID="term-tap-corruption">
+          <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in hidden ways.")} testID="term-tap-corruption">
             <Text style={[styles.barLabel, styles.barLabelTappable]}>CORRUPTION</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
           <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
         <View style={styles.barRow}>
-          <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "Keep this above zero — if it hits 0, the patient is lost.")} testID="term-tap-stability">
+          <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — the enemy attacks it every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">
             <Text style={[styles.barLabel, styles.barLabelTappable]}>STABILITY</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
@@ -1622,6 +1625,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       )}
 
       {glossaryOpen && <BattleGlossaryModal onClose={() => setGlossaryOpen(false)} />}
+      {showObjective && (
+        <BattleObjectiveModal
+          isPrologueBoss={isPrologueBoss}
+          isBossEnemy={isBossEnemy}
+          isTraining={isTraining}
+          isPrologueTutorial={isPrologueTutorial}
+          enemyName={enemy.name}
+          onDismiss={() => setShowObjective(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -1753,8 +1766,8 @@ const SKILL_CHAIN_LABEL: Record<string, string> = {
 // ── Battle Glossary ──────────────────────────────────────────────────────────
 
 const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
-  { term: "Stability", desc: "Keep this above zero. If it hits 0, the patient is lost." },
-  { term: "Corruption", desc: "Lower this to zero to win the encounter." },
+  { term: "Stability", desc: "How safely the patient is holding on. Keep it above zero — the enemy attacks it every turn. If it hits 0, the patient is lost." },
+  { term: "Corruption", desc: "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in unexpected ways." },
   { term: "Cue", desc: "A clue about what is wrong with the patient. Answer correctly for bonus AP." },
   { term: "Scout", desc: "Find a hidden clue. Reveal clues before high-cost moves." },
   { term: "Stabilize", desc: "Keep the patient safe and hold off deterioration." },
@@ -1850,6 +1863,107 @@ function CareChainStrip({ chain, isTutorial, currentStepId }: {
         );
       })}
     </View>
+  );
+}
+
+// ── Pre-battle Objective Popup ────────────────────────────────────────────────
+
+interface ObjData {
+  badge: string; badgeColor: string; badgeIcon: string;
+  title: string;
+  bullets: { icon: string; text: string }[];
+  note?: string;
+  btnLabel: string;
+}
+function getBattleObjData(
+  isPrologueBoss: boolean, isBossEnemy: boolean,
+  isTraining: boolean, isPrologueTutorial: boolean, enemyName: string,
+): ObjData {
+  if (isPrologueBoss) return {
+    badge: "STORY ENCOUNTER", badgeColor: "#F59E0B", badgeIcon: "book-outline",
+    title: "Follow the Healer's Rhythm",
+    bullets: [
+      { icon: "list-outline",               text: "Use Scout → Stabilize → Counter → Reassess in sequence" },
+      { icon: "information-circle-outline", text: "This is a story moment — it is not meant to be won" },
+      { icon: "star-outline",               text: "Lotus Recall will trigger when the time comes" },
+    ],
+    note: "Protection skills do not prevent the narrative outcome of this encounter.",
+    btnLabel: "I UNDERSTAND",
+  };
+  if (isPrologueTutorial) return {
+    badge: "TRAINING BATTLE", badgeColor: "#5ECBC8", badgeIcon: "school-outline",
+    title: "Learning the Ward",
+    bullets: [
+      { icon: "trending-down-outline", text: "Win: Lower Corruption to 0 using the clinical chain" },
+      { icon: "heart-outline",         text: "Lose: Stability reaches 0 — keep the patient holding on" },
+      { icon: "person-outline",        text: "Follow Master Bai's guidance step by step" },
+    ],
+    btnLabel: "LET'S BEGIN",
+  };
+  if (isBossEnemy) return {
+    badge: "BOSS ENCOUNTER", badgeColor: "#FBA94C", badgeIcon: "warning-outline",
+    title: enemyName,
+    bullets: [
+      { icon: "trending-down-outline", text: "Win: Lower Corruption to 0" },
+      { icon: "heart-outline",         text: "Lose: Stability reaches 0 — the patient is lost" },
+      { icon: "shield-outline",        text: "Some boss effects may bypass Protection" },
+    ],
+    note: "Scout and Reassess may reveal hidden attack patterns.",
+    btnLabel: "ENTER BATTLE",
+  };
+  if (isTraining) return {
+    badge: "TRAINING", badgeColor: "#94A3B8", badgeIcon: "fitness-outline",
+    title: "Practice Round",
+    bullets: [
+      { icon: "trending-down-outline", text: "Win: Lower Corruption to 0" },
+      { icon: "heart-outline",         text: "Lose: Stability reaches 0" },
+      { icon: "ribbon-outline",        text: "Reduced XP and rewards — no pressure" },
+    ],
+    btnLabel: "BEGIN TRAINING",
+  };
+  return {
+    badge: "WARD ENCOUNTER", badgeColor: "#5ECBC8", badgeIcon: "medical-outline",
+    title: enemyName,
+    bullets: [
+      { icon: "trending-down-outline", text: "Win: Lower Corruption to 0" },
+      { icon: "heart-outline",         text: "Lose: Stability reaches 0 — the patient is lost" },
+      { icon: "git-branch-outline",    text: "Build the Care Chain: Scout → Stabilize → Counter → Reassess" },
+    ],
+    btnLabel: "BEGIN",
+  };
+}
+
+function BattleObjectiveModal(props: {
+  isPrologueBoss: boolean; isBossEnemy: boolean;
+  isTraining: boolean; isPrologueTutorial: boolean;
+  enemyName: string; onDismiss: () => void;
+}) {
+  const d = getBattleObjData(
+    props.isPrologueBoss, props.isBossEnemy,
+    props.isTraining, props.isPrologueTutorial, props.enemyName,
+  );
+  return (
+    <Pressable style={styles.objOverlay} onPress={props.onDismiss} testID="objective-overlay">
+      <Pressable style={styles.objCard} onPress={(e) => e.stopPropagation()} testID="objective-modal">
+        <View style={styles.objBadgeRow}>
+          <Ionicons name={d.badgeIcon as any} size={13} color={d.badgeColor} />
+          <Text style={[styles.objBadge, { color: d.badgeColor }]}>{d.badge}</Text>
+        </View>
+        <Text style={styles.objTitle}>{d.title}</Text>
+        <View style={styles.objBullets}>
+          {d.bullets.map((b, i) => (
+            <View key={i} style={styles.objBulletRow}>
+              <Ionicons name={b.icon as any} size={14} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.objBulletTxt}>{b.text}</Text>
+            </View>
+          ))}
+        </View>
+        {d.note && <Text style={styles.objNote}>{d.note}</Text>}
+        <Pressable style={[styles.objBeginBtn, { backgroundColor: d.badgeColor }]} onPress={props.onDismiss} testID="objective-begin">
+          <Text style={styles.objBeginTxt}>{d.btnLabel}</Text>
+        </Pressable>
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -2126,6 +2240,38 @@ const styles = StyleSheet.create({
   battleHelpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic" },
 
   // ── Battle Glossary modal ──
+  // ── Pre-battle objective popup ──
+  objOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.88)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9500,
+    paddingHorizontal: 24,
+  },
+  objCard: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    width: "100%",
+    maxWidth: 380,
+    gap: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  objBadgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  objBadge: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
+  objTitle: { color: COLORS.onSurface, fontSize: 17, fontWeight: "700", lineHeight: 24 },
+  objBullets: { gap: SPACING.sm },
+  objBulletRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  objBulletTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, flex: 1 },
+  objNote: {
+    color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", lineHeight: 16,
+    borderTopWidth: 1, borderTopColor: COLORS.divider, paddingTop: SPACING.sm,
+  },
+  objBeginBtn: { borderRadius: RADIUS.pill, paddingVertical: 11, alignItems: "center" },
+  objBeginTxt: { color: COLORS.surface, fontSize: 13, fontWeight: "700", letterSpacing: 1 },
+
   glossaryOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "flex-end", zIndex: 500 },
   glossarySheet: {
     backgroundColor: COLORS.surfaceSecondary,
