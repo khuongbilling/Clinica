@@ -272,6 +272,31 @@ export const ENEMIES: Enemy[] = [
     bestCounters: ['stabilize', 'strike'],
     teaches: ['energy_basics', 'hypoglycemia_rules'],
   },
+  // ── Chapter 1 Trial Boss ────────────────────────────────────────────────────
+  // Used exclusively by c1n6 (mini_boss). Difficulty 1 so it appears in the
+  // CH1_ENEMIES pool for star tracking. Harder stats than dehydration_wisp.
+  {
+    id: 'dehydration_specter',
+    name: 'Dehydration Specter',
+    realWorld: 'Moderate dehydration with early circulatory compromise',
+    primarySystem: 'River',
+    difficulty: 1,
+    startingStability: 48,
+    instability: 7,
+    corruption: 85,
+    weakSystem: 'River',
+    visibleClues: [
+      { id: 'c1', label: 'Sunken Eyes',   detail: 'Periorbital hollowing — significant fluid loss.', hidden: false },
+      { id: 'c2', label: 'Skin Tenting',  detail: 'Skin turgor reduced — pinch recoil delayed over 2 seconds.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'HR 118',              detail: 'Compensatory tachycardia from reduced preload.', hidden: true },
+      { id: 'h2', label: 'Urine Dark / Reduced', detail: 'Output below 0.5 mL/kg/hr — kidneys conserving fluid.', hidden: true },
+    ],
+    dangerTrigger: 'Hypovolemic deterioration',
+    bestCounters: ['stabilize', 'scout', 'strike'],
+    teaches: ['fluid_resuscitation'],
+  },
   {
     id: 'fire_imp',
     name: 'Fire Imp',

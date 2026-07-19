@@ -514,6 +514,7 @@ export default function MissionLoadoutScreen() {
   const {
     title         = "Mission",
     missionRoute  = "",
+    enemyId       = "",
     partType      = "battle",
     chapterAccent = UI.gold,
     chapterNumber = "1",
@@ -521,6 +522,7 @@ export default function MissionLoadoutScreen() {
     partId:        string;
     title:         string;
     missionRoute:  string;
+    enemyId:       string;
     partType:      string;
     chapterAccent: string;
     chapterNumber: string;
@@ -554,8 +556,15 @@ export default function MissionLoadoutScreen() {
   const activeTeam = player.active_team ?? [];
 
   const handleStart = () => {
-    if (missionRoute) router.push(missionRoute as any);
-    else router.back();
+    if (enemyId) {
+      // Battle node with a specific enemy — push with typed params to avoid
+      // URL-encoding issues when enemyId was separated from the route string.
+      router.push({ pathname: "/battle" as any, params: { enemyId: String(enemyId) } });
+    } else if (missionRoute) {
+      router.push(missionRoute as any);
+    } else {
+      router.back();
+    }
   };
 
   return (

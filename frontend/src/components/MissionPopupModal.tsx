@@ -146,12 +146,20 @@ export function MissionPopupModal({
 
   const handlePrepare = () => {
     onClose();
+    // Split route like "/battle?enemyId=foo" into pathname + enemyId param
+    // so the value isn't URL-encoded when passed through loadout's query string.
+    const rawRoute  = part.route ?? "";
+    const [basePath, qs] = rawRoute.split("?");
+    const enemyIdParam   = qs
+      ? new URLSearchParams(qs).get("enemyId") ?? ""
+      : "";
     router.push({
       pathname: "/mission-loadout" as any,
       params: {
         partId:        part.id,
         title:         part.title,
-        missionRoute:  part.route ?? "",
+        missionRoute:  basePath,
+        enemyId:       enemyIdParam,
         partType:      part.type,
         chapterAccent: chapterAccent,
         chapterNumber: String(chapterNumber),

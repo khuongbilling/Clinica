@@ -308,7 +308,7 @@ export const CHAPTERS: Chapter[] = [
         title: "Trial: The Fading Apprentice",
         description: "The chapter trial. Face the apprentice's condition at full severity — apply everything the ward has taught you.",
         icon: "skull-outline",
-        route: "/shift",
+        route: "/battle?enemyId=dehydration_specter",
         rewardXp: 30,
         rewardCoins: 25,
         rewardShards: 5,
