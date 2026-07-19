@@ -35,6 +35,10 @@ args = "Start Backend"
 task = "workflow.run"
 args = "MongoDB"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Check Routes"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -66,6 +70,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "mkdir -p .local/mongodb-data && mongod --dbpath .local/mongodb-data --bind_ip 127.0.0.1 --port 27017 --quiet"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Check Routes"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node frontend/scripts/check-routes.js"
 
 [workflows.workflow.metadata]
 outputType = "console"
