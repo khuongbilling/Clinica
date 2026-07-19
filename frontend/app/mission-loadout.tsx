@@ -878,72 +878,6 @@ export default function MissionLoadoutScreen() {
 
         <SectionDivider accent={accent} />
 
-        {/* ── Clinical Supplies ─────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <View style={s.sectionHead}>
-            <View style={[s.pip, { backgroundColor: accent }]} />
-            <Text style={s.sectionTitle}>Clinical Supplies</Text>
-            <View style={[s.countPill, { borderColor: accent + "50" }]}>
-              <Text style={[s.countTxt, { color: accent }]}>
-                {selectedItems.length}/3
-              </Text>
-            </View>
-          </View>
-          {isTutorial ? (
-            <View style={[s.tutorialNotice, { borderColor: UI.gold + "30", backgroundColor: UI.gold + "0A" }]}>
-              <Ionicons name="lock-closed" size={14} color={UI.gold} />
-              <Text style={[s.tutorialNoticeTxt, { color: UI.gold + "CC" }]}>
-                Items are not available in Training Mode. You'll unlock your clinical bag after recruiting your first hero.
-              </Text>
-            </View>
-          ) : (
-            <>
-          <Text style={s.sectionDesc}>
-            Select up to 3 disposable items. Tap the slots above to remove.
-          </Text>
-
-          <View style={s.navCard}>
-            <View style={s.navCardInfo}>
-              {selectedItems.length === 0 ? (
-                <Text style={s.emptyNavTxt}>No items selected</Text>
-              ) : (
-                selectedItems.map((id) => {
-                  const item = ITEMS.find((it) => it.id === id);
-                  if (!item) return null;
-                  return (
-                    <View key={id} style={s.heroChip}>
-                      <Ionicons name="medical" size={11} color={accent} />
-                      <Text style={[s.heroChipTxt, { color: accent }]} numberOfLines={1}>
-                        {item.displayName}
-                      </Text>
-                    </View>
-                  );
-                })
-              )}
-            </View>
-            <Pressable
-              style={[s.navBtn, { borderColor: accent + "60" }]}
-              onPress={() => router.push("/item-bag" as any)}
-            >
-              <Text style={[s.navBtnTxt, { color: accent }]}>Browse Bag</Text>
-              <Ionicons name="chevron-forward" size={13} color={accent} />
-            </Pressable>
-          </View>
-
-          {ownedItems.length === 0 && (
-            <View style={s.empty}>
-              <Ionicons name="medkit-outline" size={24} color={UI.textDim} />
-              <Text style={s.emptyTxt}>
-                No items in inventory — win battles or visit the Apothecary.
-              </Text>
-            </View>
-          )}
-            </>
-          )}
-        </View>
-
-        <SectionDivider accent={accent} />
-
         {/* ── Card Deck ─────────────────────────────────────────────────────── */}
         <View style={s.section}>
           <View style={s.sectionHead}>
@@ -1080,6 +1014,70 @@ export default function MissionLoadoutScreen() {
             </View>
           </View>
         </Modal>
+
+        <SectionDivider accent={accent} />
+
+        {/* ── Clinical Supplies ─────────────────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={[s.pip, { backgroundColor: accent }]} />
+            <Text style={s.sectionTitle}>Clinical Supplies</Text>
+            <View style={[s.countPill, { borderColor: accent + "50" }]}>
+              <Text style={[s.countTxt, { color: accent }]}>
+                {selectedItems.length}/3
+              </Text>
+            </View>
+          </View>
+          {isTutorial ? (
+            <View style={[s.tutorialNotice, { borderColor: UI.gold + "30", backgroundColor: UI.gold + "0A" }]}>
+              <Ionicons name="lock-closed" size={14} color={UI.gold} />
+              <Text style={[s.tutorialNoticeTxt, { color: UI.gold + "CC" }]}>
+                Items are not available in Training Mode. You'll unlock your clinical bag after recruiting your first hero.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={s.sectionDesc}>
+                Select up to 3 disposable items. Tap the slots above to remove.
+              </Text>
+              <View style={s.navCard}>
+                <View style={s.navCardInfo}>
+                  {selectedItems.length === 0 ? (
+                    <Text style={s.emptyNavTxt}>No items selected</Text>
+                  ) : (
+                    selectedItems.map((id) => {
+                      const item = ITEMS.find((it) => it.id === id);
+                      if (!item) return null;
+                      return (
+                        <View key={id} style={s.heroChip}>
+                          <Ionicons name="medical" size={11} color={accent} />
+                          <Text style={[s.heroChipTxt, { color: accent }]} numberOfLines={1}>
+                            {item.displayName}
+                          </Text>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+                <Pressable
+                  style={[s.navBtn, { borderColor: accent + "60" }]}
+                  onPress={() => router.push("/item-bag" as any)}
+                >
+                  <Text style={[s.navBtnTxt, { color: accent }]}>Browse Bag</Text>
+                  <Ionicons name="chevron-forward" size={13} color={accent} />
+                </Pressable>
+              </View>
+              {ownedItems.length === 0 && (
+                <View style={s.empty}>
+                  <Ionicons name="medkit-outline" size={24} color={UI.textDim} />
+                  <Text style={s.emptyTxt}>
+                    No items in inventory — win battles or visit the Apothecary.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
 
         {/* ── Tip ─────────────────────────────────────────────────────────── */}
         <View style={s.tip}>
