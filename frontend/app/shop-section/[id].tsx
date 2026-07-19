@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -369,9 +370,19 @@ export default function ShopSection() {
                   const afford = crowns >= s.price;
                   return (
                     <View key={s.id} style={styles.card} testID={`shop-skin-${s.id}`}>
-                      <View style={[styles.auraSwatch, { backgroundColor: s.auraColor + "33", borderColor: s.accentColor }]}>
-                        <Ionicons name={s.icon as any} size={20} color={s.accentColor} />
-                      </View>
+                      {isWard && s.wardBackdrop ? (
+                        <View style={[styles.backdropThumb, { borderColor: s.accentColor }]}>
+                          <ExpoImage
+                            source={s.wardBackdrop}
+                            style={styles.backdropThumbImg}
+                            contentFit="cover"
+                          />
+                        </View>
+                      ) : (
+                        <View style={[styles.auraSwatch, { backgroundColor: s.auraColor + "33", borderColor: s.accentColor }]}>
+                          <Ionicons name={s.icon as any} size={20} color={s.accentColor} />
+                        </View>
+                      )}
                       <View style={styles.cardMain}>
                         <Text style={styles.cardName}>{s.name}</Text>
                         <Text style={[styles.cardEffect, { color: s.accentColor }]}>{s.subtitle} • {isWard ? "Ward Backdrop" : "Hero Aura"}</Text>
@@ -859,6 +870,12 @@ const styles = StyleSheet.create({
   auraSwatch: {
     width: 44, height: 44, borderRadius: RADIUS.pill, borderWidth: 2,
     alignItems: "center", justifyContent: "center",
+  },
+  backdropThumb: {
+    width: 72, height: 52, borderRadius: RADIUS.md, borderWidth: 2, overflow: "hidden",
+  },
+  backdropThumbImg: {
+    width: "100%", height: "100%",
   },
   buyBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
