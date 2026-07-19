@@ -14,7 +14,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard } from "@/src/game/cards";
-import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile } from "@/src/game/clinical";
+import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type ChainRole } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { getBattleBaseXp, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
 import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
@@ -1030,6 +1030,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
       {/* ── ZONE D: Action area (flex 1, scrolls internally) ── */}
       <View style={styles.zoneD}>
+        {/* Care Chain Rhythm Strip — always visible during active battles.
+            During tutorial battles the active step pulses and prior steps
+            show a checkmark, giving a visual guide without long dialogue. */}
+        {state.outcome === "ongoing" && (
+          <CareChainStrip
+            chain={state.chain}
+            isTutorial={isTutorialBattle}
+            currentStepId={currentStep?.id}
+          />
+        )}
         {/* Objective strip / adaptive feedback banner. While the guided
             prologue tutorial is actively narrating (Master Bai walks the
             player through every step), the goal strip is redundant noise —
@@ -1077,6 +1087,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
                   <View style={styles.actionHead}>
+                    <Ionicons name="medkit-outline" size={10} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
                     <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
                     <Text style={styles.apTag}>1 AP</Text>
                   </View>
@@ -1098,6 +1109,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                     <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
                       <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
+                        <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={10} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
                         <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
                         <Text style={styles.apTag}>{cost} AP</Text>
                       </View>
@@ -1493,6 +1505,19 @@ function StatusBadge({ status }: { status: ActionStatus }) {
   );
 }
 
+// ── Skill-type icon map ───────────────────────────────────────────────────────
+
+const SKILL_TYPE_ICONS: Record<string, string> = {
+  scout:     "eye-outline",
+  stabilize: "heart-outline",
+  strike:    "flash-outline",
+  analyze:   "refresh-circle-outline",
+  shield:    "shield-outline",
+  support:   "people-outline",
+  command:   "megaphone-outline",
+  cleanse:   "water-outline",
+};
+
 // ── Battle Glossary ──────────────────────────────────────────────────────────
 
 const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
@@ -1504,6 +1529,90 @@ const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
   { term: "Counter", desc: "Directly weaken the illness and lower Corruption." },
   { term: "Reassess", desc: "Check what changed — often reveals new information." },
 ];
+
+// ── Care Chain Rhythm Strip ───────────────────────────────────────────────────
+
+interface StripStep {
+  label: string;
+  role: ChainRole;
+  icon: string;
+  color: string;
+}
+
+const STRIP_STEPS: StripStep[] = [
+  { label: "Scout",     role: "Scout",     icon: "eye-outline",             color: "#5ECBC8" },
+  { label: "Stabilize", role: "Stabilize", icon: "heart-outline",           color: "#6EE7B7" },
+  { label: "Counter",   role: "Counter",   icon: "flash-outline",           color: "#FBA94C" },
+  { label: "Reassess",  role: "Reassess",  icon: "refresh-circle-outline",  color: "#A78BFA" },
+];
+
+const STRIP_TUTORIAL_STEP: Record<string, number> = {
+  prologue_scout:     0,
+  prologue_stabilize: 1,
+  prologue_counter:   2,
+  prologue_reassess:  3,
+};
+
+function CareChainStrip({ chain, isTutorial, currentStepId }: {
+  chain: BattleState["chain"];
+  isTutorial: boolean;
+  currentStepId: string | undefined;
+}) {
+  const activeIdx = isTutorial ? (STRIP_TUTORIAL_STEP[currentStepId ?? ""] ?? -1) : -1;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (activeIdx >= 0) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.1, duration: 500, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1,   duration: 500, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => { loop.stop(); pulseAnim.setValue(1); };
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [activeIdx, pulseAnim]);
+
+  return (
+    <View style={styles.stripRow}>
+      {STRIP_STEPS.map((step, idx) => {
+        const done = isTutorial && activeIdx >= 0
+          ? idx < activeIdx
+          : chain.progress.includes(step.role);
+        const isActive = idx === activeIdx;
+        return (
+          <View key={step.label} style={styles.stripCell}>
+            {idx > 0 && (
+              <Ionicons name="chevron-forward" size={9} color={COLORS.divider} style={styles.stripArrow} />
+            )}
+            <Animated.View style={[
+              styles.stripStep,
+              done      && styles.stripStepDone,
+              isActive  && { ...styles.stripStepActive, borderColor: step.color },
+              isActive  && { transform: [{ scale: pulseAnim }] },
+            ]}>
+              {done ? (
+                <Ionicons name="checkmark-circle" size={11} color={COLORS.success} />
+              ) : (
+                <Ionicons name={step.icon as any} size={11} color={isActive ? step.color : COLORS.onSurfaceTertiary} />
+              )}
+              <Text style={[
+                styles.stripLabel,
+                done      && styles.stripLabelDone,
+                isActive  && { color: step.color, fontWeight: "700" },
+              ]}>
+                {step.label}
+              </Text>
+            </Animated.View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 function BattleGlossaryModal({ onClose }: { onClose: () => void }) {
   return (
@@ -1796,4 +1905,42 @@ const styles = StyleSheet.create({
   glossaryTerm: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", width: 78, paddingTop: 1 },
   glossaryDesc: { color: COLORS.onSurfaceSecondary, fontSize: 13, flex: 1, lineHeight: 19 },
   glossaryHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", textAlign: "center", marginTop: SPACING.sm },
+
+  // ── Care Chain Rhythm Strip ──
+  stripRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 5,
+    paddingHorizontal: SPACING.xs,
+    marginBottom: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  stripCell: { flexDirection: "row", alignItems: "center" },
+  stripArrow: { marginHorizontal: 3 },
+  stripStep: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceTertiary,
+  },
+  stripStepDone: {
+    borderColor: COLORS.success + "60",
+    backgroundColor: COLORS.success + "12",
+  },
+  stripStepActive: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderWidth: 1.5,
+  },
+  stripLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "600" },
+  stripLabelDone: { color: COLORS.success },
+
+  // ── Skill-type icon in action buttons ──
+  skillTypeIcon: { marginRight: 2 },
 });
