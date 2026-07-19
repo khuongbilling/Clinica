@@ -439,7 +439,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionOverlay: {
-    zIndex: 9000,
+    // Must be above the clinical cue question modal (zIndex 9500) so Mr. Bai's
+    // explanation is readable. Once the player taps to dismiss the box,
+    // boxDismissed flips true and only the scrim (zIndex 8999, pointerEvents
+    // none) remains — the cue modal at 9500 then becomes visible + tappable.
+    zIndex: 9600,
     alignItems: "center",
     paddingHorizontal: SPACING.sm,
   },
