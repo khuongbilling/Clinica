@@ -194,11 +194,23 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
   };
   useEffect(() => () => { if (cueTimer.current) clearTimeout(cueTimer.current); }, []);
+  useEffect(() => () => { if (termTooltipTimer.current) clearTimeout(termTooltipTimer.current); }, []);
   const [actionFx, setActionFx] = useState<BattleFx>(null);
   const [enemyFxTs, setEnemyFxTs] = useState(0);
   const [enemyFxAction, setEnemyFxAction] = useState<ActionType | null>(null);
   const [enemyAttackTs, setEnemyAttackTs] = useState(0);
   const [enemyAttackKind, setEnemyAttackKind] = useState<EnemyAttackKind | null>(null);
+
+  // ── Battle Help glossary ──────────────────────────────────────────────────
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [termTooltip, setTermTooltip] = useState<{ term: string; desc: string } | null>(null);
+  const termTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showTermTooltip = (term: string, desc: string) => {
+    if (termTooltipTimer.current) clearTimeout(termTooltipTimer.current);
+    setTermTooltip({ term, desc });
+    termTooltipTimer.current = setTimeout(() => setTermTooltip(null), 4200);
+  };
+
   const triggerFx = (actorId?: string, action?: ActionType) => {
     const ts = Date.now();
     if (actorId) setActionFx({ actorId, ts, action });
@@ -880,15 +892,30 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
-          <Text style={styles.barLabel}>CORRUPT</Text>
+          <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "Lower this to zero to win the encounter.")} testID="term-tap-corruption">
+            <Text style={[styles.barLabel, styles.barLabelTappable]}>CORRUPT</Text>
+          </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
           <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
         <View style={styles.barRow}>
-          <Text style={styles.barLabel}>STABILITY</Text>
+          <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "Keep this above zero — if it hits 0, the patient is lost.")} testID="term-tap-stability">
+            <Text style={[styles.barLabel, styles.barLabelTappable]}>STABILITY</Text>
+          </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
           <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}%</Text>
         </View>
+        {termTooltip && (
+          <Pressable
+            style={styles.termTooltipBanner}
+            onPress={() => { if (termTooltipTimer.current) clearTimeout(termTooltipTimer.current); setTermTooltip(null); }}
+            testID="term-tooltip-dismiss"
+          >
+            <Text style={styles.termTooltipTerm}>{termTooltip.term.toUpperCase()}</Text>
+            <Text style={styles.termTooltipDesc}>{termTooltip.desc}</Text>
+            <Ionicons name="close" size={11} color={COLORS.onSurfaceTertiary} />
+          </Pressable>
+        )}
         <Pressable style={styles.codexCard} onPress={() => setCodexExpanded(!codexExpanded)} testID="battle-guidance">
           <Ionicons name="book-outline" size={11} color={COLORS.brand} />
           <Text style={styles.codexLabel} numberOfLines={codexExpanded ? undefined : 1}>
@@ -919,6 +946,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             );
           })}
         </View>
+        <Pressable style={styles.battleHelpBtn} onPress={() => setGlossaryOpen(true)} testID="battle-help-open">
+          <Ionicons name="help-circle-outline" size={12} color={COLORS.onSurfaceTertiary} />
+          <Text style={styles.battleHelpTxt}>Battle Help</Text>
+        </Pressable>
       </View>
 
       {/* ── ZONE C: Team + AP + Tabs (~16% height) ── */}
@@ -1367,6 +1398,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           </View>
         </View>
       )}
+
+      {glossaryOpen && <BattleGlossaryModal onClose={() => setGlossaryOpen(false)} />}
     </SafeAreaView>
   );
 }
@@ -1457,6 +1490,41 @@ function StatusBadge({ status }: { status: ActionStatus }) {
     <View style={[styles.statusBadge, { backgroundColor: color + "26", borderColor: color }]}>
       <Text style={[styles.statusBadgeTxt, { color }]} numberOfLines={1}>{label.toUpperCase()}</Text>
     </View>
+  );
+}
+
+// ── Battle Glossary ──────────────────────────────────────────────────────────
+
+const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
+  { term: "Stability", desc: "Keep this above zero. If it hits 0, the patient is lost." },
+  { term: "Corruption", desc: "Lower this to zero to win the encounter." },
+  { term: "Cue", desc: "A clue about what is wrong with the patient. Answer correctly for bonus AP." },
+  { term: "Scout", desc: "Find a hidden clue. Reveal clues before high-cost moves." },
+  { term: "Stabilize", desc: "Keep the patient safe and hold off deterioration." },
+  { term: "Counter", desc: "Directly weaken the illness and lower Corruption." },
+  { term: "Reassess", desc: "Check what changed — often reveals new information." },
+];
+
+function BattleGlossaryModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Pressable style={styles.glossaryOverlay} onPress={onClose} testID="glossary-overlay">
+      <Pressable style={styles.glossarySheet} onPress={(e) => e.stopPropagation()} testID="battle-glossary-modal">
+        <View style={styles.glossaryHeader}>
+          <Ionicons name="help-circle" size={15} color={COLORS.brand} />
+          <Text style={styles.glossaryTitle}>BATTLE TERMS</Text>
+          <Pressable onPress={onClose} hitSlop={12} testID="glossary-close">
+            <Ionicons name="close" size={18} color={COLORS.onSurfaceSecondary} />
+          </Pressable>
+        </View>
+        {BATTLE_GLOSSARY.map((entry, idx) => (
+          <View key={entry.term} style={[styles.glossaryRow, idx === BATTLE_GLOSSARY.length - 1 && { borderBottomWidth: 0 }]}>
+            <Text style={styles.glossaryTerm}>{entry.term}</Text>
+            <Text style={styles.glossaryDesc}>{entry.desc}</Text>
+          </View>
+        ))}
+        <Text style={styles.glossaryHint}>Long-press any action button for full skill details.</Text>
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -1693,4 +1761,39 @@ const styles = StyleSheet.create({
   briefingEnterBtn: { backgroundColor: COLORS.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
   briefingEnterTxt: { color: COLORS.onBrand, fontSize: 15, fontWeight: "700", letterSpacing: 0.5 },
   briefingDismissHint: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", marginTop: SPACING.sm, fontStyle: "italic" },
+
+  // ── Term tooltip ──
+  barLabelTappable: { borderBottomWidth: 1, borderBottomColor: COLORS.onSurfaceTertiary + "50" },
+  termTooltipBanner: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm, paddingVertical: 5,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  termTooltipTerm: { color: COLORS.brand, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  termTooltipDesc: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1, lineHeight: 17 },
+
+  // ── Battle Help button ──
+  battleHelpBtn: { flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-end", paddingVertical: 2, paddingHorizontal: 4 },
+  battleHelpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic" },
+
+  // ── Battle Glossary modal ──
+  glossaryOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "flex-end", zIndex: 500 },
+  glossarySheet: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderTopLeftRadius: 14, borderTopRightRadius: 14,
+    padding: SPACING.md, paddingBottom: SPACING.lg,
+    gap: 0,
+    borderTopWidth: 1, borderColor: COLORS.brand + "40",
+  },
+  glossaryHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, marginBottom: SPACING.sm },
+  glossaryTitle: { color: COLORS.brand, fontSize: 12, fontWeight: "700", letterSpacing: 1, flex: 1 },
+  glossaryRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm,
+    paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: COLORS.divider,
+  },
+  glossaryTerm: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700", width: 78, paddingTop: 1 },
+  glossaryDesc: { color: COLORS.onSurfaceSecondary, fontSize: 13, flex: 1, lineHeight: 19 },
+  glossaryHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", textAlign: "center", marginTop: SPACING.sm },
 });
