@@ -41,6 +41,7 @@ import OpeningMemoryCinematic        from "@/src/components/prologue/OpeningMemo
 import TacticalWarningScene          from "@/src/components/prologue/TacticalWarningScene";
 import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfarctionRevealScene";
 import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
+import PrologueBattleTutorial        from "@/src/components/prologue/PrologueBattleTutorial";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -148,6 +149,14 @@ export default function OpeningPrologue() {
   // Confirm button advances to `opening_battle_tutorial`.
   if (activePhase === "former_self_support_loadout") {
     return <PrologueLoadout onComplete={handleContinue} />;
+  }
+
+  // ── Phase 5: Guided tutorial — assessment before intervention ─────────────
+  // Two forced skill demonstrations (Lamp of Observation + Culture and
+  // Sensitivity) on the frozen battlefield.  Skills belong to the TEMPORARY
+  // prologue Nightingale and Fleming only.  Advances to `scripted_defeat`.
+  if (activePhase === "opening_battle_tutorial") {
+    return <PrologueBattleTutorial onComplete={handleContinue} />;
   }
 
   return (

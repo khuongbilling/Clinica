@@ -1,0 +1,1008 @@
+/**
+ * PrologueBattleTutorial
+ *
+ * Push 5 prologue phase — "First Contact" (opening_battle_tutorial)
+ *
+ * Interactive guided cinematic on the frozen battlefield.
+ * Teaches assessment before intervention through two skill demonstrations:
+ *   1. Lamp of Observation   (Nightingale) — reveals hidden hazards
+ *   2. Culture and Sensitivity (Fleming)   — reveals weakness + resistance
+ *
+ * Stage machine:
+ *   frozen_field     → battle scene settles (auto 1.2 s)
+ *   nightingale_entry → Nightingale steps forward, speaks (tap to continue)
+ *   lamp_prompt       → Skill card shown, player taps USE SKILL
+ *   lamp_effect       → Warm glow + reveal indicators (auto 2.8 s)
+ *   fleming_entry     → Fleming steps forward, speaks (tap to continue)
+ *   culture_prompt    → Skill card shown, player taps USE SKILL
+ *   culture_effect    → Teal scan + analysis panel (auto 2.8 s)
+ *   master_bai        → Master Bai lesson (auto 3 s)
+ *   player_turn       → Player taps ENTER BATTLE → onComplete()
+ *
+ * Rules:
+ *  - Skills belong to the TEMPORARY prologue heroes (not permanent roster).
+ *  - One mechanic at a time. Short mobile-readable text only.
+ *  - Tap advances entry stages; player actively taps skill buttons.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+
+// ─── Art ─────────────────────────────────────────────────────────────────────
+
+const ART = {
+  battlefield: require("../../../assets/images/tactical_battlefield.png"),
+  nightingale: require("../../../assets/images/nightingale_portrait.png"),
+  fleming:     require("../../../assets/images/fleming_portrait.png"),
+  masterBai:   require("../../../assets/images/master_bai.png"),
+} as const;
+
+// ─── Stage machine type ───────────────────────────────────────────────────────
+
+type Stage =
+  | "frozen_field"
+  | "nightingale_entry"
+  | "lamp_prompt"
+  | "lamp_effect"
+  | "fleming_entry"
+  | "culture_prompt"
+  | "culture_effect"
+  | "master_bai"
+  | "player_turn";
+
+// ─── Skill data ───────────────────────────────────────────────────────────────
+
+const LAMP_SKILL = {
+  id:        "prologue_lamp_of_observation",
+  name:      "Lamp of Observation",
+  owner:     "FLORENCE NIGHTINGALE",
+  ownerColor: "#E8C453",
+  avatar:    ART.nightingale,
+  tagColor:  "#E8C45320",
+  tagText:   "#E8C453",
+  accentBg:  "rgba(232,196,83,0.08)",
+  accentBorder: "rgba(232,196,83,0.30)",
+  effects: [
+    "Reveals hidden hazards on the battlefield",
+    "Highlights deteriorating civilians",
+    "Identifies unsafe tiles and decoy enemies",
+    "Patient status indicators become visible",
+  ],
+  effectColor: "#E8C453",
+  prompt:    "Do not attack yet. Give me a moment to assess the field.",
+} as const;
+
+const CULTURE_SKILL = {
+  id:        "prologue_culture_and_sensitivity",
+  name:      "Culture and Sensitivity",
+  owner:     "SIR ALEXANDER FLEMING",
+  ownerColor: "#3ECFB2",
+  avatar:    ART.fleming,
+  tagColor:  "#3ECFB220",
+  tagText:   "#3ECFB2",
+  accentBg:  "rgba(62,207,178,0.08)",
+  accentBorder: "rgba(62,207,178,0.30)",
+  effects: [
+    "Reveals one enemy weakness",
+    "Reveals one resistance",
+    "Marks ineffective attacks",
+    "Shows how untargeted attacks cause adaptation",
+  ],
+  effectColor: "#3ECFB2",
+  prompt:    "Now examine the enemy before selecting an intervention.",
+} as const;
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+interface Props {
+  onComplete: () => void;
+}
+
+export default function PrologueBattleTutorial({ onComplete }: Props) {
+  const [stage, setStage] = useState<Stage>("frozen_field");
+
+  const stageRef   = useRef<Stage>("frozen_field");
+  const mountedRef = useRef(true);
+  const timers     = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearTimers();
+    };
+  }, [clearTimers]);
+
+  // ── Animated values ──────────────────────────────────────────────────────────
+
+  // Background
+  const bgFade    = useRef(new Animated.Value(0)).current;
+  const bgScale   = useRef(new Animated.Value(1.03)).current;
+  const redPulse  = useRef(new Animated.Value(0)).current;    // looping trap glow
+
+  // Scene label
+  const labelFade = useRef(new Animated.Value(0)).current;
+
+  // Character entry card
+  const charFade  = useRef(new Animated.Value(0)).current;
+  const charSlide = useRef(new Animated.Value(40)).current;
+  const dlgFade   = useRef(new Animated.Value(0)).current;
+
+  // Skill card
+  const skillFade  = useRef(new Animated.Value(0)).current;
+  const skillScale = useRef(new Animated.Value(0.94)).current;
+
+  // Lamp of Observation effect
+  const lampGlowScale = useRef(new Animated.Value(0.2)).current;
+  const lampGlowFade  = useRef(new Animated.Value(0)).current;
+  const lampFogFade   = useRef(new Animated.Value(1)).current;   // fog fades OUT
+  const lamp1Fade     = useRef(new Animated.Value(0)).current;
+  const lamp2Fade     = useRef(new Animated.Value(0)).current;
+  const lamp3Fade     = useRef(new Animated.Value(0)).current;
+
+  // Culture & Sensitivity effect
+  const scanY         = useRef(new Animated.Value(-200)).current;
+  const scanY2        = useRef(new Animated.Value(-200)).current;
+  const scanFade      = useRef(new Animated.Value(0)).current;
+  const analysisFade  = useRef(new Animated.Value(0)).current;
+
+  // Master Bai lesson
+  const mbFade        = useRef(new Animated.Value(0)).current;
+
+  // Final CTA
+  const ctaFade       = useRef(new Animated.Value(0)).current;
+  const ctaScale      = useRef(new Animated.Value(0.93)).current;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function anim(
+    val: Animated.Value,
+    toValue: number,
+    duration: number,
+    cb?: () => void,
+  ) {
+    Animated.timing(val, { toValue, duration, useNativeDriver: false }).start(
+      cb ?? (() => {}),
+    );
+  }
+
+  function after(ms: number, fn: () => void) {
+    const t = setTimeout(() => { if (mountedRef.current) fn(); }, ms);
+    timers.current.push(t);
+  }
+
+  function toStage(s: Stage) {
+    stageRef.current = s;
+    setStage(s);
+  }
+
+  // ── Entry card helpers ────────────────────────────────────────────────────────
+
+  function showChar() {
+    charFade.setValue(0);
+    charSlide.setValue(40);
+    dlgFade.setValue(0);
+    Animated.parallel([
+      Animated.timing(charFade,  { toValue: 1, duration: 450, useNativeDriver: false }),
+      Animated.timing(charSlide, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start(() => {
+      anim(dlgFade, 1, 350);
+    });
+  }
+
+  function hideChar(cb: () => void) {
+    Animated.parallel([
+      Animated.timing(charFade, { toValue: 0, duration: 250, useNativeDriver: false }),
+      Animated.timing(dlgFade,  { toValue: 0, duration: 250, useNativeDriver: false }),
+    ]).start(() => cb());
+  }
+
+  // ── Skill card helpers ────────────────────────────────────────────────────────
+
+  function showSkillCard() {
+    skillFade.setValue(0);
+    skillScale.setValue(0.94);
+    Animated.parallel([
+      Animated.timing(skillFade,  { toValue: 1, duration: 400, useNativeDriver: false }),
+      Animated.timing(skillScale, { toValue: 1, duration: 400, useNativeDriver: false }),
+    ]).start();
+  }
+
+  function hideSkillCard(cb: () => void) {
+    anim(skillFade, 0, 250, cb);
+  }
+
+  // ── Main sequence ─────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    // Ambient bg breathing
+    const breathe = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bgScale, { toValue: 1.00, duration: 6000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.03, duration: 6000, useNativeDriver: false }),
+      ])
+    );
+    breathe.start();
+
+    // Trap red pulse loop
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(redPulse, { toValue: 0.42, duration: 1600, useNativeDriver: false }),
+        Animated.timing(redPulse, { toValue: 0.15, duration: 1600, useNativeDriver: false }),
+      ])
+    );
+    pulse.start();
+
+    // Sequence start
+    anim(bgFade, 1, 700);
+    after(500, () => anim(labelFade, 1, 600));
+
+    // After brief frozen pause → Nightingale enters
+    after(1400, () => {
+      toStage("nightingale_entry");
+      showChar();
+    });
+
+    return () => {
+      breathe.stop();
+      pulse.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Lamp of Observation effect ────────────────────────────────────────────────
+
+  function playLampEffect() {
+    lampGlowScale.setValue(0.2);
+    lampGlowFade.setValue(0);
+    lampFogFade.setValue(1);
+    lamp1Fade.setValue(0);
+    lamp2Fade.setValue(0);
+    lamp3Fade.setValue(0);
+
+    // Golden glow expands
+    Animated.parallel([
+      Animated.timing(lampGlowScale, { toValue: 2.8,  duration: 1200, useNativeDriver: false }),
+      Animated.timing(lampGlowFade,  { toValue: 0.65, duration: 500,  useNativeDriver: false }),
+    ]).start(() => {
+      anim(lampGlowFade, 0, 700);
+    });
+
+    // Fog thins
+    anim(lampFogFade, 0.15, 1000);
+
+    // Staggered indicator reveals
+    after(400,  () => anim(lamp1Fade, 1, 400));
+    after(800,  () => anim(lamp2Fade, 1, 400));
+    after(1200, () => anim(lamp3Fade, 1, 400));
+
+    // Effect hold → auto-advance to Fleming
+    after(2800, () => {
+      // Fade out indicators
+      Animated.parallel([
+        Animated.timing(lamp1Fade, { toValue: 0, duration: 400, useNativeDriver: false }),
+        Animated.timing(lamp2Fade, { toValue: 0, duration: 400, useNativeDriver: false }),
+        Animated.timing(lamp3Fade, { toValue: 0, duration: 400, useNativeDriver: false }),
+        Animated.timing(lampFogFade, { toValue: 1, duration: 500, useNativeDriver: false }),
+      ]).start(() => {
+        toStage("fleming_entry");
+        showChar();
+      });
+    });
+  }
+
+  // ── Culture and Sensitivity effect ────────────────────────────────────────────
+
+  function playCultureEffect() {
+    scanY.setValue(-200);
+    scanY2.setValue(-200);
+    scanFade.setValue(0);
+    analysisFade.setValue(0);
+
+    // Scan lines sweep
+    anim(scanFade, 0.8, 200);
+    Animated.sequence([
+      Animated.timing(scanY,  { toValue: 600, duration: 900, useNativeDriver: false }),
+    ]).start(() => anim(scanFade, 0, 300));
+    after(300, () => {
+      scanY2.setValue(-200);
+      Animated.timing(scanY2, { toValue: 600, duration: 900, useNativeDriver: false }).start();
+    });
+
+    // Analysis panel appears after scan
+    after(900, () => anim(analysisFade, 1, 500));
+
+    // Effect hold → auto-advance to Master Bai
+    after(2800, () => {
+      Animated.parallel([
+        Animated.timing(analysisFade, { toValue: 0, duration: 400, useNativeDriver: false }),
+        Animated.timing(scanFade,     { toValue: 0, duration: 300, useNativeDriver: false }),
+      ]).start(() => {
+        toStage("master_bai");
+        anim(mbFade, 1, 500);
+
+        // Auto-advance to player turn
+        after(3200, () => {
+          anim(mbFade, 0, 350, () => {
+            toStage("player_turn");
+            anim(ctaFade, 1, 600);
+            Animated.loop(
+              Animated.sequence([
+                Animated.timing(ctaScale, { toValue: 1.04, duration: 900, useNativeDriver: false }),
+                Animated.timing(ctaScale, { toValue: 0.96, duration: 900, useNativeDriver: false }),
+              ])
+            ).start();
+          });
+        });
+      });
+    });
+  }
+
+  // ── Tap handlers ──────────────────────────────────────────────────────────────
+
+  const handleTapEntry = useCallback(() => {
+    const s = stageRef.current;
+    if (s === "nightingale_entry") {
+      hideChar(() => {
+        toStage("lamp_prompt");
+        showSkillCard();
+      });
+    } else if (s === "fleming_entry") {
+      hideChar(() => {
+        toStage("culture_prompt");
+        showSkillCard();
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleUseLamp = useCallback(() => {
+    if (stageRef.current !== "lamp_prompt") return;
+    hideSkillCard(() => {
+      toStage("lamp_effect");
+      playLampEffect();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleUseCulture = useCallback(() => {
+    if (stageRef.current !== "culture_prompt") return;
+    hideSkillCard(() => {
+      toStage("culture_effect");
+      playCultureEffect();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleEnterBattle = useCallback(() => {
+    if (stageRef.current !== "player_turn") return;
+    onComplete();
+  }, [onComplete]);
+
+  // ── Derived render state ─────────────────────────────────────────────────────
+
+  const isNightingaleEntry = stage === "nightingale_entry";
+  const isFlemingEntry     = stage === "fleming_entry";
+  const isEntryStage       = isNightingaleEntry || isFlemingEntry;
+  const isLampPrompt       = stage === "lamp_prompt";
+  const isCulturePrompt    = stage === "culture_prompt";
+  const isLampEffect       = stage === "lamp_effect";
+  const isCultureEffect    = stage === "culture_effect";
+  const isMasterBai        = stage === "master_bai";
+  const isPlayerTurn       = stage === "player_turn";
+
+  const currentChar = isNightingaleEntry ? LAMP_SKILL
+                    : isFlemingEntry     ? CULTURE_SKILL
+                    : null;
+
+  const currentSkill = isLampPrompt    ? LAMP_SKILL
+                     : isCulturePrompt ? CULTURE_SKILL
+                     : null;
+
+  return (
+    <View style={styles.root}>
+      {/* ── BATTLEFIELD BACKGROUND ── */}
+      <Animated.View style={[styles.bgWrap, { opacity: bgFade, transform: [{ scale: bgScale }] }]}>
+        <ExpoImage source={ART.battlefield} style={styles.bg} contentFit="cover" />
+      </Animated.View>
+
+      {/* Frozen tint (blue-gray) */}
+      <View style={styles.frozenTint} pointerEvents="none" />
+
+      {/* Red trap pulse */}
+      <Animated.View style={[styles.redOverlay, { opacity: redPulse }]} pointerEvents="none" />
+
+      {/* ── LAMP EFFECT LAYER ── */}
+      {isLampEffect && (
+        <View style={styles.effectLayer} pointerEvents="none">
+          {/* Fog overlay that thins */}
+          <Animated.View style={[styles.fogLayer, { opacity: lampFogFade }]}>
+            <LinearGradient
+              colors={["rgba(180,210,240,0.35)", "transparent", "transparent"]}
+              locations={[0, 0.5, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+
+          {/* Golden glow expanding from mid-left (Nightingale position) */}
+          <Animated.View
+            style={[
+              styles.lampGlow,
+              { opacity: lampGlowFade, transform: [{ scale: lampGlowScale }] },
+            ]}
+          />
+
+          {/* Revealed hazard indicators */}
+          <Animated.View style={[styles.revealChip, styles.revealChip1, { opacity: lamp1Fade }]}>
+            <Text style={styles.revealHazard}>⚠  HIDDEN HAZARD</Text>
+            <Text style={styles.revealSub}>Cardiac Pressure Zone</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.revealChip, styles.revealChip2, { opacity: lamp2Fade }]}>
+            <Text style={styles.revealDecoy}>◈  DECOY DETECTED</Text>
+            <Text style={styles.revealSub}>Enemy is a secondary threat</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.revealChip, styles.revealChip3, { opacity: lamp3Fade }]}>
+            <Text style={styles.revealPatient}>↓  PATIENT STATUS: CRITICAL</Text>
+            <Text style={styles.revealSub}>Deterioration in progress</Text>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── CULTURE EFFECT LAYER ── */}
+      {isCultureEffect && (
+        <View style={styles.effectLayer} pointerEvents="none">
+          {/* Scan lines */}
+          <Animated.View
+            style={[styles.scanLine, { opacity: scanFade, transform: [{ translateY: scanY }] }]}
+          />
+          <Animated.View
+            style={[styles.scanLine, styles.scanLine2, { opacity: scanFade, transform: [{ translateY: scanY2 }] }]}
+          />
+
+          {/* Analysis panel */}
+          <Animated.View style={[styles.analysisPanel, { opacity: analysisFade }]}>
+            <Text style={styles.analysisPanelTitle}>ENEMY ANALYSIS</Text>
+            <View style={styles.analysisRow}>
+              <Text style={styles.analysisWeak}>✓  WEAKNESS</Text>
+              <Text style={styles.analysisValue}>Targeted Intervention</Text>
+            </View>
+            <View style={styles.analysisRow}>
+              <Text style={styles.analysisResist}>✗  RESISTANCE</Text>
+              <Text style={styles.analysisValue}>Broad Spectrum</Text>
+            </View>
+            <View style={[styles.analysisRow, styles.analysisWarningRow]}>
+              <Text style={styles.analysisWarn}>⚠  Repeat untargeted attacks cause adaptation</Text>
+            </View>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── BOTTOM GRADIENT ── */}
+      <LinearGradient
+        colors={["transparent", "rgba(4,10,18,0.65)", "rgba(4,10,18,0.96)"]}
+        locations={[0, 0.38, 0.75]}
+        style={styles.bottomGradient}
+        pointerEvents="none"
+      />
+
+      <SafeAreaView style={styles.safe} pointerEvents="box-none">
+        {/* ── TOP LABEL ── */}
+        <Animated.View style={[styles.topBar, { opacity: labelFade }]} pointerEvents="none">
+          <Text style={styles.sceneLabel}>EMERGENCY TREATMENT PLAZA  ·  BATTLE ACTIVE</Text>
+          <View style={styles.stepRow}>
+            {["Observe", "Analyze", "Act"].map((step, i) => {
+              const done = (i === 0 && ["lamp_effect","fleming_entry","culture_prompt","culture_effect","master_bai","player_turn"].includes(stage))
+                        || (i === 1 && ["culture_effect","master_bai","player_turn"].includes(stage));
+              const active = (i === 0 && ["frozen_field","nightingale_entry","lamp_prompt","lamp_effect"].includes(stage))
+                           || (i === 1 && ["fleming_entry","culture_prompt","culture_effect"].includes(stage))
+                           || (i === 2 && ["master_bai","player_turn"].includes(stage));
+              return (
+                <View key={step} style={styles.stepItem}>
+                  <View style={[
+                    styles.stepDot,
+                    done   && styles.stepDotDone,
+                    active && styles.stepDotActive,
+                  ]} />
+                  <Text style={[
+                    styles.stepText,
+                    done   && styles.stepTextDone,
+                    active && styles.stepTextActive,
+                  ]}>{step}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        <View style={{ flex: 1 }} pointerEvents="none" />
+
+        {/* ── CHARACTER ENTRY CARD ── */}
+        {isEntryStage && currentChar && (
+          <Animated.View
+            style={[
+              styles.entryCard,
+              {
+                opacity:   charFade,
+                transform: [{ translateY: charSlide }],
+                borderColor: currentChar.accentBorder,
+                backgroundColor: currentChar.accentBg,
+              },
+            ]}
+          >
+            {/* Avatar + Name */}
+            <View style={styles.entryHeader}>
+              <ExpoImage source={currentChar.avatar} style={styles.entryAvatar} contentFit="cover" />
+              <View>
+                <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
+                  {currentChar.owner}
+                </Text>
+                <Text style={styles.entryRole}>
+                  {currentChar === LAMP_SKILL ? "Legendary Support" : "Legendary Assessment"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Dialogue */}
+            <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
+              "{currentChar.prompt}"
+            </Animated.Text>
+
+            {/* Tap hint */}
+            <Pressable style={styles.entryAdvance} onPress={handleTapEntry}>
+              <Text style={[styles.entryAdvanceText, { color: currentChar.ownerColor }]}>
+                SEE SKILL  →
+              </Text>
+            </Pressable>
+          </Animated.View>
+        )}
+
+        {/* ── SKILL CARD ── */}
+        {(isLampPrompt || isCulturePrompt) && currentSkill && (
+          <Animated.View
+            style={[
+              styles.skillCard,
+              {
+                opacity:         skillFade,
+                transform:       [{ scale: skillScale }],
+                borderColor:     currentSkill.accentBorder,
+                backgroundColor: "rgba(4,10,18,0.94)",
+              },
+            ]}
+          >
+            {/* Skill header */}
+            <View style={styles.skillHeader}>
+              <ExpoImage source={currentSkill.avatar} style={styles.skillAvatar} contentFit="cover" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.skillOwner, { color: currentSkill.ownerColor }]}>
+                  {currentSkill.owner}
+                </Text>
+                <Text style={[styles.skillName, { color: currentSkill.ownerColor }]}>
+                  {currentSkill.name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Effects list */}
+            <View style={styles.effectsList}>
+              {currentSkill.effects.map((effect, i) => (
+                <View key={i} style={styles.effectRow}>
+                  <Text style={[styles.effectDot, { color: currentSkill.effectColor }]}>◆</Text>
+                  <Text style={styles.effectText}>{effect}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* USE SKILL button */}
+            <Pressable
+              style={[styles.useSkillBtn, { borderColor: currentSkill.accentBorder }]}
+              onPress={isLampPrompt ? handleUseLamp : handleUseCulture}
+            >
+              <LinearGradient
+                colors={isLampPrompt
+                  ? ["rgba(232,196,83,0.18)", "rgba(232,196,83,0.08)"]
+                  : ["rgba(62,207,178,0.18)", "rgba(62,207,178,0.08)"]}
+                style={styles.useSkillGradient}
+              >
+                <Text style={[styles.useSkillText, { color: currentSkill.ownerColor }]}>
+                  USE SKILL
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+        )}
+
+        {/* ── MASTER BAI LESSON ── */}
+        {isMasterBai && (
+          <Animated.View style={[styles.mbPanel, { opacity: mbFade }]} pointerEvents="none">
+            <View style={styles.mbHeader}>
+              <ExpoImage source={ART.masterBai} style={styles.mbAvatar} contentFit="cover" />
+              <Text style={styles.mbSpeaker}>MASTER BAI</Text>
+            </View>
+            <Text style={styles.mbLesson}>
+              "What you discover should change what you do next."
+            </Text>
+          </Animated.View>
+        )}
+
+        {/* ── PLAYER TURN CTA ── */}
+        {isPlayerTurn && (
+          <Animated.View
+            style={[styles.ctaWrap, { opacity: ctaFade, transform: [{ scale: ctaScale }] }]}
+          >
+            <Text style={styles.ctaLabel}>Your assessment is complete.</Text>
+            <Pressable style={styles.ctaBtn} onPress={handleEnterBattle}>
+              <LinearGradient
+                colors={["#7B2020", "#B22222", "#7B2020"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.ctaGradient}
+              >
+                <Text style={styles.ctaText}>TAKE ACTION</Text>
+              </LinearGradient>
+            </Pressable>
+            <Text style={styles.ctaSub}>
+              Assess.  Prioritize.  Intervene.  Reassess.
+            </Text>
+          </Animated.View>
+        )}
+      </SafeAreaView>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#040A12",
+  },
+
+  bgWrap: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  bg: {
+    width:  "100%",
+    height: "100%",
+  },
+
+  frozenTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(10,20,40,0.38)",
+  },
+
+  redOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#5C0000",
+  },
+
+  bottomGradient: {
+    position: "absolute",
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   "60%",
+  },
+
+  safe: {
+    flex:              1,
+    paddingHorizontal: 16,
+    paddingBottom:     12,
+  },
+
+  // Top bar
+  topBar: {
+    paddingTop: 16,
+    gap:        8,
+  },
+  sceneLabel: {
+    color:         "rgba(255,100,100,0.45)",
+    fontSize:      10,
+    fontWeight:    "700",
+    letterSpacing: 2.5,
+    textAlign:     "center",
+  },
+  stepRow: {
+    flexDirection:  "row",
+    justifyContent: "center",
+    gap:            28,
+  },
+  stepItem: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           6,
+  },
+  stepDot: {
+    width:           8,
+    height:          8,
+    borderRadius:    4,
+    backgroundColor: "rgba(255,255,255,0.20)",
+  },
+  stepDotDone:   { backgroundColor: "rgba(255,255,255,0.45)" },
+  stepDotActive: { backgroundColor: "#E8C453", shadowColor: "#E8C453", shadowOpacity: 0.8, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
+  stepText: {
+    color:         "rgba(255,255,255,0.30)",
+    fontSize:      10,
+    fontWeight:    "700",
+    letterSpacing: 1.5,
+  },
+  stepTextDone:   { color: "rgba(255,255,255,0.55)" },
+  stepTextActive: { color: "#F4F7FB" },
+
+  // Effect layers
+  effectLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+
+  // Lamp effect
+  fogLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  lampGlow: {
+    position:        "absolute",
+    top:             "20%",
+    left:            "10%",
+    width:           200,
+    height:          200,
+    borderRadius:    100,
+    backgroundColor: "rgba(255,200,60,0.55)",
+  },
+  revealChip: {
+    position:          "absolute",
+    paddingHorizontal: 10,
+    paddingVertical:   6,
+    borderRadius:      8,
+    backgroundColor:   "rgba(4,10,18,0.88)",
+    borderWidth:       1,
+    gap:               2,
+  },
+  revealChip1: { top:    "25%", left: "15%" },
+  revealChip2: { top:    "40%", right: "12%" },
+  revealChip3: { bottom: "38%", left: "20%" },
+  revealHazard:  { color: "#FF6B35", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  revealDecoy:   { color: "#E8C453", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  revealPatient: { color: "#F77B72", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  revealSub:     { color: "rgba(200,220,240,0.60)", fontSize: 10, fontWeight: "400" },
+
+  // Culture effect
+  scanLine: {
+    position:        "absolute",
+    left:            0,
+    right:           0,
+    height:          3,
+    backgroundColor: "rgba(62,207,178,0.70)",
+  },
+  scanLine2: {
+    backgroundColor: "rgba(62,207,178,0.45)",
+  },
+  analysisPanel: {
+    position:          "absolute",
+    top:               "28%",
+    left:              "10%",
+    right:             "10%",
+    backgroundColor:   "rgba(4,15,20,0.94)",
+    borderRadius:      12,
+    borderWidth:       1,
+    borderColor:       "rgba(62,207,178,0.35)",
+    padding:           14,
+    gap:               8,
+  },
+  analysisPanelTitle: {
+    color:         "#3ECFB2",
+    fontSize:      10,
+    fontWeight:    "800",
+    letterSpacing: 3,
+    marginBottom:  4,
+  },
+  analysisRow: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           8,
+  },
+  analysisWarningRow: {
+    marginTop:    4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(62,207,178,0.15)",
+    paddingTop:   8,
+  },
+  analysisWeak:   { color: "#3ECFB2", fontSize: 11, fontWeight: "700", width: 90 },
+  analysisResist: { color: "#F77B72", fontSize: 11, fontWeight: "700", width: 90 },
+  analysisValue:  { color: "#EDF2F7", fontSize: 12, fontWeight: "400" },
+  analysisWarn:   { color: "#E8C453", fontSize: 11, fontWeight: "500", fontStyle: "italic" },
+
+  // Entry card
+  entryCard: {
+    borderRadius:      14,
+    borderWidth:       1,
+    padding:           14,
+    gap:               10,
+    marginBottom:      8,
+  },
+  entryHeader: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           12,
+  },
+  entryAvatar: {
+    width:        48,
+    height:       48,
+    borderRadius: 24,
+  },
+  entryOwner: {
+    fontSize:      11,
+    fontWeight:    "800",
+    letterSpacing: 1.8,
+  },
+  entryRole: {
+    color:     "rgba(200,220,240,0.55)",
+    fontSize:  11,
+    marginTop: 1,
+  },
+  entryDialogue: {
+    color:         "rgba(230,240,255,0.88)",
+    fontSize:      15,
+    lineHeight:    24,
+    fontWeight:    "300",
+    letterSpacing: 0.2,
+    fontStyle:     "italic",
+  },
+  entryAdvance: {
+    alignSelf:     "flex-end",
+    paddingTop:    4,
+    paddingBottom: 2,
+  },
+  entryAdvanceText: {
+    fontSize:      11,
+    fontWeight:    "800",
+    letterSpacing: 1.5,
+  },
+
+  // Skill card
+  skillCard: {
+    borderRadius: 14,
+    borderWidth:  1,
+    padding:      14,
+    gap:          12,
+    marginBottom: 8,
+  },
+  skillHeader: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           12,
+  },
+  skillAvatar: {
+    width:        44,
+    height:       44,
+    borderRadius: 22,
+  },
+  skillOwner: {
+    fontSize:      9,
+    fontWeight:    "800",
+    letterSpacing: 2,
+    marginBottom:  1,
+  },
+  skillName: {
+    fontSize:      16,
+    fontWeight:    "600",
+    letterSpacing: 0.3,
+  },
+  effectsList: {
+    gap: 6,
+  },
+  effectRow: {
+    flexDirection: "row",
+    alignItems:    "flex-start",
+    gap:           8,
+  },
+  effectDot: {
+    fontSize: 8,
+    marginTop: 5,
+  },
+  effectText: {
+    color:      "#C5D5E8",
+    fontSize:   13,
+    lineHeight: 20,
+    flex:       1,
+  },
+  useSkillBtn: {
+    borderRadius: 10,
+    borderWidth:  1,
+    overflow:     "hidden",
+    marginTop:    4,
+  },
+  useSkillGradient: {
+    paddingVertical:   14,
+    alignItems:        "center",
+  },
+  useSkillText: {
+    fontSize:      13,
+    fontWeight:    "800",
+    letterSpacing: 3,
+  },
+
+  // Master Bai lesson
+  mbPanel: {
+    backgroundColor: "rgba(4,10,18,0.90)",
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     "rgba(217,164,65,0.28)",
+    padding:         14,
+    gap:             8,
+    marginBottom:    8,
+  },
+  mbHeader: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           10,
+  },
+  mbAvatar: {
+    width:        36,
+    height:       36,
+    borderRadius: 18,
+  },
+  mbSpeaker: {
+    color:         "#D9A441",
+    fontSize:      10,
+    fontWeight:    "800",
+    letterSpacing: 2.5,
+  },
+  mbLesson: {
+    color:         "rgba(230,240,255,0.88)",
+    fontSize:      15,
+    lineHeight:    24,
+    fontWeight:    "300",
+    fontStyle:     "italic",
+    letterSpacing: 0.2,
+  },
+
+  // Player turn CTA
+  ctaWrap: {
+    alignItems:   "center",
+    gap:          10,
+    marginBottom: 4,
+  },
+  ctaLabel: {
+    color:         "rgba(200,220,240,0.55)",
+    fontSize:      12,
+    letterSpacing: 0.5,
+    textAlign:     "center",
+  },
+  ctaBtn: {
+    width:        "100%",
+    borderRadius: 10,
+    overflow:     "hidden",
+  },
+  ctaGradient: {
+    paddingVertical: 16,
+    alignItems:      "center",
+  },
+  ctaText: {
+    color:         "#FFFFFF",
+    fontSize:      14,
+    fontWeight:    "800",
+    letterSpacing: 4,
+  },
+  ctaSub: {
+    color:         "rgba(255,255,255,0.25)",
+    fontSize:      11,
+    letterSpacing: 1.2,
+    textAlign:     "center",
+  },
+});
