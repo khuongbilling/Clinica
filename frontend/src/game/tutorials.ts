@@ -184,8 +184,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   firstBattle: [
     {
       id: "fb_intro",
-      title: "You Know the Chain",
-      body: "Scout. Stabilize. Counter. Reassess. Every shift, in that order. This patient is harder than the last. Follow the rhythm and you will know what to do.",
+      title: "This case is wrong.",
+      body: "The signs are too quiet for how dangerous it feels. Follow the rhythm — look, protect, treat, then check again.",
       placement: "center",
       requireAction: false,
       banner: true,
@@ -193,8 +193,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "fb_scout",
-      title: "Step 1 of 4 — Scout",
-      body: "Always assess before you act. Use any Scout skill to reveal what you are dealing with. Scout skills are highlighted in gold.",
+      title: "Look first.",
+      body: "Before anything else — read the patient. Use a Scout skill. Highlighted skills show the way.",
       placement: "center",
       requireAction: true,
       requiredActionType: "scout",
@@ -202,8 +202,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "fb_stabilize",
-      title: "Step 2 of 4 — Stabilize",
-      body: "Good. Now shore up the patient before pushing back. Use a Stabilize skill to buy time and protect their condition.",
+      title: "Now keep them steady.",
+      body: "Good. Shore up their Stability before pushing back. Use a Stabilize skill.",
       placement: "center",
       requireAction: true,
       requiredActionType: "stabilize",
@@ -211,8 +211,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "fb_counter",
-      title: "Step 3 of 4 — Counter",
-      body: "The patient is steadier. Now go on the offensive. Use a Counter skill to reduce Corruption and push the disease back.",
+      title: "Push back the illness.",
+      body: "The patient is holding. Now reduce the Corruption. Use a Counter skill.",
       placement: "center",
       requireAction: true,
       requiredActionType: "strike",
@@ -220,8 +220,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "fb_reassess",
-      title: "Step 4 of 4 — Reassess",
-      body: "Never assume improvement. Confirm it. Use a Reassess skill to close the care chain and see where things stand.",
+      title: "Check again.",
+      body: "Never assume improvement — confirm it. Use a Reassess skill to close the chain.",
       placement: "center",
       requireAction: true,
       requiredActionType: "analyze",
@@ -229,8 +229,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "fb_done",
-      title: "Scout. Stabilize. Counter. Reassess.",
-      body: "You ran the full chain. This case was always going to overwhelm the ward — it was meant to test your rhythm, not to be won. Remember the chain. It will carry you through every shift ahead.",
+      title: "You followed the rhythm correctly.",
+      body: "This was not your failure. This case was always going to overwhelm the ward — the outcome was written before you arrived. This is the moment before the Recall.",
       placement: "center",
       requireAction: false,
       nextText: "UNDERSTOOD",
