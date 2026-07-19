@@ -936,6 +936,8 @@ const styles = StyleSheet.create({
   featEmblemWrap: {
     width: 56, height: 75,
     alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(6, 9, 16, 0.42)",
+    borderRadius: 14,
   },
   featLabel:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.2, textAlign: "center" },
   featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
