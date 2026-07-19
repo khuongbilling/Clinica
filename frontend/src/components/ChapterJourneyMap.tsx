@@ -982,6 +982,12 @@ function PartRow({
           }]}>
             {isClaimed ? (
               <Ionicons name="checkmark-circle" size={15} color={chapterAccent} />
+            ) : part.type === "mini_boss" ? (
+              <Image
+                source={require("../../assets/map-nodes/node_trial_corrupted_gate.png")}
+                style={{ width: 26, height: 26, opacity: (chapterLocked || isWardDefenseLocked) ? 0.35 : 1 }}
+                contentFit="contain"
+              />
             ) : (
               <Ionicons
                 name={(NODE_TYPE_ICON[part.type] ?? "ellipse") as any}

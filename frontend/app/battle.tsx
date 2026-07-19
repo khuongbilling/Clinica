@@ -520,6 +520,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     } else if (actionType === 'analyze') {
       msg = getContextualReassessFeedback(explanationLayer, ctx);
       isChain = treatedThisTurn;
+    } else if (actionType === 'shield') {
+      msg = 'Shield raised — the next enemy attack deals reduced damage to Stability.';
+    } else if (actionType === 'command') {
+      msg = 'Command issued — protection and pressure applied together.';
     } else {
       msg = getGuidedFeedback(enemy.id, actionType) ?? null;
     }
@@ -1070,7 +1074,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "Lower this to zero to win the encounter.")} testID="term-tap-corruption">
-            <Text style={[styles.barLabel, styles.barLabelTappable]}>CORRUPT</Text>
+            <Text style={[styles.barLabel, styles.barLabelTappable]}>CORRUPTION</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
           <Text style={styles.barVal}>{state.corruption}</Text>
@@ -1264,7 +1268,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
                   <View style={styles.actionHead}>
-                    <Ionicons name="medkit-outline" size={10} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
+                    <Ionicons name="medkit-outline" size={14} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
                     <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
                     <Text style={styles.apTag}>1 AP</Text>
                   </View>
@@ -1288,7 +1292,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                     <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
                       <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
-                        <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={10} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
+                        <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={14} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
                         <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
                         <Text style={styles.apTag}>{cost} AP</Text>
                       </View>
@@ -1944,8 +1948,8 @@ const styles = StyleSheet.create({
   zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm, overflow: "hidden" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, paddingBottom: SPACING.sm },
   actionBtn: {
-    width: "48.5%", minHeight: 70, padding: 8, borderRadius: 4,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong, gap: 2,
+    width: "48.5%", minHeight: 80, padding: 10, borderRadius: 6,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong, gap: 3,
   },
   disabled: { opacity: 0.4 },
   actionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
