@@ -1287,7 +1287,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         {feedbackMsg ? (
           <View pointerEvents="none" style={[styles.feedbackBanner, feedbackIsChain && styles.feedbackBannerChain]}>
             <Ionicons name={feedbackIsChain ? "sparkles" : "information-circle"} size={11} color={feedbackIsChain ? COLORS.runeGold : COLORS.brand} />
-            <Text style={[styles.feedbackText, feedbackIsChain && styles.feedbackTextChain]} numberOfLines={2}>{feedbackMsg}</Text>
+            <Text style={[styles.feedbackText, feedbackIsChain && styles.feedbackTextChain]} numberOfLines={1} ellipsizeMode="tail">{feedbackMsg}</Text>
           </View>
         ) : activeTutorialId ? null : (
           <View style={styles.objectiveStrip}>
@@ -2377,10 +2377,11 @@ const styles = StyleSheet.create({
   objectiveStrip: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 3, marginBottom: 3 },
   objectiveText: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.2, fontStyle: "italic" },
   feedbackBanner: {
-    flexDirection: "row", alignItems: "flex-start", gap: 5,
+    flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: COLORS.brand + "14", borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.sm, paddingVertical: 5,
     borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: 4,
+    maxHeight: 34, overflow: "hidden",
     // On web, TutorialOverlay's battleScrim sits at zIndex 8999 via
     // absoluteFillObject.  Without an explicit zIndex here, CSS stacking
     // places the banner beneath that scrim, making the feedback text invisible
