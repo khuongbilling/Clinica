@@ -211,6 +211,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     termTooltipTimer.current = setTimeout(() => setTermTooltip(null), 4200);
   };
 
+  // ── firstBattle cinematic story-beat overlays ─────────────────────────────
+  const [cinematicText, setCinematicText] = useState<string | null>(null);
+  const [cinematicSeverity, setCinematicSeverity] = useState<"positive" | "warning" | "danger">("positive");
+  const [flashColor, setFlashColor] = useState("rgba(34,197,94,0.0)");
+  const cinematicFadeAnim = useRef(new Animated.Value(0)).current;
+  const flashFadeAnim = useRef(new Animated.Value(0)).current;
+  const cinematicTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const cinematicMsgId = useRef(0);
+  const prevFbStepRef = useRef<string | undefined>(undefined);
+
   const triggerFx = (actorId?: string, action?: ActionType) => {
     const ts = Date.now();
     if (actorId) setActionFx({ actorId, ts, action });
@@ -289,6 +299,101 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.stability > 0 || state.outcome !== "ongoing") return;
     setState(s => ({ ...s, stability: 1 }));
   }, [isFirstBattleActionStep, state.stability, state.outcome]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── firstBattle cinematic helpers ────────────────────────────────────────
+  // Plain functions (not useCallback) — all internal references are stable
+  // refs or stable setState setters, so eslint-disable is safe.
+  const _clearCinematicTimers = () => {
+    cinematicTimers.current.forEach(t => clearTimeout(t));
+    cinematicTimers.current = [];
+  };
+  const _showCinematicMsg = (text: string, severity: "positive" | "warning" | "danger", duration = 1600) => {
+    const id = ++cinematicMsgId.current;
+    cinematicFadeAnim.stopAnimation();
+    cinematicFadeAnim.setValue(0);
+    setCinematicText(text);
+    setCinematicSeverity(severity);
+    Animated.timing(cinematicFadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    const t = setTimeout(() => {
+      Animated.timing(cinematicFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+        if (cinematicMsgId.current === id) setCinematicText(null);
+      });
+    }, duration);
+    cinematicTimers.current.push(t);
+  };
+  const _triggerFlash = (color: string, duration = 600) => {
+    setFlashColor(color);
+    flashFadeAnim.stopAnimation();
+    flashFadeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(flashFadeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.timing(flashFadeAnim, { toValue: 0, duration: Math.max(80, duration - 120), useNativeDriver: true }),
+    ]).start();
+  };
+
+  // Watch chain-step transitions during firstBattle and play cinematic story
+  // beats: each action briefly works, then Silent Infarction fights back.
+  // The final reassess→done beat triggers before the 2500ms scripted loss.
+  useEffect(() => {
+    const newStep = currentStep?.id;
+    const prev = prevFbStepRef.current;
+    prevFbStepRef.current = newStep;
+    if (!isFirstBattleGuided || !prev || prev === newStep) return;
+
+    _clearCinematicTimers();
+
+    if (prev === "fb_scout" && newStep === "fb_stabilize") {
+      // Scout done → cue confirmed, but threat lingers
+      _showCinematicMsg("Cue Found", "positive", 1400);
+      const t = setTimeout(() => _showCinematicMsg("Hidden danger remains...", "warning", 1700), 1700);
+      cinematicTimers.current.push(t);
+
+    } else if (prev === "fb_stabilize" && newStep === "fb_counter") {
+      // Stabilize done → brief green protection, then Silent Infarction pulses back
+      _triggerFlash("rgba(34,197,94,0.20)", 700);
+      _showCinematicMsg("Stability Secured", "positive", 1400);
+      const t = setTimeout(() => {
+        _showCinematicMsg("Silent Infarction pulses...", "danger", 1700);
+        _triggerFlash("rgba(239,68,68,0.26)", 900);
+        setState(s => ({ ...s, stability: Math.max(1, s.stability - 18) }));
+      }, 1700);
+      cinematicTimers.current.push(t);
+
+    } else if (prev === "fb_counter" && newStep === "fb_reassess") {
+      // Counter done → corruption cracks, then reconstitutes
+      _triggerFlash("rgba(245,158,11,0.18)", 700);
+      _showCinematicMsg("Corruption Cracking", "positive", 1400);
+      const t = setTimeout(() => {
+        _showCinematicMsg("It reconstitutes...", "warning", 1700);
+        setState(s => ({ ...s, corruption: s.corruption + 22 }));
+      }, 1700);
+      cinematicTimers.current.push(t);
+
+    } else if (prev === "fb_reassess" && newStep === "fb_done") {
+      // Reassess done → condition deteriorates before scripted loss at +2500ms
+      _showCinematicMsg("Condition Worsening", "danger", 2200);
+      _triggerFlash("rgba(239,68,68,0.28)", 1000);
+      const t = setTimeout(() => {
+        _triggerFlash("rgba(239,68,68,0.38)", 900);
+        setState(s => ({ ...s, stability: Math.max(1, s.stability - 28) }));
+      }, 1300);
+      cinematicTimers.current.push(t);
+    }
+  }, [currentStep?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear cinematic overlays when the battle ends so they don't render above
+  // the outcome modal (which has no explicit zIndex).
+  useEffect(() => {
+    if (state.outcome === "ongoing") return;
+    cinematicTimers.current.forEach(t => clearTimeout(t));
+    cinematicTimers.current = [];
+    cinematicFadeAnim.setValue(0);
+    flashFadeAnim.setValue(0);
+    setCinematicText(null);
+  }, [state.outcome, cinematicFadeAnim, flashFadeAnim]);
+
+  // Unmount cleanup for cinematic timers
+  useEffect(() => () => { cinematicTimers.current.forEach(t => clearTimeout(t)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Battle exit guards ────────────────────────────────────────────────────
   // Back navigation (browser back, Android hardware back, iOS swipe-back,
@@ -1415,6 +1520,33 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {/* Tutorial overlay renders after the cue modals so its guided banner sits above them. */}
       <TutorialOverlay />
 
+      {/* ── firstBattle cinematic message (story beat feedback) ──────────────
+          zIndex 9200 sits above TutorialOverlay (≈9000) so the message is
+          legible against the tutorial scrim. pointerEvents none so it never
+          blocks button taps. Cleared by state.outcome cleanup before the
+          outcome modal renders. */}
+      {cinematicText !== null && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.cinematicOverlay, { opacity: cinematicFadeAnim }]}
+        >
+          <View style={[
+            styles.cinematicCard,
+            cinematicSeverity === "positive" && styles.cinematicPositive,
+            cinematicSeverity === "warning"  && styles.cinematicWarning,
+            cinematicSeverity === "danger"   && styles.cinematicDanger,
+          ]}>
+            <Text style={styles.cinematicMsgTxt}>{cinematicText}</Text>
+          </View>
+        </Animated.View>
+      )}
+      {/* Brief tinted flash for protect / hit moments — always rendered so the
+          Animated.Value can drive it; invisible at opacity 0. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.cinematicFlash, { backgroundColor: flashColor, opacity: flashFadeAnim }]}
+      />
+
       {state.outcome !== "ongoing" && isPrologueBoss && (
         <View style={styles.bossCollapseOverlay}>
           <SceneTransition duration={900} style={styles.bossCollapseInner}>
@@ -1993,4 +2125,41 @@ const styles = StyleSheet.create({
 
   // ── Skill-type icon in action buttons ──
   skillTypeIcon: { marginRight: 2 },
+
+  // ── firstBattle cinematic overlays ───────────────────────────────────────
+  cinematicOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9200,
+  },
+  cinematicCard: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    elevation: 16,
+    maxWidth: 310,
+  },
+  cinematicPositive: { borderColor: COLORS.success + "99" },
+  cinematicWarning:  { borderColor: COLORS.runeGold + "99" },
+  cinematicDanger:   { borderColor: COLORS.error + "99" },
+  cinematicMsgTxt: {
+    color: COLORS.onSurface,
+    fontSize: 18,
+    fontWeight: "300",
+    letterSpacing: 2.2,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+  cinematicFlash: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1500,
+  },
 });
