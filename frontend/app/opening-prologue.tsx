@@ -42,6 +42,7 @@ import TacticalWarningScene          from "@/src/components/prologue/TacticalWar
 import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfarctionRevealScene";
 import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
 import PrologueBattleTutorial        from "@/src/components/prologue/PrologueBattleTutorial";
+import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScriptedBattle";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -157,6 +158,17 @@ export default function OpeningPrologue() {
   // prologue Nightingale and Fleming only.  Advances to `scripted_defeat`.
   if (activePhase === "opening_battle_tutorial") {
     return <PrologueBattleTutorial onComplete={handleContinue} />;
+  }
+
+  // ── Phase 6: Playable scripted-defeat battle — "The Fall" ─────────────────
+  // 4-turn simplified battle on the Emergency Treatment Plaza.
+  // Former Self is powerful but already doomed; Nightingale/Fleming are
+  // effective and competent.  Decoy enemies are killable.  Silent Infarction
+  // is not beatable — only partially revealable.  Scripted defeat is inevitable
+  // regardless of player skill.  No Game Over; no Try Again.  After the 5-step
+  // finale the player advances to `lotus_recall_cinematic`.
+  if (activePhase === "scripted_defeat") {
+    return <PrologueScriptedBattle onComplete={handleContinue} />;
   }
 
   return (
