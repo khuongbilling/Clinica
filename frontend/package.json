@@ -9,7 +9,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "6.1.2",
