@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { type AppRoute } from "@/src/game/routes";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,7 +21,6 @@ import { LotusRecallBurst } from "@/src/components/reminiscence/LotusRecallBurst
 import { LightMotesOverlay } from "@/src/components/reminiscence/LightMotesOverlay";
 import { RainOverlay } from "@/src/components/reminiscence/RainOverlay";
 import { NarrativePanel } from "@/src/components/ui/NarrativePanel";
-import { ROUTES } from "@/src/game/routes";
 import { SPACING, RADIUS } from "@/src/theme/colors";
 
 // Story Scene — the reusable mature-manhwa narrative screen (hybrid art

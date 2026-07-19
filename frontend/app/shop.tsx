@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { type AppRoute } from "@/src/game/routes";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,7 +16,6 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { playerLevelFromXp } from "@/src/game/progression";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 

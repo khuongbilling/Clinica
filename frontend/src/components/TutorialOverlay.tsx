@@ -15,7 +15,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
  * the player actually reads each step. Tap the box to reveal the rest instantly.
  * Calls onComplete when all characters are visible (naturally or via instant).
  */
-function TypewriterText({ text, style, instant, speed = 16, onComplete }: { text: string; style?: any; instant?: boolean; speed?: number; onComplete?: () => void }) {
+export function TypewriterText({ text, style, instant, speed = 16, onComplete }: { text: string; style?: any; instant?: boolean; speed?: number; onComplete?: () => void }) {
   const [count, setCount] = useState(0);
   const onCompleteRef = useRef(onComplete);
   useEffect(() => { onCompleteRef.current = onComplete; });

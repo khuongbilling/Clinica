@@ -11,7 +11,7 @@
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { type AppRoute } from "@/src/game/routes";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import React, { useState } from "react";
 import {
   Pressable, ScrollView, StyleSheet, Text, View,
@@ -21,7 +21,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { type TutorialId } from "@/src/game/tutorials";
 import { goBack } from "@/src/utils/navigation";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── Types ──────────────────────────────────────────────────────────────────

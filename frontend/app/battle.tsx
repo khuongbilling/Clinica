@@ -21,7 +21,8 @@ import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveP
 import { computeEpidemicTokens } from "@/src/game/worldEvent";
 import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
-import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { TutorialOverlay, TypewriterText } from "@/src/components/TutorialOverlay";
+import { MASTER_BAI } from "@/src/game/systemNarrator";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
@@ -58,7 +59,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
-  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen } = usePlayer();
+  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const isFirstBattleGuided = activeTutorialId === "firstBattle";
   const isFirstBattleActionStep =
@@ -237,6 +238,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   // ── Pre-battle objective popup (shown once at battle start) ─────────────
   const [showObjective, setShowObjective] = useState(true);
+  // ── Florence Nightingale one-time cameo (prologue tutorial only) ─────────
+  const [showFlorenceCameo, setShowFlorenceCameo] = useState(false);
+  const dismissFlorenceCameo = () => {
+    setShowFlorenceCameo(false);
+    if (player && !player.seen_florence_cameo) {
+      updateState({ ...player, seen_florence_cameo: true });
+    }
+  };
 
   // ── Battle Help glossary ──────────────────────────────────────────────────
   const [glossaryOpen, setGlossaryOpen] = useState(false);
@@ -1832,8 +1841,16 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           isTraining={isTraining}
           isPrologueTutorial={isPrologueTutorial}
           enemyName={enemy.name}
-          onDismiss={() => setShowObjective(false)}
+          onDismiss={() => {
+            setShowObjective(false);
+            if (isPrologueTutorial && !player?.seen_florence_cameo) {
+              setShowFlorenceCameo(true);
+            }
+          }}
         />
+      )}
+      {showFlorenceCameo && (
+        <FlorenceCameoOverlay onDismiss={dismissFlorenceCameo} />
       )}
     </SafeAreaView>
   );
@@ -2167,6 +2184,56 @@ function BattleObjectiveModal(props: {
   );
 }
 
+function FlorenceCameoOverlay({ onDismiss }: { onDismiss: () => void }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [typingDone, setTypingDone] = useState(false);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, [fadeAnim]);
+
+  const handleDismiss = () => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start(() => onDismiss());
+  };
+
+  const LINES = [
+    "Before your first shift begins…",
+    "A legendary light flickers at the edge of the ward.",
+    "Florence Nightingale — The Lady with the Lamp — briefly lends her lamp's glow to guide your hands.",
+    "Her voice is quiet, certain:",
+    "\"Statistics are the lamp. Compassion is the light. Use both.\"",
+  ];
+  const fullText = LINES.join("\n\n");
+
+  return (
+    <Pressable style={styles.cameoOverlay} onPress={typingDone ? handleDismiss : undefined} testID="florence-cameo-overlay">
+      <Animated.View style={[styles.cameoCard, { opacity: fadeAnim }]}>
+        <View style={styles.cameoNarratorRow}>
+          <View style={[styles.cameoNarratorDot, { backgroundColor: MASTER_BAI.color }]} />
+          <Text style={[styles.cameoNarratorName, { color: MASTER_BAI.color }]}>Master Bai</Text>
+        </View>
+        <View style={styles.cameoLampRow}>
+          <Text style={styles.cameoLampIcon}>🕯</Text>
+          <Text style={styles.cameoHeroName}>Florence Nightingale</Text>
+          <Text style={styles.cameoLampIcon}>🕯</Text>
+        </View>
+        <View style={styles.cameoTextBox}>
+          <TypewriterText
+            text={fullText}
+            style={styles.cameoText}
+            speed={18}
+            onComplete={() => setTypingDone(true)}
+          />
+        </View>
+        <Pressable style={styles.camoeDismissBtn} onPress={handleDismiss} testID="florence-cameo-dismiss">
+          <Text style={styles.camoeDismissTxt}>ENTER THE WARD</Text>
+        </Pressable>
+        <Text style={styles.cameoHint}>She will not fight alongside you today — but her legacy lights the way.</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 function BattleGlossaryModal({ onClose }: { onClose: () => void }) {
   return (
     <Pressable style={styles.glossaryOverlay} onPress={onClose} testID="glossary-overlay">
@@ -2479,6 +2546,70 @@ const styles = StyleSheet.create({
   },
   objBeginBtn: { borderRadius: RADIUS.pill, paddingVertical: 11, alignItems: "center" },
   objBeginTxt: { color: COLORS.surface, fontSize: 13, fontWeight: "700", letterSpacing: 1 },
+
+  // ── Florence Nightingale one-time cameo overlay ──
+  cameoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9600,
+    paddingHorizontal: 24,
+  },
+  cameoCard: {
+    backgroundColor: "#1A1610",
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    width: "100%",
+    maxWidth: 380,
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: "#D9A44160",
+  },
+  cameoNarratorRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  cameoNarratorDot: { width: 7, height: 7, borderRadius: 4 },
+  cameoNarratorName: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
+  cameoLampRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    marginTop: 2,
+    marginBottom: 4,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#D9A44130",
+  },
+  cameoLampIcon: { fontSize: 18 },
+  cameoHeroName: {
+    color: "#F5D48A",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+  cameoTextBox: { minHeight: 100 },
+  cameoText: {
+    color: "#D4CAB8",
+    fontSize: 14,
+    lineHeight: 22,
+    fontStyle: "italic",
+  },
+  camoeDismissBtn: {
+    borderRadius: RADIUS.pill,
+    paddingVertical: 11,
+    alignItems: "center",
+    backgroundColor: "#D9A441",
+    marginTop: 4,
+  },
+  camoeDismissTxt: { color: "#1A1610", fontSize: 13, fontWeight: "700", letterSpacing: 1 },
+  cameoHint: {
+    color: "#8A8070",
+    fontSize: 11,
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 16,
+  },
 
   glossaryOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "flex-end", zIndex: 500 },
   glossarySheet: {

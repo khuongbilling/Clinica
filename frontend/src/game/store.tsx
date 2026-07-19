@@ -194,6 +194,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   }
   // Fix 9 — backfill quest milestone claim tracking.
   if (!out.claimed_daily_milestones) out = { ...out, claimed_daily_milestones: [] };
+  // Florence cameo — existing players are past the tutorial, so backfill as seen.
+  if (out.seen_florence_cameo == null) out = { ...out, seen_florence_cameo: true };
   // P6 — Normalize chapter_progress based on actual journey node completion.
   // Only ever advances forward; never resets down. Corrects saves where
   // chapter_progress was set to 2 via run count before this push without the
@@ -647,6 +649,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     battle_stars: {},
     seen_lv2_unlock: false,
     seen_university_intro: false,
+    seen_florence_cameo: false,
     claimed_level_rewards: [],
     claimed_chapter_chests: [],
     claimed_chapter_3star: [],

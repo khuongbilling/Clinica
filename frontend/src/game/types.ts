@@ -246,6 +246,10 @@ export interface PlayerState {
   // "Apprentice Path Opened" moment (Summoning Hall + Daily/Weekly Rounds unlock).
   // Backfilled as true for existing players who are already Level 2+.
   seen_lv2_unlock?: boolean;
+  // Tutorial battle — one-time "Florence Nightingale lends her light" cameo
+  // shown at the start of the prologue tutorial battle. Backfilled as true for
+  // existing players (already past the tutorial); false for brand-new players.
+  seen_florence_cameo?: boolean;
   // Push 5 — Memory Reminiscence: has the player seen the post-recall
   // reminiscence story scene (modern-world origin -> Silent Infarct -> Lotus
   // Recall)? Gates the one-time redirect from post-recall into /reminiscence.

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { type AppRoute } from "@/src/game/routes";
+import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -12,7 +12,6 @@ import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { findMode, MODE_STATUS_LABEL } from "@/src/game/modeHub";
-import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────
