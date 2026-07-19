@@ -1,0 +1,120 @@
+Clinica Push 3: Tactical Warning Scene
+
+Goal:
+Create the 2.5D tactical battlefield warning scene where Master Bai, Florence Nightingale, and Sir Alexander Fleming warn the Former Self not to rush.
+
+Map style:
+Use a 2.5D isometric tactical presentation, not flat top-down.
+Include:
+- Grid-based terrain
+- Elevation differences
+- Stairs, ledges, ramps, and platforms
+- Damaged clinical sanctuary or emergency treatment plaza
+- Cracked walkways
+- Elevated treatment platforms
+- Abandoned stretchers
+- Medical carts
+- Broken lanterns
+- Glowing monitoring crystals
+- Torn banners
+- Triage tents
+- Injured NPCs
+- Scattered clinical records
+- Fog-covered areas
+- Red energy moving under the ground
+- Weak visible decoy enemies
+- Distant, partially hidden Silent Infarction silhouette
+
+Color direction:
+- Cool blue-gray moonlight for the environment
+- Warm gold for Nightingale
+- Green-blue analytical effects for Fleming
+- Jade-white for Master Bai
+- Deep red-black subtle pulse effects for Silent Infarction
+
+Characters:
+- Former Self / The Prodigy
+- Master Bai
+- Florence Nightingale
+- Sir Alexander Fleming
+- Silent Infarction
+
+Dialogue staging:
+Characters should move and react while speaking. Use steps, turns, kneeling, raising a lamp, examining samples, pointing toward fog, drawing weapons, and reacting to red pulses. Use camera pans and zooms where possible.
+
+Required dialogue:
+
+Master Bai:
+“Stop where you are.”
+
+The Prodigy:
+“We have already wasted enough time.”
+
+Master Bai:
+“Time spent observing is not time wasted.”
+“Something is wrong. The enemy is allowing us to see only what it wants us to see.”
+
+The Prodigy:
+“You taught me to trust my training.”
+
+Master Bai:
+“I taught you to question your first conclusion.”
+“Confidence without reflection is merely another form of blindness.”
+
+Nightingale:
+“These injuries do not match the enemies in front of us.”
+
+The Prodigy:
+“Then we will ask the enemy after we defeat it.”
+
+Nightingale:
+“The environment is part of the assessment.”
+“Their breathing changed before they collapsed. The monitors failed before the first creature appeared. We are missing something important.”
+
+The Prodigy:
+“Or you are searching for complexity where none exists.”
+
+Nightingale:
+“A patient does not become less endangered because the danger is difficult to see.”
+
+Fleming:
+“This corruption is adapting.”
+
+The Prodigy:
+“Everything adapts shortly before I destroy it.”
+
+Fleming:
+“That certainty is precisely what concerns me.”
+“The organisms at the edge are already resistant to our first response. If we attack carelessly, we may strengthen what we are trying to eliminate.”
+
+The Prodigy:
+“Then I will strike hard enough that resistance will not matter.”
+
+Fleming:
+“Power used without proper selection can turn treatment into harm.”
+
+Final warning:
+Master Bai:
+“Wait for the others. Assess the field. Form a plan.”
+
+The Prodigy:
+“While we stand here discussing possibilities, people are suffering.”
+“I have defeated stronger enemies than this alone.”
+
+Master Bai:
+“That is why this enemy has chosen you.”
+
+The Prodigy:
+“Watch carefully, Master.”
+“I will show you how quickly this can be ended.”
+
+End:
+The Former Self advances alone and the Silent Infarction begins its trap reveal.
+
+Acceptance checks:
+- Tactical battlefield feels isometric and deep.
+- Dialogue is readable on mobile.
+- Characters visually react during dialogue.
+- Mentors give distinct warnings.
+- Former Self sounds heroic but impatient, not cruel or stupid.
+- Scene ends with Silent Infarction trap setup.
