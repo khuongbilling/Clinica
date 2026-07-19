@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -266,126 +266,99 @@ const sl = StyleSheet.create({
   },
 });
 
-// ── Hero deployment card ───────────────────────────────────────────────────────
+// ── Hero loadout slot ──────────────────────────────────────────────────────────
 
-function HeroCard({
+function HeroSlot({
   heroId,
-  selected,
-  onSelect,
+  slotNum,
   locked = false,
+  onAdd,
+  onRemove,
 }: {
-  heroId:    string;
-  selected:  boolean;
-  onSelect?: () => void;
+  heroId?:   string;
+  slotNum:   number;
   locked?:   boolean;
+  onAdd?:    () => void;
+  onRemove?: () => void;
 }) {
-  const hero       = HEROES.find((h) => h.id === heroId);
-  const sprite     = getHeroSprite(heroId);
-  if (!hero) return null;
-
-  const rc         = ROLE_COLOR[hero.role] ?? UI.teal;
-  const ri         = ROLE_ICON[hero.role]  ?? "star";
-  const rColor     = rarityColor(hero.rarity);
-  const rLabel     = RARITY_LABEL[hero.rarity] ?? "COMMON";
-  const sysCo      = SYSTEM_COLOR[hero.element] ?? UI.gold;
-  const chainRoles = getHeroChainRoles(hero);
+  const hero   = heroId ? HEROES.find((h) => h.id === heroId) : null;
+  const sprite = heroId ? getHeroSprite(heroId) : undefined;
+  const rc     = hero ? (ROLE_COLOR[hero.role] ?? UI.teal) : UI.teal;
+  const ri     = hero ? (ROLE_ICON[hero.role]  ?? "star") : "star";
+  const color  = hero ? rc : "rgba(255,255,255,0.14)";
 
   return (
     <Pressable
       style={[
-        hc.card,
-        selected && !locked && { borderColor: rc + "90", backgroundColor: rc + "0D" },
-        locked && { borderColor: UI.gold + "40", backgroundColor: UI.gold + "06" },
+        hs.wrap,
+        hero
+          ? { borderColor: color + "80", backgroundColor: color + "10" }
+          : { borderColor: "rgba(255,255,255,0.10)" },
+        locked && { borderColor: UI.gold + "60", backgroundColor: UI.gold + "08" },
       ]}
-      onPress={!locked ? onSelect : undefined}
+      onPress={locked ? undefined : hero ? onRemove : onAdd}
+      hitSlop={4}
     >
-      <View style={[hc.tl, { borderColor: locked ? UI.gold + "50" : selected ? rc + "80" : "rgba(255,255,255,0.10)" }]} />
-      <View style={[hc.br, { borderColor: locked ? UI.gold + "50" : selected ? rc + "80" : "rgba(255,255,255,0.10)" }]} />
+      <View style={[hs.tl, { borderColor: locked ? UI.gold + "70" : hero ? color + "90" : "rgba(255,255,255,0.16)" }]} />
+      <View style={[hs.br, { borderColor: locked ? UI.gold + "70" : hero ? color + "90" : "rgba(255,255,255,0.16)" }]} />
 
-      {/* Portrait */}
-      <View style={[hc.portrait, { borderColor: locked ? UI.gold + "70" : selected ? rc + "AA" : rColor + "50" }]}>
-        {sprite ? (
-          <Image source={sprite} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-        ) : (
-          <View style={[hc.fallback, { backgroundColor: rc + "1E" }]}>
-            <Ionicons name={ri as any} size={26} color={rc} />
+      {hero ? (
+        <>
+          <View style={[hs.portrait, { borderColor: locked ? UI.gold + "80" : color + "AA" }]}>
+            {sprite ? (
+              <Image source={sprite} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+            ) : (
+              <View style={[hs.fallback, { backgroundColor: rc + "1E" }]}>
+                <Ionicons name={ri as any} size={20} color={rc} />
+              </View>
+            )}
+            {locked && (
+              <View style={hs.lockOverlay}>
+                <Ionicons name="lock-closed" size={14} color={UI.gold} />
+              </View>
+            )}
           </View>
-        )}
-        {locked ? (
-          <View style={[hc.badge, { backgroundColor: UI.gold }]}>
-            <Ionicons name="lock-closed" size={8} color="#0B1020" />
-          </View>
-        ) : selected ? (
-          <View style={[hc.badge, { backgroundColor: rc }]}>
-            <Ionicons name="checkmark" size={9} color="#000" />
-          </View>
-        ) : null}
-      </View>
-
-      {/* Rarity stars */}
-      <Text style={[hc.rarity, { color: rColor }]} numberOfLines={1}>
-        {"★".repeat(Math.max(1, hero.rarity - 2))}
-        {"  "}
-        <Text style={[hc.rarityLabel, { color: rColor + "CC" }]}>{rLabel}</Text>
-      </Text>
-
-      {/* Name */}
-      <Text style={hc.name} numberOfLines={1}>{hero.name}</Text>
-
-      {/* Role badge */}
-      <View style={[hc.role, { backgroundColor: rc + "18", borderColor: rc + "40" }]}>
-        <Ionicons name={ri as any} size={8} color={rc} />
-        <Text style={[hc.roleTxt, { color: rc }]}>{hero.role}</Text>
-      </View>
-
-      {/* Element badge */}
-      <View style={[hc.elemBadge, { backgroundColor: sysCo + "14", borderColor: sysCo + "32" }]}>
-        <Text style={[hc.elemTxt, { color: sysCo }]}>{hero.element}</Text>
-      </View>
-
-      {/* Chain roles */}
-      {chainRoles.length > 0 && (
-        <View style={hc.chainRow}>
-          {chainRoles.map((cr) => (
-            <View key={cr} style={hc.chainChip}>
-              <Text style={hc.chainTxt}>{cr}</Text>
-            </View>
-          ))}
-        </View>
+          <Text style={[hs.name, { color: locked ? UI.gold + "CC" : color }]} numberOfLines={2}>{hero.name}</Text>
+          {!locked && <Ionicons name="close-circle" size={10} color={color + "70"} />}
+        </>
+      ) : (
+        <>
+          <Ionicons name="add" size={22} color="rgba(255,255,255,0.28)" />
+          <Text style={hs.empty}>EMPTY</Text>
+        </>
       )}
     </Pressable>
   );
 }
-const hc = StyleSheet.create({
-  card: {
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: UI.panel,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.07)",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+const hs = StyleSheet.create({
+  wrap: {
     flex: 1,
-    minWidth: "28%",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    minHeight: 100,
     position: "relative",
   },
   tl: {
-    position: "absolute", top: 5, left: 5,
-    width: 8, height: 8,
+    position: "absolute", top: 4, left: 4,
+    width: 7, height: 7,
     borderTopWidth: 1.5, borderLeftWidth: 1.5,
-    borderTopLeftRadius: 3,
+    borderTopLeftRadius: 2,
   },
   br: {
-    position: "absolute", bottom: 5, right: 5,
-    width: 8, height: 8,
+    position: "absolute", bottom: 4, right: 4,
+    width: 7, height: 7,
     borderBottomWidth: 1.5, borderRightWidth: 1.5,
-    borderBottomRightRadius: 3,
+    borderBottomRightRadius: 2,
   },
   portrait: {
-    width: 64, height: 64,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 52, height: 52,
+    borderRadius: 10,
+    borderWidth: 1.5,
     overflow: "hidden",
     backgroundColor: UI.bgDeep,
   },
@@ -394,74 +367,32 @@ const hc = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  badge: {
-    position: "absolute",
-    bottom: -3, right: -3,
-    width: 14, height: 14,
-    borderRadius: 7,
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.52)",
     alignItems: "center",
     justifyContent: "center",
   },
-  rarity: {
-    fontSize: 10,
-    letterSpacing: 1.5,
-    textAlign: "center",
-    marginTop: -1,
-  },
-  rarityLabel: {
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-  },
   name: {
-    color: UI.text,
     fontSize: 11,
     fontWeight: "700",
     textAlign: "center",
+    lineHeight: 14,
   },
-  role: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  num: {
+    color: "rgba(255,255,255,0.22)",
+    fontSize: 20,
+    fontWeight: "200",
+    lineHeight: 24,
   },
-  roleTxt: {
-    fontSize: 10,
+  empty: {
+    color: "rgba(255,255,255,0.18)",
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  elemBadge: {
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  elemTxt: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  chainRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 3,
-    justifyContent: "center",
-  },
-  chainChip: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  chainTxt: {
-    color: UI.textDim,
-    fontSize: 9,
-    fontWeight: "600",
+    letterSpacing: 0.4,
   },
 });
+
 
 // ── Item card ──────────────────────────────────────────────────────────────────
 
@@ -607,7 +538,7 @@ const ic = StyleSheet.create({
 
 export default function MissionLoadoutScreen() {
   const router = useRouter();
-  const { player, loading, setEquippedCards } = usePlayer();
+  const { player, loading, setEquippedCards, saveActiveTeam } = usePlayer();
 
   const {
     title         = "Mission",
@@ -641,11 +572,32 @@ export default function MissionLoadoutScreen() {
     () => player?.equipped_cards ?? []
   );
   const [cardPickerOpen, setCardPickerOpen] = useState(false);
+  const [teamSlots, setTeamSlots] = useState<(string | null)[]>([null, null, null]);
+  const [heroPickerSlot, setHeroPickerSlot] = useState<number | null>(null);
+  // Sync teamSlots from player.active_team once when player data first arrives,
+  // and again on each focus (in case active_team changed externally). Local
+  // edits made after focus will not be overwritten until the next focus.
+  const teamSyncedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!player) return;
+    const key = (player.active_team ?? []).join(',');
+    if (teamSyncedRef.current === key) return;
+    teamSyncedRef.current = key;
+    const team = player.active_team ?? [];
+    setTeamSlots([team[0] ?? null, team[1] ?? null, team[2] ?? null]);
+  }, [player]);
 
   useFocusEffect(useCallback(() => {
     setSelectedItems(getLoadoutItems());
     setLocalEquippedCards(player?.equipped_cards ?? []);
-  }, [player?.equipped_cards]));
+    // Re-sync team slots to server state on each focus visit
+    if (player) {
+      const team = player.active_team ?? [];
+      const key = team.join(',');
+      teamSyncedRef.current = key;
+      setTeamSlots([team[0] ?? null, team[1] ?? null, team[2] ?? null]);
+    }
+  }, [player?.equipped_cards, player?.active_team]));
 
   function toggleCard(cardId: string) {
     setLocalEquippedCards((prev) => {
@@ -673,9 +625,16 @@ export default function MissionLoadoutScreen() {
 
   const inventory  = player.inventory ?? {};
   const ownedItems = ITEMS.filter((it) => (inventory[it.name] ?? 0) > 0);
-  const activeTeam = player.active_team ?? [];
 
-  const handleStart = () => {
+  const owned = new Set(player.heroes_owned);
+  const availableHeroes = HEROES.filter(
+    (h) => owned.has(h.id) && !teamSlots.includes(h.id)
+  );
+
+  const handleStart = async () => {
+    if (!isTutorial) {
+      await saveActiveTeam(teamSlots.filter((id): id is string => id !== null));
+    }
     if (isTutorial) {
       // Tutorial mode — always replace into battle with prologue+training flags so
       // the guided Ward Shift scripted sequence runs correctly.
@@ -789,30 +748,13 @@ export default function MissionLoadoutScreen() {
               <Text style={s.sectionDesc}>
                 These loaner healers guide you through your first shift. Recruit your own team after the tutorial.
               </Text>
-              <View style={s.heroRow}>
-                {["novice_guardian", "village_caretaker"].map((id) => (
-                  <HeroCard key={id} heroId={id} selected locked />
-                ))}
-                <View style={{ flex: 1 }} />
+              <View style={s.heroSlotRow}>
+                <HeroSlot heroId="novice_guardian"   slotNum={1} locked />
+                <HeroSlot heroId="village_caretaker" slotNum={2} locked />
+                <HeroSlot slotNum={3} locked />
               </View>
             </>
-          ) : activeTeam.length > 0 ? (
-            <>
-              <View style={s.heroRow}>
-                {activeTeam.slice(0, 3).map((heroId) => (
-                  <HeroCard key={heroId} heroId={heroId} selected onSelect={() => {}} />
-                ))}
-              </View>
-              <Pressable
-                style={[s.editBtn, { borderColor: UI.teal + "50" }]}
-                onPress={() => router.push("/hero-select" as any)}
-              >
-                <Ionicons name="create-outline" size={13} color={UI.teal} />
-                <Text style={[s.editBtnTxt, { color: UI.teal }]}>Edit Formation</Text>
-                <Ionicons name="chevron-forward" size={13} color={UI.teal} />
-              </Pressable>
-            </>
-          ) : (
+          ) : owned.size === 0 ? (
             <Pressable
               style={[s.navCard, s.emptyNavCard]}
               onPress={() => router.push("/summon" as any)}
@@ -821,8 +763,118 @@ export default function MissionLoadoutScreen() {
               <Text style={s.emptyNavTxt}>No heroes recruited — Go to Summoning Hall</Text>
               <Ionicons name="chevron-forward" size={13} color={UI.textDim} />
             </Pressable>
+          ) : (
+            <>
+              <Text style={s.sectionDesc}>
+                Tap an empty slot to add a hero. Tap a filled slot to remove them.
+              </Text>
+              <View style={s.heroSlotRow}>
+                {[0, 1, 2].map((i) => (
+                  <HeroSlot
+                    key={i}
+                    heroId={teamSlots[i] ?? undefined}
+                    slotNum={i + 1}
+                    onAdd={() => setHeroPickerSlot(i)}
+                    onRemove={() =>
+                      setTeamSlots((prev) => {
+                        const next = [...prev];
+                        next[i] = null;
+                        return next;
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            </>
           )}
         </View>
+
+        {/* Hero picker modal */}
+        <Modal
+          visible={heroPickerSlot !== null}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setHeroPickerSlot(null)}
+        >
+          <View style={s.cardModalOverlay}>
+            <View style={s.cardModalSheet}>
+              <View style={s.cardModalHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardModalTitle}>Choose a Healer</Text>
+                  <Text style={[s.cardModalSub, { color: UI.teal }]}>
+                    Slot {(heroPickerSlot ?? 0) + 1} · tap a hero to assign
+                  </Text>
+                </View>
+                <Pressable onPress={() => setHeroPickerSlot(null)} hitSlop={10}>
+                  <Ionicons name="close" size={20} color={UI.textSoft} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                <View style={s.heroPickerList}>
+                  {availableHeroes.length === 0 ? (
+                    <View style={s.heroPickerEmpty}>
+                      <Ionicons name="people-outline" size={28} color={UI.textDim} />
+                      <Text style={s.heroPickerEmptyTxt}>
+                        All recruited heroes are already in a slot.
+                      </Text>
+                    </View>
+                  ) : (
+                    availableHeroes.map((hero) => {
+                      const sprite = getHeroSprite(hero.id);
+                      const rc     = ROLE_COLOR[hero.role]    ?? UI.teal;
+                      const ri     = ROLE_ICON[hero.role]     ?? "star";
+                      const sysCo  = SYSTEM_COLOR[hero.element] ?? UI.gold;
+                      return (
+                        <Pressable
+                          key={hero.id}
+                          style={[s.heroPickerRow, { borderColor: rc + "45" }]}
+                          onPress={() => {
+                            setTeamSlots((prev) => {
+                              const next = [...prev];
+                              next[heroPickerSlot!] = hero.id;
+                              return next;
+                            });
+                            setHeroPickerSlot(null);
+                          }}
+                        >
+                          <View style={[s.heroPickerPortrait, { borderColor: rc + "AA" }]}>
+                            {sprite ? (
+                              <Image
+                                source={sprite}
+                                style={{ width: "100%", height: "100%" }}
+                                contentFit="cover"
+                              />
+                            ) : (
+                              <View style={[s.heroPickerFallback, { backgroundColor: rc + "1E" }]}>
+                                <Ionicons name={ri as any} size={22} color={rc} />
+                              </View>
+                            )}
+                          </View>
+                          <View style={{ flex: 1, gap: 4 }}>
+                            <Text style={[s.heroPickerName, { color: rc }]} numberOfLines={1}>
+                              {hero.name}
+                            </Text>
+                            <Text style={s.heroPickerTitle} numberOfLines={1}>{hero.title}</Text>
+                            <View style={s.heroPickerBadges}>
+                              <View style={[s.heroPickerPill, { backgroundColor: rc + "18", borderColor: rc + "40" }]}>
+                                <Text style={[s.heroPickerPillTxt, { color: rc }]}>{hero.role}</Text>
+                              </View>
+                              <View style={[s.heroPickerPill, { backgroundColor: sysCo + "14", borderColor: sysCo + "32" }]}>
+                                <Text style={[s.heroPickerPillTxt, { color: sysCo }]}>{hero.element}</Text>
+                              </View>
+                            </View>
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={rc + "70"} />
+                        </Pressable>
+                      );
+                    })
+                  )}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         <SectionDivider accent={accent} />
 
@@ -1183,11 +1235,10 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Hero row
-  heroRow: {
+  // Hero slot row
+  heroSlotRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
+    gap: 8,
   },
 
   // Item grid
@@ -1262,6 +1313,69 @@ const s = StyleSheet.create({
   },
   emptyNavTxt: { color: UI.textDim, fontSize: 12, flex: 1 },
 
+  // Hero picker modal rows
+  heroPickerList: {
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  heroPickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    backgroundColor: UI.panel,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: SPACING.sm,
+  },
+  heroPickerPortrait: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    overflow: "hidden",
+    backgroundColor: UI.bgDeep,
+    flexShrink: 0,
+  },
+  heroPickerFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroPickerName: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  heroPickerTitle: {
+    color: UI.textDim,
+    fontSize: 11,
+  },
+  heroPickerBadges: {
+    flexDirection: "row",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  heroPickerPill: {
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  heroPickerPillTxt: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  heroPickerEmpty: {
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: SPACING.xl,
+  },
+  heroPickerEmptyTxt: {
+    color: UI.textDim,
+    fontSize: 13,
+    textAlign: "center",
+  },
+
   // Tutorial mode
   lockChip: {
     flexDirection: "row",
@@ -1273,17 +1387,6 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   lockChipTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
-  editBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-end",
-    gap: 4,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  editBtnTxt: { fontSize: 12, fontWeight: "700" },
   tutorialNotice: {
     flexDirection: "row",
     gap: SPACING.sm,
