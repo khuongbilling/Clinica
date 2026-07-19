@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -383,6 +383,24 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const guidedSkillId = guidedStep?.requiredSkillId;
   const guidedCueStep = guidedStep?.requiredActionType === "cue";
   const guidedEndTurnStep = guidedStep?.requiredActionType === "endTurn";
+
+  // Pulse animation for the required battle target (skill card or End Turn).
+  // Scales the highlighted element gently so the player's eye is drawn to it
+  // without dimming anything else on screen.
+  const skillPulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const isActive = !!(guidedSkillId || guidedEndTurnStep);
+    if (!isActive) { skillPulseAnim.setValue(1); return; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(skillPulseAnim, { toValue: 1.05, duration: 480, useNativeDriver: true }),
+        Animated.timing(skillPulseAnim, { toValue: 1.0,  duration: 480, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [guidedSkillId, guidedEndTurnStep, skillPulseAnim]);
+
   const tutorialNudge = () => {
     if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
     setFeedbackMsg("Follow the highlighted step to continue.");
@@ -963,9 +981,11 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               );
             })}
           </View>
-          <Pressable onPress={handleEndTurn} style={[styles.endBtn, guidedEndTurnStep && styles.guidedHighlight, guidedStep && !guidedEndTurnStep && styles.guidedDim]} disabled={state.outcome !== "ongoing"} testID="battle-end-turn">
-            <Text style={styles.endTxt}>END TURN</Text>
-          </Pressable>
+          <Animated.View style={guidedEndTurnStep ? { transform: [{ scale: skillPulseAnim }] } : undefined}>
+            <Pressable onPress={handleEndTurn} style={[styles.endBtn, guidedEndTurnStep && styles.guidedHighlight]} disabled={state.outcome !== "ongoing"} testID="battle-end-turn">
+              <Text style={styles.endTxt}>END TURN</Text>
+            </Pressable>
+          </Animated.View>
         </View>
         <View style={styles.tabs}>
           {(["actions", "items", "cards", "call", "team"] as Tab[]).map(t => (
@@ -1023,7 +1043,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               const careDmg = careAttemptDamage(state.chapter, isBoss);
               const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
               const careNode = (
-                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled, guidedStep && styles.guidedDim]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
+                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
                   <View style={styles.actionHead}>
                     <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
@@ -1041,16 +1061,19 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 const preview = previewSkillStatus(state, skill);
                 const isLocked = preview.status === "locked";
                 const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
+                const isGuidedSkill = guidedSkillId === skill.id;
                 return (
-                  <Pressable key={`${selHero.id}-${skill.id}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, guidedSkillId === skill.id && styles.guidedHighlight, !!guidedSkillId && guidedSkillId !== skill.id && styles.guidedDim]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
-                    <StatusBadge status={preview.status} />
-                    <View style={styles.actionHead}>
-                      <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
-                      <Text style={styles.apTag}>{cost} AP</Text>
-                    </View>
-                    <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
-                    <Text style={styles.actionHero} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{skill.systemType || "Universal"}</Text>
-                  </Pressable>
+                  <Animated.View key={`${selHero.id}-${skill.id}`} style={isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined}>
+                    <Pressable style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
+                      <StatusBadge status={preview.status} />
+                      <View style={styles.actionHead}>
+                        <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
+                        <Text style={styles.apTag}>{cost} AP</Text>
+                      </View>
+                      <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
+                      <Text style={styles.actionHero} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{skill.systemType || "Universal"}</Text>
+                    </Pressable>
+                  </Animated.View>
                 );
               });
               return [careNode, ...skillNodes];
@@ -1637,7 +1660,7 @@ const styles = StyleSheet.create({
   feedbackText: { color: COLORS.brand, fontSize: 13, lineHeight: 19, flex: 1 },
   feedbackTextChain: { color: COLORS.runeGold, fontWeight: "700" },
 
-  guidedHighlight: { borderColor: COLORS.brand, borderWidth: 2, backgroundColor: "rgba(88,166,255,0.10)" },
+  guidedHighlight: { borderColor: "#FFD700", borderWidth: 2.5, backgroundColor: "rgba(255,215,0,0.09)" },
   guidedDim: { opacity: 0.35 },
   briefingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.93)", zIndex: 100, justifyContent: "flex-end" },
   briefingPanel: { maxHeight: "90%", backgroundColor: COLORS.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, overflow: "hidden", borderTopWidth: 1, borderColor: COLORS.brand + "40" },
