@@ -1063,8 +1063,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
                 const isGuidedSkill = guidedSkillId === skill.id;
                 return (
-                  <Animated.View key={`${selHero.id}-${skill.id}`} style={isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined}>
-                    <Pressable style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
+                  <Animated.View key={`${selHero.id}-${skill.id}`} style={[{ width: "48.5%" }, isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined]}>
+                    <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
                       <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
                         <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
