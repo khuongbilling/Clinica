@@ -585,37 +585,23 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Finale sequence ───────────────────────────────────────────────────────
+  // ── Finale sequence (auto-advancing — full dialogue lives in lotus_recall_cinematic) ──
 
   const startFinale = useCallback(() => {
     toStage("finale");
-    finaleStepRef.current = 0;
-    setFinaleStep(0);
-    anim(doomFade, 0.78, 1800);
-    anim(finaleFade, 1, 700);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleFinaleNext = useCallback(() => {
-    if (stageRef.current !== "finale") return;
-    const next = finaleStepRef.current + 1;
-    if (next >= FINALE_STEPS.length) {
-      // Final step — fade everything to black → onComplete
-      anim(finaleFade, 0, 500, () => {
+    anim(doomFade, 0.88, 1800);
+    after(900, () => anim(finaleFade, 1, 700));
+    // Hold "THE TRAP CLOSES." for 3.8 s then fade to black → onComplete
+    after(4700, () => {
+      anim(finaleFade, 0, 700, () => {
         anim(doomFade, 1, 1600, () => {
-          after(600, () => {
+          after(400, () => {
             toStage("done");
             onComplete();
           });
         });
       });
-    } else {
-      anim(finaleFade, 0, 220, () => {
-        finaleStepRef.current = next;
-        setFinaleStep(next);
-        anim(finaleFade, 1, 400);
-      });
-    }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onComplete]);
 
@@ -935,43 +921,25 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         </Animated.View>
       )}
 
-      {/* ── FINALE OVERLAY (full-screen) ── */}
+      {/* ── FINALE OVERLAY (full-screen, auto-advancing — no tap required) ── */}
       {stage === "finale" && (
-        <Animated.View style={[styles.finaleOverlay, { opacity: finaleFade }]}>
+        <Animated.View
+          style={[styles.finaleOverlay, { opacity: finaleFade }]}
+          pointerEvents="none"
+        >
           <LinearGradient
             colors={["rgba(6,2,2,0.93)", "rgba(4,10,18,0.98)"]}
             style={StyleSheet.absoluteFill}
           />
-          <SafeAreaView style={styles.finaleSafe}>
-            <Pressable style={styles.finaleContent} onPress={handleFinaleNext}>
-              {currentFinale.portrait && (
-                <ExpoImage
-                  source={currentFinale.portrait}
-                  style={styles.finalePortrait}
-                  contentFit="cover"
-                />
-              )}
-              {currentFinale.speaker && (
-                <Text style={[styles.finaleSpeaker, { color: currentFinale.color }]}>
-                  {currentFinale.speaker}
-                </Text>
-              )}
-              <Text
-                style={[
-                  styles.finaleText,
-                  finaleStep === 0 && styles.finaleTextDrama,
-                  { color: finaleStep === 0 ? "#FF3333" : "#EDF2F7" },
-                ]}
-              >
-                {currentFinale.text}
+          <SafeAreaView style={styles.finaleSafe} pointerEvents="none">
+            <View style={styles.finaleContent}>
+              <Text style={[styles.finaleText, styles.finaleTextDrama, { color: "#FF3333" }]}>
+                THE TRAP CLOSES.
               </Text>
-              {"subtext" in currentFinale && currentFinale.subtext ? (
-                <Text style={styles.finaleSubtext}>{currentFinale.subtext}</Text>
-              ) : null}
-              {finaleStep < FINALE_STEPS.length - 1 ? (
-                <Text style={styles.finaleTapHint}>tap anywhere to continue</Text>
-              ) : null}
-            </Pressable>
+              <Text style={styles.finaleSubtext}>
+                Everything the Former Self built — and everything they missed.
+              </Text>
+            </View>
           </SafeAreaView>
         </Animated.View>
       )}

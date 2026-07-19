@@ -43,6 +43,7 @@ import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfar
 import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
 import PrologueBattleTutorial        from "@/src/components/prologue/PrologueBattleTutorial";
 import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScriptedBattle";
+import LotusRecallCinematic          from "@/src/components/prologue/LotusRecallCinematic";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -165,10 +166,22 @@ export default function OpeningPrologue() {
   // Former Self is powerful but already doomed; Nightingale/Fleming are
   // effective and competent.  Decoy enemies are killable.  Silent Infarction
   // is not beatable — only partially revealable.  Scripted defeat is inevitable
-  // regardless of player skill.  No Game Over; no Try Again.  After the 5-step
-  // finale the player advances to `lotus_recall_cinematic`.
+  // regardless of player skill.  Auto-advancing finale ("THE TRAP CLOSES.")
+  // then hands off to `lotus_recall_cinematic`.
   if (activePhase === "scripted_defeat") {
     return <PrologueScriptedBattle onComplete={handleContinue} />;
+  }
+
+  // ── Phase 7: Lotus Recall Cinematic ────────────────────────────────────────
+  // Three-act defeat cinematic played immediately after the scripted battle.
+  //   Act 1 — Dialogue:  Nightingale / Fleming / Master Bai (tap-to-advance)
+  //   Act 2 — Visual:    aura destabilise → overwhelm → silence → lotus petals
+  //                      → luminous silhouette → reaching toward the team
+  //   Act 3 — Result:    "Lotus Recall" card (Timeline Failed / Recall Triggered /
+  //                      Healer's Rhythm Learned / Identity Reconstruction Pending)
+  //                      Gold "RECALL AND CONTINUE" button → identity_reconstruction
+  if (activePhase === "lotus_recall_cinematic") {
+    return <LotusRecallCinematic onComplete={handleContinue} />;
   }
 
   return (
