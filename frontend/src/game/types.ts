@@ -320,4 +320,7 @@ export interface PlayerState {
   // One-time "what are cards?" tutorial shown the first time the Cards tab is
   // opened in battle. Undefined/false means not yet seen.
   seen_card_tutorial?: boolean;
+  // P9 — one-time "how does Call for Help work?" tutorial shown the first
+  // time the Call tab is opened in battle. Undefined/false = not yet seen.
+  seen_call_tutorial?: boolean;
 }

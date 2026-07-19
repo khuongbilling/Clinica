@@ -192,6 +192,7 @@ class Player(BaseModel):
     # P8 — battle card deck (up to 3 card IDs loaded in mission loadout)
     equipped_cards: List[str] = Field(default_factory=list)
     seen_card_tutorial: bool = False
+    seen_call_tutorial: bool = False
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -282,6 +283,7 @@ class PlayerUpdate(BaseModel):
     realm_seed: Optional[int] = None
     equipped_cards: Optional[List[str]] = None
     seen_card_tutorial: Optional[bool] = None
+    seen_call_tutorial: Optional[bool] = None
 
 
 # ---------- Routes ----------

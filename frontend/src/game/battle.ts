@@ -92,7 +92,9 @@ export interface BattleState {
   // Hero-based turn system
   selectedHeroId: string | null;
   heroActionsUsed: Record<string, boolean>;
-  callsUsed: { pharmacy: boolean; respiratory: boolean; rapidResponse: boolean; infectionControl: boolean };
+  callsUsed: { pharmacy: boolean; respiratory: boolean; rapidResponse: boolean; infectionControl: boolean; lab: boolean; rehab: boolean; social: boolean };
+  // P9 — total calls remaining this battle (global budget across all call types).
+  callHelpRemaining: number;
   preparedItemDiscount: string | null;
   nextAirActionDiscount: boolean;
   rapidResponseActive: boolean;
@@ -316,7 +318,8 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
 
     selectedHeroId: team[0]?.id || null,
     heroActionsUsed,
-    callsUsed: { pharmacy: false, respiratory: false, rapidResponse: false, infectionControl: false },
+    callsUsed: { pharmacy: false, respiratory: false, rapidResponse: false, infectionControl: false, lab: false, rehab: false, social: false },
+    callHelpRemaining: 3,
     preparedItemDiscount: null,
     nextAirActionDiscount: false,
     rapidResponseActive: false,
@@ -1056,10 +1059,16 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
     option.id === 'call_pharmacy' ? 'pharmacy' :
     option.id === 'call_respiratory' ? 'respiratory' :
     option.id === 'call_rapid' ? 'rapidResponse' :
-    option.id === 'call_infection' ? 'infectionControl' : null;
+    option.id === 'call_infection' ? 'infectionControl' :
+    option.id === 'call_lab' ? 'lab' :
+    option.id === 'call_rehab' ? 'rehab' :
+    option.id === 'call_social' ? 'social' : null;
 
   if (callKey && s.callsUsed[callKey]) {
     return { state: s, message: `${option.name} has already been called this battle.`, aborted: true };
+  }
+  if (s.callHelpRemaining <= 0) {
+    return { state: s, message: 'No calls remaining this battle.', aborted: true };
   }
   if (s.ap < option.costAP) return { state: s, message: `Not enough AP (needs ${option.costAP}).`, aborted: true };
 
@@ -1080,6 +1089,7 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
     ap: s.ap - option.costAP,
     callUsed: true,
     callsUsed: callKey ? { ...s.callsUsed, [callKey]: true } : s.callsUsed,
+    callHelpRemaining: Math.max(0, s.callHelpRemaining - 1),
     consultsUsed: post.consultsUsed + 1,
     log: [...post.log, `📞 ${option.name} (−${option.costAP} AP).`],
   };
@@ -1152,6 +1162,48 @@ export function applyCall(s: BattleState, option: CallOption, addedItemName?: st
     next.blockNextSpread = true;
     next.log.push(`Infection Control joins. Isolation Seal available, next spread blocked.`);
     return { state: next, message: 'Infection Control engaged.', status: res.status };
+  }
+
+  // P9 new family-specific calls ─────────────────────────────────────────────
+
+  if (option.id === 'call_lab') {
+    // Reveal one random hidden clue (if any exist), then add a Lab Token
+    const revealed = next.hiddenClueIds.length > 0;
+    if (revealed) {
+      const revealId = next.hiddenClueIds[0];
+      const revealedClue = next.clues.find(c => c.id === revealId);
+      next.hiddenClueIds = next.hiddenClueIds.slice(1);
+      next.visibleClues = [...next.visibleClues, revealId];
+      if (revealedClue) {
+        next.revealedLabels = [...next.revealedLabels, revealedClue.label];
+        next.log.push(`Lab & Imaging revealed: ${revealedClue.label}.`);
+      }
+    } else {
+      next.log.push(`Lab & Imaging found no new hidden findings.`);
+    }
+    const token = 'Lab Token';
+    next.inventory = { ...next.inventory, [token]: (next.inventory[token] || 0) + 1 };
+    next.log.push(`Lab Token added to inventory.`);
+    const detail = revealed
+      ? `Diagnostic clue revealed + Lab Token added.`
+      : `No hidden clues remain. Lab Token added as fallback.`;
+    return { state: next, message: detail, status: res.status };
+  }
+
+  if (option.id === 'call_rehab') {
+    if (!next.temporaryActionIds.includes('mobility_aid')) {
+      next.temporaryActionIds = [...next.temporaryActionIds, 'mobility_aid'];
+    }
+    next.log.push(`Rehab Consult joins. Mobility Aid is available this battle.`);
+    return { state: next, message: 'Rehab support engaged. Mobility Aid unlocked.', status: res.status };
+  }
+
+  if (option.id === 'call_social') {
+    if (!next.temporaryActionIds.includes('systems_consult')) {
+      next.temporaryActionIds = [...next.temporaryActionIds, 'systems_consult'];
+    }
+    next.log.push(`Systems Support joins. Systems Consultation is available this battle.`);
+    return { state: next, message: 'Systems support engaged. Systems Consultation unlocked.', status: res.status };
   }
 
   // Legacy fallbacks

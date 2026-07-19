@@ -1,4 +1,4 @@
-import { ElementSystem } from './types';
+import { ClassFamily, ElementSystem } from './types';
 
 export interface Item {
   id: string;
@@ -248,46 +248,85 @@ export function findItem(name: string): Item | undefined {
   return ITEMS.find(i => i.name === name);
 }
 
-// ---------- Call Team Options ----------
+// ---------- Call for Help Options ----------
 export interface CallOption {
   id: string;
   name: string;
   costAP: number;
-  effect: 'unlockAction' | 'addRelevantItem' | 'rapidResponse';
+  effect: 'unlockAction' | 'addRelevantItem' | 'rapidResponse' | 'revealClue' | 'stabilize' | 'shield';
   actionId?: string;
   description: string;
+  // Families whose heroes unlock this call. Empty/absent = always available.
+  requiredFamilies?: ClassFamily[];
+  // Short display label shown in the Call tab badge.
+  supportLabel: string;
 }
 
 export const CALL_OPTIONS: CallOption[] = [
   {
     id: 'call_respiratory',
-    name: 'Call Respiratory Support',
+    name: 'Respiratory Support',
     costAP: 2,
     effect: 'unlockAction',
     actionId: 'open_airflow',
-    description: 'Unlocks Open Airflow. Strongest when respiratory clues are present.',
+    description: 'Unlocks Assisted Airflow. Strongest when respiratory clues are present. May provide only weak help if no airway signs.',
+    requiredFamilies: ['Lifebreath', 'Wardborn'],
+    supportLabel: 'Respiratory',
   },
   {
     id: 'call_pharmacy',
-    name: 'Call Pharmacy',
+    name: 'Pharmacy Support',
     costAP: 2,
     effect: 'addRelevantItem',
-    description: 'Prepares a context-relevant item (-1 AP). Needs at least one clue revealed.',
+    description: 'Prepares a context-relevant item (costs 1 less AP). Needs at least one clue revealed — if none, provides only a generic Lab Token.',
+    requiredFamilies: ['Remedybound'],
+    supportLabel: 'Pharmacy',
   },
   {
     id: 'call_rapid',
-    name: 'Call Rapid Response',
+    name: 'Rapid Response',
     costAP: 3,
     effect: 'rapidResponse',
-    description: 'Emergency only (Stability ≤ 30). +15 Stability + block next enemy attack.',
+    description: 'Emergency only (Stability ≤ 30). +15 Stability + blocks next enemy attack. Always available.',
+    requiredFamilies: [],
+    supportLabel: 'Emergency',
   },
   {
     id: 'call_infection',
-    name: 'Call Infection Control',
+    name: 'Infection Control',
     costAP: 2,
     effect: 'unlockAction',
     actionId: 'containment_order',
-    description: 'Unlocks Containment Order. Strongest against infection/spread problems.',
+    description: 'Unlocks Containment Order. Strongest against infection or spread problems. May provide weak help if no infection clues are present.',
+    requiredFamilies: ['Wardborn'],
+    supportLabel: 'Infection',
+  },
+  {
+    id: 'call_lab',
+    name: 'Lab & Imaging',
+    costAP: 2,
+    effect: 'revealClue',
+    description: 'Reveals one hidden diagnostic clue and adds a Lab Token. Best used early when key findings are still unknown.',
+    requiredFamilies: ['Truthseer'],
+    supportLabel: 'Lab/Imaging',
+  },
+  {
+    id: 'call_rehab',
+    name: 'Rehab Consult',
+    costAP: 2,
+    effect: 'stabilize',
+    description: 'Unlocks Mobility Aid. Restores patient function and provides sustained stability recovery.',
+    requiredFamilies: ['Restorebound'],
+    supportLabel: 'Rehab',
+  },
+  {
+    id: 'call_social',
+    name: 'Systems Support',
+    costAP: 2,
+    effect: 'shield',
+    description: 'Unlocks Systems Consultation. Coordinates care through public health and social work to shield and stabilize.',
+    requiredFamilies: ['Realmbound'],
+    supportLabel: 'Social/PH',
   },
 ];
 
@@ -324,6 +363,25 @@ export const TEMP_ACTIONS: Record<string, TempAction> = {
     shortEffect: 'Protect Counter • -20 Corruption · 30% Shield',
     strike: 20,
     shield: 30,
+  },
+  mobility_aid: {
+    id: 'mobility_aid',
+    name: 'Mobility Aid',
+    costAP: 1,
+    systemType: 'Forge',
+    description: 'Restore patient mobility and function. Stability +20.',
+    shortEffect: 'Rehab • +20 Stability',
+    stabilize: 20,
+  },
+  systems_consult: {
+    id: 'systems_consult',
+    name: 'Systems Consultation',
+    costAP: 1,
+    systemType: 'Growth',
+    description: 'Coordinate holistic public health support. Shield 20%, Stability +10.',
+    shortEffect: 'Public Health • 20% Shield · +10 Stability',
+    shield: 20,
+    stabilize: 10,
   },
 };
 

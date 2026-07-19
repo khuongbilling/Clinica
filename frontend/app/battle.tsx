@@ -27,7 +27,7 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
 import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
-import type { ActionType, Hero, HeroSkill } from "@/src/game/types";
+import type { ActionType, ClassFamily, Hero, HeroSkill } from "@/src/game/types";
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
 import { applySkillUpgradesToTeam } from "@/src/game/heroSkillAcademy";
 import { usePlayer } from "@/src/game/store";
@@ -57,7 +57,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
-  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen } = usePlayer();
+  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
@@ -167,13 +167,28 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });
 
+  // P9 — team hero families, used to filter available Call for Help options.
+  const teamFamilies = useMemo<Set<ClassFamily>>(() => {
+    const s = new Set<ClassFamily>();
+    team.forEach(h => { if ((h as any).family) s.add((h as any).family as ClassFamily); });
+    return s;
+  }, [team]);
+
   const [activeTab, setActiveTabRaw] = useState<Tab>("actions");
   const cardTabOpenedRef = useRef(false);
   const [showCardTutorial, setShowCardTutorial] = useState(false);
+  const callTabOpenedRef = useRef(false);
+  const [showCallTutorial, setShowCallTutorial] = useState(false);
+  // P9 — result popup shown after each Call for Help use.
+  const [callResult, setCallResult] = useState<{ title: string; detail: string; success: boolean } | null>(null);
   function setActiveTab(tab: Tab) {
     if (tab === "cards" && !cardTabOpenedRef.current) {
       cardTabOpenedRef.current = true;
       if (!player?.seen_card_tutorial) setShowCardTutorial(true);
+    }
+    if (tab === "call" && !callTabOpenedRef.current) {
+      callTabOpenedRef.current = true;
+      if (!player?.seen_call_tutorial) setShowCallTutorial(true);
     }
     setActiveTabRaw(tab);
   }
@@ -741,8 +756,19 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (enemy.primarySystem === "Fire" || enemy.secondarySystem === "Fire") return "Isolation Kit";
     return "Lab Token";
   };
-  // Show ALL calls all the time — players learn by misusing them (penalty handled in applyCall)
-  const availableCalls = CALL_OPTIONS;
+  // P9 — filter Call for Help options by team family composition.
+  // call_rapid (Emergency) is always available.
+  // call_infection also shows when the enemy is Fire/infection-tagged.
+  const availableCalls = useMemo(() => CALL_OPTIONS.filter(opt => {
+    if (!opt.requiredFamilies || opt.requiredFamilies.length === 0) return true;
+    if (opt.id === "call_infection") {
+      const enemyIsInfection = enemy.primarySystem === "Fire"
+        || (ENEMY_CLINICAL[enemy.id]?.diseaseTags || []).some((t: string) => /infection|spread/.test(t));
+      if (enemyIsInfection) return true;
+    }
+    return opt.requiredFamilies.some(f => teamFamilies.has(f));
+  }), [teamFamilies, enemy]);
+
   const handleCall = (opt: typeof CALL_OPTIONS[number]) => {
     if (guidedStep) { tutorialNudge(); return; }
     const itemName = opt.effect === "addRelevantItem" ? decideCallItem() : undefined;
@@ -750,6 +776,13 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
+    // Show result popup
+    const success = !res.aborted && res.status !== "inappropriate";
+    setCallResult({
+      title: res.aborted ? "Support Unavailable" : opt.name,
+      detail: res.message || opt.description,
+      success: !!success,
+    });
   };
 
   const handleEndTurn = () => {
@@ -1451,33 +1484,100 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           </>
         )}
         {activeTab === "call" && (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
-            {availableCalls.length === 0 && <Text style={styles.helpTxt}>No support options available.</Text>}
-            {availableCalls.map(opt => {
-              const callKey: keyof BattleState["callsUsed"] | null =
-                opt.id === "call_pharmacy" ? "pharmacy" :
-                opt.id === "call_respiratory" ? "respiratory" :
-                opt.id === "call_rapid" ? "rapidResponse" :
-                opt.id === "call_infection" ? "infectionControl" : null;
-              const alreadyUsed = !!(callKey && state.callsUsed[callKey]);
-              const preview = previewCallStatus(state, opt.id);
-              const isLocked = preview.status === "locked";
-              const rapidGated = opt.id === "call_rapid" && state.stability > 30 && !state.dangerTriggerActive;
-              const disabled = isLocked || alreadyUsed || rapidGated || state.ap < opt.costAP || state.outcome !== "ongoing";
-              return (
-                <Pressable key={opt.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleCall(opt)} onLongPress={() => setDetail({ kind: "call", option: opt })} delayLongPress={350} testID={`call-opt-${opt.id}`}>
-                  <StatusBadge status={preview.status} />
-                  <View style={styles.actionHead}>
-                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{opt.name}</Text>
-                    <Text style={styles.apTag}>{opt.costAP} AP</Text>
+          <>
+            {/* First-time Call for Help tutorial modal */}
+            <Modal visible={showCallTutorial} transparent animationType="fade" onRequestClose={() => {}}>
+              <View style={styles.cardTutModalOverlay}>
+                <View style={styles.cardTutModal}>
+                  <View style={styles.cardTutHeader}>
+                    <Ionicons name="call" size={22} color={COLORS.runeGold} />
+                    <Text style={styles.cardTutTitle}>Call for Help</Text>
                   </View>
-                  <Text style={styles.actionEffect} numberOfLines={2}>{opt.description}</Text>
-                  {alreadyUsed && <Text style={styles.actionHero}>Already called</Text>}
-                  {rapidGated && !alreadyUsed && <Text style={styles.actionHero}>Reserved for Stability ≤ 30</Text>}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                  <Text style={styles.cardTutBody}>
+                    Call for Help summons allied support teams based on your loaded heroes. Each hero family unlocks a different specialty — nursing, pharmacy, lab, rehab, and more.
+                  </Text>
+                  <Text style={styles.cardTutBody}>
+                    You have <Text style={{ color: COLORS.runeGold, fontWeight: "700" }}>3 calls</Text> available per battle. Each individual call can only be made <Text style={{ color: "#A6D8F6", fontWeight: "700" }}>once</Text>.
+                  </Text>
+                  <Text style={styles.cardTutBody}>
+                    Support may provide an item, a temporary skill, a clue, or stability recovery. If conditions aren't right or the right expert isn't available, the call may provide only weak or no help.
+                  </Text>
+                  <Pressable style={styles.cardTutBtn} onPress={() => { setShowCallTutorial(false); markCallTutorialSeen(); }}>
+                    <Text style={styles.cardTutBtnTxt}>Understood</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Remaining calls banner */}
+            <View style={styles.callRemainingBanner}>
+              <Ionicons name="call-outline" size={13} color={state.callHelpRemaining > 0 ? "#A6D8F6" : COLORS.runeGold + "70"} />
+              <Text style={[styles.callRemainingTxt, state.callHelpRemaining === 0 && styles.callRemainingExhausted]}>
+                {state.callHelpRemaining > 0
+                  ? `${state.callHelpRemaining} call${state.callHelpRemaining !== 1 ? "s" : ""} remaining this battle`
+                  : "No calls remaining this battle"}
+              </Text>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
+              {availableCalls.length === 0 && (
+                <View style={styles.callEmptyState}>
+                  <Ionicons name="people-outline" size={24} color={COLORS.runeGold + "60"} />
+                  <Text style={styles.callEmptyTxt}>No support available for this team.</Text>
+                  <Text style={styles.callEmptyHint}>Recruit heroes from Lifebreath, Wardborn, Remedybound, Truthseer, Restorebound, or Realmbound families to unlock more calls.</Text>
+                </View>
+              )}
+              {availableCalls.map(opt => {
+                const callKey: keyof BattleState["callsUsed"] | null =
+                  opt.id === "call_pharmacy" ? "pharmacy" :
+                  opt.id === "call_respiratory" ? "respiratory" :
+                  opt.id === "call_rapid" ? "rapidResponse" :
+                  opt.id === "call_infection" ? "infectionControl" :
+                  opt.id === "call_lab" ? "lab" :
+                  opt.id === "call_rehab" ? "rehab" :
+                  opt.id === "call_social" ? "social" : null;
+                const alreadyUsed = !!(callKey && state.callsUsed[callKey]);
+                const preview = previewCallStatus(state, opt.id);
+                const isLocked = preview.status === "locked";
+                const rapidGated = opt.id === "call_rapid" && state.stability > 30 && !state.dangerTriggerActive;
+                const budgetExhausted = state.callHelpRemaining <= 0;
+                const disabled = isLocked || alreadyUsed || rapidGated || budgetExhausted || state.ap < opt.costAP || state.outcome !== "ongoing";
+                return (
+                  <Pressable key={opt.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleCall(opt)} onLongPress={() => setDetail({ kind: "call", option: opt })} delayLongPress={350} testID={`call-opt-${opt.id}`}>
+                    <StatusBadge status={preview.status} />
+                    <View style={styles.actionHead}>
+                      <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{opt.name}</Text>
+                      <Text style={styles.apTag}>{opt.costAP} AP</Text>
+                    </View>
+                    <Text style={styles.actionEffect} numberOfLines={2}>{opt.description}</Text>
+                    <View style={styles.callSupportBadge}>
+                      <Ionicons name="people-outline" size={10} color="#A6D8F6" />
+                      <Text style={styles.callSupportLbl}>{opt.supportLabel}</Text>
+                    </View>
+                    {alreadyUsed && <Text style={styles.actionHero}>✓ Already called</Text>}
+                    {rapidGated && !alreadyUsed && <Text style={styles.actionHero}>Reserved for Stability ≤ 30</Text>}
+                    {budgetExhausted && !alreadyUsed && !rapidGated && <Text style={styles.actionHero}>No calls remaining</Text>}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {/* Call result popup */}
+            {callResult && (
+              <View style={styles.callResultOverlay}>
+                <View style={[styles.callResultCard, { borderColor: callResult.success ? "#4FD8C4" : COLORS.runeGold }]}>
+                  <View style={styles.callResultHeader}>
+                    <Ionicons name={callResult.success ? "checkmark-circle" : "alert-circle"} size={18} color={callResult.success ? "#4FD8C4" : COLORS.runeGold} />
+                    <Text style={[styles.callResultTitle, { color: callResult.success ? "#4FD8C4" : COLORS.runeGold }]}>{callResult.title}</Text>
+                  </View>
+                  <Text style={styles.callResultDetail}>{callResult.detail}</Text>
+                  <Pressable style={styles.callResultDismiss} onPress={() => setCallResult(null)}>
+                    <Text style={styles.callResultDismissTxt}>OK</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </>
         )}
         {activeTab === "team" && (
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -2558,5 +2658,105 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.4,
+  },
+
+  // ── P9 Call for Help tab styles ──────────────────────────────────────────
+  callRemainingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "rgba(166,216,246,0.08)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(166,216,246,0.14)",
+  },
+  callRemainingTxt: {
+    color: "#A6D8F6",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  callRemainingExhausted: {
+    color: COLORS.runeGold + "90",
+  },
+  callSupportBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginTop: 3,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(166,216,246,0.10)",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  callSupportLbl: {
+    color: "#A6D8F6",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  callEmptyState: {
+    alignItems: "center",
+    gap: 8,
+    padding: 24,
+  },
+  callEmptyTxt: {
+    color: COLORS.runeGold + "80",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  callEmptyHint: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 17,
+  },
+  callResultOverlay: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 600,
+    padding: 20,
+  },
+  callResultCard: {
+    width: "100%",
+    backgroundColor: "#111828",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 18,
+    gap: 10,
+    maxWidth: 340,
+  },
+  callResultHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  callResultTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    flex: 1,
+  },
+  callResultDetail: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  callResultDismiss: {
+    alignSelf: "flex-end",
+    backgroundColor: COLORS.runeGold,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  callResultDismissTxt: {
+    color: "#0B1020",
+    fontSize: 13,
+    fontWeight: "700",
   },
 });
