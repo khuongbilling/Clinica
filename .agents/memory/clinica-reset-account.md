@@ -5,7 +5,7 @@ description: Why "Reset Account" wipes all clinica.* AsyncStorage keys, not just
 
 Reset Account (`resetPlayer` in `src/game/store.tsx`, invoked from Profile's reset
 button together with `resetTutorials`) must clear EVERY app-owned persisted key,
-then let Boot (`router.replace("/")`) redirect to the title screen for a fresh run.
+then navigate to `/title` for a fresh run.
 
 **Why:** One-time onboarding/UI flags live in their own AsyncStorage keys separate
 from the player record — e.g. hub intro (`clinica.intro.seen`), battle tips
@@ -20,3 +20,14 @@ enumerates `getAllKeys()` and `multiRemove`s everything with that prefix (fallin
 back to removing just the player key on failure), and also nulls `playerRef.current`.
 Any new persisted flag added anywhere in the app is auto-covered as long as its key
 starts with `clinica.` — keep that prefix convention or reset will silently miss it.
+
+**Legendary heroes (e.g. Florence Nightingale):** These have NO dedicated
+AsyncStorage keys. Their entire state lives in the player record (`clinica.player.v2`)
+and in-memory content definitions — fully wiped by the bulk `clinica.*` removal.
+If a future feature adds a per-hero one-time flag (e.g. `florence_teaser_seen`),
+it MUST use the `clinica.` prefix or it will survive a reset.
+
+**Tutorial ceremony-summon flags:** `tutorial_recruit_1_claimed` and
+`tutorial_recruit_2_claimed` are PlayerState fields stored inside `clinica.player.v2`,
+not separate AsyncStorage keys. They are wiped with the player record — free
+ceremony draws are fully restored after a reset.

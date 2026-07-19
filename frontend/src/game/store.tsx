@@ -1854,6 +1854,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // one-time intro/tips banners, dismissed world-event banner, cached test
   // session, …), not just the player record, so "Reset Account" truly starts
   // the game over from scratch. All Clinica keys share the `clinica.` prefix.
+  //
+  // Locked legendary heroes (e.g. Florence Nightingale) have no dedicated
+  // AsyncStorage keys — their state lives exclusively inside the player record
+  // (`clinica.player.v2`) and in in-memory content definitions. They are fully
+  // cleared by this wipe. If any future feature adds per-hero flags (e.g. a
+  // "florence_teaser_seen" one-time flag), it MUST use the `clinica.` prefix
+  // or it will survive a reset and bleed into the fresh-account experience.
+  //
+  // Tutorial ceremony-summon flags (`tutorial_recruit_1_claimed`,
+  // `tutorial_recruit_2_claimed`) are fields inside PlayerState and are wiped
+  // with the player record — free draws are fully restored after reset.
   const resetPlayer = useCallback(async () => {
     try {
       const keys = await AsyncStorage.getAllKeys();
