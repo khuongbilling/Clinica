@@ -20,10 +20,14 @@ import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 export default function LotusRecall() {
   const router = useRouter();
   const { completePrologue } = usePlayer();
-  const { replay } = useLocalSearchParams<{ enemyId?: string; replay?: string }>();
+  const { replay, firstBattle } = useLocalSearchParams<{ enemyId?: string; replay?: string; firstBattle?: string }>();
   // Push 6 — Replay Prologue watches this cinematic without ever writing
   // prologue_complete or entering the real (mutating) post-recall onboarding.
   const isReplay = replay === "1";
+  // Push F — Battle 2 scripted loss: "Timeline Failed" variant.
+  // No prologue completion, no onboarding progress — just a narrative beat
+  // before the player returns to the hub.
+  const isFirstBattleRecall = firstBattle === "1";
   const [ready, setReady] = useState(false);
 
   // The prologue finale must complete — backing out would re-enter the
@@ -36,6 +40,11 @@ export default function LotusRecall() {
   }, []);
 
   const proceed = async () => {
+    // firstBattle recall: no prologue flags to write — just return to hub.
+    if (isFirstBattleRecall) {
+      router.replace("/(tabs)");
+      return;
+    }
     if (isReplay) {
       router.replace("/(tabs)/profile");
       return;
@@ -51,6 +60,55 @@ export default function LotusRecall() {
     router.replace("/post-recall");
   };
 
+  // ── firstBattle "Timeline Failed" variant ────────────────────────────────
+  if (isFirstBattleRecall) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="lotus-recall-screen">
+        <LinearGradient
+          colors={["#0B1628", "#12182A", "#0E1E26", "#0A1A1C"]}
+          locations={[0, 0.3, 0.65, 1]}
+          start={{ x: 0.3, y: 0 }}
+          end={{ x: 0.7, y: 1 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        {/* Faint crimson echo — the infarct that won this round */}
+        <LinearGradient
+          colors={["#EF444408", "#C084FC06", "#00000000"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.scrim} pointerEvents="none" />
+        <SceneTransition style={styles.block} duration={1400}>
+          <Ionicons name="time-outline" size={40} color={COLORS.runeGold} />
+          <Text style={[styles.kicker, styles.kickerTimeline]}>TIMELINE FAILED</Text>
+          <Text style={styles.title}>The first path collapsed.</Text>
+          <Text style={styles.body}>
+            Silent Infarction moved faster than your hands could follow. The chain held — Scout,
+            Stabilize, Counter, Reassess — but the outcome was sealed before you arrived.
+          </Text>
+          <Text style={styles.body}>
+            Memory endures. The rhythm you traced in that ward is yours to keep. A pulse of lotus
+            light draws the moment back — not to erase it, but to let you carry it forward.
+          </Text>
+          {ready ? (
+            <Pressable style={[styles.button, styles.buttonTimeline]} onPress={proceed} testID="lotus-recall-continue">
+              <Text style={styles.buttonTxt}>CARRY IT FORWARD</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.waitRow}>
+              <View style={[styles.waitDot, { backgroundColor: COLORS.runeGold }]} />
+              <Text style={styles.waitTxt}>The moment gathers…</Text>
+            </View>
+          )}
+        </SceneTransition>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Prologue / Replay variant (original) ─────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="lotus-recall-screen">
       {/* Clinica healing-academy background: deep jade night sky with lotus warmth */}
@@ -117,4 +175,7 @@ const styles = StyleSheet.create({
   waitRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.lg },
   waitDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.brand },
   waitTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 1 },
+  // Push F — Timeline Failed variant overrides
+  kickerTimeline: { color: COLORS.runeGold },
+  buttonTimeline: { backgroundColor: COLORS.runeGold + "E0" },
 });

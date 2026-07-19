@@ -220,6 +220,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const cinematicTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cinematicMsgId = useRef(0);
   const prevFbStepRef = useRef<string | undefined>(undefined);
+  // Set to true by the firstBattle scripted-loss timer so finish() can branch
+  // to the Lotus Recall "Timeline Failed" screen instead of the normal defeat.
+  const isFirstBattleLoss = useRef(false);
 
   const triggerFx = (actorId?: string, action?: ActionType) => {
     const ts = Date.now();
@@ -282,6 +285,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.outcome !== "ongoing") return;
     const t = setTimeout(() => {
       advanceStep();
+      // Flag BEFORE setState so the outcome modal condition reads it on the
+      // same render that sets outcome:"loss", preventing any flash of the
+      // normal "Patient Lost" UI before finish() is invoked.
+      isFirstBattleLoss.current = true;
       setState(s => ({
         ...s,
         outcome: "loss",
@@ -291,6 +298,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }, 2500);
     return () => clearTimeout(t);
   }, [isFirstBattleGuided, currentStep?.id, state.outcome]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // firstBattle Lotus Recall: skip the normal outcome modal entirely —
+  // as soon as outcome flips to "loss" and the flag is set, auto-invoke
+  // finish() which will route to /lotus-recall?firstBattle=1.
+  useEffect(() => {
+    if (!isFirstBattleLoss.current || state.outcome !== "loss") return;
+    finish();
+  }, [state.outcome]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stability floor during firstBattle chain steps: prevent an enemy attack
   // from zeroing the patient before the chain completes.
@@ -740,6 +755,22 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const finish = async () => {
     // finish() navigates via router.replace, which the useBlockBack guard
     // deliberately lets through (it only swallows back-type actions).
+
+    // ── firstBattle scripted loss → "Timeline Failed" Lotus Recall ───────────
+    // Rewards (LOSS_LEARNING_XP) are granted here so the normal loss branch
+    // is never reached. No stars, no shards, no crowns — narrative beat only.
+    if (isFirstBattleLoss.current) {
+      await recordFailure(enemy.id);
+      if (!isTraining) {
+        await applyRewards({ xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name });
+      }
+      if (state.cuesTopicsCorrect.length > 0) {
+        await recordCueTopics(state.cuesTopicsCorrect);
+      }
+      router.replace({ pathname: "/lotus-recall", params: { firstBattle: "1" } });
+      return;
+    }
+
     // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
     // Route straight into the Lotus Recall cutscene regardless of outcome.
     if (isPrologueBoss) {
@@ -1569,7 +1600,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         </View>
       )}
 
-      {state.outcome !== "ongoing" && !isPrologueBoss && activeTutorialId !== "prologueBattle" && (
+      {state.outcome !== "ongoing" && !isPrologueBoss && activeTutorialId !== "prologueBattle" && !isFirstBattleLoss.current && (
         <View style={styles.modalOverlay}>
           <View style={styles.outcomeModal}>
             <Ionicons name={state.outcome === "win" ? "shield-checkmark" : "alert-circle"} size={48} color={state.outcome === "win" ? COLORS.success : COLORS.error} />
