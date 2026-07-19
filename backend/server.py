@@ -39,6 +39,9 @@ class PlayerCreate(BaseModel):
     prologue_complete: Optional[bool] = None
     identity_restored: Optional[bool] = None
     diagnostic_intro_seen: Optional[bool] = None
+    opening_prologue_complete: Optional[bool] = None
+    opening_prologue_phase: Optional[str] = None
+    prologue_rewards_claimed: Optional[bool] = None
 
 
 class MasteryStats(BaseModel):
@@ -115,6 +118,9 @@ class Player(BaseModel):
     prologue_complete: bool = True
     identity_restored: bool = True
     diagnostic_intro_seen: bool = True
+    opening_prologue_complete: bool = True
+    opening_prologue_phase: Optional[str] = None
+    prologue_rewards_claimed: bool = True
     avatar_id: str = ""
     rank: str = "Sprout Healer"
     rank_index: int = 0
@@ -208,6 +214,9 @@ class PlayerUpdate(BaseModel):
     prologue_complete: Optional[bool] = None
     identity_restored: Optional[bool] = None
     diagnostic_intro_seen: Optional[bool] = None
+    opening_prologue_complete: Optional[bool] = None
+    opening_prologue_phase: Optional[str] = None
+    prologue_rewards_claimed: Optional[bool] = None
     avatar_id: Optional[str] = None
     rank: Optional[str] = None
     rank_index: Optional[int] = None
@@ -307,6 +316,9 @@ async def create_player(payload: PlayerCreate):
         prologue_complete=payload.prologue_complete if payload.prologue_complete is not None else True,
         identity_restored=payload.identity_restored if payload.identity_restored is not None else True,
         diagnostic_intro_seen=payload.diagnostic_intro_seen if payload.diagnostic_intro_seen is not None else True,
+        opening_prologue_complete=payload.opening_prologue_complete if payload.opening_prologue_complete is not None else True,
+        opening_prologue_phase=payload.opening_prologue_phase,
+        prologue_rewards_claimed=payload.prologue_rewards_claimed if payload.prologue_rewards_claimed is not None else True,
         # Heroes are earned exclusively through University Recruitment.
         heroes_owned=[],
         active_team=[],
