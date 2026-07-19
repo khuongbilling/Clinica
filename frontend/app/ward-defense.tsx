@@ -6,7 +6,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated, Image, Pressable, ScrollView,
   StyleSheet, Text, View,
@@ -56,7 +56,7 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
-import { WARD_BOOSTS, findWardBoost } from "@/src/game/shop";
+import { WARD_BOOSTS, findWardBoost, findSkin } from "@/src/game/shop";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 /* ── Tick speed ── */
@@ -2451,6 +2451,11 @@ export default function WardDefense() {
   const router = useRouter();
   const { player, applyRewards, recordWardWaves, syncInventory, setWardLoadout } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+
+  const wardBackdrop = useMemo(() => {
+    const skin = findSkin(player?.equipped_ward_skin || "");
+    return skin?.wardBackdrop ?? null;
+  }, [player?.equipped_ward_skin]);
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
 
   // Back navigation is blocked for the whole mode (lobby, live board, result)
@@ -3210,6 +3215,7 @@ export default function WardDefense() {
               mergeTileSet={mergeTileSet}
               onTilePress={deployUnit}
               unitColors={unitColors}
+              wardBackdrop={wardBackdrop}
             />
           );
         })()}

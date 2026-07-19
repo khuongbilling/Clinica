@@ -142,6 +142,7 @@ export interface WardBoardV2Props {
   spawnQueueLen: number; mergeTileSet: Set<number>;
   onTilePress: (i: number) => void;
   unitColors: Record<string, string>;
+  wardBackdrop?: any;
 }
 
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
@@ -462,6 +463,7 @@ export function WardBoardV2({
   stability, phase, wave,
   bobY,
   spawnQueueLen, mergeTileSet, onTilePress, unitColors,
+  wardBackdrop,
 }: WardBoardV2Props) {
   /* Measure the AVAILABLE area (outer container) and fit the whole 878×1408
      portrait map inside it, preserving aspect. This guarantees the entry
@@ -499,12 +501,14 @@ export function WardBoardV2({
       {/* L0: Portrait battle map, sized to fit fully inside the available area.
           Board size matches the image's 878×1408 ratio exactly, so contentFit
           shows the WHOLE map (gate + lantern included) with zero crop, and
-          overlay fractions (PATH_WPS / DEPLOY_TILES) sit EXACTLY on features. */}
+          overlay fractions (PATH_WPS / DEPLOY_TILES) sit EXACTLY on features.
+          wardBackdrop (equipped skin) replaces the default map art when set. */}
       <ExpoImage
-        source={IMG_MAP}
+        source={wardBackdrop ?? IMG_MAP}
         style={StyleSheet.absoluteFillObject}
         contentFit="cover"
         cachePolicy="memory-disk"
+        transition={wardBackdrop ? 400 : undefined}
       />
 
       {/* L2: Nine invisible tap targets aligned onto the drawn pedestals */}
