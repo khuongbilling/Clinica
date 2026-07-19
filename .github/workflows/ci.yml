@@ -26,3 +26,6 @@ jobs:
 
       - name: Realm route integrity check
         run: node_modules/.bin/sucrase-node tests/realm_routes.test.ts
+
+      - name: Route constant ↔ screen file cross-check
+        run: node scripts/check-routes.js

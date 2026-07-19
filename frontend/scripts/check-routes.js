@@ -20,8 +20,26 @@
  * Exits 0  — both checks pass.
  * Exits 1  — one or more violations found.
  *
- * Add to CI / workflow:  node frontend/scripts/check-routes.js
- * Run as npm script:     cd frontend && npm run check:routes
+ * ── How to run ────────────────────────────────────────────────────────────────
+ *
+ *   Locally (from project root):
+ *     node frontend/scripts/check-routes.js
+ *
+ *   As an npm script (from frontend/):
+ *     npm run check:routes
+ *
+ *   In Replit CI:
+ *     The "Check Routes" workflow runs this script automatically.
+ *     It exits non-zero on any violation, blocking bad merges.
+ *     Restart it after adding/removing screen files or route constants.
+ *
+ *   When you add a new screen (frontend/app/…):
+ *     → Add a matching constant to ROUTES in frontend/src/game/routes.ts
+ *
+ *   When you remove a screen:
+ *     → Remove or update the corresponding constant in routes.ts
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 'use strict';
