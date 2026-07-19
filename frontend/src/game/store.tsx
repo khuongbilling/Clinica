@@ -2059,6 +2059,35 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     playerRef.current = next;
     await updateState(next);
+
+    // ── Single source of truth: sync hub guide objective ─────────────────
+    // Always write obj_lotus_first_lesson to AsyncStorage here, regardless
+    // of which screen path called completeLotusLessonNode.  This makes the
+    // store the authority for BOTH player.lessons_completed (player state)
+    // AND the hub guide 15-step chain (AsyncStorage).  Screen components no
+    // longer need their own completeObjective calls — they are removed.
+    // completeObjective is idempotent; reconcileEarlyObjectives at boot is
+    // the secondary fallback for any device that loses AsyncStorage.
+    if (nodeId === 'recognizing-cues-hydration') {
+      try {
+        const { completeObjective, isObjectiveXpGranted, markObjectiveXpGranted } =
+          await import('./objectiveProgress');
+        const isNewObj = await completeObjective('obj_lotus_first_lesson');
+        if (isNewObj) {
+          const alreadyGranted = await isObjectiveXpGranted('obj_lotus_first_lesson');
+          if (!alreadyGranted) {
+            // Objective step XP (10 XP) is separate from node.rewards.xp above.
+            const withObjXp = applyXp(playerRef.current!, 10);
+            playerRef.current = withObjXp;
+            await updateState(withObjXp);
+            await markObjectiveXpGranted('obj_lotus_first_lesson');
+          }
+        }
+      } catch {
+        // Fail silently — reconcileEarlyObjectives at next boot is the fallback.
+      }
+    }
+
     return {
       ok: true,
       message: `+${node.rewards.insightCrystals} Insight Crystals · +${node.rewards.crowns} Ward Coins · +${node.rewards.universityCredits} University Credits · +${node.rewards.xp} XP`,

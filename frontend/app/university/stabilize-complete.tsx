@@ -27,11 +27,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  completeObjective,
-  isObjectiveXpGranted,
-  markObjectiveXpGranted,
-} from "@/src/game/objectiveProgress";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -115,7 +110,7 @@ function RewardBadge({ badge, delay }: { badge: BadgeDef; delay: number }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function StabilizeCompleteScreen() {
   const router = useRouter();
-  const { completeLotusLessonNode, applyRewards } = usePlayer();
+  const { completeLotusLessonNode } = usePlayer();
 
   const [claimed, setClaimed] = useState(false);
   const [ctaReady, setCtaReady] = useState(false);
@@ -125,28 +120,14 @@ export default function StabilizeCompleteScreen() {
   const ctaFade = useRef(new Animated.Value(0)).current;
 
   // ── Grant lotus rewards exactly once ───────────────────────────────────
-  // Also writes obj_lotus_first_lesson to AsyncStorage so the hub guide
-  // advances past "Start First Lotus Lesson" — without this write the hub
-  // kept re-prompting the player even after the chain completed.
+  // completeLotusLessonNode now writes obj_lotus_first_lesson to AsyncStorage
+  // internally — it is the single source of truth for both player state and
+  // the hub guide objective chain.  No separate completeObjective call needed.
   useEffect(() => {
     if (claimed) return;
     setClaimed(true);
-    completeLotusLessonNode(LOTUS_NODE_ID).then(async () => {
-      try {
-        const isNew = await completeObjective("obj_lotus_first_lesson");
-        if (isNew) {
-          const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
-          if (!alreadyGranted) {
-            await applyRewards({ xp: 10 });
-            await markObjectiveXpGranted("obj_lotus_first_lesson");
-          }
-        }
-      } catch {
-        // Fail silently — objective mark is idempotent; hub reconciliation
-        // on next boot will catch any gap via reconcileEarlyObjectives.
-      }
-    }).catch(() => {
-      // Fail silently — reward is cosmetic-safe; node may already be complete
+    completeLotusLessonNode(LOTUS_NODE_ID).catch(() => {
+      // Fail silently — node may already be complete; store is idempotent.
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

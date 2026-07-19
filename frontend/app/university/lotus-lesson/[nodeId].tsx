@@ -141,22 +141,10 @@ export default function LotusLessonScreen() {
     try {
       const res = await completeLotusLessonNode(node.id);
       if (res.ok && res.rewards) setRewards(res.rewards);
-      // Always write the objective — completeObjective is idempotent, so this
-      // is safe even if alreadyDone=true.  The !alreadyDone guard was the root
-      // cause of the re-trigger loop: if the lesson was completed via the
-      // stabilize-chain path (which calls completeLotusLessonNode but not
-      // completeObjective), the objective record was never written, the hub
-      // kept showing "Start First Lotus Lesson", and the player looped forever.
-      if (node.id === "recognizing-cues-hydration") {
-        const isNew = await completeObjective("obj_lotus_first_lesson");
-        if (isNew) {
-          const alreadyGranted = await isObjectiveXpGranted("obj_lotus_first_lesson");
-          if (!alreadyGranted) {
-            await applyRewards({ xp: 10 });
-            await markObjectiveXpGranted("obj_lotus_first_lesson");
-          }
-        }
-      }
+      // obj_lotus_first_lesson and the objective XP are now written inside
+      // completeLotusLessonNode in the store (single source of truth).
+      // The alreadyDoneEarly effect below is kept as a legacy safety net for
+      // accounts that completed the lesson before this change was deployed.
     } catch (_e) {
       // Completion screen still shows even if a non-critical async step fails.
     } finally {
