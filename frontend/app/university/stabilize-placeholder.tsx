@@ -166,7 +166,7 @@ interface ActionTileProps {
 }
 
 function ActionTile({ tile, inChain, disabled, isShaking, shakeAnim, onPress }: ActionTileProps) {
-  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } =
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle, pulseAnim } =
     useHighlightTarget(tile.targetId);
 
   const handlePress = useCallback(() => {
@@ -179,9 +179,7 @@ function ActionTile({ tile, inChain, disabled, isShaking, shakeAnim, onPress }: 
 
   return (
     <Animated.View
-      style={[
-        isShaking && { transform: [{ translateX: shakeAnim }] },
-      ]}
+      style={{ transform: [{ translateX: shakeAnim }, { scale: pulseAnim }] }}
     >
       <Pressable
         style={({ pressed }) => [

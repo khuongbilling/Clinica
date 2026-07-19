@@ -349,7 +349,6 @@ export function TutorialOverlay() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.70)",
     alignItems: "center",
     justifyContent: "center",
     padding: SPACING.lg,
@@ -426,7 +425,6 @@ const styles = StyleSheet.create({
   battleScrim: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 8999,
-    backgroundColor: "rgba(0,0,0,0.45)",
   },
 
   // ── Guided action narrative box (positioned near the highlighted control) ──

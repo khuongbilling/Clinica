@@ -166,7 +166,7 @@ function TriageButton({ def, disabled, onPress }: {
   disabled: boolean;
   onPress: (level: TriageLevel) => void;
 }) {
-  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } =
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle, pulseAnim } =
     useHighlightTarget(def.targetId);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -182,7 +182,7 @@ function TriageButton({ def, disabled, onPress }: {
   }, [disabled, isHighlighted, isTutorialBlocked, def.level, onPress, onTargetPress, scaleAnim]);
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, highlightStyle, isTutorialBlocked && { opacity: 0.22 }]}>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }, { scale: pulseAnim }] }, highlightStyle]}>
       <Pressable
         style={({ pressed }) => [
           styles.triageBtn,

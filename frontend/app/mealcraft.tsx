@@ -205,7 +205,7 @@ interface FoodCardProps {
 }
 
 function FoodCard({ food, onTap, onPlate, plateFull }: FoodCardProps) {
-  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } = useHighlightTarget(
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle, pulseAnim } = useHighlightTarget(
     food.id
   );
 
@@ -221,34 +221,36 @@ function FoodCard({ food, onTap, onPlate, plateFull }: FoodCardProps) {
   const dimmed = onPlate || (plateFull && !isHighlighted);
 
   return (
-    <Pressable
-      testID={food.id}
-      onPress={handlePress}
-      style={[
-        styles.foodCard,
-        { borderColor: food.color + "40" },
-        isHighlighted && (highlightStyle as ViewStyle),
-        dimmed && styles.foodCardDim,
-      ]}
-    >
-      <Text style={styles.foodEmoji}>{food.emoji}</Text>
-      <Text
-        style={[styles.foodLabel, { color: dimmed ? COLORS.onSurfaceTertiary : food.color }]}
-        numberOfLines={2}
+    <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+      <Pressable
+        testID={food.id}
+        onPress={handlePress}
+        style={[
+          styles.foodCard,
+          { borderColor: food.color + "40" },
+          isHighlighted && (highlightStyle as ViewStyle),
+          dimmed && styles.foodCardDim,
+        ]}
       >
-        {food.label}
-      </Text>
-      {onPlate && (
-        <View style={styles.foodCheck}>
-          <Ionicons name="checkmark" size={10} color="#fff" />
-        </View>
-      )}
-      {food.risk && !onPlate && (
-        <View style={styles.riskTag}>
-          <Text style={styles.riskTxt}>!</Text>
-        </View>
-      )}
-    </Pressable>
+        <Text style={styles.foodEmoji}>{food.emoji}</Text>
+        <Text
+          style={[styles.foodLabel, { color: dimmed ? COLORS.onSurfaceTertiary : food.color }]}
+          numberOfLines={2}
+        >
+          {food.label}
+        </Text>
+        {onPlate && (
+          <View style={styles.foodCheck}>
+            <Ionicons name="checkmark" size={10} color="#fff" />
+          </View>
+        )}
+        {food.risk && !onPlate && (
+          <View style={styles.riskTag}>
+            <Text style={styles.riskTxt}>!</Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 

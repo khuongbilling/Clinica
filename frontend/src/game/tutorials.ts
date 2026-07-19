@@ -197,7 +197,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "kingdom_overview",
       title: "Your Sanctuary",
-      body: "This is the Grand Ward Sanctuary, your base to build and expand. It is not a combat zone. Each battle you win earns Codex Shards you can spend on buildings and upgrades here.",
+      body: "SYSTEM: Sanctuary interface loaded. This is the Grand Ward Sanctuary, your base to build and expand. It is not a combat zone. Each battle you win earns Codex Shards you can spend on buildings and upgrades here.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
@@ -205,7 +205,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "kingdom_buildings",
       title: "Sanctuary Inventory",
-      body: "The grid starts mostly empty. Open Sanctuary Inventory to place buildings you have unlocked onto compatible plots. You can move or store them anytime. The Research Library holds your Codex. The Training Hall manages your team. The Apothecary stocks your items.",
+      body: "SYSTEM: Inventory system active. The grid starts mostly empty. Open Sanctuary Inventory to place buildings you have unlocked onto compatible plots. You can move or store them anytime. The Research Library holds your Codex. The Training Hall manages your team. The Apothecary stocks your items.",
       placement: "center",
       requireAction: false,
       nextText: "NEXT",
@@ -222,7 +222,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "kingdom_done",
       title: "Sanctuary Growing",
-      body: "Head to the home screen when you are ready for a clinical encounter. Each battle covers a real nursing concept. The Codex tab holds deeper explanations after you win.",
+      body: "SYSTEM: Orientation complete. Return to the home screen when ready for a clinical encounter. Each battle covers a real nursing concept. The Codex holds deeper explanations after you win.",
       placement: "center",
       requireAction: false,
       nextText: "LET'S GO",

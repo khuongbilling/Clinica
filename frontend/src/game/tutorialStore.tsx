@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { TutorialId, TutorialStep, TUTORIALS } from "./tutorials";
+import { Animated } from "react-native";
 import type { ViewStyle } from "react-native";
 
 const STORAGE_KEY = "clinica.tutorials.v1";
@@ -282,6 +283,7 @@ export function useHighlightTarget(targetId: string): {
   isTutorialBlocked: boolean;
   onTargetPress: () => void;
   highlightStyle: ViewStyle;
+  pulseAnim: Animated.Value;
 } {
   const { requiredTargetId, onTargetTap, currentStep, activeTutorialId } = useTutorial();
   const isHighlighted =
@@ -299,6 +301,25 @@ export function useHighlightTarget(targetId: string): {
   const onTargetPress = useCallback(() => {
     if (isHighlighted) onTargetTap(targetId);
   }, [isHighlighted, onTargetTap, targetId]);
+
+  // Blink pulse: gently scales the highlighted element to draw attention
+  // without darkening any surrounding UI.
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isHighlighted) {
+      pulseAnim.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 480, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0,  duration: 480, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isHighlighted, pulseAnim]);
+
   const highlightStyle: ViewStyle = isHighlighted
     ? {
         zIndex: 9500,
@@ -311,6 +332,6 @@ export function useHighlightTarget(targetId: string): {
         elevation: 20,
       }
     : {};
-  return { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle };
+  return { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle, pulseAnim };
 }
 

@@ -443,7 +443,7 @@ function ActionOrb({
   onTap: (id: string) => void;
   disabled: boolean;
 }) {
-  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle } =
+  const { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle, pulseAnim } =
     useHighlightTarget(action.id);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -493,10 +493,9 @@ function ActionOrb({
     <Animated.View
       style={[
         styles.orbWrap,
-        { transform: [{ scale: scaleAnim }, { translateX: shakeX }] },
+        { transform: [{ scale: scaleAnim }, { scale: pulseAnim }, { translateX: shakeX }] },
         isHighlighted && styles.orbGlow,
         highlightStyle,
-        isTutorialBlocked && { opacity: 0.22 },
       ]}
     >
       <Pressable
