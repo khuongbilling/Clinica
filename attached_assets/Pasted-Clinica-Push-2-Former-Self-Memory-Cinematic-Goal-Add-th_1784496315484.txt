@@ -1,0 +1,68 @@
+Clinica Push 2: Former Self Memory Cinematic
+
+Goal:
+Add the opening memory cinematic that introduces the player’s previous identity before permanent character creation.
+
+The player must not create their permanent character yet.
+
+Temporary protagonist:
+- Display name: The Former Self
+- Dialogue title: The Prodigy
+- Do not show permanent name, pronouns, customizable face, or permanent class.
+
+Visual direction:
+The Former Self should look legendary, powerful, aspirational, and slightly intimidating.
+Use:
+- Long fantasy-medical battle coat
+- Healer, scholar, and warrior armor influences
+- Partially concealed face using mask, visor, hood, high collar, backlight, or glowing eye cover
+- Glowing clinical weapon or medical focus
+- Lotus and heartbeat motifs
+- Gold, white, jade, and crimson energy accents
+- High-level aura and floating instruments
+- Advanced equipment that contrasts with later beginner clothing
+
+Cinematic style:
+Use a fragmented memory format with still art, parallax, particles, lotus petals, light motes, broken medical symbols, and short flashes of battle. If full assets are not available, use polished placeholders in the current Clinica style.
+
+Memory scenes:
+- Former Self healing an entire squad
+- Defeating a major enemy
+- Being praised by healers, scholars, and soldiers
+- Receiving honors
+- Standing over defeated monsters
+- Using advanced abilities
+- Ignoring team members
+- Becoming more isolated with each victory
+
+Narration:
+“Before the Academy…
+Before the System began teaching you what you had forgotten…
+you were already considered a hero.”
+
+“Your name was spoken throughout Clinica.
+Diseases that overwhelmed entire parties fell before you.
+Injuries others feared became little more than inconveniences.”
+
+“Victory came quickly.
+Then repeatedly.”
+
+“With every victory, caution began to feel unnecessary.”
+
+“You began to believe experience made you infallible.”
+
+“That strength could replace observation.”
+
+“That speed could replace judgment.”
+
+“On the day you encountered the Silent Infarction…
+three legends tried to warn you.”
+
+End by transitioning into the tactical battlefield cutscene state.
+
+Acceptance checks:
+- New player sees the Former Self before character creation.
+- The Former Self is not customized and has no permanent identity.
+- The memory montage establishes high power and growing overconfidence.
+- The scene ends by routing to the tactical warning scene.
+- Returning players are unaffected.

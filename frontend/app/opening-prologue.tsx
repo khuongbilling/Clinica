@@ -37,6 +37,7 @@ import {
   prologuePhaseIndex,
   type ProloguePhase,
 } from "@/src/game/prologueTypes";
+import OpeningMemoryCinematic from "@/src/components/prologue/OpeningMemoryCinematic";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -114,6 +115,14 @@ export default function OpeningPrologue() {
   const label      = PROLOGUE_PHASE_LABELS[activePhase];
   const description = PROLOGUE_PHASE_DESCRIPTIONS[activePhase];
   const isLast     = activePhase === PROLOGUE_LAST_PHASE;
+
+  // ── Phase 1: full-screen cinematic takeover ──────────────────────────────
+  // The cinematic manages its own layout, animation, and tap-to-advance UX.
+  // When all 8 memory beats finish it calls handleContinue, which persists
+  // the phase advance to `former_self_battlefield_cutscene`.
+  if (activePhase === "opening_memory_cinematic") {
+    return <OpeningMemoryCinematic onComplete={handleContinue} />;
+  }
 
   return (
     <View style={styles.root}>
