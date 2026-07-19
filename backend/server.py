@@ -317,7 +317,7 @@ async def create_player(payload: PlayerCreate):
             "Isolation Kit": 1,
             "Lab Token": 2,
         },
-        codex_shards=50,
+        codex_shards=100,
         kingdom_levels={
             "grand_ward_atrium": 3,
             "academy_of_healing": 1,
