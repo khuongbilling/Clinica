@@ -247,6 +247,15 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
   };
 
+  // ── Master Bai warning narration (prologue boss only) ─────────────────────
+  const [showBossNarrator, setShowBossNarrator] = useState(false);
+  const dismissBossNarrator = () => {
+    setShowBossNarrator(false);
+    if (player && !player.seen_boss_narrator) {
+      updateState({ ...player, seen_boss_narrator: true });
+    }
+  };
+
   // ── Battle Help glossary ──────────────────────────────────────────────────
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [termTooltip, setTermTooltip] = useState<{ term: string; desc: string } | null>(null);
@@ -1845,12 +1854,17 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             setShowObjective(false);
             if (isPrologueTutorial && !player?.seen_florence_cameo) {
               setShowFlorenceCameo(true);
+            } else if (isPrologueBoss && !player?.seen_boss_narrator) {
+              setShowBossNarrator(true);
             }
           }}
         />
       )}
       {showFlorenceCameo && (
         <FlorenceCameoOverlay onDismiss={dismissFlorenceCameo} />
+      )}
+      {showBossNarrator && (
+        <MasterBaiBossNarratorOverlay onDismiss={dismissBossNarrator} />
       )}
     </SafeAreaView>
   );
@@ -2229,6 +2243,56 @@ function FlorenceCameoOverlay({ onDismiss }: { onDismiss: () => void }) {
           <Text style={styles.camoeDismissTxt}>ENTER THE WARD</Text>
         </Pressable>
         <Text style={styles.cameoHint}>She will not fight alongside you today — but her legacy lights the way.</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function MasterBaiBossNarratorOverlay({ onDismiss }: { onDismiss: () => void }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [typingDone, setTypingDone] = useState(false);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, [fadeAnim]);
+
+  const handleDismiss = () => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start(() => onDismiss());
+  };
+
+  const LINES = [
+    "Master Bai speaks quietly, his voice heavy with weight:",
+    "\"This patient… is beyond what we can do today.\"",
+    "\"The Silent Infarct does not negotiate. It does not tire. It does not forgive a hesitant hand.\"",
+    "\"Fight — not to win, but so your hands remember the weight of what healing truly costs.\"",
+    "\"This lesson will stay with you long after the ward is quiet.\"",
+  ];
+  const fullText = LINES.join("\n\n");
+
+  return (
+    <Pressable style={styles.cameoOverlay} onPress={typingDone ? handleDismiss : undefined} testID="boss-narrator-overlay">
+      <Animated.View style={[styles.cameoCard, { opacity: fadeAnim, borderColor: "#8B2A2A60" }]}>
+        <View style={styles.cameoNarratorRow}>
+          <View style={[styles.cameoNarratorDot, { backgroundColor: MASTER_BAI.color }]} />
+          <Text style={[styles.cameoNarratorName, { color: MASTER_BAI.color }]}>Master Bai</Text>
+        </View>
+        <View style={[styles.cameoLampRow, { borderBottomColor: "#8B2A2A30" }]}>
+          <Text style={styles.cameoLampIcon}>⚠️</Text>
+          <Text style={[styles.cameoHeroName, { color: "#E87070" }]}>Silent Infarct</Text>
+          <Text style={styles.cameoLampIcon}>⚠️</Text>
+        </View>
+        <View style={styles.cameoTextBox}>
+          <TypewriterText
+            text={fullText}
+            style={styles.cameoText}
+            speed={18}
+            onComplete={() => setTypingDone(true)}
+          />
+        </View>
+        <Pressable style={[styles.camoeDismissBtn, { backgroundColor: "#8B2A2A" }]} onPress={handleDismiss} testID="boss-narrator-dismiss">
+          <Text style={styles.camoeDismissTxt}>FACE THE INFARCT</Text>
+        </Pressable>
+        <Text style={styles.cameoHint}>Some battles are fought not to be won — but to be remembered.</Text>
       </Animated.View>
     </Pressable>
   );

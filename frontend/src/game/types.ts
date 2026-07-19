@@ -250,6 +250,10 @@ export interface PlayerState {
   // shown at the start of the prologue tutorial battle. Backfilled as true for
   // existing players (already past the tutorial); false for brand-new players.
   seen_florence_cameo?: boolean;
+  // Prologue boss battle — one-time Master Bai warning narration shown after
+  // the objective modal is dismissed on the scripted-loss Silent Infarct boss.
+  // Backfilled as true for existing players; false for brand-new players.
+  seen_boss_narrator?: boolean;
   // Push 5 — Memory Reminiscence: has the player seen the post-recall
   // reminiscence story scene (modern-world origin -> Silent Infarct -> Lotus
   // Recall)? Gates the one-time redirect from post-recall into /reminiscence.

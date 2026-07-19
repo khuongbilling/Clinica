@@ -196,6 +196,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.claimed_daily_milestones) out = { ...out, claimed_daily_milestones: [] };
   // Florence cameo — existing players are past the tutorial, so backfill as seen.
   if (out.seen_florence_cameo == null) out = { ...out, seen_florence_cameo: true };
+  // Boss narrator — existing players already past the prologue boss, backfill as seen.
+  if (out.seen_boss_narrator == null) out = { ...out, seen_boss_narrator: true };
   // P6 — Normalize chapter_progress based on actual journey node completion.
   // Only ever advances forward; never resets down. Corrects saves where
   // chapter_progress was set to 2 via run count before this push without the
@@ -650,6 +652,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     seen_lv2_unlock: false,
     seen_university_intro: false,
     seen_florence_cameo: false,
+    seen_boss_narrator: false,
     claimed_level_rewards: [],
     claimed_chapter_chests: [],
     claimed_chapter_3star: [],
