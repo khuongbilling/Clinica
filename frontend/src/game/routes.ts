@@ -264,6 +264,31 @@ export const ROUTES = {
 } as const;
 
 /**
+ * Dev-mode validator: checks that every realm building's linkRoute is a known
+ * ROUTES value. Called once at app startup from _layout.tsx so stale strings
+ * surface immediately rather than silently producing dead navigation.
+ * Throws in __DEV__ if any route is unrecognised; warns in production.
+ */
+export function validateRealmRoutes(
+  buildings: ReadonlyArray<{ id?: string; linkRoute?: string }>
+): void {
+  const knownRoutes = new Set<string>(Object.values(ROUTES) as string[]);
+  const bad: string[] = [];
+  for (const b of buildings) {
+    if (b.linkRoute && !knownRoutes.has(b.linkRoute)) {
+      bad.push(`${b.id ?? '?'}: "${b.linkRoute}"`);
+    }
+  }
+  if (bad.length > 0) {
+    const msg = `validateRealmRoutes: unknown linkRoutes — ${bad.join(', ')}`;
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      throw new Error(msg);
+    }
+    console.warn(msg);
+  }
+}
+
+/**
  * Helpers for dynamic (parameterised) routes.
  * These return `AppRoute` so call sites stay type-safe without `as any`.
  */
@@ -277,24 +302,3 @@ export const dynRoute = {
   simulation:  (id: string): AppRoute => `/university/simulation/${id}` as AppRoute,
   department:  (id: string): AppRoute => `/university/department/${id}` as AppRoute,
 } as const;
-
-/**
- * Validates that all `linkRoute` values in the given building list resolve to
- * a known ROUTES path.  Throws in __DEV__ if any route is unrecognised.
- */
-export function validateRealmRoutes(buildings: Array<{ id: string; linkRoute?: string }>): void {
-  const knownRoutes = new Set(Object.values(ROUTES) as string[]);
-  const bad: string[] = [];
-  for (const b of buildings) {
-    if (b.linkRoute && !knownRoutes.has(b.linkRoute)) {
-      bad.push(`${b.id}: "${b.linkRoute}"`);
-    }
-  }
-  if (bad.length > 0) {
-    const msg = `validateRealmRoutes: unknown linkRoutes — ${bad.join(', ')}`;
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      throw new Error(msg);
-    }
-    console.warn(msg);
-  }
-}
