@@ -164,6 +164,7 @@ class Player(BaseModel):
     seen_practice_curriculum: bool = False
     seen_lv2_unlock: bool = False
     seen_reminiscence: bool = False
+    seen_university_intro: bool = False
     tutorial_summon_1_done: bool = False
     tutorial_summon_2_done: bool = False
     story_scenes_seen: List[str] = Field(default_factory=list)
@@ -252,6 +253,7 @@ class PlayerUpdate(BaseModel):
     seen_practice_curriculum: Optional[bool] = None
     seen_lv2_unlock: Optional[bool] = None
     seen_reminiscence: Optional[bool] = None
+    seen_university_intro: Optional[bool] = None
     tutorial_summon_1_done: Optional[bool] = None
     tutorial_summon_2_done: Optional[bool] = None
     story_scenes_seen: Optional[List[str]] = None

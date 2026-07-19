@@ -260,15 +260,77 @@ function MoreRow({ icon, title, desc, locked, onPress, testID }: {
   );
 }
 
+// ── University Intro Panel ────────────────────────────────────────────────────
+// Shown once on first University visit. Re-openable via the help button (?)
+// in the University hero header. Positioned at z5000 — above normal content
+// but below TutorialOverlay (z9000) so the tutorial is never blocked.
+
+const UNI_PILLARS: { icon: React.ComponentProps<typeof Ionicons>["name"]; color: string; title: string; desc: string }[] = [
+  { icon: "book-outline",    color: "#5ECBC8", title: "Lotus Lessons",
+    desc: "Each lesson teaches a clinical cue, concept, or patient care insight — one idea at a time." },
+  { icon: "shield-outline",  color: "#F59E0B", title: "Simulations",
+    desc: "Safe training wards where you practice battle mechanics and care chain skills without stakes." },
+  { icon: "flask-outline",   color: "#A78BFA", title: "Research",
+    desc: "Investigate the Sanctuary archive to discover new items and cards for future battles." },
+  { icon: "diamond-outline", color: "#D4AF37", title: "University Credits",
+    desc: "Earned by completing lessons and labs. Spend them on research, upgrades, and future unlocks." },
+  { icon: "ribbon-outline",  color: "#34D399", title: "Badges",
+    desc: "Show your clinical mastery. Some badges unlock progression gates and hero evolution paths." },
+];
+
+function UniversityIntroPanel({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <Pressable style={uniStyles.overlay} onPress={onDismiss} testID="uni-intro-overlay">
+      <Pressable style={uniStyles.sheet} onPress={(e) => e.stopPropagation()} testID="uni-intro-panel">
+        {/* Header */}
+        <View style={uniStyles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={uniStyles.headerKicker}>CLINICA UNIVERSITY</Text>
+            <Text style={uniStyles.headerTitle}>Your Learning Realm</Text>
+          </View>
+          <Pressable hitSlop={12} onPress={onDismiss} testID="uni-intro-close">
+            <Ionicons name="close" size={22} color={COLORS.onSurfaceSecondary} />
+          </Pressable>
+        </View>
+        <Text style={uniStyles.headerSub}>
+          Five systems work together to grow your healer — inside and outside the ward.
+        </Text>
+
+        {/* Pillar rows */}
+        <View style={uniStyles.pillars}>
+          {UNI_PILLARS.map((p) => (
+            <View key={p.title} style={uniStyles.pillarRow}>
+              <View style={[uniStyles.pillarIcon, { backgroundColor: p.color + "18" }]}>
+                <Ionicons name={p.icon} size={18} color={p.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[uniStyles.pillarTitle, { color: p.color }]}>{p.title}</Text>
+                <Text style={uniStyles.pillarDesc}>{p.desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* CTA */}
+        <Pressable style={uniStyles.ctaBtn} onPress={onDismiss} testID="uni-intro-cta">
+          <Text style={uniStyles.ctaTxt}>ENTER THE UNIVERSITY</Text>
+          <Ionicons name="arrow-forward" size={14} color="#0B1A18" />
+        </Pressable>
+      </Pressable>
+    </Pressable>
+  );
+}
+
 export default function UniversityHubScreen() {
   const router = useRouter();
-  const { player, applyRewards } = usePlayer();
+  const { player, applyRewards, markUniversityIntroSeen } = usePlayer();
   const gate       = useFeatureGate("university");
   const heroesGate = useFeatureGate("hall_of_heroes");
   const { activeTutorialId, onRequiredAction } = useTutorial();
   const [info, setInfo]         = useState<{ title: string; message: string } | null>(null);
   const [showFuture, setShowFuture] = useState(false);
   const [activeTab, setActiveTab]   = useState("lessons");
+  const [showUniIntro, setShowUniIntro] = useState(false);
   const [chainProg, setChainProg] = useState<ChainProgress>({
     cueHuntDone: false, rapidTriageDone: false, stabilizeDone: false,
     cueHuntFirstPerfect: false, triageFirstPerfect: false, stabilizeFirstPerfect: false,
@@ -311,6 +373,20 @@ export default function UniversityHubScreen() {
       if (bonus > 0) await applyRewards({ xp: bonus });
     })();
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // P5 — auto-show the University intro panel once on the player's first visit.
+  // Skip if the tutorial system has an active guided step (it takes priority).
+  useEffect(() => {
+    if (!player || player.seen_university_intro) return;
+    if (activeTutorialId) return;
+    const t = setTimeout(() => setShowUniIntro(true), 400);
+    return () => clearTimeout(t);
+  }, [player?.id, player?.seen_university_intro, activeTutorialId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDismissUniIntro = useCallback(() => {
+    setShowUniIntro(false);
+    markUniversityIntroSeen();
+  }, [markUniversityIntroSeen]);
 
   const handleChainEntry = useCallback(() => {
     if (chainProg.stabilizeDone) return;
@@ -359,9 +435,14 @@ export default function UniversityHubScreen() {
       <PlayerHeader player={player} />
 
       <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
-        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
-          <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
-        </Pressable>
+        <View style={styles.heroTopRow}>
+          <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
+            <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
+          </Pressable>
+          <Pressable style={styles.helpBtn} onPress={() => setShowUniIntro(true)} hitSlop={10} testID="university-help">
+            <Ionicons name="help-circle-outline" size={20} color={COLORS.onSurfaceSecondary} />
+          </Pressable>
+        </View>
         <Text style={styles.kicker}>CLINICA UNIVERSITY</Text>
         <Text style={styles.title}>Where Your Story Begins</Text>
       </View>
@@ -647,6 +728,8 @@ export default function UniversityHubScreen() {
         </ScrollView>
       )}
 
+      {showUniIntro && <UniversityIntroPanel onDismiss={handleDismissUniIntro} />}
+
       <MessageDialog
         visible={!!info}
         title={info?.title ?? ""}
@@ -666,9 +749,17 @@ const styles = StyleSheet.create({
   loading:   { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.sm },
   loadingTxt: { color: COLORS.onSurfaceSecondary, fontSize: 13 },
   hero: { padding: SPACING.lg, paddingTop: SPACING.md, gap: 4 },
+  heroTopRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
   backBtn: {
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  helpBtn: {
+    width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.20)",
   },
   kicker: { color: COLORS.brand, fontSize: 12, letterSpacing: 1, fontWeight: "700" },
   title:  { color: COLORS.onSurface, fontSize: 22, fontWeight: "300" },
@@ -799,4 +890,90 @@ const prepS = StyleSheet.create({
   rowDesc:   { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
   labelChip: { borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
   labelTxt:  { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+});
+
+const uniStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    justifyContent: "flex-end",
+    zIndex: 5000,
+  },
+  sheet: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xl,
+    gap: SPACING.md,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+  },
+  headerKicker: {
+    color: COLORS.brand,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  headerTitle: {
+    color: COLORS.onSurface,
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 26,
+  },
+  headerSub: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: -4,
+  },
+  pillars: {
+    gap: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+    paddingTop: SPACING.sm,
+  },
+  pillarRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+  },
+  pillarIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  pillarTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  pillarDesc: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 1,
+  },
+  ctaBtn: {
+    backgroundColor: "#D4AF37",
+    borderRadius: RADIUS.pill,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginTop: SPACING.xs,
+  },
+  ctaTxt: {
+    color: "#0B1A18",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
 });
