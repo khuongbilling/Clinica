@@ -1292,12 +1292,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                     <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
                       <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
-                        <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={14} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
+                        <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={14} color={SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
                         <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
                         <Text style={styles.apTag}>{cost} AP</Text>
                       </View>
                       <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
-                      <Text style={styles.actionHero} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{skill.systemType || "Universal"}</Text>
+                      <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{SKILL_CHAIN_LABEL[skill.type] ? `${SKILL_CHAIN_LABEL[skill.type]} · ` : ""}{skill.systemType || "Universal"}</Text>
                     </Pressable>
                   </Animated.View>
                 );
@@ -1728,6 +1728,28 @@ const SKILL_TYPE_ICONS: Record<string, string> = {
   cleanse:   "water-outline",
 };
 
+const SKILL_CHAIN_COLOR: Record<string, string> = {
+  scout:     "#5ECBC8",
+  stabilize: "#6EE7B7",
+  strike:    "#FBA94C",
+  analyze:   "#A78BFA",
+  shield:    "#94A3B8",
+  support:   "#34D399",
+  command:   "#F472B6",
+  cleanse:   "#60A5FA",
+};
+
+const SKILL_CHAIN_LABEL: Record<string, string> = {
+  scout:     "Scout",
+  stabilize: "Stabilize",
+  strike:    "Counter",
+  analyze:   "Reassess",
+  shield:    "Protect",
+  support:   "Support",
+  command:   "Command",
+  cleanse:   "Treat",
+};
+
 // ── Battle Glossary ──────────────────────────────────────────────────────────
 
 const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
@@ -1812,9 +1834,9 @@ function CareChainStrip({ chain, isTutorial, currentStepId }: {
               isActive  && { transform: [{ scale: pulseAnim }] },
             ]}>
               {done ? (
-                <Ionicons name="checkmark-circle" size={11} color={COLORS.success} />
+                <Ionicons name="checkmark-circle" size={13} color={COLORS.success} />
               ) : (
-                <Ionicons name={step.icon as any} size={11} color={isActive ? step.color : COLORS.onSurfaceTertiary} />
+                <Ionicons name={step.icon as any} size={13} color={isActive ? step.color : COLORS.onSurfaceTertiary} />
               )}
               <Text style={[
                 styles.stripLabel,
@@ -2139,9 +2161,9 @@ const styles = StyleSheet.create({
   stripStep: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: RADIUS.pill,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -2155,7 +2177,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
     borderWidth: 1.5,
   },
-  stripLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "600" },
+  stripLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
   stripLabelDone: { color: COLORS.success },
 
   // ── Skill-type icon in action buttons ──

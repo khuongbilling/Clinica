@@ -1211,17 +1211,22 @@ export function endPlayerTurn(s: BattleState): BattleState {
   }
   corruption = Math.max(0, corruption + corruptionRegrow);
 
-  const shieldTag = s.shieldNext ? ' (shielded)' : '';
+  // Shield absorbed = damage that would have landed without the shield
+  const rawDmgNoShield = Math.floor(baseDmg * damageMultiplier * waveMultiplier);
+  const shieldAbsorbed = s.shieldNext > 0 ? Math.max(0, rawDmgNoShield - reductionAfterShield) : 0;
+  const shieldNote = shieldAbsorbed > 0
+    ? ` 🛡 Shield blocked ${shieldAbsorbed}% Stability damage. Protection does not block Corruption spread or passive disease effects.`
+    : '';
   if (attack.kind === 'spread') {
     if (spreadBlocked) {
-      log.push(`🧫 Isolation Seal contains ${attack.name}. The spread is blocked — Corruption holds. Stability -${reduced}%${shieldTag}.`);
+      log.push(`🧫 Isolation Seal contains ${attack.name}. Spread blocked — Corruption holds. Stability −${reduced}%.${shieldNote}`);
     } else {
-      log.push(`🦠 ${s.enemy.name} unleashes ${attack.name}. Corruption +${corruptionRegrow}, Stability -${reduced}%${shieldTag}.`);
+      log.push(`🦠 ${s.enemy.name} unleashes ${attack.name}. Corruption +${corruptionRegrow}, Stability −${reduced}%.${shieldNote}`);
     }
   } else if (attack.kind === 'hex') {
-    log.push(`💫 ${s.enemy.name} unleashes ${attack.name}. Your team is hindered — 1 fewer action next turn. Stability -${reduced}%${shieldTag}.`);
+    log.push(`💫 ${s.enemy.name} unleashes ${attack.name}. Team hindered — 1 fewer action next turn. Stability −${reduced}%.${shieldNote}`);
   } else {
-    log.push(`🩸 ${s.enemy.name} unleashes ${attack.name}. Stability -${reduced}%${shieldTag}.`);
+    log.push(`🩸 ${s.enemy.name} unleashes ${attack.name}. Stability −${reduced}%.${shieldNote}`);
   }
 
   if (stability <= 0) {

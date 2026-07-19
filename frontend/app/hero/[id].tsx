@@ -498,21 +498,49 @@ function DetailsTab({ hero, accent }: { hero: any; accent: string }) {
   );
 }
 
+const HERO_CHAIN_COLOR: Record<string, string> = {
+  scout: "#5ECBC8", stabilize: "#6EE7B7", strike: "#FBA94C",
+  analyze: "#A78BFA", shield: "#94A3B8", support: "#34D399",
+  command: "#F472B6", cleanse: "#60A5FA",
+};
+const HERO_CHAIN_LABEL: Record<string, string> = {
+  scout: "Scout", stabilize: "Stabilize", strike: "Counter",
+  analyze: "Reassess", shield: "Protect", support: "Support",
+  command: "Command", cleanse: "Treat",
+};
+const HERO_CHAIN_ICON: Record<string, string> = {
+  scout: "eye-outline", stabilize: "heart-outline", strike: "flash-outline",
+  analyze: "refresh-circle-outline", shield: "shield-outline",
+  support: "people-outline", command: "megaphone-outline", cleanse: "water-outline",
+};
+
 function SkillsTab({ hero, accent }: { hero: any; accent: string }) {
   return (
     <View style={{ gap: SPACING.md }}>
       <SectionHeader title="Skills & Abilities" icon="flash-outline" accent={accent} />
-      {hero.skills.map((s: any) => (
+      {hero.skills.map((s: any) => {
+        const chainColor = HERO_CHAIN_COLOR[s.type] || COLORS.onSurfaceTertiary;
+        const chainLabel = HERO_CHAIN_LABEL[s.type] || s.type;
+        const chainIcon  = HERO_CHAIN_ICON[s.type]  || "ellipse-outline";
+        return (
         <View key={s.id} style={[styles.skillCard, { borderColor: accent + "30" }]}>
           <View style={styles.skillHeader}>
             <View style={{ flex: 1 }}>
               <Text style={styles.skillName}>{s.name}</Text>
-              <Text style={styles.skillType}>{s.type.toUpperCase()}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                <Ionicons name={chainIcon as any} size={11} color={chainColor} />
+                <Text style={[styles.skillType, { color: chainColor }]}>{chainLabel.toUpperCase()}</Text>
+              </View>
             </View>
             <View style={[styles.apChip, { backgroundColor: accent + "20", borderColor: accent + "60" }]}>
               <Text style={[styles.apTxt, { color: accent }]}>{s.cost} AP</Text>
             </View>
           </View>
+          {s.shortEffect && (
+            <View style={styles.skillShortRow}>
+              <Text style={styles.skillShortTxt} numberOfLines={2}>{s.shortEffect}</Text>
+            </View>
+          )}
           <Text style={styles.skillDesc}>{s.description}</Text>
           {s.beginnerExplanation && (
             <View style={styles.explainBox}>
@@ -527,7 +555,8 @@ function SkillsTab({ hero, accent }: { hero: any; accent: string }) {
             </View>
           )}
         </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -1017,6 +1046,11 @@ const styles = StyleSheet.create({
   },
   apTxt:       { fontSize: 11, fontWeight: "700" },
   skillDesc:   { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
+  skillShortRow: {
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm,
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  skillShortTxt: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600" },
   explainBox:  { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm, padding: SPACING.sm, gap: 3 },
   explainLabel:{ color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
   explainTxt:  { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17 },
