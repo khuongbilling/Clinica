@@ -119,6 +119,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'gha_calm_wave', name: 'Calm Wave', type: 'stabilize', systemType: 'Mind', cost: 2, description: 'Emotional de-escalation brings the patient back from the edge. Stabilize +18.', shortEffect: 'Stabilize +18', stabilize: 18, beginnerExplanation: 'Calming the patient helps them recover faster.', nclexExplanation: 'De-escalation reduces cortisol and sympathetic tone, supporting cardiovascular stability.' },
     ],
     evolvedInto: ['mindward_listener'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A gentle female care aide with warm amber eyes and loose dark hair, rounded features, performing a calming hand gesture, soft teal-river robes, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'safety_watch_initiate',
@@ -137,6 +138,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'swi_barrier_seal', name: 'Barrier Seal', type: 'command', systemType: 'Protection', cost: 2, description: 'Containment protocol stops spread and counters infection. Shield 60%, Strike 8.', shortEffect: 'Shield 60% · Strike 8', shield: 60, strike: 8, blockSpread: true, beginnerExplanation: 'Stop the problem from spreading and weaken the infection.', nclexExplanation: 'Contact precautions and source control directly limit transmission and reduce the infectious burden.' },
     ],
     evolvedInto: ['infection_watcher'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An alert young male safety trainee with short cropped hair and watchful eyes, teal shield rune glowing on his chest, teal ward uniform, fantasy hospital ward background with amber lanterns, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'care_chain_initiate',
@@ -155,6 +157,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'cci_quality_shield', name: 'Quality Shield', type: 'shield', systemType: 'Protection', cost: 2, description: 'System safeguard reduces incoming harm and stabilizes the patient.', shortEffect: 'Shield 50 · Stabilize +10', shield: 50, stabilize: 10, beginnerExplanation: 'A well-run system protects the patient and keeps them stable.', nclexExplanation: 'Quality systems — checklists, SBAR, timeout protocols — reduce harm and support safe care delivery.' },
     ],
     evolvedInto: ['quality_sealbearer'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An androgynous non-binary care chain initiate with slight build, holding a clipboard with glowing chain-link rune, silver-teal color scheme, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'comfort_scribe',
@@ -173,6 +176,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'cs_lesson_mark', name: 'Lesson Mark', type: 'stabilize', systemType: 'River', cost: 2, description: 'A well-placed clinical lesson steadies the ward. Stabilize +18.', shortEffect: 'Stabilize +18', stabilize: 18, beginnerExplanation: 'Sharing knowledge keeps everyone steady.', nclexExplanation: 'Education-informed care reduces clinical errors and supports patient stability.' },
     ],
     evolvedInto: ['lesson_lantern'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A scholarly female nurse educator with a neat bun, holding a quill pen, warm tones, gentle smile, teal-warm robes, fantasy hospital ward background with amber lanterns, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'record_keeper_initiate',
@@ -191,6 +195,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'rki_data_strike', name: 'Data Strike', type: 'strike', systemType: 'Storm', cost: 2, description: 'Pattern in the record reveals the exact weakness. Strike 16.', shortEffect: 'Strike 16', strike: 16, beginnerExplanation: 'Finding the right data leads to the right action.', nclexExplanation: 'Clinical data analysis identifies patterns that guide targeted intervention.' },
     ],
     evolvedInto: ['lawbound_advocate'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An analytical male record keeper with glasses motif, holding a stylized chart scroll, teal-dark uniform, focused expression, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Uncommons ──
@@ -213,6 +218,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'wardlight_apprentice',
     evolvedInto: ['night_ward_sentinel'],
+    artPrompt: 'Donghua anime style vivid gacha card. An experienced female ward nurse with silver-streaked hair and calm authority, glowing ward badge, teal nurse cape, fantasy hospital ward background with soft amber lanterns, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'triage_lantern',
@@ -232,6 +238,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'wardlight_apprentice',
     evolvedInto: ['code_guardian'],
+    artPrompt: 'Donghua anime style vivid gacha card. An alert confident male triage nurse with short hair, triage badge glowing teal-red, dynamic alert pose, teal-river uniform, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'mindward_listener',
@@ -251,6 +258,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'gentle_hands_aide',
     evolvedInto: ['crisis_calm_keeper'],
+    artPrompt: 'Donghua anime style vivid gacha card. An empathetic female mental health nurse with long flowing hair and soft blue-mind tones, hands clasped in listening pose, teal-mind robes, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'infection_watcher',
@@ -270,6 +278,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'safety_watch_initiate',
     evolvedInto: ['clean_hands_sentinel'],
+    artPrompt: 'Donghua anime style vivid gacha card. A vigilant male infection control nurse with protective face-shield motif, containment rune glowing on shoulder, teal protective uniform, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'quality_sealbearer',
@@ -289,6 +298,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'care_chain_initiate',
     evolvedInto: ['safety_auditor'],
+    artPrompt: 'Donghua anime style vivid gacha card. A precise androgynous non-binary quality coordinator in a structured teal coat, glowing quality-seal emblem on chest, professional authoritative stance, fantasy hospital ward background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Rares ──
@@ -311,6 +321,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'bedside_guardian',
     evolvedInto: ['lotus_care_captain'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A veteran female night-shift nurse with dramatic night lighting, silver-teal armor with protective runes, commanding presence, glowing ward badge, fantasy hospital night ward background, luminous teal-silver aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'crisis_calm_keeper',
@@ -331,6 +342,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'mindward_listener',
     evolvedInto: ['mind_lotus_healer'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A grounded male psychiatric crisis specialist with calm authority, warm-toned teal robes, therapeutic presence, glowing mind-calm rune, fantasy hospital ward background with night atmosphere, luminous warm-teal glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'safety_auditor',
@@ -351,6 +363,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'quality_sealbearer',
     evolvedInto: ['patient_safety_arbiter'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. An authoritative female patient safety officer holding a glowing data-scroll, safety runes radiating light, structured teal-silver coat, fantasy hospital ward background, luminous silver-teal aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
 
   // ── Epics ──
@@ -418,6 +431,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'ba_air_treatment', name: 'Air Treatment', type: 'stabilize', systemType: 'Air', cost: 2, description: 'Targeted respiratory treatment. Stabilize +18 · Strike 8 vs Air.', shortEffect: 'Air • Stabilize +18 · Strike 8', stabilize: 18, strike: 8, beginnerExplanation: 'Give the right breathing treatment to help the patient and fight the problem.', nclexExplanation: 'Nebulized bronchodilators and oxygen delivery both restore oxygenation and reduce the inflammatory burden on airways.' },
     ],
     evolvedInto: ['breath_lantern'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A gentle female respiratory aide with a stethoscope around her neck, hopeful expression, soft sky-blue uniform, fantasy ICU breath-mist atrium background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'airway_apprentice',
@@ -436,6 +450,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'aa_suction_strike', name: 'Suction Strike', type: 'strike', systemType: 'Air', cost: 2, description: 'Targeted airway clearance removes obstruction. Strike 14.', shortEffect: 'Strike 14', strike: 14, beginnerExplanation: 'Clearing the obstruction directly weakens the problem.', nclexExplanation: 'Suctioning removes secretions that obstruct airflow and serve as medium for pathogen growth, directly reducing infectious and mechanical burden.' },
     ],
     evolvedInto: ['emergency_airway_warden'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A focused male airway trainee with short neat hair, airway tool belt, ready alert stance, sky-blue uniform, fantasy ICU background with wind-silver motifs, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'pulsewind_initiate',
@@ -454,6 +469,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'pi_breath_train', name: 'Breath Training', type: 'stabilize', systemType: 'Air', cost: 2, description: 'Respiratory retraining restores lung capacity. Stabilize +20.', shortEffect: 'Air • Stabilize +20', stabilize: 20, beginnerExplanation: 'Teaching the patient to breathe better directly improves their condition.', nclexExplanation: 'Pursed-lip breathing, diaphragmatic breathing, and incentive spirometry improve tidal volume and reduce air trapping.' },
     ],
     evolvedInto: ['pulmonary_guide'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A female respiratory trainee in listening pose with a long ponytail, spiral breath-note rune floating beside her, sky-blue wind-silver robes, fantasy ICU breath-mist background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'nebula_trainee',
@@ -472,6 +488,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'nt_nebula_mist', name: 'Nebula Mist', type: 'strike', systemType: 'Air', cost: 2, description: 'Nebulized treatment targets airway inflammation. Strike 12 · Stabilize +10.', shortEffect: 'Strike 12 · Stabilize +10', strike: 12, stabilize: 10, beginnerExplanation: 'The mist medicine fights the problem and helps recovery at once.', nclexExplanation: 'Nebulized bronchodilators reduce bronchospasm while anti-inflammatory agents decrease airway wall edema, improving patency and airflow.' },
     ],
     evolvedInto: ['sleepwind_keeper'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A dreamy non-binary sleep medicine trainee with mist-cloud motifs woven into soft robes, starlit breath aura, soft androgynous silhouette, fantasy breath-mist atrium background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'vapor_aide',
@@ -490,6 +507,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'va_aerosol_push', name: 'Aerosol Push', type: 'strike', systemType: 'Air', cost: 2, description: 'Targeted aerosol medication delivery. Strike 12, Stabilize +8.', shortEffect: 'Strike 12 · Stabilize +8', strike: 12, stabilize: 8, beginnerExplanation: 'The aerosol medication goes right to the source of the problem.', nclexExplanation: 'Inhaled medications achieve high local drug concentration in airways with minimal systemic side effects.' },
     ],
     evolvedInto: ['icu_breathkeeper'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A calm analytical male respiratory aide with a nebulizer mask around his chin, blue-steam motif on uniform, thoughtful expression, sky-blue and white outfit, fantasy ICU background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'cascade_aide',
@@ -507,6 +525,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'ca_o2_read', name: 'O2 Read', type: 'analyze', systemType: 'Air', cost: 1, description: 'Assess oxygen needs and reveal respiratory clues. Reveal 1.', shortEffect: 'Analyze • Reveal 1', reveal: 1, beginnerExplanation: 'Check the patient\'s oxygen carefully to find what\'s needed.', nclexExplanation: 'SpO2 monitoring, blood gas analysis, and flow rate titration form the foundation of oxygen therapy management.' },
       { id: 'ca_cascade_flow', name: 'Cascade Flow', type: 'stabilize', systemType: 'Air', cost: 2, description: 'Precise oxygen delivery cascade. Stabilize +20, Strike 8.', shortEffect: 'Stabilize +20 · Strike 8', stabilize: 20, strike: 8, beginnerExplanation: 'The right amount of oxygen at the right time helps both recovery and fighting the disease.', nclexExplanation: 'Titrated oxygen therapy maintains SpO2 in therapeutic range, preventing both hypoxemia and oxygen toxicity.' },
     ],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A female oxygen therapy aide with flowing hair, cascade-water-air motif on her robe, gentle movement pose suggesting flowing breath, sky-blue and silver robes, fantasy ICU background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Uncommons ──
@@ -528,6 +547,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'breath_aide',
     evolvedInto: ['breathstride_therapist'],
+    artPrompt: 'Donghua anime style vivid gacha card. An elegant female respiratory therapist with silver-blue hair holding a glowing breath lantern, luminous wind-silver and sky-blue robes, structured elegant pose, fantasy ICU breath-mist atrium background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'emergency_airway_warden',
@@ -547,6 +567,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'airway_apprentice',
     evolvedInto: ['airway_warden'],
+    artPrompt: 'Donghua anime style vivid gacha card. A heroic male emergency airway specialist with airway staff raised in action pose, crimson-blue accent on sky-blue armor, confident decisive expression, fantasy ICU emergency background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'pulmonary_guide',
@@ -566,6 +587,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'pulsewind_initiate',
     evolvedInto: ['breathstride_therapist'],
+    artPrompt: 'Donghua anime style vivid gacha card. A composed female pulmonary specialist with a silver hair streak, holding a lung-map scroll, measured calm expression, instructor pose, sky-blue and silver robes, fantasy ICU grand hall background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'sleepwind_keeper',
@@ -585,6 +607,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'nebula_trainee',
     evolvedInto: ['night_breath_warden'],
+    artPrompt: 'Donghua anime style vivid gacha card. A dreamy non-binary sleep medicine specialist with a crescent motif on gentle flowing robes, starfield and moon detail in sky-blue and silver, androgynous night-keeper appearance, fantasy breath-mist night atrium background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'icu_breathkeeper',
@@ -604,6 +627,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'vapor_aide',
     evolvedInto: ['ventilation_strategist'],
+    artPrompt: 'Donghua anime style vivid gacha card. An intense focused male ICU respiratory therapist with ventilator-circuit robe accents in sky-blue and silver, critical care specialist look, determined expression, fantasy ICU background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Rares ──
@@ -626,6 +650,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'pulmonary_guide',
     evolvedInto: ['breathstride_master'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A confident female respiratory therapist mid-stride with multiple therapy tools, luminous wind ribbon aura trailing her movement, sky-blue and silver armor-robes, fantasy ICU breath-mist background, luminous silver-blue glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'airway_warden',
@@ -645,6 +670,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'aw_warden_shield', name: 'Warden Shield', type: 'shield', systemType: 'Protection', cost: 2, description: 'Master-level airway protection. Shield 80.', shortEffect: 'Shield 80', shield: 80, beginnerExplanation: 'Expert prevention from an airway master is one of the strongest protective forces available.', nclexExplanation: 'Preoxygenation, apneic oxygenation, and a prepared rescue plan minimize hypoxic exposure during emergency airway management.' },
     ],
     evolvedFrom: 'emergency_airway_warden',
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A masterful male airway specialist with commanding stance holding dual complex airway tools, silver-blue glow emanating from his hands, intricate sky-blue and silver armor, fantasy ICU emergency background, luminous silver-blue aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'night_breath_warden',
@@ -665,6 +691,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'sleepwind_keeper',
     evolvedInto: ['dreamlung_keeper'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A sentinel female sleep medicine specialist with moon and night motifs, deep indigo-blue robes with polysomnography rune glowing, night guardian stance, fantasy nocturnal ICU background, luminous indigo-blue aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
 
   // ── Epics ──
@@ -712,6 +739,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'as_clinical_note', name: 'Clinical Note', type: 'scout', systemType: 'Universal', cost: 2, description: 'Careful documentation of findings. Reveal 2 clues.', shortEffect: 'Scout • Reveal 2', reveal: 2, beginnerExplanation: 'Writing down every observation finds the most important clues.', nclexExplanation: 'Systematic documentation of physical examination findings improves diagnostic accuracy and interdisciplinary communication.' },
     ],
     evolvedInto: ['resident_of_dawn'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A studious female anatomy student with round glasses and a violet quill, holding an anatomy scroll, warm scholarly expression, purple-indigo academic robes, fantasy grand rounds hall background with floating data runes, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'whitecoat_initiate',
@@ -730,6 +758,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'wi_emergency_strike', name: 'Emergency Strike', type: 'strike', systemType: 'Storm', cost: 2, description: 'Emergency intervention. Strike 18.', shortEffect: 'Strike 18', strike: 18, beginnerExplanation: 'A fast, decisive emergency treatment hits the crisis hard.', nclexExplanation: 'Empiric treatment based on clinical gestalt reduces time-to-treatment in high-acuity emergency presentations.' },
     ],
     evolvedInto: ['codefire_physician'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An eager young male medical student in a crisp white coat with a storm-purple badge, confident hopeful expression, fantasy grand rounds hall background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'image_apprentice',
@@ -748,6 +777,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'ia_scan_strike', name: 'Scan Strike', type: 'strike', systemType: 'Mind', cost: 2, description: 'Image-guided precision attack. Reveal 1 · Strike 14.', shortEffect: 'Reveal 1 · Strike 14', reveal: 1, strike: 14, beginnerExplanation: 'Using imaging to guide a precise treatment hits the exact source of the problem.', nclexExplanation: 'Image-guided procedures enable targeted intervention with reduced collateral damage to surrounding tissue.' },
     ],
     evolvedInto: ['radiant_lens'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An analytical female radiology trainee with a scanning glove motif, a holographic image rune floating beside her, analytical expression, purple-white diagnostic coat, fantasy grand rounds background with floating data runes, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'sample_runner',
@@ -766,6 +796,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'sr_lab_strike', name: 'Lab Strike', type: 'strike', systemType: 'Storm', cost: 2, description: 'Diagnostic precision attack. Reveal 1 · Strike 14.', shortEffect: 'Reveal 1 · Strike 14', reveal: 1, strike: 14, beginnerExplanation: 'Laboratory results guide the best attack on the disease.', nclexExplanation: 'Culture and sensitivity results direct targeted antibiotic therapy, eliminating empiric broad-spectrum coverage.' },
     ],
     evolvedInto: ['lablight_technologist'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A determined male laboratory trainee in a white lab coat, specimen vials glowing at his belt, quick determined stride, purple-indigo uniform, fantasy clinical laboratory background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'vial_keeper',
@@ -784,6 +815,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'vk_archive_strike', name: 'Archive Strike', type: 'strike', systemType: 'Storm', cost: 2, description: 'Hematological precision attack. Strike 14.', shortEffect: 'Strike 14', strike: 14, beginnerExplanation: 'Using blood results to find exactly where to strike the disease.', nclexExplanation: 'Hematological diagnosis enables targeted therapy — iron for iron-deficiency anemia, B12 for megaloblastic, hydroxyurea for sickle cell.' },
     ],
     evolvedInto: ['hematology_threader'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A precise sharp-featured female hematology trainee with blood-vial motifs glowing on her robe, analytical expression, crimson-purple diagnostic coat, fantasy clinical laboratory background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'pathlight_initiate',
@@ -801,6 +833,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'pli_micro_read', name: 'Micro Read', type: 'scout', systemType: 'Mind', cost: 1, description: 'Microscopic analysis reveals pathogen. Reveal 2 clues.', shortEffect: 'Scout • Reveal 2', reveal: 2, beginnerExplanation: 'Looking at cells under the microscope finds what is causing the illness.', nclexExplanation: 'Histopathology identifies cellular morphology changes that confirm diagnoses of infection, malignancy, or inflammatory disease.' },
       { id: 'pli_path_strike', name: 'Path Strike', type: 'strike', systemType: 'Mind', cost: 2, description: 'Targeted pathological intervention. Strike 14 · Reveal 1.', shortEffect: 'Strike 14 · Reveal 1', strike: 14, reveal: 1, beginnerExplanation: 'Understanding the disease at the cellular level guides a powerful, precise attack.', nclexExplanation: 'Pathological diagnosis of disease mechanism enables selection of targeted therapy matched to the specific disease process.' },
     ],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An androgynous non-binary pathology trainee with a microscope lens motif and glowing cellular spiral rune, academic androgynous look, purple-silver academic robes, fantasy grand rounds hall background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Uncommons ──
@@ -822,6 +855,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'anatomy_scribe',
     evolvedInto: ['wardround_doctor'],
+    artPrompt: 'Donghua anime style vivid gacha card. A hopeful female medical resident with morning light behind her, holding a SOAP scroll with glowing runes, early-career optimistic expression, purple-white diagnostic coat, fantasy grand rounds hall with dawn light, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'codefire_physician',
@@ -841,6 +875,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'whitecoat_initiate',
     evolvedInto: ['code_sage'],
+    artPrompt: 'Donghua anime style vivid gacha card. A decisive sharp male emergency physician with fire-storm energy crackling around him, code badge glowing storm-purple, decisive commanding expression, white-purple emergency coat, fantasy emergency grand rounds background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'radiant_lens',
@@ -860,6 +895,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'image_apprentice',
     evolvedInto: ['spiral_ct_seer'],
+    artPrompt: 'Donghua anime style vivid gacha card. A calm analytical female radiologist with radiant light streaming from her fingertips, imaging glow around her, analytical serene expression, purple-white diagnostic coat, fantasy imaging suite background with floating runes, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'lablight_technologist',
@@ -879,6 +915,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'sample_runner',
     evolvedInto: ['microbe_seer'],
+    artPrompt: 'Donghua anime style vivid gacha card. A measured scientific male lab technologist in a white coat with glowing specimen analysis tools, precise expression, purple-storm diagnostic uniform, fantasy clinical laboratory background with floating data runes, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'hematology_threader',
@@ -898,6 +935,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'vial_keeper',
     evolvedInto: ['blood_archive_warden'],
+    artPrompt: 'Donghua anime style vivid gacha card. A focused androgynous non-binary hematology specialist weaving blood-thread motifs with glowing crimson-silver threads between fingers, androgynous sharp features, purple-crimson academic robes, fantasy diagnostic hall background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Rares ──
@@ -920,6 +958,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'resident_of_dawn',
     evolvedInto: ['hearthline_attending'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. An elegant senior female physician in flowing rounds coat with a glowing diagnostic orb of purple light, authority and wisdom in her expression, purple-gold trim diagnostic coat, fantasy grand rounds hall background, luminous purple-indigo aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'spiral_ct_seer',
@@ -940,6 +979,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'radiant_lens',
     evolvedInto: ['trauma_image_oracle'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A commanding male radiologist with CT scanner ring motifs orbiting him, deep indigo robes with diagnostic spiral aura, analytical masterful expression, fantasy grand imaging hall background, luminous indigo-purple glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'microbe_seer',
@@ -960,6 +1000,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'lablight_technologist',
     evolvedInto: ['pathogen_seer'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A precise female clinical microbiologist with luminous pathogen-map aura surrounding her, microscopic vision motif in her eyes, precise authoritative expression, purple-silver diagnostic coat, fantasy clinical lab background with floating microbe runes, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
 
   // ── Epics ──
@@ -1007,6 +1048,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'sha_remedy_strike', name: 'Remedy Strike', type: 'strike', systemType: 'Filter', cost: 2, description: 'Targeted pharmacological intervention. Strike 14 · Stabilize +8.', shortEffect: 'Strike 14 · Stabilize +8', strike: 14, stabilize: 8, beginnerExplanation: 'The right medicine fights the disease and helps the patient recover.', nclexExplanation: 'Accurate medication dispensing and administration ensures therapeutic drug levels for optimal disease management.' },
     ],
     evolvedInto: ['lotus_apothecary'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A pleasant organized female pharmacy technician trainee with golden-emerald uniform, standing before glowing fantasy pharmacy shelves, warm pleasant expression, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'dose_scribe',
@@ -1025,6 +1067,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'dsc_dose_strike', name: 'Dose Strike', type: 'strike', systemType: 'Filter', cost: 2, description: 'Precise medication intervention. Strike 14 · Block Spread.', shortEffect: 'Strike 14 · Block Spread', strike: 14, blockSpread: true, beginnerExplanation: 'The right dose at the right time stops the problem and prevents it from spreading.', nclexExplanation: 'Correct dosing eliminates therapeutic gaps and prevents subtherapeutic levels that allow pathogen persistence.' },
     ],
     evolvedInto: ['clinic_dosekeeper'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A precise focused male medication safety trainee holding a dosing rune scroll, neat expression, emerald-golden uniform, fantasy apothecary background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'mortar_initiate',
@@ -1043,6 +1086,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'mi_mortar_strike', name: 'Mortar Strike', type: 'strike', systemType: 'Filter', cost: 2, description: 'Custom formulation targets the exact need. Strike 14 · Stabilize +8.', shortEffect: 'Strike 14 · Stabilize +8', strike: 14, stabilize: 8, beginnerExplanation: 'A custom-made medicine fits the patient\'s specific needs better than any pre-made option.', nclexExplanation: 'Compounded medications achieve bioavailability, concentration, and delivery route optimized for the specific patient context.' },
     ],
     evolvedInto: ['compound_hand'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A female apothecary trainee with a glowing mortar and pestle, herb accents decorating her emerald robes, warm compounding expression, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'garden_apprentice',
@@ -1061,6 +1105,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'ga_garden_heal', name: 'Garden Heal', type: 'stabilize', systemType: 'Growth', cost: 2, description: 'Therapeutic nutrition intervention. Stabilize +18.', shortEffect: 'Stabilize +18', stabilize: 18, beginnerExplanation: 'The right nutrition plan directly improves the patient\'s recovery.', nclexExplanation: 'Adequate protein and micronutrient intake is essential for wound healing, immune function, and muscle recovery from acute illness.' },
     ],
     evolvedInto: ['lotus_dietitian'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A warm outdoor-facing male nutrition trainee with earthy tones and leaf motifs on emerald-green robes, herbal garden setting, open warm expression, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'plate_initiate',
@@ -1079,6 +1124,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'pli_balance_strike', name: 'Balance Strike', type: 'strike', systemType: 'Filter', cost: 2, description: 'Metabolic intervention targets glucose dysregulation. Strike 14 · Stabilize +8.', shortEffect: 'Strike 14 · Stabilize +8', strike: 14, stabilize: 8, beginnerExplanation: 'The right combination of nutrition and medication brings blood sugar under control.', nclexExplanation: 'Combined insulin management and dietary modification reduces hyperglycemic burden and its inflammatory consequences.' },
     ],
     evolvedInto: ['glucose_lantern'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A warm female diabetes educator trainee with a colorful glowing nutrition plate rune, food motifs decorating golden-emerald robes, encouraging expression, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'hydration_scribe',
@@ -1097,6 +1143,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'hsc_hydration_restore', name: 'Hydration Restore', type: 'stabilize', systemType: 'Filter', cost: 2, description: 'Fluid and electrolyte restoration. Stabilize +20 · Reveal 1.', shortEffect: 'Stabilize +20 · Reveal 1', stabilize: 20, reveal: 1, beginnerExplanation: 'Restoring the right fluid balance makes the patient significantly more stable.', nclexExplanation: 'Rehydration and electrolyte replacement correct the physiological disturbances that drive cardiac arrhythmia, confusion, and organ dysfunction.' },
     ],
     evolvedInto: ['renal_balance_keeper'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A gentle androgynous non-binary fluid balance trainee with water-fluid motifs flowing through silver-green robes, androgynous gentle appearance, fantasy apothecary water garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Uncommons ──
@@ -1118,6 +1165,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'shelfmark_apprentice',
     evolvedInto: ['ward_pharmacist'],
+    artPrompt: 'Donghua anime style vivid gacha card. An elegant female senior apothecary with flowing emerald robes adorned with a glowing lotus-formula rune, authoritative apothecary presence, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'clinic_dosekeeper',
@@ -1137,6 +1185,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'dose_scribe',
     evolvedInto: ['medication_safety_arbiter'],
+    artPrompt: 'Donghua anime style vivid gacha card. A precise structured male clinical pharmacist with a glowing dose-seal emblem on his chest, green-emerald professional uniform, clinical precision expression, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'compound_hand',
@@ -1156,6 +1205,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'mortar_initiate',
     evolvedInto: ['antidote_alchemist'],
+    artPrompt: 'Donghua anime style vivid gacha card. A focused female compounding pharmacist with intricate formula runes glowing on her hands and specialized compounding tools, emerald-gold robes, fantasy apothecary workshop background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'lotus_dietitian',
@@ -1175,6 +1225,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'garden_apprentice',
     evolvedInto: ['metabolic_garden_sage'],
+    artPrompt: 'Donghua anime style vivid gacha card. A warm female clinical dietitian with a glowing lotus-leaf tray motif, warm golden-green palette robes, nutrition expertise expression, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'glucose_lantern',
@@ -1194,6 +1245,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'plate_initiate',
     evolvedInto: ['diabetes_garden_sage'],
+    artPrompt: 'Donghua anime style vivid gacha card. A confident male metabolic specialist holding a glowing amber-green metabolic light lantern, metabolic specialist stance, emerald-amber robes, fantasy apothecary garden background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Rares ──
@@ -1216,6 +1268,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'lotus_apothecary',
     evolvedInto: ['formula_strategist'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A senior female clinical pharmacist with a glowing formula staff and luminous emerald aura radiating from her hands, authoritative pharmacy presence, fantasy apothecary garden background, luminous emerald-gold glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'antidote_alchemist',
@@ -1235,6 +1288,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'aa_counter_shield', name: 'Counter Shield', type: 'shield', systemType: 'Filter', cost: 2, description: 'Antidote protocol prevention shield. Shield 80 · Stabilize +12.', shortEffect: 'Shield 80 · Stabilize +12', shield: 80, stabilize: 12, beginnerExplanation: 'The antidote protocol protects the patient from further toxic damage while healing.', nclexExplanation: 'Antidote therapy combined with supportive care prevents progression of organ toxicity while the body eliminates or metabolizes the toxic agent.' },
     ],
     evolvedFrom: 'compound_hand',
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A dramatic male alchemist raising a glowing antidote vial as golden-green alchemical energy bursts around him, heroic alchemical stance, emerald-gold robes, fantasy apothecary laboratory background, luminous golden-emerald aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'metabolic_garden_sage',
@@ -1255,6 +1309,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'lotus_dietitian',
     evolvedInto: ['vital_garden_sage'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A wise senior female metabolic sage in a seated garden pose with a luminous metabolic-map rune floating before her, silver-green flowing robes, wisdom and calm expression, fantasy apothecary garden background, luminous silver-green aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
 
   // ── Epics ──
@@ -1302,6 +1357,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'swa_stride_push', name: 'Stride Push', type: 'strike', systemType: 'Forge', cost: 2, description: 'Progressive mobility challenge fights deconditioning. Strike 12 · Stabilize +8.', shortEffect: 'Strike 12 · Stabilize +8', strike: 12, stabilize: 8, beginnerExplanation: 'Challenging the patient appropriately weakens the disease and builds their strength.', nclexExplanation: 'Progressive exercise therapy reverses muscle protein catabolism and improves mitochondrial function, directly counteracting disease-related deconditioning.' },
     ],
     evolvedInto: ['gait_lantern'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A warm orange-bronze uniformed male PT aide with a step-by-step motion trail glowing underfoot, encouraging aide expression, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'gait_apprentice',
@@ -1320,6 +1376,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'gap_neuro_push', name: 'Neuro Push', type: 'strike', systemType: 'Forge', cost: 2, description: 'Neuroplasticity-driven rehabilitation. Strike 12 · Stabilize +10.', shortEffect: 'Strike 12 · Stabilize +10', strike: 12, stabilize: 10, beginnerExplanation: 'Targeted brain-based therapy promotes neuroplasticity and fights the underlying injury.', nclexExplanation: 'Task-specific repetitive training drives cortical neuroplasticity and functional recovery after stroke and traumatic brain injury.' },
     ],
     evolvedInto: ['neurostep_seer'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A light athletic female PT trainee in a walking pose with a gait-analysis rune glowing underfoot, warm amber-orange athletic uniform, dynamic movement expression, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'stretch_hand',
@@ -1338,6 +1395,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'sth_restore_push', name: 'Restore Push', type: 'stabilize', systemType: 'Forge', cost: 2, description: 'Therapeutic exercise restores function. Stabilize +18.', shortEffect: 'Stabilize +18', stabilize: 18, beginnerExplanation: 'The right exercises restore strength and stability to the injured area.', nclexExplanation: 'Progressive therapeutic exercise rebuilds musculotendinous strength, joint proprioception, and movement confidence after injury.' },
     ],
     evolvedInto: ['bonepath_guide'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A flexible male PT trainee in a dynamic stretch pose with muscle-motion runes glowing on his arms, warm orange-bronze athletic outfit, flexibility and strength expression, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'function_aide',
@@ -1356,6 +1414,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'fa_ot_restore', name: 'OT Restore', type: 'stabilize', systemType: 'Energy', cost: 2, description: 'Occupational therapy intervention restores function. Stabilize +18.', shortEffect: 'Stabilize +18', stabilize: 18, beginnerExplanation: 'OT exercises directly restore the patient\'s ability to take care of themselves.', nclexExplanation: 'Occupational therapy interventions — adaptive equipment, modified technique, environmental modification — maximize participation in meaningful daily activities.' },
     ],
     evolvedInto: ['lifeweave_therapist'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An encouraging female OT aide with a warm amber-toned set of daily-function tools, warm encouraging expression, amber-orange OT uniform, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'routine_keeper',
@@ -1374,6 +1433,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'rk_routine_restore', name: 'Routine Restore', type: 'stabilize', systemType: 'Mind', cost: 2, description: 'Structured routine restoration. Stabilize +16 · Reveal 1.', shortEffect: 'Stabilize +16 · Reveal 1', stabilize: 16, reveal: 1, beginnerExplanation: 'Restoring the patient\'s daily structure helps their brain and overall recovery.', nclexExplanation: 'Structured activity scheduling improves orientation, executive function, and independence in patients with cognitive impairment.' },
     ],
     evolvedInto: ['mindroutine_keeper'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An organized male cognitive rehab trainee with a schedule motif and glowing timer rune, structured neat expression, warm amber-bronze uniform, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'grip_apprentice',
@@ -1392,6 +1452,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'ga_grip_restore', name: 'Grip Restore', type: 'stabilize', systemType: 'Forge', cost: 2, description: 'Fine motor rehabilitation. Stabilize +16.', shortEffect: 'Stabilize +16', stabilize: 16, beginnerExplanation: 'Targeted hand exercises rebuild fine motor control step by step.', nclexExplanation: 'Tendon gliding exercises, nerve mobilization, and fine motor activities drive peripheral nerve regeneration and motor skill relearning after hand injury.' },
     ],
     evolvedInto: ['handseal_artisan'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An androgynous non-binary hand therapy trainee with hands extended forward showing a grip-strength rune, bronze-orange athletic outfit, androgynous confident expression, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Uncommons ──
@@ -1413,6 +1474,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'stepwise_aide',
     evolvedInto: ['acute_step_warden'],
+    artPrompt: 'Donghua anime style vivid gacha card. A guiding female physical therapist with a glowing path of light underfoot, motion-ribbon aura trailing her movement, guiding outstretched pose, warm orange-amber robes, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'neurostep_seer',
@@ -1432,6 +1494,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'gait_apprentice',
     evolvedInto: ['neurostep_sage'],
+    artPrompt: 'Donghua anime style vivid gacha card. A focused intellectual-athletic male neurological PT with a brain-step map rune glowing beside him, intellectual-athletic blend expression, orange-bronze robes, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'bonepath_guide',
@@ -1451,6 +1514,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'stretch_hand',
     evolvedInto: ['iron_tendon_adept'],
+    artPrompt: 'Donghua anime style vivid gacha card. An authoritative warm female musculoskeletal physiotherapist with structural strength motifs and skeletal runes on her orange-bronze coat, authoritative warm expression, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'lifeweave_therapist',
@@ -1470,6 +1534,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'function_aide',
     evolvedInto: ['lifeweaver'],
+    artPrompt: 'Donghua anime style vivid gacha card. A balanced androgynous non-binary occupational therapist weaving glowing motion ribbons between hands, flowing amber robes, balanced and graceful expression, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'mindroutine_keeper',
@@ -1489,6 +1554,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'routine_keeper',
     evolvedInto: ['cognitive_rehab_specialist'],
+    artPrompt: 'Donghua anime style vivid gacha card. A calm structured intellectual male cognitive rehab specialist with a mind-map rune glowing beside him, organized thoughtful expression, warm amber-bronze robes, fantasy rehabilitation pavilion background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Rares ──
@@ -1511,6 +1577,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'gait_lantern',
     evolvedInto: ['mobility_commander'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A dynamic female acute PT specialist in a heroic stride with luminous stride aura trailing her steps, athletic armor-light outfit in orange-amber, commanding rehabilitation specialist expression, fantasy rehabilitation pavilion background, luminous amber-orange glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'iron_tendon_adept',
@@ -1530,6 +1597,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'ita_tendon_shield', name: 'Tendon Shield', type: 'shield', systemType: 'Forge', cost: 2, description: 'Connective tissue protection protocol. Shield 75 · Stabilize +10.', shortEffect: 'Shield 75 · Stabilize +10', shield: 75, stabilize: 10, beginnerExplanation: 'A protective protocol allows healing while preventing re-injury.', nclexExplanation: 'Load management protocols protect healing connective tissue from overload while maintaining the mechanical stimulus needed for collagen maturation.' },
     ],
     evolvedFrom: 'bonepath_guide',
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A powerful male orthopedic physiotherapy specialist with tendon-strength runes glowing bronze on his muscular arms, heroic strong stance, bronze-orange specialist uniform, fantasy rehabilitation pavilion background, luminous bronze glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'cognitive_rehab_specialist',
@@ -1549,6 +1617,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'crs_mind_shield', name: 'Mind Shield', type: 'shield', systemType: 'Mind', cost: 2, description: 'Cognitive protective protocol. Shield 75 · Stabilize +10.', shortEffect: 'Shield 75 · Stabilize +10', shield: 75, stabilize: 10, beginnerExplanation: 'Building cognitive protective strategies prevents further deterioration.', nclexExplanation: 'Cognitive reserve building through stimulating activity, sleep optimization, and stress management provides protective buffer against further cognitive decline.' },
     ],
     evolvedFrom: 'mindroutine_keeper',
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A calm authoritative female cognitive rehabilitation specialist with a glowing mind-map orb and cognitive rune radiating warm light, serene wisdom expression, warm bronze-amber specialist coat, fantasy rehabilitation pavilion background, luminous warm-bronze aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
 
   // ── Epics ──
@@ -1596,6 +1665,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'vha_health_teach', name: 'Health Teach', type: 'support', systemType: 'Growth', cost: 2, description: 'Community health education. Stabilize +18 · Reveal 1.', shortEffect: 'Stabilize +18 · Reveal 1', stabilize: 18, reveal: 1, beginnerExplanation: 'Teaching the community about health prevention directly reduces disease burden.', nclexExplanation: 'Community health education reduces incidence of vaccine-preventable disease, improves chronic disease self-management, and increases health-seeking behavior.' },
     ],
     evolvedInto: ['community_lantern'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A warm-smiling female community health worker with a sage-blue uniform and a village-map scroll glowing in her hands, open welcoming expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'banner_scribe',
@@ -1614,6 +1684,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'bsc_health_message', name: 'Health Message', type: 'stabilize', systemType: 'Growth', cost: 2, description: 'Health promotion campaign. Stabilize +16 · Shield 40.', shortEffect: 'Stabilize +16 · Shield 40', stabilize: 16, shield: 40, beginnerExplanation: 'A well-designed health message protects the community and aids recovery.', nclexExplanation: 'Evidence-based health promotion reduces population risk factor burden, leading to fewer clinical presentations of preventable disease.' },
     ],
     evolvedInto: ['health_banner_guide'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A herald-stance male health promotion trainee holding a proclamation scroll with glowing banner motif, midnight blue herald uniform, announcer expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'clean_water_runner',
@@ -1632,6 +1703,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'cwr_clean_shield', name: 'Clean Shield', type: 'shield', systemType: 'Protection', cost: 2, description: 'Environmental containment protocol. Shield 50 · Stabilize +12.', shortEffect: 'Shield 50 · Stabilize +12', shield: 50, stabilize: 12, beginnerExplanation: 'Cleaning up environmental hazards protects the community and helps recovery.', nclexExplanation: 'Environmental remediation reduces ongoing exposure and allows natural recovery from environmentally-driven disease.' },
     ],
     evolvedInto: ['clean_water_sentinel'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An active female environmental health trainee with water-current rune flowing from her hands, blue-green environmental motifs on sage-blue robes, active determined pose, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'care_guide',
@@ -1650,6 +1722,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'cg_system_bridge', name: 'System Bridge', type: 'support', systemType: 'Energy', cost: 2, description: 'System navigation and resource connection. Stabilize +18 · Shield 40.', shortEffect: 'Stabilize +18 · Shield 40', stabilize: 18, shield: 40, beginnerExplanation: 'Connecting the patient to the right resources builds their recovery and protects them from falling through the gaps.', nclexExplanation: 'Social work intervention reduces hospital readmission by addressing post-discharge social vulnerability through targeted community resource linkage.' },
     ],
     evolvedInto: ['resource_lantern'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A calm directional male social work trainee with a guiding hand gesture and glowing waypoint rune, sage-midnight blue uniform, guiding calm expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'return_path_scribe',
@@ -1668,6 +1741,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'rps_return_guide', name: 'Return Guide', type: 'support', systemType: 'Energy', cost: 2, description: 'Discharge coordination and education. Stabilize +18 · Shield 40.', shortEffect: 'Stabilize +18 · Shield 40', stabilize: 18, shield: 40, beginnerExplanation: 'A well-coordinated discharge keeps the patient recovering safely outside the hospital.', nclexExplanation: 'Structured discharge education and care coordination reduces 30-day readmission by preparing the patient and family for post-hospital self-management.' },
     ],
     evolvedInto: ['discharge_planner'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. A hopeful female discharge planning trainee with a glowing discharge pathway scroll, map motif in sage-midnight palette, hopeful optimistic expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'data_threader_initiate',
@@ -1686,6 +1760,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'dti_thread_strike', name: 'Thread Strike', type: 'strike', systemType: 'Energy', cost: 2, description: 'Data-guided targeted intervention. Strike 14 · Reveal 1.', shortEffect: 'Strike 14 · Reveal 1', strike: 14, reveal: 1, beginnerExplanation: 'Using health data to guide the exact treatment leads to the most precise intervention.', nclexExplanation: 'Clinical decision support systems leverage patient-specific data to suggest evidence-based treatments, reducing clinical variation and improving outcomes.' },
     ],
     evolvedInto: ['chartweave_analyst'],
+    artPrompt: 'Donghua anime style soft-toned gacha card. An androgynous non-binary health informatics trainee with glowing data-thread strings forming a map visualization between fingers, tech-nature blend style, midnight blue-sage green robes, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Uncommons ──
@@ -1707,6 +1782,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'village_health_aide',
     evolvedInto: ['pattern_seer'],
+    artPrompt: 'Donghua anime style vivid gacha card. A warm female community health nurse holding a lantern high with gathering community motif around her, sage-blue robes with starlight accents, warm community presence expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'health_banner_guide',
@@ -1725,6 +1801,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'hbg_guide_shield', name: 'Guide Shield', type: 'shield', systemType: 'Growth', cost: 2, description: 'Population health protection campaign. Shield 60 · Stabilize +14.', shortEffect: 'Shield 60 · Stabilize +14', shield: 60, stabilize: 14, beginnerExplanation: 'A targeted health campaign both protects the community and supports recovery from illness.', nclexExplanation: 'Evidence-based health promotion campaigns reduce population risk factor burden and improve chronic disease management outcomes.' },
     ],
     evolvedFrom: 'banner_scribe',
+    artPrompt: 'Donghua anime style vivid gacha card. A herald-armored male public health educator with a public health banner raised high, midnight blue herald armor with sage accents, commanding public health expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'clean_water_sentinel',
@@ -1744,6 +1821,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'clean_water_runner',
     evolvedInto: ['environmental_seal_warden'],
+    artPrompt: 'Donghua anime style vivid gacha card. A guardian-stance female environmental health officer with a glowing water-shield rune and sentinel protective pose, sage-blue guardian armor, environmental protector expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'resource_lantern',
@@ -1763,6 +1841,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'care_guide',
     evolvedInto: ['medical_hearthworker'],
+    artPrompt: 'Donghua anime style vivid gacha card. A guiding male social worker with a glowing lantern map motif showing resource distribution pathways, midnight blue-sage robes, guiding compassionate expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
   {
     id: 'discharge_planner',
@@ -1782,6 +1861,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'return_path_scribe',
     evolvedInto: ['continuity_binder'],
+    artPrompt: 'Donghua anime style vivid gacha card. An organized female discharge coordinator with a structured pathway scroll and planner motif, warm midnight-sage tones in professional uniform, organized competent expression, fantasy public health citadel background, Genshin-style cel shading, soft clean linework, luminous colors, portrait orientation.',
   },
 
   // ── Rares ──
@@ -1804,6 +1884,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'community_lantern',
     evolvedInto: ['outbreak_commander'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. An analytical female epidemiologist with a luminous epidemiological pattern map and outbreak-aura surrounding her, authoritative analytical presence, midnight blue-sage robes with starlight accents, fantasy public health command center background, luminous sage-blue glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'environmental_seal_warden',
@@ -1823,6 +1904,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
       { id: 'esw_clean_seal', name: 'Clean Seal', type: 'shield', systemType: 'Protection', cost: 2, description: 'Environmental protective certification. Shield 80 · Block Spread.', shortEffect: 'Shield 80 · Block Spread', shield: 80, blockSpread: true, beginnerExplanation: 'A certified clean environment is the strongest protection against environmental disease.', nclexExplanation: 'Environmental health certification and ongoing monitoring create a protective barrier against future environmental disease burden.' },
     ],
     evolvedFrom: 'clean_water_sentinel',
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A powerful male environmental health warden in environmental health armor with a glowing seal-rune shield and nature-star energy radiating around him, guardian protective stance, midnight blue-sage green armor, fantasy public health citadel background, luminous nature-star glow, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
   {
     id: 'chartweave_analyst',
@@ -1843,6 +1925,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
     ],
     evolvedFrom: 'data_threader_initiate',
     evolvedInto: ['informatics_architect'],
+    artPrompt: 'Donghua anime style luminous glowing gacha card. A luminous female health informaticist weaving glowing chart-threads into a data visualization web, analytic presence radiating luminous data light, midnight blue-sage specialist robes, fantasy public health data citadel background, luminous blue-sage aura, Genshin-style cel shading, soft clean linework, portrait orientation.',
   },
 
   // ── Epics ──

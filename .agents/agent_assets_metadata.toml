@@ -1446,3 +1446,927 @@ id = "nC8XGYyzsnPaqgLrS2iZ7"
 uri = "file://frontend/assets/enemies/ward_cascade.png"
 type = "image"
 title = "ward cascade boss enemy sprite"
+
+[[generated]]
+id = "3U6hu3X-rh-vFUwfsFT2L"
+uri = "file://frontend/assets/heroes/wardlight_apprentice.png"
+type = "image"
+title = "wardlight_apprentice portrait"
+
+[[generated]]
+id = "eYEeCeSt4pc2znQD0Iik6"
+uri = "file://frontend/assets/heroes/battle/wardlight_apprentice.png"
+type = "image"
+title = "wardlight_apprentice battle"
+
+[[generated]]
+id = "BUE7-DcJmAZTNSM18XK5k"
+uri = "file://frontend/assets/heroes/gentle_hands_aide.png"
+type = "image"
+title = "gentle_hands_aide portrait"
+
+[[generated]]
+id = "wtQilul5qoIJhmanL4_-E"
+uri = "file://frontend/assets/heroes/battle/gentle_hands_aide.png"
+type = "image"
+title = "gentle_hands_aide battle"
+
+[[generated]]
+id = "bgoLFykQSRHmdGQPZWo2o"
+uri = "file://frontend/assets/heroes/safety_watch_initiate.png"
+type = "image"
+title = "safety_watch_initiate portrait"
+
+[[generated]]
+id = "54ZI0f59Crhk5bs-fIzVv"
+uri = "file://frontend/assets/heroes/battle/safety_watch_initiate.png"
+type = "image"
+title = "safety_watch_initiate battle"
+
+[[generated]]
+id = "NM-pm2XcwQwGfY51wYO_2"
+uri = "file://frontend/assets/heroes/care_chain_initiate.png"
+type = "image"
+title = "care_chain_initiate portrait"
+
+[[generated]]
+id = "GHs_PVuuIaBJTrtwgTs79"
+uri = "file://frontend/assets/heroes/battle/care_chain_initiate.png"
+type = "image"
+title = "care_chain_initiate battle"
+
+[[generated]]
+id = "WLVn_Xv9xUNgxHS-9SXPV"
+uri = "file://frontend/assets/heroes/comfort_scribe.png"
+type = "image"
+title = "comfort_scribe portrait"
+
+[[generated]]
+id = "eHYZCUhNYwisACLQWawh2"
+uri = "file://frontend/assets/heroes/battle/comfort_scribe.png"
+type = "image"
+title = "comfort_scribe battle"
+
+[[generated]]
+id = "WdDFYkKxVDNZadSky8aA2"
+uri = "file://frontend/assets/heroes/quality_sealbearer.png"
+type = "image"
+title = "quality_sealbearer portrait"
+
+[[generated]]
+id = "RLdwQ_wyUoR--PHb8DXbD"
+uri = "file://frontend/assets/heroes/battle/quality_sealbearer.png"
+type = "image"
+title = "quality_sealbearer battle"
+
+[[generated]]
+id = "-w3MIg83_cMJcfwX_Gb0T"
+uri = "file://frontend/assets/heroes/night_ward_sentinel.png"
+type = "image"
+title = "night_ward_sentinel portrait"
+
+[[generated]]
+id = "7BBsI5HOBEIe7Qvdn1UUM"
+uri = "file://frontend/assets/heroes/battle/night_ward_sentinel.png"
+type = "image"
+title = "night_ward_sentinel battle"
+
+[[generated]]
+id = "0f3mOBWvyu44Pg6XoUOGp"
+uri = "file://frontend/assets/heroes/crisis_calm_keeper.png"
+type = "image"
+title = "crisis_calm_keeper portrait"
+
+[[generated]]
+id = "NDn4oMGYIZrjdz9jeWdA6"
+uri = "file://frontend/assets/heroes/battle/crisis_calm_keeper.png"
+type = "image"
+title = "crisis_calm_keeper battle"
+
+[[generated]]
+id = "5wv3Oc3zJUBAgJw7YKRmO"
+uri = "file://frontend/assets/heroes/safety_auditor.png"
+type = "image"
+title = "safety_auditor portrait"
+
+[[generated]]
+id = "-w22dQrzLPbS8F6A9WXNn"
+uri = "file://frontend/assets/heroes/battle/safety_auditor.png"
+type = "image"
+title = "safety_auditor battle"
+
+[[generated]]
+id = "njwQzC3FTVwE1d6BeZy7K"
+uri = "file://frontend/assets/heroes/breath_aide.png"
+type = "image"
+title = "breath_aide portrait"
+
+[[generated]]
+id = "aoMwayBSjFlhBQnxwsO_K"
+uri = "file://frontend/assets/heroes/battle/breath_aide.png"
+type = "image"
+title = "breath_aide battle"
+
+[[generated]]
+id = "2Q5CS04lIneUkK-f3MBr8"
+uri = "file://frontend/assets/heroes/record_keeper_initiate.png"
+type = "image"
+title = "record_keeper_initiate portrait"
+
+[[generated]]
+id = "E6kCAIhnwuR9J_79SX85q"
+uri = "file://frontend/assets/heroes/airway_apprentice.png"
+type = "image"
+title = "airway_apprentice portrait"
+
+[[generated]]
+id = "RneyEgcEwM-rYGLobyMfx"
+uri = "file://frontend/assets/heroes/battle/airway_apprentice.png"
+type = "image"
+title = "airway_apprentice battle"
+
+[[generated]]
+id = "Tfxk4avx4YkpeqlP8JfPK"
+uri = "file://frontend/assets/heroes/pulsewind_initiate.png"
+type = "image"
+title = "pulsewind_initiate portrait"
+
+[[generated]]
+id = "IDJIARuQ3_utUJCEPbmYh"
+uri = "file://frontend/assets/heroes/breath_lantern.png"
+type = "image"
+title = "breath_lantern portrait"
+
+[[generated]]
+id = "FOp_Dpc0_0rBsB6Cntbwa"
+uri = "file://frontend/assets/heroes/breathstride_therapist.png"
+type = "image"
+title = "breathstride_therapist portrait"
+
+[[generated]]
+id = "nCmbVJlB75YsbD0VhQo4n"
+uri = "file://frontend/assets/heroes/battle/bedside_guardian.png"
+type = "image"
+title = "bedside_guardian battle"
+
+[[generated]]
+id = "bQ80NJ9sxjBCWkuvFufmG"
+uri = "file://frontend/assets/heroes/battle/breath_lantern.png"
+type = "image"
+title = "breath_lantern battle"
+
+[[generated]]
+id = "Oz9dKXp-f5qK-a1I80k4z"
+uri = "file://frontend/assets/heroes/battle/breathstride_therapist.png"
+type = "image"
+title = "breathstride_therapist battle"
+
+[[generated]]
+id = "3-9gX-TDYkdSjNBUW3rVn"
+uri = "file://frontend/assets/heroes/nebula_trainee.png"
+type = "image"
+title = "nebula_trainee portrait"
+
+[[generated]]
+id = "cVcHGK8fQCP1zXEEJArts"
+uri = "file://frontend/assets/heroes/emergency_airway_warden.png"
+type = "image"
+title = "emergency_airway_warden portrait"
+
+[[generated]]
+id = "b4cOpPyFTi3KeD7dzpn-J"
+uri = "file://frontend/assets/heroes/image_apprentice.png"
+type = "image"
+title = "image_apprentice portrait"
+
+[[generated]]
+id = "I-DKrCX0_7UjDV4xrjrm-"
+uri = "file://frontend/assets/heroes/battle/triage_lantern.png"
+type = "image"
+title = "triage_lantern battle"
+
+[[generated]]
+id = "270e0YnhD6oP_0n4JhqVu"
+uri = "file://frontend/assets/heroes/codefire_physician.png"
+type = "image"
+title = "codefire_physician portrait"
+
+[[generated]]
+id = "WR4MaUdMEMS4mD0lOZ7rH"
+uri = "file://frontend/assets/heroes/battle/emergency_airway_warden.png"
+type = "image"
+title = "emergency_airway_warden battle"
+
+[[generated]]
+id = "JlAp_cemwq8FuvWwUDLYG"
+uri = "file://frontend/assets/heroes/battle/airway_warden.png"
+type = "image"
+title = "airway_warden battle"
+
+[[generated]]
+id = "jvpX3rE5aHk2ZGtcw2aa2"
+uri = "file://frontend/assets/heroes/mindward_listener.png"
+type = "image"
+title = "mindward_listener portrait"
+
+[[generated]]
+id = "q2pqQ66XaHE7gBfLucT54"
+uri = "file://frontend/assets/heroes/battle/codefire_physician.png"
+type = "image"
+title = "codefire_physician battle"
+
+[[generated]]
+id = "xhtm9CiQ4C5SI2KAAQz_B"
+uri = "file://frontend/assets/heroes/pulmonary_guide.png"
+type = "image"
+title = "pulmonary_guide portrait"
+
+[[generated]]
+id = "Wm_bFTQKXKxS61_7Bjx4V"
+uri = "file://frontend/assets/heroes/compound_hand.png"
+type = "image"
+title = "compound_hand portrait"
+
+[[generated]]
+id = "xxbJeLsbzOQhVVsTVVa0T"
+uri = "file://frontend/assets/heroes/spiral_ct_seer.png"
+type = "image"
+title = "spiral_ct_seer portrait"
+
+[[generated]]
+id = "G1yVDdBMROeP66INlx_t7"
+uri = "file://frontend/assets/heroes/night_breath_warden.png"
+type = "image"
+title = "night_breath_warden portrait"
+
+[[generated]]
+id = "guekAvBkvUAYJ7bW11x4S"
+uri = "file://frontend/assets/heroes/sample_runner.png"
+type = "image"
+title = "sample_runner portrait"
+
+[[generated]]
+id = "GU4vMC4oLcq2-NK-_qIE1"
+uri = "file://frontend/assets/heroes/battle/mindward_listener.png"
+type = "image"
+title = "mindward_listener battle"
+
+[[generated]]
+id = "kC9E91vE62iNYI5bH5cp9"
+uri = "file://frontend/assets/heroes/radiant_lens.png"
+type = "image"
+title = "radiant_lens portrait"
+
+[[generated]]
+id = "vpfB_3grjXScJbAux5b5A"
+uri = "file://frontend/assets/heroes/battle/pulmonary_guide.png"
+type = "image"
+title = "pulmonary_guide battle"
+
+[[generated]]
+id = "rCbor8Zg1rLcHeV4FUu-e"
+uri = "file://frontend/assets/heroes/battle/compound_hand.png"
+type = "image"
+title = "compound_hand battle"
+
+[[generated]]
+id = "n4wLsMp1nW3UTWV20E2JT"
+uri = "file://frontend/assets/heroes/battle/spiral_ct_seer.png"
+type = "image"
+title = "spiral_ct_seer battle"
+
+[[generated]]
+id = "JmFLU3QcDtzxoGjoHDcfe"
+uri = "file://frontend/assets/heroes/battle/night_breath_warden.png"
+type = "image"
+title = "night_breath_warden battle"
+
+[[generated]]
+id = "kOEzrVB48zVLsn2U6b9AG"
+uri = "file://frontend/assets/heroes/infection_watcher.png"
+type = "image"
+title = "infection_watcher portrait"
+
+[[generated]]
+id = "4iTKQtYVZqFO4pVKXRh8v"
+uri = "file://frontend/assets/heroes/metabolic_garden_sage.png"
+type = "image"
+title = "metabolic_garden_sage portrait"
+
+[[generated]]
+id = "6Dhz9-1O7OL1zbDVEKzxx"
+uri = "file://frontend/assets/heroes/battle/radiant_lens.png"
+type = "image"
+title = "radiant_lens battle"
+
+[[generated]]
+id = "-YchebLQkUPGpRm0y04C_"
+uri = "file://frontend/assets/heroes/sleepwind_keeper.png"
+type = "image"
+title = "sleepwind_keeper portrait"
+
+[[generated]]
+id = "6syZRIPrYu4ngOmIdiOzO"
+uri = "file://frontend/assets/heroes/routine_keeper.png"
+type = "image"
+title = "routine_keeper portrait"
+
+[[generated]]
+id = "PuY2f5Xjk4lOfnW649_rL"
+uri = "file://frontend/assets/heroes/lotus_dietitian.png"
+type = "image"
+title = "lotus_dietitian portrait"
+
+[[generated]]
+id = "wjriBYsnh9JEvUbTg9G64"
+uri = "file://frontend/assets/heroes/microbe_seer.png"
+type = "image"
+title = "microbe_seer portrait"
+
+[[generated]]
+id = "qyCCSOFtP2EYmtBI1GBDF"
+uri = "file://frontend/assets/heroes/anatomy_scribe.png"
+type = "image"
+title = "anatomy_scribe portrait"
+
+[[generated]]
+id = "g7a1Q6x9SCugLKRiBVL_s"
+uri = "file://frontend/assets/heroes/battle/cascade_aide.png"
+type = "image"
+title = "cascade_aide battle"
+
+[[generated]]
+id = "3YlFggX2qahcL1m0eUJ3q"
+uri = "file://frontend/assets/heroes/battle/infection_watcher.png"
+type = "image"
+title = "infection_watcher battle"
+
+[[generated]]
+id = "VyWQCCbKONXON9EMzUGfc"
+uri = "file://frontend/assets/heroes/battle/metabolic_garden_sage.png"
+type = "image"
+title = "metabolic_garden_sage battle"
+
+[[generated]]
+id = "fNhbkpz2KJ_JJuRWa1zPG"
+uri = "file://frontend/assets/heroes/lablight_technologist.png"
+type = "image"
+title = "lablight_technologist portrait"
+
+[[generated]]
+id = "X6mzIDeUo8iyk02LTu2UE"
+uri = "file://frontend/assets/heroes/garden_apprentice.png"
+type = "image"
+title = "garden_apprentice portrait"
+
+[[generated]]
+id = "y3FKLY1PS3oW9rNaoylqt"
+uri = "file://frontend/assets/heroes/data_threader_initiate.png"
+type = "image"
+title = "data_threader_initiate portrait"
+
+[[generated]]
+id = "JrLq8eVXetob13uEwDH07"
+uri = "file://frontend/assets/heroes/lifeweave_therapist.png"
+type = "image"
+title = "lifeweave_therapist portrait"
+
+[[generated]]
+id = "digdPJ5ZtUoyHzL27qVcg"
+uri = "file://frontend/assets/heroes/discharge_planner.png"
+type = "image"
+title = "discharge_planner portrait"
+
+[[generated]]
+id = "7dBxfBiqEEsmKGJrKj4iM"
+uri = "file://frontend/assets/heroes/battle/sleepwind_keeper.png"
+type = "image"
+title = "sleepwind_keeper battle"
+
+[[generated]]
+id = "URd_9vYPwOgeLwvAZljAU"
+uri = "file://frontend/assets/heroes/battle/routine_keeper.png"
+type = "image"
+title = "routine_keeper battle"
+
+[[generated]]
+id = "jpJCjZjmE7tBbpVUn0RSK"
+uri = "file://frontend/assets/heroes/battle/lotus_dietitian.png"
+type = "image"
+title = "lotus_dietitian battle"
+
+[[generated]]
+id = "kRJZy75hTa6hMblSwOdaW"
+uri = "file://frontend/assets/heroes/battle/microbe_seer.png"
+type = "image"
+title = "microbe_seer battle"
+
+[[generated]]
+id = "zgFs6Vnpl6gMLMcnvhPBJ"
+uri = "file://frontend/assets/heroes/village_health_aide.png"
+type = "image"
+title = "village_health_aide portrait"
+
+[[generated]]
+id = "W8piVufybogabpFGNPuNv"
+uri = "file://frontend/assets/heroes/battle/vial_keeper.png"
+type = "image"
+title = "vial_keeper battle"
+
+[[generated]]
+id = "C5JmUsezmjPGWr9IecVBX"
+uri = "file://frontend/assets/heroes/stepwise_aide.png"
+type = "image"
+title = "stepwise_aide portrait"
+
+[[generated]]
+id = "PNSCQzQjC61I8UqOmT3FI"
+uri = "file://frontend/assets/heroes/battle/lablight_technologist.png"
+type = "image"
+title = "lablight_technologist battle"
+
+[[generated]]
+id = "J_xujuBMr1vWHr9t1m3C5"
+uri = "file://frontend/assets/heroes/battle/garden_apprentice.png"
+type = "image"
+title = "garden_apprentice battle"
+
+[[generated]]
+id = "-1RpnHApRRICXAVkhTow6"
+uri = "file://frontend/assets/heroes/battle/data_threader_initiate.png"
+type = "image"
+title = "data_threader_initiate battle"
+
+[[generated]]
+id = "9sv6i8JAqWutIPtv2PaGk"
+uri = "file://frontend/assets/heroes/battle/lifeweave_therapist.png"
+type = "image"
+title = "lifeweave_therapist battle"
+
+[[generated]]
+id = "6GVz4Ur_lZjKqkLWbEJ-0"
+uri = "file://frontend/assets/heroes/battle/discharge_planner.png"
+type = "image"
+title = "discharge_planner battle"
+
+[[generated]]
+id = "VmuHrXmzSI6neDhibb7du"
+uri = "file://frontend/assets/heroes/icu_breathkeeper.png"
+type = "image"
+title = "icu_breathkeeper portrait"
+
+[[generated]]
+id = "t3oeTrJKKJ8QO2vuH_Rs5"
+uri = "file://frontend/assets/heroes/grip_apprentice.png"
+type = "image"
+title = "grip_apprentice portrait"
+
+[[generated]]
+id = "oOA8RVLX-sbDQaioWApno"
+uri = "file://frontend/assets/heroes/glucose_lantern.png"
+type = "image"
+title = "glucose_lantern portrait"
+
+[[generated]]
+id = "TBVBzoZeW3n_hJBVu3CR0"
+uri = "file://frontend/assets/heroes/shelfmark_apprentice.png"
+type = "image"
+title = "shelfmark_apprentice portrait"
+
+[[generated]]
+id = "7OYq5pWA-iFZFNmdO_NvM"
+uri = "file://frontend/assets/heroes/whitecoat_initiate.png"
+type = "image"
+title = "whitecoat_initiate portrait"
+
+[[generated]]
+id = "ddKbanUv_0O-T3p1ebI4J"
+uri = "file://frontend/assets/heroes/battle/village_health_aide.png"
+type = "image"
+title = "village_health_aide battle"
+
+[[generated]]
+id = "0Q3KrO8ac3hlsZDolBtzR"
+uri = "file://frontend/assets/heroes/pathlight_initiate.png"
+type = "image"
+title = "pathlight_initiate portrait"
+
+[[generated]]
+id = "YvWuv87rBRE3USmzfOrg_"
+uri = "file://frontend/assets/heroes/battle/stepwise_aide.png"
+type = "image"
+title = "stepwise_aide battle"
+
+[[generated]]
+id = "R60ijLJ4j-Un0shTz04zF"
+uri = "file://frontend/assets/heroes/hematology_threader.png"
+type = "image"
+title = "hematology_threader portrait"
+
+[[generated]]
+id = "qRfXVSUQnOyGBToxxvYiY"
+uri = "file://frontend/assets/heroes/plate_initiate.png"
+type = "image"
+title = "plate_initiate portrait"
+
+[[generated]]
+id = "_7xJp2qM245gDPcjy3Rcw"
+uri = "file://frontend/assets/heroes/community_lantern.png"
+type = "image"
+title = "community_lantern portrait"
+
+[[generated]]
+id = "8P36IFlvvaellTHIQXLTr"
+uri = "file://frontend/assets/heroes/mindroutine_keeper.png"
+type = "image"
+title = "mindroutine_keeper portrait"
+
+[[generated]]
+id = "Q7tGUZgs5uftOgOv54Snv"
+uri = "file://frontend/assets/heroes/pattern_seer.png"
+type = "image"
+title = "pattern_seer portrait"
+
+[[generated]]
+id = "OJPnxyAh8l96POGcEXzIC"
+uri = "file://frontend/assets/heroes/battle/icu_breathkeeper.png"
+type = "image"
+title = "icu_breathkeeper battle"
+
+[[generated]]
+id = "6iV9FbFpVqtrdGv3nGNV8"
+uri = "file://frontend/assets/heroes/battle/grip_apprentice.png"
+type = "image"
+title = "grip_apprentice battle"
+
+[[generated]]
+id = "HKCLmOQ7QUK3fMb0WouQ8"
+uri = "file://frontend/assets/heroes/battle/glucose_lantern.png"
+type = "image"
+title = "glucose_lantern battle"
+
+[[generated]]
+id = "fJyvQKFY-wjBmZMiEWqNt"
+uri = "file://frontend/assets/heroes/battle/shelfmark_apprentice.png"
+type = "image"
+title = "shelfmark_apprentice battle"
+
+[[generated]]
+id = "Yzf8JSKz83G4ZofylJ5e4"
+uri = "file://frontend/assets/heroes/banner_scribe.png"
+type = "image"
+title = "banner_scribe portrait"
+
+[[generated]]
+id = "J98LWmsGCDnQCVUuxcxzR"
+uri = "file://frontend/assets/heroes/battle/pathlight_initiate.png"
+type = "image"
+title = "pathlight_initiate battle"
+
+[[generated]]
+id = "HZteUbN1PBQdvR24qNMFG"
+uri = "file://frontend/assets/heroes/gait_apprentice.png"
+type = "image"
+title = "gait_apprentice portrait"
+
+[[generated]]
+id = "Dgc_LXCfzdYLbpT12LX8k"
+uri = "file://frontend/assets/heroes/battle/hematology_threader.png"
+type = "image"
+title = "hematology_threader battle"
+
+[[generated]]
+id = "1nLPQjctPh_lPF8MCOM_r"
+uri = "file://frontend/assets/heroes/battle/plate_initiate.png"
+type = "image"
+title = "plate_initiate battle"
+
+[[generated]]
+id = "gJgzUwcLtb1Xq1qQ63MV1"
+uri = "file://frontend/assets/heroes/battle/community_lantern.png"
+type = "image"
+title = "community_lantern battle"
+
+[[generated]]
+id = "_diQYKH6Y328dwNhjPgl9"
+uri = "file://frontend/assets/heroes/battle/mindroutine_keeper.png"
+type = "image"
+title = "mindroutine_keeper battle"
+
+[[generated]]
+id = "xHna9HBls4n4POBquSHZd"
+uri = "file://frontend/assets/heroes/battle/pattern_seer.png"
+type = "image"
+title = "pattern_seer battle"
+
+[[generated]]
+id = "tGvY10QoLaxtDczcDlduF"
+uri = "file://frontend/assets/heroes/gait_lantern.png"
+type = "image"
+title = "gait_lantern portrait"
+
+[[generated]]
+id = "4Xw5-jHF4zEcWDv3HvpYG"
+uri = "file://frontend/assets/heroes/ward_pharmacist.png"
+type = "image"
+title = "ward_pharmacist portrait"
+
+[[generated]]
+id = "BUtwHPmRRh0cMXPgB4e0H"
+uri = "file://frontend/assets/heroes/dose_scribe.png"
+type = "image"
+title = "dose_scribe portrait"
+
+[[generated]]
+id = "qVYcq00aG7thqE4OC_MRd"
+uri = "file://frontend/assets/heroes/battle/banner_scribe.png"
+type = "image"
+title = "banner_scribe battle"
+
+[[generated]]
+id = "CQlEpSNN3MU3Ou7GGA2d0"
+uri = "file://frontend/assets/heroes/resident_of_dawn.png"
+type = "image"
+title = "resident_of_dawn portrait"
+
+[[generated]]
+id = "IOrS1XY43k4q-D-Qi7Xpc"
+uri = "file://frontend/assets/heroes/battle/gait_apprentice.png"
+type = "image"
+title = "gait_apprentice battle"
+
+[[generated]]
+id = "yz1SrBSQDGe9o4uiJokse"
+uri = "file://frontend/assets/heroes/wardround_doctor.png"
+type = "image"
+title = "wardround_doctor portrait"
+
+[[generated]]
+id = "lT0D_fLbLf_o7mIg5zuDG"
+uri = "file://frontend/assets/heroes/hydration_scribe.png"
+type = "image"
+title = "hydration_scribe portrait"
+
+[[generated]]
+id = "pybdvkCD2biaPe15COTD1"
+uri = "file://frontend/assets/heroes/health_banner_guide.png"
+type = "image"
+title = "health_banner_guide portrait"
+
+[[generated]]
+id = "1RQkOhcs2fPZWHymNGccr"
+uri = "file://frontend/assets/heroes/acute_step_warden.png"
+type = "image"
+title = "acute_step_warden portrait"
+
+[[generated]]
+id = "5yTn0U5sPf1iATAVMISEH"
+uri = "file://frontend/assets/heroes/environmental_seal_warden.png"
+type = "image"
+title = "environmental_seal_warden portrait"
+
+[[generated]]
+id = "xKTlrQhF_RP9ayDakEb1M"
+uri = "file://frontend/assets/heroes/battle/gait_lantern.png"
+type = "image"
+title = "gait_lantern battle"
+
+[[generated]]
+id = "5BD5qF1mEjXPqZU5sT8X4"
+uri = "file://frontend/assets/heroes/battle/ward_pharmacist.png"
+type = "image"
+title = "ward_pharmacist battle"
+
+[[generated]]
+id = "qOeKhsi_byPJzKzcgcBqe"
+uri = "file://frontend/assets/heroes/battle/dose_scribe.png"
+type = "image"
+title = "dose_scribe battle"
+
+[[generated]]
+id = "vpR6IHwHbb4nuTFY6RpNZ"
+uri = "file://frontend/assets/heroes/clean_water_runner.png"
+type = "image"
+title = "clean_water_runner portrait"
+
+[[generated]]
+id = "n20jU1XbapXSK_ZXNTfg-"
+uri = "file://frontend/assets/heroes/battle/resident_of_dawn.png"
+type = "image"
+title = "resident_of_dawn battle"
+
+[[generated]]
+id = "wdmKBigCZ4_uAyPkH2E3x"
+uri = "file://frontend/assets/heroes/stretch_hand.png"
+type = "image"
+title = "stretch_hand portrait"
+
+[[generated]]
+id = "VH_eCsk9Hdrcm8roqpTOc"
+uri = "file://frontend/assets/heroes/battle/wardround_doctor.png"
+type = "image"
+title = "wardround_doctor battle"
+
+[[generated]]
+id = "GeJ0mz_S7fwZP2D1uwqzN"
+uri = "file://frontend/assets/heroes/battle/hydration_scribe.png"
+type = "image"
+title = "hydration_scribe battle"
+
+[[generated]]
+id = "YJ6kN1pvjwPUm3F81U46o"
+uri = "file://frontend/assets/heroes/battle/health_banner_guide.png"
+type = "image"
+title = "health_banner_guide battle"
+
+[[generated]]
+id = "RVDwtr0ZKJ4xKAWBcINl7"
+uri = "file://frontend/assets/heroes/battle/acute_step_warden.png"
+type = "image"
+title = "acute_step_warden battle"
+
+[[generated]]
+id = "ehEohvOpjuz3E32ORWX9a"
+uri = "file://frontend/assets/heroes/battle/environmental_seal_warden.png"
+type = "image"
+title = "environmental_seal_warden battle"
+
+[[generated]]
+id = "px8pj2ke1rNYQ-6RGCj83"
+uri = "file://frontend/assets/heroes/neurostep_seer.png"
+type = "image"
+title = "neurostep_seer portrait"
+
+[[generated]]
+id = "dssu0U4rdmuidS9jPk7Wr"
+uri = "file://frontend/assets/heroes/antidote_alchemist.png"
+type = "image"
+title = "antidote_alchemist portrait"
+
+[[generated]]
+id = "tU3UQdGPN6zr3aReyyCuw"
+uri = "file://frontend/assets/heroes/mortar_initiate.png"
+type = "image"
+title = "mortar_initiate portrait"
+
+[[generated]]
+id = "I_l2Yuk2wAzgtK46tx3Uo"
+uri = "file://frontend/assets/heroes/battle/clean_water_runner.png"
+type = "image"
+title = "clean_water_runner battle"
+
+[[generated]]
+id = "7zNVYozT_oWE_Oim5zu1T"
+uri = "file://frontend/assets/heroes/battle/stretch_hand.png"
+type = "image"
+title = "stretch_hand battle"
+
+[[generated]]
+id = "IQAMeT4r7CiYaOoAyKNZk"
+uri = "file://frontend/assets/heroes/lotus_apothecary.png"
+type = "image"
+title = "lotus_apothecary portrait"
+
+[[generated]]
+id = "nIMvTzjTjSg1ZZfGuKyVy"
+uri = "file://frontend/assets/heroes/clean_water_sentinel.png"
+type = "image"
+title = "clean_water_sentinel portrait"
+
+[[generated]]
+id = "siPku0kDmi8m7HBU40LqM"
+uri = "file://frontend/assets/heroes/iron_tendon_adept.png"
+type = "image"
+title = "iron_tendon_adept portrait"
+
+[[generated]]
+id = "fPjdSCZaGywEm7Q9ouZ04"
+uri = "file://frontend/assets/heroes/chartweave_analyst.png"
+type = "image"
+title = "chartweave_analyst portrait"
+
+[[generated]]
+id = "YhslSBRe06JFkYsiyC6yx"
+uri = "file://frontend/assets/heroes/battle/neurostep_seer.png"
+type = "image"
+title = "neurostep_seer battle"
+
+[[generated]]
+id = "jRjWGA67OWrc8RrniM5y3"
+uri = "file://frontend/assets/heroes/battle/antidote_alchemist.png"
+type = "image"
+title = "antidote_alchemist battle"
+
+[[generated]]
+id = "bcqNmypl8UZYXLSglJufk"
+uri = "file://frontend/assets/heroes/battle/mortar_initiate.png"
+type = "image"
+title = "mortar_initiate battle"
+
+[[generated]]
+id = "XA3bGBFf4BkU9BgygnpP0"
+uri = "file://frontend/assets/heroes/care_guide.png"
+type = "image"
+title = "care_guide portrait"
+
+[[generated]]
+id = "pSUHz1LK0rifMOMHsAiAk"
+uri = "file://frontend/assets/heroes/function_aide.png"
+type = "image"
+title = "function_aide portrait"
+
+[[generated]]
+id = "AumyzlcrSI8ZTci40sYyL"
+uri = "file://frontend/assets/heroes/battle/lotus_apothecary.png"
+type = "image"
+title = "lotus_apothecary battle"
+
+[[generated]]
+id = "kzitPThMChidJTmaJWHWH"
+uri = "file://frontend/assets/heroes/battle/clean_water_sentinel.png"
+type = "image"
+title = "clean_water_sentinel battle"
+
+[[generated]]
+id = "JyzMVKjZEUjNQIk7E1A9q"
+uri = "file://frontend/assets/heroes/battle/iron_tendon_adept.png"
+type = "image"
+title = "iron_tendon_adept battle"
+
+[[generated]]
+id = "3Ux_qo-N3dAfdAao8g-2x"
+uri = "file://frontend/assets/heroes/battle/chartweave_analyst.png"
+type = "image"
+title = "chartweave_analyst battle"
+
+[[generated]]
+id = "z47O4of6-KlIxJKtmGqKJ"
+uri = "file://frontend/assets/heroes/bonepath_guide.png"
+type = "image"
+title = "bonepath_guide portrait"
+
+[[generated]]
+id = "vcqkCLNwj5t697IQLJyq7"
+uri = "file://frontend/assets/heroes/battle/care_guide.png"
+type = "image"
+title = "care_guide battle"
+
+[[generated]]
+id = "pUOIl8lyzRZl6emUIgWGi"
+uri = "file://frontend/assets/heroes/battle/function_aide.png"
+type = "image"
+title = "function_aide battle"
+
+[[generated]]
+id = "7UBMUhqrAJk2dmfQbCkO9"
+uri = "file://frontend/assets/heroes/clinic_dosekeeper.png"
+type = "image"
+title = "clinic_dosekeeper portrait"
+
+[[generated]]
+id = "FcktJdOFL2tVtAaJign6I"
+uri = "file://frontend/assets/heroes/resource_lantern.png"
+type = "image"
+title = "resource_lantern portrait"
+
+[[generated]]
+id = "jPTd3KcYHZ6NQCJ_PDhf5"
+uri = "file://frontend/assets/heroes/cognitive_rehab_specialist.png"
+type = "image"
+title = "cognitive_rehab_specialist portrait"
+
+[[generated]]
+id = "XYyFb2Dzruay4JejH4GvS"
+uri = "file://frontend/assets/heroes/battle/bonepath_guide.png"
+type = "image"
+title = "bonepath_guide battle"
+
+[[generated]]
+id = "V1oWF9-leQHU0gAACS9KZ"
+uri = "file://frontend/assets/heroes/return_path_scribe.png"
+type = "image"
+title = "return_path_scribe portrait"
+
+[[generated]]
+id = "N9Su4srSB0OebYtJrDUUq"
+uri = "file://frontend/assets/heroes/battle/clinic_dosekeeper.png"
+type = "image"
+title = "clinic_dosekeeper battle"
+
+[[generated]]
+id = "obnXUnkKmFhZTdG5Rg05i"
+uri = "file://frontend/assets/heroes/battle/resource_lantern.png"
+type = "image"
+title = "resource_lantern battle"
+
+[[generated]]
+id = "0MgA2E9LLAUENweS0M1Rj"
+uri = "file://frontend/assets/heroes/battle/cognitive_rehab_specialist.png"
+type = "image"
+title = "cognitive_rehab_specialist battle"
+
+[[generated]]
+id = "Ul-muGsGZkw_dvZ-T7M2v"
+uri = "file://frontend/assets/heroes/battle/return_path_scribe.png"
+type = "image"
+title = "return_path_scribe battle"
