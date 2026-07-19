@@ -27,7 +27,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getHeroSprite } from "@/src/components/HeroSprites";
-import { getLoadoutItems } from "@/src/game/loadoutStore";
+import {
+  drainItemBagSelection,
+  loadPersistedLoadoutForType,
+  persistLoadoutForType,
+  syncCurrentLoadout,
+} from "@/src/game/loadoutStore";
 import { HEROES } from "@/src/game/content";
 import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { rarityColor } from "@/src/game/gacha";
@@ -567,7 +572,7 @@ export default function MissionLoadoutScreen() {
   const nodeImg = NODE_EMBLEM[String(partType)] ?? NODE_EMBLEM["battle"]!;
   const bgImg   = CHAPTER_BG[chNum] ?? CHAPTER_BG_FALLBACK;
 
-  const [selectedItems, setSelectedItems] = useState<string[]>(() => getLoadoutItems());
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [equippedCards, setLocalEquippedCards] = useState<string[]>(
     () => player?.equipped_cards ?? []
   );
@@ -592,7 +597,22 @@ export default function MissionLoadoutScreen() {
   }, [player]);
 
   useFocusEffect(useCallback(() => {
-    setSelectedItems(getLoadoutItems());
+    const missionType = String(partType);
+    const bagPick = drainItemBagSelection();
+    if (bagPick !== null) {
+      // Just returned from /item-bag — use the player's exact pick, persist it
+      // for this mission type, and sync back so item-bag pre-populates on re-open.
+      setSelectedItems(bagPick);
+      syncCurrentLoadout(bagPick);
+      persistLoadoutForType(missionType, bagPick);
+    } else {
+      // Fresh entry, app restart, or cross-mission-type navigation — restore the
+      // last-saved loadout for this specific type (boss ≠ battle ≠ ward_defense).
+      loadPersistedLoadoutForType(missionType).then((persisted) => {
+        setSelectedItems(persisted);
+        syncCurrentLoadout(persisted);
+      });
+    }
     setLocalEquippedCards(player?.equipped_cards ?? []);
     // Re-sync team slots to server state on each focus visit.
     // Same null-window guard: don't overwrite filled slots with empty data if
@@ -605,7 +625,14 @@ export default function MissionLoadoutScreen() {
       teamSyncedRef.current = key;
       setTeamSlots([team[0] ?? null, team[1] ?? null, team[2] ?? null]);
     }
-  }, [player?.equipped_cards, player?.active_team]));
+  }, [player?.equipped_cards, player?.active_team, partType]));
+
+  // Persist item loadout for this mission type whenever the player removes an
+  // item inline (tap slot to deselect), keeping the persisted store up-to-date.
+  useEffect(() => {
+    if (selectedItems.length === 0) return; // avoid writing empty on initial mount
+    persistLoadoutForType(String(partType), selectedItems);
+  }, [selectedItems, partType]);
 
   function toggleCard(cardId: string) {
     setLocalEquippedCards((prev) => {
