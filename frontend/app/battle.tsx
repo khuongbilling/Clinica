@@ -610,6 +610,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 2500);
   };
 
+  const showBlockMsg = (msg: string) => {
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    setFeedbackMsg(msg);
+    feedbackTimeout.current = setTimeout(() => setFeedbackMsg(null), 2500);
+  };
+
   const handleSkill = (hero: Hero, skill: HeroSkill, castQuality: CastQuality = "normal") => {
     if (state.outcome !== "ongoing") return;
     // prologueBattle locks to a specific skill ID; firstBattle locks to a type.
@@ -620,7 +626,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       effective = { ...skill, cost: Math.max(0, skill.cost - 1) };
       setSageScoutBonusUsed(true);
     }
-    if (state.ap < effective.cost) return;
+    if (state.ap < effective.cost) { showBlockMsg("Not enough AP for this skill."); return; }
     if (castQuality === "normal" && skillSupportsCastTiming(effective) && state.outcome === "ongoing" && !guidedSkillId) {
       openTimingPrompt(hero, effective);
       return;
@@ -698,7 +704,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.outcome !== "ongoing") return;
     if (guidedStep) { tutorialNudge(); return; }
     const res = applyCard(state, cardId);
-    if (res.aborted) return;
+    if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
@@ -708,7 +714,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.outcome !== "ongoing") return;
     if (guidedStep) { tutorialNudge(); return; }
     const res = applyUltimate(state, hero.id);
-    if (res.aborted) return;
+    if (res.aborted) { showBlockMsg(res.message); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     setState(res.state);
     triggerFx(hero.id, "support");
@@ -736,6 +742,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const handleTempAction = (actionId: string) => {
     if (guidedStep) { tutorialNudge(); return; }
     const res = applyTempAction(state, actionId);
+    if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
@@ -743,6 +750,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const handleUseItem = (item: Item) => {
     if (guidedStep) { tutorialNudge(); return; }
     const res = applyItem(state, item);
+    if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "stabilize");
     const itemActionType = item.target === 'corruption' ? 'strike' : item.target === 'clue' ? 'scout' : 'stabilize';
@@ -773,6 +781,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (guidedStep) { tutorialNudge(); return; }
     const itemName = opt.effect === "addRelevantItem" ? decideCallItem() : undefined;
     const res = applyCall(state, opt, itemName);
+    if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
     setDetail(null);
@@ -1295,7 +1304,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               const heroBlocked = !selHero || !!state.heroActionsUsed[selHero.id];
               const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing" || heroBlocked;
               return (
-                <Pressable key={`tmp-${aid}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleTempAction(aid)} onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })} delayLongPress={350} testID={`battle-temp-${aid}`}>
+                <Pressable key={`tmp-${aid}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => { if (!disabled) { handleTempAction(aid); return; } if (isLocked) { showBlockMsg("This action is locked."); return; } if (state.ap < a.costAP) { showBlockMsg("Not enough AP."); return; } showBlockMsg("Hero has already acted this turn."); }} onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })} delayLongPress={350} testID={`battle-temp-${aid}`}>
                   <StatusBadge status={preview.status} />
                   <View style={styles.actionHead}>
                     <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{a.name}</Text>
@@ -1315,7 +1324,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               const careDmg = careAttemptDamage(state.chapter, isBoss);
               const careDisabled = state.ap < 1 || state.outcome !== "ongoing" || isFirstBattleActionStep;
               const careNode = (
-                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
+                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) { showBlockMsg(state.ap < 1 ? "Not enough AP." : "Not available right now."); return; } setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
                   <View style={styles.actionHead}>
                     <Ionicons name="medkit-outline" size={14} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
@@ -1339,7 +1348,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                   (isFirstBattleActionStep && skill.type === guidedActionType);
                 return (
                   <Animated.View key={`${selHero.id}-${skill.id}`} style={[{ width: "48.5%" }, isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined]}>
-                    <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
+                    <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => { if (!disabled) { handleSkill(selHero, skill); return; } if (isWrongType) { tutorialNudge(); return; } if (isLocked) { showBlockMsg("This skill is locked for this battle."); return; } if (state.ap < cost) { showBlockMsg("Not enough AP for this skill."); return; } showBlockMsg(selHero.name + " has already acted this turn."); }} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
                       <StatusBadge status={preview.status} />
                       <View style={styles.actionHead}>
                         <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={14} color={SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
@@ -1374,7 +1383,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               const cost = discounted ? Math.max(1, item.costAP - 1) : item.costAP;
               const disabled = isLocked || qty <= 0 || state.ap < cost || state.outcome !== "ongoing" || heroBlocked;
               return (
-                <Pressable key={item.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleUseItem(item)} onLongPress={() => setDetail({ kind: "item", item })} delayLongPress={350} testID={`battle-item-${item.id}`}>
+                <Pressable key={item.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => { if (!disabled) { handleUseItem(item); return; } if (isLocked) { showBlockMsg("This item is locked."); return; } if (qty <= 0) { showBlockMsg(item.displayName + " is out of stock."); return; } if (state.ap < cost) { showBlockMsg("Not enough AP."); return; } showBlockMsg("Hero has already acted this turn."); }} onLongPress={() => setDetail({ kind: "item", item })} delayLongPress={350} testID={`battle-item-${item.id}`}>
                   <StatusBadge status={preview.status} />
                   <View style={styles.actionHead}>
                     <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{item.displayName}</Text>
@@ -1446,7 +1455,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                   <Pressable
                     key={`${cardId}-${idx}`}
                     style={[styles.actionBtn, { borderColor: chainCfg.color + "80" }, disabled && styles.disabled]}
-                    onPress={() => disabled ? null : handleCard(cardId)}
+                    onPress={() => { if (!disabled) { handleCard(cardId); return; } if (state.ap < card.costAP) { showBlockMsg("Not enough AP for this card."); return; } showBlockMsg("Hero has already acted this turn."); }}
                     testID={`battle-card-${cardId}`}
                   >
                     {/* Chain-type badge */}
@@ -1545,7 +1554,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 const budgetExhausted = state.callHelpRemaining <= 0;
                 const disabled = isLocked || alreadyUsed || rapidGated || budgetExhausted || state.ap < opt.costAP || state.outcome !== "ongoing";
                 return (
-                  <Pressable key={opt.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => disabled ? null : handleCall(opt)} onLongPress={() => setDetail({ kind: "call", option: opt })} delayLongPress={350} testID={`call-opt-${opt.id}`}>
+                  <Pressable key={opt.id} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled]} onPress={() => { if (!disabled) { handleCall(opt); return; } if (alreadyUsed) { showBlockMsg(opt.name + " has already been called this battle."); return; } if (rapidGated) { showBlockMsg("Rapid Response is reserved for Stability ≤ 30."); return; } if (budgetExhausted) { showBlockMsg("No calls remaining this battle."); return; } if (state.ap < opt.costAP) { showBlockMsg("Not enough AP."); return; } showBlockMsg(opt.name + " is locked."); }} onLongPress={() => setDetail({ kind: "call", option: opt })} delayLongPress={350} testID={`call-opt-${opt.id}`}>
                     <StatusBadge status={preview.status} />
                     <View style={styles.actionHead}>
                       <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{opt.name}</Text>
