@@ -12,6 +12,7 @@ import {
   classIdFromFantasyClass, getFuturePathHint, type FantasyClass,
 } from "@/src/game/classQuiz";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { SystemNarratorBar } from "@/src/components/SystemNarratorBar";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
@@ -179,7 +180,7 @@ export default function ClassResultScreen() {
           {/* Secondary action: Switch Class */}
           <Pressable
             style={styles.switchBtn}
-            onPress={() => router.push("/class-tree")}
+            onPress={() => router.push(ROUTES.classTree)}
             testID="class-result-switch"
           >
             <Ionicons name="swap-horizontal" size={14} color={COLORS.onSurfaceTertiary} />

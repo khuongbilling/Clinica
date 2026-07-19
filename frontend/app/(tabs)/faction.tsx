@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 

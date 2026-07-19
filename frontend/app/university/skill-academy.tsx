@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ROUTES } from "@/src/game/routes";
 import { useRouter } from "expo-router";
 import { ROUTES, type AppRoute } from "@/src/game/routes";
 import { useState } from "react";

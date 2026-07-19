@@ -14,6 +14,7 @@ import {
 import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
 import { getUiIcon } from "@/src/game/uiIcons";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -91,7 +92,7 @@ export function PlayerHeader({
       <View style={styles.topRow}>
         <Pressable
           style={styles.identityRow}
-          onPress={() => router.push("/(tabs)/profile")}
+          onPress={() => router.push(ROUTES.tabProfile)}
           hitSlop={4}
           testID="player-header-identity"
         >
@@ -107,7 +108,7 @@ export function PlayerHeader({
               {player.name}{" "}
               <Text
                 style={styles.levelTxt}
-                onPress={() => router.push("/class-tree")}
+                onPress={() => router.push(ROUTES.classTree)}
                 testID="player-header-class-link"
               >
                 Lv.{playerLevelInfo.level} {classIdentity.name}
@@ -220,7 +221,7 @@ export function PlayerHeader({
             {shopUnlocked && (
               <Pressable
                 style={styles.modalBtn}
-                onPress={() => { setInfoModal(null); router.push("/(tabs)/shop"); }}
+                onPress={() => { setInfoModal(null); router.push(ROUTES.tabShop); }}
                 testID="player-header-crowns-goto-shop"
               >
                 <Text style={styles.modalBtnTxt}>Go to Shop</Text>
@@ -275,7 +276,7 @@ export function PlayerHeader({
             <Text style={styles.modalHint}>Spend them on cosmetics, hero skins, and Realm decorations.</Text>
             <Pressable
               style={styles.modalBtn}
-              onPress={() => { setInfoModal(null); router.push("/economy"); }}
+              onPress={() => { setInfoModal(null); router.push(ROUTES.economy); }}
               testID="player-header-refined-gems-goto-economy"
             >
               <Text style={styles.modalBtnTxt}>View Currency Guide</Text>
@@ -299,7 +300,7 @@ export function PlayerHeader({
             <Text style={styles.modalHint}>Core clinical learning and all ward progression are always completely free.</Text>
             <Pressable
               style={styles.modalBtn}
-              onPress={() => { setInfoModal(null); router.push("/economy"); }}
+              onPress={() => { setInfoModal(null); router.push(ROUTES.economy); }}
               testID="player-header-lotus-gems-goto-economy"
             >
               <Text style={styles.modalBtnTxt}>View Currency Guide</Text>
@@ -327,7 +328,7 @@ export function PlayerHeader({
             )}
             <Pressable
               style={styles.modalBtn}
-              onPress={() => { setInfoModal(null); router.push("/(tabs)/profile"); }}
+              onPress={() => { setInfoModal(null); router.push(ROUTES.tabProfile); }}
               testID="player-header-level-goto-profile"
             >
               <Text style={styles.modalBtnTxt}>View Profile</Text>

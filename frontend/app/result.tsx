@@ -11,6 +11,7 @@ import { getEnemyHint } from "@/src/game/onboarding";
 import { playRewardCue } from "@/src/game/cues";
 import { getEnemySprite } from "@/src/components/EnemySprites";
 import { usePlayer } from "@/src/game/store";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
 import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
@@ -398,7 +399,7 @@ export default function Result() {
 
             {crownsEarned > 0 && (
               shopGate.unlocked ? (
-                <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push("/(tabs)/shop")}>
+                <Pressable style={styles.crownsCard} testID="result-crowns" onPress={() => router.push(ROUTES.tabShop)}>
                   <Ionicons name="cash-outline" size={20} color={COLORS.energy} />
                   <Text style={styles.crownsTxt}>+{crownsEarned} Crowns earned — spend them at the Apothecary Market.</Text>
                   <Ionicons name="chevron-forward" size={16} color={COLORS.energy} />
@@ -414,7 +415,7 @@ export default function Result() {
             )}
 
             {epidemicTokensEarned > 0 && (
-              <Pressable style={styles.tokensCard} testID="result-epidemic-tokens" onPress={() => router.push("/world-event")}>
+              <Pressable style={styles.tokensCard} testID="result-epidemic-tokens" onPress={() => router.push(ROUTES.worldEvent)}>
                 <Ionicons name="flask" size={20} color={EPIDEMIC_ACCENT} />
                 <Text style={styles.tokensTxt}>
                   +{epidemicTokensEarned} Epidemic Token{epidemicTokensEarned > 1 ? "s" : ""} — your Ward Shift helped contain the Miasma Bloom.
@@ -644,7 +645,7 @@ export default function Result() {
             </Pressable>
           )}
           {won && !isPrologueTutorial && (
-            <Pressable style={styles.primary} onPress={() => router.replace("/shift")} testID="result-next-mission">
+            <Pressable style={styles.primary} onPress={() => router.replace(ROUTES.shift)} testID="result-next-mission">
               <Ionicons name="arrow-forward-circle" size={16} color={COLORS.onBrand} />
               <Text style={styles.primaryTxt}>NEXT MISSION</Text>
             </Pressable>
@@ -666,10 +667,10 @@ export default function Result() {
                   <Text style={styles.secondaryTxt}>VIEW JOURNEY MAP</Text>
                 </Pressable>
               )}
-              <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)")} testID="result-back">
+              <Pressable style={styles.secondary} onPress={() => router.replace(ROUTES.tabs)} testID="result-back">
                 <Text style={styles.secondaryTxt}>RETURN TO KINGDOM</Text>
               </Pressable>
-              <Pressable style={styles.secondary} onPress={() => router.replace("/(tabs)/codex")} testID="result-codex">
+              <Pressable style={styles.secondary} onPress={() => router.replace(ROUTES.tabCodex)} testID="result-codex">
                 <Text style={styles.secondaryTxt}>OPEN CODEX</Text>
               </Pressable>
             </>

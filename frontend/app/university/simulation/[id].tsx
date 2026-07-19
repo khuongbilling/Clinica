@@ -9,6 +9,7 @@ import { getSimulation, getBadge } from "@/src/game/lessons";
 import { usePlayer } from "@/src/game/store";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function SimulationDetailScreen() {
@@ -47,7 +48,7 @@ export default function SimulationDetailScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.hero}>
         <LinearGradient colors={[COLORS.brandTertiary, COLORS.surface]} style={StyleSheet.absoluteFillObject} />
-        <Pressable style={styles.backBtn} onPress={() => router.replace("/university")} testID="simulation-back">
+        <Pressable style={styles.backBtn} onPress={() => router.replace(ROUTES.university)} testID="simulation-back">
           <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
         </Pressable>
         <Text style={styles.kicker}>SIMULATION{alreadyDone ? " · COMPLETED" : ""}</Text>

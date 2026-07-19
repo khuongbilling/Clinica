@@ -16,6 +16,7 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { playerLevelFromXp } from "@/src/game/progression";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -115,7 +116,7 @@ export default function Shop() {
           <Text style={styles.kicker}>APOTHECARY MARKET</Text>
           <Text style={styles.title}>Choose a Stall</Text>
         </View>
-        <Pressable onPress={() => router.push("/economy")} hitSlop={10} testID="shop-economy-guide">
+        <Pressable onPress={() => router.push(ROUTES.economy)} hitSlop={10} testID="shop-economy-guide">
           <Ionicons name="help-circle-outline" size={22} color={COLORS.onSurfaceSecondary} />
         </Pressable>
       </View>
@@ -213,7 +214,7 @@ export default function Shop() {
             ))}
           </View>
           <Pressable style={styles.economyLink}
-            onPress={() => router.push("/economy")} testID="shop-economy-guide-exchange">
+            onPress={() => router.push(ROUTES.economy)} testID="shop-economy-guide-exchange">
             <Ionicons name="book-outline" size={16} color={COLORS.brand} />
             <Text style={styles.economyLinkTxt}>Economy Guide — how currencies work</Text>
             <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />
@@ -249,7 +250,7 @@ export default function Shop() {
             ))
           )}
           <Pressable style={styles.economyLink}
-            onPress={() => router.push("/economy")} testID="shop-economy-guide-2">
+            onPress={() => router.push(ROUTES.economy)} testID="shop-economy-guide-2">
             <Ionicons name="book-outline" size={16} color={COLORS.brand} />
             <Text style={styles.economyLinkTxt}>Economy Guide — learn how currencies work</Text>
             <Ionicons name="chevron-forward" size={14} color={COLORS.brand} />

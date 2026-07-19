@@ -27,6 +27,7 @@ import {
   REALM_PRODUCTION_NOTE, getProducerBuildings, productionRatePerHour,
   productionCap, computeAccruedPoints, assignedHeroCount, HERO_ASSIGNMENT_RATE_BONUS,
 } from "@/src/game/realm";
+import { ROUTES } from "@/src/game/routes";
 import { HEROES } from "@/src/game/content";
 import {
   GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,
@@ -1293,7 +1294,7 @@ function LegendModal({ visible, onClose }: { visible: boolean; onClose: () => vo
           </ScrollView>
           <Pressable
             style={styles.resourceGuideBtn}
-            onPress={() => { onClose(); router.push("/materials"); }}
+            onPress={() => { onClose(); router.push(ROUTES.materials); }}
             testID="realm-resource-guide-button"
           >
             <Ionicons name="cube-outline" size={16} color={COLORS.brand} />

@@ -8,6 +8,7 @@ import { HEROES } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function HeroSelectScreen() {
@@ -63,7 +64,7 @@ export default function HeroSelectScreen() {
             <Text style={styles.emptyTxt}>
               Heroes join your ward through University Recruitment. Enroll your first healer, then pick your lead here.
             </Text>
-            <Pressable style={styles.emptyBtn} onPress={() => router.push("/university/recruit")} testID="hero-select-empty-recruit-btn">
+            <Pressable style={styles.emptyBtn} onPress={() => router.push(ROUTES.universityRecruit)} testID="hero-select-empty-recruit-btn">
               <Ionicons name="school" size={14} color={COLORS.onBrand} />
               <Text style={styles.emptyBtnTxt}>GO TO RECRUITMENT HALL</Text>
             </Pressable>

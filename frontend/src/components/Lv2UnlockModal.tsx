@@ -12,6 +12,7 @@ import { ROUTES } from "@/src/game/routes";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── Unlock item ───────────────────────────────────────────────────────────────

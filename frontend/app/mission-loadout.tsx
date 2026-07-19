@@ -41,6 +41,7 @@ import { ITEMS } from "@/src/game/items";
 import { CARD_POOL, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { usePlayer } from "@/src/game/store";
 import type { Hero } from "@/src/game/types";
+import { ROUTES } from "@/src/game/routes";
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 

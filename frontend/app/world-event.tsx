@@ -14,6 +14,7 @@ import { usePlayer } from "@/src/game/store";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { playRewardCue } from "@/src/game/cues";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import {
@@ -91,7 +92,7 @@ export default function WorldEventScreen() {
         <ScrollView contentContainerStyle={styles.boardScroll} showsVerticalScrollIndicator={false}>
           {/* ── Header ── */}
           <View style={styles.boardHeader}>
-            <Pressable style={styles.backBtn} onPress={() => router.replace("/events")} hitSlop={10} testID="world-event-locked-back">
+            <Pressable style={styles.backBtn} onPress={() => router.replace(ROUTES.events)} hitSlop={10} testID="world-event-locked-back">
               <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
             </Pressable>
             <View style={{ flex: 1 }}>
@@ -216,7 +217,7 @@ export default function WorldEventScreen() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.replace("/events")} hitSlop={10} testID="world-event-back">
+        <Pressable style={styles.backBtn} onPress={() => router.replace(ROUTES.events)} hitSlop={10} testID="world-event-back">
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <LinearGradient
@@ -695,7 +696,7 @@ function RewardsTab() {
         cancelLabel="Not now"
         onConfirm={() => {
           setTitleCelebration(null);
-          router.push("/(tabs)/profile");
+          router.push(ROUTES.tabProfile);
         }}
         onCancel={() => setTitleCelebration(null)}
         testID="world-event-title-celebration"

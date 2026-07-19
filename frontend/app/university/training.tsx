@@ -15,6 +15,7 @@ import {
 } from "@/src/game/university";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── Requirement row ──────────────────────────────────────────────────────────
@@ -101,7 +102,7 @@ export default function TrainingHallScreen() {
             <Ionicons name="people-outline" size={32} color={COLORS.onSurfaceTertiary} />
             <Text style={styles.emptyTitle}>No heroes to train yet</Text>
             <Text style={styles.empty}>Heroes join your ward through University Recruitment. Enroll your first healer, then return here to train them.</Text>
-            <Pressable style={styles.emptyBtn} onPress={() => router.push("/university/recruit")} testID="training-empty-recruit-btn">
+            <Pressable style={styles.emptyBtn} onPress={() => router.push(ROUTES.universityRecruit)} testID="training-empty-recruit-btn">
               <Ionicons name="school" size={14} color={COLORS.onBrand} />
               <Text style={styles.emptyBtnTxt}>GO TO RECRUITMENT HALL</Text>
             </Pressable>

@@ -14,6 +14,7 @@ import { QUEST_ICON } from "@/src/components/ModeBanners";
 import { StaminaPill } from "@/src/components/StaminaPill";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import {
   BOSS_ENCOUNTER_COST, ENCOUNTER_COST, formatCountdown, useLiveStamina,
@@ -296,7 +297,7 @@ export default function ShiftCasesPage() {
         {bossUnlocked && (
           <>
             <Text style={styles.section}>Special Quest</Text>
-            <Pressable style={styles.bossCard} onPress={() => router.push("/boss")} testID="shift-cases-boss">
+            <Pressable style={styles.bossCard} onPress={() => router.push(ROUTES.boss)} testID="shift-cases-boss">
               <View style={[styles.bossIcon, { borderColor: COLORS.error + "70", backgroundColor: COLORS.error + "1E" }]}>
                 <Ionicons name="flame" size={22} color={COLORS.error} />
               </View>

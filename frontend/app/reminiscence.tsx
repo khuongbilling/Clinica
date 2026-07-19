@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
+import { ROUTES } from "@/src/game/routes";
 import { SPACING, RADIUS } from "@/src/theme/colors";
 import { MotionPanel, PanelEffect } from "@/src/components/reminiscence/MotionPanel";
 import { LotusPetalOverlay } from "@/src/components/reminiscence/LotusPetalOverlay";
@@ -293,7 +294,7 @@ export default function ReminiscenceScreen() {
   // reachable in the first place.
   useEffect(() => {
     if (!isReplay && player?.seen_reminiscence) {
-      router.replace("/(tabs)");
+      router.replace(ROUTES.tabs);
     }
   }, [isReplay, player?.seen_reminiscence, router]);
 

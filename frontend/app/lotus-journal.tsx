@@ -13,6 +13,7 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { DAILY_INSIGHT_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const GARDEN_METERS = [
@@ -71,7 +72,7 @@ export default function LotusJournalPage() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <PlayerHeader player={player} />
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10}>
+        <Pressable style={styles.backBtn} onPress={() => router.replace(ROUTES.tabs)} hitSlop={10}>
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>
@@ -121,7 +122,7 @@ export default function LotusJournalPage() {
           <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
         </Pressable>
 
-        <Pressable style={styles.actionCard} onPress={() => router.push("/lotus-journal-log")}>
+        <Pressable style={styles.actionCard} onPress={() => router.push(ROUTES.lotusJournalLog)}>
           <View style={[styles.actionIcon, { backgroundColor: COLORS.growth + "20" }]}>
             <Ionicons name="restaurant" size={22} color={COLORS.growth} />
           </View>
@@ -132,7 +133,7 @@ export default function LotusJournalPage() {
           <Ionicons name="chevron-forward" size={18} color={COLORS.onSurfaceTertiary} />
         </Pressable>
 
-        <Pressable style={styles.actionCard} onPress={() => router.push("/lotus-journal-recipes")}>
+        <Pressable style={styles.actionCard} onPress={() => router.push(ROUTES.lotusJournalRecipes)}>
           <View style={[styles.actionIcon, { backgroundColor: COLORS.energy + "20" }]}>
             <Ionicons name="book" size={22} color={COLORS.energy} />
           </View>

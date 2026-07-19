@@ -21,6 +21,7 @@ import { LotusRecallBurst } from "@/src/components/reminiscence/LotusRecallBurst
 import { LightMotesOverlay } from "@/src/components/reminiscence/LightMotesOverlay";
 import { RainOverlay } from "@/src/components/reminiscence/RainOverlay";
 import { NarrativePanel } from "@/src/components/ui/NarrativePanel";
+import { ROUTES } from "@/src/game/routes";
 import { SPACING, RADIUS } from "@/src/theme/colors";
 
 // Story Scene — the reusable mature-manhwa narrative screen (hybrid art
@@ -105,7 +106,7 @@ function SceneViewer({ sceneId, returnTo }: { sceneId: string; returnTo?: string
       } else if (router.canGoBack()) {
         router.back();
       } else {
-        router.replace("/(tabs)");
+        router.replace(ROUTES.tabs);
       }
     });
   }

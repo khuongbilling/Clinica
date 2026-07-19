@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView } from "@/src/components/FeatureGate";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
@@ -124,7 +125,7 @@ export default function ShopSection() {
           <Text style={styles.subtitle}>{section.subtitle}</Text>
         </View>
         <Pressable
-          onPress={() => router.push("/economy")}
+          onPress={() => router.push(ROUTES.economy)}
           hitSlop={10}
           style={styles.infoBtn}
           testID="shop-economy-guide"
@@ -421,7 +422,7 @@ export default function ShopSection() {
                   live trading, or subscriptions are active. See the Economy Guide for full details.
                 </Text>
 
-                <Pressable style={styles.card} onPress={() => router.push("/materials")} testID="shop-materials-guide">
+                <Pressable style={styles.card} onPress={() => router.push(ROUTES.materials)} testID="shop-materials-guide">
                   <View style={[styles.iconBadge, { borderColor: COLORS.brand }]}>
                     <Ionicons name="cube-outline" size={20} color={COLORS.brand} />
                   </View>
@@ -538,7 +539,7 @@ export default function ShopSection() {
                   </View>
                 ))}
 
-                <Pressable style={styles.equipBtn} onPress={() => router.push("/economy")} testID="shop-open-economy-guide">
+                <Pressable style={styles.equipBtn} onPress={() => router.push(ROUTES.economy)} testID="shop-open-economy-guide">
                   <Text style={styles.equipBtnTxt}>Open full Economy Guide →</Text>
                 </Pressable>
               </>

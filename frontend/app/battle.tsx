@@ -26,6 +26,7 @@ import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
 import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
+import { ROUTES } from "@/src/game/routes";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import type { ActionType, ClassFamily, Hero, HeroSkill } from "@/src/game/types";
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
@@ -1048,12 +1049,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         {/* Hide exit and help buttons during tutorial battles — the ✕ on
             the tutorial overlay box is the only correct exit path. */}
         {!isMandatoryBattle && (
-          <Pressable style={styles.closeBtn} onPress={() => router.replace("/(tabs)")} testID="battle-close">
+          <Pressable style={styles.closeBtn} onPress={() => router.replace(ROUTES.tabs)} testID="battle-close">
             <Ionicons name="close" size={16} color={COLORS.onSurface} />
           </Pressable>
         )}
         {!isMandatoryBattle && (
-          <Pressable style={styles.helpBtn} onPress={() => router.push("/tutorial")} hitSlop={10} testID="battle-tutorial-button">
+          <Pressable style={styles.helpBtn} onPress={() => router.push(ROUTES.tutorial)} hitSlop={10} testID="battle-tutorial-button">
             <Ionicons name="help-circle-outline" size={16} color={COLORS.onSurfaceSecondary} />
           </Pressable>
         )}

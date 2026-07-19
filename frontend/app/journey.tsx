@@ -24,6 +24,7 @@ import {
 } from "@/src/game/chapterJourney";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
+import { ROUTES } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
 import { useState } from "react";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";

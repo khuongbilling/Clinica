@@ -13,6 +13,7 @@ import { EVENT_TRACKS, EventTrackDef, MONETIZATION_CARDS, MonetizationCardDef } 
 import { usePlayer } from "@/src/game/store";
 import { playerLevelFromXp, isFeatureUnlocked } from "@/src/game/progression";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ────────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import { usePlayer } from "@/src/game/store";
 import { useSettings } from "@/src/game/settingsStore";
 import { playRewardCue } from "@/src/game/cues";
 import { useTutorial } from "@/src/game/tutorialStore";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
   nextClassAbility, playerClassForAptitude, playerLevelFromXp,
@@ -49,7 +50,7 @@ export default function ProfileScreen() {
     // Navigate directly to the title/start screen. Skipping Boot ("/") avoids
     // a double-redirect (Boot always redirects straight to /title anyway) that
     // can race on web and leave the app on a blank screen after reset.
-    router.replace("/title" as never);
+    router.replace(ROUTES.title);
   }
 
   if (!player) {
@@ -116,7 +117,7 @@ export default function ProfileScreen() {
 
         <Pressable
           style={styles.classTreeCard}
-          onPress={() => router.push("/class-tree")}
+          onPress={() => router.push(ROUTES.classTree)}
           testID="profile-class-tree-link"
         >
           <View style={[styles.classTreeIcon, { backgroundColor: (CLASS_IDENTITIES[(player.class_tree_id as ClassId) || "medic"] || CLASS_IDENTITIES.medic).color + "22" }]}>
@@ -281,7 +282,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/tutorial")}
+            onPress={() => router.push(ROUTES.tutorial)}
             testID="profile-tutorial-button"
           >
             <Ionicons name="book-outline" size={18} color={COLORS.brand} />
@@ -301,7 +302,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/(tabs)/codex")}
+            onPress={() => router.push(ROUTES.tabCodex)}
             testID="profile-codex-button"
           >
             <Ionicons name="library-outline" size={18} color={COLORS.brand} />
@@ -311,7 +312,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/economy")}
+            onPress={() => router.push(ROUTES.economy)}
             testID="profile-economy-button"
           >
             <Ionicons name="diamond-outline" size={18} color={COLORS.brand} />
@@ -321,7 +322,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/materials")}
+            onPress={() => router.push(ROUTES.materials)}
             testID="profile-materials-button"
           >
             <Ionicons name="cube-outline" size={18} color={COLORS.brand} />
@@ -346,7 +347,8 @@ export default function ProfileScreen() {
         <View style={styles.settingsCard}>
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/battle?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1")}
+            // Inline: ROUTES.battle + runtime query params for a specific training replay
+            onPress={() => router.push(`${ROUTES.battle}?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1` as any)}
             testID="profile-replay-prologue-button"
           >
             <Ionicons name="film-outline" size={18} color={COLORS.brand} />
@@ -356,7 +358,8 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/reminiscence?replay=1")}
+            // Inline: ROUTES.reminiscence + replay query param (dynamic flag)
+            onPress={() => router.push(`${ROUTES.reminiscence}?replay=1` as any)}
             testID="profile-replay-reminiscence-button"
           >
             <Ionicons name="images-outline" size={18} color={COLORS.brand} />
@@ -366,7 +369,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/story-scene")}
+            onPress={() => router.push(ROUTES.storyScene)}
             testID="profile-story-scenes-button"
           >
             <Ionicons name="book-outline" size={18} color={COLORS.brand} />
@@ -376,7 +379,8 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/post-recall?replay=1")}
+            // Inline: ROUTES.postRecall + replay query param (dynamic flag)
+            onPress={() => router.push(`${ROUTES.postRecall}?replay=1` as any)}
             testID="profile-replay-diagnostic-button"
           >
             <Ionicons name="pulse-outline" size={18} color={COLORS.brand} />
@@ -386,7 +390,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/class-result")}
+            onPress={() => router.push(ROUTES.classResult)}
             testID="profile-class-result-button"
           >
             <Ionicons name="ribbon-outline" size={18} color={COLORS.brand} />
@@ -396,7 +400,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsDivider} />
           <Pressable
             style={styles.settingsRow}
-            onPress={() => router.push("/tutorial-center")}
+            onPress={() => router.push(ROUTES.tutorialCenter)}
             testID="profile-tutorial-center-button"
           >
             <Ionicons name="school-outline" size={18} color={COLORS.brand} />

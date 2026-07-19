@@ -15,6 +15,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { ROUTES } from "@/src/game/routes";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -560,7 +561,7 @@ export default function CueHuntScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.replace("/university")}
+          onPress={() => router.replace(ROUTES.university)}
           hitSlop={10}
           testID="cue-hunt-back"
         >
@@ -635,7 +636,7 @@ export default function CueHuntScreen() {
       {phase !== "complete" && (
         <Pressable
           style={styles.backToUni}
-          onPress={() => router.replace("/university")}
+          onPress={() => router.replace(ROUTES.university)}
           testID="cue-hunt-return"
         >
           <Ionicons name="chevron-back" size={15} color={COLORS.onSurfaceTertiary} />

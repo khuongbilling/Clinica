@@ -11,6 +11,7 @@ import {
   allObjectivesComplete, ensureFreshDailyRounds, summarizeReward,
   WEEKLY_GOAL_TARGET,
 } from "@/src/game/dailyRounds";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────
@@ -166,7 +167,7 @@ export function DailyPulseToast() {
   const openPanel = useCallback(() => {
     dismiss();
     requestOpenDailyRounds();
-    router.push("/(tabs)");
+    router.push(ROUTES.tabs);
   }, [dismiss, requestOpenDailyRounds, router]);
 
   // One-tap claim: if exactly one reward is outstanding, grant it in place and

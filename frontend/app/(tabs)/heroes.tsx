@@ -19,6 +19,7 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import { rarityTierLabel } from "@/src/game/university";
 import { findSkin } from "@/src/game/shop";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -113,7 +114,7 @@ export default function HeroesScreen() {
           {player.heroes_owned.length === 0 && (
             <Pressable
               style={styles.emptyBanner}
-              onPress={() => router.push("/university/recruit")}
+              onPress={() => router.push(ROUTES.universityRecruit)}
               testID="heroes-empty-recruit-btn"
             >
               <Ionicons name="school" size={22} color={COLORS.brand} />
@@ -283,7 +284,7 @@ export default function HeroesScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionLbl}>Recruitment Hall</Text>
           <Pressable style={styles.recruitBanner}
-            onPress={() => router.push("/university/recruit")} testID="heroes-recruit-tab-btn">
+            onPress={() => router.push(ROUTES.universityRecruit)} testID="heroes-recruit-tab-btn">
             <View style={styles.recruitIcon}>
               <Ionicons name="school" size={28} color={COLORS.brand} />
             </View>

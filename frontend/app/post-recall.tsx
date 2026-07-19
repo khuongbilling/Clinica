@@ -22,6 +22,7 @@ import {
   type QuizResult,
   type FantasyClass,
 } from "@/src/game/classQuiz";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import { MilestoneReward } from "@/src/components/onboarding/MilestoneReward";
@@ -108,9 +109,9 @@ export default function PostRecall() {
     // memory-reminiscence scene before the player ever reaches University
     // or the normal hub. Once seen, later visits go straight to the hub.
     if (player && !player.seen_reminiscence) {
-      router.replace("/reminiscence");
+      router.replace(ROUTES.reminiscence);
     } else {
-      router.replace("/(tabs)");
+      router.replace(ROUTES.tabs);
     }
   }, [isReplay, phase, player, router]);
 
@@ -175,7 +176,7 @@ export default function PostRecall() {
             await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
           }
         }
-        if (isReplay) router.replace("/(tabs)/profile");
+        if (isReplay) router.replace(ROUTES.tabProfile);
       } finally {
         setSubmitting(false);
       }
@@ -313,7 +314,7 @@ export default function PostRecall() {
       {isReplay && (
         <Pressable
           style={styles.replayCloseBtn}
-          onPress={() => router.replace("/(tabs)/profile")}
+          onPress={() => router.replace(ROUTES.tabProfile)}
           hitSlop={10}
           testID="post-recall-replay-close"
         >

@@ -27,6 +27,7 @@ const HEROES:     AppRoute = "/(tabs)/heroes";
 const KINGDOM:    AppRoute = "/(tabs)/kingdom";
 const PROFILE:    AppRoute = "/(tabs)/profile";
 const SHOP_TAB:   AppRoute = "/(tabs)/shop";
+const FACTION:    AppRoute = "/(tabs)/faction";
 
 // ── Core gameplay ────────────────────────────────────────────────────────────
 const BATTLE:          AppRoute = "/battle";
@@ -70,6 +71,14 @@ const UNI_TRIAGE_COMPLETE:      AppRoute = "/university/triage-complete";
 const UNI_CAREER_EXPLORER:      AppRoute = "/university/career-explorer";
 
 // ── Other screens ─────────────────────────────────────────────────────────────
+const TITLE:               AppRoute = "/title";
+const PRELOADER:           AppRoute = "/preloader";
+const TUTORIAL:            AppRoute = "/tutorial";
+const TUTORIAL_CENTER:     AppRoute = "/tutorial-center";
+const TUTORIAL_ENCYCLOPEDIA: AppRoute = "/tutorial-encyclopedia";
+const CLASS_TREE:          AppRoute = "/class-tree";
+const CLASS_RESULT:        AppRoute = "/class-result";
+const HERO_SELECT:         AppRoute = "/hero-select";
 const SUMMON:              AppRoute = "/summon";
 const ITEM_BAG:            AppRoute = "/item-bag";
 const MEALCRAFT:           AppRoute = "/mealcraft";
@@ -77,7 +86,6 @@ const LOTUS_JOURNAL:       AppRoute = "/lotus-journal";
 const LOTUS_JOURNAL_LOG:   AppRoute = "/lotus-journal-log";
 const LOTUS_JOURNAL_RECIPES: AppRoute = "/lotus-journal-recipes";
 const COMPENDIUM:          AppRoute = "/compendium";
-const CLASS_TREE:          AppRoute = "/class-tree";
 const ECONOMY:             AppRoute = "/economy";
 const BAZAAR:              AppRoute = "/bazaar";
 const EMBASSY:             AppRoute = "/embassy";
@@ -87,22 +95,27 @@ const MATERIALS:           AppRoute = "/materials";
 const LEARNING_PROFILE:    AppRoute = "/learning-profile";
 const SHOP:                AppRoute = "/shop";
 const SUMMON_CEREMONY:     AppRoute = "/summon";
-const TUTORIAL_ENCYCLOPEDIA: AppRoute = "/tutorial-encyclopedia";
-const TUTORIAL_CENTER:     AppRoute = "/tutorial-center";
 const LOTUS_RECALL:        AppRoute = "/lotus-recall";
 
 /**
  * Static route constants — prefer these over raw string literals in
  * router.push / router.replace calls and in navigation data objects.
+ *
+ * Two naming conventions are exported for backwards compatibility:
+ *   UPPERCASE (canonical, preferred for new code): ROUTES.UNIVERSITY
+ *   camelCase (aliases, supported in existing code): ROUTES.university
  */
 export const ROUTES = {
+  // ── Tabs ──────────────────────────────────────────────────────────────────
   HOME,
   CODEX,
   HEROES,
   KINGDOM,
   PROFILE,
   SHOP_TAB,
+  FACTION,
 
+  // ── Core gameplay ──────────────────────────────────────────────────────────
   BATTLE,
   MISSION_LOADOUT,
   SHIFT,
@@ -119,6 +132,7 @@ export const ROUTES = {
   POST_RECALL,
   STORY_SCENE,
 
+  // ── University ────────────────────────────────────────────────────────────
   UNIVERSITY,
   UNI_LESSONS,
   UNI_RECRUIT,
@@ -142,6 +156,15 @@ export const ROUTES = {
   UNI_TRIAGE_COMPLETE,
   UNI_CAREER_EXPLORER,
 
+  // ── Other screens ─────────────────────────────────────────────────────────
+  TITLE,
+  PRELOADER,
+  TUTORIAL,
+  TUTORIAL_CENTER,
+  TUTORIAL_ENCYCLOPEDIA,
+  CLASS_TREE,
+  CLASS_RESULT,
+  HERO_SELECT,
   SUMMON,
   ITEM_BAG,
   MEALCRAFT,
@@ -149,7 +172,6 @@ export const ROUTES = {
   LOTUS_JOURNAL_LOG,
   LOTUS_JOURNAL_RECIPES,
   COMPENDIUM,
-  CLASS_TREE,
   ECONOMY,
   BAZAAR,
   EMBASSY,
@@ -159,9 +181,83 @@ export const ROUTES = {
   LEARNING_PROFILE,
   SHOP,
   SUMMON_CEREMONY,
-  TUTORIAL_ENCYCLOPEDIA,
-  TUTORIAL_CENTER,
   LOTUS_RECALL,
+
+  // ── camelCase aliases (for files migrated before the uppercase convention) ─
+  tabs:             HOME,
+  tabHome:          HOME,
+  tabCodex:         CODEX,
+  tabHeroes:        HEROES,
+  tabShop:          SHOP_TAB,
+  tabKingdom:       KINGDOM,
+  tabProfile:       PROFILE,
+  tabFaction:       FACTION,
+
+  title:                TITLE,
+  preloader:            PRELOADER,
+  onboarding:           ONBOARDING,
+  university:           UNIVERSITY,
+  battle:               BATTLE,
+  shift:                SHIFT,
+  shiftCases:           SHIFT_CASES,
+  result:               RESULT,
+  prologue:             PROLOGUE,
+  tutorial:             TUTORIAL,
+  tutorialCenter:       TUTORIAL_CENTER,
+  tutorialEncyclopedia: TUTORIAL_ENCYCLOPEDIA,
+  wardDefense:          WARD_DEFENSE,
+  boss:                 BOSS,
+  worldEvent:           WORLD_EVENT,
+  summon:               SUMMON,
+  journey:              JOURNEY,
+  academyPath:          ACADEMY_PATH,
+  classTree:            CLASS_TREE,
+  classResult:          CLASS_RESULT,
+  economy:              ECONOMY,
+  bazaar:               BAZAAR,
+  embassy:              EMBASSY,
+  events:               EVENTS,
+  lotusJournal:         LOTUS_JOURNAL,
+  lotusJournalLog:      LOTUS_JOURNAL_LOG,
+  lotusJournalRecipes:  LOTUS_JOURNAL_RECIPES,
+  lotusRecall:          LOTUS_RECALL,
+  mealcraft:            MEALCRAFT,
+  reminiscence:         REMINISCENCE,
+  postRecall:           POST_RECALL,
+  storyScene:           STORY_SCENE,
+  materials:            MATERIALS,
+  milestones:           MILESTONES,
+  itemBag:              ITEM_BAG,
+  heroSelect:           HERO_SELECT,
+  missionLoadout:       MISSION_LOADOUT,
+  shop:                 SHOP,
+  compendium:           COMPENDIUM,
+  learningProfile:      LEARNING_PROFILE,
+  modeWardDefense:      "/mode/ward-defense" as AppRoute,
+  modeWardShift:        "/mode/ward-shift"   as AppRoute,
+
+  universityLessons:              UNI_LESSONS,
+  universityRecruit:              UNI_RECRUIT,
+  universityTraining:             UNI_TRAINING,
+  universityPractice:             UNI_PRACTICE,
+  universitySkillAcademy:         UNI_SKILL_ACADEMY,
+  universityCareerExplorer:       UNI_CAREER_EXPLORER,
+  universityCueHunt:              UNI_CUE_HUNT,
+  universityCueHuntLesson:        UNI_CUE_HUNT_LESSON,
+  universityRapidTriage:          UNI_RAPID_TRIAGE,
+  universityTriageLesson:         UNI_TRIAGE_LESSON,
+  universityTriageComplete:       UNI_TRIAGE_COMPLETE,
+  universityStabilizeStack:       UNI_STABILIZE_STACK,
+  universityStabilizeLesson:      UNI_STABILIZE_LESSON,
+  universityStabilizePlaceholder: UNI_STABILIZE_PLACEHOLDER,
+  universityStabilizeComplete:    UNI_STABILIZE_COMPLETE,
+  universityApplyIt:              UNI_APPLY_IT,
+  universityCueLab:               UNI_CUE_LAB,
+  universityTriageHall:           UNI_TRIAGE_HALL,
+  universityStackLab:             UNI_STACK_LAB,
+  universityUniMilestones:        UNI_MILESTONES,
+  universityUniShop:              UNI_SHOP,
+  universityLotusLessonHydration: "/university/lotus-lesson/recognizing-cues-hydration" as AppRoute,
 } as const;
 
 /**

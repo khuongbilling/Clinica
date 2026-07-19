@@ -22,6 +22,7 @@ import { HubBottomNav } from "@/src/components/HubBottomNav";
 import { firstIncompleteLotusNode, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getChainProgress, ChainProgress } from "@/src/game/chainProgress";
 import { TutorialQuestPanel } from "@/src/components/university/TutorialQuestPanel";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import {
@@ -437,7 +438,7 @@ export default function UniversityHubScreen() {
 
       <View style={[styles.hero, { backgroundColor: COLORS.brandTertiary }]}>
         <View style={styles.heroTopRow}>
-          <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="university-back">
+          <Pressable style={styles.backBtn} onPress={() => router.replace(ROUTES.tabs)} hitSlop={10} testID="university-back">
             <Ionicons name="chevron-back" size={18} color={COLORS.onSurface} />
           </Pressable>
           <Pressable style={styles.helpBtn} onPress={() => setShowUniIntro(true)} hitSlop={10} testID="university-help">

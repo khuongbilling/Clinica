@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { type TutorialId } from "@/src/game/tutorials";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -535,7 +536,7 @@ export default function TutorialEncyclopedia() {
         {/* Link to Replay Center for batch management */}
         <Pressable
           style={styles.replayCenterLink}
-          onPress={() => router.push("/tutorial-center")}
+          onPress={() => router.push(ROUTES.tutorialCenter)}
           testID="encyclopedia-replay-center-link"
         >
           <Ionicons name="school-outline" size={16} color={COLORS.brand} />

@@ -16,6 +16,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { ROUTES } from "@/src/game/routes";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -459,7 +460,7 @@ export default function RapidTriageScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.replace("/university")}
+          onPress={() => router.replace(ROUTES.university)}
           hitSlop={10}
           testID="triage-back"
         >

@@ -39,6 +39,7 @@ import { Chapter5VisualMap } from "@/src/components/Chapter5VisualMap";
 import { GenericChapterVisualMap } from "@/src/components/GenericChapterVisualMap";
 import { ENEMIES } from "@/src/game/content";
 import { getJourneyNodeDef, computeJourneyReward, getChapterNodeIds } from "@/src/game/journeyRewards";
+import { ROUTES } from "@/src/game/routes";
 import { CHAPTER_CHESTS } from "@/src/game/milestones";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";

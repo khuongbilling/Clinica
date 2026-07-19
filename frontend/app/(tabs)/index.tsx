@@ -29,6 +29,7 @@ import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
+import { ROUTES } from "@/src/game/routes";
 
 const EMBLEM_IMAGES = {
   journey:     require("../../assets/ui-icons/emblems/journey.png"),
@@ -353,7 +354,7 @@ export default function RunHome() {
       <View style={styles.tutorialRow}>
         <Pressable
           style={styles.headerBtn}
-          onPress={() => router.push("/tutorial")}
+          onPress={() => router.push(ROUTES.tutorial)}
           hitSlop={10}
           testID="run-tutorial-button"
         >
@@ -511,7 +512,7 @@ export default function RunHome() {
             emblem={<HubEmblem source={EMBLEM_IMAGES.journey} />}
             label="Journey"
             color={COLORS.river}
-            onPress={() => router.push("/journey")}
+            onPress={() => router.push(ROUTES.journey)}
             testID="home-float-journey"
           />
           {roundsUnlocked && (
@@ -528,7 +529,7 @@ export default function RunHome() {
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
         <Pressable
           style={styles.heroCenter}
-          onPress={() => router.push("/hero-select")}
+          onPress={() => router.push(ROUTES.heroSelect)}
           testID="home-portrait-tap"
         >
           {heroSprite ? (
@@ -579,7 +580,7 @@ export default function RunHome() {
               emblem={<HubEmblem source={EMBLEM_IMAGES.bossWard} />}
               label="Boss"
               color={COLORS.error}
-              onPress={() => router.push("/boss")}
+              onPress={() => router.push(ROUTES.boss)}
               testID="home-float-boss"
             />
           )}
@@ -589,7 +590,7 @@ export default function RunHome() {
               label="Events"
               color={COLORS.air}
               live
-              onPress={() => router.push("/events")}
+              onPress={() => router.push(ROUTES.events)}
               testID="home-float-events"
             />
           )}
@@ -606,7 +607,7 @@ export default function RunHome() {
           shadowOffset: { width: 0, height: 4 },
           elevation: 5,
         }]}
-        onPress={() => router.push("/hero-select")}
+        onPress={() => router.push(ROUTES.heroSelect)}
       >
         <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
         <View style={[styles.elementBadge, { borderColor: elementColor + "90", backgroundColor: elementColor + "20" }]}>
@@ -630,7 +631,7 @@ export default function RunHome() {
         <PrimaryButton
           label="ENTER THE WARD"
           icon="medical"
-          onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push("/shift"); }}
+          onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push(ROUTES.shift); }}
           style={styles.startBtn}
           testID="run-random-encounter"
         />

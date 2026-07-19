@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { getMaterialById, rewardPreviewForMode } from "@/src/game/materials";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export function RewardPreview({ mode, label }: { mode: string; label?: string }) {
@@ -14,7 +15,7 @@ export function RewardPreview({ mode, label }: { mode: string; label?: string })
 
   return (
     <Pressable
-      onPress={() => router.push("/materials")}
+      onPress={() => router.push(ROUTES.materials)}
       style={styles.wrap}
       testID={`reward-preview-${mode.replace(/\s+/g, "-").toLowerCase()}`}
     >

@@ -36,6 +36,7 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -390,7 +391,7 @@ export default function MealcraftScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.replace("/lotus-journal")}
+          onPress={() => router.replace(ROUTES.lotusJournal)}
           hitSlop={10}
         >
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
@@ -578,7 +579,7 @@ export default function MealcraftScreen() {
         ) : (
           <Pressable
             style={styles.continueBtn}
-            onPress={() => router.replace("/lotus-journal")}
+            onPress={() => router.replace(ROUTES.lotusJournal)}
           >
             <Text style={styles.continueTxt}>Return to Journal</Text>
             <Ionicons name="arrow-forward" size={18} color="#0B1A18" />

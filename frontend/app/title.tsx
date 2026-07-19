@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "@/src/theme/colors";
 import { usePlayer } from "@/src/game/store";
 import { RANKS } from "@/src/game/content";
+import { ROUTES } from "@/src/game/routes";
 
 const SPLASH = require("../assets/images/title_splash.png");
 
@@ -59,7 +60,7 @@ export default function Title() {
 
           <Pressable
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            onPress={() => router.replace("/preloader" as never)}
+            onPress={() => router.replace(ROUTES.preloader)}
             testID="start-game"
           >
             <Text style={styles.buttonText}>

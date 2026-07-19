@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { COLORS } from "@/src/theme/colors";
+import { ROUTES } from "@/src/game/routes";
 
 /**
  * Legacy onboarding route — redirects to the current Post-Recall flow.
@@ -15,7 +16,7 @@ export default function OnboardingRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/post-recall");
+    router.replace(ROUTES.postRecall);
   }, [router]);
 
   return (

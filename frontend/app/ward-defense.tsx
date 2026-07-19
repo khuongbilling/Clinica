@@ -58,6 +58,7 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost, findSkin } from "@/src/game/shop";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 /* ── Tick speed ── */
@@ -3061,7 +3062,7 @@ export default function WardDefense() {
     return (
       <LobbyScreen
         onStart={startGame}
-        onBack={() => router.replace("/mode/ward-defense")}
+        onBack={() => router.replace(ROUTES.modeWardDefense)}
         inventory={player?.inventory || {}}
         pendingBoosts={pendingBoosts}
         onToggleBoost={(id) =>
@@ -3095,7 +3096,7 @@ export default function WardDefense() {
     return (
       <ResultScreen won={gs.phase === "won"} wave={gs.wave} stability={gs.stability}
         score={gs.score} rewards={rewards} learningStats={ls}
-        onReplay={startGame} onBack={() => router.replace("/shift")} />
+        onReplay={startGame} onBack={() => router.replace(ROUTES.shift)} />
     );
   }
 
@@ -3110,7 +3111,7 @@ export default function WardDefense() {
       {/* ── HUD bar ── */}
       <View style={[s.hud, { backgroundColor: "#060e1a" }]}>
         {/* Back button */}
-        <Pressable style={s.hudBack} onPress={() => router.replace("/mode/ward-defense")} hitSlop={12}>
+        <Pressable style={s.hudBack} onPress={() => router.replace(ROUTES.modeWardDefense)} hitSlop={12}>
           <Ionicons name="arrow-back" size={15} color={COLORS.onSurface} />
         </Pressable>
 

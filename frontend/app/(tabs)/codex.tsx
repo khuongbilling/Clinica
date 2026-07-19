@@ -9,6 +9,7 @@ import { DEPTH_INTRO, DEPTH_LABEL } from "@/src/game/onboarding";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { TUTORIAL_LABELS, TutorialId } from "@/src/game/tutorials";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const TUTORIAL_IDS: TutorialId[] = ["firstBattle", "firstKingdom", "firstSummon"];
@@ -54,7 +55,7 @@ export default function CodexScreen() {
           <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
         </Pressable>
         <Pressable
-          onPress={() => router.push("/materials")}
+          onPress={() => router.push(ROUTES.materials)}
           style={styles.materialsBtn}
           hitSlop={12}
           testID="codex-materials-button"
@@ -75,7 +76,7 @@ export default function CodexScreen() {
 
         <Pressable
           style={styles.classTreeLink}
-          onPress={() => router.push("/class-tree")}
+          onPress={() => router.push(ROUTES.classTree)}
           testID="codex-class-tree-link"
         >
           <Ionicons name="git-network-outline" size={14} color={COLORS.brand} />

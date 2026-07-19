@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
@@ -42,11 +43,11 @@ export default function LotusRecall() {
   const proceed = async () => {
     // firstBattle recall: no prologue flags to write — just return to hub.
     if (isFirstBattleRecall) {
-      router.replace("/(tabs)");
+      router.replace(ROUTES.tabs);
       return;
     }
     if (isReplay) {
-      router.replace("/(tabs)/profile");
+      router.replace(ROUTES.tabProfile);
       return;
     }
     // C1: grant obj_lotus_recall (step 2) before routing away.
@@ -57,7 +58,7 @@ export default function LotusRecall() {
       // applyRewards not available in this component; university catch-up covers it.
     }
     await completePrologue();
-    router.replace("/post-recall");
+    router.replace(ROUTES.postRecall);
   };
 
   // ── firstBattle "Timeline Failed" variant ────────────────────────────────

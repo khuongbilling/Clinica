@@ -24,6 +24,7 @@ import {
   CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
   UNIVERSITY_HUB_MODE, WARD_SHIFT_MODE, WELLNESS_MODES,
 } from "@/src/game/modeHub";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -110,7 +111,7 @@ export default function ShiftPage() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.replace("/(tabs)")} hitSlop={10} testID="shift-back">
+        <Pressable style={styles.backBtn} onPress={() => router.replace(ROUTES.tabs)} hitSlop={10} testID="shift-back">
           <Ionicons name="arrow-back" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
         <View style={{ flex: 1 }}>
