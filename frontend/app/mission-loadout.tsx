@@ -580,20 +580,28 @@ export default function MissionLoadoutScreen() {
   const teamSyncedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!player) return;
-    const key = (player.active_team ?? []).join(',');
-    if (teamSyncedRef.current === key) return;
-    teamSyncedRef.current = key;
     const team = player.active_team ?? [];
+    const key = team.join(',');
+    if (teamSyncedRef.current === key) return;
+    // Guard: if we previously had heroes and the new data is empty, treat it as a
+    // transient reload artifact (token refresh / reconnect) and hold the current
+    // slots until real data arrives with a non-empty or confirmed-empty team.
+    if (team.length === 0 && teamSyncedRef.current !== null && teamSyncedRef.current !== '') return;
+    teamSyncedRef.current = key;
     setTeamSlots([team[0] ?? null, team[1] ?? null, team[2] ?? null]);
   }, [player]);
 
   useFocusEffect(useCallback(() => {
     setSelectedItems(getLoadoutItems());
     setLocalEquippedCards(player?.equipped_cards ?? []);
-    // Re-sync team slots to server state on each focus visit
+    // Re-sync team slots to server state on each focus visit.
+    // Same null-window guard: don't overwrite filled slots with empty data if
+    // we previously had a non-empty team (reload artifact protection).
     if (player) {
       const team = player.active_team ?? [];
       const key = team.join(',');
+      const hadHeroes = teamSyncedRef.current !== null && teamSyncedRef.current !== '';
+      if (team.length === 0 && hadHeroes) return;
       teamSyncedRef.current = key;
       setTeamSlots([team[0] ?? null, team[1] ?? null, team[2] ?? null]);
     }
