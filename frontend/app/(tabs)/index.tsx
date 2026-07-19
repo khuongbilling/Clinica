@@ -44,7 +44,7 @@ function HubEmblem({ source }: { source: any }) {
   return (
     <Image
       source={source}
-      style={{ width: 44, height: 44 }}
+      style={{ width: 56, height: 75 }}
       contentFit="contain"
     />
   );
@@ -884,7 +884,9 @@ function FeatureButton({
           </View>
         ) : null}
       </View>
-      <Text style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
+      {emblem === undefined && (
+        <Text style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
+      )}
       {live && !locked ? <Text style={styles.featLiveTxt}>LIVE</Text> : null}
       {locked && lockText ? <Text style={styles.featLock}>{lockText}</Text> : null}
     </Pressable>
@@ -932,7 +934,7 @@ const styles = StyleSheet.create({
   sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm },
   featBtn:        { alignItems: "center", gap: 4 },
   featEmblemWrap: {
-    width: 56, height: 56,
+    width: 56, height: 75,
     alignItems: "center", justifyContent: "center",
   },
   featLabel:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.2, textAlign: "center" },
