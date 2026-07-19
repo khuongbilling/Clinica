@@ -58,7 +58,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars } = usePlayer();
-  const { isCompleted, startTutorial, replayTutorial, onRequiredAction, currentStep, activeTutorialId, guidedReserve } = useTutorial();
+  const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
@@ -263,6 +263,33 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     setState((s) => ({ ...s, outcome: "loss", stability: 0, log: [...s.log, "⚠ The patient's condition collapses without warning."] }));
   }, [isPrologueBoss, state.outcome, state.turnsTaken]);
 
+  // firstBattle scripted-loss: once the guided chain is complete (fb_done
+  // overlay shows), advance the tutorial to mark it done, then trigger the
+  // story defeat. The 2.5 s delay lets the fb_done overlay be readable.
+  useEffect(() => {
+    if (!isFirstBattleGuided) return;
+    if (currentStep?.id !== "fb_done") return;
+    if (state.outcome !== "ongoing") return;
+    const t = setTimeout(() => {
+      advanceStep();
+      setState(s => ({
+        ...s,
+        outcome: "loss",
+        stability: 0,
+        log: [...s.log, "The ward is overwhelmed. This battle was always meant to test your rhythm, not to be won."],
+      }));
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [isFirstBattleGuided, currentStep?.id, state.outcome]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Stability floor during firstBattle chain steps: prevent an enemy attack
+  // from zeroing the patient before the chain completes.
+  useEffect(() => {
+    if (!isFirstBattleActionStep) return;
+    if (state.stability > 0 || state.outcome !== "ongoing") return;
+    setState(s => ({ ...s, stability: 1 }));
+  }, [isFirstBattleActionStep, state.stability, state.outcome]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Battle exit guards ────────────────────────────────────────────────────
   // Back navigation (browser back, Android hardware back, iOS swipe-back,
   // in-app pops) is blocked for EVERY battle — mid-battle back used to strand
@@ -395,13 +422,23 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const guidedSkillId = guidedStep?.requiredSkillId;
   const guidedCueStep = guidedStep?.requiredActionType === "cue";
   const guidedEndTurnStep = guidedStep?.requiredActionType === "endTurn";
+  // firstBattle guided rehearsal: lock the action panel to exactly one skill
+  // type at a time (scout/stabilize/strike/analyze). Wrong-type buttons are
+  // fully disabled (not just nudged), and the correct type pulses gold.
+  const isFirstBattleGuided = activeTutorialId === "firstBattle";
+  const guidedActionType = (guidedStep?.requiredActionType ?? null) as string | null;
+  const isFirstBattleActionStep =
+    isFirstBattleGuided &&
+    !!guidedStep &&
+    !!guidedActionType &&
+    !["cue", "endTurn"].includes(guidedActionType);
 
   // Pulse animation for the required battle target (skill card or End Turn).
   // Scales the highlighted element gently so the player's eye is drawn to it
   // without dimming anything else on screen.
   const skillPulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const isActive = !!(guidedSkillId || guidedEndTurnStep);
+    const isActive = !!(guidedSkillId || guidedEndTurnStep || isFirstBattleActionStep);
     if (!isActive) { skillPulseAnim.setValue(1); return; }
     const loop = Animated.loop(
       Animated.sequence([
@@ -421,7 +458,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   const handleSkill = (hero: Hero, skill: HeroSkill, castQuality: CastQuality = "normal") => {
     if (state.outcome !== "ongoing") return;
-    if (guidedStep && skill.id !== guidedSkillId) { tutorialNudge(); return; }
+    // prologueBattle locks to a specific skill ID; firstBattle locks to a type.
+    if (guidedStep && guidedSkillId && skill.id !== guidedSkillId) { tutorialNudge(); return; }
+    if (isFirstBattleActionStep && skill.type !== guidedActionType) { tutorialNudge(); return; }
     let effective = skill;
     if (sageDiscount && skill.type === "scout" && skill.cost > 0) {
       effective = { ...skill, cost: Math.max(0, skill.cost - 1) };
@@ -576,7 +615,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   const handleEndTurn = () => {
     if (state.outcome !== "ongoing") return;
-    if (guidedStep && !guidedEndTurnStep) { tutorialNudge(); return; }
+    // During firstBattle action steps, endTurn is always allowed so the player
+    // can refill AP between guided steps without getting stuck.
+    if (guidedStep && !guidedEndTurnStep && !isFirstBattleActionStep) { tutorialNudge(); return; }
     onRequiredAction("endTurn");
     turnActionsRef.current = [];
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -1082,7 +1123,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               if (acted) return [<Text key="acted" style={styles.emptyTab}>{selHero.name} has already acted.</Text>];
               const isBoss = (state.enemyClinical?.rewardBase || 0) >= 100;
               const careDmg = careAttemptDamage(state.chapter, isBoss);
-              const careDisabled = state.ap < 1 || state.outcome !== "ongoing";
+              const careDisabled = state.ap < 1 || state.outcome !== "ongoing" || isFirstBattleActionStep;
               const careNode = (
                 <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) return; setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
                   <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
@@ -1102,8 +1143,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 if (airDisc) cost = Math.max(1, cost - 1);
                 const preview = previewSkillStatus(state, skill);
                 const isLocked = preview.status === "locked";
-                const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing";
-                const isGuidedSkill = guidedSkillId === skill.id;
+                const isWrongType = isFirstBattleActionStep && skill.type !== guidedActionType;
+                const disabled = isLocked || state.ap < cost || state.outcome !== "ongoing" || isWrongType;
+                const isGuidedSkill = guidedSkillId === skill.id ||
+                  (isFirstBattleActionStep && skill.type === guidedActionType);
                 return (
                   <Animated.View key={`${selHero.id}-${skill.id}`} style={[{ width: "48.5%" }, isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined]}>
                     <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, isGuidedSkill && styles.guidedHighlight]} onPress={() => disabled ? null : handleSkill(selHero, skill)} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
@@ -1551,6 +1594,13 @@ const STRIP_TUTORIAL_STEP: Record<string, number> = {
   prologue_stabilize: 1,
   prologue_counter:   2,
   prologue_reassess:  3,
+  // firstBattle guided rehearsal — same four positions
+  fb_scout:           0,
+  fb_stabilize:       1,
+  fb_counter:         2,
+  fb_reassess:        3,
+  // fb_done: index 4 means all four steps show as completed checkmarks
+  fb_done:            4,
 };
 
 function CareChainStrip({ chain, isTutorial, currentStepId }: {
@@ -1562,7 +1612,7 @@ function CareChainStrip({ chain, isTutorial, currentStepId }: {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (activeIdx >= 0) {
+    if (activeIdx >= 0 && activeIdx < STRIP_STEPS.length) {
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.1, duration: 500, useNativeDriver: true }),
