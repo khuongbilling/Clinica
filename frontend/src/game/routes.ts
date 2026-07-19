@@ -97,6 +97,8 @@ const LEARNING_PROFILE:    AppRoute = "/learning-profile";
 const SHOP:                AppRoute = "/shop";
 const SUMMON_CEREMONY:     AppRoute = "/summon";
 const LOTUS_RECALL:        AppRoute = "/lotus-recall";
+const OPENING_PROLOGUE:    AppRoute = "/opening-prologue"    as AppRoute;
+const DEV_PROLOGUE_TESTER: AppRoute = "/dev-prologue-tester" as AppRoute;
 
 /**
  * Static route constants — prefer these over raw string literals in
@@ -261,6 +263,13 @@ export const ROUTES = {
   universityUniMilestones:        UNI_MILESTONES,
   universityUniShop:              UNI_SHOP,
   universityLotusLessonHydration: "/university/lotus-lesson/recognizing-cues-hydration" as AppRoute,
+
+  // ── Prologue ───────────────────────────────────────────────────────────────
+  OPENING_PROLOGUE,
+  openingPrologue:    OPENING_PROLOGUE,
+  // Dev-only scene jumper — not reachable in production builds.
+  DEV_PROLOGUE_TESTER,
+  devPrologueTester:  DEV_PROLOGUE_TESTER,
 } as const;
 
 /**

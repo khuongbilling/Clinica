@@ -254,6 +254,16 @@ export interface PlayerState {
   // the objective modal is dismissed on the scripted-loss Silent Infarct boss.
   // Backfilled as true for existing players; false for brand-new players.
   seen_boss_narrator?: boolean;
+  // New cinematic prologue framework (Push 1 v2). Backfilled true for existing
+  // players so they are never re-routed into the new prologue. New players start
+  // at the first phase and advance through all 11 before reaching the hub.
+  opening_prologue_complete?: boolean;
+  // Current phase within the new cinematic prologue. null when not yet started.
+  // Persisted on each advance so the app can resume after a crash or close.
+  opening_prologue_phase?: string | null;
+  // Set true once memory_echo_award_scene items have been granted, preventing
+  // duplicate rewards if the player exits and re-enters that phase.
+  prologue_rewards_claimed?: boolean;
   // Push 5 — Memory Reminiscence: has the player seen the post-recall
   // reminiscence story scene (modern-world origin -> Silent Infarct -> Lotus
   // Recall)? Gates the one-time redirect from post-recall into /reminiscence.

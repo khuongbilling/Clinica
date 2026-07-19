@@ -6,13 +6,22 @@ import { usePlayer } from "@/src/game/store";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
+import { PROLOGUE_FIRST_PHASE } from "@/src/game/prologueTypes";
 
-// Push 1 prologue entry point. Replaces the old name/quiz onboarding as the
-// very first thing a brand-new player sees: a short cinematic beat, then a
-// silent, default player is created (prologue_complete: false) and the
-// player is dropped straight into the guided tutorial Ward Shift battle.
-// Name input, the aptitude quiz, and the class-result screen are deferred to
-// a later push — onboarding.tsx is left intact and unlinked for now.
+// Prologue entry-point — determines which prologue path to take:
+//
+//   A) Push 1 v2 (new cinematic prologue):
+//      Brand-new players (no player object) or players with
+//      opening_prologue_complete === false go to /opening-prologue where the
+//      11-phase state machine runs.
+//
+//   B) Legacy path (old tutorial battle — still reachable by saves created
+//      before Push 1 v2 that somehow have prologue_complete:false but
+//      opening_prologue_complete:true, or by the dev tester bypass):
+//      Route directly to the tutorial Ward Shift battle.
+//
+// Existing players always have opening_prologue_complete backfilled to true in
+// normalizeProgression, so they never land here.
 export default function Prologue() {
   const router = useRouter();
   const { player, createPlayer } = usePlayer();
@@ -21,11 +30,31 @@ export default function Prologue() {
 
   useEffect(() => {
     if (startedRef.current) return;
-    if (player && player.prologue_complete === false) {
+
+    // ── Path A: new cinematic prologue (resume if mid-sequence) ────────────
+    if (player && player.opening_prologue_complete === false) {
       startedRef.current = true;
-      router.replace({ pathname: "/mission-loadout", params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
+      router.replace(ROUTES.openingPrologue);
       return;
     }
+
+    // ── Path B: legacy tutorial battle (backward compat) ───────────────────
+    if (player && player.prologue_complete === false) {
+      startedRef.current = true;
+      router.replace({
+        pathname: "/mission-loadout",
+        params: {
+          enemyId: "dehydration_wisp",
+          title: "First Ward Shift",
+          partType: "battle",
+          chapterAccent: "#4FD8C4",
+          tutorial: "1",
+        },
+      });
+      return;
+    }
+
+    // ── No player yet: create + send to new cinematic prologue ─────────────
     if (!player) {
       startedRef.current = true;
       setStarting(true);
@@ -36,12 +65,16 @@ export default function Prologue() {
         prologue_complete: false,
         identity_restored: false,
         diagnostic_intro_seen: false,
-      }).then(() => {
-        router.replace({ pathname: "/mission-loadout", params: { enemyId: "dehydration_wisp", title: "First Ward Shift", partType: "battle", chapterAccent: "#4FD8C4", tutorial: "1" } });
-      }).catch(() => {
-        setStarting(false);
-        startedRef.current = false;
-      });
+        opening_prologue_complete: false,
+        opening_prologue_phase: PROLOGUE_FIRST_PHASE,
+      })
+        .then(() => {
+          router.replace(ROUTES.openingPrologue);
+        })
+        .catch(() => {
+          setStarting(false);
+          startedRef.current = false;
+        });
     }
   }, [player, createPlayer, router]);
 
@@ -57,7 +90,9 @@ export default function Prologue() {
         </Text>
         <View style={styles.subRow}>
           <ActivityIndicator size="small" color={COLORS.brand} />
-          <Text style={styles.sub}>{starting ? "Entering the ward…" : "Preparing your first shift…"}</Text>
+          <Text style={styles.sub}>
+            {starting ? "Entering the ward…" : "Preparing your first shift…"}
+          </Text>
         </View>
       </SceneTransition>
     </View>

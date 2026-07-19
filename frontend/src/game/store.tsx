@@ -198,6 +198,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.seen_florence_cameo == null) out = { ...out, seen_florence_cameo: true };
   // Boss narrator — existing players already past the prologue boss, backfill as seen.
   if (out.seen_boss_narrator == null) out = { ...out, seen_boss_narrator: true };
+  // Push 1 v2 — new cinematic prologue framework. Existing players never saw
+  // it, so backfill as complete so they are never routed into it.
+  // Brand-new players get opening_prologue_complete:false in defaultPlayer.
+  if (out.opening_prologue_complete === undefined) out = { ...out, opening_prologue_complete: true };
+  if (out.opening_prologue_phase === undefined)    out = { ...out, opening_prologue_phase: null };
+  if (out.prologue_rewards_claimed === undefined)  out = { ...out, prologue_rewards_claimed: out.opening_prologue_complete ?? true };
   // P6 — Normalize chapter_progress based on actual journey node completion.
   // Only ever advances forward; never resets down. Corrects saves where
   // chapter_progress was set to 2 via run count before this push without the
@@ -362,6 +368,11 @@ type CreatePlayerArgs = {
   prologue_complete?: boolean;
   identity_restored?: boolean;
   diagnostic_intro_seen?: boolean;
+  // Push 1 v2 — new cinematic prologue. Callers that explicitly pass
+  // opening_prologue_complete: true skip the new prologue (used by the
+  // dev tester to create an already-through player).
+  opening_prologue_complete?: boolean;
+  opening_prologue_phase?: string;
 };
 
 // Ephemeral, non-persisted signal emitted the moment a qualifying action
@@ -458,6 +469,10 @@ type Ctx = {
   setPlayerClass: (classId: ClassId) => Promise<{ ok: boolean; message: string }>;
   claimClassTier: (classId: ClassId, level: 1 | 10 | 20 | 30) => Promise<{ ok: boolean; message: string }>;
   completePrologue: () => Promise<void>;
+  // Push 1 v2 — new cinematic prologue state machine.
+  advanceProloguePhase: (phase: import('./prologueTypes').ProloguePhase) => Promise<void>;
+  completePrologueCinematic: () => Promise<void>;
+  claimPrologueRewards: () => Promise<{ ok: boolean }>;
   completeIdentityRestore: (name: string) => Promise<void>;
   setAvatar: (id: string) => Promise<void>;
   completeDiagnosticIntro: () => Promise<void>;
@@ -653,6 +668,12 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     seen_university_intro: false,
     seen_florence_cameo: false,
     seen_boss_narrator: false,
+    // Push 1 v2 — new cinematic prologue. New players start at phase 0;
+    // opening_prologue_complete is backfilled as true for existing players
+    // in normalizeProgression so they are never re-routed.
+    opening_prologue_complete: args.opening_prologue_complete ?? false,
+    opening_prologue_phase: args.opening_prologue_phase ?? 'opening_memory_cinematic',
+    prologue_rewards_claimed: false,
     claimed_level_rewards: [],
     claimed_chapter_chests: [],
     claimed_chapter_3star: [],
@@ -1950,6 +1971,50 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // Push 1 v2 — Advance to a specific phase of the new cinematic prologue and
+  // persist the checkpoint so the app can resume after a crash or close.
+  // Safe to call repeatedly (idempotent to the same phase).
+  const advanceProloguePhase = useCallback(async (phase: import('./prologueTypes').ProloguePhase) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const next = { ...base, opening_prologue_phase: phase };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
+  // Push 1 v2 — Mark the entire new cinematic prologue complete and persist.
+  // Also marks the old prologue_complete flag so nothing else re-routes the
+  // player back into the tutorial battle path.  Idempotent.
+  const completePrologueCinematic = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base || base.opening_prologue_complete) return;
+    const next = {
+      ...base,
+      opening_prologue_complete: true,
+      opening_prologue_phase: null,
+      prologue_complete: true,
+    };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
+  // Push 1 v2 — Grant memory-echo award items (nightingale + fleming echoes)
+  // as inventory entries.  Idempotent: does nothing if already claimed.
+  const claimPrologueRewards = useCallback(async (): Promise<{ ok: boolean }> => {
+    const base = playerRef.current;
+    if (!base) return { ok: false };
+    if (base.prologue_rewards_claimed) return { ok: true };
+    const { PROLOGUE_AWARD_ITEMS } = await import('./prologueTypes');
+    const newInventory = { ...(base.inventory || {}) };
+    for (const itemId of PROLOGUE_AWARD_ITEMS) {
+      if (!newInventory[itemId]) newInventory[itemId] = 1;
+    }
+    const next = { ...base, inventory: newInventory, prologue_rewards_claimed: true };
+    playerRef.current = next;
+    await updateState(next);
+    return { ok: true };
+  }, [updateState]);
+
   // Push 2 post-recall onboarding — step 1: identity restoration. Saves the
   // player-entered name to the same `name` field used everywhere else
   // (header, profile, etc.) and marks this sub-step done so it is never
@@ -2516,7 +2581,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
     setEquippedCards, markCardTutorialSeen, markCallTutorialSeen,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen]);
+    advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
