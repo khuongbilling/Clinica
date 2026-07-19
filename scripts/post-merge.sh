@@ -13,4 +13,7 @@ echo "[post-merge] Installing backend (FastAPI) dependencies..."
 cd "$ROOT/backend"
 pip install -r requirements.txt
 
+echo "[post-merge] Checking routes (routes.ts ↔ app/ file tree)..."
+node "$ROOT/frontend/scripts/check-routes.js"
+
 echo "[post-merge] Done."
