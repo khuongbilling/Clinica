@@ -2381,6 +2381,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand + "14", borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.sm, paddingVertical: 5,
     borderWidth: 1, borderColor: COLORS.brand + "30", marginBottom: 4,
+    // On web, TutorialOverlay's battleScrim sits at zIndex 8999 via
+    // absoluteFillObject.  Without an explicit zIndex here, CSS stacking
+    // places the banner beneath that scrim, making the feedback text invisible
+    // during a guided tutorial step.  9100 keeps it above the scrim (8999)
+    // while remaining below the narrator dialogue box (9600).
+    zIndex: 9100,
   },
   feedbackBannerChain: {
     backgroundColor: COLORS.runeGold + "18",
