@@ -174,6 +174,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
   // ── Animation values ──
   const mainFade  = useRef(new Animated.Value(0)).current;
+  const textFade  = useRef(new Animated.Value(1)).current;
   const lineAnims = useRef(
     Array.from({ length: MAX_LINES }, () => new Animated.Value(0))
   ).current;
@@ -194,7 +195,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: false }).start();
   }, []);
 
-  const crossFade = useCallback((callback: () => void, outDur = 300) => {
+  const hardCrossFade = useCallback((callback: () => void, outDur = 300) => {
     busyRef.current = true;
     Animated.timing(mainFade, { toValue: 0, duration: outDur, useNativeDriver: false }).start(() => {
       if (!mountedRef.current) return;
@@ -203,6 +204,16 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       fadeIn(mainFade, 600);
     });
   }, [mainFade, fadeIn]);
+
+  const softCrossFade = useCallback((callback: () => void) => {
+    busyRef.current = true;
+    Animated.timing(textFade, { toValue: 0, duration: 220, useNativeDriver: false }).start(() => {
+      if (!mountedRef.current) return;
+      callback();
+      busyRef.current = false;
+      Animated.timing(textFade, { toValue: 1, duration: 450, useNativeDriver: false }).start();
+    });
+  }, [textFade]);
 
   // ── Particle system ──
   useEffect(() => {
@@ -253,11 +264,11 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     const next    = current + 1;
 
     if (next >= BEATS.length) {
-      crossFade(() => {
+      hardCrossFade(() => {
         if (mountedRef.current) onComplete();
       }, 800);
     } else {
-      crossFade(() => {
+      softCrossFade(() => {
         if (!mountedRef.current) return;
         beatIdxRef.current = next;
         setBeatIdx(next);
@@ -265,7 +276,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [crossFade, onComplete, revealLines]);
+  }, [hardCrossFade, softCrossFade, onComplete, revealLines]);
 
   // ── Kick off intro ──
   useEffect(() => {
@@ -274,7 +285,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
     const t = setTimeout(() => {
       if (!mountedRef.current) return;
-      crossFade(() => {
+      hardCrossFade(() => {
         stageRef.current = "beat";
         setStage("beat");
         beatIdxRef.current = 0;
@@ -297,7 +308,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
     if (stageRef.current === "intro") {
       clearTimers();
-      crossFade(() => {
+      hardCrossFade(() => {
         stageRef.current   = "beat";
         beatIdxRef.current = 0;
         setStage("beat");
@@ -330,7 +341,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       clearTimers();
       doAdvanceBeat();
     }
-  }, [clearTimers, crossFade, doAdvanceBeat, fadeIn, lineAnims, revealLines]);
+  }, [clearTimers, hardCrossFade, doAdvanceBeat, fadeIn, lineAnims, revealLines]);
 
   // ── Derived ──
   const beat   = BEATS[Math.min(beatIdx, BEATS.length - 1)];
@@ -409,7 +420,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         {/* Top anchor: scene label in beat mode, invisible spacer in intro */}
         <View style={styles.topArea}>
           {stage === "beat" && (
-            <Animated.View style={{ opacity: mainFade }}>
+            <Animated.View style={{ opacity: textFade }}>
               <Text style={[styles.sceneLabel, { color: beat.accent }]}>
                 {beat.sceneLabel}
               </Text>
@@ -432,7 +443,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         {/* Bottom anchor: narration lines + identity strip + tap hint */}
         <View style={styles.bottomArea}>
           {stage === "beat" && (
-            <Animated.View style={[styles.narration, { opacity: mainFade }]}>
+            <Animated.View style={[styles.narration, { opacity: textFade }]}>
               {beat.lines.map((line, i) => (
                 <Animated.Text
                   key={`${beat.id}-${i}`}

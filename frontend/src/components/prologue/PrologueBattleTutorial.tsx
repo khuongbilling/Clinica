@@ -48,9 +48,9 @@ import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
   theProdigy:  require("../../../assets/heroes/battle/the_prodigy.png"),
-  nightingale: require("../../../assets/images/nightingale_portrait.png"),
-  fleming:     require("../../../assets/images/fleming_portrait.png"),
-  masterBai:   require("../../../assets/images/master_bai.png"),
+  nightingale: require("../../../assets/images/nightingale_nobg.png"),
+  fleming:     require("../../../assets/images/fleming_nobg.png"),
+  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
 } as const;
 
 // ─── Stage machine type ───────────────────────────────────────────────────────
@@ -655,19 +655,25 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
         {isEntryStage && currentChar && (
           <Animated.View
             style={[
-              styles.entryCard,
+              styles.entryWrap,
               {
                 opacity:   charFade,
                 transform: [{ translateY: charSlide }],
-                borderColor: currentChar.accentBorder,
-                backgroundColor: currentChar.accentBg,
               },
             ]}
           >
-            {/* Avatar + Name */}
-            <View style={styles.entryHeader}>
-              <ExpoImage source={currentChar.avatar} style={styles.entryAvatar} contentFit="cover" />
-              <View>
+            {/* Standing portrait above card */}
+            <View style={styles.entryPortraitRow}>
+              <ExpoImage
+                source={currentChar.avatar}
+                style={styles.entryPortrait}
+                contentFit="contain"
+              />
+            </View>
+
+            {/* Dialogue card */}
+            <View style={[styles.entryCard, { borderColor: currentChar.accentBorder, backgroundColor: currentChar.accentBg }]}>
+              <View style={styles.entryNameRow}>
                 <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
                   {currentChar.owner}
                 </Text>
@@ -675,19 +681,15 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
                   {currentChar === PRODIGY_SKILL ? "The Prodigy — Peak Power" : currentChar === LAMP_SKILL ? "Legendary Support" : "Legendary Assessment"}
                 </Text>
               </View>
+              <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
+                "{currentChar.prompt}"
+              </Animated.Text>
+              <Pressable style={styles.entryAdvance} onPress={handleTapEntry}>
+                <Text style={[styles.entryAdvanceText, { color: currentChar.ownerColor }]}>
+                  SEE SKILL  →
+                </Text>
+              </Pressable>
             </View>
-
-            {/* Dialogue */}
-            <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
-              "{currentChar.prompt}"
-            </Animated.Text>
-
-            {/* Tap hint */}
-            <Pressable style={styles.entryAdvance} onPress={handleTapEntry}>
-              <Text style={[styles.entryAdvanceText, { color: currentChar.ownerColor }]}>
-                SEE SKILL  →
-              </Text>
-            </Pressable>
           </Animated.View>
         )}
 
@@ -750,14 +752,16 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
 
         {/* ── MASTER BAI LESSON ── */}
         {isMasterBai && (
-          <Animated.View style={[styles.mbPanel, { opacity: mbFade }]} pointerEvents="none">
-            <View style={styles.mbHeader}>
-              <ExpoImage source={ART.masterBai} style={styles.mbAvatar} contentFit="cover" />
-              <Text style={styles.mbSpeaker}>MASTER BAI</Text>
+          <Animated.View style={[{ opacity: mbFade }]} pointerEvents="none">
+            <View style={styles.mbPortraitRow}>
+              <ExpoImage source={ART.masterBai} style={styles.mbPortrait} contentFit="contain" />
             </View>
-            <Text style={styles.mbLesson}>
-              "Scout first. Stabilize what you find. Then counter — with everything you have. Then reassess. Every time — in that sequence."
-            </Text>
+            <View style={styles.mbPanel}>
+              <Text style={styles.mbSpeaker}>MASTER BAI</Text>
+              <Text style={styles.mbLesson}>
+                "Scout first. Stabilize what you find. Then counter — with everything you have. Then reassess. Every time — in that sequence."
+              </Text>
+            </View>
           </Animated.View>
         )}
 
@@ -960,22 +964,27 @@ const styles = StyleSheet.create({
   analysisWarn:   { color: "#E8C453", fontSize: 11, fontWeight: "500", fontStyle: "italic" },
 
   // Entry card
+  entryWrap: {
+    marginBottom: 8,
+  },
+  entryPortraitRow: {
+    paddingHorizontal: 16,
+    alignItems:        "flex-start",
+  },
+  entryPortrait: {
+    width:        120,
+    height:       172,
+    marginBottom: -22,
+  },
   entryCard: {
-    borderRadius:      14,
-    borderWidth:       1,
-    padding:           14,
-    gap:               10,
-    marginBottom:      8,
+    borderRadius: 14,
+    borderWidth:  1,
+    padding:      14,
+    paddingTop:   10,
+    gap:          10,
   },
-  entryHeader: {
-    flexDirection: "row",
-    alignItems:    "center",
-    gap:           12,
-  },
-  entryAvatar: {
-    width:        48,
-    height:       48,
-    borderRadius: 24,
+  entryNameRow: {
+    gap: 2,
   },
   entryOwner: {
     fontSize:      11,
@@ -1070,24 +1079,24 @@ const styles = StyleSheet.create({
   },
 
   // Master Bai lesson
+  mbPortraitRow: {
+    paddingHorizontal: 16,
+    alignItems:        "flex-start",
+  },
+  mbPortrait: {
+    width:        100,
+    height:       130,
+    marginBottom: -18,
+  },
   mbPanel: {
     backgroundColor: "rgba(4,10,18,0.90)",
     borderRadius:    12,
     borderWidth:     1,
     borderColor:     "rgba(217,164,65,0.28)",
     padding:         14,
+    paddingTop:      8,
     gap:             8,
     marginBottom:    8,
-  },
-  mbHeader: {
-    flexDirection: "row",
-    alignItems:    "center",
-    gap:           10,
-  },
-  mbAvatar: {
-    width:        36,
-    height:       36,
-    borderRadius: 18,
   },
   mbSpeaker: {
     color:         "#D9A441",

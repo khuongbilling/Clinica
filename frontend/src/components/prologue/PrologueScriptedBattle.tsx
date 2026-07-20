@@ -39,10 +39,10 @@ import { LinearGradient } from "expo-linear-gradient";
 const ART = {
   battlefield:    require("../../../assets/images/tactical_battlefield.png"),
   theProdigy:     require("../../../assets/heroes/battle/the_prodigy.png"),
-  nightingale:    require("../../../assets/images/nightingale_portrait.png"),
-  fleming:        require("../../../assets/images/fleming_portrait.png"),
-  masterBai:      require("../../../assets/images/master_bai.png"),
-  bossPortrait:   require("../../../assets/images/silent_infarction_portrait.png"),
+  nightingale:    require("../../../assets/images/nightingale_nobg.png"),
+  fleming:        require("../../../assets/images/fleming_nobg.png"),
+  masterBai:      require("../../../assets/images/master_bai_nobg.png"),
+  bossPortrait:   require("../../../assets/images/silent_infarction_nobg.png"),
 } as const;
 
 // ─── Stage machine ────────────────────────────────────────────────────────────
@@ -699,18 +699,25 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         {isEntryStage && currentChar && (
           <Animated.View
             style={[
-              styles.entryCard,
+              styles.entryWrap,
               {
-                opacity:         charFade,
-                transform:       [{ translateY: charSlide }],
-                borderColor:     currentChar.accentBorder,
-                backgroundColor: currentChar.accentBg,
+                opacity:   charFade,
+                transform: [{ translateY: charSlide }],
               },
             ]}
           >
-            <View style={styles.entryHeader}>
-              <ExpoImage source={currentChar.avatar} style={styles.entryAvatar} contentFit="cover" />
-              <View style={{ flex: 1 }}>
+            {/* Standing portrait above card */}
+            <View style={styles.entryPortraitRow}>
+              <ExpoImage
+                source={currentChar.avatar}
+                style={styles.entryPortrait}
+                contentFit="contain"
+              />
+            </View>
+
+            {/* Dialogue card */}
+            <View style={[styles.entryCard, { borderColor: currentChar.accentBorder, backgroundColor: currentChar.accentBg }]}>
+              <View style={styles.entryNameRow}>
                 <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
                   {currentChar.owner}
                 </Text>
@@ -720,15 +727,15 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                     : "Legendary Assessment"}
                 </Text>
               </View>
+              <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
+                "{currentChar.prompt}"
+              </Animated.Text>
+              <Pressable style={styles.entryAdvance} onPress={handleTapEntry}>
+                <Text style={[styles.entryAdvanceText, { color: currentChar.ownerColor }]}>
+                  SEE SKILL  →
+                </Text>
+              </Pressable>
             </View>
-            <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
-              "{currentChar.prompt}"
-            </Animated.Text>
-            <Pressable style={styles.entryAdvance} onPress={handleTapEntry}>
-              <Text style={[styles.entryAdvanceText, { color: currentChar.ownerColor }]}>
-                SEE SKILL  →
-              </Text>
-            </Pressable>
           </Animated.View>
         )}
 
@@ -875,8 +882,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(20,4,4,0.72)", borderRadius: 10,
     borderWidth: 1, borderColor: "rgba(200,20,20,0.25)", gap: 3,
   },
-  bossPortraitWrap: { position: "relative", width: 52, height: 64 },
-  bossPortrait:     { width: 52, height: 64 },
+  bossPortraitWrap: { position: "relative", width: 60, height: 76 },
+  bossPortrait:     { width: 60, height: 76 },
   bossConcealment: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#050505",
@@ -963,13 +970,23 @@ const styles = StyleSheet.create({
   },
 
   // Entry card
-  entryCard: {
+  entryWrap: {
     marginBottom: 12,
-    borderRadius: 12, borderWidth: 1,
-    paddingVertical: 16, paddingHorizontal: 16, gap: 12,
   },
-  entryHeader:  { flexDirection: "row", alignItems: "center", gap: 12 },
-  entryAvatar:  { width: 48, height: 48, borderRadius: 24 },
+  entryPortraitRow: {
+    paddingHorizontal: 16,
+    alignItems:        "flex-start",
+  },
+  entryPortrait: {
+    width:        120,
+    height:       172,
+    marginBottom: -22,
+  },
+  entryCard: {
+    borderRadius: 12, borderWidth: 1,
+    paddingVertical: 12, paddingHorizontal: 16, gap: 12,
+  },
+  entryNameRow: { gap: 2 },
   entryOwner:   { fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   entryRole:    { color: "rgba(255,255,255,0.50)", fontSize: 11, marginTop: 2 },
   entryDialogue: {

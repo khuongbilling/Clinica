@@ -37,10 +37,10 @@ const { width: W, height: H } = Dimensions.get("window");
 
 const ART = {
   battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  formerSelf:  require("../../../assets/images/former_self_portrait.png"),
-  nightingale: require("../../../assets/images/nightingale_portrait.png"),
-  fleming:     require("../../../assets/images/fleming_portrait.png"),
-  masterBai:   require("../../../assets/images/master_bai.png"),
+  formerSelf:  require("../../../assets/heroes/battle/the_prodigy.png"),
+  nightingale: require("../../../assets/images/nightingale_nobg.png"),
+  fleming:     require("../../../assets/images/fleming_nobg.png"),
+  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
 } as const;
 
 type Stage = "ward_title" | "self_entry" | "speak_1" | "speak_2" | "battle_call";
@@ -289,8 +289,8 @@ const s = StyleSheet.create({
     gap: 12,
   },
   selfPortrait: {
-    width: 180,
-    height: 240,
+    width: 200,
+    height: 300,
   },
   rankBadge: {
     borderWidth: 1,
@@ -324,9 +324,9 @@ const s = StyleSheet.create({
     gap: 4,
   },
   sidePortrait: {
-    width: 56,
-    height: 72,
-    opacity: 0.75,
+    width: 84,
+    height: 120,
+    opacity: 0.88,
   },
   sideName: {
     fontSize: 9,
