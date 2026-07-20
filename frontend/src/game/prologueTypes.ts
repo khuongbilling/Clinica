@@ -1,21 +1,22 @@
 /**
  * Prologue State Framework — Push 1 v3
  *
- * 12-phase cinematic prologue for brand-new players.
- * Phase order (Push 10 reorder + Push 11 overconfidence):
+ * 13-phase cinematic prologue for brand-new players.
+ * Phase order (Push 10 reorder + Push 11 overconfidence + Push 11b restore):
  *
  *   1. opening_memory_cinematic           — fragments of a former life
  *   2. former_self_battlefield_cutscene   — Former Self intro at high power on the ward battlefield
- *   3. former_self_victory_boast          — post-intro overconfidence beat (before warnings reach them)
- *   4. warning_dialogue_scene             — Master Bai + Nightingale + Fleming warn the Former Self
- *   5. silent_infarction_initial_reveal   — Silent Infarction trap reveals itself
- *   6. former_self_support_loadout        — temporary prologue loadout (NF auto-added)
- *   7. scripted_defeat                    — real battle vs Silent Infarct (scripted loss)
- *   8. lotus_recall_cinematic             — Lotus Recall defeat cinematic
- *   9. identity_reconstruction_character_creation — character creation / rebirth
- *  10. post_rebirth_awakening             — Level 1 awakening, Master Bai
- *  11. memory_echo_award_scene            — Nightingale's Lamp Fragment + Fleming's Culture Notes
- *  12. clinica_university_introduction    — first destination: Clinica University
+ *   3. opening_battle_tutorial            — guided tutorial battle vs Dehydration Wisp
+ *   4. former_self_victory_boast          — post-battle overconfidence beat
+ *   5. warning_dialogue_scene             — Master Bai + Nightingale + Fleming warn the Former Self
+ *   6. silent_infarction_initial_reveal   — Silent Infarction trap reveals itself
+ *   7. former_self_support_loadout        — temporary prologue loadout (NF auto-added)
+ *   8. scripted_defeat                    — real battle vs Silent Infarct (scripted loss)
+ *   9. lotus_recall_cinematic             — Lotus Recall defeat cinematic
+ *  10. identity_reconstruction_character_creation — character creation / rebirth
+ *  11. post_rebirth_awakening             — Level 1 awakening, Master Bai
+ *  12. memory_echo_award_scene            — Nightingale's Lamp Fragment + Fleming's Culture Notes
+ *  13. clinica_university_introduction    — first destination: Clinica University
  */
 
 // ---------------------------------------------------------------------------
@@ -25,6 +26,7 @@
 export const PROLOGUE_PHASES = [
   'opening_memory_cinematic',
   'former_self_battlefield_cutscene',
+  'opening_battle_tutorial',
   'former_self_victory_boast',
   'warning_dialogue_scene',
   'silent_infarction_initial_reveal',
@@ -42,6 +44,7 @@ export type ProloguePhase = typeof PROLOGUE_PHASES[number];
 export const PROLOGUE_PHASE_LABELS: Record<ProloguePhase, string> = {
   opening_memory_cinematic:                    'Awakening',
   former_self_battlefield_cutscene:            'The Battlefield',
+  opening_battle_tutorial:                     'First Response',
   former_self_victory_boast:                   'The Overconfidence',
   warning_dialogue_scene:                      'The Warning',
   silent_infarction_initial_reveal:            'The Silent Infarction',
@@ -59,6 +62,8 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
     'Fragments of a life before. Warmth fading. A voice calling you back.',
   former_self_battlefield_cutscene:
     'The ward floor — your former domain. Florence and Fleming stand beside you.',
+  opening_battle_tutorial:
+    'A Dehydration Wisp — small, containable. The kind of enemy that used to be training.',
   former_self_victory_boast:
     'The shift ends too easily. The Former Self does not notice the warning signs.',
   warning_dialogue_scene:
