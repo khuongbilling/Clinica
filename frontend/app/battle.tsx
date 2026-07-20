@@ -273,6 +273,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
   };
 
+  // ── Skill pagination ─────────────────────────────────────────────────────
+  const [skillPage, setSkillPage] = useState(0);
+  useEffect(() => { setSkillPage(0); }, [state.selectedHeroId]);
+
   // ── Battle Help glossary ──────────────────────────────────────────────────
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [termTooltip, setTermTooltip] = useState<{ term: string; desc: string } | null>(null);
@@ -1333,49 +1337,60 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           </View>
         )}
         {activeTab === "actions" && (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
-            {state.temporaryActionIds.map((aid) => {
-              const a = TEMP_ACTIONS[aid]; if (!a) return null;
-              const preview = previewTempStatus(state, aid);
-              const isLocked = preview.status === "locked";
-              const selHero = state.team.find(h => h.id === state.selectedHeroId);
-              const heroBlocked = !selHero || !!state.heroActionsUsed[selHero.id];
-              const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing" || heroBlocked;
-              const apBlocked = state.ap < a.costAP;
-              return (
-                <Pressable key={`tmp-${aid}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, apBlocked && styles.apBlocked]} onPress={() => { if (!disabled) { handleTempAction(aid); return; } if (isLocked) { showBlockMsg("This action is locked."); return; } if (state.ap < a.costAP) { showBlockMsg("Not enough AP."); return; } showBlockMsg("Hero has already acted this turn."); }} onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })} delayLongPress={350} testID={`battle-temp-${aid}`}>
-                  <StatusBadge status={preview.status} />
-                  <View style={styles.actionHead}>
-                    <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{a.name}</Text>
-                    <Text style={styles.apTag}>{a.costAP} AP</Text>
-                  </View>
-                  <Text style={styles.actionEffect} numberOfLines={2}>{a.shortEffect || a.description}</Text>
-                  <Text style={styles.actionHero} numberOfLines={1}>Team · {a.systemType || "Universal"}</Text>
-                </Pressable>
-              );
-            })}
+          <View style={styles.actionsPanel}>
+            {/* Temporary bonus actions sit above the paged grid (rare game modifiers) */}
+            {state.temporaryActionIds.length > 0 && (
+              <View style={styles.grid}>
+                {state.temporaryActionIds.map((aid) => {
+                  const a = TEMP_ACTIONS[aid]; if (!a) return null;
+                  const preview = previewTempStatus(state, aid);
+                  const isLocked = preview.status === "locked";
+                  const selHero = state.team.find(h => h.id === state.selectedHeroId);
+                  const heroBlocked = !selHero || !!state.heroActionsUsed[selHero.id];
+                  const disabled = isLocked || state.ap < a.costAP || state.outcome !== "ongoing" || heroBlocked;
+                  const apBlocked = state.ap < a.costAP;
+                  return (
+                    <Pressable key={`tmp-${aid}`} style={[styles.actionBtn, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, apBlocked && styles.apBlocked]} onPress={() => { if (!disabled) { handleTempAction(aid); return; } if (isLocked) { showBlockMsg("This action is locked."); return; } if (state.ap < a.costAP) { showBlockMsg("Not enough AP."); return; } showBlockMsg("Hero has already acted this turn."); }} onLongPress={() => disabled ? null : setDetail({ kind: "temp", actionId: aid })} delayLongPress={350} testID={`battle-temp-${aid}`}>
+                      <StatusBadge status={preview.status} />
+                      <View style={styles.actionHead}>
+                        <Text style={[styles.actionName, { color: COLORS.brand }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{a.name}</Text>
+                        <Text style={styles.apTag}>{a.costAP} AP</Text>
+                      </View>
+                      <Text style={styles.actionEffect} numberOfLines={2}>{a.shortEffect || a.description}</Text>
+                      <Text style={styles.actionHero} numberOfLines={1}>Team · {a.systemType || "Universal"}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+            {/* Paged skill grid — all cards fixed to the same width + height */}
             {(() => {
               const selHero = state.team.find(h => h.id === state.selectedHeroId);
-              if (!selHero) return [<Text key="pick" style={styles.emptyTab}>Tap a hero above to select.</Text>];
+              if (!selHero) return <Text style={styles.emptyTab}>Tap a hero above to select.</Text>;
               const acted = !!state.heroActionsUsed[selHero.id];
-              if (acted) return [<Text key="acted" style={styles.emptyTab}>{selHero.name} has already acted.</Text>];
+              if (acted) return <Text style={styles.emptyTab}>{selHero.name} has already acted.</Text>;
               const isBoss = (state.enemyClinical?.rewardBase || 0) >= 100;
               const careDmg = careAttemptDamage(state.chapter, isBoss);
               const careDisabled = state.ap < 1 || state.outcome !== "ongoing" || isFirstBattleActionStep;
               const careApBlocked = state.ap < 1;
-              const careNode = (
-                <Pressable key="care-attempt" style={[styles.actionBtn, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled, careApBlocked && styles.apBlocked]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) { showBlockMsg(state.ap < 1 ? "Not enough AP." : "Not available right now."); return; } setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
-                  <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
-                  <View style={styles.actionHead}>
-                    <Ionicons name="medkit-outline" size={14} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
-                    <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
-                    <Text style={styles.apTag}>1 AP</Text>
-                  </View>
-                  <Text style={styles.actionEffect} numberOfLines={2}>Unfocused aid · −{careDmg} Corruption.</Text>
-                  <Text style={styles.actionHero} numberOfLines={1}>Fallback — targeted skills are stronger</Text>
-                </Pressable>
-              );
-              const skillNodes = selHero.skills.map(skill => {
+
+              const careEntry = {
+                key: "care-attempt",
+                node: (
+                  <Pressable style={[styles.skillCard, { borderColor: COLORS.onSurfaceTertiary }, careDisabled && styles.disabled, careApBlocked && styles.apBlocked]} onPress={() => { if (guidedStep) { tutorialNudge(); return; } if (careDisabled) { showBlockMsg(state.ap < 1 ? "Not enough AP." : "Not available right now."); return; } setState(prev => applyCareAttempt(prev).state); triggerFx(selHero.id); }} testID="battle-care-attempt">
+                    <View style={styles.basicTag}><Text style={styles.basicTagTxt}>BASIC</Text></View>
+                    <View style={styles.actionHead}>
+                      <Ionicons name="medkit-outline" size={14} color={COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
+                      <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Care Attempt</Text>
+                      <Text style={styles.apTag}>1 AP</Text>
+                    </View>
+                    <Text style={styles.actionEffect} numberOfLines={3}>Unfocused aid · −{careDmg} Corruption.</Text>
+                    <Text style={styles.actionHero} numberOfLines={1}>Fallback — targeted skills are stronger</Text>
+                  </Pressable>
+                ),
+              };
+
+              const skillEntries = selHero.skills.map(skill => {
                 const sageDisc = sageDiscount && skill.type === "scout" && skill.cost > 0;
                 let cost = sageDisc ? Math.max(0, skill.cost - 1) : skill.cost;
                 const airDisc = state.nextAirActionDiscount && skill.systemType === "Air";
@@ -1387,24 +1402,51 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 const apBlocked = state.ap < cost;
                 const isGuidedSkill = guidedSkillId === skill.id ||
                   (isFirstBattleActionStep && skill.type === guidedActionType);
-                return (
-                  <Animated.View key={`${selHero.id}-${skill.id}`} style={[{ width: "48.5%" }, isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined]}>
-                    <Pressable style={[styles.actionBtn, { width: "100%", borderColor: statusColor(preview.status) }, disabled && styles.disabled, apBlocked && styles.apBlocked, isGuidedSkill && styles.guidedHighlight]} onPress={() => { if (!disabled) { handleSkill(selHero, skill); return; } if (isWrongType) { tutorialNudge(); return; } if (isLocked) { showBlockMsg("This skill is locked for this battle."); return; } if (state.ap < cost) { showBlockMsg("Not enough AP for this skill."); return; } showBlockMsg(selHero.name + " has already acted this turn."); }} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
-                      <StatusBadge status={preview.status} />
-                      <View style={styles.actionHead}>
-                        <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={14} color={SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
-                        <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
-                        <Text style={styles.apTag}>{cost} AP</Text>
-                      </View>
-                      <Text style={styles.actionEffect} numberOfLines={2}>{skill.shortEffect || skill.description}</Text>
-                      <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{SKILL_CHAIN_LABEL[skill.type] ? `${SKILL_CHAIN_LABEL[skill.type]} · ` : ""}{skill.systemType || "Universal"}</Text>
-                    </Pressable>
-                  </Animated.View>
-                );
+                return {
+                  key: `${selHero.id}-${skill.id}`,
+                  node: (
+                    <Animated.View style={[{ flex: 1 }, isGuidedSkill ? { transform: [{ scale: skillPulseAnim }] } : undefined]}>
+                      <Pressable style={[styles.skillCard, { borderColor: statusColor(preview.status) }, disabled && styles.disabled, apBlocked && styles.apBlocked, isGuidedSkill && styles.guidedHighlight]} onPress={() => { if (!disabled) { handleSkill(selHero, skill); return; } if (isWrongType) { tutorialNudge(); return; } if (isLocked) { showBlockMsg("This skill is locked for this battle."); return; } if (state.ap < cost) { showBlockMsg("Not enough AP for this skill."); return; } showBlockMsg(selHero.name + " has already acted this turn."); }} onLongPress={() => disabled ? null : setDetail({ kind: "skill", hero: selHero, skill })} delayLongPress={350} testID={`battle-skill-${skill.id}`}>
+                        <StatusBadge status={preview.status} />
+                        <View style={styles.actionHead}>
+                          <Ionicons name={(SKILL_TYPE_ICONS[skill.type] || "ellipse-outline") as any} size={14} color={SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary} style={styles.skillTypeIcon} />
+                          <Text style={styles.actionName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{skill.name}</Text>
+                          <Text style={styles.apTag}>{cost} AP</Text>
+                        </View>
+                        <Text style={styles.actionEffect} numberOfLines={3}>{skill.shortEffect || skill.description}</Text>
+                        <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{SKILL_CHAIN_LABEL[skill.type] ? `${SKILL_CHAIN_LABEL[skill.type]} · ` : ""}{skill.systemType || "Universal"}</Text>
+                      </Pressable>
+                    </Animated.View>
+                  ),
+                };
               });
-              return [careNode, ...skillNodes];
+
+              const entries = [careEntry, ...skillEntries];
+              const CARDS_PER_PAGE = 4;
+              const totalPages = Math.ceil(entries.length / CARDS_PER_PAGE);
+              const page = Math.min(skillPage, Math.max(0, totalPages - 1));
+              const visible = entries.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE);
+
+              return (
+                <>
+                  <View style={styles.skillPageGrid}>
+                    {visible.map(e => (
+                      <View key={e.key} style={styles.skillCardSlot}>{e.node}</View>
+                    ))}
+                  </View>
+                  {totalPages > 1 && (
+                    <View style={styles.skillPageNav}>
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <Pressable key={i} onPress={() => setSkillPage(i)} hitSlop={10}>
+                          <View style={[styles.skillPageDot, i === page && styles.skillPageDotActive]} />
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </>
+              );
             })()}
-          </ScrollView>
+          </View>
         )}
         {activeTab === "items" && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.grid}>
@@ -2437,6 +2479,18 @@ const styles = StyleSheet.create({
     width: "48.5%", minHeight: 80, padding: 10, borderRadius: 6,
     backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong, gap: 3,
   },
+  // ── Skill pagination ──
+  actionsPanel: { flex: 1, gap: SPACING.xs },
+  skillPageGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  skillCardSlot: { width: "48.5%", height: 132 },
+  skillCard: {
+    flex: 1, padding: 9, borderRadius: 6,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong,
+    gap: 3, overflow: "hidden",
+  },
+  skillPageNav: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 4 },
+  skillPageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.borderStrong },
+  skillPageDotActive: { width: 18, height: 7, borderRadius: 4, backgroundColor: COLORS.brand },
   disabled: { opacity: 0.4 },
   apBlocked: { opacity: 0.45 },
   actionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

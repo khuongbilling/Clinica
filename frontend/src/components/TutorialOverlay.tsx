@@ -196,8 +196,7 @@ export function TutorialOverlay() {
       if (!isBattleTutorial) return null;
       return (
         <View
-          pointerEvents="none"
-          style={[styles.battleScrim, { zIndex: 9000 }]}
+          style={[styles.battleScrim, { zIndex: 9000, pointerEvents: "none" }]}
         />
       );
     }
