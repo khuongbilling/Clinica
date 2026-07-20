@@ -31,9 +31,9 @@ import { LinearGradient } from "expo-linear-gradient";
 
 const ART = {
   battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  formerSelf:  require("../../../assets/images/former_self_portrait.png"),
-  nightingale: require("../../../assets/images/nightingale_portrait.png"),
-  masterBai:   require("../../../assets/images/master_bai.png"),
+  formerSelf:  require("../../../assets/images/the_prodigy_vn.png"),
+  nightingale: require("../../../assets/images/nightingale_vn.png"),
+  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
 } as const;
 
 type Beat = "beat_1" | "beat_2" | "beat_3" | "beat_4" | "beat_5";

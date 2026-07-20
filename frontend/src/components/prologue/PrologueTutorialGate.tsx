@@ -10,7 +10,7 @@
  * (configured in battle.tsx via the isPrologueTutorial flag).
  *
  * When the player wins the tutorial, result.tsx advances the prologue phase to
- * `warning_dialogue_scene` and routes back to /opening-prologue.
+ * `former_self_victory_boast` and routes back to /opening-prologue.
  *
  * This component shows a brief transition screen while the navigation fires.
  */

@@ -637,7 +637,7 @@ export default function Result() {
             <Pressable
               style={styles.primary}
               onPress={async () => {
-                try { await advanceProloguePhase("warning_dialogue_scene"); } catch {}
+                try { await advanceProloguePhase("former_self_victory_boast"); } catch {}
                 router.replace("/opening-prologue" as any);
               }}
               testID="result-prologue-continue"
