@@ -164,8 +164,8 @@ export const UPGRADES: ShopUpgrade[] = [
   {
     id: 'upg_resolve',
     name: 'Hardened Resolve',
-    subtitle: 'Permanent • Enemy damage -12%',
-    description: 'Disease spirits deal 12% less damage on their turns. Applies forever.',
+    subtitle: 'Permanent • Instability -12%',
+    description: 'Disease spirits inflict 12% less Instability on their turns. Applies forever.',
     price: 2600,
     icon: 'fitness',
     effect: { enemyDamageReduction: 12 },
@@ -224,8 +224,8 @@ export const WARD_BOOSTS: WardBoost[] = [
   {
     id: 'ward_lantern',
     name: 'Lantern Ward',
-    subtitle: 'Ward Defense • +2 AP & brief shield',
-    description: 'A steady opening: begin the next Ward Defense run with +2 Action Points and a short barrier that halves incoming Stability damage for the first ~7 seconds. Consumed on use.',
+    subtitle: 'Ward Defense • +2 AP & opening Protection',
+    description: 'A steady opening: begin the next Ward Defense run with +2 Action Points and a brief Protection barrier that halves incoming Instability for the first ~7 seconds. Consumed on use.',
     price: 100,
     icon: 'bulb',
     effect: { startAP: 2, startShield: 14 },
@@ -233,8 +233,8 @@ export const WARD_BOOSTS: WardBoost[] = [
   {
     id: 'ward_bulwark',
     name: 'Bulwark Sigil',
-    subtitle: 'Ward Defense • opening damage shield',
-    description: 'Open the next Ward Defense run behind a barrier that halves incoming Stability damage for the first ~15 seconds. Consumed on use.',
+    subtitle: 'Ward Defense • opening Protection barrier',
+    description: 'Open the next Ward Defense run behind a Protection barrier that halves incoming Instability for the first ~15 seconds. Consumed on use.',
     price: 140,
     icon: 'shield',
     effect: { startShield: 30 },

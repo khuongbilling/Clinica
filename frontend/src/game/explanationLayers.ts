@@ -382,12 +382,12 @@ export function buildClinicalReflection(params: {
   } else if (inappropriateConsultsUsed > 0) {
     missedOpportunity = 'A Support Call didn\'t match the situation — the Codex noted it.';
   } else if (poorFitCount > 0 && won) {
-    missedOpportunity = `${poorFitCount} poor-fit action${poorFitCount > 1 ? 's' : ''} — matching the enemy system deals more corruption damage.`;
+    missedOpportunity = `${poorFitCount} poor-fit action${poorFitCount > 1 ? 's' : ''} — matching the enemy system lowers Corruption more effectively.`;
   }
 
   let nextTip: string;
   if (!reassessUsed) {
-    nextTip = 'Next time: use Analyze after a treatment skill to close the care loop and earn bonus AP.';
+    nextTip = 'Next time: use Reassess after a treatment skill to close the care loop and earn bonus AP.';
   } else if (!fullChainCompleted) {
     nextTip = 'Try opening with Scout → Stabilize → Treat → Reassess for the full chain bonus.';
   } else if (unsafeCount === 0 && poorFitCount === 0) {

@@ -217,7 +217,7 @@ const assessmentLessons: Lesson[] = [
     whyItMatters: 'Acting without assessing can waste effort or make things worse. A quick look first leads to better decisions.',
     whatToLookFor: 'The most obvious or urgent detail in front of you — start there.',
     whatToDoFirst: 'Pause, observe, then choose your action based on what you noticed.',
-    gameTranslation: 'The Assess role exists to reveal weaknesses before your team attacks — using Assess first almost always improves your next move.',
+    gameTranslation: 'The Assess role exists to reveal weaknesses before your team acts — using Assess first almost always improves your next move.',
     quickChallenge: {
       question: 'Why assess before acting?',
       choices: ['It wastes a turn', 'It helps you choose a better action', 'It is only for beginners', 'It has no effect'],
@@ -226,8 +226,8 @@ const assessmentLessons: Lesson[] = [
     },
     conceptToCombat: {
       realConcept: 'Gathering information before intervening.',
-      gameTranslation: 'The Assess role reveals a weakness on the enemy before your team commits to attacks.',
-      battleTip: 'Use an Assessor early in a fight — the revealed weakness boosts your team\'s follow-up damage.',
+      gameTranslation: 'The Assess role reveals a weakness on the enemy before your team commits to treatment.',
+      battleTip: 'Use an Assessor early in a fight — the revealed weakness boosts your team\'s follow-up Corruption reduction.',
     },
     badgeId: 'clinical_cue_basics',
   },
@@ -271,7 +271,7 @@ const assessmentLessons: Lesson[] = [
     conceptToCombat: {
       realConcept: 'Uncovering a problem that isn\'t obvious at first.',
       gameTranslation: 'Hidden Pathology enemies must be revealed with a Clinical Cue Check before their true weakness is exploitable.',
-      battleTip: 'Never skip the Clinical Cue Check on a Hidden Pathology enemy — attacking blind wastes your best moves.',
+      battleTip: 'Never skip the Clinical Cue Check on a Hidden Pathology enemy — acting without assessment wastes your best moves.',
     },
     badgeId: 'hidden_pathology',
   },
@@ -503,8 +503,8 @@ export const SIMULATIONS: SimulationCard[] = [
     ],
     conceptToCombat: {
       realConcept: 'Uncovering a non-obvious problem before treating it.',
-      gameTranslation: 'Use a Clinical Cue Check on Hidden Pathology enemies before attacking.',
-      battleTip: 'Reveal Hidden Pathology enemies with a Cue Check before spending your best attacks.',
+      gameTranslation: 'Use a Clinical Cue Check on Hidden Pathology enemies before using Strike actions.',
+      battleTip: 'Reveal Hidden Pathology enemies with a Cue Check before spending your best Strike actions.',
     },
     badgeId: 'hidden_pathology',
   },

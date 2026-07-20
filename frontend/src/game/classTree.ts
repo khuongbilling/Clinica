@@ -114,10 +114,10 @@ const TIER_30_REQ: ClassTierRequirement[] = [{ material: 'ascension_seals', qty:
 
 export const CLASS_TREES: Record<ClassId, ClassAbilityCard[]> = {
   guardian: [
-    { level: 1, name: 'Steady Hands', description: 'Slightly reduces Stability loss.', requirements: [] },
-    { level: 10, name: 'Barrier Response', description: 'The first time Stability drops below 50% in a battle, gain a small shield.', requirements: TIER_10_REQ },
-    { level: 20, name: 'Protected Ward', description: 'Guardian-type heroes gain a small barrier bonus.', requirements: TIER_20_REQ },
-    { level: 30, name: 'Vital Bastion', description: 'Temporarily protects Vital Stability from a critical drop.', requirements: TIER_30_REQ },
+    { level: 1, name: 'Steady Hands', description: 'Prevents up to 5 Stability loss from the next deterioration event.', requirements: [] },
+    { level: 10, name: 'Barrier Response', description: 'The first time Stability drops below 50% in a battle, prevents the next Stability loss event.', requirements: TIER_10_REQ },
+    { level: 20, name: 'Protected Ward', description: 'Guardian-type heroes reduce incoming Instability from the next deterioration event.', requirements: TIER_20_REQ },
+    { level: 30, name: 'Vital Bastion', description: 'Prevents Stability from falling below 1 this turn — Triage Wall holds the line.', requirements: TIER_30_REQ },
   ],
   seer: [
     { level: 1, name: 'Early Recognition', description: 'The first successful Clinical Cue each battle reveals one hidden weakness.', requirements: [] },
@@ -126,10 +126,10 @@ export const CLASS_TREES: Record<ClassId, ClassAbilityCard[]> = {
     { level: 30, name: 'True Cue Revelation', description: "Briefly reveals all of the enemy's active weaknesses at once.", requirements: TIER_30_REQ },
   ],
   caretaker: [
-    { level: 1, name: 'Gentle Stabilization', description: 'Stabilize restores slightly more Stability.', requirements: [] },
+    { level: 1, name: 'Gentle Stabilization', description: 'Stabilize restores slightly more Stability, keeping the patient safer longer.', requirements: [] },
     { level: 10, name: 'Recovery Rhythm', description: 'Post-battle recovery rewards improve.', requirements: TIER_10_REQ },
-    { level: 20, name: 'Compassion Chain', description: 'Support-focused heroes gain a small healing/support bonus.', requirements: TIER_20_REQ },
-    { level: 30, name: 'Lotus Recovery Field', description: 'Restores a small amount of Stability over time.', requirements: TIER_30_REQ },
+    { level: 20, name: 'Compassion Chain', description: 'Support-focused heroes restore additional Stability when completing a Care Chain step.', requirements: TIER_20_REQ },
+    { level: 30, name: 'Lotus Recovery Field', description: 'Restores a small amount of Stability each turn — recurring Instability slows.', requirements: TIER_30_REQ },
   ],
   scholar: [
     { level: 1, name: 'Studious Mind', description: 'Gain extra University Credits from Clinical Cue success.', requirements: [] },
@@ -138,10 +138,10 @@ export const CLASS_TREES: Record<ClassId, ClassAbilityCard[]> = {
     { level: 30, name: 'Grand Rounds', description: "Correct answers temporarily strengthen your active heroes' role bonuses.", requirements: TIER_30_REQ },
   ],
   alchemist: [
-    { level: 1, name: 'Careful Preparation', description: 'Clinical Supplies are slightly more effective.', requirements: [] },
-    { level: 10, name: 'Herbal Precision', description: 'Cleanse and treatment effects improve.', requirements: TIER_10_REQ },
+    { level: 1, name: 'Careful Preparation', description: 'Clinical Supplies lower Corruption and identify resistance more effectively.', requirements: [] },
+    { level: 10, name: 'Herbal Precision', description: 'Lower Corruption and resistance identification effects improve.', requirements: TIER_10_REQ },
     { level: 20, name: 'Apothecary Efficiency', description: 'Supply production and Apothecary discounts improve.', requirements: TIER_20_REQ },
-    { level: 30, name: 'Purifying Formula', description: 'Briefly cleanses corruption and boosts treatment effects.', requirements: TIER_30_REQ },
+    { level: 30, name: 'Purifying Formula', description: 'Briefly lowers Corruption and boosts treatment effectiveness.', requirements: TIER_30_REQ },
   ],
   medic: [
     { level: 1, name: 'Field Readiness', description: 'A small AP preparation bonus reduces early-turn pressure.', requirements: [] },

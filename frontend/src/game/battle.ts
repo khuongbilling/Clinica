@@ -571,7 +571,7 @@ function applyResolutionToState(
     const outcome = getCorruptionOutcome('unsafe', penaltyScale);
     next.stability = clamp(next.stability - 10, 0, 100);
     if (outcome.worsenBase > 0) next.corruption = Math.max(0, next.corruption + outcome.worsenBase);
-    next.log.push(`⚠ Unsafe: ${actionName}. Stability -10${outcome.worsenBase > 0 ? `, symptoms worsen (Corruption +${outcome.worsenBase})` : ''}.`);
+    next.log.push(`⚠ Unsafe: ${actionName}. Stability -10${outcome.worsenBase > 0 ? `, Corruption Spread increases (+${outcome.worsenBase} Corruption)` : ''}.`);
   }
   if (res.status === 'inappropriate') {
     next.poorFitActionsUsed = next.poorFitActionsUsed + 1;
@@ -579,7 +579,7 @@ function applyResolutionToState(
     const outcome = getCorruptionOutcome('inappropriate', penaltyScale);
     if (outcome.stabilityPenalty > 0) next.stability = clamp(next.stability - outcome.stabilityPenalty, 0, 100);
     if (outcome.worsenBase > 0) next.corruption = Math.max(0, next.corruption + outcome.worsenBase);
-    next.log.push(`✗ ${actionName} doesn't fit this disease — Stability -${outcome.stabilityPenalty}, symptoms worsen (Corruption +${outcome.worsenBase}).`);
+    next.log.push(`✗ ${actionName} does not match this condition — Stability -${outcome.stabilityPenalty}, Corruption worsens (+${outcome.worsenBase}).`);
   }
 
   // Track chain progress
@@ -1302,7 +1302,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
   const rawDmgNoShield = Math.floor(baseDmg * damageMultiplier * waveMultiplier);
   const shieldAbsorbed = s.shieldNext > 0 ? Math.max(0, rawDmgNoShield - reductionAfterShield) : 0;
   const shieldNote = shieldAbsorbed > 0
-    ? ` 🛡 Shield blocked ${shieldAbsorbed}% Stability damage. Protection does not block Corruption spread or passive disease effects.`
+    ? ` 🛡 Protection absorbed ${shieldAbsorbed}% incoming Instability. Protection does not block Corruption Spread or passive disease effects.`
     : '';
   if (attack.kind === 'spread') {
     if (spreadBlocked) {

@@ -311,10 +311,10 @@ type UnitDef = {
 /* ── Clinical Arts roles — each hero's tactical identity (RoleId from src/game/units) ── */
 type RoleDef = { label: string; icon: string; color: string; desc: string };
 const ROLE_DATA: Record<RoleId, RoleDef> = {
-  ASSESS:    { label: "Assess",    icon: "🔍", color: "#A78BFA", desc: "Reveals enemy weaknesses; enables follow-up bonus damage." },
-  TREAT:     { label: "Treat",     icon: "💊", color: "#F472B6", desc: "Deals stronger damage when it matches the enemy's clinical problem." },
-  STABILIZE: { label: "Stabilize", icon: "🌊", color: "#06B6D4", desc: "Protects the Vital Lantern and restores stability." },
-  PROTECT:   { label: "Protect",   icon: "🛡", color: "#34D399", desc: "Shields or slows threats to the lane." },
+  ASSESS:    { label: "Assess",    icon: "🔍", color: "#A78BFA", desc: "Reveals enemy weaknesses; enables follow-up bonus Corruption reduction." },
+  TREAT:     { label: "Treat",     icon: "💊", color: "#F472B6", desc: "Lowers Corruption more effectively when matched to the enemy's clinical problem." },
+  STABILIZE: { label: "Stabilize", icon: "🌊", color: "#06B6D4", desc: "Protects the Vital Lantern and restores Stability." },
+  PROTECT:   { label: "Protect",   icon: "🛡", color: "#34D399", desc: "Applies Protection or slows threats to the lane." },
   REASSESS:  { label: "Reassess",  icon: "🔄", color: "#EC4899", desc: "Confirms response — grants bonus AP or extra effects." },
 };
 

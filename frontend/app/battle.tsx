@@ -597,7 +597,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       msg = getContextualReassessFeedback(explanationLayer, ctx);
       isChain = treatedThisTurn;
     } else if (actionType === 'shield') {
-      msg = 'Shield raised — the next enemy attack deals reduced damage to Stability.';
+      msg = 'Protection raised — the next deterioration event will reduce less Stability.';
     } else if (actionType === 'command') {
       msg = 'Command issued — protection and pressure applied together.';
     } else {
@@ -847,7 +847,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       let next = endPlayerTurn(s);
       if (player?.aptitude === "guardian" && s.outcome === "ongoing" && next.outcome === "ongoing" && next.stability < s.stability) {
         const recovered = Math.min(5, s.stability - next.stability);
-        next = { ...next, stability: Math.min(100, next.stability + recovered), log: [...next.log, `🛡 Guardian's Vigil: damage reduced by ${recovered}.`] };
+        next = { ...next, stability: Math.min(100, next.stability + recovered), log: [...next.log, `🛡 Guardian's Vigil: Instability reduced by ${recovered}.`] };
       }
       return next;
     });
@@ -1181,7 +1181,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
         <View style={styles.barRow}>
-          <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — the enemy attacks it every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">
+          <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — Corruption escalates every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">
             <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>STABILITY</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
@@ -1699,7 +1699,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 <View style={styles.passiveCard}>
                   <Text style={styles.passiveLbl}>YOUR APTITUDE PASSIVE</Text>
                   <Text style={styles.passiveTxt}>
-                    {player.aptitude === "guardian" && "🛡 Guardian's Vigil: -5 damage per enemy turn."}
+                    {player.aptitude === "guardian" && "🛡 Guardian's Vigil: -5 Instability per enemy turn."}
                     {player.aptitude === "sage" && "🔍 Sage's Eye: first Scout each battle costs -1 AP."}
                     {player.aptitude === "warden" && "🔒 Warden's Watch: blocks one minor complication."}
                     {player.aptitude === "weaver" && "⟡ Weaver's Eye: one hidden clue revealed at battle start."}
@@ -2058,7 +2058,7 @@ const SKILL_CHAIN_LABEL: Record<string, string> = {
 // ── Battle Glossary ──────────────────────────────────────────────────────────
 
 const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
-  { term: "Stability", desc: "How safely the patient is holding on. Keep it above zero — the enemy attacks it every turn. If it hits 0, the patient is lost." },
+  { term: "Stability", desc: "How safely the patient is holding on. Keep it above zero — Corruption escalates every turn. If it hits 0, the patient is lost." },
   { term: "Corruption", desc: "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in unexpected ways." },
   { term: "Cue", desc: "A clue about what is wrong with the patient. Answer correctly for bonus AP." },
   { term: "Scout", desc: "Find a hidden clue. Reveal clues before high-cost moves." },
@@ -2200,7 +2200,7 @@ function getBattleObjData(
       { icon: "heart-outline",         text: "Lose: Stability reaches 0 — the patient is lost" },
       { icon: "shield-outline",        text: "Some boss effects may bypass Protection" },
     ],
-    note: "Scout and Reassess may reveal hidden attack patterns.",
+    note: "Scout and Reassess may reveal hidden Corruption patterns.",
     btnLabel: "ENTER BATTLE",
   };
   if (isTraining) return {

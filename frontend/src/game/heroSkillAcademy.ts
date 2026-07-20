@@ -157,7 +157,7 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     category: 'triage',
     categoryLabel: 'Triage · Readiness',
     description:
-      'Shield and support skills provide stronger protective cover, rewarding triage preparation before a battle starts.',
+      'Shield and support skills prevent more Stability loss, rewarding clinical preparation before a battle starts.',
     icon: 'shield-outline',
     accentColor: '#F59E0B',
     targetActionTypes: ['shield', 'support'],
@@ -166,8 +166,8 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
       {
         rank: 1,
         label: 'Field Readiness I',
-        description: 'Shield and support skills grant +4 Shield to the patient.',
-        battleEffect: '+4 Shield per shield/support skill used.',
+        description: 'Shield and support skills prevent an additional 4 Stability loss from the next deterioration event.',
+        battleEffect: '+4 Protection per shield/support skill used.',
         effect: { shield: 4 },
         requirements: {
           triage_scroll: 3,
@@ -179,8 +179,8 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
       {
         rank: 2,
         label: 'Field Readiness II',
-        description: 'Shield and support skills grant +8 Shield total (cumulative with Rank I).',
-        battleEffect: '+8 Shield per shield/support skill used.',
+        description: 'Shield and support skills prevent an additional 8 Stability loss total (cumulative with Rank I).',
+        battleEffect: '+8 Protection per shield/support skill used.',
         effect: { shield: 4 },
         requirements: {
           triage_scroll: 5,

@@ -1101,7 +1101,7 @@ export function generateBattleMessage(ctx: BattleMessageContext): string {
   const effectStr = effectType === 'clue' ? '' :
     effectType === 'stability' ? `Stability +${effectAmount}.` :
     effectType === 'corruption' ? `Disease Corruption -${effectAmount}.` :
-    effectType === 'shield' ? `Shield ${effectAmount}%.` : '';
+    effectType === 'shield' ? `Protection ${effectAmount}%.` : '';
 
   if (feedbackLevel === 'expert') {
     return effectStr || `${eff}.`;
@@ -1434,7 +1434,7 @@ export const CLINICAL_CUES: ClinicalCueQuestion[] = [
       { text: 'A sign of dehydration', correct: false },
     ],
     rationale: 'Redness, warmth, and spreading swelling are classic signs of infection — the "spreading" part is the key detail suggesting it needs treatment before it worsens.',
-    battleTranslation: 'This is exactly why Infection Control matters against Fire-aligned foes with spread attacks — stopping the spread early prevents a bigger fight.',
+    battleTranslation: 'This is exactly why Infection Control matters against Fire-aligned foes with Corruption Spread — stopping the spread early prevents a bigger fight.',
     learnerNote: 'These are the classic local signs of infection: redness, warmth, swelling, and pain — spreading margins suggest it is not yet contained.',
   },
   {
@@ -1607,7 +1607,7 @@ export const ULTIMATE_BY_ROLE: Record<import('./types').HeroRole, UltimateDef> =
   Educator: {
     name: "Lantern of Understanding",
     rpgFlavor: 'The Educator\u2019s lantern illuminates the safest path forward.',
-    description: 'Reveals 2 hidden clues and grants a shield.',
+    description: 'Reveals 2 hidden clues and grants Protection.',
   },
   Specialist: {
     name: 'Precision Strike',
@@ -1632,7 +1632,7 @@ export const ULTIMATE_BY_ROLE: Record<import('./types').HeroRole, UltimateDef> =
   Preventer: {
     name: 'Protective Seal',
     rpgFlavor: 'The Preventer raises a barrier the disease cannot cross.',
-    description: 'Shield 30 and blocks next spread.',
+    description: 'Protection 30 and blocks next Corruption Spread.',
   },
   SystemsLeader: {
     name: 'Grand Rounds',

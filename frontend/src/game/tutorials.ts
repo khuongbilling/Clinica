@@ -332,7 +332,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "wd_merge",
       title: "Care Synthesis",
-      body: "Deploy two identical same-level units and tap SYNTHESIZE to merge them into a stronger one. Stronger units deal more damage and cover greater range. Use this whenever the option appears.",
+      body: "Deploy two identical same-level units and tap SYNTHESIZE to merge them into a stronger one. Stronger units reduce Corruption more effectively and cover greater range. Use this whenever the option appears.",
       placement: "bottom",
       requireAction: true,
       requiredActionType: "merge",
@@ -341,7 +341,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "wd_done",
       title: "Protect the Vital Lantern",
-      body: "Matched units deal bonus damage. Assess units reveal enemy weaknesses first; Treat units follow with increased impact. Monitor the Corruption and Stability bars above. Begin when ready.",
+      body: "Matched units strike with bonus Corruption reduction. Assess units reveal enemy weaknesses first; Treat units follow with increased impact. Monitor the Corruption and Stability bars above. Begin when ready.",
       placement: "center",
       requireAction: false,
       nextText: "BEGIN THE DEFENSE",
