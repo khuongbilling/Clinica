@@ -4,20 +4,25 @@
  * Push 5 prologue phase — "First Contact" (opening_battle_tutorial)
  *
  * Interactive guided cinematic on the frozen battlefield.
- * Teaches assessment before intervention through two skill demonstrations:
- *   1. Lamp of Observation   (Nightingale) — reveals hidden hazards
- *   2. Culture and Sensitivity (Fleming)   — reveals weakness + resistance
+ * Legendary party: The Prodigy, Nightingale, Fleming (prologue loaners).
+ * Teaches Scout → Stabilize → Counter → Reassess sequence through three skill demos:
+ *   1. Lamp of Observation     (Nightingale) — Scout: reveals hidden hazards
+ *   2. Culture and Sensitivity (Fleming)     — Stabilize: reveals weakness + resistance
+ *   3. Brilliant Intervention  (The Prodigy) — Counter: powerful strike, cost of skipping Scout
  *
- * Stage machine:
- *   frozen_field     → battle scene settles (auto 1.2 s)
- *   nightingale_entry → Nightingale steps forward, speaks (tap to continue)
+ * Stage machine (Scout → Stabilize → Counter → Reassess):
+ *   frozen_field      → battle scene settles (auto 1.2 s)
+ *   nightingale_entry → Nightingale steps forward (Scout), speaks (tap to continue)
  *   lamp_prompt       → Skill card shown, player taps USE SKILL
  *   lamp_effect       → Warm glow + reveal indicators (auto 2.8 s)
- *   fleming_entry     → Fleming steps forward, speaks (tap to continue)
+ *   fleming_entry     → Fleming steps forward (Stabilize), speaks (tap to continue)
  *   culture_prompt    → Skill card shown, player taps USE SKILL
  *   culture_effect    → Teal scan + analysis panel (auto 2.8 s)
- *   master_bai        → Master Bai lesson (auto 3 s)
- *   player_turn       → Player taps ENTER BATTLE → onComplete()
+ *   prodigy_entry     → The Prodigy steps forward (Counter), speaks (tap to continue)
+ *   prodigy_prompt    → Skill card shown, player taps USE SKILL
+ *   prodigy_effect    → Crimson burst + result chips (auto 2.8 s)
+ *   master_bai        → Master Bai lesson — Reassess (auto 3 s)
+ *   player_turn       → Player taps TAKE ACTION → onComplete()
  *
  * Rules:
  *  - Skills belong to the TEMPORARY prologue heroes (not permanent roster).
@@ -36,11 +41,13 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
+  theProdigy:  require("../../../assets/heroes/battle/the_prodigy.png"),
   nightingale: require("../../../assets/images/nightingale_portrait.png"),
   fleming:     require("../../../assets/images/fleming_portrait.png"),
   masterBai:   require("../../../assets/images/master_bai.png"),
@@ -50,6 +57,9 @@ const ART = {
 
 type Stage =
   | "frozen_field"
+  | "prodigy_entry"
+  | "prodigy_prompt"
+  | "prodigy_effect"
   | "nightingale_entry"
   | "lamp_prompt"
   | "lamp_effect"
@@ -61,9 +71,31 @@ type Stage =
 
 // ─── Skill data ───────────────────────────────────────────────────────────────
 
+const PRODIGY_SKILL = {
+  id:        "prologue_radiant_stabilization",
+  name:      "Radiant Stabilization",
+  apCost:    2,
+  owner:     "THE PRODIGY",
+  ownerColor: "#E8354A",
+  avatar:    ART.theProdigy,
+  tagColor:  "#E8354A20",
+  tagText:   "#E8354A",
+  accentBg:  "rgba(232,53,74,0.08)",
+  accentBorder: "rgba(232,53,74,0.30)",
+  effects: [
+    "Stabilize: reverse active damage over 2 rounds (+15 Stability)",
+    "Must use AFTER Scout — unstabilized sites resist the effect",
+    "Stabilization before countering extends your action window",
+    "AP Cost: 2 — efficient when sequenced correctly",
+  ],
+  effectColor: "#E8354A",
+  prompt: "First we scout. Now we stabilize before we strike.",
+} as const;
+
 const LAMP_SKILL = {
   id:        "prologue_lamp_of_observation",
   name:      "Lamp of Observation",
+  apCost:    2,
   owner:     "FLORENCE NIGHTINGALE",
   ownerColor: "#E8C453",
   avatar:    ART.nightingale,
@@ -82,8 +114,9 @@ const LAMP_SKILL = {
 } as const;
 
 const CULTURE_SKILL = {
-  id:        "prologue_culture_and_sensitivity",
-  name:      "Culture and Sensitivity",
+  id:        "prologue_targeted_antidote",
+  name:      "Targeted Antidote",
+  apCost:    2,
   owner:     "SIR ALEXANDER FLEMING",
   ownerColor: "#3ECFB2",
   avatar:    ART.fleming,
@@ -92,13 +125,13 @@ const CULTURE_SKILL = {
   accentBg:  "rgba(62,207,178,0.08)",
   accentBorder: "rgba(62,207,178,0.30)",
   effects: [
-    "Reveals one enemy weakness",
-    "Reveals one resistance",
-    "Marks ineffective attacks",
-    "Shows how untargeted attacks cause adaptation",
+    "Counter: targeted strike using the scouted weakness (-18 Corruption)",
+    "Deals full damage only after Scout + Stabilize sequence",
+    "Random broad-spectrum attacks deal ~40% of this",
+    "AP Cost: 2 — precision saves Action Points",
   ],
   effectColor: "#3ECFB2",
-  prompt:    "Now examine the enemy before selecting an intervention.",
+  prompt:    "Scouted. Stabilized. Now we finish it precisely.",
 } as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -153,6 +186,12 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
   const lamp1Fade     = useRef(new Animated.Value(0)).current;
   const lamp2Fade     = useRef(new Animated.Value(0)).current;
   const lamp3Fade     = useRef(new Animated.Value(0)).current;
+
+  // Prodigy skill effect
+  const prodigyGlow   = useRef(new Animated.Value(0)).current;
+  const prodigyRing   = useRef(new Animated.Value(0.3)).current;
+  const prodigy1Fade  = useRef(new Animated.Value(0)).current;
+  const prodigy2Fade  = useRef(new Animated.Value(0)).current;
 
   // Culture & Sensitivity effect
   const scanY         = useRef(new Animated.Value(-200)).current;
@@ -251,7 +290,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
     anim(bgFade, 1, 700);
     after(500, () => anim(labelFade, 1, 600));
 
-    // After brief frozen pause → Nightingale enters
+    // After brief frozen pause → Nightingale enters first (Scout step)
     after(1400, () => {
       toStage("nightingale_entry");
       showChar();
@@ -263,6 +302,39 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Brilliant Intervention (Prodigy) effect ───────────────────────────────────
+
+  function playProdigyEffect() {
+    prodigyGlow.setValue(0);
+    prodigyRing.setValue(0.3);
+    prodigy1Fade.setValue(0);
+    prodigy2Fade.setValue(0);
+
+    // Crimson glow burst
+    Animated.parallel([
+      Animated.timing(prodigyGlow, { toValue: 0.70, duration: 500,  useNativeDriver: false }),
+      Animated.timing(prodigyRing, { toValue: 2.2,  duration: 900,  useNativeDriver: false }),
+    ]).start(() => {
+      anim(prodigyGlow, 0, 800);
+    });
+
+    // Staggered result chips
+    after(400, () => anim(prodigy1Fade, 1, 350));
+    after(900, () => anim(prodigy2Fade, 1, 350));
+
+    // Effect hold → advance to Fleming (Counter step)
+    after(2800, () => {
+      Animated.parallel([
+        Animated.timing(prodigy1Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+        Animated.timing(prodigy2Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+        Animated.timing(prodigyGlow,  { toValue: 0, duration: 350, useNativeDriver: false }),
+      ]).start(() => {
+        toStage("fleming_entry");
+        showChar();
+      });
+    });
+  }
 
   // ── Lamp of Observation effect ────────────────────────────────────────────────
 
@@ -290,7 +362,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
     after(800,  () => anim(lamp2Fade, 1, 400));
     after(1200, () => anim(lamp3Fade, 1, 400));
 
-    // Effect hold → auto-advance to Fleming
+    // Effect hold → auto-advance to The Prodigy (Stabilize step)
     after(2800, () => {
       // Fade out indicators
       Animated.parallel([
@@ -299,7 +371,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
         Animated.timing(lamp3Fade, { toValue: 0, duration: 400, useNativeDriver: false }),
         Animated.timing(lampFogFade, { toValue: 1, duration: 500, useNativeDriver: false }),
       ]).start(() => {
-        toStage("fleming_entry");
+        toStage("prodigy_entry");
         showChar();
       });
     });
@@ -326,7 +398,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
     // Analysis panel appears after scan
     after(900, () => anim(analysisFade, 1, 500));
 
-    // Effect hold → auto-advance to Master Bai
+    // Effect hold → advance to Master Bai (Reassess step)
     after(2800, () => {
       Animated.parallel([
         Animated.timing(analysisFade, { toValue: 0, duration: 400, useNativeDriver: false }),
@@ -334,7 +406,6 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
       ]).start(() => {
         toStage("master_bai");
         anim(mbFade, 1, 500);
-
         // Auto-advance to player turn
         after(3200, () => {
           anim(mbFade, 0, 350, () => {
@@ -356,7 +427,12 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
 
   const handleTapEntry = useCallback(() => {
     const s = stageRef.current;
-    if (s === "nightingale_entry") {
+    if (s === "prodigy_entry") {
+      hideChar(() => {
+        toStage("prodigy_prompt");
+        showSkillCard();
+      });
+    } else if (s === "nightingale_entry") {
       hideChar(() => {
         toStage("lamp_prompt");
         showSkillCard();
@@ -367,6 +443,15 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
         showSkillCard();
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleUseProdigy = useCallback(() => {
+    if (stageRef.current !== "prodigy_prompt") return;
+    hideSkillCard(() => {
+      toStage("prodigy_effect");
+      playProdigyEffect();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -395,9 +480,12 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
 
   // ── Derived render state ─────────────────────────────────────────────────────
 
+  const isProdigyEntry     = stage === "prodigy_entry";
+  const isProdigyPrompt    = stage === "prodigy_prompt";
+  const isProdigyEffect    = stage === "prodigy_effect";
   const isNightingaleEntry = stage === "nightingale_entry";
   const isFlemingEntry     = stage === "fleming_entry";
-  const isEntryStage       = isNightingaleEntry || isFlemingEntry;
+  const isEntryStage       = isProdigyEntry || isNightingaleEntry || isFlemingEntry;
   const isLampPrompt       = stage === "lamp_prompt";
   const isCulturePrompt    = stage === "culture_prompt";
   const isLampEffect       = stage === "lamp_effect";
@@ -405,12 +493,14 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
   const isMasterBai        = stage === "master_bai";
   const isPlayerTurn       = stage === "player_turn";
 
-  const currentChar = isNightingaleEntry ? LAMP_SKILL
+  const currentChar = isProdigyEntry     ? PRODIGY_SKILL
+                    : isNightingaleEntry ? LAMP_SKILL
                     : isFlemingEntry     ? CULTURE_SKILL
                     : null;
 
-  const currentSkill = isLampPrompt    ? LAMP_SKILL
-                     : isCulturePrompt ? CULTURE_SKILL
+  const currentSkill = isProdigyPrompt  ? PRODIGY_SKILL
+                     : isLampPrompt     ? LAMP_SKILL
+                     : isCulturePrompt  ? CULTURE_SKILL
                      : null;
 
   return (
@@ -425,6 +515,32 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
 
       {/* Red trap pulse */}
       <Animated.View style={[styles.redOverlay, { opacity: redPulse }]} pointerEvents="none" />
+
+      {/* ── PRODIGY EFFECT LAYER ── */}
+      {isProdigyEffect && (
+        <View style={styles.effectLayer} pointerEvents="none">
+          {/* Crimson glow ring */}
+          <Animated.View
+            style={[
+              styles.prodigyGlow,
+              { opacity: prodigyGlow, transform: [{ scale: prodigyRing }] },
+            ]}
+          />
+
+          {/* Result chips */}
+          <Animated.View style={[styles.revealChip, styles.revealChip1, { opacity: prodigy1Fade }]}>
+            <Text style={styles.revealHazard}>⚡  BRILLIANT INTERVENTION</Text>
+            <Text style={styles.revealSub}>Corruption −12</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.revealChip, styles.revealChip3, { opacity: prodigy2Fade }]}>
+            <Text style={{ color: "#E8C453", fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>
+              ⚠  SCOUT FIRST
+            </Text>
+            <Text style={styles.revealSub}>Hidden cues still spreading</Text>
+          </Animated.View>
+        </View>
+      )}
 
       {/* ── LAMP EFFECT LAYER ── */}
       {isLampEffect && (
@@ -504,14 +620,17 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
         {/* ── TOP LABEL ── */}
         <Animated.View style={[styles.topBar, { opacity: labelFade }]} pointerEvents="none">
-          <Text style={styles.sceneLabel}>EMERGENCY TREATMENT PLAZA  ·  BATTLE ACTIVE</Text>
+          <Text style={styles.sceneLabel}>LEGENDARY PARTY  ·  AP {PROLOGUE_AP_CONFIG.startingAP} / {PROLOGUE_AP_CONFIG.startingAP}  ·  BATTLE ACTIVE</Text>
           <View style={styles.stepRow}>
-            {["Observe", "Analyze", "Act"].map((step, i) => {
-              const done = (i === 0 && ["lamp_effect","fleming_entry","culture_prompt","culture_effect","master_bai","player_turn"].includes(stage))
-                        || (i === 1 && ["culture_effect","master_bai","player_turn"].includes(stage));
+            {["Scout", "Stabilize", "Counter", "Reassess"].map((step, i) => {
+              // Scout (Nightingale), Stabilize (Fleming), Counter (Prodigy), Reassess (Master Bai)
+              const done = (i === 0 && ["lamp_effect","fleming_entry","culture_prompt","culture_effect","prodigy_entry","prodigy_prompt","prodigy_effect","master_bai","player_turn"].includes(stage))
+                        || (i === 1 && ["culture_effect","prodigy_entry","prodigy_prompt","prodigy_effect","master_bai","player_turn"].includes(stage))
+                        || (i === 2 && ["prodigy_effect","master_bai","player_turn"].includes(stage));
               const active = (i === 0 && ["frozen_field","nightingale_entry","lamp_prompt","lamp_effect"].includes(stage))
                            || (i === 1 && ["fleming_entry","culture_prompt","culture_effect"].includes(stage))
-                           || (i === 2 && ["master_bai","player_turn"].includes(stage));
+                           || (i === 2 && ["prodigy_entry","prodigy_prompt","prodigy_effect"].includes(stage))
+                           || (i === 3 && ["master_bai","player_turn"].includes(stage));
               return (
                 <View key={step} style={styles.stepItem}>
                   <View style={[
@@ -553,7 +672,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
                   {currentChar.owner}
                 </Text>
                 <Text style={styles.entryRole}>
-                  {currentChar === LAMP_SKILL ? "Legendary Support" : "Legendary Assessment"}
+                  {currentChar === PRODIGY_SKILL ? "The Prodigy — Peak Power" : currentChar === LAMP_SKILL ? "Legendary Support" : "Legendary Assessment"}
                 </Text>
               </View>
             </View>
@@ -573,7 +692,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
         )}
 
         {/* ── SKILL CARD ── */}
-        {(isLampPrompt || isCulturePrompt) && currentSkill && (
+        {(isLampPrompt || isProdigyPrompt || isCulturePrompt) && currentSkill && (
           <Animated.View
             style={[
               styles.skillCard,
@@ -611,10 +730,12 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
             {/* USE SKILL button */}
             <Pressable
               style={[styles.useSkillBtn, { borderColor: currentSkill.accentBorder }]}
-              onPress={isLampPrompt ? handleUseLamp : handleUseCulture}
+              onPress={isProdigyPrompt ? handleUseProdigy : isLampPrompt ? handleUseLamp : handleUseCulture}
             >
               <LinearGradient
-                colors={isLampPrompt
+                colors={isProdigyPrompt
+                  ? ["rgba(232,53,74,0.18)", "rgba(232,53,74,0.08)"]
+                  : isLampPrompt
                   ? ["rgba(232,196,83,0.18)", "rgba(232,196,83,0.08)"]
                   : ["rgba(62,207,178,0.18)", "rgba(62,207,178,0.08)"]}
                 style={styles.useSkillGradient}
@@ -635,7 +756,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
               <Text style={styles.mbSpeaker}>MASTER BAI</Text>
             </View>
             <Text style={styles.mbLesson}>
-              "What you discover should change what you do next."
+              "Scout first. Stabilize what you find. Then counter — with everything you have. Then reassess. Every time — in that sequence."
             </Text>
           </Animated.View>
         )}
@@ -749,6 +870,17 @@ const styles = StyleSheet.create({
   // Effect layers
   effectLayer: {
     ...StyleSheet.absoluteFillObject,
+  },
+
+  // Prodigy effect
+  prodigyGlow: {
+    position:        "absolute",
+    alignSelf:       "center",
+    top:             "30%",
+    width:           280,
+    height:          280,
+    borderRadius:    140,
+    backgroundColor: "rgba(232,53,74,0.45)",
   },
 
   // Lamp effect

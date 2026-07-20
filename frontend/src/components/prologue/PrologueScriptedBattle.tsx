@@ -35,12 +35,13 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 
 // ─── Art registry ─────────────────────────────────────────────────────────────
 
 const ART = {
   battlefield:      require("../../../assets/images/tactical_battlefield.png"),
-  formerSelf:       require("../../../assets/images/former_self_portrait.png"),
+  theProdigy:       require("../../../assets/heroes/battle/the_prodigy.png"),
   nightingale:      require("../../../assets/images/nightingale_portrait.png"),
   fleming:          require("../../../assets/images/fleming_portrait.png"),
   masterBai:        require("../../../assets/images/master_bai.png"),
@@ -67,6 +68,7 @@ interface HeroAction {
   id:         string;
   label:      string;
   type:       ActionType;
+  apCost:     number;
 }
 
 interface HeroData {
@@ -93,15 +95,15 @@ interface FinaleStep {
 
 const HEROES: HeroData[] = [
   {
-    id: "former_self",
-    name: "The Former Self",
-    short: "Former Self",
-    image: ART.formerSelf,
+    id: "the_prodigy",
+    name: "The Prodigy",
+    short: "Prodigy",
+    image: ART.theProdigy,
     color: "#E8354A",
     maxHp: 100,
     actions: [
-      { id: "decisive_strike", label: "Decisive Strike",  type: "strike"  },
-      { id: "rally",           label: "Rally the Line",   type: "support" },
+      { id: "brilliant_intervention",  label: "Brilliant Intervention",  type: "strike",  apCost: 3 },
+      { id: "radiant_stabilization",   label: "Radiant Stabilization",   type: "support", apCost: 2 },
     ],
   },
   {
@@ -112,8 +114,8 @@ const HEROES: HeroData[] = [
     color: "#E8C453",
     maxHp: 90,
     actions: [
-      { id: "lamp_observe", label: "Lamp of Observation", type: "reveal"  },
-      { id: "field_triage", label: "Field Triage",         type: "support" },
+      { id: "lamp_of_observation", label: "Lamp of Observation", type: "reveal",  apCost: 2 },
+      { id: "ward_vigil",          label: "Ward Vigil",          type: "support", apCost: 1 },
     ],
   },
   {
@@ -124,28 +126,29 @@ const HEROES: HeroData[] = [
     color: "#3ECFB2",
     maxHp: 90,
     actions: [
-      { id: "culture_sens",    label: "Culture & Sensitivity", type: "reveal" },
-      { id: "broad_treatment", label: "Broad Treatment",        type: "risky"  },
+      { id: "culture_and_sensitivity", label: "Culture & Sensitivity", type: "reveal", apCost: 2 },
+      { id: "targeted_antidote",       label: "Targeted Antidote",     type: "strike", apCost: 2 },
     ],
   },
 ];
 
 // Scripted enemy responses, one per player turn (index = turn - 1).
-// turn 4 dmg is 999 = lethal safety net.
+// turn 4 dmg is 999 = lethal safety net — Hidden Deterioration → Unseen Collapse.
 const ENEMY_SCRIPT = [
-  { target: "former_self", dmg: 16, text: "Decoy swarms surge. Former Self holds the line. For now." },
-  { target: "nightingale", dmg: 12, text: "A flank strike catches Nightingale. The silence grows louder." },
-  { target: "former_self", dmg: 31, text: "The Silent Infarction moves. Former Self catches all of it." },
-  { target: "former_self", dmg: 999, text: "The trap springs. The damage runs far deeper than any strike." },
+  { target: "the_prodigy", dmg: 16, text: "Hidden Deterioration — the Silent Infarction works beneath the surface. The Prodigy holds." },
+  { target: "nightingale", dmg: 12, text: "False Reassurance — a cue is hidden. Nightingale catches the backlash." },
+  { target: "the_prodigy", dmg: 31, text: "Hidden Deterioration — the trap tightens. The Prodigy absorbs the blow." },
+  { target: "the_prodigy", dmg: 999, text: "Unseen Collapse. The trap that was set before this battle ever began." },
 ] as const;
 
 // Narrative beats triggered by specific player actions (one-shot per battle).
 const NARRATIVE: Record<string, string> = {
-  first_decoy_killed: "The decoy dissolves. But the true source was never there.",
-  lamp_used:          "The field opens. Three civilians in critical deterioration. Two exits blocked.\n\nThe trap was always here.",
-  culture_used:       "Analysis complete.\n\nTargeted intervention only. Broad approaches cause adaptation.",
-  rally_used:         "Former Self: \"This is my ward. I know what I'm doing.\"",
-  broad_warning:      "⚠  Broad treatment applied. The Silent Infarction adapts.\n\nTargeted therapy is the only path forward.",
+  first_decoy_killed:         "The decoy dissolves. But the true source was never there.",
+  lamp_used:                  "The field opens. Three civilians in critical deterioration. Two exits blocked.\n\nThe trap was always here.",
+  rally_used:                 "Stabilization holds. The team breathes.\n\nBut the root cause is still spreading beneath the surface.",
+  culture_used:               "Analysis complete.\n\nTargeted intervention only. Broad approaches cause adaptation.",
+  brilliant_intervention_warn: "The Prodigy: \"I know this. I can handle it.\"\n\nBut something hidden is still spreading.",
+  broad_warning:              "⚠  Broad treatment applied. The Silent Infarction adapts.\n\nTargeted therapy is the only path forward.",
 };
 
 const FINALE_STEPS: FinaleStep[] = [
@@ -153,7 +156,7 @@ const FINALE_STEPS: FinaleStep[] = [
     speaker: null,
     portrait: null,
     text: "THE TRAP CLOSES.",
-    subtext: "Everything the Former Self built. And everything they missed.",
+    subtext: "Not because The Prodigy was weak. Because they rushed before they looked.",
     color: "#FF3333",
   },
   {
@@ -165,13 +168,13 @@ const FINALE_STEPS: FinaleStep[] = [
   {
     speaker: "ALEXANDER FLEMING",
     portrait: ART.fleming,
-    text: "The choices came before this battle.\n\nWe cannot reverse what was already set.",
+    text: "The overconfidence was the trap.\n\nThe choices came before this battle.",
     color: "#3ECFB2",
   },
   {
     speaker: "MASTER BAI",
     portrait: ART.masterBai,
-    text: "Sometimes the lesson only comes after the fall.\n\nYou needed to see this.",
+    text: "You were brilliant. That was never in question.\n\nBut brilliance that skips the assessment is the most dangerous kind.",
     color: "#D9A441",
   },
   {
@@ -322,8 +325,13 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
   const turnRef = useRef(1);
   const [turn,  setTurn]   = useState(1);
 
+  // ── Action Points (legendary prologue budget) ──────────────────────────────
+  // Starts at PROLOGUE_AP_CONFIG.startingAP; regenerates apPerTurn each new turn.
+  const playerAPRef = useRef<number>(PROLOGUE_AP_CONFIG.startingAP);
+  const [playerAP,  setPlayerAP]  = useState<number>(PROLOGUE_AP_CONFIG.startingAP);
+
   // ── Hero HPs (ref for closure safety, state for rendering) ─────────────────
-  const heroHPsRef = useRef<Record<string, number>>({ former_self: 100, nightingale: 90, fleming: 90 });
+  const heroHPsRef = useRef<Record<string, number>>({ the_prodigy: 100, nightingale: 90, fleming: 90 });
   const [heroHPs,  setHeroHPs]  = useState({ ...heroHPsRef.current });
 
   // ── Decoy HPs ──────────────────────────────────────────────────────────────
@@ -456,54 +464,66 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
     let beatKey: string | null = null;
 
     switch (actionId) {
-      case "decisive_strike": {
+      case "brilliant_intervention": {
         const d1 = dHPs["fever_shade"] ?? 0;
         const d2 = dHPs["mind_fog"]    ?? 0;
-        const dmg = 38 + Math.floor(Math.random() * 10);
+        // Brilliant Intervention vs Silent Infarction shows reduced effect — story beat
+        const bossRevealedFraction = bossRevRef.current;
+        const dmg = bossRevealedFraction < 0.3
+          ? 28 + Math.floor(Math.random() * 8)   // hidden cues: reduced effectiveness
+          : 38 + Math.floor(Math.random() * 10);  // revealed: full power
 
         if (d1 > 0) {
           const next = Math.max(0, d1 - dmg);
           decoyChanges = { fever_shade: next };
           const killed = next <= 0;
-          resultText  = killed ? "FEVER SHADE DEFEATED" : `DECISIVE STRIKE\n${dmg} DAMAGE`;
+          resultText  = killed ? "FEVER SHADE DEFEATED" : `BRILLIANT INTERVENTION\n-${dmg} CORRUPTION`;
           resultColor = killed ? "#FF8C00" : "#E8354A";
           logLine     = killed
-            ? "The Fever Shade dissolves under Former Self's strike."
-            : `Decisive Strike deals ${dmg} to the Fever Shade.`;
+            ? "Brilliant Intervention — the Fever Shade dissolves."
+            : `Brilliant Intervention lowered Corruption by ${dmg}.`;
           if (killed && !beats.has("first_decoy_killed")) beatKey = "first_decoy_killed";
         } else if (d2 > 0) {
           const next = Math.max(0, d2 - dmg);
           decoyChanges = { mind_fog: next };
           const killed = next <= 0;
-          resultText  = killed ? "MIND FOG DEFEATED" : `DECISIVE STRIKE\n${dmg} DAMAGE`;
+          resultText  = killed ? "MIND FOG DEFEATED" : `BRILLIANT INTERVENTION\n-${dmg} CORRUPTION`;
           resultColor = killed ? "#FF8C00" : "#E8354A";
           logLine     = killed
-            ? "The Mind Fog clears as Former Self drives through it."
-            : `Decisive Strike deals ${dmg} to the Mind Fog.`;
+            ? "Brilliant Intervention cuts through the Mind Fog."
+            : `Brilliant Intervention lowered Corruption by ${dmg}.`;
         } else {
-          // Both decoys dead — hits the boss (no damage, minor reveal)
-          bossRevDelta = 0.12;
-          resultText  = "THE DARKNESS\nABSORBS IT";
-          resultColor = "#886655";
-          logLine     = "Former Self strikes the true source. The blow barely lands.";
+          // Both decoys dead — Brilliant Intervention shows reduced effect against the boss
+          bossRevDelta = bossRevealedFraction < 0.3 ? 0.08 : 0.14;
+          resultText  = bossRevealedFraction < 0.3
+            ? "REDUCED EFFECT\nSomething hidden remains"
+            : "THE DARKNESS\nPartially Resists";
+          resultColor = bossRevealedFraction < 0.3 ? "#FF6B35" : "#886655";
+          logLine     = bossRevealedFraction < 0.3
+            ? "Brilliant Intervention was powerful — but something hidden continued to spread."
+            : "The Prodigy's intervention lands. The Silent Infarction barely yields.";
+          if (!beats.has("brilliant_intervention_warn") && bossRevealedFraction < 0.3) {
+            beatKey = "brilliant_intervention_warn";
+          }
         }
         break;
       }
 
-      case "rally": {
-        const nHP = Math.min(90, (hHPs["nightingale"] ?? 90) + 15);
-        const fHP = Math.min(90, (hHPs["fleming"]    ?? 90) + 15);
-        hpChanges   = { nightingale: nHP, fleming: fHP };
-        resultText  = "TEAM RALLIED";
+      case "radiant_stabilization": {
+        const nHP = Math.min(90, (hHPs["nightingale"] ?? 90) + 10);
+        const fHP = Math.min(90, (hHPs["fleming"]    ?? 90) + 10);
+        const pHP = Math.min(100, (hHPs["the_prodigy"] ?? 100) + 12);
+        hpChanges   = { the_prodigy: pHP, nightingale: nHP, fleming: fHP };
+        resultText  = "RADIANT STABILIZATION\n+8 STABILITY";
         resultColor = "#E8354A";
-        logLine     = "Former Self rallies. Nightingale and Fleming hold steady.";
+        logLine     = "Radiant Stabilization. The Prodigy holds the team together.";
         if (!beats.has("rally_used")) beatKey = "rally_used";
         break;
       }
 
-      case "lamp_observe": {
-        const fsHP = Math.min(100, (hHPs["former_self"] ?? 100) + 10);
-        hpChanges   = { former_self: fsHP };
+      case "lamp_of_observation": {
+        const pHP   = Math.min(100, (hHPs["the_prodigy"] ?? 100) + 10);
+        hpChanges   = { the_prodigy: pHP };
         bossRevDelta = 0.24;
         resultText  = "FIELD REVEALED";
         resultColor = "#E8C453";
@@ -512,31 +532,41 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         break;
       }
 
-      case "field_triage": {
-        const fsHP = Math.min(100, (hHPs["former_self"] ?? 100) + 18);
-        const fHP  = Math.min(90,  (hHPs["fleming"]    ?? 90) + 10);
-        hpChanges   = { former_self: fsHP, fleming: fHP };
-        resultText  = "+18 STABILITY";
+      case "ward_vigil": {
+        const pHP   = Math.min(100, (hHPs["the_prodigy"] ?? 100) + 18);
+        const fHP   = Math.min(90,  (hHPs["fleming"]     ?? 90)  + 10);
+        hpChanges   = { the_prodigy: pHP, fleming: fHP };
+        resultText  = "WARD VIGIL\n+18 STABILITY";
         resultColor = "#E8C453";
-        logLine     = "Nightingale performs field triage. Stability partially restored.";
+        logLine     = "Ward Vigil: Nightingale steadies the ward. Stability restored across the team.";
         break;
       }
 
-      case "culture_sens": {
+      case "culture_and_sensitivity": {
         bossRevDelta = 0.30;
         resultText  = "WEAKNESS IDENTIFIED\nTargeted Intervention";
         resultColor = "#3ECFB2";
-        logLine     = "Fleming marks the pathway. Targeted intervention confirmed.";
+        logLine     = "Culture & Sensitivity: Fleming marks the pathway. Targeted intervention confirmed.";
         if (!beats.has("culture_used")) beatKey = "culture_used";
         break;
       }
 
-      case "broad_treatment": {
-        bossRevDelta = -0.08; // boss adapts, hides slightly
-        resultText  = "⚠  ENEMY ADAPTS\nTarget Narrows";
-        resultColor = "#FF6B35";
-        logLine     = "⚠ Broad treatment: enemy adapts. Targeted therapy required.";
-        if (!beats.has("broad_warning")) beatKey = "broad_warning";
+      case "targeted_antidote": {
+        const d1 = dHPs["fever_shade"] ?? 0;
+        const d2 = dHPs["mind_fog"]    ?? 0;
+        const dmg = 22;
+        if (d1 > 0) {
+          decoyChanges = { fever_shade: Math.max(0, d1 - dmg) };
+          resultText   = `TARGETED ANTIDOTE\n-${dmg} TARGETED`;
+        } else if (d2 > 0) {
+          decoyChanges = { mind_fog: Math.max(0, d2 - dmg) };
+          resultText   = `TARGETED ANTIDOTE\n-${dmg} TARGETED`;
+        } else {
+          bossRevDelta = 0.18;
+          resultText   = "TARGETED ANTIDOTE\nEnemy Weakened";
+        }
+        resultColor = "#3ECFB2";
+        logLine     = "Targeted Antidote: Fleming deploys a precise counter. No collateral effect.";
         break;
       }
 
@@ -576,6 +606,13 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         } else {
           turnRef.current = t + 1;
           setTurn(t + 1);
+          // Regenerate AP at turn start (PROLOGUE_AP_CONFIG.apPerTurn per turn, capped at startingAP)
+          const nextAP = Math.min(
+            PROLOGUE_AP_CONFIG.startingAP,
+            playerAPRef.current + PROLOGUE_AP_CONFIG.apPerTurn,
+          );
+          playerAPRef.current = nextAP;
+          setPlayerAP(nextAP);
           selectedHeroIdRef.current = null;
           setSelectedHeroId(null);
           toStage("selecting_hero");
@@ -607,8 +644,15 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
 
   // ── Player action handler ─────────────────────────────────────────────────
 
-  const handleAction = useCallback((heroId: string, actionId: string) => {
+  const handleAction = useCallback((heroId: string, actionId: string, apCost: number) => {
     if (stageRef.current !== "selecting_action") return;
+    // Gate: insufficient AP
+    if (playerAPRef.current < apCost) return;
+
+    // Consume AP (synchronous ref write + state update)
+    const newAP = playerAPRef.current - apCost;
+    playerAPRef.current = newAP;
+    setPlayerAP(newAP);
 
     const result = resolveAction(heroId, actionId);
 
@@ -729,7 +773,9 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                   ]}
                 />
               ))}
-              <Text style={styles.turnLabel}>TURN {Math.min(turn, 4)} / 4</Text>
+              <Text style={styles.turnLabel}>
+                TURN {Math.min(turn, 4)} / 4  ·  AP {playerAP} / {PROLOGUE_AP_CONFIG.startingAP}
+              </Text>
             </View>
           </View>
         )}
@@ -827,7 +873,9 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
             </Text>
             <View style={styles.actionBtnRow}>
               {selectedHero.actions.map(action => {
-                const isRisky = action.type === "risky";
+                const isRisky    = action.type === "risky";
+                const canAfford  = playerAP >= action.apCost;
+                const dimmed     = !canAfford;
                 return (
                   <Pressable
                     key={action.id}
@@ -836,14 +884,18 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                       isRisky
                         ? styles.actionBtnRisky
                         : { borderColor: `${selectedHero.color}55` },
+                      dimmed && { opacity: 0.38 },
                     ]}
-                    onPress={() => handleAction(selectedHero.id, action.id)}
+                    onPress={() => handleAction(selectedHero.id, action.id, action.apCost)}
                   >
                     <Text style={[
                       styles.actionBtnLabel,
                       { color: isRisky ? "#FF6B35" : selectedHero.color },
                     ]}>
                       {action.label}
+                    </Text>
+                    <Text style={[styles.actionBtnCost, dimmed && { color: "#FF4444" }]}>
+                      {action.apCost} AP
                     </Text>
                     {isRisky && (
                       <Text style={styles.actionBtnRiskyNote}>⚠  use carefully</Text>
@@ -937,7 +989,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                 THE TRAP CLOSES.
               </Text>
               <Text style={styles.finaleSubtext}>
-                Everything the Former Self built. And everything they missed.
+                The power was real. The overconfidence was the trap. It was always here.
               </Text>
             </View>
           </SafeAreaView>
@@ -1090,6 +1142,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,107,53,0.06)",
   },
   actionBtnLabel: { fontSize: 12, fontWeight: "700", textAlign: "center" },
+  actionBtnCost: { fontSize: 10, color: "rgba(255,255,255,0.45)", textAlign: "center", marginTop: 2 },
   actionBtnRiskyNote: {
     color: "rgba(255,107,53,0.60)",
     fontSize: 9,

@@ -140,9 +140,11 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   // Prologue loaner heroes — tutorial + boss battles
   prologue_nightingale:  require('../../assets/heroes/florence_nightingale.png'),
   prologue_fleming:      require('../../assets/images/fleming_portrait.png'),
+  // The Prodigy — Former Self at peak legendary power (prologue pre-recall only)
+  prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),
+  the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),
 
-  // Former Self — prologue scripted battle + cinematic appearances
-  // Both keys are kept: prologue_former_self (cinematic alias) + former_self (battle resolver)
+  // Former Self — cinematic alias (kept for any legacy references)
   prologue_former_self:  require('../../assets/images/former_self_portrait.png'),
   former_self:           require('../../assets/images/former_self_portrait.png'),
 };

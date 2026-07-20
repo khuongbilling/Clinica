@@ -91,7 +91,8 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
 // ---------------------------------------------------------------------------
 
 export const PROLOGUE_TEMP_IDS = {
-  FORMER_SELF:       'prologue_former_self',
+  THE_PRODIGY:       'prologue_the_prodigy',
+  FORMER_SELF:       'prologue_former_self',   // alias kept for any legacy references
   NIGHTINGALE_TEMP:  'prologue_nightingale',
   FLEMING_TEMP:      'prologue_fleming',
   MASTER_BAI:        'prologue_master_bai',
@@ -104,6 +105,175 @@ export type PrologueTempId = typeof PROLOGUE_TEMP_IDS[keyof typeof PROLOGUE_TEMP
 export function isPrologueTempId(id: string): boolean {
   return (Object.values(PROLOGUE_TEMP_IDS) as string[]).includes(id);
 }
+
+// ---------------------------------------------------------------------------
+// Prologue AP tuning — PRE-RECALL POWER FANTASY ONLY
+// DO NOT copy these values to post-recall initBattle options.
+// High AP represents The Prodigy at peak legendary power, not normal play.
+// ---------------------------------------------------------------------------
+
+/** @prologue-pre-recall-only */
+export const PROLOGUE_AP_CONFIG = {
+  startingAP:  9,   // 8–10 range; feel powerful from the first turn
+  apPerTurn:   7,   // 6–8 range; legendary healers never run dry
+} as const;
+
+// ---------------------------------------------------------------------------
+// Legendary prologue skill definitions (Clinica language)
+// Used in PrologueBattleTutorial and PrologueScriptedBattle.
+// These are display + narrative data; effect fields are not wired to
+// the main battle engine (prologue components are self-contained).
+// ---------------------------------------------------------------------------
+
+export interface PrologueSkill {
+  id:          string;
+  name:        string;
+  apCost:      number;
+  description: string;
+  shortEffect: string;
+  battleLog:   string;
+  chainRole:   'Scout' | 'Stabilize' | 'Counter' | 'Reassess';
+  /** Warning logged instead of normal battle log when used out of optimal order */
+  warningLog?: string;
+}
+
+/** The Prodigy — peak-power legendary clinician (Former Self) */
+export const PRODIGY_SKILLS: readonly PrologueSkill[] = [
+  {
+    id:          'brilliant_intervention',
+    name:        'Brilliant Intervention',
+    apCost:      3,
+    description: 'Lower Corruption by 12. If used before Scout, hidden Corruption Spread increases by 2.',
+    shortEffect: '-12 Corruption',
+    battleLog:   'Brilliant Intervention lowered Corruption by 12.',
+    warningLog:  'The intervention was powerful, but something hidden continued to spread.',
+    chainRole:   'Counter',
+  },
+  {
+    id:          'radiant_stabilization',
+    name:        'Radiant Stabilization',
+    apCost:      2,
+    description: 'Restore 8 Stability.',
+    shortEffect: '+8 Stability',
+    battleLog:   'Radiant Stabilization restored 8 Stability.',
+    chainRole:   'Stabilize',
+  },
+  {
+    id:          'overconfident_advance',
+    name:        'Overconfident Advance',
+    apCost:      1,
+    description: 'Lower visible Corruption by 5. Increases hidden risk if hidden cues remain unrevealed.',
+    shortEffect: '-5 Corruption (visible only)',
+    battleLog:   'Overconfident Advance reduced visible Corruption by 5.',
+    warningLog:  'Overconfident Advance pushed back the surface — but the hidden cues remain.',
+    chainRole:   'Counter',
+  },
+];
+
+/** Florence Nightingale — legendary support (prologue version) */
+export const NIGHTINGALE_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
+  {
+    id:          'lamp_of_observation',
+    name:        'Lamp of Observation',
+    apCost:      2,
+    description: 'Reveal hidden Clinical Cues. Reduce incoming Instability by 3 this turn.',
+    shortEffect: 'Reveal Cues  ·  -3 Instability',
+    battleLog:   'Nightingale\'s Lamp illuminates hidden Clinical Cues. The picture becomes clearer.',
+    chainRole:   'Scout',
+  },
+  {
+    id:          'ward_vigil',
+    name:        'Ward Vigil',
+    apCost:      3,
+    description: 'Prevent the next Stability loss event and restore 5 Stability.',
+    shortEffect: 'Block next Stability loss  ·  +5 Stability',
+    battleLog:   'Ward Vigil holds. Nightingale shields the patient from the next blow.',
+    chainRole:   'Stabilize',
+  },
+  {
+    id:          'pattern_of_care',
+    name:        'Pattern of Care',
+    apCost:      2,
+    description: 'After Reassess this turn, restore 3 additional Stability if a correct cue was found.',
+    shortEffect: '+3 Stability (after correct Reassess)',
+    battleLog:   'Pattern of Care: a correct cue was confirmed. Additional Stability restored.',
+    chainRole:   'Reassess',
+  },
+];
+
+/** Sir Alexander Fleming — legendary assessment (prologue version) */
+export const FLEMING_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
+  {
+    id:          'culture_and_sensitivity',
+    name:        'Culture and Sensitivity',
+    apCost:      2,
+    description: 'Reveal one weakness and one resistance. The next correct Counter lowers Corruption by 5 more.',
+    shortEffect: 'Reveal Weakness + Resistance  ·  +5 next Counter',
+    battleLog:   'Fleming\'s analysis marks the pathway. Targeted intervention is confirmed.',
+    chainRole:   'Scout',
+  },
+  {
+    id:          'targeted_antidote',
+    name:        'Targeted Antidote',
+    apCost:      3,
+    description: 'Lower Corruption by 10. If a weakness is revealed, lower by 15 instead.',
+    shortEffect: '-10 Corruption  (or -15 if weakness known)',
+    battleLog:   'Targeted Antidote strikes where it hurts. Corruption falls sharply.',
+    chainRole:   'Counter',
+  },
+  {
+    id:          'resistance_warning',
+    name:        'Resistance Warning',
+    apCost:      2,
+    description: 'Prevent the next ineffective treatment penalty and reduce Corruption Spread by 4.',
+    shortEffect: 'Block next penalty  ·  -4 Corruption Spread',
+    battleLog:   'Resistance Warning issued. The next ineffective treatment causes no harm.',
+    chainRole:   'Stabilize',
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Prologue enemy skill definitions (Clinica language, for narrative display)
+// ---------------------------------------------------------------------------
+
+export interface PrologueEnemySkill {
+  name:        string;
+  description: string;
+  battleLog:   string;
+}
+
+/** Silent Infarction — the scripted-defeat prologue boss */
+export const SILENT_INFARCTION_SKILLS: readonly PrologueEnemySkill[] = [
+  {
+    name:        'Hidden Deterioration',
+    description: 'Lower Stability by 6 unless a hidden cue has been revealed.',
+    battleLog:   'The Silent Infarction deteriorates beneath the surface. Stability falls by 6.',
+  },
+  {
+    name:        'False Reassurance',
+    description: 'Hide one Clinical Cue and increase Corruption Spread by 4.',
+    battleLog:   'False Reassurance conceals a cue. Corruption Spread increases by 4.',
+  },
+  {
+    name:        'Unseen Collapse',
+    description: 'Scripted prologue finale — the trap springs, causing catastrophic damage.',
+    battleLog:   'The trap springs. The damage runs far deeper than any strike.',
+  },
+];
+
+/** Dehydration Wisp — tutorial battle 1 enemy (Hydration Monster narrative name) */
+export const HYDRATION_MONSTER_SKILLS: readonly PrologueEnemySkill[] = [
+  {
+    name:        'Drying Pulse',
+    description: 'Lower Stability by 4 and add 2 Corruption Spread unless the Hydration Cue is identified.',
+    battleLog:   'Drying Pulse drains the patient\'s reserves. Stability -4, Corruption Spread rising.',
+  },
+  {
+    name:        'Thirst Signal',
+    description: 'Create a visible Clinical Cue that can be found with Scout.',
+    battleLog:   'The enemy reveals itself — a visible cue emerges. Use Scout to read it.',
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Permanent post-rebirth identifiers granted after the prologue

@@ -133,12 +133,14 @@ const BATTLE_SPRITES: Record<string, any> = {
   florence_nightingale: require('../../assets/heroes/battle/florence_nightingale.png'),
 
   // ── Prologue loaner heroes (tutorial + scripted-loss boss) ──
-  prologue_nightingale: require('../../assets/heroes/battle/prologue_nightingale.png'),
-  prologue_fleming:     require('../../assets/heroes/battle/prologue_fleming.png'),
+  prologue_nightingale:  require('../../assets/heroes/battle/prologue_nightingale.png'),
+  prologue_fleming:      require('../../assets/heroes/battle/prologue_fleming.png'),
+  prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),
 
-  // ── Former Self (scripted prologue battle) ──
-  former_self:          require('../../assets/heroes/battle/former_self.png'),
-  prologue_former_self: require('../../assets/heroes/battle/former_self.png'),
+  // ── Former Self / The Prodigy (scripted prologue battle) ──
+  former_self:           require('../../assets/heroes/battle/former_self.png'),
+  prologue_former_self:  require('../../assets/heroes/battle/former_self.png'),
+  the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),
 };
 
 // All battle-sprite modules, for cache preloading at game start.
