@@ -137,7 +137,8 @@ const BATTLE_SPRITES: Record<string, any> = {
   prologue_fleming:     require('../../assets/heroes/battle/prologue_fleming.png'),
 
   // ── Former Self (scripted prologue battle) ──
-  former_self: require('../../assets/heroes/battle/former_self.png'),
+  former_self:          require('../../assets/heroes/battle/former_self.png'),
+  prologue_former_self: require('../../assets/heroes/battle/former_self.png'),
 };
 
 // All battle-sprite modules, for cache preloading at game start.

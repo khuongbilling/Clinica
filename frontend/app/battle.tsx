@@ -1685,7 +1685,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         </Pressable>
       )}
 
-      {state.pendingCue && !cueFeedback && state.outcome === "ongoing" && (activeTutorialId !== "prologueBattle" || guidedCueStep) && (
+      {state.pendingCue && !cueFeedback && state.outcome === "ongoing" && (!isPrologueTutorial || guidedCueStep) && (
         <View style={[styles.modalOverlay, styles.cueModalOverlay]}>
           <ScrollView style={styles.cueModal} contentContainerStyle={styles.cueModalContent} showsVerticalScrollIndicator={false} testID="clinical-cue-modal">
             <Text style={styles.cueKicker}>CLINICAL CUE</Text>

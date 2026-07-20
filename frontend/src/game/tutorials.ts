@@ -111,8 +111,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "prologue_cue",
-      title: "Read the Signs First",
-      body: "Before you act, a clinical question will appear. Take a moment. There's always a reason one answer is better than the others. A correct answer strengthens your actions this turn. An explanation follows either way. It won't delay you.",
+      title: "What Is the Disease Doing?",
+      body: "Corruption tracks how far the illness has taken hold. Before you act, read the clinical question below — it's tied directly to what this disease is doing to the patient right now. A correct answer will strengthen your actions this turn.",
       placement: "top",
       requireAction: true,
       requiredActionType: "cue",
