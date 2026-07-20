@@ -319,13 +319,13 @@ export const HEROES: Hero[] = [
 export const ENEMIES: Enemy[] = [
   {
     id: 'dehydration_wisp',
-    name: 'Dehydration Wraith',
-    realWorld: 'Severe dehydration with circulatory compromise',
+    name: 'Hypovolemic Specter',
+    realWorld: 'Hypovolemia — severe fluid depletion with cardiovascular compromise',
     primarySystem: 'River',
     difficulty: 3,
     startingStability: 80,
-    instability: 7,
-    corruption: 200,
+    instability: 8,
+    corruption: 160,
     weakSystem: 'River',
     visibleClues: [
       { id: 'c1', label: 'Parched Lips', detail: 'Cracked, dry mucous membranes — severe fluid loss.', hidden: false },
