@@ -72,7 +72,7 @@ const DESTINATIONS = [
     border: "rgba(90,159,232,0.28)",
     title:  "Class Tree",
     sub:    "Find your role.",
-    desc:   "Ward Guardian. Clinical Sage. Domain Warden. Harmony Weaver. Your path shapes how you heal — and who you become.",
+    desc:   "Ward Guardian. Clinical Sage. Domain Warden. Harmony Weaver. Your path shapes how you heal, and who you become.",
   },
   {
     symbol: "⊕",
@@ -223,7 +223,7 @@ export default function ClinicaUniversityIntroduction({ onComplete }: Props) {
                   <View style={s.destText}>
                     <View style={s.destTitleRow}>
                       <Text style={[s.destTitle, { color: dest.color }]}>{dest.title}</Text>
-                      <Text style={[s.destSub, { color: `${dest.color}88` }]}>— {dest.sub}</Text>
+                      <Text style={[s.destSub, { color: `${dest.color}88` }]}>· {dest.sub}</Text>
                     </View>
                     <Text style={s.destDesc}>{dest.desc}</Text>
                   </View>

@@ -107,7 +107,7 @@ const BEATS: Beat[] = [
       "The environment is part of the assessment.",
       "Their breathing changed before they collapsed. The monitors failed before the first creature appeared. We are missing something important.",
     ],
-    stageDir: "Nightingale stands, turning to face the monitoring crystals — all of them dark.",
+    stageDir: "Nightingale stands, turning to face the monitoring crystals. All of them dark.",
   },
   {
     speaker: "PRODIGY",
@@ -132,7 +132,7 @@ const BEATS: Beat[] = [
       "That certainty is precisely what concerns me.",
       "The organisms at the edge are already resistant to our first response. If we attack carelessly, we may strengthen what we are trying to eliminate.",
     ],
-    stageDir: "Fleming holds the sample up — the corruption has already changed color.",
+    stageDir: "Fleming holds the sample up. The corruption has already changed color.",
   },
   {
     speaker: "PRODIGY",
@@ -162,7 +162,7 @@ const BEATS: Beat[] = [
   {
     speaker:     "PRODIGY",
     lines:       ["Watch carefully, Master.", "I will show you how quickly this can be ended."],
-    stageDir:    "The Prodigy advances alone. The fog at the far end begins to part — revealing the trap.",
+    stageDir:    "The Prodigy advances alone. The fog at the far end begins to part, revealing the trap.",
     trapReveal:  true,
   },
 ];

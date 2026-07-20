@@ -109,13 +109,13 @@ export interface LearningGoal {
 export const LEARNING_GOALS: LearningGoal[] = [
   {
     id: 'rpg',
-    label: "I'm here for the RPG — the medicine is a bonus.",
+    label: "I'm here for the RPG. The medicine is a bonus.",
     sublabel: 'Fantasy story, battles, and world-building first.',
     depth: 'simple',
     tone: 'rpg',
     icon: 'game-controller',
     trialIntro:
-      'A crystal corruption stirs in the Air Temple. Your healer team reads the signs, battles the disease, and restores the kingdom — one fight at a time. The Codex will explain what each clue means in plain language so the story always makes sense.',
+      'A crystal corruption stirs in the Air Temple. Your healer team reads the signs, battles the disease, and restores the kingdom, one fight at a time. The Codex will explain what each clue means in plain language so the story always makes sense.',
     codexVoice: 'The Codex whispers:',
   },
   {
@@ -126,7 +126,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'rpg',
     icon: 'leaf',
     trialIntro:
-      'The first corruption is gentle — a mist in the Air Temple. There is no rush. Read the clues at your pace, keep the patient stable, and the Codex will explain every step. This is your kingdom to restore.',
+      'The first corruption is gentle, like a mist in the Air Temple. There is no rush. Read the clues at your pace, keep the patient stable, and the Codex will explain every step. This is your kingdom to restore.',
     codexVoice: 'The Codex gently notes:',
   },
   {
@@ -137,7 +137,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'curious',
     icon: 'bulb',
     trialIntro:
-      'The Air system is the body\'s breathing kingdom — lungs, airways, oxygen. A corruption is blocking airflow. Your team will read clues like "oxygen saturation dropping" and choose actions that fix it. Every clue is explained in plain language.',
+      'The Air system is the body\'s breathing kingdom: lungs, airways, oxygen. A corruption is blocking airflow. Your team will read clues like "oxygen saturation dropping" and choose actions that fix it. Every clue is explained in plain language.',
     codexVoice: 'The Codex explains:',
   },
   {
@@ -148,7 +148,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'curious',
     icon: 'school',
     trialIntro:
-      'This is your first battle in the kingdom — and the best way to learn is by doing. The Air Crystal needs you. Read the patient\'s clues, pick the right actions, and the Codex will explain the real science behind everything that happens.',
+      'This is your first battle in the kingdom. The best way to learn is by doing. The Air Crystal needs you. Read the patient\'s clues, pick the right actions, and the Codex will explain the real science behind everything that happens.',
     codexVoice: 'The Codex teaches:',
   },
   {
@@ -159,7 +159,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'foundation',
     icon: 'heart',
     trialIntro:
-      'The Air system maps to respiratory physiology — the lungs, airways, and oxygenation. Your first encounter introduces the Scout → Stabilize → Counter → Reassess care chain. Every action teaches a foundational concept you\'ll see again in school.',
+      'The Air system maps to respiratory physiology: the lungs, airways, and oxygenation. Your first encounter introduces the Scout → Stabilize → Counter → Reassess care chain. Every action teaches a foundational concept you\'ll see again in school.',
     codexVoice: 'The Codex notes:',
   },
   {
@@ -170,7 +170,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'clinical',
     icon: 'medkit',
     trialIntro:
-      'SpO₂ dropping. Respiratory rate elevated. A hidden clue — potentially wheeze — is not yet visible. Apply the clinical care chain: recognize cues → analyze → prioritize → intervene → evaluate. The Codex gives NCLEX-adjacent feedback after each battle.',
+      'SpO₂ dropping. Respiratory rate elevated. A hidden clue (potentially wheeze) is not yet visible. Apply the clinical care chain: recognize cues → analyze → prioritize → intervene → evaluate. The Codex gives NCLEX-adjacent feedback after each battle.',
     codexVoice: 'Clinical note:',
   },
   {
@@ -192,7 +192,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'professional',
     icon: 'pulse',
     trialIntro:
-      'Respiratory presentation — likely acute bronchospasm or early decompensation. Triage visible findings, reveal the hidden clue, and apply the strongest targeted intervention. The Codex provides concise clinical synthesis without hand-holding.',
+      'Respiratory presentation: likely acute bronchospasm or early decompensation. Triage visible findings, reveal the hidden clue, and apply the strongest targeted intervention. The Codex provides concise clinical synthesis without hand-holding.',
     codexVoice: 'Clinically:',
   },
 ];
@@ -240,7 +240,7 @@ export const TONE_GUIDE: Record<string, { codexOpener: string; hintStyle: string
     codexOpener: 'The Codex notes:',
     hintStyle: 'nursing concepts, approachable',
     victoryLine: 'Strong foundational care. The region is restored.',
-    defeatLine: 'Review the care chain and try again — this is how nurses learn.',
+    defeatLine: 'Review the care chain and try again. This is how nurses learn.',
   },
   clinical: {
     codexOpener: 'Clinical note:',
@@ -286,7 +286,7 @@ export const ENEMY_HINTS: Record<string, EnemyHint> = {
     tactical: 'Try Reveal Cue to check for low blood pressure, then stabilize before striking.',
   },
   mind_fog: {
-    gentle: 'Confusion and agitation may signal the Mind system is faltering — and the patient may be unsafe.',
+    gentle: 'Confusion and agitation may signal the Mind system is faltering, and the patient may be unsafe.',
     tactical: 'Shield against the danger trigger, then reveal the hidden cause (often an infection or imbalance).',
   },
   septara_seed: {
@@ -299,11 +299,11 @@ export const ENEMY_HINTS: Record<string, EnemyHint> = {
   },
   glycora_spark: {
     gentle: 'Very high glucose with deep rapid breathing means the Energy system has tipped into acid.',
-    tactical: 'Reveal the hidden potassium first. Insulin without checking K⁺ can be dangerous — stabilize first.',
+    tactical: 'Reveal the hidden potassium first. Insulin without checking K⁺ can be dangerous; stabilize first.',
   },
   pulmora_wisp: {
     gentle: 'Pursed-lip breathing and barrel chest point to trapped air.',
-    tactical: 'Support oxygenation gently. Watch CO₂ retention — reveal the hidden clue before striking.',
+    tactical: 'Support oxygenation gently. Watch CO₂ retention; reveal the hidden clue before striking.',
   },
   electrox_flicker: {
     gentle: 'Weakness and rhythm changes point to the Storm system.',

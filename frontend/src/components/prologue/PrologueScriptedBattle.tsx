@@ -133,7 +133,7 @@ const HEROES: HeroData[] = [
 // Scripted enemy responses, one per player turn (index = turn - 1).
 // turn 4 dmg is 999 = lethal safety net.
 const ENEMY_SCRIPT = [
-  { target: "former_self", dmg: 16, text: "Decoy swarms surge. Former Self holds the line — for now." },
+  { target: "former_self", dmg: 16, text: "Decoy swarms surge. Former Self holds the line. For now." },
   { target: "nightingale", dmg: 12, text: "A flank strike catches Nightingale. The silence grows louder." },
   { target: "former_self", dmg: 31, text: "The Silent Infarction moves. Former Self catches all of it." },
   { target: "former_self", dmg: 999, text: "The trap springs. The damage runs far deeper than any strike." },
@@ -153,7 +153,7 @@ const FINALE_STEPS: FinaleStep[] = [
     speaker: null,
     portrait: null,
     text: "THE TRAP CLOSES.",
-    subtext: "Everything the Former Self built — and everything they missed.",
+    subtext: "Everything the Former Self built. And everything they missed.",
     color: "#FF3333",
   },
   {
@@ -496,7 +496,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         hpChanges   = { nightingale: nHP, fleming: fHP };
         resultText  = "TEAM RALLIED";
         resultColor = "#E8354A";
-        logLine     = "Former Self rallies — Nightingale and Fleming hold steady.";
+        logLine     = "Former Self rallies. Nightingale and Fleming hold steady.";
         if (!beats.has("rally_used")) beatKey = "rally_used";
         break;
       }
@@ -900,7 +900,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                   ◆  Decoy enemies can be defeated
                 </Text>
                 <Text style={styles.introHintLine}>
-                  ◆  The true source cannot be beaten — only revealed
+                  ◆  The true source cannot be beaten. Only revealed.
                 </Text>
                 <Text style={styles.introHintLine}>
                   ◆  This battle has no victory condition
@@ -937,7 +937,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                 THE TRAP CLOSES.
               </Text>
               <Text style={styles.finaleSubtext}>
-                Everything the Former Self built — and everything they missed.
+                Everything the Former Self built. And everything they missed.
               </Text>
             </View>
           </SafeAreaView>

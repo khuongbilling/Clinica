@@ -65,7 +65,7 @@ export const STORY_SCENES: StoryScene[] = [
     kicker: "CHAPTER I",
     title: "The Empty Ward",
     lines: [
-      "The ward was quiet the morning I returned — not the quiet of peace, but the quiet of waiting.",
+      "The ward was quiet the morning I returned. Not the quiet of peace, but the quiet of waiting.",
       "Every empty bed held a question I had once answered too quickly.",
       "This time, I would earn my answers before I gave them.",
     ],
@@ -80,7 +80,7 @@ export const STORY_SCENES: StoryScene[] = [
     kicker: "CHAPTER II",
     title: "The Gathering Miasma",
     lines: [
-      "It began at the edges of the kingdom — a shadow in the air that lanterns could not burn away.",
+      "It began at the edges of the kingdom: a shadow in the air that lanterns could not burn away.",
       "The healers watched the sky. The people watched the healers.",
       "And I understood, at last, that knowledge is not for the one who holds it. It is for everyone standing beneath the same storm.",
     ],
@@ -94,10 +94,10 @@ export const STORY_SCENES: StoryScene[] = [
     kicker: "THE LOTUS KEEPER",
     title: "An Audience in the Dark",
     lines: [
-      "Between one breath and the next, the world fell away — and the Keeper was there, seated where no floor should be.",
+      "Between one breath and the next, the world fell away. The Keeper was there, seated where no floor should be.",
     ],
     keeperLines: [
-      "You return to me changed. Not stronger — clearer. That is the rarer thing.",
+      "You return to me changed. Not stronger, but clearer. That is the rarer thing.",
       "Power is what the desperate reach for. Understanding is what the worthy build.",
       "Go back to your ward, healer. The lotus does not bloom for those who watch it. It blooms for those who tend the water.",
     ],
@@ -113,7 +113,7 @@ export const STORY_SCENES: StoryScene[] = [
     kicker: "FRAGMENTS OF BEFORE",
     title: "The Doctor Who Stayed",
     lines: [
-      "In my first life there was a physician I never thanked — an old doctor who stayed long after the night shift ended.",
+      "In my first life there was a physician I never thanked: an old doctor who stayed long after the night shift ended.",
       "Cold coffee. Tired eyes. And still, when the frightened family asked their hundredth question, he answered as if it were the first.",
       "I did not understand then what I was seeing. It was not knowledge. It was devotion wearing knowledge like a coat.",
     ],
@@ -128,9 +128,9 @@ export const STORY_SCENES: StoryScene[] = [
     kicker: "MEMORY",
     title: "What the Lotus Kept",
     lines: [
-      "Some nights, the recall returns to me in shards — a classroom, a corridor, a hand held in the dark.",
+      "Some nights, the recall returns to me in shards: a classroom, a corridor, a hand held in the dark.",
       "The Lotus did not save all of me. It saved what mattered.",
-      "The rest, I am learning to rebuild — one patient, one lesson, one day at a time.",
+      "The rest, I am learning to rebuild. One patient, one lesson, one day at a time.",
     ],
     art: require("../../assets/story/flashback_shards.png"),
     effect: "heartbeat",
@@ -148,7 +148,7 @@ export const STORY_SCENES: StoryScene[] = [
     lines: [
       "The simulation doors opened.",
       "For the first time, the ward did not reset.",
-      "The signs were still there — the same vital threads I had learned to read.",
+      "The signs were still there. The same vital threads I had learned to read.",
       "But now, hesitation had consequences.",
       "And the ward did not wait.",
     ],

@@ -428,7 +428,7 @@ export default function PostRebirthAwakening({ onComplete }: Props) {
                 pointerEvents="none"
               />
               <Text style={[s.closingMsgText, { color: apt.color }]}>
-                ✦  Enrollment: Clinica University — Confirmed  ✦
+                ✦  Enrollment: Clinica University. Confirmed.  ✦
               </Text>
             </Animated.View>
           )}
