@@ -3,28 +3,26 @@
  *
  * Push 6 — "The Fall" (scripted_defeat phase)
  *
- * A self-contained playable battle that ends in scripted defeat.
- * The player has meaningful agency for 4 turns before the trap closes.
+ * Cinematic guided battle — same format as PrologueBattleTutorial.
+ * Legendary party: Nightingale, The Prodigy, Fleming face the Silent Infarction.
+ * Three skill demos → boss adapts → trap closes → scripted defeat.
  *
- * DESIGN RULES:
- *  - Former Self is powerful and impressive. Attacks look spectacular.
- *  - Nightingale and Fleming are competent and effective.
- *  - Decoys are killable. Silent Infarction is not.
- *  - Defeat is story-driven: the Former Self's past choices are the cause.
- *  - No normal "Game Over". No "Try Again". No score.
- *  - After 4 turns the scripted finale begins automatically.
- *
- * Turn cap safety: enemy turn 4 deals lethal damage regardless of hero HP,
- * ensuring the finale always triggers and no softlock is possible.
+ * Stages:
+ *   opening          → battlefield settles (auto 1.5 s)
+ *   nightingale_entry → Nightingale speaks (tap SEE SKILL)
+ *   lamp_prompt       → Lamp of Observation card (tap USE SKILL)
+ *   lamp_effect       → Golden glow + hazard reveals (auto 2.8 s)
+ *   prodigy_entry     → The Prodigy speaks (tap SEE SKILL)
+ *   strike_prompt     → Brilliant Intervention card (tap USE SKILL)
+ *   strike_effect     → Crimson burst + adaptation warning (auto 2.8 s)
+ *   fleming_entry     → Fleming speaks (tap SEE SKILL)
+ *   analyze_prompt    → Culture & Sensitivity card (tap USE SKILL)
+ *   analyze_effect    → Teal scan + true-source panel (auto 2.8 s)
+ *   trap_closing      → Boss counterattack overlay (auto 3.5 s)
+ *   finale_0..4       → Tappable defeat dialogue cards
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -35,146 +33,126 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 
-// ─── Art registry ─────────────────────────────────────────────────────────────
+// ─── Art ──────────────────────────────────────────────────────────────────────
 
 const ART = {
-  battlefield:      require("../../../assets/images/tactical_battlefield.png"),
-  theProdigy:       require("../../../assets/heroes/battle/the_prodigy.png"),
-  nightingale:      require("../../../assets/images/nightingale_portrait.png"),
-  fleming:          require("../../../assets/images/fleming_portrait.png"),
-  masterBai:        require("../../../assets/images/master_bai.png"),
-  bossPortrait:     require("../../../assets/images/silent_infarction_portrait.png"),
-  decoyFeverShade:  require("../../../assets/enemies/fever_shade.png"),
-  decoyMindFog:     require("../../../assets/enemies/mind_fog.png"),
+  battlefield:    require("../../../assets/images/tactical_battlefield.png"),
+  theProdigy:     require("../../../assets/heroes/battle/the_prodigy.png"),
+  nightingale:    require("../../../assets/images/nightingale_portrait.png"),
+  fleming:        require("../../../assets/images/fleming_portrait.png"),
+  masterBai:      require("../../../assets/images/master_bai.png"),
+  bossPortrait:   require("../../../assets/images/silent_infarction_portrait.png"),
 } as const;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Stage machine ────────────────────────────────────────────────────────────
 
-type BattleStage =
-  | "intro"
-  | "selecting_hero"
-  | "selecting_action"
-  | "action_result"
-  | "enemy_turn"
-  | "narrative_beat"
+type Stage =
+  | "opening"
+  | "nightingale_entry"
+  | "lamp_prompt"
+  | "lamp_effect"
+  | "prodigy_entry"
+  | "strike_prompt"
+  | "strike_effect"
+  | "fleming_entry"
+  | "analyze_prompt"
+  | "analyze_effect"
+  | "trap_closing"
   | "finale"
   | "done";
 
-type ActionType = "strike" | "support" | "reveal" | "risky";
+// ─── Skill data ───────────────────────────────────────────────────────────────
 
-interface HeroAction {
-  id:         string;
-  label:      string;
-  type:       ActionType;
-  apCost:     number;
-}
+const LAMP_SKILL = {
+  name:      "Lamp of Observation",
+  apCost:    2,
+  owner:     "FLORENCE NIGHTINGALE",
+  ownerColor: "#E8C453",
+  avatar:    ART.nightingale,
+  accentBg:  "rgba(232,196,83,0.08)",
+  accentBorder: "rgba(232,196,83,0.30)",
+  effectColor: "#E8C453",
+  effects: [
+    "Scout: reveals hidden hazards and concealed patient status",
+    "Must be used before Strike — blind attacks are far weaker",
+    "Exposes the true source of deterioration over time",
+    "AP Cost: 2 — the investment that makes everything else work",
+  ],
+  prompt: "Do not attack yet. Let me read the field first.",
+} as const;
 
-interface HeroData {
-  id:       string;
-  name:     string;
-  short:    string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  image:    any;
-  color:    string;
-  maxHp:    number;
-  actions:  HeroAction[];
-}
+const STRIKE_SKILL = {
+  name:      "Brilliant Intervention",
+  apCost:    3,
+  owner:     "THE PRODIGY",
+  ownerColor: "#E8354A",
+  avatar:    ART.theProdigy,
+  accentBg:  "rgba(232,53,74,0.08)",
+  accentBorder: "rgba(232,53,74,0.30)",
+  effectColor: "#E8354A",
+  effects: [
+    "Strike: peak power when scouted cues are known",
+    "Corruption reduced: but the source is not yet visible",
+    "Broad attacks cause adaptation — precision must follow",
+    "AP Cost: 3 — only effective after proper assessment",
+  ],
+  prompt: "I see it. Stand back — I know this condition.",
+} as const;
 
-interface FinaleStep {
+const ANALYZE_SKILL = {
+  name:      "Culture & Sensitivity",
+  apCost:    2,
+  owner:     "SIR ALEXANDER FLEMING",
+  ownerColor: "#3ECFB2",
+  avatar:    ART.fleming,
+  accentBg:  "rgba(62,207,178,0.08)",
+  accentBorder: "rgba(62,207,178,0.30)",
+  effectColor: "#3ECFB2",
+  effects: [
+    "Analyze: identifies the true source and its resistance profile",
+    "Reveals what broad treatment cannot stop",
+    "The Silent Infarction was never the surface enemy",
+    "AP Cost: 2 — too late. The trap was already set.",
+  ],
+  prompt: "Wait. This is not the primary lesion. Something is hiding beneath it.",
+} as const;
+
+// ─── Finale dialogue ──────────────────────────────────────────────────────────
+
+interface FinaleCard {
   speaker:  string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  portrait: any;
+  portrait: any | null;
   text:     string;
   subtext?: string;
   color:    string;
 }
 
-// ─── Static data ──────────────────────────────────────────────────────────────
-
-const HEROES: HeroData[] = [
-  {
-    id: "the_prodigy",
-    name: "The Prodigy",
-    short: "Prodigy",
-    image: ART.theProdigy,
-    color: "#E8354A",
-    maxHp: 100,
-    actions: [
-      { id: "brilliant_intervention",  label: "Brilliant Intervention",  type: "strike",  apCost: 3 },
-      { id: "radiant_stabilization",   label: "Radiant Stabilization",   type: "support", apCost: 2 },
-    ],
-  },
-  {
-    id: "nightingale",
-    name: "Florence Nightingale",
-    short: "Nightingale",
-    image: ART.nightingale,
-    color: "#E8C453",
-    maxHp: 90,
-    actions: [
-      { id: "lamp_of_observation", label: "Lamp of Observation", type: "reveal",  apCost: 2 },
-      { id: "ward_vigil",          label: "Ward Vigil",          type: "support", apCost: 1 },
-    ],
-  },
-  {
-    id: "fleming",
-    name: "Alexander Fleming",
-    short: "Fleming",
-    image: ART.fleming,
-    color: "#3ECFB2",
-    maxHp: 90,
-    actions: [
-      { id: "culture_and_sensitivity", label: "Culture & Sensitivity", type: "reveal", apCost: 2 },
-      { id: "targeted_antidote",       label: "Targeted Antidote",     type: "strike", apCost: 2 },
-    ],
-  },
-];
-
-// Scripted enemy responses, one per player turn (index = turn - 1).
-// turn 4 dmg is 999 = lethal safety net — Hidden Deterioration → Unseen Collapse.
-const ENEMY_SCRIPT = [
-  { target: "the_prodigy", dmg: 16, text: "Hidden Deterioration — the Silent Infarction works beneath the surface. The Prodigy holds." },
-  { target: "nightingale", dmg: 12, text: "False Reassurance — a cue is hidden. Nightingale catches the backlash." },
-  { target: "the_prodigy", dmg: 31, text: "Hidden Deterioration — the trap tightens. The Prodigy absorbs the blow." },
-  { target: "the_prodigy", dmg: 999, text: "Unseen Collapse. The trap that was set before this battle ever began." },
-] as const;
-
-// Narrative beats triggered by specific player actions (one-shot per battle).
-const NARRATIVE: Record<string, string> = {
-  first_decoy_killed:         "The decoy dissolves. But the true source was never there.",
-  lamp_used:                  "The field opens. Three civilians in critical deterioration. Two exits blocked.\n\nThe trap was always here.",
-  rally_used:                 "Stabilization holds. The team breathes.\n\nBut the root cause is still spreading beneath the surface.",
-  culture_used:               "Analysis complete.\n\nTargeted intervention only. Broad approaches cause adaptation.",
-  brilliant_intervention_warn: "The Prodigy: \"I know this. I can handle it.\"\n\nBut something hidden is still spreading.",
-  broad_warning:              "⚠  Broad treatment applied. The Silent Infarction adapts.\n\nTargeted therapy is the only path forward.",
-};
-
-const FINALE_STEPS: FinaleStep[] = [
+const FINALE: FinaleCard[] = [
   {
     speaker: null,
     portrait: null,
     text: "THE TRAP CLOSES.",
-    subtext: "Not because The Prodigy was weak. Because they rushed before they looked.",
+    subtext: "Not because the party was weak. Because the root cause was set before the battle began.",
     color: "#FF3333",
   },
   {
     speaker: "FLORENCE NIGHTINGALE",
     portrait: ART.nightingale,
-    text: "We have to retreat. The damage is done.\n\nThe trap was always closing.",
+    text: "We have to retreat. The damage is done. The trap was always closing — we just could not see it in time.",
     color: "#E8C453",
   },
   {
     speaker: "ALEXANDER FLEMING",
     portrait: ART.fleming,
-    text: "The overconfidence was the trap.\n\nThe choices came before this battle.",
+    text: "The overconfidence was the trap. The choices that led here came long before this battle.",
     color: "#3ECFB2",
   },
   {
     speaker: "MASTER BAI",
     portrait: ART.masterBai,
-    text: "You were brilliant. That was never in question.\n\nBut brilliance that skips the assessment is the most dangerous kind.",
+    text: "You were brilliant. That was never in question. But brilliance that skips the assessment is the most dangerous kind.",
     color: "#D9A441",
   },
   {
@@ -186,186 +164,25 @@ const FINALE_STEPS: FinaleStep[] = [
   },
 ];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-interface DecoyCardProps {
-  name:    string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  image:   any;
-  hp:      number;
-  maxHp:   number;
-  color:   string;
-}
-
-function DecoyCard({ name, image, hp, maxHp, color }: DecoyCardProps) {
-  const dead = hp <= 0;
-  const pct  = Math.max(0, hp / maxHp) * 100;
-  return (
-    <View style={[dcStyles.card, dead && dcStyles.cardDead]}>
-      <ExpoImage
-        source={image}
-        style={[dcStyles.portrait, dead && { opacity: 0.2 }]}
-        contentFit="contain"
-      />
-      <Text style={[dcStyles.name, { color: dead ? "#555" : color }]} numberOfLines={1}>
-        {dead ? "DEFEATED" : name}
-      </Text>
-      {!dead && (
-        <View style={dcStyles.hpBar}>
-          <View style={[dcStyles.hpFill, { width: `${pct}%` as any, backgroundColor: color }]} />
-        </View>
-      )}
-    </View>
-  );
-}
-
-const dcStyles = StyleSheet.create({
-  card: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    backgroundColor: "rgba(4,10,18,0.60)",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    gap: 4,
-  },
-  cardDead: { opacity: 0.55 },
-  portrait: { width: 56, height: 72 },
-  name: { fontSize: 9, fontWeight: "700", letterSpacing: 1, textAlign: "center" },
-  hpBar: {
-    width: "90%",
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    overflow: "hidden",
-  },
-  hpFill: { height: "100%", borderRadius: 2 },
-});
-
-// ── Boss card ──────────────────────────────────────────────────────────────────
-
-interface BossCardProps {
-  revealed: number;  // 0..1
-  glowAnim: Animated.Value;
-}
-
-function BossCard({ revealed, glowAnim }: BossCardProps) {
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.55] });
-  const concealOpacity = Math.max(0, 1 - revealed);
-
-  return (
-    <View style={bcStyles.card}>
-      <View style={bcStyles.portraitWrap}>
-        <ExpoImage source={ART.bossPortrait} style={bcStyles.portrait} contentFit="contain" />
-        {/* Concealment dark overlay — fades as boss is revealed */}
-        <View
-          style={[bcStyles.concealment, { opacity: concealOpacity }]}
-          pointerEvents="none"
-        />
-        {/* Ambient red glow ring */}
-        <Animated.View
-          style={[bcStyles.glow, { opacity: glowOpacity }]}
-          pointerEvents="none"
-        />
-      </View>
-      <Text style={bcStyles.name}>SILENT INFARCTION</Text>
-      <Text style={bcStyles.hp}>??? / ???</Text>
-      {revealed >= 0.4 && (
-        <Text style={bcStyles.hint} numberOfLines={1}>
-          {revealed >= 0.8 ? "⚠  True source visible" : "◉  Partially revealed"}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-const bcStyles = StyleSheet.create({
-  card: {
-    flex: 1.25,
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    backgroundColor: "rgba(20,4,4,0.72)",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(200,20,20,0.25)",
-    gap: 4,
-  },
-  portraitWrap: { position: "relative", width: 68, height: 82 },
-  portrait: { width: 68, height: 82 },
-  concealment: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#050505",
-    borderRadius: 6,
-  },
-  glow: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#600000",
-    borderRadius: 10,
-  },
-  name: { color: "#CC3333", fontSize: 8, fontWeight: "800", letterSpacing: 1.2 },
-  hp:   { color: "rgba(200,100,100,0.55)", fontSize: 10, fontWeight: "300" },
-  hint: { color: "#E8C453", fontSize: 8, letterSpacing: 0.5 },
-});
-
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   onComplete: () => void;
 }
 
 export default function PrologueScriptedBattle({ onComplete }: Props) {
-  // ── Stage ──────────────────────────────────────────────────────────────────
-  const stageRef = useRef<BattleStage>("intro");
-  const [stage,   setStage]   = useState<BattleStage>("intro");
-
-  // ── Turn ───────────────────────────────────────────────────────────────────
-  const turnRef = useRef(1);
-  const [turn,  setTurn]   = useState(1);
-
-  // ── Action Points (legendary prologue budget) ──────────────────────────────
-  // Starts at PROLOGUE_AP_CONFIG.startingAP; regenerates apPerTurn each new turn.
-  const playerAPRef = useRef<number>(PROLOGUE_AP_CONFIG.startingAP);
-  const [playerAP,  setPlayerAP]  = useState<number>(PROLOGUE_AP_CONFIG.startingAP);
-
-  // ── Hero HPs (ref for closure safety, state for rendering) ─────────────────
-  const heroHPsRef = useRef<Record<string, number>>({ the_prodigy: 100, nightingale: 90, fleming: 90 });
-  const [heroHPs,  setHeroHPs]  = useState({ ...heroHPsRef.current });
-
-  // ── Decoy HPs ──────────────────────────────────────────────────────────────
-  const decoyHPsRef = useRef<Record<string, number>>({ fever_shade: 55, mind_fog: 55 });
-  const [decoyHPs, setDecoyHPs] = useState({ ...decoyHPsRef.current });
-
-  // ── Boss reveal (0..1) ─────────────────────────────────────────────────────
-  const bossRevRef = useRef(0);
-  const [bossRevealed, setBossRevealed] = useState(0);
-
-  // ── Selection ──────────────────────────────────────────────────────────────
-  const [selectedHeroId, setSelectedHeroId] = useState<string | null>(null);
-  const selectedHeroIdRef = useRef<string | null>(null);
-
-  // ── Battle log (last 2 lines) ──────────────────────────────────────────────
-  const [log, setLog] = useState<string[]>([]);
-
-  // ── Overlay text (action result + enemy turn) ──────────────────────────────
-  const [overlayText,  setOverlayText]  = useState("");
-  const [overlayColor, setOverlayColor] = useState("#FFFFFF");
-
-  // ── Narrative beat ─────────────────────────────────────────────────────────
-  const [narrativeText, setNarrativeText] = useState("");
-
-  // ── Finale ─────────────────────────────────────────────────────────────────
-  const finaleStepRef = useRef(0);
-  const [finaleStep, setFinaleStep] = useState(0);
-
-  // ── One-shot narrative guards ──────────────────────────────────────────────
-  const beatsShownRef = useRef<Set<string>>(new Set());
-
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  const [stage, setStage] = useState<Stage>("opening");
+  const stageRef   = useRef<Stage>("opening");
   const mountedRef = useRef(true);
   const timers     = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Boss reveal progress (0..1) — increases as skills are used
+  const [bossRevealed, setBossRevealed] = useState(0);
+  const bossRevRef = useRef(0);
+
+  // Finale step index
+  const [finaleStep, setFinaleStep] = useState(0);
+  const finaleStepRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -375,43 +192,59 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
     };
   }, []);
 
-  // ─── Animations ──────────────────────────────────────────────────────────────
+  // ── Animated values ───────────────────────────────────────────────────────────
 
-  const bgFade       = useRef(new Animated.Value(0)).current;
-  const introFade    = useRef(new Animated.Value(0)).current;
-  const overlayFade  = useRef(new Animated.Value(0)).current;
-  const narrativeFade = useRef(new Animated.Value(0)).current;
-  const finaleFade   = useRef(new Animated.Value(0)).current;
-  const doomFade     = useRef(new Animated.Value(0)).current; // progressive battlefield darkening
-  const flashFade    = useRef(new Animated.Value(0)).current;
-  const bossGlow     = useRef(new Animated.Value(0)).current;
+  const bgFade      = useRef(new Animated.Value(0)).current;
+  const bgScale     = useRef(new Animated.Value(1.04)).current;
+  const redPulse    = useRef(new Animated.Value(0)).current;
+  const labelFade   = useRef(new Animated.Value(0)).current;
+  const charFade    = useRef(new Animated.Value(0)).current;
+  const charSlide   = useRef(new Animated.Value(40)).current;
+  const dlgFade     = useRef(new Animated.Value(0)).current;
+  const skillFade   = useRef(new Animated.Value(0)).current;
+  const skillScale  = useRef(new Animated.Value(0.94)).current;
+  const doomFade    = useRef(new Animated.Value(0)).current;
+  const flashFade   = useRef(new Animated.Value(0)).current;
+  const finaleFade  = useRef(new Animated.Value(0)).current;
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // Lamp effect
+  const lampGlowScale = useRef(new Animated.Value(0.2)).current;
+  const lampGlowFade  = useRef(new Animated.Value(0)).current;
+  const lamp1Fade     = useRef(new Animated.Value(0)).current;
+  const lamp2Fade     = useRef(new Animated.Value(0)).current;
+  const lamp3Fade     = useRef(new Animated.Value(0)).current;
+
+  // Strike effect
+  const strikeGlow  = useRef(new Animated.Value(0)).current;
+  const strikeRing  = useRef(new Animated.Value(0.3)).current;
+  const strike1Fade = useRef(new Animated.Value(0)).current;
+  const strike2Fade = useRef(new Animated.Value(0)).current;
+
+  // Analyze effect
+  const scanY        = useRef(new Animated.Value(-200)).current;
+  const scanFade     = useRef(new Animated.Value(0)).current;
+  const analysisFade = useRef(new Animated.Value(0)).current;
+
+  // Trap overlay
+  const trapFade = useRef(new Animated.Value(0)).current;
+
+  // Boss glow
+  const bossGlow = useRef(new Animated.Value(0)).current;
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  function anim(val: Animated.Value, to: number, dur: number, cb?: () => void) {
+    Animated.timing(val, { toValue: to, duration: dur, useNativeDriver: false }).start(cb ?? (() => {}));
+  }
 
   function after(ms: number, fn: () => void) {
     const t = setTimeout(() => { if (mountedRef.current) fn(); }, ms);
     timers.current.push(t);
   }
 
-  function anim(v: Animated.Value, to: number, dur: number, cb?: () => void) {
-    Animated.timing(v, { toValue: to, duration: dur, useNativeDriver: false }).start(
-      cb ?? (() => {}),
-    );
-  }
-
-  function toStage(s: BattleStage) {
+  function toStage(s: Stage) {
     stageRef.current = s;
     setStage(s);
-  }
-
-  function applyHeroHP(changes: Partial<Record<string, number>>) {
-    heroHPsRef.current = { ...heroHPsRef.current, ...changes } as Record<string, number>;
-    setHeroHPs({ ...heroHPsRef.current });
-  }
-
-  function applyDecoyHP(changes: Partial<Record<string, number>>) {
-    decoyHPsRef.current = { ...decoyHPsRef.current, ...changes } as Record<string, number>;
-    setDecoyHPs({ ...decoyHPsRef.current });
   }
 
   function applyBossReveal(delta: number) {
@@ -420,581 +253,571 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
     setBossRevealed(next);
   }
 
-  function pushLog(line: string) {
-    setLog(prev => [line, ...prev].slice(0, 2));
-  }
-
-  function flashScreen(color: string) {
+  function flashScreen() {
     Animated.sequence([
-      Animated.timing(flashFade, { toValue: 0.38, duration: 160, useNativeDriver: false }),
+      Animated.timing(flashFade, { toValue: 0.35, duration: 160, useNativeDriver: false }),
       Animated.timing(flashFade, { toValue: 0,    duration: 500, useNativeDriver: false }),
     ]).start();
   }
 
-  // ── Startup ───────────────────────────────────────────────────────────────
+  function showChar() {
+    charFade.setValue(0);
+    charSlide.setValue(40);
+    dlgFade.setValue(0);
+    Animated.parallel([
+      Animated.timing(charFade,  { toValue: 1, duration: 450, useNativeDriver: false }),
+      Animated.timing(charSlide, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start(() => anim(dlgFade, 1, 350));
+  }
+
+  function hideChar(cb: () => void) {
+    Animated.parallel([
+      Animated.timing(charFade, { toValue: 0, duration: 250, useNativeDriver: false }),
+      Animated.timing(dlgFade,  { toValue: 0, duration: 250, useNativeDriver: false }),
+    ]).start(() => cb());
+  }
+
+  function showSkillCard() {
+    skillFade.setValue(0);
+    skillScale.setValue(0.94);
+    Animated.parallel([
+      Animated.timing(skillFade,  { toValue: 1, duration: 400, useNativeDriver: false }),
+      Animated.timing(skillScale, { toValue: 1, duration: 400, useNativeDriver: false }),
+    ]).start();
+  }
+
+  function hideSkillCard(cb: () => void) {
+    anim(skillFade, 0, 250, cb);
+  }
+
+  // ── Startup ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    anim(bgFade, 1, 900);
-    after(700, () => anim(introFade, 1, 600));
+    const breathe = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bgScale, { toValue: 1.00, duration: 6000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.04, duration: 6000, useNativeDriver: false }),
+      ])
+    );
+    breathe.start();
 
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(bossGlow, { toValue: 1, duration: 2100, useNativeDriver: false }),
-        Animated.timing(bossGlow, { toValue: 0, duration: 2100, useNativeDriver: false }),
+        Animated.timing(redPulse, { toValue: 0.35, duration: 1800, useNativeDriver: false }),
+        Animated.timing(redPulse, { toValue: 0.12, duration: 1800, useNativeDriver: false }),
       ])
     );
     pulse.start();
-    return () => pulse.stop();
+
+    const bossBreath = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bossGlow, { toValue: 1, duration: 2200, useNativeDriver: false }),
+        Animated.timing(bossGlow, { toValue: 0, duration: 2200, useNativeDriver: false }),
+      ])
+    );
+    bossBreath.start();
+
+    anim(bgFade, 1, 800);
+    after(600, () => anim(labelFade, 1, 600));
+
+    // Nightingale enters first
+    after(1500, () => {
+      toStage("nightingale_entry");
+      showChar();
+    });
+
+    return () => {
+      breathe.stop();
+      pulse.stop();
+      bossBreath.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Action resolution ─────────────────────────────────────────────────────
+  // ── Skill effects ─────────────────────────────────────────────────────────────
 
-  const resolveAction = useCallback((heroId: string, actionId: string) => {
-    const dHPs  = decoyHPsRef.current;
-    const hHPs  = heroHPsRef.current;
-    const beats = beatsShownRef.current;
+  function playLampEffect() {
+    lampGlowScale.setValue(0.2);
+    lampGlowFade.setValue(0);
+    lamp1Fade.setValue(0);
+    lamp2Fade.setValue(0);
+    lamp3Fade.setValue(0);
 
-    let resultText   = "";
-    let resultColor  = "#FFFFFF";
-    let logLine      = "";
-    let hpChanges: Partial<Record<string,number>>    = {};
-    let decoyChanges: Partial<Record<string,number>> = {};
-    let bossRevDelta = 0;
-    let beatKey: string | null = null;
+    Animated.parallel([
+      Animated.timing(lampGlowScale, { toValue: 2.8, duration: 1200, useNativeDriver: false }),
+      Animated.timing(lampGlowFade,  { toValue: 0.60, duration: 500,  useNativeDriver: false }),
+    ]).start(() => anim(lampGlowFade, 0, 700));
 
-    switch (actionId) {
-      case "brilliant_intervention": {
-        const d1 = dHPs["fever_shade"] ?? 0;
-        const d2 = dHPs["mind_fog"]    ?? 0;
-        // Brilliant Intervention vs Silent Infarction shows reduced effect — story beat
-        const bossRevealedFraction = bossRevRef.current;
-        const dmg = bossRevealedFraction < 0.3
-          ? 28 + Math.floor(Math.random() * 8)   // hidden cues: reduced effectiveness
-          : 38 + Math.floor(Math.random() * 10);  // revealed: full power
+    after(400,  () => anim(lamp1Fade, 1, 400));
+    after(800,  () => anim(lamp2Fade, 1, 400));
+    after(1200, () => anim(lamp3Fade, 1, 400));
 
-        if (d1 > 0) {
-          const next = Math.max(0, d1 - dmg);
-          decoyChanges = { fever_shade: next };
-          const killed = next <= 0;
-          resultText  = killed ? "FEVER SHADE DEFEATED" : `BRILLIANT INTERVENTION\n-${dmg} CORRUPTION`;
-          resultColor = killed ? "#FF8C00" : "#E8354A";
-          logLine     = killed
-            ? "Brilliant Intervention — the Fever Shade dissolves."
-            : `Brilliant Intervention lowered Corruption by ${dmg}.`;
-          if (killed && !beats.has("first_decoy_killed")) beatKey = "first_decoy_killed";
-        } else if (d2 > 0) {
-          const next = Math.max(0, d2 - dmg);
-          decoyChanges = { mind_fog: next };
-          const killed = next <= 0;
-          resultText  = killed ? "MIND FOG DEFEATED" : `BRILLIANT INTERVENTION\n-${dmg} CORRUPTION`;
-          resultColor = killed ? "#FF8C00" : "#E8354A";
-          logLine     = killed
-            ? "Brilliant Intervention cuts through the Mind Fog."
-            : `Brilliant Intervention lowered Corruption by ${dmg}.`;
-        } else {
-          // Both decoys dead — Brilliant Intervention shows reduced effect against the boss
-          bossRevDelta = bossRevealedFraction < 0.3 ? 0.08 : 0.14;
-          resultText  = bossRevealedFraction < 0.3
-            ? "REDUCED EFFECT\nSomething hidden remains"
-            : "THE DARKNESS\nPartially Resists";
-          resultColor = bossRevealedFraction < 0.3 ? "#FF6B35" : "#886655";
-          logLine     = bossRevealedFraction < 0.3
-            ? "Brilliant Intervention was powerful — but something hidden continued to spread."
-            : "The Prodigy's intervention lands. The Silent Infarction barely yields.";
-          if (!beats.has("brilliant_intervention_warn") && bossRevealedFraction < 0.3) {
-            beatKey = "brilliant_intervention_warn";
-          }
-        }
-        break;
-      }
+    applyBossReveal(0.25);
 
-      case "radiant_stabilization": {
-        const nHP = Math.min(90, (hHPs["nightingale"] ?? 90) + 10);
-        const fHP = Math.min(90, (hHPs["fleming"]    ?? 90) + 10);
-        const pHP = Math.min(100, (hHPs["the_prodigy"] ?? 100) + 12);
-        hpChanges   = { the_prodigy: pHP, nightingale: nHP, fleming: fHP };
-        resultText  = "RADIANT STABILIZATION\n+8 STABILITY";
-        resultColor = "#E8354A";
-        logLine     = "Radiant Stabilization. The Prodigy holds the team together.";
-        if (!beats.has("rally_used")) beatKey = "rally_used";
-        break;
-      }
-
-      case "lamp_of_observation": {
-        const pHP   = Math.min(100, (hHPs["the_prodigy"] ?? 100) + 10);
-        hpChanges   = { the_prodigy: pHP };
-        bossRevDelta = 0.24;
-        resultText  = "FIELD REVEALED";
-        resultColor = "#E8C453";
-        logLine     = "Nightingale's lamp thins the concealment. Three civilians stabilized.";
-        if (!beats.has("lamp_used")) beatKey = "lamp_used";
-        break;
-      }
-
-      case "ward_vigil": {
-        const pHP   = Math.min(100, (hHPs["the_prodigy"] ?? 100) + 18);
-        const fHP   = Math.min(90,  (hHPs["fleming"]     ?? 90)  + 10);
-        hpChanges   = { the_prodigy: pHP, fleming: fHP };
-        resultText  = "WARD VIGIL\n+18 STABILITY";
-        resultColor = "#E8C453";
-        logLine     = "Ward Vigil: Nightingale steadies the ward. Stability restored across the team.";
-        break;
-      }
-
-      case "culture_and_sensitivity": {
-        bossRevDelta = 0.30;
-        resultText  = "WEAKNESS IDENTIFIED\nTargeted Intervention";
-        resultColor = "#3ECFB2";
-        logLine     = "Culture & Sensitivity: Fleming marks the pathway. Targeted intervention confirmed.";
-        if (!beats.has("culture_used")) beatKey = "culture_used";
-        break;
-      }
-
-      case "targeted_antidote": {
-        const d1 = dHPs["fever_shade"] ?? 0;
-        const d2 = dHPs["mind_fog"]    ?? 0;
-        const dmg = 22;
-        if (d1 > 0) {
-          decoyChanges = { fever_shade: Math.max(0, d1 - dmg) };
-          resultText   = `TARGETED ANTIDOTE\n-${dmg} TARGETED`;
-        } else if (d2 > 0) {
-          decoyChanges = { mind_fog: Math.max(0, d2 - dmg) };
-          resultText   = `TARGETED ANTIDOTE\n-${dmg} TARGETED`;
-        } else {
-          bossRevDelta = 0.18;
-          resultText   = "TARGETED ANTIDOTE\nEnemy Weakened";
-        }
-        resultColor = "#3ECFB2";
-        logLine     = "Targeted Antidote: Fleming deploys a precise counter. No collateral effect.";
-        break;
-      }
-
-      default:
-        resultText = "ACTION TAKEN";
-        logLine    = "The team takes action.";
-    }
-
-    return { resultText, resultColor, logLine, hpChanges, decoyChanges, bossRevDelta, beatKey };
-  }, []);
-
-  // ── Enemy turn (scripted, called after each player action) ────────────────
-
-  const runEnemyTurn = useCallback(() => {
-    const t      = turnRef.current;
-    const script = ENEMY_SCRIPT[t - 1];
-    if (!script) { startFinale(); return; }
-
-    const currentHP = heroHPsRef.current[script.target] ?? 0;
-    const isLethal  = script.dmg >= 999;
-    const newHP     = isLethal ? 0 : Math.max(0, currentHP - script.dmg);
-    applyHeroHP({ [script.target]: newHP });
-
-    setOverlayText(script.text);
-    setOverlayColor("#CC1111");
-    toStage("enemy_turn");
-    anim(overlayFade, 1, 300);
-    flashScreen("#CC1111");
-
-    // Battlefield darkens progressively from turn 3
-    if (t >= 3) anim(doomFade, Math.min(0.65, (t - 2) * 0.22), 1200);
-
-    after(2100, () => {
-      anim(overlayFade, 0, 300, () => {
-        if (isLethal || t >= 4) {
-          startFinale();
-        } else {
-          turnRef.current = t + 1;
-          setTurn(t + 1);
-          // Regenerate AP at turn start (PROLOGUE_AP_CONFIG.apPerTurn per turn, capped at startingAP)
-          const nextAP = Math.min(
-            PROLOGUE_AP_CONFIG.startingAP,
-            playerAPRef.current + PROLOGUE_AP_CONFIG.apPerTurn,
-          );
-          playerAPRef.current = nextAP;
-          setPlayerAP(nextAP);
-          selectedHeroIdRef.current = null;
-          setSelectedHeroId(null);
-          toStage("selecting_hero");
-        }
+    after(2800, () => {
+      Animated.parallel([
+        Animated.timing(lamp1Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+        Animated.timing(lamp2Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+        Animated.timing(lamp3Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+      ]).start(() => {
+        toStage("prodigy_entry");
+        showChar();
       });
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
 
-  // ── Finale sequence (auto-advancing — full dialogue lives in lotus_recall_cinematic) ──
+  function playStrikeEffect() {
+    strikeGlow.setValue(0);
+    strikeRing.setValue(0.3);
+    strike1Fade.setValue(0);
+    strike2Fade.setValue(0);
 
-  const startFinale = useCallback(() => {
-    toStage("finale");
-    anim(doomFade, 0.88, 1800);
-    after(900, () => anim(finaleFade, 1, 700));
-    // Hold "THE TRAP CLOSES." for 3.8 s then fade to black → onComplete
-    after(4700, () => {
-      anim(finaleFade, 0, 700, () => {
-        anim(doomFade, 1, 1600, () => {
-          after(400, () => {
-            toStage("done");
-            onComplete();
-          });
-        });
+    Animated.parallel([
+      Animated.timing(strikeGlow, { toValue: 0.70, duration: 500,  useNativeDriver: false }),
+      Animated.timing(strikeRing, { toValue: 2.4,  duration: 1000, useNativeDriver: false }),
+    ]).start(() => anim(strikeGlow, 0, 800));
+
+    after(400, () => anim(strike1Fade, 1, 350));
+    after(900, () => anim(strike2Fade, 1, 350));
+
+    flashScreen();
+    applyBossReveal(0.30);
+
+    after(2800, () => {
+      Animated.parallel([
+        Animated.timing(strike1Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+        Animated.timing(strike2Fade, { toValue: 0, duration: 350, useNativeDriver: false }),
+      ]).start(() => {
+        toStage("fleming_entry");
+        showChar();
       });
+    });
+  }
+
+  function playAnalyzeEffect() {
+    scanY.setValue(-200);
+    scanFade.setValue(0);
+    analysisFade.setValue(0);
+
+    anim(scanFade, 0.8, 200);
+    Animated.timing(scanY, { toValue: 600, duration: 900, useNativeDriver: false }).start(
+      () => anim(scanFade, 0, 300),
+    );
+
+    after(900, () => anim(analysisFade, 1, 500));
+    applyBossReveal(0.45);
+
+    after(2800, () => {
+      Animated.parallel([
+        Animated.timing(analysisFade, { toValue: 0, duration: 350, useNativeDriver: false }),
+        Animated.timing(scanFade,     { toValue: 0, duration: 250, useNativeDriver: false }),
+      ]).start(() => startTrapClosing());
+    });
+  }
+
+  // ── Trap closing sequence (auto) ──────────────────────────────────────────────
+
+  function startTrapClosing() {
+    toStage("trap_closing");
+    anim(doomFade, 0.75, 1800);
+    after(500,  () => anim(trapFade, 1, 600));
+    after(3500, () => {
+      anim(trapFade,  0, 500);
+      anim(doomFade, 1, 1400, () => {
+        // Start tappable finale
+        toStage("finale");
+        finaleStepRef.current = 0;
+        setFinaleStep(0);
+        finaleFade.setValue(0);
+        anim(finaleFade, 1, 600);
+      });
+    });
+  }
+
+  // ── Finale advance (tappable) ─────────────────────────────────────────────────
+
+  const handleFinaleAdvance = useCallback(() => {
+    if (stageRef.current !== "finale") return;
+    const next = finaleStepRef.current + 1;
+    if (next >= FINALE.length) {
+      anim(finaleFade, 0, 600, () => {
+        toStage("done");
+        onComplete();
+      });
+      return;
+    }
+    anim(finaleFade, 0, 300, () => {
+      finaleStepRef.current = next;
+      setFinaleStep(next);
+      anim(finaleFade, 1, 400);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onComplete]);
 
-  // ── Player action handler ─────────────────────────────────────────────────
+  // ── Tap handlers ──────────────────────────────────────────────────────────────
 
-  const handleAction = useCallback((heroId: string, actionId: string, apCost: number) => {
-    if (stageRef.current !== "selecting_action") return;
-    // Gate: insufficient AP
-    if (playerAPRef.current < apCost) return;
-
-    // Consume AP (synchronous ref write + state update)
-    const newAP = playerAPRef.current - apCost;
-    playerAPRef.current = newAP;
-    setPlayerAP(newAP);
-
-    const result = resolveAction(heroId, actionId);
-
-    if (Object.keys(result.hpChanges).length)    applyHeroHP(result.hpChanges);
-    if (Object.keys(result.decoyChanges).length) applyDecoyHP(result.decoyChanges);
-    if (result.bossRevDelta !== 0)               applyBossReveal(result.bossRevDelta);
-    pushLog(result.logLine);
-    if (result.beatKey) beatsShownRef.current.add(result.beatKey);
-
-    flashScreen(result.resultColor);
-    setOverlayText(result.resultText);
-    setOverlayColor(result.resultColor);
-    toStage("action_result");
-    anim(overlayFade, 1, 300);
-
-    after(1700, () => {
-      anim(overlayFade, 0, 280, () => {
-        if (result.beatKey && NARRATIVE[result.beatKey]) {
-          setNarrativeText(NARRATIVE[result.beatKey]);
-          toStage("narrative_beat");
-          anim(narrativeFade, 1, 400);
-        } else {
-          runEnemyTurn();
-        }
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolveAction, runEnemyTurn]);
-
-  // ── Narrative beat continue ───────────────────────────────────────────────
-
-  const handleNarrativeContinue = useCallback(() => {
-    if (stageRef.current !== "narrative_beat") return;
-    anim(narrativeFade, 0, 300, () => runEnemyTurn());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runEnemyTurn]);
-
-  // ── Hero/action selection ─────────────────────────────────────────────────
-
-  const handleSelectHero = useCallback((id: string) => {
-    if (stageRef.current !== "selecting_hero") return;
-    if ((heroHPsRef.current[id] ?? 0) <= 0) return;
-    selectedHeroIdRef.current = id;
-    setSelectedHeroId(id);
-    toStage("selecting_action");
-  }, []);
-
-  const handleCancelAction = useCallback(() => {
-    if (stageRef.current !== "selecting_action") return;
-    selectedHeroIdRef.current = null;
-    setSelectedHeroId(null);
-    toStage("selecting_hero");
-  }, []);
-
-  const handleStartBattle = useCallback(() => {
-    anim(introFade, 0, 500, () => toStage("selecting_hero"));
+  const handleTapEntry = useCallback(() => {
+    const s = stageRef.current;
+    if (s === "nightingale_entry") {
+      hideChar(() => { toStage("lamp_prompt"); showSkillCard(); });
+    } else if (s === "prodigy_entry") {
+      hideChar(() => { toStage("strike_prompt"); showSkillCard(); });
+    } else if (s === "fleming_entry") {
+      hideChar(() => { toStage("analyze_prompt"); showSkillCard(); });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Derived values ────────────────────────────────────────────────────────
+  const handleUseLamp = useCallback(() => {
+    if (stageRef.current !== "lamp_prompt") return;
+    hideSkillCard(() => { toStage("lamp_effect"); playLampEffect(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const selectedHero = useMemo(
-    () => HEROES.find(h => h.id === selectedHeroId) ?? null,
-    [selectedHeroId],
-  );
+  const handleUseStrike = useCallback(() => {
+    if (stageRef.current !== "strike_prompt") return;
+    hideSkillCard(() => { toStage("strike_effect"); playStrikeEffect(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const currentFinale = FINALE_STEPS[finaleStep] ?? FINALE_STEPS[0];
+  const handleUseAnalyze = useCallback(() => {
+    if (stageRef.current !== "analyze_prompt") return;
+    hideSkillCard(() => { toStage("analyze_effect"); playAnalyzeEffect(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const showBattleUI = !["intro", "finale", "done"].includes(stage);
-  const isInteractive = stage === "selecting_hero" || stage === "selecting_action";
+  // ── Derived render state ──────────────────────────────────────────────────────
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  const isNightingaleEntry = stage === "nightingale_entry";
+  const isProdigyEntry     = stage === "prodigy_entry";
+  const isFlemingEntry     = stage === "fleming_entry";
+  const isEntryStage       = isNightingaleEntry || isProdigyEntry || isFlemingEntry;
+
+  const isLampPrompt    = stage === "lamp_prompt";
+  const isStrikePrompt  = stage === "strike_prompt";
+  const isAnalyzePrompt = stage === "analyze_prompt";
+  const isSkillPrompt   = isLampPrompt || isStrikePrompt || isAnalyzePrompt;
+
+  const isLampEffect    = stage === "lamp_effect";
+  const isStrikeEffect  = stage === "strike_effect";
+  const isAnalyzeEffect = stage === "analyze_effect";
+  const isTrapClosing   = stage === "trap_closing";
+  const isFinale        = stage === "finale";
+
+  const currentChar = isNightingaleEntry ? LAMP_SKILL
+                    : isProdigyEntry     ? STRIKE_SKILL
+                    : isFlemingEntry     ? ANALYZE_SKILL
+                    : null;
+
+  const currentSkill = isLampPrompt    ? LAMP_SKILL
+                     : isStrikePrompt  ? STRIKE_SKILL
+                     : isAnalyzePrompt ? ANALYZE_SKILL
+                     : null;
+
+  const bossGlowOpacity = bossGlow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.48] });
+  const finaleCard = FINALE[finaleStep] ?? FINALE[0];
+
+  // Progress step indicator
+  const stepDone = (i: number) =>
+    (i === 0 && ["prodigy_entry","strike_prompt","strike_effect","fleming_entry","analyze_prompt","analyze_effect","trap_closing","finale","done"].includes(stage)) ||
+    (i === 1 && ["fleming_entry","analyze_prompt","analyze_effect","trap_closing","finale","done"].includes(stage)) ||
+    (i === 2 && ["trap_closing","finale","done"].includes(stage));
+
+  const stepActive = (i: number) =>
+    (i === 0 && ["opening","nightingale_entry","lamp_prompt","lamp_effect"].includes(stage)) ||
+    (i === 1 && ["prodigy_entry","strike_prompt","strike_effect"].includes(stage)) ||
+    (i === 2 && ["fleming_entry","analyze_prompt","analyze_effect"].includes(stage));
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.root}>
       {/* BACKGROUND */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: bgFade }]}>
-        <ExpoImage source={ART.battlefield} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Animated.View style={[styles.bgWrap, { opacity: bgFade, transform: [{ scale: bgScale }] }]}>
+        <ExpoImage source={ART.battlefield} style={styles.bg} contentFit="cover" />
       </Animated.View>
 
-      {/* PROGRESSIVE DOOM OVERLAY */}
+      {/* Dark tint */}
+      <View style={styles.darkTint} pointerEvents="none" />
+
+      {/* Red trap pulse */}
+      <Animated.View style={[styles.redOverlay, { opacity: redPulse }]} pointerEvents="none" />
+
+      {/* Progressive doom overlay */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: doomFade }]}
         pointerEvents="none"
       />
 
-      {/* HIT FLASH */}
+      {/* Hit flash */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#CC0000", opacity: flashFade }]}
         pointerEvents="none"
       />
 
+      {/* ── LAMP EFFECT LAYER ── */}
+      {isLampEffect && (
+        <View style={styles.effectLayer} pointerEvents="none">
+          <Animated.View
+            style={[styles.lampGlow, { opacity: lampGlowFade, transform: [{ scale: lampGlowScale }] }]}
+          />
+          <Animated.View style={[styles.revealChip, styles.chipTop, { opacity: lamp1Fade }]}>
+            <Text style={styles.revealHazard}>⚠  CONCEALED HAZARD</Text>
+            <Text style={styles.revealSub}>Secondary source detected beneath surface enemy</Text>
+          </Animated.View>
+          <Animated.View style={[styles.revealChip, styles.chipMid, { opacity: lamp2Fade }]}>
+            <Text style={styles.revealDecoy}>◈  DECOY DETECTED</Text>
+            <Text style={styles.revealSub}>Visible enemy is not the primary threat</Text>
+          </Animated.View>
+          <Animated.View style={[styles.revealChip, styles.chipBot, { opacity: lamp3Fade }]}>
+            <Text style={styles.revealPatient}>↓  PATIENT STATUS: CRITICAL</Text>
+            <Text style={styles.revealSub}>Deterioration in progress — assess before striking</Text>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── STRIKE EFFECT LAYER ── */}
+      {isStrikeEffect && (
+        <View style={styles.effectLayer} pointerEvents="none">
+          <Animated.View
+            style={[styles.strikeGlow, { opacity: strikeGlow, transform: [{ scale: strikeRing }] }]}
+          />
+          <Animated.View style={[styles.revealChip, styles.chipTop, { opacity: strike1Fade }]}>
+            <Text style={[styles.revealHazard, { color: "#E8354A" }]}>BRILLIANT INTERVENTION</Text>
+            <Text style={styles.revealSub}>Corruption reduced — surface enemy weakening</Text>
+          </Animated.View>
+          <Animated.View style={[styles.revealChip, styles.chipBot, { opacity: strike2Fade }]}>
+            <Text style={[styles.revealHazard, { color: "#FF8C00" }]}>⚠  SOURCE ADAPTING</Text>
+            <Text style={styles.revealSub}>True threat has not been reached</Text>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── ANALYZE EFFECT LAYER ── */}
+      {isAnalyzeEffect && (
+        <View style={styles.effectLayer} pointerEvents="none">
+          <Animated.View
+            style={[styles.scanLine, { opacity: scanFade, transform: [{ translateY: scanY }] }]}
+          />
+          <Animated.View style={[styles.analysisPanel, { opacity: analysisFade }]}>
+            <Text style={styles.analysisPanelTitle}>ENEMY ANALYSIS</Text>
+            <View style={styles.analysisRow}>
+              <Text style={styles.analysisWeak}>✓  TRUE SOURCE</Text>
+              <Text style={styles.analysisValue}>Silent Infarction</Text>
+            </View>
+            <View style={styles.analysisRow}>
+              <Text style={styles.analysisResist}>✗  RESISTANCE</Text>
+              <Text style={styles.analysisValue}>All Broad-Spectrum Strikes</Text>
+            </View>
+            <View style={[styles.analysisRow, styles.analysisWarningRow]}>
+              <Text style={styles.analysisWarn}>⚠  Trap was set before this battle began</Text>
+            </View>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── TRAP CLOSING OVERLAY ── */}
+      {isTrapClosing && (
+        <Animated.View style={[styles.trapOverlay, { opacity: trapFade }]} pointerEvents="none">
+          <Text style={styles.trapTitle}>THE TRAP CLOSES.</Text>
+          <Text style={styles.trapSub}>
+            The Silent Infarction was never the surface enemy.
+          </Text>
+        </Animated.View>
+      )}
+
       {/* BOTTOM GRADIENT */}
       <LinearGradient
-        colors={["transparent", "rgba(4,10,18,0.50)", "rgba(4,10,18,0.96)"]}
-        locations={[0, 0.30, 0.70]}
-        style={styles.bottomGrad}
+        colors={["transparent", "rgba(4,10,18,0.55)", "rgba(4,10,18,0.97)"]}
+        locations={[0, 0.30, 0.72]}
+        style={styles.bottomGradient}
         pointerEvents="none"
       />
 
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
 
-        {/* ── OBJECTIVE BAR ── */}
-        {showBattleUI && (
-          <View style={styles.topBar}>
-            <Text style={styles.objectiveTitle}>OBJECTIVE</Text>
-            <Text style={styles.objectiveText}>
-              Learn the field.  Save who you can.  Survive the trap.
+        {/* ── TOP BAR (scene label + step row + boss card) ── */}
+        {!isFinale && stage !== "done" && (
+          <Animated.View style={[styles.topBar, { opacity: labelFade }]} pointerEvents="none">
+            <Text style={styles.sceneLabel}>
+              LEGENDARY PARTY  ·  SILENT INFARCTION ENCOUNTER
             </Text>
-            <View style={styles.turnRow}>
-              {[1, 2, 3, 4].map(t => (
-                <View
-                  key={t}
-                  style={[
-                    styles.turnDot,
-                    turn === t && styles.turnDotActive,
-                    turn > t  && styles.turnDotDone,
-                  ]}
-                />
+
+            {/* Step progress */}
+            <View style={styles.stepRow}>
+              {["Scout", "Strike", "Analyze"].map((label, i) => (
+                <View key={label} style={styles.stepItem}>
+                  <View style={[
+                    styles.stepDot,
+                    stepDone(i)   && styles.stepDotDone,
+                    stepActive(i) && styles.stepDotActive,
+                  ]} />
+                  <Text style={[
+                    styles.stepText,
+                    stepDone(i)   && styles.stepTextDone,
+                    stepActive(i) && styles.stepTextActive,
+                  ]}>{label}</Text>
+                </View>
               ))}
-              <Text style={styles.turnLabel}>
-                TURN {Math.min(turn, 4)} / 4  ·  AP {playerAP} / {PROLOGUE_AP_CONFIG.startingAP}
-              </Text>
             </View>
-          </View>
-        )}
 
-        {/* ── ENEMY AREA ── */}
-        {showBattleUI && (
-          <View style={styles.enemyRow}>
-            <DecoyCard
-              name="Fever Shade"
-              image={ART.decoyFeverShade}
-              hp={decoyHPs["fever_shade"] ?? 55}
-              maxHp={55}
-              color="#FF6B35"
-            />
-            <View style={styles.enemyGap} />
-            <DecoyCard
-              name="Mind Fog"
-              image={ART.decoyMindFog}
-              hp={decoyHPs["mind_fog"] ?? 55}
-              maxHp={55}
-              color="#9B7FD4"
-            />
-            <View style={styles.enemyGap} />
-            <BossCard revealed={bossRevealed} glowAnim={bossGlow} />
-          </View>
-        )}
-
-        {/* ── BATTLE LOG ── */}
-        {showBattleUI && log.length > 0 && (
-          <View style={styles.logArea}>
-            {log.map((line, i) => (
-              <Text
-                key={`${i}-${line}`}
-                style={[styles.logLine, i > 0 && styles.logLineOld]}
-                numberOfLines={1}
-              >
-                {line}
-              </Text>
-            ))}
-          </View>
+            {/* Boss card — small, top right */}
+            <View style={styles.bossCardRow}>
+              <View style={styles.bossCard}>
+                <View style={styles.bossPortraitWrap}>
+                  <ExpoImage
+                    source={ART.bossPortrait}
+                    style={styles.bossPortrait}
+                    contentFit="contain"
+                  />
+                  {/* Concealment overlay */}
+                  <View
+                    style={[styles.bossConcealment, { opacity: Math.max(0, 1 - bossRevealed) }]}
+                    pointerEvents="none"
+                  />
+                  <Animated.View
+                    style={[styles.bossGlowRing, { opacity: bossGlowOpacity }]}
+                    pointerEvents="none"
+                  />
+                </View>
+                <Text style={styles.bossName}>SILENT INFARCTION</Text>
+                <Text style={styles.bossHp}>
+                  {bossRevealed < 0.4
+                    ? "??? / ???"
+                    : bossRevealed < 0.9
+                    ? "Partially revealed"
+                    : "TRUE SOURCE VISIBLE"}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
         )}
 
         <View style={{ flex: 1 }} pointerEvents="none" />
 
-        {/* ── HERO ROW ── */}
-        {isInteractive && (
-          <View style={styles.heroRow}>
-            {HEROES.map(hero => {
-              const hp       = heroHPs[hero.id] ?? hero.maxHp;
-              const isDown   = hp <= 0;
-              const isActive = selectedHeroId === hero.id && stage === "selecting_action";
-              const hpPct    = (Math.max(0, hp) / hero.maxHp) * 100;
+        {/* ── CHARACTER ENTRY CARD ── */}
+        {isEntryStage && currentChar && (
+          <Animated.View
+            style={[
+              styles.entryCard,
+              {
+                opacity:         charFade,
+                transform:       [{ translateY: charSlide }],
+                borderColor:     currentChar.accentBorder,
+                backgroundColor: currentChar.accentBg,
+              },
+            ]}
+          >
+            <View style={styles.entryHeader}>
+              <ExpoImage source={currentChar.avatar} style={styles.entryAvatar} contentFit="cover" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
+                  {currentChar.owner}
+                </Text>
+                <Text style={styles.entryRole}>
+                  {isNightingaleEntry ? "Legendary Support — Scout"
+                    : isProdigyEntry  ? "The Prodigy — Peak Strike"
+                    : "Legendary Assessment"}
+                </Text>
+              </View>
+            </View>
+            <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
+              "{currentChar.prompt}"
+            </Animated.Text>
+            <Pressable style={styles.entryAdvance} onPress={handleTapEntry}>
+              <Text style={[styles.entryAdvanceText, { color: currentChar.ownerColor }]}>
+                SEE SKILL  →
+              </Text>
+            </Pressable>
+          </Animated.View>
+        )}
 
-              return (
-                <Pressable
-                  key={hero.id}
-                  style={[
-                    styles.heroCard,
-                    isDown   && styles.heroCardDown,
-                    isActive && { borderColor: hero.color, borderWidth: 2, backgroundColor: `${hero.color}14` },
-                  ]}
-                  onPress={() => {
-                    if (isDown) return;
-                    if (isActive) { handleCancelAction(); }
-                    else          { handleSelectHero(hero.id); }
-                  }}
-                >
+        {/* ── SKILL CARD ── */}
+        {isSkillPrompt && currentSkill && (
+          <Animated.View
+            style={[
+              styles.skillCard,
+              {
+                opacity:         skillFade,
+                transform:       [{ scale: skillScale }],
+                borderColor:     currentSkill.accentBorder,
+                backgroundColor: "rgba(4,10,18,0.94)",
+              },
+            ]}
+          >
+            <View style={styles.skillHeader}>
+              <ExpoImage source={currentSkill.avatar} style={styles.skillAvatar} contentFit="cover" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.skillOwner, { color: currentSkill.ownerColor }]}>
+                  {currentSkill.owner}
+                </Text>
+                <Text style={[styles.skillName, { color: currentSkill.ownerColor }]}>
+                  {currentSkill.name}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.effectsList}>
+              {currentSkill.effects.map((effect, i) => (
+                <View key={i} style={styles.effectRow}>
+                  <Text style={[styles.effectDot, { color: currentSkill.effectColor }]}>◆</Text>
+                  <Text style={styles.effectText}>{effect}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Pressable
+              style={[styles.useSkillBtn, { borderColor: currentSkill.accentBorder }]}
+              onPress={isLampPrompt ? handleUseLamp : isStrikePrompt ? handleUseStrike : handleUseAnalyze}
+            >
+              <LinearGradient
+                colors={
+                  isLampPrompt
+                    ? ["rgba(232,196,83,0.18)", "rgba(232,196,83,0.08)"]
+                    : isStrikePrompt
+                    ? ["rgba(232,53,74,0.18)", "rgba(232,53,74,0.08)"]
+                    : ["rgba(62,207,178,0.18)", "rgba(62,207,178,0.08)"]
+                }
+                style={styles.useSkillGradient}
+              >
+                <Text style={[styles.useSkillText, { color: currentSkill.ownerColor }]}>
+                  USE SKILL
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+        )}
+
+        {/* ── FINALE CARD ── */}
+        {isFinale && (
+          <Pressable style={styles.finaleWrap} onPress={handleFinaleAdvance}>
+            <Animated.View style={[styles.finaleCard, { opacity: finaleFade }]}>
+              {finaleCard.speaker && finaleCard.portrait && (
+                <View style={styles.finaleSpeakerRow}>
                   <ExpoImage
-                    source={hero.image}
-                    style={[styles.heroPortrait, isDown && { opacity: 0.35 }]}
+                    source={finaleCard.portrait}
+                    style={styles.finaleSpeakerAvatar}
                     contentFit="cover"
                   />
-                  <Text style={[styles.heroName, { color: isDown ? "#555" : hero.color }]} numberOfLines={1}>
-                    {isDown ? "FALLEN" : hero.short}
+                  <Text style={[styles.finaleSpeaker, { color: finaleCard.color }]}>
+                    {finaleCard.speaker}
                   </Text>
-                  <View style={styles.heroHpBar}>
-                    <View
-                      style={[
-                        styles.heroHpFill,
-                        { width: `${hpPct}%` as any, backgroundColor: hero.color },
-                      ]}
-                    />
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-
-        {/* ── ACTION PANEL ── */}
-        {stage === "selecting_action" && selectedHero && (
-          <View style={[styles.actionPanel, { borderColor: `${selectedHero.color}35` }]}>
-            <Text style={[styles.actionPanelHero, { color: selectedHero.color }]}>
-              {selectedHero.short}
-            </Text>
-            <View style={styles.actionBtnRow}>
-              {selectedHero.actions.map(action => {
-                const isRisky    = action.type === "risky";
-                const canAfford  = playerAP >= action.apCost;
-                const dimmed     = !canAfford;
-                return (
-                  <Pressable
-                    key={action.id}
-                    style={[
-                      styles.actionBtn,
-                      isRisky
-                        ? styles.actionBtnRisky
-                        : { borderColor: `${selectedHero.color}55` },
-                      dimmed && { opacity: 0.38 },
-                    ]}
-                    onPress={() => handleAction(selectedHero.id, action.id, action.apCost)}
-                  >
-                    <Text style={[
-                      styles.actionBtnLabel,
-                      { color: isRisky ? "#FF6B35" : selectedHero.color },
-                    ]}>
-                      {action.label}
-                    </Text>
-                    <Text style={[styles.actionBtnCost, dimmed && { color: "#FF4444" }]}>
-                      {action.apCost} AP
-                    </Text>
-                    {isRisky && (
-                      <Text style={styles.actionBtnRiskyNote}>⚠  use carefully</Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Pressable onPress={handleCancelAction} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>← BACK</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {/* ── ACTION RESULT / ENEMY TURN OVERLAY ── */}
-        {(stage === "action_result" || stage === "enemy_turn") && (
-          <Animated.View
-            style={[styles.resultOverlay, { opacity: overlayFade }]}
-            pointerEvents="none"
-          >
-            <Text style={[styles.resultText, { color: overlayColor }]}>{overlayText}</Text>
-          </Animated.View>
-        )}
-
-        {/* ── NARRATIVE BEAT ── */}
-        {stage === "narrative_beat" && (
-          <Animated.View style={[styles.narrativePanel, { opacity: narrativeFade }]}>
-            <Text style={styles.narrativeText}>{narrativeText}</Text>
-            <Pressable style={styles.narrativeContinue} onPress={handleNarrativeContinue}>
-              <Text style={styles.narrativeContinueText}>CONTINUE  ▶</Text>
-            </Pressable>
-          </Animated.View>
+                </View>
+              )}
+              <Text style={[styles.finaleText, { color: finaleCard.color }]}>
+                {finaleCard.text}
+              </Text>
+              {finaleCard.subtext ? (
+                <Text style={styles.finaleSubtext}>{finaleCard.subtext}</Text>
+              ) : null}
+              <Text style={styles.finaleTapHint}>
+                {finaleStep < FINALE.length - 1 ? "TAP TO CONTINUE" : "TAP TO PROCEED"}
+              </Text>
+            </Animated.View>
+          </Pressable>
         )}
 
       </SafeAreaView>
-
-      {/* ── INTRO OVERLAY (full-screen, rendered outside SafeAreaView) ── */}
-      {stage === "intro" && (
-        <Animated.View style={[styles.introOverlay, { opacity: introFade }]}>
-          <LinearGradient
-            colors={["rgba(4,10,18,0.85)", "rgba(4,10,18,0.97)"]}
-            style={StyleSheet.absoluteFill}
-          />
-          <SafeAreaView style={styles.introSafe}>
-            <View style={styles.introContent}>
-              <Text style={styles.introPhaseLabel}>THE FALL</Text>
-              <Text style={styles.introTitle}>Emergency Treatment Plaza</Text>
-              <View style={styles.introDivider} />
-              <Text style={styles.introObjective}>
-                {`Learn the field.\nSave who you can.\nSurvive the trap.`}
-              </Text>
-              <View style={styles.introHints}>
-                <Text style={styles.introHintLine}>
-                  ◆  Decoy enemies can be defeated
-                </Text>
-                <Text style={styles.introHintLine}>
-                  ◆  The true source cannot be beaten. Only revealed.
-                </Text>
-                <Text style={styles.introHintLine}>
-                  ◆  This battle has no victory condition
-                </Text>
-              </View>
-              <Pressable style={styles.introBtn} onPress={handleStartBattle}>
-                <LinearGradient
-                  colors={["#7B2020", "#B22222", "#7B2020"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.introBtnGrad}
-                >
-                  <Text style={styles.introBtnText}>BEGIN</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-        </Animated.View>
-      )}
-
-      {/* ── FINALE OVERLAY (full-screen, auto-advancing — no tap required) ── */}
-      {stage === "finale" && (
-        <Animated.View
-          style={[styles.finaleOverlay, { opacity: finaleFade }]}
-          pointerEvents="none"
-        >
-          <LinearGradient
-            colors={["rgba(6,2,2,0.93)", "rgba(4,10,18,0.98)"]}
-            style={StyleSheet.absoluteFill}
-          />
-          <SafeAreaView style={styles.finaleSafe} pointerEvents="none">
-            <View style={styles.finaleContent}>
-              <Text style={[styles.finaleText, styles.finaleTextDrama, { color: "#FF3333" }]}>
-                THE TRAP CLOSES.
-              </Text>
-              <Text style={styles.finaleSubtext}>
-                The power was real. The overconfidence was the trap. It was always here.
-              </Text>
-            </View>
-          </SafeAreaView>
-        </Animated.View>
-      )}
     </View>
   );
 }
@@ -1002,284 +825,204 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#040A12",
+  root: { flex: 1, backgroundColor: "#040A12" },
+
+  bgWrap: { ...StyleSheet.absoluteFillObject, overflow: "hidden" },
+  bg:     { width: "100%", height: "100%" },
+
+  darkTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(6,14,28,0.32)",
+  },
+  redOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#5C0000",
+  },
+  bottomGradient: {
+    position: "absolute", bottom: 0, left: 0, right: 0, height: "60%",
   },
 
-  bottomGrad: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
-    height: "58%",
-  },
+  safe: { flex: 1, paddingHorizontal: 16, paddingBottom: 12 },
 
-  safe: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+  // Top bar
+  topBar: { paddingTop: 14, gap: 8 },
+  sceneLabel: {
+    color: "rgba(255,100,100,0.45)", fontSize: 10, fontWeight: "700",
+    letterSpacing: 2.5, textAlign: "center",
   },
-
-  // ── Objective bar ──────────────────────────────────────────────────────────
-  topBar: {
-    paddingTop: 14,
-    gap: 4,
-  },
-  objectiveTitle: {
-    color: "rgba(180,100,100,0.55)",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 3,
-  },
-  objectiveText: {
-    color: "rgba(200,220,240,0.75)",
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
-  turnRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-  turnDot: {
+  stepRow: { flexDirection: "row", justifyContent: "center", gap: 28 },
+  stepItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  stepDot: {
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.20)",
   },
-  turnDotActive: { backgroundColor: "#E8354A" },
-  turnDotDone:   { backgroundColor: "rgba(255,255,255,0.45)" },
-  turnLabel: {
-    color: "rgba(255,255,255,0.40)",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginLeft: 4,
+  stepDotDone:   { backgroundColor: "rgba(255,255,255,0.45)" },
+  stepDotActive: {
+    backgroundColor: "#E8C453",
+    shadowColor: "#E8C453", shadowOpacity: 0.8, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
   },
+  stepText: {
+    color: "rgba(255,255,255,0.30)", fontSize: 10, fontWeight: "700", letterSpacing: 1.5,
+  },
+  stepTextDone:   { color: "rgba(255,255,255,0.55)" },
+  stepTextActive: { color: "#F4F7FB" },
 
-  // ── Enemy row ──────────────────────────────────────────────────────────────
-  enemyRow: {
-    flexDirection: "row",
-    marginTop: 14,
-    height: 160,
+  // Boss card (compact, top right)
+  bossCardRow: { alignItems: "flex-end", paddingRight: 4 },
+  bossCard: {
+    alignItems: "center", paddingVertical: 8, paddingHorizontal: 10,
+    backgroundColor: "rgba(20,4,4,0.72)", borderRadius: 10,
+    borderWidth: 1, borderColor: "rgba(200,20,20,0.25)", gap: 3,
   },
-  enemyGap: { width: 6 },
-
-  // ── Log ────────────────────────────────────────────────────────────────────
-  logArea: {
-    marginTop: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "rgba(4,10,18,0.70)",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    gap: 2,
-  },
-  logLine: {
-    color: "rgba(200,220,240,0.80)",
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  logLineOld: { color: "rgba(160,180,200,0.40)" },
-
-  // ── Hero row ───────────────────────────────────────────────────────────────
-  heroRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 8,
-  },
-  heroCard: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-    backgroundColor: "rgba(4,10,18,0.80)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    gap: 4,
-  },
-  heroCardDown: { opacity: 0.55 },
-  heroPortrait: {
-    width: 52, height: 52, borderRadius: 26,
-  },
-  heroName: {
-    fontSize: 9, fontWeight: "700", letterSpacing: 0.8, textAlign: "center",
-  },
-  heroHpBar: {
-    width: "80%", height: 4, borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    overflow: "hidden",
-  },
-  heroHpFill: { height: "100%", borderRadius: 2 },
-
-  // ── Action panel ───────────────────────────────────────────────────────────
-  actionPanel: {
-    backgroundColor: "rgba(4,10,18,0.94)",
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    gap: 10,
-    marginBottom: 4,
-  },
-  actionPanelHero: {
-    fontSize: 10, fontWeight: "800", letterSpacing: 2,
-  },
-  actionBtnRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    alignItems: "center",
-    gap: 2,
-  },
-  actionBtnRisky: {
-    borderColor: "rgba(255,107,53,0.45)",
-    backgroundColor: "rgba(255,107,53,0.06)",
-  },
-  actionBtnLabel: { fontSize: 12, fontWeight: "700", textAlign: "center" },
-  actionBtnCost: { fontSize: 10, color: "rgba(255,255,255,0.45)", textAlign: "center", marginTop: 2 },
-  actionBtnRiskyNote: {
-    color: "rgba(255,107,53,0.60)",
-    fontSize: 9,
-    letterSpacing: 0.5,
-  },
-  cancelBtn: {
-    alignSelf: "flex-start",
-    paddingVertical: 2,
-  },
-  cancelText: {
-    color: "rgba(200,220,240,0.35)",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-
-  // ── Result / enemy turn overlay ────────────────────────────────────────────
-  resultOverlay: {
-    position: "absolute",
-    left: 0, right: 0,
-    bottom: "28%",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  resultText: {
-    fontSize: 22, fontWeight: "800", textAlign: "center",
-    letterSpacing: 1.5, lineHeight: 32,
-    textShadowColor: "rgba(0,0,0,0.8)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-
-  // ── Narrative beat ─────────────────────────────────────────────────────────
-  narrativePanel: {
-    backgroundColor: "rgba(4,10,18,0.94)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    padding: 16,
-    gap: 12,
-    marginBottom: 8,
-  },
-  narrativeText: {
-    color: "rgba(220,235,255,0.88)",
-    fontSize: 14,
-    lineHeight: 22,
-    fontWeight: "300",
-    fontStyle: "italic",
-  },
-  narrativeContinue: { alignSelf: "flex-end" },
-  narrativeContinueText: {
-    color: "rgba(200,220,240,0.45)",
-    fontSize: 11, fontWeight: "800", letterSpacing: 1.5,
-  },
-
-  // ── Intro overlay ──────────────────────────────────────────────────────────
-  introOverlay: {
+  bossPortraitWrap: { position: "relative", width: 52, height: 64 },
+  bossPortrait:     { width: 52, height: 64 },
+  bossConcealment: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#050505",
+    borderRadius: 6,
   },
-  introSafe: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  introContent: {
-    paddingHorizontal: 28,
-    gap: 14,
-  },
-  introPhaseLabel: {
-    color: "rgba(200,60,60,0.70)",
-    fontSize: 10, fontWeight: "800", letterSpacing: 4,
-    textAlign: "center",
-  },
-  introTitle: {
-    color: "rgba(200,220,240,0.60)",
-    fontSize: 13, fontWeight: "300", letterSpacing: 0.5,
-    textAlign: "center",
-  },
-  introDivider: {
-    height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginVertical: 4,
-  },
-  introObjective: {
-    color: "#EDF2F7",
-    fontSize: 22, fontWeight: "300", lineHeight: 36,
-    textAlign: "center", letterSpacing: 0.3,
-  },
-  introHints: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+  bossGlowRing: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#600000",
     borderRadius: 10,
-    padding: 14,
-    gap: 8,
   },
-  introHintLine: {
-    color: "rgba(180,200,220,0.55)",
-    fontSize: 12, lineHeight: 18,
-  },
-  introBtn: {
-    borderRadius: 10, overflow: "hidden", marginTop: 6,
-  },
-  introBtnGrad: {
-    paddingVertical: 16, alignItems: "center",
-  },
-  introBtnText: {
-    color: "#FFFFFF", fontSize: 14, fontWeight: "800", letterSpacing: 4,
+  bossName: { color: "#CC3333", fontSize: 8, fontWeight: "800", letterSpacing: 1.2 },
+  bossHp:   { color: "rgba(200,100,100,0.55)", fontSize: 9, fontWeight: "300" },
+
+  // Effect layers
+  effectLayer: { ...StyleSheet.absoluteFillObject },
+
+  // Lamp glow
+  lampGlow: {
+    position: "absolute", top: "20%", left: "10%",
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: "rgba(255,200,60,0.55)",
   },
 
-  // ── Finale overlay ─────────────────────────────────────────────────────────
-  finaleOverlay: {
+  // Strike glow
+  strikeGlow: {
+    position: "absolute", alignSelf: "center", top: "30%",
+    width: 280, height: 280, borderRadius: 140,
+    backgroundColor: "rgba(232,53,74,0.45)",
+  },
+
+  // Scan line
+  scanLine: {
+    position: "absolute", left: 0, right: 0, height: 2,
+    backgroundColor: "rgba(62,207,178,0.70)",
+  },
+
+  // Reveal chips
+  revealChip: {
+    position: "absolute", left: 20, right: 20,
+    backgroundColor: "rgba(4,10,18,0.88)",
+    borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", gap: 3,
+  },
+  chipTop: { top: "22%" },
+  chipMid: { top: "42%" },
+  chipBot: { top: "62%" },
+  revealHazard: { color: "#E8C453", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  revealDecoy:  { color: "#CC88FF", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  revealPatient: { color: "#FF6B6B", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  revealSub:    { color: "rgba(255,255,255,0.55)", fontSize: 11 },
+
+  // Analysis panel
+  analysisPanel: {
+    position: "absolute", left: 20, right: 20, top: "30%",
+    backgroundColor: "rgba(4,10,18,0.92)", borderRadius: 10,
+    borderWidth: 1, borderColor: "rgba(62,207,178,0.30)",
+    paddingVertical: 14, paddingHorizontal: 16, gap: 8,
+  },
+  analysisPanelTitle: {
+    color: "#3ECFB2", fontSize: 11, fontWeight: "800", letterSpacing: 2, marginBottom: 4,
+  },
+  analysisRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  analysisWeak:  { color: "#3ECFB2", fontSize: 12, fontWeight: "700" },
+  analysisResist: { color: "#FF6B6B", fontSize: 12, fontWeight: "700" },
+  analysisValue: { color: "rgba(255,255,255,0.65)", fontSize: 12 },
+  analysisWarningRow: {
+    borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 8, marginTop: 4,
+  },
+  analysisWarn: { color: "#E8C453", fontSize: 11, flex: 1 },
+
+  // Trap overlay
+  trapOverlay: {
     ...StyleSheet.absoluteFillObject,
+    justifyContent: "center", alignItems: "center",
+    backgroundColor: "rgba(100,0,0,0.25)",
+    paddingHorizontal: 32, gap: 16,
   },
-  finaleSafe: {
-    flex: 1,
-    justifyContent: "center",
+  trapTitle: {
+    color: "#FF3333", fontSize: 26, fontWeight: "800",
+    letterSpacing: 3, textAlign: "center",
   },
-  finaleContent: {
+  trapSub: {
+    color: "rgba(255,200,200,0.70)", fontSize: 14, textAlign: "center", lineHeight: 22,
+  },
+
+  // Entry card
+  entryCard: {
+    marginBottom: 12,
+    borderRadius: 12, borderWidth: 1,
+    paddingVertical: 16, paddingHorizontal: 16, gap: 12,
+  },
+  entryHeader:  { flexDirection: "row", alignItems: "center", gap: 12 },
+  entryAvatar:  { width: 48, height: 48, borderRadius: 24 },
+  entryOwner:   { fontSize: 12, fontWeight: "800", letterSpacing: 1 },
+  entryRole:    { color: "rgba(255,255,255,0.50)", fontSize: 11, marginTop: 2 },
+  entryDialogue: {
+    color: "rgba(255,255,255,0.80)", fontSize: 14, lineHeight: 22, fontStyle: "italic",
+  },
+  entryAdvance: { alignSelf: "flex-end" },
+  entryAdvanceText: { fontSize: 13, fontWeight: "700", letterSpacing: 1 },
+
+  // Skill card
+  skillCard: {
+    marginBottom: 12, borderRadius: 12, borderWidth: 1,
+    paddingVertical: 16, paddingHorizontal: 16, gap: 14,
+  },
+  skillHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  skillAvatar: { width: 44, height: 44, borderRadius: 22 },
+  skillOwner:  { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  skillName:   { fontSize: 16, fontWeight: "700", marginTop: 2 },
+  effectsList: { gap: 8 },
+  effectRow:   { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  effectDot:   { fontSize: 9, marginTop: 3 },
+  effectText:  { color: "rgba(255,255,255,0.75)", fontSize: 13, flex: 1, lineHeight: 19 },
+  useSkillBtn: {
+    borderRadius: 8, borderWidth: 1, overflow: "hidden",
+  },
+  useSkillGradient: {
+    paddingVertical: 14, alignItems: "center", justifyContent: "center",
+  },
+  useSkillText: { fontSize: 15, fontWeight: "800", letterSpacing: 2 },
+
+  // Finale
+  finaleWrap: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center", alignItems: "center",
     paddingHorizontal: 28,
-    alignItems: "center",
-    gap: 16,
   },
-  finalePortrait: {
-    width: 64, height: 64, borderRadius: 32, marginBottom: 4,
+  finaleCard: {
+    backgroundColor: "rgba(4,10,18,0.92)",
+    borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+    paddingVertical: 28, paddingHorizontal: 24, gap: 16,
+    width: "100%",
   },
-  finaleSpeaker: {
-    fontSize: 9, fontWeight: "800", letterSpacing: 3,
-  },
+  finaleSpeakerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  finaleSpeakerAvatar: { width: 42, height: 42, borderRadius: 21 },
+  finaleSpeaker: { fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
   finaleText: {
-    fontSize: 18, fontWeight: "300", lineHeight: 30,
-    textAlign: "center", letterSpacing: 0.3,
-  },
-  finaleTextDrama: {
-    fontSize: 28, fontWeight: "800", letterSpacing: 4, lineHeight: 40,
+    fontSize: 18, fontWeight: "600", lineHeight: 28, textAlign: "center",
   },
   finaleSubtext: {
-    color: "rgba(200,220,240,0.38)",
-    fontSize: 12, letterSpacing: 0.5, textAlign: "center",
+    color: "rgba(255,255,255,0.45)", fontSize: 13, textAlign: "center",
+    lineHeight: 20, fontStyle: "italic",
   },
   finaleTapHint: {
-    color: "rgba(200,220,240,0.22)",
-    fontSize: 11, letterSpacing: 1, marginTop: 8,
+    color: "rgba(255,255,255,0.25)", fontSize: 10, fontWeight: "700",
+    letterSpacing: 2, textAlign: "center", marginTop: 8,
   },
 });
