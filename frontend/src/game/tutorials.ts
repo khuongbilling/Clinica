@@ -129,16 +129,16 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_scout",
       title: "Step 1: Scout",
-      body: "Don't rush to treat what you haven't assessed. Novice Guardian has Lantern of Clues ready. Use it to surface what this patient actually needs before you do anything else.",
+      body: "Don't rush to treat what you haven't assessed. Nightingale's Lamp of Observation is ready. Use it to surface what this patient actually needs before you do anything else.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "lantern_of_clues",
-      nextText: "USE LANTERN OF CLUES",
+      nextText: "USE LAMP OF OBSERVATION",
     },
     {
       id: "prologue_stabilize",
       title: "Step 2: Stabilize",
-      body: "Good. Now you know the picture. Village Caretaker's Guardian's Touch will shore up Stability. Buy the patient some time. Stability before everything else.",
+      body: "Good. Now you know the picture. Fleming's Guardian's Touch will shore up Stability. Buy the patient some time. Stability before everything else.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "guardians_touch",
@@ -156,7 +156,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_counter",
       title: "Step 3: Counter",
-      body: "The patient is steadier. Now push the disease back. Novice Guardian's Breath of Dawn reduces Corruption directly. This is where you go on the offensive.",
+      body: "The patient is steadier. Now push the disease back. Nightingale's Breath of Dawn reduces Corruption directly. This is where you go on the offensive.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "breath_of_dawn",
@@ -165,7 +165,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_reassess",
       title: "Step 4: Reassess",
-      body: "Never assume improvement. Confirm it. Village Caretaker's Reassess will check on the patient and close the care chain. This completes the shift.",
+      body: "Never assume improvement. Confirm it. Fleming's Reassess will check on the patient and close the care chain. This completes the shift.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "reassess",

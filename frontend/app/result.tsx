@@ -35,7 +35,7 @@ interface PlayerLevelUpParsed { fromLevel: number; toLevel: number }
 
 export default function Result() {
   const router = useRouter();
-  const { player } = usePlayer();
+  const { player, advanceProloguePhase } = usePlayer();
   const { logEvent } = useTestSession();
   const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string; epidemicTokens?: string;
@@ -636,11 +636,14 @@ export default function Result() {
           {won && isPrologueTutorial && (
             <Pressable
               style={styles.primary}
-              onPress={() => router.replace({ pathname: "/battle", params: { enemyId: "silent_infarct", prologue: "boss", replay: isReplay ? "1" : "" } })}
+              onPress={async () => {
+                try { await advanceProloguePhase("warning_dialogue_scene"); } catch {}
+                router.replace("/opening-prologue" as any);
+              }}
               testID="result-prologue-continue"
             >
-              <Ionicons name="alert-circle" size={16} color={COLORS.onBrand} />
-              <Text style={styles.primaryTxt}>ANSWER THE NEXT CALL</Text>
+              <Ionicons name="arrow-forward-circle" size={16} color={COLORS.onBrand} />
+              <Text style={styles.primaryTxt}>CONTINUE THE PROLOGUE</Text>
             </Pressable>
           )}
           {won && !isPrologueTutorial && (

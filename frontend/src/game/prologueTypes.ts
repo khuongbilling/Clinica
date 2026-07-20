@@ -1,10 +1,24 @@
 /**
- * Prologue State Framework — Push 1
+ * Prologue State Framework — Push 1 v2 (reordered Push 10)
  *
- * Defines the 11-phase new cinematic prologue, temporary hero/enemy IDs used
- * only during the sequence, and permanent post-rebirth identifiers granted once
- * the sequence completes.  Nothing here modifies the permanent player roster —
- * all PROLOGUE_TEMP_IDS must be kept out of heroes_owned / hero_progression.
+ * 12-phase cinematic prologue for brand-new players.
+ * Phase order (corrected Push 10):
+ *
+ *   1. opening_memory_cinematic           — fragments of a former life
+ *   2. former_self_battlefield_cutscene   — Former Self intro at high power
+ *   3. opening_battle_tutorial            — original guided ward tutorial
+ *                                           (dehydration_wisp, Scout→Stabilize→Counter→Reassess)
+ *                                           Nightingale + Fleming as the two heroes
+ *   4. warning_dialogue_scene             — full-body donghua warning dialogue AFTER tutorial
+ *                                           (Master Bai, Nightingale, Fleming, Former Self ignores)
+ *   5. silent_infarction_initial_reveal   — Silent Infarction trap reveals itself
+ *   6. former_self_support_loadout        — temporary prologue loadout (NF auto-added)
+ *   7. scripted_defeat                    — playable scripted-loss second battle
+ *   8. lotus_recall_cinematic             — Lotus Recall defeat cinematic
+ *   9. identity_reconstruction_character_creation — character creation / rebirth
+ *  10. post_rebirth_awakening             — Level 1 awakening, Master Bai
+ *  11. memory_echo_award_scene            — Nightingale's Lamp Fragment + Fleming's Culture Notes
+ *  12. clinica_university_introduction    — first destination: Clinica University
  */
 
 // ---------------------------------------------------------------------------
@@ -14,9 +28,10 @@
 export const PROLOGUE_PHASES = [
   'opening_memory_cinematic',
   'former_self_battlefield_cutscene',
+  'opening_battle_tutorial',
+  'warning_dialogue_scene',
   'silent_infarction_initial_reveal',
   'former_self_support_loadout',
-  'opening_battle_tutorial',
   'scripted_defeat',
   'lotus_recall_cinematic',
   'identity_reconstruction_character_creation',
@@ -30,9 +45,10 @@ export type ProloguePhase = typeof PROLOGUE_PHASES[number];
 export const PROLOGUE_PHASE_LABELS: Record<ProloguePhase, string> = {
   opening_memory_cinematic:                    'Awakening',
   former_self_battlefield_cutscene:            'The Battlefield',
+  opening_battle_tutorial:                     'First Contact',
+  warning_dialogue_scene:                      'The Warning',
   silent_infarction_initial_reveal:            'The Silent Infarction',
   former_self_support_loadout:                 'Prepare for Battle',
-  opening_battle_tutorial:                     'First Contact',
   scripted_defeat:                             'The Fall',
   lotus_recall_cinematic:                      'Lotus Recall',
   identity_reconstruction_character_creation:  'Who Were You?',
@@ -46,12 +62,14 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
     'Fragments of a life before. Warmth fading. A voice calling you back.',
   former_self_battlefield_cutscene:
     'The ward floor — your former domain. Florence and Fleming stand beside you.',
+  opening_battle_tutorial:
+    'Your first shift. Scout. Stabilize. Counter. Reassess.',
+  warning_dialogue_scene:
+    'Master Bai urges caution. The Former Self does not listen.',
   silent_infarction_initial_reveal:
     'Something is wrong. The silence has a shape, and it is spreading.',
   former_self_support_loadout:
     'Choose your tools. The legendary healers offer their support.',
-  opening_battle_tutorial:
-    'Engage the Silent Infarction. Learn the rhythms of the ward.',
   scripted_defeat:
     'The corruption is too great. Even legends fall before it.',
   lotus_recall_cinematic:
@@ -72,8 +90,8 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
 
 export const PROLOGUE_TEMP_IDS = {
   FORMER_SELF:       'prologue_former_self',
-  NIGHTINGALE_TEMP:  'prologue_nightingale_legendary',
-  FLEMING_TEMP:      'prologue_fleming_legendary',
+  NIGHTINGALE_TEMP:  'prologue_nightingale',
+  FLEMING_TEMP:      'prologue_fleming',
   MASTER_BAI:        'prologue_master_bai',
   SILENT_INFARCTION: 'prologue_silent_infarction',
 } as const;

@@ -125,7 +125,56 @@ export const HEROES: Hero[] = [
     skills: [
       { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 1, description: 'Steady support. +10 Stability, -10 Corruption.', shortEffect: 'Universal Treatment • +10 Stability · -10 Corruption', rpgDescription: 'A steadying pulse of healing energy restores balance and pushes back the corruption.', beginnerExplanation: 'Basic care helps the patient feel better and fights the problem.', nclexExplanation: 'Fundamental nursing care — repositioning, hygiene, comfort measures, and monitoring — has a real therapeutic effect that reduces disease burden over time.', stabilize: 10, strike: 10 },
       { id: 'reassess', name: 'Reassess', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one clue. Catching the gap in care reduces Corruption by 8.', shortEffect: 'Scout • Reveal Clue · -8 Corruption', rpgDescription: 'A patient eye returns to the bedside, finds what was missed, and corrects the course.', beginnerExplanation: 'Take another look — catching a missed step actively helps the patient recover.', nclexExplanation: 'Reassessment closes care gaps. Identifying a missed intervention or change in status directly reduces the disease burden.', reveal: 1, strike: 8 },
-      { id: 'glucose_round', name: 'Glucose Round', type: 'strike', systemType: 'Energy', cost: 2, description: 'Follow glucose protocol. -16 Corruption (Energy). Reveal 1 clue.', shortEffect: 'Energy Counter • -16 Corruption · Reveal Clue', rpgDescription: 'The Caretaker reads the Energy Crystal and responds precisely — glucose protocol restores the balance that corruption stole.', beginnerExplanation: 'Check blood sugar and give glucose if low — this directly fights the energy problem.', nclexExplanation: 'Hypoglycemia management requires glucose monitoring and administration per protocol. This nurse-initiated action directly treats the underlying energy deficit.', strike: 16, reveal: 1 },
+      { id: 'glucose_round', name: 'Glucose Round', type: 'strike', systemType: 'Energy', cost: 2, description: 'Follow glucose protocol. -16 Corruption (Energy). Reveal 1 clue.', shortEffect: 'Energy Counter • -16 Corruption · Reveal Clue', rpgDescription: 'The Caretaker reads the Energy Crystal and responds precisely — glucose protocol restores the balance that corruption stored.', beginnerExplanation: 'Check blood sugar and give glucose if low — this directly fights the energy problem.', nclexExplanation: 'Hypoglycemia management requires glucose monitoring and administration per protocol. This nurse-initiated action directly treats the underlying energy deficit.', strike: 16, reveal: 1 },
+    ],
+  },
+
+  // ── PROLOGUE LOANER HEROES ─────────────────────────────────────────────────
+  // These two heroes are TEMPORARY — used only for the guided tutorial battle
+  // (dehydration_wisp / isPrologueTutorial).  They carry the exact same skill
+  // IDs as novice_guardian and village_caretaker so the prologueBattle tutorial
+  // step pins (requiredSkillId) continue to work without any change to
+  // tutorials.ts.  They are never persisted in heroes_owned or active_team.
+  {
+    id: 'prologue_nightingale',
+    name: 'Florence Nightingale',
+    title: 'The Lady with the Lamp',
+    rarity: 5,
+    role: 'Stabilizer',
+    element: 'River',
+    description: 'The founder of modern nursing. Her lamp reveals what others overlook — and her breath restores what the corruption steals.',
+    faction: 'Clinica University',
+    quote: 'I attribute my success to this: I never gave or took an excuse.',
+    backstory: 'Florence Nightingale led the charge on sanitation and evidence-based care in the 19th century. Her Lamp of Observation and Breath of Dawn keep patients stable long enough to fight back.',
+    bestAgainst: 'Air',
+    medicalFocus: 'Respiratory support, clinical assessment, infection prevention',
+    bondLevel: 0,
+    bondExp: 0,
+    skills: [
+      { id: 'lantern_of_clues', name: 'Lamp of Observation', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one hidden clue.', shortEffect: 'Scout • Reveal Hidden Clue', rpgDescription: "Nightingale's lamp sweeps the ward, catching the detail corruption tried to hide.", beginnerExplanation: 'Look closer to find the important clue.', nclexExplanation: 'Assessment data helps the nurse recognize relevant cues before choosing interventions.', reveal: 1 },
+      { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 1, description: 'Restore oxygenation. +14 Stability, -10 Corruption (Air).', shortEffect: 'Air Treatment • +14 Stability · -10 Corruption', rpgDescription: 'A bright breath from Nightingale restores oxygen flow to the fading patient, pushing back respiratory corruption.', beginnerExplanation: 'This supports breathing and oxygen — directly fighting the airway problem.', nclexExplanation: 'Oxygenation support is a direct counter to respiratory distress. Positioning, supplemental oxygen, and airway management reduce the disease burden.', stabilize: 14, strike: 10 },
+      { id: 'rapid_response', name: 'Rapid Response', type: 'stabilize', systemType: 'Universal', cost: 2, description: 'Emergency support. +26 Stability.', shortEffect: 'Stabilize • +26 Stability', rpgDescription: 'Nightingale surges in with practiced calm — the patient pulls back from the edge.', beginnerExplanation: 'A big push of support when the patient is in trouble.', nclexExplanation: 'Recognize deterioration and escalate care. Rapid intervention can stabilize an acutely unstable patient.', stabilize: 26 },
+    ],
+  },
+  {
+    id: 'prologue_fleming',
+    name: 'Alexander Fleming',
+    title: 'The Discoverer of Penicillin',
+    rarity: 5,
+    role: 'Educator',
+    element: 'Growth',
+    description: 'The bacteriologist who changed medicine forever. Fleming steadies patients and reassesses until the answer reveals itself.',
+    faction: 'Clinica University',
+    quote: 'One sometimes finds what one is not looking for.',
+    backstory: "Alexander Fleming's accidental discovery of penicillin exemplifies clinical observation: notice the unexpected, reassess the evidence, and act with precision. His Guardian's Touch and Reassess translate that discipline to every shift.",
+    bestAgainst: 'Growth',
+    medicalFocus: 'Infection treatment, systematic reassessment, fundamental nursing care',
+    bondLevel: 0,
+    bondExp: 0,
+    skills: [
+      { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 1, description: 'Steady support. +10 Stability, -10 Corruption.', shortEffect: 'Universal Treatment • +10 Stability · -10 Corruption', rpgDescription: "Fleming's steady hand restores balance and pushes back the corruption.", beginnerExplanation: 'Basic care helps the patient feel better and fights the problem.', nclexExplanation: 'Fundamental nursing care — repositioning, hygiene, comfort measures, and monitoring — has a real therapeutic effect that reduces disease burden over time.', stabilize: 10, strike: 10 },
+      { id: 'reassess', name: 'Reassess', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one clue. Catching the gap in care reduces Corruption by 8.', shortEffect: 'Scout • Reveal Clue · -8 Corruption', rpgDescription: "Fleming returns to the bedside with a scientist's eye, finds what was missed, and corrects the course.", beginnerExplanation: 'Take another look — catching a missed step actively helps the patient recover.', nclexExplanation: 'Reassessment closes care gaps. Identifying a missed intervention or change in status directly reduces the disease burden.', reveal: 1, strike: 8 },
+      { id: 'glucose_round', name: 'Culture & Sensitivity', type: 'strike', systemType: 'Energy', cost: 2, description: 'Run the culture. -16 Corruption (Energy). Reveal 1 clue.', shortEffect: 'Energy Counter • -16 Corruption · Reveal Clue', rpgDescription: 'Fleming reads the culture result and responds precisely — targeted therapy restores the balance corruption stole.', beginnerExplanation: 'Identify the exact problem and treat it directly.', nclexExplanation: 'Culture and sensitivity results guide targeted antimicrobial therapy, directly reducing the infectious disease burden.', strike: 16, reveal: 1 },
     ],
   },
   {

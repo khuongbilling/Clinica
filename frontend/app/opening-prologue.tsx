@@ -38,10 +38,11 @@ import {
   type ProloguePhase,
 } from "@/src/game/prologueTypes";
 import OpeningMemoryCinematic        from "@/src/components/prologue/OpeningMemoryCinematic";
-import TacticalWarningScene          from "@/src/components/prologue/TacticalWarningScene";
+import FormerSelfIntroScene          from "@/src/components/prologue/FormerSelfIntroScene";
+import PrologueTutorialGate          from "@/src/components/prologue/PrologueTutorialGate";
+import WarningDialogueScene          from "@/src/components/prologue/WarningDialogueScene";
 import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfarctionRevealScene";
 import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
-import PrologueBattleTutorial        from "@/src/components/prologue/PrologueBattleTutorial";
 import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScriptedBattle";
 import LotusRecallCinematic             from "@/src/components/prologue/LotusRecallCinematic";
 import IdentityReconstructionScreen    from "@/src/components/prologue/IdentityReconstructionScreen";
@@ -53,10 +54,11 @@ import ClinicaUniversityIntroduction   from "@/src/components/prologue/ClinicaUn
 // the emotional beat of that scene.  Replace with art-matched palette later.
 const PHASE_ACCENTS: Record<ProloguePhase, string> = {
   opening_memory_cinematic:                    "#7EB8F7",
-  former_self_battlefield_cutscene:            "#5AC8A8",
+  former_self_battlefield_cutscene:            "#E8354A",
+  opening_battle_tutorial:                     "#4FD8C4",
+  warning_dialogue_scene:                      "#D9A441",
   silent_infarction_initial_reveal:            "#F77B72",
   former_self_support_loadout:                 "#9B8CF7",
-  opening_battle_tutorial:                     "#4FD8C4",
   scripted_defeat:                             "#C45C5C",
   lotus_recall_cinematic:                      "#E0AAFF",
   identity_reconstruction_character_creation:  "#F7C948",
@@ -134,38 +136,53 @@ export default function OpeningPrologue() {
     return <OpeningMemoryCinematic onComplete={handleContinue} />;
   }
 
-  // ── Phase 2: full-screen battlefield dialogue scene ───────────────────────
-  // Five-character visual-novel exchange on the emergency treatment plaza.
-  // When the last dialogue beat completes it calls handleContinue, which
-  // persists the phase advance to `silent_infarction_initial_reveal`.
+  // ── Phase 2: Former Self intro — high-level healer at the height of power ──
+  // Brief cinematic that shows who the Former Self was: legendary rank badges,
+  // Nightingale and Fleming at their side, and a confident pre-battle line.
+  // Advances to `opening_battle_tutorial`.
   if (activePhase === "former_self_battlefield_cutscene") {
-    return <TacticalWarningScene onComplete={handleContinue} />;
+    return <FormerSelfIntroScene onComplete={handleContinue} />;
   }
 
-  // ── Phase 3: Silent Infarction trap reveal ────────────────────────────────
+  // ── Phase 3: Original guided ward-shift tutorial battle ───────────────────
+  // Navigates directly to the real ward battle screen:
+  //   /battle?enemyId=dehydration_wisp&training=1&prologue=tutorial
+  // Loaner heroes are Florence Nightingale + Alexander Fleming (set in
+  // battle.tsx via the isPrologueTutorial flag).
+  // Tutorial teaches: Scout (lantern_of_clues) → Stabilize (guardians_touch)
+  //   → End Turn → Counter (breath_of_dawn) → Reassess → done.
+  // When the player wins, result.tsx advances the phase to
+  // `warning_dialogue_scene` and routes back to /opening-prologue.
+  if (activePhase === "opening_battle_tutorial") {
+    return <PrologueTutorialGate />;
+  }
+
+  // ── Phase 4: Full-body donghua warning dialogue ────────────────────────────
+  // Plays AFTER the tutorial win. Master Bai, Nightingale, and Fleming warn
+  // the Former Self not to rush. The Former Self ignores all warnings and
+  // advances alone — the trap closes behind them.
+  // Format: full-body standing speaker illustration + large dialogue panel.
+  // Advances to `silent_infarction_initial_reveal`.
+  if (activePhase === "warning_dialogue_scene") {
+    return <WarningDialogueScene onComplete={handleContinue} />;
+  }
+
+  // ── Phase 5: Silent Infarction trap reveal ────────────────────────────────
   // Red heartbeat sweep, hero reactions, the SI reveals itself and speaks.
   // Ends with a white freeze-flash → fade to black → advances to loadout.
   if (activePhase === "silent_infarction_initial_reveal") {
     return <SilentInfarctionRevealScene onComplete={handleContinue} />;
   }
 
-  // ── Phase 4: Story loadout before prologue battle ─────────────────────────
+  // ── Phase 6: Story loadout before prologue battle ─────────────────────────
   // Nightingale and Fleming join as locked temporary legendary units.
   // Temporary — must NOT enter the permanent roster.
-  // Confirm button advances to `opening_battle_tutorial`.
+  // Confirm button advances to `scripted_defeat`.
   if (activePhase === "former_self_support_loadout") {
     return <PrologueLoadout onComplete={handleContinue} />;
   }
 
-  // ── Phase 5: Guided tutorial — assessment before intervention ─────────────
-  // Two forced skill demonstrations (Lamp of Observation + Culture and
-  // Sensitivity) on the frozen battlefield.  Skills belong to the TEMPORARY
-  // prologue Nightingale and Fleming only.  Advances to `scripted_defeat`.
-  if (activePhase === "opening_battle_tutorial") {
-    return <PrologueBattleTutorial onComplete={handleContinue} />;
-  }
-
-  // ── Phase 6: Playable scripted-defeat battle — "The Fall" ─────────────────
+  // ── Phase 7: Playable scripted-defeat battle — "The Fall" ─────────────────
   // 4-turn simplified battle on the Emergency Treatment Plaza.
   // Former Self is powerful but already doomed; Nightingale/Fleming are
   // effective and competent.  Decoy enemies are killable.  Silent Infarction

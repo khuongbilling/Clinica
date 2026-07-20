@@ -136,6 +136,9 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   environmental_seal_warden: require('../../assets/heroes/environmental_seal_warden.png'),
   chartweave_analyst: require('../../assets/heroes/chartweave_analyst.png'),
   florence_nightingale: require('../../assets/heroes/florence_nightingale.png'),
+  // Prologue loaner heroes — tutorial battle (dehydration_wisp / isPrologueTutorial)
+  prologue_nightingale: require('../../assets/heroes/florence_nightingale.png'),
+  prologue_fleming:     require('../../assets/images/fleming_portrait.png'),
 };
 
 // All portrait modules, for cache preloading at game start.

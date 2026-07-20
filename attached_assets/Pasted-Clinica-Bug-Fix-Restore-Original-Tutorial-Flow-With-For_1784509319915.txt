@@ -1,0 +1,147 @@
+Clinica Bug Fix: Restore Original Tutorial Flow With Former Self Intro, Nightingale, and Fleming
+
+Goal:
+The recent opening/tutorial scene changes removed the original tutorial design that I wanted to keep. Restore the original beginning structure while keeping the added Former Self introduction, Nightingale/Fleming presence, Lotus Recall character creation, Memory Echo rewards, and locked legendary hero rules.
+
+Corrected opening sequence:
+
+1. Opening memory cinematic.
+2. Introduce the Former Self as a high-level hero.
+3. Transition directly into the original first tutorial battle against the hydration monster.
+4. No loadout before the first tutorial battle.
+5. Keep the original tutorial exactly as it was before, with Mr. Bai/Master Bai giving the tutorial.
+6. The only change to the first tutorial battle is that the two starting battlefield heroes are Florence Nightingale and Sir Alexander Fleming.
+7. After the first tutorial battle, transition to a full-body donghua dialogue scene.
+8. In that dialogue scene, the Former Self, Master Bai, Florence Nightingale, and Sir Alexander Fleming talk.
+9. The three mentors warn the Former Self not to rush.
+10. The Former Self ignores them and advances.
+11. The Silent Infarction begins revealing its trap.
+12. Then the temporary prologue loadout appears.
+13. Nightingale and Fleming are automatically added to the temporary prologue battle party.
+14. The second prologue battle begins.
+15. Use the same second battle design that existed previously, but remove the two original heroes and use only Nightingale and Fleming with the Former Self as appropriate.
+16. The player learns assessment and targeted-intervention mechanics.
+17. The second battle ends in scripted defeat caused by the Former Self’s earlier decisions.
+18. Lotus Recall cinematic begins.
+19. Continue into character design inside Lotus Recall.
+20. Continue the class-matching questions as originally designed.
+21. The customized player awakens at Level 1.
+22. Award Nightingale’s Lamp Fragment.
+23. Award Fleming’s Culture Notes.
+24. Full legendary Nightingale and Fleming remain locked for later story quests.
+
+Critical bugs to fix:
+
+Bug 1: Former Self visual inconsistency
+Currently the Former Self has two different drawing representations. Use one consistent Former Self visual throughout:
+- Opening memory cinematic
+- Pre-battle intro
+- Dialogue scenes
+- Any pre-Lotus Recall appearance
+
+The Former Self should remain consistent until Lotus Recall dissolves that identity.
+
+Bug 2: Nightingale and Fleming sprites not appearing in battle
+Currently no sprite is popping up in battle.
+
+Fix this by inspecting the original 10 hero sprite implementation and making Florence Nightingale and Sir Alexander Fleming use the same:
+- sprite file structure
+- asset loading pattern
+- hero identifier format
+- battlefield render path
+- scale
+- anchor point
+- action animation structure
+- 2.5D placement logic
+- battle team slot logic
+
+Create or wire 2.5D action sprites for Nightingale and Fleming in the same style as the original 10 hero sprites. They must visually appear on the battlefield.
+
+Bug 3: First tutorial was replaced by the wrong scene
+The first tutorial should not be the tactical warning scene.
+
+Restore the original first tutorial battle:
+- original hydration monster
+- original Mr. Bai/Master Bai tutorial text
+- original Scout, Stabilize, Counter/Treat, Reassess teaching
+- original guided battle pacing
+- original tutorial overlay behavior
+- original result/reward handling
+
+Only change:
+- replace the original two starting heroes with Nightingale and Fleming.
+
+Bug 4: Loadout appears too early
+There should be no loadout before the first tutorial battle.
+
+The temporary prologue loadout should appear only after:
+- first tutorial battle is completed
+- full-body donghua warning dialogue is completed
+- Silent Infarction begins revealing its trap
+
+Bug 5: Dialogue scene format is wrong
+After the first tutorial battle, the warning conversation should use the full-body donghua transparent-background speaker style already used in the app.
+
+Dialogue format:
+- Speaker full-body illustration pops up
+- Large readable narration text appears
+- Speaker disappears when finished
+- Next speaker appears
+- Use Former Self, Master Bai, Nightingale, and Fleming
+- Keep mobile readability high
+
+This should not be a complex tactical map dialogue scene before the first tutorial battle.
+
+Bug 6: Second battle party needs correction
+Use the previous second battle design, but replace the two original heroes with:
+- Florence Nightingale
+- Sir Alexander Fleming
+
+Do not include the original two heroes in the second prologue battle.
+
+Nightingale and Fleming in this section are temporary legendary prologue units only.
+
+Permanent roster rules:
+- Do not add full legendary Nightingale to the permanent roster.
+- Do not add full legendary Fleming to the permanent roster.
+- Award only Nightingale’s Lamp Fragment and Fleming’s Culture Notes after Lotus Recall.
+- Keep full legendary Nightingale and Fleming locked for later story quests.
+
+Narrative intent:
+The opening should preserve the original playable tutorial design, while adding clarity that the player was once powerful and overconfident.
+
+The opening should teach:
+- The player used to be powerful.
+- The player became overconfident.
+- The original tutorial still teaches basic gameplay cleanly.
+- Nightingale and Fleming are present early as important mentor figures.
+- The warning happens after the first tutorial, not before it.
+- The Silent Infarction defeat is a story consequence, not a normal player failure.
+- Lotus Recall leads into permanent character creation and class matching.
+- The new Level 1 player begins again with better humility and learning.
+
+Acceptance checks:
+- Opening memory cinematic plays first.
+- Former Self uses one consistent visual.
+- First battle starts immediately after the intro.
+- First battle is the original hydration tutorial.
+- No loadout appears before the first tutorial battle.
+- Mr. Bai/Master Bai gives the original tutorial guidance.
+- Nightingale and Fleming appear visibly as 2.5D sprites in the first battle.
+- Nightingale and Fleming match the original 10 hero sprite style.
+- After first battle, full-body donghua dialogue scene plays.
+- Warning dialogue happens after the first tutorial battle.
+- Temporary loadout appears only after warning dialogue.
+- Second prologue battle uses the prior second battle design.
+- Second battle uses Nightingale and Fleming instead of the original two heroes.
+- Scripted defeat still works.
+- Lotus Recall still works.
+- Character creation inside Lotus Recall still works.
+- Class questions still work as originally designed.
+- Customized player awakens at Level 1.
+- Nightingale’s Lamp Fragment is awarded once.
+- Fleming’s Culture Notes is awarded once.
+- Full legendary Nightingale and Fleming remain locked.
+- Existing players keep their progress.
+- Returning players are not forced into broken onboarding.
+- No duplicate rewards occur after reload or replay.

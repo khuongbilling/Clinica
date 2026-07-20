@@ -100,7 +100,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const isPrologueLoanerBattle = isPrologueTutorial || isPrologueBoss;
   const team = useMemo(() => {
     if (isPrologueLoanerBattle || !player || (player.heroes_owned || []).length === 0) {
-      const loanerIds = ["novice_guardian", "village_caretaker"];
+      const loanerIds = isPrologueTutorial
+        ? ["prologue_nightingale", "prologue_fleming"]
+        : ["novice_guardian", "village_caretaker"];
       return loanerIds
         .map((id) => HEROES.find((h) => h.id === id))
         .filter(Boolean) as Hero[];
