@@ -37,9 +37,9 @@ const { width: W, height: H } = Dimensions.get("window");
 
 const ART = {
   battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  formerSelf:  require("../../../assets/heroes/battle/the_prodigy.png"),
-  nightingale: require("../../../assets/images/nightingale_nobg.png"),
-  fleming:     require("../../../assets/images/fleming_nobg.png"),
+  formerSelf:  require("../../../assets/images/the_prodigy_vn.png"),
+  nightingale: require("../../../assets/images/nightingale_vn.png"),
+  fleming:     require("../../../assets/images/fleming_vn.png"),
   masterBai:   require("../../../assets/images/master_bai_nobg.png"),
 } as const;
 
