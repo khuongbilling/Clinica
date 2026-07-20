@@ -1175,14 +1175,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in hidden ways.")} testID="term-tap-corruption">
-            <Text style={[styles.barLabel, styles.barLabelTappable]}>CORRUPTION</Text>
+            <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>CORRUPT.</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
           <Text style={styles.barVal}>{state.corruption}</Text>
         </View>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — the enemy attacks it every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">
-            <Text style={[styles.barLabel, styles.barLabelTappable]}>STABILITY</Text>
+            <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>STABILITY</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
           <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}%</Text>
@@ -2423,7 +2423,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.divider,
   },
   barRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.2, fontWeight: "700", width: 64 },
+  barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 0, fontWeight: "700", width: 64 },
   barBg: { flex: 1, height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden" },
   barFill: { height: "100%", borderRadius: 2 },
   barVal: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600", width: 40, textAlign: "right" },
@@ -2437,11 +2437,11 @@ const styles = StyleSheet.create({
   codexLabel: { color: COLORS.brand, fontSize: 12, fontWeight: "700", letterSpacing: 0.2, flex: 1, lineHeight: 17 },
   codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 12 },
   clueRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs, paddingVertical: 2 },
-  clue: { flex: 1, minWidth: 80, maxWidth: 140, height: 58, padding: SPACING.xs, borderRadius: 4, borderWidth: 1, gap: 2, backgroundColor: COLORS.surface },
+  clue: { flex: 1, minWidth: 72, maxWidth: 140, height: 52, padding: 4, borderRadius: 4, borderWidth: 1, gap: 1, backgroundColor: COLORS.surface },
   clueVisible: { borderColor: COLORS.brand + "80", borderTopWidth: 2, borderTopColor: COLORS.brand + "CC" },
   clueHidden: { borderColor: COLORS.borderStrong, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
-  clueLabel: { color: COLORS.onSurface, fontSize: 13, fontWeight: "600" },
-  clueDetail: { color: COLORS.onSurfaceTertiary, fontSize: 13, lineHeight: 19 },
+  clueLabel: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
+  clueDetail: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 13 },
 
   // ── Zone C: Team + AP + Tabs ──
   zoneC: {
@@ -2482,11 +2482,11 @@ const styles = StyleSheet.create({
   // ── Skill pagination ──
   actionsPanel: { flex: 1, gap: SPACING.xs },
   skillPageGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
-  skillCardSlot: { width: "48.5%", height: 132 },
+  skillCardSlot: { width: "48.5%", height: 138 },
   skillCard: {
-    flex: 1, padding: 9, borderRadius: 6,
+    flex: 1, padding: 7, borderRadius: 6,
     backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong,
-    gap: 3, overflow: "hidden",
+    gap: 2, overflow: "hidden",
   },
   skillPageNav: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 4 },
   skillPageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.borderStrong },

@@ -334,8 +334,7 @@ export const ENEMIES: Enemy[] = [
     ],
     hiddenClues: [
       { id: 'h1', label: 'Tachycardia', detail: 'HR elevated — heart compensating for low blood volume.', hidden: true },
-      { id: 'h2', label: 'Low Urine Output', detail: 'Kidneys conserving fluid — oliguria. Pre-renal risk.', hidden: true },
-      { id: 'h3', label: 'Skin Tenting', detail: 'Poor skin turgor — fluid has left the interstitial space.', hidden: true },
+      { id: 'h2', label: 'Low Urine Output', detail: 'Oliguria — kidneys conserving fluid. Pre-renal risk.', hidden: true },
     ],
     dangerTrigger: 'Circulatory collapse — hypovolemic shock',
     bestCounters: ['stabilize', 'scout'],
