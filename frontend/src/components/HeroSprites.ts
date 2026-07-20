@@ -136,10 +136,15 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   environmental_seal_warden: require('../../assets/heroes/environmental_seal_warden.png'),
   chartweave_analyst: require('../../assets/heroes/chartweave_analyst.png'),
   florence_nightingale: require('../../assets/heroes/florence_nightingale.png'),
-  // Prologue loaner heroes — boss battle (Silent Infarct / isPrologueBoss)
+
+  // Prologue loaner heroes — tutorial + boss battles
   prologue_nightingale:  require('../../assets/heroes/florence_nightingale.png'),
   prologue_fleming:      require('../../assets/images/fleming_portrait.png'),
+
+  // Former Self — prologue scripted battle + cinematic appearances
+  // Both keys are kept: prologue_former_self (cinematic alias) + former_self (battle resolver)
   prologue_former_self:  require('../../assets/images/former_self_portrait.png'),
+  former_self:           require('../../assets/images/former_self_portrait.png'),
 };
 
 // All portrait modules, for cache preloading at game start.

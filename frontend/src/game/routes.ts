@@ -99,6 +99,7 @@ const SUMMON_CEREMONY:     AppRoute = "/summon";
 const LOTUS_RECALL:        AppRoute = "/lotus-recall";
 const OPENING_PROLOGUE:    AppRoute = "/opening-prologue"    as AppRoute;
 const DEV_PROLOGUE_TESTER: AppRoute = "/dev-prologue-tester" as AppRoute;
+const HERO_AUDIT:           AppRoute = "/hero-audit"          as AppRoute;
 
 /**
  * Static route constants — prefer these over raw string literals in
@@ -270,6 +271,9 @@ export const ROUTES = {
   // Dev-only scene jumper — not reachable in production builds.
   DEV_PROLOGUE_TESTER,
   devPrologueTester:  DEV_PROLOGUE_TESTER,
+  // Dev-only hero visual audit — lists every hero with sprite + portrait previews.
+  HERO_AUDIT,
+  heroAudit: HERO_AUDIT,
 } as const;
 
 /**

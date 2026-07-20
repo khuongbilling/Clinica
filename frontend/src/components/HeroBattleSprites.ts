@@ -131,6 +131,13 @@ const BATTLE_SPRITES: Record<string, any> = {
   environmental_seal_warden: require('../../assets/heroes/battle/environmental_seal_warden.png'),
   chartweave_analyst: require('../../assets/heroes/battle/chartweave_analyst.png'),
   florence_nightingale: require('../../assets/heroes/battle/florence_nightingale.png'),
+
+  // ── Prologue loaner heroes (tutorial + scripted-loss boss) ──
+  prologue_nightingale: require('../../assets/heroes/battle/prologue_nightingale.png'),
+  prologue_fleming:     require('../../assets/heroes/battle/prologue_fleming.png'),
+
+  // ── Former Self (scripted prologue battle) ──
+  former_self: require('../../assets/heroes/battle/former_self.png'),
 };
 
 // All battle-sprite modules, for cache preloading at game start.

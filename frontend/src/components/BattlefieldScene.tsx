@@ -27,7 +27,7 @@ const BOSS_BG: Record<string, ReturnType<typeof require>> = {
   verdantha: require("@/assets/images/battle_bg/verdantha.png"),
 };
 
-import { getHeroBattleSprite } from "./HeroBattleSprites";
+import { getHeroVisuals } from "./getHeroVisuals";
 import { getEnemySprite } from "./EnemySprites";
 import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
 import type { ActionType, ClueCard, ElementSystem, Hero } from "@/src/game/types";
@@ -232,8 +232,9 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
   const hurt = useRef(new Animated.Value(0)).current;
   const [castKind, setCastKind] = useState<ActionType>("strike");
   const [hurtFx, setHurtFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
-  const sprite = getHeroBattleSprite(hero.id);
-  const color = ELEMENT_COLORS[hero.element] || COLORS.brand;
+  const visuals = getHeroVisuals(hero.id, hero.name);
+  const sprite = visuals.battleSpriteAsset;
+  const color = ELEMENT_COLORS[hero.element] || visuals.familyColor || COLORS.brand;
   const move = HERO_MOVE[castKind] ?? HERO_MOVE.strike;
 
   useEffect(() => {

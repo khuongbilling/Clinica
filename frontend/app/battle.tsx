@@ -31,6 +31,7 @@ import { ROUTES } from "@/src/game/routes";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import type { ActionType, ClassFamily, Hero, HeroSkill } from "@/src/game/types";
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
+import { getHeroVisuals } from "@/src/components/getHeroVisuals";
 import { applySkillUpgradesToTeam } from "@/src/game/heroSkillAcademy";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -91,34 +92,46 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const isBossEnemy = enemy.id === BOSS_LORD_IMBALANCE.id || !!enemy.worldBoss;
 
   // Prologue loaner heroes: brand-new players own no heroes (Recruitment is
-  // the only source), so the guided tutorial battle and the scripted prologue
-  // boss run on TEMPORARY loaner heroes. The tutorial script pins specific
-  // skills (Lantern of Clues / Guardian's Touch), so the loaner pair must be
-  // exactly Novice Guardian + Village Caretaker. Loaners are never persisted:
-  // the prologue runs as training (no hero XP) and nothing writes them into
-  // heroes_owned/active_team/hero_progression.
+  // the only source), so the guided tutorial battle AND the scripted prologue
+  // boss both run on the SAME temporary loaner pair — Florence Nightingale
+  // (prologue_nightingale) and Alexander Fleming (prologue_fleming). Their
+  // skill IDs (lantern_of_clues / guardians_touch) satisfy the guided tutorial
+  // step pins. Loaners are never persisted: the prologue runs as training (no
+  // hero XP) and nothing writes them into heroes_owned/active_team/hero_progression.
   const isPrologueLoanerBattle = isPrologueTutorial || isPrologueBoss;
   const team = useMemo(() => {
+    let assembled: Hero[];
     if (isPrologueLoanerBattle || !player || (player.heroes_owned || []).length === 0) {
+      // Tutorial: Nightingale + Fleming. Boss: adds Former Self as the 3rd loaner.
+      // Empty-roster fallback (shouldn't occur post-recruitment): Novice Guardian pair.
       const loanerIds = isPrologueTutorial
         ? ["prologue_nightingale", "prologue_fleming"]
         : isPrologueBoss
           ? ["prologue_nightingale", "prologue_fleming", "prologue_former_self"]
           : ["novice_guardian", "village_caretaker"];
-      return loanerIds
+      assembled = loanerIds
         .map((id) => HEROES.find((h) => h.id === id))
         .filter(Boolean) as Hero[];
+    } else {
+      const teamIds = (player.active_team && player.active_team.length > 0) ? player.active_team : player.heroes_owned;
+      const fromTeam = teamIds
+        .map(id => {
+          const base = HEROES.find(h => h.id === id);
+          if (!base) return null;
+          return applyStarToHero(base, getProgress(player.hero_progression, id));
+        })
+        .filter(Boolean) as Hero[];
+      assembled = fromTeam.length >= 1 ? fromTeam.slice(0, 3) : HEROES.slice(0, 3);
     }
-    const teamIds = (player.active_team && player.active_team.length > 0) ? player.active_team : player.heroes_owned;
-    const fromTeam = teamIds
-      .map(id => {
-        const base = HEROES.find(h => h.id === id);
-        if (!base) return null;
-        return applyStarToHero(base, getProgress(player.hero_progression, id));
-      })
-      .filter(Boolean) as Hero[];
-    if (fromTeam.length >= 1) return fromTeam.slice(0, 3);
-    return HEROES.slice(0, 3);
+    if (__DEV__) {
+      const battleType = isPrologueTutorial ? 'tutorial' : isPrologueBoss ? 'boss' : 'ward-shift';
+      assembled.forEach(h => {
+        const v = getHeroVisuals(h.id, h.name);
+        if (!v.hasBattleSprite) console.warn(`[Battle:${battleType}] Hero "${h.id}" (${h.name}) has no battle sprite — will show letter fallback.`);
+        if (!v.hasPortrait)     console.warn(`[Battle:${battleType}] Hero "${h.id}" (${h.name}) has no portrait — fallback active.`);
+      });
+    }
+    return assembled;
   }, [player, isPrologueLoanerBattle]);
 
   // Cosmetic ward-skin backdrop (e.g. Bloom Ward Skin). Only ward skins carry a
