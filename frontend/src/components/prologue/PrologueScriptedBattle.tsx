@@ -706,26 +706,23 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
               },
             ]}
           >
-            {/* Standing portrait above card */}
-            <View style={styles.entryPortraitRow}>
-              <ExpoImage
-                source={currentChar.avatar}
-                style={styles.entryPortrait}
-                contentFit="contain"
-              />
-            </View>
-
             {/* Dialogue card */}
             <View style={[styles.entryCard, { borderColor: currentChar.accentBorder, backgroundColor: currentChar.accentBg }]}>
               <View style={styles.entryNameRow}>
-                <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
-                  {currentChar.owner}
-                </Text>
-                <Text style={styles.entryRole}>
-                  {isNightingaleEntry ? "Legendary Support — Scout"
-                    : isProdigyEntry  ? "The Prodigy — Peak Strike"
-                    : "Legendary Assessment"}
-                </Text>
+                {/* 48 px circle face avatar */}
+                <View style={[styles.entryAvatarCircle, { borderColor: currentChar.ownerColor }]}>
+                  <ExpoImage source={currentChar.avatar} style={styles.entryAvatarImg} contentFit="cover" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
+                    {currentChar.owner}
+                  </Text>
+                  <Text style={styles.entryRole}>
+                    {isNightingaleEntry ? "Legendary Support — Scout"
+                      : isProdigyEntry  ? "The Prodigy — Peak Strike"
+                      : "Legendary Assessment"}
+                  </Text>
+                </View>
               </View>
               <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
                 "{currentChar.prompt}"
@@ -736,6 +733,13 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Large head-to-torso portrait — absolute, right side, torso flush with card bottom */}
+            <ExpoImage
+              source={currentChar.avatar}
+              style={styles.entryPortrait}
+              contentFit="contain"
+            />
           </Animated.View>
         )}
 
@@ -972,21 +976,26 @@ const styles = StyleSheet.create({
   // Entry card
   entryWrap: {
     marginBottom: 12,
-  },
-  entryPortraitRow: {
-    paddingHorizontal: 16,
-    alignItems:        "flex-start",
+    position:     "relative",
   },
   entryPortrait: {
-    width:        120,
-    height:       172,
-    marginBottom: -22,
+    position: "absolute",
+    right:    8,
+    bottom:   0,
+    width:    160,
+    height:   280,
   },
   entryCard: {
     borderRadius: 12, borderWidth: 1,
-    paddingVertical: 12, paddingHorizontal: 16, gap: 12,
+    paddingVertical: 12, paddingHorizontal: 16,
+    paddingRight: 120, gap: 12,
   },
-  entryNameRow: { gap: 2 },
+  entryNameRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  entryAvatarCircle: {
+    width: 48, height: 48, borderRadius: 24,
+    overflow: "hidden", borderWidth: 2,
+  },
+  entryAvatarImg: { width: 48, height: 48 },
   entryOwner:   { fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   entryRole:    { color: "rgba(255,255,255,0.50)", fontSize: 11, marginTop: 2 },
   entryDialogue: {

@@ -662,24 +662,21 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
               },
             ]}
           >
-            {/* Standing portrait above card */}
-            <View style={styles.entryPortraitRow}>
-              <ExpoImage
-                source={currentChar.avatar}
-                style={styles.entryPortrait}
-                contentFit="contain"
-              />
-            </View>
-
             {/* Dialogue card */}
             <View style={[styles.entryCard, { borderColor: currentChar.accentBorder, backgroundColor: currentChar.accentBg }]}>
               <View style={styles.entryNameRow}>
-                <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
-                  {currentChar.owner}
-                </Text>
-                <Text style={styles.entryRole}>
-                  {currentChar === PRODIGY_SKILL ? "The Prodigy — Peak Power" : currentChar === LAMP_SKILL ? "Legendary Support" : "Legendary Assessment"}
-                </Text>
+                {/* 48 px circle face avatar */}
+                <View style={[styles.entryAvatarCircle, { borderColor: currentChar.ownerColor }]}>
+                  <ExpoImage source={currentChar.avatar} style={styles.entryAvatarImg} contentFit="cover" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
+                    {currentChar.owner}
+                  </Text>
+                  <Text style={styles.entryRole}>
+                    {currentChar === PRODIGY_SKILL ? "The Prodigy — Peak Power" : currentChar === LAMP_SKILL ? "Legendary Support" : "Legendary Assessment"}
+                  </Text>
+                </View>
               </View>
               <Animated.Text style={[styles.entryDialogue, { opacity: dlgFade }]}>
                 "{currentChar.prompt}"
@@ -690,6 +687,13 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Large head-to-torso portrait — absolute, right side, torso flush with card bottom */}
+            <ExpoImage
+              source={currentChar.avatar}
+              style={styles.entryPortrait}
+              contentFit="contain"
+            />
           </Animated.View>
         )}
 
@@ -752,16 +756,20 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
 
         {/* ── MASTER BAI LESSON ── */}
         {isMasterBai && (
-          <Animated.View style={[{ opacity: mbFade }]} pointerEvents="none">
-            <View style={styles.mbPortraitRow}>
-              <ExpoImage source={ART.masterBai} style={styles.mbPortrait} contentFit="contain" />
-            </View>
+          <Animated.View style={[styles.mbWrap, { opacity: mbFade }]} pointerEvents="none">
             <View style={styles.mbPanel}>
-              <Text style={styles.mbSpeaker}>MASTER BAI</Text>
+              <View style={styles.mbNameRow}>
+                <View style={styles.mbAvatarCircle}>
+                  <ExpoImage source={ART.masterBai} style={styles.mbAvatarImg} contentFit="cover" />
+                </View>
+                <Text style={styles.mbSpeaker}>MASTER BAI</Text>
+              </View>
               <Text style={styles.mbLesson}>
                 "Scout first. Stabilize what you find. Then counter — with everything you have. Then reassess. Every time — in that sequence."
               </Text>
             </View>
+            {/* Large portrait — absolute, right side, torso flush with panel bottom */}
+            <ExpoImage source={ART.masterBai} style={styles.mbPortrait} contentFit="contain" />
           </Animated.View>
         )}
 
@@ -966,25 +974,38 @@ const styles = StyleSheet.create({
   // Entry card
   entryWrap: {
     marginBottom: 8,
-  },
-  entryPortraitRow: {
-    paddingHorizontal: 16,
-    alignItems:        "flex-start",
+    position:     "relative",
   },
   entryPortrait: {
-    width:        120,
-    height:       172,
-    marginBottom: -22,
+    position: "absolute",
+    right:    8,
+    bottom:   0,
+    width:    160,
+    height:   280,
   },
   entryCard: {
-    borderRadius: 14,
-    borderWidth:  1,
-    padding:      14,
-    paddingTop:   10,
-    gap:          10,
+    borderRadius:  14,
+    borderWidth:   1,
+    padding:       14,
+    paddingTop:    10,
+    paddingRight:  120,
+    gap:           10,
   },
   entryNameRow: {
-    gap: 2,
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           10,
+  },
+  entryAvatarCircle: {
+    width:        48,
+    height:       48,
+    borderRadius: 24,
+    overflow:     "hidden",
+    borderWidth:  2,
+  },
+  entryAvatarImg: {
+    width:  48,
+    height: 48,
   },
   entryOwner: {
     fontSize:      11,
@@ -1079,14 +1100,16 @@ const styles = StyleSheet.create({
   },
 
   // Master Bai lesson
-  mbPortraitRow: {
-    paddingHorizontal: 16,
-    alignItems:        "flex-start",
+  mbWrap: {
+    marginBottom: 8,
+    position:     "relative",
   },
   mbPortrait: {
-    width:        100,
-    height:       130,
-    marginBottom: -18,
+    position: "absolute",
+    right:    8,
+    bottom:   0,
+    width:    140,
+    height:   240,
   },
   mbPanel: {
     backgroundColor: "rgba(4,10,18,0.90)",
@@ -1094,15 +1117,33 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     "rgba(217,164,65,0.28)",
     padding:         14,
-    paddingTop:      8,
+    paddingTop:      10,
+    paddingRight:    110,
     gap:             8,
-    marginBottom:    8,
+  },
+  mbNameRow: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           10,
+  },
+  mbAvatarCircle: {
+    width:        48,
+    height:       48,
+    borderRadius: 24,
+    overflow:     "hidden",
+    borderWidth:  2,
+    borderColor:  "#D9A441",
+  },
+  mbAvatarImg: {
+    width:  48,
+    height: 48,
   },
   mbSpeaker: {
     color:         "#D9A441",
     fontSize:      10,
     fontWeight:    "800",
     letterSpacing: 2.5,
+    flex:          1,
   },
   mbLesson: {
     color:         "rgba(230,240,255,0.88)",
