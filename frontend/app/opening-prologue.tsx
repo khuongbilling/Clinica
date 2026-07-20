@@ -39,11 +39,11 @@ import {
 } from "@/src/game/prologueTypes";
 import OpeningMemoryCinematic        from "@/src/components/prologue/OpeningMemoryCinematic";
 import FormerSelfIntroScene          from "@/src/components/prologue/FormerSelfIntroScene";
-import PrologueTutorialGate          from "@/src/components/prologue/PrologueTutorialGate";
+import FormerSelfVictoryCutscene     from "@/src/components/prologue/FormerSelfVictoryCutscene";
 import WarningDialogueScene          from "@/src/components/prologue/WarningDialogueScene";
 import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfarctionRevealScene";
 import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
-import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScriptedBattle";
+import PrologueBossGate              from "@/src/components/prologue/PrologueBossGate";
 import LotusRecallCinematic             from "@/src/components/prologue/LotusRecallCinematic";
 import IdentityReconstructionScreen    from "@/src/components/prologue/IdentityReconstructionScreen";
 import PostRebirthAwakening            from "@/src/components/prologue/PostRebirthAwakening";
@@ -55,7 +55,7 @@ import ClinicaUniversityIntroduction   from "@/src/components/prologue/ClinicaUn
 const PHASE_ACCENTS: Record<ProloguePhase, string> = {
   opening_memory_cinematic:                    "#7EB8F7",
   former_self_battlefield_cutscene:            "#E8354A",
-  opening_battle_tutorial:                     "#4FD8C4",
+  former_self_victory_boast:                   "#E06080",
   warning_dialogue_scene:                      "#D9A441",
   silent_infarction_initial_reveal:            "#F77B72",
   former_self_support_loadout:                 "#9B8CF7",
@@ -139,28 +139,24 @@ export default function OpeningPrologue() {
   // ── Phase 2: Former Self intro — high-level healer at the height of power ──
   // Brief cinematic that shows who the Former Self was: legendary rank badges,
   // Nightingale and Fleming at their side, and a confident pre-battle line.
-  // Advances to `opening_battle_tutorial`.
+  // Advances to `former_self_victory_boast`.
   if (activePhase === "former_self_battlefield_cutscene") {
     return <FormerSelfIntroScene onComplete={handleContinue} />;
   }
 
-  // ── Phase 3: Original guided ward-shift tutorial battle ───────────────────
-  // Navigates directly to the real ward battle screen:
-  //   /battle?enemyId=dehydration_wisp&training=1&prologue=tutorial
-  // Loaner heroes are Florence Nightingale + Alexander Fleming (set in
-  // battle.tsx via the isPrologueTutorial flag).
-  // Tutorial teaches: Scout (lantern_of_clues) → Stabilize (guardians_touch)
-  //   → End Turn → Counter (breath_of_dawn) → Reassess → done.
-  // When the player wins, result.tsx advances the phase to
-  // `warning_dialogue_scene` and routes back to /opening-prologue.
-  if (activePhase === "opening_battle_tutorial") {
-    return <PrologueTutorialGate />;
+  // ── Phase 3: Overconfidence cutscene after the intro ─────────────────────
+  // Short 4-beat scene showing the Former Self dismissing every warning after
+  // the shift intro plays out. Nightingale and Master Bai grow uneasy while
+  // the Former Self waves off all concern.
+  // Advances to `warning_dialogue_scene`.
+  if (activePhase === "former_self_victory_boast") {
+    return <FormerSelfVictoryCutscene onComplete={handleContinue} />;
   }
 
   // ── Phase 4: Full-body donghua warning dialogue ────────────────────────────
-  // Plays AFTER the tutorial win. Master Bai, Nightingale, and Fleming warn
-  // the Former Self not to rush. The Former Self ignores all warnings and
-  // advances alone — the trap closes behind them.
+  // Master Bai, Nightingale, and Fleming warn the Former Self not to rush.
+  // The Former Self ignores all warnings and advances alone — the trap closes
+  // behind them.
   // Format: full-body standing speaker illustration + large dialogue panel.
   // Advances to `silent_infarction_initial_reveal`.
   if (activePhase === "warning_dialogue_scene") {
@@ -182,15 +178,16 @@ export default function OpeningPrologue() {
     return <PrologueLoadout onComplete={handleContinue} />;
   }
 
-  // ── Phase 7: Playable scripted-defeat battle — "The Fall" ─────────────────
-  // 4-turn simplified battle on the Emergency Treatment Plaza.
-  // Former Self is powerful but already doomed; Nightingale/Fleming are
-  // effective and competent.  Decoy enemies are killable.  Silent Infarction
-  // is not beatable — only partially revealable.  Scripted defeat is inevitable
-  // regardless of player skill.  Auto-advancing finale ("THE TRAP CLOSES.")
-  // then hands off to `lotus_recall_cinematic`.
+  // ── Phase 7: Real ward battle vs Silent Infarct — "The Fall" ────────────
+  // Routes to the real /battle screen with:
+  //   – Florence Nightingale (legendary) + Alexander Fleming (legendary) +
+  //     The Former Self (near-mythic) as loaner team
+  //   – Silent Infarct boss (scriptedLoss: true) — loss is inevitable
+  //   – +3 AP bonus to showcase the legendary/mythic hero skills
+  // battle.tsx isPrologueBoss handler: forces loss at turn 6, then calls
+  //   advanceProloguePhase('lotus_recall_cinematic') + routes /opening-prologue.
   if (activePhase === "scripted_defeat") {
-    return <PrologueScriptedBattle onComplete={handleContinue} />;
+    return <PrologueBossGate />;
   }
 
   // ── Phase 7: Lotus Recall Cinematic ────────────────────────────────────────

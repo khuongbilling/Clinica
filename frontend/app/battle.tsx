@@ -59,7 +59,7 @@ export default function Battle() {
 
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
-  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState } = usePlayer();
+  const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState, advanceProloguePhase } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
   const isFirstBattleGuided = activeTutorialId === "firstBattle";
   const isFirstBattleActionStep =
@@ -102,7 +102,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (isPrologueLoanerBattle || !player || (player.heroes_owned || []).length === 0) {
       const loanerIds = isPrologueTutorial
         ? ["prologue_nightingale", "prologue_fleming"]
-        : ["novice_guardian", "village_caretaker"];
+        : isPrologueBoss
+          ? ["prologue_nightingale", "prologue_fleming", "prologue_former_self"]
+          : ["novice_guardian", "village_caretaker"];
       return loanerIds
         .map((id) => HEROES.find((h) => h.id === id))
         .filter(Boolean) as Hero[];
@@ -155,7 +157,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0) + upgrades.startingStabilityBonus + classBonuses.startingStabilityBonus,
       enemyDamageReduction: handicap.enemyDamageReduction + upgrades.enemyDamageReduction,
       revealOneExtraClue: handicap.revealOneExtraClue || isTraining || upgrades.revealOneExtraClue || classBonuses.revealOneExtraClue,
-      apBonus: upgrades.apBonus + classBonuses.apBonus,
+      apBonus: upgrades.apBonus + classBonuses.apBonus + (isPrologueBoss ? 3 : 0),
       startShield: classBonuses.startShield,
       difficulty: player?.difficulty || undefined,
       additionalEnemies: getWaveAdditionalEnemies(enemy.id),
@@ -854,7 +856,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
 
     // Push 1 prologue boss: no normal Game Over, no normal victory rewards.
-    // Route straight into the Lotus Recall cutscene regardless of outcome.
+    // Advance prologue phase to lotus_recall_cinematic then return to
+    // /opening-prologue so the rich LotusRecallCinematic component plays.
     if (isPrologueBoss) {
       // C1: grant obj_prologue_done XP (step 1 — Recall Stabilized). Awaited
       // so XP is persisted before the navigation tear-down removes this screen.
@@ -863,7 +866,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         await markObjectiveXpGranted("obj_prologue_done");
         await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "prologue" });
       }
-      router.replace({ pathname: "/lotus-recall", params: { enemyId: enemy.id, replay: isReplay ? "1" : "" } });
+      try { await advanceProloguePhase("lotus_recall_cinematic"); } catch {}
+      router.replace("/opening-prologue" as any);
       return;
     }
     let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;

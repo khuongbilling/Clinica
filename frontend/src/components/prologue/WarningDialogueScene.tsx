@@ -38,7 +38,7 @@ const { height: H } = Dimensions.get("window");
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
-  battlefield: require("../../../assets/images/tactical_battlefield.png"),
+  battlefield: require("../../../assets/images/ward_corridor_battle.png"),
   masterBai:   require("../../../assets/images/master_bai.png"),
   nightingale: require("../../../assets/heroes/florence_nightingale.png"),
   fleming:     require("../../../assets/images/fleming_portrait.png"),

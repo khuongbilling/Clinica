@@ -36,7 +36,7 @@ import { usePlayer } from "@/src/game/store";
 const { width: W, height: H } = Dimensions.get("window");
 
 const ART = {
-  battlefield: require("../../../assets/images/tactical_battlefield.png"),
+  battlefield: require("../../../assets/images/ward_corridor_battle.png"),
   formerSelf:  require("../../../assets/images/former_self_portrait.png"),
   nightingale: require("../../../assets/images/nightingale_portrait.png"),
   fleming:     require("../../../assets/images/fleming_portrait.png"),

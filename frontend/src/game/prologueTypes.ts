@@ -1,19 +1,16 @@
 /**
- * Prologue State Framework — Push 1 v2 (reordered Push 10)
+ * Prologue State Framework — Push 1 v3
  *
  * 12-phase cinematic prologue for brand-new players.
- * Phase order (corrected Push 10):
+ * Phase order (Push 10 reorder + Push 11 overconfidence):
  *
  *   1. opening_memory_cinematic           — fragments of a former life
- *   2. former_self_battlefield_cutscene   — Former Self intro at high power
- *   3. opening_battle_tutorial            — original guided ward tutorial
- *                                           (dehydration_wisp, Scout→Stabilize→Counter→Reassess)
- *                                           Nightingale + Fleming as the two heroes
- *   4. warning_dialogue_scene             — full-body donghua warning dialogue AFTER tutorial
- *                                           (Master Bai, Nightingale, Fleming, Former Self ignores)
+ *   2. former_self_battlefield_cutscene   — Former Self intro at high power on the ward battlefield
+ *   3. former_self_victory_boast          — post-intro overconfidence beat (before warnings reach them)
+ *   4. warning_dialogue_scene             — Master Bai + Nightingale + Fleming warn the Former Self
  *   5. silent_infarction_initial_reveal   — Silent Infarction trap reveals itself
  *   6. former_self_support_loadout        — temporary prologue loadout (NF auto-added)
- *   7. scripted_defeat                    — playable scripted-loss second battle
+ *   7. scripted_defeat                    — real battle vs Silent Infarct (scripted loss)
  *   8. lotus_recall_cinematic             — Lotus Recall defeat cinematic
  *   9. identity_reconstruction_character_creation — character creation / rebirth
  *  10. post_rebirth_awakening             — Level 1 awakening, Master Bai
@@ -28,7 +25,7 @@
 export const PROLOGUE_PHASES = [
   'opening_memory_cinematic',
   'former_self_battlefield_cutscene',
-  'opening_battle_tutorial',
+  'former_self_victory_boast',
   'warning_dialogue_scene',
   'silent_infarction_initial_reveal',
   'former_self_support_loadout',
@@ -45,7 +42,7 @@ export type ProloguePhase = typeof PROLOGUE_PHASES[number];
 export const PROLOGUE_PHASE_LABELS: Record<ProloguePhase, string> = {
   opening_memory_cinematic:                    'Awakening',
   former_self_battlefield_cutscene:            'The Battlefield',
-  opening_battle_tutorial:                     'First Contact',
+  former_self_victory_boast:                   'The Overconfidence',
   warning_dialogue_scene:                      'The Warning',
   silent_infarction_initial_reveal:            'The Silent Infarction',
   former_self_support_loadout:                 'Prepare for Battle',
@@ -62,8 +59,8 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
     'Fragments of a life before. Warmth fading. A voice calling you back.',
   former_self_battlefield_cutscene:
     'The ward floor — your former domain. Florence and Fleming stand beside you.',
-  opening_battle_tutorial:
-    'Your first shift. Scout. Stabilize. Counter. Reassess.',
+  former_self_victory_boast:
+    'The shift ends too easily. The Former Self does not notice the warning signs.',
   warning_dialogue_scene:
     'Master Bai urges caution. The Former Self does not listen.',
   silent_infarction_initial_reveal:
