@@ -6,6 +6,7 @@
 - [Clinica C4 milestone rewards](clinica-c4-milestones.md) — milestones.ts: LEVEL_MILESTONES/CHAPTER_CHESTS/CHAPTER_3STAR_REWARDS; 3 claimed_ arrays in PlayerState; claimLevelReward/claimChapterChest/claimChapter3Star in store Ctx.
 - [Reanimated Expo Go constraint](clinica-reanimated-expo-go.md) — MUST stay on react-native-reanimated ~3.16.7; v4 requires react-native-worklets which is NOT in Expo Go and crashes it silently on native startup.
 - [Clinica adaptive system](clinica-adaptive-system.md) — two-axis: LearningProfile→ExplanationLayer (depth/language) + DifficultyLevel (clue visibility); fully independent axes.
+- [Prologue tutorial corruption math](prologue-tutorial-corruption.md) — wisp must have corruption≥200 or legendary skills (strike:15+25+28+30) kill it before End Turn step is reached.
 - [Ward Defense board layout](ward-defense-board-layout.md) — map PNG IS the background; board MUST aspect-lock to image's EXACT pixel ratio (768/1408, not 9:16) or overlays drift; measure tile coords from pixels.
 - [Clinica image rendering](clinica-image-rendering.md) — use expo-image (ExpoImage + contentFit) for scene backgrounds in nested flex containers; RN Image fails silently on web inside ward-defense battle View.
 - [Clinica battle scene FX](clinica-battle-scene-fx.md) — animated overlays must be invisible at Animated rest value (0), not just anim end; per-system bg map keyed by enemy.primarySystem; stability diminishing-returns via getStabilityGainModifier.

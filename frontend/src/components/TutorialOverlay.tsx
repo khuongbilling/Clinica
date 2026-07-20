@@ -228,9 +228,13 @@ export function TutorialOverlay() {
           {currentStep.banner ? (
             <>
               <View style={{ flex: 1 }} />
-              <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
-                <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
-              </Pressable>
+              {instant ? (
+                <Pressable onPress={advanceStep} style={[styles.nextBtn, { backgroundColor: accent }]}>
+                  <Text style={styles.nextBtnTxt}>{currentStep.nextText || "NEXT"}</Text>
+                </Pressable>
+              ) : (
+                <Text style={[styles.tapPrompt, { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>▸ tap to read</Text>
+              )}
             </>
           ) : (
             <Text style={[styles.tapPrompt, { color: instant ? accent : COLORS.onSurfaceTertiary }]} numberOfLines={1}>
