@@ -46,6 +46,8 @@ import PrologueScriptedBattle        from "@/src/components/prologue/PrologueScr
 import LotusRecallCinematic             from "@/src/components/prologue/LotusRecallCinematic";
 import IdentityReconstructionScreen    from "@/src/components/prologue/IdentityReconstructionScreen";
 import PostRebirthAwakening            from "@/src/components/prologue/PostRebirthAwakening";
+import MemoryEchoAwardScene            from "@/src/components/prologue/MemoryEchoAwardScene";
+import ClinicaUniversityIntroduction   from "@/src/components/prologue/ClinicaUniversityIntroduction";
 
 // Phase accent palette — each phase gets a distinct colour to help signal
 // the emotional beat of that scene.  Replace with art-matched palette later.
@@ -204,6 +206,30 @@ export default function OpeningPrologue() {
   // Advances to memory_echo_award_scene.
   if (activePhase === "post_rebirth_awakening") {
     return <PostRebirthAwakening onComplete={handleContinue} />;
+  }
+
+  // ── Phase 10: Memory Echo Award Scene ──────────────────────────────────────
+  // Awards Nightingale's Lamp Fragment and Fleming's Culture Notes as
+  // permanent inventory items (NOT permanent heroes, NOT hero slots).
+  // claimPrologueRewards is called on mount — idempotent, guarded by
+  // prologue_rewards_claimed — so replays and reloads never double-award.
+  // Nightingale's warm-gold echo appears → speaks → leaves her card.
+  // Fleming's cool-teal echo appears → speaks → leaves his card.
+  // Three system messages accumulate → both cards revealed side-by-side.
+  // Advances to clinica_university_introduction.
+  if (activePhase === "memory_echo_award_scene") {
+    return <MemoryEchoAwardScene onComplete={handleContinue} />;
+  }
+
+  // ── Phase 11: Clinica University Introduction ───────────────────────────────
+  // Final prologue phase. Introduces the University as the player's first
+  // destination. Recall copy: "not recalled because you were ready / recalled
+  // because you can still learn / begin with Lotus Lessons."
+  // Highlights: Lotus Lessons → Simulations → Research Library → Class Tree
+  // → Ward Shift. "ENTER CLINICA UNIVERSITY" calls handleContinue which
+  // triggers completePrologueCinematic and routes to the hub.
+  if (activePhase === "clinica_university_introduction") {
+    return <ClinicaUniversityIntroduction onComplete={handleContinue} />;
   }
 
   return (
