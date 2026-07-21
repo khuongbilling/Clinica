@@ -46,12 +46,15 @@ import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
-  battlefield:     require("../../../assets/images/tactical_battlefield.png"),
-  theProdigy:      require("../../../assets/images/prodigy_vn_canonical.png"),
-  nightingale:     require("../../../assets/images/nightingale_vn_bust.png"),
-  fleming:         require("../../../assets/images/fleming_vn_bust.png"),
-  masterBai:       require("../../../assets/images/master_bai_vn.png"),
-  spectrePortrait: require("../../../assets/images/corrupted_water_spectre.png"),
+  battlefield:       require("../../../assets/images/tactical_battlefield.png"),
+  theProdigy:        require("../../../assets/images/prodigy_vn_canonical.png"),
+  nightingale:       require("../../../assets/images/nightingale_vn_bust.png"),
+  fleming:           require("../../../assets/images/fleming_vn_bust.png"),
+  masterBai:         require("../../../assets/images/master_bai_vn.png"),
+  spectrePortrait:   require("../../../assets/images/corrupted_water_spectre.png"),
+  prodigySprite:     require("../../../assets/images/prodigy_battle_sprite.png"),
+  nightingaleSprite: require("../../../assets/images/nightingale_battle_sprite.png"),
+  flemingSprite:     require("../../../assets/images/fleming_battle_sprite.png"),
 } as const;
 
 // ─── Stage machine type ───────────────────────────────────────────────────────
@@ -618,6 +621,22 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
         pointerEvents="none"
       />
 
+      {/* ── ALLY SPRITE PANEL — Prodigy / Nightingale / Fleming ── */}
+      <View style={styles.allyRow} pointerEvents="none">
+        <View style={styles.allyUnit}>
+          <ExpoImage source={ART.nightingaleSprite} style={styles.allySprite} contentFit="contain" />
+          <Text style={[styles.allyName, { color: "#E8C453" }]}>NIGHTINGALE</Text>
+        </View>
+        <View style={styles.allyUnit}>
+          <ExpoImage source={ART.prodigySprite} style={styles.allySprite} contentFit="contain" />
+          <Text style={[styles.allyName, { color: "#E8354A" }]}>THE PRODIGY</Text>
+        </View>
+        <View style={styles.allyUnit}>
+          <ExpoImage source={ART.flemingSprite} style={styles.allySprite} contentFit="contain" />
+          <Text style={[styles.allyName, { color: "#3ECFB2" }]}>FLEMING</Text>
+        </View>
+      </View>
+
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
         {/* ── TOP LABEL ── */}
         <Animated.View style={[styles.topBar, { opacity: labelFade }]} pointerEvents="none">
@@ -825,6 +844,34 @@ const styles = StyleSheet.create({
     left:     0,
     right:    0,
     height:   "60%",
+  },
+
+  allyRow: {
+    position:       "absolute",
+    bottom:         212,
+    left:           0,
+    right:          0,
+    flexDirection:  "row",
+    justifyContent: "space-evenly",
+    alignItems:     "flex-end",
+    paddingHorizontal: 8,
+  },
+  allyUnit: {
+    alignItems: "center",
+    gap:        2,
+  },
+  allySprite: {
+    width:   82,
+    height:  118,
+    opacity: 0.92,
+  },
+  allyName: {
+    fontSize:      7,
+    fontWeight:    "800",
+    letterSpacing: 0.8,
+    textShadowColor:  "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 
   safe: {
