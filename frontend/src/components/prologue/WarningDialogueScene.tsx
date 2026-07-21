@@ -3,24 +3,19 @@
  *
  * Phase: warning_dialogue_scene
  *
- * Visual Novel–style dialogue scene that plays AFTER the overconfidence
- * cutscene. Master Bai, Florence Nightingale, Alexander Fleming, and the
- * Former Self deliver the narrative warning beat.
+ * VN-style warning after the overconfidence cutscene: Master Bai,
+ * Florence Nightingale, Alexander Fleming, and the Former Self deliver
+ * the narrative warning beat before the inevitable scripted loss.
  *
- * VN layout (Persona 5 / Disgaea reference):
- *   – Full background: ward_corridor_battle.png (panning Ken Burns)
- *   – Half-body character art stands on the RIGHT side of the screen
- *   – Bottom bar (full width, semi-transparent):
- *       ┌──────────────────────────────────────────────────────────┐
- *       │ [●portrait] Speaker Name                         [▾ NEXT]│
- *       │                                                          │
- *       │   Typewriter dialogue text…                             │
- *       └──────────────────────────────────────────────────────────┘
- *   – Portrait thumbnail: circle avatar bottom-left of the bar
- *   – Speaker name: accent-coloured, above dialogue text
- *   – Typewriter: character-by-character reveal, ~28 chars/sec
- *   – Tap anywhere: skip typewriter → show full line; tap again → advance
- *   – Red pulse overlay on the final trapReveal beat
+ * VN layout (anime dialogue reference style):
+ *   – Full background: ward_corridor_battle.png (Ken Burns pan)
+ *   – Current speaker's portrait fades in on the right (above bar)
+ *   – Bottom bar:
+ *       [avatar]   dialogue text…                           [▾]
+ *       [ name ]
+ *   – NO oval/capsule glow behind character art
+ *   – Tap: skip typewriter → tap again → advance
+ *   – Last beat has trapReveal: red pulse; auto-completes on tap
  */
 
 import React, {
@@ -40,62 +35,52 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  PROLOGUE_CHARACTERS,
+  type PrologueSpeakerId,
+} from "../../game/prologueCharacters";
 
 const { width: W, height: H } = Dimensions.get("window");
 
-// ─── Art ─────────────────────────────────────────────────────────────────────
-
-const ART = {
-  battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
-  nightingale: require("../../../assets/images/nightingale_legend_vn.png"),
-  fleming:     require("../../../assets/images/fleming_legend_vn.png"),
-  prodigy:     require("../../../assets/images/the_prodigy_vn.png"),
-} as const;
-
-// ─── Speakers ─────────────────────────────────────────────────────────────────
-
-type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
+const BG = require("../../../assets/images/ward_corridor_battle.png");
 
 const SPEAKERS: Record<
-  SpeakerId,
-  { label: string; color: string; barColor: string; art: any; portrait: any }
+  PrologueSpeakerId,
+  { label: string; color: string; barColor: string; art: any; avatar: any }
 > = {
+  PRODIGY: {
+    label:    PROLOGUE_CHARACTERS.PRODIGY.name,
+    color:    PROLOGUE_CHARACTERS.PRODIGY.color,
+    barColor: PROLOGUE_CHARACTERS.PRODIGY.barColor,
+    art:      PROLOGUE_CHARACTERS.PRODIGY.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+  },
   MASTER_BAI: {
-    label:    "Master Bai",
-    color:    "#D9A441",
-    barColor: "rgba(30,20,5,0.93)",
-    art:      ART.masterBai,
-    portrait: ART.masterBai,
+    label:    PROLOGUE_CHARACTERS.MASTER_BAI.name,
+    color:    PROLOGUE_CHARACTERS.MASTER_BAI.color,
+    barColor: PROLOGUE_CHARACTERS.MASTER_BAI.barColor,
+    art:      PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
   },
   NIGHTINGALE: {
-    label:    "Florence Nightingale",
-    color:    "#4FD8C4",
-    barColor: "rgba(5,22,20,0.93)",
-    art:      ART.nightingale,
-    portrait: ART.nightingale,
+    label:    PROLOGUE_CHARACTERS.NIGHTINGALE.name,
+    color:    PROLOGUE_CHARACTERS.NIGHTINGALE.color,
+    barColor: PROLOGUE_CHARACTERS.NIGHTINGALE.barColor,
+    art:      PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
   },
   FLEMING: {
-    label:    "Alexander Fleming",
-    color:    "#78B8F0",
-    barColor: "rgba(5,15,28,0.93)",
-    art:      ART.fleming,
-    portrait: ART.fleming,
-  },
-  PRODIGY: {
-    label:    "The Former Self",
-    color:    "#E8354A",
-    barColor: "rgba(28,5,8,0.93)",
-    art:      ART.prodigy,
-    portrait: ART.prodigy,
+    label:    PROLOGUE_CHARACTERS.FLEMING.name,
+    color:    PROLOGUE_CHARACTERS.FLEMING.color,
+    barColor: PROLOGUE_CHARACTERS.FLEMING.barColor,
+    art:      PROLOGUE_CHARACTERS.FLEMING.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.FLEMING.avatar48,
   },
 };
 
-// ─── Beats ────────────────────────────────────────────────────────────────────
-
 interface Beat {
-  speaker:    SpeakerId;
-  line:       string;
+  speaker:     PrologueSpeakerId;
+  line:        string;
   trapReveal?: boolean;
 }
 
@@ -122,18 +107,15 @@ const BEATS: Beat[] = [
 ];
 
 const CHARS_PER_SEC = 32;
+const BAR_HEIGHT    = 200;
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
-interface Props {
-  onComplete: () => void;
-}
+interface Props { onComplete: () => void }
 
 export default function WarningDialogueScene({ onComplete }: Props) {
   const insets = useSafeAreaInsets();
 
-  const [beatIdx,    setBeatIdx]    = useState(0);
-  const [displayed,  setDisplayed]  = useState("");
+  const [beatIdx,        setBeatIdx]        = useState(0);
+  const [displayed,      setDisplayed]      = useState("");
   const [typewriterDone, setTypewriterDone] = useState(false);
 
   const beatRef    = useRef(0);
@@ -142,22 +124,19 @@ export default function WarningDialogueScene({ onComplete }: Props) {
   const twTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
   const timers     = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Animations
-  const bgFade      = useRef(new Animated.Value(0)).current;
-  const bgScale     = useRef(new Animated.Value(1.04)).current;
-  const redOverlay  = useRef(new Animated.Value(0)).current;
-  const charFade    = useRef(new Animated.Value(0)).current;
-  const barSlide    = useRef(new Animated.Value(60)).current;
-  const barFade     = useRef(new Animated.Value(0)).current;
-  const closeFade   = useRef(new Animated.Value(0)).current;
+  const bgFade     = useRef(new Animated.Value(0)).current;
+  const bgScale    = useRef(new Animated.Value(1.04)).current;
+  const redOverlay = useRef(new Animated.Value(0)).current;
+  const charFade   = useRef(new Animated.Value(0)).current;
+  const barSlide   = useRef(new Animated.Value(60)).current;
+  const barFade    = useRef(new Animated.Value(0)).current;
+  const closeFade  = useRef(new Animated.Value(0)).current;
 
   const after = (ms: number, fn: () => void) => {
     const t = setTimeout(() => { if (mountedRef.current) fn(); }, ms);
     timers.current.push(t);
     return t;
   };
-
-  // ── Typewriter ────────────────────────────────────────────────────────────
 
   const stopTypewriter = () => {
     if (twTimer.current) { clearInterval(twTimer.current); twTimer.current = null; }
@@ -166,36 +145,25 @@ export default function WarningDialogueScene({ onComplete }: Props) {
   const startTypewriter = useCallback((line: string) => {
     stopTypewriter();
     if (!mountedRef.current) return;
-    setDisplayed("");
-    setTypewriterDone(false);
-
+    setDisplayed(""); setTypewriterDone(false);
     let pos = 0;
     const interval = Math.round(1000 / CHARS_PER_SEC);
     twTimer.current = setInterval(() => {
       pos += 1;
       setDisplayed(line.slice(0, pos));
-      if (pos >= line.length) {
-        stopTypewriter();
-        if (mountedRef.current) setTypewriterDone(true);
-      }
+      if (pos >= line.length) { stopTypewriter(); if (mountedRef.current) setTypewriterDone(true); }
     }, interval);
   }, []);
 
   const skipTypewriter = useCallback((line: string) => {
-    stopTypewriter();
-    setDisplayed(line);
-    setTypewriterDone(true);
+    stopTypewriter(); setDisplayed(line); setTypewriterDone(true);
   }, []);
-
-  // ── Show beat ─────────────────────────────────────────────────────────────
 
   const revealBeat = useCallback((idx: number) => {
     if (!mountedRef.current) return;
-    beatRef.current = idx;
-    setBeatIdx(idx);
+    beatRef.current = idx; setBeatIdx(idx);
 
     const beat = BEATS[idx];
-
     if (beat.trapReveal) {
       Animated.loop(
         Animated.sequence([
@@ -205,60 +173,38 @@ export default function WarningDialogueScene({ onComplete }: Props) {
       ).start();
     }
 
-    // Slide bar in, then start typewriter
     Animated.parallel([
       Animated.timing(barSlide, { toValue: 0,  duration: 280, useNativeDriver: false }),
       Animated.timing(barFade,  { toValue: 1,  duration: 280, useNativeDriver: false }),
-      Animated.timing(charFade, { toValue: 1,  duration: 250, useNativeDriver: false }),
-    ]).start(() => {
-      if (!mountedRef.current) return;
-      startTypewriter(beat.line);
-    });
+      Animated.timing(charFade, { toValue: 1,  duration: 300, useNativeDriver: false }),
+    ]).start(() => { if (!mountedRef.current) return; startTypewriter(beat.line); });
   }, [barSlide, barFade, charFade, redOverlay, startTypewriter]);
-
-  // ── Boot ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     mountedRef.current = true;
-
     Animated.loop(
       Animated.sequence([
         Animated.timing(bgScale, { toValue: 1.0,  duration: 8000, useNativeDriver: false }),
         Animated.timing(bgScale, { toValue: 1.04, duration: 8000, useNativeDriver: false }),
       ])
     ).start();
-
     Animated.timing(bgFade, { toValue: 1, duration: 600, useNativeDriver: false }).start(() => {
       after(200, () => revealBeat(0));
     });
-
-    return () => {
-      mountedRef.current = false;
-      stopTypewriter();
-      timers.current.forEach(clearTimeout);
-    };
+    return () => { mountedRef.current = false; stopTypewriter(); timers.current.forEach(clearTimeout); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ── Tap handler ───────────────────────────────────────────────────────────
 
   const handleTap = useCallback(() => {
     if (busyRef.current || !mountedRef.current) return;
 
     const beat = BEATS[beatRef.current];
-
-    // If typewriter still running — skip to end of current line
-    if (!typewriterDone) {
-      skipTypewriter(beat.line);
-      return;
-    }
+    if (!typewriterDone) { skipTypewriter(beat.line); return; }
 
     busyRef.current = true;
-
     const nextIdx = beatRef.current + 1;
 
     if (nextIdx >= BEATS.length) {
-      // Final beat — close out
       Animated.parallel([
         Animated.timing(barFade,  { toValue: 0, duration: 300, useNativeDriver: false }),
         Animated.timing(charFade, { toValue: 0, duration: 300, useNativeDriver: false }),
@@ -270,43 +216,35 @@ export default function WarningDialogueScene({ onComplete }: Props) {
       return;
     }
 
-    // Reset bar for next beat
     Animated.parallel([
       Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: false }),
       Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: false }),
     ]).start(() => {
       if (!mountedRef.current) return;
-      barSlide.setValue(60);
-      charFade.setValue(0);
-      busyRef.current = false;
-      revealBeat(nextIdx);
+      barSlide.setValue(60); charFade.setValue(0); busyRef.current = false; revealBeat(nextIdx);
     });
   }, [typewriterDone, skipTypewriter, barFade, charFade, barSlide, closeFade, onComplete, revealBeat]);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   const beat    = BEATS[beatIdx];
   const speaker = SPEAKERS[beat.speaker];
-
-  const BAR_HEIGHT = 168;
+  const barTotal = BAR_HEIGHT + insets.bottom;
 
   return (
     <Pressable style={s.root} onPress={handleTap}>
 
-      {/* ── Background ─────────────────────────────────────────── */}
+      {/* ── Background ─────────────────────────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: bgFade }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: bgScale }] }]}>
-          <ExpoImage source={ART.battlefield} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <ExpoImage source={BG} style={StyleSheet.absoluteFill} contentFit="cover" />
         </Animated.View>
-
-        {/* Gradient — heavier at bottom where the bar lives */}
         <LinearGradient
-          colors={["rgba(0,0,0,0.28)", "rgba(0,0,0,0.15)", "rgba(4,8,18,0.72)"]}
-          locations={[0, 0.5, 1]}
+          colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.05)", "rgba(4,8,18,0.78)"]}
+          locations={[0, 0.45, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-
         {/* Trap-reveal red pulse */}
         <Animated.View
           style={[StyleSheet.absoluteFill, { backgroundColor: "#FF1020", opacity: redOverlay }]}
@@ -314,75 +252,56 @@ export default function WarningDialogueScene({ onComplete }: Props) {
         />
       </Animated.View>
 
-      {/* ── Character half-body (right side, above bar) ────────── */}
+      {/* ── Character portrait — right side, above bar ─────────────── */}
       <Animated.View
-        style={[s.charWrap, { bottom: BAR_HEIGHT + insets.bottom, opacity: charFade }]}
+        style={[s.charWrap, { bottom: barTotal, opacity: charFade }]}
         pointerEvents="none"
       >
-        <ExpoImage
-          source={speaker.art}
-          style={s.charArt}
-          contentFit="contain"
-        />
-        {/* Subtle glow halo behind character */}
-        <View
-          style={[s.charGlow, { backgroundColor: `${speaker.color}18` }]}
-          pointerEvents="none"
-        />
+        <ExpoImage source={speaker.art} style={s.charArt} contentFit="contain" />
       </Animated.View>
 
-      {/* ── VN Dialogue Bar ────────────────────────────────────── */}
+      {/* ── VN Dialogue Bar ────────────────────────────────────────── */}
       <Animated.View
         style={[
           s.bar,
           {
-            opacity:          barFade,
-            transform:        [{ translateY: barSlide }],
-            height:           BAR_HEIGHT + insets.bottom,
-            paddingBottom:    insets.bottom + 12,
-            backgroundColor:  speaker.barColor,
-            borderTopColor:   `${speaker.color}55`,
+            opacity:         barFade,
+            transform:       [{ translateY: barSlide }],
+            height:          barTotal,
+            paddingBottom:   insets.bottom + 14,
+            backgroundColor: speaker.barColor,
+            borderTopColor:  `${speaker.color}66`,
           },
         ]}
         pointerEvents="none"
       >
-        {/* Top accent line */}
-        <View style={[s.barAccentLine, { backgroundColor: speaker.color }]} />
-
+        <View style={[s.barAccent, { backgroundColor: speaker.color }]} />
         <View style={s.barInner}>
-          {/* Portrait thumbnail — circle */}
-          <View style={[s.portraitRing, { borderColor: speaker.color }]}>
-            <ExpoImage
-              source={speaker.portrait}
-              style={s.portraitImg}
-              contentFit="cover"
-            />
-          </View>
-
-          {/* Text column */}
-          <View style={s.textCol}>
-            {/* Speaker name */}
-            <Text style={[s.speakerName, { color: speaker.color }]} numberOfLines={1}>
+          <View style={s.leftCol}>
+            <View style={[s.avatarRing, { borderColor: speaker.color }]}>
+              <ExpoImage source={speaker.avatar} style={s.avatarImg} contentFit="cover" />
+            </View>
+            <Text style={[s.speakerName, { color: speaker.color }]} numberOfLines={2}>
               {speaker.label}
             </Text>
+          </View>
 
-            {/* Dialogue text */}
+          <View style={s.textCol}>
             <Text style={s.dlgText} numberOfLines={4}>
               {displayed}
               {!typewriterDone && <Text style={{ color: speaker.color }}>▌</Text>}
             </Text>
           </View>
 
-          {/* Next arrow */}
           {typewriterDone && (
-            <View style={s.nextArrowWrap}>
-              <Text style={[s.nextArrow, { color: speaker.color }]}>▾</Text>
+            <View style={s.arrowWrap}>
+              <Text style={[s.arrow, { color: speaker.color }]}>▾</Text>
             </View>
           )}
         </View>
       </Animated.View>
 
-      {/* ── Fade-to-black close ────────────────────────────────── */}
+      {/* ── Fade-to-black ──────────────────────────────────────────── */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#040810", opacity: closeFade }]}
         pointerEvents="none"
@@ -391,99 +310,63 @@ export default function WarningDialogueScene({ onComplete }: Props) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#040810",
-  },
+  root: { flex: 1, backgroundColor: "#040810" },
 
-  // Character art
   charWrap: {
-    position:  "absolute",
-    right:     W * 0.02,
-    alignItems: "flex-end",
+    position:       "absolute",
+    right:          0,
+    alignItems:     "flex-end",
     justifyContent: "flex-end",
-    width:     W * 0.62,
-    height:    H * 0.64,
+    width:          W * 0.74,
+    height:         H * 0.72,
   },
-  charArt: {
-    width:  "100%",
-    height: "100%",
-  },
-  charGlow: {
-    position:     "absolute",
-    width:        "70%",
-    height:       "80%",
-    right:        "15%",
-    bottom:       0,
-    borderRadius: 200,
-  },
+  charArt: { width: "100%", height: "100%" },
 
-  // VN bar
   bar: {
-    position:      "absolute",
-    bottom:        0,
-    left:          0,
-    right:         0,
-    borderTopWidth: 1,
+    position:       "absolute",
+    bottom:         0,
+    left:           0,
+    right:          0,
+    borderTopWidth: 1.5,
   },
-  barAccentLine: {
-    height: 2,
-    width:  "100%",
-    opacity: 0.7,
-  },
+  barAccent: { height: 2, width: "100%", opacity: 0.8 },
+
   barInner: {
-    flex:           1,
-    flexDirection:  "row",
-    alignItems:     "center",
+    flex:              1,
+    flexDirection:     "row",
+    alignItems:        "center",
     paddingHorizontal: 16,
-    paddingTop:     10,
-    gap:            14,
+    paddingTop:        12,
+    gap:               14,
   },
 
-  // Portrait
-  portraitRing: {
-    width:        64,
-    height:       64,
-    borderRadius: 32,
-    borderWidth:  2.5,
+  leftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 80 },
+  avatarRing: {
+    width:        80,
+    height:       80,
+    borderRadius: 40,
+    borderWidth:  3,
     overflow:     "hidden",
-    flexShrink:   0,
   },
-  portraitImg: {
-    width:  "100%",
-    height: "100%",
-  },
-
-  // Text
-  textCol: {
-    flex:  1,
-    gap:   4,
-  },
+  avatarImg:   { width: "100%", height: "100%" },
   speakerName: {
-    fontSize:     11,
-    fontWeight:   "800",
-    letterSpacing: 2,
+    fontSize:      10,
+    fontWeight:    "800",
+    letterSpacing: 1.2,
+    textAlign:     "center",
     textTransform: "uppercase",
-  },
-  dlgText: {
-    color:      "#DCE8F2",
-    fontSize:   15.5,
-    fontWeight: "400",
-    lineHeight: 24,
+    lineHeight:    14,
   },
 
-  // Next arrow
-  nextArrowWrap: {
-    alignSelf:  "flex-end",
-    paddingBottom: 4,
-    flexShrink: 0,
+  textCol:  { flex: 1 },
+  dlgText: {
+    color:      "#E8EEF6",
+    fontSize:   17,
+    fontWeight: "400",
+    lineHeight: 26,
   },
-  nextArrow: {
-    fontSize:   22,
-    fontWeight: "900",
-    opacity:    0.9,
-  },
+
+  arrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
+  arrow:     { fontSize: 24, fontWeight: "900", opacity: 0.9 },
 });

@@ -3,16 +3,17 @@
  *
  * Phase: former_self_battlefield_cutscene
  *
- * Visual Novel dialogue scene that plays BEFORE the first tutorial battle.
- * The overconfident Prodigy dismisses Master Bai, Nightingale, and Fleming,
- * then charges in alone — setting up the inevitable fall.
+ * Opening: the overconfident Prodigy dismisses Master Bai, Nightingale,
+ * and Fleming, then charges in alone — setting up the inevitable fall.
  *
- * VN layout (matches WarningDialogueScene):
- *   – Full background: ward_corridor_battle.png (Ken Burns pan)
- *   – Only the CURRENT speaker's half-body art appears on the right
- *   – Bottom bar: [64px portrait] Speaker Name | typewriter dialogue
- *   – Tap: skip typewriter → tap again → next beat
- *   – Last beat auto-advances after 1.5 s
+ * VN layout (reference: anime dialogue style):
+ *   – Full background fills screen with Ken Burns pan
+ *   – Current speaker's half-body portrait fades in on the right side
+ *   – Bottom dialogue bar:
+ *       [avatar]   dialogue text…                            [▾]
+ *       [ name ]
+ *   – Tap: skip typewriter → tap again → advance to next beat
+ *   – Last beat has autoEnd: true — auto-advances 1.5 s after text finishes
  */
 
 import React, {
@@ -32,63 +33,59 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  PROLOGUE_CHARACTERS,
+  type PrologueSpeakerId,
+} from "../../game/prologueCharacters";
 
 const { width: W, height: H } = Dimensions.get("window");
 
-// ─── Art ─────────────────────────────────────────────────────────────────────
+// ─── Background ───────────────────────────────────────────────────────────────
 
-const ART = {
-  battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
-  nightingale: require("../../../assets/images/nightingale_legend_vn.png"),
-  fleming:     require("../../../assets/images/fleming_legend_vn.png"),
-  prodigy:     require("../../../assets/images/the_prodigy_vn.png"),
-} as const;
+const BG = require("../../../assets/images/ward_corridor_battle.png");
 
-// ─── Speakers ─────────────────────────────────────────────────────────────────
-
-type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
+// ─── Speaker lookup (pulls from canonical resolver) ───────────────────────────
 
 const SPEAKERS: Record<
-  SpeakerId,
-  { label: string; color: string; barColor: string; art: any; portrait: any }
+  PrologueSpeakerId,
+  { label: string; color: string; barColor: string; art: any; avatar: any }
 > = {
+  PRODIGY: {
+    label:    PROLOGUE_CHARACTERS.PRODIGY.name,
+    color:    PROLOGUE_CHARACTERS.PRODIGY.color,
+    barColor: PROLOGUE_CHARACTERS.PRODIGY.barColor,
+    art:      PROLOGUE_CHARACTERS.PRODIGY.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+  },
   MASTER_BAI: {
-    label:    "Master Bai",
-    color:    "#D9A441",
-    barColor: "rgba(30,20,5,0.93)",
-    art:      ART.masterBai,
-    portrait: ART.masterBai,
+    label:    PROLOGUE_CHARACTERS.MASTER_BAI.name,
+    color:    PROLOGUE_CHARACTERS.MASTER_BAI.color,
+    barColor: PROLOGUE_CHARACTERS.MASTER_BAI.barColor,
+    art:      PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
   },
   NIGHTINGALE: {
-    label:    "Florence Nightingale",
-    color:    "#4FD8C4",
-    barColor: "rgba(5,22,20,0.93)",
-    art:      ART.nightingale,
-    portrait: ART.nightingale,
+    label:    PROLOGUE_CHARACTERS.NIGHTINGALE.name,
+    color:    PROLOGUE_CHARACTERS.NIGHTINGALE.color,
+    barColor: PROLOGUE_CHARACTERS.NIGHTINGALE.barColor,
+    art:      PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
   },
   FLEMING: {
-    label:    "Alexander Fleming",
-    color:    "#78B8F0",
-    barColor: "rgba(5,15,28,0.93)",
-    art:      ART.fleming,
-    portrait: ART.fleming,
-  },
-  PRODIGY: {
-    label:    "The Former Self",
-    color:    "#E8354A",
-    barColor: "rgba(28,5,8,0.93)",
-    art:      ART.prodigy,
-    portrait: ART.prodigy,
+    label:    PROLOGUE_CHARACTERS.FLEMING.name,
+    color:    PROLOGUE_CHARACTERS.FLEMING.color,
+    barColor: PROLOGUE_CHARACTERS.FLEMING.barColor,
+    art:      PROLOGUE_CHARACTERS.FLEMING.largePortrait,
+    avatar:   PROLOGUE_CHARACTERS.FLEMING.avatar48,
   },
 };
 
 // ─── Beats ────────────────────────────────────────────────────────────────────
 
 interface Beat {
-  speaker:   SpeakerId;
-  line:      string;
-  autoEnd?:  boolean;
+  speaker:  PrologueSpeakerId;
+  line:     string;
+  autoEnd?: boolean;
 }
 
 const BEATS: Beat[] = [
@@ -120,19 +117,18 @@ const BEATS: Beat[] = [
 ];
 
 const CHARS_PER_SEC = 32;
+const BAR_HEIGHT    = 200;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface Props {
-  onComplete: () => void;
-}
+interface Props { onComplete: () => void }
 
 export default function FormerSelfIntroScene({ onComplete }: Props) {
   const insets = useSafeAreaInsets();
 
-  const [beatIdx,         setBeatIdx]         = useState(0);
-  const [displayed,       setDisplayed]       = useState("");
-  const [typewriterDone,  setTypewriterDone]  = useState(false);
+  const [beatIdx,        setBeatIdx]        = useState(0);
+  const [displayed,      setDisplayed]      = useState("");
+  const [typewriterDone, setTypewriterDone] = useState(false);
 
   const beatRef    = useRef(0);
   const busyRef    = useRef(false);
@@ -140,12 +136,11 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
   const twTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
   const timers     = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Animations
-  const bgFade   = useRef(new Animated.Value(0)).current;
-  const bgScale  = useRef(new Animated.Value(1.04)).current;
-  const charFade = useRef(new Animated.Value(0)).current;
-  const barSlide = useRef(new Animated.Value(60)).current;
-  const barFade  = useRef(new Animated.Value(0)).current;
+  const bgFade    = useRef(new Animated.Value(0)).current;
+  const bgScale   = useRef(new Animated.Value(1.04)).current;
+  const charFade  = useRef(new Animated.Value(0)).current;
+  const barSlide  = useRef(new Animated.Value(60)).current;
+  const barFade   = useRef(new Animated.Value(0)).current;
   const closeFade = useRef(new Animated.Value(0)).current;
 
   const after = (ms: number, fn: () => void) => {
@@ -153,8 +148,6 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
     timers.current.push(t);
     return t;
   };
-
-  // ── Typewriter ──────────────────────────────────────────────────────────────
 
   const stopTypewriter = () => {
     if (twTimer.current) { clearInterval(twTimer.current); twTimer.current = null; }
@@ -165,7 +158,6 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
     if (!mountedRef.current) return;
     setDisplayed("");
     setTypewriterDone(false);
-
     let pos = 0;
     const interval = Math.round(1000 / CHARS_PER_SEC);
     twTimer.current = setInterval(() => {
@@ -184,39 +176,31 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
     setTypewriterDone(true);
   }, []);
 
-  // ── Show beat ───────────────────────────────────────────────────────────────
-
   const revealBeat = useCallback((idx: number) => {
     if (!mountedRef.current) return;
     beatRef.current = idx;
     setBeatIdx(idx);
-
     Animated.parallel([
       Animated.timing(barSlide, { toValue: 0,  duration: 280, useNativeDriver: false }),
       Animated.timing(barFade,  { toValue: 1,  duration: 280, useNativeDriver: false }),
-      Animated.timing(charFade, { toValue: 1,  duration: 250, useNativeDriver: false }),
+      Animated.timing(charFade, { toValue: 1,  duration: 300, useNativeDriver: false }),
     ]).start(() => {
       if (!mountedRef.current) return;
       startTypewriter(BEATS[idx].line);
     });
   }, [barSlide, barFade, charFade, startTypewriter]);
 
-  // ── Boot ────────────────────────────────────────────────────────────────────
-
   useEffect(() => {
     mountedRef.current = true;
-
     Animated.loop(
       Animated.sequence([
         Animated.timing(bgScale, { toValue: 1.0,  duration: 8000, useNativeDriver: false }),
         Animated.timing(bgScale, { toValue: 1.04, duration: 8000, useNativeDriver: false }),
       ])
     ).start();
-
     Animated.timing(bgFade, { toValue: 1, duration: 700, useNativeDriver: false }).start(() => {
       after(200, () => revealBeat(0));
     });
-
     return () => {
       mountedRef.current = false;
       stopTypewriter();
@@ -225,14 +209,10 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Advance helper ──────────────────────────────────────────────────────────
-
   const advanceBeat = useCallback(() => {
     if (busyRef.current || !mountedRef.current) return;
     busyRef.current = true;
-
     const nextIdx = beatRef.current + 1;
-
     if (nextIdx >= BEATS.length) {
       Animated.parallel([
         Animated.timing(barFade,  { toValue: 0, duration: 300, useNativeDriver: false }),
@@ -244,7 +224,6 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
       });
       return;
     }
-
     Animated.parallel([
       Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: false }),
       Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: false }),
@@ -257,22 +236,14 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
     });
   }, [barFade, charFade, barSlide, closeFade, onComplete, revealBeat]);
 
-  // ── Tap handler ─────────────────────────────────────────────────────────────
-
   const handleTap = useCallback(() => {
     if (busyRef.current || !mountedRef.current) return;
     const beat = BEATS[beatRef.current];
-
-    if (!typewriterDone) {
-      skipTypewriter(beat.line);
-      return;
-    }
-
+    if (!typewriterDone) { skipTypewriter(beat.line); return; }
     if (beat.autoEnd) return;
     advanceBeat();
   }, [typewriterDone, skipTypewriter, advanceBeat]);
 
-  // Auto-advance on the last beat once typewriter finishes
   useEffect(() => {
     if (!typewriterDone) return;
     const beat = BEATS[beatRef.current];
@@ -286,27 +257,27 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
 
   const beat    = BEATS[beatIdx];
   const speaker = SPEAKERS[beat.speaker];
-  const BAR_HEIGHT = 168;
+  const barTotal = BAR_HEIGHT + insets.bottom;
 
   return (
     <Pressable style={s.root} onPress={handleTap}>
 
-      {/* ── Background ──────────────────────────────────────────── */}
+      {/* ── Background ──────────────────────────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: bgFade }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: bgScale }] }]}>
-          <ExpoImage source={ART.battlefield} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <ExpoImage source={BG} style={StyleSheet.absoluteFill} contentFit="cover" />
         </Animated.View>
         <LinearGradient
-          colors={["rgba(0,0,0,0.28)", "rgba(0,0,0,0.15)", "rgba(4,8,18,0.72)"]}
-          locations={[0, 0.5, 1]}
+          colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.05)", "rgba(4,8,18,0.78)"]}
+          locations={[0, 0.45, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
       </Animated.View>
 
-      {/* ── Character half-body (right side, above bar) ─────────── */}
+      {/* ── Character portrait — right side, above bar ──────────────── */}
       <Animated.View
-        style={[s.charWrap, { bottom: BAR_HEIGHT + insets.bottom, opacity: charFade }]}
+        style={[s.charWrap, { bottom: barTotal, opacity: charFade }]}
         pointerEvents="none"
       >
         <ExpoImage
@@ -314,47 +285,55 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
           style={s.charArt}
           contentFit="contain"
         />
-        <View style={[s.charGlow, { backgroundColor: `${speaker.color}18` }]} pointerEvents="none" />
       </Animated.View>
 
-      {/* ── VN Dialogue Bar ─────────────────────────────────────── */}
+      {/* ── VN Dialogue Bar ─────────────────────────────────────────── */}
       <Animated.View
         style={[
           s.bar,
           {
             opacity:         barFade,
             transform:       [{ translateY: barSlide }],
-            height:          BAR_HEIGHT + insets.bottom,
-            paddingBottom:   insets.bottom + 12,
+            height:          barTotal,
+            paddingBottom:   insets.bottom + 14,
             backgroundColor: speaker.barColor,
-            borderTopColor:  `${speaker.color}55`,
+            borderTopColor:  `${speaker.color}66`,
           },
         ]}
         pointerEvents="none"
       >
-        <View style={[s.barAccentLine, { backgroundColor: speaker.color }]} />
+        {/* Top accent line */}
+        <View style={[s.barAccent, { backgroundColor: speaker.color }]} />
+
         <View style={s.barInner}>
-          <View style={[s.portraitRing, { borderColor: speaker.color }]}>
-            <ExpoImage source={speaker.portrait} style={s.portraitImg} contentFit="cover" />
-          </View>
-          <View style={s.textCol}>
-            <Text style={[s.speakerName, { color: speaker.color }]} numberOfLines={1}>
+          {/* Left column: avatar + name */}
+          <View style={s.leftCol}>
+            <View style={[s.avatarRing, { borderColor: speaker.color }]}>
+              <ExpoImage source={speaker.avatar} style={s.avatarImg} contentFit="cover" />
+            </View>
+            <Text style={[s.speakerName, { color: speaker.color }]} numberOfLines={2}>
               {speaker.label}
             </Text>
+          </View>
+
+          {/* Right column: dialogue text + arrow */}
+          <View style={s.textCol}>
             <Text style={s.dlgText} numberOfLines={4}>
               {displayed}
               {!typewriterDone && <Text style={{ color: speaker.color }}>▌</Text>}
             </Text>
           </View>
+
+          {/* Advance arrow */}
           {typewriterDone && !beat.autoEnd && (
-            <View style={s.nextArrowWrap}>
-              <Text style={[s.nextArrow, { color: speaker.color }]}>▾</Text>
+            <View style={s.arrowWrap}>
+              <Text style={[s.arrow, { color: speaker.color }]}>▾</Text>
             </View>
           )}
         </View>
       </Animated.View>
 
-      {/* ── Fade-to-black close ─────────────────────────────────── */}
+      {/* ── Fade-to-black ───────────────────────────────────────────── */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#040810", opacity: closeFade }]}
         pointerEvents="none"
@@ -370,63 +349,63 @@ const s = StyleSheet.create({
 
   charWrap: {
     position:       "absolute",
-    right:          W * 0.02,
+    right:          0,
     alignItems:     "flex-end",
     justifyContent: "flex-end",
-    width:          W * 0.62,
-    height:         H * 0.64,
+    width:          W * 0.74,
+    height:         H * 0.72,
   },
-  charArt:  { width: "100%", height: "100%" },
-  charGlow: {
-    position:     "absolute",
-    width:        "70%",
-    height:       "80%",
-    right:        "15%",
-    bottom:       0,
-    borderRadius: 200,
-  },
+  charArt: { width: "100%", height: "100%" },
 
   bar: {
     position:       "absolute",
     bottom:         0,
     left:           0,
     right:          0,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
   },
-  barAccentLine: { height: 2, width: "100%", opacity: 0.7 },
+  barAccent: { height: 2, width: "100%", opacity: 0.8 },
+
   barInner: {
     flex:              1,
     flexDirection:     "row",
     alignItems:        "center",
     paddingHorizontal: 16,
-    paddingTop:        10,
+    paddingTop:        12,
     gap:               14,
   },
 
-  portraitRing: {
-    width:        64,
-    height:       64,
-    borderRadius: 32,
-    borderWidth:  2.5,
+  leftCol: {
+    alignItems: "center",
+    gap:        6,
+    flexShrink: 0,
+    width:      80,
+  },
+  avatarRing: {
+    width:        80,
+    height:       80,
+    borderRadius: 40,
+    borderWidth:  3,
     overflow:     "hidden",
-    flexShrink:   0,
   },
-  portraitImg: { width: "100%", height: "100%" },
-
-  textCol: { flex: 1, gap: 4 },
+  avatarImg: { width: "100%", height: "100%" },
   speakerName: {
-    fontSize:      11,
+    fontSize:      10,
     fontWeight:    "800",
-    letterSpacing: 2,
+    letterSpacing: 1.2,
+    textAlign:     "center",
     textTransform: "uppercase",
-  },
-  dlgText: {
-    color:      "#DCE8F2",
-    fontSize:   15.5,
-    fontWeight: "400",
-    lineHeight: 24,
+    lineHeight:    14,
   },
 
-  nextArrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
-  nextArrow:     { fontSize: 22, fontWeight: "900", opacity: 0.9 },
+  textCol: { flex: 1 },
+  dlgText: {
+    color:      "#E8EEF6",
+    fontSize:   17,
+    fontWeight: "400",
+    lineHeight: 26,
+  },
+
+  arrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
+  arrow:     { fontSize: 24, fontWeight: "900", opacity: 0.9 },
 });
