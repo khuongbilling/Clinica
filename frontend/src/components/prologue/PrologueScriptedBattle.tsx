@@ -277,24 +277,6 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         pointerEvents="none"
       />
 
-      {/* ── ALLY SPRITE PANEL — Prodigy / Nightingale / Fleming ── */}
-      {!isFinale && (
-        <View style={styles.allyRow} pointerEvents="none">
-          <View style={styles.allyUnit}>
-            <ExpoImage source={ART.nightingaleSprite} style={styles.allySprite} contentFit="contain" />
-            <Text style={[styles.allyName, { color: "#E8C453" }]}>NIGHTINGALE</Text>
-          </View>
-          <View style={styles.allyUnit}>
-            <ExpoImage source={ART.prodigySprite} style={styles.allySprite} contentFit="contain" />
-            <Text style={[styles.allyName, { color: "#E8354A" }]}>THE PRODIGY</Text>
-          </View>
-          <View style={styles.allyUnit}>
-            <ExpoImage source={ART.flemingSprite} style={styles.allySprite} contentFit="contain" />
-            <Text style={[styles.allyName, { color: "#3ECFB2" }]}>FLEMING</Text>
-          </View>
-        </View>
-      )}
-
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
 
         {/* ── TOP LABEL ── */}
@@ -308,6 +290,24 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
             </View>
           </View>
         </Animated.View>
+
+        {/* ── ALLY SPRITE PANEL ── */}
+        {!isFinale && (
+          <View style={styles.allyRow} pointerEvents="none">
+            <View style={styles.allyUnit}>
+              <ExpoImage source={ART.nightingaleSprite} style={styles.allySprite} contentFit="contain" />
+              <Text style={[styles.allyName, { color: "#E8C453" }]}>NIGHTINGALE</Text>
+            </View>
+            <View style={styles.allyUnit}>
+              <ExpoImage source={ART.prodigySprite} style={styles.allySprite} contentFit="contain" />
+              <Text style={[styles.allyName, { color: "#E8354A" }]}>THE PRODIGY</Text>
+            </View>
+            <View style={styles.allyUnit}>
+              <ExpoImage source={ART.flemingSprite} style={styles.allySprite} contentFit="contain" />
+              <Text style={[styles.allyName, { color: "#3ECFB2" }]}>FLEMING</Text>
+            </View>
+          </View>
+        )}
 
         <View style={{ flex: 1 }} pointerEvents="none" />
 
@@ -414,29 +414,26 @@ const styles = StyleSheet.create({
   },
 
   allyRow: {
-    position:          "absolute",
-    bottom:            200,
-    left:              0,
-    right:             0,
     flexDirection:     "row",
     justifyContent:    "space-evenly",
     alignItems:        "flex-end",
     paddingHorizontal: 8,
+    paddingVertical:   12,
   },
   allyUnit: {
     alignItems: "center",
-    gap:        2,
+    gap:        3,
   },
   allySprite: {
-    width:   82,
-    height:  118,
-    opacity: 0.88,
+    width:   80,
+    height:  120,
+    opacity: 0.94,
   },
   allyName: {
     fontSize:         7,
     fontWeight:       "800",
     letterSpacing:    0.8,
-    textShadowColor:  "rgba(0,0,0,0.85)",
+    textShadowColor:  "rgba(0,0,0,0.9)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
