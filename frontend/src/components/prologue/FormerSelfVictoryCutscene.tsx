@@ -1,206 +1,329 @@
 /**
- * FormerSelfVictoryCutscene — Push 11
+ * FormerSelfVictoryCutscene — VN-style post-battle cutscene
  *
  * Phase: former_self_victory_boast
  *
- * A short overconfidence scene that plays immediately after the Former Self's
- * intro on the battlefield. The shift ends "too easily." The Former Self
- * dismisses every warning sign — the team grows visibly uneasy.
+ * After the first tutorial battle, the Prodigy becomes even more reckless.
+ * Nightingale raises concern. The Prodigy dismisses it entirely.
  *
- * Narrative beat:
- *   beat_1  — (auto 1.6 s) Victory glow; Former Self turns away from the field
- *   beat_2  — (tap) "Child's play. The ward hasn't seen a real challenge since my last shift."
- *   beat_3  — (tap) Nightingale: "...Something in the monitoring crystals feels wrong."
- *   beat_4  — (tap) "Then find it. That's what you're here for."
- *   beat_5  — (auto 1.2 s) Master Bai watches. Silence. → onComplete()
- *
- * Background: ward_corridor_battle.png (same battlefield backdrop as FormerSelfIntroScene).
+ * VN layout (same as WarningDialogueScene):
+ *   – Full background: ward_corridor_battle.png
+ *   – Only current speaker's half-body art on the right
+ *   – Bottom bar with 64px portrait + typewriter dialogue
+ *   – Tap: skip typewriter → advance; last beat auto-advances 1.2 s
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
+  Dimensions,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const { width: W, height: H } = Dimensions.get("window");
+
+// ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
   battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  formerSelf:  require("../../../assets/images/the_prodigy_vn.png"),
-  nightingale: require("../../../assets/images/nightingale_vn.png"),
   masterBai:   require("../../../assets/images/master_bai_nobg.png"),
+  nightingale: require("../../../assets/images/nightingale_legend_vn.png"),
+  prodigy:     require("../../../assets/images/the_prodigy_vn.png"),
 } as const;
 
-type Beat = "beat_1" | "beat_2" | "beat_3" | "beat_4" | "beat_5";
+// ─── Speakers ─────────────────────────────────────────────────────────────────
+
+type SpeakerId = "PRODIGY" | "NIGHTINGALE" | "MASTER_BAI";
+
+const SPEAKERS: Record<
+  SpeakerId,
+  { label: string; color: string; barColor: string; art: any; portrait: any }
+> = {
+  PRODIGY: {
+    label:    "The Former Self",
+    color:    "#E8354A",
+    barColor: "rgba(28,5,8,0.93)",
+    art:      ART.prodigy,
+    portrait: ART.prodigy,
+  },
+  NIGHTINGALE: {
+    label:    "Florence Nightingale",
+    color:    "#4FD8C4",
+    barColor: "rgba(5,22,20,0.93)",
+    art:      ART.nightingale,
+    portrait: ART.nightingale,
+  },
+  MASTER_BAI: {
+    label:    "Master Bai",
+    color:    "#D9A441",
+    barColor: "rgba(30,20,5,0.93)",
+    art:      ART.masterBai,
+    portrait: ART.masterBai,
+  },
+};
+
+// ─── Beats ────────────────────────────────────────────────────────────────────
+
+interface Beat {
+  speaker:  SpeakerId;
+  line:     string;
+  autoEnd?: boolean;
+}
+
+const BEATS: Beat[] = [
+  {
+    speaker: "PRODIGY",
+    line:    "Child's play. The ward hasn't seen a real challenge since my last shift.",
+  },
+  {
+    speaker: "NIGHTINGALE",
+    line:    "The monitoring crystals failed before the first creature appeared. Something does not add up.",
+  },
+  {
+    speaker: "PRODIGY",
+    line:    "The crystals are old. They need recalibrating. That's maintenance — not a threat.",
+  },
+  {
+    speaker: "NIGHTINGALE",
+    line:    "These injuries do not match the enemies we fought. The visible corruption was not the source.",
+  },
+  {
+    speaker: "PRODIGY",
+    line:    "Then find the source. That is exactly what we are about to do — by going forward.",
+  },
+  {
+    speaker:  "MASTER_BAI",
+    line:     "...Wait.",
+    autoEnd:  true,
+  },
+];
+
+const CHARS_PER_SEC = 32;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   onComplete: () => void;
 }
 
 export default function FormerSelfVictoryCutscene({ onComplete }: Props) {
-  const [beat, setBeat]   = useState<Beat>("beat_1");
-  const beatRef           = useRef<Beat>("beat_1");
-  const mountedRef        = useRef(true);
-  const timers            = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const insets = useSafeAreaInsets();
+
+  const [beatIdx,        setBeatIdx]        = useState(0);
+  const [displayed,      setDisplayed]      = useState("");
+  const [typewriterDone, setTypewriterDone] = useState(false);
+
+  const beatRef    = useRef(0);
+  const busyRef    = useRef(false);
+  const mountedRef = useRef(true);
+  const twTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timers     = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const bgFade    = useRef(new Animated.Value(0)).current;
   const bgScale   = useRef(new Animated.Value(1.04)).current;
-  const victoryGlow = useRef(new Animated.Value(0)).current;
-  const selfFade  = useRef(new Animated.Value(0)).current;
-  const dlgFade   = useRef(new Animated.Value(0)).current;
-  const baiWarn   = useRef(new Animated.Value(0)).current;
+  const charFade  = useRef(new Animated.Value(0)).current;
+  const barSlide  = useRef(new Animated.Value(60)).current;
+  const barFade   = useRef(new Animated.Value(0)).current;
   const closeFade = useRef(new Animated.Value(0)).current;
 
   const after = (ms: number, fn: () => void) => {
     const t = setTimeout(() => { if (mountedRef.current) fn(); }, ms);
     timers.current.push(t);
+    return t;
   };
-  const fadeIn = (v: Animated.Value, dur: number, cb?: () => void) =>
-    Animated.timing(v, { toValue: 1, duration: dur, useNativeDriver: false }).start(cb ?? (() => {}));
-  const fadeOut = (v: Animated.Value, dur: number, cb?: () => void) =>
-    Animated.timing(v, { toValue: 0, duration: dur, useNativeDriver: false }).start(cb ?? (() => {}));
+
+  const stopTypewriter = () => {
+    if (twTimer.current) { clearInterval(twTimer.current); twTimer.current = null; }
+  };
+
+  const startTypewriter = useCallback((line: string) => {
+    stopTypewriter();
+    if (!mountedRef.current) return;
+    setDisplayed("");
+    setTypewriterDone(false);
+    let pos = 0;
+    const interval = Math.round(1000 / CHARS_PER_SEC);
+    twTimer.current = setInterval(() => {
+      pos += 1;
+      setDisplayed(line.slice(0, pos));
+      if (pos >= line.length) {
+        stopTypewriter();
+        if (mountedRef.current) setTypewriterDone(true);
+      }
+    }, interval);
+  }, []);
+
+  const skipTypewriter = useCallback((line: string) => {
+    stopTypewriter();
+    setDisplayed(line);
+    setTypewriterDone(true);
+  }, []);
+
+  const revealBeat = useCallback((idx: number) => {
+    if (!mountedRef.current) return;
+    beatRef.current = idx;
+    setBeatIdx(idx);
+
+    Animated.parallel([
+      Animated.timing(barSlide, { toValue: 0,  duration: 280, useNativeDriver: false }),
+      Animated.timing(barFade,  { toValue: 1,  duration: 280, useNativeDriver: false }),
+      Animated.timing(charFade, { toValue: 1,  duration: 250, useNativeDriver: false }),
+    ]).start(() => {
+      if (!mountedRef.current) return;
+      startTypewriter(BEATS[idx].line);
+    });
+  }, [barSlide, barFade, charFade, startTypewriter]);
 
   useEffect(() => {
     mountedRef.current = true;
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(bgScale, { toValue: 1.0, duration: 8000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.0,  duration: 8000, useNativeDriver: false }),
         Animated.timing(bgScale, { toValue: 1.04, duration: 8000, useNativeDriver: false }),
       ])
     ).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(victoryGlow, { toValue: 1, duration: 2000, useNativeDriver: false }),
-        Animated.timing(victoryGlow, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
-      ])
-    ).start();
-
-    fadeIn(bgFade, 800, () => {
-      fadeIn(selfFade, 600);
-      after(1600, () => {
-        beatRef.current = "beat_2";
-        setBeat("beat_2");
-        fadeIn(dlgFade, 350);
-      });
+    Animated.timing(bgFade, { toValue: 1, duration: 700, useNativeDriver: false }).start(() => {
+      after(200, () => revealBeat(0));
     });
 
     return () => {
       mountedRef.current = false;
+      stopTypewriter();
       timers.current.forEach(clearTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTap = useCallback(() => {
-    const b = beatRef.current;
-    if (b === "beat_2") {
-      fadeOut(dlgFade, 200, () => {
-        beatRef.current = "beat_3";
-        setBeat("beat_3");
-        fadeIn(dlgFade, 350);
-        fadeIn(baiWarn, 500);
-      });
-      return;
-    }
-    if (b === "beat_3") {
-      fadeOut(dlgFade, 200, () => {
-        beatRef.current = "beat_4";
-        setBeat("beat_4");
-        fadeIn(dlgFade, 350);
-      });
-      return;
-    }
-    if (b === "beat_4") {
-      beatRef.current = "beat_5";
-      setBeat("beat_5");
-      fadeOut(dlgFade, 300);
-      after(1200, () => {
-        fadeIn(closeFade, 600, () => {
+  const advanceBeat = useCallback(() => {
+    if (busyRef.current || !mountedRef.current) return;
+    busyRef.current = true;
+
+    const nextIdx = beatRef.current + 1;
+
+    if (nextIdx >= BEATS.length) {
+      Animated.parallel([
+        Animated.timing(barFade,  { toValue: 0, duration: 300, useNativeDriver: false }),
+        Animated.timing(charFade, { toValue: 0, duration: 300, useNativeDriver: false }),
+      ]).start(() => {
+        Animated.timing(closeFade, { toValue: 1, duration: 500, useNativeDriver: false }).start(() => {
           after(80, onComplete);
         });
       });
+      return;
     }
-  }, [onComplete]);
 
-  const isTappable = beat === "beat_2" || beat === "beat_3" || beat === "beat_4";
+    Animated.parallel([
+      Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: false }),
+      Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: false }),
+    ]).start(() => {
+      if (!mountedRef.current) return;
+      barSlide.setValue(60);
+      charFade.setValue(0);
+      busyRef.current = false;
+      revealBeat(nextIdx);
+    });
+  }, [barFade, charFade, barSlide, closeFade, onComplete, revealBeat]);
 
-  const glowOpac = victoryGlow.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.28] });
+  const handleTap = useCallback(() => {
+    if (busyRef.current || !mountedRef.current) return;
+    const beat = BEATS[beatRef.current];
+    if (!typewriterDone) {
+      skipTypewriter(beat.line);
+      return;
+    }
+    if (beat.autoEnd) return;
+    advanceBeat();
+  }, [typewriterDone, skipTypewriter, advanceBeat]);
 
-  const LINES: Record<Beat, { speaker: string; speakerColor: string; text: string } | null> = {
-    beat_1: null,
-    beat_2: {
-      speaker: "The Former Self",
-      speakerColor: "#E8354A",
-      text: '"Child\'s play. The ward hasn\'t seen a real challenge since my last shift."',
-    },
-    beat_3: {
-      speaker: "Florence Nightingale",
-      speakerColor: "#E8C453",
-      text: '"...Something in the monitoring crystals feels wrong. The pattern is off."',
-    },
-    beat_4: {
-      speaker: "The Former Self",
-      speakerColor: "#E8354A",
-      text: '"Then find it. That\'s what you\'re here for."',
-    },
-    beat_5: null,
-  };
+  useEffect(() => {
+    if (!typewriterDone) return;
+    const beat = BEATS[beatRef.current];
+    if (!beat?.autoEnd) return;
+    const t = after(1200, () => advanceBeat());
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typewriterDone]);
 
-  const line = LINES[beat];
+  const beat    = BEATS[beatIdx];
+  const speaker = SPEAKERS[beat.speaker];
+  const BAR_HEIGHT = 168;
 
   return (
-    <Pressable style={s.root} onPress={isTappable ? handleTap : undefined}>
+    <Pressable style={s.root} onPress={handleTap}>
+
+      {/* ── Background ─────────────────────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: bgFade }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: bgScale }] }]}>
           <ExpoImage source={ART.battlefield} style={StyleSheet.absoluteFill} contentFit="cover" />
         </Animated.View>
-
         <LinearGradient
-          colors={["rgba(0,0,0,0.68)", "rgba(4,8,14,0.90)"]}
+          colors={["rgba(0,0,0,0.28)", "rgba(0,0,0,0.15)", "rgba(4,8,18,0.72)"]}
+          locations={[0, 0.5, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-
-        <Animated.View style={[s.victoryGlow, { opacity: glowOpac }]} pointerEvents="none" />
-
-        <SafeAreaView style={s.safe}>
-          <Animated.View style={[s.selfWrap, { opacity: selfFade }]}>
-            <ExpoImage source={ART.formerSelf} style={s.selfPortrait} contentFit="contain" />
-          </Animated.View>
-
-          <Animated.View style={[s.baiWarn, { opacity: baiWarn }]} pointerEvents="none">
-            <ExpoImage source={ART.masterBai} style={s.baiPortrait} contentFit="contain" />
-            <Text style={s.baiLabel}>Master Bai watches in silence.</Text>
-          </Animated.View>
-
-          <Animated.View style={[s.nightingaleWrap, { opacity: baiWarn }]} pointerEvents="none">
-            <ExpoImage source={ART.nightingale} style={s.nightingalePortrait} contentFit="contain" />
-          </Animated.View>
-
-          {line && (
-            <Animated.View style={[s.dlgBox, { opacity: dlgFade }]}>
-              <Text style={[s.dlgSpeaker, { color: line.speakerColor }]}>{line.speaker}</Text>
-              <Text style={s.dlgText}>{line.text}</Text>
-              {isTappable && <Text style={s.tapHint}>▸ TAP TO CONTINUE</Text>}
-            </Animated.View>
-          )}
-
-          {beat === "beat_5" && (
-            <View style={s.silenceWrap} pointerEvents="none">
-              <Text style={s.silenceText}>The ward grows quiet.</Text>
-              <Text style={s.silenceSub}>The Former Self does not look back.</Text>
-            </View>
-          )}
-        </SafeAreaView>
       </Animated.View>
 
+      {/* ── Character art (right, above bar) ───────────────────── */}
+      <Animated.View
+        style={[s.charWrap, { bottom: BAR_HEIGHT + insets.bottom, opacity: charFade }]}
+        pointerEvents="none"
+      >
+        <ExpoImage source={speaker.art} style={s.charArt} contentFit="contain" />
+        <View style={[s.charGlow, { backgroundColor: `${speaker.color}18` }]} pointerEvents="none" />
+      </Animated.View>
+
+      {/* ── VN Dialogue Bar ─────────────────────────────────────── */}
+      <Animated.View
+        style={[
+          s.bar,
+          {
+            opacity:         barFade,
+            transform:       [{ translateY: barSlide }],
+            height:          BAR_HEIGHT + insets.bottom,
+            paddingBottom:   insets.bottom + 12,
+            backgroundColor: speaker.barColor,
+            borderTopColor:  `${speaker.color}55`,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View style={[s.barAccentLine, { backgroundColor: speaker.color }]} />
+        <View style={s.barInner}>
+          <View style={[s.portraitRing, { borderColor: speaker.color }]}>
+            <ExpoImage source={speaker.portrait} style={s.portraitImg} contentFit="cover" />
+          </View>
+          <View style={s.textCol}>
+            <Text style={[s.speakerName, { color: speaker.color }]} numberOfLines={1}>
+              {speaker.label}
+            </Text>
+            <Text style={s.dlgText} numberOfLines={4}>
+              {displayed}
+              {!typewriterDone && <Text style={{ color: speaker.color }}>▌</Text>}
+            </Text>
+          </View>
+          {typewriterDone && !beat.autoEnd && (
+            <View style={s.nextArrowWrap}>
+              <Text style={[s.nextArrow, { color: speaker.color }]}>▾</Text>
+            </View>
+          )}
+        </View>
+      </Animated.View>
+
+      {/* ── Fade-to-black ──────────────────────────────────────── */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#040810", opacity: closeFade }]}
         pointerEvents="none"
@@ -211,105 +334,66 @@ export default function FormerSelfVictoryCutscene({ onComplete }: Props) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#040810" },
-  safe: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+
+  charWrap: {
+    position:       "absolute",
+    right:          W * 0.02,
+    alignItems:     "flex-end",
+    justifyContent: "flex-end",
+    width:          W * 0.62,
+    height:         H * 0.64,
   },
-  victoryGlow: {
-    position: "absolute",
-    top: "15%",
-    left: "15%",
-    right: "15%",
-    bottom: "10%",
-    borderRadius: 240,
-    backgroundColor: "rgba(232,53,74,0.3)",
+  charArt:  { width: "100%", height: "100%" },
+  charGlow: {
+    position:     "absolute",
+    width:        "70%",
+    height:       "80%",
+    right:        "15%",
+    bottom:       0,
+    borderRadius: 200,
   },
-  selfWrap: {
-    alignItems: "center",
-    marginBottom: 16,
+
+  bar: {
+    position:       "absolute",
+    bottom:         0,
+    left:           0,
+    right:          0,
+    borderTopWidth: 1,
   },
-  selfPortrait: {
-    width: 200,
-    height: 260,
+  barAccentLine: { height: 2, width: "100%", opacity: 0.7 },
+  barInner: {
+    flex:              1,
+    flexDirection:     "row",
+    alignItems:        "center",
+    paddingHorizontal: 16,
+    paddingTop:        10,
+    gap:               14,
   },
-  baiWarn: {
-    position: "absolute",
-    right: 24,
-    bottom: 200,
-    alignItems: "center",
-    gap: 6,
+
+  portraitRing: {
+    width:        64,
+    height:       64,
+    borderRadius: 32,
+    borderWidth:  2.5,
+    overflow:     "hidden",
+    flexShrink:   0,
   },
-  baiPortrait: {
-    width: 52,
-    height: 68,
-    opacity: 0.65,
-  },
-  baiLabel: {
-    color: "rgba(200,180,140,0.45)",
-    fontSize: 8,
-    letterSpacing: 1,
-    textAlign: "center",
-    maxWidth: 72,
-  },
-  nightingaleWrap: {
-    position: "absolute",
-    left: 24,
-    bottom: 200,
-  },
-  nightingalePortrait: {
-    width: 48,
-    height: 64,
-    opacity: 0.55,
-  },
-  dlgBox: {
-    position: "absolute",
-    bottom: 100,
-    left: 24,
-    right: 24,
-    borderWidth: 1,
-    borderColor: "rgba(232,53,74,0.35)",
-    borderRadius: 14,
-    padding: 16,
-    backgroundColor: "rgba(4,8,14,0.90)",
-    gap: 6,
-  },
-  dlgSpeaker: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.8,
+  portraitImg: { width: "100%", height: "100%" },
+
+  textCol: { flex: 1, gap: 4 },
+  speakerName: {
+    fontSize:      11,
+    fontWeight:    "800",
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   dlgText: {
-    color: "#D8E0E8",
-    fontSize: 15,
-    fontWeight: "300",
-    fontStyle: "italic",
+    color:      "#DCE8F2",
+    fontSize:   15.5,
+    fontWeight: "400",
     lineHeight: 24,
   },
-  tapHint: {
-    color: "rgba(160,180,200,0.35)",
-    fontSize: 9,
-    letterSpacing: 2.5,
-    alignSelf: "flex-end",
-    marginTop: 2,
-  },
-  silenceWrap: {
-    position: "absolute",
-    alignItems: "center",
-    gap: 6,
-  },
-  silenceText: {
-    color: "rgba(200,180,140,0.50)",
-    fontSize: 14,
-    fontWeight: "300",
-    letterSpacing: 2,
-  },
-  silenceSub: {
-    color: "rgba(160,140,120,0.35)",
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
+
+  nextArrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
+  nextArrow:     { fontSize: 22, fontWeight: "900", opacity: 0.9 },
 });

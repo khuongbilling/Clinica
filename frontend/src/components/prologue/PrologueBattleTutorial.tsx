@@ -46,11 +46,12 @@ import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
-  battlefield: require("../../../assets/images/tactical_battlefield.png"),
-  theProdigy:  require("../../../assets/images/the_prodigy_vn.png"),
-  nightingale: require("../../../assets/images/nightingale_vn.png"),
-  fleming:     require("../../../assets/images/fleming_vn.png"),
-  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
+  battlefield:    require("../../../assets/images/tactical_battlefield.png"),
+  theProdigy:     require("../../../assets/images/the_prodigy_vn.png"),
+  nightingale:    require("../../../assets/images/nightingale_legend_vn.png"),
+  fleming:        require("../../../assets/images/fleming_legend_vn.png"),
+  masterBai:      require("../../../assets/images/master_bai_nobg.png"),
+  spectrePortrait: require("../../../assets/images/corrupted_water_spectre.png"),
 } as const;
 
 // ─── Stage machine type ───────────────────────────────────────────────────────
@@ -620,7 +621,15 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
         {/* ── TOP LABEL ── */}
         <Animated.View style={[styles.topBar, { opacity: labelFade }]} pointerEvents="none">
-          <Text style={styles.sceneLabel}>LEGENDARY PARTY  ·  AP {PROLOGUE_AP_CONFIG.startingAP} / {PROLOGUE_AP_CONFIG.startingAP}  ·  BATTLE ACTIVE</Text>
+          <View style={styles.topBarRow}>
+            <View style={styles.topBarMeta}>
+              <Text style={styles.sceneLabel}>LEGENDARY PARTY  ·  AP {PROLOGUE_AP_CONFIG.startingAP} / {PROLOGUE_AP_CONFIG.startingAP}  ·  BATTLE ACTIVE</Text>
+            </View>
+            <View style={styles.enemyMiniCard}>
+              <ExpoImage source={ART.spectrePortrait} style={styles.enemyMiniPortrait} contentFit="contain" />
+              <Text style={styles.enemyMiniName}>WATER SPECTRE</Text>
+            </View>
+          </View>
           <View style={styles.stepRow}>
             {["Scout", "Stabilize", "Counter", "Reassess"].map((step, i) => {
               // Scout (Nightingale), Stabilize (Fleming), Counter (Prodigy), Reassess (Master Bai)
@@ -665,10 +674,6 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
             {/* Dialogue card */}
             <View style={[styles.entryCard, { borderColor: currentChar.accentBorder, backgroundColor: currentChar.accentBg }]}>
               <View style={styles.entryNameRow}>
-                {/* 48 px circle face avatar */}
-                <View style={[styles.entryAvatarCircle, { borderColor: currentChar.ownerColor }]}>
-                  <ExpoImage source={currentChar.avatar} style={styles.entryAvatarImg} contentFit="cover" />
-                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.entryOwner, { color: currentChar.ownerColor }]}>
                     {currentChar.owner}
@@ -687,13 +692,6 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
                 </Text>
               </Pressable>
             </View>
-
-            {/* Large head-to-torso portrait — absolute, right side, torso flush with card bottom */}
-            <ExpoImage
-              source={currentChar.avatar}
-              style={styles.entryPortrait}
-              contentFit="contain"
-            />
           </Animated.View>
         )}
 
@@ -759,17 +757,12 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
           <Animated.View style={[styles.mbWrap, { opacity: mbFade }]} pointerEvents="none">
             <View style={styles.mbPanel}>
               <View style={styles.mbNameRow}>
-                <View style={styles.mbAvatarCircle}>
-                  <ExpoImage source={ART.masterBai} style={styles.mbAvatarImg} contentFit="cover" />
-                </View>
                 <Text style={styles.mbSpeaker}>MASTER BAI</Text>
               </View>
               <Text style={styles.mbLesson}>
                 "Scout first. Stabilize what you find. Then counter — with everything you have. Then reassess. Every time — in that sequence."
               </Text>
             </View>
-            {/* Large portrait — absolute, right side, torso flush with panel bottom */}
-            <ExpoImage source={ART.masterBai} style={styles.mbPortrait} contentFit="contain" />
           </Animated.View>
         )}
 
@@ -845,12 +838,36 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap:        8,
   },
+  topBarRow: {
+    flexDirection:  "row",
+    alignItems:     "center",
+    justifyContent: "space-between",
+    gap:            8,
+  },
+  topBarMeta: { flex: 1 },
+  enemyMiniCard: {
+    alignItems:      "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: "rgba(20,4,4,0.72)",
+    borderRadius:    8,
+    borderWidth:     1,
+    borderColor:     "rgba(200,20,20,0.22)",
+    gap:             2,
+  },
+  enemyMiniPortrait: { width: 36, height: 46 },
+  enemyMiniName: {
+    color:         "#CC3333",
+    fontSize:      7,
+    fontWeight:    "800",
+    letterSpacing: 0.8,
+  },
   sceneLabel: {
     color:         "rgba(255,100,100,0.45)",
     fontSize:      10,
     fontWeight:    "700",
     letterSpacing: 2.5,
-    textAlign:     "center",
+    textAlign:     "left",
   },
   stepRow: {
     flexDirection:  "row",
@@ -974,38 +991,18 @@ const styles = StyleSheet.create({
   // Entry card
   entryWrap: {
     marginBottom: 8,
-    position:     "relative",
-  },
-  entryPortrait: {
-    position: "absolute",
-    right:    8,
-    bottom:   0,
-    width:    160,
-    height:   280,
   },
   entryCard: {
-    borderRadius:  14,
-    borderWidth:   1,
-    padding:       14,
-    paddingTop:    10,
-    paddingRight:  120,
-    gap:           10,
+    borderRadius: 14,
+    borderWidth:  1,
+    padding:      14,
+    paddingTop:   10,
+    gap:          10,
   },
   entryNameRow: {
     flexDirection: "row",
     alignItems:    "center",
     gap:           10,
-  },
-  entryAvatarCircle: {
-    width:        48,
-    height:       48,
-    borderRadius: 24,
-    overflow:     "hidden",
-    borderWidth:  2,
-  },
-  entryAvatarImg: {
-    width:  48,
-    height: 48,
   },
   entryOwner: {
     fontSize:      11,
@@ -1102,14 +1099,6 @@ const styles = StyleSheet.create({
   // Master Bai lesson
   mbWrap: {
     marginBottom: 8,
-    position:     "relative",
-  },
-  mbPortrait: {
-    position: "absolute",
-    right:    8,
-    bottom:   0,
-    width:    140,
-    height:   240,
   },
   mbPanel: {
     backgroundColor: "rgba(4,10,18,0.90)",
@@ -1118,25 +1107,12 @@ const styles = StyleSheet.create({
     borderColor:     "rgba(217,164,65,0.28)",
     padding:         14,
     paddingTop:      10,
-    paddingRight:    110,
     gap:             8,
   },
   mbNameRow: {
     flexDirection: "row",
     alignItems:    "center",
     gap:           10,
-  },
-  mbAvatarCircle: {
-    width:        48,
-    height:       48,
-    borderRadius: 24,
-    overflow:     "hidden",
-    borderWidth:  2,
-    borderColor:  "#D9A441",
-  },
-  mbAvatarImg: {
-    width:  48,
-    height: 48,
   },
   mbSpeaker: {
     color:         "#D9A441",

@@ -1,239 +1,360 @@
 /**
- * FormerSelfIntroScene — Push 10 (phase reorder)
+ * FormerSelfIntroScene — VN-style opening cutscene
  *
  * Phase: former_self_battlefield_cutscene
  *
- * A brief cinematic that establishes the Former Self as a high-level legendary
- * healer at the height of their power, BEFORE the first tutorial battle begins.
- * This is intentionally short — just enough to show who they were.
+ * Visual Novel dialogue scene that plays BEFORE the first tutorial battle.
+ * The overconfident Prodigy dismisses Master Bai, Nightingale, and Fleming,
+ * then charges in alone — setting up the inevitable fall.
  *
- * The Former Self uses `former_self_portrait.png` throughout for visual
- * consistency (no alternate art).
- *
- * Flow:
- *   ward_title  — (auto 1.8 s) ward establishing title fades in
- *   self_entry  — (auto 1.5 s) Former Self materialises with power glows
- *   speak_1     — (tap) "This ward has never held a threat I could not defeat."
- *   speak_2     — (tap) "Nightingale. Fleming. Hold the line with me."
- *   battle_call — (auto 1.2 s) "A shift begins." → onComplete()
+ * VN layout (matches WarningDialogueScene):
+ *   – Full background: ward_corridor_battle.png (Ken Burns pan)
+ *   – Only the CURRENT speaker's half-body art appears on the right
+ *   – Bottom bar: [64px portrait] Speaker Name | typewriter dialogue
+ *   – Tap: skip typewriter → tap again → next beat
+ *   – Last beat auto-advances after 1.5 s
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Dimensions,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-
-import { usePlayer } from "@/src/game/store";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: W, height: H } = Dimensions.get("window");
 
+// ─── Art ─────────────────────────────────────────────────────────────────────
+
 const ART = {
   battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  formerSelf:  require("../../../assets/images/the_prodigy_vn.png"),
-  nightingale: require("../../../assets/images/nightingale_vn.png"),
-  fleming:     require("../../../assets/images/fleming_vn.png"),
   masterBai:   require("../../../assets/images/master_bai_nobg.png"),
+  nightingale: require("../../../assets/images/nightingale_legend_vn.png"),
+  fleming:     require("../../../assets/images/fleming_legend_vn.png"),
+  prodigy:     require("../../../assets/images/the_prodigy_vn.png"),
 } as const;
 
-type Stage = "ward_title" | "self_entry" | "speak_1" | "speak_2" | "battle_call";
+// ─── Speakers ─────────────────────────────────────────────────────────────────
+
+type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
+
+const SPEAKERS: Record<
+  SpeakerId,
+  { label: string; color: string; barColor: string; art: any; portrait: any }
+> = {
+  MASTER_BAI: {
+    label:    "Master Bai",
+    color:    "#D9A441",
+    barColor: "rgba(30,20,5,0.93)",
+    art:      ART.masterBai,
+    portrait: ART.masterBai,
+  },
+  NIGHTINGALE: {
+    label:    "Florence Nightingale",
+    color:    "#4FD8C4",
+    barColor: "rgba(5,22,20,0.93)",
+    art:      ART.nightingale,
+    portrait: ART.nightingale,
+  },
+  FLEMING: {
+    label:    "Alexander Fleming",
+    color:    "#78B8F0",
+    barColor: "rgba(5,15,28,0.93)",
+    art:      ART.fleming,
+    portrait: ART.fleming,
+  },
+  PRODIGY: {
+    label:    "The Former Self",
+    color:    "#E8354A",
+    barColor: "rgba(28,5,8,0.93)",
+    art:      ART.prodigy,
+    portrait: ART.prodigy,
+  },
+};
+
+// ─── Beats ────────────────────────────────────────────────────────────────────
+
+interface Beat {
+  speaker:   SpeakerId;
+  line:      string;
+  autoEnd?:  boolean;
+}
+
+const BEATS: Beat[] = [
+  {
+    speaker: "MASTER_BAI",
+    line:    "Something is wrong with this field. The corruption pattern is not what it should be.",
+  },
+  {
+    speaker: "PRODIGY",
+    line:    "Master Bai. I have cleared this kind of threat before. A hundred times.",
+  },
+  {
+    speaker: "NIGHTINGALE",
+    line:    "Wait — let me run an observation scan first. The monitoring readings are behaving strangely.",
+  },
+  {
+    speaker: "PRODIGY",
+    line:    "There is no time for scans. The corruption spreads while we stand and deliberate.",
+  },
+  {
+    speaker: "FLEMING",
+    line:    "There are signs here we have not yet read. To act without assessing the resistance—",
+  },
+  {
+    speaker:  "PRODIGY",
+    line:     "Enough. I am going in.",
+    autoEnd:  true,
+  },
+];
+
+const CHARS_PER_SEC = 32;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   onComplete: () => void;
 }
 
 export default function FormerSelfIntroScene({ onComplete }: Props) {
-  const { player } = usePlayer();
-  const [stage, setStage] = useState<Stage>("ward_title");
-  const stageRef  = useRef<Stage>("ward_title");
-  const mountedRef = useRef(true);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const insets = useSafeAreaInsets();
 
-  // Animated values
-  const bgFade     = useRef(new Animated.Value(0)).current;
-  const bgScale    = useRef(new Animated.Value(1.04)).current;
-  const titleFade  = useRef(new Animated.Value(0)).current;
-  const selfFade   = useRef(new Animated.Value(0)).current;
-  const selfSlide  = useRef(new Animated.Value(40)).current;
-  const glowAnim   = useRef(new Animated.Value(0)).current;
-  const dlgFade    = useRef(new Animated.Value(0)).current;
-  const rankFade   = useRef(new Animated.Value(0)).current;
-  const sideFade   = useRef(new Animated.Value(0)).current;
-  const callFade   = useRef(new Animated.Value(0)).current;
-  const closeFade  = useRef(new Animated.Value(0)).current;
+  const [beatIdx,         setBeatIdx]         = useState(0);
+  const [displayed,       setDisplayed]       = useState("");
+  const [typewriterDone,  setTypewriterDone]  = useState(false);
+
+  const beatRef    = useRef(0);
+  const busyRef    = useRef(false);
+  const mountedRef = useRef(true);
+  const twTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timers     = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Animations
+  const bgFade   = useRef(new Animated.Value(0)).current;
+  const bgScale  = useRef(new Animated.Value(1.04)).current;
+  const charFade = useRef(new Animated.Value(0)).current;
+  const barSlide = useRef(new Animated.Value(60)).current;
+  const barFade  = useRef(new Animated.Value(0)).current;
+  const closeFade = useRef(new Animated.Value(0)).current;
 
   const after = (ms: number, fn: () => void) => {
     const t = setTimeout(() => { if (mountedRef.current) fn(); }, ms);
     timers.current.push(t);
+    return t;
   };
-  const fade = (val: Animated.Value, to: number, dur: number, cb?: () => void) =>
-    Animated.timing(val, { toValue: to, duration: dur, useNativeDriver: false }).start(cb ?? (() => {}));
+
+  // ── Typewriter ──────────────────────────────────────────────────────────────
+
+  const stopTypewriter = () => {
+    if (twTimer.current) { clearInterval(twTimer.current); twTimer.current = null; }
+  };
+
+  const startTypewriter = useCallback((line: string) => {
+    stopTypewriter();
+    if (!mountedRef.current) return;
+    setDisplayed("");
+    setTypewriterDone(false);
+
+    let pos = 0;
+    const interval = Math.round(1000 / CHARS_PER_SEC);
+    twTimer.current = setInterval(() => {
+      pos += 1;
+      setDisplayed(line.slice(0, pos));
+      if (pos >= line.length) {
+        stopTypewriter();
+        if (mountedRef.current) setTypewriterDone(true);
+      }
+    }, interval);
+  }, []);
+
+  const skipTypewriter = useCallback((line: string) => {
+    stopTypewriter();
+    setDisplayed(line);
+    setTypewriterDone(true);
+  }, []);
+
+  // ── Show beat ───────────────────────────────────────────────────────────────
+
+  const revealBeat = useCallback((idx: number) => {
+    if (!mountedRef.current) return;
+    beatRef.current = idx;
+    setBeatIdx(idx);
+
+    Animated.parallel([
+      Animated.timing(barSlide, { toValue: 0,  duration: 280, useNativeDriver: false }),
+      Animated.timing(barFade,  { toValue: 1,  duration: 280, useNativeDriver: false }),
+      Animated.timing(charFade, { toValue: 1,  duration: 250, useNativeDriver: false }),
+    ]).start(() => {
+      if (!mountedRef.current) return;
+      startTypewriter(BEATS[idx].line);
+    });
+  }, [barSlide, barFade, charFade, startTypewriter]);
+
+  // ── Boot ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     mountedRef.current = true;
 
-    // BG slow zoom
     Animated.loop(
       Animated.sequence([
-        Animated.timing(bgScale, { toValue: 1.0, duration: 7000, useNativeDriver: false }),
-        Animated.timing(bgScale, { toValue: 1.04, duration: 7000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.0,  duration: 8000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.04, duration: 8000, useNativeDriver: false }),
       ])
     ).start();
 
-    // Red/crimson power glow pulse
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0.3, duration: 1800, useNativeDriver: false }),
-      ])
-    ).start();
-
-    // Stage 1 — ward title
-    fade(bgFade, 1, 700, () => {
-      fade(titleFade, 1, 600);
-      after(1800, () => {
-        fade(titleFade, 0, 400, () => {
-          stageRef.current = "self_entry";
-          setStage("self_entry");
-          // Former Self enters
-          Animated.parallel([
-            Animated.timing(selfFade,  { toValue: 1, duration: 650, useNativeDriver: false }),
-            Animated.timing(selfSlide, { toValue: 0, duration: 650, useNativeDriver: false }),
-          ]).start(() => {
-            fade(rankFade, 1, 400);
-            after(1500, () => {
-              stageRef.current = "speak_1";
-              setStage("speak_1");
-              fade(dlgFade, 1, 400);
-            });
-          });
-        });
-      });
+    Animated.timing(bgFade, { toValue: 1, duration: 700, useNativeDriver: false }).start(() => {
+      after(200, () => revealBeat(0));
     });
 
     return () => {
       mountedRef.current = false;
+      stopTypewriter();
       timers.current.forEach(clearTimeout);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTap = useCallback(() => {
-    const s = stageRef.current;
-    if (s === "speak_1") {
-      fade(dlgFade, 0, 200, () => {
-        stageRef.current = "speak_2";
-        setStage("speak_2");
-        fade(dlgFade, 1, 350);
-        // Show Nightingale + Fleming side portraits
-        fade(sideFade, 1, 500);
+  // ── Advance helper ──────────────────────────────────────────────────────────
+
+  const advanceBeat = useCallback(() => {
+    if (busyRef.current || !mountedRef.current) return;
+    busyRef.current = true;
+
+    const nextIdx = beatRef.current + 1;
+
+    if (nextIdx >= BEATS.length) {
+      Animated.parallel([
+        Animated.timing(barFade,  { toValue: 0, duration: 300, useNativeDriver: false }),
+        Animated.timing(charFade, { toValue: 0, duration: 300, useNativeDriver: false }),
+      ]).start(() => {
+        Animated.timing(closeFade, { toValue: 1, duration: 500, useNativeDriver: false }).start(() => {
+          after(80, onComplete);
+        });
       });
       return;
     }
-    if (s === "speak_2") {
-      stageRef.current = "battle_call";
-      setStage("battle_call");
-      fade(dlgFade, 0, 250);
-      fade(selfFade, 0, 400);
-      fade(sideFade, 0, 300);
-      fade(callFade, 1, 600, () => {
-        after(1200, () => {
-          fade(closeFade, 1, 500, () => {
-            after(100, onComplete);
-          });
-        });
-      });
+
+    Animated.parallel([
+      Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: false }),
+      Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: false }),
+    ]).start(() => {
+      if (!mountedRef.current) return;
+      barSlide.setValue(60);
+      charFade.setValue(0);
+      busyRef.current = false;
+      revealBeat(nextIdx);
+    });
+  }, [barFade, charFade, barSlide, closeFade, onComplete, revealBeat]);
+
+  // ── Tap handler ─────────────────────────────────────────────────────────────
+
+  const handleTap = useCallback(() => {
+    if (busyRef.current || !mountedRef.current) return;
+    const beat = BEATS[beatRef.current];
+
+    if (!typewriterDone) {
+      skipTypewriter(beat.line);
+      return;
     }
-  }, [onComplete]);
 
-  const isTappable = stage === "speak_1" || stage === "speak_2";
-  const glowOpac = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.40] });
+    if (beat.autoEnd) return;
+    advanceBeat();
+  }, [typewriterDone, skipTypewriter, advanceBeat]);
 
-  const dlgLines: Record<Stage, string> = {
-    ward_title:   "",
-    self_entry:   "",
-    speak_1:      '"This ward has never held a threat I could not defeat."',
-    speak_2:      '"Nightingale. Fleming. Hold the line with me."',
-    battle_call:  "",
-  };
+  // Auto-advance on the last beat once typewriter finishes
+  useEffect(() => {
+    if (!typewriterDone) return;
+    const beat = BEATS[beatRef.current];
+    if (!beat?.autoEnd) return;
+    const t = after(1500, () => advanceBeat());
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typewriterDone]);
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
+  const beat    = BEATS[beatIdx];
+  const speaker = SPEAKERS[beat.speaker];
+  const BAR_HEIGHT = 168;
 
   return (
-    <Pressable style={s.root} onPress={isTappable ? handleTap : undefined}>
+    <Pressable style={s.root} onPress={handleTap}>
+
+      {/* ── Background ──────────────────────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: bgFade }]}>
-        {/* Battlefield background */}
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: bgScale }] }]}>
           <ExpoImage source={ART.battlefield} style={StyleSheet.absoluteFill} contentFit="cover" />
         </Animated.View>
-
-        {/* Dark overlay */}
         <LinearGradient
-          colors={["rgba(0,0,0,0.72)", "rgba(4,8,14,0.88)"]}
+          colors={["rgba(0,0,0,0.28)", "rgba(0,0,0,0.15)", "rgba(4,8,18,0.72)"]}
+          locations={[0, 0.5, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-
-        {/* Crimson power glow behind Former Self */}
-        <Animated.View style={[s.powerGlow, { opacity: glowOpac }]} pointerEvents="none" />
-
-        <SafeAreaView style={s.safe}>
-          {/* Ward title card */}
-          <Animated.View style={[s.titleCard, { opacity: titleFade }]}>
-            <Text style={s.titleKicker}>CLINICA — EMERGENCY TREATMENT PLAZA</Text>
-            <Text style={s.titleMain}>WARD SHIFT</Text>
-            <Text style={s.titleSub}>The Former Self. Mythic Clinician. Peak of power.</Text>
-          </Animated.View>
-
-          {/* Former Self figure */}
-          <Animated.View style={[s.selfWrap, { opacity: selfFade, transform: [{ translateY: selfSlide }] }]}>
-            <ExpoImage source={ART.formerSelf} style={s.selfPortrait} contentFit="contain" />
-
-            {/* Rank badge */}
-            <Animated.View style={[s.rankBadge, { opacity: rankFade }]}>
-              <Text style={s.rankBadgeText}>✦ RANK: MYTHIC CLINICIAN ✦</Text>
-              <Text style={s.rankBadgeSub}>The Former Self  ·  Ward Champion</Text>
-            </Animated.View>
-          </Animated.View>
-
-          {/* Side heroes (appear at speak_2) */}
-          <Animated.View style={[s.sideHeroes, { opacity: sideFade }]} pointerEvents="none">
-            <View style={s.sideHeroCard}>
-              <ExpoImage source={ART.nightingale} style={s.sidePortrait} contentFit="contain" />
-              <Text style={[s.sideName, { color: "#E8C453" }]}>NIGHTINGALE</Text>
-            </View>
-            <View style={s.sideHeroCard}>
-              <ExpoImage source={ART.fleming} style={s.sidePortrait} contentFit="contain" />
-              <Text style={[s.sideName, { color: "#3ECFB2" }]}>FLEMING</Text>
-            </View>
-          </Animated.View>
-
-          {/* Dialogue */}
-          {(stage === "speak_1" || stage === "speak_2") && (
-            <Animated.View style={[s.dlgBox, { opacity: dlgFade }]}>
-              <Text style={s.dlgSpeaker}>The Former Self</Text>
-              <Text style={s.dlgText}>{dlgLines[stage]}</Text>
-              <Text style={s.tapHint}>▸ TAP TO CONTINUE</Text>
-            </Animated.View>
-          )}
-
-          {/* Battle call */}
-          {stage === "battle_call" && (
-            <Animated.View style={[s.battleCall, { opacity: callFade }]}>
-              <Text style={s.battleCallKicker}>ENTERING THE WARD</Text>
-              <Text style={s.battleCallMain}>A shift begins.</Text>
-              <Text style={s.battleCallSub}>Scout. Stabilize. Counter. Reassess.</Text>
-            </Animated.View>
-          )}
-        </SafeAreaView>
       </Animated.View>
 
-      {/* Closing overlay */}
+      {/* ── Character half-body (right side, above bar) ─────────── */}
+      <Animated.View
+        style={[s.charWrap, { bottom: BAR_HEIGHT + insets.bottom, opacity: charFade }]}
+        pointerEvents="none"
+      >
+        <ExpoImage
+          source={speaker.art}
+          style={s.charArt}
+          contentFit="contain"
+        />
+        <View style={[s.charGlow, { backgroundColor: `${speaker.color}18` }]} pointerEvents="none" />
+      </Animated.View>
+
+      {/* ── VN Dialogue Bar ─────────────────────────────────────── */}
+      <Animated.View
+        style={[
+          s.bar,
+          {
+            opacity:         barFade,
+            transform:       [{ translateY: barSlide }],
+            height:          BAR_HEIGHT + insets.bottom,
+            paddingBottom:   insets.bottom + 12,
+            backgroundColor: speaker.barColor,
+            borderTopColor:  `${speaker.color}55`,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View style={[s.barAccentLine, { backgroundColor: speaker.color }]} />
+        <View style={s.barInner}>
+          <View style={[s.portraitRing, { borderColor: speaker.color }]}>
+            <ExpoImage source={speaker.portrait} style={s.portraitImg} contentFit="cover" />
+          </View>
+          <View style={s.textCol}>
+            <Text style={[s.speakerName, { color: speaker.color }]} numberOfLines={1}>
+              {speaker.label}
+            </Text>
+            <Text style={s.dlgText} numberOfLines={4}>
+              {displayed}
+              {!typewriterDone && <Text style={{ color: speaker.color }}>▌</Text>}
+            </Text>
+          </View>
+          {typewriterDone && !beat.autoEnd && (
+            <View style={s.nextArrowWrap}>
+              <Text style={[s.nextArrow, { color: speaker.color }]}>▾</Text>
+            </View>
+          )}
+        </View>
+      </Animated.View>
+
+      {/* ── Fade-to-black close ─────────────────────────────────── */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#040810", opacity: closeFade }]}
         pointerEvents="none"
@@ -242,150 +363,70 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#040810" },
-  safe: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+
+  charWrap: {
+    position:       "absolute",
+    right:          W * 0.02,
+    alignItems:     "flex-end",
+    justifyContent: "flex-end",
+    width:          W * 0.62,
+    height:         H * 0.64,
   },
-  powerGlow: {
-    position: "absolute",
-    top: "20%",
-    left: "20%",
-    right: "20%",
-    bottom: "10%",
+  charArt:  { width: "100%", height: "100%" },
+  charGlow: {
+    position:     "absolute",
+    width:        "70%",
+    height:       "80%",
+    right:        "15%",
+    bottom:       0,
     borderRadius: 200,
-    backgroundColor: "rgba(224,60,60,0.25)",
   },
-  titleCard: {
-    alignItems: "center",
-    gap: 6,
-    position: "absolute",
-    top: "30%",
+
+  bar: {
+    position:       "absolute",
+    bottom:         0,
+    left:           0,
+    right:          0,
+    borderTopWidth: 1,
   },
-  titleKicker: {
-    color: "rgba(200,160,160,0.50)",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 3,
+  barAccentLine: { height: 2, width: "100%", opacity: 0.7 },
+  barInner: {
+    flex:              1,
+    flexDirection:     "row",
+    alignItems:        "center",
+    paddingHorizontal: 16,
+    paddingTop:        10,
+    gap:               14,
   },
-  titleMain: {
-    color: "#E8354A",
-    fontSize: 32,
-    fontWeight: "300",
-    letterSpacing: 8,
+
+  portraitRing: {
+    width:        64,
+    height:       64,
+    borderRadius: 32,
+    borderWidth:  2.5,
+    overflow:     "hidden",
+    flexShrink:   0,
   },
-  titleSub: {
-    color: "rgba(200,150,150,0.55)",
-    fontSize: 12,
-    letterSpacing: 1.5,
-  },
-  selfWrap: {
-    alignItems: "center",
-    gap: 12,
-  },
-  selfPortrait: {
-    width: 200,
-    height: 300,
-  },
-  rankBadge: {
-    borderWidth: 1,
-    borderColor: "rgba(232,53,74,0.45)",
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "rgba(4,8,14,0.75)",
-  },
-  rankBadgeText: {
-    color: "#E8354A",
-    fontSize: 11,
-    fontWeight: "700",
+  portraitImg: { width: "100%", height: "100%" },
+
+  textCol: { flex: 1, gap: 4 },
+  speakerName: {
+    fontSize:      11,
+    fontWeight:    "800",
     letterSpacing: 2,
-  },
-  rankBadgeSub: {
-    color: "rgba(200,150,150,0.55)",
-    fontSize: 10,
-    letterSpacing: 1,
-  },
-  sideHeroes: {
-    flexDirection: "row",
-    gap: 32,
-    position: "absolute",
-    bottom: 180,
-  },
-  sideHeroCard: {
-    alignItems: "center",
-    gap: 4,
-  },
-  sidePortrait: {
-    width: 84,
-    height: 120,
-    opacity: 0.88,
-  },
-  sideName: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-  dlgBox: {
-    position: "absolute",
-    bottom: 100,
-    left: 24,
-    right: 24,
-    borderWidth: 1,
-    borderColor: "rgba(232,53,74,0.35)",
-    borderRadius: 14,
-    padding: 16,
-    backgroundColor: "rgba(4,8,14,0.88)",
-    gap: 6,
-  },
-  dlgSpeaker: {
-    color: "#E8354A",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.8,
     textTransform: "uppercase",
   },
   dlgText: {
-    color: "#D8E0E8",
-    fontSize: 15,
-    fontWeight: "300",
-    fontStyle: "italic",
+    color:      "#DCE8F2",
+    fontSize:   15.5,
+    fontWeight: "400",
     lineHeight: 24,
   },
-  tapHint: {
-    color: "rgba(160,180,200,0.35)",
-    fontSize: 9,
-    letterSpacing: 2.5,
-    alignSelf: "flex-end",
-    marginTop: 2,
-  },
-  battleCall: {
-    position: "absolute",
-    alignItems: "center",
-    gap: 8,
-  },
-  battleCallKicker: {
-    color: "rgba(160,180,200,0.40)",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 4,
-  },
-  battleCallMain: {
-    color: "#E8C090",
-    fontSize: 26,
-    fontWeight: "300",
-    letterSpacing: 4,
-  },
-  battleCallSub: {
-    color: "rgba(160,180,200,0.50)",
-    fontSize: 12,
-    letterSpacing: 1.5,
-  },
+
+  nextArrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
+  nextArrow:     { fontSize: 22, fontWeight: "900", opacity: 0.9 },
 });

@@ -1175,17 +1175,17 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in hidden ways.")} testID="term-tap-corruption">
-            <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>CORRUPT.</Text>
+            <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>CORRUPTION</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
-          <Text style={styles.barVal}>{state.corruption}</Text>
+          <Text style={styles.barVal}>{state.corruption}/{enemy.corruption}</Text>
         </View>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — Corruption escalates every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">
             <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>STABILITY</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
-          <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}%</Text>
+          <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}/100</Text>
         </View>
         {termTooltip && (
           <Pressable
@@ -2482,7 +2482,7 @@ const styles = StyleSheet.create({
   // ── Skill pagination ──
   actionsPanel: { flex: 1, gap: SPACING.xs },
   skillPageGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
-  skillCardSlot: { width: "48.5%", height: 138 },
+  skillCardSlot: { width: "48.5%", minHeight: 138 },
   skillCard: {
     flex: 1, padding: 7, borderRadius: 6,
     backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong,

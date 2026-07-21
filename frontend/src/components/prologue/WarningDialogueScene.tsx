@@ -47,10 +47,10 @@ const { width: W, height: H } = Dimensions.get("window");
 
 const ART = {
   battlefield: require("../../../assets/images/ward_corridor_battle.png"),
-  masterBai:   require("../../../assets/images/master_bai.png"),
-  nightingale: require("../../../assets/heroes/florence_nightingale.png"),
-  fleming:     require("../../../assets/images/fleming_portrait.png"),
-  prodigy:     require("../../../assets/images/former_self_portrait.png"),
+  masterBai:   require("../../../assets/images/master_bai_nobg.png"),
+  nightingale: require("../../../assets/images/nightingale_legend_vn.png"),
+  fleming:     require("../../../assets/images/fleming_legend_vn.png"),
+  prodigy:     require("../../../assets/images/the_prodigy_vn.png"),
 } as const;
 
 // ─── Speakers ─────────────────────────────────────────────────────────────────
