@@ -49,7 +49,7 @@ export const MASTER_BAI = {
 export interface SystemIdentity {
   revealed: boolean;
   aptitude: SystemAptitude | null;
-  name: string;      // "The System" pre-reveal, else "The System — <Aptitude>"
+  name: string;      // "The System" pre-reveal, else "The System: <Aptitude>"
   color: string;     // accent color for name/frame/glow
   art: any;          // require()'d image source
 }
@@ -88,7 +88,7 @@ export function getSystemIdentity(
   return {
     revealed: true,
     aptitude: apt,
-    name: `${SHADOW_NAME} — ${info?.title || apt}`,
+    name: `${SHADOW_NAME}: ${info?.title || apt}`,
     color: info?.color || SHADOW_COLOR,
     art: SYSTEM_ART[apt!],
   };

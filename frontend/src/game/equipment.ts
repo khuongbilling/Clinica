@@ -31,11 +31,11 @@ export type EquipmentRoleFamily =
   | "guardian"; // Specialist / Novice Guardian
 
 export const EQUIPMENT_SLOT_META: Record<EquipmentSlot, { label: string; icon: string; blurb: string }> = {
-  focusTool: { label: "Focus Tool", icon: "scan-outline", blurb: "Assessment & diagnostic instruments — sharpens what a hero can see and read." },
-  wardGarment: { label: "Ward Garment", icon: "shirt-outline", blurb: "Worn protection and comfort gear — supports stability and resilience." },
+  focusTool: { label: "Focus Tool", icon: "scan-outline", blurb: "Assessment & diagnostic instruments; sharpens what a hero can see and read." },
+  wardGarment: { label: "Ward Garment", icon: "shirt-outline", blurb: "Worn protection and comfort gear; supports stability and resilience." },
   charm: { label: "Charm / Talisman", icon: "sparkles-outline", blurb: "Small worn tokens that reinforce a hero's role identity." },
   medicalKit: { label: "Medical Kit", icon: "medkit-outline", blurb: "Carried supplies and tools for treatment and support in the field." },
-  relic: { label: "Relic", icon: "diamond-outline", blurb: "Rare, story-significant items — the slowest to earn, always role-fit first." },
+  relic: { label: "Relic", icon: "diamond-outline", blurb: "Rare, story-significant items. The slowest to earn; always role-fit first." },
 };
 
 export const EQUIPMENT_RARITY_META: Record<EquipmentRarity, { label: string; color: string; order: number }> = {
@@ -271,7 +271,7 @@ export function equipmentForHeroRole(role: HeroRole): EquipmentDef[] {
 // -----------------------------------------------------------------------------
 export const ROLE_FIT_RULE =
   "Role fit matters more than raw rarity. A Rare item built for your hero's role can " +
-  "outperform a Legendary item built for a different role — always check role fit first.";
+  "outperform a Legendary item built for a different role; always check role fit first.";
 
 // -----------------------------------------------------------------------------
 // Step 12 — Monetization guardrails (documentation, surfaced in Shop/UI copy)

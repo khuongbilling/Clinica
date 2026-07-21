@@ -1,3 +1,7 @@
+// EM DASH CONVENTION — DO NOT USE — in any player-visible string.
+// Em dashes render inconsistently across mobile font stacks. Use a semicolon,
+// colon, or period instead. Em dashes are fine in code comments only.
+// Run  bash scripts/check-em-dashes.sh  to verify before committing new content.
 import { Building, CodexEntry, Enemy, Hero, Rank } from './types';
 
 // ---------- RANKS ----------
@@ -320,7 +324,7 @@ export const ENEMIES: Enemy[] = [
   {
     id: 'dehydration_wisp',
     name: 'Hypovolemic Specter',
-    realWorld: 'Hypovolemia — severe fluid depletion with cardiovascular compromise',
+    realWorld: 'Hypovolemia: severe fluid depletion with cardiovascular compromise',
     primarySystem: 'River',
     difficulty: 3,
     startingStability: 80,

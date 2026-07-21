@@ -1,3 +1,8 @@
+// EM DASH CONVENTION — DO NOT USE — in any player-visible string (beats/text fields).
+// Em dashes render inconsistently across mobile font stacks. Use a semicolon,
+// colon, or period instead. Em dashes are fine in these top-of-file comments only.
+// Run  bash scripts/check-em-dashes.sh  to verify before committing new content.
+//
 // Story Scenes — the mature-manhwa narrative layer (hybrid art direction).
 //
 // Gameplay screens stay luminous donghua; narrative beats (chapter openings,

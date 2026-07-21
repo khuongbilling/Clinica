@@ -100,7 +100,7 @@ export const MISSIONS: Record<string, MissionMeta> = {
 
   storm_sprite: {
     missionTitle:    "Calm the Storm Corruption",
-    story:           "The Storm Temple roars. A patient has early sepsis — the infection is entering the bloodstream.",
+    story:           "The Storm Temple roars. A patient has early sepsis: the infection is entering the bloodstream.",
     recommendedRoles:["Scout", "Strike", "Stabilizer"],
     winCondition:    "Keep Stability above 0 and reduce Corruption to 0",
     starGoals: [
@@ -117,7 +117,7 @@ export const MISSIONS: Record<string, MissionMeta> = {
 
   lord_imbalance: {
     missionTitle:    "Face the Fading Core",
-    story:           "The Core of Clinica is failing. Multiple systems are collapsing at once — Air, River, and Mind all faltering.",
+    story:           "The Core of Clinica is failing. Multiple systems are collapsing at once: Air, River, and Mind all faltering.",
     recommendedRoles:["All roles", "Prioritize the worst system first"],
     winCondition:    "Keep Stability above 0 through all stages and reduce Corruption to 0",
     starGoals: [

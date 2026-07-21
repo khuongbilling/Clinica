@@ -1,3 +1,7 @@
+// EM DASH CONVENTION — DO NOT USE — in any player-visible string.
+// Em dashes render inconsistently across mobile font stacks. Use a semicolon,
+// colon, or period instead. Em dashes are fine in code comments only.
+// Run  bash scripts/check-em-dashes.sh  to verify before committing new content.
 import { Aptitude } from './types';
 
 // ---------- Calling Quiz ----------
