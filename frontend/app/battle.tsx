@@ -1430,9 +1430,20 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               return (
                 <>
                   <View style={styles.skillPageGrid}>
-                    {visible.map(e => (
-                      <View key={e.key} style={styles.skillCardSlot}>{e.node}</View>
-                    ))}
+                    {/* Row 1 — first two cards fill half the available height */}
+                    <View style={styles.skillGridRow}>
+                      {visible.slice(0, 2).map(e => (
+                        <View key={e.key} style={styles.skillCardSlot}>{e.node}</View>
+                      ))}
+                    </View>
+                    {/* Row 2 — cards 3-4 (always present: Care Attempt + ≥1 skill) */}
+                    {visible.length > 2 && (
+                      <View style={styles.skillGridRow}>
+                        {visible.slice(2, 4).map(e => (
+                          <View key={e.key} style={styles.skillCardSlot}>{e.node}</View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                   {totalPages > 1 && (
                     <View style={styles.skillPageNav}>
@@ -2473,7 +2484,7 @@ const styles = StyleSheet.create({
   affordanceHint: { color: COLORS.onSurfaceTertiary, fontSize: 12, textAlign: "center", fontStyle: "italic", letterSpacing: 0.2 },
 
   // ── Zone D: Actions ──
-  zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm, overflow: "hidden" },
+  zoneD: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.sm },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, paddingBottom: SPACING.sm },
   actionBtn: {
     width: "48.5%", minHeight: 80, padding: 10, borderRadius: 6,
@@ -2481,12 +2492,15 @@ const styles = StyleSheet.create({
   },
   // ── Skill pagination ──
   actionsPanel: { flex: 1, gap: SPACING.xs },
-  skillPageGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
-  skillCardSlot: { width: "48.5%", minHeight: 138 },
+  // Two-row flex grid: each row gets flex:1 so both rows share available height equally.
+  // No overflow:hidden anywhere — cards expand to fill, never get clipped.
+  skillPageGrid: { flex: 1, gap: SPACING.sm },
+  skillGridRow:  { flex: 1, flexDirection: "row", gap: SPACING.sm },
+  skillCardSlot: { flex: 1 },
   skillCard: {
     flex: 1, padding: 7, borderRadius: 6,
     backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.borderStrong,
-    gap: 2, overflow: "hidden",
+    gap: 2,
   },
   skillPageNav: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 4 },
   skillPageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.borderStrong },
