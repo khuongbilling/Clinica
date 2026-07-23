@@ -353,11 +353,10 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       {/* ── Background art (changes per beat) ──────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: mainFade }]}>
         <ExpoImage
-          source={stage === "intro" ? ART.portrait : artSrc}
+          source={artSrc}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           contentPosition="center"
-          transition={300}
         />
 
         {/* Colour tint overlay per beat */}

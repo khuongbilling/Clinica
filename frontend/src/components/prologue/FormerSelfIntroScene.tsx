@@ -284,6 +284,7 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
           source={speaker.art}
           style={s.charArt}
           contentFit="contain"
+          contentPosition="bottom"
         />
       </Animated.View>
 

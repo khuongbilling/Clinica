@@ -1,8 +1,10 @@
 /**
  * Prologue State Framework — Push 1 v3
  *
- * 13-phase cinematic prologue for brand-new players.
- * Phase order (Push 10 reorder + Push 11 overconfidence + Push 11b restore):
+ * 9-phase cinematic prologue for brand-new players.
+ * After the final phase (lotus_recall_cinematic) the prologue is marked
+ * complete and the player is routed to /post-recall for name + class
+ * diagnostic, then /reminiscence, then the hub.
  *
  *   1. opening_memory_cinematic           — fragments of a former life
  *   2. former_self_battlefield_cutscene   — Former Self intro at high power on the ward battlefield
@@ -12,11 +14,7 @@
  *   6. silent_infarction_initial_reveal   — Silent Infarction trap reveals itself
  *   7. former_self_support_loadout        — temporary prologue loadout (NF auto-added)
  *   8. scripted_defeat                    — real battle vs Silent Infarct (scripted loss)
- *   9. lotus_recall_cinematic             — Lotus Recall defeat cinematic
- *  10. identity_reconstruction_character_creation — character creation / rebirth
- *  11. post_rebirth_awakening             — Level 1 awakening, Master Bai
- *  12. memory_echo_award_scene            — Nightingale's Lamp Fragment + Fleming's Culture Notes
- *  13. clinica_university_introduction    — first destination: Clinica University
+ *   9. lotus_recall_cinematic             — Lotus Recall defeat cinematic → /post-recall
  */
 
 // ---------------------------------------------------------------------------
@@ -33,10 +31,6 @@ export const PROLOGUE_PHASES = [
   'former_self_support_loadout',
   'scripted_defeat',
   'lotus_recall_cinematic',
-  'identity_reconstruction_character_creation',
-  'post_rebirth_awakening',
-  'memory_echo_award_scene',
-  'clinica_university_introduction',
 ] as const;
 
 export type ProloguePhase = typeof PROLOGUE_PHASES[number];
@@ -51,10 +45,6 @@ export const PROLOGUE_PHASE_LABELS: Record<ProloguePhase, string> = {
   former_self_support_loadout:                 'Prepare for Battle',
   scripted_defeat:                             'The Fall',
   lotus_recall_cinematic:                      'Lotus Recall',
-  identity_reconstruction_character_creation:  'Who Were You?',
-  post_rebirth_awakening:                      'Rebirth',
-  memory_echo_award_scene:                     'Memory Echoes',
-  clinica_university_introduction:             'Enter the Kingdom',
 };
 
 export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
@@ -76,14 +66,6 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
     'The corruption is too great. Even legends fall before it.',
   lotus_recall_cinematic:
     'A lotus blooms in the dark. The kingdom pulls you through.',
-  identity_reconstruction_character_creation:
-    'You remember who you were. Now decide who you will become.',
-  post_rebirth_awakening:
-    'The ward materialises around you. You are new — and needed.',
-  memory_echo_award_scene:
-    'The echoes of Florence and Fleming remain. Their light is yours to carry.',
-  clinica_university_introduction:
-    'Master Bai opens the doors of Clinica University.',
 };
 
 // ---------------------------------------------------------------------------

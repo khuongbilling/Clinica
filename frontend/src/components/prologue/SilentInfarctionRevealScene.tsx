@@ -357,8 +357,14 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
             style={styles.siPortrait}
             contentFit="contain"
           />
-          {/* Red corona glow behind SI */}
-          <View style={styles.siGlow} />
+          {/* Red corona glow behind SI — gradient so it never renders as a rectangle */}
+          <LinearGradient
+            colors={["transparent", "rgba(160,0,0,0.55)", "transparent"]}
+            locations={[0, 0.45, 1]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.siGlow}
+          />
         </Animated.View>
       )}
 
@@ -484,16 +490,12 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   siGlow: {
-    position:        "absolute",
-    bottom:          20,
-    width:           280,
-    height:          280,
-    borderRadius:    140,
-    backgroundColor: "rgba(139,0,0,0.45)",
-    shadowColor:     "#FF0000",
-    shadowOpacity:   1,
-    shadowRadius:    60,
-    shadowOffset:    { width: 0, height: 0 },
+    position:     "absolute",
+    bottom:       20,
+    width:        300,
+    height:       280,
+    borderRadius: 150,
+    overflow:     "hidden",
   },
 
   // White flash
