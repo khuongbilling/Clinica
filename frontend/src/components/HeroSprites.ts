@@ -144,9 +144,9 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),
   the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),
 
-  // The Prodigy — former self aliases, all point to canonical portrait
-  prologue_former_self:  require('../../assets/images/prodigy_vn_canonical.png'),
-  former_self:           require('../../assets/images/prodigy_vn_canonical.png'),
+  // The Prodigy — former self portrait card (dedicated loadout portrait)
+  prologue_former_self:  require('../../assets/images/the_prodigy_portrait.png'),
+  former_self:           require('../../assets/images/the_prodigy_portrait.png'),
 };
 
 // All portrait modules, for cache preloading at game start.

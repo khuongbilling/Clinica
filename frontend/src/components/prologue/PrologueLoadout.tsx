@@ -37,7 +37,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 const ART = {
   battlefield:  require("../../../assets/images/tactical_battlefield.png"),
-  formerSelf:   require("../../../assets/images/prodigy_vn_canonical.png"),
+  formerSelf:   require("../../../assets/images/the_prodigy_portrait.png"),
   nightingale:  require("../../../assets/images/nightingale_vn_bust.png"),
   fleming:      require("../../../assets/images/fleming_portrait.png"),
   masterBai:    require("../../../assets/images/master_bai.png"),
