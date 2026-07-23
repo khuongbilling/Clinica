@@ -8,6 +8,7 @@ import { preloadTabAssets } from "@/src/game/tabAssets";
 import { HERO_SPRITE_MODULES } from "@/src/components/HeroSprites";
 import { HERO_PORTRAIT_MODULES } from "@/src/components/HeroPortraits";
 import { HERO_BATTLE_SPRITE_MODULES } from "@/src/components/HeroBattleSprites";
+import { WD_SPRITE_MODULES } from "@/src/components/WardDefenseSprites";
 import { BATTLE_IMAGE_MODULES } from "@/src/game/battleAssets";
 import { LOADING_ART } from "@/src/game/loadingArt";
 
@@ -15,6 +16,7 @@ const ALL_MODULES: number[] = [
   ...(HERO_SPRITE_MODULES as unknown as number[]),
   ...(HERO_PORTRAIT_MODULES as unknown as number[]),
   ...(HERO_BATTLE_SPRITE_MODULES as unknown as number[]),
+  ...(WD_SPRITE_MODULES as unknown as number[]),
   ...(REALM_IMAGE_MODULES as unknown as number[]),
   ...BATTLE_IMAGE_MODULES,
   ...LOADING_ART,

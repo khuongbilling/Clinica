@@ -63,16 +63,16 @@ const IMG_MAP = require("../../assets/ward-defense/lotus-healing-ward-map-portra
 const IMG_WING_L = require("../../assets/ward-defense/map-wing-left.png");
 const IMG_WING_R = require("../../assets/ward-defense/map-wing-right.png");
 const IMG_UNITS: Record<string, any> = {
-  ward_scout:      require("../../assets/heroes/battle/apprentice_seer.png"),
-  reassess_sage:   require("../../assets/heroes/battle/mindkeeper.png"),
-  mist_caster:     require("../../assets/heroes/battle/village_caretaker.png"),
-  herbal_chemist:  require("../../assets/heroes/battle/wound_sage.png"),
-  o2_healer:       require("../../assets/heroes/battle/novice_guardian.png"),
-  guardian:        require("../../assets/heroes/battle/junior_warden.png"),
-  rhythm_medic:    require("../../assets/heroes/battle/storm_runner.png"),
-  lantern_scribe:  require("../../assets/heroes/battle/data_acolyte.png"),
-  fever_warden:    require("../../assets/heroes/battle/infection_warden.png"),
-  airway_sentinel: require("../../assets/heroes/battle/night_watcher.png"),
+  ward_scout:      require("../../assets/heroes/battle/wd/ward_scout_wd.png"),
+  reassess_sage:   require("../../assets/heroes/battle/wd/reassess_sage_wd.png"),
+  mist_caster:     require("../../assets/heroes/battle/wd/mist_caster_wd.png"),
+  herbal_chemist:  require("../../assets/heroes/battle/wd/herbal_chemist_wd.png"),
+  o2_healer:       require("../../assets/heroes/battle/wd/o2_healer_wd.png"),
+  guardian:        require("../../assets/heroes/battle/wd/guardian_wd.png"),
+  rhythm_medic:    require("../../assets/heroes/battle/wd/rhythm_medic_wd.png"),
+  lantern_scribe:  require("../../assets/heroes/battle/wd/lantern_scribe_wd.png"),
+  fever_warden:    require("../../assets/heroes/battle/wd/fever_warden_wd.png"),
+  airway_sentinel: require("../../assets/heroes/battle/wd/airway_sentinel_wd.png"),
 };
 const IMG_ENEMIES: Record<string, any> = {
   breathless_wisp:    require("../../assets/images/enemy_breathless_wisp.png"),
