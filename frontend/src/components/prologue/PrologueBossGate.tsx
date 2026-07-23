@@ -72,7 +72,7 @@ export default function PrologueBossGate() {
         <Text style={s.heading}>The Last Shift</Text>
 
         <Text style={s.sub}>
-          Florence Nightingale, Alexander Fleming and The Former Self stand with you.{"\n"}
+          Florence Nightingale, Alexander Fleming and The Prodigy stand with you.{"\n"}
           Scout. Stabilize. Counter. Reassess.
         </Text>
 

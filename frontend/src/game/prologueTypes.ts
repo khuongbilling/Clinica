@@ -55,9 +55,9 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
   opening_battle_tutorial:
     'A Dehydration Wisp — small, containable. The kind of enemy that used to be training.',
   former_self_victory_boast:
-    'The shift ends too easily. The Former Self does not notice the warning signs.',
+    'The shift ends too easily. The Prodigy does not notice the warning signs.',
   warning_dialogue_scene:
-    'Master Bai urges caution. The Former Self does not listen.',
+    'Master Bai urges caution. The Prodigy does not listen.',
   silent_infarction_initial_reveal:
     'Something is wrong. The silence has a shape, and it is spreading.',
   former_self_support_loadout:

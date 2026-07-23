@@ -378,7 +378,7 @@ export default function PrologueLoadout({ onComplete }: Props) {
             </View>
             <View style={styles.heroInfo}>
               <Text style={[styles.heroRole, { color: "#7EB8F7" }]}>THE PRODIGY</Text>
-              <Text style={styles.heroName}>The Former Self</Text>
+              <Text style={styles.heroName}>The Prodigy</Text>
               <View style={styles.tagRow}>
                 {["Strike", "Heal", "Solo"].map(t => (
                   <View key={t} style={[styles.tag, { borderColor: "#7EB8F740" }]}>

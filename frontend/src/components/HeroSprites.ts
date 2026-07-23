@@ -144,7 +144,7 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),
   the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),
 
-  // Former Self — cinematic alias (kept for any legacy references)
+  // The Prodigy — former self aliases, all point to canonical portrait
   prologue_former_self:  require('../../assets/images/prodigy_vn_canonical.png'),
   former_self:           require('../../assets/images/prodigy_vn_canonical.png'),
 };

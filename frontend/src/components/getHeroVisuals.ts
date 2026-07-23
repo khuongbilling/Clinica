@@ -31,7 +31,7 @@ export interface HeroVisualMeta {
   isLocked: boolean;
 }
 
-const PROLOGUE_IDS = new Set(['prologue_nightingale', 'prologue_fleming', 'former_self', 'prologue_former_self']);
+const PROLOGUE_IDS = new Set(['prologue_nightingale', 'prologue_fleming', 'former_self', 'prologue_former_self', 'prologue_the_prodigy', 'the_prodigy']);
 const LOCKED_IDS   = new Set(['florence_nightingale']);
 
 function resolveMeta(heroId: string, heroName?: string): HeroVisualMeta {
