@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
@@ -551,7 +552,7 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
           {/* ── Portrait zone (top 58% of screen) ── */}
           <View style={[revealStyles.portraitZone, { height: portraitH }]}>
             {portrait ? (
-              <Image source={portrait} style={revealStyles.fullPortrait} resizeMode="contain" />
+              <ExpoImage source={portrait} style={revealStyles.fullPortrait} contentFit="contain" />
             ) : (
               <View style={[revealStyles.fullPortraitPlaceholder, { borderColor: rc + "40" }]}>
                 <Ionicons name="person" size={80} color={rc + "70"} />
@@ -1048,6 +1049,8 @@ const revealStyles = StyleSheet.create({
     width: "100%",
     overflow: "hidden",
     position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
   },
   fullPortrait: {
     width: "100%",

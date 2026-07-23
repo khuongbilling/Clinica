@@ -88,12 +88,24 @@ export default function HeroPickerScreen() {
   const router = useRouter();
   const { player } = usePlayer();
 
-  const { slot: slotParam, ownedIds: ownedIdsParam } = useLocalSearchParams<{
+  const { slot: slotParam, ownedIds: ownedIdsParam, takenSlots: takenSlotsParam } = useLocalSearchParams<{
     slot: string;
     ownedIds: string;
+    takenSlots: string;
   }>();
 
   const slotIndex = Number(slotParam ?? 0);
+
+  // Parse which heroes are already assigned to OTHER slots so we can badge them.
+  const heroInOtherSlot: Record<string, number> = (() => {
+    if (!takenSlotsParam) return {};
+    try {
+      const arr: (string | null)[] = JSON.parse(decodeURIComponent(takenSlotsParam));
+      const map: Record<string, number> = {};
+      arr.forEach((id, idx) => { if (id && idx !== slotIndex) map[id] = idx; });
+      return map;
+    } catch { return {}; }
+  })();
 
   // Build owned hero list from param or fall back to player.heroes_owned.
   // ownedIdsParam arrives URL-encoded (encodeURIComponent applied in mission-loadout).
@@ -284,10 +296,12 @@ export default function HeroPickerScreen() {
           contentContainerStyle={p.rosterRow}
         >
           {ownedHeroes.map((h) => {
-            const spr   = getHeroSprite(h.id);
-            const hRc   = ROLE_COLOR[h.role] ?? UI.teal;
-            const hRarC = rarityColor(h.rarity);
-            const active = h.id === previewId;
+            const spr      = getHeroSprite(h.id);
+            const hRc      = ROLE_COLOR[h.role] ?? UI.teal;
+            const hRarC    = rarityColor(h.rarity);
+            const active   = h.id === previewId;
+            const takenIdx = heroInOtherSlot[h.id]; // undefined if not taken
+            const isTaken  = takenIdx !== undefined;
             return (
               <Pressable
                 key={h.id}
@@ -295,12 +309,14 @@ export default function HeroPickerScreen() {
                   p.chip,
                   active
                     ? { borderColor: hRarC + "CC", backgroundColor: hRarC + "18" }
+                    : isTaken
+                    ? { borderColor: "rgba(255,255,255,0.22)", backgroundColor: "rgba(255,255,255,0.04)" }
                     : { borderColor: "rgba(255,255,255,0.12)" },
                 ]}
                 onPress={() => setPreviewId(h.id)}
                 hitSlop={4}
               >
-                <View style={[p.chipPortrait, { borderColor: hRc + (active ? "CC" : "44") }]}>
+                <View style={[p.chipPortrait, { borderColor: hRc + (active ? "CC" : "44"), opacity: isTaken && !active ? 0.55 : 1 }]}>
                   {spr ? (
                     <Image source={spr} style={{ width: "100%", height: "100%" }} contentFit="cover" />
                   ) : (
@@ -309,9 +325,15 @@ export default function HeroPickerScreen() {
                     </View>
                   )}
                 </View>
-                <Text style={[p.chipName, { color: active ? hRarC : UI.textDim }]} numberOfLines={1}>
-                  {h.name.split(" ")[0]}
-                </Text>
+                {isTaken && !active ? (
+                  <View style={p.chipTakenBadge}>
+                    <Text style={p.chipTakenTxt}>S{(takenIdx) + 1}</Text>
+                  </View>
+                ) : (
+                  <Text style={[p.chipName, { color: active ? hRarC : UI.textDim }]} numberOfLines={1}>
+                    {h.name.split(" ")[0]}
+                  </Text>
+                )}
                 {active && (
                   <View style={[p.chipActiveDot, { backgroundColor: hRarC }]} />
                 )}
@@ -582,6 +604,18 @@ const p = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
+  },
+  chipTakenBadge: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  chipTakenTxt: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
 
   // Footer

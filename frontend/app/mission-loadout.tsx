@@ -652,6 +652,10 @@ export default function MissionLoadoutScreen() {
     if (heroPick !== null) {
       setTeamSlots((prev) => {
         const next = [...prev];
+        // Dedup: if this hero is already in another slot, clear that slot first.
+        for (let i = 0; i < next.length; i++) {
+          if (i !== heroPick.slot && next[i] === heroPick.heroId) next[i] = null;
+        }
         next[heroPick.slot] = heroPick.heroId;
         return next;
       });
@@ -880,9 +884,10 @@ export default function MissionLoadoutScreen() {
                     heroId={teamSlots[i] ?? undefined}
                     slotNum={i + 1}
                     onAdd={() => {
-                      const ownedIds = encodeURIComponent(JSON.stringify([...owned]));
+                      const ownedIds   = encodeURIComponent(JSON.stringify([...owned]));
+                      const takenSlots = encodeURIComponent(JSON.stringify(teamSlots));
                       router.push(
-                        `/hero-picker?slot=${i}&ownedIds=${ownedIds}` as AppRoute
+                        `/hero-picker?slot=${i}&ownedIds=${ownedIds}&takenSlots=${takenSlots}` as AppRoute
                       );
                     }}
                     onRemove={() => {
