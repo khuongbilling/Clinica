@@ -44,7 +44,6 @@ import PrologueTutorialGate          from "@/src/components/prologue/PrologueTut
 import FormerSelfVictoryCutscene     from "@/src/components/prologue/FormerSelfVictoryCutscene";
 import WarningDialogueScene          from "@/src/components/prologue/WarningDialogueScene";
 import SilentInfarctionRevealScene   from "@/src/components/prologue/SilentInfarctionRevealScene";
-import PrologueLoadout               from "@/src/components/prologue/PrologueLoadout";
 import PrologueBossGate              from "@/src/components/prologue/PrologueBossGate";
 import LotusRecallCinematic          from "@/src/components/prologue/LotusRecallCinematic";
 
@@ -57,7 +56,6 @@ const PHASE_ACCENTS: Record<ProloguePhase, string> = {
   former_self_victory_boast:                   "#E06080",
   warning_dialogue_scene:                      "#D9A441",
   silent_infarction_initial_reveal:            "#F77B72",
-  former_self_support_loadout:                 "#9B8CF7",
   scripted_defeat:                             "#C45C5C",
   lotus_recall_cinematic:                      "#E0AAFF",
 };
@@ -155,12 +153,7 @@ export default function OpeningPrologue() {
     return <SilentInfarctionRevealScene onComplete={handleContinue} />;
   }
 
-  // ── Phase 7: Story loadout before prologue battle ─────────────────────────
-  if (activePhase === "former_self_support_loadout") {
-    return <PrologueLoadout onComplete={handleContinue} />;
-  }
-
-  // ── Phase 8: Real ward battle vs Silent Infarct — scripted loss ───────────
+  // ── Phase 7: Real ward battle vs Silent Infarct — scripted loss ───────────
   if (activePhase === "scripted_defeat") {
     return <PrologueBossGate />;
   }

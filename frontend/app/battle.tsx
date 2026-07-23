@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Animated, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
 import { BOSS_LORD_IMBALANCE, BOSS_SILENT_INFARCT, ENEMIES, HEROES, getWaveAdditionalEnemies } from "@/src/game/content";
@@ -334,6 +335,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       const t = setTimeout(() => replayTutorial("prologueBattle"), 800);
       return () => clearTimeout(t);
     }
+    // Boss battle: show the pre-battle VN narration only — no guided tutorial
+    if (isPrologueBoss) return;
     if (!isCompleted("firstBattle")) {
       const t = setTimeout(() => startTutorial("firstBattle"), 800);
       return () => clearTimeout(t);
@@ -2331,51 +2334,165 @@ function FlorenceCameoOverlay({ onDismiss }: { onDismiss: () => void }) {
 }
 
 function MasterBaiBossNarratorOverlay({ onDismiss }: { onDismiss: () => void }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [typingDone, setTypingDone] = useState(false);
+  const insets   = useSafeAreaInsets();
+  const { height: H, width: W } = Dimensions.get("window");
+  const BAR_H    = 200;
+  const barTotal = BAR_H + insets.bottom;
+
+  const BEATS = [
+    {
+      name:     "Master Bai",
+      color:    MASTER_BAI.color,
+      barColor: "rgba(22,16,4,0.96)" as const,
+      portrait: require("../assets/images/master_bai_vn_mirror.png"),
+      avatar:   require("../assets/images/master_bai.png"),
+      line:     "What stands before you cannot be overcome by force alone. Read every sign. This battle is not meant to be won.",
+    },
+    {
+      name:     "The Prodigy",
+      color:    "#9B8CF7",
+      barColor: "rgba(12,8,24,0.96)" as const,
+      portrait: require("../assets/images/prodigy_vn_canonical.png"),
+      avatar:   require("../assets/images/prodigy_vn_canonical.png"),
+      line:     "I know.",
+    },
+  ] as const;
+
+  const overlayFade = useRef(new Animated.Value(0)).current;
+  const charFade    = useRef(new Animated.Value(0)).current;
+  const barFade     = useRef(new Animated.Value(0)).current;
+  const barSlide    = useRef(new Animated.Value(60)).current;
+  const btnFade     = useRef(new Animated.Value(0)).current;
+
+  const [beatIdx,   setBeatIdx]   = useState(0);
+  const [displayed, setDisplayed] = useState("");
+  const [twDone,    setTwDone]    = useState(false);
+  const [showBtn,   setShowBtn]   = useState(false);
+  const twTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
+
+  function stopTw() {
+    if (twTimer.current) { clearInterval(twTimer.current); twTimer.current = null; }
+  }
+
+  function playBeat(idx: number) {
+    if (!mountedRef.current) return;
+    const beat = BEATS[idx];
+    setBeatIdx(idx);
+    setDisplayed(""); setTwDone(false); setShowBtn(false);
+    charFade.setValue(0); barFade.setValue(0); barSlide.setValue(60);
+    Animated.parallel([
+      Animated.timing(charFade, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.timing(barFade,  { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(barSlide, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => {
+      if (!mountedRef.current) return;
+      let pos = 0;
+      twTimer.current = setInterval(() => {
+        pos++;
+        setDisplayed(beat.line.slice(0, pos));
+        if (pos >= beat.line.length) { stopTw(); if (mountedRef.current) setTwDone(true); }
+      }, 28);
+    });
+  }
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-  }, [fadeAnim]);
+    mountedRef.current = true;
+    Animated.timing(overlayFade, { toValue: 1, duration: 500, useNativeDriver: true }).start(() => {
+      setTimeout(() => playBeat(0), 200);
+    });
+    return () => { mountedRef.current = false; stopTw(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleDismiss = () => {
-    Animated.timing(fadeAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start(() => onDismiss());
-  };
+  function handleTap() {
+    if (!twDone) {
+      stopTw();
+      setDisplayed(BEATS[beatIdx].line);
+      setTwDone(true);
+      return;
+    }
+    const next = beatIdx + 1;
+    if (next < BEATS.length) { playBeat(next); return; }
+    setShowBtn(true);
+    Animated.timing(btnFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+  }
 
-  const LINES = [
-    "Master Bai speaks quietly, his voice heavy with weight:",
-    "\"This patient… is beyond what we can do today.\"",
-    "\"The Silent Infarct does not negotiate. It does not tire. It does not forgive a hesitant hand.\"",
-    "\"Fight — not to win, but so your hands remember the weight of what healing truly costs.\"",
-    "\"This lesson will stay with you long after the ward is quiet.\"",
-  ];
-  const fullText = LINES.join("\n\n");
+  function handleDismiss() {
+    Animated.timing(overlayFade, { toValue: 0, duration: 280, useNativeDriver: true }).start(() => onDismiss());
+  }
+
+  const beat = BEATS[beatIdx];
 
   return (
-    <Pressable style={styles.cameoOverlay} onPress={typingDone ? handleDismiss : undefined} testID="boss-narrator-overlay">
-      <Animated.View style={[styles.cameoCard, { opacity: fadeAnim, borderColor: "#8B2A2A60" }]}>
-        <View style={styles.cameoNarratorRow}>
-          <View style={[styles.cameoNarratorDot, { backgroundColor: MASTER_BAI.color }]} />
-          <Text style={[styles.cameoNarratorName, { color: MASTER_BAI.color }]}>Master Bai</Text>
-        </View>
-        <View style={[styles.cameoLampRow, { borderBottomColor: "#8B2A2A30" }]}>
-          <Text style={styles.cameoLampIcon}>⚠️</Text>
-          <Text style={[styles.cameoHeroName, { color: "#E87070" }]}>Silent Infarct</Text>
-          <Text style={styles.cameoLampIcon}>⚠️</Text>
-        </View>
-        <View style={styles.cameoTextBox}>
-          <TypewriterText
-            text={fullText}
-            style={styles.cameoText}
-            speed={18}
-            onComplete={() => setTypingDone(true)}
-          />
-        </View>
-        <Pressable style={[styles.camoeDismissBtn, { backgroundColor: "#8B2A2A" }]} onPress={handleDismiss} testID="boss-narrator-dismiss">
-          <Text style={styles.camoeDismissTxt}>FACE THE INFARCT</Text>
-        </Pressable>
-        <Text style={styles.cameoHint}>Some battles are fought not to be won — but to be remembered.</Text>
+    <Pressable
+      style={[styles.bossNarratorRoot, { zIndex: 9600 }]}
+      onPress={handleTap}
+      testID="boss-narrator-overlay"
+    >
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(4,4,8,0.90)", opacity: overlayFade }]} />
+
+      {/* Portrait — grounded above VN bar */}
+      <Animated.View
+        style={[styles.bossNarratorPortraitWrap, { bottom: barTotal - 80, width: W * 0.80, height: H * 0.82, opacity: charFade }]}
+        pointerEvents="none"
+      >
+        <ExpoImage
+          source={beat.portrait}
+          style={styles.bossNarratorPortraitImg}
+          contentFit="contain"
+          contentPosition="bottom"
+        />
       </Animated.View>
+
+      {/* VN dialogue bar */}
+      <Animated.View
+        style={[
+          styles.bossNarratorBar,
+          {
+            height:          barTotal,
+            paddingBottom:   insets.bottom + 14,
+            opacity:         barFade,
+            transform:       [{ translateY: barSlide }],
+            backgroundColor: beat.barColor,
+            borderTopColor:  `${beat.color}66`,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View style={[styles.bossNarratorBarAccent, { backgroundColor: beat.color }]} />
+        <View style={styles.bossNarratorBarInner}>
+          <View style={styles.bossNarratorLeftCol}>
+            <View style={[styles.bossNarratorAvatarRing, { borderColor: beat.color }]}>
+              <ExpoImage source={beat.avatar} style={styles.bossNarratorAvatarImg} contentFit="cover" />
+            </View>
+            <Text style={[styles.bossNarratorSpeakerName, { color: beat.color }]}>{beat.name}</Text>
+          </View>
+          <View style={styles.bossNarratorTextCol}>
+            <Text style={styles.bossNarratorDlgText} numberOfLines={4}>
+              {displayed}
+              {!twDone && <Text style={{ color: beat.color }}>▌</Text>}
+            </Text>
+          </View>
+          {twDone && !showBtn && (
+            <View style={styles.bossNarratorArrowWrap}>
+              <Text style={[styles.bossNarratorArrow, { color: beat.color }]}>▾</Text>
+            </View>
+          )}
+        </View>
+      </Animated.View>
+
+      {/* Dismiss button — fades in after all beats */}
+      {showBtn && (
+        <Animated.View
+          style={[styles.bossNarratorBtnWrap, { opacity: btnFade, paddingBottom: insets.bottom + barTotal + 16 }]}
+          pointerEvents="box-none"
+        >
+          <Pressable style={styles.bossNarratorBtn} onPress={handleDismiss} testID="boss-narrator-dismiss">
+            <Text style={styles.bossNarratorBtnTxt}>FACE THE INFARCT</Text>
+          </Pressable>
+        </Animated.View>
+      )}
     </Pressable>
   );
 }
@@ -3078,5 +3195,81 @@ const styles = StyleSheet.create({
     color: "#0B1020",
     fontSize: 13,
     fontWeight: "700",
+  },
+
+  // ── Boss narrator VN overlay ──────────────────────────────────────────────
+  bossNarratorRoot: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+  },
+  bossNarratorPortraitWrap: {
+    position:       "absolute",
+    right:          0,
+    alignItems:     "flex-end",
+    justifyContent: "flex-end",
+  },
+  bossNarratorPortraitImg: { width: "100%", height: "100%" },
+  bossNarratorBar: {
+    position:       "absolute",
+    bottom:         0,
+    left:           0,
+    right:          0,
+    borderTopWidth: 1.5,
+  },
+  bossNarratorBarAccent: { height: 2, width: "100%", opacity: 0.8 },
+  bossNarratorBarInner: {
+    flex:              1,
+    flexDirection:     "row",
+    alignItems:        "center",
+    paddingHorizontal: 16,
+    paddingTop:        12,
+    gap:               14,
+  },
+  bossNarratorLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 80 },
+  bossNarratorAvatarRing: {
+    width:        80,
+    height:       80,
+    borderRadius: 40,
+    borderWidth:  3,
+    overflow:     "hidden",
+  },
+  bossNarratorAvatarImg:   { width: "100%", height: "100%" },
+  bossNarratorSpeakerName: {
+    fontSize:      10,
+    fontWeight:    "800",
+    letterSpacing: 1.2,
+    textAlign:     "center",
+    textTransform: "uppercase",
+    lineHeight:    14,
+  },
+  bossNarratorTextCol: { flex: 1 },
+  bossNarratorDlgText: {
+    color:      "#E8EEF6",
+    fontSize:   17,
+    fontWeight: "400",
+    lineHeight: 26,
+  },
+  bossNarratorArrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
+  bossNarratorArrow:     { fontSize: 24, fontWeight: "900", opacity: 0.9 },
+  bossNarratorBtnWrap: {
+    position:          "absolute",
+    bottom:            0,
+    left:              0,
+    right:             0,
+    paddingHorizontal: 24,
+    alignItems:        "center",
+  },
+  bossNarratorBtn: {
+    backgroundColor:  "#8B1A1A",
+    borderRadius:     10,
+    paddingVertical:  16,
+    width:            "100%",
+    alignItems:       "center",
+  },
+  bossNarratorBtnTxt: {
+    color:         "#FFFFFF",
+    fontSize:      13,
+    fontWeight:    "800",
+    letterSpacing: 3,
   },
 });

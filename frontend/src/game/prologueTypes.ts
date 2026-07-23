@@ -28,7 +28,6 @@ export const PROLOGUE_PHASES = [
   'former_self_victory_boast',
   'warning_dialogue_scene',
   'silent_infarction_initial_reveal',
-  'former_self_support_loadout',
   'scripted_defeat',
   'lotus_recall_cinematic',
 ] as const;
@@ -42,7 +41,6 @@ export const PROLOGUE_PHASE_LABELS: Record<ProloguePhase, string> = {
   former_self_victory_boast:                   'The Overconfidence',
   warning_dialogue_scene:                      'The Warning',
   silent_infarction_initial_reveal:            'The Silent Infarction',
-  former_self_support_loadout:                 'Prepare for Battle',
   scripted_defeat:                             'The Fall',
   lotus_recall_cinematic:                      'Lotus Recall',
 };
@@ -60,8 +58,6 @@ export const PROLOGUE_PHASE_DESCRIPTIONS: Record<ProloguePhase, string> = {
     'Master Bai urges caution. The Prodigy does not listen.',
   silent_infarction_initial_reveal:
     'Something is wrong. The silence has a shape, and it is spreading.',
-  former_self_support_loadout:
-    'Choose your tools. The legendary healers offer their support.',
   scripted_defeat:
     'The corruption is too great. Even legends fall before it.',
   lotus_recall_cinematic:

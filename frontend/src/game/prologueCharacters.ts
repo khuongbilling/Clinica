@@ -65,7 +65,7 @@ export const PROLOGUE_CHARACTERS = {
     name:          "Florence Nightingale",
     color:         "#4FD8C4",
     barColor:      "rgba(5,22,20,0.93)",
-    largePortrait: NIGHTINGALE_LARGE,
+    largePortrait: NIGHTINGALE_BUST,
     avatar48:      NIGHTINGALE_BUST,
     battleSprite:  NIGHTINGALE_BATTLE,
     palette:       "gold, ivory, jade",
