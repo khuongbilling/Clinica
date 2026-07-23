@@ -22,9 +22,8 @@ export interface PrologueCharacter {
 }
 
 const PRODIGY_LARGE          = require("../../assets/images/prodigy_vn_canonical.png");
-const MASTER_BAI_TORSO       = require("../../assets/images/master_bai_vn_torso.png");
-const MASTER_BAI_BUST        = require("../../assets/images/master_bai_vn_bust.png");
-const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn.png");
+const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
+const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_bust.png");
 const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
 const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
 const FLEMING_BUST           = require("../../assets/images/fleming_vn_bust.png");
@@ -53,8 +52,8 @@ export const PROLOGUE_CHARACTERS = {
     name:          "Master Bai",
     color:         "#D9A441",
     barColor:      "rgba(30,20,5,0.93)",
-    largePortrait: MASTER_BAI_TORSO,
-    avatar48:      MASTER_BAI_BUST,
+    largePortrait: MASTER_BAI_ART,
+    avatar48:      MASTER_BAI_ART,
     battleSprite:  MASTER_BAI_BATTLE,
     palette:       "jade, white, gold",
     role:          "Mentor — Legendary Physician Scholar",
