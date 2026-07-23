@@ -151,7 +151,6 @@ const LINE_INTERVAL_MS   = 1000;
 const AUTO_ADVANCE_MS    = 2600;
 const INTRO_HOLD_MS      = 3400;
 const CROSSFADE_DUR      = 750;   // ms — art dissolve overlap
-const KB_DURATION        = 10000; // ms — Ken Burns zoom per panel
 
 // ─── Particles ────────────────────────────────────────────────────────────────
 
@@ -188,8 +187,6 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   const [artB, setArtB] = useState<ArtKey>("origin");
   const layerAOpacity  = useRef(new Animated.Value(1)).current; // A is first on-screen
   const layerBOpacity  = useRef(new Animated.Value(0)).current;
-  const kbScaleA       = useRef(new Animated.Value(1.0)).current;
-  const kbScaleB       = useRef(new Animated.Value(1.0)).current;
   const activeLayerRef = useRef<"A" | "B">("A");
 
   // ── Black overlay — used ONLY for very first fade-in and final exit ──
@@ -223,22 +220,12 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: false }).start();
   }, []);
 
-  const startKenBurns = useCallback((scaleAnim: Animated.Value) => {
-    scaleAnim.setValue(1.0);
-    Animated.timing(scaleAnim, {
-      toValue:         1.07,
-      duration:        KB_DURATION,
-      useNativeDriver: false,
-    }).start();
-  }, []);
-
   // ── A/B dissolve — old panel fades out, new panel fades in simultaneously ──
   const doCrossFade = useCallback((newArt: ArtKey, onDone: () => void) => {
     busyRef.current = true;
     if (activeLayerRef.current === "A") {
       setArtB(newArt);
       layerBOpacity.setValue(0);
-      startKenBurns(kbScaleB);
       Animated.parallel([
         Animated.timing(layerAOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: false }),
         Animated.timing(layerBOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: false }),
@@ -251,7 +238,6 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     } else {
       setArtA(newArt);
       layerAOpacity.setValue(0);
-      startKenBurns(kbScaleA);
       Animated.parallel([
         Animated.timing(layerBOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: false }),
         Animated.timing(layerAOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: false }),
@@ -262,7 +248,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         busyRef.current = false;
       });
     }
-  }, [layerAOpacity, layerBOpacity, kbScaleA, kbScaleB, startKenBurns]);
+  }, [layerAOpacity, layerBOpacity]);
 
   // ── Text-only soft fade (same art, just text changes) ──
   const softTextFade = useCallback((callback: () => void) => {
@@ -363,12 +349,11 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   useEffect(() => {
     mountedRef.current = true;
 
-    // Prime layer A with the first beat's art; begin Ken Burns immediately
+    // Prime layer A with the first beat's art
     setArtA(BEATS[0].art);
     layerAOpacity.setValue(1);
     layerBOpacity.setValue(0);
     activeLayerRef.current = "A";
-    startKenBurns(kbScaleA);
 
     // Fade the black overlay away to reveal the scene (no black-flash start)
     Animated.timing(fadeOverlay, { toValue: 0, duration: 900, useNativeDriver: false }).start();
@@ -447,28 +432,44 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   return (
     <View style={styles.root}>
 
-      {/* ── Art layer A (Ken Burns zoom independently) ──────────────── */}
+      {/* ── Art layer A ──────────────────────────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: layerAOpacity }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: kbScaleA }] }]}>
+        {/* Blurred fill — same image at cover, blurred, fills any letterbox bars */}
+        <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
           <ExpoImage
             source={ART[artA]}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, styles.blurredBg]}
             contentFit="cover"
             contentPosition="center"
           />
-        </Animated.View>
+        </View>
+        {/* Sharp image — full art, no cropping */}
+        <ExpoImage
+          source={ART[artA]}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          contentPosition="center"
+        />
       </Animated.View>
 
       {/* ── Art layer B (cross-dissolve target) ─────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: layerBOpacity }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: kbScaleB }] }]}>
+        {/* Blurred fill */}
+        <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
           <ExpoImage
             source={ART[artB]}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, styles.blurredBg]}
             contentFit="cover"
             contentPosition="center"
           />
-        </Animated.View>
+        </View>
+        {/* Sharp image — full art, no cropping */}
+        <ExpoImage
+          source={ART[artB]}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          contentPosition="center"
+        />
       </Animated.View>
 
       {/* ── Per-beat tint overlay ────────────────────────────────────── */}
@@ -605,6 +606,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, justifyContent: "space-between" },
 
   petal: { position: "absolute" },
+
+  blurredBg: { filter: "blur(22px)" } as any,
 
   topArea: {
     paddingTop:        16,
