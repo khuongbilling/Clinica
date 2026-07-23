@@ -29,9 +29,14 @@ import { LinearGradient } from "expo-linear-gradient";
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
-  portrait: require("../../../assets/images/prodigy_vn_canonical.png"),
-  healing:  require("../../../assets/images/prodigy_vn_canonical.png"),
-  victory:  require("../../../assets/images/prodigy_vn_canonical.png"),
+  origin:      require("../../../assets/images/opening_prodigy_origin.png"),
+  fame:        require("../../../assets/images/opening_prodigy_fame.png"),
+  victory:     require("../../../assets/images/opening_prodigy_victory.png"),
+  caution:     require("../../../assets/images/opening_prodigy_caution.png"),
+  infallible:  require("../../../assets/images/opening_prodigy_infallible.png"),
+  observation: require("../../../assets/images/opening_prodigy_observation.png"),
+  judgment:    require("../../../assets/images/opening_prodigy_judgment.png"),
+  warning:     require("../../../assets/images/opening_prodigy_warning.png"),
 } as const;
 type ArtKey = keyof typeof ART;
 
@@ -56,7 +61,7 @@ const BEATS: Beat[] = [
       "what you had forgotten…",
       "you were already considered a hero.",
     ],
-    art:    "portrait",
+    art:    "origin",
     accent: "#D4AF37",
   },
   {
@@ -67,7 +72,7 @@ const BEATS: Beat[] = [
       "Diseases that overwhelmed entire parties fell before you.",
       "Injuries others feared became little more than inconveniences.",
     ],
-    art:    "healing",
+    art:    "fame",
     accent: "#4FD8C4",
   },
   {
@@ -87,7 +92,7 @@ const BEATS: Beat[] = [
       "With every victory,",
       "caution began to feel unnecessary.",
     ],
-    art:       "victory",
+    art:       "caution",
     accent:    "#F7C948",
     tintColor: "rgba(80,50,0,0.25)",
   },
@@ -98,7 +103,7 @@ const BEATS: Beat[] = [
       "You began to believe",
       "experience made you infallible.",
     ],
-    art:       "portrait",
+    art:       "infallible",
     accent:    "#C8A0FF",
     tintColor: "rgba(40,0,60,0.30)",
   },
@@ -108,7 +113,7 @@ const BEATS: Beat[] = [
     lines: [
       "That strength could replace observation.",
     ],
-    art:       "healing",
+    art:       "observation",
     accent:    "#F7C948",
     tintColor: "rgba(20,0,0,0.40)",
   },
@@ -118,7 +123,7 @@ const BEATS: Beat[] = [
     lines: [
       "That speed could replace judgment.",
     ],
-    art:       "victory",
+    art:       "judgment",
     accent:    "#F77B72",
     tintColor: "rgba(60,0,0,0.45)",
   },
@@ -129,7 +134,7 @@ const BEATS: Beat[] = [
       "On the day you encountered the Silent Infarction…",
       "three legends tried to warn you.",
     ],
-    art:       "portrait",
+    art:       "warning",
     accent:    "#8B1A1A",
     tintColor: "rgba(80,0,0,0.50)",
   },
@@ -268,12 +273,18 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         if (mountedRef.current) onComplete();
       }, 800);
     } else {
-      softCrossFade(() => {
+      const artChanged = BEATS[current].art !== BEATS[next].art;
+      const advance = () => {
         if (!mountedRef.current) return;
         beatIdxRef.current = next;
         setBeatIdx(next);
         revealLines(BEATS[next]);
-      });
+      };
+      if (artChanged) {
+        hardCrossFade(advance);
+      } else {
+        softCrossFade(advance);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hardCrossFade, softCrossFade, onComplete, revealLines]);
