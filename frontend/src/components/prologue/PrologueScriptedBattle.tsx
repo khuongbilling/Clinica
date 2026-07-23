@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -123,6 +124,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
   const trapFade   = useRef(new Animated.Value(0)).current;
   const finaleFade = useRef(new Animated.Value(0)).current;
   const bossGlow   = useRef(new Animated.Value(0)).current;
+  const heroBreath = useRef(new Animated.Value(0)).current;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -166,6 +168,15 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
       ])
     ).start();
 
+    // Hero idle breath — scale only, no vertical float
+    const heroBreathLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(heroBreath, { toValue: 1, duration: 1700, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        Animated.timing(heroBreath, { toValue: 0, duration: 1700, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+      ])
+    );
+    heroBreathLoop.start();
+
     anim(bgFade, 1, 700);
     after(500, () => anim(labelFade, 1, 600));
 
@@ -180,7 +191,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
       ]).start();
     });
 
-    return () => { breathe.stop(); pulse.stop(); };
+    return () => { breathe.stop(); pulse.stop(); heroBreathLoop.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -249,6 +260,7 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
   const finaleCard     = FINALE[finaleStep];
 
   const bossGlowOpac = bossGlow.interpolate({ inputRange: [0,1], outputRange: [0.08, 0.28] });
+  const heroBreathScale = heroBreath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] });
 
   return (
     <View style={styles.root}>
@@ -295,15 +307,21 @@ export default function PrologueScriptedBattle({ onComplete }: Props) {
         {!isFinale && (
           <View style={styles.allyRow} pointerEvents="none">
             <View style={styles.allyUnit}>
-              <ExpoImage source={ART.nightingaleSprite} style={styles.allySprite} contentFit="contain" />
+              <Animated.View style={{ transform: [{ scale: heroBreathScale }] }}>
+                <ExpoImage source={ART.nightingaleSprite} style={styles.allySprite} contentFit="contain" />
+              </Animated.View>
               <Text style={[styles.allyName, { color: "#E8C453" }]}>NIGHTINGALE</Text>
             </View>
             <View style={styles.allyUnit}>
-              <ExpoImage source={ART.prodigySprite} style={styles.allySprite} contentFit="contain" />
+              <Animated.View style={{ transform: [{ scale: heroBreathScale }] }}>
+                <ExpoImage source={ART.prodigySprite} style={styles.allySprite} contentFit="contain" />
+              </Animated.View>
               <Text style={[styles.allyName, { color: "#E8354A" }]}>THE PRODIGY</Text>
             </View>
             <View style={styles.allyUnit}>
-              <ExpoImage source={ART.flemingSprite} style={styles.allySprite} contentFit="contain" />
+              <Animated.View style={{ transform: [{ scale: heroBreathScale }] }}>
+                <ExpoImage source={ART.flemingSprite} style={styles.allySprite} contentFit="contain" />
+              </Animated.View>
               <Text style={[styles.allyName, { color: "#3ECFB2" }]}>FLEMING</Text>
             </View>
           </View>
