@@ -29,6 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import {
+  drainHeroPick,
   drainItemBagSelection,
   loadPersistedLoadoutForType,
   persistLoadoutForType,
@@ -627,7 +628,7 @@ export default function MissionLoadoutScreen() {
   );
   const [cardPickerOpen, setCardPickerOpen] = useState(false);
   const [teamSlots, setTeamSlots] = useState<(string | null)[]>([null, null, null]);
-  const [heroPickerSlot, setHeroPickerSlot] = useState<number | null>(null);
+  const [deployError, setDeployError] = useState<string | null>(null);
   // Sync teamSlots from player.active_team once when player data first arrives,
   // and again on each focus (in case active_team changed externally). Local
   // edits made after focus will not be overwritten until the next focus.
@@ -646,6 +647,17 @@ export default function MissionLoadoutScreen() {
   }, [player]);
 
   useFocusEffect(useCallback(() => {
+    // Consume hero-picker result first (drain-once pattern).
+    const heroPick = drainHeroPick();
+    if (heroPick !== null) {
+      setTeamSlots((prev) => {
+        const next = [...prev];
+        next[heroPick.slot] = heroPick.heroId;
+        return next;
+      });
+      setDeployError(null);
+    }
+
     const missionType = String(partType);
     const bagPick = drainItemBagSelection();
     if (bagPick !== null) {
@@ -663,10 +675,9 @@ export default function MissionLoadoutScreen() {
       });
     }
     setLocalEquippedCards(player?.equipped_cards ?? []);
-    // Re-sync team slots to server state on each focus visit.
-    // Same null-window guard: don't overwrite filled slots with empty data if
-    // we previously had a non-empty team (reload artifact protection).
-    if (player) {
+    // Re-sync team slots to server state on each focus visit only when there is
+    // no pending hero pick (otherwise the pick would be overwritten by server data).
+    if (player && heroPick === null) {
       const team = player.active_team ?? [];
       const key = team.join(',');
       const hadHeroes = teamSyncedRef.current !== null && teamSyncedRef.current !== '';
@@ -711,11 +722,15 @@ export default function MissionLoadoutScreen() {
   const ownedItems = ITEMS.filter((it) => (inventory[it.name] ?? 0) > 0);
 
   const owned = new Set(player.heroes_owned);
-  const availableHeroes = HEROES.filter(
-    (h) => owned.has(h.id) && !teamSlots.includes(h.id)
-  );
+
+  const hasHero = isTutorial || teamSlots.some((id) => id !== null);
 
   const handleStart = async () => {
+    if (!isTutorial && !hasHero) {
+      setDeployError("Select at least one healer to deploy.");
+      return;
+    }
+    setDeployError(null);
     if (!isTutorial) {
       await saveActiveTeam(teamSlots.filter((id): id is string => id !== null));
     }
@@ -864,14 +879,20 @@ export default function MissionLoadoutScreen() {
                     key={i}
                     heroId={teamSlots[i] ?? undefined}
                     slotNum={i + 1}
-                    onAdd={() => setHeroPickerSlot(i)}
-                    onRemove={() =>
+                    onAdd={() => {
+                      const ownedIds = encodeURIComponent(JSON.stringify([...owned]));
+                      router.push(
+                        `/hero-picker?slot=${i}&ownedIds=${ownedIds}` as AppRoute
+                      );
+                    }}
+                    onRemove={() => {
                       setTeamSlots((prev) => {
                         const next = [...prev];
                         next[i] = null;
                         return next;
-                      })
-                    }
+                      });
+                      setDeployError(null);
+                    }}
                   />
                 ))}
               </View>
@@ -879,120 +900,7 @@ export default function MissionLoadoutScreen() {
           )}
         </View>
 
-        {/* Hero picker modal */}
-        <Modal
-          visible={heroPickerSlot !== null}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setHeroPickerSlot(null)}
-        >
-          <View style={s.cardModalOverlay}>
-            <View style={s.cardModalSheet}>
-              <View style={s.cardModalHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.cardModalTitle}>Choose a Healer</Text>
-                  <Text style={[s.cardModalSub, { color: UI.teal }]}>
-                    Slot {(heroPickerSlot ?? 0) + 1} · tap a hero to assign
-                  </Text>
-                </View>
-                <Pressable onPress={() => setHeroPickerSlot(null)} hitSlop={10}>
-                  <Ionicons name="close" size={20} color={UI.textSoft} />
-                </Pressable>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-                <View style={s.heroPickerList}>
-                  {availableHeroes.length === 0 ? (
-                    <View style={s.heroPickerEmpty}>
-                      <Ionicons name="people-outline" size={28} color={UI.textDim} />
-                      <Text style={s.heroPickerEmptyTxt}>
-                        All recruited heroes are already in a slot.
-                      </Text>
-                    </View>
-                  ) : (
-                    availableHeroes.map((hero) => {
-                      const sprite      = getHeroSprite(hero.id);
-                      const rc          = ROLE_COLOR[hero.role]    ?? UI.teal;
-                      const ri          = ROLE_ICON[hero.role]     ?? "star";
-                      const sysCo       = SYSTEM_COLOR[hero.element] ?? UI.gold;
-                      const keySkill    = hero.skills?.[0];
-                      const chainRoles  = getHeroChainRoles(hero);
-                      return (
-                        <Pressable
-                          key={hero.id}
-                          style={[s.heroPickerRow, { borderColor: rc + "45" }]}
-                          onPress={() => {
-                            setTeamSlots((prev) => {
-                              const next = [...prev];
-                              next[heroPickerSlot!] = hero.id;
-                              return next;
-                            });
-                            setHeroPickerSlot(null);
-                          }}
-                        >
-                          <View style={[s.heroPickerPortrait, { borderColor: rc + "AA" }]}>
-                            {sprite ? (
-                              <Image
-                                source={sprite}
-                                style={{ width: "100%", height: "100%" }}
-                                contentFit="cover"
-                              />
-                            ) : (
-                              <View style={[s.heroPickerFallback, { backgroundColor: rc + "1E" }]}>
-                                <Ionicons name={ri as any} size={22} color={rc} />
-                              </View>
-                            )}
-                          </View>
-                          <View style={{ flex: 1, gap: 5 }}>
-                            <Text style={[s.heroPickerName, { color: rc }]} numberOfLines={1}>
-                              {hero.name}
-                            </Text>
-                            <Text style={s.heroPickerTitle} numberOfLines={1}>{hero.title}</Text>
-
-                            {/* Role + Element badges */}
-                            <View style={s.heroPickerBadges}>
-                              <View style={[s.heroPickerPill, { backgroundColor: rc + "18", borderColor: rc + "40" }]}>
-                                <Text style={[s.heroPickerPillTxt, { color: rc }]}>{hero.role}</Text>
-                              </View>
-                              <View style={[s.heroPickerPill, { backgroundColor: sysCo + "14", borderColor: sysCo + "32" }]}>
-                                <Text style={[s.heroPickerPillTxt, { color: sysCo }]}>{hero.element}</Text>
-                              </View>
-                            </View>
-
-                            {/* Key skill shortEffect */}
-                            {keySkill?.shortEffect ? (
-                              <View style={s.heroPickerSkillRow}>
-                                <Ionicons name="flash-outline" size={10} color={rc + "90"} />
-                                <Text style={[s.heroPickerSkillTxt, { color: rc + "CC" }]} numberOfLines={2}>
-                                  {keySkill.shortEffect}
-                                </Text>
-                              </View>
-                            ) : null}
-
-                            {/* Chain roles */}
-                            {chainRoles.length > 0 && (
-                              <View style={s.heroPickerChainRow}>
-                                <Ionicons name="link-outline" size={10} color="rgba(255,255,255,0.35)" />
-                                <View style={s.heroPickerChainPills}>
-                                  {chainRoles.map((cr) => (
-                                    <View key={cr} style={s.heroPickerChainPill}>
-                                      <Text style={s.heroPickerChainTxt}>{cr}</Text>
-                                    </View>
-                                  ))}
-                                </View>
-                              </View>
-                            )}
-                          </View>
-                          <Ionicons name="chevron-forward" size={14} color={rc + "70"} style={{ alignSelf: "center" }} />
-                        </Pressable>
-                      );
-                    })
-                  )}
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        {/* Hero picker is now a full-page route — /hero-picker — no modal here */}
 
         <SectionDivider accent={accent} />
 
@@ -1213,13 +1121,36 @@ export default function MissionLoadoutScreen() {
           <Ionicons name="chevron-back" size={16} color={UI.textSoft} />
           <Text style={s.backFooterTxt}>Back</Text>
         </Pressable>
-        <Pressable
-          style={[s.startBtn, { backgroundColor: isTutorial ? UI.gold : accent }]}
-          onPress={handleStart}
-        >
-          <Ionicons name={isTutorial ? "school-outline" : "shield-checkmark"} size={18} color="#0B1020" />
-          <Text style={[s.startBtnTxt, { color: "#0B1020" }]}>{isTutorial ? "Begin Training" : "Deploy to Ward"}</Text>
-        </Pressable>
+        <View style={{ flex: 1, gap: 6 }}>
+          {deployError ? (
+            <View style={s.deployError}>
+              <Ionicons name="warning-outline" size={13} color="#F97316" />
+              <Text style={s.deployErrorTxt}>{deployError}</Text>
+            </View>
+          ) : null}
+          <Pressable
+            style={[
+              s.startBtn,
+              {
+                backgroundColor: isTutorial
+                  ? UI.gold
+                  : hasHero
+                    ? accent
+                    : "rgba(255,255,255,0.08)",
+              },
+            ]}
+            onPress={handleStart}
+          >
+            <Ionicons
+              name={isTutorial ? "school-outline" : "shield-checkmark"}
+              size={18}
+              color={hasHero || isTutorial ? "#0B1020" : UI.textDim}
+            />
+            <Text style={[s.startBtnTxt, { color: hasHero || isTutorial ? "#0B1020" : UI.textDim }]}>
+              {isTutorial ? "Begin Training" : "Deploy to Ward"}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
     </SafeAreaView>
@@ -1726,6 +1657,25 @@ const s = StyleSheet.create({
     color: "#0B1020",
     fontSize: 13,
     fontWeight: "700",
+  },
+
+  // Deploy error label
+  deployError: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(249,115,22,0.10)",
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.30)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  deployErrorTxt: {
+    color: "#F97316",
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
   },
 
   // Footer

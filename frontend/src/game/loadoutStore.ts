@@ -11,6 +11,9 @@
  * AsyncStorage holds the last selection PER mission type so returning to any
  * mission-type prep screen (boss / battle / ward_defense / …) restores the
  * player's preferred kit even after an app restart.
+ *
+ * Also hosts the hero-picker communication channel (pendingHeroPick) which
+ * follows the same drain-once pattern used by the item-bag channel.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,6 +22,30 @@ const PERSIST_PREFIX = "clinica.loadout.items.";
 
 let _items: string[] = [];
 let _fromItemBag = false;
+
+// ── Hero-picker communication channel ────────────────────────────────────────
+
+type HeroPick = { slot: number; heroId: string };
+let _pendingHeroPick: HeroPick | null = null;
+
+/**
+ * Called by /hero-picker on confirm — stores the player's pick so
+ * mission-loadout can consume it on next focus via drainHeroPick().
+ */
+export function setPendingHeroPick(pick: HeroPick): void {
+  _pendingHeroPick = pick;
+}
+
+/**
+ * Drain the hero pick exactly once. Returns the pick if hero-picker just
+ * confirmed a selection, otherwise returns null.
+ * Call on mission-loadout focus.
+ */
+export function drainHeroPick(): HeroPick | null {
+  const pick = _pendingHeroPick;
+  _pendingHeroPick = null;
+  return pick;
+}
 
 // ── In-memory API (used by item-bag) ─────────────────────────────────────────
 
