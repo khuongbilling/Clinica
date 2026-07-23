@@ -1209,7 +1209,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           </Text>
           <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"} size={11} color={COLORS.onSurfaceTertiary} />
         </Pressable>
-        <View style={styles.clueRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.clueScrollView}
+          contentContainerStyle={styles.clueRow}
+        >
           {[...enemy.visibleClues, ...enemy.hiddenClues].map((c) => {
             const isVisible = state.visibleClues.includes(c.id);
             return (
@@ -1228,7 +1233,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               </View>
             );
           })}
-        </View>
+        </ScrollView>
         <Pressable style={styles.battleHelpBtn} onPress={() => setGlossaryOpen(true)} testID="battle-help-open">
           <Ionicons name="help-circle-outline" size={12} color={COLORS.onSurfaceTertiary} />
           <Text style={styles.battleHelpTxt}>Battle Help</Text>
@@ -2452,8 +2457,9 @@ const styles = StyleSheet.create({
   },
   codexLabel: { color: COLORS.brand, fontSize: 12, fontWeight: "700", letterSpacing: 0.2, flex: 1, lineHeight: 17 },
   codexText: { color: COLORS.onSurfaceSecondary, fontWeight: "400", fontSize: 12 },
-  clueRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs, paddingVertical: 2 },
-  clue: { flex: 1, minWidth: 72, maxWidth: 140, height: 52, padding: 4, borderRadius: 4, borderWidth: 1, gap: 1, backgroundColor: COLORS.surface },
+  clueScrollView: { flexShrink: 0 },
+  clueRow: { flexDirection: "row", gap: SPACING.xs, paddingVertical: 2, alignItems: "flex-start" },
+  clue: { width: 120, height: 52, padding: 4, borderRadius: 4, borderWidth: 1, gap: 1, backgroundColor: COLORS.surface },
   clueVisible: { borderColor: COLORS.brand + "80", borderTopWidth: 2, borderTopColor: COLORS.brand + "CC" },
   clueHidden: { borderColor: COLORS.borderStrong, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
   clueLabel: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
