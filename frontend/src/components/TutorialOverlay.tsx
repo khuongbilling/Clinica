@@ -184,7 +184,11 @@ export function TutorialOverlay() {
     // tutorials do NOT use a scrim — wrong-tap blocking is handled by
     // isTutorialBlocked in each game screen's press handler.
     const isMiniGameStep = !!currentStep.requiredTargetId;
-    const showScrim = isBattleTutorial && currentStep.requireAction;
+    // Block ALL battle tutorial steps (banner + requireAction) while the box is
+    // visible — not just requireAction steps — so tapping skill cards or end-turn
+    // during any narrative step does nothing. The scrim releases only after the
+    // player taps the box away (boxDismissed), letting them reach the highlighted action.
+    const showScrim = isBattleTutorial;
 
     // After the box dismisses: battle tutorials keep a dim visual-only scrim
     // so the player sees the highlighted skill is still the target. Mini-game

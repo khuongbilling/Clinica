@@ -172,7 +172,7 @@ export default function RunHome() {
   const router  = useRouter();
   const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
   const { logEvent } = useTestSession();
-  const { isCompleted, markDone } = useTutorial();
+  const { isCompleted, markDone, startTutorial } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
   const [showLv2Modal, setShowLv2Modal] = useState(false);
@@ -223,20 +223,34 @@ export default function RunHome() {
 
   // Push 26 — post-prologue orientation cleanup.
   // Players who reach the hub via the full flow always have seen_reminiscence=true.
-  // Auto-dismiss the "Welcome to Clinica" intro modal and complete systemHubIntro so
-  // neither fires on top of the NarratorGuide objective chain — both are redundant
-  // after the prologue → recall → identity → reminiscence arc the player just finished.
+  // Auto-dismiss the "Welcome to Clinica" intro modal so it never fires on top of
+  // the NarratorGuide objective chain. systemHubIntro is handled separately below.
   // For edge-case players without seen_reminiscence (shouldn't reach hub), fall back
   // to the legacy INTRO_KEY check so the modal still shows.
   useEffect(() => {
     if (player?.seen_reminiscence) {
-      // Post-prologue player: suppress both intro-modal and orientation-panel
       AsyncStorage.setItem(INTRO_KEY, "1");
-      if (!isCompleted("systemHubIntro")) markDone("systemHubIntro");
       return;
     }
     AsyncStorage.getItem(INTRO_KEY).then((v) => { if (!v) setShowIntro(true); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // systemHubIntro: play once on first hub visit after prologue (seen_reminiscence=true).
+  // Auto-skip only for players clearly past Chapter 1 (the tutorial is genuinely
+  // redundant at that point). Otherwise, start the 3-step orientation overlay.
+  // The tutorial-center replay path (replayTutorial) always bypasses this guard.
+  const systemHubIntroCompleted = isCompleted("systemHubIntro");
+  useEffect(() => {
+    if (!player || !player.seen_reminiscence) return;
+    if (systemHubIntroCompleted) return;
+    const chapterProgress = player.chapter_progress ?? 0;
+    if (chapterProgress >= 1) {
+      markDone("systemHubIntro");
+      return;
+    }
+    const t = setTimeout(() => startTutorial("systemHubIntro"), 700);
+    return () => clearTimeout(t);
+  }, [player?.seen_reminiscence, player?.chapter_progress, systemHubIntroCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // C5 — Level 2 "Apprentice Path Opened" celebration. Fire once the player
   // reaches Level 2 and hasn't yet seen the unlock moment. The intro modal

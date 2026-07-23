@@ -61,7 +61,7 @@ export default function Battle() {
 function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState, advanceProloguePhase } = usePlayer();
-  const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId, guidedReserve } = useTutorial();
+  const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId } = useTutorial();
   const isFirstBattleGuided = activeTutorialId === "firstBattle";
   const isFirstBattleActionStep =
     isFirstBattleGuided &&
@@ -1429,9 +1429,13 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
               const visible = entries.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE);
 
               return (
-                <>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ flexGrow: 1, gap: SPACING.sm }}
+                >
                   <View style={styles.skillPageGrid}>
-                    {/* Row 1 — first two cards fill half the available height */}
+                    {/* Row 1 — first two cards share available height */}
                     <View style={styles.skillGridRow}>
                       {visible.slice(0, 2).map(e => (
                         <View key={e.key} style={styles.skillCardSlot}>{e.node}</View>
@@ -1455,7 +1459,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                       ))}
                     </View>
                   )}
-                </>
+                </ScrollView>
               );
             })()}
           </View>
@@ -2493,10 +2497,11 @@ const styles = StyleSheet.create({
   },
   // ── Skill pagination ──
   actionsPanel: { flex: 1, gap: SPACING.xs },
-  // Two-row flex grid: each row gets flex:1 so both rows share available height equally.
-  // No overflow:hidden anywhere — cards expand to fill, never get clipped.
+  // Two-row flex grid inside a ScrollView — each row has a guaranteed minimum
+  // height (minHeight) so cards are never clipped on small screens, and the
+  // ScrollView scrolls when content exceeds the available zone-D space.
   skillPageGrid: { flex: 1, gap: SPACING.sm },
-  skillGridRow:  { flex: 1, flexDirection: "row", gap: SPACING.sm },
+  skillGridRow:  { flex: 1, flexDirection: "row", gap: SPACING.sm, minHeight: 88 },
   skillCardSlot: { flex: 1 },
   skillCard: {
     flex: 1, padding: 7, borderRadius: 6,
