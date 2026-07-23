@@ -30,12 +30,14 @@ import { LinearGradient } from "expo-linear-gradient";
 
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
+import { PROLOGUE_CHARACTERS } from "../../game/prologueCharacters";
+
 const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
-  masterBai:   require("../../../assets/images/master_bai.png"),
-  nightingale: require("../../../assets/images/nightingale_vn_bust.png"),
+  masterBai:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
+  nightingale: PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
   fleming:     require("../../../assets/images/fleming_portrait.png"),
-  prodigy:     require("../../../assets/images/prodigy_vn_canonical.png"),
+  prodigy:     PROLOGUE_CHARACTERS.PRODIGY.avatar48,
 } as const;
 
 // ─── Characters ───────────────────────────────────────────────────────────────

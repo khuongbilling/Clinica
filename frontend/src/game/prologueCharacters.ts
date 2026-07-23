@@ -21,12 +21,13 @@ export interface PrologueCharacter {
   temporary:     boolean;
 }
 
-const PRODIGY_LARGE      = require("../../assets/images/prodigy_vn_canonical.png");
-const MASTER_BAI_ART     = require("../../assets/images/master_bai_vn.png");
-const NIGHTINGALE_LARGE  = require("../../assets/images/nightingale_battle_sprite.png");
-const NIGHTINGALE_BUST   = require("../../assets/images/nightingale_vn_bust.png");
-const FLEMING_LARGE      = require("../../assets/images/fleming_vn.png");
-const FLEMING_BUST       = require("../../assets/images/fleming_vn_bust.png");
+const PRODIGY_LARGE          = require("../../assets/images/prodigy_vn_canonical.png");
+const MASTER_BAI_TORSO       = require("../../assets/images/master_bai_vn_torso.png");
+const MASTER_BAI_BUST        = require("../../assets/images/master_bai_vn_bust.png");
+const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn.png");
+const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
+const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
+const FLEMING_BUST           = require("../../assets/images/fleming_vn_bust.png");
 
 const NIGHTINGALE_BATTLE = require("../../assets/heroes/battle/prologue_nightingale.png");
 const FLEMING_BATTLE     = require("../../assets/heroes/battle/prologue_fleming.png");
@@ -52,8 +53,8 @@ export const PROLOGUE_CHARACTERS = {
     name:          "Master Bai",
     color:         "#D9A441",
     barColor:      "rgba(30,20,5,0.93)",
-    largePortrait: MASTER_BAI_ART,
-    avatar48:      MASTER_BAI_ART,
+    largePortrait: MASTER_BAI_TORSO,
+    avatar48:      MASTER_BAI_BUST,
     battleSprite:  MASTER_BAI_BATTLE,
     palette:       "jade, white, gold",
     role:          "Mentor — Legendary Physician Scholar",
@@ -65,7 +66,7 @@ export const PROLOGUE_CHARACTERS = {
     name:          "Florence Nightingale",
     color:         "#4FD8C4",
     barColor:      "rgba(5,22,20,0.93)",
-    largePortrait: NIGHTINGALE_BUST,
+    largePortrait: NIGHTINGALE_LARGE,
     avatar48:      NIGHTINGALE_BUST,
     battleSprite:  NIGHTINGALE_BATTLE,
     palette:       "gold, ivory, jade",
