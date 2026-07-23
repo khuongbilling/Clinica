@@ -21,10 +21,13 @@ export interface PrologueCharacter {
   temporary:     boolean;
 }
 
-const PRODIGY_ART    = require("../../assets/images/prodigy_vn_canonical.png");
-const MASTER_BAI_ART = require("../../assets/images/master_bai_vn.png");
-const NIGHTINGALE_ART = require("../../assets/images/nightingale_vn_bust.png");
-const FLEMING_ART    = require("../../assets/images/fleming_vn_bust.png");
+const PRODIGY_LARGE      = require("../../assets/images/prodigy_vn_canonical.png");
+const PRODIGY_BUST       = require("../../assets/images/prodigy_vn_bust.png");
+const MASTER_BAI_ART     = require("../../assets/images/master_bai_vn.png");
+const NIGHTINGALE_LARGE  = require("../../assets/images/nightingale_vn.png");
+const NIGHTINGALE_BUST   = require("../../assets/images/nightingale_vn_bust.png");
+const FLEMING_LARGE      = require("../../assets/images/fleming_vn.png");
+const FLEMING_BUST       = require("../../assets/images/fleming_vn_bust.png");
 
 const NIGHTINGALE_BATTLE = require("../../assets/heroes/battle/prologue_nightingale.png");
 const FLEMING_BATTLE     = require("../../assets/heroes/battle/prologue_fleming.png");
@@ -37,8 +40,8 @@ export const PROLOGUE_CHARACTERS = {
     name:          "The Former Self",
     color:         "#E8354A",
     barColor:      "rgba(28,5,8,0.93)",
-    largePortrait: PRODIGY_ART,
-    avatar48:      PRODIGY_ART,
+    largePortrait: PRODIGY_LARGE,
+    avatar48:      PRODIGY_BUST,
     battleSprite:  PRODIGY_BATTLE,
     palette:       "white, gold, jade, crimson",
     role:          "Legendary Clinician Prodigy — Pre-Recall",
@@ -63,8 +66,8 @@ export const PROLOGUE_CHARACTERS = {
     name:          "Florence Nightingale",
     color:         "#4FD8C4",
     barColor:      "rgba(5,22,20,0.93)",
-    largePortrait: NIGHTINGALE_ART,
-    avatar48:      NIGHTINGALE_ART,
+    largePortrait: NIGHTINGALE_LARGE,
+    avatar48:      NIGHTINGALE_BUST,
     battleSprite:  NIGHTINGALE_BATTLE,
     palette:       "gold, ivory, jade",
     role:          "Legendary Healer — Temporary Prologue Ally",
@@ -76,8 +79,8 @@ export const PROLOGUE_CHARACTERS = {
     name:          "Alexander Fleming",
     color:         "#78B8F0",
     barColor:      "rgba(5,15,28,0.93)",
-    largePortrait: FLEMING_ART,
-    avatar48:      FLEMING_ART,
+    largePortrait: FLEMING_LARGE,
+    avatar48:      FLEMING_BUST,
     battleSprite:  FLEMING_BATTLE,
     palette:       "blue, teal, silver",
     role:          "Legendary Scholar — Temporary Prologue Ally",
