@@ -2337,21 +2337,32 @@ function HandPanel({
                 const isSelected = selectedUnit === typeId;
                 return (
                   <Pressable key={typeId}
-                    style={[s.unitCard, { borderColor: isSelected ? u.color : canAfford ? u.color + "55" : COLORS.border,
-                      backgroundColor: isSelected ? u.color + "20" : canAfford ? "#080e18" : "#060a12" }]}
+                    style={[s.unitCard, {
+                      borderColor: isSelected ? u.color : canAfford ? u.color + "55" : COLORS.border,
+                      borderWidth: isSelected ? 2 : 1.5,
+                      backgroundColor: isSelected ? u.color + "28" : canAfford ? "#080e18" : "#060a12",
+                    }]}
                     onPress={() => onSelectUnit(typeId)}>
-                    <Text style={[s.cardCatBadge, { color: canAfford ? u.color : COLORS.onSurfaceTertiary }]}>
+                    {/* Selected: top-edge luminous highlight strip */}
+                    {isSelected && (
+                      <View style={{ position: "absolute", top: 0, left: 8, right: 8, height: 2,
+                        borderRadius: 2, backgroundColor: u.color + "cc" }} />
+                    )}
+                    <Text style={[s.cardCatBadge, { color: canAfford ? u.color : COLORS.onSurfaceTertiary, marginTop: isSelected ? 3 : 0 }]}>
                       {u.category}
                     </Text>
+                    {/* Chibi portrait — no overflow clip so full body is visible */}
                     <View style={{
-                      width: "100%", minHeight: 72, borderRadius: 8,
-                      overflow: "hidden", marginVertical: 2,
+                      width: "100%", height: 84,
                       alignItems: "center", justifyContent: "flex-end",
+                      marginVertical: 2,
                     }}>
-                      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: u.color + "18" }]} />
+                      {/* Soft elliptical aura glow at the feet — no boxy fill */}
+                      <View style={{ position: "absolute", bottom: -2, width: 54, height: 28,
+                        borderRadius: 27, backgroundColor: u.color + (isSelected ? "38" : "22") }} />
                       <ExpoImage
                         source={CARD_PORTRAITS[typeId]}
-                        style={{ width: 60, height: 78 }}
+                        style={{ width: 68, height: 90 }}
                         contentFit="contain"
                         cachePolicy="none"
                       />
@@ -4522,9 +4533,9 @@ const s = StyleSheet.create({
   handPauseTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 0.2, marginTop: 1 },
   unitCard: {
     flex: 1, alignItems: "center", gap: 3,
-    paddingVertical: 5, paddingTop: 5, paddingHorizontal: 4,
+    paddingVertical: 5, paddingHorizontal: 3,
     borderRadius: RADIUS.md, borderWidth: 1.5,
-    minHeight: 108,
+    minHeight: 128,
   },
   abilityCard: {
     flex: 1, alignItems: "center", gap: 2,
