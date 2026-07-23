@@ -244,7 +244,10 @@ export default function RunHome() {
     if (!player || !player.seen_reminiscence) return;
     if (systemHubIntroCompleted) return;
     const chapterProgress = player.chapter_progress ?? 0;
-    if (chapterProgress >= 1) {
+    // chapter_progress starts at 1 for brand-new players and advances to 2+
+    // only after completing Chapter 1 nodes. Auto-skip only once a player has
+    // genuinely moved past Chapter 1 (>= 2); value 1 means "on Chapter 1, not yet done".
+    if (chapterProgress >= 2) {
       markDone("systemHubIntro");
       return;
     }
