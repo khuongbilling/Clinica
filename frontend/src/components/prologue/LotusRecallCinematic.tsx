@@ -29,10 +29,10 @@ import { Image as ExpoImage } from "expo-image";
 // ── Art assets ────────────────────────────────────────────────────────────────
 const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
-  nightingale: require("../../../assets/images/nightingale_portrait.png"),
+  nightingale: require("../../../assets/images/nightingale_vn_bust.png"),
   fleming:     require("../../../assets/images/fleming_portrait.png"),
   masterBai:   require("../../../assets/images/master_bai.png"),
-  formerSelf:  require("../../../assets/images/former_self_portrait.png"),
+  formerSelf:  require("../../../assets/images/prodigy_vn_canonical.png"),
 };
 
 // ── Dialogue beats ────────────────────────────────────────────────────────────

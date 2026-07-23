@@ -138,8 +138,8 @@ const BATTLE_SPRITES: Record<string, any> = {
   prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),
 
   // ── Former Self / The Prodigy (scripted prologue battle) ──
-  former_self:           require('../../assets/heroes/battle/former_self.png'),
-  prologue_former_self:  require('../../assets/heroes/battle/former_self.png'),
+  former_self:           require('../../assets/heroes/battle/the_prodigy.png'),
+  prologue_former_self:  require('../../assets/heroes/battle/the_prodigy.png'),
   the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),
 };
 

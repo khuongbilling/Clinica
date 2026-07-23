@@ -183,7 +183,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'prologue_former_self',
-    name: 'The Former Self',
+    name: 'The Prodigy',
     title: 'Mythic Clinician',
     rarity: 6,
     role: 'Striker',

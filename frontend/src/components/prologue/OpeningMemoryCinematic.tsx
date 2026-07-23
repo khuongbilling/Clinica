@@ -29,9 +29,9 @@ import { LinearGradient } from "expo-linear-gradient";
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
 const ART = {
-  portrait: require("../../../assets/images/former_self_portrait.png"),
-  healing:  require("../../../assets/images/former_self_scene_healing.png"),
-  victory:  require("../../../assets/images/former_self_scene_victory.png"),
+  portrait: require("../../../assets/images/prodigy_vn_canonical.png"),
+  healing:  require("../../../assets/images/prodigy_vn_canonical.png"),
+  victory:  require("../../../assets/images/prodigy_vn_canonical.png"),
 } as const;
 type ArtKey = keyof typeof ART;
 

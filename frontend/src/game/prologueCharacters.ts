@@ -24,7 +24,7 @@ export interface PrologueCharacter {
 const PRODIGY_LARGE      = require("../../assets/images/prodigy_vn_canonical.png");
 const PRODIGY_BUST       = require("../../assets/images/prodigy_vn_bust.png");
 const MASTER_BAI_ART     = require("../../assets/images/master_bai_vn.png");
-const NIGHTINGALE_LARGE  = require("../../assets/images/nightingale_vn.png");
+const NIGHTINGALE_LARGE  = require("../../assets/images/nightingale_battle_sprite.png");
 const NIGHTINGALE_BUST   = require("../../assets/images/nightingale_vn_bust.png");
 const FLEMING_LARGE      = require("../../assets/images/fleming_vn.png");
 const FLEMING_BUST       = require("../../assets/images/fleming_vn_bust.png");
@@ -37,7 +37,7 @@ const PRODIGY_BATTLE     = require("../../assets/heroes/battle/the_prodigy.png")
 export const PROLOGUE_CHARACTERS = {
   PRODIGY: {
     id:            "prodigy_former_self",
-    name:          "The Former Self",
+    name:          "The Prodigy",
     color:         "#E8354A",
     barColor:      "rgba(28,5,8,0.93)",
     largePortrait: PRODIGY_LARGE,

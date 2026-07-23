@@ -37,8 +37,8 @@ import { LinearGradient } from "expo-linear-gradient";
 
 const ART = {
   battlefield:  require("../../../assets/images/tactical_battlefield.png"),
-  formerSelf:   require("../../../assets/images/former_self_portrait.png"),
-  nightingale:  require("../../../assets/images/nightingale_portrait.png"),
+  formerSelf:   require("../../../assets/images/prodigy_vn_canonical.png"),
+  nightingale:  require("../../../assets/images/nightingale_vn_bust.png"),
   fleming:      require("../../../assets/images/fleming_portrait.png"),
   masterBai:    require("../../../assets/images/master_bai.png"),
 } as const;
@@ -69,8 +69,8 @@ const HERO_SLOTS = [
   },
   {
     id:       "former_self",
-    name:     "The Former Self",
-    role:     "The Prodigy",
+    name:     "The Prodigy",
+    role:     "Legendary Clinician",
     roleColor: "#7EB8F7",
     tags:     ["Strike", "Heal", "Solo"],
     avatar:   ART.formerSelf,

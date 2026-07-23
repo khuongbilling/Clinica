@@ -43,7 +43,7 @@ function buildAuditList() {
 
   // 1. Prologue special heroes (former_self, prologue_nightingale, prologue_fleming)
   const prologueSpecial = [
-    { id: "former_self", name: "The Former Self", family: null, rarity: "—", role: "Scripted", status: "prologue" as const },
+    { id: "former_self", name: "The Prodigy", family: null, rarity: "—", role: "Scripted", status: "prologue" as const },
     { id: "prologue_nightingale", name: "Florence Nightingale", family: null, rarity: "Legendary", role: "Stabilizer", status: "prologue" as const },
     { id: "prologue_fleming", name: "Alexander Fleming", family: null, rarity: "Legendary", role: "Educator", status: "prologue" as const },
   ];
