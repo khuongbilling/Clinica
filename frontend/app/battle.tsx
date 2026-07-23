@@ -94,22 +94,20 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   // Prologue loaner heroes: brand-new players own no heroes (Recruitment is
   // the only source), so the guided tutorial battle AND the scripted prologue
-  // boss both run on the SAME temporary loaner pair — Florence Nightingale
-  // (prologue_nightingale) and Alexander Fleming (prologue_fleming). Their
-  // skill IDs (lantern_of_clues / guardians_touch) satisfy the guided tutorial
-  // step pins. Loaners are never persisted: the prologue runs as training (no
-  // hero XP) and nothing writes them into heroes_owned/active_team/hero_progression.
+  // boss both run on the SAME temporary loaner trio — Florence Nightingale
+  // (prologue_nightingale), Alexander Fleming (prologue_fleming), and The Prodigy
+  // (prologue_former_self). Their skill IDs satisfy the guided tutorial step pins.
+  // Loaners are never persisted: the prologue runs as training (no hero XP) and
+  // nothing writes them into heroes_owned/active_team/hero_progression.
   const isPrologueLoanerBattle = isPrologueTutorial || isPrologueBoss;
   const team = useMemo(() => {
     let assembled: Hero[];
     if (isPrologueLoanerBattle || !player || (player.heroes_owned || []).length === 0) {
-      // Tutorial: Nightingale + Fleming. Boss: adds Former Self as the 3rd loaner.
+      // Tutorial + Boss: same three-hero loaner team (Nightingale, Fleming, Former Self).
       // Empty-roster fallback (shouldn't occur post-recruitment): Novice Guardian pair.
-      const loanerIds = isPrologueTutorial
-        ? ["prologue_nightingale", "prologue_fleming"]
-        : isPrologueBoss
-          ? ["prologue_nightingale", "prologue_fleming", "prologue_former_self"]
-          : ["novice_guardian", "village_caretaker"];
+      const loanerIds = isPrologueTutorial || isPrologueBoss
+        ? ["prologue_nightingale", "prologue_fleming", "prologue_former_self"]
+        : ["novice_guardian", "village_caretaker"];
       assembled = loanerIds
         .map((id) => HEROES.find((h) => h.id === id))
         .filter(Boolean) as Hero[];

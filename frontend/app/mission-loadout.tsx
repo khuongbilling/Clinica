@@ -849,17 +849,17 @@ export default function MissionLoadoutScreen() {
           {isTutorial ? (
             <>
               <Text style={s.sectionDesc}>
-                Two legendary healers lend you their power for your first shift. Recruit your own team after the tutorial.
+                Three legendary healers lend you their power for your first shift. Recruit your own team after the tutorial.
               </Text>
               <View style={s.heroSlotRow}>
-                <HeroSlot heroId="novice_guardian"      slotNum={1} locked loanerLabel="LOANER" />
-                <HeroSlot heroId="village_caretaker"    slotNum={2} locked loanerLabel="LOANER" />
-                <HeroSlot heroId="florence_nightingale" slotNum={3} locked loanerLabel="LEGENDARY LOANER" />
+                <HeroSlot heroId="prologue_nightingale" slotNum={1} locked loanerLabel="LEGENDARY LOANER" />
+                <HeroSlot heroId="prologue_fleming"     slotNum={2} locked loanerLabel="LEGENDARY LOANER" />
+                <HeroSlot heroId="prologue_former_self" slotNum={3} locked loanerLabel="LEGENDARY LOANER" />
               </View>
               <View style={[s.tutorialNotice, { borderColor: UI.gold + "30", backgroundColor: UI.gold + "0A", marginTop: 8 }]}>
                 <Ionicons name="star" size={14} color={UI.gold} />
                 <Text style={[s.tutorialNoticeTxt, { color: UI.gold + "CC" }]}>
-                  A legendary healer lends their power for your first shift. Complete the tutorial to begin recruiting your own team.
+                  Three legendary healers lend their power for your first shift. Complete the tutorial to begin recruiting your own team.
                 </Text>
               </View>
             </>

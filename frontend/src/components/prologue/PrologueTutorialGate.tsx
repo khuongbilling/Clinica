@@ -7,7 +7,7 @@
  * (dehydration_wisp / prologueBattle tutorial) on mount.
  *
  * The loaner team for this battle is Florence Nightingale + Alexander Fleming
- * (configured in battle.tsx via the isPrologueTutorial flag).
+ * + The Prodigy (configured in battle.tsx via the isPrologueTutorial flag).
  *
  * When the player wins the tutorial, result.tsx advances the prologue phase to
  * `former_self_victory_boast` and routes back to /opening-prologue.
@@ -70,7 +70,7 @@ export default function PrologueTutorialGate() {
         <Text style={s.kicker}>CLINICA UNIVERSITY  ·  FIRST SHIFT</Text>
         <Text style={s.heading}>The Ward Awaits</Text>
         <Text style={s.sub}>
-          Florence Nightingale and Alexander Fleming are ready.{"\n"}
+          Nightingale, Fleming, and The Prodigy stand with you.{"\n"}
           Scout. Stabilize. Counter. Reassess.
         </Text>
         <Text style={s.instructor}>MASTER BAI will guide you.</Text>
