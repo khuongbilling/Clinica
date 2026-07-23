@@ -236,7 +236,7 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
   const [isAttacking, setIsAttacking] = useState(false);
   const visuals = getHeroVisuals(hero.id, hero.name);
   const idleSprite = visuals.battleSpriteAsset;
-  const attackSprite = getHeroAttackSprite(visuals.family);
+  const attackSprite = getHeroAttackSprite(visuals.family, hero.id);
   const sprite = isAttacking && attackSprite ? attackSprite : idleSprite;
   const color = ELEMENT_COLORS[hero.element] || visuals.familyColor || COLORS.brand;
   const move = HERO_MOVE[castKind] ?? HERO_MOVE.strike;
