@@ -1158,6 +1158,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           dangerTrigger: enemy.dangerTrigger,
           bestCounters: enemy.bestCounters,
           visibleClues: [...enemy.visibleClues, ...enemy.hiddenClues].filter((c) => state.visibleClues.includes(c.id)),
+          floats: enemy.floats,
         }}
         team={team}
         selectedHeroId={state.selectedHeroId}

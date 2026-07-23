@@ -106,6 +106,10 @@ export interface Enemy {
   // should only appear in encounters gated to this chapter or higher.
   simulationCounterpart?: string; // id of the simulation-era enemy this is derived from
   chapterGate?: number;           // minimum chapter to encounter in ward shifts
+  // True for enemies that genuinely fly/float (wisps, spirits, specters, shades,
+  // fire imps, etc.). Drives the vertical bob idle animation in BattlefieldScene —
+  // grounded enemies skip the float and only breathe-scale.
+  floats?: boolean;
 }
 
 export interface CodexEntry {

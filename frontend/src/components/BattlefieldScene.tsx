@@ -28,6 +28,7 @@ const BOSS_BG: Record<string, ReturnType<typeof require>> = {
 };
 
 import { getHeroVisuals } from "./getHeroVisuals";
+import { getHeroAttackSprite } from "./HeroBattleAttackSprites";
 import { getEnemySprite } from "./EnemySprites";
 import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
 import type { ActionType, ClueCard, ElementSystem, Hero } from "@/src/game/types";
@@ -140,6 +141,7 @@ interface BattleEnemyInfo {
   dangerTrigger: string;
   bestCounters: ActionType[];
   visibleClues: ClueCard[];
+  floats?: boolean;
 }
 
 interface BattlefieldSceneProps {
@@ -224,7 +226,6 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
   hero: Hero; selected: boolean; acted: boolean; castTs: number; castAction?: ActionType;
   hitTs: number; hitKind?: EnemyAttackKind | null; teamDefeated: boolean;
 }) {
-  const bob = useRef(new Animated.Value(0)).current;
   const cast = useRef(new Animated.Value(0)).current;
   const proj = useRef(new Animated.Value(0)).current;
   const combat = useRef(new Animated.Value(0)).current;
@@ -232,21 +233,13 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
   const hurt = useRef(new Animated.Value(0)).current;
   const [castKind, setCastKind] = useState<ActionType>("strike");
   const [hurtFx, setHurtFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
+  const [isAttacking, setIsAttacking] = useState(false);
   const visuals = getHeroVisuals(hero.id, hero.name);
-  const sprite = visuals.battleSpriteAsset;
+  const idleSprite = visuals.battleSpriteAsset;
+  const attackSprite = getHeroAttackSprite(visuals.family);
+  const sprite = isAttacking && attackSprite ? attackSprite : idleSprite;
   const color = ELEMENT_COLORS[hero.element] || visuals.familyColor || COLORS.brand;
   const move = HERO_MOVE[castKind] ?? HERO_MOVE.strike;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(bob, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [bob]);
 
   // Fighting stance when this hero is selected & ready to act.
   useEffect(() => {
@@ -263,11 +256,12 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
     if (!castTs) return;
     const kind = castAction ?? "strike";
     setCastKind(kind);
+    setIsAttacking(true);
     cast.setValue(0);
     Animated.sequence([
       Animated.timing(cast, { toValue: 1, duration: 150, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
       Animated.timing(cast, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-    ]).start();
+    ]).start(() => setIsAttacking(false));
     // Unique illustrated attack sequence — projectile/effect flying toward the enemy.
     proj.setValue(0);
     Animated.timing(proj, {
@@ -294,7 +288,6 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
     ]).start();
   }, [hitTs, hitKind, hurt]);
 
-  const idleY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
   const combatLean = combat.interpolate({ inputRange: [0, 1], outputRange: [0, 6] });
   const combatDip = combat.interpolate({ inputRange: [0, 1], outputRange: [0, 2] });
   const combatScale = combat.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] });
@@ -331,7 +324,7 @@ function HeroUnit({ hero, selected, acted, castTs, castAction, hitTs, hitKind, t
           {
             transform: [
               { translateX: Animated.add(Animated.add(combatLean, castX), Animated.add(hurtX, hurtShakeX)) },
-              { translateY: Animated.add(Animated.add(idleY, combatDip), Animated.add(castY, defeatTranslate)) },
+              { translateY: Animated.add(combatDip, Animated.add(castY, defeatTranslate)) },
               { rotate: castRotate },
               { rotate: hurtRotate },
               { scale: Animated.multiply(combatScale, castScale) },
@@ -417,6 +410,7 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
   }, [breathe]);
 
   useEffect(() => {
+    if (!enemy.floats) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(bob, { toValue: 1, duration: 1550, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -425,7 +419,7 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
     );
     loop.start();
     return () => loop.stop();
-  }, [bob]);
+  }, [bob, enemy.floats]);
 
   useEffect(() => {
     if (!hitTs) return;
