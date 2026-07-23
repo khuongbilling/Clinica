@@ -1,4 +1,5 @@
 import { HERO_SPRITE_MODULES } from "@/src/components/HeroSprites";
+import { HERO_PORTRAIT_MODULES } from "@/src/components/HeroPortraits";
 import { HERO_BATTLE_SPRITE_MODULES } from "@/src/components/HeroBattleSprites";
 import { REALM_IMAGE_MODULES, prefetchModules } from "@/src/game/realmAssets";
 import { CHAPTER_MAP_BG_MODULES } from "@/src/game/illustratedAssets";
@@ -8,7 +9,8 @@ import { CHAPTER_MAP_BG_MODULES } from "@/src/game/illustratedAssets";
 // so switching between tabs and opening chapter maps appears instantly.
 const TAB_IMAGE_MODULES: number[] = [
   require("../../assets/images/home_hub_bg.png"), // Shift — hub background
-  ...HERO_SPRITE_MODULES,        // Shift lead-hero portrait + Heroes lists
+  ...HERO_SPRITE_MODULES,        // Legacy full-body portraits
+  ...(HERO_PORTRAIT_MODULES as unknown as number[]), // Bust portraits — collection + gacha cards
   ...HERO_BATTLE_SPRITE_MODULES, // Heroes tab — battle sprite cards
   ...REALM_IMAGE_MODULES,        // Realm — terrain + buildings
   ...CHAPTER_MAP_BG_MODULES,     // Journey Map — V3 illustrated chapter backgrounds

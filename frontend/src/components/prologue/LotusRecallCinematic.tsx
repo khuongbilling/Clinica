@@ -32,7 +32,7 @@ import { PROLOGUE_CHARACTERS } from "../../game/prologueCharacters";
 const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
   nightingale: PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
-  fleming:     require("../../../assets/images/fleming_portrait.png"),
+  fleming:     require("../../../assets/images/fleming_vn_bust.png"),
   masterBai:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
   formerSelf:  PROLOGUE_CHARACTERS.PRODIGY.avatar48,
 };

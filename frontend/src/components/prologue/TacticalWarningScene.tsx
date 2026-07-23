@@ -36,7 +36,7 @@ const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
   masterBai:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
   nightingale: PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
-  fleming:     require("../../../assets/images/fleming_portrait.png"),
+  fleming:     require("../../../assets/images/fleming_vn_bust.png"),
   prodigy:     PROLOGUE_CHARACTERS.PRODIGY.avatar48,
 } as const;
 

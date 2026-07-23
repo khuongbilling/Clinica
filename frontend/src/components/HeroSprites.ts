@@ -139,7 +139,7 @@ const SPRITES: Record<string, ImageSourcePropType> = {
 
   // Prologue loaner heroes — tutorial + boss battles
   prologue_nightingale:  require('../../assets/heroes/florence_nightingale.png'),
-  prologue_fleming:      require('../../assets/images/fleming_portrait.png'),
+  prologue_fleming:      require('../../assets/images/fleming_vn_bust.png'),
   // The Prodigy — Former Self at peak legendary power (prologue pre-recall only)
   prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),
   the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),

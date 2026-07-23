@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES, RANKS } from "@/src/game/content";
+import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { usePlayer } from "@/src/game/store";
@@ -306,7 +307,7 @@ export default function HeroProfile() {
   }
 
   const accent    = ELEMENT_COLORS[hero.element] ?? COLORS.brand;
-  const portrait  = getHeroSprite(hero.id);
+  const portrait  = getHeroPortrait(hero.id) ?? getHeroSprite(hero.id);
   const isOwned   = player.heroes_owned.includes(hero.id);
   const inTeam    = player.active_team.includes(hero.id);
   const teamSlot  = player.active_team.indexOf(hero.id) + 1;

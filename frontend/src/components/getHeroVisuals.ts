@@ -7,6 +7,7 @@
  */
 
 import type { ImageSourcePropType } from 'react-native';
+import { getHeroPortrait, hasHeroPortrait } from './HeroPortraits';
 import { getHeroSprite, hasHeroSprite } from './HeroSprites';
 import { getHeroBattleSprite } from './HeroBattleSprites';
 import { HEROES } from '@/src/game/content';
@@ -114,9 +115,10 @@ export interface HeroVisuals extends HeroVisualMeta {
  * @param heroName - Optional display name used only for the fallback initial when metadata lookup fails.
  */
 export function getHeroVisuals(heroId: string, heroName?: string): HeroVisuals {
-  const portraitAsset     = getHeroSprite(heroId) ?? null;
+  // Prefer new dedicated bust portraits; fall back to legacy HeroSprites.
+  const portraitAsset     = getHeroPortrait(heroId) ?? getHeroSprite(heroId) ?? null;
   const battleSpriteAsset = getHeroBattleSprite(heroId);
-  const hasPortrait       = hasHeroSprite(heroId);
+  const hasPortrait       = hasHeroPortrait(heroId) || hasHeroSprite(heroId);
   const hasBattleSprite   = battleSpriteAsset !== null;
   const meta              = resolveMeta(heroId, heroName);
 

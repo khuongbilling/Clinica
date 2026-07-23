@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HEROES } from "@/src/game/content";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
+import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
@@ -133,7 +134,7 @@ export default function HeroesScreen() {
               const isOwned  = owned.has(h.id);
               const inTeam   = team.includes(h.id);
               const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
-              const sprite   = getHeroBattleSprite(h.id);
+              const sprite   = getHeroPortrait(h.id) ?? getHeroBattleSprite(h.id);
               const teamSlot = team.indexOf(h.id) + 1;
               const prog     = getProgress(player.hero_progression, h.id);
               const evolveReady = isOwned && canEvolve(prog);
@@ -235,7 +236,7 @@ export default function HeroesScreen() {
               <View style={styles.grid}>
                 {legendaryHeroes.map((h) => {
                   const accent = UI.gold;
-                  const sprite = getHeroBattleSprite(h.id);
+                  const sprite = getHeroPortrait(h.id) ?? getHeroBattleSprite(h.id);
                   return (
                     <View key={h.id} style={[styles.cardWrap]}>
                       <View style={[styles.card, styles.legendaryCard, { borderColor: UI.gold + "60" }]}>
@@ -286,7 +287,7 @@ export default function HeroesScreen() {
           )}
           {teamHeroes.map((h, i) => {
             const accent = ELEMENT_COLORS[h.element] ?? COLORS.brand;
-            const sprite = getHeroBattleSprite(h.id);
+            const sprite = getHeroPortrait(h.id) ?? getHeroBattleSprite(h.id);
             const prog   = getProgress(player.hero_progression, h.id);
             return (
               <Pressable key={h.id} style={[styles.teamCard, { borderLeftColor: accent }]}

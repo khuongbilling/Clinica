@@ -130,7 +130,7 @@ const BATTLE_SPRITES: Record<string, any> = {
   pattern_seer:                require('../../assets/heroes/battle/pattern_seer.png'),                // Pattern Seer
   environmental_seal_warden:   require('../../assets/heroes/battle/environmental_seal_warden.png'),   // Environmental Seal Warden
   chartweave_analyst:          require('../../assets/heroes/battle/chartweave_analyst.png'),          // Chartweave Analyst
-  florence_nightingale:        require('../../assets/heroes/battle/florence_nightingale.png'),        // Florence Nightingale (recruitable REALMBOUND rare)
+  florence_nightingale:        require('../../assets/heroes/battle/prologue_nightingale.png'),        // Florence Nightingale (shares prologue sprite)
 
   // ── Prologue loaner heroes (tutorial + scripted-loss boss) ──
   prologue_nightingale:  require('../../assets/heroes/battle/prologue_nightingale.png'),  // Nightingale (prologue loaner — distinct from recruitable florence_nightingale)

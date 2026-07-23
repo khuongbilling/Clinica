@@ -20,20 +20,7 @@ import { useTutorial } from "@/src/game/tutorialStore";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-
-// ── Portrait asset map — keyed by heroId ────────────────────────────────────
-const HERO_PORTRAITS: Record<string, ReturnType<typeof require>> = {
-  novice_guardian:   require("../../assets/heroes/novice_guardian.png"),
-  apprentice_seer:   require("../../assets/heroes/apprentice_seer.png"),
-  junior_warden:     require("../../assets/heroes/junior_warden.png"),
-  data_acolyte:      require("../../assets/heroes/data_acolyte.png"),
-  village_caretaker: require("../../assets/heroes/village_caretaker.png"),
-  night_watcher:     require("../../assets/heroes/night_watcher.png"),
-  storm_runner:      require("../../assets/heroes/storm_runner.png"),
-  infection_warden:  require("../../assets/heroes/infection_warden.png"),
-  wound_sage:        require("../../assets/heroes/wound_sage.png"),
-  mindkeeper:        require("../../assets/heroes/mindkeeper.png"),
-};
+import { getHeroPortrait } from "@/src/components/HeroPortraits";
 
 // Collect unique chain roles from a hero's skills (max 3 displayed).
 function getHeroChainRoles(heroId: string): string[] {
@@ -525,7 +512,7 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
     const hero       = LAUNCH_ROSTER.find(h => h.id === entry.heroId);
     const rc         = rarityColor(entry.rarity);
     const rLabel     = entry.rarity === 5 ? "LEGENDARY" : entry.rarity === 4 ? "RARE" : entry.rarity === 3 ? "UNCOMMON" : "COMMON";
-    const portrait   = HERO_PORTRAITS[entry.heroId];
+    const portrait   = getHeroPortrait(entry.heroId);
     const famColor   = hero ? FAMILY_COLORS[hero.family] : rc;
     const chainRoles = getHeroChainRoles(entry.heroId);
     const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.65] });
