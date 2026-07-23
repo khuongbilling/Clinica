@@ -6,11 +6,17 @@
  * legendary healer to growing overconfidence, ending on the Silent Infarction
  * encounter setup.
  *
+ * Transition system:
+ *  - Art panels dissolve directly into each other (A/B layer crossfade).
+ *    No black flash between beats.
+ *  - Each panel has a slow Ken Burns zoom (1.0 → 1.07 over ~10 s) for depth.
+ *  - The black overlay is used only for the very first fade-in and final exit.
+ *
  * UX:
  *  - Tap anywhere to reveal the next narration line, or advance to the next beat
  *    once all lines in the current beat are visible.
  *  - Each beat auto-advances if the player doesn't tap.
- *  - Calls onComplete() when the final beat finishes → advances the prologue phase.
+ *  - Calls onComplete() when the final beat finishes.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -48,7 +54,7 @@ type Beat = {
   lines:      string[];
   art:        ArtKey;
   accent:     string;
-  tintColor?: string;   // optional colour overlay on the art
+  tintColor?: string;
 };
 
 const BEATS: Beat[] = [
@@ -140,10 +146,12 @@ const BEATS: Beat[] = [
   },
 ];
 
-const MAX_LINES = 4;
-const LINE_INTERVAL_MS = 1000;
-const AUTO_ADVANCE_AFTER_MS = 2600;
-const INTRO_HOLD_MS = 3400;
+const MAX_LINES          = 4;
+const LINE_INTERVAL_MS   = 1000;
+const AUTO_ADVANCE_MS    = 2600;
+const INTRO_HOLD_MS      = 3400;
+const CROSSFADE_DUR      = 750;   // ms — art dissolve overlap
+const KB_DURATION        = 10000; // ms — Ken Burns zoom per panel
 
 // ─── Particles ────────────────────────────────────────────────────────────────
 
@@ -167,50 +175,97 @@ interface Props {
 export default function OpeningMemoryCinematic({ onComplete }: Props) {
   const { width: SW, height: SH } = Dimensions.get("window");
 
-  // ── State machine: 'intro' → 'beat' ──
+  // ── State machine ──
   const [stage, setStage]     = useState<"intro" | "beat">("intro");
   const [beatIdx, setBeatIdx] = useState(0);
+  const stageRef   = useRef<"intro" | "beat">("intro");
+  const beatIdxRef = useRef(0);
+  const busyRef    = useRef(false);
+  const mountedRef = useRef(true);
 
-  // Track via ref so timers see current values without stale closures.
-  const stageRef    = useRef<"intro" | "beat">("intro");
-  const beatIdxRef  = useRef(0);
-  const busyRef     = useRef(false);       // prevents tap races
-  const mountedRef  = useRef(true);
+  // ── Art layers (A / B alternating dissolve) ──
+  const [artA, setArtA] = useState<ArtKey>("origin");
+  const [artB, setArtB] = useState<ArtKey>("origin");
+  const layerAOpacity  = useRef(new Animated.Value(1)).current; // A is first on-screen
+  const layerBOpacity  = useRef(new Animated.Value(0)).current;
+  const kbScaleA       = useRef(new Animated.Value(1.0)).current;
+  const kbScaleB       = useRef(new Animated.Value(1.0)).current;
+  const activeLayerRef = useRef<"A" | "B">("A");
 
-  // ── Animation values ──
-  const mainFade  = useRef(new Animated.Value(0)).current;
-  const textFade  = useRef(new Animated.Value(1)).current;
-  const lineAnims = useRef(
+  // ── Black overlay — used ONLY for very first fade-in and final exit ──
+  const fadeOverlay = useRef(new Animated.Value(1)).current; // starts black
+
+  // ── Intro card + narration text ──
+  const introCardFade = useRef(new Animated.Value(0)).current;
+  const textFade      = useRef(new Animated.Value(1)).current;
+  const lineAnims     = useRef(
     Array.from({ length: MAX_LINES }, () => new Animated.Value(0))
   ).current;
+
+  // ── Tint overlay ──
+  const tintFade = useRef(new Animated.Value(0)).current;
+
+  // ── Particles ──
   const petalAnims = useRef(
     PETAL_DATA.map((_, i) => new Animated.Value(i / PETAL_DATA.length))
   ).current;
 
-  // ── Timer bookkeeping ──
+  // Timer bookkeeping
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
   const clearTimers = useCallback(() => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
   }, []);
 
-  // ── Fade helpers ──
+  // ── Helpers ──
+
   const fadeIn = useCallback((val: Animated.Value, dur = 700) => {
     Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: false }).start();
   }, []);
 
-  const hardCrossFade = useCallback((callback: () => void, outDur = 300) => {
-    busyRef.current = true;
-    Animated.timing(mainFade, { toValue: 0, duration: outDur, useNativeDriver: false }).start(() => {
-      if (!mountedRef.current) return;
-      callback();
-      busyRef.current = false;
-      fadeIn(mainFade, 600);
-    });
-  }, [mainFade, fadeIn]);
+  const startKenBurns = useCallback((scaleAnim: Animated.Value) => {
+    scaleAnim.setValue(1.0);
+    Animated.timing(scaleAnim, {
+      toValue:         1.07,
+      duration:        KB_DURATION,
+      useNativeDriver: false,
+    }).start();
+  }, []);
 
-  const softCrossFade = useCallback((callback: () => void) => {
+  // ── A/B dissolve — old panel fades out, new panel fades in simultaneously ──
+  const doCrossFade = useCallback((newArt: ArtKey, onDone: () => void) => {
+    busyRef.current = true;
+    if (activeLayerRef.current === "A") {
+      setArtB(newArt);
+      layerBOpacity.setValue(0);
+      startKenBurns(kbScaleB);
+      Animated.parallel([
+        Animated.timing(layerAOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: false }),
+        Animated.timing(layerBOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: false }),
+      ]).start(() => {
+        if (!mountedRef.current) return;
+        activeLayerRef.current = "B";
+        onDone();
+        busyRef.current = false;
+      });
+    } else {
+      setArtA(newArt);
+      layerAOpacity.setValue(0);
+      startKenBurns(kbScaleA);
+      Animated.parallel([
+        Animated.timing(layerBOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: false }),
+        Animated.timing(layerAOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: false }),
+      ]).start(() => {
+        if (!mountedRef.current) return;
+        activeLayerRef.current = "A";
+        onDone();
+        busyRef.current = false;
+      });
+    }
+  }, [layerAOpacity, layerBOpacity, kbScaleA, kbScaleB, startKenBurns]);
+
+  // ── Text-only soft fade (same art, just text changes) ──
+  const softTextFade = useCallback((callback: () => void) => {
     busyRef.current = true;
     Animated.timing(textFade, { toValue: 0, duration: 220, useNativeDriver: false }).start(() => {
       if (!mountedRef.current) return;
@@ -220,16 +275,22 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     });
   }, [textFade]);
 
+  // ── Update tint when beat changes ──
+  const updateTint = useCallback((beat: Beat) => {
+    if (beat.tintColor) {
+      tintFade.setValue(0);
+      Animated.timing(tintFade, { toValue: 1, duration: 700, useNativeDriver: false }).start();
+    } else {
+      Animated.timing(tintFade, { toValue: 0, duration: 400, useNativeDriver: false }).start();
+    }
+  }, [tintFade]);
+
   // ── Particle system ──
   useEffect(() => {
     const stops: Animated.CompositeAnimation[] = [];
     petalAnims.forEach((anim, i) => {
       const loop = Animated.loop(
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: PETAL_DATA[i].speed,
-          useNativeDriver: false,
-        })
+        Animated.timing(anim, { toValue: 1, duration: PETAL_DATA[i].speed, useNativeDriver: false })
       );
       loop.start();
       stops.push(loop);
@@ -237,15 +298,13 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     return () => stops.forEach(s => s.stop());
   }, [petalAnims]);
 
-  // ── Line reveal for a given beat ──
+  // ── Line reveal ──
   const revealLines = useCallback((beat: Beat) => {
     clearTimers();
     lineAnims.forEach(a => a.setValue(0));
+    textFade.setValue(1);
 
-    // Line 0 appears immediately.
     fadeIn(lineAnims[0], 500);
-
-    // Subsequent lines are scheduled.
     for (let i = 1; i < beat.lines.length; i++) {
       const t = setTimeout(() => {
         if (mountedRef.current) fadeIn(lineAnims[i], 500);
@@ -253,8 +312,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       timers.current.push(t);
     }
 
-    // Auto-advance after all lines + hold.
-    const autoDelay = (beat.lines.length - 1) * LINE_INTERVAL_MS + AUTO_ADVANCE_AFTER_MS;
+    const autoDelay = (beat.lines.length - 1) * LINE_INTERVAL_MS + AUTO_ADVANCE_MS;
     const autoT = setTimeout(() => {
       if (mountedRef.current) doAdvanceBeat();
     }, autoDelay);
@@ -262,49 +320,78 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearTimers, lineAnims, fadeIn]);
 
-  // ── Advance to next beat (or complete) ──
+  // ── Advance to next beat or finish ──
   const doAdvanceBeat = useCallback(() => {
     if (!mountedRef.current || busyRef.current) return;
     const current = beatIdxRef.current;
     const next    = current + 1;
 
     if (next >= BEATS.length) {
-      hardCrossFade(() => {
+      // Fade to black then exit
+      busyRef.current = true;
+      Animated.timing(fadeOverlay, { toValue: 1, duration: 900, useNativeDriver: false }).start(() => {
         if (mountedRef.current) onComplete();
-      }, 800);
-    } else {
-      const artChanged = BEATS[current].art !== BEATS[next].art;
-      const advance = () => {
+      });
+      return;
+    }
+
+    clearTimers();
+
+    const artChanged = BEATS[current].art !== BEATS[next].art;
+
+    const applyBeat = () => {
+      if (!mountedRef.current) return;
+      beatIdxRef.current = next;
+      setBeatIdx(next);
+      updateTint(BEATS[next]);
+      revealLines(BEATS[next]);
+    };
+
+    if (artChanged) {
+      // Fade text out first, then dissolve the art layers
+      Animated.timing(textFade, { toValue: 0, duration: 200, useNativeDriver: false }).start(() => {
         if (!mountedRef.current) return;
-        beatIdxRef.current = next;
-        setBeatIdx(next);
-        revealLines(BEATS[next]);
-      };
-      if (artChanged) {
-        hardCrossFade(advance);
-      } else {
-        softCrossFade(advance);
-      }
+        doCrossFade(BEATS[next].art, applyBeat);
+      });
+    } else {
+      softTextFade(applyBeat);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hardCrossFade, softCrossFade, onComplete, revealLines]);
+  }, [doCrossFade, softTextFade, onComplete, revealLines, updateTint, clearTimers]);
 
-  // ── Kick off intro ──
+  // ── Boot sequence ──
   useEffect(() => {
     mountedRef.current = true;
-    fadeIn(mainFade, 900);
 
-    const t = setTimeout(() => {
+    // Prime layer A with the first beat's art; begin Ken Burns immediately
+    setArtA(BEATS[0].art);
+    layerAOpacity.setValue(1);
+    layerBOpacity.setValue(0);
+    activeLayerRef.current = "A";
+    startKenBurns(kbScaleA);
+
+    // Fade the black overlay away to reveal the scene (no black-flash start)
+    Animated.timing(fadeOverlay, { toValue: 0, duration: 900, useNativeDriver: false }).start();
+
+    // Fade intro card in shortly after
+    const cardIn = setTimeout(() => {
+      if (mountedRef.current) fadeIn(introCardFade, 700);
+    }, 300);
+    timers.current.push(cardIn);
+
+    // After the intro hold, dissolve the card and begin beat 0
+    const hold = setTimeout(() => {
       if (!mountedRef.current) return;
-      hardCrossFade(() => {
+      Animated.timing(introCardFade, { toValue: 0, duration: 400, useNativeDriver: false }).start(() => {
+        if (!mountedRef.current) return;
         stageRef.current = "beat";
         setStage("beat");
         beatIdxRef.current = 0;
         setBeatIdx(0);
         revealLines(BEATS[0]);
-      }, 600);
+      });
     }, INTRO_HOLD_MS);
-    timers.current.push(t);
+    timers.current.push(hold);
 
     return () => {
       mountedRef.current = false;
@@ -319,7 +406,9 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
     if (stageRef.current === "intro") {
       clearTimers();
-      hardCrossFade(() => {
+      // Skip intro immediately
+      Animated.timing(introCardFade, { toValue: 0, duration: 250, useNativeDriver: false }).start(() => {
+        if (!mountedRef.current) return;
         stageRef.current   = "beat";
         beatIdxRef.current = 0;
         setStage("beat");
@@ -329,67 +418,82 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       return;
     }
 
-    // In beat mode: check how many lines are visible.
     const beat = BEATS[beatIdxRef.current];
-    const allVisible = lineAnims.slice(0, beat.lines.length).every(a => {
-      // Check if animation has reached 1.
-      // Animated.Value doesn't expose __value in types but we can peek.
-      return (a as any)._value >= 0.99;
-    });
+    const allVisible = lineAnims
+      .slice(0, beat.lines.length)
+      .every(a => (a as any)._value >= 0.99);
 
     if (!allVisible) {
-      // Immediately reveal all remaining lines.
       clearTimers();
       lineAnims.forEach((a, i) => {
         if (i < beat.lines.length) fadeIn(a, 250);
       });
-      // Schedule auto-advance.
       const t = setTimeout(() => {
         if (mountedRef.current) doAdvanceBeat();
-      }, AUTO_ADVANCE_AFTER_MS);
+      }, AUTO_ADVANCE_MS);
       timers.current.push(t);
     } else {
       clearTimers();
       doAdvanceBeat();
     }
-  }, [clearTimers, hardCrossFade, doAdvanceBeat, fadeIn, lineAnims, revealLines]);
+  }, [clearTimers, doAdvanceBeat, fadeIn, introCardFade, lineAnims, revealLines]);
 
   // ── Derived ──
-  const beat   = BEATS[Math.min(beatIdx, BEATS.length - 1)];
-  const artSrc = ART[beat.art];
+  const beat          = BEATS[Math.min(beatIdx, BEATS.length - 1)];
+  const hasTint       = stage === "beat" && !!beat.tintColor;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.root}>
 
-      {/* ── Background art (changes per beat) ──────────────────────────── */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: mainFade }]}>
-        <ExpoImage
-          source={artSrc}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          contentPosition="center"
-        />
-
-        {/* Colour tint overlay per beat */}
-        {stage === "beat" && beat.tintColor && (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: beat.tintColor }]} />
-        )}
-
-        {/* Top vignette */}
-        <LinearGradient
-          colors={["rgba(3,5,10,0.85)", "transparent"]}
-          locations={[0, 0.32]}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
-        {/* Bottom vignette */}
-        <LinearGradient
-          colors={["transparent", "rgba(3,5,10,0.80)", "rgba(3,5,10,0.97)"]}
-          locations={[0.42, 0.68, 1]}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
+      {/* ── Art layer A (Ken Burns zoom independently) ──────────────── */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: layerAOpacity }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: kbScaleA }] }]}>
+          <ExpoImage
+            source={ART[artA]}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            contentPosition="center"
+          />
+        </Animated.View>
       </Animated.View>
+
+      {/* ── Art layer B (cross-dissolve target) ─────────────────────── */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: layerBOpacity }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: kbScaleB }] }]}>
+          <ExpoImage
+            source={ART[artB]}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            contentPosition="center"
+          />
+        </Animated.View>
+      </Animated.View>
+
+      {/* ── Per-beat tint overlay ────────────────────────────────────── */}
+      {hasTint && (
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: beat.tintColor, opacity: tintFade }]}
+        />
+      )}
+
+      {/* ── Top vignette ─────────────────────────────────────────────── */}
+      <LinearGradient
+        colors={["rgba(3,5,10,0.85)", "transparent"]}
+        locations={[0, 0.32]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
+      {/* ── Bottom vignette ──────────────────────────────────────────── */}
+      <LinearGradient
+        colors={["transparent", "rgba(3,5,10,0.80)", "rgba(3,5,10,0.97)"]}
+        locations={[0.42, 0.68, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
 
       {/* ── Floating petal particles ─────────────────────────────────── */}
       {PETAL_DATA.map((p, i) => {
@@ -413,10 +517,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
                 height:          p.h,
                 borderRadius:    p.h / 2,
                 backgroundColor: p.color,
-                transform: [
-                  { translateY },
-                  { rotate: `${p.rot}deg` },
-                ],
+                transform: [{ translateY }, { rotate: `${p.rot}deg` }],
                 opacity,
               },
             ]}
@@ -424,10 +525,16 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         );
       })}
 
-      {/* ── Content layer ────────────────────────────────────────────── */}
+      {/* ── Black overlay — only for initial reveal and final exit ───── */}
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: "#03050A", opacity: fadeOverlay }]}
+      />
+
+      {/* ── UI content ───────────────────────────────────────────────── */}
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
 
-        {/* Top anchor: scene label in beat mode, invisible spacer in intro */}
+        {/* Scene label (beat mode) */}
         <View style={styles.topArea}>
           {stage === "beat" && (
             <Animated.View style={{ opacity: textFade }}>
@@ -438,9 +545,9 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
           )}
         </View>
 
-        {/* Intro identity card — absolutely centered, fades in with mainFade */}
+        {/* Intro identity card */}
         {stage === "intro" && (
-          <Animated.View style={[styles.introCard, { opacity: mainFade }]}>
+          <Animated.View style={[styles.introCard, { opacity: introCardFade }]}>
             <Text style={styles.classifiedTag}>— CLASSIFIED —</Text>
             <View style={styles.divider} />
             <Text style={styles.introTitle}>THE FORMER SELF</Text>
@@ -450,7 +557,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
           </Animated.View>
         )}
 
-        {/* Bottom anchor: narration lines + identity strip + tap hint */}
+        {/* Narration + identity strip + tap hint */}
         <View style={styles.bottomArea}>
           {stage === "beat" && (
             <Animated.View style={[styles.narration, { opacity: textFade }]}>
@@ -469,20 +576,23 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
             </Animated.View>
           )}
 
-          {/* Identity strip */}
           <View style={styles.identityStrip} pointerEvents="none">
-            <View style={[styles.identityDot, { backgroundColor: stage === "beat" ? beat.accent : "#D4AF37" }]} />
+            <View
+              style={[
+                styles.identityDot,
+                { backgroundColor: stage === "beat" ? beat.accent : "#D4AF37" },
+              ]}
+            />
             <Text style={styles.identityName}>THE FORMER SELF</Text>
             <Text style={styles.identitySep}>·</Text>
             <Text style={styles.identityTitle}>The Prodigy</Text>
           </View>
 
-          {/* Tap hint */}
           <Text style={styles.tapHint}>Tap anywhere to continue</Text>
         </View>
       </SafeAreaView>
 
-      {/* ── Full-screen tap target ───────────────────────────────────── */}
+      {/* Full-screen tap target (below UI, above art) */}
       <Pressable style={StyleSheet.absoluteFill} onPress={handleTap} />
     </View>
   );
@@ -494,10 +604,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#03050A" },
   safe: { flex: 1, justifyContent: "space-between" },
 
-  // particles
   petal: { position: "absolute" },
 
-  // layout anchors
   topArea: {
     paddingTop:        16,
     paddingHorizontal: 20,
@@ -507,7 +615,6 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
 
-  // intro identity card (absolutely centered)
   introCard: {
     position:          "absolute",
     alignSelf:         "center",
@@ -542,7 +649,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // beat scene label
   sceneLabel: {
     fontSize:      10,
     letterSpacing: 3,
@@ -550,7 +656,6 @@ const styles = StyleSheet.create({
     opacity:       0.85,
   },
 
-  // beat narration lines
   narration: {
     paddingHorizontal: 22,
     paddingBottom:     12,
@@ -567,7 +672,6 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
 
-  // identity strip
   identityStrip: {
     flexDirection:     "row",
     alignItems:        "center",
@@ -597,7 +701,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // tap hint
   tapHint: {
     color:         "rgba(255,255,255,0.18)",
     fontSize:      11,
