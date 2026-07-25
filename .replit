@@ -43,6 +43,10 @@ args = "Check Routes"
 task = "workflow.run"
 args = "typecheck"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Expo Go (Tunnel)"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -99,6 +103,17 @@ args = "cd frontend && npx tsc --noEmit"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "Expo Go (Tunnel)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && NGROK_AUTHTOKEN=$NGROK_AUTHTOKEN npx expo start --clear --tunnel"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000

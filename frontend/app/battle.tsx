@@ -2342,7 +2342,7 @@ function MasterBaiBossNarratorOverlay({ onDismiss }: { onDismiss: () => void }) 
       name:     "Master Bai",
       color:    MASTER_BAI.color,
       barColor: "rgba(22,16,4,0.96)" as const,
-      portrait: require("../assets/images/master_bai_vn_torso.png"),
+      portrait: require("../assets/images/master_bai_vn_bust.png"),
       avatar:   require("../assets/images/master_bai.png"),
       line:     "What stands before you cannot be overcome by force alone. Read every sign. This battle is not meant to be won.",
     },
