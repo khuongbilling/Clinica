@@ -1176,19 +1176,11 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {/* ── ZONE B: Meters + Codex + Clues (~18% height) ── */}
       <View style={styles.zoneB}>
         <View style={styles.barRow}>
-          <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", enemy.corruptionHidden ? "The true extent of this illness cannot be measured. Readings contradict each other. Your actions may be landing — or not. Watch Stability instead." : "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in hidden ways.")} testID="term-tap-corruption">
+          <Pressable hitSlop={8} onPress={() => showTermTooltip("Corruption", "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in hidden ways.")} testID="term-tap-corruption">
             <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>CORRUPTION</Text>
           </Pressable>
-          {enemy.corruptionHidden ? (
-            <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: "42%", backgroundColor: COLORS.onSurfaceTertiary, opacity: 0.45 }]} />
-            </View>
-          ) : (
-            <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
-          )}
-          <Text style={[styles.barVal, enemy.corruptionHidden && { color: COLORS.onSurfaceTertiary, letterSpacing: 1 }]}>
-            {enemy.corruptionHidden ? "???/???" : `${state.corruption}/${enemy.corruption}`}
-          </Text>
+          <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
+          <Text style={styles.barVal}>{state.corruption}/{enemy.corruption}</Text>
         </View>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — Corruption escalates every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">

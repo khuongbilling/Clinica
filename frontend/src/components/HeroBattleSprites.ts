@@ -130,17 +130,17 @@ const BATTLE_SPRITES: Record<string, any> = {
   pattern_seer:                require('../../assets/heroes/battle/pattern_seer.png'),                // Pattern Seer
   environmental_seal_warden:   require('../../assets/heroes/battle/environmental_seal_warden.png'),   // Environmental Seal Warden
   chartweave_analyst:          require('../../assets/heroes/battle/chartweave_analyst.png'),          // Chartweave Analyst
-  florence_nightingale:        require('../../assets/images/nightingale_battle_sprite.png'),        // Florence Nightingale
+  florence_nightingale:        require('../../assets/heroes/battle/prologue_nightingale.png'),        // Florence Nightingale (shares prologue sprite)
 
   // ── Prologue loaner heroes (tutorial + scripted-loss boss) ──
-  prologue_nightingale:  require('../../assets/images/nightingale_battle_sprite.png'),  // Nightingale (prologue loaner)
-  prologue_fleming:      require('../../assets/images/fleming_battle_sprite.png'),      // Fleming (prologue loaner)
-  prologue_the_prodigy:  require('../../assets/images/prodigy_battle_sprite.png'),      // The Prodigy (prologue boss / peak-power self)
+  prologue_nightingale:  require('../../assets/heroes/battle/prologue_nightingale.png'),  // Nightingale (prologue loaner — distinct from recruitable florence_nightingale)
+  prologue_fleming:      require('../../assets/heroes/battle/prologue_fleming.png'),      // Fleming (prologue loaner)
+  prologue_the_prodigy:  require('../../assets/heroes/battle/the_prodigy.png'),           // The Prodigy (prologue boss / peak-power self)
 
   // ── The Prodigy aliases (former_self consolidated → the_prodigy) ──
-  the_prodigy:           require('../../assets/images/prodigy_battle_sprite.png'),      // The Prodigy
-  former_self:           require('../../assets/images/prodigy_battle_sprite.png'),      // The Prodigy (legacy alias)
-  prologue_former_self:  require('../../assets/images/prodigy_battle_sprite.png'),      // The Prodigy (legacy prologue alias)
+  the_prodigy:           require('../../assets/heroes/battle/the_prodigy.png'),           // The Prodigy
+  former_self:           require('../../assets/heroes/battle/the_prodigy.png'),           // The Prodigy (legacy alias)
+  prologue_former_self:  require('../../assets/heroes/battle/the_prodigy.png'),           // The Prodigy (legacy prologue alias)
 };
 
 // All battle-sprite modules, for cache preloading at game start.

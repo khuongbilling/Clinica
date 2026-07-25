@@ -21,17 +21,17 @@ export interface PrologueCharacter {
   temporary:     boolean;
 }
 
-const PRODIGY_LARGE          = require("../../assets/images/the_prodigy_portrait.png");
+const PRODIGY_LARGE          = require("../../assets/images/prodigy_vn_canonical.png");
 const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
 const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_bust.png");
 const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
 const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
 const FLEMING_BUST           = require("../../assets/images/fleming_vn_bust.png");
 
-const NIGHTINGALE_BATTLE = require("../../assets/images/nightingale_battle_sprite.png");
-const FLEMING_BATTLE     = require("../../assets/images/fleming_battle_sprite.png");
+const NIGHTINGALE_BATTLE = require("../../assets/heroes/battle/prologue_nightingale.png");
+const FLEMING_BATTLE     = require("../../assets/heroes/battle/prologue_fleming.png");
 const MASTER_BAI_BATTLE  = require("../../assets/images/master_bai_vn.png");
-const PRODIGY_BATTLE     = require("../../assets/images/prodigy_battle_sprite.png");
+const PRODIGY_BATTLE     = require("../../assets/heroes/battle/the_prodigy.png");
 
 export const PROLOGUE_CHARACTERS = {
   PRODIGY: {
