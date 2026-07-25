@@ -1162,6 +1162,7 @@ export const BOSS_SILENT_INFARCT: Enemy = {
   instability: 14,
   corruption: 260,
   stabilityResistance: 0.9, // shrugs off nearly all stabilization — this fight cannot be held steady
+  corruptionHidden: true,   // atypical presentation — corruption level is unreadable; bar shows "???"
   visibleClues: [
     { id: 'c1', label: 'Vague Fatigue', detail: 'Patient reports "just feeling off." Nothing specific.', hidden: false },
     { id: 'c2', label: 'Vitals Look Fine', detail: 'BP and HR within normal range. For now.', hidden: false },
