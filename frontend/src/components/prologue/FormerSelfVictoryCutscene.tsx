@@ -222,7 +222,7 @@ export default function FormerSelfVictoryCutscene({ onComplete }: Props) {
 
       {/* ── Character portrait — right side, grounded behind bar ──────── */}
       <Animated.View
-        style={[s.charWrap, { bottom: barTotal - 100, opacity: charFade }]}
+        style={[s.charWrap, { bottom: 0, opacity: charFade }]}
         pointerEvents="none"
       >
         <ExpoImage source={speaker.art} style={s.charArt} contentFit="contain" contentPosition="bottom" />
@@ -287,7 +287,7 @@ const s = StyleSheet.create({
     alignItems:     "flex-end",
     justifyContent: "flex-end",
     width:          W * 0.80,
-    height:         H * 0.82,
+    height:         H,
   },
   charArt: { width: "100%", height: "100%" },
 

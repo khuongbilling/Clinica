@@ -379,7 +379,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
       {/* ── Hero character portrait — grounded above VN bar ── */}
       {beatVisible && (isReact || isLoadout) && (
         <Animated.View
-          style={[styles.charWrap, { bottom: barTotal - 80, opacity: charFade }]}
+          style={[styles.charWrap, { bottom: 0, opacity: charFade }]}
           pointerEvents="none"
         >
           <ExpoImage
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     alignItems:     "flex-end",
     justifyContent: "flex-end",
     width:          W * 0.80,
-    height:         H * 0.82,
+    height:         H,
   },
   charArt: { width: "100%", height: "100%" },
 
