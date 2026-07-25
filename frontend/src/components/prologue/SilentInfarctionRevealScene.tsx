@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     right:          0,
     alignItems:     "flex-end",
     justifyContent: "flex-end",
-    width:          W * 0.80,
+    width:          W * 0.92,
     height:         H,
   },
   charArt: { width: "100%", height: "100%" },
