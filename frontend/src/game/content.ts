@@ -330,7 +330,7 @@ export const ENEMIES: Enemy[] = [
     difficulty: 3,
     startingStability: 80,
     instability: 8,
-    corruption: 160,
+    corruption: 220,
     weakSystem: 'River',
     visibleClues: [
       { id: 'c1', label: 'Parched Lips', detail: 'Cracked, dry mucous membranes. Severe fluid loss.', hidden: false },
