@@ -627,8 +627,14 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     codex_depth: args.codex_depth || 'simple',
     onboarding_complete: true,
     prologue_complete: args.prologue_complete ?? true,
-    identity_restored: args.identity_restored ?? true,
-    diagnostic_intro_seen: args.diagnostic_intro_seen ?? true,
+    // New players go through the cinematic prologue (opening_prologue_complete
+    // defaults to false).  After it ends, /post-recall must show the
+    // questionnaire and class-chooser, so both flags must start false.
+    // Callers that explicitly pass opening_prologue_complete:true are creating
+    // legacy / admin players who have already completed onboarding, so keep
+    // the old true default for those.
+    identity_restored: args.identity_restored ?? (args.opening_prologue_complete === true),
+    diagnostic_intro_seen: args.diagnostic_intro_seen ?? (args.opening_prologue_complete === true),
     // Push 5 — new players have not seen the memory-reminiscence scene yet;
     // it plays once, right after their class-diagnostic is confirmed.
     seen_reminiscence: false,
@@ -2004,6 +2010,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // Push 1 v2 — Mark the entire new cinematic prologue complete and persist.
   // Also marks the old prologue_complete flag so nothing else re-routes the
   // player back into the tutorial battle path.  Idempotent.
+  //
+  // Crucially, we reset identity_restored and diagnostic_intro_seen to false
+  // here so /post-recall always shows the questionnaire and class-chooser even
+  // if the player was created before these defaults were fixed (old records
+  // carried true from createPlayer defaults and would have skipped the quiz).
   const completePrologueCinematic = useCallback(async () => {
     const base = playerRef.current;
     if (!base || base.opening_prologue_complete) return;
@@ -2012,6 +2023,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       opening_prologue_complete: true,
       opening_prologue_phase: null,
       prologue_complete: true,
+      identity_restored: false,
+      diagnostic_intro_seen: false,
     };
     playerRef.current = next;
     await updateState(next);
