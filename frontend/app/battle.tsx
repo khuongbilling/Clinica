@@ -1180,14 +1180,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>CORRUPTION</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${corruptionPct}%`, backgroundColor: COLORS.corruptCrystal }]} /></View>
-          <Text style={styles.barVal}>{state.corruption}/{enemy.corruption}</Text>
+          <Text style={styles.barVal} numberOfLines={1}>{state.corruption}/{enemy.corruption}</Text>
         </View>
         <View style={styles.barRow}>
           <Pressable hitSlop={8} onPress={() => showTermTooltip("Stability", "How safely the patient is holding on. Keep it above zero — Corruption escalates every turn. If it hits 0, the patient is lost.")} testID="term-tap-stability">
             <Text style={[styles.barLabel, styles.barLabelTappable]} numberOfLines={1}>STABILITY</Text>
           </Pressable>
           <View style={styles.barBg}><View style={[styles.barFill, { width: `${state.stability}%`, backgroundColor: stabilityColor }]} /></View>
-          <Text style={[styles.barVal, { color: stabilityColor }]}>{state.stability}/100</Text>
+          <Text style={[styles.barVal, { color: stabilityColor }]} numberOfLines={1}>{state.stability}/100</Text>
         </View>
         {termTooltip && (
           <Pressable
@@ -2558,11 +2558,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
   },
-  barRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 0, fontWeight: "700", width: 64 },
-  barBg: { flex: 1, height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden" },
+  barRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "nowrap" },
+  barLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, letterSpacing: 0, fontWeight: "700", width: 64, flexShrink: 0 },
+  barBg: { flex: 1, height: 8, backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden", minWidth: 20 },
   barFill: { height: "100%", borderRadius: 2 },
-  barVal: { color: COLORS.onSurface, fontSize: 12, fontWeight: "600", width: 40, textAlign: "right" },
+  barVal: { color: COLORS.onSurface, fontSize: 11, fontWeight: "600", width: 58, textAlign: "right", flexShrink: 0 },
   codexCard: {
     backgroundColor: COLORS.brand + "18", borderRadius: 4,
     borderWidth: 1, borderColor: COLORS.brand + "50",

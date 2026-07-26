@@ -17,12 +17,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Dimensions,
   Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+
+const { width: W, height: H } = Dimensions.get("window");
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 
@@ -30,11 +33,14 @@ import { Image as ExpoImage } from "expo-image";
 import { PROLOGUE_CHARACTERS } from "../../game/prologueCharacters";
 
 const ART = {
-  battlefield: require("../../../assets/images/tactical_battlefield.png"),
-  nightingale: PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
-  fleming:     require("../../../assets/images/fleming_vn_bust.png"),
-  masterBai:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
-  formerSelf:  PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+  battlefield:     require("../../../assets/images/tactical_battlefield.png"),
+  nightingale:     PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
+  fleming:         require("../../../assets/images/fleming_vn_bust.png"),
+  masterBai:       PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
+  formerSelf:      PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+  // Canonical full-body VN art used for the disappearing sequence — distinct
+  // from the portrait crop used in dialogue bars.
+  prodigyCanonical: require("../../../assets/images/prodigy_vn_canonical.png"),
 };
 
 // ── Dialogue beats ────────────────────────────────────────────────────────────
@@ -429,27 +435,29 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
           Former Self aura cracks; legendary equipment flashes
       ══════════════════════════════════════════════════════════════════════ */}
       {(stage === "destabilize" || stage === "overwhelm") && (
-        <View style={[StyleSheet.absoluteFill, styles.centreLayer]} pointerEvents="none">
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
 
-          {/* Former Self portrait, dimming */}
-          <Animated.View style={{ opacity: formerDim, alignItems: "center" }}>
+          {/* Former Self portrait — bottom-anchored, 150% height so face clears top */}
+          <Animated.View style={[styles.formerPortraitWrap, { opacity: formerDim }]}>
             <ExpoImage
-              source={ART.formerSelf}
+              source={ART.prodigyCanonical}
               style={styles.formerPortrait}
               contentFit="contain"
+              contentPosition="bottom"
             />
           </Animated.View>
 
-          {/* Outer aura ring (red-purple) */}
-          <Animated.View style={[
-            styles.auraRing,
-            { opacity: auraOpacity, transform: [{ scale: auraScale }] },
-          ]} />
-          {/* Inner aura ring (deeper red) */}
-          <Animated.View style={[
-            styles.auraRingInner,
-            { opacity: auraOpacity, transform: [{ scale: auraScale }] },
-          ]} />
+          {/* Aura rings — centred over the portrait */}
+          <View style={[StyleSheet.absoluteFill, styles.centreLayer]}>
+            <Animated.View style={[
+              styles.auraRing,
+              { opacity: auraOpacity, transform: [{ scale: auraScale }] },
+            ]} />
+            <Animated.View style={[
+              styles.auraRingInner,
+              { opacity: auraOpacity, transform: [{ scale: auraScale }] },
+            ]} />
+          </View>
 
           {/* Equipment-crack flash */}
           <Animated.View
@@ -538,16 +546,17 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
           Former Self becomes luminous light; reaches toward their team
       ══════════════════════════════════════════════════════════════════════ */}
       {(stage === "silhouette" || stage === "reaching") && (
-        <View style={[StyleSheet.absoluteFill, styles.centreLayer]} pointerEvents="none">
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* Ghost portrait — bottom-anchored at 150% height, barely visible */}
           <Animated.View style={[
             styles.silWrap,
             { opacity: silFade, transform: [{ translateX: silShift }] },
           ]}>
-            {/* Ghost portrait — barely visible */}
             <ExpoImage
-              source={ART.formerSelf}
+              source={ART.prodigyCanonical}
               style={styles.silPortrait}
               contentFit="contain"
+              contentPosition="bottom"
             />
             {/* Luminous white-gold overlay — becomes the silhouette */}
             <Animated.View style={[StyleSheet.absoluteFill, styles.silGlowOverlay, { opacity: silGlow }]}>
@@ -556,9 +565,11 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
                 style={StyleSheet.absoluteFill}
               />
             </Animated.View>
-            {/* Outer radial halo */}
-            <Animated.View style={[styles.silHalo, { opacity: silGlow }]} />
           </Animated.View>
+          {/* Outer radial halo — centred on screen */}
+          <View style={[StyleSheet.absoluteFill, styles.centreLayer]}>
+            <Animated.View style={[styles.silHalo, { opacity: silGlow }]} />
+          </View>
         </View>
       )}
 
@@ -666,7 +677,18 @@ const styles = StyleSheet.create({
   },
 
   // ── Destabilize ───────────────────────────────────────────────────────────
-  formerPortrait: { width: 200, height: 220 },
+  // Portrait fills 150% of screen height, bottom-anchored so the crop line
+  // sits at the screen edge and the face is well above it.
+  formerPortraitWrap: {
+    position:       "absolute",
+    bottom:         0,
+    left:           0,
+    right:          0,
+    height:         H * 1.5,
+    alignItems:     "center",
+    justifyContent: "flex-end",
+  },
+  formerPortrait: { width: W, height: H * 1.5 },
   auraRing: {
     position: "absolute",
     width: 230, height: 230, borderRadius: 115,
@@ -711,11 +733,16 @@ const styles = StyleSheet.create({
   petalGrad: { flex: 1 },
 
   // ── Silhouette ────────────────────────────────────────────────────────────
-  silWrap: { alignItems: "center", justifyContent: "center" },
-  silPortrait: { width: 220, height: 260, opacity: 0.38 },
-  silGlowOverlay: { borderRadius: 12 },
+  silWrap: {
+    position:       "absolute",
+    bottom:         0,
+    left:           0,
+    right:          0,
+    height:         H * 1.5,
+  },
+  silPortrait: { width: W, height: H * 1.5, opacity: 0.38 },
+  silGlowOverlay: { borderRadius: 0 },
   silHalo: {
-    position: "absolute",
     width: 320, height: 380, borderRadius: 160,
     backgroundColor: "rgba(245,225,175,0.14)",
   },
