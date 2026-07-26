@@ -180,10 +180,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       revealOneExtraClue: handicap.revealOneExtraClue || isTraining || upgrades.revealOneExtraClue || classBonuses.revealOneExtraClue,
       // Push 9: Leader AP bonus (Educator/"Scholar's Leadership" grants +1 starting AP).
       // Skip for prologue loaner battles so the tutorial team stays unscaled.
-      // Prologue (tutorial + scripted-loss boss) always starts at 12 AP so the loaner
+      // Prologue (tutorial + scripted-loss boss) always starts at 14 AP so the loaner
       // team's legendary/mythic skills are meaningfully usable from turn one.
       // Previously boss had +3 and tutorial had +0; unified to +2 for both (10 base + 2 = 12).
-      apBonus: upgrades.apBonus + classBonuses.apBonus + (isPrologueLoanerBattle ? 2 : 0)
+      apBonus: upgrades.apBonus + classBonuses.apBonus + (isPrologueLoanerBattle ? 4 : 0)
         + (!isPrologueLoanerBattle && battleTeam[0] ? getLeaderBonus(battleTeam[0]).apBonus : 0)
         + (!isPrologueLoanerBattle ? (classTreeBonus?.startApBonus ?? 0) : 0),
       startShield: classBonuses.startShield,
