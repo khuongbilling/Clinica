@@ -407,7 +407,8 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
             <ExpoImage
               source={beat.largePortrait}
               style={styles.dlgCharArt}
-              contentFit="fill"
+              contentFit="cover"
+              contentPosition="bottom"
             />
             {/* subtle colour halo at base of character */}
             <LinearGradient
@@ -472,7 +473,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
             <ExpoImage
               source={ART.prodigyCanonical}
               style={styles.formerPortrait}
-              contentFit="contain"
+              contentFit="cover"
               contentPosition="bottom"
             />
           </Animated.View>
@@ -585,7 +586,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
             <ExpoImage
               source={ART.prodigyCanonical}
               style={styles.silPortrait}
-              contentFit="contain"
+              contentFit="cover"
               contentPosition="bottom"
             />
             {/* Luminous white-gold overlay — becomes the silhouette */}

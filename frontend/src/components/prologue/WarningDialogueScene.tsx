@@ -257,7 +257,7 @@ export default function WarningDialogueScene({ onComplete }: Props) {
         style={[s.charWrap, { opacity: charFade }]}
         pointerEvents="none"
       >
-        <ExpoImage source={speaker.art} style={s.charArt} contentFit="contain" contentPosition="bottom" />
+        <ExpoImage source={speaker.art} style={s.charArt} contentFit="cover" contentPosition="bottom" />
       </Animated.View>
 
       {/* ── VN Dialogue Bar ────────────────────────────────────────── */}

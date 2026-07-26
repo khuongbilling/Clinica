@@ -379,13 +379,13 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
       {/* ── Hero character portrait — grounded above VN bar ── */}
       {beatVisible && (isReact || isLoadout) && (
         <Animated.View
-          style={[styles.charWrap, { opacity: charFade, bottom: barTotal }]}
+          style={[styles.charWrap, { opacity: charFade, bottom: 0 }]}
           pointerEvents="none"
         >
           <ExpoImage
             source={activeSpeaker!.largePortrait}
             style={styles.charArt}
-            contentFit="contain"
+            contentFit="cover"
             contentPosition="bottom"
           />
         </Animated.View>
