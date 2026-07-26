@@ -134,7 +134,8 @@ export default function HeroesScreen() {
               const isOwned  = owned.has(h.id);
               const inTeam   = team.includes(h.id);
               const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
-              const sprite   = getHeroPortrait(h.id) ?? getHeroBattleSprite(h.id);
+              // Always prefer the full-body battle sprite on the heroes roster grid.
+              const sprite   = getHeroBattleSprite(h.id) ?? getHeroPortrait(h.id);
               const teamSlot = team.indexOf(h.id) + 1;
               const prog     = getProgress(player.hero_progression, h.id);
               const evolveReady = isOwned && canEvolve(prog);

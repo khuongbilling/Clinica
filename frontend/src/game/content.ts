@@ -415,30 +415,62 @@ export const ENEMIES: Enemy[] = [
     teaches: ['energy_basics', 'hypoglycemia_rules'],
   },
   // ── Chapter 1 Trial Boss ────────────────────────────────────────────────────
-  // Used exclusively by c1n6 (mini_boss). Difficulty 1 so it appears in the
-  // CH1_ENEMIES pool for star tracking. Harder stats than dehydration_wisp.
+  // Used exclusively by c1n6 (mini_boss). Appropriate difficulty for newly
+  // recruited Chapter 1 heroes (corruption ~2× a normal Ch1 enemy).
   {
-    id: 'dehydration_specter',
-    name: 'Dehydration Specter',
-    realWorld: 'Moderate dehydration with early circulatory compromise',
+    id: 'fluid_phantom',
+    name: 'Fluid Phantom',
+    realWorld: 'Moderate dehydration with early compensatory signs',
     primarySystem: 'River',
     floats: true,
     difficulty: 1,
-    startingStability: 48,
-    instability: 7,
-    corruption: 170,
+    startingStability: 55,
+    instability: 8,
+    corruption: 108,
     weakSystem: 'River',
     visibleClues: [
-      { id: 'c1', label: 'Sunken Eyes',   detail: 'Periorbital hollowing; significant fluid loss.', hidden: false },
-      { id: 'c2', label: 'Skin Tenting',  detail: 'Skin turgor reduced; pinch recoil delayed over 2 seconds.', hidden: false },
+      { id: 'c1', label: 'Dry Mucous Membranes', detail: 'Lips and tongue parched; saliva absent.', hidden: false },
+      { id: 'c2', label: 'Skin Tenting',         detail: 'Pinch recoil delayed over 2 seconds; fluid leaving the interstitium.', hidden: false },
     ],
     hiddenClues: [
-      { id: 'h1', label: 'HR 118',              detail: 'Compensatory tachycardia from reduced preload.', hidden: true },
-      { id: 'h2', label: 'Urine Dark / Reduced', detail: 'Output below 0.5 mL/kg/hr; kidneys conserving fluid.', hidden: true },
+      { id: 'h1', label: 'HR 105',               detail: 'Mild compensatory tachycardia from reduced preload.', hidden: true },
+      { id: 'h2', label: 'Urine Output ↓',       detail: 'Below 0.5 mL/kg/hr; kidneys entering conservation mode.', hidden: true },
     ],
-    dangerTrigger: 'Hypovolemic deterioration',
+    dangerTrigger: 'Decompensated hypovolemia',
     bestCounters: ['stabilize', 'scout', 'strike'],
-    teaches: ['fluid_resuscitation'],
+    teaches: ['fluid_resuscitation', 'dehydration_rules'],
+  },
+  // ── Chapter 9 Standalone Boss ───────────────────────────────────────────────
+  // Routes to /battle?enemyId=dehydration_specter from c9p3 (mini_boss node).
+  // Difficulty 9, chapterGate 9 — designed for Level 15+ heroes with upgraded
+  // skills. The original simulation-era Specter returns in its true form:
+  // fewer visible cues, high corruption, active stability resistance.
+  {
+    id: 'dehydration_specter',
+    name: 'Dehydration Specter',
+    realWorld: 'Severe dehydration with multi-organ stress and compensatory failure',
+    primarySystem: 'River',
+    floats: true,
+    difficulty: 9,
+    startingStability: 33,
+    instability: 14,
+    corruption: 265,
+    stabilityResistance: 0.22,
+    weakSystem: 'River',
+    chapterGate: 9,
+    simulationCounterpart: 'fluid_phantom',
+    visibleClues: [
+      { id: 'c1', label: 'Sunken Eyes',         detail: 'Marked periorbital hollowing; profound and prolonged fluid loss.', hidden: false },
+    ],
+    hiddenClues: [
+      { id: 'h1', label: 'Capillary Refill >3s', detail: 'Peripheral perfusion critically compromised; pre-shock state.', hidden: true },
+      { id: 'h2', label: 'BP 80/46',             detail: 'Frank hypotension; the body can no longer compensate.', hidden: true },
+      { id: 'h3', label: 'Na⁺ 155',              detail: 'Severe hypernatraemia from free-water depletion — organ stress imminent.', hidden: true },
+      { id: 'h4', label: 'Urine Na < 10',        detail: 'Kidneys in maximal conservation; avid sodium retention signals extreme volume deficit.', hidden: true },
+    ],
+    dangerTrigger: 'Hypovolemic shock with multi-organ dysfunction',
+    bestCounters: ['stabilize', 'scout', 'strike'],
+    teaches: ['fluid_resuscitation', 'shock_recognition'],
   },
   {
     id: 'fire_imp',

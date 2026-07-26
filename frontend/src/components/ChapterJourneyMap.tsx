@@ -447,8 +447,18 @@ function ChapterCard({
         return true; // challenge mini-games: always eligible when chapter active
       case 'battle':
         return anyBattleWon;
-      case 'mini_boss':
+      case 'mini_boss': {
+        // If this node routes to a specific enemy battle, the player must have
+        // actually WON that battle (battleStars[enemyId] >= 1) before they can
+        // claim the node reward. This forces a reattempt on exit without a win.
+        const eidMatch = part.route?.match(/[?&]enemyId=([^&]+)/);
+        if (eidMatch) {
+          const eid = eidMatch[1];
+          return (battleStars[eid] ?? 0) >= 1;
+        }
+        // Fallback for mini_boss nodes that route to /boss (Lord Imbalance etc.)
         return bestChapterStars >= 2;
+      }
       case 'ward_defense':
         return wardDefenseWaves >= 1;
       case 'realm':

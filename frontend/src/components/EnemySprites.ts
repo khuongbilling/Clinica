@@ -16,6 +16,8 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   mind_fog: require('../../assets/enemies/mind_fog.png'),
   lord_imbalance: require('../../assets/enemies/lord_imbalance.png'),
   dehydration_wisp: require('../../assets/enemies/dehydration_wisp.png'),
+  // fluid_phantom shares the specter art — replace when dedicated art is ready.
+  fluid_phantom: require('../../assets/enemies/dehydration_specter.png'),
   dehydration_specter: require('../../assets/enemies/dehydration_specter.png'),
   silent_infarct: require('../../assets/enemies/silent_infarct.png'),
   verdantha: require('../../assets/enemies/verdantha.png'),

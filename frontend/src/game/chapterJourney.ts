@@ -307,10 +307,10 @@ export const CHAPTERS: Chapter[] = [
         id: "c1n6",
         part: 6,
         type: "mini_boss",
-        title: "Trial: The Fading Apprentice",
-        description: "The chapter trial. Face the apprentice's condition at full severity — apply everything the ward has taught you.",
+        title: "Trial: The Fluid Phantom",
+        description: "The chapter trial. A phantom of fluid loss — harder than any ward shift, but still within reach of a first-rotation healer. Read the cues, apply the sequence, claim your first chapter star.",
         icon: "skull-outline",
-        route: "/battle?enemyId=dehydration_specter",
+        route: "/battle?enemyId=fluid_phantom",
         rewardXp: 30,
         rewardCoins: 25,
         rewardShards: 5,
@@ -1504,7 +1504,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[9],
     icon: "business-outline",
     realWorldTransition: true,
-    requiredCompletionNodes: ["c9p7", "c9p8"],
+    requiredCompletionNodes: ["c9p3", "c9p7", "c9p8"],
     parts: [
       {
         id: "c9p1",
@@ -1525,14 +1525,20 @@ export const CHAPTERS: Chapter[] = [
         isPlaceholder: true,
       },
       {
+        // Chapter 9 Trial — the Dehydration Specter returns in its true form.
+        // This is the simulation-era Specter reawakened as a Ch9-difficulty boss:
+        // fewer visible cues, higher corruption, active stability resistance.
+        // Must be won before Chapter 9 completion is granted.
         id: "c9p3",
         part: 3,
-        type: "battle",
-        title: "First Real Enemy: True Dehydration Wraith",
-        description: "The Dehydration Wisp was a controlled echo. This is the original — higher corruption pressure, fewer visible cues, no margin for delay.",
+        type: "mini_boss",
+        title: "Trial: The Specter Returns",
+        description: "The Fluid Phantom you faced in Chapter 1 was a shadow of this. The Dehydration Specter is the original — no visible cues to guide you, corruption that resists stabilisation, and a pace that does not wait. Face it at full severity.",
         icon: "skull-outline",
-        route: "/shift",
-        isPlaceholder: true,
+        route: "/battle?enemyId=dehydration_specter",
+        rewardXp: 80,
+        rewardCoins: 60,
+        rewardShards: 20,
       },
       {
         id: "c9p4",

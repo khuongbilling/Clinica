@@ -425,6 +425,26 @@ export interface EnemyClinical {
 const ASSESS_CHAIN: ChainRole[] = ['Scout', 'Stabilize', 'Counter', 'Reassess'];
 
 export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
+  // Chapter 1 mini-boss (fluid_phantom) — same profile as the wisp but
+  // with a tighter star-turn limit (harder fight, rewarded for efficiency).
+  fluid_phantom: {
+    clinicalCategory: 'Fluid Balance',
+    diseaseTags: ['dehydration', 'hypovolemia', 'fluid loss'],
+    allowedActionTags: ['assessment', 'reassessment', 'general support', 'comfort', 'airway', 'oxygenation', 'respiratory', 'circulation', 'fluid resuscitation', 'monitoring', 'hydration', 'escalation'],
+    strongActionTags: ['circulation', 'fluid resuscitation', 'hydration'],
+    weakActionTags: ['comfort'],
+    inappropriateActionTags: ['glucose replacement', 'antimicrobial', 'bronchospasm', 'skin integrity', 'orientation', 'fall prevention', 'infection isolation'],
+    unsafeActionTags: [],
+    treatmentChain: ASSESS_CHAIN,
+    preferredChainTags: ['assessment', 'reassessment', 'general support', 'circulation', 'fluid resuscitation', 'hydration'],
+    weaknesses: ['River'],
+    resistances: ['Fire'],
+    starTurnLimit: 5,
+    rewardBase: 30,
+    chapter: 1,
+    affinityStrong: ['circulatory'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
+  },
   dehydration_wisp: {
     clinicalCategory: 'Fluid Balance',
     diseaseTags: ['dehydration', 'hypovolemia', 'fluid loss'],
