@@ -50,6 +50,8 @@ export default function HeroesScreen() {
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const [team, setTeam] = useState<string[]>(player?.active_team ?? []);
   const [activeTab, setActiveTab] = useState("roster");
+  const [filterElement, setFilterElement] = useState<string | null>(null);
+  const [filterRole,    setFilterRole]    = useState<string | null>(null);
 
   useClearTutorialOnExit();
 
@@ -94,6 +96,16 @@ export default function HeroesScreen() {
   const teamHeroes     = HEROES.filter((h) => team.includes(h.id));
   const regularHeroes  = HEROES.filter((h) => !h.locked);
   const legendaryHeroes = HEROES.filter((h) => h.locked);
+
+  // Unique elements and roles from the regular pool (preserving first-seen order)
+  const allElements = Array.from(new Set(regularHeroes.map((h) => h.element)));
+  const allRoles    = Array.from(new Set(regularHeroes.map((h) => h.role)));
+
+  // Filtered slice shown in the Roster grid
+  const visibleHeroes = regularHeroes.filter((h) =>
+    (!filterElement || h.element === filterElement) &&
+    (!filterRole    || h.role    === filterRole),
+  );
 
   // Helper: whether hero at `star` with Player Level `pl` can currently promote
   const check_canPromote = (star: number, pl: number) => pl >= star + 1;
@@ -140,8 +152,55 @@ export default function HeroesScreen() {
               </View>
             </Pressable>
           )}
+          {/* ── Filter chips ── */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
+            {allElements.map((el) => {
+              const col = ELEMENT_COLORS[el] ?? COLORS.brand;
+              const active = filterElement === el;
+              return (
+                <Pressable key={el}
+                  style={[styles.filterChip,
+                    active ? { backgroundColor: col, borderColor: col } : { borderColor: col + "55" }]}
+                  onPress={() => setFilterElement(active ? null : el)}
+                  testID={`filter-element-${el}`}
+                >
+                  <Text style={[styles.filterChipTxt, { color: active ? COLORS.surface : col }]}>{el}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            style={[styles.filterRow, { marginTop: 4 }]} contentContainerStyle={styles.filterRowContent}>
+            {allRoles.map((role) => {
+              const active = filterRole === role;
+              return (
+                <Pressable key={role}
+                  style={[styles.filterChip,
+                    active ? { backgroundColor: COLORS.brand, borderColor: COLORS.brand } : { borderColor: COLORS.brand + "40" }]}
+                  onPress={() => setFilterRole(active ? null : role)}
+                  testID={`filter-role-${role}`}
+                >
+                  <Text style={[styles.filterChipTxt, { color: active ? COLORS.surface : COLORS.onSurfaceTertiary }]}>{role}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          {(filterElement || filterRole) && (
+            <Pressable style={styles.clearFilters} onPress={() => { setFilterElement(null); setFilterRole(null); }}
+              testID="filter-clear">
+              <Ionicons name="close-circle" size={12} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.clearFiltersTxt}>Clear filters</Text>
+            </Pressable>
+          )}
+          {visibleHeroes.length === 0 && (
+            <View style={styles.noResultsCard}>
+              <Text style={styles.noResultsTxt}>No heroes match these filters.</Text>
+            </View>
+          )}
+
           <View style={styles.grid}>
-            {regularHeroes.map((h) => {
+            {visibleHeroes.map((h) => {
               const isOwned  = owned.has(h.id);
               const inTeam   = team.includes(h.id);
               const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
@@ -781,4 +840,24 @@ const styles = StyleSheet.create({
   upgradeIconBox: { width: 44, height: 44, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
   upgradeLinkTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "700" },
   upgradeLinkSub:   { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19, marginTop: 2 },
+
+  // Roster filter chips
+  filterRow: { flexGrow: 0, marginBottom: 2 },
+  filterRowContent: { paddingHorizontal: 0, gap: 6, flexDirection: "row", alignItems: "center", paddingBottom: 4 },
+  filterChip: {
+    borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  filterChipTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  clearFilters: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    alignSelf: "flex-end", marginBottom: SPACING.sm,
+  },
+  clearFiltersTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
+  noResultsCard: {
+    padding: SPACING.lg, alignItems: "center",
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm,
+  },
+  noResultsTxt: { color: COLORS.onSurfaceTertiary, fontSize: 13 },
 });
