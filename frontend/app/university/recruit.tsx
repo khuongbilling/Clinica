@@ -51,8 +51,7 @@ export default function UniversityRecruitScreen() {
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [busy, setBusy] = useState(false);
-  const [single, setSingle] = useState<RecruitResult | null>(null);
-  const [singleIsFree, setSingleIsFree] = useState(false);
+  const [single, setSingle] = useState<{ result: RecruitResult; isFree: boolean } | null>(null);
   const [ceremonyResult, setCeremonyResult] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -154,11 +153,10 @@ export default function UniversityRecruitScreen() {
     setError(null);
     setBatch(null);
     setSingle(null);
-    setSingleIsFree(true);
     setCeremonyResult(null);
     const res = await freeRecruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; setSingle(r); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: true }); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 
@@ -167,11 +165,11 @@ export default function UniversityRecruitScreen() {
     setBusy(true);
     setError(null);
     setBatch(null);
-    setSingleIsFree(false);
+    setSingle(null);
     setCeremonyResult(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; setSingle(r); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: false }); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 
@@ -386,7 +384,7 @@ export default function UniversityRecruitScreen() {
         </View>
 
         {/* Result cards (free / single / batch) */}
-        {single && <ResultCard result={single} isFree={singleIsFree} />}
+        {single && <ResultCard result={single.result} isFree={single.isFree} />}
         {batch && (() => {
           const dupCount = batch.filter(r => r.kind === 'shards').length;
           const totalRefund = batch.reduce((sum, r) => sum + (r.kind === 'shards' ? (r.codexShardRefund ?? 0) : 0), 0);
