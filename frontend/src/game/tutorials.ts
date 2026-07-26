@@ -175,11 +175,10 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_prodigy",
       title: "Step 5: Finish It",
-      body: "The Corruption is on the edge. The Prodigy's Cascade Protocol will end this — mythic authority, complete care, overwhelming result. One skill. That's all it takes.",
+      body: "The Corruption is on the edge. One more action and the patient is in reach — use whichever skill your team has left.",
       placement: "center",
-      requireAction: true,
-      requiredSkillId: "cascade_protocol",
-      nextText: "USE CASCADE PROTOCOL",
+      requireAction: false,
+      nextText: "GOT IT",
     },
     {
       id: "prologue_done",

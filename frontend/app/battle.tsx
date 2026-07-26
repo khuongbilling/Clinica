@@ -2551,7 +2551,7 @@ function MasterBaiBossNarratorOverlay({ onDismiss }: { onDismiss: () => void }) 
 
       {/* Portrait — grounded above VN bar */}
       <Animated.View
-        style={[styles.bossNarratorPortraitWrap, { bottom: barTotal - 80, width: W * 0.80, height: H * 0.82, opacity: charFade }]}
+        style={[styles.bossNarratorPortraitWrap, { bottom: barTotal - 80, width: W, height: H * 0.82, opacity: charFade }]}
         pointerEvents="none"
       >
         <ExpoImage
@@ -3321,8 +3321,9 @@ const styles = StyleSheet.create({
   },
   bossNarratorPortraitWrap: {
     position:       "absolute",
+    left:           0,
     right:          0,
-    alignItems:     "flex-end",
+    alignItems:     "center",
     justifyContent: "flex-end",
   },
   bossNarratorPortraitImg: { width: "100%", height: "100%" },
