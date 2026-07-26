@@ -38,6 +38,7 @@ import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
   EQUIPMENT_SLOT_META,
   EQUIPMENT_RARITY_META,
+  EQUIPMENT_ITEMS,
   ROLE_STAT_VOCABULARY,
   ROLE_FIT_RULE,
   equipmentForHeroRole,
@@ -650,10 +651,16 @@ function SkillsTab({ hero, accent }: { hero: any; accent: string }) {
 }
 
 function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
-  const items = equipmentForHeroRole(hero.role);
+  const { player, equipItem, unequipItem } = usePlayer();
+  // Role-specific future items (legacy display)
+  const roleItems = equipmentForHeroRole(hero.role);
+  // All active items (Push 10 — equippable by any hero)
+  const activeItems = EQUIPMENT_ITEMS.filter((i) => i.status === "active");
   const slots: EquipmentSlot[] = ["focusTool", "wardGarment", "charm", "medicalKit", "relic"];
-  const family = items[0]?.roleFamily;
+  const family = roleItems[0]?.roleFamily;
   const statLines = family ? ROLE_STAT_VOCABULARY[family] : [];
+  // Current hero's equipped item IDs: slotId → itemId
+  const heroEquipment = player?.hero_equipment?.[hero.id] ?? {};
 
   return (
     <View style={{ gap: SPACING.lg }}>
@@ -680,34 +687,85 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
 
       {slots.map((slot) => {
         const slotMeta = EQUIPMENT_SLOT_META[slot];
-        const item = items.find((i) => i.slot === slot);
+        const slotActiveItems = activeItems.filter((i) => i.slot === slot);
+        const slotFutureItem = roleItems.find((i) => i.slot === slot && i.status === "future");
+        const equippedItemId = heroEquipment[slot];
+        const hasAnyItem = slotActiveItems.length > 0 || slotFutureItem;
+
         return (
           <View key={slot} style={[styles.equipSlotCard, { borderColor: accent + "28" }]}>
             <View style={styles.equipSlotHeader}>
               <Ionicons name={slotMeta.icon as any} size={16} color={accent} />
               <Text style={[styles.equipSlotLabel, { color: accent }]}>{slotMeta.label}</Text>
-              {!item && <Text style={styles.equipSlotEmpty}>Empty — foundation slot</Text>}
+              {!hasAnyItem && <Text style={styles.equipSlotEmpty}>Empty — foundation slot</Text>}
             </View>
-            {item ? (
-              <>
+
+            {/* Active (equippable) items for this slot */}
+            {slotActiveItems.map((item) => {
+              const isEquipped = equippedItemId === item.id;
+              return (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.equipItemRow,
+                    isEquipped && { borderColor: accent + "60", backgroundColor: accent + "0D" },
+                  ]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <Text style={styles.equipItemName}>{item.name}</Text>
+                    <View style={[styles.equipRarityChip, { borderColor: EQUIPMENT_RARITY_META[item.rarity].color + "80" }]}>
+                      <Text style={[styles.equipRarityTxt, { color: EQUIPMENT_RARITY_META[item.rarity].color }]}>
+                        {EQUIPMENT_RARITY_META[item.rarity].label}
+                      </Text>
+                    </View>
+                    {isEquipped && (
+                      <View style={[styles.equipFutureChip, { backgroundColor: accent + "30" }]}>
+                        <Text style={[styles.equipFutureTxt, { color: accent }]}>EQUIPPED</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.equipStatLine, { marginTop: 2 }]}>{item.mainStat}</Text>
+                  <Text style={styles.equipItemDesc}>{item.description}</Text>
+                  <Pressable
+                    onPress={() =>
+                      isEquipped
+                        ? unequipItem(hero.id, slot)
+                        : equipItem(hero.id, slot, item.id)
+                    }
+                    style={[
+                      styles.equipActionBtn,
+                      { borderColor: isEquipped ? "#ef444480" : accent + "80" },
+                    ]}
+                  >
+                    <Text style={[styles.equipActionTxt, { color: isEquipped ? "#ef4444" : accent }]}>
+                      {isEquipped ? "Unequip" : "Equip"}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+
+            {/* Future (coming soon) item from role catalog */}
+            {slotFutureItem && (
+              <View key={slotFutureItem.id} style={{ marginTop: slotActiveItems.length > 0 ? 8 : 4 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
-                  <Text style={styles.equipItemName}>{item.name}</Text>
-                  <View style={[styles.equipRarityChip, { borderColor: EQUIPMENT_RARITY_META[item.rarity].color + "80" }]}>
-                    <Text style={[styles.equipRarityTxt, { color: EQUIPMENT_RARITY_META[item.rarity].color }]}>
-                      {EQUIPMENT_RARITY_META[item.rarity].label}
+                  <Text style={styles.equipItemName}>{slotFutureItem.name}</Text>
+                  <View style={[styles.equipRarityChip, { borderColor: EQUIPMENT_RARITY_META[slotFutureItem.rarity].color + "80" }]}>
+                    <Text style={[styles.equipRarityTxt, { color: EQUIPMENT_RARITY_META[slotFutureItem.rarity].color }]}>
+                      {EQUIPMENT_RARITY_META[slotFutureItem.rarity].label}
                     </Text>
                   </View>
-                  {item.status === "future" && (
-                    <View style={styles.equipFutureChip}>
-                      <Text style={styles.equipFutureTxt}>SOON</Text>
-                    </View>
-                  )}
+                  <View style={styles.equipFutureChip}>
+                    <Text style={styles.equipFutureTxt}>SOON</Text>
+                  </View>
                 </View>
-                <Text style={styles.equipItemDesc}>{item.description}</Text>
-                <Text style={styles.equipStatLine}>{item.mainStat} · {item.secondaryTrait}</Text>
-                <Text style={styles.equipSourceLine}>Source: {item.source}</Text>
-              </>
-            ) : (
+                <Text style={styles.equipItemDesc}>{slotFutureItem.description}</Text>
+                <Text style={styles.equipStatLine}>{slotFutureItem.mainStat} · {slotFutureItem.secondaryTrait}</Text>
+                <Text style={styles.equipSourceLine}>Source: {slotFutureItem.source}</Text>
+              </View>
+            )}
+
+            {!hasAnyItem && (
               <Text style={styles.equipSlotBlurb}>{slotMeta.blurb}</Text>
             )}
           </View>
@@ -1281,6 +1339,15 @@ const styles = StyleSheet.create({
   equipItemDesc: { fontSize: 12, color: COLORS.onSurfaceSecondary, lineHeight: 17 },
   equipStatLine: { fontSize: 11, fontWeight: "600", color: COLORS.onSurface },
   equipSourceLine: { fontSize: 10, color: COLORS.onSurfaceTertiary },
+  equipItemRow: {
+    borderWidth: 1, borderRadius: RADIUS.sm, borderColor: "transparent",
+    padding: SPACING.sm, gap: 4, marginTop: 6,
+  },
+  equipActionBtn: {
+    borderWidth: 1, borderRadius: RADIUS.pill, alignSelf: "flex-start",
+    paddingHorizontal: 14, paddingVertical: 5, marginTop: 4,
+  },
+  equipActionTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
 
   /* Skills */
   skillCard: {

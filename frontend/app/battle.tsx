@@ -17,6 +17,7 @@ import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type ChainRole } from "@/src/game/clinical";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
+import { EQUIPMENT_ITEMS } from "@/src/game/equipment";
 import { CLASS_IDENTITIES, ClassId, getClassTreeBattleBonuses } from "@/src/game/classTree";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { getBattleBaseXp, getBattleScrollDrop, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
@@ -192,6 +193,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       // Empty array → skip, let initBattle use random draw (legacy).
       equippedCards: (player?.equipped_cards?.length ?? 0) > 0 ? player!.equipped_cards : undefined,
       classTreeBonus: classTreeBonus ?? undefined,
+      // Push 10: hero equipment loadout (skipped for prologue loaner battles).
+      heroEquipment: !isPrologueLoanerBattle ? (player?.hero_equipment ?? {}) : undefined,
     });
     let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
@@ -212,6 +215,17 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // Push 11: log the active class bonus so it's visible in the battle log.
     if (!isPrologueLoanerBattle && classTreeBonus) {
       log = [...log, `⚕️ Class: ${CLASS_IDENTITIES[classId].name} — class bonuses active.`];
+    }
+    // Push 10: log active equipment for the battle team.
+    if (!isPrologueLoanerBattle && player?.hero_equipment) {
+      for (const hero of battleTeam) {
+        const slots = player.hero_equipment[hero.id];
+        if (!slots) continue;
+        for (const itemId of Object.values(slots)) {
+          const item = EQUIPMENT_ITEMS.find((e) => e.id === itemId && e.status === 'active');
+          if (item) log = [...log, `⚕️ ${item.name} equipped on ${hero.name}.`];
+        }
+      }
     }
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });

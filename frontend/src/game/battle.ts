@@ -55,6 +55,7 @@ import {
 } from './skillCalc';
 import { getLeaderBonus, scaleLeaderBonus } from './leaderSpecialty';
 import type { ClassTreeBattleBonus } from './classTree';
+import { getAggregatedEquipmentEffect, type AggregatedEquipmentEffect } from './equipment';
 
 export interface WaveMember {
   enemy: Enemy;
@@ -150,6 +151,12 @@ export interface BattleState {
   classBonus: ClassTreeBattleBonus | null;
   classFirstScoutUsed: boolean;        // Seer: true after the first scout action of this battle
   classStabilizeUsedThisTurn: boolean; // Caretaker: true when any stabilize skill fired this turn
+
+  // Push 10 — Aggregated equipment effects per hero (computed once at initBattle).
+  // Keyed by hero.id. Heroes with no equipped items get a neutral (all-1.00) effect.
+  heroEquipmentEffects: Record<string, AggregatedEquipmentEffect>;
+  // True after the Triage Sash first-loss reduction has fired once this battle.
+  equipFirstLossUsed: boolean;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -174,6 +181,9 @@ export interface InitBattleOptions {
   // Push 11 — Pre-computed class tree bonus; passed from battle.tsx so battle.ts
   // doesn't need to import classTree directly. null/undefined = no class bonus.
   classTreeBonus?: ClassTreeBattleBonus;
+  // Push 10 — Hero equipment loadout (player.hero_equipment). Used at init to
+  // compute heroEquipmentEffects. Skipped for prologue loaner battles.
+  heroEquipment?: Record<string, Record<string, string>>;
 }
 
 // ============================================================
@@ -369,6 +379,12 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     classBonus: opts.classTreeBonus ?? null,
     classFirstScoutUsed: false,
     classStabilizeUsedThisTurn: false,
+
+    // Push 10 — pre-compute each hero's aggregated equipment effect once at init.
+    heroEquipmentEffects: Object.fromEntries(
+      team.map(h => [h.id, getAggregatedEquipmentEffect(h.id, opts.heroEquipment)])
+    ),
+    equipFirstLossUsed: false,
   };
 }
 
@@ -722,6 +738,8 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   // Scale by their rarity/star before building mod bags so each bag gets the correct value.
   const lb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
   const cb = s.classBonus; // Push 11: class tree bonus
+  // Push 10: equipment effect for the acting hero (pre-computed at initBattle).
+  const equipFx = s.heroEquipmentEffects[hero.id] ?? { strikeMult: 1, stabilizeMult: 1, shieldMult: 1, itemMult: 1, cardMult: 1, scoutRevealBonus: 0, firstStabilityLossReduction: 0, callForHelpBonus: 0 };
 
   const strikeMods: SkillModifiers = {
     ...neutralModifiers(),
@@ -737,6 +755,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     hiddenDefenseMod,                    // Push 7
     leaderBonusMod: lb?.strikeMult ?? 1, // Push 9
     playerClassMod: cb?.strikeMod ?? 1,  // Push 11
+    equipmentMod: equipFx.strikeMult,    // Push 10
   };
   const stabMods: SkillModifiers = {
     ...neutralModifiers(),
@@ -752,6 +771,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     hiddenDefenseMod,                       // Push 7 (corruptionResistanceMod not applied to stabilize)
     leaderBonusMod: lb?.stabilizeMult ?? 1, // Push 9
     playerClassMod: cb?.stabilizeMod ?? 1,  // Push 11
+    equipmentMod: equipFx.stabilizeMult,    // Push 10
   };
   // Shield modifier bag — guard stat always; affinity + hidden-defense apply here too.
   const shieldMods: SkillModifiers = {
@@ -761,6 +781,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     hiddenDefenseMod,                    // Push 7
     leaderBonusMod: lb?.shieldMult ?? 1, // Push 9
     playerClassMod: cb?.shieldMod ?? 1,  // Push 11
+    equipmentMod: equipFx.shieldMult,    // Push 10
   };
 
   if (castQuality !== 'normal') {
@@ -793,6 +814,11 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
         next.log = [...next.log, `👁 Seer's Eye: first Scout of battle reveals an extra clue.`];
       }
       next.classFirstScoutUsed = true;
+    }
+    // Push 10: Culture Lens — extra clue per scout action.
+    if (equipFx.scoutRevealBonus > 0) {
+      revealCount += equipFx.scoutRevealBonus;
+      next.log = [...next.log, `🔬 Culture Lens: +${equipFx.scoutRevealBonus} extra clue${equipFx.scoutRevealBonus > 1 ? 's' : ''} revealed.`];
     }
     next = revealHiddenClues(next, revealCount);
     effectType = 'clue';
@@ -937,6 +963,8 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   // Push 9: item mult from Leader (slot 0). Same mult applied to both bags.
   const itemLb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
   const itemCb = s.classBonus; // Push 11
+  // Push 10: Apothecary Seal — highest itemMult across the whole team applies.
+  const teamItemMult = Math.max(1, ...s.team.map(h => s.heroEquipmentEffects[h.id]?.itemMult ?? 1));
   const itemStrikeMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: corrOutcome.reductionMult,
@@ -946,6 +974,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     // no elementBonus — items are system-neutral tools
     leaderBonusMod: itemLb?.itemMult ?? 1, // Push 9
     playerClassMod: itemCb?.itemMod ?? 1,  // Push 11
+    equipmentMod: teamItemMult,             // Push 10
   };
   const itemStabMods: SkillModifiers = {
     ...neutralModifiers(),
@@ -957,6 +986,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     cueBonusFlat: next.cueBonusStabilize,
     leaderBonusMod: itemLb?.itemMult ?? 1, // Push 9
     playerClassMod: itemCb?.itemMod ?? 1,  // Push 11
+    equipmentMod: teamItemMult,             // Push 10
   };
 
   let effectAmount = 0;
@@ -1125,6 +1155,8 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   // Push 9: card mult from Leader (slot 0).
   const cardLb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
   const cardCb = s.classBonus; // Push 11
+  // Push 10: Apothecary Seal — highest cardMult across the whole team applies.
+  const teamCardMult = Math.max(1, ...s.team.map(h => s.heroEquipmentEffects[h.id]?.cardMult ?? 1));
   const cardStrikeMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: corrOutcome.reductionMult,
@@ -1132,6 +1164,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     affinityMod: res.affinityResult.multiplier,
     leaderBonusMod: cardLb?.cardMult ?? 1,  // Push 9
     playerClassMod: cardCb?.strikeMod ?? 1, // Push 11
+    equipmentMod: teamCardMult,              // Push 10
   };
   const cardStabMods: SkillModifiers = {
     ...neutralModifiers(),
@@ -1143,6 +1176,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     cueBonusFlat: next.cueBonusStabilize,
     leaderBonusMod: cardLb?.cardMult ?? 1,    // Push 9
     playerClassMod: cardCb?.stabilizeMod ?? 1, // Push 11
+    equipmentMod: teamCardMult,                // Push 10
   };
 
   let effectAmount = 0;
@@ -1297,7 +1331,28 @@ export function maybeTriggerClinicalCue(s: BattleState): BattleState {
   };
 }
 
+// Push 10: Thin wrapper that post-processes every non-aborted, non-inappropriate
+// call result to apply Field Coordinator Badge AP bonus without touching all 10+
+// early-return paths inside the core logic.
 export function applyCall(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {
+  const result = _applyCallCore(s, option, addedItemName);
+  if (!result.aborted && result.status !== 'inappropriate' && result.status !== 'locked') {
+    const maxBonus = Math.max(0, ...result.state.team.map(h => result.state.heroEquipmentEffects[h.id]?.callForHelpBonus ?? 0));
+    if (maxBonus > 0) {
+      return {
+        ...result,
+        state: {
+          ...result.state,
+          ap: Math.min(result.state.ap + maxBonus, AP_BONUS_CEILING),
+          log: [...result.state.log, `🏅 Field Coordinator Badge: +${maxBonus} AP from successful call.`],
+        },
+      };
+    }
+  }
+  return result;
+}
+
+function _applyCallCore(s: BattleState, option: CallOption, addedItemName?: string): ApplyResult {
   const callKey: keyof BattleState['callsUsed'] | null =
     option.id === 'call_pharmacy' ? 'pharmacy' :
     option.id === 'call_respiratory' ? 'respiratory' :
@@ -1512,6 +1567,19 @@ export function endPlayerTurn(s: BattleState): BattleState {
   // Push 11: Guardian — reduces incoming Instability by a class-tier percentage.
   const classGuardianReduction = s.classBonus?.incomingDamageReduction ?? 0;
   if (classGuardianReduction > 0) reduced = Math.max(0, Math.floor(reduced * (1 - classGuardianReduction)));
+  // Push 10: Triage Sash — blocks a fraction of the FIRST enemy attack's stability damage this battle.
+  let equipFirstLossUsed = s.equipFirstLossUsed;
+  if (!equipFirstLossUsed && reduced > 0) {
+    const maxSashReduction = Math.max(0, ...s.team.map(h => s.heroEquipmentEffects[h.id]?.firstStabilityLossReduction ?? 0));
+    if (maxSashReduction > 0) {
+      const mitigated = Math.floor(reduced * maxSashReduction);
+      if (mitigated > 0) {
+        reduced = Math.max(0, reduced - mitigated);
+        equipFirstLossUsed = true;
+        log.push(`🏥 Triage Sash absorbed ${mitigated} Stability damage (${Math.round(maxSashReduction * 100)}% of the opening blow).`);
+      }
+    }
+  }
 
   // Companion affliction pressure — wisps/spikes still alive in the wave drain stability every turn
   const wavePressure = getWaveBehaviorPressure(s.wave);
@@ -1568,7 +1636,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
 
   if (stability <= 0) {
     log.push(`💀 ${s.enemy.dangerTrigger}. The patient is lost.`);
-    return { ...s, stability: 0, corruption, shieldNext: 0, log, outcome: 'loss' };
+    return { ...s, stability: 0, corruption, shieldNext: 0, log, outcome: 'loss', equipFirstLossUsed };
   }
 
   // Next-turn AP — dynamic based on patient state
@@ -1599,6 +1667,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
     rapidResponseActive: false,
     cueBonusStabilize: 0,
     classStabilizeUsedThisTurn: false, // Push 11: reset Caretaker combo tracker each enemy turn
+    equipFirstLossUsed,                // Push 10: persist Triage Sash one-shot flag
     heroActionsUsed,
     selectedHeroId: s.team.find(h => !heroActionsUsed[h.id])?.id || s.selectedHeroId,
     dangerTriggerActive,

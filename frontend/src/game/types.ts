@@ -439,4 +439,8 @@ export interface PlayerState {
   // P9 — one-time "how does Call for Help work?" tutorial shown the first
   // time the Call tab is opened in battle. Undefined/false = not yet seen.
   seen_call_tutorial?: boolean;
+  // Push 10 — hero equipment loadouts. heroId → slotId → itemId.
+  // Only items with status: "active" in equipment.ts take effect in battle.
+  // Backfilled as {} for existing players in normalizeProgression.
+  hero_equipment?: Record<string, Record<string, string>>;
 }

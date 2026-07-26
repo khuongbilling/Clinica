@@ -63,6 +63,45 @@ export interface EquipmentUpgradeRequirement {
   amount?: number;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Push 10 — Numeric Equipment Effects
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Numeric effects applied to battle math when this item is equipped (status: "active" only). */
+export interface EquipmentEffect {
+  /** Hero skill strike multiplier (e.g. 1.08 = +8%). Stacks multiplicatively. */
+  strikeMult?: number;
+  /** Hero skill stabilize multiplier (e.g. 1.08 = +8%). Stacks multiplicatively. */
+  stabilizeMult?: number;
+  /** Hero skill shield multiplier. Stacks multiplicatively. */
+  shieldMult?: number;
+  /** Item-use effect multiplier; battle uses the HIGHEST value across the team. */
+  itemMult?: number;
+  /** Clinical card effect multiplier; battle uses the HIGHEST value across the team. */
+  cardMult?: number;
+  /** Extra hidden clues revealed per scout action (flat additive, stacks). */
+  scoutRevealBonus?: number;
+  /** Fraction of the FIRST enemy attack's stability damage blocked this battle (0.40 = 40%). */
+  firstStabilityLossReduction?: number;
+  /** Extra AP granted after a successful Call for Help (not aborted, not inappropriate). */
+  callForHelpBonus?: number;
+}
+
+/**
+ * Merged view across all items currently equipped by one hero.
+ * All fields always present — defaults: multipliers = 1.00, flats = 0.
+ */
+export interface AggregatedEquipmentEffect {
+  strikeMult: number;
+  stabilizeMult: number;
+  shieldMult: number;
+  itemMult: number;
+  cardMult: number;
+  scoutRevealBonus: number;
+  firstStabilityLossReduction: number;
+  callForHelpBonus: number;
+}
+
 export interface EquipmentDef {
   id: string;
   name: string;
@@ -78,6 +117,8 @@ export interface EquipmentDef {
   relatedBuilding?: string; // Realm building id/name this item connects to
   status: EquipmentStatus;
   note?: string;
+  /** Numeric battle effect — present and non-trivial only for status: "active" items. */
+  effect?: EquipmentEffect;
 }
 
 // -----------------------------------------------------------------------------
@@ -254,7 +295,119 @@ export const EQUIPMENT_ITEMS: EquipmentDef[] = [
     upgradeRequires: { materialIds: ["building_blueprints"], currency: "crowns", amount: 800 },
     relatedBuilding: "Training Hall", status: "future",
   },
+
+  // ── Push 10 — Active equippable items (5 live items; all others remain "future") ──
+  {
+    id: "lotus_lamp_wick",
+    name: "Lotus Lamp Wick",
+    slot: "wardGarment",
+    roleFamily: "caretaker",
+    rarity: "common",
+    level: 1,
+    mainStat: "+8% Stability restoration",
+    secondaryTrait: "All stabilize skills improved",
+    description: "A softly glowing wick woven from lotus-light; it steadies the healer's hands and amplifies every restorative touch.",
+    source: "Hospital Ward, Ward Shift, events.",
+    status: "active",
+    effect: { stabilizeMult: 1.08 },
+  },
+  {
+    id: "culture_lens",
+    name: "Culture Lens",
+    slot: "focusTool",
+    roleFamily: "seer",
+    rarity: "uncommon",
+    level: 1,
+    mainStat: "+1 Scout reveal",
+    secondaryTrait: "Every Scout action uncovers one extra hidden clue",
+    description: "A precision assessment lens that catches what other eyes miss — each scan strips away one more layer of hidden pathology.",
+    source: "Research Library, University exams, events.",
+    status: "active",
+    effect: { scoutRevealBonus: 1 },
+  },
+  {
+    id: "triage_sash",
+    name: "Triage Sash",
+    slot: "wardGarment",
+    roleFamily: "guardian",
+    rarity: "rare",
+    level: 1,
+    mainStat: "First enemy attack −40% damage",
+    secondaryTrait: "Triage cushion: blocks the worst of the opening blow",
+    description: "A triage sash worn across the chest; on the first enemy attack of every battle, it absorbs 40% of the incoming stability damage.",
+    source: "Training Hall, Hospital Ward, events.",
+    status: "active",
+    effect: { firstStabilityLossReduction: 0.40 },
+  },
+  {
+    id: "apothecary_seal",
+    name: "Apothecary Seal",
+    slot: "relic",
+    roleFamily: "herbalchemist",
+    rarity: "rare",
+    level: 1,
+    mainStat: "+10% Item effectiveness",
+    secondaryTrait: "+10% Clinical card effectiveness",
+    description: "An official Apothecary seal pressed into living wax; items and clinical cards drawn from this practitioner's kit hit harder.",
+    source: "Apothecary, boss clears, events.",
+    status: "active",
+    effect: { itemMult: 1.10, cardMult: 1.10 },
+  },
+  {
+    id: "field_coordinator_badge",
+    name: "Field Coordinator Badge",
+    slot: "charm",
+    roleFamily: "caretaker",
+    rarity: "uncommon",
+    level: 1,
+    mainStat: "+1 AP on successful Call for Help",
+    secondaryTrait: "Team coordination bonus after each consult",
+    description: "A coordination badge pinned to the collar; whenever a Call for Help succeeds, the coordination boost grants +1 free AP.",
+    source: "Hospital Ward, Ward Shift, events.",
+    status: "active",
+    effect: { callForHelpBonus: 1 },
+  },
 ];
+
+/** Returns a neutral AggregatedEquipmentEffect (all mults = 1.00, flats = 0). */
+export function neutralEquipmentEffect(): AggregatedEquipmentEffect {
+  return {
+    strikeMult: 1, stabilizeMult: 1, shieldMult: 1,
+    itemMult: 1, cardMult: 1,
+    scoutRevealBonus: 0, firstStabilityLossReduction: 0, callForHelpBonus: 0,
+  };
+}
+
+/**
+ * Aggregate all equipped items for a single hero into one effect bundle.
+ * @param heroId        The hero's id string.
+ * @param heroEquipment player.hero_equipment (heroId → slotId → itemId).
+ */
+export function getAggregatedEquipmentEffect(
+  heroId: string,
+  heroEquipment: Record<string, Record<string, string>> | undefined,
+): AggregatedEquipmentEffect {
+  const agg = neutralEquipmentEffect();
+  const slots = heroEquipment?.[heroId];
+  if (!slots) return agg;
+
+  for (const itemId of Object.values(slots)) {
+    const item = EQUIPMENT_ITEMS.find(e => e.id === itemId && e.status === 'active' && e.effect);
+    if (!item?.effect) continue;
+    const fx = item.effect;
+    // Multiplicative stacking
+    if (fx.strikeMult)    agg.strikeMult    *= fx.strikeMult;
+    if (fx.stabilizeMult) agg.stabilizeMult *= fx.stabilizeMult;
+    if (fx.shieldMult)    agg.shieldMult    *= fx.shieldMult;
+    if (fx.itemMult)      agg.itemMult      *= fx.itemMult;
+    if (fx.cardMult)      agg.cardMult      *= fx.cardMult;
+    // Flat additive stacking
+    if (fx.scoutRevealBonus)            agg.scoutRevealBonus            += fx.scoutRevealBonus;
+    if (fx.firstStabilityLossReduction) agg.firstStabilityLossReduction += fx.firstStabilityLossReduction;
+    if (fx.callForHelpBonus)            agg.callForHelpBonus            += fx.callForHelpBonus;
+  }
+  return agg;
+}
 
 export function equipmentForRoleFamily(roleFamily: EquipmentRoleFamily): EquipmentDef[] {
   return EQUIPMENT_ITEMS.filter((e) => e.roleFamily === roleFamily);

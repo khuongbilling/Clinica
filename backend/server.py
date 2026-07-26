@@ -201,6 +201,8 @@ class Player(BaseModel):
     realm_seed: int = 0
     # P8 — battle card deck (up to 3 card IDs loaded in mission loadout)
     equipped_cards: List[str] = Field(default_factory=list)
+    # Push 10 — hero equipment loadouts: heroId → slotId → itemId
+    hero_equipment: Dict[str, Dict[str, str]] = Field(default_factory=dict)
     seen_card_tutorial: bool = False
     seen_call_tutorial: bool = False
     created_at: str = Field(default_factory=now_iso)
@@ -299,6 +301,8 @@ class PlayerUpdate(BaseModel):
     realm_production: Optional[Dict[str, Dict[str, Any]]] = None
     realm_seed: Optional[int] = None
     equipped_cards: Optional[List[str]] = None
+    # Push 10 — hero equipment loadouts: heroId → slotId → itemId
+    hero_equipment: Optional[Dict[str, Dict[str, str]]] = None
     seen_card_tutorial: Optional[bool] = None
     seen_call_tutorial: Optional[bool] = None
 
