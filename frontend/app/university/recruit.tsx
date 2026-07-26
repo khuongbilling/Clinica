@@ -52,10 +52,12 @@ export default function UniversityRecruitScreen() {
 
   const [busy, setBusy] = useState(false);
   const [single, setSingle] = useState<RecruitResult | null>(null);
+  const [singleIsFree, setSingleIsFree] = useState(false);
   const [ceremonyResult, setCeremonyResult] = useState<RecruitResult | null>(null);
   const [batch, setBatch] = useState<RecruitResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revealResult, setRevealResult] = useState<RecruitResult | null>(null);
+  const [revealIsFree, setRevealIsFree] = useState(false);
 
   const freeAvailable = (() => {
     if (!player) return false;
@@ -138,6 +140,7 @@ export default function UniversityRecruitScreen() {
     else {
       const r = res.result || null;
       setCeremonyResult(r);
+      setRevealIsFree(true);
       setRevealResult(r);
       playRewardCue(true);
       onRequiredAction("summon");
@@ -151,10 +154,11 @@ export default function UniversityRecruitScreen() {
     setError(null);
     setBatch(null);
     setSingle(null);
+    setSingleIsFree(true);
     setCeremonyResult(null);
     const res = await freeRecruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; setSingle(r); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; setSingle(r); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 
@@ -163,10 +167,11 @@ export default function UniversityRecruitScreen() {
     setBusy(true);
     setError(null);
     setBatch(null);
+    setSingleIsFree(false);
     setCeremonyResult(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; setSingle(r); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; setSingle(r); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
     setBusy(false);
   };
 
@@ -381,14 +386,35 @@ export default function UniversityRecruitScreen() {
         </View>
 
         {/* Result cards (free / single / batch) */}
-        {single && <ResultCard result={single} />}
-        {batch && (
-          <View style={styles.batchGrid}>
-            {batch.map((r, i) => (
-              <ResultTile key={i} result={r} />
-            ))}
-          </View>
-        )}
+        {single && <ResultCard result={single} isFree={singleIsFree} />}
+        {batch && (() => {
+          const dupCount = batch.filter(r => r.kind === 'shards').length;
+          const totalRefund = batch.reduce((sum, r) => sum + (r.kind === 'shards' ? (r.codexShardRefund ?? 0) : 0), 0);
+          return (
+            <View style={{ gap: SPACING.sm }}>
+              <View style={styles.batchGrid}>
+                {batch.map((r, i) => (
+                  <ResultTile key={i} result={r} />
+                ))}
+              </View>
+              {dupCount > 0 && totalRefund > 0 ? (
+                <View style={styles.batchSummary}>
+                  <Ionicons name="sparkles" size={13} color="#4FD8C4" />
+                  <Text style={styles.batchSummaryTxt}>
+                    {dupCount} duplicate{dupCount > 1 ? 's' : ''} → {totalRefund} Codex Shards refunded
+                  </Text>
+                </View>
+              ) : dupCount > 0 ? (
+                <View style={styles.batchSummary}>
+                  <Ionicons name="copy-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                  <Text style={styles.batchSummaryTxt}>
+                    {dupCount} duplicate{dupCount > 1 ? 's' : ''} → converted to Hero Shards
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          );
+        })()}
 
         {error && <Text style={styles.errorTxt}>{error}</Text>}
 
@@ -460,14 +486,14 @@ export default function UniversityRecruitScreen() {
         </View>
       </ScrollView>
 
-      <RecruitRevealModal result={revealResult} onDismiss={() => setRevealResult(null)} />
+      <RecruitRevealModal result={revealResult} isFree={revealIsFree} onDismiss={() => setRevealResult(null)} />
       <TutorialOverlay />
     </SafeAreaView>
   );
 }
 
 // ── Gacha-style reveal popup ─────────────────────────────────────────────────
-function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | null; onDismiss: () => void }) {
+function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResult | null; isFree?: boolean; onDismiss: () => void }) {
   const { height: screenH } = useWindowDimensions();
   const scaleAnim   = useRef(new Animated.Value(0.94)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -706,9 +732,14 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
               <Text style={[revealStyles.roleTxt, { color: rc }]}>+{result.shardAmount} HERO SHARDS</Text>
               <Text style={[revealStyles.roleBracket, { color: rc + "AA" }]}>⟧</Text>
             </View>
-            {(result.codexShardRefund ?? 0) > 0 && (
+            {!isFree && (result.codexShardRefund ?? 0) > 0 && (
               <View style={[revealStyles.badge, { borderColor: "#4FD8C480", backgroundColor: "#4FD8C418", alignSelf: "center" }]}>
                 <Text style={[revealStyles.badgeTxt, { color: "#4FD8C4" }]}>+{result.codexShardRefund} Codex Shards refunded</Text>
+              </View>
+            )}
+            {isFree && (
+              <View style={[revealStyles.badge, { borderColor: COLORS.border, backgroundColor: COLORS.surfaceSecondary, alignSelf: "center" }]}>
+                <Text style={[revealStyles.badgeTxt, { color: COLORS.onSurfaceTertiary }]}>Free draw — no Codex Shards refunded</Text>
               </View>
             )}
             <Text style={[revealStyles.heroName, { color: COLORS.onSurface, textAlign: "center" }]}>{result.entry.name}</Text>
@@ -716,7 +747,9 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
               <Text style={[revealStyles.badgeTxt, { color: rc }]}>{rLabel} · Already Enrolled</Text>
             </View>
             <Text style={revealStyles.desc}>
-              You already have this healer on your ward team. The duplicate was converted into Hero Shards for evolution, and {result.codexShardRefund ?? 25} Codex Shards were refunded. Use Hero Shards at the Training Hall to raise their Certification Star.
+              {isFree
+                ? `You already have this healer on your ward team. The duplicate was converted into Hero Shards for evolution. No Codex Shards were refunded — this was a free draw with no cost. Use Hero Shards at the Training Hall to raise their Certification Star.`
+                : `You already have this healer on your ward team. The duplicate was converted into Hero Shards for evolution, and ${result.codexShardRefund ?? 25} Codex Shards were refunded. Use Hero Shards at the Training Hall to raise their Certification Star.`}
             </Text>
           </View>
         </ScrollView>
@@ -798,7 +831,7 @@ function CeremonyResultCard({ result }: { result: RecruitResult }) {
   );
 }
 
-function ResultCard({ result }: { result: RecruitResult }) {
+function ResultCard({ result, isFree }: { result: RecruitResult; isFree?: boolean }) {
   if (result.kind === "hero" || result.kind === "shards") {
     const rc = rarityColor(result.entry!.rarity);
     return (
@@ -808,6 +841,19 @@ function ResultCard({ result }: { result: RecruitResult }) {
           <Text style={[styles.tierPillTxt, { color: rc }]}>{rarityTierLabel(result.entry!.rarity)}</Text>
         </View>
         <Text style={styles.resultMsg}>{result.message}</Text>
+        {result.kind === "shards" && (
+          isFree ? (
+            <View style={styles.freeNoDupRefund}>
+              <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.freeNoDupRefundTxt}>Free draw — no Codex Shards were spent, so no refund applies on duplicates.</Text>
+            </View>
+          ) : (result.codexShardRefund ?? 0) > 0 ? (
+            <View style={styles.codexRefundNote}>
+              <Ionicons name="sparkles" size={13} color="#4FD8C4" />
+              <Text style={styles.codexRefundNoteTxt}>+{result.codexShardRefund} Codex Shards refunded</Text>
+            </View>
+          ) : null
+        )}
       </View>
     );
   }
@@ -815,6 +861,12 @@ function ResultCard({ result }: { result: RecruitResult }) {
     <View style={[styles.resultCard, { borderColor: COLORS.brand }]} testID="recruit-result">
       <Ionicons name={result.kind === "trainee" ? "people" : "school"} size={22} color={COLORS.brand} />
       <Text style={styles.resultMsg}>{result.message}</Text>
+      {isFree && (
+        <View style={styles.freeNoDupRefund}>
+          <Ionicons name="information-circle-outline" size={13} color={COLORS.onSurfaceTertiary} />
+          <Text style={styles.freeNoDupRefundTxt}>Free daily draw — no Codex Shards required.</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -948,6 +1000,27 @@ const styles = StyleSheet.create({
   },
   tileName: { fontSize: 13, fontWeight: "700" },
   tileMeta: { fontSize: 12, color: COLORS.onSurfaceTertiary, textAlign: "center" },
+  batchSummary: {
+    flexDirection: "row" as const, alignItems: "center", gap: 6,
+    backgroundColor: "#4FD8C412", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#4FD8C440",
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+  },
+  batchSummaryTxt: { flex: 1, fontSize: 13, color: "#4FD8C4", fontWeight: "600" as const },
+  freeNoDupRefund: {
+    flexDirection: "row" as const, alignItems: "flex-start", gap: 5,
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginTop: 2,
+  },
+  freeNoDupRefundTxt: { flex: 1, fontSize: 12, color: COLORS.onSurfaceTertiary, lineHeight: 17 },
+  codexRefundNote: {
+    flexDirection: "row" as const, alignItems: "center", gap: 5,
+    backgroundColor: "#4FD8C412", borderRadius: RADIUS.sm,
+    borderWidth: 1, borderColor: "#4FD8C440",
+    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, marginTop: 2,
+  },
+  codexRefundNoteTxt: { fontSize: 12, color: "#4FD8C4", fontWeight: "600" as const },
 
   // Buttons
   btn: {

@@ -1065,13 +1065,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else if (result.entry) {
       nextHistory = [...nextHistory, { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() }];
     }
-    // Refund codex shards for duplicate pulls even on the free path — the duplicate
-    // message promises shards were refunded, so we must actually grant them.
-    const freeRefund = result.kind === 'shards' ? (result.codexShardRefund || 0) : 0;
+    // The free daily draw has no cost, so no Codex Shard refund is given even on
+    // duplicates — there is nothing to refund. The UI explicitly communicates this.
     await updateState(foldDaily({
       ...player,
       last_free_summon_at: new Date().toISOString(),
-      codex_shards: (player.codex_shards || 0) + freeRefund,
       heroes_owned: heroesOwned,
       hero_progression: progression,
       class_trainees: nextTrainees,
