@@ -5,6 +5,7 @@ import { CARD_CLINICAL, CARD_POOL, drawCards, getCard, SkillCard } from './cards
 import {
   ActionClinical,
   ActionStatus,
+  AffinityResult,
   apMessage,
   applyChapterForgivenessToStatus,
   buildRationale,
@@ -21,6 +22,7 @@ import {
   evaluateClinicalAppropriateness,
   generateBattleMessage,
   getActiveFeedbackLevel,
+  getAffinityModifier,
   getChapterForgiveness,
   getCorruptionOutcome,
   getCorruptionPenaltyScale,
@@ -518,6 +520,7 @@ interface ResolveResult {
   chainAdvanced: ChainRole | null;
   chainCompletedNow: boolean;
   rationale: string | undefined;
+  affinityResult: AffinityResult;
 }
 
 function resolveAction(
@@ -548,7 +551,8 @@ function resolveAction(
   }
 
   const rationale = buildRationale(evalRes.status, action, enemy);
-  return { status: evalRes.status, modifier: effectiveMod, systemModifier: sysMod, chainAdvanced, chainCompletedNow, rationale };
+  const affinityResult = getAffinityModifier(action, enemy);
+  return { status: evalRes.status, modifier: effectiveMod, systemModifier: sysMod, chainAdvanced, chainCompletedNow, rationale, affinityResult };
 }
 
 function applyResolutionToState(
@@ -676,9 +680,11 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
   if (skill.strike) {
-    const bonus = s.enemy.weakSystem && hero.element === s.enemy.weakSystem ? Math.floor(skill.strike * 0.3) : 0;
-    const amt = Math.max(0, corrEff(skill.strike + bonus));
+    const elementBonus = s.enemy.weakSystem && hero.element === s.enemy.weakSystem ? Math.floor(skill.strike * 0.3) : 0;
+    const affinityBase = Math.round((skill.strike + elementBonus) * res.affinityResult.multiplier);
+    const amt = Math.max(0, corrEff(affinityBase));
     next.corruption = Math.max(0, next.corruption - amt);
+    if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : (effectType === 'stability' ? 'mixed' : 'corruption');
   }
@@ -775,8 +781,10 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
   if (item.target === 'corruption') {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier, chapterModifier: treatMod }));
+    const affinityBase = Math.round(item.baseEffect * res.affinityResult.multiplier);
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: affinityBase, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier, chapterModifier: treatMod }));
     next.corruption = Math.max(0, next.corruption - amt);
+    if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = amt; effectType = 'corruption';
   }
   if (item.target === 'stability') {
@@ -849,8 +857,10 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
   }
   if (a.strike) {
     const corrOutcome = getCorruptionOutcome(res.status);
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: a.strike, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
+    const affinityBase = Math.round(a.strike * res.affinityResult.multiplier);
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: affinityBase, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
     next.corruption = Math.max(0, next.corruption - amt);
+    if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
   }
   if (a.shield) next.shieldNext = Math.max(next.shieldNext, a.shield);
   next = addUltimateCharge(next, heroId, 8);
@@ -926,8 +936,10 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
   if (card.strike) {
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: card.strike, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
+    const affinityBase = Math.round(card.strike * res.affinityResult.multiplier);
+    const amt = Math.max(0, combineFinalEffect({ baseEffect: affinityBase, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
     next.corruption = Math.max(0, next.corruption - amt);
+    if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'stability' || effectType === 'clue' ? 'mixed' : 'corruption';
   }
   if (card.shield) {

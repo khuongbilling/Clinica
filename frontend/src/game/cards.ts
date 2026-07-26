@@ -185,19 +185,19 @@ export const CARD_POOL: SkillCard[] = [
 // Support cards MUST have chainRoles: [] — they never advance the care chain.
 
 export const CARD_CLINICAL: Record<string, ActionClinical> = {
-  card_oxygen_support:         { clinicalTags: ['oxygenation', 'respiratory'], appropriateForSystems: ['Air'], chainRoles: ['Stabilize'] },
-  card_airway_clearance:       { clinicalTags: ['airway', 'respiratory'],      appropriateForSystems: ['Air'], chainRoles: ['Counter'] },
-  card_positioning:            { clinicalTags: ['general support', 'comfort'],                                chainRoles: ['Stabilize'] },
-  card_reassess:               { clinicalTags: ['reassessment', 'assessment'],                                chainRoles: ['Reassess', 'Scout'] },
+  card_oxygen_support:         { clinicalTags: ['oxygenation', 'respiratory'], appropriateForSystems: ['Air'], chainRoles: ['Stabilize'],        diseaseCategory: 'respiratory' },
+  card_airway_clearance:       { clinicalTags: ['airway', 'respiratory'],      appropriateForSystems: ['Air'], chainRoles: ['Counter'],           diseaseCategory: 'respiratory' },
+  card_positioning:            { clinicalTags: ['general support', 'comfort'],                                chainRoles: ['Stabilize'],         diseaseCategory: 'general' },
+  card_reassess:               { clinicalTags: ['reassessment', 'assessment'],                                chainRoles: ['Reassess', 'Scout'], diseaseCategory: 'general' },
   // Support cards — explicitly empty chainRoles so they never advance the chain.
-  card_rapid_response:         { clinicalTags: ['escalation', 'emergency'],                                   chainRoles: [] },
-  card_protective_ward:        { clinicalTags: ['safety', 'protect'],          appropriateForSystems: ['Protection'], chainRoles: [] },
+  card_rapid_response:         { clinicalTags: ['escalation', 'emergency'],                                   chainRoles: [],                    diseaseCategory: 'general' },
+  card_protective_ward:        { clinicalTags: ['safety', 'protect'],          appropriateForSystems: ['Protection'], chainRoles: [],            diseaseCategory: 'safety' },
   // P8 starter cards
-  card_focused_assessment:     { clinicalTags: ['assessment', 'observation'],                                 chainRoles: ['Scout'] },
-  card_hydration_support:      { clinicalTags: ['hydration', 'fluid support'], appropriateForSystems: ['River'], chainRoles: ['Stabilize'] },
-  card_treatment_protocol:     { clinicalTags: ['treatment', 'intervention'],                                 chainRoles: ['Counter'] },
-  card_reassessment_checklist: { clinicalTags: ['reassessment', 'systematic review'],                         chainRoles: ['Reassess'] },
-  card_emergency_call:         { clinicalTags: ['emergency', 'escalation'],                                   chainRoles: [] },
+  card_focused_assessment:     { clinicalTags: ['assessment', 'observation'],                                 chainRoles: ['Scout'],             diseaseCategory: 'general' },
+  card_hydration_support:      { clinicalTags: ['hydration', 'fluid support'], appropriateForSystems: ['River'], chainRoles: ['Stabilize'],      diseaseCategory: 'circulatory' },
+  card_treatment_protocol:     { clinicalTags: ['treatment', 'intervention'],                                 chainRoles: ['Counter'],           diseaseCategory: 'general' },
+  card_reassessment_checklist: { clinicalTags: ['reassessment', 'systematic review'],                         chainRoles: ['Reassess'],          diseaseCategory: 'general' },
+  card_emergency_call:         { clinicalTags: ['emergency', 'escalation'],                                   chainRoles: [],                    diseaseCategory: 'general' },
 };
 
 // Cards every player has access to in their loadout picker (P8 starter set).

@@ -122,6 +122,19 @@ export function getChapterForgiveness(chapter: number): ChapterForgiveness {
 
 export type ChainRole = 'Scout' | 'Stabilize' | 'Counter' | 'Protect' | 'Reassess' | 'Command';
 
+// Disease domain that a skill or action belongs to — drives the affinity bonus system.
+// 'general' = assessment / escalation / catch-all → always neutral (never penalised).
+export type DiseaseCategory =
+  | 'respiratory'    // airways, oxygenation, bronchodilator, ventilation
+  | 'circulatory'    // fluid resuscitation, IV fluids, hydration, perfusion
+  | 'infection'      // antimicrobial, isolation, infection treatment
+  | 'metabolic'      // glucose management, hypoglycemia, insulin, electrolytes
+  | 'cardiac'        // heart rhythm, cardiac output, dysrhythmia
+  | 'neurological'   // orientation, mental status, pain, de-escalation
+  | 'integumentary'  // skin, wound care, dressings
+  | 'safety'         // fall prevention, medication safety
+  | 'general';       // assessment, reassessment, escalation, command — always neutral
+
 export interface ActionClinical {
   clinicalTags: string[];
   requiredClues?: string[]; // case-insensitive substrings of revealed clue labels
@@ -135,6 +148,8 @@ export interface ActionClinical {
   chainRoles?: ChainRole[];
   // Optional activation gate (used for Rapid Response style)
   conditionalRequiresLowStability?: number; // if defined, action is "weak" when stability is above this
+  // Disease domain — drives the affinity modifier (super-effective / limited)
+  diseaseCategory?: DiseaseCategory;
 }
 
 // --- Hero skill metadata (keyed by skill id) ---
@@ -143,103 +158,126 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     clinicalTags: ['airway', 'oxygenation', 'respiratory', 'assessment'],
     appropriateForSystems: ['Air'],
     chainRoles: ['Stabilize', 'Counter'],
+    diseaseCategory: 'respiratory',
   },
   lantern_of_clues: {
     clinicalTags: ['assessment'],
     chainRoles: ['Scout'],
+    diseaseCategory: 'general',
   },
   rapid_response: {
     clinicalTags: ['escalation', 'acute deterioration', 'emergency'],
     chainRoles: ['Command', 'Stabilize'],
     conditionalRequiresLowStability: 50,
+    diseaseCategory: 'general',
   },
   vital_ward: {
     clinicalTags: ['assessment', 'reassessment', 'general support'],
     chainRoles: ['Scout', 'Reassess'],
+    diseaseCategory: 'general',
   },
   rally_bell: {
     clinicalTags: ['escalation', 'command'],
     chainRoles: ['Command'],
+    diseaseCategory: 'general',
   },
   pattern_sight: {
     clinicalTags: ['assessment', 'neurovascular assessment'],
     chainRoles: ['Scout', 'Counter'],
+    diseaseCategory: 'neurological',
   },
   focused_lens: {
     clinicalTags: ['assessment', 'reassessment'],
     chainRoles: ['Scout', 'Reassess'],
+    diseaseCategory: 'general',
   },
   safety_circle: {
     clinicalTags: ['fall prevention', 'safety'],
     chainRoles: ['Protect'],
+    diseaseCategory: 'safety',
   },
   isolation_seal: {
     clinicalTags: ['infection isolation', 'transmission prevention'],
     appropriateForSystems: ['Fire', 'Protection'],
     chainRoles: ['Protect', 'Counter'],
+    diseaseCategory: 'infection',
   },
   threadwatch: {
     clinicalTags: ['assessment', 'reassessment'],
     chainRoles: ['Scout', 'Reassess'],
+    diseaseCategory: 'general',
   },
   codex_link: {
     clinicalTags: ['assessment'],
     chainRoles: ['Scout', 'Counter'],
+    diseaseCategory: 'general',
   },
   mythic_prescience: {
     clinicalTags: ['assessment', 'reassessment', 'anticipatory care'],
     chainRoles: ['Counter'],
+    diseaseCategory: 'general',
   },
   guardians_touch: {
     clinicalTags: ['general support', 'comfort'],
     chainRoles: ['Stabilize', 'Counter'],
+    diseaseCategory: 'general',
   },
   mend: {
     clinicalTags: ['skin integrity', 'wound care', 'protect', 'general support', 'comfort'],
     appropriateForSystems: ['Protection'],
     chainRoles: ['Counter', 'Stabilize'],
+    diseaseCategory: 'integumentary',
   },
   reassess: {
     clinicalTags: ['reassessment', 'assessment'],
     chainRoles: ['Reassess', 'Scout'],
+    diseaseCategory: 'general',
   },
   glucose_round: {
     clinicalTags: ['glucose replacement', 'hypoglycemia', 'assessment', 'monitoring'],
     appropriateForSystems: ['Energy'],
     chainRoles: ['Counter', 'Scout'],
+    diseaseCategory: 'metabolic',
   },
   critical_response: {
     clinicalTags: ['escalation', 'acute deterioration', 'emergency'],
     chainRoles: ['Stabilize', 'Command'],
     conditionalRequiresLowStability: 50,
+    diseaseCategory: 'general',
   },
   river_surge: {
     clinicalTags: ['circulation', 'fluid resuscitation'],
     appropriateForSystems: ['River'],
     unsafeIfClues: ['Crackles', 'Leg Swelling', 'Weight +'],
     chainRoles: ['Counter', 'Stabilize'],
+    diseaseCategory: 'circulatory',
   },
   infection_scan: {
     clinicalTags: ['assessment', 'infection assessment'],
     chainRoles: ['Scout'],
+    diseaseCategory: 'infection',
   },
   purity_mark: {
     clinicalTags: ['antimicrobial', 'infection treatment'],
     appropriateForSystems: ['Fire'],
     chainRoles: ['Counter'],
+    diseaseCategory: 'infection',
   },
   skin_shield: {
     clinicalTags: ['skin integrity', 'protect'],
     chainRoles: ['Protect'],
+    diseaseCategory: 'integumentary',
   },
   mind_anchor: {
     clinicalTags: ['orientation', 'therapeutic communication', 'neuro', 'comfort'],
     appropriateForSystems: ['Mind'],
     chainRoles: ['Counter', 'Stabilize'],
+    diseaseCategory: 'neurological',
   },
   error_ward: {
     clinicalTags: ['safety', 'medication safety'],
     chainRoles: ['Protect'],
+    diseaseCategory: 'safety',
   },
 };
 
@@ -250,12 +288,14 @@ export const ITEM_CLINICAL: Record<string, ActionClinical> = {
     requiredClues: ['Wheezing'],
     appropriateForSystems: ['Air'],
     chainRoles: ['Counter'],
+    diseaseCategory: 'respiratory',
   },
   'Glucose Gel': {
     clinicalTags: ['glucose replacement', 'hypoglycemia'],
-    requiredClues: ['Glucose'], // any clue containing "glucose" (e.g., "Glucose 48", "Low Glucose")
+    requiredClues: ['Glucose'],
     appropriateForSystems: ['Energy'],
     chainRoles: ['Counter'],
+    diseaseCategory: 'metabolic',
   },
   'Fluid Bolus': {
     clinicalTags: ['circulation', 'fluid resuscitation'],
@@ -263,45 +303,54 @@ export const ITEM_CLINICAL: Record<string, ActionClinical> = {
     appropriateForSystems: ['River'],
     unsafeIfClues: ['Crackles', 'Leg Swelling', 'Weight +'],
     chainRoles: ['Counter', 'Stabilize'],
+    diseaseCategory: 'circulatory',
   },
   'Isolation Kit': {
     clinicalTags: ['infection isolation', 'transmission prevention'],
     appropriateForSystems: ['Fire'],
     chainRoles: ['Protect'],
+    diseaseCategory: 'infection',
   },
   'Lab Token': {
     clinicalTags: ['assessment'],
     chainRoles: ['Scout'],
+    diseaseCategory: 'general',
   },
   'Antipyretic Draught': {
     clinicalTags: ['fever', 'antipyretic', 'inflammation', 'infection'],
     appropriateForSystems: ['Fire'],
     chainRoles: ['Counter'],
+    diseaseCategory: 'infection',
   },
   'Oxygen Sigil': {
     clinicalTags: ['oxygenation', 'hypoxia', 'respiratory', 'airway'],
     appropriateForSystems: ['Air'],
     chainRoles: ['Stabilize'],
+    diseaseCategory: 'respiratory',
   },
   'Calming Elixir': {
     clinicalTags: ['anxiety', 'panic', 'de-escalation'],
     appropriateForSystems: ['Mind'],
     chainRoles: ['Stabilize'],
+    diseaseCategory: 'neurological',
   },
   'Analgesic Balm': {
     clinicalTags: ['pain', 'analgesia', 'comfort'],
     appropriateForSystems: ['Mind'],
     chainRoles: ['Stabilize'],
+    diseaseCategory: 'neurological',
   },
   'Rhythm Elixir': {
     clinicalTags: ['dysrhythmia', 'heart rate', 'rhythm'],
     appropriateForSystems: ['Storm'],
     chainRoles: ['Stabilize'],
+    diseaseCategory: 'cardiac',
   },
   'Antiemetic Charm': {
     clinicalTags: ['nausea', 'vomiting', 'antiemetic', 'hydration'],
     appropriateForSystems: ['Filter'],
     chainRoles: ['Counter'],
+    diseaseCategory: 'general',
   },
 };
 
@@ -311,11 +360,13 @@ export const TEMP_CLINICAL: Record<string, ActionClinical> = {
     clinicalTags: ['airway', 'oxygenation', 'respiratory'],
     appropriateForSystems: ['Air'],
     chainRoles: ['Counter', 'Stabilize'],
+    diseaseCategory: 'respiratory',
   },
   containment_order: {
     clinicalTags: ['infection isolation', 'transmission prevention'],
     appropriateForSystems: ['Fire'],
     chainRoles: ['Protect'],
+    diseaseCategory: 'infection',
   },
 };
 
@@ -325,20 +376,24 @@ export const CALL_CLINICAL: Record<string, ActionClinical> = {
     clinicalTags: ['airway', 'oxygenation', 'respiratory', 'escalation'],
     appropriateForSystems: ['Air'],
     chainRoles: ['Command'],
+    diseaseCategory: 'respiratory',
   },
   call_pharmacy: {
     clinicalTags: ['escalation', 'command'],
     chainRoles: ['Command'],
+    diseaseCategory: 'general',
   },
   call_rapid: {
     clinicalTags: ['acute deterioration', 'escalation', 'emergency'],
     chainRoles: ['Command', 'Stabilize'],
     conditionalRequiresLowStability: 35,
+    diseaseCategory: 'general',
   },
   call_infection: {
     clinicalTags: ['infection isolation', 'transmission prevention', 'escalation'],
     appropriateForSystems: ['Fire'],
     chainRoles: ['Command', 'Protect'],
+    diseaseCategory: 'infection',
   },
 };
 
@@ -361,6 +416,10 @@ export interface EnemyClinical {
   starTurnLimit: number;
   rewardBase: number;
   chapter: 1 | 2 | 3;
+  // Disease-domain affinity — skills in affinityStrong get ×1.5 strike; affinityWeak get ×0.5.
+  // 'general' category skills are always neutral regardless of these lists.
+  affinityStrong?: DiseaseCategory[];
+  affinityWeak?: DiseaseCategory[];
 }
 
 const ASSESS_CHAIN: ChainRole[] = ['Scout', 'Stabilize', 'Counter', 'Reassess'];
@@ -381,6 +440,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 20,
     chapter: 1,
+    affinityStrong: ['circulatory'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   air_sprite: {
     clinicalCategory: 'Respiratory',
@@ -413,6 +474,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 5,
     rewardBase: 25,
     chapter: 1,
+    affinityStrong: ['circulatory'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   energy_lock: {
     clinicalCategory: 'Endocrine',
@@ -429,6 +492,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 5,
     rewardBase: 25,
     chapter: 1,
+    affinityStrong: ['metabolic'],
+    affinityWeak: ['respiratory', 'infection', 'integumentary', 'safety', 'neurological', 'cardiac', 'circulatory'],
   },
   fire_imp: {
     clinicalCategory: 'Infection',
@@ -445,6 +510,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 30,
     chapter: 1,
+    affinityStrong: ['infection'],
+    affinityWeak: ['metabolic', 'integumentary', 'neurological', 'cardiac', 'circulatory'],
   },
   mind_fog: {
     clinicalCategory: 'Neuro',
@@ -461,6 +528,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 28,
     chapter: 1,
+    affinityStrong: ['neurological', 'safety'],
+    affinityWeak: ['circulatory', 'infection', 'metabolic', 'integumentary', 'cardiac', 'respiratory'],
   },
   septara_seed: {
     clinicalCategory: 'Sepsis',
@@ -477,6 +546,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 45,
     chapter: 2,
+    affinityStrong: ['infection', 'circulatory'],
+    affinityWeak: ['metabolic', 'integumentary', 'neurological', 'cardiac'],
   },
   cardion_echo: {
     clinicalCategory: 'Cardiac',
@@ -493,6 +564,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 40,
     chapter: 2,
+    affinityStrong: ['cardiac', 'respiratory'],
+    affinityWeak: ['metabolic', 'integumentary', 'infection', 'safety', 'neurological'],
   },
   glycora_spark: {
     clinicalCategory: 'Endocrine Crisis',
@@ -509,6 +582,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 45,
     chapter: 2,
+    affinityStrong: ['circulatory'],
+    affinityWeak: ['infection', 'integumentary', 'neurological', 'safety', 'respiratory', 'cardiac'],
   },
   pulmora_wisp: {
     clinicalCategory: 'Respiratory',
@@ -525,6 +600,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 35,
     chapter: 2,
+    affinityStrong: ['respiratory'],
+    affinityWeak: ['circulatory', 'infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   electrox_flicker: {
     clinicalCategory: 'Electrolyte',
@@ -541,6 +618,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 6,
     rewardBase: 40,
     chapter: 2,
+    affinityStrong: ['cardiac'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'respiratory'],
   },
   lord_imbalance: {
     clinicalCategory: 'Multi-System',
@@ -557,6 +636,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 8,
     rewardBase: 100,
     chapter: 3,
+    affinityStrong: ['respiratory', 'circulatory', 'infection'],
+    affinityWeak: ['integumentary', 'safety'],
   },
   hypoxia_wisp: {
     clinicalCategory: 'Respiratory',
@@ -573,6 +654,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 4,
     rewardBase: 12,
     chapter: 2,
+    affinityStrong: ['respiratory'],
+    affinityWeak: ['circulatory', 'infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   mucus_wisp: {
     clinicalCategory: 'Respiratory',
@@ -589,6 +672,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 4,
     rewardBase: 12,
     chapter: 2,
+    affinityStrong: ['respiratory'],
+    affinityWeak: ['circulatory', 'infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   panic_wraith: {
     clinicalCategory: 'Mental Health',
@@ -605,6 +690,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 4,
     rewardBase: 10,
     chapter: 2,
+    affinityStrong: ['neurological'],
+    affinityWeak: ['circulatory', 'infection', 'metabolic', 'integumentary', 'cardiac', 'respiratory'],
   },
   wheeze_guard: {
     clinicalCategory: 'Respiratory',
@@ -621,6 +708,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 4,
     rewardBase: 13,
     chapter: 2,
+    affinityStrong: ['respiratory'],
+    affinityWeak: ['circulatory', 'infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   shock_spike: {
     clinicalCategory: 'Circulatory',
@@ -637,6 +726,8 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     starTurnLimit: 4,
     rewardBase: 15,
     chapter: 2,
+    affinityStrong: ['circulatory'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac', 'respiratory'],
   },
 };
 
@@ -763,6 +854,47 @@ export function getSystemMatchModifier(systemType: string | undefined, enemy: En
   const related = RELATED_SYSTEMS[sys] || [];
   if (related.includes(systemType)) return 1.0;
   return 0.25;
+}
+
+// ------------------------------------------------------------
+// DISEASE-DOMAIN AFFINITY
+// ------------------------------------------------------------
+
+export type AffinityLevel = 'strong' | 'neutral' | 'weak';
+
+export interface AffinityResult {
+  level: AffinityLevel;
+  multiplier: number; // applied to strike/corruption-reduction base amount
+  label: string;      // player-facing label ('Super Effective' | '' | 'Limited Effect')
+}
+
+const AFFINITY_NEUTRAL: AffinityResult = { level: 'neutral', multiplier: 1.0, label: '' };
+
+/**
+ * Returns a strike multiplier based on how well the skill's disease domain
+ * matches the enemy's clinical affinity map.
+ *
+ * - Strong (×1.5)  — e.g. respiratory skill vs respiratory disease (Albuterol vs wheeze_guard)
+ * - Neutral (×1.0) — 'general' category or no match either way
+ * - Weak   (×0.5)  — e.g. metabolic skill vs respiratory disease (Glucose Gel vs air_sprite)
+ *
+ * Stacks multiplicatively with appropriateness and system modifiers.
+ */
+export function getAffinityModifier(
+  action: ActionClinical | undefined,
+  enemy: EnemyClinical | undefined,
+): AffinityResult {
+  if (!action || !enemy) return AFFINITY_NEUTRAL;
+  const category = action.diseaseCategory;
+  if (!category || category === 'general') return AFFINITY_NEUTRAL;
+
+  if ((enemy.affinityStrong || []).includes(category)) {
+    return { level: 'strong', multiplier: 1.5, label: 'Super Effective' };
+  }
+  if ((enemy.affinityWeak || []).includes(category)) {
+    return { level: 'weak', multiplier: 0.5, label: 'Limited Effect' };
+  }
+  return AFFINITY_NEUTRAL;
 }
 
 // Treatment is more effective when patient is more stable.
