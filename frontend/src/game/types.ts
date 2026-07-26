@@ -15,6 +15,25 @@ export type LaunchRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
 export type ActionType = 'scout' | 'strike' | 'stabilize' | 'shield' | 'cleanse' | 'command' | 'analyze' | 'support' | 'counter';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Affinity families (Combat Scaling Push 5 — data layer only).
+// 11 clinical domains that heroes excel/struggle in and enemies belong to.
+// No multipliers are activated by these fields yet; they exist purely as
+// data so future pushes can build matching bonuses on top of them.
+// ─────────────────────────────────────────────────────────────────────────────
+export type AffinityFamily =
+  | 'Fluid / Hydration'
+  | 'Airway / Respiratory'
+  | 'Fire / Inflammation'
+  | 'Protection / Immune'
+  | 'Energy / Metabolic'
+  | 'Storm / Cardiac'
+  | 'Mind / Neuro-Psych'
+  | 'Growth / Endocrine'
+  | 'Filter / Renal'
+  | 'Wound / Tissue'
+  | 'Community / Public Health';
+
 export interface HeroSkill {
   id: string;
   name: string;
@@ -26,18 +45,40 @@ export interface HeroSkill {
   rpgDescription?: string; // fantasy flavor
   beginnerExplanation?: string; // plain language
   nclexExplanation?: string; // clinical NCLEX-style
-  // Effects
+  // Effects (fixed values — used when range fields absent)
   reveal?: number;
   stabilize?: number;
   strike?: number;
   cleanse?: boolean;
   shield?: number;
   blockSpread?: boolean; // stops the next enemy 'spread' attack once (e.g. Isolation Seal)
+  // Base ranges (Combat Scaling Push 1) — engine rolls within [min, max] each use
+  strikeRange?: [number, number];
+  stabilizeRange?: [number, number];
+  shieldRange?: [number, number];
   risk?: {
     ifSystem?: ElementSystem;
     penalty?: number;
     description: string;
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero combat stats (Combat Scaling Push 3 — data layer only).
+// These five stats gate future per-skill multipliers in skillCalc.ts.
+// All modifiers default to ×1.00 until Push 4 activates them.
+// ─────────────────────────────────────────────────────────────────────────────
+export interface HeroCombatStats {
+  /** Improves Scout, cue reveal, weakness/resistance discovery. */
+  insight: number;
+  /** Improves Stability restoration and recovery. */
+  carePower: number;
+  /** Improves Corruption reduction from Treat/Counter skills. */
+  intervention: number;
+  /** Improves Stability loss prevention and Instability reduction. */
+  guard: number;
+  /** Improves AP efficiency, leader effects, cards, items, Call for Help, and team synergy. */
+  coordination: number;
 }
 
 export interface Hero {
@@ -48,6 +89,8 @@ export interface Hero {
   role: HeroRole;
   element: ElementSystem;
   description: string;
+  /** Combat stat profile — all five values required. */
+  stats: HeroCombatStats;
   skills: HeroSkill[];
   // Hero identity (Phase 2)
   faction?: string;
@@ -65,6 +108,10 @@ export interface Hero {
   // ★1 is always visible; ★2-★5 unlock when prog.star >= entry.star.
   // Optional — heroes without this field show no star lore section.
   starLore?: { star: 1 | 2 | 3 | 4 | 5; title: string; text: string }[];
+  // Affinity data (Push 5 — data layer, no battle multipliers yet).
+  strongAffinities?: AffinityFamily[]; // clinical domains this hero excels in
+  weakAffinities?: AffinityFamily[];   // clinical domains this hero struggles with
+  roleTags?: string[];                 // functional descriptors for filtering/UI (e.g. 'healer', 'scout')
 }
 
 export interface ClueCard {
@@ -114,6 +161,41 @@ export interface Enemy {
   // fire imps, etc.). Drives the vertical bob idle animation in BattlefieldScene —
   // grounded enemies skip the float and only breathe-scale.
   floats?: boolean;
+  // Affinity data (Push 5 — data layer, no battle multipliers yet).
+  primaryAffinity?: AffinityFamily;   // main clinical domain (derived from primarySystem)
+  secondaryAffinity?: AffinityFamily; // secondary domain if enemy spans two systems
+  resistanceTags?: string[];          // treatment approaches that are less effective
+  weaknessTags?: string[];            // treatment approaches that work best
+  // Enemy defense profile (Push 7 — data + active).
+  /** Display level; equals difficulty. Handy for future scaling UI. */
+  enemyLevel?: number;
+  /**
+   * 0.0–0.35: fraction by which corruption-lowering effects (strike) are reduced.
+   * Chapter 1 enemies: 0.00–0.04. Bosses: 0.25–0.35.
+   */
+  corruptionResistance?: number;
+  /**
+   * 0.0–0.25: amplifies enemy instability damage each enemy turn
+   * (applied as a multiplier on baseDmg in endPlayerTurn).
+   */
+  stabilityPressure?: number;
+  /**
+   * 0.0–0.45: fraction by which ALL skill effects are reduced when hidden clues
+   * remain unrevealed. Scales down progressively as Scout / Reassess reveals clues.
+   * 0 for enemies with no hidden clues.
+   */
+  hiddenDefense?: number;
+  /**
+   * 0.0–0.20: dampens the affinity-family strong-match bonus.
+   * Reduces ×1.15 advantage by this fraction (e.g. 0.1 → ×1.135 effective).
+   * Does not affect weak-match penalty.
+   */
+  affinityResistance?: number;
+  /**
+   * true: caps single-hit corruption reduction at 40% of current corruption,
+   * preventing one-turn burst deletion of bosses.
+   */
+  bossGuard?: boolean;
 }
 
 export interface CodexEntry {

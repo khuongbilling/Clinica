@@ -36,6 +36,7 @@ import {
   persistLoadoutForType,
   syncCurrentLoadout,
 } from "@/src/game/loadoutStore";
+import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { HEROES } from "@/src/game/content";
 import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { rarityColor } from "@/src/game/gacha";
@@ -299,6 +300,8 @@ function HeroSlot({
   const ri     = hero ? (ROLE_ICON[hero.role]  ?? "star") : "star";
   const color  = hero ? rc : "rgba(255,255,255,0.14)";
   const isLegendaryLoaner = loanerLabel && loanerLabel.includes("LEGENDARY");
+  // Push 9: slot 1 = Leader Spot.
+  const isLeader = slotNum === 1;
 
   return (
     <Pressable
@@ -309,6 +312,8 @@ function HeroSlot({
           : { borderColor: "rgba(255,255,255,0.10)" },
         locked && { borderColor: UI.gold + "60", backgroundColor: UI.gold + "08" },
         isLegendaryLoaner && { borderColor: UI.gold + "90", backgroundColor: UI.gold + "12" },
+        // Push 9: subtle gold tint for the empty leader slot so it draws the eye.
+        isLeader && !hero && !locked && { borderColor: UI.gold + "38", backgroundColor: UI.gold + "06" },
       ]}
       onPress={locked ? undefined : hero ? onRemove : onAdd}
       hitSlop={4}
@@ -324,6 +329,13 @@ function HeroSlot({
 
       {hero ? (
         <>
+          {/* Push 9: LEADER chip — compact badge above portrait, non-loaner slot 1 only. */}
+          {isLeader && !locked && (
+            <View style={hs.leaderChip}>
+              <Ionicons name="shield-checkmark" size={7} color={UI.gold} />
+              <Text style={hs.leaderChipTxt}>LEADER</Text>
+            </View>
+          )}
           <View style={[hs.portrait, { borderColor: locked ? UI.gold + "80" : color + "AA" }]}>
             {sprite ? (
               <Image source={sprite} style={{ width: "100%", height: "100%" }} contentFit="contain" />
@@ -348,8 +360,19 @@ function HeroSlot({
         </>
       ) : (
         <>
-          <Ionicons name="add" size={22} color="rgba(255,255,255,0.28)" />
-          <Text style={hs.empty}>EMPTY</Text>
+          {/* Push 9: leader empty state shows a shield icon + LEADER label instead of a number. */}
+          {isLeader ? (
+            <>
+              <Ionicons name="shield-checkmark-outline" size={18} color={UI.gold + "60"} />
+              <Text style={hs.leaderEmptyTxt}>LEADER</Text>
+              <Text style={hs.empty}>EMPTY</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="add" size={22} color="rgba(255,255,255,0.28)" />
+              <Text style={hs.empty}>EMPTY</Text>
+            </>
+          )}
         </>
       )}
     </Pressable>
@@ -448,6 +471,31 @@ const hs = StyleSheet.create({
     height: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Push 9 — Leader Spot slot styles
+  leaderChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    backgroundColor: UI.gold + "18",
+    borderWidth: 0.5,
+    borderColor: UI.gold + "60",
+  },
+  leaderChipTxt: {
+    color: UI.gold,
+    fontSize: 7,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  leaderEmptyTxt: {
+    color: UI.gold + "80",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
 });
 
@@ -904,6 +952,21 @@ export default function MissionLoadoutScreen() {
                   />
                 ))}
               </View>
+              {/* Push 9 — Leader Specialty strip: shows the active bonus when slot 1 is filled. */}
+              {teamSlots[0] ? (() => {
+                const lHero = HEROES.find(h => h.id === teamSlots[0]);
+                if (!lHero) return null;
+                const lb = getLeaderBonus(lHero);
+                return (
+                  <View style={s.leaderBonusStrip}>
+                    <Ionicons name="shield-checkmark" size={12} color={UI.gold} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.leaderBonusName}>{lb.name}</Text>
+                      <Text style={s.leaderBonusDesc}>{lb.description}</Text>
+                    </View>
+                  </View>
+                );
+              })() : null}
             </>
           )}
         </View>
@@ -1721,5 +1784,30 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  // Push 9 — Leader Specialty strip (below the Healer Formation slot row)
+  leaderBonusStrip: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: UI.gold + "0C",
+    borderWidth: 0.5,
+    borderColor: UI.gold + "40",
+  },
+  leaderBonusName: {
+    color: UI.gold + "DD",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  leaderBonusDesc: {
+    color: UI.textDim,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 2,
   },
 });

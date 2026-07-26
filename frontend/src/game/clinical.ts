@@ -111,7 +111,9 @@ export interface ChapterForgiveness {
 }
 
 export function getChapterForgiveness(chapter: number): ChapterForgiveness {
-  if (chapter === 1) return { poorFitModifier: 0.35, weakModifier: 0.6, enemyDamageMultiplier: 0.85, allowLuckyWin: true };
+  // Push 13: Ch1 weakModifier 0.60 → 0.65 — beginners are forgiven a little more for
+  // slightly off-target treatments so the first chapter stays accessible and educational.
+  if (chapter === 1) return { poorFitModifier: 0.35, weakModifier: 0.65, enemyDamageMultiplier: 0.85, allowLuckyWin: true };
   if (chapter === 2) return { poorFitModifier: 0.25, weakModifier: 0.5, enemyDamageMultiplier: 1.0, allowLuckyWin: true };
   return { poorFitModifier: 0.1, weakModifier: 0.35, enemyDamageMultiplier: 1.1, allowLuckyWin: false };
 }
@@ -1103,10 +1105,12 @@ export function canAdvanceChain(
   return null;
 }
 
+// Push 13: Chain bonuses tuned upward so care-chain momentum feels rewarding.
+// step 5→6, fullCorr 20→25, fullStab 15→18; shard reward unchanged.
 export const CHAIN_BONUSES = {
-  stepCorruptionDamage: 5,
-  fullChainCorruptionDamage: 20,
-  fullChainStabilityBonus: 15,
+  stepCorruptionDamage: 6,
+  fullChainCorruptionDamage: 25,
+  fullChainStabilityBonus: 18,
   fullChainRewardBonus: 10, // shards
 };
 
@@ -1256,25 +1260,30 @@ export function generateBattleMessage(ctx: BattleMessageContext): string {
   const { feedbackLevel, actionName, status, effectAmount, effectType, chainAdvanced, nextChainStep, fullChainCompleted, rationale, systemModifier } = ctx;
 
   const eff = effectivenessLabel(systemModifier, status);
+  // Push 8: natural-language effect description — "Lowered Corruption by 11." is
+  // easier to scan than "Disease Corruption -11." and matches the spec log examples.
   const effectStr = effectType === 'clue' ? '' :
-    effectType === 'stability' ? `Stability +${effectAmount}.` :
-    effectType === 'corruption' ? `Disease Corruption -${effectAmount}.` :
-    effectType === 'shield' ? `Protection ${effectAmount}%.` : '';
+    effectType === 'stability'  ? `Raised Stability by ${effectAmount}.` :
+    effectType === 'corruption' ? `Lowered Corruption by ${effectAmount}.` :
+    effectType === 'shield'     ? `Protection raised to ${effectAmount}%.` : '';
 
   if (feedbackLevel === 'expert') {
+    // Expert: just the number — minimal noise, maximum density.
     return effectStr || `${eff}.`;
   }
   if (feedbackLevel === 'minimal') {
+    // Minimal: effectiveness label + number on one line.
     return `${eff}. ${effectStr}`.trim();
   }
   if (feedbackLevel === 'standard') {
-    const chainStr = chainAdvanced ? ` Chain advanced: ${chainAdvanced}.` : '';
-    const fullChainStr = fullChainCompleted ? ' Complete care chain!' : '';
+    // Standard: action name + label + number. Chain info appended inline.
+    const chainStr = chainAdvanced ? ` Chain: ${chainAdvanced} complete.` : '';
+    const fullChainStr = fullChainCompleted ? ' Full care chain!' : '';
     return `${actionName}: ${eff}. ${effectStr}${chainStr}${fullChainStr}`.trim();
   }
-  // supportive / guided
+  // supportive / guided — verbose, educational, multi-line.
   const why = rationale ? ` ${rationale}` : '';
-  const chainLine = chainAdvanced ? `\nClinical Chain advanced: ${chainAdvanced} complete.` : '';
+  const chainLine = chainAdvanced ? `\nClinical Chain: ${chainAdvanced} complete.` : '';
   const nextStepLine = !fullChainCompleted && nextChainStep && chainAdvanced
     ? `\nNext: ${nextChainStep}.`
     : '';

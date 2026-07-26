@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import {
   CLASS_IDENTITIES, CLASS_IDS, ClassAbilityCard, ClassId, GUARDRAIL_LINES,
-  canClaimTier, getClassTree, isTierClaimed,
+  canClaimTier, describeClassBattleBonuses, getClassTree, getClassTreeBattleBonuses, isTierClaimed,
 } from "@/src/game/classTree";
 import { playRewardCue } from "@/src/game/cues";
 import { getMaterialById } from "@/src/game/materials";
@@ -209,6 +209,23 @@ export default function ClassTreeScreen() {
           })}
         </View>
 
+        {/* Push 11: Active battle bonuses for the viewed class */}
+        <View style={[styles.bonusCard, { borderColor: identity.color + "44" }]} testID="class-tree-bonus">
+          <View style={styles.bonusHead}>
+            <Ionicons name="flash" size={14} color={identity.color} />
+            <Text style={[styles.bonusTitle, { color: identity.color }]}>ACTIVE BATTLE BONUSES</Text>
+            {activeId !== currentId && (
+              <Text style={styles.bonusHint}>(based on unlocked tiers)</Text>
+            )}
+          </View>
+          {describeClassBattleBonuses(getClassTreeBattleBonuses(activeId, (player.class_progress || {})[activeId] || [])).map((line, i) => (
+            <View key={i} style={styles.bonusRow}>
+              <Ionicons name="checkmark-circle" size={12} color={identity.color} />
+              <Text style={styles.bonusTxt}>{line}</Text>
+            </View>
+          ))}
+        </View>
+
         <View style={styles.guardrailCard} testID="class-tree-guardrails">
           <View style={styles.guardrailHead}>
             <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.onSurfaceSecondary} />
@@ -301,6 +318,15 @@ const styles = StyleSheet.create({
   claimBtn: { backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: 9, alignItems: "center" },
   claimBtnDisabled: { backgroundColor: COLORS.surfaceTertiary },
   claimBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "800" },
+  bonusCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1.5,
+    padding: SPACING.md, gap: 6,
+  },
+  bonusHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  bonusTitle: { fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  bonusHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, marginLeft: 4 },
+  bonusRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  bonusTxt: { color: COLORS.onSurfaceSecondary, fontSize: 12, flex: 1, lineHeight: 16 },
   guardrailCard: {
     marginTop: SPACING.sm, backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
     borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, gap: 6,

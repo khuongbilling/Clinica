@@ -11,11 +11,13 @@ import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, COUNTER_FEEDBACK, getContextualScoutFeedback, getContextualStabilizeFeedback, getContextualReassessFeedback } from "@/src/game/explanationLayers";
 import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
-import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, type BattleState, type CastQuality } from "@/src/game/battle";
+import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, buildSkillCalcBreakdown, type BattleState, type CastQuality, type CalcBreakdown } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type ChainRole } from "@/src/game/clinical";
+import { getLeaderBonus } from "@/src/game/leaderSpecialty";
+import { CLASS_IDENTITIES, ClassId, getClassTreeBattleBonuses } from "@/src/game/classTree";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
 import { getBattleBaseXp, getBattleScrollDrop, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
 import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
@@ -161,6 +163,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     const battleTeam = !isPrologueLoanerBattle
       ? applySkillUpgradesToTeam(team, player?.hero_skill_upgrades ?? {})
       : team;
+    // Push 11: class tree combat bonus (6-class system keyed by class_tree_id).
+    // Skipped for prologue loaner battles so tutorial fights stay unscaled.
+    const classId = ((player?.class_tree_id as ClassId) || 'medic');
+    const classTreeBonus = !isPrologueLoanerBattle
+      ? getClassTreeBattleBonuses(classId, (player?.class_progress || {})[classId] || [])
+      : null;
     const base = initBattle(enemy, battleTeam, {
       inventory: player?.inventory || {},
       profile,
@@ -169,13 +177,21 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       startingStabilityBonus: handicap.startingStabilityBonus + (mentorAid ? 10 : 0) + (isTraining ? 10 : 0) + upgrades.startingStabilityBonus + classBonuses.startingStabilityBonus,
       enemyDamageReduction: handicap.enemyDamageReduction + upgrades.enemyDamageReduction,
       revealOneExtraClue: handicap.revealOneExtraClue || isTraining || upgrades.revealOneExtraClue || classBonuses.revealOneExtraClue,
-      apBonus: upgrades.apBonus + classBonuses.apBonus + (isPrologueBoss ? 3 : 0),
+      // Push 9: Leader AP bonus (Educator/"Scholar's Leadership" grants +1 starting AP).
+      // Skip for prologue loaner battles so the tutorial team stays unscaled.
+      // Prologue (tutorial + scripted-loss boss) always starts at 12 AP so the loaner
+      // team's legendary/mythic skills are meaningfully usable from turn one.
+      // Previously boss had +3 and tutorial had +0; unified to +2 for both (10 base + 2 = 12).
+      apBonus: upgrades.apBonus + classBonuses.apBonus + (isPrologueLoanerBattle ? 2 : 0)
+        + (!isPrologueLoanerBattle && battleTeam[0] ? getLeaderBonus(battleTeam[0]).apBonus : 0)
+        + (!isPrologueLoanerBattle ? (classTreeBonus?.startApBonus ?? 0) : 0),
       startShield: classBonuses.startShield,
       difficulty: player?.difficulty || undefined,
       additionalEnemies: getWaveAdditionalEnemies(enemy.id),
       // P8 — pass equipped cards from loadout (limited-use per battle).
       // Empty array → skip, let initBattle use random draw (legacy).
       equippedCards: (player?.equipped_cards?.length ?? 0) > 0 ? player!.equipped_cards : undefined,
+      classTreeBonus: classTreeBonus ?? undefined,
     });
     let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
@@ -188,6 +204,15 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
     if (mentorAid) log = [...log, isPrologueTutorial || isPrologueBoss ? `🕯 Master Bai steadies your hand. Starting Stability +10.` : `🕯 The System steadies your hand. Starting Stability +10.`];
     if (isTraining) log = [...log, `📜 Training Battle: hidden clue revealed, enemy weakened.`];
+    // Push 9: log the active Leader specialty so it's visible in the battle log.
+    if (!isPrologueLoanerBattle && battleTeam[0]) {
+      const lb = getLeaderBonus(battleTeam[0]);
+      log = [...log, `👑 Leader: ${battleTeam[0].name} — ${lb.description}`];
+    }
+    // Push 11: log the active class bonus so it's visible in the battle log.
+    if (!isPrologueLoanerBattle && classTreeBonus) {
+      log = [...log, `⚕️ Class: ${CLASS_IDENTITIES[classId].name} — class bonuses active.`];
+    }
     return { ...base, stability, visibleClues, hiddenClueIds, revealedLabels, log };
   });
 
@@ -674,10 +699,21 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
     onRequiredAction(skill.type, skill.id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setState((s) => applySkill(s, effective, hero, castQuality).state);
+    // Push 8: capture result so we can display the actual effect in feedbackMsg.
+    // Calling applySkill(state, ...) directly is safe — state is current at press-time,
+    // which matches how all other handlers (handleCard, handleUseItem, etc.) already work.
+    const applyResult = applySkill(state, effective, hero, castQuality);
+    setState(applyResult.state);
     triggerFx(hero.id, effective.type);
     turnActionsRef.current = [...turnActionsRef.current, effective.type];
-    showFeedback(skill.type);
+    // Push 8: show the actual outcome ("Lowered Corruption by 11.") in the feedback banner.
+    // Tutorial battles keep the guided contextual tip — the narrator is already explaining
+    // each step, so outcome numbers are secondary noise there.
+    if (!isTutorialBattle && applyResult.message) {
+      showBlockMsg(applyResult.message.split('\n')[0]);
+    } else {
+      showFeedback(skill.type);
+    }
     if (!tsFirstAction.current) {
       tsFirstAction.current = true;
       logEvent('first_action_used', 'battle', { playerAction: effective.type, gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap - effective.cost } });
@@ -748,6 +784,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
+    // Push 8: show outcome in feedback banner (cards previously had no live feedback).
+    if (res.message) showBlockMsg(res.message.split('\n')[0]);
     setDetail(null);
   };
 
@@ -786,6 +824,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "support");
+    // Push 8: show outcome in feedback banner (temp actions previously had no live feedback).
+    if (res.message) showBlockMsg(res.message.split('\n')[0]);
     setDetail(null);
   };
   const handleUseItem = (item: Item) => {
@@ -794,6 +834,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (res.aborted) { showBlockMsg(res.message); return; }
     setState(res.state);
     triggerFx(state.selectedHeroId ?? undefined, "stabilize");
+    // Push 8: show outcome (e.g., "Raised Stability by 15.") in feedback banner.
+    if (res.message) showBlockMsg(res.message.split('\n')[0]);
     const itemActionType = item.target === 'corruption' ? 'strike' : item.target === 'clue' ? 'scout' : 'stabilize';
     turnActionsRef.current = [...turnActionsRef.current, itemActionType];
     setDetail(null);
@@ -1750,12 +1792,15 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {detail && (
         <Pressable style={styles.modalOverlay} onPress={() => setDetail(null)}>
           <Pressable style={styles.detailModal} onPress={(e) => e.stopPropagation()}>
-            <DetailContent detail={detail} state={state} onUse={() => {
-              if (detail.kind === "skill") handleSkill(detail.hero, detail.skill);
-              else if (detail.kind === "temp") handleTempAction(detail.actionId);
-              else if (detail.kind === "item") handleUseItem(detail.item);
-              else if (detail.kind === "call") handleCall(detail.option);
-            }} />
+            {/* Push 12: ScrollView so the calc breakdown never clips on small screens */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScroll} keyboardShouldPersistTaps="handled">
+              <DetailContent detail={detail} state={state} onUse={() => {
+                if (detail.kind === "skill") handleSkill(detail.hero, detail.skill);
+                else if (detail.kind === "temp") handleTempAction(detail.actionId);
+                else if (detail.kind === "item") handleUseItem(detail.item);
+                else if (detail.kind === "call") handleCall(detail.option);
+              }} />
+            </ScrollView>
             <Pressable style={styles.modalDismiss} onPress={() => setDetail(null)} testID="detail-cancel">
               <Text style={styles.modalDismissTxt}>CLOSE</Text>
             </Pressable>
@@ -1967,9 +2012,48 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   );
 }
 
+// ── Push 12: Advanced calculation breakdown ───────────────────────────────────
+
+function CalcBreakdownView({ breakdown }: { breakdown: CalcBreakdown }) {
+  const effectLabel =
+    breakdown.effectType === "strike"    ? "Corruption reduced"
+    : breakdown.effectType === "stabilize" ? "Stability restored"
+    :                                        "Shield";
+  return (
+    <View style={styles.calcBox}>
+      <View style={styles.calcRow}>
+        <Text style={styles.calcLabel}>Base</Text>
+        <Text style={styles.calcVal}>{breakdown.baseDisplay}</Text>
+      </View>
+      {breakdown.rows.map((row, i) => (
+        <View key={i} style={styles.calcRow}>
+          <Text style={styles.calcLabel}>{row.label}</Text>
+          <Text style={[styles.calcVal, row.kind === "mult" && row.value < 1.0 ? styles.calcValNeg : undefined]}>
+            {row.kind === "mult"
+              ? `×${row.value.toFixed(2)}`
+              : `+${Math.round(row.value)}`}
+          </Text>
+        </View>
+      ))}
+      <View style={styles.calcDivider} />
+      <View style={styles.calcRow}>
+        <Text style={styles.calcEstLabel}>Est. {effectLabel}</Text>
+        <Text style={styles.calcEstVal}>~{breakdown.estimated}</Text>
+      </View>
+      <Text style={styles.calcNote}>{breakdown.note}</Text>
+    </View>
+  );
+}
+
 function DetailContent({ detail, state, onUse }: { detail: DetailEntry; state: BattleState; onUse: () => void }) {
+  // Push 12: toggle for the advanced calc breakdown — must be before any early returns.
+  const [showCalc, setShowCalc] = useState(false);
+
   if (detail.kind === "skill") {
     const { hero, skill } = detail;
+    // Push 12: pre-compute breakdown (pure, safe to call in render).
+    const breakdown = buildSkillCalcBreakdown(state, hero, skill);
+    const hasCalc = breakdown.effectType !== "none";
     return (
       <>
         <Text style={styles.detailKicker}>{(skill.systemType || "Universal").toUpperCase()} · {skill.type.toUpperCase()} · {skill.cost} AP</Text>
@@ -1989,6 +2073,13 @@ function DetailContent({ detail, state, onUse }: { detail: DetailEntry; state: B
           <Text style={styles.detailSection}>NCLEX Focus</Text>
           <Text style={styles.detailBody}>{skill.nclexExplanation}</Text>
         </>)}
+        {hasCalc && (
+          <Pressable style={styles.calcToggle} onPress={() => setShowCalc(v => !v)} testID="detail-calc-toggle">
+            <Ionicons name={showCalc ? "chevron-up-outline" : "analytics-outline"} size={11} color={COLORS.onSurfaceTertiary} />
+            <Text style={styles.calcToggleTxt}>{showCalc ? "Hide formula" : "Show formula"}</Text>
+          </Pressable>
+        )}
+        {hasCalc && showCalc && <CalcBreakdownView breakdown={breakdown} />}
         <Pressable style={styles.useBtn} onPress={onUse} testID="detail-use" disabled={state.ap < skill.cost}>
           <Text style={styles.useBtnTxt}>USE · {skill.cost} AP</Text>
         </Pressable>
@@ -3284,4 +3375,17 @@ const styles = StyleSheet.create({
     fontWeight:    "800",
     letterSpacing: 3,
   },
+  // Push 12 — Advanced calculation detail view
+  detailScroll: { gap: 6 },
+  calcToggle: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 5, alignSelf: "flex-start" },
+  calcToggleTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, fontWeight: "600" },
+  calcBox: { backgroundColor: COLORS.surfaceTertiary, borderRadius: 8, padding: SPACING.sm, gap: 3, marginTop: 2 },
+  calcRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 },
+  calcLabel: { color: COLORS.onSurfaceTertiary, fontSize: 11, flex: 1 },
+  calcVal: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
+  calcValNeg: { color: "#FCA5A5" },
+  calcDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 4 },
+  calcEstLabel: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", flex: 1 },
+  calcEstVal: { color: COLORS.brand, fontSize: 14, fontWeight: "800" },
+  calcNote: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2, fontStyle: "italic" },
 });

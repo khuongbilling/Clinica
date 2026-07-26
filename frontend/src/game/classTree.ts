@@ -224,3 +224,134 @@ export const GUARDRAIL_LINES: string[] = [
   'Basic gameplay (Ward Shift, Ward Defense, Heroes, Shop, University) stays fully available regardless of your class.',
   'Deeper battle integration for class abilities will roll out gradually in future updates.',
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push 11 — Class tree combat bonuses
+//
+// Each of the 6 classes grants numeric bonuses during battle. Bonuses scale
+// with the tier levels the player has claimed (Lv1 is automatic/always active;
+// Lv10/20/30 are claimed via claimClassTier and stored in class_progress).
+//
+// These are pre-computed in battle.tsx and passed into initBattle as
+// InitBattleOptions.classTreeBonus — battle.ts never calls into classTree.ts
+// directly, keeping the dependency graph clean.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ClassTreeBattleBonus {
+  // SkillModifiers.playerClassMod — fed per bag type in battle.ts
+  stabilizeMod: number;    // Caretaker/Guardian: stabilize skills amplified
+  strikeMod: number;       // Alchemist/Scholar: treatment/strike skills amplified
+  shieldMod: number;       // Guardian: shield skills amplified
+  itemMod: number;         // Alchemist: item use amplified
+  // SkillModifiers.careChainMod — multiplies Care Chain completion bonus
+  careChainMod: number;    // Medic: chain completion bonus amplified
+  // Special effects — handled directly in battle.ts action handlers
+  incomingDamageReduction: number;      // Guardian: enemy instability × (1 − this)
+  scoutRevealBonus: number;             // Seer: extra hidden clues per scout action
+  scoutFirstActionRevealBonus: number;  // Seer: additional clues on the FIRST scout of the battle
+  cueBonusFlatBonus: number;            // Scholar: added to cueBonusStabilize on every correct Cue
+  reassessAfterStabilizeBonus: number;  // Caretaker: flat stability when Reassess follows Stabilize
+  startApBonus: number;                 // Medic: flat extra AP at battle start
+}
+
+function neutralClassBonus(): ClassTreeBattleBonus {
+  return {
+    stabilizeMod: 1, strikeMod: 1, shieldMod: 1, itemMod: 1, careChainMod: 1,
+    incomingDamageReduction: 0, scoutRevealBonus: 0, scoutFirstActionRevealBonus: 0,
+    cueBonusFlatBonus: 0, reassessAfterStabilizeBonus: 0, startApBonus: 0,
+  };
+}
+
+const hasTier = (progress: number[], level: number) => progress.includes(level);
+
+/** Returns the combat bonus for the given class and claimed tier progress. */
+export function getClassTreeBattleBonuses(classId: ClassId, classProgress: number[]): ClassTreeBattleBonus {
+  const b = neutralClassBonus();
+  const t10 = hasTier(classProgress, 10);
+  const t20 = hasTier(classProgress, 20);
+  const t30 = hasTier(classProgress, 30);
+
+  switch (classId) {
+    case 'guardian':
+      // Lv1 (automatic): incoming Instability reduced 3%, stabilize 3% stronger
+      b.incomingDamageReduction = 0.03;
+      b.stabilizeMod = 1.03;
+      if (t10) { b.incomingDamageReduction = 0.05; b.stabilizeMod = 1.05; }
+      if (t20) { b.shieldMod = 1.05; }
+      if (t30) { b.incomingDamageReduction = 0.08; b.shieldMod = 1.08; }
+      break;
+
+    case 'seer':
+      // Lv1: scout reveals +1 extra clue each time
+      b.scoutRevealBonus = 1;
+      if (t10) { b.scoutFirstActionRevealBonus = 1; }
+      if (t20) { b.cueBonusFlatBonus = 2; }
+      if (t30) { b.scoutRevealBonus = 2; b.cueBonusFlatBonus = 2; }
+      break;
+
+    case 'caretaker':
+      // Lv1: stabilize 5% stronger
+      b.stabilizeMod = 1.05;
+      if (t10) { b.reassessAfterStabilizeBonus = 3; }
+      if (t20) { b.stabilizeMod = 1.07; b.reassessAfterStabilizeBonus = 5; }
+      if (t30) { b.stabilizeMod = 1.10; b.reassessAfterStabilizeBonus = 8; }
+      break;
+
+    case 'scholar':
+      // Lv1: correct Cue grants +2 extra cueBonusStabilize
+      b.cueBonusFlatBonus = 2;
+      if (t10) { b.cueBonusFlatBonus = 3; }
+      if (t20) { b.cueBonusFlatBonus = 4; b.strikeMod = 1.03; }
+      if (t30) { b.cueBonusFlatBonus = 5; b.strikeMod = 1.05; }
+      break;
+
+    case 'alchemist':
+      // Lv1: clinical supplies 5% stronger, treatment strikes 3% stronger
+      b.itemMod = 1.05;
+      b.strikeMod = 1.03;
+      if (t10) { b.itemMod = 1.07; b.strikeMod = 1.05; }
+      if (t20) { b.itemMod = 1.08; b.stabilizeMod = 1.03; }
+      if (t30) { b.itemMod = 1.10; b.strikeMod = 1.07; }
+      break;
+
+    case 'medic':
+      // Lv1: Care Chain completion 5% stronger
+      b.careChainMod = 1.05;
+      if (t10) { b.careChainMod = 1.10; b.startApBonus = 1; }
+      if (t20) { b.careChainMod = 1.12; }
+      if (t30) { b.careChainMod = 1.15; }
+      break;
+
+    default:
+      break;
+  }
+  return b;
+}
+
+/** Human-readable summary of active bonuses, shown on the Class Tree screen. */
+export function describeClassBattleBonuses(bonus: ClassTreeBattleBonus): string[] {
+  const lines: string[] = [];
+  if (bonus.incomingDamageReduction > 0)
+    lines.push(`Incoming Instability reduced ${Math.round(bonus.incomingDamageReduction * 100)}%`);
+  if (bonus.stabilizeMod > 1)
+    lines.push(`Stabilize skills ${Math.round((bonus.stabilizeMod - 1) * 100)}% stronger`);
+  if (bonus.strikeMod > 1)
+    lines.push(`Treatment & strike skills ${Math.round((bonus.strikeMod - 1) * 100)}% stronger`);
+  if (bonus.shieldMod > 1)
+    lines.push(`Shield skills ${Math.round((bonus.shieldMod - 1) * 100)}% stronger`);
+  if (bonus.itemMod > 1)
+    lines.push(`Clinical supplies ${Math.round((bonus.itemMod - 1) * 100)}% stronger`);
+  if (bonus.careChainMod > 1)
+    lines.push(`Care Chain completion ${Math.round((bonus.careChainMod - 1) * 100)}% stronger`);
+  if (bonus.scoutRevealBonus > 0)
+    lines.push(`Scout reveals ${bonus.scoutRevealBonus} extra hidden clue${bonus.scoutRevealBonus > 1 ? 's' : ''}`);
+  if (bonus.scoutFirstActionRevealBonus > 0)
+    lines.push(`First Scout of battle reveals ${bonus.scoutFirstActionRevealBonus} additional clue`);
+  if (bonus.cueBonusFlatBonus > 0)
+    lines.push(`Correct Cue empowers stabilizing actions further (+${bonus.cueBonusFlatBonus} bonus)`);
+  if (bonus.reassessAfterStabilizeBonus > 0)
+    lines.push(`Reassess after Stabilize restores +${bonus.reassessAfterStabilizeBonus} Stability`);
+  if (bonus.startApBonus > 0)
+    lines.push(`Start battle with +${bonus.startApBonus} AP`);
+  return lines;
+}

@@ -15,7 +15,6 @@ import {
   ChainState,
   CHAIN_BONUSES,
   ClinicalCueQuestion,
-  combineFinalEffect,
   emptyChain,
   ENEMY_CLINICAL,
   EnemyClinical,
@@ -44,6 +43,18 @@ import {
   ULTIMATE_CHARGE_MAX,
   SYSTEM_TO_CUE_TOPIC,
 } from './clinical';
+import {
+  calcShieldEffect,
+  calcAffinityFamilyMod,
+  calcStabilizeEffect,
+  calcStrikeEffect,
+  neutralModifiers,
+  SkillModifiers,
+  statForSkillType,
+  statToMultiplier,
+} from './skillCalc';
+import { getLeaderBonus, scaleLeaderBonus } from './leaderSpecialty';
+import type { ClassTreeBattleBonus } from './classTree';
 
 export interface WaveMember {
   enemy: Enemy;
@@ -133,6 +144,12 @@ export interface BattleState {
   // spent), used at battle end to split Hero EXP proportionally (see
   // progression.ts splitContributionToHeroXp). Distinct from Player EXP.
   heroContribution: Record<string, number>;
+
+  // Push 11 — Player class tree combat bonuses (computed once at initBattle from
+  // class_tree_id + class_progress; never mutated during battle).
+  classBonus: ClassTreeBattleBonus | null;
+  classFirstScoutUsed: boolean;        // Seer: true after the first scout action of this battle
+  classStabilizeUsedThisTurn: boolean; // Caretaker: true when any stabilize skill fired this turn
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -154,6 +171,9 @@ export interface InitBattleOptions {
   // P8 — card IDs the player loaded in the mission loadout (limited-use mode).
   // When provided, these become the battle hand; when empty/undefined, random draw.
   equippedCards?: string[];
+  // Push 11 — Pre-computed class tree bonus; passed from battle.tsx so battle.ts
+  // doesn't need to import classTree directly. null/undefined = no class bonus.
+  classTreeBonus?: ClassTreeBattleBonus;
 }
 
 // ============================================================
@@ -345,6 +365,10 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     heroUltimateCharge,
     ultimateUsedCount,
     heroContribution: {},
+
+    classBonus: opts.classTreeBonus ?? null,
+    classFirstScoutUsed: false,
+    classStabilizeUsedThisTurn: false,
   };
 }
 
@@ -592,10 +616,14 @@ function applyResolutionToState(
     if (res.chainCompletedNow) {
       next.chain = { ...next.chain, completed: true };
       next.fullChainCompleted = true;
-      next.corruption = Math.max(0, next.corruption - CHAIN_BONUSES.fullChainCorruptionDamage);
-      const chainStab = Math.round(CHAIN_BONUSES.fullChainStabilityBonus * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
+      // Push 11: Medic careChainMod amplifies care-chain completion bonus.
+      const ccm = s.classBonus?.careChainMod ?? 1;
+      const chainCorr = Math.round(CHAIN_BONUSES.fullChainCorruptionDamage * ccm);
+      next.corruption = Math.max(0, next.corruption - chainCorr);
+      const chainStab = Math.round(CHAIN_BONUSES.fullChainStabilityBonus * ccm * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
       next.stability = clamp(next.stability + chainStab, 0, 100);
-      next.log.push(`✨ Complete Care Chain: -${CHAIN_BONUSES.fullChainCorruptionDamage} corruption, +${chainStab} stability.`);
+      const ccNote = ccm > 1.005 ? ` (Medic +${Math.round((ccm - 1) * 100)}%)` : '';
+      next.log.push(`✨ Complete Care Chain: -${chainCorr} corruption, +${chainStab} stability.${ccNote}`);
     }
   }
 
@@ -618,7 +646,12 @@ export const CAST_QUALITY_MULTIPLIER: Record<CastQuality, number> = {
 
 /** Skills that support the Perfect Cast timing prompt — those with a meaningful strike or stabilize payload. */
 export function skillSupportsCastTiming(skill: HeroSkill): boolean {
-  return !!(skill.strike || skill.stabilize);
+  return !!(skill.strike || skill.strikeRange || skill.stabilize || skill.stabilizeRange);
+}
+
+/** Roll a random integer within a [min, max] inclusive range. */
+function rollRange([min, max]: [number, number]): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQuality: CastQuality = 'normal'): ApplyResult {
@@ -654,43 +687,147 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   next.log = [...next.log, `${hero.name} → ${skill.name}.`];
   if (consumedAirDiscount) next.nextAirActionDiscount = false;
 
-  // Treatment stability modifier — corruption damage scales with how stable the patient is
+  // Build modifier bags for this skill use (Push 2 pipeline + Push 4 + Push 6).
+  // Strike and stabilize need different clinicalMod sources, so two bags.
   const treatMod = getTreatmentStabilityModifier(next.stability);
   const castMult = CAST_QUALITY_MULTIPLIER[castQuality];
   const corrOutcome = getCorruptionOutcome(res.status);
-  // Corruption reduction scales with how well the treatment correlates with the disease.
-  const corrEff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier, chapterModifier: treatMod }) * castMult);
-  const stabEff = (n: number) => Math.round(combineFinalEffect({ baseEffect: n, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) }) * castMult);
+
+  // Push 4: heroStatMod — per-hero stat scale factor from HeroCombatStats.
+  const heroStatMult   = statToMultiplier(statForSkillType(skill.type, hero.stats));
+  const shieldStatMult = statToMultiplier(hero.stats.guard);
+
+  // Push 6: affinityFamilyMod — ×1.15 strong / ×0.90 weak / ×1.00 neutral.
+  // Checks hero.strongAffinities / weakAffinities vs enemy.primaryAffinity +
+  // secondaryAffinity. Falls safely to ×1.00 when Push-5 data is absent.
+  // Push 6: affinityFamilyMod — dampened by enemy.affinityResistance (Push 7).
+  const affinityFamilyMult = calcAffinityFamilyMod(
+    hero.strongAffinities,
+    hero.weakAffinities,
+    s.enemy.primaryAffinity,
+    s.enemy.secondaryAffinity,
+    s.enemy.affinityResistance ?? 0,
+  );
+
+  // Push 7: enemy defense modifiers.
+  // corruptionResistanceMod: enemy's resistance to corruption-lowering effects (strikes only).
+  const corruptionResistanceMod = 1 - (s.enemy.corruptionResistance ?? 0);
+  // hiddenDefenseMod: scales down all effects proportionally to remaining unrevealed hidden clues.
+  // = 1.00 when no hidden clues / all revealed. Falls below 1.00 while clues are concealed.
+  const totalHiddenClues = s.enemy.hiddenClues.length;
+  const hiddenFraction = totalHiddenClues > 0 ? s.hiddenClueIds.length / totalHiddenClues : 0;
+  const hiddenDefenseMod = 1 - (s.enemy.hiddenDefense ?? 0) * hiddenFraction;
+
+  // Push 9: Leader Spot — team[0] = slot 1 = the Leader hero.
+  // Scale by their rarity/star before building mod bags so each bag gets the correct value.
+  const lb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
+  const cb = s.classBonus; // Push 11: class tree bonus
+
+  const strikeMods: SkillModifiers = {
+    ...neutralModifiers(),
+    clinicalMod: corrOutcome.reductionMult,
+    systemMod: res.systemModifier,
+    castMult,
+    chapterMod: treatMod,
+    affinityMod: res.affinityResult.multiplier,
+    elementBonus: s.enemy.weakSystem && hero.element === s.enemy.weakSystem ? 0.3 : 0,
+    heroStatMod: heroStatMult,
+    affinityFamilyMod: affinityFamilyMult,
+    corruptionResistanceMod,             // Push 7
+    hiddenDefenseMod,                    // Push 7
+    leaderBonusMod: lb?.strikeMult ?? 1, // Push 9
+    playerClassMod: cb?.strikeMod ?? 1,  // Push 11
+  };
+  const stabMods: SkillModifiers = {
+    ...neutralModifiers(),
+    clinicalMod: res.modifier,
+    systemMod: res.systemModifier,
+    castMult,
+    corruptionMod: getStabilizationModifier(next.corruption),
+    stabilityGainMod: getStabilityGainModifier(next.stability),
+    enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
+    cueBonusFlat: next.cueBonusStabilize,
+    heroStatMod: heroStatMult,
+    affinityFamilyMod: affinityFamilyMult,
+    hiddenDefenseMod,                       // Push 7 (corruptionResistanceMod not applied to stabilize)
+    leaderBonusMod: lb?.stabilizeMult ?? 1, // Push 9
+    playerClassMod: cb?.stabilizeMod ?? 1,  // Push 11
+  };
+  // Shield modifier bag — guard stat always; affinity + hidden-defense apply here too.
+  const shieldMods: SkillModifiers = {
+    ...neutralModifiers(),
+    heroStatMod: shieldStatMult,
+    affinityFamilyMod: affinityFamilyMult,
+    hiddenDefenseMod,                    // Push 7
+    leaderBonusMod: lb?.shieldMult ?? 1, // Push 9
+    playerClassMod: cb?.shieldMod ?? 1,  // Push 11
+  };
+
   if (castQuality !== 'normal') {
     next.log = [...next.log, castQuality === 'perfect' ? '✨ Perfect Cast! Effect amplified.' : '⭐ Good Cast — effect boosted.'];
+  }
+
+  // Push 6: affinity family feedback — only log non-neutral events.
+  if (affinityFamilyMult > 1.0) {
+    next.log = [...next.log, '✅ Affinity advantage — effect increased.'];
+  } else if (affinityFamilyMult < 1.0) {
+    next.log = [...next.log, '⚠️ Weak affinity — effect reduced.'];
+  }
+
+  // Push 7: hidden-defense hint on the very first action of the battle.
+  // Shows once only — tells the player Scout/Reassess will help.
+  if (hiddenDefenseMod < 0.99 && s.turnsTaken === 0) {
+    next.log = [...next.log, `🔍 Hidden pathology detected — Scout or Reassess to reveal clues and strengthen effects.`];
   }
 
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
   if (skill.reveal) {
-    next = revealHiddenClues(next, skill.reveal);
+    // Push 11: Seer — extra hidden clues per scout; first scout of battle gets an additional bonus.
+    let revealCount = skill.reveal;
+    if ((cb?.scoutRevealBonus ?? 0) > 0 || (cb?.scoutFirstActionRevealBonus ?? 0) > 0) {
+      revealCount += cb?.scoutRevealBonus ?? 0;
+      if (!next.classFirstScoutUsed && (cb?.scoutFirstActionRevealBonus ?? 0) > 0) {
+        revealCount += cb!.scoutFirstActionRevealBonus;
+        next.log = [...next.log, `👁 Seer's Eye: first Scout of battle reveals an extra clue.`];
+      }
+      next.classFirstScoutUsed = true;
+    }
+    next = revealHiddenClues(next, revealCount);
     effectType = 'clue';
   }
-  if (skill.stabilize) {
-    const rawAmt = Math.max(0, stabEff(skill.stabilize)) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
+  if (skill.stabilize || skill.stabilizeRange) {
+    const base = skill.stabilizeRange ? rollRange(skill.stabilizeRange) : skill.stabilize!;
+    const amt = calcStabilizeEffect(base, stabMods);
     next.stability = clamp(next.stability + amt, 0, 100);
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : 'stability';
+    // Push 11: Caretaker — mark stabilize used so reassess combo can fire this turn.
+    if ((cb?.reassessAfterStabilizeBonus ?? 0) > 0) next.classStabilizeUsedThisTurn = true;
   }
-  if (skill.strike) {
-    const elementBonus = s.enemy.weakSystem && hero.element === s.enemy.weakSystem ? Math.floor(skill.strike * 0.3) : 0;
-    const affinityBase = Math.round((skill.strike + elementBonus) * res.affinityResult.multiplier);
-    const amt = Math.max(0, corrEff(affinityBase));
+  if (skill.strike || skill.strikeRange) {
+    const base = skill.strikeRange ? rollRange(skill.strikeRange) : skill.strike!;
+    const rawAmt = calcStrikeEffect(base, strikeMods);
+    // Push 7: bossGuard caps single-hit corruption reduction to 40% of current corruption.
+    // Prevents one-turn burst deletion of bosses — sustained effort still wins.
+    const bossMaxHit = s.enemy.bossGuard
+      ? Math.max(1, Math.floor(next.corruption * 0.40))
+      : rawAmt;
+    const amt = Math.min(rawAmt, bossMaxHit);
+    if (s.enemy.bossGuard && amt < rawAmt) {
+      next.log = [...next.log, `🛡 ${s.enemy.name}'s resilience limits the impact — sustained treatment is required.`];
+    }
     next.corruption = Math.max(0, next.corruption - amt);
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : (effectType === 'stability' ? 'mixed' : 'corruption');
   }
-  if (skill.shield) {
-    next.shieldNext = Math.max(next.shieldNext, skill.shield);
-    effectAmount = Math.max(effectAmount, skill.shield);
+  if (skill.shield || skill.shieldRange) {
+    const base = skill.shieldRange ? rollRange(skill.shieldRange) : skill.shield!;
+    const amt = calcShieldEffect(base, shieldMods);
+    next.shieldNext = Math.max(next.shieldNext, amt);
+    effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'mixed' ? 'mixed' : 'shield';
   }
   if (skill.blockSpread) {
@@ -709,6 +846,13 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
     next.reboundArmed = false;
+    // Push 11: Caretaker — bonus stability when Reassess follows a Stabilize action this turn.
+    const reassessStabBonus = s.classStabilizeUsedThisTurn ? (cb?.reassessAfterStabilizeBonus ?? 0) : 0;
+    if (reassessStabBonus > 0) {
+      const adjusted = Math.round(reassessStabBonus * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
+      next.stability = clamp(next.stability + adjusted, 0, 100);
+      next.log = [...next.log, `💚 Caretaker's Rhythm: Reassess after Stabilize +${adjusted} Stability.`];
+    }
   }
 
   // Rebound arming when corruption drops below 40
@@ -730,6 +874,21 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     rationale: res.rationale,
   });
   if (msg) next.log.push(msg);
+
+  // Push 8: brief modifier-feedback notes appended after the primary outcome line.
+  // Only fires for non-expert feedback levels — experts read numbers directly.
+  // Thresholds prevent noise on tutorial/Ch.1 enemies (0–4% resistance).
+  if (next.feedbackLevel !== 'expert') {
+    // Enemy resistance (significant ≥5% reduction on strike effects)
+    if ((s.enemy.corruptionResistance ?? 0) >= 0.05 && (skill.strike || skill.strikeRange)) {
+      next.log.push('Enemy resistance reduced the effect.');
+    }
+    // Hidden-pathology defense (significant ≥5% active reduction, not already shown on turn 0)
+    const activeHiddenDef = (s.enemy.hiddenDefense ?? 0) * hiddenFraction;
+    if (activeHiddenDef >= 0.05 && s.turnsTaken > 0) {
+      next.log.push('Hidden pathology softened the result.');
+    }
+  }
 
   next = addUltimateCharge(next, hero.id, res.chainAdvanced ? 20 : 12);
   next = addContribution(next, hero.id, effectAmount + cost * 2);
@@ -773,29 +932,51 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     log: [...post.log, `${hero?.name || 'Hero'} used ${item.displayName}.`],
   }, heroId);
 
-  const stabMod = getStabilizationModifier(next.corruption);
-  const treatMod = getTreatmentStabilityModifier(next.stability);
+  // Build modifier bags for item use (no castMult for items — no cast prompt).
   const corrOutcome = getCorruptionOutcome(res.status);
+  // Push 9: item mult from Leader (slot 0). Same mult applied to both bags.
+  const itemLb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
+  const itemCb = s.classBonus; // Push 11
+  const itemStrikeMods: SkillModifiers = {
+    ...neutralModifiers(),
+    clinicalMod: corrOutcome.reductionMult,
+    systemMod: res.systemModifier,
+    chapterMod: getTreatmentStabilityModifier(next.stability),
+    affinityMod: res.affinityResult.multiplier,
+    // no elementBonus — items are system-neutral tools
+    leaderBonusMod: itemLb?.itemMult ?? 1, // Push 9
+    playerClassMod: itemCb?.itemMod ?? 1,  // Push 11
+  };
+  const itemStabMods: SkillModifiers = {
+    ...neutralModifiers(),
+    clinicalMod: res.modifier,
+    systemMod: res.systemModifier,
+    corruptionMod: getStabilizationModifier(next.corruption),
+    stabilityGainMod: getStabilityGainModifier(next.stability),
+    enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
+    cueBonusFlat: next.cueBonusStabilize,
+    leaderBonusMod: itemLb?.itemMult ?? 1, // Push 9
+    playerClassMod: itemCb?.itemMod ?? 1,  // Push 11
+  };
 
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
   if (item.target === 'corruption') {
-    const affinityBase = Math.round(item.baseEffect * res.affinityResult.multiplier);
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: affinityBase, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier, chapterModifier: treatMod }));
+    const amt = calcStrikeEffect(item.baseEffect, itemStrikeMods);
     next.corruption = Math.max(0, next.corruption - amt);
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = amt; effectType = 'corruption';
   }
   if (item.target === 'stability') {
-    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: item.baseEffect, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
+    const amt = calcStabilizeEffect(item.baseEffect, itemStabMods);
     next.stability = clamp(next.stability + amt, 0, 100);
     effectAmount = amt; effectType = 'stability';
   }
   if (item.target === 'shield') {
-    next.shieldNext = Math.max(next.shieldNext, item.baseEffect);
-    effectAmount = item.baseEffect; effectType = 'shield';
+    const amt = calcShieldEffect(item.baseEffect, neutralModifiers());
+    next.shieldNext = Math.max(next.shieldNext, amt);
+    effectAmount = amt; effectType = 'shield';
   }
   if (item.target === 'clue') {
     next = revealHiddenClues(next, 1);
@@ -850,19 +1031,34 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
   if (aborted) return { state: post, message: `${a.name} is locked.`, status: 'locked', aborted: true };
 
   let next: BattleState = consumeHeroAction({ ...post, ap: s.ap - a.costAP, turnsTaken: post.turnsTaken + 1, log: [...post.log, `${hero?.name || 'Hero'} → ${a.name}.`] }, heroId);
+  // No castMult or chapterMod for temp actions (no cast prompt; chapter modifier
+  // was not applied to temp-action strikes historically — preserved here).
   if (a.stabilize) {
-    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: a.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: getStabilizationModifier(next.corruption) })) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
+    const taMods: SkillModifiers = {
+      ...neutralModifiers(),
+      clinicalMod: res.modifier,
+      systemMod: res.systemModifier,
+      corruptionMod: getStabilizationModifier(next.corruption),
+      stabilityGainMod: getStabilityGainModifier(next.stability),
+      enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
+      cueBonusFlat: next.cueBonusStabilize,
+    };
+    const amt = calcStabilizeEffect(a.stabilize, taMods);
     next.stability = clamp(next.stability + amt, 0, 100);
   }
   if (a.strike) {
     const corrOutcome = getCorruptionOutcome(res.status);
-    const affinityBase = Math.round(a.strike * res.affinityResult.multiplier);
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: affinityBase, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
+    const taStrikeMods: SkillModifiers = {
+      ...neutralModifiers(),
+      clinicalMod: corrOutcome.reductionMult,
+      systemMod: res.systemModifier,
+      affinityMod: res.affinityResult.multiplier,
+    };
+    const amt = calcStrikeEffect(a.strike, taStrikeMods);
     next.corruption = Math.max(0, next.corruption - amt);
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
   }
-  if (a.shield) next.shieldNext = Math.max(next.shieldNext, a.shield);
+  if (a.shield) next.shieldNext = Math.max(next.shieldNext, calcShieldEffect(a.shield, neutralModifiers()));
   next = addUltimateCharge(next, heroId, 8);
   next = addContribution(next, heroId, Math.max(a.stabilize || 0, a.strike || 0, a.shield || 0) + a.costAP * 2);
   next = syncWaveAndCheckVictory(next);
@@ -923,28 +1119,51 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     log: [...post.log, `${hero?.name || 'Hero'} plays ${card.name}.`],
   }, heroId);
 
-  const stabMod = getStabilizationModifier(next.corruption);
+  // Build modifier bags for card play (no castMult or chapterMod — historically
+  // cards did not apply either, so we preserve that pipeline here).
   const corrOutcome = getCorruptionOutcome(res.status);
+  // Push 9: card mult from Leader (slot 0).
+  const cardLb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
+  const cardCb = s.classBonus; // Push 11
+  const cardStrikeMods: SkillModifiers = {
+    ...neutralModifiers(),
+    clinicalMod: corrOutcome.reductionMult,
+    systemMod: res.systemModifier,
+    affinityMod: res.affinityResult.multiplier,
+    leaderBonusMod: cardLb?.cardMult ?? 1,  // Push 9
+    playerClassMod: cardCb?.strikeMod ?? 1, // Push 11
+  };
+  const cardStabMods: SkillModifiers = {
+    ...neutralModifiers(),
+    clinicalMod: res.modifier,
+    systemMod: res.systemModifier,
+    corruptionMod: getStabilizationModifier(next.corruption),
+    stabilityGainMod: getStabilityGainModifier(next.stability),
+    enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
+    cueBonusFlat: next.cueBonusStabilize,
+    leaderBonusMod: cardLb?.cardMult ?? 1,    // Push 9
+    playerClassMod: cardCb?.stabilizeMod ?? 1, // Push 11
+  };
+
   let effectAmount = 0;
   let effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed' = 'mixed';
 
   if (card.reveal) { next = revealHiddenClues(next, card.reveal); next.reboundArmed = false; effectType = 'clue'; }
   if (card.stabilize) {
-    const rawAmt = Math.max(0, combineFinalEffect({ baseEffect: card.stabilize, clinicalMod: res.modifier, systemMod: res.systemModifier, corruptionMod: stabMod })) + next.cueBonusStabilize;
-    const amt = Math.round(rawAmt * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
+    const amt = calcStabilizeEffect(card.stabilize, cardStabMods);
     next.stability = clamp(next.stability + amt, 0, 100);
     effectAmount = amt; effectType = effectType === 'clue' ? 'mixed' : 'stability';
   }
   if (card.strike) {
-    const affinityBase = Math.round(card.strike * res.affinityResult.multiplier);
-    const amt = Math.max(0, combineFinalEffect({ baseEffect: affinityBase, clinicalMod: corrOutcome.reductionMult, systemMod: res.systemModifier }));
+    const amt = calcStrikeEffect(card.strike, cardStrikeMods);
     next.corruption = Math.max(0, next.corruption - amt);
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'stability' || effectType === 'clue' ? 'mixed' : 'corruption';
   }
   if (card.shield) {
-    next.shieldNext = Math.max(next.shieldNext, card.shield);
-    effectAmount = Math.max(effectAmount, card.shield); effectType = effectType === 'mixed' ? 'mixed' : 'shield';
+    const amt = calcShieldEffect(card.shield, neutralModifiers());
+    next.shieldNext = Math.max(next.shieldNext, amt);
+    effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'mixed' ? 'mixed' : 'shield';
   }
 
   if ((action?.chainRoles || []).includes('Reassess')) {
@@ -1027,7 +1246,7 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
       ...s,
       pendingCue: null,
       cuesAnswered,
-      cueBonusStabilize: s.cueBonusStabilize + 8,
+      cueBonusStabilize: s.cueBonusStabilize + 8 + (s.classBonus?.cueBonusFlatBonus ?? 0),
       cuesTopicsCorrect: [...s.cuesTopicsCorrect, cue.topic],
       // Bonus AP stacks ABOVE the normal per-turn limit (hard-capped to avoid runaway).
       ap: Math.min(s.ap + 1, AP_BONUS_CEILING),
@@ -1035,8 +1254,20 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
     next = addUltimateCharge(next, heroId, 15);
     const { state: withBonus, label } = applyCueTopicBonus(next, cue.topic);
     next = withBonus;
+    // Push 9: Analyst leader bonus — first correct Cue this battle grants extra AP.
+    // Check s.cuesTopicsCorrect (original state, BEFORE this update) so it fires once only.
+    const cueLb = s.team[0] ? getLeaderBonus(s.team[0]) : null;
+    const cueLeaderAp = (cueLb?.cueCorrectApBonus ?? 0) > 0 && s.cuesTopicsCorrect.length === 0
+      ? cueLb!.cueCorrectApBonus
+      : 0;
+    if (cueLeaderAp > 0) {
+      next = { ...next, ap: Math.min(next.ap + cueLeaderAp, AP_BONUS_CEILING) };
+    }
     const bonusLog = label ? `, ${label}` : '';
-    next = { ...next, log: [...next.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered${bonusLog})`] };
+    const leaderCueLog = cueLeaderAp > 0 ? `, +${cueLeaderAp} AP (Leader bonus)` : '';
+    const cueBonusClassFlat = s.classBonus?.cueBonusFlatBonus ?? 0;
+    const classCueLog = cueBonusClassFlat > 0 ? `, Scholar empowerment +${cueBonusClassFlat}` : '';
+    next = { ...next, log: [...next.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered${bonusLog}${leaderCueLog}${classCueLog})`] };
     return { state: next, message: 'Correct! +1 AP and a power boost.', status: 'appropriate' };
   }
 
@@ -1269,11 +1500,18 @@ export function endPlayerTurn(s: BattleState): BattleState {
 
   // Enemy turn — shielded by Rapid Response or shieldNext.
   // Corruption's grip on stability scales with chapter + difficulty mode (soft in Ch.1, harsh on Chaos).
-  const baseDmg = getEnemyDamage(s.corruption, s.enemy.instability, getCorruptionPenaltyScale(s.chapter, s.difficulty));
+  const rawBaseDmg = getEnemyDamage(s.corruption, s.enemy.instability, getCorruptionPenaltyScale(s.chapter, s.difficulty));
+  // Push 7: stabilityPressure amplifies enemy instability damage.
+  // 0.0 (tutorial) → no change. 0.15 (boss) → +15% pressure per enemy turn.
+  const pressureMult = 1 + (s.enemy.stabilityPressure ?? 0);
+  const baseDmg = pressureMult > 1.001 ? Math.ceil(rawBaseDmg * pressureMult) : rawBaseDmg;
   const damageMultiplier = getChapterForgiveness(s.chapter).enemyDamageMultiplier;
   const waveMultiplier = getWaveDamageMultiplier(s.wave);
   const reductionAfterShield = Math.floor(baseDmg * (1 - s.shieldNext / 100) * damageMultiplier * waveMultiplier);
   let reduced = Math.max(0, reductionAfterShield - s.enemyDamageReduction);
+  // Push 11: Guardian — reduces incoming Instability by a class-tier percentage.
+  const classGuardianReduction = s.classBonus?.incomingDamageReduction ?? 0;
+  if (classGuardianReduction > 0) reduced = Math.max(0, Math.floor(reduced * (1 - classGuardianReduction)));
 
   // Companion affliction pressure — wisps/spikes still alive in the wave drain stability every turn
   const wavePressure = getWaveBehaviorPressure(s.wave);
@@ -1360,6 +1598,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
     reboundArmed: false,
     rapidResponseActive: false,
     cueBonusStabilize: 0,
+    classStabilizeUsedThisTurn: false, // Push 11: reset Caretaker combo tracker each enemy turn
     heroActionsUsed,
     selectedHeroId: s.team.find(h => !heroActionsUsed[h.id])?.id || s.selectedHeroId,
     dangerTriggerActive,
@@ -1405,4 +1644,165 @@ export function previewCallStatus(state: BattleState, callId: string): { status:
   const action = CALL_CLINICAL[callId];
   const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability });
   return { status: res.status, label: statusLabel(res.status) };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push 12 — Advanced calculation detail view
+//
+// Pre-computes the displayable modifier breakdown for a skill in the current
+// battle context. Safe to call during render — pure function, no side effects.
+//
+// Clinical correctness (clinicalMod) and cast quality (castMult) are unknown
+// pre-fire, so the estimate assumes appropriate (×1.0) and normal cast (×1.0).
+// The note below the estimate tells the player this explicitly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CalcRow {
+  label: string;
+  /** mult: 1.08 means ×1.08; flat: 8 means +8 */
+  value: number;
+  kind: 'mult' | 'flat';
+}
+
+export interface CalcBreakdown {
+  effectType: 'strike' | 'stabilize' | 'shield' | 'none';
+  baseDisplay: string;    // "7" for fixed, "5–9" for ranged
+  estimatedBase: number;  // midpoint used for estimate; 0 if effectType === 'none'
+  rows: CalcRow[];        // only non-trivial active factors
+  estimated: number;      // estimated final value (assumes appropriate + normal cast)
+  note: string;           // caveat shown below the estimate
+}
+
+/**
+ * Pre-computes the displayable modifier breakdown for a skill in the current
+ * battle context. Called from the long-press detail panel in battle.tsx.
+ */
+export function buildSkillCalcBreakdown(
+  state: BattleState,
+  hero: Hero,
+  skill: HeroSkill,
+): CalcBreakdown {
+  // ── Determine primary effect type and base value ────────────────────────────
+  let effectType: CalcBreakdown['effectType'] = 'none';
+  let baseMin = 0, baseMax = 0;
+
+  if (skill.strike || skill.strikeRange) {
+    effectType = 'strike';
+    [baseMin, baseMax] = skill.strikeRange
+      ? [skill.strikeRange[0], skill.strikeRange[1]]
+      : [skill.strike!, skill.strike!];
+  } else if (skill.stabilize || skill.stabilizeRange) {
+    effectType = 'stabilize';
+    [baseMin, baseMax] = skill.stabilizeRange
+      ? [skill.stabilizeRange[0], skill.stabilizeRange[1]]
+      : [skill.stabilize!, skill.stabilize!];
+  } else if (skill.shield || skill.shieldRange) {
+    effectType = 'shield';
+    [baseMin, baseMax] = skill.shieldRange
+      ? [skill.shieldRange[0], skill.shieldRange[1]]
+      : [skill.shield!, skill.shield!];
+  }
+
+  const isRange = baseMin !== baseMax;
+  const baseDisplay = isRange ? `${baseMin}–${baseMax}` : `${baseMin}`;
+  const estimatedBase = isRange ? Math.round((baseMin + baseMax) / 2) : baseMin;
+
+  if (effectType === 'none' || estimatedBase <= 0) {
+    return { effectType: 'none', baseDisplay: '—', estimatedBase: 0, rows: [], estimated: 0, note: '' };
+  }
+
+  // ── Compute each modifier (mirrors applySkill bags, minus unknown pre-fire values) ──
+
+  // Hero combat stat for this effect type
+  const stats = hero.stats;
+  const heroStatMult = stats
+    ? statToMultiplier(
+        effectType === 'shield'    ? stats.guard
+        : effectType === 'stabilize' ? stats.carePower
+        : stats.intervention,
+      )
+    : 1.0;
+
+  // Affinity family match (hero strong/weak affinities vs enemy)
+  const affinityFamilyMult = calcAffinityFamilyMod(
+    hero.strongAffinities, hero.weakAffinities,
+    state.enemy.primaryAffinity, state.enemy.secondaryAffinity,
+    state.enemy.affinityResistance ?? 0,
+  );
+
+  // Element advantage: strike only — hero element hits enemy weak system
+  const elementBonus = effectType === 'strike'
+    && !!state.enemy.weakSystem && hero.element === state.enemy.weakSystem ? 0.3 : 0;
+
+  // Push 13 fix: corruption resistance reduces strike damage (mirrors applySkill line 714).
+  // Was missing from Push 12 — omitting it made estimates too optimistic for resistant enemies.
+  const corruptionResistMod = effectType === 'strike'
+    ? 1 - (state.enemy.corruptionResistance ?? 0)
+    : 1;
+
+  // Hidden-pathology defense — scales down all effects while clues remain unrevealed
+  const totalHidden = state.enemy.hiddenClues.length;
+  const hiddenFraction = totalHidden > 0 ? state.hiddenClueIds.length / totalHidden : 0;
+  const hiddenDefenseMod = 1 - (state.enemy.hiddenDefense ?? 0) * hiddenFraction;
+
+  // Leader bonus (team slot 0 = Leader)
+  const lb = state.team[0] ? scaleLeaderBonus(getLeaderBonus(state.team[0]), state.team[0]) : null;
+  const leaderMult =
+    effectType === 'strike'    ? (lb?.strikeMult    ?? 1)
+    : effectType === 'stabilize' ? (lb?.stabilizeMult ?? 1)
+    :                              (lb?.shieldMult    ?? 1);
+
+  // Class bonus
+  const cb = state.classBonus;
+  const classMult =
+    effectType === 'strike'    ? (cb?.strikeMod    ?? 1)
+    : effectType === 'stabilize' ? (cb?.stabilizeMod ?? 1)
+    :                              (cb?.shieldMod    ?? 1);
+
+  // Clinical-cue empowerment — additive, stabilize only, active this turn
+  const cueBonusFlat = effectType === 'stabilize' ? state.cueBonusStabilize : 0;
+
+  // ── Build rows — only include non-trivial factors ──────────────────────────
+  const rows: CalcRow[] = [];
+
+  function pushRow(label: string, value: number, kind: 'mult' | 'flat') {
+    const trivial = kind === 'mult' ? Math.abs(value - 1.0) < 0.005 : Math.abs(value) < 1;
+    if (!trivial) rows.push({ label, value, kind });
+  }
+
+  if (elementBonus > 0)          pushRow('Element advantage',  1 + elementBonus,  'mult');
+  pushRow('Hero stat',             heroStatMult,                                   'mult');
+  pushRow('Affinity match',        affinityFamilyMult,                             'mult');
+  if (hiddenDefenseMod < 0.995)   pushRow('Hidden pathology',  hiddenDefenseMod,   'mult');
+  if (corruptionResistMod < 0.995) pushRow('Enemy resistance',  corruptionResistMod, 'mult');
+  if (leaderMult !== 1.0)         pushRow('Leader bonus',      leaderMult,         'mult');
+  if (classMult !== 1.0)          pushRow('Class bonus',       classMult,          'mult');
+  if (cueBonusFlat > 0)           pushRow('Cue empowerment',   cueBonusFlat,       'flat');
+
+  // ── Estimate — assumes clinicalMod=1, castMult=1, systemMod=1 ─────────────
+  let estimated: number;
+  if (effectType === 'strike') {
+    estimated = Math.max(0, Math.round(
+      estimatedBase * (1 + elementBonus)
+      * heroStatMult * affinityFamilyMult
+      * hiddenDefenseMod * corruptionResistMod * leaderMult * classMult,
+    ));
+  } else if (effectType === 'stabilize') {
+    const core = Math.max(0,
+      estimatedBase * heroStatMult * affinityFamilyMult
+      * hiddenDefenseMod * leaderMult * classMult,
+    );
+    estimated = Math.max(0, Math.round(core + cueBonusFlat));
+  } else {
+    estimated = Math.max(0, Math.round(
+      estimatedBase * heroStatMult * affinityFamilyMult
+      * hiddenDefenseMod * leaderMult * classMult,
+    ));
+  }
+
+  const note = isRange
+    ? `Dice roll ${baseDisplay} · clinical alignment, system match & enemy resistance also apply`
+    : 'Clinical alignment, system match & enemy resistance also apply';
+
+  return { effectType, baseDisplay, estimatedBase, rows, estimated, note };
 }
