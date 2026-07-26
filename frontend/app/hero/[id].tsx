@@ -31,6 +31,7 @@ import {
   SCROLL_TIERS,
   rarityTierLabel,
   traineeForRole,
+  PROMOTION_REQUIREMENTS,
 } from "@/src/game/university";
 import { heroXpCostForLevel, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -432,6 +433,33 @@ export default function HeroProfile() {
             </View>
           </View>
         </View>
+
+        {/* Hero Shard progress chip — visible when owned and not yet at max star */}
+        {isOwned && prog.star < MAX_CERTIFICATION_STAR && (() => {
+          const req = PROMOTION_REQUIREMENTS[prog.star];
+          const shardsHave = prog.copies ?? 0;
+          const shardsNeeded = req?.shardsRequired ?? 0;
+          const pct = shardsNeeded > 0 ? Math.min(1, shardsHave / shardsNeeded) : 0;
+          const ready = shardsHave >= shardsNeeded;
+          return (
+            <View style={[styles.shardChipRow, { borderColor: ready ? accent + "60" : COLORS.border }]}>
+              <Ionicons name="diamond-outline" size={13} color={ready ? accent : COLORS.onSurfaceTertiary} />
+              <View style={{ flex: 1, gap: 3 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={[styles.shardChipLabel, { color: ready ? accent : COLORS.onSurfaceSecondary }]}>
+                    HERO SHARDS {ready ? "· Ready!" : `· Next ★${prog.star + 1}`}
+                  </Text>
+                  <Text style={[styles.shardChipCount, { color: ready ? accent : COLORS.onSurfaceTertiary }]}>
+                    {shardsHave} / {shardsNeeded}
+                  </Text>
+                </View>
+                <View style={styles.shardChipTrack}>
+                  <View style={[styles.shardChipFill, { width: `${Math.round(pct * 100)}%` as any, backgroundColor: ready ? accent : accent + "80" }]} />
+                </View>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Team toggle */}
         {isOwned && (
@@ -953,6 +981,44 @@ function EvolveTab({
         <Text style={styles.evolveBonus}>Skill power +{curBonus}%</Text>
       </View>
 
+      {/* Hero Shards — dedicated progress section */}
+      {!atMax && (
+        <View style={[styles.shardsSection, { borderColor: accent + "35" }]}>
+          <SectionHeader title="Hero Shards" icon="diamond-outline" accent={accent} />
+          <View style={styles.shardsRow}>
+            <Text style={[styles.shardsCount, { color: check.shardsOk ? accent : COLORS.onSurface }]}>
+              {shards}
+            </Text>
+            <Text style={styles.shardsOf}> / {check.shardsNeeded}</Text>
+            {check.shardsOk && (
+              <View style={[styles.shardsReadyChip, { backgroundColor: accent + "22", borderColor: accent + "60" }]}>
+                <Ionicons name="checkmark-circle" size={12} color={accent} />
+                <Text style={[styles.shardsReadyTxt, { color: accent }]}>Ready</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.shardsTrack}>
+            <View style={[
+              styles.shardsFill,
+              {
+                width: `${Math.round(Math.min(1, shards / Math.max(1, check.shardsNeeded)) * 100)}%` as any,
+                backgroundColor: check.shardsOk ? accent : accent + "99",
+              },
+            ]} />
+          </View>
+          <Text style={styles.shardsHint}>
+            {check.shardsOk
+              ? `Shard requirement met — promote now to spend ${check.shardsNeeded} shards`
+              : `${check.shardsNeeded - shards} more needed · earn from duplicate Recruitment pulls`}
+          </Text>
+          {check.req?.shardsOrTrainees && !check.shardsOk && check.trainOk && (
+            <Text style={[styles.shardsHint, { color: accent, marginTop: 2 }]}>
+              ✓ Class Trainees can substitute at this tier
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* Promotion requirements */}
       <View style={styles.detailSection}>
         <SectionHeader title="Promotion Requirements" icon="ribbon-outline" accent={accent} />
@@ -1325,6 +1391,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
+
+  /* Shard chip in identity block */
+  shardChipRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    borderWidth: 1, borderRadius: RADIUS.md,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    backgroundColor: COLORS.surfaceSecondary,
+  },
+  shardChipLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
+  shardChipCount: { fontSize: 9, fontWeight: "700" },
+  shardChipTrack: { height: 3, borderRadius: 2, backgroundColor: COLORS.border, overflow: "hidden" },
+  shardChipFill: { height: "100%", borderRadius: 2 },
+
+  /* Hero Shards section in EvolveTab */
+  shardsSection: {
+    borderWidth: 1, borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary, gap: SPACING.sm,
+  },
+  shardsRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  shardsCount: { fontSize: 26, fontWeight: "800" },
+  shardsOf: { fontSize: 14, color: COLORS.onSurfaceTertiary, fontWeight: "600", alignSelf: "flex-end", marginBottom: 3 },
+  shardsReadyChip: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 3, marginLeft: 6,
+  },
+  shardsReadyTxt: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+  shardsTrack: { height: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.border, overflow: "hidden" },
+  shardsFill: { height: "100%", borderRadius: RADIUS.pill },
+  shardsHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
 
   /* Chapter unlocked toast */
   chapterToast: {
