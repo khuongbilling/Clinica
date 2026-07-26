@@ -426,7 +426,7 @@ export const ENEMIES: Enemy[] = [
     difficulty: 1,
     startingStability: 48,
     instability: 7,
-    corruption: 85,
+    corruption: 170,
     weakSystem: 'River',
     visibleClues: [
       { id: 'c1', label: 'Sunken Eyes',   detail: 'Periorbital hollowing; significant fluid loss.', hidden: false },
