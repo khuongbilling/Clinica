@@ -384,6 +384,21 @@ export const EQUIPMENT_ITEMS: EquipmentDef[] = [
     status: "active",
     effect: { callForHelpBonus: 1 },
   },
+  // ── Push 12 — Stat-boost active item (verifies insightBonus pipeline end-to-end) ──
+  {
+    id: "seer_monocle",
+    name: "Seer's Monocle",
+    slot: "focusTool",
+    roleFamily: "seer",
+    rarity: "uncommon",
+    level: 1,
+    mainStat: "+5 Insight",
+    secondaryTrait: "Scout & Analyze skills noticeably stronger",
+    description: "A single-lens assessment monocle worn by veteran Assessors; it sharpens every diagnostic reading, boosting the hero's Insight stat directly.",
+    source: "Research Library, University exams, Ward Shift assessment chapters.",
+    status: "active",
+    effect: { insightBonus: 5 },
+  },
 ];
 
 /** Returns a neutral AggregatedEquipmentEffect (all mults = 1.00, flats = 0). */

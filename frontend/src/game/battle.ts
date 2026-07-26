@@ -56,6 +56,34 @@ import {
 import { getLeaderBonus, scaleLeaderBonus } from './leaderSpecialty';
 import type { ClassTreeBattleBonus } from './classTree';
 import { getAggregatedEquipmentEffect, type AggregatedEquipmentEffect } from './equipment';
+import type { ActionType } from './types';
+
+/**
+ * Returns the flat stat bonus from a hero's aggregated equipment effect for a
+ * given skill action type. Mirrors statForSkillType()'s skill→stat mapping.
+ *
+ * | type              | stat        | bonus field       |
+ * |-------------------|-------------|-------------------|
+ * | scout / analyze   | insight     | insightBonus      |
+ * | stabilize / support / cleanse | carePower | carePowerBonus |
+ * | strike / counter  | intervention| interventionBonus |
+ * | shield            | guard       | guardBonus        |
+ * | command           | coordination| coordinationBonus |
+ */
+function equipStatBonusForType(type: ActionType, fx: AggregatedEquipmentEffect): number {
+  switch (type) {
+    case 'scout':
+    case 'analyze':    return fx.insightBonus;
+    case 'stabilize':
+    case 'support':
+    case 'cleanse':    return fx.carePowerBonus;
+    case 'strike':
+    case 'counter':    return fx.interventionBonus;
+    case 'shield':     return fx.guardBonus;
+    case 'command':    return fx.coordinationBonus;
+    default:           return 0;
+  }
+}
 
 export interface WaveMember {
   enemy: Enemy;
@@ -709,9 +737,16 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   const castMult = CAST_QUALITY_MULTIPLIER[castQuality];
   const corrOutcome = getCorruptionOutcome(res.status);
 
-  // Push 4: heroStatMod — per-hero stat scale factor from HeroCombatStats.
-  const heroStatMult   = statToMultiplier(statForSkillType(skill.type, hero.stats));
-  const shieldStatMult = statToMultiplier(hero.stats.guard);
+  // Push 10: equipment effect for the acting hero (pre-computed at initBattle).
+  // Must be fetched before heroStatMult so stat bonuses can be included in the multiplier.
+  const equipFx = s.heroEquipmentEffects[hero.id] ?? { strikeMult: 1, stabilizeMult: 1, shieldMult: 1, itemMult: 1, cardMult: 1, scoutRevealBonus: 0, firstStabilityLossReduction: 0, callForHelpBonus: 0, insightBonus: 0, carePowerBonus: 0, interventionBonus: 0, guardBonus: 0, coordinationBonus: 0 };
+
+  // Push 4 + Push 12: heroStatMod — per-hero stat scale factor from HeroCombatStats.
+  // Push 12: equipment flat stat bonuses (insightBonus, carePowerBonus, etc.) are added to
+  // the raw stat value before converting to a multiplier, so equipped stat-boosting gear
+  // actually improves combat performance.
+  const heroStatMult   = statToMultiplier(statForSkillType(skill.type, hero.stats) + equipStatBonusForType(skill.type, equipFx));
+  const shieldStatMult = statToMultiplier(hero.stats.guard + equipFx.guardBonus);
 
   // Push 6: affinityFamilyMod — ×1.15 strong / ×0.90 weak / ×1.00 neutral.
   // Checks hero.strongAffinities / weakAffinities vs enemy.primaryAffinity +
@@ -738,8 +773,6 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   // Scale by their rarity/star before building mod bags so each bag gets the correct value.
   const lb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
   const cb = s.classBonus; // Push 11: class tree bonus
-  // Push 10: equipment effect for the acting hero (pre-computed at initBattle).
-  const equipFx = s.heroEquipmentEffects[hero.id] ?? { strikeMult: 1, stabilizeMult: 1, shieldMult: 1, itemMult: 1, cardMult: 1, scoutRevealBonus: 0, firstStabilityLossReduction: 0, callForHelpBonus: 0 };
 
   const strikeMods: SkillModifiers = {
     ...neutralModifiers(),
@@ -1782,13 +1815,20 @@ export function buildSkillCalcBreakdown(
 
   // ── Compute each modifier (mirrors applySkill bags, minus unknown pre-fire values) ──
 
-  // Hero combat stat for this effect type
+  // Push 12: equipment flat stat bonuses (mirrors applySkill logic).
+  const equipFxBreakdown = state.heroEquipmentEffects?.[hero.id] ?? {
+    insightBonus: 0, carePowerBonus: 0, interventionBonus: 0, guardBonus: 0, coordinationBonus: 0,
+  };
+
+  // Hero combat stat for this effect type + equipment stat bonus
   const stats = hero.stats;
   const heroStatMult = stats
     ? statToMultiplier(
-        effectType === 'shield'    ? stats.guard
-        : effectType === 'stabilize' ? stats.carePower
-        : stats.intervention,
+        effectType === 'shield'
+          ? stats.guard + (equipFxBreakdown.guardBonus ?? 0)
+          : effectType === 'stabilize'
+            ? stats.carePower + (equipFxBreakdown.carePowerBonus ?? 0)
+            : stats.intervention + (equipFxBreakdown.interventionBonus ?? 0),
       )
     : 1.0;
 
