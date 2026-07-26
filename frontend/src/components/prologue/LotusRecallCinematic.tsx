@@ -33,11 +33,14 @@ import { Image as ExpoImage } from "expo-image";
 import { PROLOGUE_CHARACTERS } from "../../game/prologueCharacters";
 
 const ART = {
-  battlefield:     require("../../../assets/images/tactical_battlefield.png"),
-  nightingale:     PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
-  fleming:         require("../../../assets/images/fleming_vn_bust.png"),
-  masterBai:       PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
-  formerSelf:      PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+  battlefield:      require("../../../assets/images/tactical_battlefield.png"),
+  nightingale:      PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
+  nightingaleLarge: PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait,
+  fleming:          require("../../../assets/images/fleming_vn_bust.png"),
+  flemingLarge:     PROLOGUE_CHARACTERS.FLEMING.largePortrait,
+  masterBai:        PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
+  masterBaiLarge:   PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,
+  formerSelf:       PROLOGUE_CHARACTERS.PRODIGY.avatar48,
   // Canonical full-body VN art used for the disappearing sequence — distinct
   // from the portrait crop used in dialogue bars.
   prodigyCanonical: require("../../../assets/images/prodigy_vn_canonical.png"),
@@ -45,37 +48,43 @@ const ART = {
 
 // ── Dialogue beats ────────────────────────────────────────────────────────────
 interface DialogueBeat {
-  speaker:  string;
+  speaker:      string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  portrait: any;
-  color:    string;
-  text:     string;
+  portrait:     any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  largePortrait: any;
+  color:        string;
+  text:         string;
 }
 
 const DIALOGUE_BEATS: DialogueBeat[] = [
   {
-    speaker:  "FLORENCE NIGHTINGALE",
-    portrait: ART.nightingale,
-    color:    "#E8C453",
-    text:     '"We can stabilize the others, but we cannot reach you in time!"',
+    speaker:      "FLORENCE NIGHTINGALE",
+    portrait:     ART.nightingale,
+    largePortrait: ART.nightingaleLarge,
+    color:        "#E8C453",
+    text:         '"We can stabilize the others, but we cannot reach you in time!"',
   },
   {
-    speaker:  "ALEXANDER FLEMING",
-    portrait: ART.fleming,
-    color:    "#3ECFB2",
-    text:     '"The enemy adapted to every intervention you used against the decoy."',
+    speaker:      "ALEXANDER FLEMING",
+    portrait:     ART.fleming,
+    largePortrait: ART.flemingLarge,
+    color:        "#3ECFB2",
+    text:         '"The enemy adapted to every intervention you used against the decoy."',
   },
   {
-    speaker:  "MASTER BAI",
-    portrait: ART.masterBai,
-    color:    "#D9A441",
-    text:     '"Your strength was never the problem."',
+    speaker:      "MASTER BAI",
+    portrait:     ART.masterBai,
+    largePortrait: ART.masterBaiLarge,
+    color:        "#D9A441",
+    text:         '"Your strength was never the problem."',
   },
   {
-    speaker:  "MASTER BAI",
-    portrait: ART.masterBai,
-    color:    "#D9A441",
-    text:     '"You stopped listening before the battle began."',
+    speaker:      "MASTER BAI",
+    portrait:     ART.masterBai,
+    largePortrait: ART.masterBaiLarge,
+    color:        "#D9A441",
+    text:         '"You stopped listening before the battle began."',
   },
 ];
 
@@ -389,6 +398,28 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
       ══════════════════════════════════════════════════════════════════════ */}
       {stage === "dialogue" && (
         <Pressable style={StyleSheet.absoluteFill} onPress={handleDialogueTap}>
+
+          {/* ── Floating character portrait above dialogue panel ── */}
+          <Animated.View
+            style={[styles.dlgCharWrap, { opacity: charFade, transform: [{ translateY: charSlide }] }]}
+            pointerEvents="none"
+          >
+            <ExpoImage
+              source={beat.largePortrait}
+              style={styles.dlgCharArt}
+              contentFit="contain"
+              contentPosition="bottom"
+            />
+            {/* subtle colour halo at base of character */}
+            <LinearGradient
+              colors={["transparent", `${beat.color}22`, "transparent"]}
+              locations={[0, 0.5, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.dlgCharGlow}
+            />
+          </Animated.View>
+
           <SafeAreaView style={styles.dialogueSafe}>
 
             <Animated.View style={[
@@ -640,6 +671,30 @@ const styles = StyleSheet.create({
 
   // ── Dialogue panel ────────────────────────────────────────────────────────
   dialogueSafe: { flex: 1, justifyContent: "flex-end", paddingBottom: 32 },
+
+  // Floating full-body portrait sits above the VN panel — bottom pinned above
+  // the panel so the character's face clears the dialogue box
+  dlgCharWrap: {
+    position:       "absolute",
+    bottom:         210,          // sits above the dialogue panel (~190 px tall)
+    left:           0,
+    right:          0,
+    height:         H * 0.78,
+    alignItems:     "center",
+    justifyContent: "flex-end",
+    pointerEvents:  "none",
+  } as any,
+  dlgCharArt: {
+    width:  W * 0.88,
+    height: H * 0.76,
+  },
+  dlgCharGlow: {
+    position:     "absolute",
+    bottom:       0,
+    width:        W * 0.7,
+    height:       200,
+    borderRadius: 100,
+  },
   dlgPanel: {
     marginHorizontal: 16,
     marginBottom: 10,
@@ -677,18 +732,18 @@ const styles = StyleSheet.create({
   },
 
   // ── Destabilize ───────────────────────────────────────────────────────────
-  // Portrait fills 150% of screen height, bottom-anchored so the crop line
-  // sits at the screen edge and the face is well above it.
+  // Portrait fills 300% of screen height (2× prior size), bottom-anchored so
+  // the crop line sits at the screen edge and the face is well above it.
   formerPortraitWrap: {
     position:       "absolute",
     bottom:         0,
     left:           0,
     right:          0,
-    height:         H * 1.5,
+    height:         H * 3,
     alignItems:     "center",
     justifyContent: "flex-end",
   },
-  formerPortrait: { width: W, height: H * 1.5 },
+  formerPortrait: { width: W * 2, height: H * 3 },
   auraRing: {
     position: "absolute",
     width: 230, height: 230, borderRadius: 115,
@@ -738,9 +793,9 @@ const styles = StyleSheet.create({
     bottom:         0,
     left:           0,
     right:          0,
-    height:         H * 1.5,
+    height:         H * 3,
   },
-  silPortrait: { width: W, height: H * 1.5, opacity: 0.38 },
+  silPortrait: { width: W * 2, height: H * 3, opacity: 0.38 },
   silGlowOverlay: { borderRadius: 0 },
   silHalo: {
     width: 320, height: 380, borderRadius: 160,

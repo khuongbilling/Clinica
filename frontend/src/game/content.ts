@@ -1189,11 +1189,11 @@ export const BOSS_SILENT_INFARCT: Enemy = {
   name: 'The Silent Infarct',
   realWorld: 'Atypical, hidden-presentation myocardial infarction',
   primarySystem: 'River',
-  difficulty: 5,
-  startingStability: 55,
-  instability: 14,
-  corruption: 338,
-  stabilityResistance: 0.9, // shrugs off nearly all stabilization — this fight cannot be held steady
+  difficulty: 10,
+  startingStability: 18,
+  instability: 55,
+  corruption: 3200,
+  stabilityResistance: 0.97, // chapter 10 apex — every stabilize attempt barely registers
   visibleClues: [
     { id: 'c1', label: 'Vague Fatigue', detail: 'Patient reports "just feeling off." Nothing specific.', hidden: false },
     { id: 'c2', label: 'Vitals Look Fine', detail: 'BP and HR within normal range. For now.', hidden: false },
