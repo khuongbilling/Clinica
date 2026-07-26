@@ -283,7 +283,7 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
         <ExpoImage
           source={speaker.art}
           style={s.charArt}
-          contentFit="contain"
+          contentFit="cover"
           contentPosition="bottom"
         />
       </Animated.View>
