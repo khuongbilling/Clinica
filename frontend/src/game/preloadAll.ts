@@ -1,8 +1,8 @@
 // Single entry point that warms EVERY image the game needs — heroes, realm,
-// battle stages, enemies, and loading art — so gameplay never paints a blank
-// frame waiting on a large PNG to decode. Called from the full-page preloader
-// screen after the player taps "Start Game". Idempotent: the work runs once and
-// subsequent callers await the same promise.
+// battle stages, enemies, prologue VN art, and loading art — so gameplay
+// never paints a blank frame waiting on a large PNG to decode. Called from
+// the full-page preloader screen after the player taps "Start Game".
+// Idempotent: the work runs once and subsequent callers await the same promise.
 import { prefetchModules, REALM_IMAGE_MODULES } from "@/src/game/realmAssets";
 import { preloadTabAssets } from "@/src/game/tabAssets";
 import { HERO_SPRITE_MODULES } from "@/src/components/HeroSprites";
@@ -11,8 +11,12 @@ import { HERO_BATTLE_SPRITE_MODULES } from "@/src/components/HeroBattleSprites";
 import { WD_SPRITE_MODULES } from "@/src/components/WardDefenseSprites";
 import { BATTLE_IMAGE_MODULES } from "@/src/game/battleAssets";
 import { LOADING_ART } from "@/src/game/loadingArt";
+import { PROLOGUE_IMAGE_MODULES } from "@/src/game/prologueCharacters";
 
 const ALL_MODULES: number[] = [
+  // Prologue VN art + battle sprites — loaded first so opening scenes are
+  // guaranteed to paint immediately without waiting on other hero assets.
+  ...(PROLOGUE_IMAGE_MODULES as unknown as number[]),
   ...(HERO_SPRITE_MODULES as unknown as number[]),
   ...(HERO_PORTRAIT_MODULES as unknown as number[]),
   ...(HERO_BATTLE_SPRITE_MODULES as unknown as number[]),

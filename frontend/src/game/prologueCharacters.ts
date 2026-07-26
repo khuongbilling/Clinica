@@ -21,17 +21,31 @@ export interface PrologueCharacter {
   temporary:     boolean;
 }
 
-const PRODIGY_LARGE          = require("../../assets/images/prodigy_vn_canonical.png");
+const PRODIGY_PORTRAIT       = require("../../assets/images/the_prodigy_portrait.png");
 const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
 const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_bust.png");
 const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
 const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
 const FLEMING_BUST           = require("../../assets/images/fleming_vn_bust.png");
 
-const NIGHTINGALE_BATTLE = require("../../assets/heroes/battle/prologue_nightingale.png");
-const FLEMING_BATTLE     = require("../../assets/heroes/battle/prologue_fleming.png");
+const NIGHTINGALE_BATTLE = require("../../assets/images/nightingale_battle_sprite.png");
+const FLEMING_BATTLE     = require("../../assets/images/fleming_battle_sprite.png");
 const MASTER_BAI_BATTLE  = require("../../assets/images/master_bai_vn.png");
-const PRODIGY_BATTLE     = require("../../assets/heroes/battle/the_prodigy.png");
+const PRODIGY_BATTLE     = require("../../assets/images/prodigy_battle_sprite.png");
+
+/** All prologue art — included in the preloader so opening scenes never wait on a cold fetch. */
+export const PROLOGUE_IMAGE_MODULES: readonly number[] = [
+  PRODIGY_PORTRAIT,
+  MASTER_BAI_ART,
+  NIGHTINGALE_LARGE,
+  NIGHTINGALE_BUST,
+  FLEMING_LARGE,
+  FLEMING_BUST,
+  NIGHTINGALE_BATTLE,
+  FLEMING_BATTLE,
+  MASTER_BAI_BATTLE,
+  PRODIGY_BATTLE,
+];
 
 export const PROLOGUE_CHARACTERS = {
   PRODIGY: {
@@ -39,8 +53,8 @@ export const PROLOGUE_CHARACTERS = {
     name:          "The Prodigy",
     color:         "#E8354A",
     barColor:      "rgba(28,5,8,0.93)",
-    largePortrait: PRODIGY_LARGE,
-    avatar48:      PRODIGY_LARGE,
+    largePortrait: PRODIGY_PORTRAIT,
+    avatar48:      PRODIGY_PORTRAIT,
     battleSprite:  PRODIGY_BATTLE,
     palette:       "white, gold, jade, crimson",
     role:          "Legendary Clinician Prodigy — Pre-Recall",

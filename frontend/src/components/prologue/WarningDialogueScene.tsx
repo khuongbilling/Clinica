@@ -107,7 +107,7 @@ const BEATS: Beat[] = [
 ];
 
 const CHARS_PER_SEC = 32;
-const BAR_HEIGHT    = 200;
+const BAR_HEIGHT    = 220;
 
 interface Props { onComplete: () => void }
 
@@ -252,9 +252,9 @@ export default function WarningDialogueScene({ onComplete }: Props) {
         />
       </Animated.View>
 
-      {/* ── Character portrait — right side, grounded behind bar ──────── */}
+      {/* ── Character portrait — right, bottom-anchored, face above dialogue bar ── */}
       <Animated.View
-        style={[s.charWrap, { bottom: 0, opacity: charFade }]}
+        style={[s.charWrap, { opacity: charFade }]}
         pointerEvents="none"
       >
         <ExpoImage source={speaker.art} style={s.charArt} contentFit="contain" contentPosition="bottom" />
@@ -313,15 +313,23 @@ export default function WarningDialogueScene({ onComplete }: Props) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#040810" },
 
+  // Portrait container: full-width, full-height, bottom-anchored.
+  // The image is sized so the head is always well above the dialogue bar.
   charWrap: {
     position:       "absolute",
+    bottom:         0,
     right:          0,
-    alignItems:     "flex-end",
-    justifyContent: "flex-end",
-    width:          W * 0.80,
+    left:           0,
     height:         H,
+    alignItems:     "center",
+    justifyContent: "flex-end",
   },
-  charArt: { width: "100%", height: "100%" },
+  // Explicit large dimensions ensure the portrait fills enough vertical space
+  // that the face clears the BAR_HEIGHT even on short devices.
+  charArt: {
+    width:  W * 0.92,
+    height: H * 0.88,
+  },
 
   bar: {
     position:       "absolute",
