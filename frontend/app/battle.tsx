@@ -1118,7 +1118,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           <View style={{ flex: 1, gap: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text style={styles.enemyKicker} numberOfLines={1}>{enemy.realWorld.toUpperCase()}</Text>
-              {isTraining && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
+              {isTraining && !isPrologueTutorial && <View style={styles.trainingTag}><Text style={styles.trainingTxt}>TRAINING</Text></View>}
             </View>
             <Text style={styles.enemyName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{enemy.name}</Text>
             <View style={styles.systemPills}>

@@ -52,7 +52,7 @@ const ART = {
   nightingale:       require("../../../assets/images/nightingale_vn_bust.png"),
   fleming:           require("../../../assets/images/fleming_vn_bust.png"),
   masterBai:         require("../../../assets/images/master_bai_vn.png"),
-  spectrePortrait:   require("../../../assets/images/corrupted_water_spectre.png"),
+  spectrePortrait:   require("../../../assets/enemies/dehydration_specter.png"),
   prodigySprite:     require("../../../assets/images/prodigy_battle_sprite.png"),
   nightingaleSprite: require("../../../assets/images/nightingale_battle_sprite.png"),
   flemingSprite:     require("../../../assets/images/fleming_battle_sprite.png"),
@@ -646,7 +646,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
             </View>
             <View style={styles.enemyMiniCard}>
               <ExpoImage source={ART.spectrePortrait} style={styles.enemyMiniPortrait} contentFit="contain" />
-              <Text style={styles.enemyMiniName}>WATER SPECTRE</Text>
+              <Text style={styles.enemyMiniName}>DEHYDRATION SPECTER</Text>
             </View>
           </View>
           <View style={styles.stepRow}>
