@@ -355,6 +355,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.seen_call_tutorial == null) {
     out = { ...out, seen_call_tutorial: false };
   }
+  // Guard: codex_shards must always be a finite non-negative integer.
+  // Old saves may have undefined or NaN here, which would silently corrupt
+  // wallet arithmetic (e.g. recruitOnce/recruitTen shard refund additions).
+  if (!Number.isFinite(out.codex_shards) || out.codex_shards == null) {
+    out = { ...out, codex_shards: 0 };
+  }
   return out;
 }
 
@@ -1019,7 +1025,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const result = roll(new Set(player.heroes_owned));
     const { heroesOwned, progression } = applyRecruitResultToProgression(player.hero_progression, player.heroes_owned, result);
     // Deduct summon cost; refund DUPLICATE_REFUND codex shards when a duplicate hero is pulled.
-    let nextShards = (player.codex_shards || 0) - SUMMON_COST + (result.kind === 'shards' ? (result.codexShardRefund || 0) : 0);
+    let nextShards = Math.max(0, Math.round((player.codex_shards || 0) - SUMMON_COST + (result.kind === 'shards' ? (result.codexShardRefund || 0) : 0)));
     let nextTrainees = { ...(player.class_trainees || {}) };
     let nextCredits = player.university_credits || 0;
     let nextHistory = player.summon_history || [];
@@ -1109,7 +1115,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const tutorialRefund = result.kind === 'shards' ? (result.codexShardRefund || 0) : 0;
     await updateState(foldDaily({
       ...player,
-      codex_shards: (player.codex_shards || 0) + tutorialRefund,
+      codex_shards: Math.max(0, Math.round((player.codex_shards || 0) + tutorialRefund)),
       heroes_owned: heroesOwned,
       hero_progression: progression,
       summon_history: nextHistory,
@@ -1155,7 +1161,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     await updateState(foldDaily({
       ...player,
-      codex_shards: (player.codex_shards || 0) - cost + codexRefund,
+      codex_shards: Math.max(0, Math.round((player.codex_shards || 0) - cost + codexRefund)),
       heroes_owned: heroesOwned,
       hero_progression: progression,
       class_trainees: nextTrainees,
