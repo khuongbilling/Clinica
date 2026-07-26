@@ -1018,7 +1018,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     const result = roll(new Set(player.heroes_owned));
     const { heroesOwned, progression } = applyRecruitResultToProgression(player.hero_progression, player.heroes_owned, result);
-    let nextShards = (player.codex_shards || 0) - SUMMON_COST;
+    // Deduct summon cost; refund DUPLICATE_REFUND codex shards when a duplicate hero is pulled.
+    let nextShards = (player.codex_shards || 0) - SUMMON_COST + (result.kind === 'shards' ? (result.codexShardRefund || 0) : 0);
     let nextTrainees = { ...(player.class_trainees || {}) };
     let nextCredits = player.university_credits || 0;
     let nextHistory = player.summon_history || [];
@@ -1064,9 +1065,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else if (result.entry) {
       nextHistory = [...nextHistory, { hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() }];
     }
+    // Refund codex shards for duplicate pulls even on the free path — the duplicate
+    // message promises shards were refunded, so we must actually grant them.
+    const freeRefund = result.kind === 'shards' ? (result.codexShardRefund || 0) : 0;
     await updateState(foldDaily({
       ...player,
       last_free_summon_at: new Date().toISOString(),
+      codex_shards: (player.codex_shards || 0) + freeRefund,
       heroes_owned: heroesOwned,
       hero_progression: progression,
       class_trainees: nextTrainees,
@@ -1100,10 +1105,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const { heroesOwned, progression } = applyRecruitResultToProgression(player.hero_progression, player.heroes_owned, result);
     const nextHistory = [...(player.summon_history || [])];
     if (result.entry) {
-      nextHistory.push({ hero: result.entry.name, rarity: result.entry.rarity, duplicate: false, date: new Date().toISOString() });
+      nextHistory.push({ hero: result.entry.name, rarity: result.entry.rarity, duplicate: result.kind === 'shards', date: new Date().toISOString() });
     }
+    // Apply codex shard refund if the fallback path returned a duplicate result.
+    const tutorialRefund = result.kind === 'shards' ? (result.codexShardRefund || 0) : 0;
     await updateState(foldDaily({
       ...player,
+      codex_shards: (player.codex_shards || 0) + tutorialRefund,
       heroes_owned: heroesOwned,
       hero_progression: progression,
       summon_history: nextHistory,
@@ -1130,10 +1138,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     let nextTrainees = { ...(player.class_trainees || {}) };
     let nextCredits = player.university_credits || 0;
     let nextHistory = player.summon_history || [];
+    let codexRefund = 0;
     for (const result of results) {
       const applied = applyRecruitResultToProgression(progression, heroesOwned, result);
       heroesOwned = applied.heroesOwned;
       progression = applied.progression;
+      if (result.kind === 'shards') {
+        // Accumulate codex shard refund for each duplicate pull in the batch.
+        codexRefund += result.codexShardRefund || 0;
+      }
       if (result.kind === 'trainee' && result.trainee) {
         nextTrainees[result.trainee.id] = (nextTrainees[result.trainee.id] || 0) + (result.traineeAmount || 0);
       } else if (result.kind === 'credits') {
@@ -1144,7 +1157,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     await updateState(foldDaily({
       ...player,
-      codex_shards: (player.codex_shards || 0) - cost,
+      codex_shards: (player.codex_shards || 0) - cost + codexRefund,
       heroes_owned: heroesOwned,
       hero_progression: progression,
       class_trainees: nextTrainees,

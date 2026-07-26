@@ -1,6 +1,6 @@
 import { HeroRole, PlayerState } from './types';
 import { HeroProgress, defaultProgress, getHeroShards } from './evolution';
-import { FOUNDATION_BANNER, GachaEntry } from './gacha';
+import { FOUNDATION_BANNER, GachaEntry, DUPLICATE_REFUND } from './gacha';
 import { playerLevelFromXp } from './progression';
 
 // ────────────────────────────────────────────────────────────
@@ -365,7 +365,10 @@ export interface RecruitResult {
   kind: RecruitKind;
   entry?: GachaEntry;
   isNewHero?: boolean;
+  /** Per-hero evolution shards (copies) awarded for a duplicate pull. */
   shardAmount?: number;
+  /** Codex Shards (summoning currency) refunded as consolation for a duplicate. */
+  codexShardRefund?: number;
   trainee?: TraineeDef;
   traineeAmount?: number;
   creditsAmount?: number;
@@ -383,7 +386,14 @@ function rollHeroOutcome(ownedHeroIds: Set<string>): RecruitResult {
   const duplicate = ownedHeroIds.has(entry.heroId);
   if (duplicate) {
     const shardAmount = 10 + entry.rarity * 5;
-    return { kind: 'shards', entry, shardAmount, message: `Duplicate ${entry.name} converted into ${shardAmount} Hero Shards!` };
+    const codexShardRefund = DUPLICATE_REFUND;
+    return {
+      kind: 'shards',
+      entry,
+      shardAmount,
+      codexShardRefund,
+      message: `Duplicate ${entry.name}! Converted into ${shardAmount} Hero Shards + ${codexShardRefund} Codex Shards refunded.`,
+    };
   }
   return { kind: 'hero', entry, isNewHero: true, message: `${entry.name} enrolled at Clinica University as a 1-Star healer!` };
 }

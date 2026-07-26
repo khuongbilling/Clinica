@@ -703,15 +703,20 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
           <View style={revealStyles.infoBlock}>
             <View style={revealStyles.roleRow}>
               <Text style={[revealStyles.roleBracket, { color: rc + "AA" }]}>⟦</Text>
-              <Text style={[revealStyles.roleTxt, { color: rc }]}>+{result.shardAmount} SHARDS</Text>
+              <Text style={[revealStyles.roleTxt, { color: rc }]}>+{result.shardAmount} HERO SHARDS</Text>
               <Text style={[revealStyles.roleBracket, { color: rc + "AA" }]}>⟧</Text>
             </View>
+            {(result.codexShardRefund ?? 0) > 0 && (
+              <View style={[revealStyles.badge, { borderColor: "#4FD8C480", backgroundColor: "#4FD8C418", alignSelf: "center" }]}>
+                <Text style={[revealStyles.badgeTxt, { color: "#4FD8C4" }]}>+{result.codexShardRefund} Codex Shards refunded</Text>
+              </View>
+            )}
             <Text style={[revealStyles.heroName, { color: COLORS.onSurface, textAlign: "center" }]}>{result.entry.name}</Text>
             <View style={[revealStyles.badge, { borderColor: rc + "60", backgroundColor: rc + "18", alignSelf: "center" }]}>
               <Text style={[revealStyles.badgeTxt, { color: rc }]}>{rLabel} · Already Enrolled</Text>
             </View>
             <Text style={revealStyles.desc}>
-              You already have this healer on your ward team. The duplicate was converted into Hero Shards — use them at the Training Hall to raise their Certification Star and unlock higher power.
+              You already have this healer on your ward team. The duplicate was converted into Hero Shards for evolution, and {result.codexShardRefund ?? 25} Codex Shards were refunded. Use Hero Shards at the Training Hall to raise their Certification Star.
             </Text>
           </View>
         </ScrollView>
@@ -820,7 +825,11 @@ function ResultTile({ result }: { result: RecruitResult }) {
     return (
       <View style={[styles.tile, { borderColor: rc + "70" }]}>
         <Text style={[styles.tileName, { color: rc }]} numberOfLines={1}>{result.entry!.name}</Text>
-        <Text style={styles.tileMeta}>{result.kind === "hero" ? "NEW" : `+${result.shardAmount} shards`}</Text>
+        <Text style={styles.tileMeta}>
+          {result.kind === "hero"
+            ? "NEW"
+            : `+${result.shardAmount} Hero Shards${(result.codexShardRefund ?? 0) > 0 ? ` +${result.codexShardRefund} refund` : ""}`}
+        </Text>
       </View>
     );
   }
