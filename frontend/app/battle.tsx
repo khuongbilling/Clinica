@@ -17,7 +17,7 @@ import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type ChainRole } from "@/src/game/clinical";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
-import { getBattleBaseXp, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
+import { getBattleBaseXp, getBattleScrollDrop, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
 import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { computeEpidemicTokens } from "@/src/game/worldEvent";
 import { useTestSession } from "@/src/game/testSession";
@@ -955,6 +955,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       if (!isTraining && !!enemy.worldBoss) {
         inventoryDelta["World Boss Relic Shard"] = (inventoryDelta["World Boss Relic Shard"] || 0) + 1;
       }
+      // Experience Scroll drop — 2★+ wins reward scroll(s) that fuel the
+      // Training Hall. Training and prologue battles are excluded so players
+      // can't farm scrolls through free practice runs.
+      // Star rating isn't known until computeStars below, so we use a
+      // sentinel and patch the delta after starResult is computed.
+      // (Patched at the "scroll patch" comment below, after starResult.)
 
       // Player EXP: separate progression pool from Hero EXP, scaled by
       // clinical performance (stars), difficulty, first-clear and Clinical
@@ -1018,6 +1024,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         isBoss: isBossEnemy,
         isFirstClear,
       });
+
+      // Scroll patch — tiered Experience Scroll drops based on star rating and
+      // boss status. Training and prologue battles are excluded (not farmable).
+      if (!isTraining && !isPrologueTutorial) {
+        for (const { key, count } of getBattleScrollDrop(starResult.stars, isBossEnemy)) {
+          inventoryDelta[key] = (inventoryDelta[key] || 0) + count;
+        }
+      }
 
       const rewardsResult = await applyRewards({
         xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, epidemicTokens: epidemicTokensEarned, inventoryDelta,

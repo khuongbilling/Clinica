@@ -10,9 +10,14 @@ import { HEROES } from "@/src/game/content";
 import { getProgress } from "@/src/game/evolution";
 import {
   levelCapForStar,
+  heroEffectiveLevelCap,
+  canUseScroll,
+  SCROLL_TIERS,
   MAX_CERTIFICATION_STAR,
   checkPromotion,
+  type ScrollTier,
 } from "@/src/game/university";
+import { heroXpCostForLevel, playerLevelFromXp } from "@/src/game/progression";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { ROUTES } from "@/src/game/routes";
@@ -35,19 +40,29 @@ function ReqRow({ label, have, need }: { label: string; have: number; need: numb
     </View>
   );
 }
-
 const rr = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 3 },
   label: { flex: 1, color: COLORS.onSurfaceSecondary, fontSize: 11 },
   count: { fontSize: 11, fontWeight: "700" },
 });
 
+// ── Scroll tier rarity colors ────────────────────────────────────────────────
+const RARITY_BG: Record<string, string> = {
+  Common:   "#94A3B820",
+  Uncommon: "#34D39920",
+  Rare:     "#60A5FA20",
+  Epic:     "#D4AF3720",
+};
+
 // ── Main screen ──────────────────────────────────────────────────────────────
 export default function TrainingHallScreen() {
   const router = useRouter();
-  const { player, trainHero, promoteHeroCert } = usePlayer();
+  const { player, trainHero, promoteHeroCert, purchaseItem } = usePlayer();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyTier, setBusyTier] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const [buyingTier, setBuyingTier] = useState<string | null>(null);
+  const [buyFeedback, setBuyFeedback] = useState<string | null>(null);
 
   if (!player) {
     return (
@@ -59,13 +74,22 @@ export default function TrainingHallScreen() {
 
   const owned = HEROES.filter((h) => player.heroes_owned.includes(h.id));
   const uc = player.university_credits ?? 0;
+  const inv = player.inventory ?? {};
+  const crowns = player.crowns ?? 0;
+  const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
 
-  const onTrain = async (heroId: string) => {
+  // Total scroll count across all tiers (for bottom bar)
+  const totalScrolls = SCROLL_TIERS.reduce((sum, t) => sum + (inv[t.key] ?? 0), 0);
+
+  const onTrain = async (heroId: string, tierKey: string) => {
     if (busyId) return;
+    const key = `${heroId}::${tierKey}`;
     setBusyId(heroId);
-    const res = await trainHero(heroId);
+    setBusyTier(tierKey);
+    const res = await trainHero(heroId, tierKey);
     setFeedback((f) => ({ ...f, [heroId]: res.message }));
     setBusyId(null);
+    setBusyTier(null);
   };
 
   const onPromote = async (heroId: string) => {
@@ -74,6 +98,15 @@ export default function TrainingHallScreen() {
     const res = await promoteHeroCert(heroId);
     setFeedback((f) => ({ ...f, [heroId]: res.message }));
     setBusyId(null);
+  };
+
+  const onBuyScroll = async (tier: ScrollTier) => {
+    if (buyingTier) return;
+    setBuyingTier(tier.key);
+    const res = await purchaseItem(tier.key, tier.crownCost, 1);
+    setBuyFeedback(res.ok ? `Purchased 1 ${tier.label}!` : res.message);
+    setTimeout(() => setBuyFeedback(null), 3000);
+    setBuyingTier(null);
   };
 
   return (
@@ -85,16 +118,89 @@ export default function TrainingHallScreen() {
         </Pressable>
         <Text style={styles.kicker}>TRAINING HALL</Text>
         <Text style={styles.title}>Level Up Your Heroes</Text>
-        <Text style={styles.sub}>Training is free. Certification Star promotion costs University Credits.</Text>
-        <UniversityCreditsBadge amount={uc} testID="training-credits-badge" />
+        <View style={styles.headerMeta}>
+          <View style={styles.metaChip}>
+            <Ionicons name="person-circle-outline" size={13} color={COLORS.brand} />
+            <Text style={styles.metaLabel}>Player Lv</Text>
+            <Text style={[styles.metaValue, { color: COLORS.brand }]}>{playerLevel}</Text>
+          </View>
+          <View style={styles.metaChip}>
+            <Ionicons name="document-text-outline" size={13} color="#FCD34D" />
+            <Text style={styles.metaLabel}>Scrolls</Text>
+            <Text style={[styles.metaValue, { color: "#FCD34D" }]}>{totalScrolls}</Text>
+          </View>
+          <UniversityCreditsBadge amount={uc} testID="training-credits-badge" />
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* How it works */}
         <View style={styles.loopBox} testID="training-loop-explainer">
           <Text style={styles.loopTitle}>HOW HERO GROWTH WORKS</Text>
-          <Text style={styles.loopLine}>1. Train here for FREE — each session grants +1 Hero Level.</Text>
-          <Text style={styles.loopLine}>2. Training stops at the level cap set by the hero's Certification Star.</Text>
-          <Text style={styles.loopLine}>3. When the cap is reached, promote the star here — costs Credits + Shards/Trainees.</Text>
+          <Text style={styles.loopLine}>
+            <Text style={styles.loopBold}>Battle XP — </Text>
+            Heroes gain XP from battles they join. Higher contribution (stabilizes, reveals, actions) earns more.
+          </Text>
+          <Text style={styles.loopLine}>
+            <Text style={styles.loopBold}>Experience Scrolls — </Text>
+            Use a scroll here to inject XP instantly. Rarer scrolls give more. Earn them from battle clears or buy with Crowns.
+          </Text>
+          <Text style={styles.loopLine}>
+            <Text style={styles.loopBold}>Certification Stars — </Text>
+            Each hero levels freely within their current ★ cap. Reach Player Level {`{N}`} to unlock promotion to {`{N}`}★.
+          </Text>
+          <Text style={styles.loopLine}>
+            <Text style={styles.loopBold}>Promotion — </Text>
+            When a hero hits their star cap, spend Hero Shards + Credits to advance to the next Certification Star.
+          </Text>
+        </View>
+
+        {/* Scroll shop — all 4 tiers */}
+        <View style={styles.shopSection}>
+          <Text style={styles.shopTitle}>SCROLL SHOP</Text>
+          <Text style={styles.shopSub}>Your Crowns: {crowns.toLocaleString()}</Text>
+          {buyFeedback && <Text style={styles.buyFeedback}>{buyFeedback}</Text>}
+          {SCROLL_TIERS.map((tier) => {
+            const count = inv[tier.key] ?? 0;
+            const canAfford = crowns >= tier.crownCost;
+            const isBuying = buyingTier === tier.key;
+            return (
+              <View key={tier.key} style={[styles.shopRow, { backgroundColor: RARITY_BG[tier.rarity] }]}>
+                <View style={styles.shopLeft}>
+                  <Ionicons name={tier.iconName as any} size={20} color={tier.color} />
+                  <View>
+                    <View style={styles.shopNameRow}>
+                      <Text style={[styles.shopName, { color: tier.color }]}>{tier.label}</Text>
+                      <View style={[styles.rarityBadge, { borderColor: tier.color + "50" }]}>
+                        <Text style={[styles.rarityTxt, { color: tier.color }]}>{tier.rarity}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.shopXp}>+{tier.xp} Hero XP per use</Text>
+                  </View>
+                </View>
+                <View style={styles.shopRight}>
+                  <View style={[styles.countBubble, { borderColor: tier.color + "60" }]}>
+                    <Text style={[styles.countTxt, { color: tier.color }]}>{count}</Text>
+                  </View>
+                  <Pressable
+                    style={[styles.buyBtn, (!canAfford || isBuying) && styles.buyBtnDisabled]}
+                    onPress={() => onBuyScroll(tier)}
+                    disabled={!canAfford || isBuying}
+                    testID={`training-buy-${tier.key}`}
+                  >
+                    <Ionicons name="diamond-outline" size={11} color={!canAfford ? COLORS.onSurfaceTertiary : "#fff"} />
+                    <Text style={[styles.buyBtnTxt, !canAfford && { color: COLORS.onSurfaceTertiary }]}>
+                      {isBuying ? "…" : tier.crownCost}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
+          <Text style={styles.dropHint}>
+            Drop rates: 1★ → Common · 2★ → Uncommon · 3★ → Rare · Boss 3★ → Epic
+          </Text>
         </View>
 
         {owned.length === 0 && (
@@ -111,15 +217,21 @@ export default function TrainingHallScreen() {
 
         {owned.map((h) => {
           const prog = getProgress(player.hero_progression, h.id);
-          const cap = levelCapForStar(prog.star);
+          const starCap = levelCapForStar(prog.star);
+          const effectiveCap = starCap; // level cap is now purely star-based
           const level = prog.level ?? 1;
-          const pct = Math.min(1, level / cap);
+          const xpBanked = prog.xp ?? 0;
+          const xpNeeded = heroXpCostForLevel(level);
+          const xpPct = level >= effectiveCap ? 1 : Math.min(1, xpBanked / xpNeeded);
+          const levelPct = Math.min(1, level / effectiveCap);
           const accent = ELEMENT_COLORS[h.element] ?? COLORS.brand;
-          const atCap = level >= cap;
+          const starCapped = level >= starCap;
+          const atCap = level >= effectiveCap;
           const atMaxStar = prog.star >= MAX_CERTIFICATION_STAR;
           const isBusy = busyId === h.id;
+          const canScroll = canUseScroll(prog, playerLevel);
 
-          // Compute promotion eligibility whenever at cap and not max star
+          // Certification promotion check
           const promCheck = (atCap && !atMaxStar)
             ? checkPromotion(h.role, prog, player)
             : null;
@@ -133,37 +245,79 @@ export default function TrainingHallScreen() {
               </View>
               <Text style={styles.cardRole}>{h.role} · {h.element}</Text>
 
-              {/* Level bar */}
+              {/* Broad level bar */}
               <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${pct * 100}%`, backgroundColor: accent }]} />
+                <View style={[styles.barFill, { width: `${levelPct * 100}%`, backgroundColor: accent + "88" }]} />
               </View>
-              <Text style={styles.levelTxt}>Level {level} / {cap}</Text>
+              <Text style={styles.levelTxt}>
+                Level {level} / {effectiveCap}
+                <Text style={styles.gateTxt}> (★{prog.star} cap)</Text>
+              </Text>
 
-              {/* Train button — only shown when not at cap */}
+              {/* Fine XP bar within current level */}
               {!atCap && (
-                <Pressable
-                  onPress={() => onTrain(h.id)}
-                  disabled={isBusy}
-                  style={[styles.trainBtn, { backgroundColor: isBusy ? accent + "66" : accent }]}
-                  testID={`training-train-btn-${h.id}`}
-                >
-                  <Ionicons name="school-outline" size={14} color={COLORS.surface} />
-                  <Text style={[styles.trainBtnTxt, { color: COLORS.surface }]}>
-                    {isBusy ? "Training…" : "Train (+1 Level)"}
-                  </Text>
-                </Pressable>
+                <>
+                  <View style={styles.xpTrack}>
+                    <View style={[styles.xpFill, { width: `${xpPct * 100}%`, backgroundColor: accent }]} />
+                  </View>
+                  <Text style={styles.xpTxt}>{xpBanked} / {xpNeeded} XP to Level {level + 1}</Text>
+                </>
               )}
 
-              {/* Fully maxed */}
-              {atCap && atMaxStar && (
-                <View style={styles.maxRow}>
-                  <Ionicons name="trophy-outline" size={14} color={accent} />
-                  <Text style={[styles.maxTxt, { color: accent }]}>Fully certified — max star and level cap reached.</Text>
+              {/* Scroll train buttons — one row per tier that has stock */}
+              {canScroll && (
+                <View style={styles.trainSection}>
+                  <Text style={styles.trainLabel}>USE A SCROLL</Text>
+                  <View style={styles.trainTierRow}>
+                    {SCROLL_TIERS.map((tier) => {
+                      const count = inv[tier.key] ?? 0;
+                      const isThisBusy = isBusy && busyTier === tier.key;
+                      const disabled = isBusy || count < 1;
+                      return (
+                        <Pressable
+                          key={tier.key}
+                          onPress={() => onTrain(h.id, tier.key)}
+                          disabled={disabled}
+                          style={[
+                            styles.tierBtn,
+                            { borderColor: count > 0 ? tier.color + "70" : COLORS.border },
+                            disabled && styles.tierBtnDisabled,
+                          ]}
+                          testID={`training-train-${h.id}-${tier.key}`}
+                        >
+                          <Ionicons
+                            name={tier.iconName as any}
+                            size={13}
+                            color={count > 0 ? tier.color : COLORS.onSurfaceTertiary}
+                          />
+                          <Text style={[styles.tierXp, { color: count > 0 ? tier.color : COLORS.onSurfaceTertiary }]}>
+                            {isThisBusy ? "…" : `+${tier.xp}`}
+                          </Text>
+                          <View style={[styles.tierCountBubble, { backgroundColor: count > 0 ? tier.color + "25" : COLORS.surfaceTertiary }]}>
+                            <Text style={[styles.tierCountTxt, { color: count > 0 ? tier.color : COLORS.onSurfaceTertiary }]}>
+                              {count}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {totalScrolls === 0 && (
+                    <Text style={styles.noScrollHint}>Earn scrolls from battle clears or buy above</Text>
+                  )}
                 </View>
               )}
 
-              {/* Certification promotion section */}
-              {atCap && !atMaxStar && promCheck && (
+              {/* Star cap — fully certified */}
+              {starCapped && atMaxStar && (
+                <View style={styles.maxRow}>
+                  <Ionicons name="trophy-outline" size={14} color={accent} />
+                  <Text style={[styles.maxTxt, { color: accent }]}>Fully certified — max star and level reached.</Text>
+                </View>
+              )}
+
+              {/* Certification promotion */}
+              {atCap && !atMaxStar && promCheck !== null && (
                 <View style={[styles.promoteBox, { borderColor: accent + "44" }]}>
                   <View style={styles.promoteHeader}>
                     <Ionicons name="arrow-up-circle-outline" size={15} color={accent} />
@@ -172,16 +326,10 @@ export default function TrainingHallScreen() {
                     </Text>
                   </View>
                   <Text style={styles.promoteCaption}>
-                    Raises the level cap to {levelCapForStar(prog.star + 1)}. Costs Credits + materials.
+                    Raises the star cap to Level {levelCapForStar(prog.star + 1)}. Costs Credits + materials.
                   </Text>
-
-                  {/* Requirements */}
                   <View style={styles.reqBlock}>
-                    <ReqRow
-                      label={`Hero Level ${promCheck.levelNeeded}`}
-                      have={promCheck.level}
-                      need={promCheck.levelNeeded}
-                    />
+                    <ReqRow label={`Hero Level ${promCheck.levelNeeded}`} have={promCheck.level} need={promCheck.levelNeeded} />
                     {promCheck.req?.shardsOrTrainees ? (
                       <ReqRow
                         label={`Hero Shards OR ${promCheck.trainee.label}s`}
@@ -190,26 +338,12 @@ export default function TrainingHallScreen() {
                       />
                     ) : (
                       <>
-                        <ReqRow
-                          label={`Hero Shards (${promCheck.shardsNeeded} needed)`}
-                          have={promCheck.shardsHave}
-                          need={promCheck.shardsNeeded}
-                        />
-                        <ReqRow
-                          label={`${promCheck.trainee.label}s (${promCheck.trainNeeded} needed)`}
-                          have={promCheck.trainHave}
-                          need={promCheck.trainNeeded}
-                        />
+                        <ReqRow label={`Hero Shards (${promCheck.shardsNeeded} needed)`} have={promCheck.shardsHave} need={promCheck.shardsNeeded} />
+                        <ReqRow label={`${promCheck.trainee.label}s (${promCheck.trainNeeded} needed)`} have={promCheck.trainHave} need={promCheck.trainNeeded} />
                       </>
                     )}
-                    <ReqRow
-                      label={`University Credits`}
-                      have={promCheck.creditsHave}
-                      need={promCheck.creditsNeeded}
-                    />
+                    <ReqRow label="University Credits" have={promCheck.creditsHave} need={promCheck.creditsNeeded} />
                   </View>
-
-                  {/* Missing list or promote button */}
                   {!promCheck.eligible ? (
                     <View style={styles.missingBox}>
                       {promCheck.missing.map((m, i) => (
@@ -242,19 +376,21 @@ export default function TrainingHallScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Sticky bottom credits bar */}
+      {/* Sticky bottom bar */}
       <View style={styles.creditsBar}>
-        <View style={styles.creditChip}>
-          <Ionicons name="diamond-outline" size={13} color="#D4AF37" />
-          <Text style={styles.creditLabel}>University Credits</Text>
-          <Text style={styles.creditAmt}>{uc.toLocaleString()}</Text>
-        </View>
-        <View style={styles.creditChip}>
-          <Ionicons name="school-outline" size={13} color={COLORS.brand} />
-          <Text style={styles.creditLabel}>Training Pages</Text>
-          <Text style={[styles.creditAmt, { color: COLORS.brand }]}>
-            {(player.inventory?.hero_training_page ?? 0)}
-          </Text>
+        {SCROLL_TIERS.map((tier) => {
+          const count = inv[tier.key] ?? 0;
+          return (
+            <View key={tier.key} style={styles.creditChip}>
+              <Ionicons name={tier.iconName as any} size={12} color={tier.color} />
+              <Text style={[styles.creditAmt, { color: count > 0 ? tier.color : COLORS.onSurfaceTertiary }]}>{count}</Text>
+            </View>
+          );
+        })}
+        <View style={[styles.creditChip, { flex: 2 }]}>
+          <Ionicons name="school-outline" size={12} color="#2DD4BF" />
+          <Text style={styles.creditLabel}>Credits</Text>
+          <Text style={[styles.creditAmt, { color: "#2DD4BF" }]}>{uc.toLocaleString()}</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -264,21 +400,73 @@ export default function TrainingHallScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   loading: { alignItems: "center", justifyContent: "center" },
-  hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 4 },
+  hero: { padding: SPACING.lg, paddingTop: SPACING.xl, gap: 6 },
   backBtn: {
     width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.25)", marginBottom: SPACING.sm,
   },
   kicker: { color: COLORS.brand, fontSize: 10, letterSpacing: 2, fontWeight: "700" },
   title: { color: COLORS.onSurface, fontSize: 24, fontWeight: "300" },
-  sub: { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 2 },
+  headerMeta: { flexDirection: "row", gap: 8, flexWrap: "wrap", marginTop: 4 },
+  metaChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(0,0,0,0.2)", borderRadius: RADIUS.sm,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  metaLabel: { color: COLORS.onSurfaceSecondary, fontSize: 11 },
+  metaValue: { fontSize: 13, fontWeight: "800" },
+
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxxl },
+
   loopBox: {
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, gap: 4,
+    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, gap: 6,
   },
-  loopTitle: { color: COLORS.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: "800" },
-  loopLine: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 18 },
+  loopTitle: { color: COLORS.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: "800", marginBottom: 2 },
+  loopLine: { color: COLORS.onSurfaceSecondary, fontSize: 11, lineHeight: 17 },
+  loopBold: { color: COLORS.onSurface, fontWeight: "700" },
+
+  // Scroll shop
+  shopSection: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceSecondary, padding: SPACING.md, gap: 8,
+  },
+  shopTitle: { color: COLORS.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: "800" },
+  shopSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: -4 },
+  buyFeedback: { color: "#22C55E", fontSize: 11, textAlign: "center" },
+  shopRow: {
+    flexDirection: "row", alignItems: "center",
+    borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: SPACING.sm, paddingVertical: 10, gap: SPACING.sm,
+  },
+  shopLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  shopNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  shopName: { fontSize: 13, fontWeight: "700" },
+  rarityBadge: {
+    borderWidth: 1, borderRadius: RADIUS.sm,
+    paddingHorizontal: 5, paddingVertical: 1,
+  },
+  rarityTxt: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  shopXp: { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 1 },
+  shopRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  countBubble: {
+    minWidth: 32, height: 32, borderRadius: 16, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: COLORS.surface,
+  },
+  countTxt: { fontSize: 13, fontWeight: "800" },
+  buyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.brand, borderRadius: RADIUS.sm,
+    paddingHorizontal: 10, paddingVertical: 7,
+  },
+  buyBtnDisabled: { backgroundColor: COLORS.surfaceTertiary },
+  buyBtnTxt: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  dropHint: {
+    color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic",
+    textAlign: "center", lineHeight: 14,
+  },
+
   emptyBox: { alignItems: "center", gap: SPACING.sm, paddingVertical: SPACING.xl },
   emptyTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
   emptyBtn: {
@@ -296,15 +484,36 @@ const styles = StyleSheet.create({
   cardName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "600" },
   cardStar: { fontSize: 13, fontWeight: "800" },
   cardRole: { color: COLORS.onSurfaceTertiary, fontSize: 11 },
-  barTrack: { height: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden", marginTop: 4 },
+
+  barTrack: { height: 6, borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden", marginTop: 4 },
   barFill: { height: "100%", borderRadius: RADIUS.pill },
   levelTxt: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600" },
+  gateTxt: { color: COLORS.onSurfaceTertiary, fontWeight: "400", fontSize: 10 },
 
-  trainBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    borderRadius: RADIUS.md, paddingVertical: SPACING.sm, marginTop: 4,
+  xpTrack: { height: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surfaceTertiary, overflow: "hidden" },
+  xpFill: { height: "100%", borderRadius: RADIUS.pill },
+  xpTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
+
+  // Tier scroll buttons
+  trainSection: { marginTop: 4, gap: 6 },
+  trainLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 1 },
+  trainTierRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  tierBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    borderWidth: 1, borderRadius: RADIUS.sm,
+    paddingHorizontal: 10, paddingVertical: 8,
+    backgroundColor: COLORS.surface,
   },
-  trainBtnTxt: { fontSize: 12, fontWeight: "700" },
+  tierBtnDisabled: { opacity: 0.45 },
+  tierXp: { fontSize: 12, fontWeight: "800" },
+  tierCountBubble: {
+    borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
+  },
+  tierCountTxt: { fontSize: 10, fontWeight: "800" },
+  noScrollHint: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontStyle: "italic" },
+
+  capRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  capTxt: { flex: 1, color: "#F59E0B", fontSize: 10, lineHeight: 14 },
 
   maxRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
   maxTxt: { fontSize: 11, fontWeight: "600" },
@@ -317,10 +526,8 @@ const styles = StyleSheet.create({
   promoteTitle: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   promoteCaption: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15 },
   reqBlock: { gap: 2, marginTop: 4 },
-
   missingBox: { gap: 3, marginTop: 4 },
   missingTxt: { color: "#EF4444", fontSize: 11, lineHeight: 16 },
-
   promoteBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
     borderRadius: RADIUS.md, paddingVertical: SPACING.sm, marginTop: 6,
@@ -330,16 +537,16 @@ const styles = StyleSheet.create({
   feedback: { fontSize: 11, fontWeight: "600", textAlign: "center" },
 
   creditsBar: {
-    flexDirection: "row", gap: 10,
+    flexDirection: "row", gap: 8,
     borderTopWidth: 1, borderTopColor: COLORS.border,
     backgroundColor: COLORS.surfaceSecondary,
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
   creditChip: {
-    flex: 1, flexDirection: "row", alignItems: "center", gap: 6,
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: COLORS.surface, borderRadius: RADIUS.sm,
-    paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 8, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border,
   },
-  creditLabel: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 11 },
-  creditAmt: { color: "#D4AF37", fontSize: 14, fontWeight: "800" },
+  creditLabel: { flex: 1, color: COLORS.onSurfaceTertiary, fontSize: 10 },
+  creditAmt: { fontSize: 13, fontWeight: "800" },
 });

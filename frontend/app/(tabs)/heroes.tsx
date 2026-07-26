@@ -18,7 +18,12 @@ import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { canEvolve, getProgress } from "@/src/game/evolution";
-import { rarityTierLabel } from "@/src/game/university";
+import {
+  rarityTierLabel, heroClassLabel, isClassChangeStar,
+  levelCapForStar, canUseScroll, SCROLL_TIERS,
+  playerMaxStar, CLASS_CHANGE_STAR,
+} from "@/src/game/university";
+import { playerLevelFromXp, heroXpCostForLevel } from "@/src/game/progression";
 import { findSkin } from "@/src/game/shop";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
@@ -70,6 +75,9 @@ export default function HeroesScreen() {
 
   const owned = new Set(player.heroes_owned);
   const equippedSkin = findSkin(player.equipped_skin || "");
+  const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
+  const maxStar = playerMaxStar(playerLevel);
+  const inv = player.inventory ?? {};
 
   const toggleTeam = async (heroId: string) => {
     if (!owned.has(heroId)) return;
@@ -86,6 +94,9 @@ export default function HeroesScreen() {
   const teamHeroes     = HEROES.filter((h) => team.includes(h.id));
   const regularHeroes  = HEROES.filter((h) => !h.locked);
   const legendaryHeroes = HEROES.filter((h) => h.locked);
+
+  // Helper: whether hero at `star` with Player Level `pl` can currently promote
+  const check_canPromote = (star: number, pl: number) => pl >= star + 1;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -140,6 +151,16 @@ export default function HeroesScreen() {
               const prog     = getProgress(player.hero_progression, h.id);
               const evolveReady = isOwned && canEvolve(prog);
 
+              const level      = prog.level ?? 1;
+              const starLvlCap = levelCapForStar(prog.star);
+              const levelPct   = Math.min(1, level / starLvlCap);
+              const canTrain   = canUseScroll(prog);
+              const atStarCap  = level >= starLvlCap;
+              const classLabel = heroClassLabel(h.role, prog.star);
+              const classChange = isOwned && isClassChangeStar(prog.star);
+              const promoteReady = isOwned && atStarCap && prog.star < 5;
+              const starGateLocked = isOwned && prog.star < maxStar && promoteReady && !check_canPromote(prog.star, maxStar);
+
               return (
                 <Pressable
                   key={h.id}
@@ -149,7 +170,7 @@ export default function HeroesScreen() {
                 >
                   <View style={[
                     styles.card,
-                    { borderColor: evolveReady ? COLORS.brand : inTeam ? accent : COLORS.border },
+                    { borderColor: evolveReady ? COLORS.brand : promoteReady ? accent + "CC" : inTeam ? accent : COLORS.border },
                     inTeam && { backgroundColor: accent + "10" },
                     isOwned && equippedSkin && { borderColor: equippedSkin.accentColor },
                     !isOwned && styles.cardLocked,
@@ -164,22 +185,49 @@ export default function HeroesScreen() {
                       ) : (
                         <View style={styles.spriteFallback} />
                       )}
+
+                      {/* Team slot badge */}
                       {inTeam && (
                         <View style={[styles.slotBadge, { backgroundColor: accent }]}>
                           <Text style={styles.slotTxt}>{teamSlot}</Text>
                         </View>
                       )}
+
+                      {/* Star row (top right) */}
                       {isOwned && (
-                        <View style={styles.starBadge}>
-                          <Ionicons name="star" size={9} color={COLORS.brand} />
-                          <Text style={styles.starBadgeTxt}>{prog.star}</Text>
+                        <View style={styles.starRow}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Ionicons key={i} name={i < prog.star ? "star" : "star-outline"}
+                              size={8} color={i < prog.star ? COLORS.brand : COLORS.border + "88"} />
+                          ))}
                         </View>
                       )}
+
+                      {/* Class-change badge */}
+                      {classChange && (
+                        <View style={styles.classChangeBadge}>
+                          <Ionicons name="sparkles" size={8} color="#D4AF37" />
+                          <Text style={styles.classChangeTxt}>CLASS ↑</Text>
+                        </View>
+                      )}
+
+                      {/* Level bar at bottom of sprite */}
+                      {isOwned && (
+                        <View style={styles.levelBarWrap} pointerEvents="none">
+                          <View style={styles.levelBarTrack}>
+                            <View style={[styles.levelBarFill, { width: `${levelPct * 100}%`, backgroundColor: canTrain ? accent : accent + "55" }]} />
+                          </View>
+                          <Text style={styles.levelBarTxt}>Lv {level}/{starLvlCap}</Text>
+                        </View>
+                      )}
+
+                      {/* Evolve / promote ready indicator */}
                       {evolveReady && (
                         <View style={styles.evolveBadge}>
                           <Ionicons name="arrow-up-circle" size={16} color={COLORS.surface} />
                         </View>
                       )}
+
                       {!isOwned && (
                         <View style={styles.lockOverlay}>
                           <Ionicons name="lock-closed" size={20} color={COLORS.onSurfaceTertiary} />
@@ -196,10 +244,23 @@ export default function HeroesScreen() {
                       <View style={{ flex: 1 }}>
                         <TierBadge rarity={h.rarity} color={accent} />
                         <Text style={[styles.heroName, !isOwned && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>{h.name}</Text>
-                        <View style={[styles.elementTag, { borderColor: accent + "70" }]}>
-                          <Text style={[styles.elementTxt, { color: accent }]}>{h.element.toUpperCase()}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
+                          <View style={[styles.elementTag, { borderColor: accent + "70" }]}>
+                            <Text style={[styles.elementTxt, { color: accent }]}>{h.element.toUpperCase()}</Text>
+                          </View>
                         </View>
-                        <Text style={styles.roleTag}>{h.role}</Text>
+                        {isOwned ? (
+                          <Text style={[styles.roleTag, prog.star >= CLASS_CHANGE_STAR && { color: accent + "CC" }]}
+                            numberOfLines={1}>{classLabel}</Text>
+                        ) : (
+                          <Text style={styles.roleTag}>{h.role}</Text>
+                        )}
+                        {isOwned && promoteReady && (
+                          <View style={[styles.promotePill, { borderColor: accent + "80", backgroundColor: accent + "18" }]}>
+                            <Ionicons name="arrow-up-circle-outline" size={10} color={accent} />
+                            <Text style={[styles.promotePillTxt, { color: accent }]}>PROMOTE</Text>
+                          </View>
+                        )}
                       </View>
                       {isOwned && (
                         <Pressable
@@ -287,9 +348,17 @@ export default function HeroesScreen() {
             </View>
           )}
           {teamHeroes.map((h, i) => {
-            const accent = ELEMENT_COLORS[h.element] ?? COLORS.brand;
-            const sprite = getHeroPortrait(h.id) ?? getHeroBattleSprite(h.id);
-            const prog   = getProgress(player.hero_progression, h.id);
+            const accent   = ELEMENT_COLORS[h.element] ?? COLORS.brand;
+            const sprite   = getHeroPortrait(h.id) ?? getHeroBattleSprite(h.id);
+            const prog     = getProgress(player.hero_progression, h.id);
+            const level    = prog.level ?? 1;
+            const lvCap    = levelCapForStar(prog.star);
+            const lvPct    = Math.min(1, level / lvCap);
+            const xpBanked = prog.xp ?? 0;
+            const xpNeeded = heroXpCostForLevel(level);
+            const xpPct    = level >= lvCap ? 1 : Math.min(1, xpBanked / xpNeeded);
+            const cLabel   = heroClassLabel(h.role, prog.star);
+            const skills   = h.skills ?? [];
             return (
               <Pressable key={h.id} style={[styles.teamCard, { borderLeftColor: accent }]}
                 onPress={() => router.push(`/hero/${h.id}`)}>
@@ -303,13 +372,44 @@ export default function HeroesScreen() {
                     <Text style={styles.slotTxt}>{i + 1}</Text>
                   </View>
                 </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <TierBadge rarity={h.rarity} color={accent} />
+                <View style={{ flex: 1, gap: 3 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <TierBadge rarity={h.rarity} color={accent} />
+                    <View style={{ flexDirection: "row", gap: 2 }}>
+                      {Array.from({ length: 5 }).map((_, si) => (
+                        <Ionicons key={si} name={si < prog.star ? "star" : "star-outline"}
+                          size={9} color={si < prog.star ? COLORS.brand : COLORS.border} />
+                      ))}
+                    </View>
+                  </View>
                   <Text style={styles.teamHeroName}>{h.name}</Text>
-                  <Text style={styles.teamHeroRole}>{h.role} · {h.element}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Ionicons name="star" size={11} color={COLORS.brand} />
-                    <Text style={styles.teamStat}>★{prog.star} · Lv {prog.level}</Text>
+                  <Text style={[styles.teamHeroRole, prog.star >= CLASS_CHANGE_STAR && { color: accent + "DD" }]}>
+                    {cLabel} · {h.element}
+                  </Text>
+                  {/* Level progress bar */}
+                  <View style={styles.teamLevelRow}>
+                    <Text style={styles.teamLvTxt}>Lv {level}/{lvCap}</Text>
+                    <View style={styles.teamLvTrack}>
+                      <View style={[styles.teamLvFill, { width: `${lvPct * 100}%`, backgroundColor: accent + "BB" }]} />
+                    </View>
+                    {level < lvCap && (
+                      <View style={styles.teamXpTrack}>
+                        <View style={[styles.teamXpFill, { width: `${xpPct * 100}%`, backgroundColor: accent }]} />
+                      </View>
+                    )}
+                  </View>
+                  {/* Skill count */}
+                  <View style={{ flexDirection: "row", gap: 6, alignItems: "center", marginTop: 1 }}>
+                    <View style={[styles.skillCountPill, { borderColor: accent + "50" }]}>
+                      <Ionicons name="flash-outline" size={9} color={accent} />
+                      <Text style={[styles.skillCountTxt, { color: accent }]}>{skills.length} Skills</Text>
+                    </View>
+                    {prog.star >= CLASS_CHANGE_STAR && (
+                      <View style={[styles.skillCountPill, { borderColor: "#D4AF37" + "60", backgroundColor: "#D4AF37" + "12" }]}>
+                        <Ionicons name="sparkles" size={9} color="#D4AF37" />
+                        <Text style={[styles.skillCountTxt, { color: "#D4AF37" }]}>Class Change</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <Pressable style={[styles.toggleBtn, { borderColor: accent + "55", backgroundColor: "transparent" }]}
@@ -493,20 +593,42 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   slotTxt: { color: COLORS.surface, fontSize: 12, fontWeight: "700" },
-  starBadge: {
-    position: "absolute", top: 6, right: 6,
+  starRow: {
+    position: "absolute", top: 5, right: 5,
     flexDirection: "row", alignItems: "center", gap: 1,
-    backgroundColor: "rgba(12,14,18,0.72)", borderRadius: RADIUS.pill,
-    paddingHorizontal: 5, paddingVertical: 2,
+    backgroundColor: "rgba(12,14,18,0.66)", borderRadius: RADIUS.pill,
+    paddingHorizontal: 4, paddingVertical: 3,
   },
-  starBadgeTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "800" },
   tierBadge: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginBottom: 2 },
   tierBadgeTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
   evolveBadge: {
-    position: "absolute", bottom: 6, left: 6,
+    position: "absolute", bottom: 30, left: 6,
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: COLORS.brand, alignItems: "center", justifyContent: "center",
   },
+  classChangeBadge: {
+    position: "absolute", top: 5, left: 6,
+    flexDirection: "row", alignItems: "center", gap: 2,
+    backgroundColor: "rgba(18,12,2,0.80)", borderRadius: RADIUS.pill,
+    paddingHorizontal: 5, paddingVertical: 2,
+    borderWidth: 1, borderColor: "#D4AF37" + "70",
+  },
+  classChangeTxt: { color: "#D4AF37", fontSize: 8, fontWeight: "800", letterSpacing: 0.6 },
+  levelBarWrap: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 6, paddingBottom: 5, paddingTop: 3,
+    backgroundColor: "rgba(10,12,16,0.72)",
+    flexDirection: "row", alignItems: "center", gap: 5,
+  },
+  levelBarTrack: { flex: 1, height: 4, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 2, overflow: "hidden" },
+  levelBarFill: { height: "100%", borderRadius: 2 },
+  levelBarTxt: { color: "rgba(255,255,255,0.75)", fontSize: 8, fontWeight: "700", minWidth: 28 },
+  promotePill: {
+    flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3,
+    alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  promotePillTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(12,14,18,0.6)", alignItems: "center", justifyContent: "center", gap: 4,
@@ -619,6 +741,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, backgroundColor: COLORS.surfaceTertiary,
   },
   lockedPillTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontWeight: "600" },
+
+  // Team tab — level progress
+  teamLevelRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },
+  teamLvTxt:   { color: COLORS.brand, fontSize: 10, fontWeight: "700", minWidth: 40 },
+  teamLvTrack: { flex: 1, height: 4, backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden" },
+  teamLvFill:  { height: "100%", borderRadius: 2 },
+  teamXpTrack: { width: 30, height: 3, backgroundColor: COLORS.surfaceTertiary, borderRadius: 2, overflow: "hidden" },
+  teamXpFill:  { height: "100%", borderRadius: 2 },
+
+  // Team skill count chips
+  skillCountPill: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    borderWidth: 1, borderRadius: RADIUS.pill,
+    paddingHorizontal: 5, paddingVertical: 2,
+  },
+  skillCountTxt: { fontSize: 9, fontWeight: "700" },
+
+  // Upgrade tab — hero progress cards
+  upgradeHeroCard: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border,
+    borderLeftWidth: 3, padding: SPACING.md, marginBottom: SPACING.sm,
+  },
+  upgradeStatLbl: { color: COLORS.onSurfaceSecondary, fontSize: 10, fontWeight: "700", minWidth: 36 },
+  scrollCountChip: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.pill,
+    paddingHorizontal: 5, paddingVertical: 2, backgroundColor: COLORS.surfaceTertiary,
+  },
+  scrollCountTxt: { fontSize: 9, fontWeight: "700" },
 
   // Upgrade tab
   upgradeLinkCard: {

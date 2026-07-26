@@ -59,7 +59,7 @@ function mkTabIcon(key: TabKey, label: string, focused: boolean) {
 }
 
 const s = StyleSheet.create({
-  wrap: { alignItems: "center", gap: 3, paddingTop: 2 },
+  wrap: { alignItems: "center", gap: 0, paddingTop: 2 },
   icon: { width: 44, height: 44 },
   label: {
     fontSize:      9.5,

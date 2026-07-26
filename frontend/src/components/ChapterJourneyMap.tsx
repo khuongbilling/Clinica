@@ -992,17 +992,17 @@ function PartRow({
             borderColor: (chapterLocked || isWardDefenseLocked) ? COLORS.border : chapterAccent + "80",
           }]}>
             {isClaimed ? (
-              <Ionicons name="checkmark-circle" size={15} color={chapterAccent} />
+              <Ionicons name="checkmark-circle" size={22} color={chapterAccent} />
             ) : part.type === "mini_boss" ? (
               <Image
                 source={require("../../assets/map-nodes/node_trial_corrupted_gate.png")}
-                style={{ width: 26, height: 26, opacity: (chapterLocked || isWardDefenseLocked) ? 0.35 : 1 }}
+                style={{ width: 32, height: 32, opacity: (chapterLocked || isWardDefenseLocked) ? 0.35 : 1 }}
                 contentFit="contain"
               />
             ) : (
               <Ionicons
                 name={(NODE_TYPE_ICON[part.type] ?? "ellipse") as any}
-                size={15}
+                size={20}
                 color={(chapterLocked || isWardDefenseLocked) ? COLORS.onSurfaceTertiary : chapterAccent}
               />
             )}
@@ -1200,22 +1200,36 @@ function PartRow({
           </View>
         ) : null}
 
-        {/* J2 — CLAIM / CLAIMED button — P7: gated behind scenario completion when node has a scenario */}
+        </Pressable>
+
+        {/* J2 — CLAIM / CLAIMED section: lives OUTSIDE the nav Pressable so the
+            claim button always gets its own independent touch target. */}
         {def && !chapterLocked && (
           isClaimed ? (
-            <View style={styles.nodeClaimedBadge}>
-              <Ionicons name="checkmark-circle" size={11} color="#34D399" />
-              <Text style={styles.nodeClaimedTxt}>CLAIMED</Text>
+            <View style={styles.nodeClaimedRow}>
+              <View style={styles.nodeClaimedBadge}>
+                <Ionicons name="checkmark-circle" size={12} color="#34D399" />
+                <Text style={styles.nodeClaimedTxt}>CLAIMED</Text>
+              </View>
+              {/* Refight hint — visible on battle / mini_boss nodes after claiming */}
+              {(part.type === 'battle' || part.type === 'mini_boss') && isActionable && (
+                <View style={styles.refightHint}>
+                  <Ionicons name="refresh-outline" size={10} color={chapterAccent + "90"} />
+                  <Text style={[styles.refightHintTxt, { color: chapterAccent + "90" }]}>
+                    Tap to refight for stars
+                  </Text>
+                </View>
+              )}
             </View>
           ) : claimReady && onClaim ? (
             <Pressable
               style={[styles.nodeClaimBtn, claiming && styles.nodeClaimBtnBusy]}
               onPress={handleClaim}
               disabled={claiming}
-              hitSlop={6}
+              hitSlop={8}
             >
-              <Ionicons name="gift-outline" size={11} color="#FFFFFF" />
-              <Text style={styles.nodeClaimBtnTxt}>{claiming ? "…" : "CLAIM"}</Text>
+              <Ionicons name="gift-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.nodeClaimBtnTxt}>{claiming ? "…" : "CLAIM REWARD"}</Text>
             </Pressable>
           ) : isEligible && hasScenario && !scenarioDone ? (
             <View style={styles.scenarioClaimHint}>
@@ -1226,7 +1240,6 @@ function PartRow({
             </View>
           ) : null
         )}
-        </Pressable>
 
         {/* P6 — node-clear flash overlay (fades in then out after claim) */}
         {justClaimed && (
@@ -1356,9 +1369,9 @@ const styles = StyleSheet.create({
   },
 
   chapterThumb: {
-    width: 40,
-    height: 40,
-    borderRadius: 6,
+    width: 52,
+    height: 52,
+    borderRadius: 8,
     borderWidth: 1.5,
     overflow: "hidden",
     flexShrink: 0,
@@ -1376,16 +1389,16 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   chapterNum: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.6,
   },
   chapterTheme: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
   },
   chapterMeta: {
-    fontSize: 12,
+    fontSize: 13,
   },
   chapterMetaRow: {
     flexDirection: "row",
@@ -1454,8 +1467,8 @@ const styles = StyleSheet.create({
   },
   partWrap: {
     flexDirection: "row",
-    gap: SPACING.xs,
-    padding: SPACING.sm,
+    gap: SPACING.sm,
+    padding: SPACING.md,
   },
   partDivider: {
     borderBottomWidth: 1,
@@ -1463,26 +1476,26 @@ const styles = StyleSheet.create({
   },
   partNumCol: {
     alignItems: "center",
-    gap: 2,
+    gap: 3,
     flexShrink: 0,
     marginTop: 2,
   },
   partNum: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
   nodeLabelTxt: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
   partContent: {
     flex: 1,
-    gap: 4,
+    gap: 5,
   },
   partActionable: {
     // slight highlight when tappable handled via press state
@@ -1495,22 +1508,22 @@ const styles = StyleSheet.create({
   },
   partTypeBadge: {
     borderRadius: RADIUS.sm,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   partTypeTxt: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
   },
   comingSoonBadge: {
     backgroundColor: UI.sanctuaryCard,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   comingSoonTxt: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     color: COLORS.onSurfaceTertiary,
     letterSpacing: 0.8,
@@ -1521,79 +1534,93 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   partTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 21,
   },
   partDesc: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   // Reward chips
   rewardRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
-    marginTop: 2,
+    gap: 5,
+    marginTop: 3,
   },
   rewardChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 4,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
     borderColor: UI.sanctuaryBorder,
     backgroundColor: UI.sanctuaryCard,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   rewardChipTxt: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
 
-  // J2 — journey node CLAIM / CLAIMED buttons
+  // J2 — journey node CLAIM / CLAIMED buttons (outside nav Pressable)
   nodeClaimBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     alignSelf: "flex-start",
-    marginTop: 4,
+    marginTop: 6,
     backgroundColor: "#16A34A",
     borderRadius: RADIUS.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   nodeClaimBtnBusy: {
     opacity: 0.5,
   },
   nodeClaimBtnTxt: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "800",
     color: "#FFFFFF",
     letterSpacing: 0.8,
   },
+  nodeClaimedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
   nodeClaimedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    alignSelf: "flex-start",
-    marginTop: 4,
+    gap: 4,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
     borderColor: "#34D39940",
     backgroundColor: "#34D39912",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   nodeClaimedTxt: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "800",
     color: "#34D399",
     letterSpacing: 0.8,
+  },
+  refightHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  refightHintTxt: {
+    fontSize: 11,
+    fontStyle: "italic",
   },
 
   // J1: University Prep Tips section
@@ -1732,9 +1759,9 @@ const styles = StyleSheet.create({
   // P6: next-node pulse ring — absolute behind the part-number circle
   nextNodeRing: {
     position: "absolute",
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     borderWidth: 2,
     zIndex: 0,
   },

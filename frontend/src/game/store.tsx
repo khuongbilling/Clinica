@@ -438,7 +438,8 @@ type Ctx = {
   tutorialRecruitOnce: (summonIndex: 1 | 2) => Promise<{ ok: boolean; message: string; result?: import('./university').RecruitResult }>;
   recruitTen: () => Promise<{ ok: boolean; message: string; results?: import('./university').RecruitResult[] }>;
   promoteHeroCert: (heroId: string) => Promise<{ ok: boolean; message: string }>;
-  trainHero: (heroId: string) => Promise<{ ok: boolean; message: string }>;
+  /** Use `scrollKey` to specify which scroll tier to consume (e.g. 'exp_scroll_xs'). Defaults to the highest tier available. */
+  trainHero: (heroId: string, scrollKey?: string) => Promise<{ ok: boolean; message: string }>;
   toggleHeroLock: (heroId: string) => Promise<void>;
   toggleHeroFavorite: (heroId: string) => Promise<void>;
   completeLesson: (lessonId: string) => Promise<{ ok: boolean; message: string; result?: import('./lessons').CompletionResult }>;
@@ -591,9 +592,12 @@ function addDailyReward(p: PlayerState, r: DailyReward): PlayerState {
     if (pool.length > 0) {
       const perHero = Math.max(1, Math.round(r.heroXp / pool.length));
       const prog = { ...(next.hero_progression || {}) };
+      const playerLvl = playerLevelFromXp(next.xp ?? 0).level;
       for (const heroId of pool) {
         const ex = prog[heroId] ?? { star: 1, copies: 0, level: 1, xp: 0 };
-        const cap = levelCapForStar(ex.star ?? 1);
+        // Cap = min(star cap, player level) — prevents batch-XP rewards from
+        // bypassing the same gate as the Training Hall scroll system.
+        const cap = Math.min(levelCapForStar(ex.star ?? 1), playerLvl);
         const result = addHeroXp(ex.level ?? 1, ex.xp ?? 0, perHero, cap);
         prog[heroId] = { ...ex, xp: result.xp, level: result.level };
       }
@@ -867,11 +871,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[] = [];
     if (rewards.heroXp) {
       const prog = { ...(next.hero_progression || {}) };
+      // Use post-reward player level so a level-up this battle immediately
+      // raises the hero cap — XP earned while at cap is banked, not lost.
+      const battlePlayerLvl = playerLevelFromXp(next.xp ?? 0).level;
       for (const [heroId, xpAmount] of Object.entries(rewards.heroXp)) {
         if (!xpAmount) continue;
         const existing = prog[heroId] ? { ...prog[heroId] } : (defaultProgress() as any);
         const fromLevel = existing.level ?? 1;
-        const cap = levelCapForStar(existing.star ?? 1);
+        // Same player-level gate as the Training Hall scroll system.
+        const cap = Math.min(levelCapForStar(existing.star ?? 1), battlePlayerLvl);
         const result = addHeroXp(fromLevel, existing.xp ?? 0, xpAmount, cap);
         prog[heroId] = { ...existing, xp: result.xp, level: result.level };
         if (result.level > fromLevel) heroLevelUps.push({ heroId, fromLevel, toLevel: result.level });
@@ -1171,20 +1179,64 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: result.message };
   }, [player, updateState]);
 
-  const trainHero = useCallback(async (heroId: string) => {
+  const trainHero = useCallback(async (heroId: string, scrollKey?: string) => {
     if (!player) return { ok: false, message: 'No player loaded.' };
     if (!player.heroes_owned.includes(heroId)) return { ok: false, message: 'Hero not owned.' };
-    const { canTrain, trainProgress, levelCapForStar } = await import('./university');
-    const cur = getProgress(player.hero_progression, heroId);
-    if (!canTrain(cur)) {
-      return { ok: false, message: `Already at Level ${levelCapForStar(cur.star)} cap for ${cur.star}-Star. Promote to raise the cap.` };
+
+    // Synchronous read to prevent double-spend.
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+
+    const { heroEffectiveLevelCap, levelCapForStar, SCROLL_TIERS, findScrollTier } = await import('./university');
+    const { heroXpCostForLevel } = await import('./progression');
+
+    // Resolve which scroll tier to use: caller-specified key, or best available.
+    const inv = base.inventory ?? {};
+    let tier = scrollKey ? findScrollTier(scrollKey) : undefined;
+    if (!tier) {
+      // Auto-pick: highest tier the player actually has
+      for (let i = SCROLL_TIERS.length - 1; i >= 0; i--) {
+        if ((inv[SCROLL_TIERS[i].key] ?? 0) >= 1) { tier = SCROLL_TIERS[i]; break; }
+      }
     }
-    const next = trainProgress(cur);
-    await updateState(foldDaily({
-      ...player,
-      hero_progression: { ...(player.hero_progression || {}), [heroId]: next },
-    }, 'hero_action'));
-    return { ok: true, message: `Trained to Level ${next.level}!` };
+    if (!tier) {
+      return { ok: false, message: 'No Experience Scrolls available. Earn them from 2★+ battles or buy from the Training Hall.' };
+    }
+    if ((inv[tier.key] ?? 0) < 1) {
+      return { ok: false, message: `No ${tier.label} available.` };
+    }
+
+    const cur = getProgress(base.hero_progression, heroId);
+    const playerLvl = base.player_level ?? playerLevelFromXp(base.xp ?? 0).level;
+    const effectiveCap = heroEffectiveLevelCap(cur.star, playerLvl);
+    const starCap = levelCapForStar(cur.star);
+    const curLevel = cur.level ?? 1;
+
+    if (curLevel >= effectiveCap) {
+      if (effectiveCap < starCap) {
+        return { ok: false, message: `Hero level is capped at your Player Level (${playerLvl}). Earn more account XP to raise it.` };
+      }
+      return { ok: false, message: `Already at Level ${starCap} cap for ${cur.star}★. Promote the Certification Star to raise the cap.` };
+    }
+
+    const result = addHeroXp(curLevel, cur.xp ?? 0, tier.xp, effectiveCap);
+    const nextProg = { ...cur, level: result.level, xp: result.xp };
+    const nextInv = { ...inv, [tier.key]: (inv[tier.key] ?? 0) - 1 };
+
+    const nextState = foldDaily({
+      ...base,
+      inventory: nextInv,
+      hero_progression: { ...(base.hero_progression || {}), [heroId]: nextProg },
+    }, 'hero_action');
+
+    playerRef.current = nextState;
+    await updateState(nextState);
+
+    const xpNeeded = heroXpCostForLevel(result.level);
+    if (result.leveledUp) {
+      return { ok: true, message: `Leveled up! ${result.levelsGained > 1 ? `+${result.levelsGained} levels → ` : ''}Level ${result.level} (${result.xp}/${xpNeeded} XP to next)` };
+    }
+    return { ok: true, message: `+${tier.xp} XP · ${result.xp}/${xpNeeded} XP to Level ${result.level + 1}` };
   }, [player, updateState]);
 
   const toggleHeroLock = useCallback(async (heroId: string) => {

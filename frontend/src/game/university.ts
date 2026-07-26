@@ -1,6 +1,7 @@
 import { HeroRole, PlayerState } from './types';
 import { HeroProgress, defaultProgress, getHeroShards } from './evolution';
 import { FOUNDATION_BANNER, GachaEntry } from './gacha';
+import { playerLevelFromXp } from './progression';
 
 // ────────────────────────────────────────────────────────────
 // CLINICA UNIVERSITY — hybrid hero progression foundation
@@ -17,6 +18,42 @@ import { FOUNDATION_BANNER, GachaEntry } from './gacha';
 // ────────────────────────────────────────────────────────────
 
 export const MAX_CERTIFICATION_STAR = 5;
+
+// ── Class Change ──────────────────────────────────────────────────────────────
+// Heroes undergo a Class Change at 3★ Certification — their role evolves into
+// a more specialised form with an updated title. At 5★ they reach their
+// legendary apex class.
+
+export const CLASS_CHANGE_STAR = 3; // first class-change breakpoint
+
+const ROLE_CLASS_LABELS: Record<string, [string, string, string]> = {
+  // [1-2★ apprentice label, 3-4★ class-change label, 5★ apex label]
+  Stabilizer:   ['Apprentice Stabilizer', 'Senior Stabilizer',   'Stability Guardian'],
+  Assessor:     ['Apprentice Assessor',   'Clinical Assessor',   'Diagnostic Sage'],
+  Analyst:      ['Apprentice Analyst',    'Lead Analyst',        'Analytical Master'],
+  Coordinator:  ['Apprentice Coord.',     'Ward Coordinator',    'Operations Chief'],
+  Educator:     ['Apprentice Educator',   'Clinical Educator',   'Lore Keeper'],
+  Specialist:   ['Specialist',            'Senior Specialist',   'Master Specialist'],
+  Scout:        ['Scout',                 'Field Scout',         'Vanguard Scout'],
+  Striker:      ['Striker',               'Elite Striker',       'Apex Striker'],
+  Restorer:     ['Restorer',              'Master Restorer',     'Restoration Sage'],
+  Preventer:    ['Preventer',             'Chief Preventer',     'Sentinel'],
+  SystemsLeader:['Systems Analyst',       'Systems Leader',      'Systems Director'],
+};
+
+/** Display class title for a hero at a given Certification Star. */
+export function heroClassLabel(role: string, star: number): string {
+  const labels = ROLE_CLASS_LABELS[role];
+  if (!labels) return role;
+  if (star >= 5) return labels[2];
+  if (star >= CLASS_CHANGE_STAR) return labels[1];
+  return labels[0];
+}
+
+/** True when this star is the exact class-change breakpoint (shows badge). */
+export function isClassChangeStar(star: number): boolean {
+  return star === CLASS_CHANGE_STAR;
+}
 
 export const LEVEL_CAP_BY_STAR: Record<number, number> = {
   1: 10, 2: 20, 3: 30, 4: 40, 5: 50,
@@ -85,6 +122,10 @@ export interface PromotionCheck {
   level: number;
   levelNeeded: number;
   levelOk: boolean;
+  /** Player Level gate: must be >= toStar to promote. */
+  playerLevel: number;
+  playerLevelNeeded: number;
+  playerLevelOk: boolean;
   shardsHave: number;
   shardsNeeded: number;
   shardsOk: boolean;
@@ -103,11 +144,14 @@ export function checkPromotion(role: HeroRole, prog: HeroProgress, player: Playe
   const shardsHave = getHeroShards(prog);
   const trainHave = player.class_trainees?.[trainee.id] ?? 0;
   const creditsHave = player.university_credits ?? 0;
+  // Player Level gate — Level N unlocks promotion to N★
+  const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
 
   if (prog.star >= MAX_CERTIFICATION_STAR) {
     return {
       atMaxStar: true, eligible: false, req: null, trainee,
       level, levelNeeded: 0, levelOk: true,
+      playerLevel, playerLevelNeeded: MAX_CERTIFICATION_STAR, playerLevelOk: true,
       shardsHave, shardsNeeded: 0, shardsOk: true,
       trainHave, trainNeeded: 0, trainOk: true,
       creditsHave, creditsNeeded: 0, creditsOk: true,
@@ -117,13 +161,16 @@ export function checkPromotion(role: HeroRole, prog: HeroProgress, player: Playe
 
   const req = PROMOTION_REQUIREMENTS[prog.star];
   const levelOk = level >= req.levelRequired;
+  const playerLevelNeeded = req.toStar;
+  const playerLevelOk = playerLevel >= playerLevelNeeded;
   const shardsOk = shardsHave >= req.shardsRequired;
   const trainOk = trainHave >= req.trainRequired;
   const materialsOk = req.shardsOrTrainees ? (shardsOk || trainOk) : (shardsOk && trainOk);
   const creditsOk = creditsHave >= req.creditsRequired;
-  const eligible = levelOk && materialsOk && creditsOk;
+  const eligible = levelOk && playerLevelOk && materialsOk && creditsOk;
 
   const missing: string[] = [];
+  if (!playerLevelOk) missing.push(`Reach Player Level ${playerLevelNeeded} to unlock ${req.toStar}★ Certification`);
   if (!levelOk) missing.push(`Reach Hero Level ${req.levelRequired} (currently ${level})`);
   if (!materialsOk) {
     missing.push(req.shardsOrTrainees
@@ -135,6 +182,7 @@ export function checkPromotion(role: HeroRole, prog: HeroProgress, player: Playe
   return {
     atMaxStar: false, eligible, req, trainee,
     level, levelNeeded: req.levelRequired, levelOk,
+    playerLevel, playerLevelNeeded, playerLevelOk,
     shardsHave, shardsNeeded: req.shardsRequired, shardsOk,
     trainHave, trainNeeded: req.trainRequired, trainOk,
     creditsHave, creditsNeeded: req.creditsRequired, creditsOk,
@@ -209,11 +257,96 @@ export function autoSelectMaterials(check: PromotionCheck): AutoSelectPlan {
 }
 
 // ---------- Hero Level / Training Hall ----------
+
+// ── Experience Scroll tiers ──────────────────────────────────────────────────
+//
+// Four tiers of scroll with increasing XP and rarity. Players earn lower
+// tiers from normal battles and higher tiers from boss clears. All tiers can
+// be purchased at the Training Hall for Crowns, with price scaling to rarity.
+//
+// XP cost curve: heroXpCostForLevel(L) = 40 + (L-1)*8
+//   xs (10 XP)  — roughly 0.25 levels at Lv1, <0.1 at Lv10  (common gain, 1★ drop)
+//   sm (25 XP)  — 0.6 levels at Lv1, ~0.2 at Lv10            (uncommon, 2★ drop)
+//   md (50 XP)  — 1.25 levels at Lv1, ~0.45 at Lv10          (rare, 3★ drop)
+//   lg (100 XP) — 2.5 levels at Lv1, ~0.9 at Lv10            (epic, boss 3★ drop only)
+
+export interface ScrollTier {
+  key: string;       // inventory key (e.g. 'exp_scroll_xs')
+  xp: number;        // Hero XP granted on use
+  label: string;     // display name
+  rarity: string;    // 'Common' | 'Uncommon' | 'Rare' | 'Epic'
+  crownCost: number; // price at Training Hall
+  color: string;     // tint color for UI
+  iconName: string;  // Ionicons name
+}
+
+export const SCROLL_TIERS: ScrollTier[] = [
+  {
+    key: 'exp_scroll_xs', xp: 10,  label: 'Basic Scroll',     rarity: 'Common',
+    crownCost: 35,  color: '#94A3B8', iconName: 'document-outline',
+  },
+  {
+    key: 'exp_scroll_sm', xp: 25,  label: 'Refined Scroll',   rarity: 'Uncommon',
+    crownCost: 80,  color: '#34D399', iconName: 'document-text-outline',
+  },
+  {
+    key: 'exp_scroll_md', xp: 50,  label: 'Advanced Scroll',  rarity: 'Rare',
+    crownCost: 150, color: '#60A5FA', iconName: 'document-text',
+  },
+  {
+    key: 'exp_scroll_lg', xp: 100, label: 'Sovereign Scroll',  rarity: 'Epic',
+    crownCost: 260, color: '#D4AF37', iconName: 'star',
+  },
+];
+
+/** Convenience look-up by inventory key. Returns undefined for unknown keys. */
+export function findScrollTier(key: string): ScrollTier | undefined {
+  return SCROLL_TIERS.find((t) => t.key === key);
+}
+
+/** @deprecated Use SCROLL_TIERS[3].xp — kept for backward compat */
+export const EXP_SCROLL_XP = 100;
+/** @deprecated Use SCROLL_TIERS[3].crownCost — kept for backward compat */
+export const EXP_SCROLL_CROWN_COST = 260;
+
+// ── Player Level → max Certification Star gate ───────────────────────────────
+//
+// Player Level gates hero PROMOTION (star advancement), not individual levels
+// within a star tier. Level 2 → can promote to 2★, Level 3 → 3★, etc.
+// Within a star tier heroes can freely level up to that tier's cap.
+
+/** Maximum Certification Star a player at this level may promote heroes to. */
+export function playerMaxStar(playerLevel: number): number {
+  return Math.min(MAX_CERTIFICATION_STAR, Math.max(1, Math.round(playerLevel)));
+}
+
+/**
+ * Effective hero level cap = level cap for the hero's current Certification Star.
+ * The player-level gate now operates at the PROMOTION boundary (see checkPromotion
+ * and playerMaxStar), not at the within-tier level ceiling.
+ *
+ * The `playerLevel` param is retained for call-site compatibility but no longer
+ * clamps the within-tier level.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function heroEffectiveLevelCap(star: number, _playerLevel?: number): number {
+  return levelCapForStar(star);
+}
+
+/**
+ * Whether a hero can receive scroll (or battle) XP right now.
+ */
+export function canUseScroll(prog: HeroProgress, _playerLevel?: number): boolean {
+  return (prog.level ?? 1) < levelCapForStar(prog.star);
+}
+
+/** @deprecated Use canUseScroll(prog, playerLevel) */
 export function canTrain(prog: HeroProgress): boolean {
   const cap = levelCapForStar(prog.star);
   return (prog.level ?? 1) < cap;
 }
 
+/** @deprecated Kept for any callers still using the direct +1-level path */
 export function trainProgress(prog: HeroProgress): HeroProgress {
   const cap = levelCapForStar(prog.star);
   const level = Math.min(cap, (prog.level ?? 1) + 1);

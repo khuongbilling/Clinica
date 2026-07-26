@@ -94,6 +94,35 @@ export function getSweepXp(baseXp: number, bestStars: number): number {
 }
 
 /**
+ * Experience Scroll drops from a real (non-training, non-prologue) battle win.
+ * Returns an array of { key, count } so multiple tiers can drop at once.
+ *
+ * Rarity ladder (matches university.ts SCROLL_TIERS):
+ *   Common (xs/10 XP)   — 1★ normal wins
+ *   Uncommon (sm/25 XP) — 2★ normal, 1★ boss
+ *   Rare (md/50 XP)     — 3★ normal, 2★ boss
+ *   Epic (lg/100 XP)    — 3★ boss ONLY
+ *
+ * This ensures boss 3★ clears are the exclusive reliable source of the best
+ * scrolls, rewarding skilled play without making early scrolls unobtainable.
+ */
+export function getBattleScrollDrop(
+  stars: number,
+  isBoss: boolean,
+): { key: string; count: number }[] {
+  if (stars < 1) return [];   // loss → nothing
+  if (isBoss) {
+    if (stars >= 3) return [{ key: 'exp_scroll_lg', count: 1 }]; // epic
+    if (stars >= 2) return [{ key: 'exp_scroll_md', count: 1 }]; // rare
+    return               [{ key: 'exp_scroll_sm', count: 1 }];   // uncommon
+  }
+  // Normal (non-boss) battles:
+  if (stars >= 3) return [{ key: 'exp_scroll_md', count: 1 }];   // rare
+  if (stars >= 2) return [{ key: 'exp_scroll_sm', count: 1 }];   // uncommon
+  return               [{ key: 'exp_scroll_xs', count: 1 }];     // common
+}
+
+/**
  * Ward Coins (crowns) earned from one auto-sweep.
  * Fixed small amount scaled by chapter tier (inferred from base XP).
  */

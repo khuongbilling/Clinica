@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
@@ -26,9 +26,13 @@ import {
   autoSelectMaterials,
   checkPromotion,
   levelCapForStar,
+  heroEffectiveLevelCap,
+  canUseScroll,
+  SCROLL_TIERS,
   rarityTierLabel,
   traineeForRole,
 } from "@/src/game/university";
+import { heroXpCostForLevel, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import {
   EQUIPMENT_SLOT_META,
@@ -687,21 +691,31 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
   const check = checkPromotion(hero.role, prog, player!);
   const trainee = traineeForRole(hero.role);
   const auto = autoSelectMaterials(check);
-  const cap = levelCapForStar(prog.star);
+  const starCap = levelCapForStar(prog.star);
+  const effectiveCap = starCap; // level cap is now purely star-based
   const level = prog.level ?? 1;
-  const levelPct = Math.min(1, level / cap);
+  const xpBanked = prog.xp ?? 0;
+  const xpNeeded = heroXpCostForLevel(level);
+  const levelPct = Math.min(1, level / effectiveCap);
+  const xpPct = level >= effectiveCap ? 1 : Math.min(1, xpBanked / xpNeeded);
+  const inv = player?.inventory ?? {};
+  const totalScrolls = SCROLL_TIERS.reduce((s, t) => s + (inv[t.key] ?? 0), 0);
+  const canScroll = canUseScroll(prog);
   const shards = getHeroShards(prog);
   const unlocked = unlockedAbilityPreviews(hero.role, prog.star);
   const nextAbility = nextAbilityPreview(hero.role, prog.star);
   const curBonus = starPowerBonusPct(prog.star);
   const nextBonus = starPowerBonusPct(Math.min(prog.star + 1, MAX_CERTIFICATION_STAR));
 
-  const onTrain = async () => {
+  const [busyTier, setBusyTier] = React.useState<string | null>(null);
+  const onTrain = async (tierKey?: string) => {
     if (busy) return;
     setBusy(true);
-    const res = await trainHero(hero.id);
+    if (tierKey) setBusyTier(tierKey);
+    const res = await trainHero(hero.id, tierKey);
     setFeedback(res.message);
     setBusy(false);
+    setBusyTier(null);
   };
 
   const onPromote = async () => {
@@ -737,21 +751,75 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
       {/* Hero Level */}
       <View style={styles.detailSection}>
         <SectionHeader title="Hero Level" icon="trending-up-outline" accent={accent} />
+
+        {/* Broad bar: level across effective cap */}
         <View style={styles.evolveBarTrack}>
-          <View style={[styles.evolveBarFill, { width: `${levelPct * 100}%`, backgroundColor: accent }]} />
+          <View style={[styles.evolveBarFill, { width: `${levelPct * 100}%`, backgroundColor: accent + "99" }]} />
         </View>
-        <Text style={styles.evolveCopiesTxt}>Level {level} / {cap} cap (raises with Certification Star)</Text>
-        <Pressable
-          onPress={onTrain}
-          disabled={busy || level >= cap}
-          style={[styles.trainBtn, level >= cap ? { backgroundColor: COLORS.surfaceTertiary } : { borderColor: accent }]}
-          testID="hero-train-btn"
-        >
-          <Ionicons name="school-outline" size={16} color={level >= cap ? COLORS.onSurfaceTertiary : accent} />
-          <Text style={[styles.trainBtnTxt, { color: level >= cap ? COLORS.onSurfaceTertiary : accent }]}>
-            {level >= cap ? "Level cap reached" : "Train at the Training Hall (+1 Level)"}
+        <Text style={styles.evolveCopiesTxt}>
+          Level {level} / {effectiveCap}
+          <Text style={{ color: COLORS.onSurfaceTertiary, fontSize: 10 }}> (★{prog.star} cap)</Text>
+        </Text>
+
+        {/* Fine XP bar within the current level */}
+        {!canScroll ? null : (
+          <>
+            <View style={[styles.evolveBarTrack, { height: 4, marginTop: 4 }]}>
+              <View style={[styles.evolveBarFill, { width: `${xpPct * 100}%`, backgroundColor: accent }]} />
+            </View>
+            <Text style={[styles.evolveCopiesTxt, { fontSize: 10 }]}>
+              {xpBanked} / {xpNeeded} XP to Level {level + 1}
+            </Text>
+          </>
+        )}
+
+        {/* Train buttons — one per scroll tier */}
+        {canScroll && (
+          <View style={{ gap: 6 }}>
+            <Text style={[styles.evolveCopiesTxt, { fontSize: 9, letterSpacing: 0.8, fontWeight: "700", color: COLORS.onSurfaceTertiary }]}>
+              USE A SCROLL
+            </Text>
+            <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+              {SCROLL_TIERS.map((tier) => {
+                const count = inv[tier.key] ?? 0;
+                const isThisBusy = busy && busyTier === tier.key;
+                const disabled = busy || count < 1;
+                return (
+                  <Pressable
+                    key={tier.key}
+                    onPress={() => onTrain(tier.key)}
+                    disabled={disabled}
+                    style={[
+                      styles.trainBtn,
+                      { borderColor: count > 0 ? tier.color + "70" : COLORS.border, opacity: disabled ? 0.45 : 1 },
+                    ]}
+                    testID={`hero-train-btn-${tier.key}`}
+                  >
+                    <Ionicons name={tier.iconName as any} size={14} color={count > 0 ? tier.color : COLORS.onSurfaceTertiary} />
+                    <Text style={[styles.trainBtnTxt, { color: count > 0 ? tier.color : COLORS.onSurfaceTertiary }]}>
+                      {isThisBusy ? "…" : `+${tier.xp} XP`}
+                    </Text>
+                    <View style={[styles.scrollBadge, { backgroundColor: count > 0 ? tier.color + "25" : COLORS.surfaceTertiary }]}>
+                      <Text style={[styles.scrollBadgeTxt, { color: count > 0 ? tier.color : COLORS.onSurfaceTertiary }]}>{count}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {totalScrolls === 0 && (
+              <Text style={[styles.evolveCopiesTxt, { fontSize: 10, fontStyle: "italic" }]}>
+                Earn scrolls from battle clears or buy at the Training Hall
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Cap notice */}
+        {!canScroll && level >= effectiveCap && (
+          <Text style={[styles.evolveCopiesTxt, { color: accent }]}>
+            ★ Max level for this Certification Star reached. Promote to continue.
           </Text>
-        </Pressable>
+        )}
       </View>
 
       {/* Certification Star status */}
@@ -778,6 +846,7 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
           <Text style={styles.evolveMsg}>Fully certified — this hero has reached the maximum Certification Star.</Text>
         ) : (
           <>
+            <ReqRow label={`Player Level ${check.playerLevelNeeded}`} have={check.playerLevel} needed={check.playerLevelNeeded} ok={check.playerLevelOk} accent={accent} />
             <ReqRow label={`Hero Level ${check.levelNeeded}`} have={check.level} needed={check.levelNeeded} ok={check.levelOk} accent={accent} />
             <ReqRow label={`Hero Shards${check.req?.shardsOrTrainees ? " (or trainees)" : ""}`} have={check.shardsHave} needed={check.shardsNeeded} ok={check.shardsOk} accent={accent} />
             <ReqRow label={`${trainee.label}s`} have={check.trainHave} needed={check.trainNeeded} ok={check.trainOk} accent={accent} />
@@ -1110,6 +1179,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: RADIUS.md, paddingVertical: SPACING.sm, marginTop: SPACING.sm,
   },
   trainBtnTxt: { fontSize: 12, fontWeight: "700" },
+  scrollBadge: { borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  scrollBadgeTxt: { fontSize: 10, fontWeight: "800" },
   reqRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
   reqLabel: { flex: 1, fontSize: 12 },
   reqValue: { fontSize: 12, fontWeight: "700" },
