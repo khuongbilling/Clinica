@@ -323,7 +323,7 @@ export const HEROES: Hero[] = [
 export const ENEMIES: Enemy[] = [
   {
     id: 'dehydration_wisp',
-    name: 'Hypovolemic Specter',
+    name: 'Hypovolemic Wisp',
     realWorld: 'Hypovolemia: severe fluid depletion with cardiovascular compromise',
     primarySystem: 'River',
     floats: true,

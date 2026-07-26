@@ -40,7 +40,7 @@ export default function PrologueTutorialGate() {
           router.replace({
             pathname: "/battle",
             params: {
-              enemyId: "dehydration_specter",
+              enemyId: "dehydration_wisp",
               training: "1",
               prologue: "tutorial",
             },

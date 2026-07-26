@@ -377,9 +377,14 @@ export default function UniversityHubScreen() {
 
   // P5 — auto-show the University intro panel once on the player's first visit.
   // Skip if the tutorial system has an active guided step (it takes priority).
+  // Guard with a session ref so changing activeTutorialId after the intro was
+  // already shown doesn't trigger a second appearance.
+  const introShownRef = React.useRef(false);
   useEffect(() => {
     if (!player || player.seen_university_intro) return;
     if (activeTutorialId) return;
+    if (introShownRef.current) return;
+    introShownRef.current = true;
     const t = setTimeout(() => setShowUniIntro(true), 400);
     return () => clearTimeout(t);
   }, [player?.id, player?.seen_university_intro, activeTutorialId]); // eslint-disable-line react-hooks/exhaustive-deps

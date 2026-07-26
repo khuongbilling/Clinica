@@ -28,6 +28,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getHeroSprite } from "@/src/components/HeroSprites";
+import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 import {
   drainHeroPick,
   drainItemBagSelection,
@@ -291,7 +292,9 @@ function HeroSlot({
   onRemove?:    () => void;
 }) {
   const hero   = heroId ? HEROES.find((h) => h.id === heroId) : null;
-  const sprite = heroId ? getHeroSprite(heroId) : undefined;
+  // Prefer the full-body battle sprite so the chosen hero is recognisable
+  // in the loadout slot; fall back to portrait sprite if not found.
+  const sprite = heroId ? (getHeroBattleSprite(heroId) ?? getHeroSprite(heroId)) : undefined;
   const rc     = hero ? (ROLE_COLOR[hero.role] ?? UI.teal) : UI.teal;
   const ri     = hero ? (ROLE_ICON[hero.role]  ?? "star") : "star";
   const color  = hero ? rc : "rgba(255,255,255,0.14)";
@@ -323,7 +326,7 @@ function HeroSlot({
         <>
           <View style={[hs.portrait, { borderColor: locked ? UI.gold + "80" : color + "AA" }]}>
             {sprite ? (
-              <Image source={sprite} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+              <Image source={sprite} style={{ width: "100%", height: "100%" }} contentFit="contain" />
             ) : (
               <View style={[hs.fallback, { backgroundColor: rc + "1E" }]}>
                 <Ionicons name={ri as any} size={20} color={rc} />
@@ -378,8 +381,8 @@ const hs = StyleSheet.create({
     borderBottomRightRadius: 2,
   },
   portrait: {
-    width: 52, height: 52,
-    borderRadius: 10,
+    width: 56, height: 84,
+    borderRadius: 6,
     borderWidth: 1.5,
     overflow: "hidden",
     backgroundColor: UI.bgDeep,

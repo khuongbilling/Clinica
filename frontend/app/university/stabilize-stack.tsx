@@ -866,17 +866,19 @@ export default function StabilizeStackScreen() {
           </Animated.View>
         )}
 
-        {/* ── Back to University ────────────────────────────────────────── */}
-        <Pressable
-          style={styles.backToUni}
-          onPress={() => router.replace(ROUTES.university)}
-          testID="stabilize-return"
-        >
-          <View style={styles.backToUniInner}>
-            <Ionicons name="arrow-back-circle-outline" size={18} color="#2DD4BF90" />
-            <Text style={styles.backToUniTxt}>Back to University</Text>
-          </View>
-        </Pressable>
+        {/* ── Back to University — hidden while tutorial is guiding ────── */}
+        {!activeTutorialId && (
+          <Pressable
+            style={styles.backToUni}
+            onPress={() => router.replace(ROUTES.university)}
+            testID="stabilize-return"
+          >
+            <View style={styles.backToUniInner}>
+              <Ionicons name="arrow-back-circle-outline" size={18} color="#2DD4BF90" />
+              <Text style={styles.backToUniTxt}>Back to University</Text>
+            </View>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* Tutorial overlay — must be inside this screen so highlighted orb

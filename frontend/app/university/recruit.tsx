@@ -21,6 +21,7 @@ import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
+import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 
 // Collect unique chain roles from a hero's skills (max 3 displayed).
 function getHeroChainRoles(heroId: string): string[] {
@@ -504,7 +505,8 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
 
   if (!result) return null;
 
-  const portraitH = Math.round(screenH * 0.58);
+  // Give the full-body sprite ample vertical space — 72% of screen height.
+  const portraitH = Math.round(screenH * 0.72);
 
   // ── HERO reveal ────────────────────────────────────────────────────────────
   if (result.kind === "hero" && result.entry) {
@@ -512,7 +514,9 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
     const hero       = LAUNCH_ROSTER.find(h => h.id === entry.heroId);
     const rc         = rarityColor(entry.rarity);
     const rLabel     = entry.rarity === 5 ? "LEGENDARY" : entry.rarity === 4 ? "RARE" : entry.rarity === 3 ? "UNCOMMON" : "COMMON";
-    const portrait   = getHeroPortrait(entry.heroId);
+    // Full-body donghua sprite for the reveal — centered, no cropping.
+    // Fall back to portrait crop only if no battle sprite exists.
+    const portrait   = getHeroBattleSprite(entry.heroId) ?? getHeroPortrait(entry.heroId);
     const famColor   = hero ? FAMILY_COLORS[hero.family] : rc;
     const chainRoles = getHeroChainRoles(entry.heroId);
     const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.65] });
@@ -536,24 +540,22 @@ function RecruitRevealModal({ result, onDismiss }: { result: RecruitResult | nul
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* ── Portrait zone (top 58% of screen) ── */}
+          {/* ── Portrait zone — full-body donghua sprite, centred, no cropping ── */}
           <View style={[revealStyles.portraitZone, { height: portraitH }]}>
             {portrait ? (
-              <ExpoImage source={portrait} style={revealStyles.fullPortrait} contentFit="contain" />
+              <ExpoImage
+                source={portrait}
+                style={revealStyles.fullPortrait}
+                contentFit="contain"
+                contentPosition="center"
+              />
             ) : (
               <View style={[revealStyles.fullPortraitPlaceholder, { borderColor: rc + "40" }]}>
                 <Ionicons name="person" size={80} color={rc + "70"} />
               </View>
             )}
-            {/* Bottom fade of portrait into content */}
-            <LinearGradient
-              colors={["transparent", "transparent", "#050A0F"]}
-              style={revealStyles.portraitFade}
-              start={{ x: 0.5, y: 0.55 }} end={{ x: 0.5, y: 1 }}
-              pointerEvents="none"
-            />
 
-            {/* Rarity pill — floated at top of portrait */}
+            {/* Rarity pill — floated at top of portrait zone */}
             <View style={[revealStyles.rarityPill, { backgroundColor: rc + "22", borderColor: rc + "80" }]}>
               <Ionicons name="sparkles" size={11} color={rc} />
               <Text style={[revealStyles.rarityPillTxt, { color: rc }]}>{rLabel} HEALER ENROLLED</Text>
