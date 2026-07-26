@@ -930,26 +930,28 @@ export function getTreatmentStabilityModifier(stability: number): number {
 // patient lets the team coordinate more actions, a crashing one limits them.
 export function getTurnAP(stability: number, corruption: number, chapter: number, modifiers: { allowHighStabilityBonus?: boolean; preventNextAPLoss?: boolean } = {}): number {
   let ap: number;
-  if (stability >= 100) ap = 6;
-  else if (stability >= 75) ap = 5;
-  else if (stability >= 50) ap = 4;
-  else if (stability >= 25) ap = 3;
-  else ap = 2; // 10-24, and the sub-10 critical floor
+  if (stability >= 100) ap = 10;
+  else if (stability >= 75) ap = 9;
+  else if (stability >= 50) ap = 8;
+  else if (stability >= 25) ap = 5;
+  else ap = 3; // critical floor
   if (stability >= 75 && modifiers.allowHighStabilityBonus) ap += 1;
   if (chapter >= 2 && corruption >= 80) ap -= 1;
   if (modifiers.preventNextAPLoss) {
-    ap = Math.max(ap, 4);
+    ap = Math.max(ap, 5);
     modifiers.preventNextAPLoss = false;
   }
-  return Math.max(2, Math.min(ap, 7));
+  return Math.max(3, Math.min(ap, 10));
 }
 
 export function apMessage(ap: number): string {
-  if (ap >= 6) return 'The patient is thriving — the team moves in perfect sync. 6 AP available.';
-  if (ap >= 5) return 'The patient is stable and the team is well coordinated. 5 AP available.';
-  if (ap >= 4) return 'The team has full coordination. 4 AP available.';
-  if (ap >= 3) return 'The situation is unstable. The team has less time. 3 AP available.';
-  return 'Critical condition. Prioritize emergency actions. 2 AP available.';
+  if (ap >= 10) return 'The patient is thriving — legendary coordination. 10 AP available.';
+  if (ap >= 9)  return 'The patient is thriving — the team moves in perfect sync. 9 AP available.';
+  if (ap >= 8)  return 'The patient is stable and the team is fully coordinated. 8 AP available.';
+  if (ap >= 6)  return 'The team has solid coordination. 6 AP available.';
+  if (ap >= 5)  return 'The situation is demanding. The team keeps pace. 5 AP available.';
+  if (ap >= 4)  return 'The situation is unstable. The team is stretched. 4 AP available.';
+  return 'Critical condition. Prioritize emergency actions. 3 AP available.';
 }
 
 export function getDangerLevel(stability: number, corruption: number): 'controlled' | 'guarded' | 'unstable' | 'critical' {

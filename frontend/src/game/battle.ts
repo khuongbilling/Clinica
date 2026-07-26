@@ -53,7 +53,7 @@ export interface WaveMember {
 
 // Hard ceiling for AP granted by bonuses (e.g. correct Clinical Cues) that stack
 // above the normal per-turn limit. Keeps bonus AP meaningful without runaway stacking.
-const AP_BONUS_CEILING = 9;
+const AP_BONUS_CEILING = 12;
 
 export interface BattleState {
   enemy: Enemy;
