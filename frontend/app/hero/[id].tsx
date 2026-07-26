@@ -3,9 +3,9 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBack } from "@/src/utils/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -276,6 +276,27 @@ export default function HeroProfile() {
   const router = useRouter();
   const { player, saveActiveTeam } = usePlayer();
   const [activeTab, setActiveTab] = useState<Tab>("Details");
+  const [chapterToast, setChapterToast] = useState<{ star: number; title: string } | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  // Animate the toast in whenever it appears, then auto-dismiss after 4 s
+  useEffect(() => {
+    if (!chapterToast) return;
+    Animated.spring(toastAnim, { toValue: 1, useNativeDriver: true, tension: 80, friction: 10 }).start();
+    const timer = setTimeout(() => dismissToast(), 4000);
+    return () => clearTimeout(timer);
+  }, [chapterToast]);
+
+  const dismissToast = () => {
+    Animated.timing(toastAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() =>
+      setChapterToast(null)
+    );
+  };
+
+  const handleChapterUnlocked = (star: number, title: string) => {
+    toastAnim.setValue(0);
+    setChapterToast({ star, title });
+  };
 
   const hero = HEROES.find((h) => h.id === id);
 
@@ -453,12 +474,46 @@ export default function HeroProfile() {
         {activeTab === "Details"  && <DetailsTab  hero={hero} accent={accent} />}
         {activeTab === "Skills"   && <SkillsTab   hero={hero} accent={accent} />}
         {activeTab === "Equipment" && <EquipmentTab hero={hero} accent={accent} />}
-        {activeTab === "Upgrade"  && <EvolveTab hero={hero} accent={accent} isOwned={isOwned} />}
+        {activeTab === "Upgrade"  && <EvolveTab hero={hero} accent={accent} isOwned={isOwned} onChapterUnlocked={handleChapterUnlocked} />}
         {activeTab === "Bond"     && <PlaceholderTab label="Bond" accent={accent} icon="heart-outline"
             message="Bond stories deepen as you use this hero in shifts. Build trust to unlock hidden abilities." />}
         {activeTab === "Lore"     && <LoreTab hero={hero} accent={accent} prog={prog} />}
         <View style={{ height: SPACING.xxxl }} />
       </ScrollView>
+
+      {/* ── CHAPTER UNLOCKED TOAST ── */}
+      {chapterToast && (
+        <Animated.View
+          style={[
+            styles.chapterToast,
+            { borderLeftColor: accent, backgroundColor: COLORS.surfaceSecondary },
+            {
+              transform: [{
+                translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [120, 0] }),
+              }],
+              opacity: toastAnim,
+            },
+          ]}
+        >
+          <Pressable
+            style={styles.chapterToastInner}
+            onPress={() => { dismissToast(); setActiveTab("Lore"); }}
+            testID="chapter-unlocked-toast"
+          >
+            <View style={[styles.chapterToastIcon, { backgroundColor: accent + "22" }]}>
+              <Ionicons name="book-outline" size={20} color={accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.chapterToastLabel, { color: accent }]}>CHAPTER UNLOCKED</Text>
+              <Text style={styles.chapterToastTitle}>
+                {"Chapter " + chapterToast.star + ": " + chapterToast.title}
+              </Text>
+              <Text style={[styles.chapterToastHint, { color: accent }]}>Tap to read in Lore</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={accent + "80"} />
+          </Pressable>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -717,7 +772,12 @@ function PlaceholderTab({ label, accent, icon, message }: { label: string; accen
   );
 }
 
-function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwned: boolean }) {
+function EvolveTab({
+  hero, accent, isOwned, onChapterUnlocked,
+}: {
+  hero: any; accent: string; isOwned: boolean;
+  onChapterUnlocked?: (star: number, title: string) => void;
+}) {
   const { player, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite } = usePlayer();
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -768,9 +828,16 @@ function EvolveTab({ hero, accent, isOwned }: { hero: any; accent: string; isOwn
   const onPromote = async () => {
     if (busy || !check.eligible) return;
     setBusy(true);
+    const newStar = prog.star + 1;
     const res = await promoteHeroCert(hero.id);
     setFeedback(res.message);
     setBusy(false);
+    if (res.ok && onChapterUnlocked) {
+      const loreEntry = hero.starLore?.find((e: any) => e.star === newStar);
+      if (loreEntry) {
+        onChapterUnlocked(newStar, loreEntry.title);
+      }
+    }
   };
 
   return (
@@ -1257,5 +1324,51 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceSecondary,
     fontSize: 13,
     lineHeight: 20,
+  },
+
+  /* Chapter unlocked toast */
+  chapterToast: {
+    position: "absolute",
+    bottom: 24,
+    left: 16,
+    right: 16,
+    borderRadius: RADIUS.lg,
+    borderLeftWidth: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  chapterToastInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    padding: SPACING.md,
+  },
+  chapterToastIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chapterToastLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  chapterToastTitle: {
+    color: COLORS.onSurface,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  chapterToastHint: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+    opacity: 0.75,
   },
 });
