@@ -36,6 +36,8 @@ export interface DailyReward {
   playerXp?: number;
   heroXp?: number;
   refinedLotusGems?: number; // weekly completion only — not farmable
+  // Task 270 — equipment item ids granted directly into owned_equipment.
+  equipmentItems?: string[];
 }
 
 // Progress-event types. Each maps to a hook point that already exists in the
@@ -385,6 +387,51 @@ export const QUEST_MILESTONES: QuestMilestoneDef[] = [
     icon: 'flame-outline',
     reward: { codexShards: 75, crowns: 125 },
     isDone: (p) => (p?.daily_rounds?.streak_count ?? 0) >= 7,
+  },
+  // ── Task 270 — Equipment acquisition milestones ──────────────────────────
+  {
+    id: 'ms_equip_lotus_lamp_wick',
+    label: 'Ward Healer',
+    description: 'Complete 3 Ward Shift runs to earn the Lotus Lamp Wick.',
+    icon: 'flame-outline',
+    reward: { crowns: 50, equipmentItems: ['lotus_lamp_wick'] },
+    isDone: (p) => (p?.runs_completed ?? 0) >= 3,
+  },
+  {
+    id: 'ms_equip_culture_lens',
+    label: 'University Practitioner',
+    description: 'Complete 5 University lessons or practice sessions to earn the Culture Lens.',
+    icon: 'school-outline',
+    reward: { universityCredits: 50, equipmentItems: ['culture_lens'] },
+    isDone: (p) =>
+      ((p?.lessons_completed?.length ?? 0) +
+        (p?.uni_cue_lab_count ?? 0) +
+        (p?.uni_triage_count ?? 0) +
+        (p?.uni_stack_count ?? 0)) >= 5,
+  },
+  {
+    id: 'ms_equip_triage_sash',
+    label: 'Boss Vanquisher',
+    description: 'Defeat a boss in Ward Shift to earn the Triage Sash.',
+    icon: 'shield-checkmark-outline',
+    reward: { crowns: 75, equipmentItems: ['triage_sash'] },
+    isDone: (p) => (p?.bosses_defeated?.length ?? 0) >= 1,
+  },
+  {
+    id: 'ms_equip_apothecary_seal',
+    label: 'Seasoned Practitioner',
+    description: 'Complete 5 Ward Shift runs to earn the Apothecary Seal.',
+    icon: 'flask-outline',
+    reward: { crowns: 60, equipmentItems: ['apothecary_seal'] },
+    isDone: (p) => (p?.runs_completed ?? 0) >= 5,
+  },
+  {
+    id: 'ms_equip_field_coordinator_badge',
+    label: 'Daily Coordinator',
+    description: 'Complete your first full Daily Ward Rounds set to earn the Field Coordinator Badge.',
+    icon: 'ribbon-outline',
+    reward: { crowns: 50, equipmentItems: ['field_coordinator_badge'] },
+    isDone: (p) => (p?.daily_rounds?.weekly_days_completed ?? 0) >= 1,
   },
 ];
 

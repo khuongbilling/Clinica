@@ -185,6 +185,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.hero_skill_upgrades) out = { ...out, hero_skill_upgrades: {} };
   // Push 10 — backfill hero equipment loadouts for pre-P10 saves.
   if (!out.hero_equipment) out = { ...out, hero_equipment: {} };
+  // Task 270 — backfill owned equipment list for pre-270 saves.
+  if (!Array.isArray(out.owned_equipment)) out = { ...out, owned_equipment: [] };
   // Push 4 — backfill Practice Curriculum completion list for pre-P4 saves.
   if (!out.practice_modules_completed) out = { ...out, practice_modules_completed: [] };
   if (out.seen_practice_curriculum == null) out = { ...out, seen_practice_curriculum: false };
@@ -596,6 +598,14 @@ function addDailyReward(p: PlayerState, r: DailyReward): PlayerState {
     university_credits: (p.university_credits || 0) + (r.universityCredits || 0),
     refined_lotus_gems: (p.refined_lotus_gems || 0) + (r.refinedLotusGems || 0),
   };
+  // Task 270 — grant equipment items (deduped; items can only be owned once).
+  if (r.equipmentItems && r.equipmentItems.length > 0) {
+    const existing = Array.isArray(next.owned_equipment) ? next.owned_equipment : [];
+    const added = r.equipmentItems.filter((id) => !existing.includes(id));
+    if (added.length > 0) {
+      next = { ...next, owned_equipment: [...existing, ...added] };
+    }
+  }
   if (r.playerXp) next = applyXp(next, r.playerXp);
   if (r.heroXp) {
     const teamIds = (next.active_team || []).filter(Boolean);
@@ -727,6 +737,7 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     tutorial_summon_1_done: false,
     tutorial_summon_2_done: false,
     hero_equipment: {},
+    owned_equipment: [],
   };
 }
 
@@ -2707,9 +2718,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // Push 10 — Equip/unequip hero equipment items.
   // Equipping a new item into a slot replaces any existing item in that slot.
+  // Task 270: blocks equipping items the player does not own.
   const equipItem = useCallback(async (heroId: string, slot: string, itemId: string) => {
     const base = playerRef.current;
     if (!base) return;
+    const ownedEq = Array.isArray(base.owned_equipment) ? base.owned_equipment : [];
+    if (!ownedEq.includes(itemId)) return; // not owned — silently ignore
     const existing = base.hero_equipment ?? {};
     const heroSlots = { ...(existing[heroId] ?? {}), [slot]: itemId };
     const next: PlayerState = { ...base, hero_equipment: { ...existing, [heroId]: heroSlots } };

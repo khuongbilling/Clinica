@@ -443,4 +443,8 @@ export interface PlayerState {
   // Only items with status: "active" in equipment.ts take effect in battle.
   // Backfilled as {} for existing players in normalizeProgression.
   hero_equipment?: Record<string, Record<string, string>>;
+  // Push 10 (Task 270) — owned equipment items (by item id from equipment.ts).
+  // Earned through Ward Shift clears, University milestones, boss defeats, and
+  // Daily Rounds milestones. Backfilled as [] for existing players.
+  owned_equipment?: string[];
 }

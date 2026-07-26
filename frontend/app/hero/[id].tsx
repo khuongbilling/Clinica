@@ -661,6 +661,11 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
   const statLines = family ? ROLE_STAT_VOCABULARY[family] : [];
   // Current hero's equipped item IDs: slotId → itemId
   const heroEquipment = player?.hero_equipment?.[hero.id] ?? {};
+  // Task 270 — items the player has earned/owns
+  const ownedEquipment: string[] = Array.isArray(player?.owned_equipment) ? player!.owned_equipment : [];
+
+  const ownedActiveItems = activeItems.filter((i) => ownedEquipment.includes(i.id));
+  const notOwnedActiveItems = activeItems.filter((i) => !ownedEquipment.includes(i.id));
 
   return (
     <View style={{ gap: SPACING.lg }}>
@@ -687,10 +692,11 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
 
       {slots.map((slot) => {
         const slotMeta = EQUIPMENT_SLOT_META[slot];
-        const slotActiveItems = activeItems.filter((i) => i.slot === slot);
+        const slotActiveOwned = ownedActiveItems.filter((i) => i.slot === slot);
+        const slotActiveNotOwned = notOwnedActiveItems.filter((i) => i.slot === slot);
         const slotFutureItem = roleItems.find((i) => i.slot === slot && i.status === "future");
         const equippedItemId = heroEquipment[slot];
-        const hasAnyItem = slotActiveItems.length > 0 || slotFutureItem;
+        const hasAnyItem = slotActiveOwned.length > 0 || slotActiveNotOwned.length > 0 || slotFutureItem;
 
         return (
           <View key={slot} style={[styles.equipSlotCard, { borderColor: accent + "28" }]}>
@@ -700,8 +706,8 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
               {!hasAnyItem && <Text style={styles.equipSlotEmpty}>Empty — foundation slot</Text>}
             </View>
 
-            {/* Active (equippable) items for this slot */}
-            {slotActiveItems.map((item) => {
+            {/* Owned active items — fully equippable */}
+            {slotActiveOwned.map((item) => {
               const isEquipped = equippedItemId === item.id;
               return (
                 <View
@@ -717,6 +723,9 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
                       <Text style={[styles.equipRarityTxt, { color: EQUIPMENT_RARITY_META[item.rarity].color }]}>
                         {EQUIPMENT_RARITY_META[item.rarity].label}
                       </Text>
+                    </View>
+                    <View style={[styles.equipFutureChip, { backgroundColor: "#22c55e30" }]}>
+                      <Text style={[styles.equipFutureTxt, { color: "#22c55e" }]}>OWNED</Text>
                     </View>
                     {isEquipped && (
                       <View style={[styles.equipFutureChip, { backgroundColor: accent + "30" }]}>
@@ -745,9 +754,34 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
               );
             })}
 
+            {/* Not-yet-owned active items — locked, show source */}
+            {slotActiveNotOwned.map((item) => (
+              <View
+                key={item.id}
+                style={[styles.equipItemRow, { opacity: 0.55, borderColor: COLORS.border }]}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Ionicons name="lock-closed-outline" size={13} color={COLORS.onSurfaceTertiary} />
+                  <Text style={[styles.equipItemName, { color: COLORS.onSurfaceSecondary }]}>{item.name}</Text>
+                  <View style={[styles.equipRarityChip, { borderColor: EQUIPMENT_RARITY_META[item.rarity].color + "60" }]}>
+                    <Text style={[styles.equipRarityTxt, { color: EQUIPMENT_RARITY_META[item.rarity].color }]}>
+                      {EQUIPMENT_RARITY_META[item.rarity].label}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.equipStatLine, { marginTop: 2, color: COLORS.onSurfaceTertiary }]}>{item.mainStat}</Text>
+                <Text style={[styles.equipItemDesc, { color: COLORS.onSurfaceTertiary }]}>{item.description}</Text>
+                <Text style={[styles.equipSourceLine, { marginTop: 4 }]}>How to earn: {item.source}</Text>
+                <View style={[styles.equipActionBtn, { borderColor: COLORS.border, opacity: 0.5, flexDirection: "row", alignItems: "center", gap: 4 }]}>
+                  <Ionicons name="lock-closed-outline" size={12} color={COLORS.onSurfaceTertiary} />
+                  <Text style={[styles.equipActionTxt, { color: COLORS.onSurfaceTertiary }]}>Not yet earned</Text>
+                </View>
+              </View>
+            ))}
+
             {/* Future (coming soon) item from role catalog */}
             {slotFutureItem && (
-              <View key={slotFutureItem.id} style={{ marginTop: slotActiveItems.length > 0 ? 8 : 4 }}>
+              <View key={slotFutureItem.id} style={{ marginTop: (slotActiveOwned.length + slotActiveNotOwned.length) > 0 ? 8 : 4 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
                   <Text style={styles.equipItemName}>{slotFutureItem.name}</Text>
                   <View style={[styles.equipRarityChip, { borderColor: EQUIPMENT_RARITY_META[slotFutureItem.rarity].color + "80" }]}>
