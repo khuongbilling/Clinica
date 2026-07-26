@@ -407,8 +407,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
             <ExpoImage
               source={beat.largePortrait}
               style={styles.dlgCharArt}
-              contentFit="contain"
-              contentPosition="bottom"
+              contentFit="fill"
             />
             {/* subtle colour halo at base of character */}
             <LinearGradient
@@ -672,21 +671,26 @@ const styles = StyleSheet.create({
   // ── Dialogue panel ────────────────────────────────────────────────────────
   dialogueSafe: { flex: 1, justifyContent: "flex-end", paddingBottom: 32 },
 
-  // Floating full-body portrait sits above the VN panel — bottom pinned above
-  // the panel so the character's face clears the dialogue box
+  // Full-body portrait flushed to screen bottom. The image is rendered taller
+  // than the screen (H * 1.3) and offset down via paddingTop so the thigh line
+  // (≈65% from image top) lands exactly at the screen bottom edge. The lower
+  // legs/feet overflow below and are clipped by overflow:hidden on the container.
   dlgCharWrap: {
     position:       "absolute",
-    bottom:         210,          // sits above the dialogue panel (~190 px tall)
+    top:            0,
     left:           0,
     right:          0,
-    height:         H * 0.78,
+    bottom:         0,
+    overflow:       "hidden",
     alignItems:     "center",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
+    paddingTop:     H * 0.155,   // head at ~15% from screen top
     pointerEvents:  "none",
   } as any,
   dlgCharArt: {
-    width:  W * 0.88,
-    height: H * 0.76,
+    width:     H * 1.3,   // wider than screen; overflow clipped by container
+    height:    H * 1.3,   // extends below screen; thigh ≈ screen bottom
+    flexShrink: 0,
   },
   dlgCharGlow: {
     position:     "absolute",

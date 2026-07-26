@@ -23,7 +23,7 @@ export interface PrologueCharacter {
 
 const PRODIGY_PORTRAIT       = require("../../assets/images/the_prodigy_portrait.png");
 const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
-const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_bust.png");
+const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_extended.png");
 const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
 const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
 const FLEMING_BUST           = require("../../assets/images/fleming_vn_bust.png");
