@@ -330,7 +330,7 @@ export const ENEMIES: Enemy[] = [
     difficulty: 3,
     startingStability: 80,
     instability: 8,
-    corruption: 140,
+    corruption: 182,
     weakSystem: 'River',
     visibleClues: [
       { id: 'c1', label: 'Parched Lips', detail: 'Cracked, dry mucous membranes. Severe fluid loss.', hidden: false },
@@ -1160,7 +1160,7 @@ export const BOSS_SILENT_INFARCT: Enemy = {
   difficulty: 5,
   startingStability: 55,
   instability: 14,
-  corruption: 260,
+  corruption: 338,
   stabilityResistance: 0.9, // shrugs off nearly all stabilization — this fight cannot be held steady
   visibleClues: [
     { id: 'c1', label: 'Vague Fatigue', detail: 'Patient reports "just feeling off." Nothing specific.', hidden: false },
