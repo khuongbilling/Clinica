@@ -186,6 +186,10 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     clinicalTags: ['assessment'],
     chainRoles: ['Scout', 'Counter'],
   },
+  mythic_prescience: {
+    clinicalTags: ['assessment', 'reassessment', 'anticipatory care'],
+    chainRoles: ['Counter'],
+  },
   guardians_touch: {
     clinicalTags: ['general support', 'comfort'],
     chainRoles: ['Stabilize', 'Counter'],

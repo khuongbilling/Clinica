@@ -71,6 +71,7 @@ const COUNTER_LABEL: Record<ActionType, string> = {
   command: "Coordinate",
   analyze: "Analyze",
   support: "Support",
+  counter: "Counter",
 };
 
 /* Per-attack HERO motion signature (hero faces right, enemy is to the right → lunge = +X). */
@@ -84,6 +85,7 @@ const HERO_MOVE: Record<ActionType, HeroMove> = {
   command: { lungeX: 16, lift: -9, scale: 1.12, spin: false, aura: "#C792EA" },
   scout: { lungeX: 5, lift: -16, scale: 1.06, spin: false, aura: "#F5C542" },
   analyze: { lungeX: 5, lift: -12, scale: 1.05, spin: false, aura: "#F5C542" },
+  counter: { lungeX: 22, lift: -8, scale: 1.13, spin: false, aura: "#FF9F43" },
 };
 
 /* Per-attack HERO illustrated attack sequence: the projectile/effect that launches
@@ -116,6 +118,8 @@ const ATTACK_FX: Record<ActionType, AttackVisual> = {
   scout:     { icon: "magnify-scan",      color: "#F5C542", particles: 1, flyX: 240, flyY: -16, rot: 0,   scaleTo: 1.25, size: 28, duration: 640 },
   // Analytic data glyph projected onto the target.
   analyze:   { icon: "chart-box-outline", color: "#F5C542", particles: 1, flyX: 220, flyY: -12, rot: 0,   scaleTo: 1.25, size: 26, duration: 640 },
+  // A preemptive intercept bolt — sharp and direct, anticipating the enemy's next move.
+  counter:   { icon: "lightning-bolt",    color: "#FF9F43", particles: 2, flyX: 240, flyY: -10, rot: -20, scaleTo: 1.3,  size: 28, duration: 520 },
 };
 
 /* Per-attack ENEMY reaction signature. */
@@ -129,6 +133,7 @@ const ENEMY_REACT: Record<ActionType, EnemyReact> = {
   support: { shake: 0, flash: false, ring: "#37D399", scan: false, settle: true },
   scout: { shake: 0, flash: false, ring: "#F5C542", scan: true, settle: false },
   analyze: { shake: 0, flash: false, ring: "#F5C542", scan: true, settle: false },
+  counter: { shake: 7, flash: true, ring: "#FF9F43", scan: false, settle: false },
 };
 
 interface BattleEnemyInfo {

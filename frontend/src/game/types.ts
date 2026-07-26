@@ -13,7 +13,7 @@ export type ClassFamily =
 
 export type LaunchRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
-export type ActionType = 'scout' | 'strike' | 'stabilize' | 'shield' | 'cleanse' | 'command' | 'analyze' | 'support';
+export type ActionType = 'scout' | 'strike' | 'stabilize' | 'shield' | 'cleanse' | 'command' | 'analyze' | 'support' | 'counter';
 
 export interface HeroSkill {
   id: string;
