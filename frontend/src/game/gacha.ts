@@ -25,6 +25,12 @@ export const FOUNDATION_BANNER: GachaEntry[] = [
   { id: 'H008', heroId: 'infection_warden', name: 'Infection Warden',  rarity: 4, role: 'Specialist',  aptitude: 'Warden',   weight: 10 },
   { id: 'H009', heroId: 'wound_sage',       name: 'Wound Sage',        rarity: 4, role: 'Specialist',  aptitude: 'Sage',     weight: 10 },
   { id: 'H010', heroId: 'mindkeeper',       name: 'Mindkeeper',        rarity: 4, role: 'Specialist',  aptitude: 'Sage',     weight: 10 },
+  { id: 'H013', heroId: 'lotus_care_captain',      name: 'Lotus Care Captain',      rarity: 4, role: 'Coordinator',    aptitude: 'Warden',   weight: 10 },
+  { id: 'H014', heroId: 'code_guardian',           name: 'Code Guardian',           rarity: 4, role: 'Coordinator',    aptitude: 'Guardian', weight: 10 },
+  { id: 'H015', heroId: 'mind_lotus_healer',       name: 'Mind Lotus Healer',       rarity: 4, role: 'Restorer',       aptitude: 'Sage',     weight: 10 },
+  { id: 'H016', heroId: 'patient_safety_arbiter',  name: 'Patient Safety Arbiter',  rarity: 4, role: 'SystemsLeader', aptitude: 'Warden',   weight: 10 },
+  { id: 'H017', heroId: 'ventilation_strategist',  name: 'Ventilation Strategist',  rarity: 4, role: 'SystemsLeader', aptitude: 'Sage',     weight: 10 },
+  { id: 'H018', heroId: 'hearthline_attending',    name: 'Hearthline Attending',    rarity: 4, role: 'SystemsLeader', aptitude: 'Sage',     weight: 10 },
   // Rarity 5 ghost slots — heroes don't yet exist in content.ts but are reserved for future expansion.
   // Pulling these grants a temporary placeholder + bonus shards.
   { id: 'H011', heroId: 'clinical_sage',    name: 'Clinical Sage',     rarity: 5, role: 'Assessor',    aptitude: 'Sage',     weight: 2 },
