@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     alignItems:     "center",
     justifyContent: "flex-end",
   },
-  charArt: { width: W * 0.92, height: H * 0.96 },
+  charArt: { width: W * 0.69, height: H * 0.72 },
 
   vnBar: {
     position:       "absolute",

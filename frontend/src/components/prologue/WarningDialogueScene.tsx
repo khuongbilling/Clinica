@@ -327,8 +327,8 @@ const s = StyleSheet.create({
   // Explicit large dimensions ensure the portrait fills enough vertical space
   // that the face clears the BAR_HEIGHT even on short devices.
   charArt: {
-    width:  W * 0.92,
-    height: H * 0.88,
+    width:  W * 0.69,
+    height: H * 0.66,
   },
 
   bar: {

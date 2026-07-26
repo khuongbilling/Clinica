@@ -401,7 +401,11 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
 
           {/* ── Floating character portrait above dialogue panel ── */}
           <Animated.View
-            style={[styles.dlgCharWrap, { opacity: charFade, transform: [{ translateY: charSlide }] }]}
+            style={[
+              styles.dlgCharWrap,
+              { opacity: charFade, transform: [{ translateY: charSlide }] },
+              beat.largePortrait === ART.nightingaleLarge && { paddingTop: H * 0.655 },
+            ]}
             pointerEvents="none"
           >
             <ExpoImage
@@ -689,8 +693,8 @@ const styles = StyleSheet.create({
     pointerEvents:  "none",
   } as any,
   dlgCharArt: {
-    width:     H * 1.3,   // wider than screen; overflow clipped by container
-    height:    H * 1.3,   // extends below screen; thigh ≈ screen bottom
+    width:     H * 0.975,
+    height:    H * 0.975,
     flexShrink: 0,
   },
   dlgCharGlow: {
