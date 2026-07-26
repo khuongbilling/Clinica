@@ -61,6 +61,10 @@ export interface Hero {
   star?: number;
   // Locked legendary heroes: not grantable, not in gacha pool — teaser/preview only.
   locked?: boolean;
+  // Star lore: five short biography chapters revealed as the hero is promoted.
+  // ★1 is always visible; ★2-★5 unlock when prog.star >= entry.star.
+  // Optional — heroes without this field show no star lore section.
+  starLore?: { star: 1 | 2 | 3 | 4 | 5; title: string; text: string }[];
 }
 
 export interface ClueCard {

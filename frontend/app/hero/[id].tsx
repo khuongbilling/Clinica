@@ -456,7 +456,7 @@ export default function HeroProfile() {
         {activeTab === "Upgrade"  && <EvolveTab hero={hero} accent={accent} isOwned={isOwned} />}
         {activeTab === "Bond"     && <PlaceholderTab label="Bond" accent={accent} icon="heart-outline"
             message="Bond stories deepen as you use this hero in shifts. Build trust to unlock hidden abilities." />}
-        {activeTab === "Lore"     && <LoreTab hero={hero} accent={accent} />}
+        {activeTab === "Lore"     && <LoreTab hero={hero} accent={accent} prog={prog} />}
         <View style={{ height: SPACING.xxxl }} />
       </ScrollView>
     </SafeAreaView>
@@ -638,11 +638,12 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
   );
 }
 
-function LoreTab({ hero, accent }: { hero: any; accent: string }) {
+function LoreTab({ hero, accent, prog }: { hero: any; accent: string; prog: { star: number } }) {
   const backstory = hero.backstory ?? `The full story of ${hero.name} is yet to be written. Continue your shifts to unlock their history.`;
+  const starLore: { star: 1|2|3|4|5; title: string; text: string }[] | undefined = hero.starLore;
   return (
     <View style={{ gap: SPACING.lg }}>
-      <SectionHeader title="Lore" icon="book-outline" accent={accent} />
+      <SectionHeader title="Origin" icon="book-outline" accent={accent} />
       <Text style={styles.descTxt}>{backstory}</Text>
       <View style={[styles.bondRow, { borderColor: accent + "30", backgroundColor: COLORS.surfaceSecondary }]}>
         <Ionicons name="heart-outline" size={16} color={accent} />
@@ -656,6 +657,52 @@ function LoreTab({ hero, accent }: { hero: any; accent: string }) {
           </View>
         </View>
       </View>
+
+      {starLore && starLore.length > 0 && (
+        <View style={{ gap: SPACING.md }}>
+          <SectionHeader title="Chapters" icon="library-outline" accent={accent} />
+          {starLore.map((entry) => {
+            const unlocked = prog.star >= entry.star;
+            return (
+              <View
+                key={entry.star}
+                style={[
+                  styles.loreChapterCard,
+                  unlocked
+                    ? { borderLeftColor: accent }
+                    : { borderLeftColor: COLORS.surfaceTertiary, opacity: 0.6 },
+                ]}
+              >
+                <View style={styles.loreChapterHeader}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {Array.from({ length: entry.star }).map((_, i) => (
+                      <Ionicons key={i} name="star" size={10} color={unlocked ? accent : COLORS.onSurfaceTertiary} />
+                    ))}
+                  </View>
+                  {!unlocked && (
+                    <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceTertiary} />
+                  )}
+                </View>
+                {unlocked ? (
+                  <>
+                    <Text style={[styles.loreChapterTitle, { color: accent }]}>{entry.title}</Text>
+                    <Text style={styles.loreChapterText}>{entry.text}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.loreChapterTitle, { color: COLORS.onSurfaceTertiary }]}>
+                      {"Chapter " + entry.star + ": ???"}
+                    </Text>
+                    <Text style={[styles.loreChapterText, { color: COLORS.onSurfaceTertiary }]}>
+                      {"Promote to \u2605" + entry.star + " to reveal this chapter."}
+                    </Text>
+                  </>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -1184,4 +1231,31 @@ const styles = StyleSheet.create({
   reqRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
   reqLabel: { flex: 1, fontSize: 12 },
   reqValue: { fontSize: 12, fontWeight: "700" },
+
+  /* Star lore chapter cards */
+  loreChapterCard: {
+    borderLeftWidth: 3,
+    borderRadius: RADIUS.md,
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.sm,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.surfaceSecondary,
+    gap: SPACING.xs,
+  },
+  loreChapterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
+  loreChapterTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  loreChapterText: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+  },
 });

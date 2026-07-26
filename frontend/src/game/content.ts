@@ -32,6 +32,33 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Respiratory distress, oxygenation, patient stabilization',
     bondLevel: 0,
     bondExp: 0,
+    starLore: [
+      {
+        star: 1,
+        title: 'The First Night',
+        text: 'She was seventeen when she sat beside her grandmother through a long respiratory crisis, watching the nurses work with quiet precision in the small hours. She did not understand the machines or the medications then. She only understood that someone stayed; someone cared enough to remain in the dark. That night planted a seed she would spend years learning to name.',
+      },
+      {
+        star: 2,
+        title: 'Lessons in the Dark',
+        text: 'Her preceptor was a compact, unhurried woman who had spent two decades in med-surg. She taught the Novice Guardian to read a patient\'s breathing rate the way a sailor reads the wind: before the numbers changed, before the alarms triggered. "Breathe with them," she said. "Your body knows before your mind does." It was the most useful thing she ever learned.',
+      },
+      {
+        star: 3,
+        title: 'The Shift That Broke Her Open',
+        text: 'Room four coded at 0340. She was the first one in and the last one out. Afterward, standing in the corridor with her hands still trembling, she understood for the first time that steadiness was not the absence of fear. It was what you built on top of it. She requested the same preceptor the following week and did not stop asking questions for three years.',
+      },
+      {
+        star: 4,
+        title: 'Breath by Breath',
+        text: 'The charge nurse pulled her aside after a particularly brutal week and said: "You are the reason that patient went home." She did not know what to do with those words. She filed them away quietly and returned to the ward, where a new patient was waiting and a new night was beginning. Recognition, she had learned, was kindest when it arrived as a quiet fact.',
+      },
+      {
+        star: 5,
+        title: 'The Oxygen Between Words',
+        text: 'She no longer needs to remind herself to watch the chest rise. Her hands move, her eyes move, and somewhere underneath it all the steady current of her training flows without interruption. She has come to believe that the most important skill in nursing is not a technique but a posture: the willingness to stay present when the room gets hard. Everything else can be taught. That cannot.',
+      },
+    ],
     skills: [
       { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 1, description: 'Restore oxygenation. +14 Stability, -10 Corruption (Air).', shortEffect: 'Air Treatment • +14 Stability · -10 Corruption', rpgDescription: 'A bright breath restores oxygen flow to the fading Air Crystal, pushing back the respiratory corruption.', beginnerExplanation: 'This supports breathing and oxygen, directly fighting the airway problem.', nclexExplanation: 'Oxygenation support is a direct counter to respiratory distress. Positioning, supplemental oxygen, and airway management reduce the disease burden.', stabilize: 14, strike: 10 },
       { id: 'lantern_of_clues', name: 'Lantern of Clues', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one hidden clue.', shortEffect: 'Scout • Reveal Hidden Clue', rpgDescription: 'A lantern of insight reveals what the corruption tried to hide.', beginnerExplanation: 'Look closer to find the important clue.', nclexExplanation: 'Assessment data helps the nurse recognize relevant cues before choosing interventions.', reveal: 1 },
@@ -46,6 +73,33 @@ export const HEROES: Hero[] = [
     role: 'Stabilizer',
     element: 'River',
     description: 'Patrols the night shift, catching subtle deterioration before it cascades.',
+    starLore: [
+      {
+        star: 1,
+        title: 'The Long Quiet',
+        text: 'He chose the night shift because nobody else wanted it. The first month he barely slept during the day; his body fought the inversion at every turn. But the ward at night had a quality he had not anticipated: an intimacy, a vulnerability from the patients that the bustle of days concealed. He found he was good at quiet. He found he was good at watching.',
+      },
+      {
+        star: 2,
+        title: 'The Senior Who Stayed',
+        text: 'An older nurse named Celestine worked the same corridor for eleven years and had never lost a patient to a preventable overnight deterioration. She taught him one rule above all others: "If something feels different, it is different. Chart it. Act on it. Apologize later if you were wrong." He has never had to apologize. He has never regretted acting.',
+      },
+      {
+        star: 3,
+        title: 'The Silent Cascade',
+        text: 'The patient in bay seven gave no dramatic sign: only a blood pressure two points lower than the night before, a respiratory rate four breaths faster, and a restlessness the day shift had charted as anxiety. He escalated. The intensivist arrived skeptical and left grateful. The patient transferred to the ICU and survived. The Night Watcher returned to his rounds and said nothing about it.',
+      },
+      {
+        star: 4,
+        title: 'Trusted in the Dark',
+        text: 'Families who stayed overnight learned to look for him. Not because he said much; he rarely did. But there was something in the way he paused at the bedside that told them the person they loved was not alone. A consultant once wrote in the notes: "Night nursing consistently excellent." He saved the page and taped it to the inside of his locker.',
+      },
+      {
+        star: 5,
+        title: 'Vigil',
+        text: 'He has come to understand that the night shift is not what happens while the real hospital sleeps. It is its own world: slower, starker, and in some ways more honest. Most people do not die at noon. Most people reach their lowest point in the early morning hours, when the body and the spirit are at their weakest. He is there. He has always been there. That is enough.',
+      },
+    ],
     skills: [
       { id: 'vital_ward', name: 'Vital Ward', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal a clue and steady the patient.', shortEffect: 'Scout • Reveal + Stabilize', rpgDescription: 'A watchful ward steadies the patient while clues surface.', beginnerExplanation: 'A careful check that also helps the patient feel better.', nclexExplanation: 'Frequent reassessment can catch early changes and prompt timely interventions.', reveal: 1, stabilize: 8 },
       { id: 'rally_bell', name: 'Rally Bell', type: 'command', systemType: 'Universal', cost: 2, description: 'Summon support. -20 Corruption, +10 Stability.', shortEffect: 'Command • -20 Corruption · +10 Stability', rpgDescription: 'A silver bell summons nearby healers to steady the crisis.', beginnerExplanation: 'Call for help when the situation is getting worse. A coordinated response hits harder.', nclexExplanation: 'Escalation is appropriate when patient status is unstable, worsening, or beyond what can be safely managed alone. A timely call directly reduces disease burden.', strike: 20, stabilize: 10 },
@@ -66,6 +120,33 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Clinical assessment, pattern recognition, cue analysis',
     bondLevel: 0,
     bondExp: 0,
+    starLore: [
+      {
+        star: 1,
+        title: 'The Girl Who Read Everything',
+        text: 'Before she ever entered a clinical placement, she had read every assessment textbook she could find twice. Not because she was told to: because she could not stop. The language of signs and symptoms felt to her like a code she had been born to crack. She entered nursing school the way others enter a conversation they have been waiting their whole lives to have.',
+      },
+      {
+        star: 2,
+        title: 'The Mentor Who Asked Questions',
+        text: 'Her clinical supervisor never told her what to do. He only asked: "What do you see? What does that suggest? What else might explain it?" At first she found the method maddening. By the end of the rotation she understood that the questions were the skill. Answers could be looked up. The habit of asking could only be built.',
+      },
+      {
+        star: 3,
+        title: 'The Case That Humbled Her',
+        text: 'She was certain about the diagnosis. She had the pattern mapped in her mind, clear and elegant, before she had finished the assessment. She was wrong: the blood cultures showed something she had not considered, a secondary infection masked by the primary presentation. The patient recovered. She did not forget the lesson. Certainty, she learned, is its own kind of blindness.',
+      },
+      {
+        star: 4,
+        title: 'Pattern Into Practice',
+        text: 'Consultants began requesting her assessments by name. Not because she was fastest or loudest, but because her documented observations consistently contained the detail that changed the clinical picture. She wrote her notes the way she thought: in layers, each one building on the last. Junior nurses sometimes asked to read them just to understand how to look.',
+      },
+      {
+        star: 5,
+        title: 'Every Symptom Is a Sentence',
+        text: 'She has come to believe that no patient deteriorates without warning. The warnings are always there; they are only missed when the observer is not ready to receive them. Her life\'s work is readiness: staying curious, staying humble, and staying close enough to the data to hear what it is actually saying before it has to shout.',
+      },
+    ],
     skills: [
       { id: 'pattern_sight', name: 'Pattern Sight', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 2 hidden clues. Pattern recognition guides a precise counter (-8 Corruption).', shortEffect: 'Analyze • Reveal 2 Clues · -8 Corruption', rpgDescription: 'Threads of the Codex reveal the pattern; the Seer strikes where it hurts most.', beginnerExplanation: 'Find the problem and act on what you see.', nclexExplanation: 'Recognizing clinical patterns helps analyze cues and select targeted interventions. The right action at the right time reduces the disease burden.', reveal: 2, strike: 8 },
       { id: 'focused_lens', name: 'Focused Lens', type: 'analyze', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues and strike 12.', shortEffect: 'Analyze • Reveal All + Strike 12', rpgDescription: 'A crystal lens sharpens the healer’s focus and prepares the next move.', beginnerExplanation: 'A careful check makes your next correct move stronger.', nclexExplanation: 'Focused assessment helps connect symptoms to priority problems and supports safer clinical decision-making.', reveal: 99, strike: 12 },
@@ -86,6 +167,33 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Patient safety, fall prevention, infection control, harm reduction',
     bondLevel: 0,
     bondExp: 0,
+    starLore: [
+      {
+        star: 1,
+        title: 'The Cost of a Moment',
+        text: 'She watched a fall happen once. She was still a student, on the ward for only her second week, and there was nothing she could have done in time. The patient was fine; the injury was minor. But she remembered the sound of it for a long time afterward. She did not enter safety nursing out of fear. She entered it out of respect for how quickly things could change.',
+      },
+      {
+        star: 2,
+        title: 'The Protocol That Nobody Followed',
+        text: 'Her first post-registration position included a falls prevention protocol that had been laminated, posted on three walls, and ignored by everyone. She started asking why. The answers led her to a redesign, a staff workshop, and a twelve-week trial. Incidents dropped by forty percent. She learned that a protocol nobody uses is not a protocol. It is decoration.',
+      },
+      {
+        star: 3,
+        title: 'The Night of Three Alerts',
+        text: 'Three patients flagged as high-risk in the same shift. She could not be in three rooms at once. She did the only thing she could: she tiered the risk carefully, communicated the plan to every member of the team, and set the system up to catch what her body could not cover. All three patients were safe by morning. Coordination, she realized, was its own kind of vigilance.',
+      },
+      {
+        star: 4,
+        title: 'Safety as Culture',
+        text: 'The new residents stopped rolling their eyes at her environmental checks when they started to understand that she caught things before they became cases. She was not trying to be difficult. She was trying to make sure that nothing she could prevent ever happened on her watch. The ward began to adopt her language. Prevention stopped being her habit and became theirs.',
+      },
+      {
+        star: 5,
+        title: 'Prevention Is Not Passive',
+        text: 'She has heard the phrase "nothing happened today" said as though it were a disappointment. She disagrees completely. Nothing happened because someone planned carefully, communicated clearly, and caught the small things before they became large ones. That is the hardest kind of work: invisible, unrecorded, unrewarded. She does it anyway. That is the whole point.',
+      },
+    ],
     skills: [
       { id: 'safety_circle', name: 'Safety Circle', type: 'shield', systemType: 'Protection', cost: 1, description: 'Reduce the next direct enemy Instability by 50%. Only blocks that one event; Corruption growth, passive disease spread, and scripted boss effects continue unaffected.', shortEffect: 'Protection • −50% next Instability', rpgDescription: 'A protective circle prevents Instability before it reaches the patient.', beginnerExplanation: 'Stop a dangerous Instability event before it happens.', nclexExplanation: 'Patient safety includes fall prevention, medication safety, infection prevention, and reducing avoidable harm.', shield: 50 },
       { id: 'isolation_seal', name: 'Isolation Seal', type: 'command', systemType: 'Protection', cost: 2, description: 'Block the next direct Instability event (Protection 100%), halt Corruption Spread from the enemy\'s next spread assault, and counter infection for −10 Corruption (vs Fire). Unlike basic Protection, this also directly fights the disease.', shortEffect: 'Counter • Block Instability · Halt Spread · −10 Corruption', rpgDescription: 'A seal of protection seals off the infectious source and strikes at the Corruption causing it.', beginnerExplanation: 'Stop germs from spreading AND help fight the infection.', nclexExplanation: 'Source control and transmission prevention directly reduce the infectious disease burden; isolation is not just defensive, it is a treatment.', blockSpread: true, shield: 100, strike: 10 },
@@ -106,6 +214,33 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Laboratory analysis, trend recognition, clinical data interpretation',
     bondLevel: 0,
     bondExp: 0,
+    starLore: [
+      {
+        star: 1,
+        title: 'Numbers as Language',
+        text: 'He discovered early that most people treated lab results as verdicts: pass or fail, normal or abnormal. He saw them differently. Each value was a single word in a long sentence the patient\'s body was writing. Learning to read that sentence, in sequence, over time, was the work that consumed him from his first clinical placement onward.',
+      },
+      {
+        star: 2,
+        title: 'The Supervisor with the Spreadsheet',
+        text: 'His placement supervisor kept a personal trending spreadsheet for every complex patient on the ward. She did not do it because the system required it. She did it because she had seen enough crises to know that a downward trend in the wrong direction was always more informative than a single out-of-range value. He started keeping his own the week after.',
+      },
+      {
+        star: 3,
+        title: 'The Value Nobody Checked',
+        text: 'The lactate had been normal on admission. It had been rising by small increments across three panels, each within the reference range, each individually unremarkable. He noticed because he was looking at the trajectory, not the points. He flagged the trend. The sepsis workup began four hours earlier than it would have otherwise. He has been looking at trajectories ever since.',
+      },
+      {
+        star: 4,
+        title: 'Precision as Care',
+        text: 'Junior staff came to him with results they could not interpret. He developed a habit of drawing it out: sketch the trend, name the physiology, connect the number to the patient in the bed. He found he was good at making the invisible visible. Numbers stopped being intimidating to the people he taught. They became a conversation with the body instead of an examination by it.',
+      },
+      {
+        star: 5,
+        title: 'The Data Does Not Lie',
+        text: 'He has come to believe that the data is always telling the truth. The challenge is never the data itself; it is the willingness of the observer to look at what is actually there rather than what they expected to find. His practice is built on one discipline: look at the trend before you decide what it means. The numbers will do the rest.',
+      },
+    ],
     skills: [
       { id: 'threadwatch', name: 'Threadwatch', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 1 clue and read the coming threat. Forewarned, the team braces; the next Instability event is reduced by 25%.', shortEffect: 'Analyze • Reveal 1 · Brace −25% next Instability', rpgDescription: 'The Weaver traces the next thread of deterioration before it snaps, steadying the ward against it.', beginnerExplanation: 'Spotting what may get worse next lets you prepare; it reduces the next Instability event.', nclexExplanation: 'Trending changes in assessment data can identify deterioration before a crisis occurs, letting the nurse intervene proactively.', reveal: 1, shield: 25 },
       { id: 'codex_link', name: 'Codex Link', type: 'scout', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues. Codex insight translates into precise action (-10 Corruption).', shortEffect: 'Analyze • Reveal All · -10 Corruption', rpgDescription: 'The revealed clues connect into a glowing Codex chain; the Weaver strikes with precision.', beginnerExplanation: 'Use what you learned to fight the disease directly.', nclexExplanation: 'Clinical judgment requires connecting assessment cues to targeted interventions; complete data drives the right action and reduces disease burden.', reveal: 99, strike: 10 },
@@ -126,6 +261,33 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Fundamental nursing care, comfort measures, patient education',
     bondLevel: 0,
     bondExp: 0,
+    starLore: [
+      {
+        star: 1,
+        title: 'The Healer Before the Title',
+        text: 'She grew up in a village where the nearest clinic was a half-day\'s walk away and the community nurse was the most trusted person anyone knew. That nurse came to the house when her mother was ill and sat with the family through the worst of it, explaining everything without being asked to. She decided then that she wanted to be that person for someone else.',
+      },
+      {
+        star: 2,
+        title: 'Slow Hands',
+        text: 'Her ward placement supervisor was not the fastest nurse on the floor. She was, without question, the most thorough. She moved deliberately: each repositioning done properly, each oral care round completed without shortcuts, each patient addressed by name before anything else happened. The supervisor told her: "Speed comes. Habit is what you build first. Make good habits and speed will follow." She never forgot it.',
+      },
+      {
+        star: 3,
+        title: 'The Patient Nobody Visited',
+        text: 'He was ninety-one and had been on the ward for three weeks without a single visitor. She started spending five extra minutes at the end of each medication round just to sit. They talked about his farm, his late wife, a road trip he took in the 1970s that he still described as the best week of his life. His wound healed faster than the team expected. She was not surprised.',
+      },
+      {
+        star: 4,
+        title: 'Foundation',
+        text: 'A newly qualified doctor asked her once, with genuine curiosity, whether she ever wished she had specialized. She thought about it for a moment. "Fundamental care is the foundation," she said. "Everything else is built on top of it. If the foundation is done poorly, nothing above it holds." He looked at her chart notes more carefully after that.',
+      },
+      {
+        star: 5,
+        title: 'The Oldest Medicine',
+        text: 'She has come to understand that presence is not a soft skill. It is a clinical one. A patient who trusts their nurse tells them things they would not otherwise tell anyone. A patient who feels safe heals in ways that cannot be charted. She does not expect anyone to write a paper about this. She just keeps showing up, doing the basics with care, and watching what happens. It works. It has always worked.',
+      },
+    ],
     skills: [
       { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 1, description: 'Steady support. +10 Stability, -10 Corruption.', shortEffect: 'Universal Treatment • +10 Stability · -10 Corruption', rpgDescription: 'A steadying pulse of healing energy restores balance and pushes back the corruption.', beginnerExplanation: 'Basic care helps the patient feel better and fights the problem.', nclexExplanation: 'Fundamental nursing care (repositioning, hygiene, comfort measures, and monitoring) has a real therapeutic effect that reduces disease burden over time.', stabilize: 10, strike: 10 },
       { id: 'reassess', name: 'Reassess', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal one clue. Catching the gap in care reduces Corruption by 8.', shortEffect: 'Analyze • Reveal Clue · -8 Corruption', rpgDescription: 'A patient eye returns to the bedside, finds what was missed, and corrects the course.', beginnerExplanation: 'Take another look. Catching a missed step actively helps the patient recover.', nclexExplanation: 'Reassessment closes care gaps. Identifying a missed intervention or change in status directly reduces the disease burden.', reveal: 1, strike: 8 },
@@ -210,6 +372,33 @@ export const HEROES: Hero[] = [
     role: 'Stabilizer',
     element: 'Fire',
     description: 'Sprints toward crisis when others retreat. Lives for the code.',
+    starLore: [
+      {
+        star: 1,
+        title: 'The Sound of the Alarm',
+        text: 'He was twelve years old when he watched a paramedic team work on the pavement outside his school. He did not look away. He watched every movement with a focus that surprised him, cataloguing each action without understanding any of it. He went home and told his mother he knew what he wanted to do. She asked how he could be sure. He said: "Because I was not afraid."',
+      },
+      {
+        star: 2,
+        title: 'The First Real Code',
+        text: 'His ER mentor had a phrase she used every time a resuscitation call came in: "Calm hands, clear voice, one thing at a time." He repeated it to himself for his first code call and kept repeating it until the room stopped spinning. He did what was needed. The patient survived. His hands had been steady the whole time. He did not tell anyone how loudly his heart was beating.',
+      },
+      {
+        star: 3,
+        title: 'The Shift That Never Ended',
+        text: 'Three concurrent codes in one night shift. He moved between rooms for eight hours without sitting down, without eating, without pausing to feel anything. In the debrief the following morning he went quiet for a long time. Then he said: "We held every one." He went home, slept for eleven hours, and came back the next evening. He did not consider calling in sick.',
+      },
+      {
+        star: 4,
+        title: 'Teaching the Chaos',
+        text: 'Students began requesting his shifts specifically. Not because he was gentle in his teaching; he was not. He expected focus and he got it. But he had a quality that was harder to name: when the room was at its most dangerous, he became the steadiest person in it, and that steadiness was contagious. Junior nurses said they felt safer working alongside him. He accepted the compliment quietly and changed the subject.',
+      },
+      {
+        star: 5,
+        title: 'Into the Storm',
+        text: 'He does not romanticize emergency care. He has seen enough of it to know exactly what it costs. But he also knows that someone has to run toward the alarm, and he has never been able to make himself run in the other direction. He thinks of it less as courage now and more as temperament: some people are built for the noise, and he is one of them. He is grateful for it every day.',
+      },
+    ],
     skills: [
       { id: 'critical_response', name: 'Critical Response', type: 'stabilize', systemType: 'Universal', cost: 2, description: 'Massive stabilization. +28 Stability.', shortEffect: 'Stabilize • +28 Stability', rpgDescription: 'In the chaos, the runner becomes the calm; the patient stabilizes.', beginnerExplanation: 'Big emergency support when seconds matter.', nclexExplanation: 'In acute deterioration, prioritize ABCs and rapid stabilization while escalating care.', stabilize: 28 },
       { id: 'river_surge', name: 'River Surge', type: 'strike', systemType: 'River', cost: 2, description: 'Strike 20 + stabilize 12. Risk: heart failure.', shortEffect: 'River Stabilize • BP Counter', rpgDescription: 'A healing current restores flow through the weakened River system.', beginnerExplanation: 'This supports circulation when blood pressure is low.', nclexExplanation: 'Hypotension and poor perfusion require prompt assessment and ordered fluid support; be cautious in heart failure where overload worsens the patient.', strike: 20, stabilize: 12, risk: { ifSystem: 'River', penalty: 20, description: 'Aggressive fluids worsen pulmonary edema in Cardion.' } },
@@ -223,6 +412,33 @@ export const HEROES: Hero[] = [
     role: 'Specialist',
     element: 'Fire',
     description: 'Walls of soap, isolation, and vigilance against the unseen.',
+    starLore: [
+      {
+        star: 1,
+        title: 'The Invisible Enemy',
+        text: 'She studied microbiology the way other students studied maps: as a guide to a territory that was real, populated, and dangerous. Bacteria were not abstract to her; they had strategies and vulnerabilities, preferred environments and weak points. When she arrived on the ward for the first time, she already knew she was not looking at the patient alone. She was looking at the patient and everything the patient carried.',
+      },
+      {
+        star: 2,
+        title: 'The Outbreak Nobody Caught',
+        text: 'A cluster of infections on a surgical ward was attributed to patient factors for three weeks before she joined the investigation team. She asked to see the cleaning logs, the glove records, and the staff rotation schedule side by side. The pattern emerged in under an hour. Nobody had looked at all three together before. The cluster stopped the week after. She filed a written report and never brought it up again.',
+      },
+      {
+        star: 3,
+        title: 'Containment as Combat',
+        text: 'The most dangerous moment in any outbreak, she had come to understand, was not the peak. It was the lull when everyone assumed the worst was over and began to relax the protocols. She had seen that moment cost lives twice. She did not relax protocols after a peak. She intensified them. Her colleagues found her relentless. Her patients found her wards safe.',
+      },
+      {
+        star: 4,
+        title: 'The Warden Teaches',
+        text: 'She developed a hand-hygiene curriculum that was adopted by three hospitals in the region. She was invited to present it at a conference and declined on the grounds that she had a ward to run. The curriculum spread anyway, attributed to her in every setting. She was told about it at a routine meeting and responded by asking whether anyone had checked the alcohol gel dispensers lately. They had not.',
+      },
+      {
+        star: 5,
+        title: 'The Wall Between Worlds',
+        text: 'She thinks of infection control as a kind of translation work: making the invisible legible, making the theoretical practical, making the urgent understood before it becomes the catastrophic. Every protocol she writes is an argument that the cost of vigilance is always lower than the cost of an outbreak. She has never stopped believing this. She suspects she never will.',
+      },
+    ],
     skills: [
       { id: 'infection_scan', name: 'Infection Scan', type: 'scout', systemType: 'Fire', cost: 1, description: 'Reveal infection clues + strike 10.', shortEffect: 'Fire Scout • Reveal + Strike 10', rpgDescription: 'A practiced eye scans for the source of the corruption.', beginnerExplanation: 'Look for where the infection is coming from.', nclexExplanation: 'Source identification is critical for infection management. Look for wounds, lines, lungs, and urine as common sources.', reveal: 1, strike: 10 },
       { id: 'purity_mark', name: 'Purity Mark', type: 'strike', systemType: 'Fire', cost: 2, description: 'Antibiotic burst. Strike 26.', shortEffect: 'Fire Strike • -26 Corruption', rpgDescription: 'A cleansing mark burns away infectious corruption.', beginnerExplanation: 'This helps fight infection-type corruption.', nclexExplanation: 'Fever, chills, and spreading infection require recognition, infection control, ordered antimicrobial therapies, and monitoring for sepsis.', strike: 26 },
@@ -236,6 +452,33 @@ export const HEROES: Hero[] = [
     role: 'Specialist',
     element: 'Protection',
     description: 'Knows every layer of skin, every stage of healing.',
+    starLore: [
+      {
+        star: 1,
+        title: 'The Architecture of the Body',
+        text: 'She learned to see skin not as a surface but as a system: layers with distinct functions, blood supplies with distinct vulnerabilities, pressure points with distinct risks. Her anatomy lecturers remembered her because she asked not just what each structure was called but what happened when it failed. She was interested in the failure modes before she ever saw a wound. When she finally did, she already understood what she was looking at.',
+      },
+      {
+        star: 2,
+        title: 'The Senior Who Measured Everything',
+        text: 'Her wound care mentor photographed and measured every wound on every visit. He said: "A wound that cannot be measured cannot be managed." She adopted the practice immediately and extended it: she started tracking the microenvironment too, the moisture, the temperature at the wound edge, the surrounding tissue quality. The consultants started reading her assessments before they saw the patients.',
+      },
+      {
+        star: 3,
+        title: 'The Wound That Would Not Close',
+        text: 'She inherited a sacral pressure ulcer that had been treated by four different practitioners over nine months without progress. She sat with the patient for an hour, asked about diet, mobility, pain, and sleep, and rewrote the care plan from the ground up. The wound began to granulate within three weeks. The patient asked her what the secret was. She said: "There is no secret. There is only assessment."',
+      },
+      {
+        star: 4,
+        title: 'Recognized',
+        text: 'A national wound care audit placed her unit in the top five percent for pressure injury prevention. She was asked to present her protocols at a symposium. She agreed on the condition that she could bring two of her healthcare assistants, who had implemented the repositioning schedule she designed. The session was standing room only. She made sure the assistants spoke first.',
+      },
+      {
+        star: 5,
+        title: 'The Skin Remembers',
+        text: 'She has spent enough years in this work to understand that healing is not a destination. It is a negotiation between the body\'s resources and its demands, conducted over days and weeks and sometimes months, always provisional, always requiring attention. She does not think of herself as someone who fixes things. She thinks of herself as someone who creates the conditions for the body to do what it already knows how to do. That is enough.',
+      },
+    ],
     skills: [
       { id: 'skin_shield', name: 'Skin Shield', type: 'shield', systemType: 'Protection', cost: 1, description: 'Reduce the next direct enemy Instability by 45%. Only blocks that one event; Corruption growth, passive disease spread, and scripted boss effects continue unaffected.', shortEffect: 'Protection • −45% next Instability', rpgDescription: 'A weave of healing knits the barrier before Instability arrives.', beginnerExplanation: 'Prevent the next Instability event from reaching full force.', nclexExplanation: 'Maintain skin integrity through positioning, pressure relief, and barrier care to prevent breakdown.', shield: 45 },
       { id: 'mend', name: 'Mend', type: 'strike', systemType: 'Protection', cost: 1, description: 'Wound treatment. +12 Stability, -12 Corruption.', shortEffect: 'Protection Treatment • +12 Stability · -12 Corruption', rpgDescription: 'Patient hands cleanse and close what was torn; the corruption loses its foothold.', beginnerExplanation: 'Treating the wound directly fights the problem causing harm.', nclexExplanation: 'Wound care is an active treatment: debridement, dressing changes, and infection control directly reduce the disease process and promote tissue recovery.', stabilize: 12, strike: 12 },
@@ -249,6 +492,33 @@ export const HEROES: Hero[] = [
     role: 'Specialist',
     element: 'Mind',
     description: 'Listens. Truly listens. Crisis softens in her presence.',
+    starLore: [
+      {
+        star: 1,
+        title: 'The One Who Listened',
+        text: 'She grew up in a household where the most important thing anyone could do was pay attention. Her grandmother had a saying: "Most people hear the words. The good ones hear the space around them." She did not fully understand it until her first mental health placement, when she sat with a patient in crisis for two hours without offering solutions, only presence, and watched the crisis begin to soften on its own.',
+      },
+      {
+        star: 2,
+        title: 'The Mentor Who Slowed Down',
+        text: 'Every other nurse she had trained under moved quickly: check the obs, update the notes, move to the next patient. Her mental health mentor moved differently. He paused at doorways. He knocked and waited for a real answer, not just a sound. He explained to her that the quality of the first thirty seconds of any interaction with a patient in distress determined the quality of the next hour. She never forgot to pause at doorways after that.',
+      },
+      {
+        star: 3,
+        title: 'The Night of the Long Conversation',
+        text: 'She spent four hours with a patient who had not spoken to anyone in three days. She did not push. She sat near the door, available but not demanding, and waited. Eventually he started talking. She did not interrupt him once. At the end he said: "I did not think anyone would stay." She made a note in the chart. She did not mention the four hours.',
+      },
+      {
+        star: 4,
+        title: 'De-escalation as a Science',
+        text: 'She was asked to develop the unit\'s de-escalation training programme after her third consecutive quarter with zero physical restraint incidents. She was initially reluctant, feeling that what she did was difficult to systematize. She was wrong: the principles were clear, the evidence was strong, and the outcomes were measurable. The programme was implemented across five wards. Restraint incidents fell by sixty percent in the first year.',
+      },
+      {
+        star: 5,
+        title: 'The Space Around the Words',
+        text: 'She has come to understand that her grandmother was right, and that the skill she has spent her career building is not a technique but a quality of attention: a willingness to be fully present with another person\'s suffering without needing to resolve it immediately. Psychiatric nursing, she tells students, is not about fixing people. It is about creating the conditions in which people can begin to recover. The difference matters more than it sounds.',
+      },
+    ],
     skills: [
       { id: 'mind_anchor', name: 'Mind Anchor', type: 'cleanse', systemType: 'Mind', cost: 1, description: 'Calm and reorient the patient. +8 Stability, -12 Mind Corruption.', shortEffect: 'Mind Treatment • +8 Stability · -12 Corruption', rpgDescription: 'A steady voice anchors the patient; the corruption of confusion loses its grip.', beginnerExplanation: 'Calming the patient actively fights Mind-type disease processes.', nclexExplanation: 'Therapeutic communication and de-escalation are active clinical interventions; they directly reduce the neurological and psychological disease burden in delirium and mental health crises.', stabilize: 8, strike: 12 },
       { id: 'error_ward', name: 'Error Ward', type: 'shield', systemType: 'Protection', cost: 2, description: 'Fully absorb the next direct enemy Instability event; that deterioration event causes zero Stability loss. Does not block Corruption Spread, passive deterioration, or scripted boss effects.', shortEffect: 'Protection 100% • Fully absorb next Instability', rpgDescription: 'A warning rune flares and absorbs the next Instability event entirely.', beginnerExplanation: 'Fully prevent the next Instability event from affecting the patient.', nclexExplanation: 'Nurses must recognize unsafe orders, contraindications, and interventions that could worsen the patient.', shield: 100 },
@@ -272,6 +542,33 @@ export const HEROES: Hero[] = [
     bondLevel: 0,
     bondExp: 0,
     locked: true,
+    starLore: [
+      {
+        star: 1,
+        title: 'The Lamp Before the Legend',
+        text: 'She did not begin as a legend. She began as a young woman from a wealthy family who was told, repeatedly and firmly, that nursing was not appropriate for someone of her station. She disagreed. She disagreed so thoroughly, and for so long, and with such documented precision, that the world eventually stopped arguing with her. She had known what she wanted to do since she was seventeen. She had simply refused to be deflected.',
+      },
+      {
+        star: 2,
+        title: 'Scutari',
+        text: 'The hospital at Scutari was not a hospital when she arrived. It was a warehouse of suffering: overcrowded, unsanitary, understaffed, and lethal to the men it was supposed to save. She did not write to complain. She organized. She cleaned. She established supply lines, documented mortality rates, and redesigned the ward layouts. Within months the death rate had fallen. She had not performed a single miracle; she had performed a thousand careful interventions.',
+      },
+      {
+        star: 3,
+        title: 'The Polar Area Diagram',
+        text: 'She understood that changing medicine required persuading people who did not want to be persuaded. She invented a new kind of statistical chart to make the mortality data undeniable. She presented it to politicians, generals, and royal commissions. The data was the same data that had always existed; she simply made it impossible to look away from. She understood that evidence alone was not enough: it had to be legible, or it would be ignored.',
+      },
+      {
+        star: 4,
+        title: 'The School She Built',
+        text: 'She founded the Nightingale Training School at St Thomas\' Hospital in 1860 and spent the following decades writing letters, advising governments, and shaping the education of nurses across Britain and the colonies. She did most of this from her bed, having never fully recovered from the Crimean illness that had nearly killed her. She was confined but not stopped. She simply changed the tools she used.',
+      },
+      {
+        star: 5,
+        title: 'The First Requirement',
+        text: 'She is remembered for the lamp, for the statistics, for the hospital reforms. But she believed that the truest measure of any healthcare system was its commitment to a principle so simple it should not have needed stating: above all, do the sick no harm. She spent ninety years arguing that this principle demanded not sentiment but rigor: evidence, training, sanitation, dignity, and the courage to say when things were wrong. She has not stopped arguing. She never will.',
+      },
+    ],
     skills: [
       {
         id: 'lamp_of_restoration',
