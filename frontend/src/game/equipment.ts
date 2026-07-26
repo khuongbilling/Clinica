@@ -85,6 +85,17 @@ export interface EquipmentEffect {
   firstStabilityLossReduction?: number;
   /** Extra AP granted after a successful Call for Help (not aborted, not inappropriate). */
   callForHelpBonus?: number;
+  // ── Future stat-boost fields (flat additive to hero raw combat stats) ──
+  /** Flat additive bonus to hero Insight stat (feeds into heroStatMod via statToMultiplier). */
+  insightBonus?: number;
+  /** Flat additive bonus to hero Care Power stat. */
+  carePowerBonus?: number;
+  /** Flat additive bonus to hero Intervention stat. */
+  interventionBonus?: number;
+  /** Flat additive bonus to hero Guard stat. */
+  guardBonus?: number;
+  /** Flat additive bonus to hero Coordination stat. */
+  coordinationBonus?: number;
 }
 
 /**
@@ -100,6 +111,12 @@ export interface AggregatedEquipmentEffect {
   scoutRevealBonus: number;
   firstStabilityLossReduction: number;
   callForHelpBonus: number;
+  // Flat additive hero stat bonuses (summed across equipped items; default 0)
+  insightBonus: number;
+  carePowerBonus: number;
+  interventionBonus: number;
+  guardBonus: number;
+  coordinationBonus: number;
 }
 
 export interface EquipmentDef {
@@ -375,6 +392,7 @@ export function neutralEquipmentEffect(): AggregatedEquipmentEffect {
     strikeMult: 1, stabilizeMult: 1, shieldMult: 1,
     itemMult: 1, cardMult: 1,
     scoutRevealBonus: 0, firstStabilityLossReduction: 0, callForHelpBonus: 0,
+    insightBonus: 0, carePowerBonus: 0, interventionBonus: 0, guardBonus: 0, coordinationBonus: 0,
   };
 }
 
@@ -405,6 +423,12 @@ export function getAggregatedEquipmentEffect(
     if (fx.scoutRevealBonus)            agg.scoutRevealBonus            += fx.scoutRevealBonus;
     if (fx.firstStabilityLossReduction) agg.firstStabilityLossReduction += fx.firstStabilityLossReduction;
     if (fx.callForHelpBonus)            agg.callForHelpBonus            += fx.callForHelpBonus;
+    // Hero stat bonuses (flat additive)
+    if (fx.insightBonus)      agg.insightBonus      += fx.insightBonus;
+    if (fx.carePowerBonus)    agg.carePowerBonus    += fx.carePowerBonus;
+    if (fx.interventionBonus) agg.interventionBonus += fx.interventionBonus;
+    if (fx.guardBonus)        agg.guardBonus        += fx.guardBonus;
+    if (fx.coordinationBonus) agg.coordinationBonus += fx.coordinationBonus;
   }
   return agg;
 }
