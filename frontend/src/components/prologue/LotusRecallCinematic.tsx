@@ -404,7 +404,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
             style={[
               styles.dlgCharWrap,
               { opacity: charFade, transform: [{ translateY: charSlide }] },
-              beat.largePortrait === ART.nightingaleLarge && { paddingTop: H * 0.655 },
+              beat.largePortrait === ART.nightingaleLarge && { paddingTop: H * 0.828 },
             ]}
             pointerEvents="none"
           >
@@ -435,13 +435,8 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
                 style={styles.dlgPanelBg}
               />
 
-              {/* Portrait + name row */}
+              {/* Speaker name row — portrait removed */}
               <View style={styles.dlgHeader}>
-                <ExpoImage
-                  source={beat.portrait}
-                  style={styles.dlgPortrait}
-                  contentFit="cover"
-                />
                 <View style={styles.dlgMeta}>
                   <Text style={[styles.dlgSpeaker, { color: beat.color }]}>
                     {beat.speaker}

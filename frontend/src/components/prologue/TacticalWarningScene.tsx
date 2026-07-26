@@ -405,20 +405,12 @@ export default function TacticalWarningScene({ onComplete }: Props) {
               const sp      = SPEAKERS[sid];
               const isActive = sid === beat.speaker;
               return (
-                <Animated.View
+                <ExpoImage
                   key={sid}
-                  style={[
-                    styles.portraitWrap,
-                    isActive && { borderColor: sp.color, shadowColor: sp.color },
-                    !isActive && styles.portraitDim,
-                  ]}
-                >
-                  <ExpoImage
-                    source={sp.avatar}
-                    style={styles.portraitImg}
-                    contentFit="cover"
-                  />
-                </Animated.View>
+                  source={sp.avatar}
+                  style={[styles.portraitImg, !isActive && styles.portraitDim]}
+                  contentFit="cover"
+                />
               );
             })}
           </View>
