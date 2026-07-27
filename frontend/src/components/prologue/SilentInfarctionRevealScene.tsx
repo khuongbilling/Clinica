@@ -386,7 +386,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
             source={activeSpeaker!.largePortrait}
             style={[
               styles.charArt,
-              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.216 }], width: W * 1.3, height: H * 0.936 },
+              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.2 }], width: W * 1.3, height: H * 0.858 },
               activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.PRODIGY.largePortrait    && { height: H },
               activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
             ]}
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     alignItems:     "center",
     justifyContent: "flex-end",
   },
-  charArt: { width: W, height: H * 0.72 },
+  charArt: { width: W, height: H * 0.66 },
 
   vnBar: {
     position:       "absolute",

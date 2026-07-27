@@ -404,15 +404,18 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
             style={[
               styles.dlgCharWrap,
               { opacity: charFade, transform: [{ translateY: charSlide }] },
-              beat.largePortrait === ART.nightingaleLarge && { paddingTop: H * 0.83 },
             ]}
             pointerEvents="none"
           >
             <ExpoImage
               source={beat.largePortrait}
-              style={styles.dlgCharArt}
+              style={[
+                styles.dlgCharArt,
+                beat.largePortrait === ART.nightingaleLarge && { transform: [{ translateY: H * 0.2 }], width: W * 1.3, height: H * 0.858 },
+                beat.largePortrait === ART.flemingLarge     && { transform: [{ translateY: H * 0.1 }] },
+              ]}
               contentFit="contain"
-              contentPosition="bottom"
+              contentPosition={beat.largePortrait === ART.nightingaleLarge ? "top" : "bottom"}
             />
             {/* subtle colour halo at base of character */}
             <LinearGradient
@@ -683,13 +686,12 @@ const styles = StyleSheet.create({
     bottom:         0,
     overflow:       "hidden",
     alignItems:     "center",
-    justifyContent: "flex-start",
-    paddingTop:     H * 0.155,   // head at ~15% from screen top
+    justifyContent: "flex-end",
     pointerEvents:  "none",
   } as any,
   dlgCharArt: {
     width:     W,
-    height:    H * 0.975,
+    height:    H * 0.66,
     flexShrink: 0,
   },
   dlgCharGlow: {
