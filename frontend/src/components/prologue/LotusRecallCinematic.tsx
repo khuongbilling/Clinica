@@ -411,8 +411,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
               source={beat.largePortrait}
               style={[
                 styles.dlgCharArt,
-                beat.largePortrait === ART.nightingaleLarge && { width: W * 1.3, height: H * 0.858 },
-                beat.largePortrait === ART.flemingLarge     && { transform: [{ translateY: H * 0.1 }] },
+                beat.largePortrait === ART.flemingLarge && { transform: [{ translateY: H * 0.1 }] },
               ]}
               contentFit="contain"
               contentPosition="bottom"

@@ -284,11 +284,9 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
           source={speaker.art}
           style={[
             s.charArt,
-            speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { width: W * 1.3, height: H * 0.858 },
-            speaker.art === PROLOGUE_CHARACTERS.PRODIGY.largePortrait    && { height: H },
-            speaker.art === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
+            speaker.art === PROLOGUE_CHARACTERS.FLEMING.largePortrait && { transform: [{ translateY: H * 0.1 }] },
           ]}
-          contentFit={speaker.art === PROLOGUE_CHARACTERS.PRODIGY.largePortrait ? "cover" : "contain"}
+          contentFit="contain"
           contentPosition="bottom"
         />
       </Animated.View>
