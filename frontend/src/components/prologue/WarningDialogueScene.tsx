@@ -259,8 +259,13 @@ export default function WarningDialogueScene({ onComplete }: Props) {
       >
         <ExpoImage
           source={speaker.art}
-          style={[s.charArt, speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.33 }] }]}
-          contentFit="contain"
+          style={[
+            s.charArt,
+            speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.2 }], width: W * 1.3, height: H * 0.858 },
+            speaker.art === PROLOGUE_CHARACTERS.PRODIGY.largePortrait    && { height: H },
+            speaker.art === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
+          ]}
+          contentFit={speaker.art === PROLOGUE_CHARACTERS.PRODIGY.largePortrait ? "cover" : "contain"}
           contentPosition={speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
         />
       </Animated.View>

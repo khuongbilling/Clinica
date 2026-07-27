@@ -384,8 +384,13 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         >
           <ExpoImage
             source={activeSpeaker!.largePortrait}
-            style={[styles.charArt, activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.36 }] }]}
-            contentFit="contain"
+            style={[
+              styles.charArt,
+              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.216 }], width: W * 1.3, height: H * 0.936 },
+              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.PRODIGY.largePortrait    && { height: H },
+              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
+            ]}
+            contentFit={activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.PRODIGY.largePortrait ? "cover" : "contain"}
             contentPosition={activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
           />
         </Animated.View>
