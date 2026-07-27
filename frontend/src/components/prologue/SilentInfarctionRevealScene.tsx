@@ -384,8 +384,8 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         >
           <ExpoImage
             source={activeSpeaker!.largePortrait}
-            style={styles.charArt}
-            contentFit="cover"
+            style={[styles.charArt, activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.36 }] }]}
+            contentFit="contain"
             contentPosition="bottom"
           />
         </Animated.View>
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     alignItems:     "center",
     justifyContent: "flex-end",
   },
-  charArt: { width: W * 0.69, height: H * 0.72 },
+  charArt: { width: W, height: H * 0.72 },
 
   vnBar: {
     position:       "absolute",

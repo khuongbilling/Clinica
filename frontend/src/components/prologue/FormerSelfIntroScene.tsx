@@ -282,8 +282,8 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
       >
         <ExpoImage
           source={speaker.art}
-          style={s.charArt}
-          contentFit="cover"
+          style={[s.charArt, speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.33 }] }]}
+          contentFit="contain"
           contentPosition="bottom"
         />
       </Animated.View>
@@ -357,7 +357,7 @@ const s = StyleSheet.create({
     alignItems:     "center",
     justifyContent: "flex-end",
   },
-  charArt: { width: W * 0.69, height: H * 0.66 },
+  charArt: { width: W, height: H * 0.66 },
 
   bar: {
     position:       "absolute",

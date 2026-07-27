@@ -257,7 +257,12 @@ export default function WarningDialogueScene({ onComplete }: Props) {
         style={[s.charWrap, { opacity: charFade }]}
         pointerEvents="none"
       >
-        <ExpoImage source={speaker.art} style={s.charArt} contentFit="cover" contentPosition="bottom" />
+        <ExpoImage
+          source={speaker.art}
+          style={[s.charArt, speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.33 }] }]}
+          contentFit="contain"
+          contentPosition="bottom"
+        />
       </Animated.View>
 
       {/* ── VN Dialogue Bar ────────────────────────────────────────── */}
@@ -327,7 +332,7 @@ const s = StyleSheet.create({
   // Explicit large dimensions ensure the portrait fills enough vertical space
   // that the face clears the BAR_HEIGHT even on short devices.
   charArt: {
-    width:  W * 0.69,
+    width:  W,
     height: H * 0.66,
   },
 
