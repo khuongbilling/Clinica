@@ -261,7 +261,7 @@ export default function WarningDialogueScene({ onComplete }: Props) {
           source={speaker.art}
           style={[s.charArt, speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { transform: [{ translateY: H * 0.33 }] }]}
           contentFit="contain"
-          contentPosition="bottom"
+          contentPosition={speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
         />
       </Animated.View>
 
