@@ -386,10 +386,11 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
             source={activeSpeaker!.largePortrait}
             style={[
               styles.charArt,
-              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.FLEMING.largePortrait && { transform: [{ translateY: H * 0.1 }] },
+              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { width: W, height: H * 0.99, transform: [{ translateY: H * 0.495 }] },
+              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
             ]}
             contentFit="contain"
-            contentPosition="bottom"
+            contentPosition={activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
           />
         </Animated.View>
       )}

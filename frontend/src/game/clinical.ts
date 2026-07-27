@@ -1183,9 +1183,10 @@ export function computeStars(scoring: BattleScoring, rules: StarRules): { stars:
   const noInappropriate = (scoring.inappropriateConsultsUsed ?? 0) === 0;
   const lowBasicAid = (scoring.basicAidUses ?? 0) <= 2;
 
-  if (scoring.won && efficient && safe && poorOk && reassessOk && consultsOk && noEmergency && noInappropriate && lowBasicAid) {
+  const efficiencyCriteriaMet = efficient && safe && poorOk && reassessOk && consultsOk && noEmergency && noInappropriate && lowBasicAid;
+  if (scoring.won && (scoring.fullChainCompleted || efficiencyCriteriaMet)) {
     stars++;
-    details.push('Efficient and safe care.');
+    details.push(efficiencyCriteriaMet ? 'Efficient and safe care.' : 'Clinical chain mastered.');
   }
 
   return { stars, details };

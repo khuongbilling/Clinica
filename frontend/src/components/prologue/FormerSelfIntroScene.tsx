@@ -284,10 +284,11 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
           source={speaker.art}
           style={[
             s.charArt,
-            speaker.art === PROLOGUE_CHARACTERS.FLEMING.largePortrait && { transform: [{ translateY: H * 0.1 }] },
+            speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { width: W, height: H * 0.99, transform: [{ translateY: H * 0.495 }] },
+            speaker.art === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
           ]}
           contentFit="contain"
-          contentPosition="bottom"
+          contentPosition={speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
         />
       </Animated.View>
 
