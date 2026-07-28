@@ -11,7 +11,7 @@
  *   Act 3 — Result screen (static Lotus Recall card, gold CTA button)
  *
  * Art style: donghua / Genshin-Impact cel-shading.
- * useNativeDriver: false everywhere.  pointerEvents as View prop only.
+ * useNativeDriver: true everywhere.  pointerEvents as View prop only.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -165,7 +165,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
     dur: number,
     cb?: () => void,
   ) => {
-    Animated.timing(val, { toValue: toVal, duration: dur, useNativeDriver: false })
+    Animated.timing(val, { toValue: toVal, duration: dur, useNativeDriver: true })
       .start(cb ? ({ finished }) => { if (finished && mountedRef.current) cb(); } : undefined);
   }, []);
 
@@ -261,7 +261,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
     after(200, () => {
       anim(auraOpacity, 0.85, 600);
       Animated.timing(auraScale, {
-        toValue: 2.4, duration: 2_300, useNativeDriver: false,
+        toValue: 2.4, duration: 2_300, useNativeDriver: true,
       }).start();
     });
 
@@ -276,8 +276,8 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
 
   const startOverwhelm = useCallback(() => {
     anim(allyFade, 0.88, 500);
-    Animated.timing(goldX, { toValue: -28, duration: 2_400, useNativeDriver: false }).start();
-    Animated.timing(tealX, { toValue:  28, duration: 2_400, useNativeDriver: false }).start();
+    Animated.timing(goldX, { toValue: -28, duration: 2_400, useNativeDriver: true }).start();
+    Animated.timing(tealX, { toValue:  28, duration: 2_400, useNativeDriver: true }).start();
 
     after(900, () => anim(darkCloud, 0.68, 1_600));
     // Allies' reach fails — their glow fades
@@ -296,8 +296,8 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
         hbScale.setValue(1);
         hbOpacity.setValue(opStart);
         Animated.sequence([
-          Animated.timing(hbScale, { toValue: scale, duration: dur * 0.38, useNativeDriver: false }),
-          Animated.timing(hbScale, { toValue: 1,     duration: dur * 0.62, useNativeDriver: false }),
+          Animated.timing(hbScale, { toValue: scale, duration: dur * 0.38, useNativeDriver: true }),
+          Animated.timing(hbScale, { toValue: 1,     duration: dur * 0.62, useNativeDriver: true }),
         ]).start();
         anim(hbOpacity, 0, dur);
       });
@@ -328,7 +328,7 @@ export default function LotusRecallCinematic({ onComplete }: Props) {
   }, []);
 
   const startReaching = useCallback(() => {
-    Animated.timing(silShift, { toValue: 28, duration: 2_100, useNativeDriver: false }).start();
+    Animated.timing(silShift, { toValue: 28, duration: 2_100, useNativeDriver: true }).start();
     after(1_900, () => {
       anim(silFade, 0, 850, () => {
         anim(silBlack, 1, 700, () => {

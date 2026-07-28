@@ -9,6 +9,7 @@
 - [Prologue tutorial corruption math](prologue-tutorial-corruption.md) — wisp must have corruption≥200 or legendary skills (strike:15+25+28+30) kill it before End Turn step is reached.
 - [Ward Defense board layout](ward-defense-board-layout.md) — map PNG IS the background; board MUST aspect-lock to image's EXACT pixel ratio (768/1408, not 9:16) or overlays drift; measure tile coords from pixels.
 - [Clinica image rendering](clinica-image-rendering.md) — use expo-image (ExpoImage + contentFit) for scene backgrounds in nested flex containers; RN Image fails silently on web inside ward-defense battle View.
+- [Prologue animation native driver](prologue-animation-native-driver.md) — Fabric (SDK 54 / RN 0.81) requires useNativeDriver:true for opacity+transform; false leaves images invisible; CSS filter strings (blur(22px)) must become blurRadius prop.
 - [Clinica battle scene FX](clinica-battle-scene-fx.md) — animated overlays must be invisible at Animated rest value (0), not just anim end; per-system bg map keyed by enemy.primarySystem; stability diminishing-returns via getStabilityGainModifier.
 - [Clinica corruption algorithm](clinica-corruption-algorithm.md) — corruption effects use getCorruptionOutcome(status) (bypasses chapter forgiveness); stability effects use res.modifier; wrong treatment worsens once in applyResolutionToState.
 - [Clinica battle sprites](clinica-battle-sprites.md) — hero battle PNGs natively face LEFT (need scaleX:-1 to face right); per-action FX via 3 in-sync maps HERO_MOVE/ENEMY_REACT/ATTACK_FX; eyeball art before flipping.

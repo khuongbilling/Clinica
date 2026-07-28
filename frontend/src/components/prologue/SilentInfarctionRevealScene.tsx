@@ -125,7 +125,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   function anim(val: Animated.Value, toValue: number, duration: number, cb?: () => void) {
-    Animated.timing(val, { toValue, duration, useNativeDriver: false }).start(cb ?? (() => {}));
+    Animated.timing(val, { toValue, duration, useNativeDriver: true }).start(cb ?? (() => {}));
   }
 
   function after(ms: number, fn: () => void) {
@@ -151,9 +151,9 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
       setDisplayed(""); setTypewriterDone(false);
     }
     Animated.parallel([
-      Animated.timing(barFade,  { toValue: 1, duration: 300, useNativeDriver: false }),
-      Animated.timing(barSlide, { toValue: 0, duration: 300, useNativeDriver: false }),
-      Animated.timing(charFade, { toValue: 1, duration: 350, useNativeDriver: false }),
+      Animated.timing(barFade,  { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(barSlide, { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(charFade, { toValue: 1, duration: 350, useNativeDriver: true }),
     ]).start(() => {
       if (!mountedRef.current || !useTypewriter) return;
       let pos = 0;
@@ -172,8 +172,8 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
   function hideDialogue(cb: () => void) {
     stopTypewriter();
     Animated.parallel([
-      Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: false }),
-      Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: false }),
+      Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: true }),
     ]).start(() => { setBeatVisible(false); cb(); });
   }
 
@@ -230,8 +230,8 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
   useEffect(() => {
     const breathe = Animated.loop(
       Animated.sequence([
-        Animated.timing(bgScale, { toValue: 1.00, duration: 5000, useNativeDriver: false }),
-        Animated.timing(bgScale, { toValue: 1.04, duration: 5000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.00, duration: 5000, useNativeDriver: true }),
+        Animated.timing(bgScale, { toValue: 1.04, duration: 5000, useNativeDriver: true }),
       ])
     );
     breathe.start();

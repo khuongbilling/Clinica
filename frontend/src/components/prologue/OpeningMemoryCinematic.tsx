@@ -217,7 +217,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   // ── Helpers ──
 
   const fadeIn = useCallback((val: Animated.Value, dur = 700) => {
-    Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: false }).start();
+    Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: true }).start();
   }, []);
 
   // ── A/B dissolve — old panel fades out, new panel fades in simultaneously ──
@@ -227,8 +227,8 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       setArtB(newArt);
       layerBOpacity.setValue(0);
       Animated.parallel([
-        Animated.timing(layerAOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: false }),
-        Animated.timing(layerBOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: false }),
+        Animated.timing(layerAOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: true }),
+        Animated.timing(layerBOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: true }),
       ]).start(() => {
         if (!mountedRef.current) return;
         activeLayerRef.current = "B";
@@ -239,8 +239,8 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       setArtA(newArt);
       layerAOpacity.setValue(0);
       Animated.parallel([
-        Animated.timing(layerBOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: false }),
-        Animated.timing(layerAOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: false }),
+        Animated.timing(layerBOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: true }),
+        Animated.timing(layerAOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: true }),
       ]).start(() => {
         if (!mountedRef.current) return;
         activeLayerRef.current = "A";
@@ -253,11 +253,11 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   // ── Text-only soft fade (same art, just text changes) ──
   const softTextFade = useCallback((callback: () => void) => {
     busyRef.current = true;
-    Animated.timing(textFade, { toValue: 0, duration: 220, useNativeDriver: false }).start(() => {
+    Animated.timing(textFade, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => {
       if (!mountedRef.current) return;
       callback();
       busyRef.current = false;
-      Animated.timing(textFade, { toValue: 1, duration: 450, useNativeDriver: false }).start();
+      Animated.timing(textFade, { toValue: 1, duration: 450, useNativeDriver: true }).start();
     });
   }, [textFade]);
 
@@ -265,9 +265,9 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   const updateTint = useCallback((beat: Beat) => {
     if (beat.tintColor) {
       tintFade.setValue(0);
-      Animated.timing(tintFade, { toValue: 1, duration: 700, useNativeDriver: false }).start();
+      Animated.timing(tintFade, { toValue: 1, duration: 700, useNativeDriver: true }).start();
     } else {
-      Animated.timing(tintFade, { toValue: 0, duration: 400, useNativeDriver: false }).start();
+      Animated.timing(tintFade, { toValue: 0, duration: 400, useNativeDriver: true }).start();
     }
   }, [tintFade]);
 
@@ -276,7 +276,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     const stops: Animated.CompositeAnimation[] = [];
     petalAnims.forEach((anim, i) => {
       const loop = Animated.loop(
-        Animated.timing(anim, { toValue: 1, duration: PETAL_DATA[i].speed, useNativeDriver: false })
+        Animated.timing(anim, { toValue: 1, duration: PETAL_DATA[i].speed, useNativeDriver: true })
       );
       loop.start();
       stops.push(loop);
@@ -315,7 +315,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     if (next >= BEATS.length) {
       // Fade to black then exit
       busyRef.current = true;
-      Animated.timing(fadeOverlay, { toValue: 1, duration: 900, useNativeDriver: false }).start(() => {
+      Animated.timing(fadeOverlay, { toValue: 1, duration: 900, useNativeDriver: true }).start(() => {
         if (mountedRef.current) onComplete();
       });
       return;
@@ -335,7 +335,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
     if (artChanged) {
       // Fade text out first, then dissolve the art layers
-      Animated.timing(textFade, { toValue: 0, duration: 200, useNativeDriver: false }).start(() => {
+      Animated.timing(textFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
         if (!mountedRef.current) return;
         doCrossFade(BEATS[next].art, applyBeat);
       });
@@ -356,7 +356,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     activeLayerRef.current = "A";
 
     // Fade the black overlay away to reveal the scene (no black-flash start)
-    Animated.timing(fadeOverlay, { toValue: 0, duration: 900, useNativeDriver: false }).start();
+    Animated.timing(fadeOverlay, { toValue: 0, duration: 900, useNativeDriver: true }).start();
 
     // Fade intro card in shortly after
     const cardIn = setTimeout(() => {
@@ -367,7 +367,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     // After the intro hold, dissolve the card and begin beat 0
     const hold = setTimeout(() => {
       if (!mountedRef.current) return;
-      Animated.timing(introCardFade, { toValue: 0, duration: 400, useNativeDriver: false }).start(() => {
+      Animated.timing(introCardFade, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
         if (!mountedRef.current) return;
         stageRef.current = "beat";
         setStage("beat");
@@ -392,7 +392,7 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     if (stageRef.current === "intro") {
       clearTimers();
       // Skip intro immediately
-      Animated.timing(introCardFade, { toValue: 0, duration: 250, useNativeDriver: false }).start(() => {
+      Animated.timing(introCardFade, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
         if (!mountedRef.current) return;
         stageRef.current   = "beat";
         beatIdxRef.current = 0;
@@ -438,9 +438,10 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
           <ExpoImage
             source={ART[artA]}
-            style={[StyleSheet.absoluteFill, styles.blurredBg]}
+            style={StyleSheet.absoluteFill}
             contentFit="cover"
             contentPosition="center"
+            blurRadius={22}
           />
         </View>
         {/* Sharp image — full art, no cropping */}
@@ -458,9 +459,10 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
           <ExpoImage
             source={ART[artB]}
-            style={[StyleSheet.absoluteFill, styles.blurredBg]}
+            style={StyleSheet.absoluteFill}
             contentFit="cover"
             contentPosition="center"
+            blurRadius={22}
           />
         </View>
         {/* Sharp image — full art, no cropping */}
@@ -607,7 +609,6 @@ const styles = StyleSheet.create({
 
   petal: { position: "absolute" },
 
-  blurredBg: { filter: "blur(22px)" } as any,
 
   topArea: {
     paddingTop:        16,

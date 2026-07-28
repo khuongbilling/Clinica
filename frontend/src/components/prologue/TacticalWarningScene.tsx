@@ -220,16 +220,16 @@ export default function TacticalWarningScene({ onComplete }: Props) {
 
   // ── Fade helpers ──
   const fadeIn  = useCallback((val: Animated.Value, dur = 500) =>
-    Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: false }).start(), []);
+    Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: true }).start(), []);
   const fadeOut = useCallback((val: Animated.Value, dur = 300) =>
-    Animated.timing(val, { toValue: 0, duration: dur, useNativeDriver: false }).start(), []);
+    Animated.timing(val, { toValue: 0, duration: dur, useNativeDriver: true }).start(), []);
 
   // ── Ambient bg breathing ──
   useEffect(() => {
     const breathe = Animated.loop(
       Animated.sequence([
-        Animated.timing(bgScale, { toValue: 1.0,  duration: 6000, useNativeDriver: false }),
-        Animated.timing(bgScale, { toValue: 1.04, duration: 6000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.0,  duration: 6000, useNativeDriver: true }),
+        Animated.timing(bgScale, { toValue: 1.04, duration: 6000, useNativeDriver: true }),
       ])
     );
     breathe.start();
@@ -277,7 +277,7 @@ export default function TacticalWarningScene({ onComplete }: Props) {
 
     // Trap reveal overlay
     if (beat.trapReveal) {
-      Animated.timing(redOverlay, { toValue: 0.45, duration: 2000, useNativeDriver: false }).start();
+      Animated.timing(redOverlay, { toValue: 0.45, duration: 2000, useNativeDriver: true }).start();
     }
 
     // Line reveals — line 0 immediate, subsequent staggered
@@ -335,17 +335,17 @@ export default function TacticalWarningScene({ onComplete }: Props) {
 
     if (next >= BEATS.length) {
       // Last beat — cross-fade out then complete
-      Animated.timing(mainFade, { toValue: 0, duration: 800, useNativeDriver: false }).start(() => {
+      Animated.timing(mainFade, { toValue: 0, duration: 800, useNativeDriver: true }).start(() => {
         if (mountedRef.current) onComplete();
       });
       return;
     }
 
     // Cross-fade to next beat
-    Animated.timing(mainFade, { toValue: 0, duration: 250, useNativeDriver: false }).start(() => {
+    Animated.timing(mainFade, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
       if (!mountedRef.current) return;
       revealBeat(next);
-      Animated.timing(mainFade, { toValue: 1, duration: 400, useNativeDriver: false }).start();
+      Animated.timing(mainFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
     });
   }, [lineAnims, clearTimers, fadeIn, onComplete, revealBeat]);
 

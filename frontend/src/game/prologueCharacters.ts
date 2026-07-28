@@ -33,8 +33,25 @@ const FLEMING_BATTLE     = require("../../assets/images/fleming_battle_sprite.pn
 const MASTER_BAI_BATTLE  = require("../../assets/images/master_bai_vn.png");
 const PRODIGY_BATTLE     = require("../../assets/images/prodigy_battle_sprite.png");
 
+// Scene backgrounds used across prologue cinematic and dialogue scenes
+const WARD_CORRIDOR_BG   = require("../../assets/images/ward_corridor_battle.png");
+const TACTICAL_BG        = require("../../assets/images/tactical_battlefield.png");
+const SI_NOBG            = require("../../assets/images/silent_infarction_nobg.png");
+const PRODIGY_CANONICAL  = require("../../assets/images/prodigy_vn_canonical.png");
+
+// Opening Memory Cinematic art panels (8 beats)
+const OPENING_ORIGIN      = require("../../assets/images/opening_prodigy_origin.png");
+const OPENING_FAME        = require("../../assets/images/opening_prodigy_fame.png");
+const OPENING_VICTORY     = require("../../assets/images/opening_prodigy_victory.png");
+const OPENING_CAUTION     = require("../../assets/images/opening_prodigy_caution.png");
+const OPENING_INFALLIBLE  = require("../../assets/images/opening_prodigy_infallible.png");
+const OPENING_OBSERVATION = require("../../assets/images/opening_prodigy_observation.png");
+const OPENING_JUDGMENT    = require("../../assets/images/opening_prodigy_judgment.png");
+const OPENING_WARNING     = require("../../assets/images/opening_prodigy_warning.png");
+
 /** All prologue art — included in the preloader so opening scenes never wait on a cold fetch. */
 export const PROLOGUE_IMAGE_MODULES: readonly number[] = [
+  // Character VN art + battle sprites
   PRODIGY_PORTRAIT,
   MASTER_BAI_ART,
   NIGHTINGALE_LARGE,
@@ -45,6 +62,20 @@ export const PROLOGUE_IMAGE_MODULES: readonly number[] = [
   FLEMING_BATTLE,
   MASTER_BAI_BATTLE,
   PRODIGY_BATTLE,
+  PRODIGY_CANONICAL,
+  // Scene backgrounds
+  WARD_CORRIDOR_BG,
+  TACTICAL_BG,
+  SI_NOBG,
+  // Opening Memory Cinematic panels
+  OPENING_ORIGIN,
+  OPENING_FAME,
+  OPENING_VICTORY,
+  OPENING_CAUTION,
+  OPENING_INFALLIBLE,
+  OPENING_OBSERVATION,
+  OPENING_JUDGMENT,
+  OPENING_WARNING,
 ];
 
 export const PROLOGUE_CHARACTERS = {

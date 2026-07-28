@@ -167,16 +167,16 @@ export default function WarningDialogueScene({ onComplete }: Props) {
     if (beat.trapReveal) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(redOverlay, { toValue: 0.42, duration: 650, useNativeDriver: false }),
-          Animated.timing(redOverlay, { toValue: 0.10, duration: 650, useNativeDriver: false }),
+          Animated.timing(redOverlay, { toValue: 0.42, duration: 650, useNativeDriver: true }),
+          Animated.timing(redOverlay, { toValue: 0.10, duration: 650, useNativeDriver: true }),
         ])
       ).start();
     }
 
     Animated.parallel([
-      Animated.timing(barSlide, { toValue: 0,  duration: 280, useNativeDriver: false }),
-      Animated.timing(barFade,  { toValue: 1,  duration: 280, useNativeDriver: false }),
-      Animated.timing(charFade, { toValue: 1,  duration: 300, useNativeDriver: false }),
+      Animated.timing(barSlide, { toValue: 0,  duration: 280, useNativeDriver: true }),
+      Animated.timing(barFade,  { toValue: 1,  duration: 280, useNativeDriver: true }),
+      Animated.timing(charFade, { toValue: 1,  duration: 300, useNativeDriver: true }),
     ]).start(() => { if (!mountedRef.current) return; startTypewriter(beat.line); });
   }, [barSlide, barFade, charFade, redOverlay, startTypewriter]);
 
@@ -184,11 +184,11 @@ export default function WarningDialogueScene({ onComplete }: Props) {
     mountedRef.current = true;
     Animated.loop(
       Animated.sequence([
-        Animated.timing(bgScale, { toValue: 1.0,  duration: 8000, useNativeDriver: false }),
-        Animated.timing(bgScale, { toValue: 1.04, duration: 8000, useNativeDriver: false }),
+        Animated.timing(bgScale, { toValue: 1.0,  duration: 8000, useNativeDriver: true }),
+        Animated.timing(bgScale, { toValue: 1.04, duration: 8000, useNativeDriver: true }),
       ])
     ).start();
-    Animated.timing(bgFade, { toValue: 1, duration: 600, useNativeDriver: false }).start(() => {
+    Animated.timing(bgFade, { toValue: 1, duration: 600, useNativeDriver: true }).start(() => {
       after(200, () => revealBeat(0));
     });
     return () => { mountedRef.current = false; stopTypewriter(); timers.current.forEach(clearTimeout); };
@@ -206,10 +206,10 @@ export default function WarningDialogueScene({ onComplete }: Props) {
 
     if (nextIdx >= BEATS.length) {
       Animated.parallel([
-        Animated.timing(barFade,  { toValue: 0, duration: 300, useNativeDriver: false }),
-        Animated.timing(charFade, { toValue: 0, duration: 300, useNativeDriver: false }),
+        Animated.timing(barFade,  { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(charFade, { toValue: 0, duration: 300, useNativeDriver: true }),
       ]).start(() => {
-        Animated.timing(closeFade, { toValue: 1, duration: 500, useNativeDriver: false }).start(() => {
+        Animated.timing(closeFade, { toValue: 1, duration: 500, useNativeDriver: true }).start(() => {
           after(80, onComplete);
         });
       });
@@ -217,8 +217,8 @@ export default function WarningDialogueScene({ onComplete }: Props) {
     }
 
     Animated.parallel([
-      Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: false }),
-      Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: false }),
+      Animated.timing(barFade,  { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(charFade, { toValue: 0, duration: 180, useNativeDriver: true }),
     ]).start(() => {
       if (!mountedRef.current) return;
       barSlide.setValue(60); charFade.setValue(0); busyRef.current = false; revealBeat(nextIdx);
