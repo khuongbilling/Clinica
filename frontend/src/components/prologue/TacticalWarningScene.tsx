@@ -44,11 +44,11 @@ const ART = {
 
 type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
 
-const SPEAKERS: Record<SpeakerId, { label: string; color: string; avatar: any }> = {
-  MASTER_BAI:  { label: "Master Bai",              color: "#D9A441", avatar: ART.masterBai   },
-  NIGHTINGALE: { label: "Florence Nightingale",     color: "#E8C453", avatar: ART.nightingale },
-  FLEMING:     { label: "Sir Alexander Fleming",    color: "#3ECFB2", avatar: ART.fleming     },
-  PRODIGY:     { label: "The Prodigy",              color: "#7EB8F7", avatar: ART.prodigy     },
+const SPEAKERS: Record<SpeakerId, { label: string; color: string; avatar: any; art: any; artFit: "contain" | "cover" }> = {
+  MASTER_BAI:  { label: "Master Bai",           color: "#D9A441", avatar: ART.masterBai,   art: PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,  artFit: "contain" },
+  NIGHTINGALE: { label: "Florence Nightingale",  color: "#E8C453", avatar: ART.nightingale, art: PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait, artFit: "cover"   },
+  FLEMING:     { label: "Sir Alexander Fleming", color: "#3ECFB2", avatar: ART.fleming,     art: PROLOGUE_CHARACTERS.FLEMING.largePortrait,     artFit: "contain" },
+  PRODIGY:     { label: "The Prodigy",           color: "#7EB8F7", avatar: ART.prodigy,     art: PROLOGUE_CHARACTERS.PRODIGY.largePortrait,     artFit: "contain" },
 };
 
 const SPEAKER_ORDER: SpeakerId[] = ["MASTER_BAI", "NIGHTINGALE", "FLEMING", "PRODIGY"];
@@ -384,6 +384,23 @@ export default function TacticalWarningScene({ onComplete }: Props) {
         pointerEvents="none"
       />
 
+      {/* ── ACTIVE SPEAKER PORTRAIT — right side, blends into background ── */}
+      <Animated.View style={[styles.charWrap, { opacity: mainFade }]} pointerEvents="none">
+        <ExpoImage
+          source={speaker.art}
+          style={styles.charArt}
+          contentFit={speaker.artFit}
+          contentPosition="bottom"
+        />
+        <LinearGradient
+          colors={["rgba(4,10,18,0.88)", "rgba(4,10,18,0)"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 0.38, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      </Animated.View>
+
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
         {/* ── TOP: progress + scene label ── */}
         <View style={styles.topBar} pointerEvents="none">
@@ -493,6 +510,19 @@ const styles = StyleSheet.create({
     right:     0,
     height:    "65%",
   },
+
+  // Active speaker portrait — upper-right quadrant above dialogue content
+  charWrap: {
+    position:       "absolute",
+    top:            0,
+    left:           0,
+    right:          0,
+    bottom:         "44%",
+    alignItems:     "flex-end",
+    justifyContent: "flex-end",
+    overflow:       "hidden",
+  },
+  charArt: { width: "68%", height: "100%" },
 
   safe: {
     flex:           1,

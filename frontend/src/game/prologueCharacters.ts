@@ -22,7 +22,9 @@ export interface PrologueCharacter {
 }
 
 const PRODIGY_PORTRAIT       = require("../../assets/images/the_prodigy_portrait.png");
+const PRODIGY_BUST           = require("../../assets/images/the_prodigy_vn_bust.png");
 const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
+const MASTER_BAI_BUST        = require("../../assets/images/master_bai_vn_bust.png");
 const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_extended.png");
 const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
 const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
@@ -53,7 +55,9 @@ const OPENING_WARNING     = require("../../assets/images/opening_prodigy_warning
 export const PROLOGUE_IMAGE_MODULES: readonly number[] = [
   // Character VN art + battle sprites
   PRODIGY_PORTRAIT,
+  PRODIGY_BUST,
   MASTER_BAI_ART,
+  MASTER_BAI_BUST,
   NIGHTINGALE_LARGE,
   NIGHTINGALE_BUST,
   FLEMING_LARGE,
@@ -85,7 +89,7 @@ export const PROLOGUE_CHARACTERS = {
     color:         "#E8354A",
     barColor:      "rgba(28,5,8,0.93)",
     largePortrait: PRODIGY_PORTRAIT,
-    avatar48:      PRODIGY_PORTRAIT,
+    avatar48:      PRODIGY_BUST,
     battleSprite:  PRODIGY_BATTLE,
     palette:       "white, gold, jade, crimson",
     role:          "Legendary Clinician Prodigy — Pre-Recall",
@@ -98,7 +102,7 @@ export const PROLOGUE_CHARACTERS = {
     color:         "#D9A441",
     barColor:      "rgba(30,20,5,0.93)",
     largePortrait: MASTER_BAI_ART,
-    avatar48:      MASTER_BAI_ART,
+    avatar48:      MASTER_BAI_BUST,
     battleSprite:  MASTER_BAI_BATTLE,
     palette:       "jade, white, gold",
     role:          "Mentor — Legendary Physician Scholar",

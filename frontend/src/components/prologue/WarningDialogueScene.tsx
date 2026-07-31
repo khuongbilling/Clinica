@@ -46,7 +46,8 @@ const BG = require("../../../assets/images/ward_corridor_battle.png");
 
 const SPEAKERS: Record<
   PrologueSpeakerId,
-  { label: string; color: string; barColor: string; art: any; avatar: any }
+  { label: string; color: string; barColor: string; art: any; avatar: any;
+    artFit: "contain" | "cover"; artPos: "bottom" | "top" }
 > = {
   PRODIGY: {
     label:    PROLOGUE_CHARACTERS.PRODIGY.name,
@@ -54,6 +55,8 @@ const SPEAKERS: Record<
     barColor: PROLOGUE_CHARACTERS.PRODIGY.barColor,
     art:      PROLOGUE_CHARACTERS.PRODIGY.largePortrait,
     avatar:   PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+    artFit:   "contain",
+    artPos:   "bottom",
   },
   MASTER_BAI: {
     label:    PROLOGUE_CHARACTERS.MASTER_BAI.name,
@@ -61,6 +64,8 @@ const SPEAKERS: Record<
     barColor: PROLOGUE_CHARACTERS.MASTER_BAI.barColor,
     art:      PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,
     avatar:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
+    artFit:   "contain",
+    artPos:   "bottom",
   },
   NIGHTINGALE: {
     label:    PROLOGUE_CHARACTERS.NIGHTINGALE.name,
@@ -68,6 +73,8 @@ const SPEAKERS: Record<
     barColor: PROLOGUE_CHARACTERS.NIGHTINGALE.barColor,
     art:      PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait,
     avatar:   PROLOGUE_CHARACTERS.NIGHTINGALE.avatar48,
+    artFit:   "cover",
+    artPos:   "bottom",
   },
   FLEMING: {
     label:    PROLOGUE_CHARACTERS.FLEMING.name,
@@ -75,6 +82,8 @@ const SPEAKERS: Record<
     barColor: PROLOGUE_CHARACTERS.FLEMING.barColor,
     art:      PROLOGUE_CHARACTERS.FLEMING.largePortrait,
     avatar:   PROLOGUE_CHARACTERS.FLEMING.avatar48,
+    artFit:   "contain",
+    artPos:   "bottom",
   },
 };
 
@@ -252,20 +261,23 @@ export default function WarningDialogueScene({ onComplete }: Props) {
         />
       </Animated.View>
 
-      {/* ── Character portrait — right, bottom-anchored, face above dialogue bar ── */}
+      {/* ── Character portrait — right side, above dialogue bar ─────────── */}
       <Animated.View
-        style={[s.charWrap, { opacity: charFade }]}
+        style={[s.charWrap, { opacity: charFade, bottom: barTotal }]}
         pointerEvents="none"
       >
         <ExpoImage
           source={speaker.art}
-          style={[
-            s.charArt,
-            speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { width: W, height: H * 0.99, transform: [{ translateY: H * 0.495 }] },
-            speaker.art === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
-          ]}
-          contentFit="contain"
-          contentPosition={speaker.art === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
+          style={s.charArt}
+          contentFit={speaker.artFit}
+          contentPosition={speaker.artPos}
+        />
+        <LinearGradient
+          colors={["rgba(4,8,18,0.82)", "rgba(4,8,18,0)"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 0.38, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
         />
       </Animated.View>
 
@@ -322,22 +334,21 @@ export default function WarningDialogueScene({ onComplete }: Props) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#040810" },
 
-  // Portrait container: full-width, full-height, bottom-anchored.
-  // The image is sized so the head is always well above the dialogue bar.
+  // Portrait container: right-aligned, fills from screen top to dialogue bar.
+  // The bottom is set inline as barTotal so the character is never covered.
   charWrap: {
     position:       "absolute",
-    bottom:         0,
-    right:          0,
+    top:            0,
     left:           0,
-    height:         H,
-    alignItems:     "center",
+    right:          0,
+    alignItems:     "flex-end",
     justifyContent: "flex-end",
+    overflow:       "hidden",
   },
-  // Explicit large dimensions ensure the portrait fills enough vertical space
-  // that the face clears the BAR_HEIGHT even on short devices.
+  // Takes up 74% of screen width on the right; height fills the container.
   charArt: {
-    width:  W,
-    height: H * 0.66,
+    width:  W * 0.74,
+    height: "100%",
   },
 
   bar: {
@@ -358,11 +369,11 @@ const s = StyleSheet.create({
     gap:               14,
   },
 
-  leftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 80 },
+  leftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 92 },
   avatarRing: {
-    width:        80,
-    height:       80,
-    borderRadius: 40,
+    width:        92,
+    height:       92,
+    borderRadius: 46,
     borderWidth:  3,
     overflow:     "hidden",
   },
