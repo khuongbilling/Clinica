@@ -21,28 +21,22 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
-/* Enemy route — traces the illustrated stone walkway in the square (1:1) map:
-   Disease Gate (upper-left, purple portal) → down left side → across bottom →
-   up right side → Vital Lantern (upper-right, golden pagoda) — a perimeter loop.
-   Fractions map onto the board's measured size (onLayout) — board matches the
-   image ratio exactly so coordinates stay valid regardless of screen size.
-   MUST stay identical to ward-defense.tsx.                              */
+/* Enemy route — Serpentine Descent: enemies zigzag through the deployment grid,
+   weaving between the 3×3 pad rows before sweeping up the right outer lane.
+   MUST stay identical to ward-defense.tsx.                                     */
 export const PATH_WPS: [number, number][] = [
-  [0.122, 0.13], /*  0  Disease Gate spawn        */
-  [0.122, 0.26], /*  1  left lane upper           */
-  [0.114, 0.40], /*  2  left lane                 */
-  [0.114, 0.54], /*  3  left lane                 */
-  [0.131, 0.68], /*  4  left lane lower           */
-  [0.175, 0.78], /*  5  bottom-left curve         */
-  [0.297, 0.83], /*  6  bottom lane left          */
-  [0.510, 0.84], /*  7  bottom lane center        */
-  [0.703, 0.83], /*  8  bottom lane right         */
-  [0.825, 0.78], /*  9  bottom-right curve        */
-  [0.877, 0.68], /* 10  right lane lower          */
-  [0.886, 0.54], /* 11  right lane                */
-  [0.886, 0.40], /* 12  right lane                */
-  [0.869, 0.26], /* 13  right lane upper          */
-  [0.825, 0.13], /* 14  Vital Lantern exit        */
+  [0.122, 0.13],  /*  0  Disease Gate spawn                      */
+  [0.122, 0.28],  /*  1  left outer lane — descend               */
+  [0.50,  0.30],  /*  2  sweep RIGHT above row-1 pads            */
+  [0.80,  0.33],  /*  3  reach right side — 1st crossing         */
+  [0.80,  0.49],  /*  4  drop to row-2 level                     */
+  [0.20,  0.49],  /*  5  sweep LEFT through center pad!          */
+  [0.20,  0.63],  /*  6  drop to row-3 level                     */
+  [0.75,  0.66],  /*  7  sweep RIGHT through row-3               */
+  [0.75,  0.83],  /*  8  drop to bottom area                     */
+  [0.886, 0.75],  /*  9  hook right to outer lane                */
+  [0.886, 0.40],  /* 10  right outer lane — ascend               */
+  [0.825, 0.13],  /* 11  Vital Lantern exit                      */
 ];
 
 /* Nine deploy pads — aligned onto the nine cross pedestals drawn in the
@@ -97,6 +91,7 @@ const ENEMY_COLOR: Record<string, string> = {
   stun_toad:          "#a3e635",
   corruption_leech:   "#c084fc",
   bronchospasm_drake: "#fb923c",
+  spore_drift:        "#E0F2FE",
 };
 
 /* Locomotion style — ethereal spirits hover/float, corporeal ones step/hop */
@@ -111,6 +106,7 @@ const ENEMY_LOCO: Record<string, "walk" | "float"> = {
   stun_toad:          "walk",
   corruption_leech:   "walk",
   bronchospasm_drake: "walk",
+  spore_drift:        "float",
 };
 
 /* ─── Per-unit attack choreography ─────────────────────────────────────────
@@ -143,13 +139,26 @@ export interface WardBoardV2Props {
   onTilePress: (i: number) => void;
   unitColors: Record<string, string>;
   wardBackdrop?: any;
+  /* Mechanics */
+  onEnemyPress?: (uid: string) => void;
+  priorityTargetUid?: string | null;
+  corruptedTiles?: Record<number, number>;
+  codeBlueActive?: boolean;
 }
 
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
 const cl = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const lp = (a: number, b: number, t: number)   => a + (b - a) * cl(t, 0, 1);
 
-function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, number] {
+/* Air-lane constants — must match ward-defense.tsx */
+const AIR_LANE_FROM: [number, number] = [0.122, 0.13];
+const AIR_LANE_TO:   [number, number] = [0.825, 0.13];
+
+function getEnemyFrac(e: { pathIndex: number; pathProgress: number; isAirLane?: boolean; airProgress?: number }): [number, number] {
+  if (e.isAirLane) {
+    const t = Math.max(0, Math.min(1, e.airProgress ?? 0));
+    return [lp(AIR_LANE_FROM[0], AIR_LANE_TO[0], t), lp(AIR_LANE_FROM[1], AIR_LANE_TO[1], t)];
+  }
   const pi   = cl(e.pathIndex, 0, PATH_WPS.length - 2);
   const from = PATH_WPS[pi];
   const to   = PATH_WPS[pi + 1];
@@ -164,9 +173,10 @@ function getEnemyFrac(e: { pathIndex: number; pathProgress: number }): [number, 
 interface StonePadProps {
   aw: number; ah: number; tileIdx: number;
   isMergeCandidate: boolean; onPress: () => void;
+  isCorrupted?: boolean; corruptedTicks?: number;
 }
 
-function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress }: StonePadProps) {
+function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress, isCorrupted, corruptedTicks }: StonePadProps) {
   const [fx, fy] = DEPLOY_TILES[tileIdx];
   const cx = fx * aw;
   const cy = fy * ah;
@@ -203,6 +213,24 @@ function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress }: StonePadProps)
             color: "#FFD700", fontSize: ringSize * 0.30, fontWeight: "800",
             ...({ textShadow: "0 0 12px #FFD70099" } as any),
           }}>★</Text>
+        </View>
+      )}
+      {/* Corruption overlay — tile is locked by disease spread */}
+      {isCorrupted && (
+        <View style={{
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          borderRadius: 8,
+          backgroundColor: "#3B0764CC",
+          borderWidth: 2, borderColor: "#8B5CF6",
+          alignItems: "center", justifyContent: "center",
+          ...({ boxShadow: "0 0 16px #8B5CF680" } as any),
+        }}>
+          <Text style={{ fontSize: 14 }}>💀</Text>
+          {corruptedTicks !== undefined && (
+            <Text style={{ color: "#C4B5FD", fontSize: 6, fontWeight: "700", marginTop: 1 }}>
+              {Math.ceil(corruptedTicks / 2)}s
+            </Text>
+          )}
         </View>
       )}
     </Pressable>
@@ -362,25 +390,43 @@ function ProjectileDot({ aw, ah, p }: { aw: number; ah: number; p: any }) {
   }
 }
 
+/* Condition badge colors — mirrors CONDITION_DEF in ward-defense.tsx */
+const CONDITION_COLOR: Record<string, string> = {
+  breathless: "#93C5FD", feverish: "#FCA5A5", septic: "#86EFAC",
+  toxic: "#C4B5FD", agitated: "#BAE6FD", altered: "#8B5CF6", airborne: "#E0F2FE",
+};
+const CONDITION_ICON: Record<string, string> = {
+  breathless: "💨", feverish: "🌡", septic: "🧫",
+  toxic: "☠", agitated: "😨", altered: "💫", airborne: "🌬",
+};
+
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYER 8 — ENEMY ON LANE
    ═══════════════════════════════════════════════════════════════════════════ */
-function EnemyOnPath({ aw, ah, enemy }: { aw: number; ah: number; enemy: any }) {
+function EnemyOnPath({ aw, ah, enemy, isPriority, onPress }: {
+  aw: number; ah: number; enemy: any;
+  isPriority?: boolean; onPress?: () => void;
+}) {
   const [fx, fy] = getEnemyFrac(enemy);
   const hpPct  = cl(enemy.hp / enemy.maxHp, 0, 1);
   const barCol = hpPct > 0.6 ? "#22C55E" : hpPct > 0.3 ? "#FACC15" : "#EF4444";
   const isFlash = (enemy.hitFlash ?? 0) > 0;
   const isBoss  = enemy.typeId === "bronchospasm_drake";
-  const sprW = isBoss ? 64 : 48, sprH = isBoss ? 64 : 48;
+  const isAirLane = enemy.isAirLane === true;
+  const sprW = isBoss ? 64 : isAirLane ? 36 : 48;
+  const sprH = isBoss ? 64 : isAirLane ? 36 : 48;
   const accent = ENEMY_COLOR[enemy.typeId] ?? "#94a3b8";
   const img    = IMG_ENEMIES[enemy.typeId];
   const loco   = ENEMY_LOCO[enemy.typeId] ?? "float";
+  const cond   = enemy.condition as string | undefined;
+  const condColor = cond ? (CONDITION_COLOR[cond] ?? "#94a3b8") : null;
 
   /* Per-enemy locomotion: walkers hop (grounded bounce + squash/stretch),
-     floaters hover (slow vertical drift + gentle breathing scale). */
+     floaters hover (slow vertical drift + gentle breathing scale).
+     Air lane enemies get a fast, shallow undulation. */
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const dur = loco === "walk" ? 300 : 1500;
+    const dur = isAirLane ? 900 : loco === "walk" ? 300 : 1500;
     const upEase   = loco === "walk" ? Easing.out(Easing.quad) : Easing.inOut(Easing.sin);
     const downEase = loco === "walk" ? Easing.in(Easing.quad)  : Easing.inOut(Easing.sin);
     const loop = Animated.loop(Animated.sequence([
@@ -389,66 +435,120 @@ function EnemyOnPath({ aw, ah, enemy }: { aw: number; ah: number; enemy: any }) 
     ]));
     loop.start();
     return () => loop.stop();
-  }, [loco, anim]);
+  }, [loco, anim, isAirLane]);
 
   const translateY = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: loco === "walk" ? [0, -7] : [-5, 5],
+    outputRange: isAirLane ? [-3, 3] : loco === "walk" ? [0, -7] : [-5, 5],
   });
-  const wobble = loco === "walk"
+  const wobble = loco === "walk" && !isAirLane
     ? { scaleY: anim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.05] }) }
     : { scale:  anim.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.04] }) };
 
   const fallbackEmoji = enemy.typeId === "bronchospasm_drake" ? "🐲"
     : enemy.typeId === "hypoxia_wraith"  ? "👻"
     : enemy.typeId === "mucus_slime"     ? "🫧"
-    : enemy.typeId === "wheeze_sprite"   ? "🌀" : "💨";
+    : enemy.typeId === "wheeze_sprite"   ? "🌀"
+    : enemy.typeId === "spore_drift"     ? "🌬" : "💨";
 
-  /* Face the direction of travel, derived from the instantaneous movement vector
-     of the CURRENT path segment (not a fixed lane threshold). Enemies moving
-     rightward — the whole bottom traverse and the lower right curve — flip to
-     face right; leftward/near-vertical legs keep the base LEFT-facing art.
-     Base enemy art faces LEFT → apply scaleX:-1 only when heading right. */
-  const seg   = cl(enemy.pathIndex, 0, PATH_WPS.length - 2);
-  const segDx = PATH_WPS[seg + 1][0] - PATH_WPS[seg][0];
-  const faceRight = segDx > 0.01;
+  /* Face the direction of travel.
+     Air lane enemies always move right (gate→lantern). */
+  const faceRight = isAirLane ? true : (() => {
+    const seg   = cl(enemy.pathIndex, 0, PATH_WPS.length - 2);
+    const segDx = PATH_WPS[seg + 1][0] - PATH_WPS[seg][0];
+    return segDx > 0.01;
+  })();
 
   return (
-    <Animated.View style={{
-      position: "absolute",
-      left: fx * aw - sprW / 2, top: fy * ah - sprH - 18,
-      alignItems: "center", zIndex: 14,
-      transform: [{ translateY }, wobble],
-    }}>
-      <View style={{ width: sprW + 8, height: 4, backgroundColor: "#00000090", borderRadius: 2, marginBottom: 2, overflow: "hidden" }}>
-        <View style={{ width: `${hpPct * 100}%` as any, height: "100%", backgroundColor: barCol, borderRadius: 2 }} />
-      </View>
-      <View style={{ backgroundColor: accent + "22", borderRadius: 3, paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3, borderWidth: 0.5, borderColor: accent + "70", maxWidth: sprW + 10 }}>
-        <Text style={{ color: accent, fontSize: 5.5, fontWeight: "700", textAlign: "center" }} numberOfLines={1}>
-          {enemy.clue ?? enemy.name ?? "?"}
-        </Text>
-      </View>
-      {isBoss && <Text style={{ color: accent, fontSize: 7, fontWeight: "700", marginBottom: 1 }}>{enemy.hp}</Text>}
-      {img ? (
-        <ExpoImage source={img} style={{ width: sprW, height: sprH, transform: [{ scaleX: faceRight ? -1 : 1 }] }} contentFit="contain" />
-      ) : (
-        <View style={{ width: sprW, height: sprH, borderRadius: sprW / 2, backgroundColor: accent + "33", borderWidth: 2, borderColor: accent, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: isBoss ? 22 : 16 }}>{fallbackEmoji}</Text>
+    <Pressable
+      onPress={onPress}
+      style={{
+        position: "absolute",
+        left: fx * aw - sprW / 2,
+        top: fy * ah - sprH - (isAirLane ? 10 : 18),
+        alignItems: "center",
+        zIndex: isAirLane ? 16 : 14,
+      }}
+    >
+      <Animated.View style={{
+        alignItems: "center",
+        transform: [{ translateY }, wobble],
+      }}>
+        {/* Priority ring — glowing red halo when triage-tapped */}
+        {isPriority && (
+          <View style={{
+            position: "absolute",
+            top: isAirLane ? 10 : 18, left: -6, right: -6, bottom: 6,
+            borderRadius: sprW,
+            borderWidth: 2.5, borderColor: "#F87171",
+            ...({ boxShadow: "0 0 14px #EF4444" } as any),
+            zIndex: 0,
+          }} />
+        )}
+        {/* HP bar */}
+        <View style={{ width: sprW + 8, height: 4, backgroundColor: "#00000090", borderRadius: 2, marginBottom: 2, overflow: "hidden" }}>
+          <View style={{ width: `${hpPct * 100}%` as any, height: "100%", backgroundColor: barCol, borderRadius: 2 }} />
         </View>
-      )}
-      {isFlash && <View style={{ position: "absolute", top: 12, left: 0, right: 0, bottom: 4, backgroundColor: "#FFFFFF28", borderRadius: 10, zIndex: 15 }} />}
-      {(enemy.slowTicks ?? 0) > 0 && (
-        <View style={{ position: "absolute", top: 10, right: -8, backgroundColor: "#A78BFA22", borderRadius: 3, paddingHorizontal: 2 }}>
-          <Text style={{ color: "#A78BFA", fontSize: 5 }}>↓</Text>
-        </View>
-      )}
-      {isBoss && !enemy.revealed && (
-        <View style={{ position: "absolute", top: 22, backgroundColor: "#0b1220D0", borderRadius: 4, paddingHorizontal: 3, paddingVertical: 1, borderWidth: 0.5, borderColor: accent + "AA", zIndex: 16 }}>
-          <Text style={{ color: accent, fontSize: 6, fontWeight: "800" }}>🛡 RESIST</Text>
-        </View>
-      )}
-      <View style={{ width: isBoss ? 44 : 30, height: 4, borderRadius: 22, backgroundColor: "#000000A0", marginTop: -2 }} />
-    </Animated.View>
+        {/* Name/clue label */}
+        {!isAirLane && (
+          <View style={{ backgroundColor: accent + "22", borderRadius: 3, paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3, borderWidth: 0.5, borderColor: accent + "70", maxWidth: sprW + 10 }}>
+            <Text style={{ color: accent, fontSize: 5.5, fontWeight: "700", textAlign: "center" }} numberOfLines={1}>
+              {enemy.clue ?? enemy.name ?? "?"}
+            </Text>
+          </View>
+        )}
+        {isBoss && <Text style={{ color: accent, fontSize: 7, fontWeight: "700", marginBottom: 1 }}>{enemy.hp}</Text>}
+        {/* Sprite */}
+        {img ? (
+          <ExpoImage source={img} style={{ width: sprW, height: sprH, transform: [{ scaleX: faceRight ? -1 : 1 }] }} contentFit="contain" />
+        ) : (
+          <View style={{ width: sprW, height: sprH, borderRadius: sprW / 2,
+            backgroundColor: isAirLane ? "#E0F2FE11" : accent + "33",
+            borderWidth: isAirLane ? 1 : 2, borderColor: isAirLane ? "#E0F2FE88" : accent,
+            alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: isBoss ? 22 : isAirLane ? 14 : 16 }}>{fallbackEmoji}</Text>
+          </View>
+        )}
+        {/* Air lane trailing glow */}
+        {isAirLane && (
+          <View style={{ position: "absolute", top: 4, left: -14, right: -14, bottom: 4,
+            borderRadius: 20, backgroundColor: "#E0F2FE08",
+            ...({ boxShadow: "0 0 18px #BAE6FD60" } as any), zIndex: -1 }} />
+        )}
+        {/* Hit flash */}
+        {isFlash && <View style={{ position: "absolute", top: 12, left: 0, right: 0, bottom: 4, backgroundColor: "#FFFFFF28", borderRadius: 10, zIndex: 15 }} />}
+        {/* Slow indicator */}
+        {(enemy.slowTicks ?? 0) > 0 && (
+          <View style={{ position: "absolute", top: 10, right: -8, backgroundColor: "#A78BFA22", borderRadius: 3, paddingHorizontal: 2 }}>
+            <Text style={{ color: "#A78BFA", fontSize: 5 }}>↓</Text>
+          </View>
+        )}
+        {/* Hidden pathology resist badge */}
+        {isBoss && !enemy.revealed && (
+          <View style={{ position: "absolute", top: 22, backgroundColor: "#0b1220D0", borderRadius: 4, paddingHorizontal: 3, paddingVertical: 1, borderWidth: 0.5, borderColor: accent + "AA", zIndex: 16 }}>
+            <Text style={{ color: accent, fontSize: 6, fontWeight: "800" }}>🛡 RESIST</Text>
+          </View>
+        )}
+        {/* Condition badge — shows clinical affliction + triage crown */}
+        {(cond || isPriority) && !isAirLane && (
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, gap: 3 }}>
+            {isPriority && (
+              <View style={{ backgroundColor: "#7F1D1D", borderRadius: 3, paddingHorizontal: 3, paddingVertical: 1, borderWidth: 0.5, borderColor: "#EF4444AA" }}>
+                <Text style={{ color: "#F87171", fontSize: 5.5, fontWeight: "800" }}>🎯 TRIAGE</Text>
+              </View>
+            )}
+            {cond && condColor && (
+              <View style={{ backgroundColor: condColor + "22", borderRadius: 3, paddingHorizontal: 3, paddingVertical: 1, borderWidth: 0.5, borderColor: condColor + "70" }}>
+                <Text style={{ color: condColor, fontSize: 5, fontWeight: "700" }}>
+                  {CONDITION_ICON[cond]} {cond.toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+        <View style={{ width: isBoss ? 44 : 30, height: 4, borderRadius: 22, backgroundColor: "#000000A0", marginTop: -2 }} />
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -464,6 +564,7 @@ export function WardBoardV2({
   bobY,
   spawnQueueLen, mergeTileSet, onTilePress, unitColors,
   wardBackdrop,
+  onEnemyPress, priorityTargetUid, corruptedTiles, codeBlueActive,
 }: WardBoardV2Props) {
   /* Measure the AVAILABLE area (outer container) and fit the whole 878×1408
      portrait map inside it, preserving aspect. This guarantees the entry
@@ -517,6 +618,8 @@ export function WardBoardV2({
           key={i} aw={W} ah={H} tileIdx={i}
           isMergeCandidate={mergeTileSet.has(i)}
           onPress={() => onTilePress(i)}
+          isCorrupted={!!(corruptedTiles?.[i])}
+          corruptedTicks={corruptedTiles?.[i]}
         />
       ))}
 
@@ -538,8 +641,30 @@ export function WardBoardV2({
 
       {/* L8: Enemies walking the lane */}
       {enemies.map((e: any) => (
-        <EnemyOnPath key={e.uid} aw={W} ah={H} enemy={e} />
+        <EnemyOnPath
+          key={e.uid} aw={W} ah={H} enemy={e}
+          isPriority={priorityTargetUid === e.uid}
+          onPress={onEnemyPress ? () => onEnemyPress(e.uid) : undefined}
+        />
       ))}
+
+      {/* L18: Code Blue surge overlay */}
+      {codeBlueActive && (
+        <View style={{
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: "#EF444410",
+          borderWidth: 3, borderColor: "#EF4444AA",
+          zIndex: 18, pointerEvents: "none",
+          ...({ boxShadow: "inset 0 0 40px #EF444430" } as any),
+        } as any}>
+          <View style={{ position: "absolute", top: 6, left: 0, right: 0, alignItems: "center" }}>
+            <Text style={{ color: "#F87171", fontSize: 9, fontWeight: "900", letterSpacing: 1.5,
+              ...({ textShadow: "0 0 8px #EF4444" } as any) }}>
+              🚨 CODE BLUE — SURGE ACTIVE
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
     {/* Right fog wing — fills any leftover width, seam matches the map's right edge */}
     <ExpoImage
