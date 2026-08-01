@@ -295,11 +295,20 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
           contentFit={speaker.artFit}
           contentPosition={speaker.artPos}
         />
+        {/* left-edge blend */}
         <LinearGradient
           colors={["rgba(4,8,18,0.82)", "rgba(4,8,18,0)"]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 0.38, y: 0.5 }}
           style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        {/* bottom feather — fades the portrait into the bar edge */}
+        <LinearGradient
+          colors={["transparent", "rgba(4,8,18,0.96)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={s.charBottomFade}
           pointerEvents="none"
         />
       </Animated.View>
@@ -377,6 +386,13 @@ const s = StyleSheet.create({
   },
   // Takes up 74% of screen width on the right; height fills the container.
   charArt: { width: W * 0.74, height: "100%" },
+  charBottomFade: {
+    position: "absolute",
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   "32%",
+  },
 
   bar: {
     position:       "absolute",

@@ -408,6 +408,14 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
             contentFit={activeSpeakerCfg?.artFit ?? "contain"}
             contentPosition={activeSpeakerCfg?.artPos ?? "bottom"}
           />
+          {/* bottom feather — fades the portrait into the bar edge */}
+          <LinearGradient
+            colors={["transparent", "rgba(4,10,18,0.96)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.charBottomFade}
+            pointerEvents="none"
+          />
         </Animated.View>
       )}
 
@@ -547,6 +555,13 @@ const styles = StyleSheet.create({
     overflow:   "hidden",
   },
   charArt: { width: W * 0.74, height: "100%" as any },
+  charBottomFade: {
+    position: "absolute",
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   "32%",
+  },
 
   vnBar: {
     position:       "absolute",

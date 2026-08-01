@@ -392,11 +392,20 @@ export default function TacticalWarningScene({ onComplete }: Props) {
           contentFit={speaker.artFit}
           contentPosition="bottom"
         />
+        {/* left-edge blend */}
         <LinearGradient
           colors={["rgba(4,10,18,0.88)", "rgba(4,10,18,0)"]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 0.38, y: 0.5 }}
           style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        {/* bottom feather — fades the portrait into the bar edge */}
+        <LinearGradient
+          colors={["transparent", "rgba(4,10,18,0.96)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.charBottomFade}
           pointerEvents="none"
         />
       </Animated.View>
@@ -523,6 +532,13 @@ const styles = StyleSheet.create({
     overflow:       "hidden",
   },
   charArt: { width: "68%", height: "100%" },
+  charBottomFade: {
+    position: "absolute",
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   "32%",
+  },
 
   safe: {
     flex:           1,
