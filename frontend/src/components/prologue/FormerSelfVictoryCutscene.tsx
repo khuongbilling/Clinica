@@ -50,7 +50,7 @@ const SPEAKERS: Record<
     barColor: PROLOGUE_CHARACTERS.PRODIGY.barColor,
     art:      PROLOGUE_CHARACTERS.PRODIGY.largePortrait,
     avatar:   PROLOGUE_CHARACTERS.PRODIGY.avatar48,
-    artFit:   "contain",
+    artFit:   "cover",
     artPos:   "bottom",
   },
   MASTER_BAI: {
@@ -77,7 +77,7 @@ const SPEAKERS: Record<
     barColor: PROLOGUE_CHARACTERS.FLEMING.barColor,
     art:      PROLOGUE_CHARACTERS.FLEMING.largePortrait,
     avatar:   PROLOGUE_CHARACTERS.FLEMING.avatar48,
-    artFit:   "contain",
+    artFit:   "cover",
     artPos:   "bottom",
   },
 };
