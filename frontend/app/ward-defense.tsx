@@ -97,22 +97,21 @@ const TREATMENT_FIELD_DMG   = 4; /* per-tick damage dealt to every enemy while a
    reduce its effect. Intentionally inert — not wired into any cast path yet. */
 const TREATMENT_FATIGUE_ENABLED = false;
 
-/* Enemy route — Serpentine Descent: enemies zigzag through the deployment grid,
-   weaving between the 3×3 pad rows before sweeping up the right outer lane.
-   MUST stay identical to WardBoardV2.tsx.                                     */
+/* Enemy route — Rush Royale rectangle: enemies enter the left, sweep through
+   three horizontal bands across the 3×3 deploy grid, then ascend the right
+   outer lane to exit.  Units deployed in the centre tiles attack each pass.
+   MUST stay identical to WardBoardV2.tsx.                                   */
 const PATH_WPS: [number, number][] = [
-  [0.122, 0.13],  /*  0  Disease Gate spawn                      */
-  [0.122, 0.28],  /*  1  left outer lane — descend               */
-  [0.50,  0.30],  /*  2  sweep RIGHT above row-1 pads            */
-  [0.80,  0.33],  /*  3  reach right side — 1st crossing         */
-  [0.80,  0.49],  /*  4  drop to row-2 level                     */
-  [0.20,  0.49],  /*  5  sweep LEFT through center pad!          */
-  [0.20,  0.63],  /*  6  drop to row-3 level                     */
-  [0.75,  0.66],  /*  7  sweep RIGHT through row-3               */
-  [0.75,  0.83],  /*  8  drop to bottom area                     */
-  [0.886, 0.75],  /*  9  hook right to outer lane                */
-  [0.886, 0.40],  /* 10  right outer lane — ascend               */
-  [0.825, 0.13],  /* 11  Vital Lantern exit                      */
+  [0.122, 0.13],  /*  0  Disease Gate spawn                               */
+  [0.122, 0.30],  /*  1  descend left outer lane                          */
+  [0.858, 0.30],  /*  2  sweep RIGHT above row-1 tiles  (y=0.350)         */
+  [0.858, 0.44],  /*  3  drop between rows 1 & 2                          */
+  [0.122, 0.44],  /*  4  sweep LEFT between rows 1 & 2  (y=0.493 below)  */
+  [0.122, 0.58],  /*  5  drop between rows 2 & 3                          */
+  [0.858, 0.58],  /*  6  sweep RIGHT between rows 2 & 3 (y=0.626 below)  */
+  [0.858, 0.72],  /*  7  drop below row-3                                 */
+  [0.858, 0.13],  /*  8  ascend right outer lane                          */
+  [0.825, 0.13],  /*  9  Vital Lantern exit                               */
 ];
 const N_SEGS = PATH_WPS.length - 1;
 

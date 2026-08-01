@@ -77,6 +77,18 @@ const SI_SPEAKER = {
   barBorder: "rgba(139,0,0,0.60)" as const,
 };
 
+/* Per-speaker portrait config — mirrors the pattern in FormerSelfIntroScene etc.
+   Nightingale's 2048×2048 square image needs cover+bottom as a workaround. */
+const SPEAKERS: Partial<Record<PrologueSpeakerId, {
+  artFit: "contain" | "cover";
+  artPos: "bottom" | "top";
+}>> = {
+  NIGHTINGALE: { artFit: "cover",   artPos: "bottom" },
+  FLEMING:     { artFit: "contain", artPos: "bottom" },
+  MASTER_BAI:  { artFit: "contain", artPos: "bottom" },
+  PRODIGY:     { artFit: "contain", artPos: "bottom" },
+};
+
 interface Props { onComplete: () => void }
 
 export default function SilentInfarctionRevealScene({ onComplete }: Props) {
@@ -321,9 +333,13 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
   const isLoadout = stage === "loadout";
   const isReady   = stage === "ready";
 
+  const activeSpeakerId   = isReact   ? REACT_BEATS[reactBeat].speaker
+                          : isLoadout ? LOADOUT_BEATS[Math.min(loadoutBeatIdx, LOADOUT_BEATS.length - 1)].speaker
+                          : null;
   const curReactSpeaker   = PROLOGUE_CHARACTERS[REACT_BEATS[reactBeat].speaker];
   const curLoadoutSpeaker = PROLOGUE_CHARACTERS[LOADOUT_BEATS[Math.min(loadoutBeatIdx, LOADOUT_BEATS.length - 1)].speaker];
   const activeSpeaker     = isReact ? curReactSpeaker : isLoadout ? curLoadoutSpeaker : null;
+  const activeSpeakerCfg  = activeSpeakerId ? SPEAKERS[activeSpeakerId] : null;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -376,21 +392,25 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         </Animated.View>
       )}
 
-      {/* ── Hero character portrait — grounded above VN bar ── */}
-      {beatVisible && (isReact || isLoadout) && (
+      {/* ── Hero character portrait — right-aligned, anchored above VN bar ── */}
+      {beatVisible && (isReact || isLoadout) && activeSpeaker && (
         <Animated.View
-          style={[styles.charWrap, { opacity: charFade, bottom: 0 }]}
+          style={[styles.charWrap, { opacity: charFade, bottom: barTotal }]}
           pointerEvents="none"
         >
+          {/* Left-edge gradient blend so the portrait fades into the battlefield bg */}
+          <LinearGradient
+            colors={["transparent", `${activeSpeaker.color}1A`, "transparent"]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 0.4, y: 0.5 }}
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
           <ExpoImage
-            source={activeSpeaker!.largePortrait}
-            style={[
-              styles.charArt,
-              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait && { width: W, height: H * 0.99, transform: [{ translateY: H * 0.495 }] },
-              activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.FLEMING.largePortrait    && { transform: [{ translateY: H * 0.1 }] },
-            ]}
-            contentFit="contain"
-            contentPosition={activeSpeaker!.largePortrait === PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait ? "top" : "bottom"}
+            source={activeSpeaker.largePortrait}
+            style={styles.charArt}
+            contentFit={activeSpeakerCfg?.artFit ?? "contain"}
+            contentPosition={activeSpeakerCfg?.artPos ?? "bottom"}
           />
         </Animated.View>
       )}
@@ -524,13 +544,15 @@ const styles = StyleSheet.create({
 
   charWrap: {
     position:       "absolute",
+    top:            0,
     left:           0,
     right:          0,
-    height:         H,
-    alignItems:     "center",
+    /* bottom is set inline as barTotal so portrait never bleeds under the bar */
+    alignItems:     "flex-end",
     justifyContent: "flex-end",
+    overflow:       "hidden",
   },
-  charArt: { width: W, height: H * 0.66 },
+  charArt: { width: W * 0.74, height: "100%" as any },
 
   vnBar: {
     position:       "absolute",
@@ -550,9 +572,9 @@ const styles = StyleSheet.create({
   },
   vnLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 80 },
   vnAvatarRing: {
-    width:        80,
-    height:       80,
-    borderRadius: 40,
+    width:        92,
+    height:       92,
+    borderRadius: 46,
     borderWidth:  3,
     overflow:     "hidden",
   },

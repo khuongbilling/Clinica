@@ -28,7 +28,6 @@ artFit: "contain" | "cover"; artPos: "bottom" | "top"
 - `TacticalWarningScene.tsx` ✓ (portrait fills upper 56%; dialogue panel below)
 
 ## NOT yet converted
-- `SilentInfarctionRevealScene.tsx` — still uses old centered charWrap + `width:W, height:H*0.66`
 - `LotusRecallCinematic.tsx` — covered by existing task "Bring TacticalWarningScene and LotusRecallCinematic..."
 
 ## Image assets
