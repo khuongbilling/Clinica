@@ -49,16 +49,17 @@ const BG = require("../../../assets/images/ward_corridor_battle.png");
 const SPEAKERS: Record<
   PrologueSpeakerId,
   { label: string; color: string; barColor: string; art: any; avatar: any;
-    artFit: "contain" | "cover"; artPos: "bottom" | "top" }
+    artFit: "contain" | "cover"; artPos: "bottom" | "top"; artHeight?: number }
 > = {
   PRODIGY: {
-    label:    PROLOGUE_CHARACTERS.PRODIGY.name,
-    color:    PROLOGUE_CHARACTERS.PRODIGY.color,
-    barColor: PROLOGUE_CHARACTERS.PRODIGY.barColor,
-    art:      PROLOGUE_CHARACTERS.PRODIGY.largePortrait,
-    avatar:   PROLOGUE_CHARACTERS.PRODIGY.avatar48,
-    artFit:   "cover",
-    artPos:   "bottom",
+    label:     PROLOGUE_CHARACTERS.PRODIGY.name,
+    color:     PROLOGUE_CHARACTERS.PRODIGY.color,
+    barColor:  PROLOGUE_CHARACTERS.PRODIGY.barColor,
+    art:       PROLOGUE_CHARACTERS.PRODIGY.largePortrait,
+    avatar:    PROLOGUE_CHARACTERS.PRODIGY.avatar48,
+    artFit:    "contain",
+    artPos:    "bottom",
+    artHeight: Math.round(W * 0.74 * 1280 / 896),
   },
   MASTER_BAI: {
     label:    PROLOGUE_CHARACTERS.MASTER_BAI.name,
@@ -79,13 +80,14 @@ const SPEAKERS: Record<
     artPos:   "bottom",
   },
   FLEMING: {
-    label:    PROLOGUE_CHARACTERS.FLEMING.name,
-    color:    PROLOGUE_CHARACTERS.FLEMING.color,
-    barColor: PROLOGUE_CHARACTERS.FLEMING.barColor,
-    art:      PROLOGUE_CHARACTERS.FLEMING.largePortrait,
-    avatar:   PROLOGUE_CHARACTERS.FLEMING.avatar48,
-    artFit:   "cover",
-    artPos:   "bottom",
+    label:     PROLOGUE_CHARACTERS.FLEMING.name,
+    color:     PROLOGUE_CHARACTERS.FLEMING.color,
+    barColor:  PROLOGUE_CHARACTERS.FLEMING.barColor,
+    art:       PROLOGUE_CHARACTERS.FLEMING.largePortrait,
+    avatar:    PROLOGUE_CHARACTERS.FLEMING.avatar48,
+    artFit:    "contain",
+    artPos:    "bottom",
+    artHeight: Math.round(W * 0.74 * 1280 / 896),
   },
 };
 
@@ -291,7 +293,9 @@ export default function FormerSelfIntroScene({ onComplete }: Props) {
       >
         <ExpoImage
           source={speaker.art}
-          style={s.charArt}
+          style={speaker.artHeight != null
+            ? { width: W * 0.74, height: speaker.artHeight, position: "absolute", bottom: 0, right: 0 }
+            : s.charArt}
           contentFit={speaker.artFit}
           contentPosition={speaker.artPos}
         />

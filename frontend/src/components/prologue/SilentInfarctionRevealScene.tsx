@@ -78,11 +78,11 @@ const SI_SPEAKER = {
 };
 
 // ── Portrait fit/position per speaker (Nightingale is square → cover) ────────
-const SPEAKERS: Record<PrologueSpeakerId, { artFit: "contain" | "cover"; artPos: "bottom" | "top" }> = {
-  PRODIGY:     { artFit: "cover",   artPos: "bottom" },
+const SPEAKERS: Record<PrologueSpeakerId, { artFit: "contain" | "cover"; artPos: "bottom" | "top"; artHeight?: number }> = {
+  PRODIGY:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1280 / 896) },
   MASTER_BAI:  { artFit: "contain", artPos: "bottom" },
   NIGHTINGALE: { artFit: "cover",   artPos: "bottom" },
-  FLEMING:     { artFit: "cover",   artPos: "bottom" },
+  FLEMING:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1280 / 896) },
 };
 
 interface Props { onComplete: () => void }
@@ -404,7 +404,9 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
           />
           <ExpoImage
             source={activeSpeaker.largePortrait}
-            style={styles.charArt}
+            style={activeSpeakerCfg?.artHeight != null
+              ? { width: W * 0.74, height: activeSpeakerCfg.artHeight, position: "absolute", bottom: 0, right: 0 }
+              : styles.charArt}
             contentFit={activeSpeakerCfg?.artFit ?? "contain"}
             contentPosition={activeSpeakerCfg?.artPos ?? "bottom"}
           />
