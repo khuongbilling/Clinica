@@ -77,16 +77,12 @@ const SI_SPEAKER = {
   barBorder: "rgba(139,0,0,0.60)" as const,
 };
 
-/* Per-speaker portrait config — mirrors the pattern in FormerSelfIntroScene etc.
-   Nightingale's 2048×2048 square image needs cover+bottom as a workaround. */
-const SPEAKERS: Partial<Record<PrologueSpeakerId, {
-  artFit: "contain" | "cover";
-  artPos: "bottom" | "top";
-}>> = {
+// ── Portrait fit/position per speaker (Nightingale is square → cover) ────────
+const SPEAKERS: Record<PrologueSpeakerId, { artFit: "contain" | "cover"; artPos: "bottom" | "top" }> = {
+  PRODIGY:     { artFit: "contain", artPos: "bottom" },
+  MASTER_BAI:  { artFit: "contain", artPos: "bottom" },
   NIGHTINGALE: { artFit: "cover",   artPos: "bottom" },
   FLEMING:     { artFit: "contain", artPos: "bottom" },
-  MASTER_BAI:  { artFit: "contain", artPos: "bottom" },
-  PRODIGY:     { artFit: "contain", artPos: "bottom" },
 };
 
 interface Props { onComplete: () => void }
@@ -543,14 +539,12 @@ const styles = StyleSheet.create({
   },
 
   charWrap: {
-    position:       "absolute",
-    top:            0,
-    left:           0,
-    right:          0,
-    /* bottom is set inline as barTotal so portrait never bleeds under the bar */
-    alignItems:     "flex-end",
-    justifyContent: "flex-end",
-    overflow:       "hidden",
+    position:   "absolute",
+    top:        0,
+    left:       0,
+    right:      0,
+    alignItems: "flex-end",
+    overflow:   "hidden",
   },
   charArt: { width: W * 0.74, height: "100%" as any },
 
@@ -570,7 +564,7 @@ const styles = StyleSheet.create({
     paddingTop:        12,
     gap:               14,
   },
-  vnLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 80 },
+  vnLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 92 },
   vnAvatarRing: {
     width:        92,
     height:       92,
