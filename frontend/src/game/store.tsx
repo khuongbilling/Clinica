@@ -2389,11 +2389,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!base) return;
     // Heroes come exclusively from University Recruitment — a class switch
     // never grants a starter hero, it only realigns identity/class fields.
+    // Task 375 — normalize learning_profile so legacy aliases (nursingStudent,
+    // nclexPrep, etc.) are never persisted; same guard as setLearningProfile.
+    const canonicalProfile = profile.learning_profile
+      ? (normalizeProfileId(profile.learning_profile) ?? profile.learning_profile)
+      : profile.learning_profile;
     const next: PlayerState = {
       ...base,
       aptitude: profile.aptitude as any,
       player_class: profile.player_class,
-      learning_profile: profile.learning_profile,
+      learning_profile: canonicalProfile,
       difficulty: profile.difficulty as any,
       system_affinity: profile.system_affinity,
       explanation_style: profile.explanation_style,

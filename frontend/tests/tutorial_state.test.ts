@@ -356,6 +356,50 @@ const TOTAL_STEPS = 3; // representative step count for tests
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// P-5  applyClassDiagnostic normalization: legacy profile IDs are canonicalized
+//      before being stored (mirrors the Task 375 fix in store.tsx)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  // Simulate the normalisation that applyClassDiagnostic now performs.
+  // The real action lives in store.tsx but the pure logic is just
+  // normalizeProfileId, which we can exercise directly.
+  const diagnosticCases: [string, string][] = [
+    // Legacy aliases that the post-recall class flow could previously write
+    ['nursingStudent',        'nursing_student'],
+    ['nclexPrep',             'nclex'],
+    ['healthcareProfessional','professional'],
+    ['nonmedical',            'curious'],
+    ['preNursing',            'nursing_student'],
+    // Canonical IDs already pass through unchanged
+    ['nursing_student',       'nursing_student'],
+    ['nclex',                 'nclex'],
+    ['professional',          'professional'],
+    ['curious',               'curious'],
+  ];
+
+  for (const [input, expected] of diagnosticCases) {
+    // Reproduce the exact guard from the fixed applyClassDiagnostic:
+    //   const canonicalProfile = input
+    //     ? (normalizeProfileId(input) ?? input)
+    //     : input;
+    const canonicalProfile = input
+      ? (normalizeProfileId(input) ?? input)
+      : input;
+    check(
+      `P-5  applyClassDiagnostic normalizes "${input}" → "${expected}"`,
+      canonicalProfile === expected,
+      `got="${canonicalProfile}"`,
+    );
+  }
+
+  // Null / undefined pass through safely (no crash when profile is absent)
+  const nullResult   = normalizeProfileId(null);
+  const undefResult  = normalizeProfileId(undefined);
+  check('P-5  applyClassDiagnostic: null profile is safe',      nullResult === null);
+  check('P-5  applyClassDiagnostic: undefined profile is safe', undefResult === undefined);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 const passed = results.filter(r => r.pass).length;
 const failed = results.filter(r => !r.pass).length;
