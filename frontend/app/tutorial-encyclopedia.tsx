@@ -52,6 +52,64 @@ interface CategorySection {
 
 const CATEGORIES: CategorySection[] = [
   {
+    label: "Onboarding",
+    emoji: "🌅",
+    entries: [
+      {
+        id: "prologue_battle_onboarding",
+        icon: "book-outline",
+        title: "Your First Shift",
+        subtitle: "The prologue clinical encounter",
+        body: "The Fading Apprentice case that opened your path. Master Bai walked you through the five-step Care Pathway: Assess, Stabilize, Treat, Reassess, then finish. Replaying this re-runs the full guided prologue battle.",
+        bullets: [
+          "Assess first — never treat what you haven't assessed",
+          "Stabilize before pushing back on corruption",
+          "Reassess after the enemy acts to close the chain",
+        ],
+        accentColor: "#94A3B8",
+        status: "available",
+        tutorialId: "prologueBattle",
+        replayRoute: "/shift",
+        practiceRoute: "/shift",
+        practiceLabel: "Enter Ward Shift",
+      },
+      {
+        id: "first_battle_onboarding",
+        icon: "flash-outline",
+        title: "Battle Basics",
+        subtitle: "Your first unguided clinical shift",
+        body: "The second case — the moment before the Recall. Master Bai guided you through the rhythm one more time: look, protect, treat, check again. Replaying this re-runs the Battle Basics walkthrough.",
+        bullets: [
+          "Follow the rhythm: look, protect, treat, check again",
+          "Highlighted skills show the suggested action each step",
+          "Completing this is the last step before the System awakens",
+        ],
+        accentColor: "#7DD3FC",
+        status: "available",
+        tutorialId: "firstBattle",
+        replayRoute: "/shift",
+        practiceRoute: "/shift",
+        practiceLabel: "Enter Ward Shift",
+      },
+      {
+        id: "system_hub_intro_onboarding",
+        icon: "radio-outline",
+        title: "The System Awakens",
+        subtitle: "Post-Recall hub orientation",
+        body: "After the Recall, the System introduced itself and oriented you to the Command Screen — your stamina, currencies, and first mission. Replaying this restores the full System introduction on the main hub.",
+        bullets: [
+          "The System is bound to you since the Recall",
+          "The top bar monitors Stamina and all resource currencies",
+          "First objective: report to Clinica University",
+        ],
+        accentColor: "#A78BFA",
+        status: "available",
+        tutorialId: "systemHubIntro",
+        replayRoute: "/(tabs)/index",
+      },
+    ],
+  },
+  {
     label: "Combat & Shifts",
     emoji: "⚔️",
     entries: [
@@ -68,8 +126,6 @@ const CATEGORIES: CategorySection[] = [
         ],
         accentColor: "#06B6D4",
         status: "available",
-        tutorialId: "firstBattle",
-        replayRoute: "/shift",
         practiceRoute: "/shift",
         practiceLabel: "Enter Ward Shift",
       },
