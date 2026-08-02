@@ -145,7 +145,7 @@ export default function UniversityRecruitScreen() {
       setRevealIsFree(true);
       setRevealResult(r);
       playRewardCue(true);
-      onRequiredAction("summon");
+      onRequiredAction("summon"); // satisfies firstSummon › summon_action (requiredActionType:"summon")
     }
     setBusy(false);
   };
@@ -159,7 +159,7 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await freeRecruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: true }); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: true }); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); /* satisfies firstSummon › summon_action */ }
     setBusy(false);
   };
 
@@ -172,7 +172,7 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: false }); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); }
+    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: false }); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); /* satisfies firstSummon › summon_action */ }
     setBusy(false);
   };
 

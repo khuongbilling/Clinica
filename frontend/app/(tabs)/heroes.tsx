@@ -89,7 +89,7 @@ export default function HeroesScreen() {
     const next = inTeam ? team.filter((id) => id !== heroId) : [...team, heroId];
     setTeam(next);
     await saveActiveTeam(next);
-    onRequiredAction("setTeam");
+    onRequiredAction("setTeam"); // satisfies firstHeroTeam › heroes_set (requiredActionType:"setTeam")
   };
 
   const ownedHeroes    = HEROES.filter((h) => owned.has(h.id));

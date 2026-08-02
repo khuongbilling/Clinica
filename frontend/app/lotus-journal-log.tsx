@@ -157,7 +157,7 @@ export default function LotusJournalLogPage() {
     if (res) {
       setResult(res);
       setStep("result");
-      onRequiredAction("logEntry");
+      onRequiredAction("logEntry"); // satisfies firstLotusEntry › lotus_log (requiredActionType:"logEntry")
     }
   };
 

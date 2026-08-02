@@ -3129,7 +3129,7 @@ export default function WardDefense() {
       uidSeed: s.uidSeed + 1,
       feedbacks: [{ id: fid, text: `${uDef.name} deployed — ${uDef.flavor}`, color: uDef.color, quality: "bonus" as any, ticks: 5 }, ...s.feedbacks.slice(0, 1)],
     });
-    onRequiredAction("deploy");
+    onRequiredAction("deploy"); // satisfies firstWardDefense › wd_deploy (requiredActionType:"deploy")
   }
 
   /* ── Care Synthesis — merge two same-type same-level units → Lv+1 ── */
@@ -3155,7 +3155,7 @@ export default function WardDefense() {
         color: "#FFD700", quality: "bonus" as any, ticks: 8,
       }, ...s.feedbacks.slice(0, 1)],
     });
-    onRequiredAction("merge");
+    onRequiredAction("merge"); // satisfies firstWardDefense › wd_merge (requiredActionType:"merge")
   }
 
   /* ── Use a global ability ── */

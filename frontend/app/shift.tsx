@@ -237,7 +237,7 @@ export default function ShiftPage() {
                 flashNotice(universityGate.reason || "Clinica University is locked.");
                 return;
               }
-              onRequiredAction("navigateToUniversity");
+              onRequiredAction("navigateToUniversity"); // satisfies systemWardHub › system_ward_university (requiredActionType:"navigateToUniversity")
               router.push(ROUTES.UNIVERSITY);
             }}
             testID="ward-hub-university"

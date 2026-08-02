@@ -30,7 +30,7 @@ const BOUTIQUE_ITEMS = [
 export default function LotusJournalPage() {
   const router = useRouter();
   const { player, logWellnessActivity } = usePlayer();
-  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
+  const { isCompleted, startTutorial } = useTutorial();
   const [lessonOpen, setLessonOpen] = useState<string | null>(null);
   const [lessonMsg, setLessonMsg] = useState<string | null>(null);
 

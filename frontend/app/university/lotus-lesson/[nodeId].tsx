@@ -75,6 +75,8 @@ export default function LotusLessonScreen() {
 
   const lessonStarted = !loading && !!player && !!node;
   useEffect(() => {
+    // Forward hook — no tutorial step currently uses requiredActionType:"openLesson",
+    // but this fires when a lotus lesson is ready so any future step can match it.
     if (lessonStarted) onRequiredAction("openLesson");
   }, [lessonStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 

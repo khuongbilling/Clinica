@@ -309,7 +309,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     setCueFeedback(null);
     if (cueAdvanceRef.current) {
       cueAdvanceRef.current = false;
-      onRequiredAction("cue");
+      onRequiredAction("cue"); // satisfies prologueBattle › prologue_cue (requiredActionType:"cue")
     }
   };
   useEffect(() => () => { if (cueTimer.current) clearTimeout(cueTimer.current); }, []);
@@ -774,6 +774,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       openTimingPrompt(hero, effective);
       return;
     }
+    // satisfies prologueBattle steps with requiredSkillId (prologue_scout / prologue_stabilize /
+    // prologue_counter / prologue_reassess) — the store checks skill.id against requiredSkillId.
     onRequiredAction(skill.type, skill.id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     // Push 8: capture result so we can display the actual effect in feedbackMsg.
@@ -959,7 +961,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // During firstBattle action steps, endTurn is always allowed so the player
     // can refill AP between guided steps without getting stuck.
     if (guidedStep && !guidedEndTurnStep && !isFirstBattleActionStep) { tutorialNudge(); return; }
-    onRequiredAction("endTurn");
+    onRequiredAction("endTurn"); // satisfies prologueBattle › prologue_endturn (requiredActionType:"endTurn")
     turnActionsRef.current = [];
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     triggerEnemyAttack(getEnemySignatureAttack(enemy).kind);

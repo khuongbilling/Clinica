@@ -24,6 +24,8 @@ export default function LessonDetailScreen() {
   // Opening a real lesson screen.
   const lessonStarted = !!player && !!lesson;
   useEffect(() => {
+    // Forward hook — no tutorial step currently uses requiredActionType:"openLesson",
+    // but this fires when a lesson screen is ready so any future step can match it.
     if (lessonStarted) onRequiredAction("openLesson");
   }, [lessonStarted]);
 

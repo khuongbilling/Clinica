@@ -342,7 +342,7 @@ export default function UniversityHubScreen() {
     useCallback(() => {
       getChainProgress().then(setChainProg);
       getObjectiveProgress().then(setCompletedObjectives);
-      onRequiredAction("navigateToUniversity");
+      onRequiredAction("navigateToUniversity"); // satisfies systemWardHub › system_ward_university (requiredActionType:"navigateToUniversity") — fires on focus so it catches both direct nav and replay
     }, [onRequiredAction]),
   );
 
