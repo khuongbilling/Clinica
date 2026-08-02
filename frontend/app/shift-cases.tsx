@@ -105,7 +105,8 @@ export default function ShiftCasesPage() {
     }
   };
 
-  const accent = current ? (ELEMENT_COLORS[current.primarySystem] ?? COLORS.brand) : COLORS.brand;
+  // primarySystem is deprecated/optional; used here as display-only colour hint only
+  const accent = current ? (ELEMENT_COLORS[current.primarySystem ?? ''] ?? COLORS.brand) : COLORS.brand;
 
   // Lesson-to-battle bridge — check if this enemy has a completed Lotus Lesson linked to it.
   const linkedLesson = current ? getLotusNodeForEnemy(current.id) : undefined;
@@ -211,12 +212,8 @@ export default function ShiftCasesPage() {
                 CHAPTER {ENEMY_CLINICAL[current.id]?.chapter ?? 1} · UNIVERSITY SIMULATION: {chapterSimulationLabel(ENEMY_CLINICAL[current.id]?.chapter).toUpperCase()}
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={[styles.caseSys, { color: accent }]}>{current.primarySystem.toUpperCase()}</Text>
-                {current.secondarySystem && (
-                  <Text style={[styles.caseSys, { color: (ELEMENT_COLORS[current.secondarySystem] ?? accent) + "AA" }]}>
-                    · {current.secondarySystem.toUpperCase()}
-                  </Text>
-                )}
+                {/* Show Corruption Aspect (narrative label) instead of deprecated primarySystem */}
+                <Text style={[styles.caseSys, { color: accent }]}>{current.corruptionAspect}</Text>
                 <View style={styles.diffRow}>
                   {Array.from({ length: current.difficulty }).map((_, i) => (
                     <Ionicons key={i} name="star" size={9} color={COLORS.brand} />

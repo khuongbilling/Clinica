@@ -37,7 +37,8 @@ export default function BossPage() {
 
   const boss = isVerdantha ? BOSS_VERDANTHA : BOSS_LORD_IMBALANCE;
   const sprite = getEnemySprite(boss.id);
-  const accent = isVerdantha ? BLOOM_ACCENT : (ELEMENT_COLORS[boss.primarySystem] ?? "#F87171");
+  // primarySystem is deprecated/optional; used here as display-only colour hint only
+  const accent = isVerdantha ? BLOOM_ACCENT : (ELEMENT_COLORS[boss.primarySystem ?? ''] ?? "#F87171");
   const canFight = stamina >= BOSS_ENCOUNTER_COST;
 
   // Verdantha is gated behind Phase III — Convergence, driven by the player's
@@ -97,15 +98,17 @@ export default function BossPage() {
             <Text style={styles.bossName}>{boss.name}</Text>
             <Text style={styles.bossSubtitle}>{isVerdantha ? VERDANTHA.title : "Lord of Systemic Imbalance"}</Text>
             <View style={styles.pillRow}>
+              {/* Corruption Aspect: narrative label replacing deprecated primarySystem */}
               <View style={[styles.pill, { borderColor: accent + "60" }]}>
                 <Text style={[styles.pillTxt, { color: accent }]}>
-                  {boss.primarySystem.toUpperCase()}
+                  {boss.corruptionAspect ?? '—'}
                 </Text>
               </View>
-              {boss.secondarySystem && (
-                <View style={[styles.pill, { borderColor: (ELEMENT_COLORS[boss.secondarySystem] ?? "#22D3EE") + "60" }]}>
-                  <Text style={[styles.pillTxt, { color: ELEMENT_COLORS[boss.secondarySystem] ?? "#22D3EE" }]}>
-                    {boss.secondarySystem.toUpperCase()}
+              {/* Weak Element: combat counter weakness */}
+              {boss.weakElement && (
+                <View style={[styles.pill, { borderColor: (ELEMENT_COLORS[boss.weakElement] ?? "#22D3EE") + "60" }]}>
+                  <Text style={[styles.pillTxt, { color: ELEMENT_COLORS[boss.weakElement] ?? "#22D3EE" }]}>
+                    Weak: {boss.weakElement}
                   </Text>
                 </View>
               )}
@@ -137,7 +140,8 @@ export default function BossPage() {
         <View style={styles.statsCard}>
           {(isVerdantha
             ? [
-                { label: "SYSTEMS INVOLVED", val: `${boss.primarySystem} · ${boss.secondarySystem ?? ""}` },
+                { label: "CORRUPTION ASPECT", val: boss.corruptionAspect ?? '—' },
+                { label: "WEAK ELEMENT", val: boss.weakElement ?? 'Unknown' },
                 { label: "SCALE", val: VERDANTHA.difficulty },
                 { label: "DIFFICULTY", val: `★★★★★ (${boss.difficulty}/5)` },
                 { label: "BEST COUNTERS", val: boss.bestCounters?.join(", ") ?? "Balanced team" },

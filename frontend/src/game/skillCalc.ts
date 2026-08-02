@@ -7,12 +7,12 @@
  *         based on hero.strongAffinities / hero.weakAffinities vs enemy.primaryAffinity.
  *
  * Formula:
- *   Strike   = base × (1 + elementBonus) × affinity × clinical × system
+ *   Strike   = base × (1 + elementBonus) × affinity × clinical
  *              × chapter × cast × heroStat × affinityFamily
  *              × [heroLevel × equipment × leaderBonus × playerClass
  *                 × careChain × clinicalCue]
  *
- *   Stabilize = base × clinical × system × corruption × cast × heroStat
+ *   Stabilize = base × clinical × corruption × cast × heroStat
  *              × affinityFamily × stabilityGain × enemyResistance
  *              × [heroLevel × equipment × leaderBonus
  *                 × playerClass × careChain × clinicalCue]
@@ -147,8 +147,6 @@ export interface SkillModifiers {
    * Stabilize: res.modifier              (from evaluateClinicalAppropriateness)
    */
   clinicalMod: number;
-  /** System-match bonus from res.systemModifier. */
-  systemMod: number;
   /**
    * Perfect / Good / Normal cast quality (CAST_QUALITY_MULTIPLIER).
    * 1.0 for items, cards, temp actions (they have no cast prompt).
@@ -248,7 +246,6 @@ export function neutralModifiers(): SkillModifiers {
   return {
     // active
     clinicalMod: 1,
-    systemMod: 1,
     castMult: 1,
     corruptionMod: 1,
     chapterMod: 1,
@@ -291,7 +288,6 @@ export function calcStrikeEffect(base: number, mods: SkillModifiers): number {
   const result = boostedBase
     * mods.affinityMod
     * mods.clinicalMod
-    * mods.systemMod
     * mods.chapterMod
     * mods.castMult
     * mods.heroStatMod           // Push 4
@@ -322,7 +318,6 @@ export function calcStabilizeEffect(base: number, mods: SkillModifiers): number 
   if (base < 0) return 0;
   const coreResult = base
     * mods.clinicalMod
-    * mods.systemMod
     * mods.corruptionMod
     * mods.castMult
     * mods.heroStatMod           // Push 4

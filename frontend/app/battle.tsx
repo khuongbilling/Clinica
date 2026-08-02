@@ -1274,9 +1274,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             </View>
             <Text style={styles.enemyName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{enemy.name}</Text>
             <View style={styles.systemPills}>
-              <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
-                <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
-              </View>
+              {/* primarySystem: deprecated/optional; kept as display-only visual colour/FX hint in battle */}
+              {enemy.primarySystem && (
+                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
+                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
+                </View>
+              )}
               {enemy.secondarySystem && (
                 <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.secondarySystem] }]}>
                   <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.secondarySystem] }]}>{enemy.secondarySystem}</Text>
@@ -1339,7 +1342,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           id: enemy.id,
           name: enemy.name,
           realWorld: enemy.realWorld,
-          primarySystem: enemy.primarySystem,
+          // primarySystem: deprecated/optional; BattlefieldScene uses it as display-only FX/colour key
+          primarySystem: enemy.primarySystem!,
           secondarySystem: enemy.secondarySystem,
           // weakSystem removed in Push 1 — not passed to BattlefieldScene
           dangerTrigger: enemy.dangerTrigger,

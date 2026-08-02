@@ -16,6 +16,7 @@ import { playRewardCue } from "@/src/game/cues";
 import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
+import { BOSS_VERDANTHA as BOSS_VERDANTHA_DATA } from "@/src/game/content";
 import {
   MIASMA_BLOOM_LORE,
   MIASMA_BLOOM_PHASES,
@@ -727,8 +728,11 @@ function BossTab({ router }: { router: any }) {
         <Text style={styles.bossName}>{boss.name}</Text>
         <Text style={styles.bossTitle}>{boss.title}</Text>
         <View style={styles.bossSystemRow}>
-          <SystemTag label={boss.primarySystem} color={BLOOM_ACCENT} />
-          <SystemTag label={boss.secondarySystem} color="#22D3EE" />
+          {/* Corruption Aspect and Weak Element from canonical Enemy data; difficulty retained */}
+          <SystemTag label={BOSS_VERDANTHA_DATA.corruptionAspect} color={BLOOM_ACCENT} />
+          {BOSS_VERDANTHA_DATA.weakElement && (
+            <SystemTag label={`Weak: ${BOSS_VERDANTHA_DATA.weakElement}`} color="#22D3EE" />
+          )}
           <SystemTag label={boss.difficulty} color={COLORS.onSurfaceTertiary} />
         </View>
       </View>

@@ -290,14 +290,23 @@ function EnemyCard({ enemy: e }: { enemy: Enemy }) {
         )}
       </View>
 
-      {/* Element chips */}
+      {/* Corruption Aspect + canonical combat fields */}
       <View style={styles.chipRow}>
-        <ElementChip label={`System: ${e.primarySystem}`} color={elementColor(e.primarySystem)} />
-        {e.secondarySystem && (
-          <ElementChip label={`2nd: ${e.secondarySystem}`} color={elementColor(e.secondarySystem)} />
-        )}
-        {e.weakElement && (
-          <ElementChip label={`Weak: ${e.weakElement}`} color={elementColor(e.weakElement)} prefix="↓" />
+        {/* Corruption Aspect: free-form narrative label — NOT an ElementSystem, no colour key */}
+        <View style={[styles.chip, { backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border }]}>
+          <Text style={[styles.chipText, { color: COLORS.onSurfaceSecondary }]}>
+            Aspect: {e.corruptionAspect}
+          </Text>
+        </View>
+        {/* Weak Element: combat counter weakness (×1.30 strike when hero.element matches) */}
+        <ElementChip
+          label={e.weakElement ? `Weak: ${e.weakElement}` : 'Weak: Unknown'}
+          color={e.weakElement ? elementColor(e.weakElement) : COLORS.onSurfaceTertiary}
+          prefix={e.weakElement ? "↓" : undefined}
+        />
+        {/* Clinical Domain */}
+        {e.primaryAffinity && (
+          <ElementChip label={`Domain: ${e.primaryAffinity}`} color={COLORS.brand} />
         )}
         {e.resistantElement && (
           <ElementChip label={`Resist: ${e.resistantElement}`} color={elementColor(e.resistantElement)} prefix="↑" />
@@ -354,7 +363,7 @@ function MechanicsTab() {
         title="Strike Formula"
         color={COLORS.error}
         lines={[
-          "base × (1 + elementBonus) × affinity × clinical × system",
+          "base × (1 + elementBonus) × affinity × clinical",
           "  × chapter × cast × heroStat × affinityFamily",
           "  × corruptionResist × hiddenDefense",
           "  × [heroLevel × equipment × leaderBonus",
@@ -375,7 +384,7 @@ function MechanicsTab() {
         title="Stabilize Formula"
         color={COLORS.success}
         lines={[
-          "base × clinical × system × corruptionMod × cast × heroStat",
+          "base × clinical × corruptionMod × cast × heroStat",
           "  × affinityFamily × hiddenDefense",
           "  × [heroLevel × equipment × leaderBonus",
           "     × playerClass × careChain × clinicalCue]",
@@ -518,7 +527,9 @@ function ChapterPoolsTab() {
           <Text style={styles.sectionNote}>{pool.length} enemies</Text>
           {pool.map((e) => {
             const isBoss = e.bossGuard || e.scriptedLoss;
+            // primarySystem kept as display-only visual colour hint; label replaced with corruptionAspect
             const sysColor = elementColor(e.primarySystem);
+            const weakColor = elementColor(e.weakElement);
             return (
               <View key={e.id} style={styles.poolRow}>
                 <View style={[styles.poolDot, { backgroundColor: sysColor }]} />
@@ -526,8 +537,15 @@ function ChapterPoolsTab() {
                   <Text style={[styles.poolName, { color: sysColor }]}>{e.name}</Text>
                   <Text style={styles.poolId}>{e.id}{isBoss ? " · BOSS" : ""}</Text>
                 </View>
-                <View style={[styles.chip, { backgroundColor: sysColor + "18", borderColor: sysColor + "66" }]}>
-                  <Text style={[styles.chipText, { color: sysColor }]}>{e.primarySystem}</Text>
+                <View style={{ gap: 3 }}>
+                  <View style={[styles.chip, { backgroundColor: COLORS.surfaceSecondary, borderColor: COLORS.border }]}>
+                    <Text style={[styles.chipText, { color: COLORS.onSurfaceSecondary }]}>{e.corruptionAspect}</Text>
+                  </View>
+                  <View style={[styles.chip, { backgroundColor: weakColor + "18", borderColor: weakColor + "66" }]}>
+                    <Text style={[styles.chipText, { color: weakColor }]}>
+                      {e.weakElement ? `↓ ${e.weakElement}` : 'Weak: ?'}
+                    </Text>
+                  </View>
                 </View>
               </View>
             );

@@ -549,6 +549,222 @@ import { getSystemMatchModifier } from '../src/game/clinical';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Test 15 — Shield receives ×1.00 on element match (elementBonus not in calcShieldEffect)
+// Shield formula: base × heroStat × affinityFamily × hiddenDefense × [...]
+// elementBonus is only factored in calcStrikeEffect; setting it in mods for a
+// shield calculation must have no effect.
+// ─────────────────────────────────────────────────────────────────────────────
+import { calcShieldEffect } from '../src/game/skillCalc';
+{
+  const base = 100;
+  const withBonus    = calcShieldEffect(base, { ...neutralModifiers(), elementBonus: 0.3 });
+  const withoutBonus = calcShieldEffect(base, neutralModifiers());
+  check(
+    'Test 15 – Shield receives ×1.00 on element match (elementBonus not applied to shields)',
+    withBonus === withoutBonus && withBonus === base,
+    `withBonus=${withBonus}, withoutBonus=${withoutBonus}, base=${base}`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 16 — Multi-effect skill: elementBonus applies ONLY to Strike component
+// A skill with both strike and stabilize payloads should have the counter bonus
+// applied to the strike amount (×1.30) but not to the stabilize amount (×1.00).
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const base = 100;
+  const strikeWithElem  = calcStrikeEffect(base,    { ...neutralModifiers(), elementBonus: 0.3 });
+  const strikeNoElem    = calcStrikeEffect(base,    neutralModifiers());
+  const stabWithElem    = calcStabilizeEffect(base, { ...neutralModifiers(), elementBonus: 0.3 });
+  const stabNoElem      = calcStabilizeEffect(base, neutralModifiers());
+  check(
+    'Test 16a – Multi-effect skill: elementBonus boosts Strike component (×1.30)',
+    strikeWithElem > strikeNoElem,
+    `strikeWithElem=${strikeWithElem}, strikeNoElem=${strikeNoElem}`,
+  );
+  check(
+    'Test 16b – Multi-effect skill: elementBonus does NOT affect Stabilize component',
+    stabWithElem === stabNoElem,
+    `stabWithElem=${stabWithElem}, stabNoElem=${stabNoElem}`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 17 — Item/Card action: neutralModifiers has elementBonus=0 (×1.00 always)
+// Items and cards in battle.ts spread neutralModifiers() without setting elementBonus,
+// so they never receive the elemental counter bonus regardless of hero element.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const neutral = neutralModifiers();
+  check(
+    'Test 17a – neutralModifiers: elementBonus is 0 (item/card actions yield ×1.00 on element match)',
+    neutral.elementBonus === 0,
+    `elementBonus=${neutral.elementBonus}`,
+  );
+  const base = 100;
+  const itemStrike = calcStrikeEffect(base, neutral);
+  check(
+    'Test 17b – calcStrikeEffect with neutralModifiers yields base (no bonus applied)',
+    itemStrike === base,
+    `itemStrike=${itemStrike}, base=${base}`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 18 — canAdvancePathway result is unchanged by hero.element/enemy.weakElement
+// Pathway advancement is driven solely by pathwayRoles + clinicalTags overlap;
+// element matching was removed in NM-01 and must not affect the result.
+// ─────────────────────────────────────────────────────────────────────────────
+import { canAdvancePathway } from '../src/game/clinical';
+{
+  const mockAction = {
+    clinicalTags: ['fluids'],
+    pathwayRoles: ['stabilize' as const],
+    diseaseCategory: 'fluid',
+  } as any;
+  const mockEnemy = {
+    treatmentChain: ['stabilize' as const],
+    preferredChainTags: ['fluids'],
+  } as any;
+  const chain = { completed: false, progress: [] } as any;
+
+  // Same enemy, with and without weakElement that matches a hypothetical hero element
+  const enemyNoWeak  = { ...mockEnemy } as any;
+  const enemyWithWeak = { ...mockEnemy, weakElement: 'River' } as any;
+
+  const resultNoWeak  = canAdvancePathway(mockAction, enemyNoWeak,  chain);
+  const resultWithWeak = canAdvancePathway(mockAction, enemyWithWeak, chain);
+  check(
+    'Test 18 – canAdvancePathway: result unchanged whether weakElement present or absent',
+    resultNoWeak === resultWithWeak,
+    `noWeak=${resultNoWeak}, withWeak=${resultWithWeak}`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 19 — Intervention Fit (getAffinityModifier) unchanged by element match
+// getAffinityModifier operates on diseaseCategory vs enemy affinityStrong/affinityWeak;
+// hero.element and enemy.weakElement are not inputs — result must be identical
+// whether or not element fields are present.
+// ─────────────────────────────────────────────────────────────────────────────
+import { getAffinityModifier } from '../src/game/clinical';
+{
+  const mockAction = { diseaseCategory: 'respiratory', clinicalTags: ['bronchodilators'] } as any;
+  const enemyBase      = { affinityStrong: ['respiratory'], affinityWeak: [] } as any;
+  const enemyWithWeak  = { ...enemyBase, weakElement: 'Air' } as any;
+  const heroMatchElem  = { element: 'Air' } as any; // not an input to getAffinityModifier
+
+  const modBase     = getAffinityModifier(mockAction, enemyBase);
+  const modWithWeak = getAffinityModifier(mockAction, enemyWithWeak);
+  check(
+    'Test 19 – Intervention Fit: getAffinityModifier result unchanged by weakElement on enemy',
+    modBase.multiplier === modWithWeak.multiplier && modBase.level === modWithWeak.level,
+    `base: ${modBase.multiplier}/${modBase.level}, withWeak: ${modWithWeak.multiplier}/${modWithWeak.level}`,
+  );
+  // Hero element is irrelevant — the function does not accept hero as argument
+  check(
+    'Test 19b – Intervention Fit: heroMatchElem variable unused by getAffinityModifier (hero not an input)',
+    heroMatchElem !== undefined && modBase.multiplier === modWithWeak.multiplier,
+    'hero element intentionally not passed',
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 20 — Dev-mode Strike log omits "systemMod" / "system=" after migration
+// After EA-01B, SkillModifiers no longer has a systemMod field and the
+// dev-mode log in applySkill no longer prints "system=×...".
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const wisp20 = ENEMIES.find(e => e.id === 'dehydration_wisp');
+  const nw20   = HEROES.find(h => h.id === 'night_watcher');
+
+  if (!wisp20 || !nw20) {
+    check('Test 20 – Dev log setup failed', false, 'wisp or night_watcher not found');
+  } else {
+    const logs: string[] = [];
+    const origLog = console.log;
+    console.log = (...args: any[]) => { if (String(args[0]).startsWith('[Strike]')) logs.push(String(args[0])); };
+
+    try {
+      const BASE20 = { id: 'rally_bell', name: 'TestStrike20', cost: 0, description: '', shortEffect: '' };
+      const strkSkill20 = { ...BASE20, type: 'strike' as const, strike: 50 } as HeroSkill;
+      const state20 = initBattle({ ...wisp20, corruption: 200 } as any, [nw20], { chapter: 1, inventory: {} });
+      applySkill(state20, strkSkill20, nw20);
+
+      check(
+        'Test 20a – Dev-mode Strike log does not contain "systemMod" after EA-01B migration',
+        logs.length > 0 && !logs[0].includes('systemMod'),
+        `log: ${logs[0] ?? 'none'}`,
+      );
+      check(
+        'Test 20b – Dev-mode Strike log does not contain "system=" after EA-01B migration',
+        logs.length > 0 && !logs[0].includes('system='),
+        `log: ${logs[0] ?? 'none'}`,
+      );
+      check(
+        'Test 20c – Dev-mode Strike log still contains "clinical=" (other fields intact)',
+        logs.length > 0 && logs[0].includes('clinical='),
+        `log: ${logs[0] ?? 'none'}`,
+      );
+    } finally {
+      console.log = origLog;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 21 — Data integrity smoke test: all chapter pools and named bosses have
+// canonical EA-01B fields (corruptionAspect string, weakElement present as key)
+// ─────────────────────────────────────────────────────────────────────────────
+import { BOSS_VERDANTHA as BOSS_VERDANTHA_SMOKE } from '../src/game/content';
+{
+  const allForSmoke: Enemy[] = [
+    ...ENEMIES,
+    ...AFFLICTION_ENEMIES,
+    BOSS_LORD_IMBALANCE,
+    BOSS_SILENT_INFARCT,
+    BOSS_VERDANTHA_SMOKE,
+  ];
+
+  const missingAspect = allForSmoke.filter(e => !e.corruptionAspect || e.corruptionAspect.trim() === '');
+  check(
+    'Test 21a – All enemies have a non-empty corruptionAspect',
+    missingAspect.length === 0,
+    `Missing corruptionAspect: ${missingAspect.map(e => e.id).join(', ')}`,
+  );
+
+  const missingWeakElemKey = allForSmoke.filter(
+    e => !Object.prototype.hasOwnProperty.call(e, 'weakElement'),
+  );
+  check(
+    'Test 21b – All enemies have the weakElement key (may be null)',
+    missingWeakElemKey.length === 0,
+    `Missing weakElement key: ${missingWeakElemKey.map(e => e.id).join(', ')}`,
+  );
+
+  // Chapter pools 1–9 must each resolve with at least one enemy
+  const chapterCounts = Array.from({ length: 9 }, (_, i) => {
+    const ch = i + 1;
+    return { ch, count: ENEMIES.filter(e => e.difficulty === ch && !e.worldBoss && !e.isAffliction).length };
+  });
+  const emptyChapters = chapterCounts.filter(({ count }) => count === 0).map(({ ch }) => ch);
+  check(
+    'Test 21c – All chapter pools 1–9 have at least one enemy',
+    emptyChapters.length === 0,
+    `Empty chapter pools: ${emptyChapters.join(', ')}`,
+  );
+
+  // Named bosses have corruptionAspect and weakElement key
+  const namedBosses = [BOSS_LORD_IMBALANCE, BOSS_SILENT_INFARCT, BOSS_VERDANTHA_SMOKE];
+  const bossIssues = namedBosses.filter(b => !b.corruptionAspect || !Object.prototype.hasOwnProperty.call(b, 'weakElement'));
+  check(
+    'Test 21d – All named bosses have corruptionAspect and weakElement field',
+    bossIssues.length === 0,
+    `Bosses missing canonical fields: ${bossIssues.map(b => b.id).join(', ')}`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Summary
 // ─────────────────────────────────────────────────────────────────────────────
 const passed = results.filter(r => r.pass).length;

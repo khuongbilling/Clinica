@@ -31,7 +31,6 @@ import {
   getStabilizationModifier,
   getStabilityGainModifier,
   stabilityResistanceMultiplier,
-  getSystemMatchModifier,
   getTreatmentStabilityModifier,
   getTurnAP,
   ITEM_CLINICAL,
@@ -433,7 +432,8 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   const limitedCardMode = equippedCards.length > 0;
   const hand = limitedCardMode ? equippedCards.slice(0, 3) : drawCards(3);
   const cardDeck = limitedCardMode ? equippedCards.slice(3) : [];
-  const pendingCue = getRandomClinicalCue([], { chapter, topicHint: SYSTEM_TO_CUE_TOPIC[enemy.primarySystem] });
+  // primarySystem is deprecated/optional; used here as display-only topic hint only
+  const pendingCue = getRandomClinicalCue([], { chapter, topicHint: enemy.primarySystem ? SYSTEM_TO_CUE_TOPIC[enemy.primarySystem] : undefined });
 
   return {
     enemy,
@@ -682,7 +682,6 @@ export function revealHiddenClues(s: BattleState, count: number): BattleState {
 interface ResolveResult {
   status: ActionStatus;
   modifier: number;
-  systemModifier: number;
   chainAdvanced: PathwayRole | null;
   chainCompletedNow: boolean;
   rationale: string | undefined;
@@ -696,7 +695,6 @@ function resolveAction(
 ): ResolveResult {
   const enemy = state.enemyClinical;
   const evalRes = evaluateClinicalAppropriateness(action, enemy, { revealedLabels: state.revealedLabels, stability: state.stability });
-  const sysMod = getSystemMatchModifier(systemType, enemy, state.enemy.primarySystem);
 
   // Chapter forgiveness on weak/inappropriate
   const forg = getChapterForgiveness(state.chapter);
@@ -718,7 +716,7 @@ function resolveAction(
 
   const rationale = buildRationale(evalRes.status, action, enemy);
   const affinityResult = getAffinityModifier(action, enemy);
-  return { status: evalRes.status, modifier: effectiveMod, systemModifier: sysMod, chainAdvanced, chainCompletedNow, rationale, affinityResult };
+  return { status: evalRes.status, modifier: effectiveMod, chainAdvanced, chainCompletedNow, rationale, affinityResult };
 }
 
 function applyResolutionToState(
@@ -879,7 +877,6 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   const strikeMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: corrOutcome.reductionMult,
-    systemMod: res.systemModifier,
     castMult,
     chapterMod: treatMod,
     affinityMod: res.affinityResult.multiplier,
@@ -898,10 +895,6 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   const stabMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: res.modifier,
-    // Push 1 elemental independence: stabilize effects are system-neutral (systemMod = 1.0).
-    // The element-based system bonus flows only through strikeMods; clinical effectiveness
-    // for stabilize is carried by clinicalMod (appropriateness) + affinityFamilyMod (domain).
-    systemMod: 1.0,
     castMult,
     corruptionMod: getStabilizationModifier(next.corruption),
     stabilityGainMod: getStabilityGainModifier(next.stability),
@@ -1009,7 +1002,6 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
         `[Strike] ${hero.name}→${skill.name} vs ${s.enemy.name}: ` +
         `base=${base}` +
         ` clinical=×${strikeMods.clinicalMod.toFixed(2)}` +
-        ` system=×${strikeMods.systemMod.toFixed(2)}` +
         `${eb}` +
         ` affFam=×${strikeMods.affinityFamilyMod.toFixed(2)}` +
         ` stat=×${strikeMods.heroStatMod.toFixed(2)}` +
@@ -1061,7 +1053,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     feedbackLevel: next.feedbackLevel,
     actionName: skill.name,
     status: res.status,
-    systemModifier: res.systemModifier,
+    systemModifier: 1.0,
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
@@ -1138,7 +1130,6 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   const itemStrikeMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: corrOutcome.reductionMult,
-    systemMod: res.systemModifier,
     chapterMod: getTreatmentStabilityModifier(next.stability),
     affinityMod: res.affinityResult.multiplier,
     // no elementBonus — items are system-neutral tools
@@ -1149,7 +1140,6 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   const itemStabMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: res.modifier,
-    systemMod: 1.0, // elemental independence: items stabilize via clinical tags, not element-system match
     corruptionMod: getStabilizationModifier(next.corruption),
     stabilityGainMod: getStabilityGainModifier(next.stability),
     enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
@@ -1197,7 +1187,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     feedbackLevel: next.feedbackLevel,
     actionName: item.displayName,
     status: res.status,
-    systemModifier: res.systemModifier,
+    systemModifier: 1.0,
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
@@ -1239,7 +1229,6 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
     const taMods: SkillModifiers = {
       ...neutralModifiers(),
       clinicalMod: res.modifier,
-      systemMod: 1.0, // elemental independence: temp actions stabilize via clinical tags, not element-system match
       corruptionMod: getStabilizationModifier(next.corruption),
       stabilityGainMod: getStabilityGainModifier(next.stability),
       enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
@@ -1253,7 +1242,6 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
     const taStrikeMods: SkillModifiers = {
       ...neutralModifiers(),
       clinicalMod: corrOutcome.reductionMult,
-      systemMod: res.systemModifier,
       affinityMod: res.affinityResult.multiplier,
     };
     const amt = calcStrikeEffect(a.strike, taStrikeMods);
@@ -1332,7 +1320,6 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   const cardStrikeMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: corrOutcome.reductionMult,
-    systemMod: res.systemModifier,
     affinityMod: res.affinityResult.multiplier,
     leaderBonusMod: cardLb?.cardMult ?? 1,  // Push 9
     playerClassMod: cardCb?.strikeMod ?? 1, // Push 11
@@ -1341,7 +1328,6 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   const cardStabMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: res.modifier,
-    systemMod: 1.0, // elemental independence: cards stabilize via clinical tags, not element-system match
     corruptionMod: getStabilizationModifier(next.corruption),
     stabilityGainMod: getStabilityGainModifier(next.stability),
     enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
@@ -1384,7 +1370,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     feedbackLevel: next.feedbackLevel,
     actionName: card.name,
     status: res.status,
-    systemModifier: res.systemModifier,
+    systemModifier: 1.0,
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
@@ -1497,7 +1483,8 @@ export function maybeTriggerClinicalCue(s: BattleState): BattleState {
   if (s.pendingCue) return s;
   if (s.cuesAnswered.length >= 4) return s;
   const isBoss = (s.enemyClinical?.rewardBase || 0) >= 100;
-  const topicHint = SYSTEM_TO_CUE_TOPIC[s.enemy.primarySystem];
+  // primarySystem is deprecated/optional; used here as display-only topic hint only
+  const topicHint = s.enemy.primarySystem ? SYSTEM_TO_CUE_TOPIC[s.enemy.primarySystem] : undefined;
   return {
     ...s,
     pendingCue: getRandomClinicalCue(s.cuesAnswered, { chapter: s.chapter, isBoss, topicHint }),
@@ -1720,7 +1707,8 @@ const SPREAD_CORRUPTION_REGROW = 5;
 
 export function getEnemySignatureAttack(enemy: Enemy): EnemySignatureAttack {
   if (enemy.id === 'lord_imbalance') return { name: 'Cascade of Imbalance', kind: 'spread' };
-  return SIGNATURE_ATTACKS[enemy.primarySystem] ?? { name: 'Corrupting Surge', kind: 'assault' };
+  // primarySystem is deprecated/optional; kept as display-only hint for signature-attack keying
+  return (enemy.primarySystem ? SIGNATURE_ATTACKS[enemy.primarySystem] : undefined) ?? { name: 'Corrupting Surge', kind: 'assault' };
 }
 
 export function endPlayerTurn(s: BattleState): BattleState {
@@ -2039,7 +2027,7 @@ export function buildSkillCalcBreakdown(
   if (classMult !== 1.0)          pushRow('Class bonus',       classMult,          'mult');
   if (cueBonusFlat > 0)           pushRow('Cue empowerment',   cueBonusFlat,       'flat');
 
-  // ── Estimate — assumes clinicalMod=1, castMult=1, systemMod=1 ─────────────
+  // ── Estimate — assumes clinicalMod=1, castMult=1 ──────────────────────────
   let estimated: number;
   if (effectType === 'strike') {
     estimated = Math.max(0, Math.round(
