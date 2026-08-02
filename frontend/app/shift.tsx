@@ -40,7 +40,7 @@ function dailyRoundsUnlockedModes(player: any): string[] {
 export default function ShiftPage() {
   const router = useRouter();
   const { player } = usePlayer();
-  const { isCompleted, startTutorial } = useTutorial();
+  const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
   const { notice, flashNotice } = useInlineNotice();
   const [showRounds, setShowRounds] = useState(false);
   const [activeTab, setActiveTab]   = useState("cases");
@@ -237,6 +237,7 @@ export default function ShiftPage() {
                 flashNotice(universityGate.reason || "Clinica University is locked.");
                 return;
               }
+              onRequiredAction("navigateToUniversity");
               router.push(ROUTES.UNIVERSITY);
             }}
             testID="ward-hub-university"

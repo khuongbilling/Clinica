@@ -12,8 +12,6 @@ export type TutorialId =
   // ── University mini-game tutorials (System-narrated, forced, no skip/close) ──
   | "cueHuntIntro"
   | "rapidTriageIntro"
-  | "rapidTriageCard2"
-  | "rapidTriageCard3"
   | "stabilizeIntro"
   // ── Off-Shift mini-game tutorials ──
   | "mealcraftIntro";
@@ -68,8 +66,6 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   systemShops: "The Apothecary Market",
   cueHuntIntro: "Cue Hunt",
   rapidTriageIntro: "Rapid Triage",
-  rapidTriageCard2: "Rapid Triage",
-  rapidTriageCard3: "Rapid Triage",
   stabilizeIntro: "Stabilize Stack",
   mealcraftIntro: "Mealcraft: Lotus Plate",
 };
@@ -89,8 +85,6 @@ export function isSystemTutorial(id: TutorialId | null | undefined): boolean {
 export const FORCED_TUTORIAL_IDS: TutorialId[] = [
   "cueHuntIntro",
   "rapidTriageIntro",
-  "rapidTriageCard2",
-  "rapidTriageCard3",
   "stabilizeIntro",
   "mealcraftIntro",
 ];
@@ -541,38 +535,6 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "triage_card3",
-      title: "Patient 3: Read Her Signs",
-      body: "A student with no symptoms, asking about hydration. Alert, well, no clinical urgency. Tap Routine.",
-      placement: "top",
-      requireAction: true,
-      requiredTargetId: "triage_routine",
-      nextText: "TAP ROUTINE",
-      progressLabel: "Card 3 / 3",
-    },
-  ],
-
-  // P1: rapidTriageCard2 and rapidTriageCard3 were previously started mid-game
-  // as separate 1-step tutorials, which caused the counter to show "1 / 1"
-  // for cards 2 and 3 — inconsistent with card 1's "2 / 2" display.
-  // The mid-game startTutorial() calls have been removed from rapid-triage.tsx.
-  // These entries are kept in the union for backward-compat (existing saves that
-  // have rapidTriageCard2/Card3 = true in storage remain valid).
-  rapidTriageCard2: [
-    {
-      id: "triage_card2_intro",
-      title: "Patient 2: Read His Signs",
-      body: "Confused elder. Low blood pressure. Unable to drink. These are danger signs; this patient cannot wait. Tap Emergency.",
-      placement: "top",
-      requireAction: true,
-      requiredTargetId: "triage_emergency",
-      nextText: "TAP EMERGENCY",
-      progressLabel: "Card 2 / 3",
-    },
-  ],
-
-  rapidTriageCard3: [
-    {
-      id: "triage_card3_intro",
       title: "Patient 3: Read Her Signs",
       body: "A student with no symptoms, asking about hydration. Alert, well, no clinical urgency. Tap Routine.",
       placement: "top",
