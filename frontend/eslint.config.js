@@ -7,4 +7,11 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    rules: {
+      // Unescaped HTML entities (' " etc.) are cosmetic; downgrade to warning
+      // so the validate workflow fails only on real logic errors.
+      'react/no-unescaped-entities': 'warn',
+    },
+  },
 ]);

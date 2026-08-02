@@ -945,6 +945,7 @@ function EvolveTab({
   const { player, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite } = usePlayer();
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [busyTier, setBusyTier] = React.useState<string | null>(null);
 
   if (!isOwned) {
     return (
@@ -978,7 +979,6 @@ function EvolveTab({
   const curBonus = starPowerBonusPct(prog.star);
   const nextBonus = starPowerBonusPct(Math.min(prog.star + 1, MAX_CERTIFICATION_STAR));
 
-  const [busyTier, setBusyTier] = React.useState<string | null>(null);
   const onTrain = async (tierKey?: string) => {
     if (busy) return;
     setBusy(true);
