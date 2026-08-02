@@ -2,6 +2,7 @@ import { AffinityFamily, ClassFamily, ElementSystem, HeroCombatStats, HeroRole, 
 
 export interface RosterHero {
   id: string;
+  gender: 'female' | 'male' | 'nonbinary';
   name: string;
   title: string;
   family: ClassFamily;
@@ -91,6 +92,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Commons ──
   {
     id: 'wardlight_apprentice',
+    gender: 'female',
     name: 'Wardlight Apprentice',
     title: 'Keeper of the Lantern',
     family: 'Wardborn',
@@ -114,6 +116,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'gentle_hands_aide',
+    gender: 'female',
     name: 'Gentle Hands Aide',
     title: 'Keeper of Calm Waters',
     family: 'Wardborn',
@@ -137,6 +140,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'safety_watch_initiate',
+    gender: 'male',
     name: 'Safety Watch Initiate',
     title: 'First Line of Prevention',
     family: 'Wardborn',
@@ -160,6 +164,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'care_chain_initiate',
+    gender: 'nonbinary',
     name: 'Care Chain Initiate',
     title: 'Keeper of the Quality Thread',
     family: 'Wardborn',
@@ -183,6 +188,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'comfort_scribe',
+    gender: 'female',
     name: 'Comfort Scribe',
     title: 'Voice of the Lesson',
     family: 'Wardborn',
@@ -206,6 +212,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'record_keeper_initiate',
+    gender: 'male',
     name: 'Record Keeper Initiate',
     title: 'Voice of the Chart',
     family: 'Wardborn',
@@ -231,6 +238,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Uncommons ──
   {
     id: 'bedside_guardian',
+    gender: 'female',
     name: 'Bedside Guardian',
     title: 'Vigil of the Ward',
     family: 'Wardborn',
@@ -256,6 +264,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'triage_lantern',
+    gender: 'male',
     name: 'Triage Lantern',
     title: 'First Light in the Storm',
     family: 'Wardborn',
@@ -280,6 +289,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'mindward_listener',
+    gender: 'female',
     name: 'Mindward Listener',
     title: 'Bridge Between Storms',
     family: 'Wardborn',
@@ -304,6 +314,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'infection_watcher',
+    gender: 'male',
     name: 'Infection Watcher',
     title: 'Sentinel of the Clean Seal',
     family: 'Wardborn',
@@ -328,6 +339,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'quality_sealbearer',
+    gender: 'nonbinary',
     name: 'Quality Sealbearer',
     title: 'Architect of Safe Systems',
     family: 'Wardborn',
@@ -354,6 +366,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Rares ──
   {
     id: 'night_ward_sentinel',
+    gender: 'female',
     name: 'Night Ward Sentinel',
     title: 'Shield of the Dark Hours',
     family: 'Wardborn',
@@ -379,6 +392,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'crisis_calm_keeper',
+    gender: 'male',
     name: 'Crisis Calm Keeper',
     title: 'Eye of the Mind\'s Storm',
     family: 'Wardborn',
@@ -404,6 +418,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'safety_auditor',
+    gender: 'female',
     name: 'Safety Auditor',
     title: 'Keeper of the Unbroken Chain',
     family: 'Wardborn',
@@ -429,6 +444,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'clean_hands_sentinel',
+    gender: 'female',
     name: 'Clean Hands Sentinel',
     title: 'Warden of the Unseen Barrier',
     family: 'Wardborn',
@@ -455,6 +471,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Epics ──
   {
     id: 'lotus_care_captain',
+    gender: 'female',
     name: 'Lotus Care Captain',
     title: 'Commander of the Healing Ward',
     family: 'Wardborn',
@@ -479,6 +496,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'code_guardian',
+    gender: 'male',
     name: 'Code Guardian',
     title: 'First Blade in the Code',
     family: 'Wardborn',
@@ -503,6 +521,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'mind_lotus_healer',
+    gender: 'female',
     name: 'Mind Lotus Healer',
     title: 'Oracle of Inner Waters',
     family: 'Wardborn',
@@ -527,6 +546,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'patient_safety_arbiter',
+    gender: 'nonbinary',
     name: 'Patient Safety Arbiter',
     title: 'Architect of the Safe Kingdom',
     family: 'Wardborn',
@@ -558,6 +578,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Commons ──
   {
     id: 'breath_aide',
+    gender: 'female',
     name: 'Breath Aide',
     title: 'First Breath of the Ward',
     family: 'Lifebreath',
@@ -581,6 +602,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'airway_apprentice',
+    gender: 'male',
     name: 'Airway Apprentice',
     title: 'Guardian of the Open Path',
     family: 'Lifebreath',
@@ -604,6 +626,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'pulsewind_initiate',
+    gender: 'female',
     name: 'Pulsewind Initiate',
     title: 'Student of the Breathing Rhythm',
     family: 'Lifebreath',
@@ -627,6 +650,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'nebula_trainee',
+    gender: 'nonbinary',
     name: 'Nebula Trainee',
     title: 'Student of the Nightbreath',
     family: 'Lifebreath',
@@ -650,6 +674,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'vapor_aide',
+    gender: 'male',
     name: 'Vapor Aide',
     title: 'Keeper of the Humidified Path',
     family: 'Lifebreath',
@@ -673,6 +698,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'cascade_aide',
+    gender: 'female',
     name: 'Cascade Aide',
     title: 'Keeper of the O2 Flow',
     family: 'Lifebreath',
@@ -697,6 +723,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Uncommons ──
   {
     id: 'breath_lantern',
+    gender: 'female',
     name: 'Breath Lantern',
     title: 'Lantern of the Lung Ward',
     family: 'Lifebreath',
@@ -721,6 +748,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'emergency_airway_warden',
+    gender: 'male',
     name: 'Emergency Airway Warden',
     title: 'Keeper of the Last Breath',
     family: 'Lifebreath',
@@ -745,6 +773,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'pulmonary_guide',
+    gender: 'female',
     name: 'Pulmonary Guide',
     title: 'Navigator of the Breathing Path',
     family: 'Lifebreath',
@@ -769,6 +798,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'sleepwind_keeper',
+    gender: 'nonbinary',
     name: 'Sleepwind Keeper',
     title: 'Guardian of the Night Breath',
     family: 'Lifebreath',
@@ -793,6 +823,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'icu_breathkeeper',
+    gender: 'male',
     name: 'ICU Breathkeeper',
     title: 'Keeper of the Mechanical Lung',
     family: 'Lifebreath',
@@ -819,6 +850,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Rares ──
   {
     id: 'breathstride_therapist',
+    gender: 'female',
     name: 'Breathstride Therapist',
     title: 'Master of the Breathing Path',
     family: 'Lifebreath',
@@ -844,6 +876,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'airway_warden',
+    gender: 'male',
     name: 'Airway Warden',
     title: 'Guardian of the Final Breath',
     family: 'Lifebreath',
@@ -869,6 +902,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'night_breath_warden',
+    gender: 'female',
     name: 'Night Breath Warden',
     title: 'Sentinel of the Sleeping Airway',
     family: 'Lifebreath',
@@ -896,6 +930,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Epics ──
   {
     id: 'ventilation_strategist',
+    gender: 'nonbinary',
     name: 'Ventilation Strategist',
     title: 'Architect of the Mechanical Lung',
     family: 'Lifebreath',
@@ -920,6 +955,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'aerosol_guardian',
+    gender: 'male',
     name: 'Aerosol Guardian',
     title: 'Supreme Sentinel of the Airborne Path',
     family: 'Lifebreath',
@@ -951,6 +987,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Commons ──
   {
     id: 'anatomy_scribe',
+    gender: 'female',
     name: 'Anatomy Scribe',
     title: 'Student of the Body\'s Language',
     family: 'Truthseer',
@@ -974,6 +1011,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'whitecoat_initiate',
+    gender: 'male',
     name: 'Whitecoat Initiate',
     title: 'Student of the Emergency Room',
     family: 'Truthseer',
@@ -997,6 +1035,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'image_apprentice',
+    gender: 'female',
     name: 'Image Apprentice',
     title: 'Student of the Invisible',
     family: 'Truthseer',
@@ -1020,6 +1059,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'sample_runner',
+    gender: 'male',
     name: 'Sample Runner',
     title: 'Courier of the Clinical Truth',
     family: 'Truthseer',
@@ -1043,6 +1083,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'vial_keeper',
+    gender: 'female',
     name: 'Vial Keeper',
     title: 'Guardian of the Blood Archive',
     family: 'Truthseer',
@@ -1066,6 +1107,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'pathlight_initiate',
+    gender: 'nonbinary',
     name: 'Pathlight Initiate',
     title: 'Student of the Hidden Process',
     family: 'Truthseer',
@@ -1091,6 +1133,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Uncommons ──
   {
     id: 'resident_of_dawn',
+    gender: 'female',
     name: 'Resident of Dawn',
     title: 'Seeker of the Clinical Dawn',
     family: 'Truthseer',
@@ -1115,6 +1158,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'codefire_physician',
+    gender: 'male',
     name: 'Codefire Physician',
     title: 'Flame of the Code Room',
     family: 'Truthseer',
@@ -1139,6 +1183,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'radiant_lens',
+    gender: 'female',
     name: 'Radiant Lens',
     title: 'Eye Behind the Ray',
     family: 'Truthseer',
@@ -1163,6 +1208,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'lablight_technologist',
+    gender: 'male',
     name: 'Lablight Technologist',
     title: 'Alchemist of the Sample',
     family: 'Truthseer',
@@ -1187,6 +1233,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'hematology_threader',
+    gender: 'nonbinary',
     name: 'Hematology Threader',
     title: 'Weaver of the Blood Thread',
     family: 'Truthseer',
@@ -1211,6 +1258,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'cellular_seer',
+    gender: 'female',
     name: 'Cellular Seer',
     title: 'Reader of the Microscopic Story',
     family: 'Truthseer',
@@ -1237,6 +1285,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Rares ──
   {
     id: 'wardround_doctor',
+    gender: 'female',
     name: 'Wardround Doctor',
     title: 'Master of the Clinical Thread',
     family: 'Truthseer',
@@ -1262,6 +1311,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'spiral_ct_seer',
+    gender: 'male',
     name: 'Spiral CT Seer',
     title: 'Oracle of the Spinning Blade',
     family: 'Truthseer',
@@ -1287,6 +1337,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'microbe_seer',
+    gender: 'female',
     name: 'Microbe Seer',
     title: 'Seer of Invisible Armies',
     family: 'Truthseer',
@@ -1312,6 +1363,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'code_sage',
+    gender: 'male',
     name: 'Code Sage',
     title: 'Master of the Emergency Mind',
     family: 'Truthseer',
@@ -1336,6 +1388,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'pathology_oracle',
+    gender: 'male',
     name: 'Pathology Oracle',
     title: 'Voice of the Definitive Truth',
     family: 'Truthseer',
@@ -1362,6 +1415,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Epics ──
   {
     id: 'hearthline_attending',
+    gender: 'nonbinary',
     name: 'Hearthline Attending',
     title: 'Physician of the Kingdom\'s Heart',
     family: 'Truthseer',
@@ -1386,6 +1440,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'trauma_image_oracle',
+    gender: 'female',
     name: 'Trauma Image Oracle',
     title: 'All-Seeing Eye of the Sanctum',
     family: 'Truthseer',
@@ -1417,6 +1472,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Commons ──
   {
     id: 'shelfmark_apprentice',
+    gender: 'female',
     name: 'Shelfmark Apprentice',
     title: 'Student of the Formula Shelf',
     family: 'Remedybound',
@@ -1440,6 +1496,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'dose_scribe',
+    gender: 'male',
     name: 'Dose Scribe',
     title: 'Keeper of the Medication Record',
     family: 'Remedybound',
@@ -1463,6 +1520,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'mortar_initiate',
+    gender: 'female',
     name: 'Mortar Initiate',
     title: 'Student of the Compounding Art',
     family: 'Remedybound',
@@ -1486,6 +1544,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'garden_apprentice',
+    gender: 'male',
     name: 'Garden Apprentice',
     title: 'Student of the Healing Plate',
     family: 'Remedybound',
@@ -1509,6 +1568,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'plate_initiate',
+    gender: 'female',
     name: 'Plate Initiate',
     title: 'Keeper of the Glucose Balance',
     family: 'Remedybound',
@@ -1532,6 +1592,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'hydration_scribe',
+    gender: 'nonbinary',
     name: 'Hydration Scribe',
     title: 'Keeper of the Fluid Balance',
     family: 'Remedybound',
@@ -1557,6 +1618,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Uncommons ──
   {
     id: 'lotus_apothecary',
+    gender: 'female',
     name: 'Lotus Apothecary',
     title: 'Keeper of the Formula Garden',
     family: 'Remedybound',
@@ -1581,6 +1643,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'clinic_dosekeeper',
+    gender: 'male',
     name: 'Clinic Dosekeeper',
     title: 'Guardian of Medication Safety',
     family: 'Remedybound',
@@ -1605,6 +1668,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'compound_hand',
+    gender: 'female',
     name: 'Compound Hand',
     title: 'Artisan of the Healing Formula',
     family: 'Remedybound',
@@ -1629,6 +1693,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'lotus_dietitian',
+    gender: 'female',
     name: 'Lotus Dietitian',
     title: 'Keeper of the Healing Garden',
     family: 'Remedybound',
@@ -1653,6 +1718,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'glucose_lantern',
+    gender: 'male',
     name: 'Glucose Lantern',
     title: 'Light of the Metabolic Path',
     family: 'Remedybound',
@@ -1679,6 +1745,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Rares ──
   {
     id: 'medication_safety_arbiter',
+    gender: 'female',
     name: 'Medication Safety Arbiter',
     title: 'Keeper of the Safe Formula',
     family: 'Remedybound',
@@ -1703,6 +1770,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'ward_pharmacist',
+    gender: 'female',
     name: 'Ward Pharmacist',
     title: 'Master of the Clinical Formula',
     family: 'Remedybound',
@@ -1728,6 +1796,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'antidote_alchemist',
+    gender: 'male',
     name: 'Antidote Alchemist',
     title: 'Master of the Counter-Formula',
     family: 'Remedybound',
@@ -1752,6 +1821,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'metabolic_garden_sage',
+    gender: 'female',
     name: 'Metabolic Garden Sage',
     title: 'Sage of the Healing Plate',
     family: 'Remedybound',
@@ -1779,6 +1849,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Epics ──
   {
     id: 'formula_strategist',
+    gender: 'female',
     name: 'Formula Strategist',
     title: 'Architect of the Healing Formula',
     family: 'Remedybound',
@@ -1803,6 +1874,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'vital_garden_sage',
+    gender: 'female',
     name: 'Vital Garden Sage',
     title: 'Master of the Healing Harvest',
     family: 'Remedybound',
@@ -1834,6 +1906,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Commons ──
   {
     id: 'stepwise_aide',
+    gender: 'male',
     name: 'Stepwise Aide',
     title: 'Student of the First Step',
     family: 'Restorebound',
@@ -1857,6 +1930,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'gait_apprentice',
+    gender: 'female',
     name: 'Gait Apprentice',
     title: 'Student of the Walking Pattern',
     family: 'Restorebound',
@@ -1880,6 +1954,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'stretch_hand',
+    gender: 'male',
     name: 'Stretch Hand',
     title: 'Keeper of the Flexible Path',
     family: 'Restorebound',
@@ -1903,6 +1978,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'function_aide',
+    gender: 'female',
     name: 'Function Aide',
     title: 'Student of Daily Life',
     family: 'Restorebound',
@@ -1926,6 +2002,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'routine_keeper',
+    gender: 'male',
     name: 'Routine Keeper',
     title: 'Student of the Daily Pattern',
     family: 'Restorebound',
@@ -1949,6 +2026,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'grip_apprentice',
+    gender: 'nonbinary',
     name: 'Grip Apprentice',
     title: 'Student of the Healing Hand',
     family: 'Restorebound',
@@ -1974,6 +2052,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Uncommons ──
   {
     id: 'gait_lantern',
+    gender: 'female',
     name: 'Gait Lantern',
     title: 'Light of the Recovery Path',
     family: 'Restorebound',
@@ -1998,6 +2077,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'neurostep_seer',
+    gender: 'male',
     name: 'Neurostep Seer',
     title: 'Seer of the Nervous Path',
     family: 'Restorebound',
@@ -2022,6 +2102,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'bonepath_guide',
+    gender: 'female',
     name: 'Bonepath Guide',
     title: 'Navigator of the Structural Path',
     family: 'Restorebound',
@@ -2046,6 +2127,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'lifeweave_therapist',
+    gender: 'nonbinary',
     name: 'Lifeweave Therapist',
     title: 'Weaver of Everyday Life',
     family: 'Restorebound',
@@ -2070,6 +2152,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'mindroutine_keeper',
+    gender: 'male',
     name: 'Mindroutine Keeper',
     title: 'Guide of the Cognitive Path',
     family: 'Restorebound',
@@ -2096,6 +2179,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Rares ──
   {
     id: 'acute_step_warden',
+    gender: 'female',
     name: 'Acute Step Warden',
     title: 'Commander of the Recovery Path',
     family: 'Restorebound',
@@ -2121,6 +2205,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'iron_tendon_adept',
+    gender: 'male',
     name: 'Iron Tendon Adept',
     title: 'Master of the Structural Path',
     family: 'Restorebound',
@@ -2145,6 +2230,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'cognitive_rehab_specialist',
+    gender: 'female',
     name: 'Cognitive Rehab Specialist',
     title: 'Master of the Mind\'s Recovery',
     family: 'Restorebound',
@@ -2170,6 +2256,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
 
   {
     id: 'lifeweaver',
+    gender: 'female',
     name: 'Lifeweaver',
     title: 'Architect of the Returning Life',
     family: 'Restorebound',
@@ -2196,6 +2283,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Epics ──
   {
     id: 'mobility_commander',
+    gender: 'female',
     name: 'Mobility Commander',
     title: 'Architect of Physical Recovery',
     family: 'Restorebound',
@@ -2227,6 +2315,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Commons ──
   {
     id: 'village_health_aide',
+    gender: 'female',
     name: 'Village Health Aide',
     title: 'Keeper of the Community\'s Health',
     family: 'Realmbound',
@@ -2250,6 +2339,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'banner_scribe',
+    gender: 'male',
     name: 'Banner Scribe',
     title: 'Keeper of the Health Message',
     family: 'Realmbound',
@@ -2273,6 +2363,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'clean_water_runner',
+    gender: 'female',
     name: 'Clean Water Runner',
     title: 'Keeper of the Clean Source',
     family: 'Realmbound',
@@ -2296,6 +2387,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'care_guide',
+    gender: 'male',
     name: 'Care Guide',
     title: 'Bridge Between Systems',
     family: 'Realmbound',
@@ -2319,6 +2411,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'return_path_scribe',
+    gender: 'female',
     name: 'Return-Path Scribe',
     title: 'Keeper of the Way Home',
     family: 'Realmbound',
@@ -2342,6 +2435,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'data_threader_initiate',
+    gender: 'nonbinary',
     name: 'Data Threader Initiate',
     title: 'Student of the Health Information Web',
     family: 'Realmbound',
@@ -2367,6 +2461,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Uncommons ──
   {
     id: 'community_lantern',
+    gender: 'female',
     name: 'Community Lantern',
     title: 'Light of the Community',
     family: 'Realmbound',
@@ -2391,6 +2486,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'health_banner_guide',
+    gender: 'male',
     name: 'Health Banner Guide',
     title: 'Architect of the Public Message',
     family: 'Realmbound',
@@ -2414,6 +2510,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'clean_water_sentinel',
+    gender: 'female',
     name: 'Clean Water Sentinel',
     title: 'Guardian of the Clean Realm',
     family: 'Realmbound',
@@ -2438,6 +2535,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'resource_lantern',
+    gender: 'male',
     name: 'Resource Lantern',
     title: 'Light of the Social Path',
     family: 'Realmbound',
@@ -2462,6 +2560,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'discharge_planner',
+    gender: 'female',
     name: 'Discharge Planner',
     title: 'Architect of the Safe Return',
     family: 'Realmbound',
@@ -2488,6 +2587,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Rares ──
   {
     id: 'pattern_seer',
+    gender: 'female',
     name: 'Pattern Seer',
     title: 'Reader of the Population\'s Disease',
     family: 'Realmbound',
@@ -2513,6 +2613,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'environmental_seal_warden',
+    gender: 'male',
     name: 'Environmental Seal Warden',
     title: 'Master of the Clean Realm',
     family: 'Realmbound',
@@ -2538,6 +2639,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'chartweave_analyst',
+    gender: 'female',
     name: 'Chartweave Analyst',
     title: 'Weaver of the Health Data Thread',
     family: 'Realmbound',
@@ -2565,6 +2667,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   // ── Epics ──
   {
     id: 'outbreak_commander',
+    gender: 'female',
     name: 'Outbreak Commander',
     title: 'General of the Population\'s Defense',
     family: 'Realmbound',
@@ -2589,6 +2692,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'informatics_architect',
+    gender: 'female',
     name: 'Informatics Architect',
     title: 'Architect of the Health Information Realm',
     family: 'Realmbound',
@@ -2613,6 +2717,7 @@ export const LAUNCH_ROSTER: RosterHero[] = [
   },
   {
     id: 'clean_realm_commander',
+    gender: 'female',
     name: 'Clean Realm Commander',
     title: 'Supreme Protector of the Living World',
     family: 'Realmbound',
