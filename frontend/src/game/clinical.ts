@@ -35,6 +35,15 @@ export type LearningProfile =
 
 export type FeedbackLevel = 'guided' | 'supportive' | 'standard' | 'minimal' | 'expert';
 
+/**
+ * Returns true for profiles that map to the non-medical / casual learner bucket.
+ * Use this instead of inline string comparisons so future profile renames only
+ * require a single change here.
+ */
+export function isNonmedicalProfile(profile: LearningProfile | string | null | undefined): boolean {
+  return profile === 'curious' || profile === 'nonmedical';
+}
+
 export const FEEDBACK_ORDER: FeedbackLevel[] = ['guided', 'supportive', 'standard', 'minimal', 'expert'];
 
 export function getInitialFeedbackLevel(profile: LearningProfile | undefined): FeedbackLevel {
@@ -44,9 +53,9 @@ export function getInitialFeedbackLevel(profile: LearningProfile | undefined): F
     case 'curious':
     case 'teen':
     case 'nonmedical': return 'guided';
-    case 'preNursing': return 'supportive';
     case 'nursing_student':
-    case 'nursingStudent': return 'standard';
+    case 'nursingStudent':
+    case 'preNursing': return 'standard';
     case 'nclex':
     case 'nclexPrep': return 'minimal';
     case 'professional':

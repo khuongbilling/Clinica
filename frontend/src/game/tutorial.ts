@@ -21,10 +21,10 @@ export function getTutorialTier(profile: LearningProfile | undefined): TutorialT
     case 'rpg':
     case 'cozy':
     case 'teen':
-    case 'preNursing':
       return 'novice';
     case 'nursing_student':
     case 'nursingStudent':
+    case 'preNursing':
     case 'nclex':
     case 'nclexPrep':
       return 'practiced';

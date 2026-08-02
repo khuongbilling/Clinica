@@ -118,7 +118,7 @@ export const DEFAULT_DIFFICULTY_BY_PROFILE: Record<string, DifficultyLevel> = {
   rpg: 'guided',
   cozy: 'guided',
   teen: 'guided',
-  preNursing: 'standard',
+  preNursing: 'clinical',
   nursingStudent: 'clinical',
   nclexPrep: 'nclex',
   healthcareProfessional: 'clinical',

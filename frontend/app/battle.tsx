@@ -15,7 +15,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
-import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, SKILL_CLINICAL, PATHWAY_ROLE_LABEL, type ActionStatus, type LearningProfile, type PathwayRole } from "@/src/game/clinical";
+import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, isNonmedicalProfile, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, SKILL_CLINICAL, PATHWAY_ROLE_LABEL, type ActionStatus, type LearningProfile, type PathwayRole } from "@/src/game/clinical";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { heroRoleLabel } from "@/src/game/university";
 import { EQUIPMENT_ITEMS } from "@/src/game/equipment";
@@ -659,7 +659,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const mission = getMission(enemy.id);
   const adaptiveMission = MISSION_BRIEFINGS[enemy.id]?.[explanationLayer];
   const objectiveStrip = getObjectiveStrip(enemy.id, explanationLayer, OBJECTIVE_BY_DIFFICULTY[difficultyLevel] || OBJECTIVE_BY_DIFFICULTY.standard);
-  const isNonmedical = player?.learning_profile === "curious" || player?.learning_profile === "nonmedical";
+  const isNonmedical = isNonmedicalProfile(player?.learning_profile);
   const isFirstBattle = (player?.runs_completed ?? 0) === 0 && enemy.id === "air_sprite";
   const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
 
