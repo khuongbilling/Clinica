@@ -9,15 +9,15 @@ export function PrologueLayoutDiagram() {
   const chars = [
     {
       name: "Prodigy",
-      file: "the_prodigy_portrait.png",
+      file: "/__mockup/images/prologue/prodigy_vn_canonical.png",
       imgW: 896, imgH: 1280,
       contentFit: "contain",
-      topTransPx: 145, botTransPx: 220,   // raw transparent pixels in PNG
+      topTransPx: 145, botTransPx: 220,
       color: "#7EB8F7",
     },
     {
       name: "Fleming",
-      file: "fleming_vn.png",
+      file: "/__mockup/images/prologue/fleming_vn_extended.png",
       imgW: 896, imgH: 1280,
       contentFit: "contain",
       topTransPx: 108, botTransPx: 77,
@@ -25,7 +25,7 @@ export function PrologueLayoutDiagram() {
     },
     {
       name: "Master Bai",
-      file: "master_bai_vn.png",
+      file: "/__mockup/images/prologue/master_bai_nobg.png",
       imgW: 896, imgH: 1040,
       contentFit: "contain",
       topTransPx: 73, botTransPx: 0,
@@ -33,7 +33,7 @@ export function PrologueLayoutDiagram() {
     },
     {
       name: "Nightingale",
-      file: "nightingale_vn_extended.png",
+      file: "/__mockup/images/prologue/nightingale_vn_extended.png",
       imgW: 2048, imgH: 2048,
       contentFit: "cover",
       topTransPx: 73, botTransPx: 25,
@@ -111,59 +111,50 @@ export function PrologueLayoutDiagram() {
                 <div style={{
                   width: PW_disp,
                   height: boxH_disp,
-                  border: `2px solid ${c.color}44`,
+                  border: `2px dashed ${c.color}66`,
                   borderRadius: 4,
                   overflow: "hidden",
                   position: "relative",
-                  background: "#0f172a",
+                  background: "transparent",
                 }}>
-                  {/* Top transparent zone */}
+                  {/* Actual character image — no tint, no overlay */}
+                  <img
+                    src={c.file}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: c.contentFit as "contain" | "cover",
+                      objectPosition: "top center",
+                    }}
+                  />
+
+                  {/* Top transparent zone label only */}
                   {topTrans_disp > 0 && (
                     <div style={{
                       position: "absolute", top: 0, left: 0, right: 0,
                       height: topTrans_disp,
-                      background: "repeating-linear-gradient(45deg, #1e2d40 0px, #1e2d40 3px, #0f1e30 3px, #0f1e30 6px)",
-                      borderBottom: "1px dashed #334155",
+                      borderBottom: `1px dashed ${c.color}44`,
+                      pointerEvents: "none",
                     }}>
-                      <div style={{ color: "#475569", fontSize: 7, padding: "1px 3px" }}>
+                      <div style={{ color: `${c.color}99`, fontSize: 7, padding: "1px 3px",
+                                    background: "rgba(0,0,0,0.55)", display: "inline-block" }}>
                         {topTrans}px transparent
                       </div>
                     </div>
                   )}
 
-                  {/* Character content zone */}
-                  <div style={{
-                    position: "absolute",
-                    top: topTrans_disp,
-                    left: 0, right: 0,
-                    height: contentH_disp,
-                    background: `${c.color}22`,
-                    border: `1px solid ${c.color}66`,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 2,
-                  }}>
-                    {/* Silhouette */}
-                    <div style={{ fontSize: contentH_disp > 60 ? 28 : 18, opacity: 0.7 }}>🧍</div>
-                    <div style={{ color: c.color, fontSize: 8, fontWeight: 600, textAlign: "center" }}>
-                      character<br />content
-                    </div>
-                    <div style={{ color: `${c.color}aa`, fontSize: 7 }}>
-                      {PW_disp}×{contentH_disp}
-                    </div>
-                  </div>
-
-                  {/* Bottom transparent zone */}
+                  {/* Bottom transparent zone label only */}
                   {botTrans_disp > 0 && (
                     <div style={{
                       position: "absolute", bottom: 0, left: 0, right: 0,
                       height: botTrans_disp,
-                      background: "repeating-linear-gradient(45deg, #1e2d40 0px, #1e2d40 3px, #0f1e30 3px, #0f1e30 6px)",
-                      borderTop: "1px dashed #334155",
+                      borderTop: `1px dashed #dc262688`,
+                      pointerEvents: "none",
                     }}>
-                      <div style={{ color: "#dc2626", fontSize: 7, padding: "1px 3px" }}>
+                      <div style={{ color: "#dc2626", fontSize: 7, padding: "1px 3px",
+                                    background: "rgba(0,0,0,0.55)", display: "inline-block" }}>
                         {botTrans}px gap ⚠
                       </div>
                     </div>
