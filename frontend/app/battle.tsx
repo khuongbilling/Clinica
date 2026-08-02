@@ -15,7 +15,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
-import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type PathwayRole } from "@/src/game/clinical";
+import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, SKILL_CLINICAL, PATHWAY_ROLE_LABEL, type ActionStatus, type LearningProfile, type PathwayRole } from "@/src/game/clinical";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { heroRoleLabel } from "@/src/game/university";
 import { EQUIPMENT_ITEMS } from "@/src/game/equipment";
@@ -1576,7 +1576,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                           <Text style={styles.apTag}>{cost} AP</Text>
                         </View>
                         <Text style={styles.actionEffect} numberOfLines={3}>{skill.shortEffect || skill.description}</Text>
-                        <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{SKILL_CHAIN_LABEL[skill.type] ? `${SKILL_CHAIN_LABEL[skill.type]} · ` : ""}{skill.systemType || "Universal"}</Text>
+                        <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{(() => { const firstRole = SKILL_CLINICAL[skill.id]?.pathwayRoles?.[0]; const label = firstRole ? PATHWAY_ROLE_LABEL[firstRole] : SKILL_CHAIN_LABEL[skill.type]; return label ? `${label} · ` : ""; })()}{skill.systemType || "Universal"}</Text>
                         {/* Push 2 / Push 3: Elemental Counter chip — phase-resolved; suppressed during prologue tutorial */}
                         {skill.type === "strike" && !state.suppressElementCounter && displayWeakElement !== 'unknown' && displayWeakElement !== null && selHero.element === displayWeakElement ? (
                           <View style={styles.elemCounterChip} accessibilityLabel="Elemental Counter active">
