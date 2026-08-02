@@ -13,7 +13,8 @@ import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel, heroRoleLabel } from "@/src/game/university";
 import { LAUNCH_ROSTER, FAMILY_COLORS } from "@/src/game/heroRoster";
-import { SKILL_CLINICAL } from "@/src/game/clinical";
+import { SKILL_CLINICAL, PATHWAY_ROLE_LABEL } from "@/src/game/clinical";
+import type { PathwayRole } from "@/src/game/clinical";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -622,7 +623,9 @@ function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResu
                 <Text style={revealStyles.chainLabel}>CARE PATHWAY</Text>
                 {chainRoles.map(cr => (
                   <View key={cr} style={revealStyles.chainChip}>
-                    <Text style={revealStyles.chainChipTxt}>{cr.charAt(0).toUpperCase() + cr.slice(1)}</Text>
+                    <Text style={revealStyles.chainChipTxt}>
+                      {PATHWAY_ROLE_LABEL[cr as PathwayRole] ?? (cr.charAt(0).toUpperCase() + cr.slice(1))}
+                    </Text>
                   </View>
                 ))}
               </View>

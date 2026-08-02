@@ -2348,7 +2348,8 @@ const SKILL_CHAIN_LABEL: Record<string, string> = {
   scout:     "Assess",
   stabilize: "Stabilize",
   strike:    "Treat",
-  analyze:   "Reassess",
+  analyze:   "Assess",   // most analyze skills reveal clues = Assess; the named
+                         // 'Reassess' skill carries 'Reassess •' in shortEffect
   shield:    "Protect",
   support:   "Support",
   command:   "Escalate",

@@ -125,6 +125,21 @@ export function getChapterForgiveness(chapter: number): ChapterForgiveness {
 // NM-01: canonical Care Pathway role IDs.
 export type PathwayRole = 'assess' | 'stabilize' | 'treat' | 'protect' | 'reassess' | 'escalate';
 
+/**
+ * Human-readable display labels for each canonical PathwayRole ID.
+ * Use this map everywhere roles are shown in UI (loadout chips, recruit reveal,
+ * Codex entries, skill tooltips) so the label always matches what the battle
+ * chain strip tracks.
+ */
+export const PATHWAY_ROLE_LABEL: Record<PathwayRole, string> = {
+  assess:    'Assess',
+  stabilize: 'Stabilize',
+  treat:     'Treat',
+  protect:   'Protect',
+  reassess:  'Reassess',
+  escalate:  'Escalate',
+};
+
 
 // Disease domain that a skill or action belongs to — drives the affinity bonus system.
 // 'general' = assessment / escalation / catch-all → always neutral (never penalised).

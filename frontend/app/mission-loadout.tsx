@@ -38,7 +38,8 @@ import {
 } from "@/src/game/loadoutStore";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { HEROES } from "@/src/game/content";
-import { SKILL_CLINICAL } from "@/src/game/clinical";
+import { SKILL_CLINICAL, PATHWAY_ROLE_LABEL } from "@/src/game/clinical";
+import type { PathwayRole } from "@/src/game/clinical";
 import { rarityColor } from "@/src/game/gacha";
 import { ITEMS } from "@/src/game/items";
 import { CARD_POOL, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
@@ -68,9 +69,11 @@ function getHeroChainRoles(hero: Hero): string[] {
   const roles = new Set<string>();
   (hero.skills ?? []).forEach((sk) => {
     const clin = SKILL_CLINICAL[sk.id];
-    // NM-01: canonical pathwayRoles.
-    const resolved = clin?.pathwayRoles ?? [];
-    resolved.forEach((r) => roles.add(r));
+    // NM-01: canonical pathwayRoles — return display labels via PATHWAY_ROLE_LABEL
+    // so any UI that renders these chips always matches the battle chain strip.
+    (clin?.pathwayRoles ?? []).forEach((r) => {
+      roles.add(PATHWAY_ROLE_LABEL[r as PathwayRole] ?? (r.charAt(0).toUpperCase() + r.slice(1)));
+    });
   });
   return [...roles].slice(0, 3);
 }
