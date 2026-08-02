@@ -16,12 +16,19 @@ export const TUTORIAL_TIERS: { id: TutorialTier; label: string; sub: string }[] 
 
 export function getTutorialTier(profile: LearningProfile | undefined): TutorialTier {
   switch (profile) {
+    case 'curious':
     case 'nonmedical':
+    case 'rpg':
+    case 'cozy':
+    case 'teen':
     case 'preNursing':
       return 'novice';
+    case 'nursing_student':
     case 'nursingStudent':
+    case 'nclex':
     case 'nclexPrep':
       return 'practiced';
+    case 'professional':
     case 'healthcareProfessional':
       return 'expert';
     default:

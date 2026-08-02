@@ -643,7 +643,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const mission = getMission(enemy.id);
   const adaptiveMission = MISSION_BRIEFINGS[enemy.id]?.[explanationLayer];
   const objectiveStrip = getObjectiveStrip(enemy.id, explanationLayer, OBJECTIVE_BY_DIFFICULTY[difficultyLevel] || OBJECTIVE_BY_DIFFICULTY.standard);
-  const isNonmedical = player?.learning_profile === "nonmedical";
+  const isNonmedical = player?.learning_profile === "curious" || player?.learning_profile === "nonmedical";
   const isFirstBattle = (player?.runs_completed ?? 0) === 0 && enemy.id === "air_sprite";
   const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
 

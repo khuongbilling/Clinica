@@ -23,12 +23,15 @@ export type LearningProfile =
   | 'nursingStudent'
   | 'nclexPrep'
   | 'healthcareProfessional'
-  // new audience-specific profiles
+  // canonical UI ids (current picker)
+  | 'curious'
+  | 'nursing_student'
+  | 'nclex'
+  | 'professional'
+  // other legacy audience-specific profiles
   | 'rpg'
   | 'cozy'
-  | 'curious'
-  | 'teen'
-  | 'professional';       // alias for healthcareProfessional
+  | 'teen';
 
 export type FeedbackLevel = 'guided' | 'supportive' | 'standard' | 'minimal' | 'expert';
 
@@ -42,7 +45,9 @@ export function getInitialFeedbackLevel(profile: LearningProfile | undefined): F
     case 'teen':
     case 'nonmedical': return 'guided';
     case 'preNursing': return 'supportive';
+    case 'nursing_student':
     case 'nursingStudent': return 'standard';
+    case 'nclex':
     case 'nclexPrep': return 'minimal';
     case 'professional':
     case 'healthcareProfessional': return 'expert';
@@ -88,8 +93,11 @@ export function getStartingHandicap(profile: LearningProfile | undefined): Handi
     case 'teen':
     case 'nonmedical':
       return { startingStabilityBonus: 15, enemyDamageReduction: 5, revealOneExtraClue: true, stricterStars: false };
+    case 'nursing_student':
+    case 'nursingStudent':
     case 'preNursing':
       return { startingStabilityBonus: 10, enemyDamageReduction: 3, revealOneExtraClue: false, stricterStars: false };
+    case 'nclex':
     case 'nclexPrep':
     case 'professional':
     case 'healthcareProfessional':
@@ -1240,8 +1248,11 @@ export function getStarRules(profile: LearningProfile | undefined, enemy: EnemyC
     case 'teen':
     case 'nonmedical':
       return { turnLimit: baseTurnLimit + 2, allowOnePoorFit: true, requireFullChainForStar2: true };
+    case 'nursing_student':
+    case 'nursingStudent':
     case 'preNursing':
       return { turnLimit: baseTurnLimit + 1, allowOnePoorFit: true, requireFullChainForStar2: true };
+    case 'nclex':
     case 'nclexPrep':
     case 'professional':
     case 'healthcareProfessional':
@@ -1433,6 +1444,8 @@ export const PROFILE_LABEL: Record<LearningProfile, string> = {
   cozy: "I want a cozy fantasy world with gentle learning.",
   curious: "I'm curious about how the human body works.",
   teen: "I'm a student exploring health and science.",
+  nursing_student: "I'm in nursing school right now.",
+  nclex: "I'm preparing for the NCLEX.",
   preNursing: "I'm preparing for nursing or healthcare school.",
   nursingStudent: "I'm in nursing school right now.",
   nclexPrep: "I'm preparing for the NCLEX.",
@@ -1447,6 +1460,8 @@ export const PROFILE_SUBLABEL: Record<LearningProfile, string> = {
   cozy: 'Low pressure, good vibes, body knowledge as lore.',
   curious: 'Plain language, no prior knowledge needed.',
   teen: 'Great for high school students or anyone starting out.',
+  nursing_student: 'Clinical judgment, SBAR, cue recognition.',
+  nclex: 'Strict clinical lens, prioritization, safety focus.',
   preNursing: 'Foundational nursing concepts and body systems.',
   nursingStudent: 'Clinical judgment, SBAR, cue recognition.',
   nclexPrep: 'Strict clinical lens, prioritization, safety focus.',
