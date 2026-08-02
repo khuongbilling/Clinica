@@ -1,0 +1,211 @@
+The previous response repeated the original broad tutorial audit instead of completing the focused verification.
+
+Perform the focused verification now. Do not reproduce the original audit and do not modify application code.
+
+Use the current branch and inspect actual call sites, route triggers, state checks, and tutorial step definitions.
+
+# 1. Existing TutorialId verification
+
+For each of the following TutorialIds, report:
+
+* Whether it is defined
+* Whether it has tutorial steps
+* Exact file defining those steps
+* Exact host screen
+* Exact trigger condition
+* Required target IDs
+* Completion behavior
+* Skip behavior
+* Replay behavior
+* Whether it is currently reachable by a normal new player
+
+TutorialIds:
+
+* `shopIntro`
+* `summonIntro`
+* `teamIntro`
+* `heroesIntro`
+* `systemHubIntro`
+
+Do not infer reachability from the existence of the TutorialId. Trace actual `startTutorial`, `isCompleted`, `replayTutorial`, and route call sites.
+
+# 2. Shop tutorial contradiction
+
+Resolve these conflicting claims:
+
+* First shop access has no dedicated tutorial.
+* `shopIntro` exists and is implemented.
+
+Determine whether `shopIntro` teaches:
+
+* Shop tab
+* Shop hub
+* Apothecary Market
+* Shop section
+* University Shop
+* Sanctuary Bank
+* Another screen
+
+List its exact steps and identify whether it runs on the player's first real purchasing opportunity.
+
+# 3. Summoning tutorial contradiction
+
+Separate:
+
+A. Guaranteed recruitment ceremony
+B. Normal Summoning Hall
+C. One-pull interaction
+D. Ten-pull interaction
+E. Duplicate conversion
+F. Pity display
+
+For each, identify whether it is taught and by which tutorial, screen, dialogue, or static copy.
+
+Confirm whether `summonIntro` belongs to the ceremony or normal Summoning Hall.
+
+# 4. Team tutorial contradiction
+
+Confirm where `teamIntro` runs:
+
+* Mission Loadout
+* Hall of Heroes
+* Hero Picker
+* Hero Select
+* Another screen
+
+List the exact tutorial steps.
+
+Determine whether a new player is taught:
+
+* Selecting three heroes
+* Replacing a hero
+* Hero roles
+* Skill previews
+* Affinity or clinical-domain matching
+* Empty-slot handling
+* Beginning the mission
+
+# 5. Learner-profile compatibility
+
+Search every code comparison involving:
+
+* `learning_profile`
+* `curious`
+* `nonmedical`
+* `nursing_student`
+* `nursingStudent`
+* `preNursing`
+* `nclex`
+* `nclexPrep`
+* `professional`
+* `healthcareProfessional`
+
+Return one row per call site:
+
+| File and line | Value checked | Canonical or legacy | Behavior controlled | Bug? | Safe correction |
+
+Separate findings into:
+
+* Tutorial-depth behavior
+* Clinical clue behavior
+* Feedback-depth behavior
+* Star-rule behavior
+* Battle briefing behavior
+* Progression or reward behavior
+
+Do not state that an entire learner profile is broken when only one branch is affected.
+
+# 6. Tutorial persistence verification
+
+Trace:
+
+* `clearActiveTutorial`
+* `completeTutorial`
+* `skipTutorial`
+* `replayTutorial`
+* `resetTutorials`
+* `useClearTutorialOnExit`
+
+Report the exact stored completion state after:
+
+1. Advancing through the final tutorial step
+2. Pressing Skip
+3. Navigating away mid-tutorial
+4. Calling `router.replace` mid-tutorial
+5. Pressing hardware Back
+6. Closing or refreshing the app mid-tutorial
+7. Replaying through Tutorial Center
+8. Resetting tutorials only
+9. Resetting the full player account
+
+Identify every screen that combines a TutorialId with a `seen_*` or `tutorial_*` PlayerState flag.
+
+# 7. Currency terminology verification
+
+Search all player-facing strings and produce:
+
+| Displayed label | CurrencyId | File and line | Screen | Canonical, legacy, placeholder, contradictory, or unused |
+
+Include:
+
+* Ward Coins
+* Crowns
+* Gold Crowns
+* Codex Shards
+* Summoning Shards
+* Hero Shards
+* Insight Crystals
+* Refined Lotus Gems
+* Lotus Gems
+* University Credits
+* Ward Sigils
+* Ward Tokens
+* Jade Scrolls
+
+Separate developer identifiers from text actually rendered to the player.
+
+# 8. Exact first regular battle
+
+Trace the first non-prologue battle available through the intended new-player route.
+
+Report only player-facing information:
+
+* Case and enemy
+* Available heroes
+* Available skills
+* Initially visible clues
+* Clues shown as unknown
+* Clinical Cue trigger condition
+* Locked action conditions
+* First possible affinity feedback
+* Care Chain starting state
+* Reassessment requirement
+* Tutorial IDs that can trigger
+* Exact possible order of prompts
+
+Do not reveal hidden formulas, resistance values, invisible thresholds, or secret multipliers.
+
+# 9. Resolve the original audit
+
+Return:
+
+## A. Confirmed original findings
+
+## B. Incorrect original findings
+
+## C. Findings that were technically true but misleading
+
+## D. Remaining uncertainties
+
+## E. Safe fixes required before tutorials
+
+## F. First tutorial implementation push
+
+The first implementation push must be narrow and should include no more than:
+
+* Learner-profile compatibility corrections
+* Currency terminology corrections
+* First regular battle contextual tutorial introductions
+
+Do not implement anything during this verification.
+Do not repeat the full screen inventory or broad tutorial audit.
