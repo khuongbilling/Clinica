@@ -38,7 +38,7 @@ import {
 } from "@/src/game/loadoutStore";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { HEROES } from "@/src/game/content";
-import { SKILL_CLINICAL } from "@/src/game/clinical";
+import { SKILL_CLINICAL, normalizePathwayRoles } from "@/src/game/clinical";
 import { rarityColor } from "@/src/game/gacha";
 import { ITEMS } from "@/src/game/items";
 import { CARD_POOL, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
@@ -58,7 +58,7 @@ const CHAPTER_BG: Record<number, ReturnType<typeof require>> = {
 };
 const CHAPTER_BG_FALLBACK = require("@/assets/map-bg/ch_generic.png");
 
-// ── Rarity label + chain-role helper ─────────────────────────────────────────
+// ── Rarity label + pathway-role helper ───────────────────────────────────────
 
 const RARITY_LABEL: Record<number, string> = {
   3: "COMMON", 4: "RARE", 5: "LEGENDARY", 6: "MYTHIC", 7: "TRANSCENDENT",
@@ -68,7 +68,9 @@ function getHeroChainRoles(hero: Hero): string[] {
   const roles = new Set<string>();
   (hero.skills ?? []).forEach((sk) => {
     const clin = SKILL_CLINICAL[sk.id];
-    if (clin?.chainRoles) (clin.chainRoles as string[]).forEach((r) => roles.add(r));
+    // NM-01: prefer canonical pathwayRoles; normalize legacy chainRoles as fallback.
+    const resolved = clin?.pathwayRoles ?? normalizePathwayRoles(clin?.chainRoles ?? []);
+    resolved.forEach((r) => roles.add(r));
   });
   return [...roles].slice(0, 3);
 }

@@ -13,7 +13,7 @@ import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { LAUNCH_ROSTER, FAMILY_COLORS } from "@/src/game/heroRoster";
-import { SKILL_CLINICAL } from "@/src/game/clinical";
+import { SKILL_CLINICAL, normalizePathwayRoles } from "@/src/game/clinical";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -23,14 +23,16 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
 
-// Collect unique chain roles from a hero's skills (max 3 displayed).
+// Collect unique pathway roles from a hero's skills (max 3 displayed).
 function getHeroChainRoles(heroId: string): string[] {
   const hero = LAUNCH_ROSTER.find(h => h.id === heroId);
   if (!hero) return [];
   const seen = new Set<string>();
   for (const skill of hero.skills) {
     const clinical = SKILL_CLINICAL[skill.id];
-    if (clinical?.chainRoles) clinical.chainRoles.forEach(r => seen.add(r));
+    // NM-01: prefer canonical pathwayRoles; normalize legacy chainRoles as fallback.
+    const resolved = clinical?.pathwayRoles ?? normalizePathwayRoles(clinical?.chainRoles ?? []);
+    resolved.forEach(r => seen.add(r));
   }
   return Array.from(seen).slice(0, 3);
 }
@@ -614,13 +616,13 @@ function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResu
               </View>
             </View>
 
-            {/* Chain roles */}
+            {/* Pathway roles */}
             {chainRoles.length > 0 && (
               <View style={revealStyles.chainRow}>
-                <Text style={revealStyles.chainLabel}>CARE CHAIN</Text>
+                <Text style={revealStyles.chainLabel}>CARE PATHWAY</Text>
                 {chainRoles.map(cr => (
                   <View key={cr} style={revealStyles.chainChip}>
-                    <Text style={revealStyles.chainChipTxt}>{cr}</Text>
+                    <Text style={revealStyles.chainChipTxt}>{cr.charAt(0).toUpperCase() + cr.slice(1)}</Text>
                   </View>
                 ))}
               </View>

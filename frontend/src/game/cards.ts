@@ -180,24 +180,24 @@ export const CARD_POOL: SkillCard[] = [
   },
 ];
 
-// ── Clinical metadata (chain roles, tags, system affinity) ────────────────────
-// chainRoles drives canAdvanceChain().
-// Support cards MUST have chainRoles: [] — they never advance the care chain.
+// ── Clinical metadata (pathway roles, tags, system affinity) ──────────────────
+// pathwayRoles drives canAdvancePathway().
+// Support cards MUST have pathwayRoles: [] — they never advance the care pathway.
 
 export const CARD_CLINICAL: Record<string, ActionClinical> = {
-  card_oxygen_support:         { clinicalTags: ['oxygenation', 'respiratory'], appropriateForSystems: ['Air'], chainRoles: ['Stabilize'],        diseaseCategory: 'respiratory' },
-  card_airway_clearance:       { clinicalTags: ['airway', 'respiratory'],      appropriateForSystems: ['Air'], chainRoles: ['Counter'],           diseaseCategory: 'respiratory' },
-  card_positioning:            { clinicalTags: ['general support', 'comfort'],                                chainRoles: ['Stabilize'],         diseaseCategory: 'general' },
-  card_reassess:               { clinicalTags: ['reassessment', 'assessment'],                                chainRoles: ['Reassess', 'Scout'], diseaseCategory: 'general' },
-  // Support cards — explicitly empty chainRoles so they never advance the chain.
-  card_rapid_response:         { clinicalTags: ['escalation', 'emergency'],                                   chainRoles: [],                    diseaseCategory: 'general' },
-  card_protective_ward:        { clinicalTags: ['safety', 'protect'],          appropriateForSystems: ['Protection'], chainRoles: [],            diseaseCategory: 'safety' },
+  card_oxygen_support:         { clinicalTags: ['oxygenation', 'respiratory'], appropriateForSystems: ['Air'], pathwayRoles: ['stabilize'],         diseaseCategory: 'respiratory' },
+  card_airway_clearance:       { clinicalTags: ['airway', 'respiratory'],      appropriateForSystems: ['Air'], pathwayRoles: ['treat'],              diseaseCategory: 'respiratory' },
+  card_positioning:            { clinicalTags: ['general support', 'comfort'],                                 pathwayRoles: ['stabilize'],          diseaseCategory: 'general' },
+  card_reassess:               { clinicalTags: ['reassessment', 'assessment'],                                 pathwayRoles: ['reassess', 'assess'], diseaseCategory: 'general' },
+  // Support cards — explicitly empty pathwayRoles so they never advance the pathway.
+  card_rapid_response:         { clinicalTags: ['escalation', 'emergency'],                                    pathwayRoles: [],                     diseaseCategory: 'general' },
+  card_protective_ward:        { clinicalTags: ['safety', 'protect'],          appropriateForSystems: ['Protection'], pathwayRoles: [],             diseaseCategory: 'safety' },
   // P8 starter cards
-  card_focused_assessment:     { clinicalTags: ['assessment', 'observation'],                                 chainRoles: ['Scout'],             diseaseCategory: 'general' },
-  card_hydration_support:      { clinicalTags: ['hydration', 'fluid support'], appropriateForSystems: ['River'], chainRoles: ['Stabilize'],      diseaseCategory: 'circulatory' },
-  card_treatment_protocol:     { clinicalTags: ['treatment', 'intervention'],                                 chainRoles: ['Counter'],           diseaseCategory: 'general' },
-  card_reassessment_checklist: { clinicalTags: ['reassessment', 'systematic review'],                         chainRoles: ['Reassess'],          diseaseCategory: 'general' },
-  card_emergency_call:         { clinicalTags: ['emergency', 'escalation'],                                   chainRoles: [],                    diseaseCategory: 'general' },
+  card_focused_assessment:     { clinicalTags: ['assessment', 'observation'],                                  pathwayRoles: ['assess'],             diseaseCategory: 'general' },
+  card_hydration_support:      { clinicalTags: ['hydration', 'fluid support'], appropriateForSystems: ['River'], pathwayRoles: ['stabilize'],       diseaseCategory: 'circulatory' },
+  card_treatment_protocol:     { clinicalTags: ['treatment', 'intervention'],                                  pathwayRoles: ['treat'],              diseaseCategory: 'general' },
+  card_reassessment_checklist: { clinicalTags: ['reassessment', 'systematic review'],                          pathwayRoles: ['reassess'],           diseaseCategory: 'general' },
+  card_emergency_call:         { clinicalTags: ['emergency', 'escalation'],                                    pathwayRoles: [],                     diseaseCategory: 'general' },
 };
 
 // Cards every player has access to in their loadout picker (P8 starter set).
