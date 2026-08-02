@@ -918,6 +918,10 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     }
     next.corruption = Math.max(0, next.corruption - amt);
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
+    // Push 2: Elemental Counter feedback — distinct log line when the element bonus fires.
+    if (strikeMods.elementBonus > 0 && s.enemy.weakElement) {
+      next.log = [...next.log, `⚡ ELEMENTAL COUNTER — ${hero.element} disrupts ${s.enemy.corruptionAspect}. Strike +30%.`];
+    }
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : (effectType === 'stability' ? 'mixed' : 'corruption');
     // Push 1 dev breakdown: log base value, each modifier, and final for strikes.
@@ -1946,7 +1950,7 @@ export function buildSkillCalcBreakdown(
     if (!trivial) rows.push({ label, value, kind });
   }
 
-  if (elementBonus > 0)          pushRow('Element advantage',  1 + elementBonus,  'mult');
+  if (elementBonus > 0)          pushRow('Elemental Counter',  1 + elementBonus,  'mult');
   pushRow('Hero stat',             heroStatMult,                                   'mult');
   pushRow('Affinity match',        affinityFamilyMult,                             'mult');
   if (hiddenDefenseMod < 0.995)   pushRow('Hidden pathology',  hiddenDefenseMod,   'mult');

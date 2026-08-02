@@ -1187,6 +1187,23 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 </View>
               )}
             </View>
+            {/* Push 2: Corruption Aspect + Weak Element rows */}
+            {enemy.corruptionAspect ? (
+              <View style={styles.enemyInfoRow} accessibilityLabel={`Corruption Aspect: ${enemy.corruptionAspect}`}>
+                <Text style={styles.enemyInfoLabel}>Corruption Aspect</Text>
+                <Text style={styles.enemyInfoValue}>{enemy.corruptionAspect}</Text>
+              </View>
+            ) : null}
+            <View style={styles.enemyInfoRow} accessibilityLabel={state.visibleClues.length > 0 && enemy.weakElement ? `Weak Element: ${enemy.weakElement}` : "Weak Element: Unknown"}>
+              <Text style={styles.enemyInfoLabel}>Weak Element</Text>
+              {state.visibleClues.length > 0 && enemy.weakElement ? (
+                <View style={styles.enemyInfoWeakPill}>
+                  <Text style={[styles.enemyInfoWeakTxt, { color: ELEMENT_COLORS[enemy.weakElement] }]}>⚡ {enemy.weakElement}</Text>
+                </View>
+              ) : (
+                <Text style={[styles.enemyInfoValue, { color: COLORS.onSurfaceTertiary }]}>Unknown</Text>
+              )}
+            </View>
             {state.wave.length > 1 && (
               <View style={styles.waveRow} testID="battle-wave-row">
                 <Text style={styles.waveLabel}>WAVE</Text>
@@ -1492,6 +1509,12 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                         </View>
                         <Text style={styles.actionEffect} numberOfLines={3}>{skill.shortEffect || skill.description}</Text>
                         <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{SKILL_CHAIN_LABEL[skill.type] ? `${SKILL_CHAIN_LABEL[skill.type]} · ` : ""}{skill.systemType || "Universal"}</Text>
+                        {/* Push 2: Elemental Counter chip — only on strike skills when weakness discovered */}
+                        {skill.type === "strike" && state.visibleClues.length > 0 && enemy.weakElement && selHero.element === enemy.weakElement ? (
+                          <View style={styles.elemCounterChip} accessibilityLabel="Elemental Counter active">
+                            <Text style={styles.elemCounterTxt}>⚡ Elemental Counter</Text>
+                          </View>
+                        ) : null}
                       </Pressable>
                     </Animated.View>
                   ),
@@ -2087,6 +2110,12 @@ function DetailContent({ detail, state, onUse }: { detail: DetailEntry; state: B
           <Text style={styles.detailSection}>NCLEX Focus</Text>
           <Text style={styles.detailBody}>{skill.nclexExplanation}</Text>
         </>)}
+        {/* Push 2: Elemental Counter chip in detail — strike skill + weakness discovered + match */}
+        {skill.type === "strike" && state.visibleClues.length > 0 && state.enemy.weakElement && hero.element === state.enemy.weakElement ? (
+          <View style={styles.elemCounterDetailChip} accessibilityLabel="Elemental Counter active: this skill deals bonus damage">
+            <Text style={styles.elemCounterDetailTxt}>⚡ Elemental Counter — {hero.element} disrupts {state.enemy.corruptionAspect}. Strike +30%.</Text>
+          </View>
+        ) : null}
         {hasCalc && (
           <Pressable style={styles.calcToggle} onPress={() => setShowCalc(v => !v)} testID="detail-calc-toggle">
             <Ionicons name={showCalc ? "chevron-up-outline" : "analytics-outline"} size={11} color={COLORS.onSurfaceTertiary} />
@@ -3403,4 +3432,16 @@ const styles = StyleSheet.create({
   calcEstLabel: { color: COLORS.onSurface, fontSize: 12, fontWeight: "700", flex: 1 },
   calcEstVal: { color: COLORS.brand, fontSize: 14, fontWeight: "800" },
   calcNote: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2, fontStyle: "italic" },
+  // Push 2 — Enemy info rows (Corruption Aspect, Weak Element)
+  enemyInfoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 1 },
+  enemyInfoLabel: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 0.4, width: 90 },
+  enemyInfoValue: { color: COLORS.onSurfaceSecondary, fontSize: 11, fontWeight: "600", flex: 1 },
+  enemyInfoWeakPill: { backgroundColor: "#1a1020", borderRadius: 5, borderWidth: 1, borderColor: "#6d28d9", paddingHorizontal: 6, paddingVertical: 1 },
+  enemyInfoWeakTxt: { fontSize: 11, fontWeight: "700" },
+  // Push 2 — Elemental Counter chip on skill card
+  elemCounterChip: { backgroundColor: "#120c22", borderRadius: 4, borderWidth: 1, borderColor: "#7c3aed", paddingHorizontal: 5, paddingVertical: 1, alignSelf: "flex-start", marginTop: 2 },
+  elemCounterTxt: { color: "#a78bfa", fontSize: 9, fontWeight: "700" },
+  // Push 2 — Elemental Counter chip in skill detail panel
+  elemCounterDetailChip: { backgroundColor: "#120c22", borderRadius: 6, borderWidth: 1, borderColor: "#7c3aed", padding: 8, marginTop: 4 },
+  elemCounterDetailTxt: { color: "#a78bfa", fontSize: 12, fontWeight: "700", lineHeight: 17 },
 });

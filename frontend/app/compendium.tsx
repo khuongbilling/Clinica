@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getDefeatedEnemies } from "@/src/game/compendiumStore";
+import { ENEMIES } from "@/src/game/content";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 type EnemyEntry = {
@@ -396,21 +397,81 @@ export default function CompendiumScreen() {
 
                   {open && (
                     <View style={s.expanded}>
-                      {/* Pathophysiology */}
-                      <View style={[s.section, { borderLeftColor: e.color }]}>
-                        <Text style={[s.sectionLabel, { color: e.color }]}>PATHOPHYSIOLOGY</Text>
-                        <Text style={s.sectionBody}>{e.pathophysiology}</Text>
-                      </View>
-
-                      {/* Clinical cues */}
-                      <Text style={s.expandedLabel}>RECOGNIZE CUES</Text>
-                      <View style={s.cueRow}>
-                        {e.cues.map((c, i) => (
-                          <View key={i} style={[s.cuePill, { backgroundColor: e.color + "18", borderColor: e.color + "35" }]}>
-                            <Text style={[s.cueTxt, { color: e.color }]}>{c}</Text>
+                      {/* Push 2: Section 1 — Corruption */}
+                      {(() => {
+                        const gameEnemy = ENEMIES.find(ge => ge.id === e.id);
+                        const aspect = gameEnemy?.corruptionAspect;
+                        return (
+                          <View style={[s.section, { borderLeftColor: "#a78bfa" }]}>
+                            <Text style={[s.sectionLabel, { color: "#a78bfa" }]}>CORRUPTION</Text>
+                            {aspect ? (
+                              <View style={s.aspectRow}>
+                                <Text style={s.aspectBadge}>{aspect}</Text>
+                              </View>
+                            ) : null}
+                            <Text style={s.sectionBody}>{e.pathophysiology}</Text>
                           </View>
-                        ))}
-                      </View>
+                        );
+                      })()}
+
+                      {/* Push 2: Section 2 — Clinical Domain */}
+                      {(() => {
+                        const gameEnemy = ENEMIES.find(ge => ge.id === e.id);
+                        const primary = gameEnemy?.primaryAffinity;
+                        const secondaries = gameEnemy?.secondaryAffinities ?? [];
+                        return (
+                          <View style={[s.section, { borderLeftColor: e.color }]}>
+                            <Text style={[s.sectionLabel, { color: e.color }]}>CLINICAL DOMAIN</Text>
+                            {primary ? (
+                              <View style={s.domainRow}>
+                                <View style={[s.domainPill, { borderColor: e.color + "60", backgroundColor: e.color + "12" }]}>
+                                  <Text style={[s.domainTxt, { color: e.color }]}>{primary}</Text>
+                                </View>
+                                {secondaries.map((sd, i) => (
+                                  <View key={i} style={[s.domainPill, { borderColor: e.color + "40", backgroundColor: e.color + "0a" }]}>
+                                    <Text style={[s.domainTxt, { color: e.color + "cc" }]}>{sd}</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            ) : null}
+                            {/* Clinical cues */}
+                            <Text style={[s.expandedLabel, { marginTop: 6 }]}>RECOGNIZE CUES</Text>
+                            <View style={s.cueRow}>
+                              {e.cues.map((c, i) => (
+                                <View key={i} style={[s.cuePill, { backgroundColor: e.color + "18", borderColor: e.color + "35" }]}>
+                                  <Text style={[s.cueTxt, { color: e.color }]}>{c}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        );
+                      })()}
+
+                      {/* Push 2: Section 3 — Elemental Counter */}
+                      {(() => {
+                        const gameEnemy = ENEMIES.find(ge => ge.id === e.id);
+                        const weak = gameEnemy?.weakElement;
+                        return (
+                          <View style={[s.section, { borderLeftColor: "#7c3aed", backgroundColor: "#0d0a1a" }]}>
+                            <Text style={[s.sectionLabel, { color: "#a78bfa" }]}>ELEMENTAL COUNTER</Text>
+                            {weak ? (
+                              <View style={s.elemRow}>
+                                <View style={s.elemPill}>
+                                  <Text style={s.elemTxt}>⚡ {weak}</Text>
+                                </View>
+                                <Text style={s.sectionBody}>
+                                  {weak} techniques disrupt this spirit's corruption. Strike damage +30%.
+                                </Text>
+                              </View>
+                            ) : (
+                              <Text style={s.sectionBody}>No elemental weakness — this spirit resists all elemental approaches equally.</Text>
+                            )}
+                            <Text style={[s.sectionBody, s.fantasyNote]}>
+                              ✦ This is a fantasy game mechanic, not a medical claim. Clinical skill and assessment always determine real-world care.
+                            </Text>
+                          </View>
+                        );
+                      })()}
 
                       {/* Interventions */}
                       <View style={[s.section, { borderLeftColor: "#34d399" }]}>
@@ -679,4 +740,38 @@ const s = StyleSheet.create({
     borderColor: "#1e3a5f",
   },
   unknownTxt: { color: "#334155", fontSize: 12 },
+
+  // Push 2 — Corruption Aspect badge
+  aspectRow: { marginBottom: 4 },
+  aspectBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#1a1030",
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#7c3aed",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    color: "#a78bfa",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  // Push 2 — Clinical Domain pills
+  domainRow: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginBottom: 4 },
+  domainPill: { borderRadius: 5, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 2 },
+  domainTxt: { fontSize: 11, fontWeight: "600" },
+
+  // Push 2 — Elemental Counter row
+  elemRow: { gap: 6, marginBottom: 4 },
+  elemPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#1a1030",
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#7c3aed",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  elemTxt: { color: "#a78bfa", fontSize: 11, fontWeight: "700" },
+  fantasyNote: { fontStyle: "italic", color: "#64748b", fontSize: 11, marginTop: 4 },
 });
