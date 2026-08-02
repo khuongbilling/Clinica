@@ -55,13 +55,14 @@ const SPEAKERS: Record<
     artHeight: Math.round(W * 0.74 * 1280 / 896),
   },
   MASTER_BAI: {
-    label:    PROLOGUE_CHARACTERS.MASTER_BAI.name,
-    color:    PROLOGUE_CHARACTERS.MASTER_BAI.color,
-    barColor: PROLOGUE_CHARACTERS.MASTER_BAI.barColor,
-    art:      PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,
-    avatar:   PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
-    artFit:   "contain",
-    artPos:   "bottom",
+    label:     PROLOGUE_CHARACTERS.MASTER_BAI.name,
+    color:     PROLOGUE_CHARACTERS.MASTER_BAI.color,
+    barColor:  PROLOGUE_CHARACTERS.MASTER_BAI.barColor,
+    art:       PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,
+    avatar:    PROLOGUE_CHARACTERS.MASTER_BAI.avatar48,
+    artFit:    "contain",
+    artPos:    "bottom",
+    artHeight: Math.round(W * 0.74 * 1040 / 896),
   },
   NIGHTINGALE: {
     label:    PROLOGUE_CHARACTERS.NIGHTINGALE.name,
@@ -236,14 +237,16 @@ export default function FormerSelfVictoryCutscene({ onComplete }: Props) {
         style={[s.charWrap, { opacity: charFade, bottom: barTotal }]}
         pointerEvents="none"
       >
-        <ExpoImage
-          source={speaker.art}
-          style={speaker.artHeight != null
-            ? { width: W * 0.74, height: speaker.artHeight, position: "absolute", bottom: 0, right: 0 }
-            : s.charArt}
-          contentFit={speaker.artFit}
-          contentPosition={speaker.artPos}
-        />
+        <View style={speaker.artHeight != null
+          ? { position: "absolute", bottom: 0, right: 0, width: W * 0.74, height: speaker.artHeight }
+          : { position: "absolute", top: 0, bottom: 0, right: 0, width: W * 0.74 }
+        }>
+          <ExpoImage
+            source={speaker.art}
+            style={{ width: "100%", height: "100%" }}
+            contentFit={speaker.artFit}
+          />
+        </View>
         {/* left-edge blend */}
         <LinearGradient
           colors={["rgba(4,8,18,0.82)", "rgba(4,8,18,0)"]}

@@ -80,7 +80,7 @@ const SI_SPEAKER = {
 // ── Portrait fit/position per speaker (Nightingale is square → cover) ────────
 const SPEAKERS: Record<PrologueSpeakerId, { artFit: "contain" | "cover"; artPos: "bottom" | "top"; artHeight?: number }> = {
   PRODIGY:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1280 / 896) },
-  MASTER_BAI:  { artFit: "contain", artPos: "bottom" },
+  MASTER_BAI:  { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1040 / 896) },
   NIGHTINGALE: { artFit: "cover",   artPos: "bottom" },
   FLEMING:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1280 / 896) },
 };
@@ -402,14 +402,16 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
             style={StyleSheet.absoluteFillObject}
             pointerEvents="none"
           />
-          <ExpoImage
-            source={activeSpeaker.largePortrait}
-            style={activeSpeakerCfg?.artHeight != null
-              ? { width: W * 0.74, height: activeSpeakerCfg.artHeight, position: "absolute", bottom: 0, right: 0 }
-              : styles.charArt}
-            contentFit={activeSpeakerCfg?.artFit ?? "contain"}
-            contentPosition={activeSpeakerCfg?.artPos ?? "bottom"}
-          />
+          <View style={activeSpeakerCfg?.artHeight != null
+            ? { position: "absolute", bottom: 0, right: 0, width: W * 0.74, height: activeSpeakerCfg.artHeight }
+            : { position: "absolute", top: 0, bottom: 0, right: 0, width: W * 0.74 }
+          }>
+            <ExpoImage
+              source={activeSpeaker.largePortrait}
+              style={{ width: "100%", height: "100%" }}
+              contentFit={activeSpeakerCfg?.artFit ?? "contain"}
+            />
+          </View>
           {/* bottom feather — fades the portrait into the bar edge */}
           <LinearGradient
             colors={["transparent", "rgba(4,10,18,0.96)"]}

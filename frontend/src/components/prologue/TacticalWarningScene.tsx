@@ -26,6 +26,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: W } = Dimensions.get("window");
 import { Image as ExpoImage } from "expo-image";
@@ -48,7 +49,7 @@ const ART = {
 type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
 
 const SPEAKERS: Record<SpeakerId, { label: string; color: string; avatar: any; art: any; artFit: "contain" | "cover"; artHeight?: number }> = {
-  MASTER_BAI:  { label: "Master Bai",           color: "#D9A441", avatar: ART.masterBai,   art: PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,  artFit: "contain" },
+  MASTER_BAI:  { label: "Master Bai",           color: "#D9A441", avatar: ART.masterBai,   art: PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,  artFit: "contain", artHeight: Math.round(W * 0.68 * 1040 / 896) },
   NIGHTINGALE: { label: "Florence Nightingale",  color: "#E8C453", avatar: ART.nightingale, art: PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait, artFit: "cover"   },
   FLEMING:     { label: "Sir Alexander Fleming", color: "#3ECFB2", avatar: ART.fleming,     art: PROLOGUE_CHARACTERS.FLEMING.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1280 / 896) },
   PRODIGY:     { label: "The Prodigy",           color: "#7EB8F7", avatar: ART.prodigy,     art: PROLOGUE_CHARACTERS.PRODIGY.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1280 / 896) },
@@ -185,6 +186,10 @@ interface Props {
 
 export default function TacticalWarningScene({ onComplete }: Props) {
   // ── State ──
+  const insets      = useSafeAreaInsets();
+  const [panelH,    setPanelH]    = useState(240); // measured dialogue panel height
+  const charWrapBot = panelH + insets.bottom;      // portrait bottom = top of dialogue panel
+
   const [beatIdx,   setBeatIdx]   = useState(0);
   const [lineIdx,   setLineIdx]   = useState(0);   // lines revealed so far (0-based count)
 
@@ -388,15 +393,17 @@ export default function TacticalWarningScene({ onComplete }: Props) {
       />
 
       {/* ── ACTIVE SPEAKER PORTRAIT — right side, blends into background ── */}
-      <Animated.View style={[styles.charWrap, { opacity: mainFade }]} pointerEvents="none">
-        <ExpoImage
-          source={speaker.art}
-          style={speaker.artHeight != null
-            ? { width: "68%" as any, height: speaker.artHeight, position: "absolute", bottom: 0, right: 0 }
-            : styles.charArt}
-          contentFit={speaker.artFit}
-          contentPosition="bottom"
-        />
+      <Animated.View style={[styles.charWrap, { opacity: mainFade, bottom: charWrapBot }]} pointerEvents="none">
+        <View style={speaker.artHeight != null
+          ? { position: "absolute", bottom: 0, right: 0, width: W * 0.68, height: speaker.artHeight }
+          : { position: "absolute", top: 0, bottom: 0, right: 0, width: W * 0.68 }
+        }>
+          <ExpoImage
+            source={speaker.art}
+            style={{ width: "100%", height: "100%" }}
+            contentFit={speaker.artFit}
+          />
+        </View>
         {/* left-edge blend */}
         <LinearGradient
           colors={["rgba(4,10,18,0.88)", "rgba(4,10,18,0)"]}
@@ -428,7 +435,11 @@ export default function TacticalWarningScene({ onComplete }: Props) {
         <View style={{ flex: 1 }} pointerEvents="none" />
 
         {/* ── DIALOGUE PANEL ── */}
-        <Animated.View style={[styles.panel, { opacity: mainFade }]} pointerEvents="none">
+        <Animated.View
+          style={[styles.panel, { opacity: mainFade }]}
+          pointerEvents="none"
+          onLayout={(e) => setPanelH(e.nativeEvent.layout.height)}
+        >
 
           {/* Portrait row */}
           <View style={styles.portraitRow}>
@@ -525,13 +536,12 @@ const styles = StyleSheet.create({
     height:    "65%",
   },
 
-  // Active speaker portrait — upper-right quadrant above dialogue content
+  // Active speaker portrait — spans from screen top to the dialogue panel top (set via inline bottom)
   charWrap: {
     position:       "absolute",
     top:            0,
     left:           0,
     right:          0,
-    bottom:         "44%",
     alignItems:     "flex-end",
     justifyContent: "flex-end",
     overflow:       "hidden",
