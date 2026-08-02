@@ -11,7 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { playRewardCue } from "@/src/game/cues";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { completeObjective } from "@/src/game/objectiveProgress";
-import { RecruitResult, rarityTierLabel } from "@/src/game/university";
+import { RecruitResult, rarityTierLabel, heroRoleLabel } from "@/src/game/university";
 import { LAUNCH_ROSTER, FAMILY_COLORS } from "@/src/game/heroRoster";
 import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { usePlayer } from "@/src/game/store";
@@ -594,7 +594,7 @@ function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResu
             {/* Large decorative role line */}
             <View style={revealStyles.roleRow}>
               <Text style={[revealStyles.roleBracket, { color: rc + "AA" }]}>⟦</Text>
-              <Text style={[revealStyles.roleTxt, { color: rc }]}>{entry.role.toUpperCase()}</Text>
+              <Text style={[revealStyles.roleTxt, { color: rc }]}>{heroRoleLabel(entry.role).toUpperCase()}</Text>
               <Text style={[revealStyles.roleBracket, { color: rc + "AA" }]}>⟧</Text>
             </View>
 
@@ -685,12 +685,12 @@ function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResu
               <Text style={[revealStyles.roleBracket, { color: rc + "AA" }]}>⟧</Text>
             </View>
             <View style={[revealStyles.badge, { borderColor: rc + "60", backgroundColor: rc + "18", alignSelf: "center" }]}>
-              <Text style={[revealStyles.badgeTxt, { color: rc }]}>{trainee.role} Class</Text>
+              <Text style={[revealStyles.badgeTxt, { color: rc }]}>{heroRoleLabel(trainee.role)} Class</Text>
             </View>
             <Text style={revealStyles.desc}>
               {showTraineeInfo
                 ? `Class Trainees are shared training materials for your ward team. Use them at the Training Hall to raise a healer's Certification Star — unlocking higher level caps and greater power. They can also power hero evolution in future systems.`
-                : `${trainee.label}s are used to promote ${trainee.role} healers. Use them at the Training Hall.`}
+                : `${trainee.label}s are used to promote ${heroRoleLabel(trainee.role)} healers. Use them at the Training Hall.`}
             </Text>
           </View>
         </ScrollView>
@@ -821,7 +821,7 @@ function CeremonyResultCard({ result }: { result: RecruitResult }) {
           <Text style={[styles.ceremonyResultName, { color: rc }]}>{result.entry.name}</Text>
           <View style={[styles.tierPill, { borderColor: rc + "70" }]}>
             <Text style={[styles.tierPillTxt, { color: rc }]}>
-              {result.entry.role} · {rarityTierLabel(result.entry.rarity)}
+              {heroRoleLabel(result.entry.role)} · {rarityTierLabel(result.entry.rarity)}
             </Text>
           </View>
         </>

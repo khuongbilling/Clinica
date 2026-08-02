@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { HEROES } from "@/src/game/content";
 import { LAUNCH_ROSTER, FAMILY_COLORS, RARITY_LABELS } from "@/src/game/heroRoster";
+import { heroRoleLabel } from "@/src/game/university";
 import { COLORS } from "@/src/theme/colors";
 import { getHeroSprite, hasHeroSprite } from "@/src/components/HeroSprites";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
@@ -274,7 +275,7 @@ function HeroAuditCard({ entry }: { entry: AuditEntry }) {
           </View>
         )}
         <View style={styles.metaBadge}>
-          <Text style={styles.metaText}>{entry.rarity} · {entry.role}</Text>
+          <Text style={styles.metaText}>{entry.rarity} · {heroRoleLabel(entry.role)}</Text>
         </View>
       </View>
     </View>

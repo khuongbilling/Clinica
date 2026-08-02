@@ -28,6 +28,7 @@ import {
   productionCap, computeAccruedPoints, assignedHeroCount, HERO_ASSIGNMENT_RATE_BONUS,
 } from "@/src/game/realm";
 import { HEROES } from "@/src/game/content";
+import { heroRoleLabel } from "@/src/game/university";
 import {
   GRID_ROWS, GRID_COLS, CELL_PX, GRID_CELLS, PlotCell, getCell, getCellById,
   isCellUnlocked, getFootprint, getFootprintCells, getOccupiedCellMap,
@@ -827,7 +828,7 @@ function BuildingActionSheet({
                         {slot.role}{slot.slotType ? ` · ${slot.slotType}` : ""}
                       </Text>
                       {hero ? (
-                        <Text style={styles.assignHeroName}>{hero.name} — {hero.role}</Text>
+                        <Text style={styles.assignHeroName}>{hero.name} — {heroRoleLabel(hero.role)}</Text>
                       ) : (
                         <Text style={styles.assignFlavor}>{slot.flavor}</Text>
                       )}
@@ -1015,7 +1016,7 @@ function HeroPickerModal({
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.pickerName}>{h.name}</Text>
-                      <Text style={styles.pickerMeta}>{h.role} · {h.element}</Text>
+                      <Text style={styles.pickerMeta}>{heroRoleLabel(h.role)} · {h.element}</Text>
                     </View>
                     {taken ? (
                       <Text style={styles.pickerTaken}>Assigned here</Text>

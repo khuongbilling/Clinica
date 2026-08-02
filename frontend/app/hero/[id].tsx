@@ -30,6 +30,7 @@ import {
   canUseScroll,
   SCROLL_TIERS,
   rarityTierLabel,
+  heroRoleLabel,
   traineeForRole,
   PROMOTION_REQUIREMENTS,
 } from "@/src/game/university";
@@ -411,7 +412,7 @@ export default function HeroProfile() {
             <Text style={[styles.elementTxt, { color: accent }]}>{hero.element.toUpperCase()}</Text>
           </View>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleTxt}>{hero.role}</Text>
+            <Text style={styles.roleTxt}>{heroRoleLabel(hero.role)}</Text>
           </View>
         </View>
 

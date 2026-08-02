@@ -34,12 +34,22 @@ const ROLE_CLASS_LABELS: Record<string, [string, string, string]> = {
   Coordinator:  ['Apprentice Coord.',     'Ward Coordinator',    'Operations Chief'],
   Educator:     ['Apprentice Educator',   'Clinical Educator',   'Lore Keeper'],
   Specialist:   ['Specialist',            'Senior Specialist',   'Master Specialist'],
-  Scout:        ['Scout',                 'Field Scout',         'Vanguard Scout'],
+  Scout:        ['Observer',              'Field Observer',      'Vanguard Observer'],
   Striker:      ['Striker',               'Elite Striker',       'Apex Striker'],
   Restorer:     ['Restorer',              'Master Restorer',     'Restoration Sage'],
   Preventer:    ['Preventer',             'Chief Preventer',     'Sentinel'],
   SystemsLeader:['Systems Analyst',       'Systems Leader',      'Systems Director'],
 };
+
+/**
+ * Maps HeroRole code values to player-facing display names.
+ * 'Scout' → 'Observer' (avoids confusion with the renamed 'Assess' clinical pathway step).
+ * All other roles pass through unchanged.
+ */
+export function heroRoleLabel(role: string): string {
+  if (role === 'Scout') return 'Observer';
+  return role;
+}
 
 /** Display class title for a hero at a given Certification Star. */
 export function heroClassLabel(role: string, star: number): string {
@@ -78,7 +88,7 @@ export const CLASS_TRAINEE_BY_ROLE: Record<HeroRole, TraineeDef> = {
   Coordinator: { id: 'protect_trainee',   label: 'Protect Trainee',   role: 'Coordinator' },
   Educator:    { id: 'support_trainee',   label: 'Support Trainee',   role: 'Educator' },
   Specialist:      { id: 'reassess_trainee',      label: 'Reassess Trainee',      role: 'Specialist' },
-  Scout:           { id: 'scout_trainee',          label: 'Scout Trainee',          role: 'Scout' },
+  Scout:           { id: 'scout_trainee',          label: 'Observer Trainee',       role: 'Scout' },
   Striker:         { id: 'striker_trainee',        label: 'Striker Trainee',        role: 'Striker' },
   Restorer:        { id: 'restorer_trainee',       label: 'Restorer Trainee',       role: 'Restorer' },
   Preventer:       { id: 'preventer_trainee',      label: 'Preventer Trainee',      role: 'Preventer' },

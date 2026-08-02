@@ -25,6 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { HEROES } from "@/src/game/content";
 import { rarityColor } from "@/src/game/gacha";
+import { heroRoleLabel } from "@/src/game/university";
 import type { Hero } from "@/src/game/types";
 import { setPendingHeroPick } from "@/src/game/loadoutStore";
 import { usePlayer } from "@/src/game/store";
@@ -222,7 +223,7 @@ export default function HeroPickerScreen() {
             {/* Badges row: role + element + rarity */}
             <View style={p.badgeRow}>
               <View style={[p.badge, { backgroundColor: rc + "18", borderColor: rc + "44" }]}>
-                <Text style={[p.badgeTxt, { color: rc }]}>{previewHero.role.toUpperCase()}</Text>
+                <Text style={[p.badgeTxt, { color: rc }]}>{heroRoleLabel(previewHero.role).toUpperCase()}</Text>
               </View>
               <View style={[p.badge, { backgroundColor: sysCo + "14", borderColor: sysCo + "38" }]}>
                 <Text style={[p.badgeTxt, { color: sysCo }]}>{previewHero.element.toUpperCase()}</Text>

@@ -15,6 +15,7 @@ import {
   SCROLL_TIERS,
   MAX_CERTIFICATION_STAR,
   checkPromotion,
+  heroRoleLabel,
   type ScrollTier,
 } from "@/src/game/university";
 import { heroXpCostForLevel, playerLevelFromXp } from "@/src/game/progression";
@@ -243,7 +244,7 @@ export default function TrainingHallScreen() {
                 <Text style={styles.cardName}>{h.name}</Text>
                 <Text style={[styles.cardStar, { color: accent }]}>★{prog.star}</Text>
               </View>
-              <Text style={styles.cardRole}>{h.role} · {h.element}</Text>
+              <Text style={styles.cardRole}>{heroRoleLabel(h.role)} · {h.element}</Text>
 
               {/* Broad level bar */}
               <View style={styles.barTrack}>

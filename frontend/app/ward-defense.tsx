@@ -381,7 +381,7 @@ const UNIT_BATTLE: Record<string, UnitBattle> = {
     strong: ["breathless_wisp", "panic_imp"],
     weak:   ["mucus_slime", "corruption_leech", "bronchospasm_drake"],
     concept: "Auscultation identifies respiratory cues — assess before treating.",
-    flavor: "Mind-element scout who reads vital signs with uncanny clarity.",
+    flavor: "Mind-element observer who reads vital signs with uncanny clarity.",
     artsName: "Moonlit Assessment Pulse",
   },
   reassess_sage: {

@@ -66,7 +66,7 @@ const NPC_NOTICES = [
   {
     id: "mei",
     name: "Apprentice Mei",
-    role: "Field Scout",
+    role: "Field Observer",
     icon: "person-outline",
     color: SKY,
     tag: "Clean Water",

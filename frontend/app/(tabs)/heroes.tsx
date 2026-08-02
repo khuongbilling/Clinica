@@ -19,7 +19,7 @@ import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import {
-  rarityTierLabel, heroClassLabel, isClassChangeStar,
+  rarityTierLabel, heroClassLabel, heroRoleLabel, isClassChangeStar,
   levelCapForStar, canUseScroll, SCROLL_TIERS,
   playerMaxStar, CLASS_CHANGE_STAR,
 } from "@/src/game/university";
@@ -181,7 +181,7 @@ export default function HeroesScreen() {
                   onPress={() => setFilterRole(active ? null : role)}
                   testID={`filter-role-${role}`}
                 >
-                  <Text style={[styles.filterChipTxt, { color: active ? COLORS.surface : COLORS.onSurfaceTertiary }]}>{role}</Text>
+                  <Text style={[styles.filterChipTxt, { color: active ? COLORS.surface : COLORS.onSurfaceTertiary }]}>{heroRoleLabel(role)}</Text>
                 </Pressable>
               );
             })}
@@ -312,7 +312,7 @@ export default function HeroesScreen() {
                           <Text style={[styles.roleTag, prog.star >= CLASS_CHANGE_STAR && { color: accent + "CC" }]}
                             numberOfLines={1}>{classLabel}</Text>
                         ) : (
-                          <Text style={styles.roleTag}>{h.role}</Text>
+                          <Text style={styles.roleTag}>{heroRoleLabel(h.role)}</Text>
                         )}
                         {isOwned && promoteReady && (
                           <View style={[styles.promotePill, { borderColor: accent + "80", backgroundColor: accent + "18" }]}>
@@ -383,7 +383,7 @@ export default function HeroesScreen() {
                             <View style={[styles.elementTag, { borderColor: accent + "50" }]}>
                               <Text style={[styles.elementTxt, { color: accent + "BB" }]}>{h.element.toUpperCase()}</Text>
                             </View>
-                            <Text style={styles.roleTag}>{h.role}</Text>
+                            <Text style={styles.roleTag}>{heroRoleLabel(h.role)}</Text>
                           </View>
                         </View>
                       </View>
@@ -518,7 +518,7 @@ export default function HeroesScreen() {
               <View key={h.id} style={[styles.rosterRow, { borderLeftColor: accent, opacity: isOwned ? 1 : 0.5 }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.rosterName, { color: isOwned ? COLORS.onSurface : COLORS.onSurfaceTertiary }]}>{h.name}</Text>
-                  <Text style={styles.rosterMeta}>{h.role} · {h.element}</Text>
+                  <Text style={styles.rosterMeta}>{heroRoleLabel(h.role)} · {h.element}</Text>
                 </View>
                 {isOwned ? (
                   <View style={[styles.ownedPill, { borderColor: accent + "60" }]}>
@@ -579,7 +579,7 @@ export default function HeroesScreen() {
                   onPress={() => router.push(`/hero/${h.id}`)}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rosterName}>{h.name}</Text>
-                    <Text style={styles.rosterMeta}>{h.role} · {h.element}</Text>
+                    <Text style={styles.rosterMeta}>{heroRoleLabel(h.role)} · {h.element}</Text>
                   </View>
                   <View style={[styles.ownedPill, { borderColor: COLORS.brand + "60", backgroundColor: COLORS.brand + "18" }]}>
                     <Ionicons name="arrow-up-circle" size={12} color={COLORS.brand} />

@@ -1875,7 +1875,7 @@ export const ULTIMATE_BY_ROLE: Record<import('./types').HeroRole, UltimateDef> =
   },
   Scout: {
     name: 'Eyes of the Ward',
-    rpgFlavor: 'The Scout reads the room before anyone else even looks up.',
+    rpgFlavor: 'The Observer reads the room before anyone else even looks up.',
     description: 'Reveals all hidden clues.',
   },
   Striker: {

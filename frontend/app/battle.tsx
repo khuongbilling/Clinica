@@ -17,6 +17,7 @@ import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
 import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type PathwayRole } from "@/src/game/clinical";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
+import { heroRoleLabel } from "@/src/game/university";
 import { EQUIPMENT_ITEMS } from "@/src/game/equipment";
 import { CLASS_IDENTITIES, ClassId, getClassTreeBattleBonuses } from "@/src/game/classTree";
 import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp } from "@/src/game/progression";
@@ -1865,7 +1866,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                   <View key={h.id} style={[styles.teamCard, { borderLeftColor: c }]} testID={`team-${h.id}`}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.teamName}>{h.name}</Text>
-                      <Text style={styles.teamRole}>{h.role} · {h.element}</Text>
+                      <Text style={styles.teamRole}>{heroRoleLabel(h.role)} · {h.element}</Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 1 }}>
                       {Array.from({ length: h.star ?? 1 }).map((_, i) => (
