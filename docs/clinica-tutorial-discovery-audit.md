@@ -1,0 +1,634 @@
+<!-- READ-ONLY DOCUMENT — Do not modify application source files based on this document. This file records the audit brief only; findings are to be produced by a future code-review or explore task. -->
+
+| Field | Value |
+|---|---|
+| Audit date | 2026-08-02 (UTC) |
+| Current branch | `main` |
+| Latest commit | `0d9f6f7c6dbf29c9cc93c6afd0d584370984f574` (Push 2: Battle UI & Bestiary — Elemental Counter display, log line, CalcBreakdown row, skill chip, Bestiary restructure) |
+| Framework | Expo 54 (React Native / Expo Router) — web port 5000; backend FastAPI port 8000 |
+| Files reviewed | See Section N |
+| Systems not traced | See Section O |
+
+---
+
+# Clinica Tutorial Discovery Audit
+
+Review the entire Clinica codebase and identify every important player-facing mechanic, screen, feature, and system that may require a tutorial when the player encounters it for the first time.
+
+## Critical rules
+
+1. Do not modify, refactor, rename, delete, or generate any code.
+2. Do not implement tutorials.
+3. Do not alter game balance, progression, routes, save data, or UI.
+4. This is a read-only code audit.
+5. Trace actual code behavior rather than relying only on filenames or comments.
+6. Clearly distinguish:
+
+   * Implemented and reachable
+   * Implemented but currently unreachable
+   * Partially implemented
+   * Placeholder or mock data
+   * Referenced but missing
+7. Do not expose internal hidden mechanics in the recommended player-facing tutorial content.
+8. Hidden systems may be listed privately for development awareness, but label them:
+   **INTERNAL ONLY — DO NOT REVEAL TO PLAYER**
+9. Important examples of hidden information include:
+
+   * Stability resistance
+   * Hidden resistance values
+   * Secret multipliers
+   * Invisible thresholds
+   * Concealed scoring formulas
+   * Enemy adaptation logic
+   * Undiscovered encounter variables
+
+The tutorial audit should focus on what the player sees, controls, chooses, earns, unlocks, or needs to understand.
+
+---
+
+# Part 1: Determine the application structure
+
+Inspect the project and report:
+
+* Framework and platform
+* Main application entry point
+* Navigation system
+* Route definitions
+* Screen directories
+* Component directories
+* Game-state management
+* Save or persistence system
+* Tutorial or onboarding state
+* Feature-flag system
+* Unlock and progression logic
+* Battle engine location
+* Clinical Care system location
+* Affinity system location
+* Shop and economy system locations
+* Inventory and equipment locations
+* Quest system location
+* University or lesson system location
+
+Include the exact file paths for each.
+
+---
+
+# Part 2: Reconstruct the real player journey
+
+Trace the code beginning with a brand-new player and create the actual expected sequence.
+
+Start from:
+
+1. App launch
+2. New game
+3. Account, profile, or save creation
+4. Opening questionnaire or player customization
+5. Class, role, or identity selection
+6. Initial loadout
+7. Opening story or cutscene
+8. First battle
+9. Defeat, Silent Infarction, or Lotus Recall
+10. Arrival at Clinica
+11. Clinica University
+12. First lesson
+13. First mission
+14. First reward
+15. First shop visit
+16. First inventory or equipment use
+17. First affinity interaction
+18. First Clinical Care encounter
+19. First quest interaction
+20. First use of each major hub feature
+
+For every step, report:
+
+* Screen or route
+* File path
+* Entry condition
+* Required player action
+* Exit condition
+* Next destination
+* Mechanics introduced
+* Whether the feature is explained
+* Whether the feature is practiced
+* Whether the player can skip or leave
+* Whether the system appears before its prerequisites are taught
+
+Also identify alternate routes caused by learner mode, difficulty, class selection, or previous save state.
+
+---
+
+# Part 3: Inventory all player-facing screens
+
+Find every screen, modal, overlay, major panel, and navigable game area.
+
+For each one, report:
+
+| Field               | Required information                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| Screen name         | Player-facing and code name                                          |
+| Route               | Navigation route or state                                            |
+| File path           | Exact implementation file                                            |
+| Entry points        | All ways the player can reach it                                     |
+| Unlock condition    | What makes it accessible                                             |
+| Purpose             | What the player does there                                           |
+| Important controls  | Buttons, tabs, selectors, menus                                      |
+| New mechanics       | Mechanics first introduced here                                      |
+| Current explanation | Dialogue, tooltip, tutorial, or none                                 |
+| Risk                | What the player may misunderstand                                    |
+| Tutorial need       | Required, guided practice, contextual prompt, optional help, or none |
+
+Include locked, empty, error, reward, confirmation, and completed states when the code supports them.
+
+---
+
+# Part 4: Inventory important player-facing mechanics
+
+Identify every meaningful mechanic that may require a first-use introduction.
+
+Prioritize:
+
+## Core navigation and onboarding
+
+* Main menu
+* New game and continue
+* Save system
+* Character creation
+* Questionnaire
+* Class or role selection
+* Learner mode selection
+* Loadout selection
+* Hub navigation
+* Back navigation
+* Locked tabs and unlock messages
+
+## Combat
+
+* Movement
+* Positioning
+* Turn order
+* Initiative display
+* Basic attack
+* Skill selection
+* Target selection
+* Range
+* Area of effect
+* Resource costs
+* Cooldowns
+* Visible health or condition states
+* Visible status effects
+* Party roles
+* Ally selection
+* Enemy inspection
+* Victory
+* Defeat
+* Retreat
+* Retry
+* Reassessment after battle-state changes
+
+## Affinity system
+
+Report only the player-facing rules as tutorial recommendations.
+
+Determine:
+
+* Affinity names
+* Affinity icons
+* Where affinity appears
+* Whether heroes have affinity
+* Whether enemies have affinity
+* Whether skills have affinity
+* Whether equipment has affinity
+* Whether environments have affinity
+* How the player inspects affinity
+* What visible feedback appears for favorable or unfavorable interactions
+* When affinity first affects a meaningful choice
+* Whether an affinity chart or Codex exists
+* Whether affinities unlock gradually
+* Which code controls the affinity calculation
+
+Do not recommend revealing hidden multipliers, hidden resistances, thresholds, or internal formulas.
+
+## Clinical Care
+
+Trace the full player-facing Clinical Care loop:
+
+* Entry trigger
+* Assessment options
+* Available clues
+* Clue collection
+* Priority selection
+* Intervention selection
+* Treatment or action confirmation
+* Feedback
+* Reassessment
+* Escalation
+* Success
+* Partial success
+* Failure
+* Reflection or rationale
+* Rewards
+* Differences by learner mode
+* Differences between combat and University cases
+
+Identify the first encounter where each step becomes necessary.
+
+Do not reveal the correct answer, hidden case scoring, deterioration thresholds, concealed variables, or invisible resistance systems in tutorial recommendations.
+
+## Progression and rewards
+
+* Experience
+* Player level
+* Hero level
+* Skill level
+* Competency
+* Mastery
+* Rank
+* Chapter progression
+* Lesson completion
+* Unlock notifications
+* Achievement systems
+* Reward claiming
+* Daily rewards
+* Milestone rewards
+
+## Inventory and equipment
+
+* Inventory access
+* Item categories
+* Consumables
+* Equipment
+* Equip and unequip
+* Equipment comparison
+* Rarity
+* Sorting and filtering
+* Upgrade materials
+* Enhancement
+* Dismantling
+* Selling
+* Item locking
+* Irreversible actions
+* Capacity limits
+
+## Shops and economy
+
+Find every shop, vendor, market, exchange, summon system, purchase screen, and upgrade shop.
+
+For each shop, report:
+
+* Shop name
+* Route or location
+* File path
+* Unlock condition
+* Inventory source
+* What it sells
+* Currency accepted
+* Buy function
+* Sell function
+* Refresh function
+* Exchange function
+* Purchase limits
+* Confirmation behavior
+* Rare-currency warnings
+* Real-money connection, if present
+* Placeholder behavior
+* First point where the player can enter
+* First point where the player can afford something
+
+## Currency
+
+Find all currency definitions, balances, icons, earn sources, and spending destinations.
+
+For each currency, report:
+
+| Field                      | Information                                           |
+| -------------------------- | ----------------------------------------------------- |
+| Code identifier            | Internal variable or key                              |
+| Player-facing name         | Displayed name                                        |
+| Icon                       | Asset or component                                    |
+| Classification             | Common, progression, rare, premium, event, or unknown |
+| Earn sources               | Where it is awarded                                   |
+| Spend locations            | Where it is used                                      |
+| First acquisition          | Earliest player event                                 |
+| First spending opportunity | Earliest valid use                                    |
+| Display locations          | Header, inventory, shop, etc.                         |
+| Expiration                 | Whether it expires                                    |
+| Reversibility              | Whether spending can be undone                        |
+| Tutorial status            | Existing explanation or missing                       |
+
+Flag currencies that:
+
+* Appear before they are explained
+* Can be spent before their value is understood
+* Use similar names or icons
+* Are displayed without a known purpose
+* Have no earn source
+* Have no spending destination
+* Are implemented only as placeholders
+
+## Quests and activities
+
+* Main quests
+* Side quests
+* Tutorial quests
+* Daily quests
+* Weekly quests
+* Milestone quests
+* Quest tracking
+* Quest claiming
+* Objective completion
+* Notification markers
+* Expiration
+* Failure
+* Replay
+
+## Education and support systems
+
+* Clinica University
+* Lessons
+* Simulations
+* Clinical cases
+* Codex
+* Help menu
+* Medical glossary
+* Affinity reference
+* Public health board
+* Career pathways
+* Mentorship
+* Wellness or journaling
+* Daily health activities
+* Community features
+
+---
+
+# Part 5: Locate existing tutorial systems
+
+Search the entire codebase for:
+
+* tutorial
+* onboarding
+* walkthrough
+* coach mark
+* tooltip
+* spotlight
+* first visit
+* first use
+* has seen
+* seen tutorial
+* completed tutorial
+* tutorial step
+* tutorial state
+* intro
+* help
+* hint
+* guide
+* mentor dialogue
+* system message
+* Codex
+* explanation modal
+* feature discovery
+* locked message
+* unlock message
+
+Report:
+
+* File paths
+* State variables
+* Persistence keys
+* Trigger conditions
+* Completion conditions
+* Skip behavior
+* Replay behavior
+* Reset behavior
+* Whether tutorial state is account-wide, save-specific, character-specific, or session-only
+* Whether tutorial completion is actually saved
+* Whether tutorial triggers can repeat unexpectedly
+* Whether different systems use inconsistent tutorial logic
+
+Also identify tutorial components that exist but are unused.
+
+---
+
+# Part 6: Find first-use triggers
+
+For every important mechanic, determine the earliest point where the player can:
+
+* See it
+* Enter it
+* Interact with it
+* Make a meaningful decision using it
+* Fail because they do not understand it
+
+The recommended tutorial trigger should usually occur at the first meaningful interaction, not merely when the icon first becomes visible.
+
+For each mechanic, report:
+
+| Mechanic | First visible | First interactive | First meaningful decision | Current tutorial trigger | Recommended trigger |
+|---|---|---|---|---|---|
+
+---
+
+# Part 7: Tutorial prerequisite audit
+
+Identify mechanics that depend on other mechanics.
+
+Examples:
+
+* Skill selection requires targeting knowledge
+* Affinity requires knowing how to inspect heroes or enemies
+* Clinical intervention requires clue recognition
+* Reassessment requires understanding changing conditions
+* Shops require understanding currency
+* Equipment upgrades require understanding materials
+* Quest claiming requires understanding quest tracking
+
+Create a dependency map:
+
+**Prerequisite mechanic → dependent mechanic**
+
+Flag any situation where a dependent mechanic is introduced before its prerequisite.
+
+---
+
+# Part 8: Hidden-system protection audit
+
+Inspect internal gameplay systems that affect visible outcomes.
+
+Examples may include:
+
+* Stability systems
+* Resistance systems
+* Hidden modifiers
+* Case scoring
+* Difficulty scaling
+* Enemy adaptation
+* AI decision weights
+* Randomization
+* Critical thresholds
+* Progression multipliers
+
+For each one, report privately:
+
+* Internal system name
+* File path
+* Which visible mechanic it affects
+* Whether the UI currently exposes it
+* Whether current dialogue accidentally reveals it
+* Whether tutorial wording could contradict it
+
+Label every entry:
+
+**INTERNAL ONLY — DO NOT REVEAL TO PLAYER**
+
+Do not include exact formulas unless needed to identify a contradiction or bug.
+
+---
+
+# Part 9: Learner-mode audit
+
+Trace differences between all available player modes, such as:
+
+* Non-medical
+* Medical learner
+* NCLEX preparation
+* Difficulty modes
+* Accessibility modes
+
+For each mode, report:
+
+* Visible clues
+* Hidden clues
+* Terminology
+* Hint availability
+* Feedback detail
+* Incorrect-answer handling
+* Tutorial differences
+* Clinical Care differences
+* Affinity differences
+* Reward differences
+* Progression differences
+
+Flag tutorial logic that assumes only one mode.
+
+---
+
+# Part 10: Return a tutorial audit table
+
+Produce one consolidated table with one row for every important mechanic.
+
+Required columns:
+
+| Mechanic | Category | First appearance | File path | Unlock condition | Player action | Existing tutorial | Tutorial priority | Tutorial type | What to teach | What not to reveal | Completion condition | Replay location | Problems found |
+| -------- | -------- | ---------------- | --------- | ---------------- | ------------- | ----------------- | ----------------- | ------------- | ------------- | ------------------ | -------------------- | --------------- | -------------- |
+
+Use these tutorial types:
+
+* Required guided tutorial
+* Controlled practice encounter
+* Contextual first-use prompt
+* Optional Help or Codex entry
+* No tutorial required
+
+Use these priorities:
+
+* Critical
+* High
+* Medium
+* Low
+* None
+
+---
+
+# Part 11: Prioritize important tutorials only
+
+Do not recommend tutorials for every button.
+
+Prioritize tutorials when misunderstanding could cause:
+
+* Failure in a core encounter
+* Loss of rare resources
+* Incorrect clinical reasoning
+* Confusion about progression
+* Confusion about affinity
+* Confusion about Clinical Care
+* Confusion about shops or currency
+* An irreversible action
+* Inability to continue
+* A major mismatch between player expectation and game behavior
+
+Avoid mandatory tutorials for:
+
+* Standard back buttons
+* Obvious navigation
+* Decorative elements
+* Familiar interface conventions
+* Minor settings
+* Information already taught and practiced elsewhere
+
+---
+
+# Part 12: Final output sections
+
+Return the audit in this exact order:
+
+## A. Executive summary
+
+Summarize the largest tutorial gaps and risks.
+
+## B. Actual new-player route
+
+Show the complete new-player sequence found in the code.
+
+## C. Screen inventory
+
+List all reachable screens and important states.
+
+## D. Important mechanic inventory
+
+List all important player-facing mechanics.
+
+## E. First-use tutorial audit table
+
+Provide the consolidated tutorial table.
+
+## F. Affinity tutorial findings
+
+Describe the player-facing introduction needed without exposing hidden calculations.
+
+## G. Clinical Care tutorial findings
+
+Describe the staged tutorial flow without revealing correct answers or hidden factors.
+
+## H. Shops and currency findings
+
+List every shop and currency, including when each first appears.
+
+## I. Tutorial dependency map
+
+Show prerequisites and dependent mechanics.
+
+## J. Existing tutorial infrastructure
+
+Explain what is already implemented and whether it persists correctly.
+
+## K. Hidden-system protection notes
+
+Mark all content as internal-only.
+
+## L. Missing, unreachable, or contradictory systems
+
+Identify code that is incomplete, duplicated, inaccessible, or inconsistent.
+
+## M. Recommended tutorial sequence
+
+Recommend the order in which tutorials should appear during normal progression.
+
+## N. Files reviewed
+
+List all important files inspected.
+
+## O. Uncertainties
+
+Clearly identify anything that could not be confirmed from the code.
+
+Do not make any code changes.
