@@ -417,7 +417,7 @@ export interface EnemyClinical {
   resistances: string[];
   starTurnLimit: number;
   rewardBase: number;
-  chapter: 1 | 2 | 3;
+  chapter: number;
   // Disease-domain affinity — skills in affinityStrong get ×1.5 strike; affinityWeak get ×0.5.
   // 'general' category skills are always neutral regardless of these lists.
   affinityStrong?: DiseaseCategory[];
@@ -427,6 +427,26 @@ export interface EnemyClinical {
 const ASSESS_CHAIN: ChainRole[] = ['Scout', 'Stabilize', 'Counter', 'Reassess'];
 
 export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
+  // Chapter 9 trial / prologue tutorial enemy — same Fluid Balance clinical
+  // profile as the wisp but tighter star-turn limit (harder fight).
+  dehydration_specter: {
+    clinicalCategory: 'Fluid Balance',
+    diseaseTags: ['dehydration', 'hypovolemia', 'severe fluid loss', 'desiccation'],
+    allowedActionTags: ['assessment', 'reassessment', 'general support', 'airway', 'oxygenation', 'respiratory', 'circulation', 'fluid resuscitation', 'monitoring', 'hydration', 'escalation'],
+    strongActionTags: ['circulation', 'fluid resuscitation', 'hydration'],
+    weakActionTags: ['comfort'],
+    inappropriateActionTags: ['glucose replacement', 'antimicrobial', 'bronchospasm', 'skin integrity', 'orientation', 'fall prevention', 'infection isolation'],
+    unsafeActionTags: [],
+    treatmentChain: ASSESS_CHAIN,
+    preferredChainTags: ['assessment', 'reassessment', 'circulation', 'fluid resuscitation', 'hydration'],
+    weaknesses: ['River'],
+    resistances: ['Fire'],
+    starTurnLimit: 5,
+    rewardBase: 35,
+    chapter: 9,
+    affinityStrong: ['circulatory'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
+  },
   // Chapter 1 mini-boss (fluid_phantom) — same profile as the wisp but
   // with a tighter star-turn limit (harder fight, rewarded for efficiency).
   fluid_phantom: {
@@ -481,6 +501,25 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     rewardBase: 25,
     chapter: 1,
   },
+  // Chapter 3 trial — advanced respiratory/airway failure encounter.
+  gale_spirit: {
+    clinicalCategory: 'Respiratory Failure',
+    diseaseTags: ['respiratory failure', 'hypoxia', 'airway obstruction', 'SpO2 drop'],
+    allowedActionTags: ['airway', 'oxygenation', 'respiratory', 'bronchospasm', 'assessment', 'reassessment', 'escalation', 'monitoring', 'general support'],
+    strongActionTags: ['airway', 'oxygenation', 'respiratory', 'escalation'],
+    weakActionTags: ['general support', 'comfort'],
+    inappropriateActionTags: ['skin integrity', 'fall prevention', 'infection isolation', 'glucose replacement', 'fluid resuscitation', 'antimicrobial'],
+    unsafeActionTags: [],
+    treatmentChain: ASSESS_CHAIN,
+    preferredChainTags: ['assessment', 'airway', 'oxygenation', 'respiratory', 'reassessment', 'escalation'],
+    weaknesses: ['Air'],
+    resistances: ['Fire'],
+    starTurnLimit: 5,
+    rewardBase: 35,
+    chapter: 3,
+    affinityStrong: ['respiratory'],
+    affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'cardiac', 'circulatory'],
+  },
   river_sludge: {
     clinicalCategory: 'Hypovolemia',
     diseaseTags: ['hypovolemia', 'low perfusion', 'shock'],
@@ -534,6 +573,25 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     chapter: 1,
     affinityStrong: ['infection'],
     affinityWeak: ['metabolic', 'integumentary', 'neurological', 'cardiac', 'circulatory'],
+  },
+  // Chapter 2 trial — advanced fever/inflammation encounter.
+  fever_shade: {
+    clinicalCategory: 'Fever / Inflammation',
+    diseaseTags: ['fever', 'hyperthermia', 'inflammation', 'infection'],
+    allowedActionTags: ['assessment', 'reassessment', 'fever management', 'antipyretic', 'antimicrobial', 'fluid resuscitation', 'hydration', 'monitoring', 'escalation', 'general support'],
+    strongActionTags: ['fever management', 'antipyretic', 'antimicrobial', 'fluid resuscitation'],
+    weakActionTags: ['general support', 'comfort'],
+    inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'orientation', 'fall prevention', 'skin integrity'],
+    unsafeActionTags: [],
+    treatmentChain: ['Scout', 'Counter', 'Reassess'],
+    preferredChainTags: ['assessment', 'fever management', 'antipyretic', 'fluid resuscitation', 'reassessment'],
+    weaknesses: ['River', 'Fire'],
+    resistances: [],
+    starTurnLimit: 5,
+    rewardBase: 35,
+    chapter: 2,
+    affinityStrong: ['infection', 'circulatory'],
+    affinityWeak: ['metabolic', 'integumentary', 'safety', 'neurological', 'cardiac'],
   },
   mind_fog: {
     clinicalCategory: 'Neuro',
@@ -642,6 +700,25 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     chapter: 2,
     affinityStrong: ['cardiac'],
     affinityWeak: ['infection', 'metabolic', 'integumentary', 'safety', 'neurological', 'respiratory'],
+  },
+  // Chapter 5 finale — multi-system ward collapse encounter.
+  ward_cascade: {
+    clinicalCategory: 'Multi-System / Ward Surge',
+    diseaseTags: ['ward collapse', 'multi-patient surge', 'mass casualty', 'code blue'],
+    allowedActionTags: ['assessment', 'reassessment', 'escalation', 'emergency', 'airway', 'oxygenation', 'circulation', 'fluid resuscitation', 'monitoring', 'infection isolation', 'general support'],
+    strongActionTags: ['escalation', 'emergency', 'circulation', 'airway', 'infection isolation'],
+    weakActionTags: ['comfort'],
+    inappropriateActionTags: ['glucose replacement', 'antimicrobial', 'bronchospasm', 'orientation', 'fall prevention', 'skin integrity'],
+    unsafeActionTags: [],
+    treatmentChain: ['Scout', 'Protect', 'Counter', 'Reassess'],
+    preferredChainTags: ['assessment', 'escalation', 'emergency', 'circulation', 'infection isolation', 'reassessment'],
+    weaknesses: ['Protection', 'River'],
+    resistances: ['Mind'],
+    starTurnLimit: 7,
+    rewardBase: 60,
+    chapter: 5,
+    affinityStrong: ['circulatory', 'respiratory', 'infection'],
+    affinityWeak: ['metabolic', 'integumentary', 'neurological'],
   },
   lord_imbalance: {
     clinicalCategory: 'Multi-System',
