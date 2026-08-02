@@ -140,7 +140,7 @@ interface BattleEnemyInfo {
   id: string;
   name: string;
   realWorld: string;
-  primarySystem: ElementSystem;
+  primarySystem?: ElementSystem;
   secondarySystem?: ElementSystem;
   // weakSystem removed (Push 1) — use weakElement if counter info is needed in UI (Push 2).
   dangerTrigger: string;
@@ -172,8 +172,8 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
     setInfoOpen(false);
   }, [enemy.id]);
 
-  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[enemy.primarySystem] ?? BATTLE_BG;
-  const accent = ELEMENT_COLORS[enemy.primarySystem] || COLORS.brand;
+  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[enemy.primarySystem ?? 'Air'] ?? BATTLE_BG;
+  const accent = ELEMENT_COLORS[enemy.primarySystem ?? 'Air'] || COLORS.brand;
 
   return (
     <View style={styles.arena} testID="battlefield-scene">
@@ -394,8 +394,8 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
   const [react, setReact] = useState<EnemyReact>(ENEMY_REACT.strike);
   const [atkFx, setAtkFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
   const sprite = getEnemySprite(enemy.id);
-  const color = ELEMENT_COLORS[enemy.primarySystem] || COLORS.error;
-  const primaryIcon = SYSTEM_ICONS[enemy.primarySystem];
+  const color = ELEMENT_COLORS[enemy.primarySystem ?? 'Air'] || COLORS.error;
+  const primaryIcon = SYSTEM_ICONS[enemy.primarySystem ?? 'Air'];
   const secondaryIcon = enemy.secondarySystem ? SYSTEM_ICONS[enemy.secondarySystem] : null;
 
   useEffect(() => {

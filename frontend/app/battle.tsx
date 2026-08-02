@@ -1342,8 +1342,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           id: enemy.id,
           name: enemy.name,
           realWorld: enemy.realWorld,
-          // primarySystem: deprecated/optional; BattlefieldScene uses it as display-only FX/colour key
-          primarySystem: enemy.primarySystem!,
+          // primarySystem: optional; BattlefieldScene falls back to 'Air' when absent
+          primarySystem: enemy.primarySystem,
           secondarySystem: enemy.secondarySystem,
           // weakSystem removed in Push 1 — not passed to BattlefieldScene
           dangerTrigger: enemy.dangerTrigger,
