@@ -650,6 +650,42 @@ function SkillsTab({ hero, accent }: { hero: any; accent: string }) {
   );
 }
 
+// Map each stat-bonus field to a display label and battle role hint.
+const STAT_BONUS_META: { key: keyof import("@/src/game/equipment").EquipmentEffect; label: string; hint: string }[] = [
+  { key: "insightBonus",      label: "Insight",      hint: "Scout & Analyze skills" },
+  { key: "carePowerBonus",    label: "Care Power",   hint: "Stabilize skills" },
+  { key: "interventionBonus", label: "Intervention", hint: "Strike skills" },
+  { key: "guardBonus",        label: "Guard",        hint: "Shield skills" },
+  { key: "coordinationBonus", label: "Coordination", hint: "Call for Help & chain bonuses" },
+];
+
+/** Renders one row per non-zero flat stat bonus in an EquipmentEffect. */
+function EquipmentStatBonusRows({
+  effect,
+  dimmed,
+}: {
+  effect: import("@/src/game/equipment").EquipmentEffect | undefined;
+  dimmed?: boolean;
+}) {
+  if (!effect) return null;
+  const rows = STAT_BONUS_META.filter((m) => (effect[m.key] ?? 0) !== 0);
+  if (rows.length === 0) return null;
+  return (
+    <View style={{ marginTop: 4, gap: 2 }}>
+      {rows.map((m) => (
+        <View key={m.key} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text style={[styles.equipStatLine, dimmed && { color: COLORS.onSurfaceTertiary }]}>
+            +{effect[m.key]} {m.label}
+          </Text>
+          <Text style={[styles.equipSourceLine, { fontSize: 11 }, dimmed && { color: COLORS.onSurfaceTertiary }]}>
+            → {m.hint}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
   const { player, equipItem, unequipItem } = usePlayer();
   // Role-specific future items (legacy display)
@@ -734,6 +770,7 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
                     )}
                   </View>
                   <Text style={[styles.equipStatLine, { marginTop: 2 }]}>{item.mainStat}</Text>
+                  <EquipmentStatBonusRows effect={item.effect} />
                   <Text style={styles.equipItemDesc}>{item.description}</Text>
                   <Pressable
                     onPress={() =>
@@ -770,6 +807,7 @@ function EquipmentTab({ hero, accent }: { hero: any; accent: string }) {
                   </View>
                 </View>
                 <Text style={[styles.equipStatLine, { marginTop: 2, color: COLORS.onSurfaceTertiary }]}>{item.mainStat}</Text>
+                <EquipmentStatBonusRows effect={item.effect} dimmed />
                 <Text style={[styles.equipItemDesc, { color: COLORS.onSurfaceTertiary }]}>{item.description}</Text>
                 <Text style={[styles.equipSourceLine, { marginTop: 4 }]}>How to earn: {item.source}</Text>
                 <View style={[styles.equipActionBtn, { borderColor: COLORS.border, opacity: 0.5, flexDirection: "row", alignItems: "center", gap: 4 }]}>
