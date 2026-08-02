@@ -13,7 +13,7 @@ import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel } from "@/src/game/university";
 import { LAUNCH_ROSTER, FAMILY_COLORS } from "@/src/game/heroRoster";
-import { SKILL_CLINICAL, normalizePathwayRoles } from "@/src/game/clinical";
+import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { usePlayer } from "@/src/game/store";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -30,8 +30,8 @@ function getHeroChainRoles(heroId: string): string[] {
   const seen = new Set<string>();
   for (const skill of hero.skills) {
     const clinical = SKILL_CLINICAL[skill.id];
-    // NM-01: prefer canonical pathwayRoles; normalize legacy chainRoles as fallback.
-    const resolved = clinical?.pathwayRoles ?? normalizePathwayRoles(clinical?.chainRoles ?? []);
+    // NM-01: canonical pathwayRoles.
+    const resolved = clinical?.pathwayRoles ?? [];
     resolved.forEach(r => seen.add(r));
   }
   return Array.from(seen).slice(0, 3);

@@ -38,7 +38,7 @@ import {
 } from "@/src/game/loadoutStore";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { HEROES } from "@/src/game/content";
-import { SKILL_CLINICAL, normalizePathwayRoles } from "@/src/game/clinical";
+import { SKILL_CLINICAL } from "@/src/game/clinical";
 import { rarityColor } from "@/src/game/gacha";
 import { ITEMS } from "@/src/game/items";
 import { CARD_POOL, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
@@ -68,8 +68,8 @@ function getHeroChainRoles(hero: Hero): string[] {
   const roles = new Set<string>();
   (hero.skills ?? []).forEach((sk) => {
     const clin = SKILL_CLINICAL[sk.id];
-    // NM-01: prefer canonical pathwayRoles; normalize legacy chainRoles as fallback.
-    const resolved = clin?.pathwayRoles ?? normalizePathwayRoles(clin?.chainRoles ?? []);
+    // NM-01: canonical pathwayRoles.
+    const resolved = clin?.pathwayRoles ?? [];
     resolved.forEach((r) => roles.add(r));
   });
   return [...roles].slice(0, 3);

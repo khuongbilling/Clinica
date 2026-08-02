@@ -11,9 +11,7 @@ import {
   buildRationale,
   CALL_CLINICAL,
   canAdvanceChain,
-  ChainRole,
   ChainState,
-  normalizePathwayRoles,
   PathwayRole,
   CHAIN_BONUSES,
   ClinicalCueQuestion,
@@ -958,8 +956,8 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     next.log.push(`⚠ Risk triggered: ${skill.risk.description} (-${pen}%)`);
   }
 
-  // Track reassess (NM-01: resolve via pathwayRoles with legacy fallback)
-  const skillResolvedRoles = action?.pathwayRoles ?? normalizePathwayRoles(action?.chainRoles ?? []);
+  // Track reassess (NM-01: resolve via canonical pathwayRoles)
+  const skillResolvedRoles = action?.pathwayRoles ?? [];
   if (skillResolvedRoles.includes('reassess')) {
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
@@ -987,7 +985,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
-    nextChainStep: (() => { const r = next.enemyClinical?.treatmentChain[next.chain.progress.length]; return r ? (normalizePathwayRoles([r])[0] ?? null) : null; })(),
+    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] ?? null,
     fullChainCompleted: next.fullChainCompleted,
     rationale: res.rationale,
   });
@@ -1105,8 +1103,8 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     effectType = 'clue';
   }
 
-  // NM-01: resolve via pathwayRoles with legacy fallback
-  const itemResolvedRoles = action?.pathwayRoles ?? normalizePathwayRoles(action?.chainRoles ?? []);
+  // NM-01: resolve via canonical pathwayRoles
+  const itemResolvedRoles = action?.pathwayRoles ?? [];
   if (itemResolvedRoles.includes('reassess')) {
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
@@ -1123,7 +1121,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
-    nextChainStep: (() => { const r = next.enemyClinical?.treatmentChain[next.chain.progress.length]; return r ? (normalizePathwayRoles([r])[0] ?? null) : null; })(),
+    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] ?? null,
     fullChainCompleted: next.fullChainCompleted,
     rationale: res.rationale,
   });
@@ -1294,8 +1292,8 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'mixed' ? 'mixed' : 'shield';
   }
 
-  // NM-01: resolve via pathwayRoles with legacy fallback
-  const cardResolvedRoles = action?.pathwayRoles ?? normalizePathwayRoles(action?.chainRoles ?? []);
+  // NM-01: resolve via canonical pathwayRoles
+  const cardResolvedRoles = action?.pathwayRoles ?? [];
   if (cardResolvedRoles.includes('reassess')) {
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
@@ -1310,7 +1308,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
-    nextChainStep: (() => { const r = next.enemyClinical?.treatmentChain[next.chain.progress.length]; return r ? (normalizePathwayRoles([r])[0] ?? null) : null; })(),
+    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] ?? null,
     fullChainCompleted: next.fullChainCompleted,
     rationale: res.rationale,
   });

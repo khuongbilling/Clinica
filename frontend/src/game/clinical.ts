@@ -122,38 +122,9 @@ export function getChapterForgiveness(chapter: number): ChapterForgiveness {
 // ACTION CLINICAL METADATA
 // ------------------------------------------------------------
 
-/** @deprecated Use PathwayRole. Kept for EnemyClinical.treatmentChain data compat until Push 2 migrates all values. */
-export type ChainRole = 'Scout' | 'Stabilize' | 'Counter' | 'Protect' | 'Reassess' | 'Command';
-
 // NM-01: canonical Care Pathway role IDs.
 export type PathwayRole = 'assess' | 'stabilize' | 'treat' | 'protect' | 'reassess' | 'escalate';
 
-/** Map from legacy ChainRole labels to canonical PathwayRole IDs. */
-const LEGACY_ROLE_MAP: Record<string, PathwayRole> = {
-  // canonical → canonical (passthrough)
-  assess: 'assess', stabilize: 'stabilize', treat: 'treat',
-  protect: 'protect', reassess: 'reassess', escalate: 'escalate',
-  // legacy → canonical
-  Scout: 'assess', Stabilize: 'stabilize', Counter: 'treat',
-  Protect: 'protect', Reassess: 'reassess', Command: 'escalate',
-};
-
-/**
- * Convert an array of legacy ChainRole strings or canonical PathwayRole strings
- * to canonical PathwayRole IDs. Unknown values are silently dropped.
- */
-export function normalizePathwayRoles(roles: string[]): PathwayRole[] {
-  const out: PathwayRole[] = [];
-  for (const r of roles) {
-    const mapped = LEGACY_ROLE_MAP[r];
-    if (mapped) {
-      out.push(mapped);
-    } else if (__DEV__) {
-      console.warn(`[NM-01] normalizePathwayRoles: unknown role "${r}" dropped`);
-    }
-  }
-  return out;
-}
 
 // Disease domain that a skill or action belongs to — drives the affinity bonus system.
 // 'general' = assessment / escalation / catch-all → always neutral (never penalised).
@@ -178,10 +149,8 @@ export interface ActionClinical {
   unsafeIfSystems?: string[];
   unsafeIfClues?: string[];
   unsafeIfMissingClues?: string[];
-  /** NM-01 canonical pathway roles. Preferred over chainRoles when present. */
+  /** NM-01 canonical pathway roles. */
   pathwayRoles?: PathwayRole[];
-  /** @deprecated Use pathwayRoles. Kept for data compat until Push 2 migrates all action maps. */
-  chainRoles?: ChainRole[];
   // Optional activation gate (used for Rapid Response style)
   conditionalRequiresLowStability?: number; // if defined, action is "weak" when stability is above this
   // Disease domain — drives the affinity modifier (super-effective / limited)
@@ -445,7 +414,7 @@ export interface EnemyClinical {
   weakActionTags: string[];
   inappropriateActionTags: string[];
   unsafeActionTags?: string[];
-  treatmentChain: ChainRole[];
+  treatmentChain: PathwayRole[];
   preferredChainTags: string[];
   weaknesses: string[]; // system types this enemy is weak to
   resistances: string[];
@@ -458,7 +427,7 @@ export interface EnemyClinical {
   affinityWeak?: DiseaseCategory[];
 }
 
-const ASSESS_CHAIN: ChainRole[] = ['Scout', 'Stabilize', 'Counter', 'Reassess'];
+const ASSESS_CHAIN: PathwayRole[] = ['assess', 'stabilize', 'treat', 'reassess'];
 
 export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
   // Chapter 9 trial / prologue tutorial enemy — same Fluid Balance clinical
@@ -580,7 +549,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['bronchospasm', 'antimicrobial', 'fluid resuscitation', 'infection isolation', 'skin integrity', 'fall prevention'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'glucose replacement', 'hypoglycemia', 'reassessment'],
     weaknesses: ['Energy'],
     resistances: ['Air', 'Fire'],
@@ -598,7 +567,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'fluid resuscitation', 'orientation'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Protect', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'protect', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'infection isolation', 'antimicrobial', 'reassessment'],
     weaknesses: ['Fire', 'Protection'],
     resistances: ['Air'],
@@ -617,7 +586,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'orientation', 'fall prevention', 'skin integrity'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'fever management', 'antipyretic', 'fluid resuscitation', 'reassessment'],
     weaknesses: ['River', 'Fire'],
     resistances: [],
@@ -635,7 +604,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'fluid resuscitation', 'antimicrobial'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Protect', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'protect', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'orientation', 'fall prevention', 'reassessment'],
     weaknesses: ['Mind', 'Protection'],
     resistances: ['Fire'],
@@ -653,7 +622,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support'],
     inappropriateActionTags: ['glucose replacement', 'orientation', 'fall prevention', 'skin integrity', 'bronchospasm'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Stabilize', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'fluid resuscitation', 'antimicrobial', 'reassessment'],
     weaknesses: ['Fire', 'River'],
     resistances: ['Mind'],
@@ -671,7 +640,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support'],
     inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'orientation', 'fall prevention', 'antimicrobial'],
     unsafeActionTags: ['fluid resuscitation'], // critical: fluids worsen CHF
-    treatmentChain: ['Scout', 'Stabilize', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'oxygenation', 'reassessment'],
     weaknesses: ['Air', 'River'],
     resistances: ['Fire'],
@@ -689,7 +658,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support'],
     inappropriateActionTags: ['bronchospasm', 'orientation', 'fall prevention', 'antimicrobial', 'glucose replacement'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Stabilize', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'fluid resuscitation', 'reassessment'],
     weaknesses: ['Energy', 'Storm'],
     resistances: ['Air'],
@@ -725,7 +694,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support'],
     inappropriateActionTags: ['bronchospasm', 'glucose replacement', 'antimicrobial', 'orientation', 'fall prevention'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Stabilize', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'circulation', 'reassessment'],
     weaknesses: ['Storm', 'River'],
     resistances: ['Fire'],
@@ -744,7 +713,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['comfort'],
     inappropriateActionTags: ['glucose replacement', 'antimicrobial', 'bronchospasm', 'orientation', 'fall prevention', 'skin integrity'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Protect', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'protect', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'escalation', 'emergency', 'circulation', 'infection isolation', 'reassessment'],
     weaknesses: ['Protection', 'River'],
     resistances: ['Mind'],
@@ -762,7 +731,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['skin integrity'],
     unsafeActionTags: [],
-    treatmentChain: ['Scout', 'Stabilize', 'Counter', 'Reassess'],
+    treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'airway', 'circulation', 'reassessment', 'escalation'],
     weaknesses: ['Air', 'River', 'Mind'],
     resistances: [],
@@ -780,7 +749,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
     unsafeActionTags: [],
-    treatmentChain: ['Stabilize', 'Reassess'],
+    treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['oxygenation', 'reassessment'],
     weaknesses: ['Air'],
     resistances: [],
@@ -798,7 +767,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
     unsafeActionTags: [],
-    treatmentChain: ['Stabilize', 'Reassess'],
+    treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['airway', 'reassessment'],
     weaknesses: ['Air'],
     resistances: [],
@@ -816,7 +785,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support'],
     inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial', 'fluid resuscitation'],
     unsafeActionTags: [],
-    treatmentChain: ['Stabilize', 'Reassess'],
+    treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['comfort', 'reassessment'],
     weaknesses: ['Mind'],
     resistances: [],
@@ -834,7 +803,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
     unsafeActionTags: [],
-    treatmentChain: ['Stabilize', 'Reassess'],
+    treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['bronchospasm', 'reassessment'],
     weaknesses: ['Air'],
     resistances: [],
@@ -852,7 +821,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     weakActionTags: ['general support', 'comfort'],
     inappropriateActionTags: ['skin integrity', 'fall prevention', 'glucose replacement', 'antimicrobial'],
     unsafeActionTags: [],
-    treatmentChain: ['Stabilize', 'Reassess'],
+    treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['circulation', 'reassessment'],
     weaknesses: ['River'],
     resistances: [],
@@ -1204,15 +1173,12 @@ export function canAdvancePathway(
   if (!action || !enemy) return null;
   if (chain.completed) return null;
 
-  // Normalize the next required step from the enemy's treatmentChain (may be
-  // a legacy ChainRole label like 'Scout' or a canonical value like 'assess').
-  const rawStep = enemy.treatmentChain[chain.progress.length];
-  if (!rawStep) return null;
-  const nextStep = normalizePathwayRoles([rawStep])[0];
+  // All treatmentChain values are canonical PathwayRole IDs.
+  const nextStep = enemy.treatmentChain[chain.progress.length];
   if (!nextStep) return null;
 
-  // Resolve action roles: prefer pathwayRoles, fall back to normalizing legacy chainRoles.
-  const roles = action.pathwayRoles ?? normalizePathwayRoles(action.chainRoles ?? []);
+  // Resolve action roles from canonical pathwayRoles.
+  const roles = action.pathwayRoles ?? [];
   if (!roles.includes(nextStep)) return null;
 
   // NM-01: element/system matching removed — clinical tag overlap is the sole qualifier.
