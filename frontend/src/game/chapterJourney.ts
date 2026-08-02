@@ -351,8 +351,8 @@ export const CHAPTERS: Chapter[] = [
       secondaryRoute: "/university/skill-academy",
     },
     // P8: required nodes that must be cleared before Chapter 3 unlocks.
-    // c2p5 = Fever Imp Simulation (Ward Shift), c2p7 = Trial: Fever Shade (mini-boss).
-    requiredCompletionNodes: ["c2p5", "c2p7"],
+    // c2p5 = Fever Imp Simulation (Ward Shift), c2p8 = Trial: Fever Shade (mini-boss, last node).
+    requiredCompletionNodes: ["c2p5", "c2p8"],
     parts: [
       // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
@@ -527,10 +527,22 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
-      // ── Node 7 — Chapter Trial (Mini-Boss) ───────────────────────────────
+      // ── Node 7 — Reflection ───────────────────────────────────────────────
       {
         id: "c2p7",
         part: 7,
+        type: "reflection",
+        title: "Rotation Complete",
+        description: "The ward holds. Fever is understood, not feared. The System seals the chapter — and the door to Chapter 3 begins to glow.",
+        icon: "checkmark-circle-outline",
+        isPlaceholder: true,
+        rewardXp: 10,
+        rewardCoins: 25,
+      },
+      // ── Node 8 — Chapter Trial (Mini-Boss, last node) ─────────────────────
+      {
+        id: "c2p8",
+        part: 8,
         type: "mini_boss",
         title: "Trial: Fever Shade",
         description: "The Fever Imp's heavier cousin. Higher corruption pressure, hidden spread risk — apply your full rotation knowledge.",
@@ -540,25 +552,13 @@ export const CHAPTERS: Chapter[] = [
         rewardCoins: 35,
         rewardShards: 20,
       },
-      // ── Node 8 — Rotation Complete ────────────────────────────────────────
-      {
-        id: "c2p8",
-        part: 8,
-        type: "reflection",
-        title: "Rotation Complete",
-        description: "The ward holds. Fever is understood, not feared. The System seals the chapter — and the door to Chapter 3 begins to glow.",
-        icon: "checkmark-circle-outline",
-        isPlaceholder: true,
-        rewardXp: 10,
-        rewardCoins: 25,
-      },
     ],
   },
 
   // ─────────────────────────────────────────────────────────────────────────
   // Chapter 3 — Breath Before Battle (9 nodes, Level 4)
   // memory → story → story → battle →
-  //     memory → story → battle → mini-boss → reflection
+  //     memory → story → battle → reflection → mini-boss
   // University prep: Breathing Lesson · Shortness Cue Hunt · Airway Triage
   // Level gate raised to 4 (P23): players must grind ~200 XP after Ch2 via
   // University practice, daily quests, or shift replays — creates intentional
@@ -592,8 +592,8 @@ export const CHAPTERS: Chapter[] = [
       secondaryRoute: "/university/skill-academy",
     },
     // P9: required nodes that must be cleared before Chapter 4 unlocks.
-    // c3p7 = Breath Under Pressure (battle), c3p8 = Trial: Breathless Gale Spirit (mini-boss).
-    requiredCompletionNodes: ["c3p7", "c3p8"],
+    // c3p7 = Breath Under Pressure (battle), c3p9 = Trial: Breathless Gale Spirit (mini-boss, last node).
+    requiredCompletionNodes: ["c3p7", "c3p9"],
     parts: [
       // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
@@ -780,23 +780,10 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 25,
         rewardCoins: 25,
       },
-      // ── Node 8 — Mini-boss ────────────────────────────────────────────────
+      // ── Node 8 — Reflection ───────────────────────────────────────────────
       {
         id: "c3p8",
         part: 8,
-        type: "mini_boss",
-        title: "Trial: Breathless Gale Spirit",
-        description: "The Air Sprite's advanced form. Full respiratory cascade — intervene before SpO₂ drops beyond recovery.",
-        icon: "skull-outline",
-        route: "/battle?enemyId=gale_spirit",
-        rewardXp: 35,
-        rewardCoins: 30,
-        rewardShards: 5,
-      },
-      // ── Node 9 — Reflection ───────────────────────────────────────────────
-      {
-        id: "c3p9",
-        part: 9,
         type: "reflection",
         title: "What Air Teaches",
         description: "A quiet moment after the storm. Reflect on the breath — and why oxygen is the first language of clinical urgency.",
@@ -826,13 +813,26 @@ export const CHAPTERS: Chapter[] = [
           ],
         },
       },
+      // ── Node 9 — Chapter Trial (Mini-Boss, last node) ─────────────────────
+      {
+        id: "c3p9",
+        part: 9,
+        type: "mini_boss",
+        title: "Trial: Breathless Gale Spirit",
+        description: "The Air Sprite's advanced form. Full respiratory cascade — intervene before SpO₂ drops beyond recovery.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=gale_spirit",
+        rewardXp: 35,
+        rewardCoins: 30,
+        rewardShards: 5,
+      },
     ],
   },
 
   // ─────────────────────────────────────────────────────────────────────────
   // Chapter 4 — Code Rush (9 nodes, Level 6)
   // memory → story → battle → ward_defense →
-  //      memory → story → ward_defense → mini-boss(WD) → reflection
+  //      memory → story → ward_defense → reflection → mini-boss(WD)
   // University prep: Crowded Ward Triage · Protect the Ward Stabilize Stack
   // Level gate raised to 6 (P23): players completing Ch3 will be ~Level 5;
   // ~340 XP grind to Level 6 via University practice, replays, daily/weekly
@@ -866,8 +866,8 @@ export const CHAPTERS: Chapter[] = [
       secondaryRoute: "/university/skill-academy",
     },
     // P10: required nodes that must be cleared before Chapter 5 unlocks.
-    // c4p7 = Code Rush Second Wave (WD), c4p8 = Trial: Hold the Line (WD mini-boss).
-    requiredCompletionNodes: ["c4p7", "c4p8"],
+    // c4p7 = Code Rush Second Wave (WD), c4p9 = Trial: Hold the Line (WD mini-boss, last node).
+    requiredCompletionNodes: ["c4p7", "c4p9"],
     parts: [
       // ── Node 1 — Memory Fragment ──────────────────────────────────────────
       {
@@ -1033,23 +1033,10 @@ export const CHAPTERS: Chapter[] = [
         rewardXp: 30,
         rewardCoins: 30,
       },
-      // ── Node 8 — Mini-boss (Ward Defense finale) ─────────────────────────
+      // ── Node 8 — Reflection ───────────────────────────────────────────────
       {
         id: "c4p8",
         part: 8,
-        type: "mini_boss",
-        title: "Trial: Hold the Line",
-        description: "The Code Rush finale. An overwhelming surge tests every defensive skill you have. The ward survives — or it doesn't.",
-        icon: "skull-outline",
-        route: "/ward-defense",
-        rewardXp: 40,
-        rewardCoins: 35,
-        rewardShards: 10,
-      },
-      // ── Node 9 — Reflection ───────────────────────────────────────────────
-      {
-        id: "c4p9",
-        part: 9,
         type: "reflection",
         title: "After the Rush",
         description: "The ward is quiet. The corridor holds. A moment to breathe — and remember what made the difference.",
@@ -1078,6 +1065,19 @@ export const CHAPTERS: Chapter[] = [
             },
           ],
         },
+      },
+      // ── Node 9 — Chapter Trial (Mini-Boss, last node) ─────────────────────
+      {
+        id: "c4p9",
+        part: 9,
+        type: "mini_boss",
+        title: "Trial: Hold the Line",
+        description: "The Code Rush finale. An overwhelming surge tests every defensive skill you have. The ward survives — or it doesn't.",
+        icon: "skull-outline",
+        route: "/ward-defense",
+        rewardXp: 40,
+        rewardCoins: 35,
+        rewardShards: 10,
       },
     ],
   },

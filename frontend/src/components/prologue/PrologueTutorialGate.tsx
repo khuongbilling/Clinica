@@ -4,7 +4,7 @@
  * Phase: opening_battle_tutorial
  *
  * A thin gate component that navigates to the real guided ward tutorial battle
- * (dehydration_wisp / prologueBattle tutorial) on mount.
+ * (dehydration_specter / prologueBattle tutorial) on mount.
  *
  * The loaner team for this battle is Florence Nightingale + Alexander Fleming
  * + The Prodigy (configured in battle.tsx via the isPrologueTutorial flag).
