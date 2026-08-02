@@ -52,6 +52,26 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if ((p.runs_completed ?? 0) > 0 && !p.diagnostic_intro_seen) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
   if ((p.runs_completed ?? 0) > 0 && !p.identity_restored)     { p = { ...p, identity_restored: true };     changed = true; }
   if (p.avatar_id === undefined) { p = { ...p, avatar_id: '' }; changed = true; }
+  // Task 369 — one-time migration: rewrite stored legacy learning_profile IDs
+  // to their canonical equivalents so the dual-branch fallbacks in
+  // getTutorialTier / getInitialFeedbackLevel / getStarRules /
+  // DEFAULT_DIFFICULTY_BY_PROFILE / getExplanationLayer can be safely removed
+  // in a future push.  Only IDs with byte-for-byte identical behaviour in all
+  // five functions are remapped here; `preNursing` is intentionally excluded
+  // because its explanation layer (simpleMedical) differs from nursing_student.
+  {
+    const LEGACY_PROFILE_MAP: Record<string, string> = {
+      nonmedical:            'curious',
+      nursingStudent:        'nursing_student',
+      nclexPrep:             'nclex',
+      healthcareProfessional: 'professional',
+    };
+    const lp = p.learning_profile as string | null | undefined;
+    if (lp && Object.prototype.hasOwnProperty.call(LEGACY_PROFILE_MAP, lp)) {
+      p = { ...p, learning_profile: LEGACY_PROFILE_MAP[lp] };
+      changed = true;
+    }
+  }
   // Push 5 — existing players (created before this push) never had the
   // reminiscence scene, so backfill them as "already seen" rather than
   // surprising returning players with it. Brand-new players get `false`
