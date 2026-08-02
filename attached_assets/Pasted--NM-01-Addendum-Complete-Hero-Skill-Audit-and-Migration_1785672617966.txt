@@ -1,0 +1,481 @@
+# NM-01 Addendum: Complete Hero Skill Audit and Migration
+
+As part of the Canonical Combat Vocabulary Migration, audit **every hero ability and action source** in the project and migrate it to the final combat terminology and data structure.
+
+Do not limit the audit to `SKILL_CLINICAL`. Search all hero data, ability registries, generated abilities, progression unlocks, alternate forms, temporary skills, ultimates, passives, equipment-granted actions, items, cards, and call actions.
+
+## 1. Audit Scope
+
+Inspect every:
+
+* basic hero skill;
+* upgraded skill;
+* ultimate;
+* passive ability;
+* leader ability;
+* equipment-granted ability;
+* temporary battle action;
+* item action;
+* card action;
+* summon or companion action;
+* transformation or alternate-form ability;
+* tutorial-only ability;
+* event-exclusive ability;
+* unreleased or placeholder ability that can still load into combat.
+
+Produce a complete inventory before modifying data.
+
+For each action, record:
+
+```text
+Action ID
+Display name
+Source hero or system
+Action type
+Current chainRoles
+Canonical pathwayRoles
+Clinical tags
+Clinical system/domain
+Element behavior
+Hero stat used
+AP cost
+Target type
+Cast timing behavior
+Leader interaction
+Care Pathway eligibility
+Issues found
+Changes made
+```
+
+## 2. Canonical Pathway Roles
+
+Replace legacy role values with canonical machine IDs:
+
+```text
+Scout     → assess
+Stabilize → stabilize
+Counter   → treat
+Protect   → protect
+Reassess  → reassess
+Command   → escalate
+```
+
+Rename:
+
+```text
+chainRoles → pathwayRoles
+```
+
+New and migrated actions must store only:
+
+```text
+assess
+stabilize
+treat
+protect
+reassess
+escalate
+```
+
+Legacy values may be accepted only through the centralized compatibility normalizer.
+
+Do not leave legacy and canonical fields active on the same runtime object.
+
+## 3. Role Classification Standards
+
+Assign roles according to what the action actually does.
+
+### Assess
+
+Use when the action:
+
+* gathers clinical information;
+* reveals clues;
+* checks status, vitals, patterns, or risk;
+* discovers weaknesses or hidden conditions;
+* establishes a baseline.
+
+### Stabilize
+
+Use when the action:
+
+* immediately improves Stability;
+* supports airway, breathing, circulation, comfort, or acute function;
+* prevents immediate deterioration;
+* creates short-term physiologic support.
+
+### Treat
+
+Use when the action:
+
+* directly addresses the active cause or manifestation of the condition;
+* removes or reduces disease burden;
+* applies a targeted therapeutic intervention;
+* causes clinically framed corruption reduction.
+
+Do not use `treat` merely because an action is useful.
+
+### Protect
+
+Use when the action:
+
+* prevents spread;
+* isolates exposure;
+* protects skin, safety, medication integrity, or environmental safety;
+* creates a clinical safeguard or barrier.
+
+Fantasy shields are not automatically `protect`. They require a clinical prevention or safety function.
+
+### Reassess
+
+Use when the action:
+
+* evaluates response after intervention;
+* updates previously gathered information;
+* reveals treatment success, failure, overcorrection, or deterioration;
+* verifies whether the plan remains appropriate.
+
+### Escalate
+
+Use when the action:
+
+* calls another discipline;
+* activates rapid response;
+* coordinates team care;
+* obtains consultation;
+* transfers, refers, or elevates the level of care.
+
+## 4. Multi-Role Requirements
+
+An action may have multiple pathway roles only when its actual behavior supports each role.
+
+Examples:
+
+```text
+river_surge:
+[stabilize, treat]
+```
+
+Valid because it can restore perfusion and directly treat fluid depletion.
+
+```text
+glucose_round:
+[assess, treat]
+```
+
+Valid if the action checks glucose and provides or directs correction.
+
+Do not assign extra roles merely to make a skill more flexible.
+
+Each use may advance only one pathway step: the next required step.
+
+By default, the same action may not fill two consecutive pathway steps unless the encounter explicitly permits repetition.
+
+## 5. Mandatory Review of Known Skills
+
+Review at minimum:
+
+| Skill               | Initial expected review                                              |
+| ------------------- | -------------------------------------------------------------------- |
+| `lantern_of_clues`  | assess                                                               |
+| `infection_scan`    | assess                                                               |
+| `vital_ward`        | assess, reassess                                                     |
+| `focused_lens`      | assess, reassess                                                     |
+| `threadwatch`       | assess, reassess                                                     |
+| `codex_link`        | likely assess, escalate; retain treat only if it performs treatment  |
+| `pattern_sight`     | primarily assess; retain treat only if therapeutic                   |
+| `glucose_round`     | assess, treat                                                        |
+| `reassess`          | reassess, possibly assess                                            |
+| `breath_of_dawn`    | stabilize, treat                                                     |
+| `guardians_touch`   | primarily stabilize; treat only with a defined therapeutic effect    |
+| `critical_response` | stabilize, escalate                                                  |
+| `river_surge`       | stabilize, treat                                                     |
+| `mind_anchor`       | stabilize, treat if it directly addresses delirium or disorientation |
+| `mend`              | stabilize or treat depending on actual wound effect                  |
+| `mythic_prescience` | likely assess, protect, or escalate; do not default to treat         |
+| `purity_mark`       | treat                                                                |
+| `rapid_response`    | escalate, stabilize                                                  |
+| `rally_bell`        | escalate                                                             |
+| `safety_circle`     | protect                                                              |
+| `isolation_seal`    | primarily protect; treat only if it also reduces disease burden      |
+| `skin_shield`       | protect                                                              |
+| `error_ward`        | protect                                                              |
+
+These are review expectations, not blind replacements. Confirm actual code behavior, skill text, targeting, and effects before final classification.
+
+## 6. Clinical Tag Audit
+
+For every action, review its `clinicalTags`.
+
+Tags must describe the clinical function, not the fantasy appearance.
+
+Good examples:
+
+```text
+assessment
+vital_monitoring
+fluid_status
+fluid_resuscitation
+airway_support
+oxygenation
+glucose_assessment
+glucose_correction
+infection_control
+antimicrobial_treatment
+fall_prevention
+medication_safety
+wound_care
+response_evaluation
+care_coordination
+rapid_escalation
+```
+
+Avoid vague or overloaded tags such as:
+
+```text
+healing
+medical
+support
+power
+magic
+river
+fire
+good
+universal
+```
+
+Element names must not be used as substitutes for clinical tags.
+
+## 7. Elemental Counter Isolation
+
+Confirm that hero skills do not use clinical tags, action systems, or pathway roles to trigger Elemental Counter.
+
+Elemental Counter requires only:
+
+```text
+action is a strike
+AND hero.element matches enemy.weakElement
+```
+
+A skill’s fantasy visuals may use any element, but its clinical classification remains independent.
+
+For every skill, confirm:
+
+* whether it is mechanically a strike;
+* whether Elemental Counter is eligible;
+* whether it is non-strike despite having an attack animation;
+* whether damage-over-time snapshots the original strike counter;
+* whether its description incorrectly implies medical appropriateness from elemental advantage.
+
+## 8. Action-Type and Stat Audit
+
+Confirm that each action uses the correct hero stat:
+
+| Action function                   | Primary stat |
+| --------------------------------- | ------------ |
+| Assess or analyze                 | Insight      |
+| Stabilize, support, cleanse       | Care Power   |
+| Strike or direct treatment attack | Intervention |
+| Shield or defensive barrier       | Guard        |
+| Escalate or team command          | Coordination |
+
+Multi-effect skills may need separate effect components.
+
+Example:
+
+```text
+An action that assesses and then deals treatment damage:
+Assessment component → Insight
+Treatment component → Intervention
+```
+
+Do not assign one stat to every component merely because the action has one display name.
+
+Flag any ability whose stat source does not match its actual function.
+
+## 9. Care Pathway Eligibility
+
+For every skill, document whether it can advance the Clinical Care Pathway.
+
+Advancement requires:
+
+```text
+next required role is included in pathwayRoles
+AND Intervention Fit is Strong or Appropriate
+AND step-specific clinical-tag requirements pass
+```
+
+Remove all pathway advancement based on:
+
+* hero element;
+* enemy weakElement;
+* visual system matching;
+* Universal classification alone.
+
+A Universal skill must still be clinically Strong or Appropriate.
+
+## 10. Description and UI Audit
+
+Update skill descriptions so player-facing language uses:
+
+```text
+Assess
+Stabilize
+Treat
+Protect
+Reassess
+Escalate
+```
+
+Do not display legacy terms such as:
+
+```text
+Scout
+Counter as a clinical role
+Command as a clinical role
+Care Chain
+```
+
+Reserve **Elemental Counter** exclusively for the fantasy strike mechanic.
+
+Skill descriptions should distinguish:
+
+```text
+Clinical role
+Clinical tags or purpose
+Elemental strike eligibility
+Actual battle effects
+```
+
+Do not imply that a skill is clinically appropriate merely because it can trigger an Elemental Counter.
+
+## 11. Balance Preservation
+
+During NM-01, do not change:
+
+* base effect values;
+* AP costs;
+* cooldowns;
+* hero stats;
+* equipment bonuses;
+* cast timing windows;
+* leader multipliers;
+* ultimate charge values;
+* enemy HP or resistance;
+* skill rarity;
+* skill unlock level.
+
+Exceptions are allowed only when a classification error causes a skill to use the wrong formula or stat. Report such cases rather than silently rebalance them.
+
+## 12. Legacy Compatibility
+
+The compatibility layer may read:
+
+```text
+chainRoles: ["Scout", "Counter"]
+```
+
+and normalize it to:
+
+```text
+pathwayRoles: ["assess", "treat"]
+```
+
+Runtime combat state must use only canonical values.
+
+New saves, generated skills, and edited data must never write legacy role labels.
+
+## 13. Validation Rules
+
+Add validation that rejects or warns about:
+
+* missing `pathwayRoles`;
+* invalid role IDs;
+* both `chainRoles` and `pathwayRoles` on one object;
+* clinical `Counter` remaining as a stored role;
+* clinical `Command` remaining as a stored role;
+* element names used as the sole clinical tags;
+* Treat role without a direct therapeutic effect;
+* Reassess role without evaluation behavior;
+* Escalate role without coordination or consultation behavior;
+* Protect role attached only because a skill grants a fantasy shield;
+* non-strike actions marked as Elemental Counter eligible;
+* actions using an incorrect hero stat;
+* duplicated role entries;
+* skill descriptions using deprecated terminology.
+
+## 14. Required Testing
+
+Test at least:
+
+1. Every hero skill loads successfully.
+2. Every action has valid canonical `pathwayRoles`.
+3. Legacy roles normalize correctly.
+4. New saves contain no legacy role names.
+5. Multi-role actions advance only one pathway step per use.
+6. A repeated dual-role action cannot fill consecutive steps unless explicitly permitted.
+7. Elemental Counter activates only for eligible strikes.
+8. Elemental Counter does not cause pathway advancement.
+9. Strong or Appropriate Intervention Fit permits advancement.
+10. Weak or Inappropriate Intervention Fit blocks advancement.
+11. Every action uses the intended stat.
+12. Ultimates and passives do not crash when canonical roles are absent or inapplicable.
+13. Tutorial and event-only skills still function.
+14. Partially completed pathways survive save migration.
+15. UI descriptions match canonical terminology.
+
+## 15. Required Completion Report
+
+Report:
+
+### Inventory
+
+```text
+Total heroes audited
+Total active skills audited
+Total ultimates audited
+Total passives audited
+Total temporary or event actions audited
+Total items/cards/calls audited
+```
+
+### Migration results
+
+```text
+Scout → assess replacements
+Counter → treat replacements
+Command → escalate replacements
+chainRoles → pathwayRoles replacements
+Skills with role changes beyond renaming
+Skills with clinical-tag corrections
+Skills with stat-source corrections
+Skills with Elemental Counter eligibility corrections
+```
+
+### Outstanding issues
+
+List:
+
+* ambiguous abilities requiring design decisions;
+* skills whose description conflicts with actual behavior;
+* skills that appear overtuned or undertuned, without changing their balance;
+* legacy references that remain;
+* files that could not be safely migrated;
+* tests that failed.
+
+Do not mark the audit complete while unexplained legacy references remain.
+
+## Acceptance Criteria
+
+The hero-skill audit is complete when:
+
+1. Every combat-capable hero and action source has been inventoried.
+2. Every applicable action uses canonical pathway roles.
+3. No runtime skill uses legacy `chainRoles`.
+4. No clinical role is stored as `Counter` or `Command`.
+5. Skill clinical tags describe clinical function rather than element.
+6. Elemental Counter eligibility is correctly limited to strikes.
+7. Pathway advancement no longer uses element matching.
+8. Skill descriptions use consistent terminology.
+9. Existing saves migrate without losing equipped skills or progress.
+10. All affected combat and migration tests pass.
