@@ -1,5 +1,5 @@
 import { getDifficultyModifier } from './difficulty';
-import { ElementSystem, Enemy, Hero, HeroSkill } from './types';
+import { AffinityFamily, ElementSystem, Enemy, Hero, HeroSkill } from './types';
 import { CallOption, Item, ITEMS, TEMP_ACTIONS } from './items';
 import { CARD_CLINICAL, CARD_POOL, drawCards, getCard, SkillCard } from './cards';
 import {
@@ -40,7 +40,7 @@ import {
   TEMP_CLINICAL,
   ULTIMATE_BY_ROLE,
   ULTIMATE_CHARGE_MAX,
-  SYSTEM_TO_CUE_TOPIC,
+  AFFINITY_TO_CUE_TOPIC,
 } from './clinical';
 import {
   calcShieldEffect,
@@ -311,7 +311,7 @@ export function getWaveDefenseModifier(target: Enemy, wave: WaveMember[]): numbe
   let mod = 1;
   for (const m of wave) {
     if (m.defeated || m.enemy.id === target.id) continue;
-    if (m.enemy.behaviorTag === 'wheeze' && target.primarySystem === 'Air') mod *= 0.5;
+    if (m.enemy.behaviorTag === 'wheeze' && target.primaryAffinity === 'Airway / Respiratory') mod *= 0.5;
     if (m.enemy.behaviorTag === 'mucus' && target.id === m.enemy.id) mod *= 0.4;
   }
   if (target.behaviorTag === 'mucus') mod *= 0.6;
@@ -432,8 +432,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
   const limitedCardMode = equippedCards.length > 0;
   const hand = limitedCardMode ? equippedCards.slice(0, 3) : drawCards(3);
   const cardDeck = limitedCardMode ? equippedCards.slice(3) : [];
-  // primarySystem is deprecated/optional; used here as display-only topic hint only
-  const pendingCue = getRandomClinicalCue([], { chapter, topicHint: enemy.primarySystem ? SYSTEM_TO_CUE_TOPIC[enemy.primarySystem] : undefined });
+  const pendingCue = getRandomClinicalCue([], { chapter, topicHint: enemy.primaryAffinity ? AFFINITY_TO_CUE_TOPIC[enemy.primaryAffinity] : undefined });
 
   return {
     enemy,
@@ -1021,11 +1020,15 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     next.blockNextSpread = true;
     next.log.push(`🛡 Spread contained — the next spread attack is blocked.`);
   }
-  if (skill.risk?.ifSystem && (skill.risk.ifSystem === s.enemy.primarySystem || skill.risk.ifSystem === s.enemy.secondarySystem)) {
-    const pen = skill.risk.penalty || 15;
-    next.stability = clamp(next.stability - pen, 0, 100);
-    next.unsafeActionsUsed = next.unsafeActionsUsed + 1;
-    next.log.push(`⚠ Risk triggered: ${skill.risk.description} (-${pen}%)`);
+  if (skill.risk?.ifSystem) {
+    const enemyEl = s.enemy.primaryAffinity ? AFFINITY_TO_ELEMENT[s.enemy.primaryAffinity] : undefined;
+    const enemySecEls = (s.enemy.secondaryAffinities ?? []).map(a => AFFINITY_TO_ELEMENT[a]);
+    if (skill.risk.ifSystem === enemyEl || enemySecEls.includes(skill.risk.ifSystem)) {
+      const pen = skill.risk.penalty || 15;
+      next.stability = clamp(next.stability - pen, 0, 100);
+      next.unsafeActionsUsed = next.unsafeActionsUsed + 1;
+      next.log.push(`⚠ Risk triggered: ${skill.risk.description} (-${pen}%)`);
+    }
   }
 
   // Track reassess (NM-01: resolve via canonical pathwayRoles)
@@ -1483,8 +1486,7 @@ export function maybeTriggerClinicalCue(s: BattleState): BattleState {
   if (s.pendingCue) return s;
   if (s.cuesAnswered.length >= 4) return s;
   const isBoss = (s.enemyClinical?.rewardBase || 0) >= 100;
-  // primarySystem is deprecated/optional; used here as display-only topic hint only
-  const topicHint = s.enemy.primarySystem ? SYSTEM_TO_CUE_TOPIC[s.enemy.primarySystem] : undefined;
+  const topicHint = s.enemy.primaryAffinity ? AFFINITY_TO_CUE_TOPIC[s.enemy.primaryAffinity] : undefined;
   return {
     ...s,
     pendingCue: getRandomClinicalCue(s.cuesAnswered, { chapter: s.chapter, isBoss, topicHint }),
@@ -1570,10 +1572,10 @@ function _applyCallCore(s: BattleState, option: CallOption, addedItemName?: stri
     if (revealedLower.some(l => l.includes('wheez'))) itemKey = 'Albuterol Mist';
     else if (revealedLower.some(l => l.includes('glucose'))) itemKey = 'Glucose Gel';
     else if (revealedLower.some(l => /bp|blood pressure/.test(l))) itemKey = 'Fluid Bolus';
-    else if (s.enemy.primarySystem === 'Fire' || (s.enemyClinical?.diseaseTags || []).some(t => /infection|spread/.test(t))) itemKey = 'Isolation Kit';
-    else if (s.enemy.primarySystem === 'Air') itemKey = 'Albuterol Mist';
-    else if (s.enemy.primarySystem === 'Energy') itemKey = 'Glucose Gel';
-    else if (s.enemy.primarySystem === 'River') itemKey = 'Fluid Bolus';
+    else if (s.enemy.primaryAffinity === 'Fire / Inflammation' || (s.enemyClinical?.diseaseTags || []).some(t => /infection|spread/.test(t))) itemKey = 'Isolation Kit';
+    else if (s.enemy.primaryAffinity === 'Airway / Respiratory') itemKey = 'Albuterol Mist';
+    else if (s.enemy.primaryAffinity === 'Energy / Metabolic') itemKey = 'Glucose Gel';
+    else if (s.enemy.primaryAffinity === 'Fluid / Hydration') itemKey = 'Fluid Bolus';
 
     next.inventory = { ...next.inventory, [itemKey]: (next.inventory[itemKey] || 0) + 1 };
     next.preparedItemDiscount = itemKey;
@@ -1583,7 +1585,7 @@ function _applyCallCore(s: BattleState, option: CallOption, addedItemName?: stri
   }
 
   if (option.id === 'call_respiratory') {
-    const appropriate = s.enemy.primarySystem === 'Air' || hasRespClue;
+    const appropriate = s.enemy.primaryAffinity === 'Airway / Respiratory' || hasRespClue;
     if (!appropriate) {
       next.inappropriateConsultsUsed = next.inappropriateConsultsUsed + 1;
       next.log.push(`Respiratory Support does not fit the current clues. Limited benefit.`);
@@ -1607,7 +1609,7 @@ function _applyCallCore(s: BattleState, option: CallOption, addedItemName?: stri
   }
 
   if (option.id === 'call_infection') {
-    const appropriate = s.enemy.primarySystem === 'Fire'
+    const appropriate = s.enemy.primaryAffinity === 'Fire / Inflammation'
       || (s.enemyClinical?.diseaseTags || []).some(t => /infection|spread/.test(t))
       || hasInfectionClue;
     if (!appropriate) {
@@ -1687,6 +1689,22 @@ export interface EnemySignatureAttack {
   kind: EnemyAttackKind;
 }
 
+// Maps every AffinityFamily to its canonical ElementSystem so we can look up
+// SIGNATURE_ATTACKS by primaryAffinity without duplicating the attack table.
+const AFFINITY_TO_ELEMENT: Partial<Record<AffinityFamily, ElementSystem>> = {
+  'Airway / Respiratory':    'Air',
+  'Fluid / Hydration':       'River',
+  'Fire / Inflammation':     'Fire',
+  'Energy / Metabolic':      'Energy',
+  'Storm / Cardiac':         'Storm',
+  'Mind / Neuro-Psych':      'Mind',
+  'Filter / Renal':          'Filter',
+  'Growth / Endocrine':      'Growth',
+  'Protection / Immune':     'Protection',
+  'Wound / Tissue':          'Forge',
+  // 'Community / Public Health' has no direct ElementSystem analogue; falls through to default.
+};
+
 // assault → raw stability damage (full).
 // spread  → trades half the stability damage for spreading corruption back.
 // hex     → trades half the stability damage for hampering next-turn actions.
@@ -1707,8 +1725,8 @@ const SPREAD_CORRUPTION_REGROW = 5;
 
 export function getEnemySignatureAttack(enemy: Enemy): EnemySignatureAttack {
   if (enemy.id === 'lord_imbalance') return { name: 'Cascade of Imbalance', kind: 'spread' };
-  // primarySystem is deprecated/optional; kept as display-only hint for signature-attack keying
-  return (enemy.primarySystem ? SIGNATURE_ATTACKS[enemy.primarySystem] : undefined) ?? { name: 'Corrupting Surge', kind: 'assault' };
+  const el = enemy.primaryAffinity ? AFFINITY_TO_ELEMENT[enemy.primaryAffinity] : undefined;
+  return (el ? SIGNATURE_ATTACKS[el] : undefined) ?? { name: 'Corrupting Surge', kind: 'assault' };
 }
 
 export function endPlayerTurn(s: BattleState): BattleState {

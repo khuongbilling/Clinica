@@ -1530,6 +1530,7 @@ export const CUE_TOPIC_LABELS: Record<ClinicalCueTopic, string> = {
 
 // Maps an enemy's elemental system to the topic most cues should lean toward
 // when that enemy is on screen, so the question feels connected to the fight.
+// @deprecated — use AFFINITY_TO_CUE_TOPIC keyed by enemy.primaryAffinity instead.
 export const SYSTEM_TO_CUE_TOPIC: Record<string, ClinicalCueTopic> = {
   Air: 'oxygen_breathing',
   River: 'hydration_kidneys',
@@ -1537,6 +1538,23 @@ export const SYSTEM_TO_CUE_TOPIC: Record<string, ClinicalCueTopic> = {
   Fire: 'infection_inflammation',
   Storm: 'heart_circulation',
   Mind: 'brain_stress_sleep',
+};
+
+// Maps an enemy's primaryAffinity (AffinityFamily) to the cue topic that best
+// fits that clinical domain. Covers all 11 AffinityFamily values so enemies
+// without a primarySystem always receive the right domain hint.
+export const AFFINITY_TO_CUE_TOPIC: Partial<Record<string, ClinicalCueTopic>> = {
+  'Airway / Respiratory':    'oxygen_breathing',
+  'Fluid / Hydration':       'hydration_kidneys',
+  'Energy / Metabolic':      'blood_sugar_energy',
+  'Fire / Inflammation':     'infection_inflammation',
+  'Storm / Cardiac':         'heart_circulation',
+  'Mind / Neuro-Psych':      'brain_stress_sleep',
+  'Growth / Endocrine':      'nutrition_wellness',
+  'Filter / Renal':          'hydration_kidneys',
+  'Protection / Immune':     'infection_inflammation',
+  'Wound / Tissue':          'assessment_reassessment',
+  'Community / Public Health': 'medication_safety',
 };
 
 export const CUE_SAFETY_NOTE =
