@@ -5,6 +5,14 @@ import { Animated } from "react-native";
 import type { ViewStyle } from "react-native";
 
 const STORAGE_KEY = "clinica.tutorials.v1";
+/**
+ * Separate key for tutorials the player started but left before the final step.
+ * Dismissed tutorials are NOT shown as "completed" in the Tutorial Replay Center
+ * (so they appear available for replay) but are NOT auto-started on the next
+ * visit (so the overlay doesn't re-intrude unprompted every time the screen loads).
+ * Replay via Tutorial Replay Center clears both dismissed and completed flags.
+ */
+const DISMISSED_KEY = "clinica.tutorials.dismissed.v1";
 
 export type TutorialProgress = Partial<Record<TutorialId, boolean>>;
 
@@ -23,8 +31,12 @@ interface TutorialCtx {
   /**
    * Abandon the in-progress tutorial WITHOUT marking it complete — used when
    * the player leaves a tutorial screen mid-flow so the overlay / highlight /
-   * blocking scrim never leaks onto the next screen. Because completion is not
-   * recorded, the tutorial auto-restarts the next time its screen mounts.
+   * blocking scrim never leaks onto the next screen.
+   *
+   * The tutorial is recorded as "dismissed" (prevents noisy auto-restart on
+   * every future visit) but NOT as "completed" (so it remains available in
+   * Profile → Tutorial Replay Center / Tutorial Encyclopedia). Replay clears
+   * the dismissed flag and restarts from step 1.
    */
   clearActiveTutorial: () => void;
   isCompleted: (id: TutorialId) => boolean;
@@ -53,6 +65,12 @@ async function saveProgress(progress: TutorialProgress) {
   } catch {}
 }
 
+async function saveDismissed(dismissed: TutorialProgress) {
+  try {
+    await AsyncStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+  } catch {}
+}
+
 async function loadProgress(): Promise<TutorialProgress> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -62,8 +80,18 @@ async function loadProgress(): Promise<TutorialProgress> {
   }
 }
 
+async function loadDismissed(): Promise<TutorialProgress> {
+  try {
+    const raw = await AsyncStorage.getItem(DISMISSED_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [completed, setCompleted] = useState<TutorialProgress>({});
+  const [dismissed, setDismissed] = useState<TutorialProgress>({});
   const [activeTutorialId, setActiveTutorialId] = useState<TutorialId | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [guidedReserve, setGuidedReserve] = useState(0);
@@ -72,8 +100,10 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   // in the same frame must not preempt each other's tutorial).
   const activeRef = useRef<TutorialId | null>(null);
   const completedRef = useRef<TutorialProgress>({});
+  const dismissedRef = useRef<TutorialProgress>({});
   useEffect(() => { activeRef.current = activeTutorialId; }, [activeTutorialId]);
   useEffect(() => { completedRef.current = completed; }, [completed]);
+  useEffect(() => { dismissedRef.current = dismissed; }, [dismissed]);
 
   // Hydration guard: until the persisted completion flags have loaded,
   // startTutorial must not trust the (still empty) completedRef — otherwise a
@@ -84,13 +114,15 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const pendingStartRef = useRef<TutorialId | null>(null);
 
   useEffect(() => {
-    loadProgress().then((p) => {
+    Promise.all([loadProgress(), loadDismissed()]).then(([p, d]) => {
       completedRef.current = p;
+      dismissedRef.current = d;
       setCompleted(p);
+      setDismissed(d);
       hydratedRef.current = true;
       const pending = pendingStartRef.current;
       pendingStartRef.current = null;
-      if (pending && !activeRef.current && !p[pending]) {
+      if (pending && !activeRef.current && !p[pending] && !d[pending]) {
         activeRef.current = pending;
         setActiveTutorialId(pending);
         setStepIndex(0);
@@ -104,18 +136,28 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       saveProgress(next);
       return next;
     });
+    // If it was previously dismissed, clear that flag — it's now fully complete.
+    setDismissed(prev => {
+      if (!prev[id]) return prev;
+      const next = { ...prev, [id]: false };
+      saveDismissed(next);
+      return next;
+    });
   }, []);
 
   const startTutorial = useCallback((id: TutorialId) => {
     // ONE tutorial loop at a time: never preempt an in-progress tutorial, and
-    // never auto-restart one that's already running or already completed.
-    // (Deliberate replays go through replayTutorial, which un-completes first.)
+    // never auto-restart one that's already running, already completed, or
+    // dismissed mid-flow (player left early — they can replay via Tutorial
+    // Replay Center when ready, but the overlay should not re-intrude
+    // automatically on every subsequent visit).
     if (!hydratedRef.current) {
       if (!pendingStartRef.current) pendingStartRef.current = id;
       return;
     }
     if (activeRef.current) return;
     if (completedRef.current[id]) return;
+    if (dismissedRef.current[id]) return;
     activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
@@ -150,12 +192,20 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }, [activeTutorialId, markDone]);
 
   const replayTutorial = useCallback(async (id: TutorialId) => {
+    // Clear completed flag so the tutorial can auto-start again.
     setCompleted(prev => {
       const next = { ...prev, [id]: false };
       saveProgress(next);
       return next;
     });
     completedRef.current = { ...completedRef.current, [id]: false };
+    // Also clear dismissed flag — replay is intentional, the block is lifted.
+    setDismissed(prev => {
+      const next = { ...prev, [id]: false };
+      saveDismissed(next);
+      return next;
+    });
+    dismissedRef.current = { ...dismissedRef.current, [id]: false };
     activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
@@ -166,25 +216,30 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     // that requested it, so resolving it later would surface a stale overlay.
     pendingStartRef.current = null;
     if (!activeRef.current) return;
-    // Mark the tutorial done so it never auto-restarts on the next visit.
-    // The player has "seen" it — deliberate replay goes through replayTutorial()
-    // which un-completes first. This is the fix for the "tutorial replays on
-    // every tab/screen revisit" bug.
+    // Mark dismissed (NOT completed) so:
+    //   • The overlay does not auto-restart on the player's next visit.
+    //   • The tutorial is still shown as available in Tutorial Replay Center.
+    //   • replayTutorial() clears this flag so the player can re-experience it.
     const id = activeRef.current;
-    markDone(id);
-    completedRef.current = { ...completedRef.current, [id]: true };
+    const nextDismissed = { ...dismissedRef.current, [id]: true };
+    dismissedRef.current = nextDismissed;
+    setDismissed(nextDismissed);
+    saveDismissed(nextDismissed);
     activeRef.current = null;
     setActiveTutorialId(null);
     setStepIndex(0);
-  }, [markDone]);
+  }, []);
 
   const resetTutorials = useCallback(async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
+      await AsyncStorage.removeItem(DISMISSED_KEY);
     } catch {}
     completedRef.current = {};
+    dismissedRef.current = {};
     activeRef.current = null;
     setCompleted({});
+    setDismissed({});
     setActiveTutorialId(null);
     setStepIndex(0);
   }, []);
@@ -334,4 +389,3 @@ export function useHighlightTarget(targetId: string): {
     : {};
   return { isHighlighted, isTutorialBlocked, onTargetPress, highlightStyle, pulseAnim };
 }
-

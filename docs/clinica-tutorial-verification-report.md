@@ -120,20 +120,26 @@ equipped. The static loaner notice is the only scaffolding.
 **Storage key:** All tutorial completion flags live under `clinica.tutorials.v1` in AsyncStorage
 (`tutorialStore.tsx:7`).
 
-**`useClearTutorialOnExit` behavior** (`frontend/src/hooks/useClearTutorialOnExit.ts:6-21`):
+**`useClearTutorialOnExit` behavior** (`frontend/src/hooks/useClearTutorialOnExit.ts`):
 Installed via `useFocusEffect`; cleanup callback calls `clearActiveTutorial()` on screen blur/unmount.
-`clearActiveTutorial` (`tutorialStore.tsx:164-179`): clears queued pre-hydration starts, calls
-`markDone(id)` if an active tutorial exists, updates the completion ref, clears active ID, resets
-step index. **Leaving mid-tutorial DOES mark it complete and prevents auto-restart.**
+`clearActiveTutorial` (`tutorialStore.tsx`): clears queued pre-hydration starts, writes the tutorial
+ID to `clinica.tutorials.dismissed.v1` (NOT to the completed key), clears active ID, resets step
+index. **Leaving mid-tutorial marks it DISMISSED (not complete) — auto-restart is suppressed on the
+next visit but the tutorial remains available in Tutorial Replay Center.**
+
+Completion (`clinica.tutorials.v1`) is written only by:
+1. `doAdvance` reaching the final step (player clicked through all steps).
+2. `skipTutorial` (player tapped the explicit Skip button).
 
 | Scenario | Outcome |
 |---|---|
-| Normal navigation away | Screen blurs → `useFocusEffect` cleanup → `clearActiveTutorial` → `markDone` → persisted complete |
+| Normal navigation away | Screen blurs → `useFocusEffect` cleanup → `clearActiveTutorial` → **dismissed** (not complete) |
 | Navigation replacement | Same as above; back and replace are indistinguishable to the hook |
 | Hardware back | Same as above |
-| App force-kill/OS termination | Not guaranteed; JS cleanup may not run; already-persisted completions survive |
-| Tutorial replay | `replayTutorial(id)` writes `false` to `clinica.tutorials.v1` for that ID, re-enables it; next exit marks done again |
-| Exception: prologueBattle | Replay-started via `replayTutorial`; intentionally re-enabled each time prologue replay screen loads |
+| App force-kill/OS termination | Not guaranteed; JS cleanup may not run; any already-persisted flags survive |
+| Tutorial replay | `replayTutorial(id)` clears both `clinica.tutorials.v1` AND `clinica.tutorials.dismissed.v1` for that ID; restarts from step 1 |
+| `resetTutorials` | Removes both storage keys entirely |
+| Exception: prologueBattle | Replay-started via `replayTutorial`; both flags cleared each time prologue replay screen loads |
 
 **`startTutorial` vs storage:** `startTutorial` reads in-memory hydrated completion state (loaded
 at hydration time from the key) but does NOT directly read/write AsyncStorage. Only `markDone`
@@ -246,7 +252,7 @@ relied upon for implementation planning:
 2. **`summonIntro`** does not exist → the live `TutorialId` is `firstSummon`.
 3. **`teamIntro`** does not exist → the live `TutorialId` is `firstHeroTeam`.
 4. **`clinicalCueIntro`, `affinityMatchIntro`, `lockedActionIntro`, `careChainIntro`, `affinityIntro`, `currencyFirstEarnIntro`** do not exist in the live `TutorialId` union. They are unimplemented design targets only.
-5. **`useClearTutorialOnExit` does NOT abandon without marking complete** — the current `clearActiveTutorial` implementation calls `markDone` (`tutorialStore.tsx:169-174`). Exiting a tutorial mid-way permanently marks it done. The older hook comment describing the opposite behavior is outdated.
+5. **`useClearTutorialOnExit` now marks dismissed, not complete** — `clearActiveTutorial` writes to `clinica.tutorials.dismissed.v1`, NOT to the completion key (`clinica.tutorials.v1`). Mid-exit suppresses auto-restart but leaves the tutorial available in Tutorial Replay Center. The hook comment and `tutorialStore.tsx` are up to date.
 6. **"Summoning Shards"** is not a canonical currency name; it is a legacy alias for Codex Shards that contradicts `economy.ts` and still appears in live player-facing UI across 8+ files.
 7. **"Gold Crowns", "Ward Tokens", "Jade Scrolls"** do not appear anywhere in the codebase; they are fully unused terms that should not be referenced in any new copy or implementation work.
 
