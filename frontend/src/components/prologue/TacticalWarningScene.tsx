@@ -51,8 +51,8 @@ type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
 const SPEAKERS: Record<SpeakerId, { label: string; color: string; avatar: any; art: any; artFit: "contain" | "cover"; artHeight?: number }> = {
   MASTER_BAI:  { label: "Master Bai",           color: "#D9A441", avatar: ART.masterBai,   art: PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,  artFit: "contain", artHeight: Math.round(W * 0.68 * 1040 / 896) },
   NIGHTINGALE: { label: "Florence Nightingale",  color: "#E8C453", avatar: ART.nightingale, art: PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait, artFit: "cover"   },
-  FLEMING:     { label: "Sir Alexander Fleming", color: "#3ECFB2", avatar: ART.fleming,     art: PROLOGUE_CHARACTERS.FLEMING.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1280 / 896) },
-  PRODIGY:     { label: "The Prodigy",           color: "#7EB8F7", avatar: ART.prodigy,     art: PROLOGUE_CHARACTERS.PRODIGY.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1280 / 896) },
+  FLEMING:     { label: "Sir Alexander Fleming", color: "#3ECFB2", avatar: ART.fleming,     art: PROLOGUE_CHARACTERS.FLEMING.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1203 / 896) },
+  PRODIGY:     { label: "The Prodigy",           color: "#7EB8F7", avatar: ART.prodigy,     art: PROLOGUE_CHARACTERS.PRODIGY.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1060 / 896) },
 };
 
 const SPEAKER_ORDER: SpeakerId[] = ["MASTER_BAI", "NIGHTINGALE", "FLEMING", "PRODIGY"];

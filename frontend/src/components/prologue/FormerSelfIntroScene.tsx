@@ -59,7 +59,7 @@ const SPEAKERS: Record<
     avatar:    PROLOGUE_CHARACTERS.PRODIGY.avatar48,
     artFit:    "contain",
     artPos:    "bottom",
-    artHeight: Math.round(W * 0.74 * 1280 / 896),
+    artHeight: Math.round(W * 0.74 * 1060 / 896),
   },
   MASTER_BAI: {
     label:     PROLOGUE_CHARACTERS.MASTER_BAI.name,
@@ -88,7 +88,7 @@ const SPEAKERS: Record<
     avatar:    PROLOGUE_CHARACTERS.FLEMING.avatar48,
     artFit:    "contain",
     artPos:    "bottom",
-    artHeight: Math.round(W * 0.74 * 1280 / 896),
+    artHeight: Math.round(W * 0.74 * 1203 / 896),
   },
 };
 

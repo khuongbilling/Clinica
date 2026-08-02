@@ -79,10 +79,10 @@ const SI_SPEAKER = {
 
 // ── Portrait fit/position per speaker (Nightingale is square → cover) ────────
 const SPEAKERS: Record<PrologueSpeakerId, { artFit: "contain" | "cover"; artPos: "bottom" | "top"; artHeight?: number }> = {
-  PRODIGY:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1280 / 896) },
+  PRODIGY:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1060 / 896) },
   MASTER_BAI:  { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1040 / 896) },
   NIGHTINGALE: { artFit: "cover",   artPos: "bottom" },
-  FLEMING:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1280 / 896) },
+  FLEMING:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1203 / 896) },
 };
 
 interface Props { onComplete: () => void }
