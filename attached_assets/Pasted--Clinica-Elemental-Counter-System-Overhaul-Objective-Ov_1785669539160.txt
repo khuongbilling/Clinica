@@ -1,0 +1,912 @@
+# Clinica Elemental Counter System Overhaul
+
+## Objective
+
+Overhaul the existing elemental system so that enemy weaknesses represent **fantasy counters**, not matching elements or medical treatment relationships.
+
+The completed system must clearly separate three independent combat layers:
+
+1. **Elemental Counter**
+
+   * Fantasy matchup.
+   * Applies only to strike actions.
+   * Matching the hero’s element to the enemy’s `weakElement` gives ×1.30 strike effect.
+
+2. **Clinical Expertise**
+
+   * Compares the hero’s clinical affinities with the enemy’s clinical domain.
+   * Applies to all eligible actions.
+   * Strong ×1.18, neutral ×1.00, weak ×0.87.
+
+3. **Intervention Fit**
+
+   * Evaluates whether the selected action is clinically appropriate.
+   * Applies to all eligible actions.
+   * Strong ×1.50, appropriate ×1.00, weak ×0.60, inappropriate ×0.25.
+
+These systems must remain independent. A fantasy weakness must never determine whether an action is medically appropriate.
+
+---
+
+# 1. Core Design Principle
+
+Use this rule throughout the code, interface, tutorials, and bestiary:
+
+> The corruption aspect describes what the enemy has become.
+> The weak element describes the fantasy force that disrupts it.
+> The clinical affinity describes the health system involved.
+> Intervention Fit determines whether the selected action makes clinical sense.
+
+Example:
+
+```text
+Fever Shade
+
+Corruption Aspect: Inferno
+Weak Element: River
+Primary Clinical Affinity: Fire/Inflammation
+Secondary Clinical Affinity: Fluid/Hydration
+```
+
+A River strike receives the fantasy counter bonus.
+
+A hydration action is not automatically clinically strong merely because the hero uses River. Clinical fit must still be calculated using the action’s clinical tags.
+
+---
+
+# 2. Preserve the Ten Hero Elements
+
+Do not rename or remove the current hero elements:
+
+```text
+Air
+River
+Fire
+Energy
+Storm
+Mind
+Filter
+Forge
+Protection
+Growth
+```
+
+Heroes continue to have exactly one primary element unless an existing hero is intentionally designed otherwise.
+
+Example:
+
+```text
+hero.element = "River"
+```
+
+Hero element determines only whether that hero’s strike activates an elemental counter.
+
+It must not automatically:
+
+* determine Intervention Fit;
+* determine Clinical Expertise;
+* make healing actions stronger;
+* make buffs stronger;
+* change status duration;
+* change assessment actions;
+* change clinical action classifications.
+
+---
+
+# 3. Replace the Enemy Element Field
+
+The current enemy `element` field is ambiguous and sometimes contains values such as:
+
+```text
+"River + Mind"
+"Fire + River"
+"Growth + Filter"
+```
+
+Stop using this field for combat calculations.
+
+Replace it with the following enemy fields:
+
+```text
+corruptionAspect
+weakElement
+resistantElement
+primaryAffinity
+secondaryAffinities
+visualTags
+```
+
+## Field definitions
+
+### `corruptionAspect`
+
+A fantasy condition or corruption identity.
+
+Examples:
+
+```text
+Depletion
+Inferno
+Suffocation
+Silent Ischemia
+Desiccating Delirium
+Ward Collapse
+Rampant Overgrowth
+Toxic Accumulation
+```
+
+This is descriptive and may be shown to the player.
+
+### `weakElement`
+
+Exactly one hero element that triggers the ×1.30 counter bonus.
+
+```text
+weakElement: "River"
+```
+
+Do not store multiple elements in a combined string.
+
+### `resistantElement`
+
+Optional future-facing field.
+
+```text
+resistantElement: null
+```
+
+Do not activate elemental resistance during this overhaul unless it already exists elsewhere. Add the field for future compatibility only.
+
+### `primaryAffinity`
+
+The enemy’s main clinical domain.
+
+```text
+primaryAffinity: "Fire/Inflammation"
+```
+
+### `secondaryAffinities`
+
+An array containing zero or more secondary clinical domains.
+
+```text
+secondaryAffinities: ["Fluid/Hydration"]
+```
+
+### `visualTags`
+
+Optional visual and narrative descriptors that do not participate in combat calculations.
+
+```text
+visualTags: ["fire", "fever", "smoke"]
+```
+
+This allows an enemy to look fiery without treating Fire as its mechanical weakness.
+
+---
+
+# 4. Use Structured IDs Internally
+
+Avoid using display names as internal comparison values.
+
+Recommended internal element IDs:
+
+```text
+air
+river
+fire
+energy
+storm
+mind
+filter
+forge
+protection
+growth
+```
+
+Recommended format:
+
+```text
+weakElement: "river"
+```
+
+Use a separate mapping for player-facing labels and icons:
+
+```text
+river → River
+storm → Storm
+protection → Protection
+```
+
+Do the same for affinities and corruption aspects where practical.
+
+---
+
+# 5. Elemental Counter Calculation
+
+Elemental Counter applies only when all of the following are true:
+
+1. The action is classified as a strike.
+2. The action has a valid acting hero.
+3. The hero has an element.
+4. The target has a `weakElement`.
+5. `hero.element === target.weakElement`.
+
+Use:
+
+```text
+Elemental Counter = ×1.30
+No Counter = ×1.00
+```
+
+Conceptual evaluator:
+
+```text
+if action is a strike
+and hero.element matches enemy.weakElement
+then elementMultiplier = 1.30
+else elementMultiplier = 1.00
+```
+
+Do not activate the elemental multiplier for:
+
+* healing;
+* shielding;
+* assessment;
+* cleansing;
+* buffs;
+* resource restoration;
+* non-damaging control;
+* passive effects;
+* environmental interactions;
+* damage-over-time ticks applied by a non-strike action.
+
+If an actual strike applies damage over time, calculate the elemental bonus when the strike lands and snapshot the resulting potency if that matches the current status architecture.
+
+---
+
+# 6. Final Effect Pipeline
+
+Use one clearly ordered calculation pipeline.
+
+```text
+Pre-Mitigation Effect =
+Base Skill Value
+× Intervention Fit
+× Clinical Expertise
+× Elemental Counter
+× Hero Stat Modifier
+× Chain Modifier
+× Leader Modifier
+```
+
+Then apply the existing target defenses and resistances afterward.
+
+Conceptually:
+
+```text
+Final Effect =
+Pre-Mitigation Effect
+× Target Resistance
+× Target Defense
+```
+
+Do not change current resistance values during this system overhaul.
+
+## Multipliers
+
+### Intervention Fit
+
+```text
+Strong:        1.50
+Appropriate:   1.00
+Weak:          0.60
+Inappropriate: 0.25
+```
+
+### Clinical Expertise
+
+```text
+Strong:  1.18 before affinity resistance
+Neutral: 1.00
+Weak:    0.87
+```
+
+### Elemental Counter
+
+```text
+Counter strike: 1.30
+All other cases: 1.00
+```
+
+## Required hierarchy
+
+A clinically inappropriate elemental strike must remain much weaker than a clinically strong action.
+
+Example:
+
+```text
+Inappropriate action with elemental counter:
+0.25 × 1.30 = 0.325
+
+Strong clinical action without counter:
+1.50 × 1.00 = 1.50
+
+Strong clinical action with counter:
+1.50 × 1.30 = 1.95
+```
+
+Do not introduce any rule that allows elemental optimization to overcome clinically nonsensical action selection.
+
+---
+
+# 7. Migrate the Nine Existing Battles
+
+Use the following initial migration.
+
+| Enemy               | Corruption Aspect    | Weak Element    | Primary Affinity        | Secondary Affinities                |
+| ------------------- | -------------------- | --------------- | ----------------------- | ----------------------------------- |
+| Hypovolemic Wisp    | Depletion            | River           | Fluid/Hydration         | None                                |
+| The Silent Infarct  | Silent Ischemia      | Storm           | Storm/Cardiac           | Energy/Metabolic                    |
+| Fluid Phantom       | Depletion            | River           | Fluid/Hydration         | None                                |
+| Lord Imbalance      | Desiccating Delirium | River           | Fluid/Hydration         | Mind/Neuro-Psych                    |
+| Fever Shade         | Inferno              | River           | Fire/Inflammation       | Fluid/Hydration                     |
+| Gale Spirit         | Suffocation          | Air             | Airway/Respiratory      | None                                |
+| Ward Cascade        | Ward Collapse        | Protection      | Community/Public Health | Airway/Respiratory, Fluid/Hydration |
+| Dehydration Specter | Desiccation          | River           | Fluid/Hydration         | None                                |
+| Verdantha           | Rampant Overgrowth   | Forge initially | Growth/Endocrine        | Filter/Renal                        |
+
+## Important migration notes
+
+### The Silent Infarct
+
+Change the weakness from River to Storm.
+
+Its fantasy vulnerability should communicate interruption of a hidden cardiac corruption rather than elemental matching.
+
+Do not rebalance its HP or resistances in this push.
+
+### Lord Imbalance
+
+Use River as its first implementation weakness because the encounter remains primarily centered on depletion and fluid imbalance.
+
+Its Mind component belongs in `secondaryAffinities`, not in `weakElement`.
+
+### Fever Shade
+
+Its visual identity remains fiery.
+
+Its fantasy counter becomes River because River disrupts Inferno.
+
+Fire remains its primary clinical affinity because the encounter concerns fever and inflammation.
+
+### Ward Cascade
+
+Use Protection as its elemental counter.
+
+This makes Protection relevant before late-game content and frames the finale as restoring order, safety, and coordinated defense to a collapsing ward.
+
+### Verdantha
+
+Prepare Verdantha for phase-specific weaknesses:
+
+```text
+Base weakElement: Forge
+Phase 1: Forge
+Phase 2: Filter
+Phase 3: Determined by current phase or revealed assessment state
+```
+
+During this initial push, it is acceptable to use Forge for all phases if phase-specific weakness handling is not yet implemented.
+
+Do not store `"Growth + Filter"` as a weakness.
+
+---
+
+# 8. Boss Phase Support
+
+Allow bosses to override `weakElement` by phase without allowing ordinary enemies to have multiple simultaneous weakness strings.
+
+Recommended structure:
+
+```text
+defaultWeakElement
+phases: [
+  {
+    phaseId,
+    weakElementOverride
+  }
+]
+```
+
+Resolution order:
+
+```text
+current phase weakElementOverride
+→ enemy default weakElement
+→ null
+```
+
+If no weakness exists, the elemental multiplier is ×1.00.
+
+For Verdantha:
+
+```text
+Phase 1: Rampant Overgrowth → weak to Forge
+Phase 2: Toxic Accumulation → weak to Filter
+Phase 3: weakness revealed through assessment or phase state
+```
+
+Do not implement random weakness changes.
+
+Weakness changes should always be:
+
+* phase-driven;
+* visually communicated;
+* revealed by assessment;
+* or clearly explained by a boss mechanic.
+
+---
+
+# 9. Remove Old Counter Logic
+
+Search the entire project for logic that:
+
+* reads `enemy.element`;
+* compares hero element with enemy element;
+* parses strings containing `"+"`;
+* checks whether an enemy element array includes the hero element;
+* treats enemy visual element as its weakness;
+* grants elemental bonuses to all actions;
+* uses element matching to determine clinical fit.
+
+Replace those references with `enemy.weakElement`.
+
+Do not leave a second legacy counter path active.
+
+During migration, the old enemy `element` field may remain temporarily for display compatibility, but:
+
+```text
+It must not affect combat calculations.
+```
+
+Add a development warning when legacy enemy elemental data is detected.
+
+Example behavior:
+
+```text
+Warning: Enemy "Fever Shade" contains legacy element data.
+Combat now uses weakElement instead.
+```
+
+Remove the legacy field after all encounters and displays have migrated successfully.
+
+---
+
+# 10. Battle Interface Changes
+
+Display the three systems separately.
+
+## Enemy information panel
+
+Show:
+
+```text
+Corruption Aspect: Inferno
+Clinical Domain: Fire/Inflammation
+Weak Element: River
+```
+
+If the weakness has not been discovered:
+
+```text
+Weak Element: Unknown
+```
+
+Do not show the enemy as “Element: River” because this recreates the original ambiguity.
+
+## Action result feedback
+
+When a counter activates, show:
+
+```text
+ELEMENTAL COUNTER
+River disrupts Inferno.
+Strike effect +30%.
+```
+
+Separately show clinical feedback:
+
+```text
+STRONG INTERVENTION
+This action directly addresses the condition.
+×1.50
+```
+
+And expertise feedback:
+
+```text
+CLINICAL EXPERTISE
+Fluid/Hydration specialty matched.
+×1.18
+```
+
+## Combined details panel
+
+Provide a compact result such as:
+
+```text
+Intervention Fit: Strong        ×1.50
+Clinical Expertise: Matched     ×1.18
+Elemental Counter: Effective    ×1.30
+```
+
+Do not imply that River is medically appropriate merely because it countered Inferno.
+
+Use icons and text together. Do not communicate element state through color alone.
+
+---
+
+# 11. Ability Preview Changes
+
+Before confirming a target, preview relevant effects when the information is known.
+
+Example:
+
+```text
+Strong Intervention
+Expertise Match
+Elemental Counter
+Estimated Effect: 230%
+```
+
+If the weakness has not been revealed:
+
+```text
+Elemental Interaction: Unknown
+```
+
+Do not expose hidden weakness information through the preview unless the player has legitimately discovered it.
+
+---
+
+# 12. Bestiary Changes
+
+Each enemy bestiary entry should have separate sections:
+
+## Corruption
+
+```text
+Inferno
+A fever-born corruption that consumes stability through escalating heat.
+```
+
+## Clinical Domain
+
+```text
+Fire/Inflammation
+Secondary: Fluid/Hydration
+```
+
+## Elemental Counter
+
+```text
+River
+River strikes disrupt Inferno and gain +30% effect.
+```
+
+## Clinical Guidance
+
+Describe relevant assessment and intervention principles separately from the fantasy counter.
+
+Do not write text implying that the fantasy counter is a real-world treatment recommendation.
+
+---
+
+# 13. Tutorial Progression
+
+Do not explain all three systems at once.
+
+## Hypovolemic Wisp
+
+Teach Intervention Fit.
+
+Elemental Counter may be mechanically disabled or visually suppressed during this tutorial encounter.
+
+Primary lesson:
+
+```text
+Choose the action that directly addresses the observed condition.
+```
+
+## Fluid Phantom
+
+Introduce Elemental Counter.
+
+Primary lesson:
+
+```text
+A hero’s element can disrupt an enemy’s corruption aspect when using a strike.
+```
+
+Explicitly state:
+
+```text
+Elemental counters improve strikes.
+They do not replace correct clinical decisions.
+```
+
+## Lord Imbalance or the next appropriate encounter
+
+Introduce Clinical Expertise.
+
+Primary lesson:
+
+```text
+Heroes perform more reliably when their clinical expertise matches the enemy’s health domain.
+```
+
+Do not introduce affinity resistance until the player has already experienced the full expertise bonus.
+
+---
+
+# 14. Validation Rules
+
+Add validation for battle and enemy data.
+
+Every standard combat enemy must satisfy:
+
+```text
+corruptionAspect is present
+weakElement is one valid element or null
+primaryAffinity is valid
+secondaryAffinities is an array
+weakElement is not a combined string
+```
+
+Reject values such as:
+
+```text
+"River + Mind"
+"Fire/River"
+["River", "Mind"]
+```
+
+unless the value occurs inside an explicitly supported boss phase structure.
+
+Add validation warnings for:
+
+* missing corruption aspect;
+* invalid weak element;
+* old enemy `element` data;
+* unsupported affinity values;
+* multiple base weaknesses;
+* strike actions without an acting hero;
+* elemental counter applied to a non-strike.
+
+---
+
+# 15. Required Automated Tests
+
+Add tests covering at least the following cases.
+
+## Test 1: Matching strike
+
+```text
+Hero element: River
+Enemy weakElement: River
+Action type: Strike
+Expected element multiplier: 1.30
+```
+
+## Test 2: Nonmatching strike
+
+```text
+Hero element: Fire
+Enemy weakElement: River
+Action type: Strike
+Expected element multiplier: 1.00
+```
+
+## Test 3: Matching non-strike
+
+```text
+Hero element: River
+Enemy weakElement: River
+Action type: Heal
+Expected element multiplier: 1.00
+```
+
+## Test 4: Clinically inappropriate counter strike
+
+```text
+Intervention Fit: 0.25
+Elemental Counter: 1.30
+Expected combined contribution: 0.325
+```
+
+## Test 5: Strong clinical action without counter
+
+```text
+Intervention Fit: 1.50
+Elemental Counter: 1.00
+Expected combined contribution: 1.50
+```
+
+## Test 6: Full optimal strike
+
+```text
+Intervention Fit: 1.50
+Clinical Expertise: 1.18
+Elemental Counter: 1.30
+Expected combined contribution before other modifiers: 2.301
+```
+
+## Test 7: Missing weakness
+
+```text
+Enemy weakElement: null
+Expected element multiplier: 1.00
+No crash
+```
+
+## Test 8: Boss phase override
+
+```text
+Verdantha default weakness: Forge
+Current phase override: Filter
+Filter hero strike: 1.30
+Forge hero strike: 1.00 during that phase
+```
+
+## Test 9: Multi-target strike
+
+Calculate Elemental Counter separately for each target.
+
+A single area strike may counter one enemy and remain neutral against another.
+
+## Test 10: Legacy field isolation
+
+An enemy with:
+
+```text
+element: "River"
+weakElement: "Storm"
+```
+
+must respond only to Storm for the counter calculation.
+
+---
+
+# 16. Do Not Change During This Overhaul
+
+Do not alter the following unless required to prevent a defect:
+
+* enemy HP;
+* stability;
+* stability resistance;
+* corruption resistance;
+* hidden defense;
+* affinity resistance;
+* stability pressure;
+* instability;
+* hero base stats;
+* skill base values;
+* chain bonuses;
+* leader bonuses;
+* scripted-loss logic;
+* encounter order;
+* reward values.
+
+Changing the data architecture and numerical balance simultaneously would make it difficult to identify the source of combat changes.
+
+Balance the battles only after the new counter engine is stable.
+
+---
+
+# 17. Telemetry and Debug Information
+
+In development mode, provide a combat calculation breakdown:
+
+```text
+Base value
+Intervention Fit multiplier
+Clinical Expertise multiplier
+Elemental Counter multiplier
+Hero stat modifier
+Chain modifier
+Leader modifier
+Resistance reduction
+Defense reduction
+Final value
+```
+
+Example:
+
+```text
+Base: 40
+Intervention Fit: ×1.50
+Clinical Expertise: ×1.18
+Elemental Counter: ×1.30
+Pre-defense: 92.04
+Corruption Resistance: ×0.88
+Final: 80.99
+```
+
+This may be a console log or developer-only battle details panel.
+
+Do not expose internal debugging information to ordinary players in production.
+
+---
+
+# 18. Acceptance Criteria
+
+The overhaul is complete when:
+
+1. Enemy weakness no longer comes from `enemy.element`.
+2. Every existing encounter has a `corruptionAspect`.
+3. Every existing encounter has one valid base `weakElement`.
+4. Hero element affects strikes only.
+5. Clinical fit remains independent from element.
+6. Clinical expertise remains independent from element.
+7. The three multipliers stack correctly.
+8. Combined strings such as `"River + Mind"` are no longer used as mechanical weaknesses.
+9. Battle feedback identifies elemental and clinical bonuses separately.
+10. Verdantha supports or is prepared for phase weakness overrides.
+11. All nine current battles load without errors.
+12. Existing save data does not crash.
+13. Automated tests pass.
+14. No unrelated screens or systems are modified.
+
+---
+
+# 19. Implementation Order
+
+Complete this overhaul in three controlled pushes.
+
+## Push 1: Combat Data and Calculation
+
+Implement only:
+
+* new enemy fields;
+* data migration;
+* `weakElement` validation;
+* new Elemental Counter evaluator;
+* removal of old counter logic;
+* combat calculation integration;
+* automated tests;
+* development breakdown logs.
+
+Do not redesign the interface yet.
+
+## Push 2: Battle UI and Bestiary
+
+Implement:
+
+* Corruption Aspect display;
+* Weak Element display;
+* separate Clinical Domain display;
+* separate feedback messages;
+* ability-preview indicators;
+* bestiary restructuring;
+* accessibility labels.
+
+## Push 3: Tutorials and Boss Phases
+
+Implement:
+
+* progressive mechanic tutorials;
+* Fluid Phantom Elemental Counter lesson;
+* Clinical Expertise tutorial;
+* Verdantha phase weakness overrides;
+* hidden weakness and assessment interaction where applicable.
+
+After each push:
+
+1. Run the complete test suite.
+2. Launch every scripted battle.
+3. Confirm no encounter fails to load.
+4. Compare representative damage calculations before and after.
+5. Report files changed.
+6. Report any legacy element references that remain.
+7. Do not proceed by silently replacing unrelated systems.
