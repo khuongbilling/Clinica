@@ -455,6 +455,12 @@ export interface PlayerState {
   // P9 — one-time "how does Call for Help work?" tutorial shown the first
   // time the Call tab is opened in battle. Undefined/false = not yet seen.
   seen_call_tutorial?: boolean;
+  // Push 3 — one-time Elemental Counter tutorial shown at the start of the
+  // Fluid Phantom encounter (Chapter 1 trial boss). Undefined/false = not yet seen.
+  seen_fluid_phantom_counter_tutorial?: boolean;
+  // Push 3 — one-time Clinical Expertise tutorial shown at the start of the
+  // Lord Imbalance encounter (Chapter 1 story boss). Undefined/false = not yet seen.
+  seen_lord_imbalance_expertise_tutorial?: boolean;
   // Push 10 — hero equipment loadouts. heroId → slotId → itemId.
   // Only items with status: "active" in equipment.ts take effect in battle.
   // Backfilled as {} for existing players in normalizeProgression.

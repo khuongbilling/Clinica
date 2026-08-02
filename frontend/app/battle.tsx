@@ -11,7 +11,7 @@ import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, COUNTER_FEEDBACK, getContextualScoutFeedback, getContextualStabilizeFeedback, getContextualReassessFeedback } from "@/src/game/explanationLayers";
 import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
-import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, buildSkillCalcBreakdown, type BattleState, type CastQuality, type CalcBreakdown } from "@/src/game/battle";
+import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, resolveEnemyWeakElement, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, buildSkillCalcBreakdown, type BattleState, type CastQuality, type CalcBreakdown } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
@@ -195,6 +195,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       classTreeBonus: classTreeBonus ?? undefined,
       // Push 10: hero equipment loadout (skipped for prologue loaner battles).
       heroEquipment: !isPrologueLoanerBattle ? (player?.hero_equipment ?? {}) : undefined,
+      // Push 3: suppress elemental counter during prologue tutorial so players
+      // learn Intervention Fit before Elemental Counter is introduced.
+      suppressElementCounter: isPrologueTutorial,
     });
     let { stability, visibleClues, hiddenClueIds, revealedLabels, log } = base;
 
@@ -237,11 +240,36 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     return s;
   }, [team]);
 
+  // Push 3 — phase-resolved weak element (Verdantha phase overrides).
+  // resolvedWeakElement: the effective element for the current phase (null = no counter / unrevealed).
+  const resolvedWeakElement = useMemo(
+    () => resolveEnemyWeakElement(state),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.activePhaseIndex, state.phase3WeakElementRevealed, state.suppressElementCounter, state.enemy.id],
+  );
+  // displayWeakElement: drives the enemy-panel pill and skill counter chips.
+  // 'unknown' = not yet scouted (hide until discovered).
+  const displayWeakElement = useMemo((): import("@/src/game/types").ElementSystem | null | 'unknown' => {
+    if (enemy.phases && enemy.phases.length > 0) {
+      // Last phase: hidden until a scout action reveals it.
+      if (state.activePhaseIndex >= enemy.phases.length - 1 && !state.phase3WeakElementRevealed) return 'unknown';
+      // Otherwise show the phase override (may be null = no counter this phase).
+      return resolvedWeakElement;
+    }
+    // Standard enemy: only reveal after first clue is scouted.
+    if (state.visibleClues.length === 0) return 'unknown';
+    return enemy.weakElement; // null = this enemy has no elemental counter
+  }, [enemy, state.activePhaseIndex, state.phase3WeakElementRevealed, state.visibleClues.length, resolvedWeakElement]);
+
   const [activeTab, setActiveTabRaw] = useState<Tab>("actions");
   const cardTabOpenedRef = useRef(false);
   const [showCardTutorial, setShowCardTutorial] = useState(false);
   const callTabOpenedRef = useRef(false);
   const [showCallTutorial, setShowCallTutorial] = useState(false);
+  // Push 3 — one-time in-battle tutorial overlays for Elemental Counter (Fluid Phantom)
+  // and Clinical Expertise (Lord Imbalance).
+  const [showCounterTutorial, setShowCounterTutorial] = useState(false);
+  const [showExpertiseTutorial, setShowExpertiseTutorial] = useState(false);
   // P9 — result popup shown after each Call for Help use.
   const [callResult, setCallResult] = useState<{ title: string; detail: string; success: boolean } | null>(null);
   function setActiveTab(tab: Tab) {
@@ -308,6 +336,21 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     setShowBossNarrator(false);
     if (player && !player.seen_boss_narrator) {
       updateState({ ...player, seen_boss_narrator: true });
+    }
+  };
+
+  // ── Fluid Phantom: one-time Elemental Counter tutorial ────────────────────
+  const dismissCounterTutorial = () => {
+    setShowCounterTutorial(false);
+    if (player && !player.seen_fluid_phantom_counter_tutorial) {
+      updateState({ ...player, seen_fluid_phantom_counter_tutorial: true });
+    }
+  };
+  // ── Lord Imbalance: one-time Clinical Expertise tutorial ──────────────────
+  const dismissExpertiseTutorial = () => {
+    setShowExpertiseTutorial(false);
+    if (player && !player.seen_lord_imbalance_expertise_tutorial) {
+      updateState({ ...player, seen_lord_imbalance_expertise_tutorial: true });
     }
   };
 
@@ -378,6 +421,25 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       const t = setTimeout(() => startTutorial("firstBattle"), 800);
       return () => clearTimeout(t);
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push 3 — Fluid Phantom: show the Elemental Counter one-time tutorial after a
+  // short delay so the objective modal has already been dismissed.
+  useEffect(() => {
+    if (isPrologueTutorial || isPrologueBoss) return; // don't interrupt guided prologue
+    if (enemy.id !== 'fluid_phantom') return;
+    if (player?.seen_fluid_phantom_counter_tutorial) return;
+    const t = setTimeout(() => setShowCounterTutorial(true), 1400);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push 3 — Lord Imbalance: show the Clinical Expertise one-time tutorial after
+  // the objective modal has been dismissed.
+  useEffect(() => {
+    if (enemy.id !== 'lord_imbalance') return;
+    if (player?.seen_lord_imbalance_expertise_tutorial) return;
+    const t = setTimeout(() => setShowExpertiseTutorial(true), 1400);
+    return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Push 1 prologue boss safety net: this fight is narratively scripted to
@@ -1194,12 +1256,15 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                 <Text style={styles.enemyInfoValue}>{enemy.corruptionAspect}</Text>
               </View>
             ) : null}
-            <View style={styles.enemyInfoRow} accessibilityLabel={state.visibleClues.length > 0 && enemy.weakElement ? `Weak Element: ${enemy.weakElement}` : "Weak Element: Unknown"}>
+            {/* Push 3: enemy panel weak-element — phase-resolved for bosses like Verdantha */}
+            <View style={styles.enemyInfoRow} accessibilityLabel={displayWeakElement !== 'unknown' && displayWeakElement !== null ? `Weak Element: ${displayWeakElement}` : displayWeakElement === null ? "Weak Element: None this phase" : "Weak Element: Unknown"}>
               <Text style={styles.enemyInfoLabel}>Weak Element</Text>
-              {state.visibleClues.length > 0 && enemy.weakElement ? (
+              {displayWeakElement !== 'unknown' && displayWeakElement !== null ? (
                 <View style={styles.enemyInfoWeakPill}>
-                  <Text style={[styles.enemyInfoWeakTxt, { color: ELEMENT_COLORS[enemy.weakElement] }]}>⚡ {enemy.weakElement}</Text>
+                  <Text style={[styles.enemyInfoWeakTxt, { color: ELEMENT_COLORS[displayWeakElement] }]}>⚡ {displayWeakElement}</Text>
                 </View>
+              ) : displayWeakElement === null ? (
+                <Text style={[styles.enemyInfoValue, { color: COLORS.onSurfaceTertiary }]}>None this phase</Text>
               ) : (
                 <Text style={[styles.enemyInfoValue, { color: COLORS.onSurfaceTertiary }]}>Unknown</Text>
               )}
@@ -1509,8 +1574,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                         </View>
                         <Text style={styles.actionEffect} numberOfLines={3}>{skill.shortEffect || skill.description}</Text>
                         <Text style={[styles.actionHero, { color: SKILL_CHAIN_COLOR[skill.type] || COLORS.onSurfaceTertiary }]} numberOfLines={1}>{sageDisc ? "Sage · " : ""}{airDisc ? "Air disc · " : ""}{SKILL_CHAIN_LABEL[skill.type] ? `${SKILL_CHAIN_LABEL[skill.type]} · ` : ""}{skill.systemType || "Universal"}</Text>
-                        {/* Push 2: Elemental Counter chip — only on strike skills when weakness discovered */}
-                        {skill.type === "strike" && state.visibleClues.length > 0 && enemy.weakElement && selHero.element === enemy.weakElement ? (
+                        {/* Push 2 / Push 3: Elemental Counter chip — phase-resolved; suppressed during prologue tutorial */}
+                        {skill.type === "strike" && !state.suppressElementCounter && displayWeakElement !== 'unknown' && displayWeakElement !== null && selHero.element === displayWeakElement ? (
                           <View style={styles.elemCounterChip} accessibilityLabel="Elemental Counter active">
                             <Text style={styles.elemCounterTxt}>⚡ Elemental Counter</Text>
                           </View>
@@ -2045,6 +2110,54 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       {showBossNarrator && (
         <MasterBaiBossNarratorOverlay onDismiss={dismissBossNarrator} />
       )}
+
+      {/* Push 3 — Fluid Phantom: one-time Elemental Counter tutorial */}
+      <Modal visible={showCounterTutorial} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.cardTutModalOverlay}>
+          <View style={styles.cardTutModal}>
+            <View style={styles.cardTutHeader}>
+              <Ionicons name="flash" size={22} color="#A78BFA" />
+              <Text style={styles.cardTutTitle}>Elemental Counter</Text>
+            </View>
+            <Text style={styles.cardTutBody}>
+              When a hero's element matches an enemy's weakness, strike skills deal +30% damage. This is called an Elemental Counter.
+            </Text>
+            <Text style={styles.cardTutBody}>
+              Elemental counters improve strikes. They do not replace correct clinical decisions.
+            </Text>
+            <Text style={styles.cardTutBody}>
+              Scout the patient first — the enemy's weak element is hidden until you look for it.
+            </Text>
+            <Pressable style={styles.cardTutBtn} onPress={dismissCounterTutorial} testID="counter-tutorial-dismiss">
+              <Text style={styles.cardTutBtnTxt}>Understood</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Push 3 — Lord Imbalance: one-time Clinical Expertise tutorial */}
+      <Modal visible={showExpertiseTutorial} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.cardTutModalOverlay}>
+          <View style={styles.cardTutModal}>
+            <View style={styles.cardTutHeader}>
+              <Ionicons name="medkit" size={22} color="#4FD8C4" />
+              <Text style={styles.cardTutTitle}>Clinical Expertise</Text>
+            </View>
+            <Text style={styles.cardTutBody}>
+              Heroes perform more reliably when their clinical expertise matches the enemy's health domain.
+            </Text>
+            <Text style={styles.cardTutBody}>
+              An Assessor excels in diagnostic conditions; a Stabilizer shines in fluid and stability crises. Matching expertise improves every action you take.
+            </Text>
+            <Text style={styles.cardTutBody}>
+              Check the enemy's primary system and lead with the hero whose role fits best.
+            </Text>
+            <Pressable style={styles.cardTutBtn} onPress={dismissExpertiseTutorial} testID="expertise-tutorial-dismiss">
+              <Text style={styles.cardTutBtnTxt}>Understood</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -2110,12 +2223,28 @@ function DetailContent({ detail, state, onUse }: { detail: DetailEntry; state: B
           <Text style={styles.detailSection}>NCLEX Focus</Text>
           <Text style={styles.detailBody}>{skill.nclexExplanation}</Text>
         </>)}
-        {/* Push 2: Elemental Counter chip in detail — strike skill + weakness discovered + match */}
-        {skill.type === "strike" && state.visibleClues.length > 0 && state.enemy.weakElement && hero.element === state.enemy.weakElement ? (
-          <View style={styles.elemCounterDetailChip} accessibilityLabel="Elemental Counter active: this skill deals bonus damage">
-            <Text style={styles.elemCounterDetailTxt}>⚡ Elemental Counter — {hero.element} disrupts {state.enemy.corruptionAspect}. Strike +30%.</Text>
-          </View>
-        ) : null}
+        {/* Push 2 / Push 3: Elemental Counter chip in detail — uses the same
+            scouting gate as the action cards so the hidden weakness is never
+            exposed before the player scouts. Phase-resolved for bosses. */}
+        {(() => {
+          // Mirror the displayWeakElement logic: non-phase enemies require at least
+          // one scouted clue before the weakness is considered known.
+          const hasPhases = !!(state.enemy.phases && state.enemy.phases.length > 0);
+          const isPhase3Unrevealed = hasPhases
+            && state.activePhaseIndex >= (state.enemy.phases?.length ?? 1) - 1
+            && !state.phase3WeakElementRevealed;
+          let dw: import("@/src/game/types").ElementSystem | null | 'unknown';
+          if (hasPhases) {
+            dw = isPhase3Unrevealed ? 'unknown' : resolveEnemyWeakElement(state);
+          } else {
+            dw = state.visibleClues.length > 0 ? state.enemy.weakElement : 'unknown';
+          }
+          return skill.type === "strike" && !state.suppressElementCounter && dw !== 'unknown' && dw !== null && hero.element === dw ? (
+            <View style={styles.elemCounterDetailChip} accessibilityLabel="Elemental Counter active: this skill deals bonus damage">
+              <Text style={styles.elemCounterDetailTxt}>⚡ Elemental Counter — {hero.element} disrupts {state.enemy.corruptionAspect}. Strike +30%.</Text>
+            </View>
+          ) : null;
+        })()}
         {hasCalc && (
           <Pressable style={styles.calcToggle} onPress={() => setShowCalc(v => !v)} testID="detail-calc-toggle">
             <Ionicons name={showCalc ? "chevron-up-outline" : "analytics-outline"} size={11} color={COLORS.onSurfaceTertiary} />

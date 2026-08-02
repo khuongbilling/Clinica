@@ -359,6 +359,15 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.seen_call_tutorial == null) {
     out = { ...out, seen_call_tutorial: false };
   }
+  // Push 3 — Elemental Counter tutorial (Fluid Phantom) and Clinical Expertise
+  // tutorial (Lord Imbalance). Both default false so every player sees the
+  // one-time overlay the next time they enter that encounter.
+  if (out.seen_fluid_phantom_counter_tutorial == null) {
+    out = { ...out, seen_fluid_phantom_counter_tutorial: false };
+  }
+  if (out.seen_lord_imbalance_expertise_tutorial == null) {
+    out = { ...out, seen_lord_imbalance_expertise_tutorial: false };
+  }
   // Guard: codex_shards must always be a finite non-negative integer.
   // Old saves may have undefined or NaN here, which would silently corrupt
   // wallet arithmetic (e.g. recruitOnce/recruitTen shard refund additions).

@@ -185,6 +185,16 @@ export interface BattleState {
   heroEquipmentEffects: Record<string, AggregatedEquipmentEffect>;
   // True after the Triage Sash first-loss reduction has fired once this battle.
   equipFirstLossUsed: boolean;
+
+  // Push 3 — Elemental Counter Overhaul: suppress the +30% counter bonus during
+  // the prologue tutorial so players learn Intervention Fit before counters.
+  suppressElementCounter: boolean;
+  // Push 3 — 0-indexed active boss phase for enemies with a phases[] array (e.g.
+  // Verdantha). Drives weakElementOverride resolution and the enemy panel display.
+  activePhaseIndex: number;
+  // Push 3 — true once the player has used a scout/assess action during the last
+  // boss phase (e.g. Verdantha Phase III), revealing the evolved weakness.
+  phase3WeakElementRevealed: boolean;
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
@@ -212,6 +222,56 @@ export interface InitBattleOptions {
   // Push 10 — Hero equipment loadout (player.hero_equipment). Used at init to
   // compute heroEquipmentEffects. Skipped for prologue loaner battles.
   heroEquipment?: Record<string, Record<string, string>>;
+  // Push 3 — when true, the elemental counter +30% bonus is suppressed for this
+  // entire battle (used in the prologue tutorial: teach Intervention Fit first).
+  suppressElementCounter?: boolean;
+}
+
+// ============================================================
+// Push 3 — Phase-aware weak-element resolution (Verdantha et al.)
+// ============================================================
+
+/**
+ * Returns the effective weak element for the current battle state.
+ *
+ * - Enemies without a phases[] array: returns enemy.weakElement unchanged.
+ * - Phase-based bosses: returns the current phase's weakElementOverride.
+ *   Last phase only: returns null until the player has scouted/assessed
+ *   (phase3WeakElementRevealed), after which it returns the override as-is
+ *   (which may itself be null — meaning "no elemental counter this phase").
+ */
+export function resolveEnemyWeakElement(s: BattleState): ElementSystem | null {
+  if (!s.enemy.phases || s.enemy.phases.length === 0) return s.enemy.weakElement;
+  const phase = s.enemy.phases[s.activePhaseIndex];
+  if (!phase) return s.enemy.weakElement;
+  // Last phase: hidden until the player scouts.
+  if (s.activePhaseIndex >= s.enemy.phases.length - 1 && !s.phase3WeakElementRevealed) {
+    return null;
+  }
+  return phase.weakElementOverride;
+}
+
+/**
+ * After any corruption change on a phase-based boss, recompute the active
+ * phase index (equal-size bands of starting corruption) and append a log
+ * line when the phase advances. No-op for enemies without phases[].
+ */
+function syncPhaseIndex(s: BattleState): BattleState {
+  if (!s.enemy.phases || s.enemy.phases.length === 0) return s;
+  const total = s.enemy.corruption; // starting value stored on enemy — never mutated
+  const count = s.enemy.phases.length;
+  // Phase 0 = top band, last phase = bottom band. Equal bands of size total/count.
+  let newIdx = count - 1;
+  for (let i = 0; i < count - 1; i++) {
+    if (s.corruption > total * ((count - 1 - i) / count)) {
+      newIdx = i;
+      break;
+    }
+  }
+  if (newIdx === s.activePhaseIndex) return s;
+  const phaseNames = ['Phase I', 'Phase II', 'Phase III', 'Phase IV'];
+  const next = { ...s, activePhaseIndex: newIdx };
+  return { ...next, log: [...next.log, `🌿 ${s.enemy.name} enters ${phaseNames[newIdx] ?? `Phase ${newIdx + 1}`} — the pathology evolves.`] };
 }
 
 // ============================================================
@@ -261,7 +321,9 @@ export function getWaveDefenseModifier(target: Enemy, wave: WaveMember[]): numbe
 
 /** After any corruption change to the active enemy: mark defeat, advance to next alive member, or win. */
 function syncWaveAndCheckVictory(s: BattleState): BattleState {
-  let next = { ...s, wave: s.wave.map(m => m.enemy.id === s.activeEnemyId ? { ...m, corruption: s.corruption } : m) };
+  // Push 3: sync boss phase on every corruption change — covers skills, items, cards,
+  // ultimates, care attempts, and chain-completion bonuses in one centralized place.
+  let next = syncPhaseIndex({ ...s, wave: s.wave.map(m => m.enemy.id === s.activeEnemyId ? { ...m, corruption: s.corruption } : m) });
   if (next.corruption > 0) return next;
 
   // Active enemy defeated
@@ -444,6 +506,11 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
       team.map(h => [h.id, getAggregatedEquipmentEffect(h.id, opts.heroEquipment)])
     ),
     equipFirstLossUsed: false,
+
+    // Push 3 — elemental counter overhaul fields.
+    suppressElementCounter: opts.suppressElementCounter ?? false,
+    activePhaseIndex: 0, // always starts at phase 0 (full corruption = top band)
+    phase3WeakElementRevealed: false,
   };
 }
 
@@ -806,6 +873,9 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   const lb = s.team[0] ? scaleLeaderBonus(getLeaderBonus(s.team[0]), s.team[0]) : null;
   const cb = s.classBonus; // Push 11: class tree bonus
 
+  // Push 3: resolve the effective weak element (phase-aware for bosses like Verdantha).
+  const resolvedWeakElem = resolveEnemyWeakElement(s);
+
   const strikeMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: corrOutcome.reductionMult,
@@ -815,7 +885,8 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     affinityMod: res.affinityResult.multiplier,
     // elementBonus: ONLY for skills whose type is 'strike'. command/analyze/support/etc.
     // actions may carry a strike payload but must NOT receive the elemental counter bonus.
-    elementBonus: skill.type === 'strike' && s.enemy.weakElement && hero.element === s.enemy.weakElement ? 0.3 : 0,
+    // Push 3: suppressed during prologue tutorial; uses phase-resolved weakElement.
+    elementBonus: !s.suppressElementCounter && skill.type === 'strike' && resolvedWeakElem !== null && hero.element === resolvedWeakElem ? 0.3 : 0,
     heroStatMod: heroStatMult,
     affinityFamilyMod: affinityFamilyMult,
     corruptionResistanceMod,             // Push 7
@@ -892,6 +963,15 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     }
     next = revealHiddenClues(next, revealCount);
     effectType = 'clue';
+    // Push 3: Verdantha Phase 3 — first scout reveals the evolved weakness (or absence).
+    const enemyPhases = next.enemy.phases;
+    if (enemyPhases && next.activePhaseIndex >= enemyPhases.length - 1 && !next.phase3WeakElementRevealed) {
+      const p3 = enemyPhases[next.activePhaseIndex];
+      next = { ...next, phase3WeakElementRevealed: true };
+      next.log = [...next.log, p3?.weakElementOverride
+        ? `🔍 Assessment reveals ${next.enemy.name}'s evolved weakness: ${p3.weakElementOverride}.`
+        : `🔍 Assessment reveals ${next.enemy.name}'s true form — no elemental counter applies in this phase.`];
+    }
   }
   if (skill.stabilize || skill.stabilizeRange) {
     const base = skill.stabilizeRange ? rollRange(skill.stabilizeRange) : skill.stabilize!;
@@ -916,8 +996,8 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     }
     next.corruption = Math.max(0, next.corruption - amt);
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
-    // Push 2: Elemental Counter feedback — distinct log line when the element bonus fires.
-    if (strikeMods.elementBonus > 0 && s.enemy.weakElement) {
+    // Push 2 / Push 3: Elemental Counter feedback — distinct log line when the element bonus fires.
+    if (strikeMods.elementBonus > 0 && resolvedWeakElem) {
       next.log = [...next.log, `⚡ ELEMENTAL COUNTER — ${hero.element} disrupts ${s.enemy.corruptionAspect}. Strike +30%.`];
     }
     effectAmount = Math.max(effectAmount, amt);
@@ -1909,8 +1989,10 @@ export function buildSkillCalcBreakdown(
   }
   // Gate on skill.type === 'strike' — command/analyze skills that carry a strike payload
   // must not receive the elemental counter bonus (mirrors applySkill strikeMods logic).
-  const elementBonus = effectType === 'strike' && skill.type === 'strike'
-    && !!state.enemy.weakElement && hero.element === state.enemy.weakElement ? 0.3 : 0;
+  // Push 3: suppressed during prologue tutorial; uses phase-resolved weakElement.
+  const resolvedWeakElemBreakdown = resolveEnemyWeakElement(state);
+  const elementBonus = !state.suppressElementCounter && effectType === 'strike' && skill.type === 'strike'
+    && resolvedWeakElemBreakdown !== null && hero.element === resolvedWeakElemBreakdown ? 0.3 : 0;
 
   // Push 13 fix: corruption resistance reduces strike damage (mirrors applySkill line 714).
   // Was missing from Push 12 — omitting it made estimates too optimistic for resistant enemies.
