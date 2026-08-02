@@ -170,9 +170,16 @@ function buildNodeData(
           // Placeholder battles are auto-eligible; real battles need a win
           eligible = part.isPlaceholder ? true : anyWon;
           break;
-        case "mini_boss":
-          eligible = part.isPlaceholder ? true : prevDone;
+        case "mini_boss": {
+          if (part.isPlaceholder) {
+            eligible = true;
+          } else {
+            // Require a win (≥1 star) for the specific enemy tied to this node.
+            const enemyId = part.route?.match(/enemyId=([^&]+)/)?.[1];
+            eligible = enemyId ? (battleStars[enemyId] ?? 0) >= 1 : prevDone;
+          }
           break;
+        }
         case "ward_defense":
           eligible = true;
           break;
@@ -187,10 +194,16 @@ function buildNodeData(
       }
     }
 
-    const claimStars =
-      (part.type === "battle" || part.type === "mini_boss") && !part.isPlaceholder
-        ? Math.max(1, bestStar)
-        : 3;
+    const claimStars = (() => {
+      if (part.isPlaceholder) return 3;
+      if (part.type === "battle") return Math.max(1, bestStar);
+      if (part.type === "mini_boss") {
+        const enemyId = part.route?.match(/enemyId=([^&]+)/)?.[1];
+        const stars   = enemyId ? (battleStars[enemyId] ?? 0) : bestStar;
+        return Math.max(1, stars);
+      }
+      return 3;
+    })();
 
     let status: NodeStatus;
     if (complete)                status = "complete";

@@ -1266,7 +1266,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[6],
     icon: "skull-outline",
     simulationEra: true,
-    requiredCompletionNodes: ["c6p5", "c6p6"],
+    requiredCompletionNodes: ["c6p5", "c6p7"],
     parts: [
       {
         id: "c6p1",
@@ -1324,6 +1324,19 @@ export const CHAPTERS: Chapter[] = [
         icon: "flag-outline",
         isPlaceholder: true,
       },
+      // ── Node 7 — Chapter Trial (Mini-Boss) ───────────────────────────────
+      {
+        id: "c6p7",
+        part: 7,
+        type: "mini_boss",
+        title: "Trial: Imbalance Core",
+        description: "The chapter trial. A concentrated metabolic crisis — electrolyte storm, cardiac instability, and rising acid. Survive the convergence to claim your Chapter 6 star.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=imbalance_core",
+        rewardXp: 50,
+        rewardCoins: 40,
+        rewardShards: 8,
+      },
     ],
   },
 
@@ -1340,7 +1353,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[7],
     icon: "people-outline",
     simulationEra: true,
-    requiredCompletionNodes: ["c7p5", "c7p7"],
+    requiredCompletionNodes: ["c7p5", "c7p8"],
     parts: [
       {
         id: "c7p1",
@@ -1406,6 +1419,19 @@ export const CHAPTERS: Chapter[] = [
         icon: "flag-outline",
         isPlaceholder: true,
       },
+      // ── Node 8 — Chapter Trial (Mini-Boss) ───────────────────────────────
+      {
+        id: "c7p8",
+        part: 8,
+        type: "mini_boss",
+        title: "Trial: Contagion Wraith",
+        description: "The chapter trial. The outbreak cluster's final form. Three linked cases, one airborne source, one chance to contain it. Stop the spread and earn your Chapter 7 star.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=contagion_wraith",
+        rewardXp: 55,
+        rewardCoins: 45,
+        rewardShards: 8,
+      },
     ],
   },
 
@@ -1422,7 +1448,7 @@ export const CHAPTERS: Chapter[] = [
     accentColor: C[8],
     icon: "trophy-outline",
     simulationEra: true,
-    requiredCompletionNodes: ["c8p4", "c8p7"],
+    requiredCompletionNodes: ["c8p4", "c8p8"],
     parts: [
       {
         id: "c8p1",
@@ -1487,6 +1513,19 @@ export const CHAPTERS: Chapter[] = [
         description: "The evaluation board's last test. One patient, one concealed detail, no second attempt.",
         icon: "flag-outline",
         isPlaceholder: true,
+      },
+      // ── Node 8 — Chapter Trial (Mini-Boss) ───────────────────────────────
+      {
+        id: "c8p8",
+        part: 8,
+        type: "mini_boss",
+        title: "Trial: Crisis Convergence",
+        description: "The chapter trial. The hardest simulation yet: two simultaneous deteriorations, a hidden hyponatraemia, and one overloaded nurse. Prove your clinical judgment to earn your Chapter 8 star.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=crisis_convergence",
+        rewardXp: 60,
+        rewardCoins: 50,
+        rewardShards: 10,
       },
     ],
   },

@@ -23,6 +23,10 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   fever_shade: require('../../assets/enemies/fever_shade.png'),
   gale_spirit: require('../../assets/enemies/gale_spirit.png'),
   ward_cascade: require('../../assets/enemies/ward_cascade.png'),
+  // Ch6–8 trial mini-bosses — placeholder sprites until dedicated art is generated.
+  imbalance_core: require('../../assets/enemies/energy_lock.png'),
+  contagion_wraith: require('../../assets/enemies/fire_imp.png'),
+  crisis_convergence: require('../../assets/enemies/mind_fog.png'),
 };
 
 // All enemy portrait modules, for cache preloading at game start.

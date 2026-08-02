@@ -136,15 +136,18 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   { nodeId: 'c5p7', chapter: 5, playerXp: 120, heroXp: 95, coins: 300, shards: 50,       isStory: false, starsScale: true  },
   { nodeId: 'c5p8', chapter: 5, playerXp: 140, heroXp: 120, coins: 350, shards: 100,     isStory: false, starsScale: true  },
 
-  // ── Chapter 6: First Boss Ward (Level 10, 6 nodes) ────────────────────────
+  // ── Chapter 6: First Boss Ward (Level 10, 7 nodes) ────────────────────────
+  // story → story → story → battle → boss → reward → mini_boss (trial)
   { nodeId: 'c6p1', chapter: 6, playerXp:  30, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c6p2', chapter: 6, playerXp:  20, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
   { nodeId: 'c6p3', chapter: 6, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c6p4', chapter: 6, playerXp: 100, heroXp: 60, coins: 200,                   isStory: false, starsScale: true  },
   { nodeId: 'c6p5', chapter: 6, playerXp: 180, heroXp: 110, coins: 350, shards: 80,      isStory: false, starsScale: true  },
   { nodeId: 'c6p6', chapter: 6, playerXp:  50, heroXp:  0, coins:  40,                   isStory: true,  starsScale: false },
+  { nodeId: 'c6p7', chapter: 6, playerXp: 160, heroXp: 140, coins: 400, shards: 110,     isStory: false, starsScale: true  },
 
-  // ── Chapter 7: The Community Board (Level 9, 7 nodes) ─────────────────────
+  // ── Chapter 7: The Community Board (Level 9, 8 nodes) ─────────────────────
+  // story × 4 → battle → community → reward → mini_boss (trial)
   { nodeId: 'c7p1', chapter: 7, playerXp:  35, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c7p2', chapter: 7, playerXp:  20, heroXp:  0, coins:  25,                   isStory: true,  starsScale: false },
   { nodeId: 'c7p3', chapter: 7, playerXp:  40, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
@@ -152,8 +155,10 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   { nodeId: 'c7p5', chapter: 7, playerXp: 110, heroXp: 70, coins: 220,                   isStory: false, starsScale: true  },
   { nodeId: 'c7p6', chapter: 7, playerXp:  30, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c7p7', chapter: 7, playerXp:  55, heroXp:  0, coins:  50,                   isStory: true,  starsScale: false },
+  { nodeId: 'c7p8', chapter: 7, playerXp: 170, heroXp: 150, coins: 420, shards: 120,     isStory: false, starsScale: true  },
 
-  // ── Chapter 8: Advanced Simulation Trials (Level 12, 7 nodes) ─────────────
+  // ── Chapter 8: Advanced Simulation Trials (Level 12, 8 nodes) ─────────────
+  // story × 3 → battle → story × 2 → reward → mini_boss (trial)
   { nodeId: 'c8p1', chapter: 8, playerXp:  40, heroXp:  0, coins:  35,                   isStory: true,  starsScale: false },
   { nodeId: 'c8p2', chapter: 8, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c8p3', chapter: 8, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
@@ -161,6 +166,7 @@ const JOURNEY_NODE_DEFS: JourneyNodeDef[] = [
   { nodeId: 'c8p5', chapter: 8, playerXp:  25, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c8p6', chapter: 8, playerXp:  40, heroXp:  0, coins:  30,                   isStory: true,  starsScale: false },
   { nodeId: 'c8p7', chapter: 8, playerXp:  65, heroXp:  0, coins:  50,                   isStory: true,  starsScale: false },
+  { nodeId: 'c8p8', chapter: 8, playerXp: 190, heroXp: 160, coins: 450, shards: 130,     isStory: false, starsScale: true  },
 
   // ── Chapter 9: First Real Ward (Level 15, 8 nodes) ────────────────────────
   { nodeId: 'c9p1', chapter: 9, playerXp:  45, heroXp:  0, coins:  40,                   isStory: true,  starsScale: false },
