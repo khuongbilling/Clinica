@@ -285,6 +285,37 @@ function syncWaveAndCheckVictory(s: BattleState): BattleState {
 }
 
 export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions = {}): BattleState {
+  // Dev-mode validation: warn if enemy is missing the weakElement field entirely.
+  // null means "no elemental weakness" (valid); undefined means the field was not set.
+  const _devMode = (typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production');
+  if (_devMode) {
+    const VALID_ELEMENTS = new Set(['Air','River','Fire','Energy','Storm','Mind','Filter','Forge','Protection','Growth']);
+    // weakElement: must be present, and if non-null must be a valid ElementSystem value.
+    if (!Object.prototype.hasOwnProperty.call(enemy, 'weakElement')) {
+      console.warn(`[Enemy:${enemy.id}] missing weakElement — add weakElement: ElementSystem | null (required by Push 1)`);
+    } else if (enemy.weakElement !== null && !VALID_ELEMENTS.has(enemy.weakElement as string)) {
+      console.warn(`[Enemy:${enemy.id}] weakElement "${String(enemy.weakElement)}" is not a valid ElementSystem value`);
+    }
+    // weakSystem: removed in Push 1; must not be present.
+    if (Object.prototype.hasOwnProperty.call(enemy, 'weakSystem')) {
+      console.warn(`[Enemy:${enemy.id}] has legacy weakSystem — remove it and use weakElement: ElementSystem | null`);
+    }
+    // corruptionAspect: required narrative label.
+    if (!enemy.corruptionAspect || typeof enemy.corruptionAspect !== 'string') {
+      console.warn(`[Enemy:${enemy.id}] missing corruptionAspect — add a narrative label string (e.g. 'Depletion')`);
+    }
+    // secondaryAffinities: required array; warn when absent or non-array.
+    if (!Object.prototype.hasOwnProperty.call(enemy, 'secondaryAffinities')) {
+      console.warn(`[Enemy:${enemy.id}] missing secondaryAffinities — add secondaryAffinities: [] (required by Push 1)`);
+    } else if (!Array.isArray(enemy.secondaryAffinities)) {
+      console.warn(`[Enemy:${enemy.id}] secondaryAffinities must be an array — got ${typeof enemy.secondaryAffinities}`);
+    }
+    // secondaryAffinity (single): deprecated; should have been migrated to secondaryAffinities.
+    if (Object.prototype.hasOwnProperty.call(enemy, 'secondaryAffinity')) {
+      console.warn(`[Enemy:${enemy.id}] has legacy secondaryAffinity (single string) — migrate to secondaryAffinities: []`);
+    }
+  }
+
   const enemyClinical = ENEMY_CLINICAL[enemy.id];
   const chapter = opts.chapter || enemyClinical?.chapter || (enemy.difficulty <= 2 ? 1 : 2);
   const feedbackLevel = getActiveFeedbackLevel(opts.profile, enemy.name, opts.enemyMastery, chapter);
@@ -699,6 +730,7 @@ function rollRange([min, max]: [number, number]): number {
 }
 
 export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQuality: CastQuality = 'normal'): ApplyResult {
+  const _devModeSkill = (typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production');
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
 
   // Hero must be the selected hero, and ready
@@ -756,7 +788,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     hero.strongAffinities,
     hero.weakAffinities,
     s.enemy.primaryAffinity,
-    s.enemy.secondaryAffinity,
+    s.enemy.secondaryAffinities ?? (s.enemy.secondaryAffinity ? [s.enemy.secondaryAffinity] : []),
     s.enemy.affinityResistance ?? 0,
   );
 
@@ -781,7 +813,9 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     castMult,
     chapterMod: treatMod,
     affinityMod: res.affinityResult.multiplier,
-    elementBonus: s.enemy.weakSystem && hero.element === s.enemy.weakSystem ? 0.3 : 0,
+    // elementBonus: ONLY for skills whose type is 'strike'. command/analyze/support/etc.
+    // actions may carry a strike payload but must NOT receive the elemental counter bonus.
+    elementBonus: skill.type === 'strike' && s.enemy.weakElement && hero.element === s.enemy.weakElement ? 0.3 : 0,
     heroStatMod: heroStatMult,
     affinityFamilyMod: affinityFamilyMult,
     corruptionResistanceMod,             // Push 7
@@ -793,7 +827,10 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   const stabMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: res.modifier,
-    systemMod: res.systemModifier,
+    // Push 1 elemental independence: stabilize effects are system-neutral (systemMod = 1.0).
+    // The element-based system bonus flows only through strikeMods; clinical effectiveness
+    // for stabilize is carried by clinicalMod (appropriateness) + affinityFamilyMod (domain).
+    systemMod: 1.0,
     castMult,
     corruptionMod: getStabilizationModifier(next.corruption),
     stabilityGainMod: getStabilityGainModifier(next.stability),
@@ -881,6 +918,21 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     if (res.affinityResult.label) next.log.push(`${res.affinityResult.label}!`);
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : (effectType === 'stability' ? 'mixed' : 'corruption');
+    // Push 1 dev breakdown: log base value, each modifier, and final for strikes.
+    if (_devModeSkill) {
+      const eb = strikeMods.elementBonus > 0 ? ` elem=×${(1 + strikeMods.elementBonus).toFixed(2)}` : '';
+      console.log(
+        `[Strike] ${hero.name}→${skill.name} vs ${s.enemy.name}: ` +
+        `base=${base}` +
+        ` clinical=×${strikeMods.clinicalMod.toFixed(2)}` +
+        ` system=×${strikeMods.systemMod.toFixed(2)}` +
+        `${eb}` +
+        ` affFam=×${strikeMods.affinityFamilyMod.toFixed(2)}` +
+        ` stat=×${strikeMods.heroStatMod.toFixed(2)}` +
+        ` resist=×${strikeMods.corruptionResistanceMod.toFixed(2)}` +
+        ` → raw=${rawAmt} final=${amt}`,
+      );
+    }
   }
   if (skill.shield || skill.shieldRange) {
     const base = skill.shieldRange ? rollRange(skill.shieldRange) : skill.shield!;
@@ -1012,7 +1064,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   const itemStabMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: res.modifier,
-    systemMod: res.systemModifier,
+    systemMod: 1.0, // elemental independence: items stabilize via clinical tags, not element-system match
     corruptionMod: getStabilizationModifier(next.corruption),
     stabilityGainMod: getStabilityGainModifier(next.stability),
     enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
@@ -1100,7 +1152,7 @@ export function applyTempAction(s: BattleState, actionId: string): ApplyResult {
     const taMods: SkillModifiers = {
       ...neutralModifiers(),
       clinicalMod: res.modifier,
-      systemMod: res.systemModifier,
+      systemMod: 1.0, // elemental independence: temp actions stabilize via clinical tags, not element-system match
       corruptionMod: getStabilizationModifier(next.corruption),
       stabilityGainMod: getStabilityGainModifier(next.stability),
       enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
@@ -1202,7 +1254,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
   const cardStabMods: SkillModifiers = {
     ...neutralModifiers(),
     clinicalMod: res.modifier,
-    systemMod: res.systemModifier,
+    systemMod: 1.0, // elemental independence: cards stabilize via clinical tags, not element-system match
     corruptionMod: getStabilizationModifier(next.corruption),
     stabilityGainMod: getStabilityGainModifier(next.stability),
     enemyResistanceMod: stabilityResistanceMultiplier(next.enemy),
@@ -1835,13 +1887,21 @@ export function buildSkillCalcBreakdown(
   // Affinity family match (hero strong/weak affinities vs enemy)
   const affinityFamilyMult = calcAffinityFamilyMod(
     hero.strongAffinities, hero.weakAffinities,
-    state.enemy.primaryAffinity, state.enemy.secondaryAffinity,
+    state.enemy.primaryAffinity,
+    state.enemy.secondaryAffinities ?? (state.enemy.secondaryAffinity ? [state.enemy.secondaryAffinity] : []),
     state.enemy.affinityResistance ?? 0,
   );
 
-  // Element advantage: strike only — hero element hits enemy weak system
-  const elementBonus = effectType === 'strike'
-    && !!state.enemy.weakSystem && hero.element === state.enemy.weakSystem ? 0.3 : 0;
+  // Element advantage: strike only — hero element hits enemy weak element
+  // Warn whenever weakSystem is present — it is deprecated regardless of whether weakElement is also set.
+  const _devModeBreakdown = (typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production');
+  if (_devModeBreakdown && (state.enemy as any).weakSystem !== undefined) {
+    console.warn(`[Elemental] Enemy "${state.enemy.id}" still has legacy weakSystem — remove it and use weakElement: ElementSystem | null instead.`);
+  }
+  // Gate on skill.type === 'strike' — command/analyze skills that carry a strike payload
+  // must not receive the elemental counter bonus (mirrors applySkill strikeMods logic).
+  const elementBonus = effectType === 'strike' && skill.type === 'strike'
+    && !!state.enemy.weakElement && hero.element === state.enemy.weakElement ? 0.3 : 0;
 
   // Push 13 fix: corruption resistance reduces strike damage (mirrors applySkill line 714).
   // Was missing from Push 12 — omitting it made estimates too optimistic for resistant enemies.

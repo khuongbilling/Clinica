@@ -135,7 +135,8 @@ export interface Enemy {
   hiddenClues: ClueCard[];
   dangerTrigger: string;
   bestCounters: ActionType[];
-  weakSystem?: ElementSystem; // taking action in this system deals extra
+  // weakSystem was removed in Push 1 of the Elemental Counter Overhaul.
+  // Use weakElement: ElementSystem | null instead.
   instability: number; // stability decay per enemy turn
   startingStability: number; // patient starting stability %
   corruption: number; // enemy HP equivalent (no upper limit — bosses can exceed 100)
@@ -163,9 +164,23 @@ export interface Enemy {
   floats?: boolean;
   // Affinity data (Push 5 — data layer, no battle multipliers yet).
   primaryAffinity?: AffinityFamily;   // main clinical domain (derived from primarySystem)
+  /** @deprecated Use secondaryAffinities (array) instead. */
   secondaryAffinity?: AffinityFamily; // secondary domain if enemy spans two systems
   resistanceTags?: string[];          // treatment approaches that are less effective
   weaknessTags?: string[];            // treatment approaches that work best
+  // Elemental Counter Overhaul (Push 1 — data & calculation).
+  /** Narrative label for the enemy's corruption pathology (e.g. 'Depletion', 'Inferno'). Required. */
+  corruptionAspect: string;
+  /** Hero element that deals ×1.30 strike damage. Replaces weakSystem. null = no elemental counter. Required. */
+  weakElement: ElementSystem | null;
+  /** Element that is resistant / deals reduced damage to this enemy. */
+  resistantElement?: ElementSystem | null;
+  /** All affinity families this enemy belongs to (array form of secondaryAffinity). Required. */
+  secondaryAffinities: AffinityFamily[];
+  /** Visual flavour tags for UI (e.g. 'fungal', 'cardiac', 'airborne'). */
+  visualTags?: string[];
+  /** Per-phase weakness overrides for boss enemies (e.g. Verdantha). Push 3 activates runtime resolution. */
+  phases?: Array<{ phaseId: string; weakElementOverride: ElementSystem | null }>;
   // Enemy defense profile (Push 7 — data + active).
   /** Display level; equals difficulty. Handy for future scaling UI. */
   enemyLevel?: number;

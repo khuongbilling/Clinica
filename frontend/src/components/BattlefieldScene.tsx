@@ -142,7 +142,7 @@ interface BattleEnemyInfo {
   realWorld: string;
   primarySystem: ElementSystem;
   secondarySystem?: ElementSystem;
-  weakSystem?: ElementSystem;
+  // weakSystem removed (Push 1) — use weakElement if counter info is needed in UI (Push 2).
   dangerTrigger: string;
   bestCounters: ActionType[];
   visibleClues: ClueCard[];

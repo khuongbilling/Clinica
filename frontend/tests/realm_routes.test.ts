@@ -33,12 +33,16 @@ function check(name: string, cond: boolean, details = '') {
   );
 }
 
-// ── 2. ROUTES has no duplicate path values ────────────────────────────────
+// ── 2. ROUTES canonical keys have no duplicate path values ───────────────
+// Only SCREAMING_SNAKE_CASE keys are checked (e.g. HOME, UNIVERSITY).
+// camelCase aliases (tabs, university, summon…) are intentional convenience
+// duplicates and are explicitly excluded from this guard.
 {
-  const values = Object.values(ROUTES) as string[];
+  const isCanonical = (k: string) => /^[A-Z][A-Z0-9_]*$/.test(k);
   const seen = new Map<string, string>();
   const dupes: string[] = [];
   for (const [key, val] of Object.entries(ROUTES) as [string, string][]) {
+    if (!isCanonical(key)) continue; // skip camelCase aliases
     if (seen.has(val)) {
       dupes.push(`"${key}" and "${seen.get(val)}" both map to "${val}"`);
     } else {

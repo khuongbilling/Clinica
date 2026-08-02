@@ -944,15 +944,19 @@ export const RELATED_SYSTEMS: Record<string, string[]> = {
   Protection: ['Forge', 'Fire', 'Mind'],
 };
 
-export function getSystemMatchModifier(systemType: string | undefined, enemy: EnemyClinical | undefined, enemyPrimarySystem?: string): number {
-  if (!systemType || !enemy) return 1.0;
-  if (systemType === 'Universal') return 0.75;
-  if (enemy.weaknesses.includes(systemType)) return 1.5;
-  if (enemy.resistances.includes(systemType)) return 0.5;
-  const sys = enemyPrimarySystem || enemy.weaknesses[0] || '';
-  const related = RELATED_SYSTEMS[sys] || [];
-  if (related.includes(systemType)) return 1.0;
-  return 0.25;
+/**
+ * Push 1 — Elemental Counter Overhaul:
+ * Returns 1.0 unconditionally. The old element-string path
+ * (ENEMY_CLINICAL.weaknesses / resistances → ×1.5 / ×0.5 / ×0.25) is
+ * removed so that fantasy element matching cannot influence clinical
+ * effectiveness. The only elemental modifier is `weakElement` → ×1.30
+ * applied exclusively via `elementBonus` in the strike modifier bag.
+ * Clinical fit is now determined solely by:
+ *   • evaluateClinicalAppropriateness (action clinical tags vs enemy disease)
+ *   • calcAffinityFamilyMod (hero affinity domains)
+ */
+export function getSystemMatchModifier(_systemType: string | undefined, _enemy: EnemyClinical | undefined, _enemyPrimarySystem?: string): number {
+  return 1.0;
 }
 
 // ------------------------------------------------------------
@@ -1129,7 +1133,7 @@ export function getCorruptionOutcome(status: ActionStatus, penaltyScale: number 
     case 'strong':        base = { reductionMult: 1.6, worsenBase: 0, stabilityPenalty: 0 }; break;
     case 'appropriate':   base = { reductionMult: 1.0, worsenBase: 0, stabilityPenalty: 0 }; break;
     case 'weak':          base = { reductionMult: 0.3, worsenBase: 0, stabilityPenalty: 0 }; break;
-    case 'inappropriate': base = { reductionMult: 0, worsenBase: 8, stabilityPenalty: 6 }; break;
+    case 'inappropriate': base = { reductionMult: 0.25, worsenBase: 8, stabilityPenalty: 6 }; break; // Push 1: ×0.25 strike still lands; worsening + penalty are the real punishment
     case 'unsafe':        base = { reductionMult: 0, worsenBase: 6, stabilityPenalty: 0 }; break;
     default:              base = { reductionMult: 0, worsenBase: 0, stabilityPenalty: 0 }; break;
   }

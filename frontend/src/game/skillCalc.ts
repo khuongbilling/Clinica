@@ -108,13 +108,18 @@ export function calcAffinityFamilyMod(
   heroStrong: AffinityFamily[] | undefined,
   heroWeak:   AffinityFamily[] | undefined,
   enemyPrimary:   AffinityFamily | undefined,
-  enemySecondary: AffinityFamily | undefined,
+  /** All secondary clinical domains (Push 1: array replaces deprecated single secondaryAffinity). */
+  enemySecondary: AffinityFamily[] | AffinityFamily | undefined,
   affinityResistance: number = 0,
 ): number {
   // No data on either side → neutral (graceful fallback for pre-Push-5 objects)
   if (!enemyPrimary || (!heroStrong?.length && !heroWeak?.length)) return 1.00;
 
-  const enemyAffs = [enemyPrimary, enemySecondary].filter(
+  // Normalise: accept both legacy single value and new array form.
+  const secondaryArr: AffinityFamily[] = Array.isArray(enemySecondary)
+    ? enemySecondary
+    : enemySecondary ? [enemySecondary] : [];
+  const enemyAffs = [enemyPrimary, ...secondaryArr].filter(
     (a): a is AffinityFamily => a !== undefined,
   );
   const strong = heroStrong ?? [];
@@ -180,7 +185,7 @@ export interface SkillModifiers {
   affinityMod: number;
   /**
    * Element-vs-weakness fraction added to base before multiply.
-   * 0.3 when hero.element === enemy.weakSystem, else 0.
+   * 0.3 when hero.element === enemy.weakElement, else 0.
    * Only used for strike; 0 for stabilize / shield.
    */
   elementBonus: number;

@@ -382,7 +382,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   // Push 1 prologue boss safety net: this fight is narratively scripted to
   // end in defeat. Normal stability math already makes it nearly unwinnable
-  // (very high stabilityResistance/instability, no weakSystem), but if the
+  // (very high stabilityResistance/instability, weakElement: Storm), but if the
   // player somehow keeps Stability alive past a generous turn cap, force the
   // scripted collapse rather than ever letting them "win" the boss.
   useEffect(() => {
@@ -1225,7 +1225,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           realWorld: enemy.realWorld,
           primarySystem: enemy.primarySystem,
           secondarySystem: enemy.secondarySystem,
-          weakSystem: enemy.weakSystem,
+          // weakSystem removed in Push 1 — not passed to BattlefieldScene
           dangerTrigger: enemy.dangerTrigger,
           bestCounters: enemy.bestCounters,
           visibleClues: [...enemy.visibleClues, ...enemy.hiddenClues].filter((c) => state.visibleClues.includes(c.id)),

@@ -95,7 +95,7 @@ const ACADEMY_PATH:        AppRoute = "/academy-path";
 const MATERIALS:           AppRoute = "/materials";
 const LEARNING_PROFILE:    AppRoute = "/learning-profile";
 const SHOP:                AppRoute = "/shop";
-const SUMMON_CEREMONY:     AppRoute = "/summon";
+// SUMMON_CEREMONY removed — it was an unused alias for SUMMON ("/summon"). Use SUMMON directly.
 const LOTUS_RECALL:        AppRoute = "/lotus-recall";
 const OPENING_PROLOGUE:    AppRoute = "/opening-prologue"    as AppRoute;
 const DEV_PROLOGUE_TESTER: AppRoute = "/dev-prologue-tester" as AppRoute;
@@ -186,7 +186,6 @@ export const ROUTES = {
   MATERIALS,
   LEARNING_PROFILE,
   SHOP,
-  SUMMON_CEREMONY,
   LOTUS_RECALL,
 
   // ── camelCase aliases (for files migrated before the uppercase convention) ─
