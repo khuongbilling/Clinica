@@ -81,12 +81,12 @@ outputType = "console"
 name = "Check Routes"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node frontend/scripts/check-routes.js"
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node frontend/scripts/check-routes.js && node frontend/scripts/check-hero-pronouns.js"
 
 [[workflows.workflow]]
 name = "typecheck"
