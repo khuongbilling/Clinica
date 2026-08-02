@@ -705,7 +705,7 @@ export default function StabilizeStackScreen() {
 
   const grade =
     correctCount === CARE_PHASES.length
-      ? { label: "Perfect Care Chain", color: "#2DD4BF", icon: "trophy"         as const }
+      ? { label: "Perfect Care Pathway", color: "#2DD4BF", icon: "trophy"         as const }
       : correctCount === 2
         ? { label: "Good Instincts",   color: "#22C55E", icon: "checkmark-done" as const }
         : { label: "Keep Learning",    color: "#F59E0B", icon: "school"         as const };

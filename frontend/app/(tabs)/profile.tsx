@@ -26,7 +26,7 @@ const MASTERY_LABELS: Record<string, string> = {
   stabilization: "Stabilization",
   pharmacology: "Pharmacology",
   judgment: "Judgment",
-  command: "Command",
+  command: "Escalate",
   systems: "Systems",
 };
 

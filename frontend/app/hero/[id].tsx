@@ -593,9 +593,9 @@ const HERO_CHAIN_COLOR: Record<string, string> = {
   command: "#F472B6", cleanse: "#60A5FA",
 };
 const HERO_CHAIN_LABEL: Record<string, string> = {
-  scout: "Scout", stabilize: "Stabilize", strike: "Counter",
+  scout: "Assess", stabilize: "Stabilize", strike: "Treat",
   analyze: "Reassess", shield: "Protect", support: "Support",
-  command: "Command", cleanse: "Treat",
+  command: "Escalate", cleanse: "Treat",
 };
 const HERO_CHAIN_ICON: Record<string, string> = {
   scout: "eye-outline", stabilize: "heart-outline", strike: "flash-outline",
@@ -652,7 +652,7 @@ function SkillsTab({ hero, accent }: { hero: any; accent: string }) {
 
 // Map each stat-bonus field to a display label and battle role hint.
 const STAT_BONUS_META: { key: keyof import("@/src/game/equipment").EquipmentEffect; label: string; hint: string }[] = [
-  { key: "insightBonus",      label: "Insight",      hint: "Scout & Analyze skills" },
+  { key: "insightBonus",      label: "Insight",      hint: "Assess & Analyze skills" },
   { key: "carePowerBonus",    label: "Care Power",   hint: "Stabilize skills" },
   { key: "interventionBonus", label: "Intervention", hint: "Strike skills" },
   { key: "guardBonus",        label: "Guard",        hint: "Shield skills" },

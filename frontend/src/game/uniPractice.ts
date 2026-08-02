@@ -145,7 +145,7 @@ export const UNI_SHOP_ITEMS: UniShopItem[] = [
     description: 'Study notes from Lotus Lessons. Used to support hero knowledge development.' },
   { id: 'shop_hero_tp',     name: 'Hero Training Page',   icon: 'trending-up-outline', creditCost: 40, category: 'manual',  status: 'preview',
     description: 'A focused training reference for hero skill development and Clinical Arts study.' },
-  { id: 'shop_care_chain',  name: 'Care Chain Manual',    icon: 'reader-outline',    creditCost: 125, category: 'manual',  status: 'preview',
+  { id: 'shop_care_chain',  name: 'Care Pathway Manual',  icon: 'reader-outline',    creditCost: 125, category: 'manual',  status: 'preview',
     description: 'A comprehensive clinical manual. Rare reward for mastering University practice.' },
   { id: 'shop_sim_pass',    name: 'Simulation Pass',      icon: 'shield-checkmark-outline', creditCost: 50, category: 'pass', status: 'preview',
     description: 'Grants access to an advanced simulation run. Opens doors to harder challenges.' },
@@ -572,7 +572,7 @@ export function scrollLabel(key: string): string {
 
 export function itemLabel(key: string): string {
   return key === 'lesson_note' ? 'Lesson Note' :
-    key === 'care_chain_manual' ? 'Care Chain Manual' :
+    key === 'care_chain_manual' ? 'Care Pathway Manual' :
     key === 'hero_training_page' ? 'Hero Training Page' :
     key === 'sim_pass' ? 'Simulation Pass' : key;
 }
@@ -595,7 +595,7 @@ export const ACTIVITY_META: Record<PracticeActivityType, { label: string; icon: 
     icon: 'eye-outline',
     accent: '#2DD4BF',
     description: 'Read patient scenarios and identify the most important clinical cues.',
-    battleRecommend: 'Strengthens Scout and Analyze actions in Ward Shift battles.',
+    battleRecommend: 'Strengthens Assess and Analyze actions in Ward Shift battles.',
   },
   triage: {
     label: 'Rapid Triage Hall',

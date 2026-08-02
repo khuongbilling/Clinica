@@ -639,7 +639,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     } else if (actionType === 'shield') {
       msg = 'Protection raised — the next deterioration event will reduce less Stability.';
     } else if (actionType === 'command') {
-      msg = 'Command issued — protection and pressure applied together.';
+      msg = 'Escalate issued — protection and pressure applied together.';
     } else {
       msg = getGuidedFeedback(enemy.id, actionType) ?? null;
     }
@@ -1609,7 +1609,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                     Cards are powerful one-use tools loaded before each battle in your Mission Loadout.
                   </Text>
                   <Text style={styles.cardTutBody}>
-                    Cards marked <Text style={{ color: "#A6D8F6" }}>Scout</Text>, <Text style={{ color: "#4FD8C4" }}>Stabilize</Text>, <Text style={{ color: "#F97316" }}>Counter</Text>, or <Text style={{ color: "#BBA7EA" }}>Reassess</Text> count toward your clinical chain. <Text style={{ color: "#E8C868" }}>Support</Text> cards provide direct aid — shields, buffs, emergency calls — but do not advance the chain.
+                    Cards marked <Text style={{ color: "#A6D8F6" }}>Assess</Text>, <Text style={{ color: "#4FD8C4" }}>Stabilize</Text>, <Text style={{ color: "#F97316" }}>Treat</Text>, or <Text style={{ color: "#BBA7EA" }}>Reassess</Text> count toward your Care Pathway. <Text style={{ color: "#E8C868" }}>Support</Text> cards provide direct aid — shields, buffs, emergency calls — but do not advance the pathway.
                   </Text>
                   <Text style={styles.cardTutBody}>
                     Once played, each card is spent for this battle. Choose your deck wisely in the loadout.
@@ -1815,7 +1815,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
                   <Text style={styles.passiveLbl}>YOUR APTITUDE PASSIVE</Text>
                   <Text style={styles.passiveTxt}>
                     {player.aptitude === "guardian" && "🛡 Guardian's Vigil: -5 Instability per enemy turn."}
-                    {player.aptitude === "sage" && "🔍 Sage's Eye: first Scout each battle costs -1 AP."}
+                    {player.aptitude === "sage" && "🔍 Sage's Eye: first Assess each battle costs -1 AP."}
                     {player.aptitude === "warden" && "🔒 Warden's Watch: blocks one minor complication."}
                     {player.aptitude === "weaver" && "⟡ Weaver's Eye: one hidden clue revealed at battle start."}
                   </Text>
@@ -2215,13 +2215,13 @@ const SKILL_CHAIN_COLOR: Record<string, string> = {
 };
 
 const SKILL_CHAIN_LABEL: Record<string, string> = {
-  scout:     "Scout",
+  scout:     "Assess",
   stabilize: "Stabilize",
-  strike:    "Counter",
+  strike:    "Treat",
   analyze:   "Reassess",
   shield:    "Protect",
   support:   "Support",
-  command:   "Command",
+  command:   "Escalate",
   cleanse:   "Treat",
 };
 
@@ -2231,9 +2231,9 @@ const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
   { term: "Stability", desc: "How safely the patient is holding on. Keep it above zero — Corruption escalates every turn. If it hits 0, the patient is lost." },
   { term: "Corruption", desc: "How much the illness is still taking over. Lower it to zero to win. Some illnesses can spread, recover, or behave in unexpected ways." },
   { term: "Cue", desc: "A clue about what is wrong with the patient. Answer correctly for bonus AP." },
-  { term: "Scout", desc: "Find a hidden clue. Reveal clues before high-cost moves." },
+  { term: "Assess", desc: "Find a hidden clue. Reveal clues before high-cost moves." },
   { term: "Stabilize", desc: "Keep the patient safe and hold off deterioration." },
-  { term: "Counter", desc: "Directly weaken the illness and lower Corruption." },
+  { term: "Treat", desc: "Directly weaken the illness and lower Corruption." },
   { term: "Reassess", desc: "Check what changed — often reveals new information." },
 ];
 
@@ -2345,7 +2345,7 @@ function getBattleObjData(
     badge: "STORY ENCOUNTER", badgeColor: "#F59E0B", badgeIcon: "book-outline",
     title: "Follow the Healer's Rhythm",
     bullets: [
-      { icon: "list-outline",               text: "Use Scout → Stabilize → Counter → Reassess in sequence" },
+      { icon: "list-outline",               text: "Use Assess → Stabilize → Treat → Reassess in sequence" },
       { icon: "information-circle-outline", text: "This is a story moment — it is not meant to be won" },
       { icon: "star-outline",               text: "Lotus Recall will trigger when the time comes" },
     ],
@@ -2370,7 +2370,7 @@ function getBattleObjData(
       { icon: "heart-outline",         text: "Lose: Stability reaches 0 — the patient is lost" },
       { icon: "shield-outline",        text: "Some boss effects may bypass Protection" },
     ],
-    note: "Scout and Reassess may reveal hidden Corruption patterns.",
+    note: "Assess and Reassess may reveal hidden Corruption patterns.",
     btnLabel: "ENTER BATTLE",
   };
   if (isTraining) return {
@@ -2389,7 +2389,7 @@ function getBattleObjData(
     bullets: [
       { icon: "trending-down-outline", text: "Win: Lower Corruption to 0" },
       { icon: "heart-outline",         text: "Lose: Stability reaches 0 — the patient is lost" },
-      { icon: "git-branch-outline",    text: "Build the Care Chain: Scout → Stabilize → Counter → Reassess" },
+      { icon: "git-branch-outline",    text: "Build the Care Pathway: Assess → Stabilize → Treat → Reassess" },
     ],
     btnLabel: "BEGIN",
   };

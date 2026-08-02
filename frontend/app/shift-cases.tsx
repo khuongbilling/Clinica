@@ -159,7 +159,7 @@ export default function ShiftCasesPage() {
               <Text style={styles.lessonBridgeKicker}>LOTUS LESSON HELPS HERE</Text>
               <Text style={styles.lessonBridgeTitle}>{linkedLesson.title}</Text>
               <Text style={styles.lessonBridgeSub}>
-                {linkedLesson.payoffCopy ?? "Your lesson prepared you for the cues in this case. Scout first, then act."}
+                {linkedLesson.payoffCopy ?? "Your lesson prepared you for the cues in this case. Assess first, then act."}
               </Text>
               {linkedLesson.learningTags && linkedLesson.learningTags.length > 0 && (
                 <View style={styles.lessonBridgeTags}>

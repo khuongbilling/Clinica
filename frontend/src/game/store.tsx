@@ -1922,7 +1922,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if ((inv.triage_scroll      ?? 0) < (req.triage_scroll      ?? 0)) return { ok: false, message: `Need ${req.triage_scroll} Triage Scroll(s).` };
     if ((inv.stab_scroll        ?? 0) < (req.stab_scroll        ?? 0)) return { ok: false, message: `Need ${req.stab_scroll} Stabilization Scroll(s).` };
     if ((inv.lesson_note        ?? 0) < (req.lesson_note        ?? 0)) return { ok: false, message: `Need ${req.lesson_note} Lesson Note(s).` };
-    if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { ok: false, message: `Need ${req.care_chain_manual} Care Chain Manual(s).` };
+    if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { ok: false, message: `Need ${req.care_chain_manual} Care Pathway Manual(s).` };
     if ((inv.hero_training_page ?? 0) < (req.hero_training_page ?? 0)) return { ok: false, message: `Need ${req.hero_training_page} Hero Training Page(s).` };
     if (uc < req.university_credits)                                    return { ok: false, message: `Need ${req.university_credits} University Credits.` };
 

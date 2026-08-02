@@ -270,7 +270,7 @@ const UNI_PILLARS: { icon: React.ComponentProps<typeof Ionicons>["name"]; color:
   { icon: "book-outline",    color: "#5ECBC8", title: "Lotus Lessons",
     desc: "Each lesson teaches a clinical cue, concept, or patient care insight — one idea at a time." },
   { icon: "shield-outline",  color: "#F59E0B", title: "Simulations",
-    desc: "Safe training wards where you practice battle mechanics and care chain skills without stakes." },
+    desc: "Safe training wards where you practice battle mechanics and Care Pathway skills without stakes." },
   { icon: "flask-outline",   color: "#A78BFA", title: "Research",
     desc: "Investigate the Sanctuary archive to discover new items and cards for future battles." },
   { icon: "diamond-outline", color: "#D4AF37", title: "University Credits",

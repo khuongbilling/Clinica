@@ -81,9 +81,9 @@ export const TIPS: Record<TipId, TipDef> = {
   "battle.firstChain": {
     id: "battle.firstChain",
     kicker: "GUIDANCE",
-    title: "Care chain progressing",
+    title: "Care Pathway progressing",
     body:
-      "Assess → Stabilize → Treat → Coordinate. Complete the chain for a damage multiplier, bonus shards, and the 3rd star.",
+      "Assess → Stabilize → Treat → Reassess. Complete the pathway for a damage multiplier, bonus shards, and the 3rd star.",
     icon: "git-network",
   },
   "result.firstWin": {
@@ -91,7 +91,7 @@ export const TIPS: Record<TipId, TipDef> = {
     kicker: "FIRST VICTORY",
     title: "How stars work",
     body:
-      "★ 1 = saved the patient · ★ 2 = completed the care chain · ★ 3 = safe & efficient. Open the Manual any time from Profile.",
+      "★ 1 = saved the patient · ★ 2 = completed the Care Pathway · ★ 3 = safe & efficient. Open the Manual any time from Profile.",
     icon: "star",
   },
 };

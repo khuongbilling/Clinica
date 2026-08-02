@@ -167,7 +167,7 @@ export const HINT_INTRO_BY_DIFFICULTY: Record<DifficultyLevel, string> = {
 
 export const OBJECTIVE_BY_DIFFICULTY: Record<DifficultyLevel, string> = {
   guided:   'Reveal clue → Stabilize → Use matching skill → Reassess',
-  standard: 'Scout → Stabilize → Counter → Reassess',
+  standard: 'Assess → Stabilize → Treat → Reassess',
   clinical: 'Recognize pattern → Stabilize if needed → Treat priority → Reassess',
   nclex:    'Recognize Cues → Prioritize → Take Action → Evaluate Outcomes',
   expert:   'Priority may change. Reassess trends and respond safely.',

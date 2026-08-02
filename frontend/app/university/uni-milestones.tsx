@@ -125,7 +125,7 @@ export default function UniMilestonesScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerTxt}>
-            Milestone rewards include University Credits, Cue Scrolls, Triage Scrolls, Stabilization Scrolls, Lesson Notes, and rare Care Chain Manuals.
+            Milestone rewards include University Credits, Cue Scrolls, Triage Scrolls, Stabilization Scrolls, Lesson Notes, and rare Care Pathway Manuals.
           </Text>
         </View>
       </ScrollView>

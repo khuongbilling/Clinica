@@ -116,7 +116,7 @@ export const LOTUS_PATHS: LotusPath[] = [
         subtitle: 'Learn to read the body\'s heat signals.',
         status: 'available',
         linkedCaseId: 'fire_imp',
-        payoffCopy: 'The warmth cue you studied here is exactly what you\'ll see in the Fire Ward — the body\'s fever response, made visible. Scout first, then act.',
+        payoffCopy: 'The warmth cue you studied here is exactly what you\'ll see in the Fire Ward — the body\'s fever response, made visible. Assess first, then act.',
         learningTags: ['Health Skill: Noticing Cues', 'Clinical Habit: Reassess', 'NCLEX Concept: Assessment'],
         rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 8 },
         interactions: [
@@ -164,7 +164,7 @@ export const LOTUS_PATHS: LotusPath[] = [
         subtitle: 'Why breathing is always the first thing a healer checks.',
         status: 'available',
         linkedCaseId: 'air_sprite',
-        payoffCopy: 'The breathing cues you studied here — rate, effort, unusual sounds — are the same ones you\'ll use to Scout the Air Sprite in the ward. Notice first, then act.',
+        payoffCopy: 'The breathing cues you studied here — rate, effort, unusual sounds — are the same ones you\'ll use to Assess the Air Sprite in the ward. Notice first, then act.',
         learningTags: ['NCLEX Concept: Priority', 'Health Skill: Noticing Cues', 'NCLEX Concept: Assessment'],
         rewards: { insightCrystals: 2, crowns: 30, universityCredits: 10, xp: 8 },
         interactions: [
@@ -198,8 +198,8 @@ export const LOTUS_PATHS: LotusPath[] = [
           },
           {
             type: 'info',
-            prompt: 'In the ward, this is called Scouting — and it\'s the most powerful first move in every case.',
-            detail: 'Scout before you act. The Ward Shift clinical cases reward healers who observe first and then choose the right targeted action. The breathing priority you just learned is exactly the logic behind why Airway and Breathing lead every assessment.',
+            prompt: 'In the ward, this is called Assessing — and it\'s the most powerful first move in every case.',
+            detail: 'Assess before you act. The Ward Shift clinical cases reward healers who observe first and then choose the right targeted action. The breathing priority you just learned is exactly the logic behind why Airway and Breathing lead every assessment.',
           },
         ],
       },

@@ -294,7 +294,7 @@ function UpgradeCard({
               <ReqRow label="Lesson Notes"             have={inv.lesson_note ?? 0}       need={rankDef.requirements.lesson_note}       color={upg.accentColor} />
             )}
             {rankDef.requirements.care_chain_manual != null && (
-              <ReqRow label="Care Chain Manual"        have={inv.care_chain_manual ?? 0} need={rankDef.requirements.care_chain_manual} color={upg.accentColor} />
+              <ReqRow label="Care Pathway Manual"      have={inv.care_chain_manual ?? 0} need={rankDef.requirements.care_chain_manual} color={upg.accentColor} />
             )}
             {rankDef.requirements.hero_training_page != null && (
               <ReqRow label="Hero Training Pages"      have={inv.hero_training_page ?? 0}need={rankDef.requirements.hero_training_page}color={upg.accentColor} />

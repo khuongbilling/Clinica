@@ -169,7 +169,7 @@ export const CHAPTERS: Chapter[] = [
       "Lotus Lesson: Hydration Basics — fluids as first language",
     ],
     failureHint: {
-      text: "Hydration cases hide their cues. Practice spotting the early signs before they fade — then your Scout and Stabilize actions will land much harder.",
+      text: "Hydration cases hide their cues. Practice spotting the early signs before they fade — then your Assess and Stabilize actions will land much harder.",
       practices: [
         "Clinical Cue Lab: Hydration Signs — spot the hidden fluid cues",
         "Rapid Triage Hall: What Matters First — urgency under time pressure",
@@ -581,7 +581,7 @@ export const CHAPTERS: Chapter[] = [
       "Stabilize Stack Lab: Open the Air Path — sequence matters",
     ],
     failureHint: {
-      text: "Airway enemies hide their severity. Scout early to reveal hidden cues — once the wheeze goes silent, the window is closing fast.",
+      text: "Airway enemies hide their severity. Assess early to reveal hidden cues — once the wheeze goes silent, the window is closing fast.",
       practices: [
         "Lotus Lesson: Breathing Basics — SpO₂, respiratory rate, effort",
         "Clinical Cue Lab: Shortness of Breath — spot the airway distress signs",

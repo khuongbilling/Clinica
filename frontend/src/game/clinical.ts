@@ -1294,9 +1294,9 @@ export function computeStars(scoring: BattleScoring, rules: StarRules): { stars:
 
   if (scoring.won && scoring.fullChainCompleted) {
     stars++;
-    details.push('Completed the clinical care chain.');
+    details.push('Completed the Care Pathway.');
   } else if (scoring.won) {
-    details.push('Care chain incomplete.');
+    details.push('Care Pathway incomplete.');
   }
 
   const efficient = scoring.turnsTaken <= rules.turnLimit;
@@ -1404,17 +1404,17 @@ export function generateBattleMessage(ctx: BattleMessageContext): string {
   if (feedbackLevel === 'standard') {
     // Standard: action name + label + number. Chain info appended inline.
     const chainStr = chainAdvanced ? ` Chain: ${chainAdvanced} complete.` : '';
-    const fullChainStr = fullChainCompleted ? ' Full care chain!' : '';
+    const fullChainStr = fullChainCompleted ? ' Full Care Pathway!' : '';
     return `${actionName}: ${eff}. ${effectStr}${chainStr}${fullChainStr}`.trim();
   }
   // supportive / guided — verbose, educational, multi-line.
   const why = rationale ? ` ${rationale}` : '';
-  const chainLine = chainAdvanced ? `\nClinical Chain: ${chainAdvanced} complete.` : '';
+  const chainLine = chainAdvanced ? `\nCare Pathway: ${chainAdvanced} complete.` : '';
   const nextStepLine = !fullChainCompleted && nextChainStep && chainAdvanced
     ? `\nNext: ${nextChainStep}.`
     : '';
   const fullChainLine = fullChainCompleted
-    ? '\nComplete Care Chain: assess, support, treat, reassess.'
+    ? '\nComplete Care Pathway: assess, stabilize, treat, reassess.'
     : '';
 
   if (feedbackLevel === 'guided') {
@@ -1602,7 +1602,7 @@ export const CLINICAL_CUES: ClinicalCueQuestion[] = [
       { text: 'Assume it will fix itself with no thought', correct: false },
     ],
     rationale: 'Noticing changes early — before jumping to conclusions — is the first step of clinical thinking: gather information before acting.',
-    battleTranslation: 'Scouting for clues before choosing an action works the same way in the ward.',
+    battleTranslation: 'Assessing for clues before choosing an action works the same way in the ward.',
     codexEntryId: 'what-is-a-clinical-cue',
   },
   // ---------------- Tier 2: Body Basics ----------------
@@ -1657,7 +1657,7 @@ export const CLINICAL_CUES: ClinicalCueQuestion[] = [
       { text: 'The patient becomes immune to further disease', correct: false },
     ],
     rationale: 'Rapid improvement without reassessment can mask a worsening underlying cause — always confirm with reassessment before assuming the job is done.',
-    battleTranslation: 'This is exactly why Reassess closes out the Care Chain — confirming the win keeps it from unraveling.',
+    battleTranslation: 'This is exactly why Reassess closes out the Care Pathway — confirming the win keeps it from unraveling.',
   },
   {
     id: 'cue_fever_basics',
@@ -1677,14 +1677,14 @@ export const CLINICAL_CUES: ClinicalCueQuestion[] = [
     id: 'cue_chain',
     tier: 'symptom_cue',
     topic: 'assessment_reassessment',
-    prompt: 'What is the correct order of the Care Chain?',
+    prompt: 'What is the correct order of the Care Pathway?',
     options: [
-      { text: 'Scout \u2192 Stabilize \u2192 Counter \u2192 Reassess', correct: true },
-      { text: 'Counter \u2192 Scout \u2192 Stabilize \u2192 Reassess', correct: false },
-      { text: 'Reassess \u2192 Counter \u2192 Scout \u2192 Stabilize', correct: false },
+      { text: 'Assess \u2192 Stabilize \u2192 Treat \u2192 Reassess', correct: true },
+      { text: 'Treat \u2192 Assess \u2192 Stabilize \u2192 Reassess', correct: false },
+      { text: 'Reassess \u2192 Treat \u2192 Assess \u2192 Stabilize', correct: false },
     ],
-    rationale: 'Gather data (Scout), support the patient (Stabilize), treat the cause (Counter), then confirm (Reassess) — this order prevents treating the wrong problem.',
-    battleTranslation: 'Following this order in battle is what unlocks full Care Chain bonuses instead of partial credit.',
+    rationale: 'Gather data (Assess), support the patient (Stabilize), treat the cause (Treat), then confirm (Reassess) — this order prevents treating the wrong problem.',
+    battleTranslation: 'Following this order in battle is what unlocks full Care Pathway bonuses instead of partial credit.',
     learnerNote: 'In real practice this mirrors the nursing process: Assessment \u2192 Intervention \u2192 Evaluation, repeated continuously rather than done once.',
     codexEntryId: 'what-is-a-clinical-cue',
   },
@@ -1756,7 +1756,7 @@ export const CLINICAL_CUES: ClinicalCueQuestion[] = [
       { text: 'Wait for the doctor to arrive', correct: false },
     ],
     rationale: 'Assessment (gathering data) always precedes intervention — treating before you know what you\u2019re treating risks making the wrong call.',
-    battleTranslation: 'Scouting clues before committing an action is what keeps Care Chain bonuses on track instead of guessing.',
+    battleTranslation: 'Assessing clues before committing an action is what keeps Care Pathway bonuses on track instead of guessing.',
     learnerNote: 'This is the foundation of clinical judgment: data drives the plan, not the other way around.',
     codexEntryId: 'what-is-a-clinical-cue',
   },
@@ -1813,7 +1813,7 @@ export const CLINICAL_CUES: ClinicalCueQuestion[] = [
       { text: 'Assume it is correct if it was correct last time', correct: false },
     ],
     rationale: 'A quick double-check before acting catches most preventable errors — speed should never replace verification.',
-    battleTranslation: 'This is why confirming a clue before committing to a Counter action pays off more than rushing in.',
+    battleTranslation: 'This is why confirming a clue before committing to a Treat action pays off more than rushing in.',
     learnerNote: 'This reflects core medication-safety practice: verifying before administering prevents the majority of avoidable errors.',
   },
 ];

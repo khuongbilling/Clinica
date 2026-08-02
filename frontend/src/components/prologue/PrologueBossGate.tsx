@@ -73,7 +73,7 @@ export default function PrologueBossGate() {
 
         <Text style={s.sub}>
           Florence Nightingale, Alexander Fleming and The Prodigy stand with you.{"\n"}
-          Scout. Stabilize. Counter. Reassess.
+          Assess. Stabilize. Treat. Reassess.
         </Text>
 
         <Text style={s.instructor}>THE SILENT INFARCTION cannot be defeated — only understood.</Text>

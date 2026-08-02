@@ -329,11 +329,11 @@ export function getContextualStabilizeFeedback(layer: ExplanationLayer, ctx: Act
 export function getContextualReassessFeedback(layer: ExplanationLayer, ctx: ActionFeedbackContext): string {
   if (ctx.treatedThisTurn) {
     const msgs: Record<ExplanationLayer, string> = {
-      fantasy:       '✦ Care Chain — treatment then reassessment. Bonus AP next turn!',
-      simpleMedical: '✦ Care Chain — you treated, then checked the response. Bonus AP awarded!',
-      nursing:       '✦ Care Chain — targeted intervention followed by reassessment. Clinical reasoning rewarded.',
-      nclex:         '✦ Care Chain — Intervene → Evaluate Outcomes. This is clinical judgment in action.',
-      professional:  '✦ Care Chain — intervention with reassessment confirms systematic clinical reasoning.',
+      fantasy:       '✦ Care Pathway — treatment then reassessment. Bonus AP next turn!',
+      simpleMedical: '✦ Care Pathway — you treated, then checked the response. Bonus AP awarded!',
+      nursing:       '✦ Care Pathway — targeted intervention followed by reassessment. Clinical reasoning rewarded.',
+      nclex:         '✦ Care Pathway — Intervene → Evaluate Outcomes. This is clinical judgment in action.',
+      professional:  '✦ Care Pathway — intervention with reassessment confirms systematic clinical reasoning.',
     };
     return msgs[layer];
   }
@@ -363,7 +363,7 @@ export function buildClinicalReflection(params: {
 
   let bestAction: string | null = null;
   if (fullChainCompleted) {
-    bestAction = 'Full Care Chain — Scout, Stabilize, Treat, and Reassess in sequence.';
+    bestAction = 'Full Care Pathway — Assess, Stabilize, Treat, and Reassess in sequence.';
   } else if (reassessUsed && won) {
     bestAction = 'You reassessed after treatment — that\'s the loop the Codex rewards.';
   } else if (consultsUsed > 0 && inappropriateConsultsUsed === 0) {
@@ -374,11 +374,11 @@ export function buildClinicalReflection(params: {
 
   let missedOpportunity: string | null = null;
   if (!reassessUsed && won) {
-    missedOpportunity = 'No Reassess used — checking after treatment earns Care Chain bonus AP next turn.';
+    missedOpportunity = 'No Reassess used — checking after treatment earns Care Pathway bonus AP next turn.';
   } else if (unsafeCount > 0) {
     missedOpportunity = `${unsafeCount} unsafe action${unsafeCount > 1 ? 's' : ''} taken — these weaken progress and risk the patient.`;
   } else if (!fullChainCompleted && won && reassessUsed) {
-    missedOpportunity = 'Care Chain incomplete — try Scout → Stabilize → Treat → Reassess for max bonus.';
+    missedOpportunity = 'Care Pathway incomplete — try Assess → Stabilize → Treat → Reassess for max bonus.';
   } else if (inappropriateConsultsUsed > 0) {
     missedOpportunity = 'A Support Call didn\'t match the situation — the Codex noted it.';
   } else if (poorFitCount > 0 && won) {
@@ -389,7 +389,7 @@ export function buildClinicalReflection(params: {
   if (!reassessUsed) {
     nextTip = 'Next time: use Reassess after a treatment skill to close the care loop and earn bonus AP.';
   } else if (!fullChainCompleted) {
-    nextTip = 'Try opening with Scout → Stabilize → Treat → Reassess for the full chain bonus.';
+    nextTip = 'Try opening with Assess → Stabilize → Treat → Reassess for the full pathway bonus.';
   } else if (unsafeCount === 0 && poorFitCount === 0) {
     nextTip = 'Perfect sequence. Push to a higher-difficulty enemy to test your clinical reasoning.';
   } else {

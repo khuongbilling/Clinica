@@ -75,9 +75,9 @@ Two bars matter most:
 • Patient Stability (green): how the patient is doing.
 You WIN when Corruption hits 0. You LOSE if Stability hits 0 at the end of any turn.`),
       practiced: w(`
-Corruption is the disease severity meter. Reduce it via correctly-targeted strikes, system actions, and care chains.
+Corruption is the disease severity meter. Reduce it via correctly-targeted strikes, system actions, and Care Pathway steps.
 Stability is the patient compensation reserve. It drops each turn based on instability and rises when you stabilize (oxygenation, perfusion, glucose, calm, etc.).
-A care chain (Assess → Stabilize → Treat → Coordinate) does not auto-win, but it multiplies your output and unlocks the third star.`),
+A Care Pathway (Assess → Stabilize → Treat → Reassess) does not auto-win, but it multiplies your output and unlocks the third star.`),
       expert: w(`
 Disease Corruption: treat as cumulative pathophysiologic burden. It falls only with correctly-matched system interventions.
 Stability: composite of ABCs, perfusion, and homeostasis. Net change/turn = (stabilize effects) − (instability tick) ± risks.
@@ -129,11 +129,11 @@ At higher chapters, dual-system enemies require role rotation across the team �
     id: 'clues',
     title: 'The Clue Board (3 + 1)',
     icon: 'eye',
-    kicker: 'Three visible clues, one hidden. Scout to reveal.',
+    kicker: 'Three visible clues, one hidden. Assess to reveal.',
     content: {
       novice: w(`
 At the start of every battle you'll see three obvious things about the patient — like "breathing fast" or "pale skin".
-There's always one more clue hidden. Use a Scout or Assess skill to reveal it. The hidden clue often unlocks the safest move.`),
+There's always one more clue hidden. Use an Assess skill to reveal it. The hidden clue often unlocks the safest move.`),
       practiced: w(`
 Visible clues are surface assessment data (vitals, posture, mental status). The hidden clue is usually the diagnostic anchor (lab value, EKG finding, BP measurement).
 Reveal it before committing AP to high-cost interventions — you'll match interventions to the actual pathology, not the surface picture.`),
@@ -168,24 +168,24 @@ Multisystem enemies require correctly-sequenced multisystem actions — single-s
   },
   {
     id: 'care-chain',
-    title: 'The Clinical Care Chain',
+    title: 'The Care Pathway',
     icon: 'git-network',
-    kicker: 'Assess → Stabilize → Treat → Coordinate.',
+    kicker: 'Assess → Stabilize → Treat → Reassess.',
     content: {
       novice: w(`
 The game rewards a real-life nursing order:
-1) Assess (look first), 2) Stabilize (support breathing/circulation), 3) Treat (target the cause), 4) Coordinate (escalate / call).
+1) Assess (look first), 2) Stabilize (support breathing/circulation), 3) Treat (target the cause), 4) Reassess (confirm the outcome).
 Following this order unlocks the third star and gives bonus shards.`),
       practiced: w(`
-Each clinical skill has a chainRole tag. When you complete the chain (any 4 chain-role roles in order without breaking it), your Treat phase deals a Care Chain Bonus.
-Care Attempt and items don't count toward the chain; consults can substitute Coordinate when used appropriately.`),
+Each clinical skill has a pathwayRole tag. When you complete the pathway (any 4 pathway-role steps in order without breaking it), your Treat phase deals a Care Pathway Bonus.
+Care Attempt and items don't count toward the pathway; consults can substitute Escalate when used appropriately.`),
       expert: w(`
-The chain is a directed sequence: A→S→T→C with a tolerance window for swaps. Breaking order (e.g., Treat before Assess) does not penalize directly but forfeits the chain bonus, which scales with chapter (×1.0 → ×1.5).
-For bosses, the chain may need to be re-completed across phases.`),
+The pathway is a directed sequence: Assess→Stabilize→Treat→Reassess with a tolerance window for swaps. Breaking order (e.g., Treat before Assess) does not penalize directly but forfeits the pathway bonus, which scales with chapter (×1.0 → ×1.5).
+For bosses, the pathway may need to be re-completed across phases.`),
     },
     takeaways: [
-      'Order matters: Assess → Stabilize → Treat → Coordinate',
-      'Care chain = damage multiplier + Codex Shard bonus + 3rd star',
+      'Order matters: Assess → Stabilize → Treat → Reassess',
+      'Care Pathway = damage multiplier + Codex Shard bonus + 3rd star',
     ],
   },
   {
@@ -197,7 +197,7 @@ For bosses, the chain may need to be re-completed across phases.`),
       novice: w(`
 After a battle you earn up to 3 stars:
 ⭐ 1: You stabilized the patient (you won).
-⭐ 2: You completed the care chain.
+⭐ 2: You completed the Care Pathway.
 ⭐ 3: You were safe and efficient — few unsafe moves, few consults, low Care Attempt use.`),
       practiced: w(`
 Stars gate Codex Shard bonuses (★+5 each) and your rank progression speed.
@@ -255,7 +255,7 @@ Treat the bag as your code cart: build it intentionally per shift.`),
 If you don't know what to do, Care Attempt is a basic action any hero can use. It costs 1 AP and lowers Corruption a small amount.
 Don't lean on it — using it more than twice in one battle blocks your 3rd star.`),
       practiced: w(`
-Care Attempt is a safety net for moments when no skill fits. It doesn't advance the care chain and scales down with chapter (5 → 4 → 3 corruption; only 2 vs bosses).
+Care Attempt is a safety net for moments when no skill fits. It doesn't advance the Care Pathway and scales down with chapter (5 → 4 → 3 corruption; only 2 vs bosses).
 The 3rd star requires ≤2 uses — this nudges you toward targeted clinical thinking instead of spamming a generic move.`),
       expert: w(`
 Care Attempt models nonspecific supportive care. The diminishing-returns curve and efficiency-star gate enforces specificity bias: the player must justify each action.

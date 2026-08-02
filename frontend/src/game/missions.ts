@@ -28,11 +28,11 @@ export const MISSIONS: Record<string, MissionMeta> = {
   air_sprite: {
     missionTitle:    "Restore the Air Temple",
     story:           "The Air Temple is collapsing. A patient is breathing fast, sitting upright, and losing oxygen glow.",
-    recommendedRoles:["Scout", "Air support", "Stabilizer"],
+    recommendedRoles:["Assess-type", "Air support", "Stabilizer"],
     winCondition:    "Keep Stability above 0 and reduce Corruption to 0",
     starGoals: [
       "Win the battle",
-      "Complete the care chain",
+      "Complete the Care Pathway",
       "Win within 4 turns with no unsafe actions and no more than 2 Care Attempts",
     ],
     victoryTitle:    "Air Temple Restored",
@@ -50,11 +50,11 @@ export const MISSIONS: Record<string, MissionMeta> = {
   water_sprite: {
     missionTitle:    "Restore the River Temple",
     story:           "The River Temple is running dry. A patient has poor circulation and falling blood pressure.",
-    recommendedRoles:["Stabilizer", "River support", "Scout"],
+    recommendedRoles:["Stabilizer", "River support", "Assess-type"],
     winCondition:    "Keep Stability above 0 and reduce Corruption to 0",
     starGoals: [
       "Win the battle",
-      "Complete the care chain",
+      "Complete the Care Pathway",
       "Win efficiently with no unsafe actions",
     ],
     victoryTitle:    "River Temple Restored",
@@ -67,11 +67,11 @@ export const MISSIONS: Record<string, MissionMeta> = {
   energy_sprite: {
     missionTitle:    "Restore the Energy Temple",
     story:           "The Energy Temple flickers. A patient has dangerously low blood sugar and is confused.",
-    recommendedRoles:["Stabilizer", "Scout", "Specialist"],
+    recommendedRoles:["Stabilizer", "Assess-type", "Specialist"],
     winCondition:    "Keep Stability above 0 and reduce Corruption to 0",
     starGoals: [
       "Win the battle",
-      "Complete the care chain",
+      "Complete the Care Pathway",
       "Win with no unsafe actions",
     ],
     victoryTitle:    "Energy Temple Restored",
@@ -84,11 +84,11 @@ export const MISSIONS: Record<string, MissionMeta> = {
   fire_sprite: {
     missionTitle:    "Contain the Fire Corruption",
     story:           "A Fire corruption spreads through the wound. A patient has a localized infection that threatens to spread.",
-    recommendedRoles:["Scout", "Strike", "Shield"],
+    recommendedRoles:["Assess-type", "Strike", "Shield"],
     winCondition:    "Keep Stability above 0 and reduce Corruption to 0",
     starGoals: [
       "Win the battle",
-      "Complete the care chain",
+      "Complete the Care Pathway",
       "Win with no unsafe actions",
     ],
     victoryTitle:    "Fire Corruption Contained",
@@ -101,11 +101,11 @@ export const MISSIONS: Record<string, MissionMeta> = {
   storm_sprite: {
     missionTitle:    "Calm the Storm Corruption",
     story:           "The Storm Temple roars. A patient has early sepsis: the infection is entering the bloodstream.",
-    recommendedRoles:["Scout", "Strike", "Stabilizer"],
+    recommendedRoles:["Assess-type", "Strike", "Stabilizer"],
     winCondition:    "Keep Stability above 0 and reduce Corruption to 0",
     starGoals: [
       "Win the battle",
-      "Complete the care chain",
+      "Complete the Care Pathway",
       "Win within 5 turns with no unsafe actions",
     ],
     victoryTitle:    "Storm Corruption Calmed",
@@ -122,7 +122,7 @@ export const MISSIONS: Record<string, MissionMeta> = {
     winCondition:    "Keep Stability above 0 through all stages and reduce Corruption to 0",
     starGoals: [
       "Win the battle",
-      "Complete the care chain",
+      "Complete the Care Pathway",
       "Win with no unsafe actions and no emergency calls",
     ],
     victoryTitle:    "The Core Restored",

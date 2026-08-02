@@ -60,7 +60,7 @@ const CATEGORIES: CategorySection[] = [
         icon: "medical-outline",
         title: "Ward Shift",
         subtitle: "Turn-based clinical encounters",
-        body: "Your main combat mode. Each turn your heroes use AP to cast skills — Scout to reveal clues, Stabilize to protect the patient, Strike to reduce corruption.",
+        body: "Your main combat mode. Each turn your heroes use AP to cast skills — Assess to reveal clues, Stabilize to protect the patient, Strike to reduce corruption.",
         bullets: [
           "Answer the Clinical Cue first for a bonus",
           "Use End Turn to refresh AP for all heroes",
@@ -180,7 +180,7 @@ const CATEGORIES: CategorySection[] = [
         icon: "people-outline",
         title: "Active Team",
         subtitle: "Your battle lineup",
-        body: "You can bring up to 3 heroes into each clinical shift. Each hero acts once per turn using their AP. Balanced teams (Scout + Stabilizer + Striker) handle the widest range of cases.",
+        body: "You can bring up to 3 heroes into each clinical shift. Each hero acts once per turn using their AP. Balanced teams (Assess + Stabilize + Treat skills) handle the widest range of cases.",
         bullets: [
           "Tap + on a hero card to add them to your active team",
           "Changes save instantly",

@@ -75,7 +75,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 const TYPE_FLAVOR: Record<string, string> = {
   battle:          "Deploy your healer team to the ward. Assess clinical cues, apply actions, and stabilize your patient before corruption overwhelms them.",
-  mini_boss:       "A formidable corrupted entity stands between chapters. Bring your strongest strategy and care chain to overcome this trial.",
+  mini_boss:       "A formidable corrupted entity stands between chapters. Bring your strongest strategy and Care Pathway to overcome this trial.",
   ward_defense:    "Hold the ward against waves of disease-monsters. Position your healers, manage stamina, and keep patients alive.",
   memory_fragment: "A flash of memory surfaces. Reflect on the healer's journey so far and claim your first-clear reward.",
   challenge:       "A rapid clinical skill challenge. Think fast, reason clearly, and demonstrate your clinical instincts.",

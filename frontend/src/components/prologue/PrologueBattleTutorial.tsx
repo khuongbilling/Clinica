@@ -89,12 +89,12 @@ const PRODIGY_SKILL = {
   accentBorder: "rgba(232,53,74,0.30)",
   effects: [
     "Stabilize: reverse active damage over 2 rounds (+15 Stability)",
-    "Must use AFTER Scout — unstabilized sites resist the effect",
-    "Stabilization before countering extends your action window",
+    "Must use AFTER Assess — unstabilized sites resist the effect",
+    "Stabilization before treating extends your action window",
     "AP Cost: 2 — efficient when sequenced correctly",
   ],
   effectColor: "#E8354A",
-  prompt: "First we scout. Now we stabilize before we strike.",
+  prompt: "First we assess. Now we stabilize before we treat.",
 } as const;
 
 const LAMP_SKILL = {
@@ -130,13 +130,13 @@ const CULTURE_SKILL = {
   accentBg:  "rgba(62,207,178,0.08)",
   accentBorder: "rgba(62,207,178,0.30)",
   effects: [
-    "Counter: targeted strike using the scouted weakness (-18 Corruption)",
-    "Deals full damage only after Scout + Stabilize sequence",
+    "Treat: targeted strike using the assessed weakness (-18 Corruption)",
+    "Deals full damage only after Assess + Stabilize sequence",
     "Random broad-spectrum attacks deal ~40% of this",
     "AP Cost: 2 — precision saves Action Points",
   ],
   effectColor: "#3ECFB2",
-  prompt:    "Scouted. Stabilized. Now we finish it precisely.",
+  prompt:    "Assessed. Stabilized. Now we finish it precisely.",
 } as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -555,7 +555,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
 
           <Animated.View style={[styles.revealChip, styles.revealChip3, { opacity: prodigy2Fade }]}>
             <Text style={{ color: "#E8C453", fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>
-              ⚠  SCOUT FIRST
+              ⚠  ASSESS FIRST
             </Text>
             <Text style={styles.revealSub}>Hidden cues still spreading</Text>
           </Animated.View>
@@ -650,8 +650,8 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
             </View>
           </View>
           <View style={styles.stepRow}>
-            {["Scout", "Stabilize", "Counter", "Reassess"].map((step, i) => {
-              // Scout (Nightingale), Stabilize (Fleming), Counter (Prodigy), Reassess (Master Bai)
+            {["Assess", "Stabilize", "Treat", "Reassess"].map((step, i) => {
+              // Assess (Nightingale), Stabilize (Fleming), Treat (Prodigy), Reassess (Master Bai)
               const done = (i === 0 && ["lamp_effect","fleming_entry","culture_prompt","culture_effect","prodigy_entry","prodigy_prompt","prodigy_effect","master_bai","player_turn"].includes(stage))
                         || (i === 1 && ["culture_effect","prodigy_entry","prodigy_prompt","prodigy_effect","master_bai","player_turn"].includes(stage))
                         || (i === 2 && ["prodigy_effect","master_bai","player_turn"].includes(stage));
@@ -799,7 +799,7 @@ export default function PrologueBattleTutorial({ onComplete }: Props) {
                 <Text style={styles.mbSpeaker}>MASTER BAI</Text>
               </View>
               <Text style={styles.mbLesson}>
-                "Scout first. Stabilize what you find. Then counter — with everything you have. Then reassess. Every time — in that sequence."
+                "Assess first. Stabilize what you find. Then treat — with everything you have. Then reassess. Every time — in that sequence."
               </Text>
             </View>
           </Animated.View>

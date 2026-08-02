@@ -1,10 +1,10 @@
 import { ActionClinical } from './clinical';
 
 // ── Card chain-role type ───────────────────────────────────────────────────────
-// Scout / Stabilize / Counter / Reassess → count toward the clinical chain.
-// Support → does NOT advance the chain (shields, buffs, emergency calls).
+// Assess / Stabilize / Treat / Reassess → count toward the clinical pathway.
+// Support → does NOT advance the pathway (shields, buffs, emergency calls).
 
-export type CardChainType = 'Scout' | 'Stabilize' | 'Counter' | 'Reassess' | 'Support';
+export type CardChainType = 'Assess' | 'Stabilize' | 'Treat' | 'Reassess' | 'Support';
 
 export type SkillCardType =
   | 'oxygen_support'
@@ -59,7 +59,7 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: '-10 Corruption',
     costAP: 1,
     systemType: 'Air',
-    cardChainType: 'Counter',
+    cardChainType: 'Treat',
     source: 'Apothecary Market',
     strike: 10,
   },
@@ -115,7 +115,7 @@ export const CARD_POOL: SkillCard[] = [
 
   // ── P8 Starter Cards ──────────────────────────────────────────────────────────
   // These five cards are the foundational clinical-chain tools given to every
-  // player. Each one slots into a specific chain role (Scout/Stabilize/Counter/
+  // player. Each one slots into a specific pathway role (Assess/Stabilize/Treat/
   // Reassess/Support) and can be loaded into the 3 card slots in the loadout.
   {
     id: 'card_focused_assessment',
@@ -125,7 +125,7 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: 'Reveal 2 clues',
     costAP: 1,
     systemType: 'Universal',
-    cardChainType: 'Scout',
+    cardChainType: 'Assess',
     source: 'University Research',
     reveal: 2,
   },
@@ -149,7 +149,7 @@ export const CARD_POOL: SkillCard[] = [
     shortEffect: '-12 Corruption',
     costAP: 1,
     systemType: 'Universal',
-    cardChainType: 'Counter',
+    cardChainType: 'Treat',
     source: 'Battle Reward',
     strike: 12,
   },
@@ -232,9 +232,9 @@ export function getCard(id: string): SkillCard | undefined {
 
 // Chain-type config for UI rendering.
 export const CHAIN_TYPE_CONFIG: Record<CardChainType, { icon: string; color: string; label: string; advancesChain: boolean }> = {
-  Scout:     { icon: 'eye',               color: '#A6D8F6', label: 'Scout',     advancesChain: true },
+  Assess:    { icon: 'eye',               color: '#A6D8F6', label: 'Assess',    advancesChain: true },
   Stabilize: { icon: 'heart',             color: '#4FD8C4', label: 'Stabilize', advancesChain: true },
-  Counter:   { icon: 'flash',             color: '#F97316', label: 'Counter',   advancesChain: true },
+  Treat:     { icon: 'flash',             color: '#F97316', label: 'Treat',     advancesChain: true },
   Reassess:  { icon: 'refresh-circle',    color: '#BBA7EA', label: 'Reassess',  advancesChain: true },
   Support:   { icon: 'shield-checkmark',  color: '#E8C868', label: 'Support',   advancesChain: false },
 };

@@ -700,7 +700,7 @@ function applyResolutionToState(
       const chainStab = Math.round(CHAIN_BONUSES.fullChainStabilityBonus * ccm * getStabilityGainModifier(next.stability) * stabilityResistanceMultiplier(next.enemy));
       next.stability = clamp(next.stability + chainStab, 0, 100);
       const ccNote = ccm > 1.005 ? ` (Medic +${Math.round((ccm - 1) * 100)}%)` : '';
-      next.log.push(`✨ Complete Care Chain: -${chainCorr} corruption, +${chainStab} stability.${ccNote}`);
+      next.log.push(`✨ Complete Care Pathway: -${chainCorr} corruption, +${chainStab} stability.${ccNote}`);
     }
   }
 
@@ -870,7 +870,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   // Push 7: hidden-defense hint on the very first action of the battle.
   // Shows once only — tells the player Scout/Reassess will help.
   if (hiddenDefenseMod < 0.99 && s.turnsTaken === 0) {
-    next.log = [...next.log, `🔍 Hidden pathology detected — Scout or Reassess to reveal clues and strengthen effects.`];
+    next.log = [...next.log, `🔍 Hidden pathology detected — Assess or Reassess to reveal clues and strengthen effects.`];
   }
 
   let effectAmount = 0;
@@ -883,7 +883,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
       revealCount += cb?.scoutRevealBonus ?? 0;
       if (!next.classFirstScoutUsed && (cb?.scoutFirstActionRevealBonus ?? 0) > 0) {
         revealCount += cb!.scoutFirstActionRevealBonus;
-        next.log = [...next.log, `👁 Seer's Eye: first Scout of battle reveals an extra clue.`];
+        next.log = [...next.log, `👁 Seer's Eye: first Assess of battle reveals an extra clue.`];
       }
       next.classFirstScoutUsed = true;
     }

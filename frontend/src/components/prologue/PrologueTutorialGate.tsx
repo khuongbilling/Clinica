@@ -71,7 +71,7 @@ export default function PrologueTutorialGate() {
         <Text style={s.heading}>The Ward Awaits</Text>
         <Text style={s.sub}>
           Nightingale, Fleming, and The Prodigy stand with you.{"\n"}
-          Scout. Stabilize. Counter. Reassess.
+          Assess. Stabilize. Treat. Reassess.
         </Text>
         <Text style={s.instructor}>MASTER BAI will guide you.</Text>
       </Animated.View>

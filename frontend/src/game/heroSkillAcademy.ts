@@ -59,19 +59,19 @@ export const MATERIAL_LABELS: Record<string, string> = {
   triage_scroll:     'Triage Scroll',
   stab_scroll:       'Stabilization Scroll',
   lesson_note:       'Lesson Note',
-  care_chain_manual: 'Care Chain Manual',
+  care_chain_manual: 'Care Pathway Manual',
   hero_training_page:'Hero Training Page',
 };
 
 export const SKILL_UPGRADES: SkillUpgradeDef[] = [
-  // ── 1. Scout / Cue Recognition ──────────────────────────────────────────
+  // ── 1. Assess / Cue Recognition ──────────────────────────────────────────
   {
     id: 'lantern_of_clues',
     name: 'Lantern of Clues',
     category: 'scout',
-    categoryLabel: 'Scout · Cue Recognition',
+    categoryLabel: 'Assess · Cue Recognition',
     description:
-      'Scout and assess skills reveal hidden clinical cues more effectively, helping identify enemy weaknesses earlier.',
+      'Assess and analyze skills reveal hidden clinical cues more effectively, helping identify enemy weaknesses earlier.',
     icon: 'eye-outline',
     accentColor: '#2DD4BF',
     targetActionTypes: ['scout', 'analyze'],
@@ -80,7 +80,7 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
       {
         rank: 1,
         label: 'Lantern of Clues I',
-        description: 'Scout and analyze skills reveal one additional hidden clue.',
+        description: 'Assess and analyze skills reveal one additional hidden clue.',
         battleEffect: '+1 clue reveal per scout/analyze skill used.',
         effect: { reveal: 1 },
         requirements: {
@@ -93,7 +93,7 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
       {
         rank: 2,
         label: 'Lantern of Clues II',
-        description: 'Scout and analyze skills now reveal two additional clues (cumulative with Rank I).',
+        description: 'Assess and analyze skills now reveal two additional clues (cumulative with Rank I).',
         battleEffect: '+2 clue reveals per scout/analyze skill used.',
         effect: { reveal: 1 },
         requirements: {
@@ -235,11 +235,11 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
   // ── 5. General Training ──────────────────────────────────────────────────
   {
     id: 'care_chain_training',
-    name: 'Care Chain Training',
+    name: 'Care Pathway Training',
     category: 'general',
     categoryLabel: 'General Training',
     description:
-      'Intensive care chain sessions accelerate hero development, granting bonus Hero EXP to all owned healers.',
+      'Intensive Care Pathway sessions accelerate hero development, granting bonus Hero EXP to all owned healers.',
     icon: 'school-outline',
     accentColor: '#F43F5E',
     targetActionTypes: [],
@@ -247,7 +247,7 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     ranks: [
       {
         rank: 1,
-        label: 'Care Chain Training I',
+        label: 'Care Pathway Training I',
         description: 'All owned heroes gain 50 Hero EXP from this focused training session.',
         battleEffect: 'Grants 50 Hero EXP to all owned heroes on purchase.',
         effect: { heroXp: 50 },
@@ -260,7 +260,7 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
       },
       {
         rank: 2,
-        label: 'Care Chain Training II',
+        label: 'Care Pathway Training II',
         description: 'Advanced training sessions grant 100 Hero EXP to all owned heroes.',
         battleEffect: 'Grants 100 Hero EXP to all owned heroes on purchase.',
         effect: { heroXp: 100 },
@@ -320,7 +320,7 @@ export function canUpgrade(
   if ((inv.triage_scroll      ?? 0) < (req.triage_scroll      ?? 0)) return { can: false, reason: `Need ${req.triage_scroll} Triage Scroll(s).` };
   if ((inv.stab_scroll        ?? 0) < (req.stab_scroll        ?? 0)) return { can: false, reason: `Need ${req.stab_scroll} Stabilization Scroll(s).` };
   if ((inv.lesson_note        ?? 0) < (req.lesson_note        ?? 0)) return { can: false, reason: `Need ${req.lesson_note} Lesson Note(s).` };
-  if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { can: false, reason: `Need ${req.care_chain_manual} Care Chain Manual(s).` };
+  if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { can: false, reason: `Need ${req.care_chain_manual} Care Pathway Manual(s).` };
   if ((inv.hero_training_page ?? 0) < (req.hero_training_page ?? 0)) return { can: false, reason: `Need ${req.hero_training_page} Training Page(s).` };
   if (uc < req.university_credits)                                    return { can: false, reason: `Need ${req.university_credits} University Credits.` };
 

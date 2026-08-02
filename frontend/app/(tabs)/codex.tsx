@@ -21,7 +21,7 @@ const TUTORIAL_ICONS: Partial<Record<TutorialId, string>> = {
 };
 
 const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
-  firstBattle: "Learn Scout, Stabilize, and Counter — the care chain that wins battles.",
+  firstBattle: "Learn Assess, Stabilize, and Treat — the Care Pathway that wins battles.",
   firstKingdom: "Explore your kingdom buildings and understand how the realm grows.",
   firstSummon: "Spend Codex Shards to call new healers with unique clinical skills.",
 };

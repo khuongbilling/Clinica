@@ -129,7 +129,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "prologue_scout",
-      title: "Step 1: Scout",
+      title: "Step 1: Assess",
       body: "Don't rush to treat what you haven't assessed. Nightingale's Lamp of Observation is ready. Use it to surface what this patient actually needs before you do anything else.",
       placement: "center",
       requireAction: true,
@@ -147,8 +147,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "prologue_counter",
-      title: "Step 3: Counter",
-      body: "The patient is steadier. Now read what the disease is about to do and get ahead of it. The Prodigy's Mythic Prescience anticipates the next deterioration and strikes the Corruption before it can act. Counter before you end the turn.",
+      title: "Step 3: Treat",
+      body: "The patient is steadier. Now read what the disease is about to do and get ahead of it. The Prodigy's Mythic Prescience anticipates the next deterioration and strikes the Corruption before it can act. Treat before you end the turn.",
       placement: "center",
       requireAction: true,
       requiredSkillId: "mythic_prescience",
@@ -157,7 +157,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "prologue_endturn",
       title: "Pass the Time",
-      body: "Scouted, stabilized, countered. The team has done their work this turn. End it and let the disease show its hand.",
+      body: "Assessed, stabilized, treated. The team has done their work this turn. End it and let the disease show its hand.",
       placement: "center",
       requireAction: true,
       requiredActionType: "endTurn",
@@ -182,8 +182,8 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     },
     {
       id: "prologue_done",
-      title: "Scout. Stabilize. Counter. Reassess. Finish.",
-      body: "That's the care chain. Five steps, every shift. Scout first. Stabilize and counter before the turn ends. Reassess after. Then deliver the finishing blow. Each healer has a role. None are passengers. The patient is safe. You did this.",
+      title: "Assess. Stabilize. Treat. Reassess. Finish.",
+      body: "That's the Care Pathway. Five steps, every shift. Assess first. Stabilize and treat before the turn ends. Reassess after. Then deliver the finishing blow. Each healer has a role. None are passengers. The patient is safe. You did this.",
       placement: "center",
       requireAction: false,
       nextText: "FINISH THE SHIFT",
@@ -203,7 +203,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "fb_scout",
       title: "Look first.",
-      body: "Before anything else — read the patient. Use a Scout skill. Highlighted skills show the way.",
+      body: "Before anything else — read the patient. Use an Assess skill. Highlighted skills show the way.",
       placement: "center",
       requireAction: false,
       nextText: "GOT IT",
@@ -219,7 +219,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "fb_counter",
       title: "Push back the illness.",
-      body: "The patient is holding. Now reduce the Corruption. Use a Counter skill.",
+      body: "The patient is holding. Now reduce the Corruption. Use a Treat skill.",
       placement: "center",
       requireAction: false,
       nextText: "GOT IT",

@@ -50,7 +50,7 @@ const CAREER_PATHS: CareerPath[] = [
     accentColor: "#22D3EE",
     tagline: "Health is not just one person. It is a whole community.",
     roles: ["Public Health Nurse", "Epidemiologist", "Infection Prevention Specialist", "Disaster Response Coordinator", "Global Health Worker"],
-    fantasyLinks: ["Epidemic Warden", "Scholar", "Scout"],
+    fantasyLinks: ["Epidemic Warden", "Scholar", "Observer"],
     clinicaSkills: ["Infection control", "Outbreak investigation", "Population-level thinking", "Prevention strategies"],
     futureBranch: "Join the World Event branch — global health crises and pandemic response simulations.",
   },

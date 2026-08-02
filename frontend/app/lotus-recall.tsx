@@ -87,8 +87,8 @@ export default function LotusRecall() {
           <Text style={[styles.kicker, styles.kickerTimeline]}>TIMELINE FAILED</Text>
           <Text style={styles.title}>The first path collapsed.</Text>
           <Text style={styles.body}>
-            Silent Infarction moved faster than your hands could follow. The chain held — Scout,
-            Stabilize, Counter, Reassess — but the outcome was sealed before you arrived.
+            Silent Infarction moved faster than your hands could follow. The pathway held — Assess,
+            Stabilize, Treat, Reassess — but the outcome was sealed before you arrived.
           </Text>
           <Text style={styles.body}>
             Memory endures. The rhythm you traced in that ward is yours to keep. A pulse of lotus

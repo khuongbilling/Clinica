@@ -110,7 +110,7 @@ export interface PrologueSkill {
   description: string;
   shortEffect: string;
   battleLog:   string;
-  chainRole:   'Scout' | 'Stabilize' | 'Counter' | 'Reassess';
+  chainRole:   'assess' | 'stabilize' | 'treat' | 'reassess';
   /** Warning logged instead of normal battle log when used out of optimal order */
   warningLog?: string;
 }
@@ -121,11 +121,11 @@ export const PRODIGY_SKILLS: readonly PrologueSkill[] = [
     id:          'brilliant_intervention',
     name:        'Brilliant Intervention',
     apCost:      3,
-    description: 'Lower Corruption by 12. If used before Scout, hidden Corruption Spread increases by 2.',
+    description: 'Lower Corruption by 12. If used before Assess, hidden Corruption Spread increases by 2.',
     shortEffect: '-12 Corruption',
     battleLog:   'Brilliant Intervention lowered Corruption by 12.',
     warningLog:  'The intervention was powerful, but something hidden continued to spread.',
-    chainRole:   'Counter',
+    chainRole:   'treat',
   },
   {
     id:          'radiant_stabilization',
@@ -134,7 +134,7 @@ export const PRODIGY_SKILLS: readonly PrologueSkill[] = [
     description: 'Restore 8 Stability.',
     shortEffect: '+8 Stability',
     battleLog:   'Radiant Stabilization restored 8 Stability.',
-    chainRole:   'Stabilize',
+    chainRole:   'stabilize',
   },
   {
     id:          'overconfident_advance',
@@ -144,7 +144,7 @@ export const PRODIGY_SKILLS: readonly PrologueSkill[] = [
     shortEffect: '-5 Corruption (visible only)',
     battleLog:   'Overconfident Advance reduced visible Corruption by 5.',
     warningLog:  'Overconfident Advance pushed back the surface — but the hidden cues remain.',
-    chainRole:   'Counter',
+    chainRole:   'treat',
   },
 ];
 
@@ -157,7 +157,7 @@ export const NIGHTINGALE_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
     description: 'Reveal hidden Clinical Cues. Reduce incoming Instability by 3 this turn.',
     shortEffect: 'Reveal Cues  ·  -3 Instability',
     battleLog:   'Nightingale\'s Lamp illuminates hidden Clinical Cues. The picture becomes clearer.',
-    chainRole:   'Scout',
+    chainRole:   'assess',
   },
   {
     id:          'ward_vigil',
@@ -166,7 +166,7 @@ export const NIGHTINGALE_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
     description: 'Prevent the next Stability loss event and restore 5 Stability.',
     shortEffect: 'Block next Stability loss  ·  +5 Stability',
     battleLog:   'Ward Vigil holds. Nightingale shields the patient from the next blow.',
-    chainRole:   'Stabilize',
+    chainRole:   'stabilize',
   },
   {
     id:          'pattern_of_care',
@@ -175,7 +175,7 @@ export const NIGHTINGALE_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
     description: 'After Reassess this turn, restore 3 additional Stability if a correct cue was found.',
     shortEffect: '+3 Stability (after correct Reassess)',
     battleLog:   'Pattern of Care: a correct cue was confirmed. Additional Stability restored.',
-    chainRole:   'Reassess',
+    chainRole:   'reassess',
   },
 ];
 
@@ -185,10 +185,10 @@ export const FLEMING_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
     id:          'culture_and_sensitivity',
     name:        'Culture and Sensitivity',
     apCost:      2,
-    description: 'Reveal one weakness and one resistance. The next correct Counter lowers Corruption by 5 more.',
-    shortEffect: 'Reveal Weakness + Resistance  ·  +5 next Counter',
+    description: 'Reveal one weakness and one resistance. The next correct Treat lowers Corruption by 5 more.',
+    shortEffect: 'Reveal Weakness + Resistance  ·  +5 next Treat',
     battleLog:   'Fleming\'s analysis marks the pathway. Targeted intervention is confirmed.',
-    chainRole:   'Scout',
+    chainRole:   'assess',
   },
   {
     id:          'targeted_antidote',
@@ -197,7 +197,7 @@ export const FLEMING_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
     description: 'Lower Corruption by 10. If a weakness is revealed, lower by 15 instead.',
     shortEffect: '-10 Corruption  (or -15 if weakness known)',
     battleLog:   'Targeted Antidote strikes where it hurts. Corruption falls sharply.',
-    chainRole:   'Counter',
+    chainRole:   'treat',
   },
   {
     id:          'resistance_warning',
@@ -206,7 +206,7 @@ export const FLEMING_PROLOGUE_SKILLS: readonly PrologueSkill[] = [
     description: 'Prevent the next ineffective treatment penalty and reduce Corruption Spread by 4.',
     shortEffect: 'Block next penalty  ·  -4 Corruption Spread',
     battleLog:   'Resistance Warning issued. The next ineffective treatment causes no harm.',
-    chainRole:   'Stabilize',
+    chainRole:   'stabilize',
   },
 ];
 
@@ -248,8 +248,8 @@ export const HYDRATION_MONSTER_SKILLS: readonly PrologueEnemySkill[] = [
   },
   {
     name:        'Thirst Signal',
-    description: 'Create a visible Clinical Cue that can be found with Scout.',
-    battleLog:   'The enemy reveals itself — a visible cue emerges. Use Scout to read it.',
+    description: 'Create a visible Clinical Cue that can be found with Assess.',
+    battleLog:   'The enemy reveals itself — a visible cue emerges. Use Assess to read it.',
   },
 ];
 

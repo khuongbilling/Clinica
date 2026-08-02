@@ -251,7 +251,7 @@ export default function Result() {
                 ))}
               </View>
               <View style={{ gap: 4, marginTop: 8 }}>
-                {(mission?.starGoals ?? ["Stabilized the patient.", "Completed the clinical care chain.", "Efficient and safe care."]).map((label, i) => (
+                {(mission?.starGoals ?? ["Stabilized the patient.", "Completed the Care Pathway.", "Efficient and safe care."]).map((label, i) => (
                   <View key={i} style={styles.starLine}>
                     <Ionicons name={i < starResult.stars ? "checkmark-circle" : "ellipse-outline"} size={14} color={i < starResult.stars ? COLORS.success : COLORS.onSurfaceTertiary} />
                     <Text style={[styles.starLabel, i < starResult.stars && { color: COLORS.onSurface }]}>{label}</Text>
@@ -391,7 +391,7 @@ export default function Result() {
                   <Text style={styles.shardsTxt}>{rewardBreakdown.total} Codex Shards earned.</Text>
                 </View>
                 <Text style={styles.shardsBreakdown}>
-                  Base {rewardBreakdown.base}{rewardBreakdown.starBonus ? ` · Stars +${rewardBreakdown.starBonus}` : ""}{rewardBreakdown.chainBonus ? ` · Care Chain +${rewardBreakdown.chainBonus}` : ""}
+                  Base {rewardBreakdown.base}{rewardBreakdown.starBonus ? ` · Stars +${rewardBreakdown.starBonus}` : ""}{rewardBreakdown.chainBonus ? ` · Care Pathway +${rewardBreakdown.chainBonus}` : ""}
                 </Text>
               </View>
             )}
@@ -600,7 +600,7 @@ export default function Result() {
               {playerLevelUp
                 ? `Level ${playerLevelUp.toLevel} reached — new content is now available.`
                 : fullChainCompleted
-                ? "Care Chain cleared. The next challenge awaits."
+                ? "Care Pathway cleared. The next challenge awaits."
                 : "Your journey continues — the next patient is waiting."}
             </Text>
           </View>

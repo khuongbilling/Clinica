@@ -67,7 +67,7 @@ export const APTITUDE_RESULT: Record<Aptitude, { title: string; body: string; bo
   sage: {
     title: 'The Codex calls you: Sage',
     body: 'You see what others miss. Sages reveal hidden clues and help the team understand what is really happening.',
-    bonus: 'Sage Bonus: The first Scout action each battle costs 1 less AP.',
+    bonus: 'Sage Bonus: The first Assess action each battle costs 1 less AP.',
     startingHero: 'Apprentice Seer',
   },
   warden: {
@@ -163,7 +163,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'foundation',
     icon: 'heart',
     trialIntro:
-      'The Air system maps to respiratory physiology: the lungs, airways, and oxygenation. Your first encounter introduces the Scout → Stabilize → Counter → Reassess care chain. Every action teaches a foundational concept you\'ll see again in school.',
+      'The Air system maps to respiratory physiology: the lungs, airways, and oxygenation. Your first encounter introduces the Assess → Stabilize → Treat → Reassess Care Pathway. Every action teaches a foundational concept you\'ll see again in school.',
     codexVoice: 'The Codex notes:',
   },
   {
@@ -174,7 +174,7 @@ export const LEARNING_GOALS: LearningGoal[] = [
     tone: 'clinical',
     icon: 'medkit',
     trialIntro:
-      'SpO₂ dropping. Respiratory rate elevated. A hidden clue (potentially wheeze) is not yet visible. Apply the clinical care chain: recognize cues → analyze → prioritize → intervene → evaluate. The Codex gives NCLEX-adjacent feedback after each battle.',
+      'SpO₂ dropping. Respiratory rate elevated. A hidden clue (potentially wheeze) is not yet visible. Apply the Care Pathway: recognize cues → analyze → prioritize → intervene → evaluate. The Codex gives NCLEX-adjacent feedback after each battle.',
     codexVoice: 'Clinical note:',
   },
   {
@@ -244,7 +244,7 @@ export const TONE_GUIDE: Record<string, { codexOpener: string; hintStyle: string
     codexOpener: 'The Codex notes:',
     hintStyle: 'nursing concepts, approachable',
     victoryLine: 'Strong foundational care. The region is restored.',
-    defeatLine: 'Review the care chain and try again. This is how nurses learn.',
+    defeatLine: 'Review the Care Pathway and try again. This is how nurses learn.',
   },
   clinical: {
     codexOpener: 'Clinical note:',

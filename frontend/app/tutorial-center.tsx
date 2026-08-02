@@ -61,8 +61,8 @@ const TUTORIAL_GROUPS: TutorialGroup[] = [
 ];
 
 const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
-  prologueBattle:   "The guided first shift — Scout, Stabilize, Counter, Reassess.",
-  firstBattle:      "Care Chain basics: matching skills to what the patient needs.",
+  prologueBattle:   "The guided first shift — Assess, Stabilize, Treat, Reassess.",
+  firstBattle:      "Care Pathway basics: matching skills to what the patient needs.",
   systemWardHub:    "The System introduces the Ward and sends you to the University.",
   systemShops:      "The System introduces the Apothecary Market and currency spending.",
   firstHeroTeam:    "Hall of Heroes — setting up your active team for clinical shifts.",

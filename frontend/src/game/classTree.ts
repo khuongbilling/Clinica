@@ -128,7 +128,7 @@ export const CLASS_TREES: Record<ClassId, ClassAbilityCard[]> = {
   caretaker: [
     { level: 1, name: 'Gentle Stabilization', description: 'Stabilize restores slightly more Stability, keeping the patient safer longer.', requirements: [] },
     { level: 10, name: 'Recovery Rhythm', description: 'Post-battle recovery rewards improve.', requirements: TIER_10_REQ },
-    { level: 20, name: 'Compassion Chain', description: 'Support-focused heroes restore additional Stability when completing a Care Chain step.', requirements: TIER_20_REQ },
+    { level: 20, name: 'Compassion Chain', description: 'Support-focused heroes restore additional Stability when completing a Care Pathway step.', requirements: TIER_20_REQ },
     { level: 30, name: 'Lotus Recovery Field', description: 'Restores a small amount of Stability each turn — recurring Instability slows.', requirements: TIER_30_REQ },
   ],
   scholar: [
@@ -145,7 +145,7 @@ export const CLASS_TREES: Record<ClassId, ClassAbilityCard[]> = {
   ],
   medic: [
     { level: 1, name: 'Field Readiness', description: 'A small AP preparation bonus reduces early-turn pressure.', requirements: [] },
-    { level: 10, name: 'Flexible Practice', description: 'A small once-per-battle bonus to Scout, Stabilize, Treat, or Reassess.', requirements: TIER_10_REQ },
+    { level: 10, name: 'Flexible Practice', description: 'A small once-per-battle bonus to Assess, Stabilize, Treat, or Reassess.', requirements: TIER_10_REQ },
     { level: 20, name: 'Team Coordination', description: "Your active team gains a minor role-synergy bonus.", requirements: TIER_20_REQ },
     { level: 30, name: 'Code Calm', description: 'An emergency support boost that restores Stability and grants AP.', requirements: TIER_30_REQ },
   ],
@@ -342,11 +342,11 @@ export function describeClassBattleBonuses(bonus: ClassTreeBattleBonus): string[
   if (bonus.itemMod > 1)
     lines.push(`Clinical supplies ${Math.round((bonus.itemMod - 1) * 100)}% stronger`);
   if (bonus.careChainMod > 1)
-    lines.push(`Care Chain completion ${Math.round((bonus.careChainMod - 1) * 100)}% stronger`);
+    lines.push(`Care Pathway completion ${Math.round((bonus.careChainMod - 1) * 100)}% stronger`);
   if (bonus.scoutRevealBonus > 0)
-    lines.push(`Scout reveals ${bonus.scoutRevealBonus} extra hidden clue${bonus.scoutRevealBonus > 1 ? 's' : ''}`);
+    lines.push(`Assess reveals ${bonus.scoutRevealBonus} extra hidden clue${bonus.scoutRevealBonus > 1 ? 's' : ''}`);
   if (bonus.scoutFirstActionRevealBonus > 0)
-    lines.push(`First Scout of battle reveals ${bonus.scoutFirstActionRevealBonus} additional clue`);
+    lines.push(`First Assess of battle reveals ${bonus.scoutFirstActionRevealBonus} additional clue`);
   if (bonus.cueBonusFlatBonus > 0)
     lines.push(`Correct Cue empowers stabilizing actions further (+${bonus.cueBonusFlatBonus} bonus)`);
   if (bonus.reassessAfterStabilizeBonus > 0)

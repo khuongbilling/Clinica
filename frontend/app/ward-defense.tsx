@@ -2930,7 +2930,7 @@ export default function WardDefense() {
             }
             if (careChain >= 2) {
               ap = Math.min(MAX_AP, ap + 1);
-              feedbacks = [{ id: `ch${s.tickCount}`, text: `⛓ Care Chain ×${careChain}! +1 AP`,
+              feedbacks = [{ id: `ch${s.tickCount}`, text: `⛓ Care Pathway ×${careChain}! +1 AP`,
                 color: COLORS.runeGold, quality: "bonus" as any, ticks: 7 }, ...feedbacks.slice(0, 1)];
             }
           } else if (quality === "weak") {
@@ -4199,7 +4199,7 @@ function ResultScreen({
                 icon: "⚔", label: "Priority Actions",
                 val: `×${learningStats.priorityActions}`, color: COLORS.success },
               learningStats.peakCareChain >= 2 && {
-                icon: "⛓", label: "Best Care Chain",
+                icon: "⛓", label: "Best Care Pathway",
                 val: `×${learningStats.peakCareChain}`, color: COLORS.runeGold },
               learningStats.reassessUses > 0 && {
                 icon: "🔄", label: "Reassess Uses",
