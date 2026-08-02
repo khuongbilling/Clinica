@@ -18,6 +18,7 @@ import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
+import { CURRENCIES } from "@/src/game/economy";
 
 export default function Shop() {
   const router = useRouter();
@@ -195,19 +196,14 @@ export default function Shop() {
           </View>
           <View style={styles.exchangeSection}>
             <Text style={styles.exchangeHeading}>CURRENCIES</Text>
-            {[
-              { icon: "leaf",            color: COLORS.brand,   name: "Jade Scrolls",    how: "Earn from lessons and daily quests" },
-              { icon: "star",            color: "#D4AF37",       name: "Gold Crowns",     how: "Earn from battles and chapter milestones" },
-              { icon: "sparkles",        color: "#A855F7",       name: "Hero Shards",     how: "Earn from Recruitment and evolutions" },
-              { icon: "shield-half",     color: "#22D3EE",       name: "Ward Tokens",     how: "Earn from Ward Defense and Boss encounters" },
-            ].map((c) => (
-              <View key={c.name} style={styles.currencyRow}>
-                <View style={[styles.currencyIcon, { backgroundColor: c.color + "18" }]}>
-                  <Ionicons name={c.icon as any} size={18} color={c.color} />
+            {CURRENCIES.map((c) => (
+              <View key={c.id} style={styles.currencyRow}>
+                <View style={[styles.currencyIcon, { backgroundColor: COLORS.borderStrong + "40" }]}>
+                  <Ionicons name={c.icon as any} size={18} color={COLORS.onSurfaceSecondary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.currencyName}>{c.name}</Text>
-                  <Text style={styles.currencyHow}>{c.how}</Text>
+                  <Text style={styles.currencyName}>{c.displayName}</Text>
+                  <Text style={styles.currencyHow}>{c.earnedFrom}</Text>
                 </View>
               </View>
             ))}

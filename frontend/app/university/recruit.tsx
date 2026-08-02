@@ -206,7 +206,7 @@ export default function UniversityRecruitScreen() {
           <View style={styles.shardCard}>
             <Ionicons name="sparkles" size={18} color={COLORS.brand} />
             <Text style={styles.shardVal}>{shards}</Text>
-            <Text style={styles.shardLbl}>SUMMONING SHARDS</Text>
+            <Text style={styles.shardLbl}>CODEX SHARDS</Text>
           </View>
           <UniversityCreditsBadge amount={player.university_credits || 0} compact testID="recruit-credits-badge" />
         </View>
@@ -222,7 +222,7 @@ export default function UniversityRecruitScreen() {
           <View style={styles.shardsInfo}>
             <Ionicons name="information-circle-outline" size={14} color={COLORS.brand} />
             <Text style={styles.shardsInfoTxt}>
-              Earn Summoning Shards from Ward Shifts, chapter clears, daily duties, and milestone rewards — no payment required.
+              Earn Codex Shards from Ward Shifts, chapter clears, daily duties, and milestone rewards — no payment required.
             </Text>
           </View>
         )}
@@ -460,7 +460,7 @@ export default function UniversityRecruitScreen() {
           <View style={styles.earnCard}>
             <View style={styles.earnCardHeader}>
               <Ionicons name="trending-up-outline" size={14} color={COLORS.brand} />
-              <Text style={styles.earnCardTitle}>Earn more Summoning Shards</Text>
+              <Text style={styles.earnCardTitle}>Earn more Codex Shards</Text>
             </View>
             <Text style={styles.earnCardLine}>• Ward Shifts — 10–20 shards per run</Text>
             <Text style={styles.earnCardLine}>• Chapter milestones — 25–50 shards on clear</Text>
