@@ -14,6 +14,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 // Route to navigate to after marking a tutorial for replay, so the overlay
 // actually fires on the correct screen.
 const REPLAY_ROUTES: Partial<Record<TutorialId, string>> = {
+  systemHubIntro:   "/(tabs)",
   prologueBattle:   "/battle?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1",
   firstBattle:      "/shift",
   firstKingdom:     "/(tabs)/kingdom",
@@ -29,9 +30,7 @@ const REPLAY_ROUTES: Partial<Record<TutorialId, string>> = {
   mealcraftIntro:   "/mealcraft",
 };
 
-// Grouped list of tutorials. System onboarding (systemHubIntro) is a
-// one-time story beat that re-runs only via a full account reset, so it is
-// omitted intentionally; all others are replayable.
+// Grouped list of tutorials shown in the replay centre.
 interface TutorialGroup {
   label: string;
   ids: TutorialId[];
@@ -40,7 +39,7 @@ interface TutorialGroup {
 const TUTORIAL_GROUPS: TutorialGroup[] = [
   {
     label: "Onboarding",
-    ids: ["prologueBattle", "firstBattle", "systemWardHub", "systemShops"],
+    ids: ["systemHubIntro", "prologueBattle", "firstBattle", "systemWardHub", "systemShops"],
   },
   {
     label: "Heroes & Recruitment",
@@ -61,6 +60,7 @@ const TUTORIAL_GROUPS: TutorialGroup[] = [
 ];
 
 const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
+  systemHubIntro:   "The System's first awakening — introducing the Ward Hub and your mission.",
   prologueBattle:   "The guided first shift — Assess, Stabilize, Treat, Reassess.",
   firstBattle:      "Care Pathway basics: matching skills to what the patient needs.",
   systemWardHub:    "The System introduces the Ward and sends you to the University.",

@@ -1,12 +1,11 @@
 # Clinica Tutorial System — Full Developer Audit
 
 > **Living document.** Re-generated each time an audit is requested.
-> **Last audited:** 2026-08-02 · commit `9e67616`
+> **Last audited:** 2026-08-02 · commit `58ca9dc`
 > **Source branch:** main (current workspace)
 > **Note:** Auto-stamped by `npm run gen:tutorial-audit`. Re-run after each audit to keep this current.
 
 ---
-
 ## Table of Contents
 
 1. [Tutorial System Architecture](#1-tutorial-system-architecture)
@@ -32,7 +31,7 @@
 |---|---|
 | `frontend/src/game/tutorials.ts` | Single source of truth — all 16 `TutorialId` definitions and their steps |
 | `frontend/src/game/tutorialStore.tsx` | State machine: start / advance / skip / replay / reset / dismiss |
-| `frontend/app/tutorial-center.tsx` | In-game Tutorial Center UI — 13 replayable entries |
+| `frontend/app/tutorial-center.tsx` | In-game Tutorial Center UI — 14 replayable entries |
 | `frontend/app/tutorial-encyclopedia.tsx` | Codex-style reference — static text entries, some with replay buttons |
 | `frontend/app/tutorial.tsx` | `getTutorialTier` — selects novice / practiced / expert content by learner profile |
 
@@ -242,7 +241,7 @@ All six steps are **informational only** (`requireAction: false`). The player ta
 
 **Host:** `frontend/app/(tabs)/index.tsx`
 **Trigger:** `player.seen_reminiscence === true` AND `!isCompleted("systemHubIntro")` — fires at 700 ms delay.
-**Intentionally excluded from Tutorial Center** (comment at `tutorial-center.tsx:32–34`). Cannot be replayed by the player.
+**Replay route (Tutorial Center):** `/(tabs)` — now listed in the Onboarding group of the Tutorial Center ("The System Awakens").
 **Steps (3):** Three informational steps (no required action on any).
 
 | # | Step ID | Position |
@@ -254,7 +253,7 @@ All six steps are **informational only** (`requireAction: false`). The player ta
 **`isCompleted` call sites:** `index.tsx:203, 242, 286, 494`; `shift.tsx:74` (gates `systemWardHub`).
 
 **Developer notes:**
-- `index.tsx:251` calls `markDone("systemHubIntro")` directly in the no-hero / invalid-state branch. A player who reaches the hub with no heroes gets this silently marked done without ever seeing it. Since the tutorial is not replayable, they permanently lose the welcome sequence. **Review whether this is intentional.**
+- `index.tsx:251` calls `markDone("systemHubIntro")` directly in the no-hero / invalid-state branch. A player who reaches the hub with no heroes gets this silently marked done without ever seeing it. They can replay it via the Tutorial Center ("The System Awakens"), but the first-run experience is still lost. **Review whether this is intentional.**
 
 ---
 
@@ -444,14 +443,14 @@ Intended path for a fresh account:
 
 ## 6. Tutorial Center & Encyclopedia Inventory
 
-### Tutorial Center — 13 entries
+### Tutorial Center — 14 entries
 
-All 13 rows unconditionally render a Replay button.
-`systemHubIntro` is intentionally excluded (not replayable by the player).
+All 14 rows unconditionally render a Replay button.
 `clinicalCueIntro` and `affinityMatchIntro` are excluded from the Tutorial Center but are accessible via the Tutorial Encyclopedia with a replay route of `/shift`.
 
 | Group | Tutorial ID | Player-facing label | Replay route |
 |---|---|---|---|
+| Onboarding | `systemHubIntro` | The System Awakens | `/(tabs)` |
 | Onboarding | `prologueBattle` | Your First Shift | `/battle?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1` |
 | Onboarding | `firstBattle` | Battle Basics | `/shift` |
 | Onboarding | `systemWardHub` | The Ward | `/shift` |
@@ -623,7 +622,7 @@ All 13 rows unconditionally render a Replay button.
 | # | Question | Why it matters |
 |---|---|---|
 | Q-1 | Does `recruit.tsx` host both the guaranteed ceremony pulls and normal pulls on the same screen, or are they separate screens? | If separate, `firstSummon` may not cover normal pulls at all. |
-| Q-2 | Is `markDone("systemHubIntro")` at `index.tsx:251` in the no-hero branch intentional? | If not, players who reach the hub without heroes permanently skip the welcome tutorial with no replay option. |
+| Q-2 | Is `markDone("systemHubIntro")` at `index.tsx:251` in the no-hero branch intentional? | If not, players who reach the hub without heroes permanently skip the welcome tutorial. They can now replay it via the Tutorial Center, but the first-run experience is still lost. |
 | Q-3 | Should `rpg/cozy/teen` aliases be actively migrated to `curious` in stored player data? | These values can still exist in old saves. If any downstream code doesn't handle them they silently fall through. |
 | Q-4 | Are `Ward Tokens` and `Jade Scrolls` planned future currencies? | No code exists for them. If they are being added, `economy.ts` entries are needed before any UI references them. |
 | Q-5 | Should `clinicalCueIntro` and `affinityMatchIntro` be added to Tutorial Center? | Both are replayable via the Tutorial Encyclopedia, but not via Tutorial Center. Players who do not find the Encyclopedia have no obvious replay path — consider whether Tutorial Center discoverability is worth the addition. |
@@ -653,7 +652,7 @@ It currently only appears in `learningProfileLabel` and the explanation-layer ma
 `PROFILE_ID_COMPAT` only normalizes `nonmedical → curious`. Adding `nursingStudent → nursing_student`, `nclexPrep → nclex`, `healthcareProfessional → professional` eliminates the need for dual-ID branches in every downstream function.
 
 **T-7. Review silent `markDone("systemHubIntro")` in the no-hero branch.**
-`index.tsx:251` marks the welcome tutorial done when the player state is invalid. Since `systemHubIntro` is intentionally excluded from Tutorial Center, players who hit this branch permanently lose the welcome sequence.
+`index.tsx:251` marks the welcome tutorial done when the player state is invalid. Players who hit this branch lose the first-run welcome sequence, though they can now replay it via the Tutorial Center ("The System Awakens" in the Onboarding group).
 
 ---
 
