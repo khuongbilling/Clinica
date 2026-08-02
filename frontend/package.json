@@ -12,7 +12,8 @@
     "lint": "expo lint",
     "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts && node_modules/.bin/sucrase-node tests/elemental_counter.test.ts",
     "check:routes": "node scripts/check-routes.js",
-    "check:pronouns": "node scripts/check-hero-pronouns.js"
+    "check:pronouns": "node scripts/check-hero-pronouns.js",
+    "validate": "echo '[check:routes]' && node scripts/check-routes.js && echo '[check:pronouns]' && node scripts/check-hero-pronouns.js && echo '[typecheck]' && npx tsc --noEmit"
   },
   "dependencies": {
     "@expo/metro-runtime": "6.1.2",

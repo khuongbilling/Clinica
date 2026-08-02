@@ -37,11 +37,7 @@ args = "MongoDB"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Check Routes"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "typecheck"
+args = "validate"
 
 [[workflows.workflow]]
 name = "Start application"
@@ -78,25 +74,15 @@ args = "mkdir -p .local/mongodb-data && mongod --dbpath .local/mongodb-data --bi
 outputType = "console"
 
 [[workflows.workflow]]
-name = "Check Routes"
+name = "validate"
 author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm run validate"
 
 [workflows.workflow.metadata]
 outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node frontend/scripts/check-routes.js && node frontend/scripts/check-hero-pronouns.js"
-
-[[workflows.workflow]]
-name = "typecheck"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npx tsc --noEmit"
-
-[workflows.workflow.metadata]
 isValidation = true
 
 [[ports]]
