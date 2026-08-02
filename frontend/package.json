@@ -11,7 +11,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts && node_modules/.bin/sucrase-node tests/elemental_counter.test.ts",
-    "check:routes": "node scripts/check-routes.js"
+    "check:routes": "node scripts/check-routes.js",
+    "check:pronouns": "node scripts/check-hero-pronouns.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "6.1.2",
