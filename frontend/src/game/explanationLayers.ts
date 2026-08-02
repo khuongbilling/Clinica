@@ -8,6 +8,7 @@
  * Independent of Difficulty — profile controls WHAT language is used;
  * difficulty controls HOW MUCH information is revealed.
  */
+import { normalizeProfileId } from './onboarding';
 
 export type ExplanationLayer =
   | 'fantasy'        // curious / rpg / cozy / teen
@@ -17,14 +18,18 @@ export type ExplanationLayer =
   | 'professional';  // professional / healthcareProfessional
 
 export function getExplanationLayer(profileId: string | null | undefined): ExplanationLayer {
-  switch (profileId) {
-    // New quiz IDs
+  // Normalize legacy aliases to canonical IDs first so we never fall through
+  // to `default` when an old ID arrives (e.g. nursingStudent → nursing_student).
+  const id = normalizeProfileId(profileId);
+  switch (id) {
+    // Canonical IDs (post-normalization)
     case 'curious':         return 'fantasy';
-    case 'medical_learner': return 'simpleMedical';
     case 'nursing_student': return 'nursing';
     case 'nclex':           return 'nclex';
     case 'professional':    return 'professional';
-    // Legacy onboarding IDs
+    // medical_learner is a canonical secondary alias kept for quiz paths
+    case 'medical_learner': return 'simpleMedical';
+    // Legacy IDs that normalizeProfileId does not yet map (safety net only)
     case 'rpg':
     case 'cozy':
     case 'teen':

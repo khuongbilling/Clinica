@@ -1,8 +1,9 @@
 # Clinica Tutorial System — Full Developer Audit
 
 > **Living document.** Re-generated each time an audit is requested.
-> **Last audited:** 2025-07-21
+> **Last audited:** 2026-08-02
 > **Source branch:** main (current workspace)
+> **Note:** Update this header manually on each audit run (date + `git rev-parse --short HEAD`).
 
 ---
 

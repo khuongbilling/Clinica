@@ -236,24 +236,20 @@ export default function RunHome() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // systemHubIntro: play once on first hub visit after prologue (seen_reminiscence=true).
-  // Auto-skip only for players clearly past Chapter 1 (the tutorial is genuinely
-  // redundant at that point). Otherwise, start the 3-step orientation overlay.
-  // The tutorial-center replay path (replayTutorial) always bypasses this guard.
+  // Fires for ALL players who have not yet seen it, regardless of chapter_progress.
+  // Previously a chapterProgress >= 2 branch silently called markDone() here, which
+  // permanently locked out the tutorial for players who advanced past Chapter 1 before
+  // ever seeing the welcome sequence. That branch is removed: startTutorial's own
+  // guards (completed / dismissed) prevent double-firing; the overlay runs at most once
+  // per account unless replayed via Tutorial Encyclopedia.
+  // The tutorial-center replay path (replayTutorial) always bypasses these guards.
   const systemHubIntroCompleted = isCompleted("systemHubIntro");
   useEffect(() => {
     if (!player || !player.seen_reminiscence) return;
     if (systemHubIntroCompleted) return;
-    const chapterProgress = player.chapter_progress ?? 0;
-    // chapter_progress starts at 1 for brand-new players and advances to 2+
-    // only after completing Chapter 1 nodes. Auto-skip only once a player has
-    // genuinely moved past Chapter 1 (>= 2); value 1 means "on Chapter 1, not yet done".
-    if (chapterProgress >= 2) {
-      markDone("systemHubIntro");
-      return;
-    }
     const t = setTimeout(() => startTutorial("systemHubIntro"), 700);
     return () => clearTimeout(t);
-  }, [player?.seen_reminiscence, player?.chapter_progress, systemHubIntroCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [player?.seen_reminiscence, systemHubIntroCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // C5 — Level 2 "Apprentice Path Opened" celebration. Fire once the player
   // reaches Level 2 and hasn't yet seen the unlock moment. The intro modal

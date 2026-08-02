@@ -201,14 +201,37 @@ export const LEARNING_GOALS: LearningGoal[] = [
   },
 ];
 
-// Map old profile IDs to new ones for backward compatibility
+/**
+ * Full map of every known legacy profile alias to its canonical ID.
+ * The four canonical IDs are: curious, nursing_student, nclex, professional.
+ * Any ID not listed here is returned unchanged (so canonical IDs pass through).
+ */
 export const PROFILE_ID_COMPAT: Record<string, string> = {
+  // curious aliases
   nonmedical: 'curious',
-  preNursing: 'preNursing',
-  nursingStudent: 'nursingStudent',
-  nclexPrep: 'nclexPrep',
-  healthcareProfessional: 'healthcareProfessional',
+  rpg:        'curious',
+  cozy:       'curious',
+  teen:       'curious',
+  // nursing_student aliases
+  nursingStudent:  'nursing_student',
+  preNursing:      'nursing_student',
+  medical_learner: 'nursing_student',
+  // nclex aliases
+  nclexPrep: 'nclex',
+  // professional aliases
+  healthcareProfessional: 'professional',
 };
+
+/**
+ * Normalize any profile ID (legacy or canonical) to one of the four canonical
+ * IDs: curious | nursing_student | nclex | professional.
+ * Canonical IDs pass through unchanged. Unknown IDs are returned as-is so
+ * callers can fall back safely.
+ */
+export function normalizeProfileId(profileId: string | null | undefined): string | null | undefined {
+  if (!profileId) return profileId;
+  return PROFILE_ID_COMPAT[profileId] ?? profileId;
+}
 
 export const DEPTH_LABEL: Record<string, string> = {
   simple: 'General Reading',

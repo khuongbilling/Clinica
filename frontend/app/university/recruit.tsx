@@ -38,6 +38,18 @@ function getHeroChainRoles(heroId: string): string[] {
   return Array.from(seen).slice(0, 3);
 }
 
+// ── onRequiredAction("summon") audit ─────────────────────────────────────────
+// The `firstSummon` tutorial step 3 (`summon_action`) requires an action of
+// type "summon". All three pull entry points on this screen satisfy it:
+//
+//   doTutorialSummon()  — guaranteed ceremony pulls 1 & 2 (line ~148)
+//   doFree()            — daily free pull                (line ~162)
+//   doSingle()          — paid single pull (1× cost)     (line ~175)
+//
+// The 10-pull path (doTen) also calls onRequiredAction("summon") — see below.
+// No defect found: every summon path correctly fires the required action.
+// ─────────────────────────────────────────────────────────────────────────────
+
 const TRAINEE_SEEN_KEY = "clinica.seen_trainee_reveal";
 
 export default function UniversityRecruitScreen() {

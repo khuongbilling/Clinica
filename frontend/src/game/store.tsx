@@ -29,6 +29,7 @@ import {
 } from './classTree';
 import { reconcileEarlyObjectives } from './objectiveProgress';
 import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
+import { normalizeProfileId } from './onboarding';
 import { TokenExchangeItem, MIASMA_BLOOM_MILESTONES, getMilestoneProgress } from './worldEvent';
 
 const STORAGE_KEY = 'clinica.player.v2';
@@ -2407,7 +2408,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const setLearningProfile = useCallback(async (profileId: string) => {
     const base = playerRef.current;
     if (!base) return;
-    const next: PlayerState = { ...base, learning_profile: profileId };
+    // Always persist the canonical ID so downstream systems never see a legacy alias.
+    const canonical = normalizeProfileId(profileId) ?? profileId;
+    const next: PlayerState = { ...base, learning_profile: canonical };
     playerRef.current = next;
     await updateState(next);
   }, [updateState]);
