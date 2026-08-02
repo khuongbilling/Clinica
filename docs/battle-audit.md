@@ -1,0 +1,592 @@
+# Battle Audit Reference
+
+**Source files:** `frontend/src/game/content.ts`, `frontend/src/game/skillCalc.ts`
+**Last updated:** 2026-08-02
+
+This document compiles every enemy's full stat block, the complete formula chains for Strike / Stabilize / Shield, reference tables for stat multipliers, affinity modifiers, and care chain bonuses, and the chapter pool membership for each enemy. It is intended to be readable in any Markdown viewer or on GitHub for balance work without running the app.
+
+---
+
+## Table of Contents
+
+1. [Enemy Stat Blocks](#1-enemy-stat-blocks)
+   - [Chapter 1 — Introduction](#chapter-1--introduction-difficulty-1)
+   - [Chapter 2 — Escalation](#chapter-2--escalation-difficulty-2)
+   - [Chapter 3 — Complexity](#chapter-3--complexity-difficulty-3)
+   - [Chapter 4 — Code Rush / Priority](#chapter-4--code-rush--priority-difficulty-4)
+   - [Chapter 5 — Sanctuary / Recovery](#chapter-5--sanctuary--recovery-difficulty-5)
+   - [Chapter 6 Trial Boss](#chapter-6-trial-boss-difficulty-6)
+   - [Chapter 7 Trial Bosses](#chapter-7-trial-bosses-difficulty-7)
+   - [Chapter 8 Trial Boss](#chapter-8-trial-boss-difficulty-8)
+   - [Chapter 9 — Real-Ward Counterparts](#chapter-9--real-ward-counterparts-difficulty-9)
+   - [Named Bosses](#named-bosses)
+   - [Wave Afflictions](#wave-afflictions)
+2. [Formulas](#2-formulas)
+   - [Strike](#strike-formula)
+   - [Stabilize](#stabilize-formula)
+   - [Shield](#shield-formula)
+3. [Reference Tables](#3-reference-tables)
+   - [statToMultiplier](#stattomultiplier-table)
+   - [Affinity Modifier (Treatment Correctness)](#affinity-modifier-treatment-correctness)
+   - [Affinity Family Modifier](#affinity-family-modifier)
+   - [Care Chain Bonuses](#care-chain-bonuses)
+4. [Chapter Pools](#4-chapter-pools)
+
+---
+
+## Column Key
+
+| Column | Meaning |
+|---|---|
+| **HP (Corr)** | Starting Corruption — reduce to 0 to win |
+| **Stab** | Starting Stability — if this hits 0, the player loses |
+| **Instab** | Instability — added to enemy HP each turn the player doesn't act |
+| **Corr Resist %** | `corruptionResistance × 100` — Strike is multiplied by `(1 − this)` |
+| **Stab Resist %** | `stabilityResistance × 100` — Stabilize final value multiplied by `(1 − this)` |
+| **Hidden Def %** | `hiddenDefense × 100` — all effects reduced by `hiddenDefense × unrevealed_fraction`; drops to 0 when all clues revealed |
+| **Stab Press %** | `stabilityPressure × 100` — end-of-turn stability drain |
+| **Aff Resist %** | `affinityResistance × 100` — dampens the affinity-family strong-match bonus only |
+| **System** | Primary elemental system |
+| **Weakness** | Element that grants +30% base for Strike (additive pre-multiply) |
+| **Flags** | BOSS = `bossGuard:true`; WORLD BOSS = `worldBoss:true`; SCRIPTED LOSS = `scriptedLoss:true`; AFFLICTION = `isAffliction:true`; TRIAL = chapter mini-boss node enemy |
+
+---
+
+## 1. Enemy Stat Blocks
+
+### Chapter 1 — Introduction (difficulty 1)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `dehydration_wisp` | Hypovolemic Wisp | 58 | 68 | 5 | 0% | — | 5% | 0% | 0% | River | River | — |
+| `air_sprite` | Air Sprite Corruption | 50 | 62 | 5 | 0% | — | 5% | 0% | 0% | Air | Air | — |
+| `river_sludge` | River Sludge | 50 | 65 | 4 | 2% | — | 5% | 0% | 0% | River | River | — |
+| `energy_lock` | Energy Lock | 50 | 62 | 5 | 2% | — | 5% | 0% | 0% | Energy | Energy | — |
+| `fluid_phantom` | Fluid Phantom | 108 | 55 | 8 | 4% | — | 8% | 0% | 0% | River | River | TRIAL (c1n6) |
+
+**Notes:**
+- All Ch 1 enemies have 0% affinity resistance and very low hidden defense — designed for new players.
+- `fluid_phantom` is the Chapter 1 mini-boss: ~2× the corruption of a normal Ch1 enemy.
+
+---
+
+### Chapter 2 — Escalation (difficulty 2)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `fire_imp` | Fire Imp | 85 | 65 | 4 | 5% | — | 8% | 0% | 0% | Fire | Fire | — |
+| `pulmora_wisp` | Pulmora Wisp | 90 | 52 | 5 | 5% | — | 8% | 0% | 0% | Air | Air | — |
+| `mind_fog` | Mind Fog | 80 | 58 | 4 | 6% | — | 10% | 2% | 5% | Mind | Mind | — |
+
+**Notes:**
+- `mind_fog` is the first enemy with `stabilityPressure` (2%) and `affinityResistance` (5%) — introduces active pressure mechanic.
+
+---
+
+### Chapter 3 — Complexity (difficulty 3)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | 2nd System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `septara_seed` | Septara Seed | 110 | 45 | 8 | 10% | — | 12% | 3% | 5% | Fire | River | Fire | — |
+| `cardion_echo` | Cardion Echo | 100 | 50 | 6 | 10% | — | 12% | 3% | 5% | River | Air | River | — |
+| `glycora_spark` | Glycora Spark | 105 | 48 | 7 | 10% | — | 12% | 3% | 5% | Energy | Storm | Energy | — |
+| `electrox_flicker` | Electrox Flicker | 95 | 55 | 6 | 10% | — | 12% | 3% | 5% | Storm | River | Storm | — |
+| `fever_shade` | Fever Shade | 155 | 45 | 10 | 12% | — | 14% | 4% | 5% | Fire | River | River | TRIAL (c2p7) |
+
+**Notes:**
+- All regular Ch3 enemies share identical resistance values (10% / 12% / 3% / 5%) — Ch3 is the balance calibration tier.
+- `fever_shade` is Ch2's trial boss but has `difficulty:3` (one step above the chapter pool) — appears in Ch3 filter, not Ch2.
+- `cardion_echo` spawns with `hypoxia_wisp` affliction companion. `septara_seed` spawns with `shock_spike`.
+
+---
+
+### Chapter 4 — Code Rush / Priority (difficulty 4)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | 2nd System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `priority_surge` | Priority Surge | 125 | 50 | 8 | 14% | — | 16% | 6% | 8% | River | Storm | River | — |
+| `overload_shade` | Overload Shade | 128 | 48 | 9 | 14% | — | 16% | 6% | 8% | Energy | Mind | Energy | — |
+| `gale_spirit` | Gale Spirit | 165 | 42 | 11 | 14% | — | 16% | 6% | 8% | Air | — | Air | TRIAL (c3p8) |
+
+**Notes:**
+- Ch4 is the first chapter with `stabilityPressure` at 6% — ward is actively deteriorating.
+- `gale_spirit` is Ch3's trial boss with `difficulty:4`.
+- `pulmora_wisp` (Ch2) spawns with `mucus_wisp`; `air_sprite` spawns with `panic_wraith`; `electrox_flicker` spawns with `wheeze_guard`.
+
+---
+
+### Chapter 5 — Sanctuary / Recovery (difficulty 5)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | 2nd System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `recovery_lapse` | Recovery Lapse | 145 | 45 | 9 | 16% | — | 18% | 8% | 10% | Air | River | Air | — |
+| `fatigue_veil` | Fatigue Veil | 150 | 44 | 10 | 16% | — | 18% | 8% | 10% | Energy | Mind | Energy | — |
+
+**Notes:**
+- These are the last two enemies in the simulation era without `stabilityResistance`.
+- `recovery_lapse` teaches the concept that apparent improvement can mask secondary deterioration.
+
+---
+
+### Chapter 6 Trial Boss (difficulty 6)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | 2nd System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `ward_cascade` | Ward Cascade | 190 | 40 | 13 | 18% | 10% | 20% | 10% | 10% | River | Air | Protection | TRIAL (c5p8) |
+
+**Notes:**
+- First enemy with `stabilityResistance` (10%) outside of named bosses.
+- Weak to `Protection` element (unusual — not one of the standard seven systems).
+- This is Ch5's trial boss with `difficulty:6`.
+
+---
+
+### Chapter 7 Trial Bosses (difficulty 7)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | 2nd System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `imbalance_core` | Imbalance Core | 210 | 38 | 14 | 20% | 12% | 22% | 12% | 12% | Energy | Storm | Energy | TRIAL (c6p7) |
+| `contagion_wraith` | Contagion Wraith | 215 | 38 | 14 | 20% | 12% | 22% | 12% | 12% | Fire | Protection | Fire | TRIAL (c7p8) |
+
+**Notes:**
+- Both share identical resistance profiles — Ch7 calibration tier.
+- `contagion_wraith` has `Protection` as secondary system (unusual).
+
+---
+
+### Chapter 8 Trial Boss (difficulty 8)
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | 2nd System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `crisis_convergence` | Crisis Convergence | 235 | 36 | 15 | 22% | 15% | 24% | 14% | 14% | Mind | River | Mind | TRIAL (c8p8) |
+
+**Notes:**
+- Lowest starting stability of all non-boss difficulty 8 enemies (36).
+- 4 hidden clues — the most of any non-boss enemy.
+
+---
+
+### Chapter 9 — Real-Ward Counterparts (difficulty 9)
+
+These are the true-ward versions of simulation-era enemies. All have `chapterGate:9` (excluded from low-level pools), fewer visible clues, higher corruption, and active `stabilityResistance`.
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Sim Counterpart | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `dehydration_specter` | Dehydration Specter | 265 | 55 | 14 | 22% | 22% | 24% | 14% | 12% | River | River | `fluid_phantom` | — |
+| `true_dehydration_wraith` | True Dehydration Wraith | 190 | 52 | 12 | 22% | 15% | 24% | 14% | 12% | River | River | `dehydration_wisp` | — |
+| `breathless_gale_spirit` | Breathless Gale Spirit | 200 | 50 | 14 | 22% | 20% | 24% | 14% | 12% | Air | Air | `air_sprite` | — |
+| `burning_fever_shade` | Burning Fever Shade | 195 | 58 | 11 | 22% | 18% | 24% | 14% | 12% | Fire | Fire | `fire_imp` | — |
+| `drought_river_shade` | Drought-Bound River Shade | 175 | 54 | 10 | 22% | 12% | 24% | 14% | 12% | River | River | `river_sludge` | — |
+| `confusion_veil` | Confusion Veil | 170 | 62 | 9 | 22% | 10% | 24% | 14% | 12% | Mind | Mind | `mind_fog` | — |
+| `glycemic_rupture` | Glycemic Rupture | 195 | 50 | 13 | 22% | 18% | 24% | 14% | 12% | Energy | Energy | `energy_lock` | — |
+
+**Notes:**
+- All share the same Corr Resist / Hidden Def / Stab Press / Aff Resist baseline (22% / 24% / 14% / 12%).
+- `dehydration_specter` has the highest `stabilityResistance` of all Ch9 enemies (22%) and is the strongest (265 HP). It links back to `fluid_phantom` (the Ch1 trial boss) rather than the standard Ch1 pool enemy.
+- `confusion_veil` has the highest starting stability (62) — misleadingly "healthy-looking" patient, matching its delirium theme.
+
+---
+
+### Named Bosses
+
+These bosses live outside the normal chapter pool (not in `ENEMIES` array, or tagged `worldBoss:true`) and are only reachable through dedicated battle entries.
+
+| ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `lord_imbalance` | Lord Imbalance | 180 | 40 | 9 | 28% | 30% | 30% | 15% | 15% | River / Mind | River | BOSS |
+| `verdantha` | Verdantha | 320 | 50 | 11 | 25% | 50% | 28% | 12% | 15% | Growth / Filter | Forge¹ | BOSS · WORLD BOSS |
+| `silent_infarct` | The Silent Infarct | 3200 | 75 | 55 | 35% | 97% | 40% | 20% | 20% | River | Storm | BOSS · SCRIPTED LOSS |
+
+¹ Verdantha's weakness shifts per phase: Phase I → Forge, Phase II → Filter, Phase III → none.
+
+**Lord Imbalance** (`lord_imbalance`)
+- Chapter: difficulty 5 (Chapter 1 story boss, node separate from pool)
+- `bossGuard: true`
+- 30% stability resistance — healing sticks poorly; lean on Strike and Shield.
+- 2 hidden clues.
+- Best fought with Scout first to reveal both hidden clues.
+
+**Verdantha, the Bloom Matriarch** (`verdantha`)
+- Chapter: difficulty 5 (World Event Boss, accessed via boss.tsx gate)
+- `bossGuard: true`, `worldBoss: true`
+- 50% stability resistance — the Bloom regrows; stabilize is heavily suppressed.
+- 3-phase battle; weakness element changes with each phase.
+- Phase 1 weak: Forge; Phase 2 weak: Filter; Phase 3: no weakness.
+
+**The Silent Infarct** (`silent_infarct`)
+- Chapter: difficulty 10 (Prologue boss — narratively unwinnable)
+- `scriptedLoss: true`, `bossGuard: true`
+- 97% stability resistance — every stabilize attempt barely registers.
+- 3200 HP (unreachable). Instability 55 — each turn is catastrophic.
+- Only 1 visible clue + 1 hidden clue (both misleading).
+- Battle ends at a forced turn cap; see `battle.tsx` scripted-loss handling.
+
+---
+
+### Wave Afflictions
+
+Afflictions are small companion enemies that spawn alongside a primary enemy (`isAffliction: true`). They always start at full stability (100) with 0 instability and have low corruption. They are excluded from chapter pool counts.
+
+**Wave companion pairings:**
+
+| Primary Enemy | Spawns With |
+|---|---|
+| `septara_seed` | `shock_spike` |
+| `cardion_echo` | `hypoxia_wisp` |
+| `pulmora_wisp` | `mucus_wisp` |
+| `air_sprite` | `panic_wraith` |
+| `electrox_flicker` | `wheeze_guard` |
+
+**Affliction stat blocks:**
+
+| ID | Name | HP (Corr) | Corr Resist % | Hidden Def % | System | Weakness | Behavior Tag |
+|---|---|---|---|---|---|---|---|
+| `hypoxia_wisp` | Hypoxia Wisp | 30 | 4% | 0% | Air | Air | hypoxia |
+| `mucus_wisp` | Mucus Wisp | 25 | 4% | 0% | Air | Air | mucus |
+| `panic_wraith` | Panic Wraith | 20 | 4% | 0% | Mind | Mind | panic |
+| `wheeze_guard` | Wheeze Guard | 28 | 4% | 0% | Air | Air | wheeze |
+| `shock_spike` | Shock Spike | 35 | 6% | 0% | River | River | shock |
+
+All afflictions: `startingStability: 100`, `instability: 0`, `stabilityPressure: 0`, `hiddenDefense: 0`.
+
+---
+
+## 2. Formulas
+
+All formulas are implemented in `frontend/src/game/skillCalc.ts`. Output is always `Math.max(0, Math.round(result))`.
+
+### Strike Formula
+
+**Reduces enemy Corruption.**
+
+```
+result = base × (1 + elementBonus)
+       × affinityMod
+       × clinicalMod
+       × systemMod
+       × chapterMod
+       × castMult
+       × heroStatMod
+       × affinityFamilyMod
+       × corruptionResistanceMod
+       × hiddenDefenseMod
+       × [heroLevelMod × equipmentMod × leaderBonusMod × playerClassMod × careChainMod × clinicalCueMod]
+```
+
+Square-bracketed factors are future slots, all currently `×1.00`.
+
+| Factor | Value / Formula | Notes |
+|---|---|---|
+| `base` | skill's `strike` field | Raw corruption reduction from the skill definition |
+| `elementBonus` | `+0.30` if `hero.element === enemy.weakElement`, else `0` | Additive pre-multiply — scales with all subsequent mods |
+| `affinityMod` | Treatment-correctness multiplier | Strong ×1.6 / Appropriate ×1.0 / Weak ×0.3 / Bad ×0 (from `evaluateClinicalAppropriateness`) |
+| `clinicalMod` | From `corrOutcome.reductionMult` | Clinical approach modifier from the correctness evaluation |
+| `systemMod` | From `res.systemModifier` | Bonus when hero's system matches the enemy's primary system |
+| `chapterMod` | `getTreatmentStabilityModifier(stability)` | Dampens corruption reduction when enemy is already very high stability; `×1.00` for cards/temp |
+| `castMult` | Perfect / Good / Normal | `CAST_QUALITY_MULTIPLIER`; `×1.00` for items, cards, temp actions |
+| `heroStatMod` | `statToMultiplier(hero.stats.intervention)` | See table below; Push 4 |
+| `affinityFamilyMod` | `calcAffinityFamilyMod(...)` | See Affinity Family table; Push 6 / 13 |
+| `corruptionResistanceMod` | `1 − enemy.corruptionResistance` | Enemy's resistance to corruption-lowering (Strike only); bosses 0.65–0.72 |
+| `hiddenDefenseMod` | `1 − (enemy.hiddenDefense × hiddenCluesFraction)` | Drops to `1.00` when all hidden clues revealed; Push 7 |
+
+---
+
+### Stabilize Formula
+
+**Restores enemy Stability.**
+
+```
+coreResult = base
+           × clinicalMod
+           × systemMod
+           × corruptionMod
+           × castMult
+           × heroStatMod
+           × affinityFamilyMod
+           × hiddenDefenseMod
+           × [heroLevelMod × equipmentMod × leaderBonusMod × playerClassMod × careChainMod × clinicalCueMod]
+
+withFlat = max(0, coreResult) + cueBonusFlat
+
+result = withFlat × stabilityGainMod × enemyResistanceMod
+```
+
+Square-bracketed factors are future slots, all currently `×1.00`.
+
+| Factor | Value / Formula | Notes |
+|---|---|---|
+| `base` | skill's `stabilize` field | Raw stability gain from the skill definition |
+| `clinicalMod` | From `res.modifier` | From `evaluateClinicalAppropriateness`; stabilize uses a different branch than strike |
+| `systemMod` | From `res.systemModifier` | Same as Strike |
+| `corruptionMod` | `getStabilizationModifier(corruption)` | Dampens healing when enemy corruption is already very low (near-win suppressor) |
+| `castMult` | Perfect / Good / Normal | Same as Strike; `×1.00` for items, cards, temp actions |
+| `heroStatMod` | `statToMultiplier(hero.stats.carePower)` | Uses `carePower` stat, not `intervention`; Push 4 |
+| `affinityFamilyMod` | `calcAffinityFamilyMod(...)` | Same formula as Strike; Push 6 / 13 |
+| `hiddenDefenseMod` | `1 − (enemy.hiddenDefense × hiddenCluesFraction)` | Same as Strike; `corruptionResistanceMod = 1.00` for Stabilize |
+| `cueBonusFlat` | `+8` from Clinical Cue bonus | Added AFTER core multiply, BEFORE state modifiers; cleared at `endPlayerTurn` |
+| `stabilityGainMod` | `getStabilityGainModifier(stability)` | Diminishing returns near 100 stability |
+| `enemyResistanceMod` | `1 − enemy.stabilityResistance` | Range 0.03–0.97; boss healer-suppressor; `1.00` for enemies without this field |
+
+**Key ordering note:** `cueBonusFlat` (+8) is inserted between the core multiply and the patient-state modifiers. This means the cue bonus also passes through `stabilityGainMod × enemyResistanceMod`, so it provides less benefit when healing a nearly-dead or boss enemy.
+
+---
+
+### Shield Formula
+
+**Grants Protection % (stored in `shieldNext`).**
+
+```
+result = base
+       × heroStatMod
+       × affinityFamilyMod
+       × hiddenDefenseMod
+       × [heroLevelMod × equipmentMod × leaderBonusMod × playerClassMod × careChainMod]
+```
+
+Square-bracketed factors are future slots, all currently `×1.00`. Caller enforces the hard 100% ceiling via `Math.min`.
+
+| Factor | Value / Formula | Notes |
+|---|---|---|
+| `base` | skill's `shield` field | Raw protection percentage |
+| `heroStatMod` | `statToMultiplier(hero.stats.guard)` | Uses `guard` stat regardless of skill type; Push 4 |
+| `affinityFamilyMod` | `calcAffinityFamilyMod(...)` | Same strong/neutral/weak formula as Strike; Push 6 / 13 |
+| `hiddenDefenseMod` | `1 − (enemy.hiddenDefense × hiddenCluesFraction)` | All action types equally reduced; Push 7 |
+
+**Note:** Shield does **not** use `clinicalMod`, `affinityMod`, `castMult`, `systemMod`, or `corruptionResistanceMod`. There is no `clinicalCueMod` future slot for Shield either.
+
+---
+
+## 3. Reference Tables
+
+### statToMultiplier Table
+
+**Formula:** `min(1.40, max(0.90, 1.0 + (stat − 10) / 75))`
+
+Baseline: stat 10 → ×1.00. Each point above/below shifts by ±0.0133̄.
+
+| Stat | ×Mult | Who Has This |
+|---|---|---|
+| 5 | ×0.93 | Very low — weakest common |
+| 6 | ×0.95 | — |
+| 7 | ×0.96 | — |
+| 8 | ×0.97 | — |
+| 9 | ×0.99 | — |
+| 10 | ×1.00 | Common average — baseline |
+| 12 | ×1.03 | — |
+| 14 | ×1.05 | — |
+| 16 | ×1.08 | Uncommon peak |
+| 18 | ×1.11 | — |
+| 20 | ×1.13 | — |
+| 22 | ×1.16 | Rare peak |
+| 25 | ×1.20 | — |
+| 28 | ×1.24 | — |
+| 30 | ×1.27 | Epic peak |
+| 35 | ×1.33 | — |
+| 40 | ×1.40 | Hard cap reached |
+| 45 | ×1.40 | Legendary / prologue heroes (capped) |
+| 55+ | ×1.40 | Mythic — hard cap |
+
+**Hero stat → skill type mapping:**
+
+| Stat | Used by |
+|---|---|
+| `insight` | `scout`, `analyze` |
+| `carePower` | `stabilize`, `support`, `cleanse` |
+| `intervention` | `strike`, `counter` |
+| `guard` | `shield` (always, regardless of skill type) |
+| `coordination` | `command` |
+
+---
+
+### Affinity Modifier (Treatment Correctness)
+
+Controls how well a chosen treatment approach matches the disease. Applied as `affinityMod` in Strike and `clinicalMod` in Stabilize.
+
+| Match Level | ×Mult | Description |
+|---|---|---|
+| Strong match | ×1.60 | Correct evidence-based intervention for this pathology |
+| Appropriate | ×1.00 | Reasonable but not optimal |
+| Weak match | ×0.30 | Suboptimal; will help slightly but poorly |
+| Bad / contraindicated | ×0.00 | Causes harm — Strike deals 0 damage, Stabilize adds 0 stability |
+
+A "bad" treatment also applies a stability penalty to the player (damage to the patient from iatrogenic harm).
+
+---
+
+### Affinity Family Modifier
+
+Scales all three action types (Strike, Stabilize, Shield) based on whether the hero's clinical specialisation matches the enemy's domain. Implemented in `calcAffinityFamilyMod()`.
+
+Both enemy affinity slots are checked (primary + secondary), so a hero specialising in a secondary domain still gets the bonus.
+
+| Condition | ×Mult | Formula |
+|---|---|---|
+| Hero strong affinity ∩ enemy affinity ≠ ∅ | ×1.18 (max) | `1 + 0.18 × (1 − min(affinityResistance, 1))` |
+| Neutral — no overlap | ×1.00 | — |
+| Hero weak affinity ∩ enemy affinity ≠ ∅ | ×0.87 | Penalty not dampened by `affinityResistance` |
+
+**Push 13 changes:** Bonus raised from ×1.15 → effective ×1.18; penalty tightened from ×0.90 → ×0.87.
+
+**`affinityResistance` dampening (Push 7):**
+- Only dampens the **bonus portion** of a strong match, not the base ×1.0.
+- At `affinityResistance: 0.15` (bosses), a strong match gives `1 + 0.18 × 0.85 ≈ ×1.153` instead of ×1.18.
+- At `affinityResistance: 0.20` (The Silent Infarct), strong match gives `1 + 0.18 × 0.80 = ×1.144`.
+
+**Quick reference at various resistance values:**
+
+| affinityResistance | Strong-Match ×Mult |
+|---|---|
+| 0.00 (Ch1 enemies) | ×1.180 |
+| 0.05 (Ch3 normal) | ×1.171 |
+| 0.08 (Ch4 normal) | ×1.165 |
+| 0.10 (Ch5–8) | ×1.162 |
+| 0.12 (Ch9 real-ward) | ×1.158 |
+| 0.15 (Lord Imbalance, Verdantha) | ×1.153 |
+| 0.20 (Silent Infarct) | ×1.144 |
+
+---
+
+### Care Chain Bonuses
+
+A Care Chain is built by using skills whose `chainRoles` connect. Bonuses are applied as `careChainMod` (future slot, currently `×1.00` except as noted below — these values reflect the intended design from Push 13 and may not yet be multiplied in).
+
+**Push 13 target values:**
+
+| Chain Length | Strike Bonus | Stabilize Bonus | Notes |
+|---|---|---|---|
+| 1 link | Small bonus | Small bonus | Per-step size: +6% per link |
+| 2 links | +12% | +12% | — |
+| 3 links | +18% | +18% | — |
+| 4 links | +24% | +24% | — |
+| ≥5 links (full chain) | **+25%** | **+18%** | Stabilize cap is lower than Strike cap |
+
+**Parameters (Push 13):** Step size 6% · Strike full-chain cap +25% · Stabilize full-chain cap +18%.
+
+---
+
+## 4. Chapter Pools
+
+Chapter pools are built by filtering `ENEMIES` where `e.difficulty === chapter` and `!e.worldBoss` and `!e.isAffliction`. Named bosses exported separately (`BOSS_LORD_IMBALANCE`, `BOSS_SILENT_INFARCT`) are not in `ENEMIES` and are never in the pool. `BOSS_VERDANTHA` is in `ENEMIES` but is excluded by `worldBoss: true`.
+
+### Chapter 1 Pool — 5 enemies
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `dehydration_wisp` | Hypovolemic Wisp | River | — |
+| `air_sprite` | Air Sprite Corruption | Air | — |
+| `river_sludge` | River Sludge | River | — |
+| `energy_lock` | Energy Lock | Energy | — |
+| `fluid_phantom` | Fluid Phantom | River | TRIAL |
+
+### Chapter 2 Pool — 3 enemies
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `fire_imp` | Fire Imp | Fire | — |
+| `pulmora_wisp` | Pulmora Wisp | Air | — |
+| `mind_fog` | Mind Fog | Mind | — |
+
+### Chapter 3 Pool — 5 enemies
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `septara_seed` | Septara Seed | Fire / River | — |
+| `cardion_echo` | Cardion Echo | River / Air | — |
+| `glycora_spark` | Glycora Spark | Energy / Storm | — |
+| `electrox_flicker` | Electrox Flicker | Storm / River | — |
+| `fever_shade` | Fever Shade | Fire / River | TRIAL |
+
+### Chapter 4 Pool — 3 enemies
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `priority_surge` | Priority Surge | River / Storm | — |
+| `overload_shade` | Overload Shade | Energy / Mind | — |
+| `gale_spirit` | Gale Spirit | Air | TRIAL |
+
+### Chapter 5 Pool — 2 enemies
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `recovery_lapse` | Recovery Lapse | Air / River | — |
+| `fatigue_veil` | Fatigue Veil | Energy / Mind | — |
+
+### Chapter 6 Pool — 1 enemy
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `ward_cascade` | Ward Cascade | River / Air | TRIAL |
+
+### Chapter 7 Pool — 2 enemies
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `imbalance_core` | Imbalance Core | Energy / Storm | TRIAL |
+| `contagion_wraith` | Contagion Wraith | Fire / Protection | TRIAL |
+
+### Chapter 8 Pool — 1 enemy
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `crisis_convergence` | Crisis Convergence | Mind / River | TRIAL |
+
+### Chapter 9 Pool — 7 enemies
+
+All have `chapterGate: 9` — excluded from earlier chapter pools by separate gate logic.
+
+| Enemy ID | Name | System | Sim Counterpart |
+|---|---|---|---|
+| `dehydration_specter` | Dehydration Specter | River | `fluid_phantom` |
+| `true_dehydration_wraith` | True Dehydration Wraith | River | `dehydration_wisp` |
+| `breathless_gale_spirit` | Breathless Gale Spirit | Air | `air_sprite` |
+| `burning_fever_shade` | Burning Fever Shade | Fire / River | `fire_imp` |
+| `drought_river_shade` | Drought-Bound River Shade | River / Storm | `river_sludge` |
+| `confusion_veil` | Confusion Veil | Mind | `mind_fog` |
+| `glycemic_rupture` | Glycemic Rupture | Energy / Storm | `energy_lock` |
+
+### Chapter 10 — Boss Only
+
+Chapter 10 has no pool enemies. The only enemy with `difficulty: 10` is:
+
+| Enemy ID | Name | System | Flags |
+|---|---|---|---|
+| `silent_infarct` | The Silent Infarct | River | BOSS · SCRIPTED LOSS |
+
+---
+
+## Balance Summary
+
+### Resistance Progression by Tier
+
+| Tier | Chapters | Corr Resist | Stab Resist | Hidden Def | Stab Press | Aff Resist |
+|---|---|---|---|---|---|---|
+| Intro | 1 | 0–4% | — | 5–8% | 0% | 0% |
+| Escalation | 2 | 5–6% | — | 8–10% | 0–2% | 0–5% |
+| Complexity | 3 | 10–12% | — | 12–14% | 3–4% | 5% |
+| Code Rush | 4 | 14% | — | 16% | 6% | 8% |
+| Recovery | 5 | 16% | — | 18% | 8% | 10% |
+| Trial 6 | (c5p8) | 18% | 10% | 20% | 10% | 10% |
+| Trial 7 | (c6–7) | 20% | 12% | 22% | 12% | 12% |
+| Trial 8 | (c8p8) | 22% | 15% | 24% | 14% | 14% |
+| Real-Ward | 9 | 22% | 10–22% | 24% | 14% | 12% |
+| Named Bosses | — | 25–35% | 30–97% | 28–40% | 12–20% | 15–20% |
+
+### Corruption (HP) Progression
+
+| Tier | Typical Range | Notes |
+|---|---|---|
+| Ch1 normal | 50–58 | Very low; intended for single-turn resolution of individual skills |
+| Ch1 trial boss | 108 | ~2× pool enemy |
+| Ch2 | 80–90 | — |
+| Ch3 normal | 95–110 | — |
+| Ch3 trial boss | 155 | — |
+| Ch4 normal | 125–128 | — |
+| Ch4 trial boss | 165 | — |
+| Ch5 | 145–150 | — |
+| Ch6 trial | 190 | — |
+| Ch7 trial | 210–215 | — |
+| Ch8 trial | 235 | — |
+| Ch9 real-ward | 170–265 | Wide spread; `dehydration_specter` is the outlier at 265 |
+| Lord Imbalance | 180 | Story boss — lower HP than Ch9 pool; leans on resistance instead |
+| Verdantha | 320 | World Boss; 50% stab resistance makes HP effectively much higher |
+| Silent Infarct | 3,200 | Scripted loss; unreachable in normal play |
