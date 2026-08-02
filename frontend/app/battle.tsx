@@ -424,6 +424,22 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── clinicalCueIntro: fire once the first Clinical Cue appears in a
+  // non-tutorial, non-training battle so new players understand the mechanic
+  // before they answer. The tutorial is a blocking modal that auto-clears
+  // when the player taps "ANSWER THE CUE", revealing the cue beneath it.
+  // Guard: skip during prologue, training, and any battle where firstBattle
+  // has not yet been completed. Using isCompleted("firstBattle") as the durable
+  // condition ensures this never fires during the guided first battle even if
+  // activeTutorialId is null at mount time (the 800ms setTimeout hasn't fired yet).
+  useEffect(() => {
+    if (!state.pendingCue) return;
+    if (isPrologueTutorial || isPrologueBoss || isTraining) return;
+    if (!isCompleted("firstBattle")) return;
+    if (isCompleted("clinicalCueIntro")) return;
+    startTutorial("clinicalCueIntro");
+  }, [state.pendingCue]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Push 3 — Fluid Phantom: show the Elemental Counter one-time tutorial after a
   // short delay so the objective modal has already been dismissed.
   useEffect(() => {
@@ -781,8 +797,23 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // Push 8: capture result so we can display the actual effect in feedbackMsg.
     // Calling applySkill(state, ...) directly is safe — state is current at press-time,
     // which matches how all other handlers (handleCard, handleUseItem, etc.) already work.
+    const prevLogLen = state.log.length;
     const applyResult = applySkill(state, effective, hero, castQuality);
     setState(applyResult.state);
+    // affinityMatchIntro: fire on the first skill that produces any non-neutral
+    // affinity result so the player learns what the feedback labels mean.
+    // Covers both family-affinity ("Affinity advantage" / "Weak affinity") and
+    // element-based affinity result labels ("Super Effective!" / "Limited Effect!").
+    // Uses isCompleted("firstBattle") as the durable guard so this cannot fire
+    // during the guided first battle even before activeTutorialId is set.
+    if (!isTraining && !isPrologueTutorial && !isPrologueBoss && isCompleted("firstBattle") && !isCompleted("affinityMatchIntro")) {
+      const newEntries = applyResult.state.log.slice(prevLogLen);
+      const hasAffinityFeedback = newEntries.some(e =>
+        e.includes("Affinity advantage") || e.includes("Weak affinity") ||
+        e.includes("Super Effective") || e.includes("Limited Effect")
+      );
+      if (hasAffinityFeedback) startTutorial("affinityMatchIntro");
+    }
     triggerFx(hero.id, effective.type);
     turnActionsRef.current = [...turnActionsRef.current, effective.type];
     // Push 8: show the actual outcome ("Lowered Corruption by 11.") in the feedback banner.

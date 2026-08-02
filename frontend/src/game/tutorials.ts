@@ -9,6 +9,9 @@ export type TutorialId =
   | "systemHubIntro"
   | "systemWardHub"
   | "systemShops"
+  // ── In-battle contextual tutorials (System-narrated, fire on first occurrence) ──
+  | "clinicalCueIntro"
+  | "affinityMatchIntro"
   // ── University mini-game tutorials (System-narrated, forced, no skip/close) ──
   | "cueHuntIntro"
   | "rapidTriageIntro"
@@ -64,6 +67,8 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   systemHubIntro: "The System Awakens",
   systemWardHub: "The Ward",
   systemShops: "The Apothecary Market",
+  clinicalCueIntro: "Clinical Cues",
+  affinityMatchIntro: "Treatment Affinity",
   cueHuntIntro: "Cue Hunt",
   rapidTriageIntro: "Rapid Triage",
   stabilizeIntro: "Stabilize Stack",
@@ -580,6 +585,33 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       requireAction: true,
       requiredTargetId: "action_oral_fluids",
       nextText: "TAP OFFER ORAL FLUIDS",
+    },
+  ],
+
+  // ── In-battle contextual tutorials ─────────────────────────────────────────
+  // Both are one-step modals narrated by the System. They fire automatically
+  // on the first qualifying event in a non-tutorial, non-prologue battle and
+  // are gated by isCompleted() so they never repeat.
+
+  clinicalCueIntro: [
+    {
+      id: "cue_intro_explain",
+      title: "Clinical Cue",
+      body: "SYSTEM: Diagnostic question detected.\n\nA Clinical Cue has appeared — a real question about this patient's condition right now. Answer it before acting. A correct answer restores AP and boosts every stabilizing action you take this turn. Incorrect answers have no penalty. This is clinical reasoning in practice — it matters.",
+      placement: "center",
+      requireAction: false,
+      nextText: "ANSWER THE CUE",
+    },
+  ],
+
+  affinityMatchIntro: [
+    {
+      id: "affinity_intro_explain",
+      title: "Treatment Affinity",
+      body: "SYSTEM: Affinity feedback logged.\n\nYour skill just produced a non-neutral affinity result — 'Affinity advantage' means this treatment aligns well with the patient's active clinical domain and hits harder. 'Weak affinity' means it does not align and is less effective. Use Assess first to reveal the clinical domain, then match your treatment approach. Check the Compendium for the full domain reference.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
     },
   ],
 
