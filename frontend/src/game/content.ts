@@ -19,6 +19,7 @@ export const RANKS: Rank[] = [
 export const HEROES: Hero[] = [
   {
     id: 'novice_guardian',
+    gender: 'female',
     name: 'Novice Guardian',
     title: 'Apprentice Stabilizer',
     rarity: 3,
@@ -71,6 +72,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'night_watcher',
+    gender: 'male',
     name: 'Night Watcher',
     title: 'Vigil of the Ward',
     rarity: 3,
@@ -90,7 +92,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Senior Who Stayed',
-        text: 'An older nurse named Celestine worked the same corridor for eleven years and had never lost a patient to a preventable overnight deterioration. She taught him one rule above all others: "If something feels different, it is different. Chart it. Act on it. Apologize later if you were wrong." He has never had to apologize. He has never regretted acting.',
+        text: 'An older nurse named Celestine worked the same corridor for eleven years and had never lost a patient to a preventable overnight deterioration. Celestine taught him one rule above all others: "If something feels different, it is different. Chart it. Act on it. Apologize later if you were wrong." He has never had to apologize. He has never regretted acting.',
       },
       {
         star: 3,
@@ -115,6 +117,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'apprentice_seer',
+    gender: 'female',
     name: 'Apprentice Seer',
     title: 'Reader of Cues',
     rarity: 3,
@@ -141,7 +144,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Mentor Who Asked Questions',
-        text: 'Her clinical supervisor never told her what to do. He only asked: "What do you see? What does that suggest? What else might explain it?" At first she found the method maddening. By the end of the rotation she understood that the questions were the skill. Answers could be looked up. The habit of asking could only be built.',
+        text: 'Her clinical supervisor never told her what to do. The supervisor only asked: "What do you see? What does that suggest? What else might explain it?" At first she found the method maddening. By the end of the rotation she understood that the questions were the skill. Answers could be looked up. The habit of asking could only be built.',
       },
       {
         star: 3,
@@ -166,6 +169,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'junior_warden',
+    gender: 'female',
     name: 'Junior Warden',
     title: 'Keeper of Safety',
     rarity: 3,
@@ -217,6 +221,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'data_acolyte',
+    gender: 'male',
     name: 'Data Acolyte',
     title: 'Apprentice Weaver',
     rarity: 3,
@@ -243,7 +248,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Supervisor with the Spreadsheet',
-        text: 'His placement supervisor kept a personal trending spreadsheet for every complex patient on the ward. She did not do it because the system required it. She did it because she had seen enough crises to know that a downward trend in the wrong direction was always more informative than a single out-of-range value. He started keeping his own the week after.',
+        text: 'His placement supervisor kept a personal trending spreadsheet for every complex patient on the ward. Not because the system required it: the supervisor had seen enough crises to know that a downward trend in the wrong direction was always more informative than a single out-of-range value. He started keeping his own the week after.',
       },
       {
         star: 3,
@@ -268,6 +273,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'village_caretaker',
+    gender: 'female',
     name: 'Village Caretaker',
     title: 'Hands of Comfort',
     rarity: 3,
@@ -299,12 +305,12 @@ export const HEROES: Hero[] = [
       {
         star: 3,
         title: 'The Patient Nobody Visited',
-        text: 'He was ninety-one and had been on the ward for three weeks without a single visitor. She started spending five extra minutes at the end of each medication round just to sit. They talked about his farm, his late wife, a road trip he took in the 1970s that he still described as the best week of his life. His wound healed faster than the team expected. She was not surprised.',
+        text: 'The patient was ninety-one and had been on the ward for three weeks without a single visitor. She started spending five extra minutes at the end of each medication round just to sit. They talked about a farm, a late wife, a road trip taken in the 1970s that the patient still described as the best week of a life. The wound healed faster than the team expected. She was not surprised.',
       },
       {
         star: 4,
         title: 'Foundation',
-        text: 'A newly qualified doctor asked her once, with genuine curiosity, whether she ever wished she had specialized. She thought about it for a moment. "Fundamental care is the foundation," she said. "Everything else is built on top of it. If the foundation is done poorly, nothing above it holds." He looked at her chart notes more carefully after that.',
+        text: 'A newly qualified doctor asked her once, with genuine curiosity, whether she ever wished she had specialized. She thought about it for a moment. "Fundamental care is the foundation," she said. "Everything else is built on top of it. If the foundation is done poorly, nothing above it holds." The doctor looked at her chart notes more carefully after that.',
       },
       {
         star: 5,
@@ -327,6 +333,7 @@ export const HEROES: Hero[] = [
   // tutorials.ts.  They are never persisted in heroes_owned or active_team.
   {
     id: 'prologue_nightingale',
+    gender: 'female',
     name: 'Florence Nightingale',
     title: 'The Lady with the Lamp',
     rarity: 5,
@@ -352,6 +359,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'prologue_fleming',
+    gender: 'male',
     name: 'Alexander Fleming',
     title: 'The Discoverer of Penicillin',
     rarity: 5,
@@ -377,6 +385,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'prologue_former_self',
+    gender: 'nonbinary',
     name: 'The Prodigy',
     title: 'Mythic Clinician',
     rarity: 6,
@@ -402,6 +411,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'storm_runner',
+    gender: 'male',
     name: 'Storm Runner',
     title: 'ER Trauma Sentinel',
     rarity: 4,
@@ -416,12 +426,12 @@ export const HEROES: Hero[] = [
       {
         star: 1,
         title: 'The Sound of the Alarm',
-        text: 'He was twelve years old when he watched a paramedic team work on the pavement outside his school. He did not look away. He watched every movement with a focus that surprised him, cataloguing each action without understanding any of it. He went home and told his mother he knew what he wanted to do. She asked how he could be sure. He said: "Because I was not afraid."',
+        text: 'He was twelve years old when he watched a paramedic team work on the pavement outside his school. He did not look away. He watched every movement with a focus that surprised him, cataloguing each action without understanding any of it. He went home and told his mother he knew what he wanted to do. His mother asked how he could be sure. He said: "Because I was not afraid."',
       },
       {
         star: 2,
         title: 'The First Real Code',
-        text: 'His ER mentor had a phrase she used every time a resuscitation call came in: "Calm hands, clear voice, one thing at a time." He repeated it to himself for his first code call and kept repeating it until the room stopped spinning. He did what was needed. The patient survived. His hands had been steady the whole time. He did not tell anyone how loudly his heart was beating.',
+        text: 'His ER mentor had a phrase for every resuscitation call that came in: "Calm hands, clear voice, one thing at a time." He repeated it to himself for his first code call and kept repeating it until the room stopped spinning. He did what was needed. The patient survived. His hands had been steady the whole time. He did not tell anyone how loudly his heart was beating.',
       },
       {
         star: 3,
@@ -446,6 +456,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'infection_warden',
+    gender: 'female',
     name: 'Infection Warden',
     title: 'Sentinel of Containment',
     rarity: 4,
@@ -490,6 +501,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'wound_sage',
+    gender: 'female',
     name: 'Wound Sage',
     title: 'Mender of Skin and Tissue',
     rarity: 4,
@@ -509,7 +521,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Senior Who Measured Everything',
-        text: 'Her wound care mentor photographed and measured every wound on every visit. He said: "A wound that cannot be measured cannot be managed." She adopted the practice immediately and extended it: she started tracking the microenvironment too, the moisture, the temperature at the wound edge, the surrounding tissue quality. The consultants started reading her assessments before they saw the patients.',
+        text: 'Her wound care mentor photographed and measured every wound on every visit. "A wound that cannot be measured cannot be managed," the mentor said. She adopted the practice immediately and extended it: she started tracking the microenvironment too, the moisture, the temperature at the wound edge, the surrounding tissue quality. The consultants started reading her assessments before they saw the patients.',
       },
       {
         star: 3,
@@ -534,6 +546,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'mindkeeper',
+    gender: 'female',
     name: 'Mindkeeper',
     title: 'Anchor of the Restless Soul',
     rarity: 4,
@@ -553,12 +566,12 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Mentor Who Slowed Down',
-        text: 'Every other nurse she had trained under moved quickly: check the obs, update the notes, move to the next patient. Her mental health mentor moved differently. He paused at doorways. He knocked and waited for a real answer, not just a sound. He explained to her that the quality of the first thirty seconds of any interaction with a patient in distress determined the quality of the next hour. She never forgot to pause at doorways after that.',
+        text: 'Every other nurse she had trained under moved quickly: check the obs, update the notes, move to the next patient. Her mental health mentor moved differently. The mentor paused at doorways, knocked and waited for a real answer, not just a sound, and explained that the quality of the first thirty seconds of any interaction with a patient in distress determined the quality of the next hour. She never forgot to pause at doorways after that.',
       },
       {
         star: 3,
         title: 'The Night of the Long Conversation',
-        text: 'She spent four hours with a patient who had not spoken to anyone in three days. She did not push. She sat near the door, available but not demanding, and waited. Eventually he started talking. She did not interrupt him once. At the end he said: "I did not think anyone would stay." She made a note in the chart. She did not mention the four hours.',
+        text: 'She spent four hours with a patient who had not spoken to anyone in three days. She did not push. She sat near the door, available but not demanding, and waited. Eventually the patient started talking. She did not interrupt once. At the end came the words: "I did not think anyone would stay." She made a note in the chart. She did not mention the four hours.',
       },
       {
         star: 4,
@@ -580,6 +593,7 @@ export const HEROES: Hero[] = [
   // ── EPIC (rarity 4) — second wave ────────────────────────────────────────
   {
     id: 'lotus_care_captain',
+    gender: 'female',
     name: 'Lotus Care Captain',
     title: 'Commander of the Healing Ward',
     rarity: 4,
@@ -606,7 +620,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Captain Who Counted Everything',
-        text: 'Her first charge nurse was a man who counted things obsessively: beds, hours, acuity scores, staff ratios, outstanding tests. She thought him cold until the night a staff member broke down at the nurses station at 0200 and he was the first one there, precise and unhurried. "I count things," he told her afterward, "because I know exactly how much I have to protect." She began keeping her own counts the following week.',
+        text: 'Her first charge nurse counted things obsessively: beds, hours, acuity scores, staff ratios, outstanding tests. She found it cold at first, until the night a staff member broke down at the nurses station at 0200 and that charge nurse was the first one there, precise and unhurried. "I count things," came the reply afterward, "because I know exactly how much I have to protect." She began keeping her own counts the following week.',
       },
       {
         star: 3,
@@ -632,6 +646,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'code_guardian',
+    gender: 'male',
     name: 'Code Guardian',
     title: 'First Blade in the Code',
     rarity: 4,
@@ -658,7 +673,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Team Leader With the Quiet Voice',
-        text: 'His code team trainer was not a loud person. She ran resuscitations at a volume barely above a normal conversation, and the effect was that everyone in the room listened harder. She told him: "In a code, the team leader\'s job is not to do everything. It is to think while everyone else does." He spent the next year learning to slow down internally while the room moved fast around him. It was the most difficult skill he ever acquired.',
+        text: 'His code team trainer was not a loud person. Resuscitations ran at a volume barely above a normal conversation, and the effect was that everyone in the room listened harder. The trainer told him: "In a code, the team leader\'s job is not to do everything. It is to think while everyone else does." He spent the next year learning to slow down internally while the room moved fast around him. It was the most difficult skill he ever acquired.',
       },
       {
         star: 3,
@@ -684,6 +699,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'mind_lotus_healer',
+    gender: 'female',
     name: 'Mind Lotus Healer',
     title: 'Oracle of Inner Waters',
     rarity: 4,
@@ -715,12 +731,12 @@ export const HEROES: Hero[] = [
       {
         star: 3,
         title: 'Three Days of Silence',
-        text: 'The patient had been selectively mute for three days when she was assigned to his care. She did not try to break the silence. She sat with him through medication rounds, through meals, through the long quiet afternoons on the unit, offering presence without demand. On the fourth day he spoke, unprompted, for twenty minutes. He did not speak to her specifically. He spoke into a room that had learned, through her, to be safe enough for words.',
+        text: 'The patient had been selectively mute for three days when she was assigned to their care. She did not try to break the silence. She sat with the patient through medication rounds, through meals, through the long quiet afternoons on the unit, offering presence without demand. On the fourth day the patient spoke, unprompted, for twenty minutes. Not to her specifically. The words went into a room that had learned, through her, to be safe enough for them.',
       },
       {
         star: 4,
         title: 'Recovery Made Visible',
-        text: 'A patient she had cared for during an acute episode two years earlier came back to the unit not as a patient but as a peer support worker. He found her in the corridor and said, quietly, that he was there because of the way the ward had treated him the first time. She did not claim credit. She had done her job; the system had done its job; he had done his. Recovery, she had come to understand, was always a collaborative achievement.',
+        text: 'A patient she had cared for during an acute episode two years earlier came back to the unit not as a patient but as a peer support worker. Finding her in the corridor, the former patient said, quietly, that returning was possible because of the way the ward had treated them the first time. She did not claim credit. She had done her job; the system had done its job; they had done theirs. Recovery, she had come to understand, was always a collaborative achievement.',
       },
       {
         star: 5,
@@ -736,6 +752,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'patient_safety_arbiter',
+    gender: 'nonbinary',
     name: 'Patient Safety Arbiter',
     title: 'Architect of the Safe Kingdom',
     rarity: 4,
@@ -788,6 +805,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'ventilation_strategist',
+    gender: 'nonbinary',
     name: 'Ventilation Strategist',
     title: 'Architect of the Mechanical Lung',
     rarity: 4,
@@ -840,6 +858,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'hearthline_attending',
+    gender: 'nonbinary',
     name: 'Hearthline Attending',
     title: 'Physician of the Kingdom\'s Heart',
     rarity: 4,
@@ -866,7 +885,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Attending Who Taught at the Bedside',
-        text: 'Their most important teacher never used a slide deck. She conducted teaching in patient rooms, with patients present and consenting, and she treated the patients as co-instructors. "Tell them what you noticed," she would say to the student, meaning: tell the patient, not me. The fear this generated in junior trainees was, she explained, the point. You had to be honest at the bedside. There was no other environment in which to practice.',
+        text: 'Their most important teacher never used a slide deck. Teaching happened in patient rooms, with patients present and consenting, treating them as co-instructors. "Tell them what you noticed," the teacher would say to the student, meaning: tell the patient, not me. The fear this generated in junior trainees was, the teacher explained, the point. You had to be honest at the bedside. There was no other environment in which to practice.',
       },
       {
         star: 3,
@@ -894,6 +913,7 @@ export const HEROES: Hero[] = [
   // ── LEGENDARY (locked, not in gacha pool) ─────────────────────────────────
   {
     id: 'florence_nightingale',
+    gender: 'female',
     name: 'Florence Nightingale',
     title: 'The Lady with the Lamp',
     rarity: 5,
