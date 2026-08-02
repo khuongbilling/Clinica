@@ -65,7 +65,7 @@ export const HEROES: Hero[] = [
       },
     ],
     skills: [
-      { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 6, description: 'Legendary oxygenation surge. +90 Stability, -60 Corruption (Air).', shortEffect: 'Treat • +90–108 Stability · −60–72 Corruption', rpgDescription: 'A radiant breath floods the ward with healing air; the patient surges back from the edge.', beginnerExplanation: 'A massive wave of breathing support and direct damage to the problem.', nclexExplanation: 'Comprehensive respiratory intervention: supplemental O₂, positioning, airway management, and escalation, delivered at legendary speed.', stabilize: 90, strike: 60, strikeRange: [60, 72] as [number,number], stabilizeRange: [90, 108] as [number,number] },
+      { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 6, description: 'Legendary oxygenation surge. +90 Stability, -60 Corruption (Air).', shortEffect: 'Air Treatment • +90–108 Stability · −60–72 Corruption', rpgDescription: 'A radiant breath floods the ward with healing air; the patient surges back from the edge.', beginnerExplanation: 'A massive wave of breathing support and direct damage to the problem.', nclexExplanation: 'Comprehensive respiratory intervention: supplemental O₂, positioning, airway management, and escalation, delivered at legendary speed.', stabilize: 90, strike: 60, strikeRange: [60, 72] as [number,number], stabilizeRange: [90, 108] as [number,number] },
       { id: 'lantern_of_clues', name: 'Lantern of Clues', type: 'scout', systemType: 'Universal', cost: 1, description: 'Reveal one hidden clue.', shortEffect: 'Assess • Reveal Hidden Clue', rpgDescription: 'A lantern of insight reveals what the corruption tried to hide.', beginnerExplanation: 'Look closer to find the important clue.', nclexExplanation: 'Assessment data helps the nurse recognize relevant cues before choosing interventions.', reveal: 1 },
       { id: 'rapid_response', name: 'Rapid Response', type: 'stabilize', systemType: 'Universal', cost: 6, description: 'Legendary emergency surge. +130 Stability, Protection 60.', shortEffect: 'Stabilize • +130–150 Stability · Protection 60–72', rpgDescription: 'The healer surges in with legendary calm; the patient stabilises, protected by a healing aura.', beginnerExplanation: 'The biggest support possible: enormous Stability gain and Protection against the next Instability event.', nclexExplanation: 'Rapid team-based escalation: coordinated stabilisation with real-time protection against further deterioration.', stabilize: 130, shield: 60, stabilizeRange: [130, 150] as [number,number], shieldRange: [60, 72] as [number,number] },
     ],
@@ -144,7 +144,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Mentor Who Asked Questions',
-        text: 'Her clinical supervisor never told her what to do. The supervisor only asked: "What do you see? What does that suggest? What else might explain it?" At first she found the method maddening. By the end of the rotation she understood that the questions were the skill. Answers could be looked up. The habit of asking could only be built.',
+        text: 'Her clinical supervisor never told her what to do, only asked: "What do you see? What does that suggest? What else might explain it?" At first she found the method maddening. By the end of the rotation she understood that the questions were the skill. Answers could be looked up. The habit of asking could only be built.',
       },
       {
         star: 3,
@@ -163,8 +163,8 @@ export const HEROES: Hero[] = [
       },
     ],
     skills: [
-      { id: 'pattern_sight', name: 'Pattern Sight', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 2 hidden clues. Pattern recognition guides a precise counter (-8 Corruption).', shortEffect: 'Assess • Reveal 2 Clues · −8–11 Corruption', rpgDescription: 'Threads of the Codex reveal the pattern; the Seer strikes where it hurts most.', beginnerExplanation: 'Find the problem and act on what you see.', nclexExplanation: 'Recognizing clinical patterns helps analyze cues and select targeted interventions. The right action at the right time reduces the disease burden.', reveal: 2, strike: 8, strikeRange: [8, 11] as [number,number] },
-      { id: 'focused_lens', name: 'Focused Lens', type: 'analyze', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues and strike 12.', shortEffect: 'Assess • Reveal All + Strike 12–15', rpgDescription: 'A crystal lens sharpens the healer’s focus and prepares the next move.', beginnerExplanation: 'A careful check makes your next correct move stronger.', nclexExplanation: 'Focused assessment helps connect symptoms to priority problems and supports safer clinical decision-making.', reveal: 99, strike: 12, strikeRange: [12, 15] as [number,number] },
+      { id: 'pattern_sight', name: 'Pattern Sight', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 2 hidden clues. Pattern recognition guides a precise counter (-8 Corruption).', shortEffect: 'Analyze • Reveal 2 Clues · −8–11 Corruption', rpgDescription: 'Threads of the Codex reveal the pattern; the Seer strikes where it hurts most.', beginnerExplanation: 'Find the problem and act on what you see.', nclexExplanation: 'Recognizing clinical patterns helps analyze cues and select targeted interventions. The right action at the right time reduces the disease burden.', reveal: 2, strike: 8, strikeRange: [8, 11] as [number,number] },
+      { id: 'focused_lens', name: 'Focused Lens', type: 'analyze', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues and strike 12.', shortEffect: 'Analyze • Reveal All + Strike 12–15', rpgDescription: 'A crystal lens sharpens the healer’s focus and prepares the next move.', beginnerExplanation: 'A careful check makes your next correct move stronger.', nclexExplanation: 'Focused assessment helps connect symptoms to priority problems and supports safer clinical decision-making.', reveal: 99, strike: 12, strikeRange: [12, 15] as [number,number] },
     ],
   },
   {
@@ -248,7 +248,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Supervisor with the Spreadsheet',
-        text: 'His placement supervisor kept a personal trending spreadsheet for every complex patient on the ward. Not because the system required it: the supervisor had seen enough crises to know that a downward trend in the wrong direction was always more informative than a single out-of-range value. He started keeping his own the week after.',
+        text: 'His placement supervisor kept a personal trending spreadsheet for every complex patient on the ward. Not because the system required it: because enough crises had shown that a downward trend in the wrong direction was always more informative than a single out-of-range value. He started keeping his own the week after.',
       },
       {
         star: 3,
@@ -267,8 +267,8 @@ export const HEROES: Hero[] = [
       },
     ],
     skills: [
-      { id: 'threadwatch', name: 'Threadwatch', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 1 clue and read the coming threat. Forewarned, the team braces; the next Instability event is reduced by 25%.', shortEffect: 'Assess • Reveal 1 · Brace −25–30% next Instability', rpgDescription: 'The Weaver traces the next thread of deterioration before it snaps, steadying the ward against it.', beginnerExplanation: 'Spotting what may get worse next lets you prepare; it reduces the next Instability event.', nclexExplanation: 'Trending changes in assessment data can identify deterioration before a crisis occurs, letting the nurse intervene proactively.', reveal: 1, shield: 25, shieldRange: [25, 30] as [number,number] },
-      { id: 'codex_link', name: 'Codex Link', type: 'scout', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues. Codex insight translates into precise action (-10 Corruption).', shortEffect: 'Assess • Reveal All · −10–13 Corruption', rpgDescription: 'The revealed clues connect into a glowing Codex chain; the Weaver strikes with precision.', beginnerExplanation: 'Use what you learned to fight the disease directly.', nclexExplanation: 'Clinical judgment requires connecting assessment cues to targeted interventions; complete data drives the right action and reduces disease burden.', reveal: 99, strike: 10, strikeRange: [10, 13] as [number,number] },
+      { id: 'threadwatch', name: 'Threadwatch', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal 1 clue and read the coming threat. Forewarned, the team braces; the next Instability event is reduced by 25%.', shortEffect: 'Analyze • Reveal 1 · Brace −25–30% next Instability', rpgDescription: 'The Weaver traces the next thread of deterioration before it snaps, steadying the ward against it.', beginnerExplanation: 'Spotting what may get worse next lets you prepare; it reduces the next Instability event.', nclexExplanation: 'Trending changes in assessment data can identify deterioration before a crisis occurs, letting the nurse intervene proactively.', reveal: 1, shield: 25, shieldRange: [25, 30] as [number,number] },
+      { id: 'codex_link', name: 'Codex Link', type: 'scout', systemType: 'Universal', cost: 2, description: 'Reveal all hidden clues. Codex insight translates into precise action (-10 Corruption).', shortEffect: 'Analyze • Reveal All · −10–13 Corruption', rpgDescription: 'The revealed clues connect into a glowing Codex chain; the Weaver strikes with precision.', beginnerExplanation: 'Use what you learned to fight the disease directly.', nclexExplanation: 'Clinical judgment requires connecting assessment cues to targeted interventions; complete data drives the right action and reduces disease burden.', reveal: 99, strike: 10, strikeRange: [10, 13] as [number,number] },
     ],
   },
   {
@@ -305,7 +305,7 @@ export const HEROES: Hero[] = [
       {
         star: 3,
         title: 'The Patient Nobody Visited',
-        text: 'The patient was ninety-one and had been on the ward for three weeks without a single visitor. She started spending five extra minutes at the end of each medication round just to sit. They talked about a farm, a late wife, a road trip taken in the 1970s that the patient still described as the best week of a life. The wound healed faster than the team expected. She was not surprised.',
+        text: 'The patient was ninety-one and had been on the ward for three weeks without a single visitor. She started spending five extra minutes at the end of each medication round just to sit. They talked about a farm, a late spouse, a road trip taken in the 1970s still described as the best week of a long life. The wound healed faster than the team expected. She was not surprised.',
       },
       {
         star: 4,
@@ -319,8 +319,8 @@ export const HEROES: Hero[] = [
       },
     ],
     skills: [
-      { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 4, description: 'Legendary steady support. +70 Stability, -20 Corruption.', shortEffect: 'Treat • +70–84 Stability · −20–24 Corruption', rpgDescription: 'A legendary steadying pulse of care restores deep balance and hammers back the corruption.', beginnerExplanation: 'A powerful wave of care that heals and fights the problem at once.', nclexExplanation: 'Legendary fundamental care: advanced repositioning, precision hygiene, therapeutic touch, and proactive monitoring at expert intensity.', stabilize: 70, strike: 20, strikeRange: [20, 24] as [number,number], stabilizeRange: [70, 84] as [number,number] },
-      { id: 'reassess', name: 'Reassess', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal one clue. Catching the gap in care reduces Corruption by 8.', shortEffect: 'Reassess • Reveal Clue · −8–11 Corruption', rpgDescription: 'A patient eye returns to the bedside, finds what was missed, and corrects the course.', beginnerExplanation: 'Take another look. Catching a missed step actively helps the patient recover.', nclexExplanation: 'Reassessment closes care gaps. Identifying a missed intervention or change in status directly reduces the disease burden.', reveal: 1, strike: 8, strikeRange: [8, 11] as [number,number] },
+      { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 4, description: 'Legendary steady support. +70 Stability, -20 Corruption.', shortEffect: 'Universal Treatment • +70–84 Stability · −20–24 Corruption', rpgDescription: 'A legendary steadying pulse of care restores deep balance and hammers back the corruption.', beginnerExplanation: 'A powerful wave of care that heals and fights the problem at once.', nclexExplanation: 'Legendary fundamental care: advanced repositioning, precision hygiene, therapeutic touch, and proactive monitoring at expert intensity.', stabilize: 70, strike: 20, strikeRange: [20, 24] as [number,number], stabilizeRange: [70, 84] as [number,number] },
+      { id: 'reassess', name: 'Reassess', type: 'analyze', systemType: 'Universal', cost: 1, description: 'Reveal one clue. Catching the gap in care reduces Corruption by 8.', shortEffect: 'Analyze • Reveal Clue · −8–11 Corruption', rpgDescription: 'A patient eye returns to the bedside, finds what was missed, and corrects the course.', beginnerExplanation: 'Take another look. Catching a missed step actively helps the patient recover.', nclexExplanation: 'Reassessment closes care gaps. Identifying a missed intervention or change in status directly reduces the disease burden.', reveal: 1, strike: 8, strikeRange: [8, 11] as [number,number] },
       { id: 'glucose_round', name: 'Glucose Round', type: 'strike', systemType: 'Energy', cost: 2, description: 'Follow glucose protocol. -16 Corruption (Energy). Reveal 1 clue.', shortEffect: 'Energy Treat • −16–19 Corruption · Reveal Clue', rpgDescription: 'The Caretaker reads the Energy Crystal and responds precisely. Glucose protocol restores the balance that corruption stored.', beginnerExplanation: 'Check blood sugar and give glucose if low; this directly fights the energy problem.', nclexExplanation: 'Hypoglycemia management requires glucose monitoring and administration per protocol. This nurse-initiated action directly treats the underlying energy deficit.', strike: 16, reveal: 1, strikeRange: [16, 19] as [number,number] },
     ],
   },
@@ -353,7 +353,7 @@ export const HEROES: Hero[] = [
     bondExp: 0,
     skills: [
       { id: 'lantern_of_clues', name: 'Lamp of Observation', type: 'scout', systemType: 'Universal', cost: 3, description: 'Legendary assessment. Reveal 2 hidden clues. -20 Corruption.', shortEffect: 'Assess • Reveal 2 Clues · −20–24 Corruption', rpgDescription: "Nightingale's lamp blazes across the ward, catching every detail corruption tried to hide.", beginnerExplanation: 'Look closer. A legendary eye sees twice as much.', nclexExplanation: 'Expert clinical assessment: pattern recognition across thousands of cases allows identification of multiple critical cues simultaneously.', reveal: 2, strike: 20, strikeRange: [20, 24] as [number,number] },
-      { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 6, description: 'Legendary oxygenation surge. +90 Stability, -60 Corruption (Air).', shortEffect: 'Treat • +90–108 Stability · −60–72 Corruption', rpgDescription: 'A radiant breath from Nightingale floods the ward with healing air; the patient surges back from the edge.', beginnerExplanation: 'A massive wave of breathing support and direct damage to the problem.', nclexExplanation: 'Comprehensive respiratory intervention: supplemental O₂, positioning, airway management, and escalation, delivered at legendary speed.', stabilize: 90, strike: 60, strikeRange: [60, 72] as [number,number], stabilizeRange: [90, 108] as [number,number] },
+      { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 6, description: 'Legendary oxygenation surge. +90 Stability, -60 Corruption (Air).', shortEffect: 'Air Treatment • +90–108 Stability · −60–72 Corruption', rpgDescription: 'A radiant breath from Nightingale floods the ward with healing air; the patient surges back from the edge.', beginnerExplanation: 'A massive wave of breathing support and direct damage to the problem.', nclexExplanation: 'Comprehensive respiratory intervention: supplemental O₂, positioning, airway management, and escalation, delivered at legendary speed.', stabilize: 90, strike: 60, strikeRange: [60, 72] as [number,number], stabilizeRange: [90, 108] as [number,number] },
       { id: 'rapid_response', name: 'Rapid Response', type: 'stabilize', systemType: 'Universal', cost: 6, description: 'Legendary emergency surge. +130 Stability, Protection 60.', shortEffect: 'Stabilize • +130–150 Stability · Protection 60–72', rpgDescription: "Nightingale surges in with centuries of practiced calm; the patient stabilises, protected by her aura.", beginnerExplanation: 'The biggest support possible: enormous Stability gain and Protection against the next Instability event.', nclexExplanation: 'Rapid team-based escalation: coordinated stabilisation with real-time protection against further deterioration.', stabilize: 130, shield: 60, stabilizeRange: [130, 150] as [number,number], shieldRange: [60, 72] as [number,number] },
     ],
   },
@@ -378,8 +378,8 @@ export const HEROES: Hero[] = [
     bondLevel: 0,
     bondExp: 0,
     skills: [
-      { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 4, description: 'Legendary steady support. +70 Stability, -20 Corruption.', shortEffect: 'Treat • +70–84 Stability · −20–24 Corruption', rpgDescription: "Fleming's legendary steady hand restores deep balance and hammers back the corruption.", beginnerExplanation: 'A powerful wave of care that heals and fights the problem at once.', nclexExplanation: 'Legendary fundamental care: advanced repositioning, precision hygiene, therapeutic touch, and proactive monitoring at expert intensity.', stabilize: 70, strike: 20, strikeRange: [20, 24] as [number,number], stabilizeRange: [70, 84] as [number,number] },
-      { id: 'reassess', name: 'Reassess', type: 'analyze', systemType: 'Universal', cost: 5, description: 'Reveal 2 clues. Expert insight -55 Corruption.', shortEffect: 'Reassess • Reveal 2 Clues · −55–66 Corruption', rpgDescription: "Fleming returns with a scientist's legendary eye, finding every missed detail and striking at the corruption's heart.", beginnerExplanation: 'Legendary observation: catches two missed steps and weakens the enemy significantly.', nclexExplanation: 'Expert reassessment closes care gaps rapidly. At legendary skill, identifying multiple missed interventions produces immediate, dramatic reduction in disease burden.', reveal: 2, strike: 55, strikeRange: [55, 66] as [number,number] },
+      { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 4, description: 'Legendary steady support. +70 Stability, -20 Corruption.', shortEffect: 'Universal Treatment • +70–84 Stability · −20–24 Corruption', rpgDescription: "Fleming's legendary steady hand restores deep balance and hammers back the corruption.", beginnerExplanation: 'A powerful wave of care that heals and fights the problem at once.', nclexExplanation: 'Legendary fundamental care: advanced repositioning, precision hygiene, therapeutic touch, and proactive monitoring at expert intensity.', stabilize: 70, strike: 20, strikeRange: [20, 24] as [number,number], stabilizeRange: [70, 84] as [number,number] },
+      { id: 'reassess', name: 'Reassess', type: 'analyze', systemType: 'Universal', cost: 5, description: 'Reveal 2 clues. Expert insight -55 Corruption.', shortEffect: 'Analyze • Reveal 2 Clues · −55–66 Corruption', rpgDescription: "Fleming returns with a scientist's legendary eye, finding every missed detail and striking at the corruption's heart.", beginnerExplanation: 'Legendary observation: catches two missed steps and weakens the enemy significantly.', nclexExplanation: 'Expert reassessment closes care gaps rapidly. At legendary skill, identifying multiple missed interventions produces immediate, dramatic reduction in disease burden.', reveal: 2, strike: 55, strikeRange: [55, 66] as [number,number] },
       { id: 'glucose_round', name: 'Culture & Sensitivity', type: 'strike', systemType: 'Energy', cost: 7, description: 'Expert targeted therapy. -96 Corruption (Energy). Reveal 2 clues.', shortEffect: 'Energy Treat • −96–115 Corruption · Reveal 2 Clues', rpgDescription: "Fleming reads the culture instantly; targeted legendary therapy shatters the Corruption's hold.", beginnerExplanation: 'Identify the exact problem with precision and deliver a massive Corruption reduction.', nclexExplanation: 'Culture and sensitivity-guided targeted antimicrobial therapy: at legendary skill, the strike is immediate and overwhelming.', strike: 96, reveal: 2, strikeRange: [96, 115] as [number,number] },
     ],
   },
@@ -431,7 +431,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The First Real Code',
-        text: 'His ER mentor had a phrase for every resuscitation call that came in: "Calm hands, clear voice, one thing at a time." He repeated it to himself for his first code call and kept repeating it until the room stopped spinning. He did what was needed. The patient survived. His hands had been steady the whole time. He did not tell anyone how loudly his heart was beating.',
+        text: 'His ER mentor had a phrase for every resuscitation call: "Calm hands, clear voice, one thing at a time." He repeated it to himself for his first code call and kept repeating it until the room stopped spinning. He did what was needed. The patient survived. His hands had been steady the whole time. He did not tell anyone how loudly his heart was beating.',
       },
       {
         star: 3,
@@ -521,7 +521,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Senior Who Measured Everything',
-        text: 'Her wound care mentor photographed and measured every wound on every visit. "A wound that cannot be measured cannot be managed," the mentor said. She adopted the practice immediately and extended it: she started tracking the microenvironment too, the moisture, the temperature at the wound edge, the surrounding tissue quality. The consultants started reading her assessments before they saw the patients.',
+        text: 'Her wound care mentor photographed and measured every wound on every visit and had one rule: "A wound that cannot be measured cannot be managed." She adopted the practice immediately and extended it: she started tracking the microenvironment too, the moisture, the temperature at the wound edge, the surrounding tissue quality. The consultants started reading her assessments before they saw the patients.',
       },
       {
         star: 3,
@@ -566,7 +566,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Mentor Who Slowed Down',
-        text: 'Every other nurse she had trained under moved quickly: check the obs, update the notes, move to the next patient. Her mental health mentor moved differently. The mentor paused at doorways, knocked and waited for a real answer, not just a sound, and explained that the quality of the first thirty seconds of any interaction with a patient in distress determined the quality of the next hour. She never forgot to pause at doorways after that.',
+        text: 'Every other nurse she had trained under moved quickly: check the obs, update the notes, move to the next patient. Her mental health mentor moved differently: pausing at doorways, knocking and waiting for a real answer, not just a sound. The lesson was clear: the quality of the first thirty seconds of any interaction with a patient in distress determined the quality of the next hour. She never forgot to pause at doorways after that.',
       },
       {
         star: 3,
@@ -620,7 +620,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Captain Who Counted Everything',
-        text: 'Her first charge nurse counted things obsessively: beds, hours, acuity scores, staff ratios, outstanding tests. She found it cold at first, until the night a staff member broke down at the nurses station at 0200 and that charge nurse was the first one there, precise and unhurried. "I count things," came the reply afterward, "because I know exactly how much I have to protect." She began keeping her own counts the following week.',
+        text: 'Her first charge nurse counted things obsessively: beds, hours, acuity scores, staff ratios, outstanding tests. She had thought the approach cold until the night a staff member broke down at the nurses station at 0200 and the charge nurse was the first one there, precise and unhurried. "I count things because I know exactly how much I have to protect." She began keeping her own counts the following week.',
       },
       {
         star: 3,
@@ -673,7 +673,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Team Leader With the Quiet Voice',
-        text: 'His code team trainer was not a loud person. Resuscitations ran at a volume barely above a normal conversation, and the effect was that everyone in the room listened harder. The trainer told him: "In a code, the team leader\'s job is not to do everything. It is to think while everyone else does." He spent the next year learning to slow down internally while the room moved fast around him. It was the most difficult skill he ever acquired.',
+        text: 'His code team trainer ran resuscitations at a volume barely above a normal conversation, and the effect was that everyone in the room listened harder. The message was direct: "In a code, the team leader\'s job is not to do everything. It is to think while everyone else does." He spent the next year learning to slow down internally while the room moved fast around him. It was the most difficult skill he ever acquired.',
       },
       {
         star: 3,
@@ -731,12 +731,12 @@ export const HEROES: Hero[] = [
       {
         star: 3,
         title: 'Three Days of Silence',
-        text: 'The patient had been selectively mute for three days when she was assigned to their care. She did not try to break the silence. She sat with the patient through medication rounds, through meals, through the long quiet afternoons on the unit, offering presence without demand. On the fourth day the patient spoke, unprompted, for twenty minutes. Not to her specifically. The words went into a room that had learned, through her, to be safe enough for them.',
+        text: 'A patient had been selectively mute for three days when she was assigned to the case. She did not try to break the silence. She sat nearby through medication rounds, through meals, through the long quiet afternoons on the unit, offering presence without demand. On the fourth day came twenty minutes of unprompted speech, directed not at her specifically but into a room that had learned, through her, to be safe enough for words.',
       },
       {
         star: 4,
         title: 'Recovery Made Visible',
-        text: 'A patient she had cared for during an acute episode two years earlier came back to the unit not as a patient but as a peer support worker. Finding her in the corridor, the former patient said, quietly, that returning was possible because of the way the ward had treated them the first time. She did not claim credit. She had done her job; the system had done its job; they had done theirs. Recovery, she had come to understand, was always a collaborative achievement.',
+        text: 'A patient she had cared for during an acute episode two years earlier came back to the unit not as a patient but as a peer support worker. They found her in the corridor and said, quietly, that returning had everything to do with the way the ward had treated them the first time. She did not claim credit. She had done her job; the system had done its job; so had the patient. Recovery, she had come to understand, was always a collaborative achievement.',
       },
       {
         star: 5,
@@ -885,7 +885,7 @@ export const HEROES: Hero[] = [
       {
         star: 2,
         title: 'The Attending Who Taught at the Bedside',
-        text: 'Their most important teacher never used a slide deck. Teaching happened in patient rooms, with patients present and consenting, treating them as co-instructors. "Tell them what you noticed," the teacher would say to the student, meaning: tell the patient, not me. The fear this generated in junior trainees was, the teacher explained, the point. You had to be honest at the bedside. There was no other environment in which to practice.',
+        text: 'Their most important teacher never used a slide deck, conducting ward rounds in patient rooms with patients present and consenting, treating each patient as a co-instructor. "Tell them what you noticed," came the instruction to every student: meaning the patient, not the supervisor. The fear this generated in junior trainees was, the teacher explained, the point. You had to be honest at the bedside. There was no other environment in which to practice.',
       },
       {
         star: 3,
@@ -994,7 +994,7 @@ export const HEROES: Hero[] = [
         systemType: 'Universal',
         cost: 2,
         description: 'Data reveals the truth. Reveal all clues, +14 Stability, −14 Corruption.',
-        shortEffect: 'Assess • Reveal All · +14 Stability · −14 Corruption',
+        shortEffect: 'Analyze • Reveal All · +14 Stability · −14 Corruption',
         rpgDescription: 'Florence consults her polar-area diagram; the pattern of corruption becomes undeniable, and the team responds with precision.',
         beginnerExplanation: 'Using evidence to guide care improves outcomes for every patient.',
         nclexExplanation: 'Data collection and analysis are foundational to clinical judgment. Evidence-based interventions reduce morbidity and mortality across patient populations.',
