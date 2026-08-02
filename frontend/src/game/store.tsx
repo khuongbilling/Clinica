@@ -2577,6 +2577,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     // P6 — advance chapter_progress when a chapter-final node is claimed.
     // c1n6 = Chapter 1 Trial (mini_boss) → unlocks Chapter 2 content + cutscene.
     // c2p7 = Chapter 2 Trial (boss)      → unlocks Chapter 3 content.
+    // c3p9 = Chapter 3 Trial (mini_boss) → unlocks Chapter 4 content.
+    // c4p9 = Chapter 4 Trial (mini_boss) → unlocks Chapter 5 content.
+    // c5p8 = Chapter 5 Trial (mini_boss) → unlocks Chapter 6 content.
     // c6p7 = Chapter 6 Trial (imbalance_core)     → unlocks Chapter 7 content.
     // c7p8 = Chapter 7 Trial (contagion_wraith)    → unlocks Chapter 8 content.
     // c8p8 = Chapter 8 Trial (crisis_convergence)  → unlocks Chapter 9 content.
@@ -2584,6 +2587,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 2) };
     } else if (nodeId === 'c2p7' || nodeId === 'c2p8') {
       next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 3) };
+    } else if (nodeId === 'c3p9') {
+      next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 4) };
+    } else if (nodeId === 'c4p9') {
+      next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 5) };
+    } else if (nodeId === 'c5p8') {
+      next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 6) };
     } else if (nodeId === 'c6p7') {
       next = { ...next, chapter_progress: Math.max(next.chapter_progress || 1, 7) };
     } else if (nodeId === 'c7p8') {
