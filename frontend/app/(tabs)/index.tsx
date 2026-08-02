@@ -172,7 +172,7 @@ export default function RunHome() {
   const router  = useRouter();
   const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
   const { logEvent } = useTestSession();
-  const { isCompleted, markDone, startTutorial } = useTutorial();
+  const { isCompleted, markDone, startTutorial, activeTutorialId } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
   const [showLv2Modal, setShowLv2Modal] = useState(false);
@@ -466,7 +466,7 @@ export default function RunHome() {
            systemHubIntro and the intro modal are auto-dismissed in the
            useEffect above for all post-prologue players (seen_reminiscence=true),
            so this card is the ONLY orientation layer a new player sees.         */}
-      {!localDismissGuide && currentObjective && currentObjective.step <= 15 && (
+      {!localDismissGuide && !activeTutorialId && currentObjective && currentObjective.step <= 15 && (
         <View style={styles.uniOnboard}>
           <NarratorGuide
             bgImage={getBannerImage("university")}
