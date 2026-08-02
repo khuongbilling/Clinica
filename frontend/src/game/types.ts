@@ -83,6 +83,7 @@ export interface HeroCombatStats {
 
 export interface Hero {
   id: string;
+  gender?: 'female' | 'male' | 'nonbinary';
   name: string;
   title: string;
   rarity: 3 | 4 | 5 | 6 | 7;

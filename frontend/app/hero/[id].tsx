@@ -417,6 +417,11 @@ export default function HeroProfile() {
 
         <Text style={styles.heroName}>{hero.name}</Text>
         <Text style={styles.heroTitle}>{hero.title}</Text>
+        {hero.gender != null && (
+          <Text style={styles.heroPronouns}>
+            {hero.gender === 'female' ? 'she/her' : hero.gender === 'male' ? 'he/him' : 'they/them'}
+          </Text>
+        )}
 
         {/* Power + XP strip */}
         <View style={styles.statRow}>
@@ -1312,6 +1317,7 @@ const styles = StyleSheet.create({
   roleTxt:      { fontSize: 9, fontWeight: "700", letterSpacing: 1, color: COLORS.onSurfaceSecondary },
   heroName:     { color: COLORS.onSurface, fontSize: 26, fontWeight: "700", letterSpacing: 0.3, marginTop: 2 },
   heroTitle:    { color: COLORS.onSurfaceSecondary, fontSize: 13, marginTop: -2 },
+  heroPronouns: { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 2, fontStyle: 'italic' },
 
   /* Stats row */
   statRow: { flexDirection: "row", gap: SPACING.md, marginTop: SPACING.sm, alignItems: "center" },
