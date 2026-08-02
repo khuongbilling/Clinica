@@ -232,21 +232,25 @@ export default function FormerSelfVictoryCutscene({ onComplete }: Props) {
         />
       </Animated.View>
 
-      {/* ── Character portrait — right side, above dialogue bar ─────────── */}
+      {/* ── Character portrait — right side, bottom flush with dialogue bar ─ */}
       <Animated.View
-        style={[s.charWrap, { opacity: charFade, bottom: barTotal }]}
         pointerEvents="none"
+        style={{
+          position:  "absolute",
+          right:     0,
+          bottom:    barTotal,
+          transform: [{ translateY: barSlide }],
+          width:     W * 0.74,
+          height:    Math.min(speaker.artHeight ?? (H - barTotal), H - barTotal),
+          overflow:  "hidden",
+          opacity:   charFade,
+        }}
       >
-        <View style={speaker.artHeight != null
-          ? { position: "absolute", bottom: 0, right: 0, width: W * 0.74, height: speaker.artHeight }
-          : { position: "absolute", top: 0, bottom: 0, right: 0, width: W * 0.74 }
-        }>
-          <ExpoImage
-            source={speaker.art}
-            style={{ width: "100%", height: "100%" }}
-            contentFit={speaker.artFit}
-          />
-        </View>
+        <ExpoImage
+          source={speaker.art}
+          style={{ width: "100%", height: "100%" }}
+          contentFit={speaker.artFit}
+        />
         {/* left-edge blend */}
         <LinearGradient
           colors={["rgba(4,8,18,0.82)", "rgba(4,8,18,0)"]}
@@ -255,7 +259,7 @@ export default function FormerSelfVictoryCutscene({ onComplete }: Props) {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        {/* bottom feather — fades the portrait into the bar edge */}
+        {/* bottom feather */}
         <LinearGradient
           colors={["transparent", "rgba(4,8,18,0.96)"]}
           start={{ x: 0, y: 0 }}

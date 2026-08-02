@@ -28,7 +28,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width: W } = Dimensions.get("window");
+const { width: W, height: H } = Dimensions.get("window");
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -392,18 +392,27 @@ export default function TacticalWarningScene({ onComplete }: Props) {
         pointerEvents="none"
       />
 
-      {/* ── ACTIVE SPEAKER PORTRAIT — right side, blends into background ── */}
-      <Animated.View style={[styles.charWrap, { opacity: mainFade, bottom: charWrapBot }]} pointerEvents="none">
-        <View style={speaker.artHeight != null
-          ? { position: "absolute", bottom: 0, right: 0, width: W * 0.68, height: speaker.artHeight }
-          : { position: "absolute", top: 0, bottom: 0, right: 0, width: W * 0.68 }
-        }>
-          <ExpoImage
-            source={speaker.art}
-            style={{ width: "100%", height: "100%" }}
-            contentFit={speaker.artFit}
-          />
-        </View>
+      {/* ── ACTIVE SPEAKER PORTRAIT — right side, bottom flush with dialogue panel ── */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          right:    0,
+          bottom:   charWrapBot,
+          width:    W * 0.68,
+          height:   Math.min(
+            speaker.artHeight ?? (H - charWrapBot),
+            H - charWrapBot
+          ),
+          overflow: "hidden",
+          opacity:  mainFade,
+        }}
+      >
+        <ExpoImage
+          source={speaker.art}
+          style={{ width: "100%", height: "100%" }}
+          contentFit={speaker.artFit}
+        />
         {/* left-edge blend */}
         <LinearGradient
           colors={["rgba(4,10,18,0.88)", "rgba(4,10,18,0)"]}
@@ -412,7 +421,7 @@ export default function TacticalWarningScene({ onComplete }: Props) {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        {/* bottom feather — fades the portrait into the bar edge */}
+        {/* bottom feather */}
         <LinearGradient
           colors={["transparent", "rgba(4,10,18,0.96)"]}
           start={{ x: 0, y: 0 }}

@@ -388,13 +388,30 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         </Animated.View>
       )}
 
-      {/* ── Hero character portrait — right-aligned, anchored above VN bar ── */}
+      {/* ── Hero character portrait — right-aligned, bottom flush with VN bar ── */}
       {beatVisible && (isReact || isLoadout) && activeSpeaker && (
         <Animated.View
-          style={[styles.charWrap, { opacity: charFade, bottom: barTotal }]}
           pointerEvents="none"
+          style={{
+            position:  "absolute",
+            right:     0,
+            bottom:    barTotal,
+            transform: [{ translateY: barSlide }],
+            width:     W * 0.74,
+            height:    Math.min(
+              activeSpeakerCfg?.artHeight ?? (H - barTotal),
+              H - barTotal
+            ),
+            overflow:  "hidden",
+            opacity:   charFade,
+          }}
         >
-          {/* Left-edge gradient blend so the portrait fades into the battlefield bg */}
+          <ExpoImage
+            source={activeSpeaker.largePortrait}
+            style={{ width: "100%", height: "100%" }}
+            contentFit={activeSpeakerCfg?.artFit ?? "contain"}
+          />
+          {/* left-edge blend */}
           <LinearGradient
             colors={["transparent", `${activeSpeaker.color}1A`, "transparent"]}
             start={{ x: 0, y: 0.5 }}
@@ -402,17 +419,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
             style={StyleSheet.absoluteFillObject}
             pointerEvents="none"
           />
-          <View style={activeSpeakerCfg?.artHeight != null
-            ? { position: "absolute", bottom: 0, right: 0, width: W * 0.74, height: activeSpeakerCfg.artHeight }
-            : { position: "absolute", top: 0, bottom: 0, right: 0, width: W * 0.74 }
-          }>
-            <ExpoImage
-              source={activeSpeaker.largePortrait}
-              style={{ width: "100%", height: "100%" }}
-              contentFit={activeSpeakerCfg?.artFit ?? "contain"}
-            />
-          </View>
-          {/* bottom feather — fades the portrait into the bar edge */}
+          {/* bottom feather */}
           <LinearGradient
             colors={["transparent", "rgba(4,10,18,0.96)"]}
             start={{ x: 0, y: 0 }}
