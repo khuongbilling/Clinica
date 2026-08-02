@@ -4,6 +4,11 @@
  * Visual explanation of objectFit cover vs contain using the actual
  * portrait images from PrologueVNBar, plus a diagram of what each
  * mode does to the image box.
+ *
+ * Characters shown:
+ *  Nightingale — cover  (fills 289 × 644 px portrait box)
+ *  The Prodigy — contain (289 × 341 px, ratio-matched)
+ *  Fleming     — contain (289 × 389 px, ratio-matched)
  */
 
 const W = 390;
@@ -14,20 +19,18 @@ const PORTRAIT_W = Math.round(W * 0.74); // 289px
 const BG    = "/__mockup/images/prologue/ward_corridor_battle.png";
 const NIGHT = "/__mockup/images/prologue/nightingale_vn_extended.png";
 const PROD  = "/__mockup/images/prologue/prodigy_vn_canonical.png";
+const FLEM  = "/__mockup/images/prologue/fleming_vn_extended.png";
 
-// Nightingale: native 896×1040 (tall) → cover fills full column, no empty space
-// Prodigy: native 896×1060, artHeight = W*0.74*1060/896 ≈ 341px → contain, shows all art
-const NIGHTINGALE_H = H - BAR_H;                               // 644 — fills available space
-const PRODIGY_H     = Math.round(W * 0.74 * (1060 / 896));   // 341
+const NIGHTINGALE_H = H - BAR_H;
+const PRODIGY_H     = Math.round(W * 0.74 * (1060 / 896));
+const FLEMING_H     = Math.round(W * 0.74 * (1203 / 896)); // ≈ 389px
 
-// ── Small diagram ────────────────────────────────────────────────────────────
+// ── Small diagram ─────────────────────────────────────────────────────────────
 
 function FitDiagram({ mode }: { mode: "cover" | "contain" }) {
   const isCover = mode === "cover";
-  // Box = the portrait container (rectangle with dashed border)
-  // Image = the actual image extent (larger or smaller)
   const boxW = 80, boxH = 100;
-  const imgW = isCover ? 100 : 60;   // cover: image overflows; contain: image fits inside
+  const imgW = isCover ? 100 : 60;
   const imgH = isCover ? 120 : 70;
   const imgX = (boxW - imgW) / 2;
   const imgY = (boxH - imgH) / 2;
@@ -35,55 +38,38 @@ function FitDiagram({ mode }: { mode: "cover" | "contain" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
       <svg width={boxW + 40} height={boxH + 40} style={{ overflow: "visible" }}>
-        {/* clipping region for cover to show overflow bleed hint */}
         <defs>
           <clipPath id={`clip-${mode}`}>
             <rect x={20} y={20} width={boxW} height={boxH} />
           </clipPath>
         </defs>
-
-        {/* Image extent (could overflow or be smaller than box) */}
         <rect
           x={20 + imgX} y={20 + imgY} width={imgW} height={imgH}
           fill={isCover ? "rgba(100,180,255,0.18)" : "rgba(100,220,140,0.18)"}
           stroke={isCover ? "rgba(100,180,255,0.6)" : "rgba(100,220,140,0.6)"}
-          strokeWidth={1.5}
-          strokeDasharray={isCover ? "4 2" : "none"}
+          strokeWidth={1.5} strokeDasharray={isCover ? "4 2" : "none"}
         />
-
-        {/* Container box */}
-        <rect
-          x={20} y={20} width={boxW} height={boxH}
-          fill="none"
-          stroke="rgba(200,210,220,0.5)"
-          strokeWidth={2}
-        />
-
-        {/* Overflow indicator for cover */}
+        <rect x={20} y={20} width={boxW} height={boxH}
+          fill="none" stroke="rgba(200,210,220,0.5)" strokeWidth={2} />
         {isCover && (
           <>
             <line x1={20} y1={20 + imgY} x2={20 - 8} y2={20 + imgY}
-              stroke="rgba(100,180,255,0.7)" strokeWidth={1} />
-            <line x1={20 + boxW} y1={20 + imgY} x2={20 + boxW + 8} y2={20 + imgY}
               stroke="rgba(100,180,255,0.7)" strokeWidth={1} />
             <text x={20 - 9} y={20 + imgY - 3} fill="rgba(100,180,255,0.7)"
               fontSize={7} textAnchor="end">cropped</text>
           </>
         )}
-        {/* Empty-space indicator for contain */}
         {!isCover && (
           <>
             <line x1={20} y1={20} x2={20} y2={20 + imgY - 2}
               stroke="rgba(100,220,140,0.7)" strokeWidth={1} strokeDasharray="3 2" />
-            <text x={20 + 3} y={20 + imgY / 2} fill="rgba(100,220,140,0.7)"
-              fontSize={7}>gap</text>
+            <text x={20 + 3} y={20 + imgY / 2} fill="rgba(100,220,140,0.7)" fontSize={7}>gap</text>
           </>
         )}
-
-        {/* Labels */}
         <text x={20 + boxW / 2} y={20 + boxH + 14} fill="rgba(200,210,220,0.55)"
           fontSize={8} textAnchor="middle">container</text>
-        <text x={20 + boxW / 2} y={20 + boxH + 24} fill={isCover ? "rgba(100,180,255,0.7)" : "rgba(100,220,140,0.7)"}
+        <text x={20 + boxW / 2} y={20 + boxH + 24}
+          fill={isCover ? "rgba(100,180,255,0.7)" : "rgba(100,220,140,0.7)"}
           fontSize={8} textAnchor="middle" fontWeight="bold">image ({mode})</text>
       </svg>
     </div>
@@ -93,42 +79,54 @@ function FitDiagram({ mode }: { mode: "cover" | "contain" }) {
 // ── Phone frame ───────────────────────────────────────────────────────────────
 
 interface PhoneConfig {
-  label:    string;
-  subtitle: string;
-  color:    string;
-  art:      string;
-  artH:     number;
-  fit:      "cover" | "contain";
-  avatarSrc: string;
-  speakerName: string;
-  line:     string;
-  fitNote:  string;
+  label:        string;
+  subtitle:     string;
+  color:        string;
+  art:          string;
+  artH:         number;
+  fit:          "cover" | "contain";
+  avatarFit:    "cover" | "contain";
+  speakerName:  string;
+  line:         string;
+  fitNote:      string;
 }
 
 const CHARS: PhoneConfig[] = [
   {
-    label:    "NIGHTINGALE",
-    subtitle: "objectFit: cover",
-    color:    "#7EC8C8",
-    art:      NIGHT,
-    artH:     NIGHTINGALE_H,
-    fit:      "cover",
-    avatarSrc: NIGHT,
+    label:       "NIGHTINGALE",
+    subtitle:    "objectFit: cover",
+    color:       "#7EC8C8",
+    art:         NIGHT,
+    artH:        NIGHTINGALE_H,
+    fit:         "cover",
+    avatarFit:   "cover",
     speakerName: "FLORENCE\nNIGHTINGALE",
-    line:     "Wait — let me run an observation scan first.",
-    fitNote:  "Image fills the full portrait box.\nEdges are cropped to fill 289 × 644 px.",
+    line:        "Wait — let me run an observation scan first.",
+    fitNote:     "Image fills the full portrait box.\nEdges cropped to fill 289 × 644 px.",
   },
   {
-    label:    "THE PRODIGY",
-    subtitle: "objectFit: contain",
-    color:    "#C89B4A",
-    art:      PROD,
-    artH:     PRODIGY_H,
-    fit:      "contain",
-    avatarSrc: PROD,
+    label:       "THE PRODIGY",
+    subtitle:    "objectFit: contain",
+    color:       "#C89B4A",
+    art:         PROD,
+    artH:        PRODIGY_H,
+    fit:         "contain",
+    avatarFit:   "contain",
     speakerName: "THE\nPRODIGY",
-    line:     "There is no time for scans. The corruption spreads.",
-    fitNote:  `Full art visible — nothing cropped.\nPortrait box is 289 × 341 px\n(W × 74% × image ratio).`,
+    line:        "There is no time for scans. The corruption spreads.",
+    fitNote:     `Full art visible — nothing cropped.\nPortrait box 289 × 341 px\n(W × 74% × image ratio 1060/896).`,
+  },
+  {
+    label:       "FLEMING",
+    subtitle:    "objectFit: contain",
+    color:       "#8AB87A",
+    art:         FLEM,
+    artH:        FLEMING_H,
+    fit:         "contain",
+    avatarFit:   "contain",
+    speakerName: "ALEXANDER\nFLEMING",
+    line:        "This corruption is adapting. To act without assessing the resistance—",
+    fitNote:     `Full art visible — nothing cropped.\nPortrait box 289 × 389 px\n(W × 74% × image ratio 1203/896).`,
   },
 ];
 
@@ -140,14 +138,12 @@ function Phone({ c }: { c: PhoneConfig }) {
       <p style={{ color: "rgba(200,210,220,0.45)", fontSize: 10, fontFamily: "monospace",
                   margin: 0 }}>{c.subtitle}</p>
 
-      {/* phone */}
       <div style={{ position: "relative", width: W, height: H,
                     borderRadius: 28, border: `2px solid ${c.color}44`,
                     overflow: "hidden", background: "#040810", flexShrink: 0 }}>
         {/* bg */}
         <img src={BG} style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
                                 objectFit: "cover" }} />
-        {/* bg overlay */}
         <div style={{ position: "absolute", inset: 0,
                       background: "linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.05) 45%,rgba(4,8,18,.78) 100%)" }} />
 
@@ -156,18 +152,38 @@ function Phone({ c }: { c: PhoneConfig }) {
                       width: PORTRAIT_W, height: c.artH, overflow: "hidden" }}>
           <img src={c.art} style={{ width: "100%", height: "100%", objectFit: c.fit,
                                      objectPosition: "top center" }} />
-          {/* left blend */}
           <div style={{ position: "absolute", inset: 0,
                         background: "linear-gradient(to right,rgba(4,8,18,.82) 0%,rgba(4,8,18,0) 38%)" }} />
-          {/* bottom feather */}
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "32%",
                         background: "linear-gradient(to bottom,transparent,rgba(4,8,18,.96))" }} />
         </div>
 
-        {/* portrait box outline annotation */}
+        {/* portrait box dashed annotation */}
         <div style={{ position: "absolute", right: 0, bottom: BAR_H,
                       width: PORTRAIT_W, height: c.artH,
-                      border: `1.5px dashed ${c.color}66`, pointerEvents: "none" }} />
+                      border: `1.5px dashed ${c.color}55`, pointerEvents: "none" }} />
+
+        {/* portrait height label */}
+        <div style={{ position: "absolute", right: PORTRAIT_W + 4, bottom: BAR_H,
+                      height: c.artH, display: "flex", alignItems: "center" }}>
+          <span style={{ color: `${c.color}99`, fontSize: 8, fontFamily: "monospace",
+                         fontWeight: 700, writingMode: "vertical-rl",
+                         transform: "rotate(180deg)", letterSpacing: 0.5 }}>
+            {c.artH}px
+          </span>
+        </div>
+
+        {/* portrait width label */}
+        {c.artH < H - BAR_H - 30 && (
+          <div style={{ position: "absolute", bottom: BAR_H + c.artH + 6, right: 0,
+                        width: PORTRAIT_W, display: "flex", justifyContent: "center" }}>
+            <span style={{ color: `${c.color}aa`, fontSize: 8, fontFamily: "monospace",
+                           fontWeight: 700, background: "rgba(4,8,18,0.85)",
+                           padding: "1px 5px", borderRadius: 3, letterSpacing: 0.5 }}>
+              W × 74% = {PORTRAIT_W}px
+            </span>
+          </div>
+        )}
 
         {/* bar */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: BAR_H,
@@ -179,12 +195,13 @@ function Phone({ c }: { c: PhoneConfig }) {
                           gap: 5, flexShrink: 0, width: 88 }}>
               <div style={{ width: 88, height: 88, borderRadius: 44,
                             border: `3px solid ${c.color}`, overflow: "hidden" }}>
-                <img src={c.avatarSrc} style={{ width: "100%", height: "100%",
-                                                 objectFit: c.fit === "cover" ? "cover" : "contain" }} />
+                <img src={c.art} style={{ width: "100%", height: "100%",
+                                           objectFit: c.avatarFit }} />
               </div>
               <span style={{ color: c.color, fontSize: 9, fontWeight: 800,
-                             letterSpacing: 1.2, textAlign: "center", textTransform: "uppercase",
-                             lineHeight: "13px", whiteSpace: "pre-line" }}>{c.speakerName}</span>
+                             letterSpacing: 1.2, textAlign: "center",
+                             textTransform: "uppercase", lineHeight: "13px",
+                             whiteSpace: "pre-line" }}>{c.speakerName}</span>
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ color: "#E8EEF6", fontSize: 14, lineHeight: "22px", margin: 0 }}>
@@ -197,7 +214,6 @@ function Phone({ c }: { c: PhoneConfig }) {
         </div>
       </div>
 
-      {/* note below */}
       <p style={{ color: "rgba(200,210,220,0.45)", fontSize: 10, fontFamily: "monospace",
                   textAlign: "center", lineHeight: "16px", margin: 0,
                   whiteSpace: "pre-line" }}>{c.fitNote}</p>
@@ -205,14 +221,14 @@ function Phone({ c }: { c: PhoneConfig }) {
   );
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export function CoverContainExplainer() {
   return (
     <div style={{ minHeight: "100vh", background: "#080C14", display: "flex",
-                  flexDirection: "column", alignItems: "center", gap: 40, padding: "36px 48px" }}>
+                  flexDirection: "column", alignItems: "center",
+                  gap: 40, padding: "36px 48px" }}>
 
-      {/* Title */}
       <div style={{ textAlign: "center" }}>
         <h1 style={{ color: "#C8D6E8", fontSize: 12, fontWeight: 800, letterSpacing: 3,
                      textTransform: "uppercase", margin: 0 }}>
@@ -224,30 +240,27 @@ export function CoverContainExplainer() {
         </p>
       </div>
 
-      {/* Diagrams row */}
+      {/* Diagrams */}
       <div style={{ display: "flex", gap: 80, alignItems: "flex-start" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <FitDiagram mode="cover" />
-          <p style={{ color: "rgba(100,180,255,0.8)", fontSize: 10, fontWeight: 700,
-                      letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>cover</p>
-          <p style={{ color: "rgba(200,210,220,0.45)", fontSize: 10, textAlign: "center",
-                      maxWidth: 180, lineHeight: "15px", margin: 0, fontFamily: "monospace" }}>
-            Image scaled until it fills the box completely. Sides that don't fit are cropped.
-          </p>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <FitDiagram mode="contain" />
-          <p style={{ color: "rgba(100,220,140,0.8)", fontSize: 10, fontWeight: 700,
-                      letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>contain</p>
-          <p style={{ color: "rgba(200,210,220,0.45)", fontSize: 10, textAlign: "center",
-                      maxWidth: 180, lineHeight: "15px", margin: 0, fontFamily: "monospace" }}>
-            Image scaled to fit entirely inside the box. The box height matches the image ratio so no gap appears.
-          </p>
-        </div>
+        {(["cover", "contain"] as const).map(mode => (
+          <div key={mode} style={{ display: "flex", flexDirection: "column",
+                                   alignItems: "center", gap: 6 }}>
+            <FitDiagram mode={mode} />
+            <p style={{ color: mode === "cover" ? "rgba(100,180,255,0.8)" : "rgba(100,220,140,0.8)",
+                        fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                        textTransform: "uppercase", margin: 0 }}>{mode}</p>
+            <p style={{ color: "rgba(200,210,220,0.45)", fontSize: 10, textAlign: "center",
+                        maxWidth: 180, lineHeight: "15px", margin: 0, fontFamily: "monospace" }}>
+              {mode === "cover"
+                ? "Image scaled until it fills the box. Sides that don't fit are cropped."
+                : "Image scaled to fit entirely inside. Box height matches image ratio — no gap."}
+            </p>
+          </div>
+        ))}
       </div>
 
-      {/* Phones */}
-      <div style={{ display: "flex", gap: 60, alignItems: "flex-start" }}>
+      {/* Three phones */}
+      <div style={{ display: "flex", gap: 48, alignItems: "flex-start" }}>
         {CHARS.map(c => <Phone key={c.label} c={c} />)}
       </div>
     </div>

@@ -4,5 +4,6 @@ export const modules: ModuleMap = {
   "./components/mockups/clinica-layout/PrologueLayoutDiagram.tsx": () => import("../components/mockups/clinica-layout/PrologueLayoutDiagram.tsx"),
   "./components/mockups/prologue-vn-positions/CoverContainExplainer.tsx": () => import("../components/mockups/prologue-vn-positions/CoverContainExplainer.tsx"),
   "./components/mockups/prologue-vn-positions/SIRevealPositions.tsx": () => import("../components/mockups/prologue-vn-positions/SIRevealPositions.tsx"),
-  "./components/mockups/prologue-vn-positions/ScenePositions.tsx": () => import("../components/mockups/prologue-vn-positions/ScenePositions.tsx")
+  "./components/mockups/prologue-vn-positions/ScenePositions.tsx": () => import("../components/mockups/prologue-vn-positions/ScenePositions.tsx"),
+  "./components/mockups/prologue-vn-positions/TacticalWarningPositions.tsx": () => import("../components/mockups/prologue-vn-positions/TacticalWarningPositions.tsx")
 };
