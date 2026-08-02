@@ -10,6 +10,11 @@
  *
  * Stage machine:
  *  quiet → pulse → react → si_emerge → si_speak → freeze → loadout → ready
+ *
+ * VN bar uses PrologueVNBar:
+ *  – react / loadout stages: hero portrait + standard typewriter bar
+ *  – si_speak stage: no right portrait (SI is shown as a large centred presence),
+ *    SI speaker in bar with monologue text style (italic, auto-advance, no arrow)
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,27 +30,35 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  PROLOGUE_CHARACTERS,
-  type PrologueSpeakerId,
-} from "../../game/prologueCharacters";
+import { type PrologueSpeakerId } from "../../game/prologueCharacters";
+import { useVNTypewriter } from "../../hooks/useVNTypewriter";
+import PrologueVNBar, { vnSpeakerFor, VN_BAR_HEIGHT, type VNSpeakerDef } from "./PrologueVNBar";
 
-const { width: W, height: H } = Dimensions.get("window");
+const { width: W } = Dimensions.get("window");
 
 const ART = {
   battlefield: require("../../../assets/images/tactical_battlefield.png"),
   si:          require("../../../assets/images/silent_infarction_nobg.png"),
 } as const;
 
+// ── The Silent Infarction as a VNSpeakerDef ───────────────────────────────────
+
+const SI_SPEAKER: VNSpeakerDef = {
+  name:          "THE SILENT\nINFARCTION",
+  color:         "#8B1A1A",
+  barColor:      "rgba(15,2,2,0.96)",
+  largePortrait: ART.si,
+  avatar:        ART.si,
+  artFit:        "contain",
+  avatarFit:     "contain",   // enemy PNG, not a face crop
+};
+
+// ── Dialogue beats ────────────────────────────────────────────────────────────
+
 type RevealStage =
-  | "quiet"
-  | "pulse"
-  | "react"
-  | "si_emerge"
-  | "si_speak"
-  | "freeze"
-  | "loadout"
-  | "ready";
+  | "quiet" | "pulse" | "react"
+  | "si_emerge" | "si_speak"
+  | "freeze" | "loadout" | "ready";
 
 const REACT_BEATS: Array<{ speaker: PrologueSpeakerId; line: string }> = [
   { speaker: "NIGHTINGALE", line: "Their condition is deteriorating!" },
@@ -68,42 +81,34 @@ const LOADOUT_BEATS: Array<{ speaker: PrologueSpeakerId; line: string }> = [
 
 const SI_LINE_HOLD_MS = 2800;
 const CHARS_PER_SEC   = 28;
-const BAR_HEIGHT      = 200;
 
-const SI_SPEAKER = {
-  name:      "THE SILENT\nINFARCTION",
-  color:     "#8B1A1A",
-  barColor:  "rgba(15,2,2,0.96)" as const,
-  barBorder: "rgba(139,0,0,0.60)" as const,
-};
-
-// ── Portrait fit/position per speaker (Nightingale is square → cover) ────────
-const SPEAKERS: Record<PrologueSpeakerId, { artFit: "contain" | "cover"; artPos: "bottom" | "top"; artHeight?: number }> = {
-  PRODIGY:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1060 / 896) },
-  MASTER_BAI:  { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1040 / 896) },
-  NIGHTINGALE: { artFit: "cover",   artPos: "bottom" },
-  FLEMING:     { artFit: "contain", artPos: "bottom", artHeight: Math.round(W * 0.74 * 1203 / 896) },
-};
+// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props { onComplete: () => void }
 
 export default function SilentInfarctionRevealScene({ onComplete }: Props) {
   const insets   = useSafeAreaInsets();
-  const barTotal = BAR_HEIGHT + insets.bottom;
+  const barTotal = VN_BAR_HEIGHT + insets.bottom;
 
   const [stage,          setStage]          = useState<RevealStage>("quiet");
   const [reactBeat,      setReactBeat]      = useState(0);
   const [siLine,         setSiLine]         = useState(0);
   const [loadoutBeatIdx, setLoadoutBeatIdx] = useState(0);
   const [beatVisible,    setBeatVisible]    = useState(false);
-  const [displayed,      setDisplayed]      = useState("");
-  const [typewriterDone, setTypewriterDone] = useState(false);
 
   const stageRef          = useRef<RevealStage>("quiet");
   const loadoutBeatIdxRef = useRef(0);
   const mountedRef        = useRef(true);
   const timers            = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const twTimer           = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const {
+    displayed,
+    typewriterDone,
+    startTypewriter,
+    skipTypewriter,
+    stopTypewriter,
+    instantShow,
+  } = useVNTypewriter(CHARS_PER_SEC);
 
   // ── Animated values ──────────────────────────────────────────────────────────
 
@@ -126,7 +131,6 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
     return () => {
       mountedRef.current = false;
       timers.current.forEach(clearTimeout);
-      if (twTimer.current) clearInterval(twTimer.current);
     };
   }, []);
 
@@ -145,35 +149,19 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
 
   // ── VN bar show / hide ───────────────────────────────────────────────────────
 
-  function stopTypewriter() {
-    if (twTimer.current) { clearInterval(twTimer.current); twTimer.current = null; }
-  }
-
   function showDialogue(line: string, useTypewriter: boolean) {
     stopTypewriter();
     barFade.setValue(0); barSlide.setValue(60); charFade.setValue(0);
     setBeatVisible(true);
-    if (!useTypewriter) {
-      setDisplayed(line); setTypewriterDone(true);
-    } else {
-      setDisplayed(""); setTypewriterDone(false);
-    }
+    // For instant mode (SI monologue), set text before animation starts
+    if (!useTypewriter) instantShow(line);
     Animated.parallel([
       Animated.timing(barFade,  { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.timing(barSlide, { toValue: 0, duration: 300, useNativeDriver: true }),
       Animated.timing(charFade, { toValue: 1, duration: 350, useNativeDriver: true }),
     ]).start(() => {
       if (!mountedRef.current || !useTypewriter) return;
-      let pos = 0;
-      const interval = Math.round(1000 / CHARS_PER_SEC);
-      twTimer.current = setInterval(() => {
-        pos += 1;
-        setDisplayed(line.slice(0, pos));
-        if (pos >= line.length) {
-          stopTypewriter();
-          if (mountedRef.current) setTypewriterDone(true);
-        }
-      }, interval);
+      startTypewriter(line);
     });
   }
 
@@ -217,7 +205,6 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
     toStage("freeze");
     anim(whiteFade, 1, 180, () => {
       anim(whiteFade, 0, 250, () => {
-        // Transition into loadout dialogue — soften the atmosphere, hide SI
         toStage("loadout");
         loadoutBeatIdxRef.current = 0;
         setLoadoutBeatIdx(0);
@@ -274,9 +261,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
 
     if (s === "react") {
       if (!typewriterDone) {
-        stopTypewriter();
-        setDisplayed(REACT_BEATS[reactBeat].line);
-        setTypewriterDone(true);
+        skipTypewriter(REACT_BEATS[reactBeat].line);
         return;
       }
       hideDialogue(() => {
@@ -303,9 +288,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
 
     if (s === "loadout") {
       if (!typewriterDone) {
-        stopTypewriter();
-        setDisplayed(LOADOUT_BEATS[loadoutBeatIdxRef.current].line);
-        setTypewriterDone(true);
+        skipTypewriter(LOADOUT_BEATS[loadoutBeatIdxRef.current].line);
         return;
       }
       hideDialogue(() => {
@@ -329,13 +312,13 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
   const isLoadout = stage === "loadout";
   const isReady   = stage === "ready";
 
-  const activeSpeakerId   = isReact   ? REACT_BEATS[reactBeat].speaker
-                          : isLoadout ? LOADOUT_BEATS[Math.min(loadoutBeatIdx, LOADOUT_BEATS.length - 1)].speaker
-                          : null;
-  const curReactSpeaker   = PROLOGUE_CHARACTERS[REACT_BEATS[reactBeat].speaker];
-  const curLoadoutSpeaker = PROLOGUE_CHARACTERS[LOADOUT_BEATS[Math.min(loadoutBeatIdx, LOADOUT_BEATS.length - 1)].speaker];
-  const activeSpeaker     = isReact ? curReactSpeaker : isLoadout ? curLoadoutSpeaker : null;
-  const activeSpeakerCfg  = activeSpeakerId ? SPEAKERS[activeSpeakerId] : null;
+  const activeSpeakerId: PrologueSpeakerId | null =
+    isReact   ? REACT_BEATS[reactBeat].speaker
+  : isLoadout ? LOADOUT_BEATS[Math.min(loadoutBeatIdx, LOADOUT_BEATS.length - 1)].speaker
+  : null;
+
+  const activeVNSpeaker: VNSpeakerDef =
+    activeSpeakerId ? vnSpeakerFor(activeSpeakerId) : SI_SPEAKER;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -374,7 +357,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         />
       </Animated.View>
 
-      {/* ── Silent Infarction portrait (emerges from fog during si_emerge/si_speak) ── */}
+      {/* ── Silent Infarction centred portrait (emerges during si_emerge / si_speak) ── */}
       {isSiStage && (
         <Animated.View style={[styles.siWrap, { opacity: siOpac }]} pointerEvents="none">
           <ExpoImage source={ART.si} style={styles.siPortrait} contentFit="contain" />
@@ -388,98 +371,19 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         </Animated.View>
       )}
 
-      {/* ── Hero character portrait — right-aligned, bottom flush with VN bar ── */}
-      {beatVisible && (isReact || isLoadout) && activeSpeaker && (
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position:  "absolute",
-            right:     0,
-            bottom:    barTotal,
-            transform: [{ translateY: barSlide }],
-            width:     W * 0.74,
-            height:    Math.min(
-              activeSpeakerCfg?.artHeight ?? (H - barTotal),
-              H - barTotal
-            ),
-            overflow:  "hidden",
-            opacity:   charFade,
-          }}
-        >
-          <ExpoImage
-            source={activeSpeaker.largePortrait}
-            style={{ width: "100%", height: "100%" }}
-            contentFit={activeSpeakerCfg?.artFit ?? "contain"}
-          />
-          {/* left-edge blend */}
-          <LinearGradient
-            colors={["transparent", `${activeSpeaker.color}1A`, "transparent"]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 0.4, y: 0.5 }}
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="none"
-          />
-          {/* bottom feather */}
-          <LinearGradient
-            colors={["transparent", "rgba(4,10,18,0.96)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.charBottomFade}
-            pointerEvents="none"
-          />
-        </Animated.View>
-      )}
-
-      {/* ── VN Dialogue Bar ── */}
-      {beatVisible && (
-        <Animated.View
-          style={[
-            styles.vnBar,
-            {
-              opacity:         barFade,
-              transform:       [{ translateY: barSlide }],
-              height:          barTotal,
-              paddingBottom:   insets.bottom + 14,
-              backgroundColor: activeSpeaker ? activeSpeaker.barColor : SI_SPEAKER.barColor,
-              borderTopColor:  activeSpeaker ? `${activeSpeaker.color}66` : SI_SPEAKER.barBorder,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <View style={[styles.vnBarAccent, { backgroundColor: activeSpeaker ? activeSpeaker.color : SI_SPEAKER.color }]} />
-          <View style={styles.vnBarInner}>
-            <View style={styles.vnLeftCol}>
-              <View style={[styles.vnAvatarRing, { borderColor: activeSpeaker ? activeSpeaker.color : SI_SPEAKER.color }]}>
-                <ExpoImage
-                  source={activeSpeaker ? activeSpeaker.avatar48 : ART.si}
-                  style={styles.vnAvatarImg}
-                  contentFit={activeSpeaker ? "cover" : "contain"}
-                />
-              </View>
-              <Text style={[styles.vnSpeakerName, { color: activeSpeaker ? activeSpeaker.color : SI_SPEAKER.color }]}>
-                {activeSpeaker ? activeSpeaker.name : SI_SPEAKER.name}
-              </Text>
-            </View>
-
-            <View style={styles.vnTextCol}>
-              {(isReact || isLoadout) ? (
-                <Text style={styles.vnDlgText} numberOfLines={4}>
-                  {displayed}
-                  {!typewriterDone && <Text style={{ color: activeSpeaker!.color }}>▌</Text>}
-                </Text>
-              ) : (
-                <Text style={styles.vnSiText} numberOfLines={4}>{displayed}</Text>
-              )}
-            </View>
-
-            {(isReact || isLoadout) && typewriterDone && (
-              <View style={styles.vnArrowWrap}>
-                <Text style={[styles.vnArrow, { color: activeSpeaker!.color }]}>▾</Text>
-              </View>
-            )}
-          </View>
-        </Animated.View>
-      )}
+      {/* ── VN portrait + dialogue bar (shared component) ── */}
+      <PrologueVNBar
+        speaker={activeVNSpeaker}
+        displayed={displayed}
+        typewriterDone={typewriterDone}
+        barSlide={barSlide}
+        barFade={barFade}
+        charFade={charFade}
+        visible={beatVisible}
+        showPortrait={isReact || isLoadout}
+        textVariant={isSiStage ? "monologue" : "normal"}
+        showArrow={(isReact || isLoadout) && typewriterDone}
+      />
 
       {/* ── ENTER THE BATTLEFIELD button (ready stage) ── */}
       {isReady && (
@@ -501,7 +405,7 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
         </Animated.View>
       )}
 
-      {/* ── White freeze flash (full-screen overlay) ── */}
+      {/* ── White freeze flash ── */}
       <Animated.View style={[styles.flashOverlay, { opacity: whiteFade }]} pointerEvents="none" />
 
       {/* ── Scene label ── */}
@@ -556,74 +460,6 @@ const styles = StyleSheet.create({
     borderRadius: 260,
     overflow:     "hidden",
   },
-
-  charWrap: {
-    position:   "absolute",
-    top:        0,
-    left:       0,
-    right:      0,
-    alignItems: "flex-end",
-    overflow:   "hidden",
-  },
-  charArt: { width: W * 0.74, height: "100%" as any },
-  charBottomFade: {
-    position: "absolute",
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   "32%",
-  },
-
-  vnBar: {
-    position:       "absolute",
-    bottom:         0,
-    left:           0,
-    right:          0,
-    borderTopWidth: 1.5,
-  },
-  vnBarAccent: { height: 2, width: "100%", opacity: 0.8 },
-  vnBarInner: {
-    flex:              1,
-    flexDirection:     "row",
-    alignItems:        "center",
-    paddingHorizontal: 16,
-    paddingTop:        12,
-    gap:               14,
-  },
-  vnLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 92 },
-  vnAvatarRing: {
-    width:        92,
-    height:       92,
-    borderRadius: 46,
-    borderWidth:  3,
-    overflow:     "hidden",
-  },
-  vnAvatarImg: { width: "100%", height: "100%" },
-  vnSpeakerName: {
-    fontSize:      10,
-    fontWeight:    "800",
-    letterSpacing: 1.2,
-    textAlign:     "center",
-    textTransform: "uppercase",
-    lineHeight:    14,
-  },
-  vnTextCol: { flex: 1 },
-  vnDlgText: {
-    color:      "#E8EEF6",
-    fontSize:   17,
-    fontWeight: "400",
-    lineHeight: 26,
-  },
-  vnSiText: {
-    color:         "rgba(255,210,210,0.92)",
-    fontSize:      16,
-    fontWeight:    "300",
-    lineHeight:    26,
-    letterSpacing: 0.6,
-    fontStyle:     "italic",
-  },
-  vnArrowWrap: { alignSelf: "flex-end", paddingBottom: 4, flexShrink: 0 },
-  vnArrow:     { fontSize: 24, fontWeight: "900", opacity: 0.9 },
 
   startBtnWrap: {
     position:          "absolute",
