@@ -15,7 +15,7 @@ import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDa
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
-import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type ChainRole } from "@/src/game/clinical";
+import { computeStars, ENEMY_CLINICAL, getStartingHandicap, getStarRules, statusColor, statusLabel, ULTIMATE_BY_ROLE, CUE_TIER_LABELS, CUE_TIER_NUMBER, CUE_TOPIC_LABELS, type ActionStatus, type LearningProfile, type PathwayRole } from "@/src/game/clinical";
 import { getLeaderBonus } from "@/src/game/leaderSpecialty";
 import { EQUIPMENT_ITEMS } from "@/src/game/equipment";
 import { CLASS_IDENTITIES, ClassId, getClassTreeBattleBonuses } from "@/src/game/classTree";
@@ -2212,16 +2212,16 @@ const BATTLE_GLOSSARY: { term: string; desc: string }[] = [
 
 interface StripStep {
   label: string;
-  role: ChainRole;
+  role: PathwayRole;
   icon: string;
   color: string;
 }
 
 const STRIP_STEPS: StripStep[] = [
-  { label: "Scout",     role: "Scout",     icon: "eye-outline",             color: "#5ECBC8" },
-  { label: "Stabilize", role: "Stabilize", icon: "heart-outline",           color: "#6EE7B7" },
-  { label: "Counter",   role: "Counter",   icon: "flash-outline",           color: "#FBA94C" },
-  { label: "Reassess",  role: "Reassess",  icon: "refresh-circle-outline",  color: "#A78BFA" },
+  { label: "Assess",    role: "assess",    icon: "eye-outline",             color: "#5ECBC8" },
+  { label: "Stabilize", role: "stabilize", icon: "heart-outline",           color: "#6EE7B7" },
+  { label: "Treat",     role: "treat",     icon: "flash-outline",           color: "#FBA94C" },
+  { label: "Reassess",  role: "reassess",  icon: "refresh-circle-outline",  color: "#A78BFA" },
 ];
 
 const STRIP_TUTORIAL_STEP: Record<string, number> = {

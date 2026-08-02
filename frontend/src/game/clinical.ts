@@ -122,7 +122,38 @@ export function getChapterForgiveness(chapter: number): ChapterForgiveness {
 // ACTION CLINICAL METADATA
 // ------------------------------------------------------------
 
+/** @deprecated Use PathwayRole. Kept for EnemyClinical.treatmentChain data compat until Push 2 migrates all values. */
 export type ChainRole = 'Scout' | 'Stabilize' | 'Counter' | 'Protect' | 'Reassess' | 'Command';
+
+// NM-01: canonical Care Pathway role IDs.
+export type PathwayRole = 'assess' | 'stabilize' | 'treat' | 'protect' | 'reassess' | 'escalate';
+
+/** Map from legacy ChainRole labels to canonical PathwayRole IDs. */
+const LEGACY_ROLE_MAP: Record<string, PathwayRole> = {
+  // canonical → canonical (passthrough)
+  assess: 'assess', stabilize: 'stabilize', treat: 'treat',
+  protect: 'protect', reassess: 'reassess', escalate: 'escalate',
+  // legacy → canonical
+  Scout: 'assess', Stabilize: 'stabilize', Counter: 'treat',
+  Protect: 'protect', Reassess: 'reassess', Command: 'escalate',
+};
+
+/**
+ * Convert an array of legacy ChainRole strings or canonical PathwayRole strings
+ * to canonical PathwayRole IDs. Unknown values are silently dropped.
+ */
+export function normalizePathwayRoles(roles: string[]): PathwayRole[] {
+  const out: PathwayRole[] = [];
+  for (const r of roles) {
+    const mapped = LEGACY_ROLE_MAP[r];
+    if (mapped) {
+      out.push(mapped);
+    } else if (__DEV__) {
+      console.warn(`[NM-01] normalizePathwayRoles: unknown role "${r}" dropped`);
+    }
+  }
+  return out;
+}
 
 // Disease domain that a skill or action belongs to — drives the affinity bonus system.
 // 'general' = assessment / escalation / catch-all → always neutral (never penalised).
@@ -147,6 +178,9 @@ export interface ActionClinical {
   unsafeIfSystems?: string[];
   unsafeIfClues?: string[];
   unsafeIfMissingClues?: string[];
+  /** NM-01 canonical pathway roles. Preferred over chainRoles when present. */
+  pathwayRoles?: PathwayRole[];
+  /** @deprecated Use pathwayRoles. Kept for data compat until Push 2 migrates all action maps. */
   chainRoles?: ChainRole[];
   // Optional activation gate (used for Rapid Response style)
   conditionalRequiresLowStability?: number; // if defined, action is "weak" when stability is above this
@@ -1154,36 +1188,46 @@ export function getCorruptionOutcome(status: ActionStatus, penaltyScale: number 
 // ------------------------------------------------------------
 
 export interface ChainState {
-  progress: ChainRole[]; // ordered steps already completed
+  progress: PathwayRole[]; // ordered canonical steps already completed
   completed: boolean;
 }
 
 export function emptyChain(): ChainState { return { progress: [], completed: false }; }
 
+// NM-01: renamed canAdvanceChain → canAdvancePathway; old export kept as alias
+// for call sites not yet updated. Remove alias after all call sites migrate.
+export function canAdvancePathway(
+  action: ActionClinical | undefined,
+  enemy: EnemyClinical | undefined,
+  chain: ChainState,
+): PathwayRole | null {
+  if (!action || !enemy) return null;
+  if (chain.completed) return null;
+
+  // Normalize the next required step from the enemy's treatmentChain (may be
+  // a legacy ChainRole label like 'Scout' or a canonical value like 'assess').
+  const rawStep = enemy.treatmentChain[chain.progress.length];
+  if (!rawStep) return null;
+  const nextStep = normalizePathwayRoles([rawStep])[0];
+  if (!nextStep) return null;
+
+  // Resolve action roles: prefer pathwayRoles, fall back to normalizing legacy chainRoles.
+  const roles = action.pathwayRoles ?? normalizePathwayRoles(action.chainRoles ?? []);
+  if (!roles.includes(nextStep)) return null;
+
+  // NM-01: element/system matching removed — clinical tag overlap is the sole qualifier.
+  const tagMatches = (action.clinicalTags || []).some(t => enemy.preferredChainTags.includes(t));
+  return tagMatches ? nextStep : null;
+}
+
+/** @deprecated Use canAdvancePathway. */
 export function canAdvanceChain(
   action: ActionClinical | undefined,
   enemy: EnemyClinical | undefined,
   chain: ChainState,
-  systemType: string | undefined,
-): ChainRole | null {
-  if (!action || !enemy) return null;
-  if (chain.completed) return null;
-
-  const nextStep = enemy.treatmentChain[chain.progress.length];
-  if (!nextStep) return null;
-
-  const roles = action.chainRoles || [];
-  const roleMatches = roles.includes(nextStep);
-  if (!roleMatches) return null;
-
-  const tagMatches = (action.clinicalTags || []).some(t => enemy.preferredChainTags.includes(t));
-  const systemMatches = systemType ? enemy.weaknesses.includes(systemType) : false;
-  const universal = systemType === 'Universal';
-
-  if (tagMatches || systemMatches || universal) {
-    return nextStep;
-  }
-  return null;
+  _systemType?: string, // ignored — NM-01 removed element matching
+): PathwayRole | null {
+  return canAdvancePathway(action, enemy, chain);
 }
 
 // Push 13: Chain bonuses tuned upward so care-chain momentum feels rewarding.
@@ -1323,8 +1367,8 @@ export interface BattleMessageContext {
   systemModifier: number;
   effectAmount: number;
   effectType: 'corruption' | 'stability' | 'shield' | 'clue' | 'mixed';
-  chainAdvanced: ChainRole | null;
-  nextChainStep: ChainRole | null;
+  chainAdvanced: PathwayRole | null;
+  nextChainStep: PathwayRole | null;
   fullChainCompleted: boolean;
   rationale?: string;
 }

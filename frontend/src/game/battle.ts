@@ -13,6 +13,8 @@ import {
   canAdvanceChain,
   ChainRole,
   ChainState,
+  normalizePathwayRoles,
+  PathwayRole,
   CHAIN_BONUSES,
   ClinicalCueQuestion,
   emptyChain,
@@ -616,7 +618,7 @@ interface ResolveResult {
   status: ActionStatus;
   modifier: number;
   systemModifier: number;
-  chainAdvanced: ChainRole | null;
+  chainAdvanced: PathwayRole | null;
   chainCompletedNow: boolean;
   rationale: string | undefined;
   affinityResult: AffinityResult;
@@ -636,7 +638,7 @@ function resolveAction(
   const effectiveMod = applyChapterForgivenessToStatus(evalRes.status, evalRes.modifier, forg);
 
   // Care chain advancement
-  let chainAdvanced: ChainRole | null = null;
+  let chainAdvanced: PathwayRole | null = null;
   let chainCompletedNow = false;
   if (evalRes.status !== 'locked' && evalRes.status !== 'unsafe' && evalRes.status !== 'inappropriate') {
     const next = canAdvanceChain(action, enemy, state.chain, systemType);
@@ -952,8 +954,9 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     next.log.push(`⚠ Risk triggered: ${skill.risk.description} (-${pen}%)`);
   }
 
-  // Track reassess
-  if ((action?.chainRoles || []).includes('Reassess')) {
+  // Track reassess (NM-01: resolve via pathwayRoles with legacy fallback)
+  const skillResolvedRoles = action?.pathwayRoles ?? normalizePathwayRoles(action?.chainRoles ?? []);
+  if (skillResolvedRoles.includes('reassess')) {
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
     next.reboundArmed = false;
@@ -980,7 +983,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
-    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] || null,
+    nextChainStep: (() => { const r = next.enemyClinical?.treatmentChain[next.chain.progress.length]; return r ? (normalizePathwayRoles([r])[0] ?? null) : null; })(),
     fullChainCompleted: next.fullChainCompleted,
     rationale: res.rationale,
   });
@@ -1098,7 +1101,9 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     effectType = 'clue';
   }
 
-  if ((action?.chainRoles || []).includes('Reassess')) {
+  // NM-01: resolve via pathwayRoles with legacy fallback
+  const itemResolvedRoles = action?.pathwayRoles ?? normalizePathwayRoles(action?.chainRoles ?? []);
+  if (itemResolvedRoles.includes('reassess')) {
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
     next.reboundArmed = false;
@@ -1114,7 +1119,7 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
-    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] || null,
+    nextChainStep: (() => { const r = next.enemyClinical?.treatmentChain[next.chain.progress.length]; return r ? (normalizePathwayRoles([r])[0] ?? null) : null; })(),
     fullChainCompleted: next.fullChainCompleted,
     rationale: res.rationale,
   });
@@ -1285,7 +1290,9 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     effectAmount = Math.max(effectAmount, amt); effectType = effectType === 'mixed' ? 'mixed' : 'shield';
   }
 
-  if ((action?.chainRoles || []).includes('Reassess')) {
+  // NM-01: resolve via pathwayRoles with legacy fallback
+  const cardResolvedRoles = action?.pathwayRoles ?? normalizePathwayRoles(action?.chainRoles ?? []);
+  if (cardResolvedRoles.includes('reassess')) {
     next.reassessUsed = true;
     next.reassessUsedAnytime = true;
     next.reboundArmed = false;
@@ -1299,7 +1306,7 @@ export function applyCard(s: BattleState, cardId: string): ApplyResult {
     effectAmount,
     effectType,
     chainAdvanced: res.chainAdvanced,
-    nextChainStep: next.enemyClinical?.treatmentChain[next.chain.progress.length] || null,
+    nextChainStep: (() => { const r = next.enemyClinical?.treatmentChain[next.chain.progress.length]; return r ? (normalizePathwayRoles([r])[0] ?? null) : null; })(),
     fullChainCompleted: next.fullChainCompleted,
     rationale: res.rationale,
   });
