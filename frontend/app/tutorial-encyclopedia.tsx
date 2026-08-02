@@ -198,7 +198,7 @@ const CATEGORIES: CategorySection[] = [
         icon: "sparkles-outline",
         title: "Summoning Hall",
         subtitle: "Recruit your healer team",
-        body: "Heroes only come from Recruitment using Summoning Shards. A free daily draw is always available — no shards needed. Each hero has unique skills tied to a body-system element.",
+        body: "Heroes only come from Recruitment using Codex Shards. A free daily draw is always available — no shards needed. Each hero has unique skills tied to a body-system element.",
         bullets: [
           "Free daily draw resets every 24 hours",
           "Duplicate heroes convert to Hero Shards for star upgrades",
@@ -310,7 +310,7 @@ const CATEGORIES: CategorySection[] = [
         bullets: [
           "Ward Coins from battles and daily objectives",
           "University Credits from weekly rounds and lessons",
-          "Summoning Shards from battles, chests, and milestones",
+          "Codex Shards from battles, chests, and milestones",
         ],
         accentColor: "#FB923C",
         status: "available",
@@ -324,7 +324,7 @@ const CATEGORIES: CategorySection[] = [
         icon: "diamond-outline",
         title: "Currencies Guide",
         subtitle: "What each currency does",
-        body: "Clinica has four free-earned currencies. Ward Coins buy supplies. University Credits buy academic items. Summoning Shards recruit heroes. Nourishment Petals unlock wellness cosmetics.",
+        body: "Clinica has four free-earned currencies. Ward Coins buy supplies. University Credits buy academic items. Codex Shards recruit heroes. Nourishment Petals unlock wellness cosmetics.",
         bullets: [
           "All sources are free — no payment ever required",
           "Daily Rounds and weekly tasks are the steady income source",

@@ -73,7 +73,7 @@ export function PlayerHeader({
   // ── Progressive reveal gates ──────────────────────────────
   // Shop gate: crowns chip links to Shop only if unlocked (level 2)
   const shopUnlocked = checkFeatureGate("shop", buildGateContext(player)).unlocked;
-  // Summoning Shards (codex_shards): visible at Level 2 (Summoning Hall unlocks) or if
+  // Codex Shards (codex_shards): visible at Level 2 (Summoning Hall unlocks) or if
   // player already has any — avoids showing a confusing 0-balance chip early.
   const showSummonShards = shopUnlocked || (player.codex_shards ?? 0) > 0;
   // Refined Lotus Gems: only show when player has actually earned some — never show
@@ -137,7 +137,7 @@ export function PlayerHeader({
             text={formatCompactNumber(player.crowns)}
             onPress={() => setInfoModal("crowns")}
           />
-          {/* Progressively revealed: Summoning Shards (Level 2 or already has some) */}
+          {/* Progressively revealed: Codex Shards (Level 2 or already has some) */}
           {showSummonShards && (
             <ShardChip
               testID="player-header-shards"
@@ -236,14 +236,14 @@ export function PlayerHeader({
         </Pressable>
       </Modal>
 
-      {/* ── Summoning Shards info modal ── */}
+      {/* ── Codex Shards info modal ── */}
       <Modal visible={infoModal === "summon_shards"} transparent animationType="fade" onRequestClose={() => setInfoModal(null)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setInfoModal(null)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Ionicons name="diamond" size={22} color="#9F7AEA" />
-            <Text style={styles.modalTitle}>Summoning Shards</Text>
+            <Text style={styles.modalTitle}>Codex Shards</Text>
             <Text style={styles.modalBody}>
-              Summoning Shards are earned by completing Ward Shifts, Daily Rounds, and milestone
+              Codex Shards are earned by completing Ward Shifts, Daily Rounds, and milestone
               rewards. Use them at the Recruitment Hall to summon new healer heroes to your team.
             </Text>
             <Text style={styles.modalHint}>Free to earn through play — no purchase required.</Text>
@@ -356,7 +356,7 @@ function Chip({
   );
 }
 
-// Summoning Shards chip — uses Ionicons (no separate asset) with a purple tint.
+// Codex Shards chip — uses Ionicons (no separate asset) with a purple tint.
 // Shown at Level 2+ or when the player already has shards.
 function ShardChip({
   count, onPress, testID,

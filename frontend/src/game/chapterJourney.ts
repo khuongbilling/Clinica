@@ -75,7 +75,7 @@ export interface ChapterPart {
   rewardXp?: number;
   rewardCredits?: number; // University Credits
   rewardCoins?: number;   // Ward Coins
-  rewardShards?: number;  // Summoning Shards
+  rewardShards?: number;  // Codex Shards
   /** P7: Optional inline health scenario that gates the CLAIM button. */
   scenario?: NodeScenario;
 }

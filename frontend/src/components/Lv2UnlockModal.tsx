@@ -26,7 +26,7 @@ const UNLOCKS: Array<{
     icon: "sparkles",
     color: "#D4AF37",
     title: "Summoning Hall",
-    description: "Spend Summoning Shards to recruit hero allies. Your first summon is within reach for free.",
+    description: "Spend Codex Shards to recruit hero allies. Your first summon is within reach for free.",
   },
   {
     icon: "today",
@@ -44,12 +44,12 @@ const UNLOCKS: Array<{
     icon: "medical",
     color: COLORS.error,
     title: "Clearer Ward Access",
-    description: "Ward Shifts are now fully open. Enter the Ward to earn XP, Summoning Shards, and ★ ratings.",
+    description: "Ward Shifts are now fully open. Enter the Ward to earn XP, Codex Shards, and ★ ratings.",
   },
   {
     icon: "diamond",
     color: "#7C3AED",
-    title: "Summoning Shards",
+    title: "Codex Shards",
     description: "The main recruitment currency. Earn them from Ward Shifts, chapter rewards, and daily duties — no payment required.",
   },
   {
@@ -130,7 +130,7 @@ export function Lv2UnlockModal({ visible, onDismiss }: Props) {
             <View style={styles.shardsCallout}>
               <Ionicons name="information-circle" size={16} color="#D4AF37" />
               <Text style={styles.shardsCalloutTxt}>
-                <Text style={{ fontWeight: "700", color: "#D4AF37" }}>Summoning Shards</Text>
+                <Text style={{ fontWeight: "700", color: "#D4AF37" }}>Codex Shards</Text>
                 {" "}are your primary recruit currency. Earn them by playing — Ward Shifts, chapter clears, daily duties, and milestones. You don't need to spend real money to build your team.
               </Text>
             </View>

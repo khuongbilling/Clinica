@@ -8,7 +8,7 @@
  * Currency mapping:
  *   playerXp           → player.xp  (Player Level progression)
  *   heroXp             → split equally among active team hero_progression
- *   codexShards        → codex_shards  (Summoning Shards in-game)
+ *   codexShards        → codex_shards  (Codex Shards in-game)
  *   crowns             → crowns         (Ward Coins)
  *   refinedLotusGems   → refined_lotus_gems
  *   universityCredits  → university_credits

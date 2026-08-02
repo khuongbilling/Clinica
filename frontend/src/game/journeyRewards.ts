@@ -36,7 +36,7 @@ export interface JourneyNodeDef {
   heroXp: number;
   /** Ward Coins at 3★ for battle nodes; flat otherwise. */
   coins: number;
-  /** Summoning Shards (battle/mini-boss/WD; never from story nodes). */
+  /** Codex Shards (battle/mini-boss/WD; never from story nodes). */
   shards?: number;
   /** True → flat reward, non-farmable, no replay. */
   isStory: boolean;

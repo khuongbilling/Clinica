@@ -66,7 +66,7 @@ const TUTORIAL_DESC: Partial<Record<TutorialId, string>> = {
   systemWardHub:    "The System introduces the Ward and sends you to the University.",
   systemShops:      "The System introduces the Apothecary Market and currency spending.",
   firstHeroTeam:    "Hall of Heroes — setting up your active team for clinical shifts.",
-  firstSummon:      "Recruitment Hall — calling new healers with Summoning Shards.",
+  firstSummon:      "Recruitment Hall — calling new healers with Codex Shards.",
   cueHuntIntro:     "Spot three hidden clinical cues in the scene; tap each one.",
   rapidTriageIntro: "Sort three patients by urgency — Emergency, Urgent, or Routine.",
   stabilizeIntro:   "Arrange three care steps in the correct safe sequence.",
