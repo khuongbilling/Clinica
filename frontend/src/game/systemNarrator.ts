@@ -43,7 +43,7 @@ const SHADOW_NAME = 'The System';
 export const MASTER_BAI = {
   name: 'Master Bai',
   color: '#D9A441',
-  art: require('../../assets/images/master_bai.png'),
+  art: require('../../assets/images/tutorial_master_bai.png'),
 } as const;
 
 export interface SystemIdentity {

@@ -135,18 +135,18 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   pattern_seer: require('../../assets/heroes/pattern_seer.png'),
   environmental_seal_warden: require('../../assets/heroes/environmental_seal_warden.png'),
   chartweave_analyst: require('../../assets/heroes/chartweave_analyst.png'),
-  florence_nightingale: require('../../assets/heroes/florence_nightingale.png'),
+  florence_nightingale: require('../../assets/images/nightingale_vn_bust.png'),
 
   // Prologue loaner heroes — tutorial + boss battles
-  prologue_nightingale:  require('../../assets/heroes/florence_nightingale.png'),
+  prologue_nightingale:  require('../../assets/images/nightingale_vn_bust.png'),
   prologue_fleming:      require('../../assets/images/fleming_vn_bust.png'),
   // The Prodigy — Former Self at peak legendary power (prologue pre-recall only)
   prologue_the_prodigy:  require('../../assets/images/prodigy_battle_sprite.png'),
   the_prodigy:           require('../../assets/images/prodigy_battle_sprite.png'),
 
   // The Prodigy — former self portrait card (dedicated loadout portrait)
-  prologue_former_self:  require('../../assets/images/the_prodigy_portrait.png'),
-  former_self:           require('../../assets/images/the_prodigy_portrait.png'),
+  prologue_former_self:  require('../../assets/images/prodigy_vn_bust.png'),
+  former_self:           require('../../assets/images/prodigy_vn_bust.png'),
 };
 
 // All portrait modules, for cache preloading at game start.

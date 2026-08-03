@@ -21,8 +21,8 @@ export interface PrologueCharacter {
   temporary:     boolean;
 }
 
-const PRODIGY_PORTRAIT       = require("../../assets/images/the_prodigy_portrait.png");
-const PRODIGY_BUST           = require("../../assets/images/the_prodigy_vn_bust.png");
+const PRODIGY_PORTRAIT       = require("../../assets/images/prodigy_vn_extended.png");
+const PRODIGY_BUST           = require("../../assets/images/prodigy_vn_bust.png");
 const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
 const MASTER_BAI_BUST        = require("../../assets/images/master_bai_vn_bust.png");
 const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_extended.png");
@@ -39,7 +39,7 @@ const PRODIGY_BATTLE     = require("../../assets/images/prodigy_battle_sprite.pn
 const WARD_CORRIDOR_BG   = require("../../assets/images/ward_corridor_battle.png");
 const TACTICAL_BG        = require("../../assets/images/tactical_battlefield.png");
 const SI_NOBG            = require("../../assets/images/silent_infarction_nobg.png");
-const PRODIGY_CANONICAL  = require("../../assets/images/prodigy_vn_canonical.png");
+const PRODIGY_CANONICAL  = require("../../assets/images/prodigy_vn_extended.png");
 
 // Opening Memory Cinematic art panels (8 beats)
 const OPENING_ORIGIN      = require("../../assets/images/opening_prodigy_origin.png");

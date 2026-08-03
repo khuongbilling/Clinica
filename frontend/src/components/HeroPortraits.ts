@@ -29,12 +29,12 @@ const PORTRAITS: Record<string, ImageSourcePropType> = {
   mindkeeper:              require('../../assets/heroes/portraits/mindkeeper.png'),
 
   // ── Prologue / legendary heroes ─────────────────────────────────────────
-  florence_nightingale:    require('../../assets/heroes/portraits/florence_nightingale.png'),
-  prologue_nightingale:    require('../../assets/heroes/portraits/florence_nightingale.png'),
-  the_prodigy:             require('../../assets/heroes/portraits/the_prodigy.png'),
-  prologue_the_prodigy:    require('../../assets/heroes/portraits/the_prodigy.png'),
-  prologue_former_self:    require('../../assets/heroes/portraits/the_prodigy.png'),
-  former_self:             require('../../assets/heroes/portraits/the_prodigy.png'),
+  florence_nightingale:    require('../../assets/images/nightingale_vn_extended.png'),
+  prologue_nightingale:    require('../../assets/images/nightingale_vn_extended.png'),
+  the_prodigy:             require('../../assets/images/prodigy_vn_extended.png'),
+  prologue_the_prodigy:    require('../../assets/images/prodigy_vn_extended.png'),
+  prologue_former_self:    require('../../assets/images/prodigy_vn_extended.png'),
+  former_self:             require('../../assets/images/prodigy_vn_extended.png'),
 
   // ── WARDBORN commons ─────────────────────────────────────────────────────
   wardlight_apprentice:    require('../../assets/heroes/portraits/wardlight_apprentice.png'),

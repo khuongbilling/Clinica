@@ -18,7 +18,7 @@ const PORTRAIT_W = Math.round(W * 0.74); // 289px
 
 const BG    = "/__mockup/images/prologue/ward_corridor_battle.png";
 const NIGHT = "/__mockup/images/prologue/nightingale_vn_extended.png";
-const PROD  = "/__mockup/images/prologue/prodigy_vn_canonical.png";
+const PROD  = "/__mockup/images/prologue/prodigy_vn_extended.png";
 const FLEM  = "/__mockup/images/prologue/fleming_vn_extended.png";
 
 const NIGHTINGALE_H = H - BAR_H;

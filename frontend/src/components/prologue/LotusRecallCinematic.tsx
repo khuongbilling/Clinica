@@ -43,7 +43,7 @@ const ART = {
   formerSelf:       PROLOGUE_CHARACTERS.PRODIGY.avatar48,
   // Canonical full-body VN art used for the disappearing sequence — distinct
   // from the portrait crop used in dialogue bars.
-  prodigyCanonical: require("../../../assets/images/prodigy_vn_canonical.png"),
+  prodigyCanonical: require("../../../assets/images/prodigy_vn_extended.png"),
 };
 
 // ── Dialogue beats ────────────────────────────────────────────────────────────

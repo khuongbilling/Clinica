@@ -22,7 +22,7 @@ const PRODIGY_H = Math.round(W * 0.74 * (1060 / 896)); // ≈ 341px
 
 const BG = "/__mockup/images/prologue/ward_corridor_battle.png";
 const NIGHTINGALE_ART = "/__mockup/images/prologue/nightingale_vn_extended.png";
-const PRODIGY_ART     = "/__mockup/images/prologue/prodigy_vn_canonical.png";
+const PRODIGY_ART     = "/__mockup/images/prologue/prodigy_vn_extended.png";
 
 interface CharConfig {
   label:       string;

@@ -48,7 +48,7 @@ import { PROLOGUE_AP_CONFIG } from "../../game/prologueTypes";
 
 const ART = {
   battlefield:       require("../../../assets/images/tactical_battlefield.png"),
-  theProdigy:        require("../../../assets/images/prodigy_vn_canonical.png"),
+  theProdigy:        require("../../../assets/images/prodigy_vn_extended.png"),
   nightingale:       require("../../../assets/images/nightingale_vn_bust.png"),
   fleming:           require("../../../assets/images/fleming_vn_bust.png"),
   masterBai:         require("../../../assets/images/master_bai_vn.png"),

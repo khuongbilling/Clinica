@@ -20,7 +20,7 @@ const BG    = "/__mockup/images/prologue/ward_corridor_battle.png";
 const NIGHT = "/__mockup/images/prologue/nightingale_vn_extended.png";
 const FLEM  = "/__mockup/images/prologue/fleming_vn_extended.png";
 const SI    = "/__mockup/images/prologue/silent_infarction_nobg.png";
-const MBAI  = "/__mockup/images/prologue/master_bai_nobg.png";
+const MBAI  = "/__mockup/images/prologue/master_bai_vn_extended.png";
 
 interface StageConfig {
   stageLabel:   string;

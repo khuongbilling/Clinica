@@ -9,7 +9,7 @@ export function PrologueLayoutDiagram() {
   const chars = [
     {
       name: "Prodigy",
-      file: "/__mockup/images/prologue/prodigy_vn_canonical.png",
+      file: "/__mockup/images/prologue/prodigy_vn_extended.png",
       imgW: 896, imgH: 1280,
       contentFit: "contain",
       topTransPx: 145, botTransPx: 220,
@@ -25,7 +25,7 @@ export function PrologueLayoutDiagram() {
     },
     {
       name: "Master Bai",
-      file: "/__mockup/images/prologue/master_bai_nobg.png",
+      file: "/__mockup/images/prologue/master_bai_vn_extended.png",
       imgW: 896, imgH: 1040,
       contentFit: "contain",
       topTransPx: 73, botTransPx: 0,

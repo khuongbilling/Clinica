@@ -27,9 +27,9 @@ const PORTRAIT_W = Math.round(W * 0.68); // 265 px  ← key difference from VNBa
 
 const BG     = "/__mockup/images/prologue/tactical_battlefield.png";
 const NIGHT  = "/__mockup/images/prologue/nightingale_vn_extended.png";
-const PROD   = "/__mockup/images/prologue/prodigy_vn_canonical.png";
+const PROD   = "/__mockup/images/prologue/prodigy_vn_extended.png";
 const FLEM   = "/__mockup/images/prologue/fleming_vn_extended.png";
-const MBAI   = "/__mockup/images/prologue/master_bai_nobg.png";
+const MBAI   = "/__mockup/images/prologue/master_bai_vn_extended.png";
 
 // artHeight formula: Math.round(W * 0.68 * imgH / imgW)
 const MBAI_H  = Math.round(W * 0.68 * 1040 / 896); // 308 px
