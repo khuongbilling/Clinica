@@ -600,7 +600,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     inappropriateActionTags: ['glucose replacement', 'antimicrobial', 'bronchospasm', 'skin integrity', 'orientation', 'fall prevention', 'infection isolation'],
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
-    preferredChainTags: ['assessment', 'reassessment', 'circulation', 'fluid resuscitation', 'hydration'],
+    preferredChainTags: ['assessment', 'reassessment', 'general support', 'comfort', 'circulation', 'fluid resuscitation', 'hydration'],
     weaknesses: ['River'],
     resistances: ['Fire'],
     starTurnLimit: 5,
@@ -1340,8 +1340,16 @@ export function canAdvancePathway(
   const roles = action.pathwayRoles ?? [];
   if (!roles.includes(nextStep)) return null;
 
-  // NM-01: element/system matching removed — clinical tag overlap is the sole qualifier.
-  const tagMatches = (action.clinicalTags || []).some(t => enemy.preferredChainTags.includes(t));
+  // NM-01: element/system matching removed — clinical tag overlap is the qualifier.
+  // Check preferredChainTags first (ideal fit); fall back to allowedActionTags so that
+  // general-care actions (e.g. 'general support', 'comfort') whose tags aren't listed in
+  // the enemy's tighter preferred set can still advance the chain when the action is
+  // otherwise clinically appropriate (the status guard above already blocks
+  // locked / unsafe / inappropriate actions before we reach this point).
+  const actTags = action.clinicalTags || [];
+  const tagMatches =
+    actTags.some(t => enemy.preferredChainTags.includes(t)) ||
+    actTags.some(t => enemy.allowedActionTags.includes(t));
   return tagMatches ? nextStep : null;
 }
 

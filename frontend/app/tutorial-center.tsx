@@ -15,7 +15,7 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 // actually fires on the correct screen.
 const REPLAY_ROUTES: Partial<Record<TutorialId, string>> = {
   systemHubIntro:   "/(tabs)",
-  prologueBattle:   "/battle?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1",
+  prologueBattle:   "/battle?enemyId=dehydration_specter&training=1&prologue=tutorial&replay=1",
   firstBattle:      "/shift",
   firstKingdom:     "/(tabs)/kingdom",
   firstSummon:      "/university/recruit",

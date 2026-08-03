@@ -327,7 +327,7 @@ export const HEROES: Hero[] = [
 
   // ── PROLOGUE LOANER HEROES ─────────────────────────────────────────────────
   // These two heroes are TEMPORARY — used only for the guided tutorial battle
-  // (dehydration_wisp / isPrologueTutorial).  They carry the exact same skill
+  // (dehydration_specter / isPrologueTutorial).  They carry the exact same skill
   // IDs as novice_guardian and village_caretaker so the prologueBattle tutorial
   // step pins (requiredSkillId) continue to work without any change to
   // tutorials.ts.  They are never persisted in heroes_owned or active_team.

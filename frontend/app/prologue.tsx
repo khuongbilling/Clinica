@@ -44,7 +44,7 @@ export default function Prologue() {
       router.replace({
         pathname: "/mission-loadout",
         params: {
-          enemyId: "dehydration_wisp",
+          enemyId: "dehydration_specter",
           title: "First Ward Shift",
           partType: "battle",
           chapterAccent: "#4FD8C4",

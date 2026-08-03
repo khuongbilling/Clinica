@@ -347,7 +347,7 @@ export default function ProfileScreen() {
           <Pressable
             style={styles.settingsRow}
             // Inline: ROUTES.battle + runtime query params for a specific training replay
-            onPress={() => router.push(`${ROUTES.battle}?enemyId=dehydration_wisp&training=1&prologue=tutorial&replay=1` as any)}
+            onPress={() => router.push(`${ROUTES.battle}?enemyId=dehydration_specter&training=1&prologue=tutorial&replay=1` as any)}
             testID="profile-replay-prologue-button"
           >
             <Ionicons name="film-outline" size={18} color={COLORS.brand} />

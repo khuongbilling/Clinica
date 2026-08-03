@@ -797,7 +797,7 @@ export default function MissionLoadoutScreen() {
     if (isTutorial) {
       // Tutorial mode — always replace into battle with prologue+training flags so
       // the guided Ward Shift scripted sequence runs correctly.
-      router.replace({ pathname: "/battle", params: { enemyId: String(enemyId || "dehydration_wisp"), training: "1", prologue: "tutorial" } });
+      router.replace({ pathname: "/battle", params: { enemyId: String(enemyId || "dehydration_specter"), training: "1", prologue: "tutorial" } });
     } else if (enemyId) {
       // Battle node with a specific enemy — push with typed params to avoid
       // URL-encoding issues when enemyId was separated from the route string.
