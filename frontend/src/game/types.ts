@@ -113,6 +113,8 @@ export interface Hero {
   strongAffinities?: AffinityFamily[]; // clinical domains this hero excels in
   weakAffinities?: AffinityFamily[];   // clinical domains this hero struggles with
   roleTags?: string[];                 // functional descriptors for filtering/UI (e.g. 'healer', 'scout')
+  // Image generation prompt describing the hero's appearance, gender, and visual style.
+  artPrompt?: string;
 }
 
 export interface ClueCard {

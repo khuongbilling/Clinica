@@ -37,6 +37,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Respiratory distress, oxygenation, patient stabilization',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'vigilant young female ward nurse with calm protective presence, short dark hair, teal-blue nursing robes with air and river element motifs, one hand raised in a steadying gesture with a soft glowing River aura, determined caring expression, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -83,6 +84,7 @@ export const HEROES: Hero[] = [
     weakAffinities: ['Wound / Tissue'],
     roleTags: ['healer', 'frontline', 'support'],
     description: 'Patrols the night shift, catching subtle deterioration before it cascades.',
+    artPrompt: 'watchful young female night-shift nurse with observant dark eyes and a small luminous lantern, dark navy-teal uniform with silver night-vigil accents, calm alert pose in a moonlit ward corridor, River element soft blue glow, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -187,6 +189,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Patient safety, fall prevention, infection control, harm reduction',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'focused young female patient safety coordinator in structured teal-green protective uniform, glowing shield emblem on her chest, arms raised in a guarding protective stance with a golden protection barrier aura, determined vigilant expression, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -239,6 +242,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Laboratory analysis, trend recognition, clinical data interpretation',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'analytical young male clinical data specialist with neat dark hair and a glasses motif, holding glowing chart scrolls with storm-blue data energy threads weaving between them, focused calculating expression, dark teal-storm colored robes with lightning accents, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, male character',
     starLore: [
       {
         star: 1,
@@ -291,6 +295,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Fundamental nursing care, comfort measures, patient education',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'warm compassionate female community nurse with gentle amber eyes and loose dark hair, earth-toned teal-green robes with leaf and growth motifs, both hands extended forward in a comforting caring gesture, soft Growth element green glow, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -351,6 +356,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Respiratory support, clinical assessment, infection prevention',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'legendary Victorian female nurse Florence Nightingale in flowing white-blue dress with golden trim, carrying a radiant golden oil lamp aloft, serene authoritative expression, River and Air element auras of teal and gold, floating sanitation and restoration runes, Genshin Impact style full-body transparent-background donghua cel-shaded legendary gacha card art, soft clean linework, luminous colors, female character',
     skills: [
       { id: 'lantern_of_clues', name: 'Lamp of Observation', type: 'scout', systemType: 'Universal', cost: 3, description: 'Legendary assessment. Reveal 2 hidden clues. -20 Corruption.', shortEffect: 'Assess • Reveal 2 Clues · −20–24 Corruption', rpgDescription: "Nightingale's lamp blazes across the ward, catching every detail corruption tried to hide.", beginnerExplanation: 'Look closer. A legendary eye sees twice as much.', nclexExplanation: 'Expert clinical assessment: pattern recognition across thousands of cases allows identification of multiple critical cues simultaneously.', reveal: 2, strike: 20, strikeRange: [20, 24] as [number,number] },
       { id: 'breath_of_dawn', name: 'Breath of Dawn', type: 'stabilize', systemType: 'Air', cost: 6, description: 'Legendary oxygenation surge. +90 Stability, -60 Corruption (Air).', shortEffect: 'Air Treatment • +90–108 Stability · −60–72 Corruption', rpgDescription: 'A radiant breath from Nightingale floods the ward with healing air; the patient surges back from the edge.', beginnerExplanation: 'A massive wave of breathing support and direct damage to the problem.', nclexExplanation: 'Comprehensive respiratory intervention: supplemental O₂, positioning, airway management, and escalation, delivered at legendary speed.', stabilize: 90, strike: 60, strikeRange: [60, 72] as [number,number], stabilizeRange: [90, 108] as [number,number] },
@@ -377,6 +383,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Infection treatment, systematic reassessment, fundamental nursing care',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'distinguished male scientist Alexander Fleming in a white laboratory coat with golden-green penicillin and growth motifs, holding a luminous culture dish radiating golden-green antibiotic light, warm intellectual expression, Growth element green-gold aura with floating microbe runes, Genshin Impact style full-body transparent-background donghua cel-shaded legendary gacha card art, soft clean linework, luminous colors, male character',
     skills: [
       { id: 'guardians_touch', name: "Guardian's Touch", type: 'support', systemType: 'Universal', cost: 4, description: 'Legendary steady support. +70 Stability, -20 Corruption.', shortEffect: 'Universal Treatment • +70–84 Stability · −20–24 Corruption', rpgDescription: "Fleming's legendary steady hand restores deep balance and hammers back the corruption.", beginnerExplanation: 'A powerful wave of care that heals and fights the problem at once.', nclexExplanation: 'Legendary fundamental care: advanced repositioning, precision hygiene, therapeutic touch, and proactive monitoring at expert intensity.', stabilize: 70, strike: 20, strikeRange: [20, 24] as [number,number], stabilizeRange: [70, 84] as [number,number] },
       { id: 'reassess', name: 'Reassess', type: 'analyze', systemType: 'Universal', cost: 5, description: 'Reveal 2 clues. Expert insight -55 Corruption.', shortEffect: 'Analyze • Reveal 2 Clues · −55–66 Corruption', rpgDescription: "Fleming returns with a scientist's legendary eye, finding every missed detail and striking at the corruption's heart.", beginnerExplanation: 'Legendary observation: catches two missed steps and weakens the enemy significantly.', nclexExplanation: 'Expert reassessment closes care gaps rapidly. At legendary skill, identifying multiple missed interventions produces immediate, dramatic reduction in disease burden.', reveal: 2, strike: 55, strikeRange: [55, 66] as [number,number] },
@@ -403,6 +410,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Comprehensive mastery, multi-system support, mythic intervention',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'powerful androgynous nonbinary mythic clinician The Prodigy in flowing white-gold robes with storm and universal element motifs, radiating mythic multi-element clinical energy in gold and violet, calm commanding expression, multiple element auras swirling around them, Genshin Impact style full-body transparent-background donghua cel-shaded mythic gacha card art, soft clean linework, luminous colors, androgynous nonbinary character',
     skills: [
       { id: 'ward_dominion', name: 'Ward Dominion', type: 'stabilize', systemType: 'Universal', cost: 5, description: 'Mythic ward mastery. +130 Stability, -30 Corruption.', shortEffect: 'Universal • +130–150 Stability · −30–36 Corruption', rpgDescription: 'The Prodigy sweeps the ward with mythic authority; stability floods back and corruption shatters.', beginnerExplanation: 'A massive wave of mythic healing that stabilises the patient and destroys the problem.', nclexExplanation: 'Comprehensive multi-system stabilisation: airway, circulation, labs, pain, and monitoring addressed simultaneously by a mythic team leader.', stabilize: 130, strike: 30, strikeRange: [30, 36] as [number,number], stabilizeRange: [130, 150] as [number,number] },
       { id: 'mythic_prescience', name: 'Mythic Prescience', type: 'counter', systemType: 'Universal', cost: 5, description: 'Read the disease before it acts. Anticipate the next deterioration, reveal 2 clues, and strike the Corruption for -50.', shortEffect: 'Treat • Anticipate Pattern · Reveal 2 Clues · −50–60 Corruption', rpgDescription: 'The Prodigy sees what is coming before it arrives — a preemptive strike that cuts through Corruption the moment the pattern is recognised.', beginnerExplanation: 'Read the warning signs and act first. Recognising what the disease will do next lets you counter it before it happens.', nclexExplanation: 'Anticipatory clinical reasoning: expert nurses recognise deterioration patterns from subtle early cues and intervene preemptively, directly reducing disease burden before it escalates.', reveal: 2, strike: 50, strikeRange: [50, 60] as [number,number] },
@@ -422,6 +430,7 @@ export const HEROES: Hero[] = [
     weakAffinities: ['Wound / Tissue'],
     roleTags: ['healer', 'frontline', 'support'],
     description: 'Sprints toward crisis when others retreat. Lives for the code.',
+    artPrompt: 'athletic determined male emergency room nurse in crimson-teal ER scrubs with fire energy accents, mid-sprint dynamic forward-leaning pose, defibrillator paddles crackling with red-orange fire energy at his sides, intense focused expression, Fire element blazing aura, fantasy emergency bay background, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, male character',
     starLore: [
       {
         star: 1,
@@ -467,6 +476,7 @@ export const HEROES: Hero[] = [
     weakAffinities: ['Fluid / Hydration'],
     roleTags: ['specialist', 'advanced', 'focused'],
     description: 'Walls of soap, isolation, and vigilance against the unseen.',
+    artPrompt: 'vigilant female infection control nurse in white-teal protective uniform with glowing amber containment runes on her shoulders and palms, one hand raised projecting a purifying fire-cleansing barrier, sharp watchful expression, Fire element purifying aura with floating pathogen-seal runes, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -512,6 +522,7 @@ export const HEROES: Hero[] = [
     weakAffinities: ['Wound / Tissue'],
     roleTags: ['specialist', 'advanced', 'focused'],
     description: 'Knows every layer of skin, every stage of healing.',
+    artPrompt: 'skilled female wound care specialist in clean white-teal robes, warm healing light emanating from both hands with skin-mending glyphs forming around her fingers, precise focused expression, Protection element golden-teal barrier aura, tissue-healing motifs woven into her garments, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -557,6 +568,7 @@ export const HEROES: Hero[] = [
     weakAffinities: ['Energy / Metabolic'],
     roleTags: ['specialist', 'advanced', 'focused'],
     description: 'Listens. Truly listens. Crisis softens in her presence.',
+    artPrompt: 'serene empathetic female psychiatric nurse in soft blue-mind toned robes with flowing neural and calm-wave motifs, seated or gently standing in a listening pose with hands open and relaxed, luminous Mind element indigo-blue aura of calm radiating around her, compassionate steady expression, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -611,6 +623,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Ward coordination, charge nurse leadership, complex patient management, team training',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'commanding senior female ward nurse in flowing teal ceremonial robes with lotus motifs, silver staff topped with a glowing lotus bloom lantern, luminous teal-gold aura of ward authority, calm composed expression, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -664,6 +677,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Code response, ACLS protocols, resuscitation leadership, team communication under pressure',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'heroic male code response nurse in teal and crimson emergency armor, wielding a defibrillator styled as a twin-bladed energy staff crackling with lightning, mid-action commanding pose, intense focused expression, River and Storm element aura, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, male character',
     starLore: [
       {
         star: 1,
@@ -717,6 +731,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Psychiatric nursing, therapeutic relationship, recovery-oriented practice, acute mental health crisis management',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'ethereal female master psychiatric nurse in flowing silver-blue robes adorned with glowing lotus motifs, serene powerful presence with both hands raised in a therapeutic gesture, luminous Mind-lotus aura of blue and teal light radiating around her, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
@@ -770,6 +785,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Patient safety systems, just culture, near-miss reporting, high-reliability organization, zero-harm culture',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'commanding nonbinary patient safety officer in silver and teal ceremonial robes with a glowing safety seal crest on their chest, surrounded by floating safety-protocol rune tablets, institution-wide authority stance, calm determined expression, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, androgynous nonbinary character',
     starLore: [
       {
         star: 1,
@@ -823,6 +839,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Mechanical ventilation, lung-protective protocols, ICU respiratory management, ventilator weaning',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'serene nonbinary ICU respiratory therapist in white and sky-blue armor with flowing ventilator-circuit motif robes, commanding a floating mechanical lung sphere of glowing Air energy with both hands, calm mastery expression, Air element breath-mist aura with floating breath runes, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, androgynous nonbinary character',
     starLore: [
       {
         star: 1,
@@ -876,6 +893,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Internal medicine, clinical diagnosis, attending-level teaching, evidence-based practice',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'distinguished nonbinary senior attending physician in white robes with flowing golden coat-tails, holding a glowing diagnostic orb of purple and gold light, calm authoritative expression with decades of clinical wisdom, Mind element violet-gold aura, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, androgynous nonbinary character',
     starLore: [
       {
         star: 1,
@@ -931,6 +949,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Infection prevention, environmental hygiene, patient dignity, evidence-based care',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'revered legendary female nursing founder Florence Nightingale in flowing white robes with golden lamp and laurel motifs, holding a radiant golden oil lamp aloft pouring warm healing light, luminous statistical rose-diagram charts floating as runes around her, calm resolute pioneering expression, Growth element golden-teal legendary aura, Genshin Impact style full-body transparent-background donghua cel-shaded legendary gacha card art, soft clean linework, luminous colors, female character',
     locked: true,
     starLore: [
       {
