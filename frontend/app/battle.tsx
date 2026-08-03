@@ -418,7 +418,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
     // Boss battle: show the pre-battle VN narration only — no guided tutorial
     if (isPrologueBoss) return;
-    if (!isCompleted("firstBattle")) {
+    // firstBattle scripted-loss only fires when facing the Silent Infarct
+    // specifically. Any other battle while firstBattle is uncompleted is a
+    // normal ward shift — don't inject the Master Bai narration there.
+    if (!isCompleted("firstBattle") && enemyId === "silent_infarct") {
       const t = setTimeout(() => startTutorial("firstBattle"), 800);
       return () => clearTimeout(t);
     }

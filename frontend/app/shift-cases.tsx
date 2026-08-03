@@ -38,8 +38,15 @@ export default function ShiftCasesPage() {
 
   const dailyShift = useMemo(() => {
     if (!player) return [];
-    const starters = ENEMIES.filter((e) => e.difficulty <= 2 && !e.worldBoss && !e.isAffliction);
-    const advanced = ENEMIES.filter((e) => e.difficulty >= 3 && !e.worldBoss && !e.isAffliction);
+    const playerChapter = player.chapter_progress ?? 1;
+    const starters = ENEMIES.filter((e) =>
+      e.difficulty <= 2 && !e.worldBoss && !e.isAffliction &&
+      (ENEMY_CLINICAL[e.id]?.chapter ?? 1) <= playerChapter
+    );
+    const advanced = ENEMIES.filter((e) =>
+      e.difficulty >= 3 && !e.worldBoss && !e.isAffliction &&
+      (ENEMY_CLINICAL[e.id]?.chapter ?? 1) <= playerChapter
+    );
     const seed = (player.runs_completed || 0) % 5;
     const seed2 = (seed + 2) % 5;
     return [
