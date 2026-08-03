@@ -413,14 +413,6 @@ export default function TacticalWarningScene({ onComplete }: Props) {
           style={{ width: "100%", height: "100%" }}
           contentFit={speaker.artFit}
         />
-        {/* left-edge blend */}
-        <LinearGradient
-          colors={["rgba(4,10,18,0.88)", "rgba(4,10,18,0)"]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 0.38, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
         {/* bottom feather */}
         <LinearGradient
           colors={["transparent", "rgba(4,10,18,0.96)"]}
