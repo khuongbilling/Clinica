@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const BATTLE_BG = require("@/assets/images/ward_battle_bg.png");
 
-// Thematic battle stage per enemy weak element — chosen by enemy.weakElement.
+// Thematic battle stage per ElementSystem — chosen via AFFINITY_TO_SYSTEM(enemy.primaryAffinity).
 const SYSTEM_BG: Record<string, ReturnType<typeof require>> = {
   Air: require("@/assets/images/battle_bg/air.png"),
   River: require("@/assets/images/battle_bg/river.png"),
@@ -31,7 +31,25 @@ import { getHeroVisuals } from "./getHeroVisuals";
 import { getHeroAttackSprite } from "./HeroBattleAttackSprites";
 import { getEnemySprite } from "./EnemySprites";
 import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
-import type { ActionType, ClueCard, ElementSystem, Hero } from "@/src/game/types";
+import type { ActionType, AffinityFamily, ClueCard, ElementSystem, Hero } from "@/src/game/types";
+
+// Maps the enemy's clinical domain (AffinityFamily) to an ElementSystem key used
+// to look up SYSTEM_BG arena backgrounds and accent colours. weakElement must NOT
+// be used for this — it describes what element counters the enemy in combat, not
+// what thematic system the enemy belongs to.
+const AFFINITY_TO_SYSTEM: Record<AffinityFamily, ElementSystem> = {
+  'Fluid / Hydration':       'River',
+  'Airway / Respiratory':    'Air',
+  'Fire / Inflammation':     'Fire',
+  'Protection / Immune':     'Protection',
+  'Energy / Metabolic':      'Energy',
+  'Storm / Cardiac':         'Storm',
+  'Mind / Neuro-Psych':      'Mind',
+  'Growth / Endocrine':      'Growth',
+  'Filter / Renal':          'Filter',
+  'Wound / Tissue':          'Forge',
+  'Community / Public Health': 'Growth', // closest thematic match
+};
 
 export type BattleFx = { actorId: string; ts: number; action?: ActionType } | null;
 export type EnemyAttackKind = "assault" | "spread" | "hex";
@@ -140,7 +158,9 @@ interface BattleEnemyInfo {
   id: string;
   name: string;
   realWorld: string;
-  // weakElement drives arena background tint and element colour/FX keying.
+  // primaryAffinity drives arena background and enemy thematic colour/icon.
+  // weakElement is kept ONLY for combat counter UI — do not use it for bg/colour keying.
+  primaryAffinity?: AffinityFamily | null;
   weakElement?: ElementSystem | null;
   dangerTrigger: string;
   bestCounters: ActionType[];
@@ -171,8 +191,11 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
     setInfoOpen(false);
   }, [enemy.id]);
 
-  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[enemy.weakElement ?? 'Air'] ?? BATTLE_BG;
-  const accent = ELEMENT_COLORS[enemy.weakElement ?? 'Air'] || COLORS.brand;
+  // Resolve the enemy's primary clinical domain to an ElementSystem for bg/accent.
+  // Falls back to 'Air' only when primaryAffinity is absent (legacy/unknown enemy).
+  const primarySystem: ElementSystem = (enemy.primaryAffinity && AFFINITY_TO_SYSTEM[enemy.primaryAffinity]) ?? 'Air';
+  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[primarySystem] ?? BATTLE_BG;
+  const accent = ELEMENT_COLORS[primarySystem] || COLORS.brand;
 
   return (
     <View style={styles.arena} testID="battlefield-scene">
@@ -393,8 +416,11 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
   const [react, setReact] = useState<EnemyReact>(ENEMY_REACT.strike);
   const [atkFx, setAtkFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
   const sprite = getEnemySprite(enemy.id);
-  const color = ELEMENT_COLORS[enemy.weakElement ?? 'Air'] || COLORS.error;
-  const primaryIcon = SYSTEM_ICONS[enemy.weakElement ?? 'Air'];
+  // Use the enemy's primary clinical domain for thematic colour and icon.
+  // weakElement is only the combat counter element — it must not drive the visual identity.
+  const enemySystem: ElementSystem = (enemy.primaryAffinity && AFFINITY_TO_SYSTEM[enemy.primaryAffinity]) ?? 'Air';
+  const color = ELEMENT_COLORS[enemySystem] || COLORS.error;
+  const primaryIcon = SYSTEM_ICONS[enemySystem];
 
   useEffect(() => {
     entrance.setValue(0);

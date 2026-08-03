@@ -1352,9 +1352,10 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           id: enemy.id,
           name: enemy.name,
           realWorld: enemy.realWorld,
-          // weakElement: null-safe; BattlefieldScene falls back to 'Air' when absent
+          // primaryAffinity drives the arena background and enemy thematic colour.
+          primaryAffinity: enemy.primaryAffinity,
+          // weakElement is for combat counter UI only — not used for bg/colour.
           weakElement: enemy.weakElement,
-          // weakSystem removed in Push 1 — not passed to BattlefieldScene
           dangerTrigger: enemy.dangerTrigger,
           bestCounters: enemy.bestCounters,
           visibleClues: [...enemy.visibleClues, ...enemy.hiddenClues].filter((c) => state.visibleClues.includes(c.id)),
