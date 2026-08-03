@@ -193,7 +193,7 @@ export interface ActionClinical {
 export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   breath_of_dawn: {
     clinicalTags: ['airway', 'oxygenation', 'respiratory', 'assessment'],
-    appropriateForSystems: ['Air'],
+    appropriateForSystems: ['Airway / Respiratory'],
     pathwayRoles: ['stabilize', 'treat'],
     diseaseCategory: 'respiratory',
   },
@@ -235,7 +235,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   isolation_seal: {
     clinicalTags: ['infection isolation', 'transmission prevention'],
-    appropriateForSystems: ['Fire', 'Protection'],
+    appropriateForSystems: ['Fire / Inflammation', 'Protection / Immune'],
     pathwayRoles: ['protect', 'treat'],
     diseaseCategory: 'infection',
   },
@@ -261,7 +261,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   mend: {
     clinicalTags: ['skin integrity', 'wound care', 'protect', 'general support', 'comfort'],
-    appropriateForSystems: ['Protection'],
+    appropriateForSystems: ['Protection / Immune'],
     pathwayRoles: ['treat', 'stabilize'],
     diseaseCategory: 'integumentary',
   },
@@ -272,7 +272,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   glucose_round: {
     clinicalTags: ['glucose replacement', 'hypoglycemia', 'assessment', 'monitoring'],
-    appropriateForSystems: ['Energy'],
+    appropriateForSystems: ['Energy / Metabolic'],
     pathwayRoles: ['treat', 'assess'],
     diseaseCategory: 'metabolic',
   },
@@ -284,7 +284,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   river_surge: {
     clinicalTags: ['circulation', 'fluid resuscitation'],
-    appropriateForSystems: ['River'],
+    appropriateForSystems: ['Fluid / Hydration'],
     unsafeIfClues: ['Crackles', 'Leg Swelling', 'Weight +'],
     pathwayRoles: ['treat', 'stabilize'],
     diseaseCategory: 'circulatory',
@@ -296,7 +296,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   purity_mark: {
     clinicalTags: ['antimicrobial', 'infection treatment'],
-    appropriateForSystems: ['Fire'],
+    appropriateForSystems: ['Fire / Inflammation'],
     pathwayRoles: ['treat'],
     diseaseCategory: 'infection',
   },
@@ -307,7 +307,7 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
   },
   mind_anchor: {
     clinicalTags: ['orientation', 'therapeutic communication', 'neuro', 'comfort'],
-    appropriateForSystems: ['Mind'],
+    appropriateForSystems: ['Mind / Neuro-Psych'],
     pathwayRoles: ['treat', 'stabilize'],
     diseaseCategory: 'neurological',
   },
@@ -315,6 +315,122 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     clinicalTags: ['safety', 'medication safety'],
     pathwayRoles: ['protect'],
     diseaseCategory: 'safety',
+  },
+
+  // ── Heroes added after the first roster batch ──────────────────────────────
+  // Lotus Care Captain
+  lcc_lotus_vigil: {
+    clinicalTags: ['assessment', 'reassessment', 'general support'],
+    pathwayRoles: ['assess', 'reassess'],
+    diseaseCategory: 'general',
+  },
+  lcc_care_cascade: {
+    clinicalTags: ['general support', 'comfort'],
+    pathwayRoles: ['stabilize'],
+    diseaseCategory: 'general',
+  },
+  lcc_ward_command: {
+    clinicalTags: ['general support', 'escalation', 'command'],
+    pathwayRoles: ['treat', 'protect', 'stabilize'],
+    diseaseCategory: 'general',
+  },
+  // Code Guardian
+  cg_code_call: {
+    clinicalTags: ['assessment', 'escalation', 'emergency', 'acute deterioration'],
+    pathwayRoles: ['assess', 'escalate'],
+    diseaseCategory: 'general',
+  },
+  cg_defib_strike: {
+    clinicalTags: ['circulation', 'cardiac', 'rhythm restoration'],
+    appropriateForSystems: ['Storm / Cardiac'],
+    pathwayRoles: ['treat', 'stabilize'],
+    diseaseCategory: 'cardiac',
+  },
+  cg_guardian_dome: {
+    clinicalTags: ['safety', 'infection prevention', 'medication safety'],
+    pathwayRoles: ['protect'],
+    diseaseCategory: 'safety',
+  },
+  // Mind Lotus Healer
+  mlh_mind_lotus: {
+    clinicalTags: ['therapeutic communication', 'orientation', 'neuro', 'assessment'],
+    pathwayRoles: ['stabilize', 'assess'],
+    diseaseCategory: 'neurological',
+  },
+  mlh_psyche_shield: {
+    clinicalTags: ['safety', 'therapeutic communication'],
+    pathwayRoles: ['protect', 'stabilize'],
+    diseaseCategory: 'neurological',
+  },
+  mlh_lotus_bloom: {
+    clinicalTags: ['therapeutic communication', 'orientation', 'neuro', 'general support'],
+    pathwayRoles: ['treat', 'stabilize', 'assess'],
+    diseaseCategory: 'neurological',
+  },
+  // Patient Safety Arbiter
+  psa_system_audit: {
+    clinicalTags: ['assessment', 'reassessment', 'medication safety', 'safety'],
+    pathwayRoles: ['assess', 'reassess'],
+    diseaseCategory: 'safety',
+  },
+  psa_arbiter_strike: {
+    clinicalTags: ['safety', 'medication safety', 'infection prevention'],
+    pathwayRoles: ['treat', 'protect'],
+    diseaseCategory: 'safety',
+  },
+  psa_safety_realm: {
+    clinicalTags: ['safety', 'medication safety', 'infection isolation', 'transmission prevention'],
+    pathwayRoles: ['protect', 'treat'],
+    diseaseCategory: 'safety',
+  },
+  // Ventilation Strategist
+  vs_vent_mastery: {
+    clinicalTags: ['assessment', 'reassessment', 'airway', 'oxygenation', 'respiratory'],
+    pathwayRoles: ['assess', 'reassess'],
+    diseaseCategory: 'respiratory',
+  },
+  vs_lung_protect: {
+    clinicalTags: ['airway', 'oxygenation', 'respiratory', 'safety'],
+    pathwayRoles: ['protect', 'stabilize'],
+    diseaseCategory: 'respiratory',
+  },
+  vs_wean_strike: {
+    clinicalTags: ['airway', 'oxygenation', 'respiratory'],
+    pathwayRoles: ['treat', 'stabilize'],
+    diseaseCategory: 'respiratory',
+  },
+  // Hearthline Attending
+  ha_master_dx: {
+    clinicalTags: ['assessment', 'reassessment', 'monitoring', 'general support'],
+    pathwayRoles: ['assess', 'reassess'],
+    diseaseCategory: 'general',
+  },
+  ha_clinical_mastery: {
+    clinicalTags: ['general support', 'assessment'],
+    pathwayRoles: ['treat', 'stabilize'],
+    diseaseCategory: 'general',
+  },
+  ha_hearthline: {
+    clinicalTags: ['general support', 'escalation', 'command', 'emergency'],
+    pathwayRoles: ['treat', 'protect', 'stabilize'],
+    diseaseCategory: 'general',
+  },
+  // Florence Nightingale (non-prologue)
+  lamp_of_restoration: {
+    clinicalTags: ['general support', 'comfort'],
+    pathwayRoles: ['stabilize'],
+    diseaseCategory: 'general',
+  },
+  sanitary_reform: {
+    clinicalTags: ['antimicrobial', 'infection treatment', 'assessment'],
+    appropriateForSystems: ['Fire / Inflammation'],
+    pathwayRoles: ['treat', 'assess'],
+    diseaseCategory: 'infection',
+  },
+  statistical_clarity: {
+    clinicalTags: ['assessment', 'reassessment', 'monitoring', 'general support'],
+    pathwayRoles: ['assess', 'treat', 'reassess'],
+    diseaseCategory: 'general',
   },
 };
 
