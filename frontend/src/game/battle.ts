@@ -814,8 +814,30 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
   }
   if (s.ap < cost) return { state: s, message: 'Not enough AP.', aborted: true };
 
-  const action = SKILL_CLINICAL[skill.id];
+  let action = SKILL_CLINICAL[skill.id];
   const systemType = skill.systemType || 'Universal';
+
+  // Fallback: when a skill has no SKILL_CLINICAL entry, synthesize a minimal
+  // ActionClinical from skill.type so the care-chain can still advance.
+  // Pass all of the enemy's preferredChainTags as clinicalTags so the tag-
+  // overlap check in canAdvancePathway always passes for the synthetic entry.
+  if (!action) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn(`[battle] SKILL_CLINICAL["${skill.id}"] is undefined — using skill.type fallback for chain advancement. Add an entry to SKILL_CLINICAL to silence this.`);
+    }
+    const inferredRoles: import('./clinical').PathwayRole[] =
+      skill.type === 'scout'    ? ['assess'] :
+      skill.type === 'analyze'  ? ['reassess'] :
+      skill.type === 'stabilize' || skill.type === 'support' ? ['stabilize'] :
+      skill.type === 'counter'  || skill.type === 'strike'   ? ['treat'] :
+      [];
+    const enemyClinical = s.enemyClinical;
+    action = {
+      clinicalTags: enemyClinical ? [...enemyClinical.preferredChainTags] : [],
+      pathwayRoles: inferredRoles,
+    };
+  }
+
   const res = resolveAction(action, systemType, s);
 
   const { state: post, aborted } = applyResolutionToState(s, res, skill.name);

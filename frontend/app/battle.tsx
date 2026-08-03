@@ -819,10 +819,25 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // Push 8: show the actual outcome ("Lowered Corruption by 11.") in the feedback banner.
     // Tutorial battles keep the guided contextual tip — the narrator is already explaining
     // each step, so outcome numbers are secondary noise there.
+    // Detect care-chain progress from this action.
+    const prevChainLen = state.chain.progress.length;
+    const nextChainLen = applyResult.state.chain.progress.length;
+    const chainStepAdvanced = nextChainLen > prevChainLen;
+    const chainJustCompleted = !state.fullChainCompleted && applyResult.state.fullChainCompleted;
+
     if (!isTutorialBattle && applyResult.message) {
       showBlockMsg(applyResult.message.split('\n')[0]);
     } else {
       showFeedback(skill.type);
+      // In tutorial battles, append a brief non-blocking chain confirmation
+      // when the action actually advanced chain.progress.
+      if (isTutorialBattle && (chainStepAdvanced || chainJustCompleted)) {
+        const stepLabel = chainJustCompleted
+          ? "Complete Care Pathway! ✨ — brilliant clinical rhythm"
+          : `${applyResult.state.chain.progress[applyResult.state.chain.progress.length - 1]
+              ?.charAt(0).toUpperCase()}${applyResult.state.chain.progress[applyResult.state.chain.progress.length - 1]?.slice(1)} ✓ — Care Pathway advancing`;
+        setTimeout(() => showBlockMsg(stepLabel), 900);
+      }
     }
     if (!tsFirstAction.current) {
       tsFirstAction.current = true;
@@ -2455,9 +2470,9 @@ function CareChainStrip({ chain, isTutorial, currentStepId }: {
   return (
     <View style={styles.stripRow}>
       {STRIP_STEPS.map((step, idx) => {
-        const done = isTutorial && activeIdx >= 0
-          ? idx < activeIdx
-          : chain.progress.includes(step.role);
+        // Always derive completion from real chain.progress.
+        // activeIdx only drives the pulsing "current step" indicator.
+        const done = chain.progress.includes(step.role);
         const isActive = idx === activeIdx;
         return (
           <View key={step.label} style={styles.stripCell}>
