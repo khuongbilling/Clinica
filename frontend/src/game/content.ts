@@ -72,7 +72,7 @@ export const HEROES: Hero[] = [
   },
   {
     id: 'night_watcher',
-    gender: 'male',
+    gender: 'female',
     name: 'Night Watcher',
     title: 'Vigil of the Ward',
     rarity: 3,
@@ -87,27 +87,27 @@ export const HEROES: Hero[] = [
       {
         star: 1,
         title: 'The Long Quiet',
-        text: 'He chose the night shift because nobody else wanted it. The first month he barely slept during the day; his body fought the inversion at every turn. But the ward at night had a quality he had not anticipated: an intimacy, a vulnerability from the patients that the bustle of days concealed. He found he was good at quiet. He found he was good at watching.',
+        text: 'She chose the night shift because nobody else wanted it. The first month she barely slept during the day; her body fought the inversion at every turn. But the ward at night had a quality she had not anticipated: an intimacy, a vulnerability from the patients that the bustle of days concealed. She found she was good at quiet. She found she was good at watching.',
       },
       {
         star: 2,
         title: 'The Senior Who Stayed',
-        text: 'An older nurse named Celestine worked the same corridor for eleven years and had never lost a patient to a preventable overnight deterioration. Celestine taught him one rule above all others: "If something feels different, it is different. Chart it. Act on it. Apologize later if you were wrong." He has never had to apologize. He has never regretted acting.',
+        text: 'An older nurse named Celestine worked the same corridor for eleven years and had never lost a patient to a preventable overnight deterioration. Celestine taught her one rule above all others: "If something feels different, it is different. Chart it. Act on it. Apologize later if you were wrong." She has never had to apologize. She has never regretted acting.',
       },
       {
         star: 3,
         title: 'The Silent Cascade',
-        text: 'The patient in bay seven gave no dramatic sign: only a blood pressure two points lower than the night before, a respiratory rate four breaths faster, and a restlessness the day shift had charted as anxiety. He escalated. The intensivist arrived skeptical and left grateful. The patient transferred to the ICU and survived. The Night Watcher returned to his rounds and said nothing about it.',
+        text: 'The patient in bay seven gave no dramatic sign: only a blood pressure two points lower than the night before, a respiratory rate four breaths faster, and a restlessness the day shift had charted as anxiety. She escalated. The intensivist arrived skeptical and left grateful. The patient transferred to the ICU and survived. The Night Watcher returned to her rounds and said nothing about it.',
       },
       {
         star: 4,
         title: 'Trusted in the Dark',
-        text: 'Families who stayed overnight learned to look for him. Not because he said much; he rarely did. But there was something in the way he paused at the bedside that told them the person they loved was not alone. A consultant once wrote in the notes: "Night nursing consistently excellent." He saved the page and taped it to the inside of his locker.',
+        text: 'Families who stayed overnight learned to look for her. Not because she said much; she rarely did. But there was something in the way she paused at the bedside that told them the person they loved was not alone. A consultant once wrote in the notes: "Night nursing consistently excellent." She saved the page and taped it to the inside of her locker.',
       },
       {
         star: 5,
         title: 'Vigil',
-        text: 'He has come to understand that the night shift is not what happens while the real hospital sleeps. It is its own world: slower, starker, and in some ways more honest. Most people do not die at noon. Most people reach their lowest point in the early morning hours, when the body and the spirit are at their weakest. He is there. He has always been there. That is enough.',
+        text: 'She has come to understand that the night shift is not what happens while the real hospital sleeps. It is its own world: slower, starker, and in some ways more honest. Most people do not die at noon. Most people reach their lowest point in the early morning hours, when the body and the spirit are at their weakest. She is there. She has always been there. That is enough.',
       },
     ],
     skills: [
@@ -135,6 +135,7 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Clinical assessment, pattern recognition, cue analysis',
     bondLevel: 0,
     bondExp: 0,
+    artPrompt: 'scholarly young female clinician with round glasses and neat dark hair tied back, holding a glowing open codex spellbook, determined intelligent expression, white and purple scholarly robes with gold trim, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
