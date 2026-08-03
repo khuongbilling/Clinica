@@ -875,7 +875,7 @@ const sc = StyleSheet.create({
   topVignette: { position: "absolute", top: 0, left: 0, right: 0,   height: "22%" },
 });
 
-/* ── FeatureButton ── no circle ring — illustrated emblem floats with soft glow */
+/* ── FeatureButton ── emblem card with integrated label overlay at bottom */
 function FeatureButton({
   icon, emblem, label, color, locked, lockText, live, badge, onPress, testID,
 }: {
@@ -890,6 +890,15 @@ function FeatureButton({
           ? emblem
           : <Ionicons name={icon as any} size={28} color={locked ? COLORS.onSurfaceTertiary : color} />
         }
+        {/* Label always visible — overlaid at the bottom of the card */}
+        <View style={styles.featLabelOverlay}>
+          <Text
+            style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}
+            numberOfLines={1}
+          >
+            {label.toUpperCase()}
+          </Text>
+        </View>
         {live && !locked ? <View style={styles.featLiveDot} /> : null}
         {!locked && badge && badge > 0 ? (
           <View style={styles.featBadge}>
@@ -897,9 +906,6 @@ function FeatureButton({
           </View>
         ) : null}
       </View>
-      {emblem === undefined && (
-        <Text style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}>{label}</Text>
-      )}
       {live && !locked ? <Text style={styles.featLiveTxt}>LIVE</Text> : null}
       {locked && lockText ? <Text style={styles.featLock}>{lockText}</Text> : null}
     </Pressable>
@@ -945,14 +951,32 @@ const styles = StyleSheet.create({
 
   /* Side columns */
   sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm },
-  featBtn:        { alignItems: "center", gap: 4 },
+  featBtn:        { alignItems: "center", gap: 0 },
   featEmblemWrap: {
-    width: 56, height: 75,
+    width: 58, height: 78,
     alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(6, 9, 16, 0.42)",
+    backgroundColor: "rgba(6, 9, 16, 0.52)",
     borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
   },
-  featLabel:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.2, textAlign: "center" },
+  featLabelOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 5,
+    paddingHorizontal: 2,
+    alignItems: "center",
+    backgroundColor: "rgba(4, 7, 12, 0.78)",
+  },
+  featLabel: {
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.9,
+    textAlign: "center",
+  },
   featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
   featLiveDot: {
     position: "absolute", top: 2, right: 2,
