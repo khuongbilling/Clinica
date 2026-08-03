@@ -23,16 +23,16 @@ export interface PrologueCharacter {
 
 const PRODIGY_PORTRAIT       = require("../../assets/images/prodigy_vn_extended.png");
 const PRODIGY_BUST           = require("../../assets/images/prodigy_vn_bust.png");
-const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn.png");
+const MASTER_BAI_ART         = require("../../assets/images/master_bai_vn_extended.png");
 const MASTER_BAI_BUST        = require("../../assets/images/master_bai_vn_bust.png");
 const NIGHTINGALE_LARGE      = require("../../assets/images/nightingale_vn_extended.png");
 const NIGHTINGALE_BUST       = require("../../assets/images/nightingale_vn_bust.png");
-const FLEMING_LARGE          = require("../../assets/images/fleming_vn.png");
+const FLEMING_LARGE          = require("../../assets/images/fleming_vn_extended.png");
 const FLEMING_BUST           = require("../../assets/images/fleming_vn_bust.png");
 
 const NIGHTINGALE_BATTLE = require("../../assets/images/nightingale_battle_sprite.png");
 const FLEMING_BATTLE     = require("../../assets/images/fleming_battle_sprite.png");
-const MASTER_BAI_BATTLE  = require("../../assets/images/master_bai_vn.png");
+const MASTER_BAI_BATTLE  = require("../../assets/images/master_bai_vn_extended.png");
 const PRODIGY_BATTLE     = require("../../assets/images/prodigy_battle_sprite.png");
 
 // Scene backgrounds used across prologue cinematic and dialogue scenes
