@@ -575,6 +575,15 @@ export interface EnemyClinical {
   unsafeActionTags?: string[];
   treatmentChain: PathwayRole[];
   preferredChainTags: string[];
+  /**
+   * Chain-only fallback tags: clinicalTags that let a non-blocked action advance
+   * the care chain even though they appear in neither preferredChainTags nor
+   * allowedActionTags. These do NOT affect evaluateClinicalAppropriateness —
+   * the action keeps its 'weak' (limited-relevance) status and modifier; it just
+   * no longer *silently* fails to advance the chain when its pathway role matches.
+   * Kept in sync by `src/game/audit-care-chain.ts` (run via sucrase-node).
+   */
+  chainAdvanceTags?: string[];
   weaknesses: string[]; // system types this enemy is weak to
   resistances: string[];
   starTurnLimit: number;
@@ -601,6 +610,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'reassessment', 'general support', 'comfort', 'circulation', 'fluid resuscitation', 'hydration'],
+    chainAdvanceTags: ['safety'],
     weaknesses: ['River'],
     resistances: ['Fire'],
     starTurnLimit: 5,
@@ -621,6 +631,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'reassessment', 'general support', 'circulation', 'fluid resuscitation', 'hydration'],
+    chainAdvanceTags: ['safety'],
     weaknesses: ['River'],
     resistances: ['Fire'],
     starTurnLimit: 5,
@@ -639,6 +650,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'reassessment', 'general support', 'comfort', 'airway', 'oxygenation', 'respiratory', 'circulation', 'fluid resuscitation', 'hydration'],
+    chainAdvanceTags: ['safety'],
     weaknesses: ['River'],
     resistances: ['Fire'],
     starTurnLimit: 6,
@@ -657,6 +669,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'oxygenation', 'bronchospasm', 'reassessment', 'airway'],
+    chainAdvanceTags: ['therapeutic communication', 'circulation', 'safety'],
     weaknesses: ['Air'],
     resistances: ['Fire', 'Mind'],
     starTurnLimit: 5,
@@ -674,6 +687,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'airway', 'oxygenation', 'respiratory', 'reassessment', 'escalation'],
+    chainAdvanceTags: ['therapeutic communication', 'circulation', 'safety'],
     weaknesses: ['Air'],
     resistances: ['Fire'],
     starTurnLimit: 5,
@@ -692,6 +706,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'circulation', 'fluid resuscitation', 'reassessment'],
+    chainAdvanceTags: ['safety', 'infection isolation', 'airway'],
     weaknesses: ['River'],
     resistances: ['Fire', 'Mind'],
     starTurnLimit: 5,
@@ -710,6 +725,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'glucose replacement', 'hypoglycemia', 'reassessment'],
+    chainAdvanceTags: ['circulation', 'safety', 'airway'],
     weaknesses: ['Energy'],
     resistances: ['Air', 'Fire'],
     starTurnLimit: 5,
@@ -728,6 +744,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'protect', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'infection isolation', 'antimicrobial', 'reassessment'],
+    chainAdvanceTags: ['safety', 'general support', 'skin integrity', 'circulation', 'airway'],
     weaknesses: ['Fire', 'Protection'],
     resistances: ['Air'],
     starTurnLimit: 6,
@@ -747,6 +764,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'fever management', 'antipyretic', 'fluid resuscitation', 'reassessment'],
+    chainAdvanceTags: ['infection isolation', 'circulation', 'safety', 'airway'],
     weaknesses: ['River', 'Fire'],
     resistances: [],
     starTurnLimit: 5,
@@ -765,6 +783,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'protect', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'orientation', 'fall prevention', 'reassessment'],
+    chainAdvanceTags: ['infection isolation', 'skin integrity', 'circulation', 'airway'],
     weaknesses: ['Mind', 'Protection'],
     resistances: ['Fire'],
     starTurnLimit: 6,
@@ -783,6 +802,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'fluid resuscitation', 'antimicrobial', 'reassessment'],
+    chainAdvanceTags: ['general support', 'safety', 'airway'],
     weaknesses: ['Fire', 'River'],
     resistances: ['Mind'],
     starTurnLimit: 6,
@@ -801,6 +821,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: ['fluid resuscitation'], // critical: fluids worsen CHF
     treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'oxygenation', 'reassessment'],
+    chainAdvanceTags: ['safety', 'infection isolation', 'circulation'],
     weaknesses: ['Air', 'River'],
     resistances: ['Fire'],
     starTurnLimit: 6,
@@ -819,6 +840,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'fluid resuscitation', 'reassessment'],
+    chainAdvanceTags: ['general support', 'safety', 'infection isolation', 'airway'],
     weaknesses: ['Energy', 'Storm'],
     resistances: ['Air'],
     starTurnLimit: 6,
@@ -837,6 +859,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ASSESS_CHAIN,
     preferredChainTags: ['assessment', 'oxygenation', 'airway', 'reassessment'],
+    chainAdvanceTags: ['safety', 'infection isolation', 'circulation'],
     weaknesses: ['Air'],
     resistances: ['Mind', 'Fire'],
     starTurnLimit: 6,
@@ -855,6 +878,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'circulation', 'reassessment'],
+    chainAdvanceTags: ['safety', 'infection isolation', 'airway'],
     weaknesses: ['Storm', 'River'],
     resistances: ['Fire'],
     starTurnLimit: 6,
@@ -874,6 +898,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'protect', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'escalation', 'emergency', 'circulation', 'infection isolation', 'reassessment'],
+    chainAdvanceTags: ['safety'],
     weaknesses: ['Protection', 'River'],
     resistances: ['Mind'],
     starTurnLimit: 7,
@@ -892,6 +917,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['assess', 'stabilize', 'treat', 'reassess'],
     preferredChainTags: ['assessment', 'airway', 'circulation', 'reassessment', 'escalation'],
+    chainAdvanceTags: ['general support', 'safety', 'infection isolation'],
     weaknesses: ['Air', 'River', 'Mind'],
     resistances: [],
     starTurnLimit: 8,
@@ -910,6 +936,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['oxygenation', 'reassessment'],
+    chainAdvanceTags: ['circulation', 'therapeutic communication'],
     weaknesses: ['Air'],
     resistances: [],
     starTurnLimit: 4,
@@ -928,6 +955,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['airway', 'reassessment'],
+    chainAdvanceTags: ['circulation', 'therapeutic communication'],
     weaknesses: ['Air'],
     resistances: [],
     starTurnLimit: 4,
@@ -946,6 +974,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['comfort', 'reassessment'],
+    chainAdvanceTags: ['safety', 'circulation', 'airway'],
     weaknesses: ['Mind'],
     resistances: [],
     starTurnLimit: 4,
@@ -964,6 +993,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['bronchospasm', 'reassessment'],
+    chainAdvanceTags: ['circulation', 'therapeutic communication'],
     weaknesses: ['Air'],
     resistances: [],
     starTurnLimit: 4,
@@ -982,6 +1012,7 @@ export const ENEMY_CLINICAL: Record<string, EnemyClinical> = {
     unsafeActionTags: [],
     treatmentChain: ['stabilize', 'reassess'],
     preferredChainTags: ['circulation', 'reassessment'],
+    chainAdvanceTags: ['therapeutic communication', 'airway'],
     weaknesses: ['River'],
     resistances: [],
     starTurnLimit: 4,
@@ -1363,10 +1394,14 @@ export function canAdvancePathway(
   // the enemy's tighter preferred set can still advance the chain when the action is
   // otherwise clinically appropriate (the status guard above already blocks
   // locked / unsafe / inappropriate actions before we reach this point).
+  // chainAdvanceTags is a chain-only safety net: it covers clinically non-blocked
+  // (weak / limited-relevance) actions whose tags appear in neither list, so a
+  // role-matching action can never *silently* fail to advance the chain.
   const actTags = action.clinicalTags || [];
   const tagMatches =
     actTags.some(t => enemy.preferredChainTags.includes(t)) ||
-    actTags.some(t => enemy.allowedActionTags.includes(t));
+    actTags.some(t => enemy.allowedActionTags.includes(t)) ||
+    actTags.some(t => (enemy.chainAdvanceTags || []).includes(t));
   return tagMatches ? nextStep : null;
 }
 
