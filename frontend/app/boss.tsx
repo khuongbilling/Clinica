@@ -37,8 +37,7 @@ export default function BossPage() {
 
   const boss = isVerdantha ? BOSS_VERDANTHA : BOSS_LORD_IMBALANCE;
   const sprite = getEnemySprite(boss.id);
-  // primarySystem is deprecated/optional; used here as display-only colour hint only
-  const accent = isVerdantha ? BLOOM_ACCENT : (ELEMENT_COLORS[boss.primarySystem ?? ''] ?? "#F87171");
+  const accent = isVerdantha ? BLOOM_ACCENT : (ELEMENT_COLORS[boss.weakElement ?? ''] ?? "#F87171");
   const canFight = stamina >= BOSS_ENCOUNTER_COST;
 
   // Verdantha is gated behind Phase III — Convergence, driven by the player's

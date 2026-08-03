@@ -105,8 +105,7 @@ export default function ShiftCasesPage() {
     }
   };
 
-  // primarySystem is deprecated/optional; used here as display-only colour hint only
-  const accent = current ? (ELEMENT_COLORS[current.primarySystem ?? ''] ?? COLORS.brand) : COLORS.brand;
+  const accent = current ? (ELEMENT_COLORS[current.weakElement ?? ''] ?? COLORS.brand) : COLORS.brand;
 
   // Lesson-to-battle bridge — check if this enemy has a completed Lotus Lesson linked to it.
   const linkedLesson = current ? getLotusNodeForEnemy(current.id) : undefined;

@@ -128,15 +128,6 @@ export interface Enemy {
   id: string;
   name: string;
   realWorld: string;
-  /**
-   * @deprecated Visual-only hint for colour/FX keying in battle.tsx and UI screens.
-   * Do NOT use as a combat modifier. Use `corruptionAspect` for narrative display,
-   * `weakElement` for combat counter logic, and `primaryAffinity` for domain matching.
-   * Will be removed once all display sites migrate to canonical fields.
-   */
-  primarySystem?: ElementSystem;
-  /** @deprecated Visual-only. See primarySystem deprecation note. */
-  secondarySystem?: ElementSystem;
   // 1–8: simulation-era enemies (Ch.1–8); 9–10: real-world ward encounters (Ch.9+)
   difficulty: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   visibleClues: ClueCard[];

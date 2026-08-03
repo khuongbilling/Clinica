@@ -32,9 +32,10 @@ const dash = (n: number | undefined): string =>
   n == null || n === 0 ? '—' : `${Math.round(n * 100)}%`;
 
 const systems = (e: Enemy): string => {
-  const parts = [e.primarySystem];
-  if (e.secondarySystem) parts.push(e.secondarySystem);
-  return parts.join(' / ');
+  const parts: string[] = [];
+  if (e.primaryAffinity) parts.push(e.primaryAffinity);
+  e.secondaryAffinities.forEach(a => { if (!parts.includes(a)) parts.push(a); });
+  return parts.join(' / ') || '—';
 };
 
 const flags = (e: Enemy, extraFlags: string[] = []): string => {
@@ -209,9 +210,7 @@ function buildEnemyStatBlocks(): string {
   lines.push('These bosses live outside the normal chapter pool (not in `ENEMIES` array, or tagged `worldBoss:true`) and are only reachable through dedicated battle entries.\n');
   lines.push(HEADER);
   namedBosses.forEach(e => {
-    const sys = e.secondarySystem
-      ? `${e.primarySystem} / ${e.secondarySystem}`
-      : e.primarySystem;
+    const sys = systems(e);
     const f = flags(e);
     lines.push(`| \`${e.id}\` | ${e.name} | ${e.corruption} | ${e.startingStability} | ${e.instability} | ${pct(e.corruptionResistance)} | ${dash(e.stabilityResistance)} | ${pct(e.hiddenDefense)} | ${pct(e.stabilityPressure)} | ${dash(e.affinityResistance)} | ${sys} | ${e.weakElement ?? '—'} | ${f} |`);
   });
@@ -271,7 +270,7 @@ function buildEnemyStatBlocks(): string {
   lines.push('|---|---|---|---|---|---|---|---|');
   AFFLICTION_ENEMIES.forEach(e => {
     const bt = (e as any).behaviorTag ?? '—';
-    lines.push(`| \`${e.id}\` | ${e.name} | ${e.corruption} | ${pct(e.corruptionResistance)} | ${pct(e.hiddenDefense)} | ${e.primarySystem} | ${e.weakElement ?? '—'} | ${bt} |`);
+    lines.push(`| \`${e.id}\` | ${e.name} | ${e.corruption} | ${pct(e.corruptionResistance)} | ${pct(e.hiddenDefense)} | ${e.primaryAffinity ?? '—'} | ${e.weakElement ?? '—'} | ${bt} |`);
   });
   lines.push('');
   lines.push(`All afflictions: \`startingStability: 100\`, \`instability: 0\`, \`stabilityPressure: 0\`, \`hiddenDefense: 0\`.\n`);
@@ -357,7 +356,7 @@ function buildChapterPools(): string {
   lines.push('|---|---|---|---|');
   const ch10 = [BOSS_SILENT_INFARCT];
   ch10.forEach(e => {
-    lines.push(`| \`${e.id}\` | ${e.name} | ${e.primarySystem} | BOSS · SCRIPTED LOSS |`);
+    lines.push(`| \`${e.id}\` | ${e.name} | ${e.corruptionAspect} | BOSS · SCRIPTED LOSS |`);
   });
 
   return lines.join('\n');

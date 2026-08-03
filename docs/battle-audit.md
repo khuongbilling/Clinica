@@ -60,11 +60,11 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `dehydration_wisp` | Hypovolemic Wisp | 58 | 68 | 5 | 0% | — | 5% | 0% | — | River | River | — |
-| `air_sprite` | Air Sprite Corruption | 50 | 62 | 5 | 0% | — | 5% | 0% | — | Air | Air | — |
-| `river_sludge` | River Sludge | 50 | 65 | 4 | 2% | — | 5% | 0% | — | River | River | — |
-| `energy_lock` | Energy Lock | 50 | 62 | 5 | 2% | — | 5% | 0% | — | Energy | Energy | — |
-| `fluid_phantom` | Fluid Phantom | 108 | 55 | 8 | 4% | — | 8% | 0% | — | River | River | TRIAL (c1n6) |
+| `dehydration_wisp` | Hypovolemic Wisp | 58 | 68 | 5 | 0% | — | 5% | 0% | — | Fluid / Hydration | River | — |
+| `air_sprite` | Air Sprite Corruption | 50 | 62 | 5 | 0% | — | 5% | 0% | — | Airway / Respiratory | Air | — |
+| `river_sludge` | River Sludge | 50 | 65 | 4 | 2% | — | 5% | 0% | — | Fluid / Hydration | River | — |
+| `energy_lock` | Energy Lock | 50 | 62 | 5 | 2% | — | 5% | 0% | — | Energy / Metabolic | Energy | — |
+| `fluid_phantom` | Fluid Phantom | 108 | 55 | 8 | 4% | — | 8% | 0% | — | Fluid / Hydration | River | TRIAL (c1n6) |
 
 **Notes:**
 - All Ch 1 enemies have 0% affinity resistance and very low hidden defense — designed for new players.
@@ -76,9 +76,9 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `fire_imp` | Fire Imp | 85 | 65 | 4 | 5% | — | 8% | 0% | — | Fire | Fire | — |
-| `pulmora_wisp` | Pulmora Wisp | 90 | 52 | 5 | 5% | — | 8% | 0% | — | Air | Air | — |
-| `mind_fog` | Mind Fog | 80 | 58 | 4 | 6% | — | 10% | 2% | 5% | Mind | Mind | — |
+| `fire_imp` | Fire Imp | 85 | 65 | 4 | 5% | — | 8% | 0% | — | Fire / Inflammation | Fire | — |
+| `pulmora_wisp` | Pulmora Wisp | 90 | 52 | 5 | 5% | — | 8% | 0% | — | Airway / Respiratory | Air | — |
+| `mind_fog` | Mind Fog | 80 | 58 | 4 | 6% | — | 10% | 2% | 5% | Mind / Neuro-Psych | Mind | — |
 
 **Notes:**
 - `mind_fog` is the first enemy with `stabilityPressure` (2%) and `affinityResistance` (5%) — introduces active pressure mechanic.
@@ -89,11 +89,11 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `septara_seed` | Septara Seed | 110 | 45 | 8 | 10% | — | 12% | 3% | 5% | Fire / River | Fire | — |
-| `cardion_echo` | Cardion Echo | 100 | 50 | 6 | 10% | — | 12% | 3% | 5% | River / Air | River | — |
-| `glycora_spark` | Glycora Spark | 105 | 48 | 7 | 10% | — | 12% | 3% | 5% | Energy / Storm | Energy | — |
-| `electrox_flicker` | Electrox Flicker | 95 | 55 | 6 | 10% | — | 12% | 3% | 5% | Storm / River | Storm | — |
-| `fever_shade` | Fever Shade | 155 | 45 | 10 | 12% | — | 14% | 4% | 5% | Fire / River | River | TRIAL (c2p7) |
+| `septara_seed` | Septara Seed | 110 | 45 | 8 | 10% | — | 12% | 3% | 5% | Fire / Inflammation / Fluid / Hydration | Fire | — |
+| `cardion_echo` | Cardion Echo | 100 | 50 | 6 | 10% | — | 12% | 3% | 5% | Fluid / Hydration / Airway / Respiratory | River | — |
+| `glycora_spark` | Glycora Spark | 105 | 48 | 7 | 10% | — | 12% | 3% | 5% | Energy / Metabolic / Storm / Cardiac | Energy | — |
+| `electrox_flicker` | Electrox Flicker | 95 | 55 | 6 | 10% | — | 12% | 3% | 5% | Storm / Cardiac / Fluid / Hydration | Storm | — |
+| `fever_shade` | Fever Shade | 155 | 45 | 10 | 12% | — | 14% | 4% | 5% | Fire / Inflammation / Fluid / Hydration | River | TRIAL (c2p7) |
 
 **Notes:**
 - All regular Ch3 enemies share identical resistance values (10% / 12% / 3% / 5%) — Ch3 is the balance calibration tier.
@@ -106,9 +106,9 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `priority_surge` | Priority Surge | 125 | 50 | 8 | 14% | — | 16% | 6% | 8% | River / Storm | River | — |
-| `overload_shade` | Overload Shade | 128 | 48 | 9 | 14% | — | 16% | 6% | 8% | Energy / Mind | Energy | — |
-| `gale_spirit` | Gale Spirit | 165 | 42 | 11 | 14% | — | 16% | 6% | 8% | Air | Air | TRIAL (c3p8) |
+| `priority_surge` | Priority Surge | 125 | 50 | 8 | 14% | — | 16% | 6% | 8% | Fluid / Hydration / Storm / Cardiac | River | — |
+| `overload_shade` | Overload Shade | 128 | 48 | 9 | 14% | — | 16% | 6% | 8% | Energy / Metabolic / Mind / Neuro-Psych | Energy | — |
+| `gale_spirit` | Gale Spirit | 165 | 42 | 11 | 14% | — | 16% | 6% | 8% | Airway / Respiratory | Air | TRIAL (c3p8) |
 
 **Notes:**
 - Ch4 is the first chapter with `stabilityPressure` at 6% — ward is actively deteriorating.
@@ -121,8 +121,8 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `recovery_lapse` | Recovery Lapse | 145 | 45 | 9 | 16% | — | 18% | 8% | 10% | Air / River | Air | — |
-| `fatigue_veil` | Fatigue Veil | 150 | 44 | 10 | 16% | — | 18% | 8% | 10% | Energy / Mind | Energy | — |
+| `recovery_lapse` | Recovery Lapse | 145 | 45 | 9 | 16% | — | 18% | 8% | 10% | Airway / Respiratory / Fluid / Hydration | Air | — |
+| `fatigue_veil` | Fatigue Veil | 150 | 44 | 10 | 16% | — | 18% | 8% | 10% | Energy / Metabolic / Mind / Neuro-Psych | Energy | — |
 
 **Notes:**
 - These are the last two enemies in the simulation era without `stabilityResistance`.
@@ -134,7 +134,7 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `ward_cascade` | Ward Cascade | 190 | 40 | 13 | 18% | 10% | 20% | 10% | 10% | River / Air | Protection | TRIAL (c5p8) |
+| `ward_cascade` | Ward Cascade | 190 | 40 | 13 | 18% | 10% | 20% | 10% | 10% | Community / Public Health / Airway / Respiratory / Fluid / Hydration | Protection | TRIAL (c5p8) |
 
 **Notes:**
 - First enemy with `stabilityResistance` (10%) outside of named bosses.
@@ -147,8 +147,8 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `imbalance_core` | Imbalance Core | 210 | 38 | 14 | 20% | 12% | 22% | 12% | 12% | Energy / Storm | Energy | TRIAL (c6p7) |
-| `contagion_wraith` | Contagion Wraith | 215 | 38 | 14 | 20% | 12% | 22% | 12% | 12% | Fire / Protection | Fire | TRIAL (c7p8) |
+| `imbalance_core` | Imbalance Core | 210 | 38 | 14 | 20% | 12% | 22% | 12% | 12% | Energy / Metabolic / Storm / Cardiac | Energy | TRIAL (c6p7) |
+| `contagion_wraith` | Contagion Wraith | 215 | 38 | 14 | 20% | 12% | 22% | 12% | 12% | Fire / Inflammation / Protection / Immune | Fire | TRIAL (c7p8) |
 
 **Notes:**
 - Both share identical resistance profiles — Ch7 calibration tier.
@@ -160,7 +160,7 @@ This document compiles every enemy's full stat block, the complete formula chain
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `crisis_convergence` | Crisis Convergence | 235 | 36 | 15 | 22% | 15% | 24% | 14% | 14% | Mind / River | Mind | TRIAL (c8p8) |
+| `crisis_convergence` | Crisis Convergence | 235 | 36 | 15 | 22% | 15% | 24% | 14% | 14% | Mind / Neuro-Psych / Fluid / Hydration | Mind | TRIAL (c8p8) |
 
 **Notes:**
 - Lowest starting stability of all non-boss difficulty 8 enemies (36).
@@ -174,13 +174,13 @@ These are the true-ward versions of simulation-era enemies. All have `chapterGat
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Sim Counterpart | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `dehydration_specter` | Dehydration Specter | 265 | 55 | 14 | 22% | 22% | 24% | 14% | 12% | River | River | `fluid_phantom` | — |
-| `true_dehydration_wraith` | True Dehydration Wraith | 190 | 52 | 12 | 22% | 15% | 24% | 14% | 12% | River | River | `dehydration_wisp` | — |
-| `breathless_gale_spirit` | Breathless Gale Spirit | 200 | 50 | 14 | 22% | 20% | 24% | 14% | 12% | Air | Air | `air_sprite` | — |
-| `burning_fever_shade` | Burning Fever Shade | 195 | 58 | 11 | 22% | 18% | 24% | 14% | 12% | Fire / River | Fire | `fire_imp` | — |
-| `drought_river_shade` | Drought-Bound River Shade | 175 | 54 | 10 | 22% | 12% | 24% | 14% | 12% | River / Storm | River | `river_sludge` | — |
-| `confusion_veil` | Confusion Veil | 170 | 62 | 9 | 22% | 10% | 24% | 14% | 12% | Mind | Mind | `mind_fog` | — |
-| `glycemic_rupture` | Glycemic Rupture | 195 | 50 | 13 | 22% | 18% | 24% | 14% | 12% | Energy / Storm | Energy | `energy_lock` | — |
+| `dehydration_specter` | Dehydration Specter | 265 | 55 | 14 | 22% | 22% | 24% | 14% | 12% | Fluid / Hydration | River | `fluid_phantom` | — |
+| `true_dehydration_wraith` | True Dehydration Wraith | 190 | 52 | 12 | 22% | 15% | 24% | 14% | 12% | Fluid / Hydration | River | `dehydration_wisp` | — |
+| `breathless_gale_spirit` | Breathless Gale Spirit | 200 | 50 | 14 | 22% | 20% | 24% | 14% | 12% | Airway / Respiratory | Air | `air_sprite` | — |
+| `burning_fever_shade` | Burning Fever Shade | 195 | 58 | 11 | 22% | 18% | 24% | 14% | 12% | Fire / Inflammation / Fluid / Hydration | Fire | `fire_imp` | — |
+| `drought_river_shade` | Drought-Bound River Shade | 175 | 54 | 10 | 22% | 12% | 24% | 14% | 12% | Fluid / Hydration / Storm / Cardiac | River | `river_sludge` | — |
+| `confusion_veil` | Confusion Veil | 170 | 62 | 9 | 22% | 10% | 24% | 14% | 12% | Mind / Neuro-Psych | Mind | `mind_fog` | — |
+| `glycemic_rupture` | Glycemic Rupture | 195 | 50 | 13 | 22% | 18% | 24% | 14% | 12% | Energy / Metabolic / Storm / Cardiac | Energy | `energy_lock` | — |
 
 **Notes:**
 - All share the same Corr Resist / Hidden Def / Stab Press / Aff Resist baseline (22% / 24% / 14% / 12%).
@@ -195,9 +195,9 @@ These bosses live outside the normal chapter pool (not in `ENEMIES` array, or ta
 
 | ID | Name | HP (Corr) | Stab | Instab | Corr Resist % | Stab Resist % | Hidden Def % | Stab Press % | Aff Resist % | System | Weakness | Flags |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `lord_imbalance` | Lord Imbalance | 180 | 40 | 9 | 28% | 30% | 30% | 15% | 15% | River / Mind | River | BOSS |
-| `verdantha` | Verdantha | 320 | 50 | 11 | 25% | 50% | 28% | 12% | 15% | Growth / Filter | Forge | BOSS · WORLD BOSS |
-| `silent_infarct` | The Silent Infarct | 3200 | 75 | 55 | 35% | 97% | 40% | 20% | 20% | River | Storm | BOSS · SCRIPTED LOSS |
+| `lord_imbalance` | Lord Imbalance | 180 | 40 | 9 | 28% | 30% | 30% | 15% | 15% | Fluid / Hydration / Mind / Neuro-Psych | River | BOSS |
+| `verdantha` | Verdantha | 320 | 50 | 11 | 25% | 50% | 28% | 12% | 15% | Growth / Endocrine / Filter / Renal | Forge | BOSS · WORLD BOSS |
+| `silent_infarct` | The Silent Infarct | 3200 | 75 | 55 | 35% | 97% | 40% | 20% | 20% | Storm / Cardiac / Energy / Metabolic | Storm | BOSS · SCRIPTED LOSS |
 
 ¹ Verdantha's weakness shifts per phase: Phase 1 → Forge, Phase 2 → Filter, Phase 3: no weakness.
 
@@ -243,11 +243,11 @@ Afflictions are small companion enemies that spawn alongside a primary enemy (`i
 
 | ID | Name | HP (Corr) | Corr Resist % | Hidden Def % | System | Weakness | Behavior Tag |
 |---|---|---|---|---|---|---|---|
-| `hypoxia_wisp` | Hypoxia Wisp | 30 | 4% | 0% | Air | Air | hypoxia |
-| `mucus_wisp` | Mucus Wisp | 25 | 4% | 0% | Air | Air | mucus |
-| `panic_wraith` | Panic Wraith | 20 | 4% | 0% | Mind | Mind | panic |
-| `wheeze_guard` | Wheeze Guard | 28 | 4% | 0% | Air | Air | wheeze |
-| `shock_spike` | Shock Spike | 35 | 6% | 0% | River | River | shock |
+| `hypoxia_wisp` | Hypoxia Wisp | 30 | 4% | 0% | Airway / Respiratory | Air | hypoxia |
+| `mucus_wisp` | Mucus Wisp | 25 | 4% | 0% | Airway / Respiratory | Air | mucus |
+| `panic_wraith` | Panic Wraith | 20 | 4% | 0% | Mind / Neuro-Psych | Mind | panic |
+| `wheeze_guard` | Wheeze Guard | 28 | 4% | 0% | Airway / Respiratory | Air | wheeze |
+| `shock_spike` | Shock Spike | 35 | 6% | 0% | Fluid / Hydration | River | shock |
 
 All afflictions: `startingStability: 100`, `instability: 0`, `stabilityPressure: 0`, `hiddenDefense: 0`.
 
@@ -474,63 +474,63 @@ Chapter pools are built by filtering `ENEMIES` where `e.difficulty === chapter` 
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `dehydration_wisp` | Hypovolemic Wisp | River | — |
-| `air_sprite` | Air Sprite Corruption | Air | — |
-| `river_sludge` | River Sludge | River | — |
-| `energy_lock` | Energy Lock | Energy | — |
-| `fluid_phantom` | Fluid Phantom | River | TRIAL (c1n6) |
+| `dehydration_wisp` | Hypovolemic Wisp | Fluid / Hydration | — |
+| `air_sprite` | Air Sprite Corruption | Airway / Respiratory | — |
+| `river_sludge` | River Sludge | Fluid / Hydration | — |
+| `energy_lock` | Energy Lock | Energy / Metabolic | — |
+| `fluid_phantom` | Fluid Phantom | Fluid / Hydration | TRIAL (c1n6) |
 
 ### Chapter 2 Pool — 3 enemies
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `fire_imp` | Fire Imp | Fire | — |
-| `pulmora_wisp` | Pulmora Wisp | Air | — |
-| `mind_fog` | Mind Fog | Mind | — |
+| `fire_imp` | Fire Imp | Fire / Inflammation | — |
+| `pulmora_wisp` | Pulmora Wisp | Airway / Respiratory | — |
+| `mind_fog` | Mind Fog | Mind / Neuro-Psych | — |
 
 ### Chapter 3 Pool — 5 enemies
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `septara_seed` | Septara Seed | Fire / River | — |
-| `cardion_echo` | Cardion Echo | River / Air | — |
-| `glycora_spark` | Glycora Spark | Energy / Storm | — |
-| `electrox_flicker` | Electrox Flicker | Storm / River | — |
-| `fever_shade` | Fever Shade | Fire / River | TRIAL (c2p7) |
+| `septara_seed` | Septara Seed | Fire / Inflammation / Fluid / Hydration | — |
+| `cardion_echo` | Cardion Echo | Fluid / Hydration / Airway / Respiratory | — |
+| `glycora_spark` | Glycora Spark | Energy / Metabolic / Storm / Cardiac | — |
+| `electrox_flicker` | Electrox Flicker | Storm / Cardiac / Fluid / Hydration | — |
+| `fever_shade` | Fever Shade | Fire / Inflammation / Fluid / Hydration | TRIAL (c2p7) |
 
 ### Chapter 4 Pool — 3 enemies
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `priority_surge` | Priority Surge | River / Storm | — |
-| `overload_shade` | Overload Shade | Energy / Mind | — |
-| `gale_spirit` | Gale Spirit | Air | TRIAL (c3p8) |
+| `priority_surge` | Priority Surge | Fluid / Hydration / Storm / Cardiac | — |
+| `overload_shade` | Overload Shade | Energy / Metabolic / Mind / Neuro-Psych | — |
+| `gale_spirit` | Gale Spirit | Airway / Respiratory | TRIAL (c3p8) |
 
 ### Chapter 5 Pool — 2 enemies
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `recovery_lapse` | Recovery Lapse | Air / River | — |
-| `fatigue_veil` | Fatigue Veil | Energy / Mind | — |
+| `recovery_lapse` | Recovery Lapse | Airway / Respiratory / Fluid / Hydration | — |
+| `fatigue_veil` | Fatigue Veil | Energy / Metabolic / Mind / Neuro-Psych | — |
 
 ### Chapter 6 Pool — 1 enemy
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `ward_cascade` | Ward Cascade | River / Air | TRIAL (c5p8) |
+| `ward_cascade` | Ward Cascade | Community / Public Health / Airway / Respiratory / Fluid / Hydration | TRIAL (c5p8) |
 
 ### Chapter 7 Pool — 2 enemies
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `imbalance_core` | Imbalance Core | Energy / Storm | TRIAL (c6p7) |
-| `contagion_wraith` | Contagion Wraith | Fire / Protection | TRIAL (c7p8) |
+| `imbalance_core` | Imbalance Core | Energy / Metabolic / Storm / Cardiac | TRIAL (c6p7) |
+| `contagion_wraith` | Contagion Wraith | Fire / Inflammation / Protection / Immune | TRIAL (c7p8) |
 
 ### Chapter 8 Pool — 1 enemy
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `crisis_convergence` | Crisis Convergence | Mind / River | TRIAL (c8p8) |
+| `crisis_convergence` | Crisis Convergence | Mind / Neuro-Psych / Fluid / Hydration | TRIAL (c8p8) |
 
 ### Chapter 9 Pool — 0 enemies (all gated by `chapterGate:9`)
 
@@ -538,13 +538,13 @@ All have `chapterGate: 9` — excluded from earlier chapter pools by separate ga
 
 | Enemy ID | Name | System | Sim Counterpart |
 |---|---|---|---|
-| `dehydration_specter` | Dehydration Specter | River | `fluid_phantom` |
-| `true_dehydration_wraith` | True Dehydration Wraith | River | `dehydration_wisp` |
-| `breathless_gale_spirit` | Breathless Gale Spirit | Air | `air_sprite` |
-| `burning_fever_shade` | Burning Fever Shade | Fire / River | `fire_imp` |
-| `drought_river_shade` | Drought-Bound River Shade | River / Storm | `river_sludge` |
-| `confusion_veil` | Confusion Veil | Mind | `mind_fog` |
-| `glycemic_rupture` | Glycemic Rupture | Energy / Storm | `energy_lock` |
+| `dehydration_specter` | Dehydration Specter | Fluid / Hydration | `fluid_phantom` |
+| `true_dehydration_wraith` | True Dehydration Wraith | Fluid / Hydration | `dehydration_wisp` |
+| `breathless_gale_spirit` | Breathless Gale Spirit | Airway / Respiratory | `air_sprite` |
+| `burning_fever_shade` | Burning Fever Shade | Fire / Inflammation / Fluid / Hydration | `fire_imp` |
+| `drought_river_shade` | Drought-Bound River Shade | Fluid / Hydration / Storm / Cardiac | `river_sludge` |
+| `confusion_veil` | Confusion Veil | Mind / Neuro-Psych | `mind_fog` |
+| `glycemic_rupture` | Glycemic Rupture | Energy / Metabolic / Storm / Cardiac | `energy_lock` |
 
 ### Chapter 10 — Boss Only
 
@@ -552,7 +552,7 @@ Chapter 10 has no pool enemies. The only enemy with `difficulty: 10` is:
 
 | Enemy ID | Name | System | Flags |
 |---|---|---|---|
-| `silent_infarct` | The Silent Infarct | River | BOSS · SCRIPTED LOSS |
+| `silent_infarct` | The Silent Infarct | Silent Ischemia | BOSS · SCRIPTED LOSS |
 
 ---
 

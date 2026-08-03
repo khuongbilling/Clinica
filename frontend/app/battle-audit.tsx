@@ -221,7 +221,7 @@ function EnemiesTab({
 function EnemyCard({ enemy: e }: { enemy: Enemy }) {
   const isBoss = e.bossGuard || e.worldBoss || e.scriptedLoss;
   const isAffliction = !!e.isAffliction;
-  const sysColor = elementColor(e.primarySystem);
+  const sysColor = elementColor(e.weakElement);
   const crColor = corruptResistColor(e.corruptionResistance ?? 0);
 
   return (
@@ -527,8 +527,7 @@ function ChapterPoolsTab() {
           <Text style={styles.sectionNote}>{pool.length} enemies</Text>
           {pool.map((e) => {
             const isBoss = e.bossGuard || e.scriptedLoss;
-            // primarySystem kept as display-only visual colour hint; label replaced with corruptionAspect
-            const sysColor = elementColor(e.primarySystem);
+            const sysColor = elementColor(e.weakElement);
             const weakColor = elementColor(e.weakElement);
             return (
               <View key={e.id} style={styles.poolRow}>

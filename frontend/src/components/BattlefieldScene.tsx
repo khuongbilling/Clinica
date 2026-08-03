@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const BATTLE_BG = require("@/assets/images/ward_battle_bg.png");
 
-// Thematic battle stage per enemy body system — chosen by enemy.primarySystem.
+// Thematic battle stage per enemy weak element — chosen by enemy.weakElement.
 const SYSTEM_BG: Record<string, ReturnType<typeof require>> = {
   Air: require("@/assets/images/battle_bg/air.png"),
   River: require("@/assets/images/battle_bg/river.png"),
@@ -140,9 +140,8 @@ interface BattleEnemyInfo {
   id: string;
   name: string;
   realWorld: string;
-  primarySystem?: ElementSystem;
-  secondarySystem?: ElementSystem;
-  // weakSystem removed (Push 1) — use weakElement if counter info is needed in UI (Push 2).
+  // weakElement drives arena background tint and element colour/FX keying.
+  weakElement?: ElementSystem | null;
   dangerTrigger: string;
   bestCounters: ActionType[];
   visibleClues: ClueCard[];
@@ -172,8 +171,8 @@ export function BattlefieldScene({ enemy, team, selectedHeroId, heroActionsUsed,
     setInfoOpen(false);
   }, [enemy.id]);
 
-  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[enemy.primarySystem ?? 'Air'] ?? BATTLE_BG;
-  const accent = ELEMENT_COLORS[enemy.primarySystem ?? 'Air'] || COLORS.brand;
+  const sceneBg = wardBackdrop ?? BOSS_BG[enemy.id] ?? SYSTEM_BG[enemy.weakElement ?? 'Air'] ?? BATTLE_BG;
+  const accent = ELEMENT_COLORS[enemy.weakElement ?? 'Air'] || COLORS.brand;
 
   return (
     <View style={styles.arena} testID="battlefield-scene">
@@ -394,9 +393,8 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
   const [react, setReact] = useState<EnemyReact>(ENEMY_REACT.strike);
   const [atkFx, setAtkFx] = useState<EnemyAttackFx>(ENEMY_ATTACK_FX.assault);
   const sprite = getEnemySprite(enemy.id);
-  const color = ELEMENT_COLORS[enemy.primarySystem ?? 'Air'] || COLORS.error;
-  const primaryIcon = SYSTEM_ICONS[enemy.primarySystem ?? 'Air'];
-  const secondaryIcon = enemy.secondarySystem ? SYSTEM_ICONS[enemy.secondarySystem] : null;
+  const color = ELEMENT_COLORS[enemy.weakElement ?? 'Air'] || COLORS.error;
+  const primaryIcon = SYSTEM_ICONS[enemy.weakElement ?? 'Air'];
 
   useEffect(() => {
     entrance.setValue(0);
@@ -547,11 +545,6 @@ function EnemyUnit({ enemy, hitTs, hitAction, attackTs, attackKind, purified, in
             <View style={[styles.systemBadge, { borderColor: color, backgroundColor: color + "22" }]}>
               <MaterialCommunityIcons name={primaryIcon.icon} size={13} color={color} />
             </View>
-            {secondaryIcon && (
-              <View style={[styles.systemBadge, { borderColor: ELEMENT_COLORS[enemy.secondarySystem!], backgroundColor: ELEMENT_COLORS[enemy.secondarySystem!] + "22" }]}>
-                <MaterialCommunityIcons name={secondaryIcon.icon} size={13} color={ELEMENT_COLORS[enemy.secondarySystem!]} />
-              </View>
-            )}
           </View>
           <Animated.View
             style={{

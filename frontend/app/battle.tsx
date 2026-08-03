@@ -954,7 +954,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     if (state.revealedLabels.some(l => l.toLowerCase().includes("wheez"))) return "Albuterol Mist";
     if (state.revealedLabels.some(l => l.toLowerCase().includes("glucose"))) return "Glucose Gel";
     if (state.revealedLabels.some(l => l.toLowerCase().includes("bp"))) return "Fluid Bolus";
-    if (enemy.primarySystem === "Fire" || enemy.secondarySystem === "Fire") return "Isolation Kit";
+    if (enemy.primaryAffinity === "Fire / Inflammation" || enemy.secondaryAffinities.includes("Fire / Inflammation")) return "Isolation Kit";
     return "Lab Token";
   };
   // P9 — filter Call for Help options by team family composition.
@@ -963,7 +963,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const availableCalls = useMemo(() => CALL_OPTIONS.filter(opt => {
     if (!opt.requiredFamilies || opt.requiredFamilies.length === 0) return true;
     if (opt.id === "call_infection") {
-      const enemyIsInfection = enemy.primarySystem === "Fire"
+      const enemyIsInfection = enemy.primaryAffinity === "Fire / Inflammation"
+        || enemy.secondaryAffinities.includes("Fire / Inflammation")
         || (ENEMY_CLINICAL[enemy.id]?.diseaseTags || []).some((t: string) => /infection|spread/.test(t));
       if (enemyIsInfection) return true;
     }
@@ -1274,15 +1275,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             </View>
             <Text style={styles.enemyName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{enemy.name}</Text>
             <View style={styles.systemPills}>
-              {/* primarySystem: deprecated/optional; kept as display-only visual colour/FX hint in battle */}
-              {enemy.primarySystem && (
-                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.primarySystem] }]}>
-                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.primarySystem] }]}>{enemy.primarySystem}</Text>
-                </View>
-              )}
-              {enemy.secondarySystem && (
-                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.secondarySystem] }]}>
-                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.secondarySystem] }]}>{enemy.secondarySystem}</Text>
+              {enemy.weakElement && (
+                <View style={[styles.sysPill, { borderColor: ELEMENT_COLORS[enemy.weakElement] }]}>
+                  <Text style={[styles.sysTxt, { color: ELEMENT_COLORS[enemy.weakElement] }]}>Weak: {enemy.weakElement}</Text>
                 </View>
               )}
             </View>
@@ -1342,9 +1337,8 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           id: enemy.id,
           name: enemy.name,
           realWorld: enemy.realWorld,
-          // primarySystem: optional; BattlefieldScene falls back to 'Air' when absent
-          primarySystem: enemy.primarySystem,
-          secondarySystem: enemy.secondarySystem,
+          // weakElement: null-safe; BattlefieldScene falls back to 'Air' when absent
+          weakElement: enemy.weakElement,
           // weakSystem removed in Push 1 — not passed to BattlefieldScene
           dangerTrigger: enemy.dangerTrigger,
           bestCounters: enemy.bestCounters,
@@ -1395,7 +1389,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
           <Text style={styles.codexLabel} numberOfLines={codexExpanded ? undefined : 1}>
             {mentorAid ? (isPrologueTutorial || isPrologueBoss ? "MASTER BAI'S AID: " : "SYSTEM'S AID: ") : tacticalHint ? (isPrologueTutorial || isPrologueBoss ? "MASTER BAI: " : "SYSTEM: ") : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
             <Text style={styles.codexText}>
-              {mentorAid ? `+10 Stability. ${hints.tactical}` : tacticalHint ? hints.tactical : gentleHint ? hints.gentle : `Match actions to the ${enemy.primarySystem} system.`}
+              {mentorAid ? `+10 Stability. ${hints.tactical}` : tacticalHint ? hints.tactical : gentleHint ? hints.gentle : `Match actions to the ${enemy.corruptionAspect} pathology.`}
             </Text>
           </Text>
           <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"} size={11} color={COLORS.onSurfaceTertiary} />

@@ -613,8 +613,6 @@ export interface WorldBossPreview {
   name: string;
   title: string;
   lore: string;
-  primarySystem: string;
-  secondarySystem: string;
   difficulty: string;
   badge: WorldEventBadge;
   signatureAttack: string;
@@ -664,8 +662,6 @@ export const VERDANTHA: WorldBossPreview = {
   title: "The Bloom Matriarch",
   lore:
     "Verdantha is the source-entity of the Verdant Miasma — a colossal, semi-sentient fungal intelligence that has been dormant in the Outer Wilds for centuries. Awakened by a surge of corrupted Clinical Cue energy, she drifts toward the Sanctuary's Vital Lantern, drawn to its life-force resonance. She does not attack with malice; she simply grows, and her growth is catastrophic.",
-  primarySystem: "Growth",
-  secondarySystem: "Filter",
   difficulty: "World-Scale (Phase III Only)",
   badge: "Planned",
   signatureAttack:
