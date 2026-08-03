@@ -415,6 +415,17 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     pathwayRoles: ['treat', 'protect', 'stabilize'],
     diseaseCategory: 'general',
   },
+  // The Prodigy (prologue boss / prologue_former_self)
+  ward_dominion: {
+    clinicalTags: ['general support', 'assessment', 'escalation', 'command'],
+    pathwayRoles: ['stabilize', 'treat', 'protect'],
+    diseaseCategory: 'general',
+  },
+  cascade_protocol: {
+    clinicalTags: ['escalation', 'emergency', 'acute deterioration', 'general support', 'command'],
+    pathwayRoles: ['stabilize', 'treat', 'protect', 'escalate'],
+    diseaseCategory: 'general',
+  },
   // Florence Nightingale (non-prologue)
   lamp_of_restoration: {
     clinicalTags: ['general support', 'comfort'],
