@@ -375,6 +375,27 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     if (Object.prototype.hasOwnProperty.call(enemy, 'secondaryAffinity')) {
       console.warn(`[Enemy:${enemy.id}] has legacy secondaryAffinity (single string) — migrate to secondaryAffinities: []`);
     }
+    // Skill risk.ifSystem vs enemy AffinityFamily mismatch: warn when a hero skill's
+    // risk.ifSystem doesn't match any affinity present in the current battle's wave.
+    // The type system catches typos, but a semantically wrong family will silently never fire.
+    const _allWaveEnemies = [enemy, ...(opts.additionalEnemies ?? [])];
+    const _allEnemyAffinities = new Set<string>();
+    for (const _e of _allWaveEnemies) {
+      if (_e.primaryAffinity) _allEnemyAffinities.add(_e.primaryAffinity);
+      for (const _a of (_e.secondaryAffinities ?? [])) _allEnemyAffinities.add(_a);
+    }
+    for (const _hero of team) {
+      for (const _skill of _hero.skills) {
+        if (_skill.risk?.ifSystem && !_allEnemyAffinities.has(_skill.risk.ifSystem)) {
+          console.warn(
+            `[SkillRisk] ${_hero.name} › "${_skill.name}": risk.ifSystem="${_skill.risk.ifSystem}" ` +
+            `does not match any enemy affinity in this battle ` +
+            `(${_allEnemyAffinities.size > 0 ? [..._allEnemyAffinities].join(', ') : 'none set'}). ` +
+            `This risk will never trigger against the current wave.`,
+          );
+        }
+      }
+    }
   }
 
   const enemyClinical = ENEMY_CLINICAL[enemy.id];
