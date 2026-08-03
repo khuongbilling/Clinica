@@ -2777,7 +2777,7 @@ function MasterBaiBossNarratorOverlay({ onDismiss }: { onDismiss: () => void }) 
 
       {/* Portrait — grounded above VN bar */}
       <Animated.View
-        style={[styles.bossNarratorPortraitWrap, { bottom: barTotal - 80, width: W, height: H * 0.82, opacity: charFade }]}
+        style={[styles.bossNarratorPortraitWrap, { bottom: barTotal, width: W, height: H * 0.82, opacity: charFade }]}
         pointerEvents="none"
       >
         <ExpoImage
@@ -3546,11 +3546,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   bossNarratorPortraitWrap: {
-    position:       "absolute",
-    left:           0,
-    right:          0,
-    alignItems:     "center",
-    justifyContent: "flex-end",
+    position:        "absolute",
+    left:            0,
+    right:           0,
+    alignItems:      "center",
+    justifyContent:  "flex-end",
+    backgroundColor: "transparent",
   },
   bossNarratorPortraitImg: { width: "100%", height: "100%" },
   bossNarratorBar: {
@@ -3566,14 +3567,14 @@ const styles = StyleSheet.create({
     flexDirection:     "row",
     alignItems:        "center",
     paddingHorizontal: 16,
-    paddingTop:        12,
+    paddingVertical:   12,
     gap:               14,
   },
-  bossNarratorLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 80 },
+  bossNarratorLeftCol: { alignItems: "center", gap: 6, flexShrink: 0, width: 92 },
   bossNarratorAvatarRing: {
-    width:        80,
-    height:       80,
-    borderRadius: 40,
+    width:        92,
+    height:       92,
+    borderRadius: 46,
     borderWidth:  3,
     overflow:     "hidden",
   },

@@ -679,15 +679,16 @@ const styles = StyleSheet.create({
   // (≈65% from image top) lands exactly at the screen bottom edge. The lower
   // legs/feet overflow below and are clipped by overflow:hidden on the container.
   dlgCharWrap: {
-    position:       "absolute",
-    top:            0,
-    left:           0,
-    right:          0,
-    bottom:         0,
-    overflow:       "hidden",
-    alignItems:     "center",
-    justifyContent: "flex-end",
-    pointerEvents:  "none",
+    position:        "absolute",
+    top:             0,
+    left:            0,
+    right:           0,
+    bottom:          0,
+    overflow:        "hidden",
+    alignItems:      "center",
+    justifyContent:  "flex-end",
+    pointerEvents:   "none",
+    backgroundColor: "transparent",
   } as any,
   dlgCharArt: {
     width:     W,
@@ -721,14 +722,14 @@ const styles = StyleSheet.create({
   },
   dlgMeta:  { flex: 1 },
   dlgSpeaker: {
-    fontSize: 11, fontWeight: "800",
-    letterSpacing: 1.8, marginBottom: 5,
+    fontSize: 10, fontWeight: "800",
+    letterSpacing: 1.2, marginBottom: 5,
+    textTransform: "uppercase",
   },
   dlgAccentBar: { height: 1.5, width: 48, borderRadius: 1 },
   dlgText: {
     color: "#EDF2F7",
-    fontSize: 15, lineHeight: 22,
-    fontStyle: "italic",
+    fontSize: 17, lineHeight: 26,
     marginBottom: 12,
   },
   dlgTapHint: {

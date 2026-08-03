@@ -456,12 +456,20 @@ export default function TacticalWarningScene({ onComplete }: Props) {
               const sp      = SPEAKERS[sid];
               const isActive = sid === beat.speaker;
               return (
-                <ExpoImage
+                <View
                   key={sid}
-                  source={sp.avatar}
-                  style={[styles.portraitImg, !isActive && styles.portraitDim]}
-                  contentFit="cover"
-                />
+                  style={[
+                    styles.portraitWrap,
+                    { borderColor: isActive ? sp.color : "transparent" },
+                    !isActive && styles.portraitDim,
+                  ]}
+                >
+                  <ExpoImage
+                    source={sp.avatar}
+                    style={styles.portraitImg}
+                    contentFit="cover"
+                  />
+                </View>
               );
             })}
           </View>
@@ -547,20 +555,22 @@ const styles = StyleSheet.create({
 
   /** The large full-height character portrait — right-aligned, bottom flush with the dialogue panel. */
   charPortrait: {
-    position: "absolute",
-    right:    0,
-    overflow: "hidden",
+    position:        "absolute",
+    right:           0,
+    overflow:        "hidden",
+    backgroundColor: "transparent",
   },
 
   // Active speaker portrait — spans from screen top to the dialogue panel top (set via inline bottom)
   charWrap: {
-    position:       "absolute",
-    top:            0,
-    left:           0,
-    right:          0,
-    alignItems:     "flex-end",
-    justifyContent: "flex-end",
-    overflow:       "hidden",
+    position:        "absolute",
+    top:             0,
+    left:            0,
+    right:           0,
+    alignItems:      "flex-end",
+    justifyContent:  "flex-end",
+    overflow:        "hidden",
+    backgroundColor: "transparent",
   },
   charArt: { width: "68%", height: "100%" },
   charBottomFade: {
@@ -604,7 +614,7 @@ const styles = StyleSheet.create({
   // Dialogue panel
   panel: {
     paddingHorizontal: 20,
-    paddingBottom:     12,
+    paddingVertical:   12,
     gap:               10,
   },
 
@@ -615,10 +625,10 @@ const styles = StyleSheet.create({
     marginBottom:   4,
   },
   portraitWrap: {
-    width:        52,
-    height:       52,
-    borderRadius: 26,
-    borderWidth:  2,
+    width:        92,
+    height:       92,
+    borderRadius: 46,
+    borderWidth:  3,
     borderColor:  "transparent",
     overflow:     "hidden",
     shadowOpacity: 0.8,
@@ -630,8 +640,8 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   portraitImg: {
-    width:  52,
-    height: 52,
+    width:  92,
+    height: 92,
   },
 
   stageDir: {
@@ -644,21 +654,23 @@ const styles = StyleSheet.create({
   },
 
   speakerName: {
-    fontSize:    12,
-    fontWeight:  "800",
-    letterSpacing: 2.5,
-    textAlign:   "center",
+    fontSize:      10,
+    fontWeight:    "800",
+    letterSpacing: 1.2,
+    textAlign:     "left",
+    textTransform: "uppercase",
+    lineHeight:    14,
   },
 
   linesWrap: {
     gap: 6,
   },
   dialogueLine: {
-    color:       "#EDF2F7",
-    fontSize:    16,
-    lineHeight:  26,
-    textAlign:   "center",
-    fontWeight:  "300",
+    color:         "#EDF2F7",
+    fontSize:      17,
+    lineHeight:    26,
+    textAlign:     "left",
+    fontWeight:    "400",
     letterSpacing: 0.3,
   },
 

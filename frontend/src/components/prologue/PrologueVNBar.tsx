@@ -260,9 +260,10 @@ export default function PrologueVNBar({
 const s = StyleSheet.create({
   /** The large full-height character portrait — right-aligned, bottom flush with the bar. */
   charPortrait: {
-    position: "absolute",
-    right:    0,
-    overflow: "hidden",
+    position:        "absolute",
+    right:           0,
+    overflow:        "hidden",
+    backgroundColor: "transparent",
   },
 
   charBottomFade: {
@@ -287,7 +288,7 @@ const s = StyleSheet.create({
     flexDirection:     "row",
     alignItems:        "center",
     paddingHorizontal: 16,
-    paddingTop:        12,
+    paddingVertical:   12,
     gap:               14,
   },
 
