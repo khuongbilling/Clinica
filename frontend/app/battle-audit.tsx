@@ -29,6 +29,48 @@ import { statToMultiplier } from "@/src/game/skillCalc";
 import { COLORS, ELEMENT_COLORS } from "@/src/theme/colors";
 import type { Enemy } from "@/src/game/types";
 
+// ── Canonical-field validation ────────────────────────────────────────────────
+
+export interface CanonicalFieldViolation {
+  id: string;
+  name: string;
+  missing: string[]; // which required fields are absent / empty
+}
+
+/**
+ * Checks every enemy in the master pool for the three fields that replaced
+ * the now-removed primarySystem / secondarySystem pair.  Returns one entry
+ * per violating enemy so callers can log or display them.
+ *
+ * Required fields:
+ *   corruptionAspect  — non-empty string (narrative corruption label)
+ *   weakElement       — ElementSystem | null  (must be explicitly set; undefined = not set)
+ *   primaryAffinity   — AffinityFamily        (clinical domain for the encounter pool)
+ */
+export function checkEnemyCanonicalFields(
+  enemies: Enemy[],
+): CanonicalFieldViolation[] {
+  const violations: CanonicalFieldViolation[] = [];
+  for (const e of enemies) {
+    const missing: string[] = [];
+    if (!e.corruptionAspect || e.corruptionAspect.trim() === "") {
+      missing.push("corruptionAspect");
+    }
+    // weakElement may legitimately be null (no elemental counter), but must be
+    // explicitly provided (i.e. not undefined).
+    if (e.weakElement === undefined) {
+      missing.push("weakElement");
+    }
+    if (!e.primaryAffinity) {
+      missing.push("primaryAffinity");
+    }
+    if (missing.length > 0) {
+      violations.push({ id: e.id, name: e.name, missing });
+    }
+  }
+  return violations;
+}
+
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
 /** Deduplicated master list: ENEMIES + AFFLICTION_ENEMIES + named boss singletons */
@@ -46,6 +88,20 @@ function buildMasterList(): Enemy[] {
 }
 
 const ALL_ENEMIES = buildMasterList();
+
+// ── Startup canonical-field check (runs once at module import in __DEV__) ─────
+
+const CANONICAL_VIOLATIONS: CanonicalFieldViolation[] = (() => {
+  if (!__DEV__) return [];
+  const violations = checkEnemyCanonicalFields(ALL_ENEMIES);
+  if (violations.length > 0) {
+    console.warn(
+      `[BattleAudit] ${violations.length} enemy/enemies missing canonical fields:`,
+      violations.map((v) => `${v.id} (${v.missing.join(", ")})`).join(" | "),
+    );
+  }
+  return violations;
+})();
 
 // ── Filter types ──────────────────────────────────────────────────────────────
 
@@ -112,7 +168,7 @@ const STAT_TABLE_VALS = [5, 10, 16, 22, 30, 45];
 
 // ── Tab type ──────────────────────────────────────────────────────────────────
 
-type Tab = "enemies" | "mechanics" | "pools";
+type Tab = "enemies" | "mechanics" | "pools" | "field_audit";
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -151,17 +207,26 @@ function BattleAuditContent() {
 
       {/* ── Tab bar ── */}
       <View style={styles.tabBar}>
-        {(["enemies", "mechanics", "pools"] as Tab[]).map((t) => (
-          <Pressable
-            key={t}
-            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-            onPress={() => setTab(t)}
-          >
-            <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive]}>
-              {t === "enemies" ? "Enemies" : t === "mechanics" ? "Mechanics" : "Chapter Pools"}
-            </Text>
-          </Pressable>
-        ))}
+        {(["enemies", "mechanics", "pools", "field_audit"] as Tab[]).map((t) => {
+          const hasIssue = t === "field_audit" && CANONICAL_VIOLATIONS.length > 0;
+          return (
+            <Pressable
+              key={t}
+              style={[styles.tabBtn, tab === t && styles.tabBtnActive, hasIssue && styles.tabBtnWarn]}
+              onPress={() => setTab(t)}
+            >
+              <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive, hasIssue && styles.tabLabelWarn]}>
+                {t === "enemies"     ? "Enemies"      :
+                 t === "mechanics"   ? "Mechanics"    :
+                 t === "pools"       ? "Chapter Pools":
+                 /* field_audit */
+                 CANONICAL_VIOLATIONS.length > 0
+                   ? `Field Audit (${CANONICAL_VIOLATIONS.length})`
+                   : "Field Audit"}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {tab === "enemies" && (
@@ -173,6 +238,7 @@ function BattleAuditContent() {
       )}
       {tab === "mechanics" && <MechanicsTab />}
       {tab === "pools" && <ChapterPoolsTab />}
+      {tab === "field_audit" && <FieldAuditTab violations={CANONICAL_VIOLATIONS} />}
     </SafeAreaView>
   );
 }
@@ -558,6 +624,73 @@ function ChapterPoolsTab() {
   );
 }
 
+// ── Field Audit Tab ───────────────────────────────────────────────────────────
+
+function FieldAuditTab({ violations }: { violations: CanonicalFieldViolation[] }) {
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.listPad}>
+      {/* Summary banner */}
+      <View
+        style={[
+          styles.sectionCard,
+          {
+            borderColor: violations.length === 0 ? "#22C55E44" : "#EF444444",
+            backgroundColor: violations.length === 0 ? "#22C55E0A" : "#EF44440A",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: violations.length === 0 ? "#22C55E" : "#EF4444" },
+          ]}
+        >
+          {violations.length === 0
+            ? "All enemies pass canonical field check"
+            : `${violations.length} ${violations.length === 1 ? "enemy is" : "enemies are"} missing required fields`}
+        </Text>
+        <Text style={styles.sectionNote}>
+          Required: corruptionAspect (non-empty string), weakElement (ElementSystem | null),
+          primaryAffinity (AffinityFamily).{"\n"}
+          Violations are also logged via console.warn on app start in __DEV__.
+        </Text>
+      </View>
+
+      {violations.map((v) => (
+        <View
+          key={v.id}
+          style={[styles.card, { borderColor: "#EF444455" }]}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardName, { color: "#EF4444" }]} numberOfLines={1}>
+              {v.name}
+            </Text>
+          </View>
+          <Text style={styles.cardId}>{v.id}</Text>
+          <View style={styles.chipRow}>
+            {v.missing.map((field) => (
+              <View
+                key={field}
+                style={[styles.chip, { backgroundColor: "#EF444422", borderColor: "#EF4444" }]}
+              >
+                <Text style={[styles.chipText, { color: "#EF4444" }]}>
+                  MISSING: {field}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+
+      {violations.length === 0 && (
+        <Text style={[styles.emptyNote, { textAlign: "center", paddingTop: 12 }]}>
+          No violations found.
+        </Text>
+      )}
+    </ScrollView>
+  );
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -579,8 +712,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tabBtnActive: { backgroundColor: COLORS.brand + "22", borderColor: COLORS.brand },
+  tabBtnWarn: { borderColor: "#EF4444" },
   tabLabel: { color: COLORS.onSurfaceSecondary, fontSize: 13, fontWeight: "700" },
   tabLabelActive: { color: COLORS.brand },
+  tabLabelWarn: { color: "#EF4444" },
 
   filterBar: { maxHeight: 44 },
   filterBarContent: { paddingHorizontal: 12, gap: 8, alignItems: "center", flexDirection: "row" },
