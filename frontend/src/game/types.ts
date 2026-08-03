@@ -57,7 +57,7 @@ export interface HeroSkill {
   stabilizeRange?: [number, number];
   shieldRange?: [number, number];
   risk?: {
-    ifSystem?: ElementSystem;
+    ifSystem?: AffinityFamily;
     penalty?: number;
     description: string;
   };

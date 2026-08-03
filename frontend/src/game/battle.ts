@@ -1021,9 +1021,9 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     next.log.push(`🛡 Spread contained — the next spread attack is blocked.`);
   }
   if (skill.risk?.ifSystem) {
-    const enemyEl = s.enemy.primaryAffinity ? AFFINITY_TO_ELEMENT[s.enemy.primaryAffinity] : undefined;
-    const enemySecEls = (s.enemy.secondaryAffinities ?? []).map(a => AFFINITY_TO_ELEMENT[a]);
-    if (skill.risk.ifSystem === enemyEl || enemySecEls.includes(skill.risk.ifSystem)) {
+    const enemyPrimaryAffinity = s.enemy.primaryAffinity;
+    const enemySecAffinities = s.enemy.secondaryAffinities ?? [];
+    if (skill.risk.ifSystem === enemyPrimaryAffinity || enemySecAffinities.includes(skill.risk.ifSystem)) {
       const pen = skill.risk.penalty || 15;
       next.stability = clamp(next.stability - pen, 0, 100);
       next.unsafeActionsUsed = next.unsafeActionsUsed + 1;
