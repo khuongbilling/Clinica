@@ -20,7 +20,6 @@ const DEFAULT_GUIDED_FEEDBACK: Partial<Record<string, string>> = {
   analyze:  "Reassessment confirms whether the action worked.",
   support:  "Your team provided support. Good coordination helps the patient.",
   shield:   "You protected the patient from worsening.",
-  cleanse:  "You cleared a harmful process from the patient.",
   command:  "You coordinated the team's response effectively.",
 };
 

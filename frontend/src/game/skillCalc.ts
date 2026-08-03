@@ -56,7 +56,7 @@ export function statToMultiplier(stat: number): number {
  *
  * Skill type → stat mapping (per spec):
  *   scout / analyze        → insight
- *   stabilize / support / cleanse → carePower
+ *   stabilize / support → carePower
  *   strike / counter       → intervention
  *   shield                 → guard
  *   command                → coordination
@@ -70,7 +70,6 @@ export function statForSkillType(type: ActionType, stats: HeroCombatStats): numb
     case 'analyze':  return stats.insight;
     case 'stabilize':return stats.carePower;
     case 'support':  return stats.carePower;
-    case 'cleanse':  return stats.carePower;
     case 'strike':   return stats.intervention;
     case 'counter':  return stats.intervention;
     case 'shield':   return stats.guard;

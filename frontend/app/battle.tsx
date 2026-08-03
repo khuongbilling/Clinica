@@ -1204,7 +1204,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       const rewardsResult = await applyRewards({
         xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, epidemicTokens: epidemicTokensEarned, inventoryDelta,
         mastery: enemy.bestCounters.reduce((acc, c) => {
-          const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", cleanse: "judgment", command: "command", analyze: "systems", support: "stabilization" };
+          const map: Record<string, keyof typeof acc> = { scout: "assessment", stabilize: "stabilization", strike: "pharmacology", shield: "judgment", command: "command", analyze: "systems", support: "stabilization" };
           const key = map[c]; if (key) acc[key] = (acc[key] || 0) + 1; return acc;
         }, {} as any),
         bossId: isBossEnemy ? enemy.id : undefined,
@@ -2378,7 +2378,6 @@ const SKILL_TYPE_ICONS: Record<string, string> = {
   shield:    "shield-outline",
   support:   "people-outline",
   command:   "megaphone-outline",
-  cleanse:   "water-outline",
 };
 
 const SKILL_CHAIN_COLOR: Record<string, string> = {
@@ -2389,7 +2388,6 @@ const SKILL_CHAIN_COLOR: Record<string, string> = {
   shield:    "#94A3B8",
   support:   "#34D399",
   command:   "#F472B6",
-  cleanse:   "#60A5FA",
 };
 
 const SKILL_CHAIN_LABEL: Record<string, string> = {
@@ -2401,7 +2399,6 @@ const SKILL_CHAIN_LABEL: Record<string, string> = {
   shield:    "Protect",
   support:   "Support",
   command:   "Escalate",
-  cleanse:   "Treat",
 };
 
 // ── Battle Glossary ──────────────────────────────────────────────────────────

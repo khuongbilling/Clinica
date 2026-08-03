@@ -85,7 +85,6 @@ const COUNTER_LABEL: Record<ActionType, string> = {
   strike: "Targeted Treatment",
   stabilize: "Stabilize",
   shield: "Protect",
-  cleanse: "Cleanse",
   command: "Coordinate",
   analyze: "Analyze",
   support: "Support",
@@ -96,7 +95,6 @@ const COUNTER_LABEL: Record<ActionType, string> = {
 type HeroMove = { lungeX: number; lift: number; scale: number; spin: boolean; aura: string };
 const HERO_MOVE: Record<ActionType, HeroMove> = {
   strike: { lungeX: 30, lift: -3, scale: 1.14, spin: false, aura: "#FF7043" },
-  cleanse: { lungeX: 12, lift: -6, scale: 1.08, spin: true, aura: "#38E1D6" },
   stabilize: { lungeX: 8, lift: -14, scale: 1.1, spin: false, aura: "#37D399" },
   support: { lungeX: 8, lift: -13, scale: 1.09, spin: false, aura: "#37D399" },
   shield: { lungeX: 0, lift: -2, scale: 1.18, spin: false, aura: "#4DA3FF" },
@@ -122,8 +120,6 @@ type AttackVisual = {
 const ATTACK_FX: Record<ActionType, AttackVisual> = {
   // Fierce single sword slash that rockets across the arena.
   strike:    { icon: "sword",             color: "#FF7043", particles: 1, flyX: 250, flyY: -6,  rot: -40, scaleTo: 1.35, size: 32, duration: 560 },
-  // A swirling spray of cleansing water droplets.
-  cleanse:   { icon: "water",             color: "#38E1D6", particles: 3, flyX: 180, flyY: -10, rot: 320, scaleTo: 1.1,  size: 20, duration: 640 },
   // A steady healing heartbeat pulse that drifts up and forward.
   stabilize: { icon: "heart-pulse",       color: "#37D399", particles: 1, flyX: 210, flyY: -20, rot: 0,   scaleTo: 1.3,  size: 28, duration: 640 },
   // Gentle twin care-hearts floating outward.
@@ -145,7 +141,6 @@ type EnemyReact = { shake: number; flash: boolean; ring: string; scan: boolean; 
 const ENEMY_REACT: Record<ActionType, EnemyReact> = {
   strike: { shake: 8, flash: true, ring: "#FF7043", scan: false, settle: false },
   command: { shake: 6, flash: true, ring: "#C792EA", scan: false, settle: false },
-  cleanse: { shake: 4, flash: false, ring: "#38E1D6", scan: false, settle: false },
   shield: { shake: 3, flash: false, ring: "#4DA3FF", scan: false, settle: false },
   stabilize: { shake: 0, flash: false, ring: "#37D399", scan: false, settle: true },
   support: { shake: 0, flash: false, ring: "#37D399", scan: false, settle: true },

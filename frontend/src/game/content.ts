@@ -1323,7 +1323,7 @@ export const ENEMIES: Enemy[] = [
       { id: 'h2', label: 'BNP 1200', detail: 'Elevated.', hidden: true },
     ],
     dangerTrigger: 'Pulmonary flood',
-    bestCounters: ['stabilize', 'cleanse', 'scout'],
+    bestCounters: ['stabilize', 'support', 'scout'],
     teaches: ['heart_failure_basics', 'fluid_balance'],
   },
   {
@@ -1426,7 +1426,7 @@ export const ENEMIES: Enemy[] = [
       { id: 'h1', label: 'K⁺ 6.4', detail: 'Critical hyperkalemia.', hidden: true },
     ],
     dangerTrigger: 'Rhythm collapse',
-    bestCounters: ['scout', 'cleanse', 'strike'],
+    bestCounters: ['scout', 'stabilize', 'strike'],
     teaches: ['electrolyte_basics', 'potassium_rules'],
   },
   {
@@ -1460,7 +1460,7 @@ export const ENEMIES: Enemy[] = [
       { id: 'h1', label: 'UTI suspected', detail: 'Cloudy urine, odor.', hidden: true },
     ],
     dangerTrigger: 'Injury / fall',
-    bestCounters: ['shield', 'cleanse', 'scout'],
+    bestCounters: ['shield', 'stabilize', 'scout'],
     teaches: ['delirium_basics', 'safety_first'],
   },
   // ── Chapter 4 enemies — Code Rush / Priority (difficulty 4) ─────────────
@@ -1881,7 +1881,7 @@ export const ENEMIES: Enemy[] = [
       { id: 'h2', label: 'Fire & River Weakness', detail: 'Burns and flushes clear spore clouds faster than anything else.', hidden: true },
     ],
     dangerTrigger: 'Bloom Cascade of realm-wide spore corruption',
-    bestCounters: ['strike', 'cleanse', 'shield', 'scout'],
+    bestCounters: ['strike', 'stabilize', 'shield', 'scout'],
     teaches: [],
   },
 
@@ -2178,7 +2178,7 @@ export const AFFLICTION_ENEMIES: Enemy[] = [
     ],
     hiddenClues: [],
     dangerTrigger: 'Airway obstruction',
-    bestCounters: ['cleanse', 'stabilize'],
+    bestCounters: ['scout', 'stabilize'],
     teaches: [],
   },
   {
@@ -2210,7 +2210,7 @@ export const AFFLICTION_ENEMIES: Enemy[] = [
     ],
     hiddenClues: [],
     dangerTrigger: 'Panic spiral',
-    bestCounters: ['cleanse', 'support'],
+    bestCounters: ['stabilize', 'support'],
     teaches: [],
   },
   {

@@ -393,7 +393,7 @@ Baseline: stat 10 → ×1.00. Each point above/below shifts by ±0.0133̄.
 | Stat | Used by |
 |---|---|
 | `insight` | `scout`, `analyze` |
-| `carePower` | `stabilize`, `support`, `cleanse` |
+| `carePower` | `stabilize`, `support` |
 | `intervention` | `strike`, `counter` |
 | `guard` | `shield` (always, regardless of skill type) |
 | `coordination` | `command` |

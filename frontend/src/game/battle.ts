@@ -64,7 +64,7 @@ import type { ActionType } from './types';
  * | type              | stat        | bonus field       |
  * |-------------------|-------------|-------------------|
  * | scout / analyze   | insight     | insightBonus      |
- * | stabilize / support / cleanse | carePower | carePowerBonus |
+ * | stabilize / support      | carePower | carePowerBonus |
  * | strike / counter  | intervention| interventionBonus |
  * | shield            | guard       | guardBonus        |
  * | command           | coordination| coordinationBonus |
@@ -74,8 +74,7 @@ function equipStatBonusForType(type: ActionType, fx: AggregatedEquipmentEffect):
     case 'scout':
     case 'analyze':    return fx.insightBonus;
     case 'stabilize':
-    case 'support':
-    case 'cleanse':    return fx.carePowerBonus;
+    case 'support':    return fx.carePowerBonus;
     case 'strike':
     case 'counter':    return fx.interventionBonus;
     case 'shield':     return fx.guardBonus;

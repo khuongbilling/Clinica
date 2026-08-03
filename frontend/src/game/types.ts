@@ -13,7 +13,7 @@ export type ClassFamily =
 
 export type LaunchRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
-export type ActionType = 'scout' | 'strike' | 'stabilize' | 'shield' | 'cleanse' | 'command' | 'analyze' | 'support' | 'counter';
+export type ActionType = 'scout' | 'strike' | 'stabilize' | 'shield' | 'command' | 'analyze' | 'support' | 'counter';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Affinity families (Combat Scaling Push 5 — data layer only).

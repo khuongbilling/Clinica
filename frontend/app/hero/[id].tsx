@@ -596,17 +596,17 @@ function DetailsTab({ hero, accent }: { hero: any; accent: string }) {
 const HERO_CHAIN_COLOR: Record<string, string> = {
   scout: "#5ECBC8", stabilize: "#6EE7B7", strike: "#FBA94C",
   analyze: "#A78BFA", shield: "#94A3B8", support: "#34D399",
-  command: "#F472B6", cleanse: "#60A5FA",
+  command: "#F472B6",
 };
 const HERO_CHAIN_LABEL: Record<string, string> = {
   scout: "Assess", stabilize: "Stabilize", strike: "Treat",
   analyze: "Reassess", shield: "Protect", support: "Support",
-  command: "Escalate", cleanse: "Treat",
+  command: "Escalate",
 };
 const HERO_CHAIN_ICON: Record<string, string> = {
   scout: "eye-outline", stabilize: "heart-outline", strike: "flash-outline",
   analyze: "refresh-circle-outline", shield: "shield-outline",
-  support: "people-outline", command: "megaphone-outline", cleanse: "water-outline",
+  support: "people-outline", command: "megaphone-outline",
 };
 
 function SkillsTab({ hero, accent }: { hero: any; accent: string }) {

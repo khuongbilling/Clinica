@@ -700,7 +700,7 @@ ${buildStatTable()}
 | Stat | Used by |
 |---|---|
 | \`insight\` | \`scout\`, \`analyze\` |
-| \`carePower\` | \`stabilize\`, \`support\`, \`cleanse\` |
+| \`carePower\` | \`stabilize\`, \`support\` |
 | \`intervention\` | \`strike\`, \`counter\` |
 | \`guard\` | \`shield\` (always, regardless of skill type) |
 | \`coordination\` | \`command\` |
