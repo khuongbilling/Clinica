@@ -1527,6 +1527,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
             chain={state.chain}
             isTutorial={isTutorialBattle}
             currentStepId={currentStep?.id}
+            treatmentChain={state.enemyClinical?.treatmentChain}
           />
         )}
         {/* Objective strip / adaptive feedback banner. While the guided
@@ -2431,6 +2432,15 @@ const STRIP_STEPS: StripStep[] = [
   { label: "Reassess",  role: "reassess",  icon: "refresh-circle-outline",  color: "#A78BFA" },
 ];
 
+/** Metadata for every possible PathwayRole so dynamic treatmentChain steps render correctly. */
+const ROLE_STEP_META: Record<PathwayRole, Omit<StripStep, "role">> = {
+  assess:    { label: "Assess",    icon: "eye-outline",             color: "#5ECBC8" },
+  stabilize: { label: "Stabilize", icon: "heart-outline",           color: "#6EE7B7" },
+  treat:     { label: "Treat",     icon: "flash-outline",           color: "#FBA94C" },
+  protect:   { label: "Protect",   icon: "shield-outline",          color: "#60A5FA" },
+  reassess:  { label: "Reassess",  icon: "refresh-circle-outline",  color: "#A78BFA" },
+  escalate:  { label: "Escalate",  icon: "arrow-up-circle-outline", color: "#F87171" },
+};
 const STRIP_TUTORIAL_STEP: Record<string, number> = {
   prologue_scout:     0,
   prologue_stabilize: 1,
@@ -2445,16 +2455,28 @@ const STRIP_TUTORIAL_STEP: Record<string, number> = {
   fb_done:            4,
 };
 
-function CareChainStrip({ chain, isTutorial, currentStepId }: {
+function CareChainStrip({ chain, isTutorial, currentStepId, treatmentChain }: {
   chain: BattleState["chain"];
   isTutorial: boolean;
   currentStepId: string | undefined;
+  /** The active enemy's treatmentChain. When provided the strip renders those
+   *  steps in order instead of the hardcoded 4-step default. */
+  treatmentChain?: PathwayRole[];
 }) {
+  // Build the display steps: use the enemy's treatmentChain when available,
+  // fall back to the legacy hardcoded STRIP_STEPS for enemies without one.
+  const displaySteps: StripStep[] = useMemo(() => {
+    if (treatmentChain && treatmentChain.length > 0) {
+      return treatmentChain.map(role => ({ role, ...ROLE_STEP_META[role] }));
+    }
+    return STRIP_STEPS;
+  }, [treatmentChain]);
+
   const activeIdx = isTutorial ? (STRIP_TUTORIAL_STEP[currentStepId ?? ""] ?? -1) : -1;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (activeIdx >= 0 && activeIdx < STRIP_STEPS.length) {
+    if (activeIdx >= 0 && activeIdx < displaySteps.length) {
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.1, duration: 500, useNativeDriver: true }),
@@ -2466,11 +2488,11 @@ function CareChainStrip({ chain, isTutorial, currentStepId }: {
     } else {
       pulseAnim.setValue(1);
     }
-  }, [activeIdx, pulseAnim]);
+  }, [activeIdx, displaySteps.length, pulseAnim]);
 
   return (
     <View style={styles.stripRow}>
-      {STRIP_STEPS.map((step, idx) => {
+      {displaySteps.map((step, idx) => {
         // Always derive completion from real chain.progress.
         // activeIdx only drives the pulsing "current step" indicator.
         const done = chain.progress.includes(step.role);
