@@ -128,7 +128,8 @@ function processFile(filePath) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Track hero element (hero-level field — heroes have `element:`, enemies have `primarySystem:`)
+    // Track hero element (hero-level field — heroes use `element:`; enemies formerly used
+    // `primarySystem:` which was removed in task #388, see add-enemy-affinities.js)
     const elMatch = line.match(/^\s+element:\s+'([A-Za-z]+)'/);
     if (elMatch) currentElement = elMatch[1];
 
