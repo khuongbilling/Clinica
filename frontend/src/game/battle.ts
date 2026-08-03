@@ -395,6 +395,44 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
         }
       }
     }
+
+    // appropriateForSystems smoke-test: all values in every clinical catalog must be
+    // canonical AffinityFamily strings. Short-form ElementSystem strings ('Air', 'River',
+    // etc.) are a silent no-match against enemy.primaryAffinity and must be caught here.
+    // Run once per battle init so any regression shows up immediately in dev.
+    const VALID_AFFINITY_FAMILIES = new Set<string>([
+      'Fluid / Hydration', 'Airway / Respiratory', 'Fire / Inflammation',
+      'Protection / Immune', 'Energy / Metabolic', 'Storm / Cardiac',
+      'Mind / Neuro-Psych', 'Growth / Endocrine', 'Filter / Renal',
+      'Wound / Tissue', 'Community / Public Health',
+    ]);
+    const _catalogsToCheck: Array<[string, Record<string, { appropriateForSystems?: string[]; inappropriateForSystems?: string[] }>]> = [
+      ['SKILL_CLINICAL', SKILL_CLINICAL],
+      ['ITEM_CLINICAL',  ITEM_CLINICAL],
+      ['CALL_CLINICAL',  CALL_CLINICAL],
+      ['CARD_CLINICAL',  CARD_CLINICAL],
+    ];
+    for (const [_catalogName, _catalog] of _catalogsToCheck) {
+      for (const [_entryKey, _entry] of Object.entries(_catalog)) {
+        for (const _sys of (_entry.appropriateForSystems ?? [])) {
+          if (!VALID_AFFINITY_FAMILIES.has(_sys)) {
+            console.warn(
+              `[AppropriateForSystems] ${_catalogName}["${_entryKey}"].appropriateForSystems ` +
+              `contains "${_sys}" which is not a valid AffinityFamily string. ` +
+              `Use the full label e.g. "Airway / Respiratory", not the short ElementSystem form.`,
+            );
+          }
+        }
+        for (const _sys of (_entry.inappropriateForSystems ?? [])) {
+          if (!VALID_AFFINITY_FAMILIES.has(_sys)) {
+            console.warn(
+              `[InappropriateForSystems] ${_catalogName}["${_entryKey}"].inappropriateForSystems ` +
+              `contains "${_sys}" which is not a valid AffinityFamily string.`,
+            );
+          }
+        }
+      }
+    }
   }
 
   const enemyClinical = ENEMY_CLINICAL[enemy.id];
