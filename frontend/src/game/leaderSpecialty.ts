@@ -242,6 +242,60 @@ const ROLE_SPECIALTY: Record<HeroRole, LeaderBonus> = {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+// ── Pill formatter ────────────────────────────────────────────────────────────
+
+export interface LeaderBonusPill {
+  /** Human-readable label, e.g. "+15% Stabilize". */
+  label: string;
+  /**
+   * Ionicons name that best represents the bonus.
+   * Consumers cast to `any` for the icon component.
+   */
+  icon: string;
+}
+
+/**
+ * Convert a (possibly scaled) LeaderBonus into a flat list of compact display
+ * pills, skipping ×1.00 multipliers and zero flat bonuses so the UI stays
+ * clean when a role has no effect in a given category.
+ *
+ * Order: stabilize → strike → shield → items → cards → AP start → cue AP.
+ */
+export function formatLeaderBonusPills(lb: LeaderBonus): LeaderBonusPill[] {
+  const pills: LeaderBonusPill[] = [];
+
+  if (lb.stabilizeMult !== 1) {
+    const pct = Math.round((lb.stabilizeMult - 1) * 100);
+    pills.push({ label: `+${pct}% Stabilize`, icon: 'heart' });
+  }
+  if (lb.strikeMult !== 1) {
+    const pct = Math.round((lb.strikeMult - 1) * 100);
+    pills.push({ label: `+${pct}% Strike`, icon: 'flash' });
+  }
+  if (lb.shieldMult !== 1) {
+    const pct = Math.round((lb.shieldMult - 1) * 100);
+    pills.push({ label: `+${pct}% Shield`, icon: 'shield' });
+  }
+  if (lb.itemMult !== 1) {
+    const pct = Math.round((lb.itemMult - 1) * 100);
+    pills.push({ label: `+${pct}% Items`, icon: 'medical' });
+  }
+  if (lb.cardMult !== 1) {
+    const pct = Math.round((lb.cardMult - 1) * 100);
+    pills.push({ label: `+${pct}% Cards`, icon: 'layers' });
+  }
+  if (lb.apBonus !== 0) {
+    pills.push({ label: `+${lb.apBonus} AP Start`, icon: 'flash-circle' });
+  }
+  if (lb.cueCorrectApBonus !== 0) {
+    pills.push({ label: `+${lb.cueCorrectApBonus} AP / Cue`, icon: 'bulb' });
+  }
+
+  return pills;
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
 /**
  * Return the base (unscaled) LeaderBonus for a hero based on their role.
  * Safe to call with any hero — falls back to Specialist for unknown roles.

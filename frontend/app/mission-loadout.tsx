@@ -36,7 +36,8 @@ import {
   persistLoadoutForType,
   syncCurrentLoadout,
 } from "@/src/game/loadoutStore";
-import { getLeaderBonus } from "@/src/game/leaderSpecialty";
+import { getLeaderBonus, scaleLeaderBonus, formatLeaderBonusPills } from "@/src/game/leaderSpecialty";
+import { getProgress } from "@/src/game/evolution";
 import { HEROES } from "@/src/game/content";
 import { SKILL_CLINICAL, PATHWAY_ROLE_LABEL } from "@/src/game/clinical";
 import type { PathwayRole } from "@/src/game/clinical";
@@ -961,17 +962,38 @@ export default function MissionLoadoutScreen() {
               {teamSlots[0] ? (() => {
                 const lHero = HEROES.find(h => h.id === teamSlots[0]);
                 if (!lHero) return null;
-                const lb = getLeaderBonus(lHero);
+                const lProg = getProgress(player.hero_progression, lHero.id);
+                const lb    = getLeaderBonus(lHero);
+                const lbSc  = scaleLeaderBonus(lb, { ...lHero, star: lProg.star });
+                const pills = formatLeaderBonusPills(lbSc);
                 return (
                   <View style={s.leaderBonusStrip}>
                     <Ionicons name="shield-checkmark" size={12} color={UI.gold} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.leaderBonusName}>{lb.name}</Text>
                       <Text style={s.leaderBonusDesc}>{lb.description}</Text>
+                      {pills.length > 0 && (
+                        <View style={s.leaderPillRow}>
+                          {pills.map((p) => (
+                            <View key={p.label} style={s.leaderPill}>
+                              <Ionicons name={p.icon as any} size={9} color={UI.gold} />
+                              <Text style={s.leaderPillTxt}>{p.label}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </View>
                   </View>
                 );
-              })() : null}
+              })() : (
+                /* Empty leader tip */
+                <View style={s.leaderEmptyTip}>
+                  <Ionicons name="shield-checkmark-outline" size={12} color={UI.gold + "70"} />
+                  <Text style={s.leaderEmptyTipTxt}>
+                    Place a hero in Slot 1 to activate their Leader Specialty bonus
+                  </Text>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -1814,5 +1836,46 @@ const s = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     marginTop: 2,
+  },
+  leaderPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 5,
+  },
+  leaderPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: UI.gold + "55",
+    backgroundColor: UI.gold + "14",
+  },
+  leaderPillTxt: {
+    color: UI.gold + "DD",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.1,
+  },
+  leaderEmptyTip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: UI.gold + "06",
+    borderWidth: 0.5,
+    borderColor: UI.gold + "28",
+  },
+  leaderEmptyTipTxt: {
+    flex: 1,
+    color: UI.textDim,
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

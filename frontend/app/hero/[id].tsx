@@ -14,6 +14,7 @@ import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { UniversityCreditsBadge } from "@/src/components/UniversityCreditsBadge";
 import { usePlayer } from "@/src/game/store";
+import { getLeaderBonus, scaleLeaderBonus, formatLeaderBonusPills } from "@/src/game/leaderSpecialty";
 import {
   getHeroShards,
   getProgress,
@@ -506,7 +507,7 @@ export default function HeroProfile() {
 
       {/* ── TAB CONTENT ── */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.tabContent}>
-        {activeTab === "Details"  && <DetailsTab  hero={hero} accent={accent} />}
+        {activeTab === "Details"  && <DetailsTab  hero={hero} accent={accent} prog={prog} />}
         {activeTab === "Skills"   && <SkillsTab   hero={hero} accent={accent} />}
         {activeTab === "Equipment" && <EquipmentTab hero={hero} accent={accent} />}
         {activeTab === "Upgrade"  && <EvolveTab hero={hero} accent={accent} isOwned={isOwned} onChapterUnlocked={handleChapterUnlocked} />}
@@ -557,7 +558,14 @@ export default function HeroProfile() {
    TAB CONTENT COMPONENTS
 ──────────────────────────────────────── */
 
-function DetailsTab({ hero, accent }: { hero: any; accent: string }) {
+function DetailsTab({ hero, accent, prog }: { hero: any; accent: string; prog: { star: number } }) {
+  // Leader specialty section: scale bonus by hero's current rarity + star.
+  const lbBase   = getLeaderBonus(hero);
+  const lbScaled = scaleLeaderBonus(lbBase, { ...hero, star: prog.star });
+  const pills    = formatLeaderBonusPills(lbScaled);
+  // Show scaling note only when rarity or star actually amplify the base bonus.
+  const showScaleNote = hero.rarity > 3 || prog.star > 1;
+
   return (
     <View style={{ gap: SPACING.lg }}>
       {hero.quote && (
@@ -589,6 +597,31 @@ function DetailsTab({ hero, accent }: { hero: any; accent: string }) {
           </View>
         </View>
       )}
+
+      {/* ── Leader Specialty ── */}
+      <View style={styles.detailSection}>
+        <SectionHeader title="Leader Specialty" icon="shield-checkmark-outline" accent="#E8C868" />
+        <View style={styles.leaderSpecialtyCard}>
+          <View style={styles.leaderSpecialtyHeader}>
+            <Ionicons name="shield-checkmark" size={14} color="#E8C868" />
+            <Text style={styles.leaderSpecialtyName}>{lbBase.name}</Text>
+          </View>
+          <Text style={styles.leaderSpecialtyDesc}>{lbBase.description}</Text>
+          {pills.length > 0 && (
+            <View style={styles.leaderPillRow}>
+              {pills.map((p) => (
+                <View key={p.label} style={styles.leaderPill}>
+                  <Ionicons name={p.icon as any} size={9} color="#E8C868" />
+                  <Text style={styles.leaderPillTxt}>{p.label}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {showScaleNote && (
+            <Text style={styles.leaderScaleNote}>Scales further with rarity &amp; ★ upgrades</Text>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -1569,6 +1602,61 @@ const styles = StyleSheet.create({
   shardsTrack: { height: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.border, overflow: "hidden" },
   shardsFill: { height: "100%", borderRadius: RADIUS.pill },
   shardsHint: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 16 },
+
+  /* Leader Specialty section (Details tab) */
+  leaderSpecialtyCard: {
+    borderWidth: 1,
+    borderColor: "#E8C86840",
+    borderRadius: RADIUS.md,
+    backgroundColor: "#E8C8680C",
+    padding: SPACING.md,
+    gap: 6,
+  },
+  leaderSpecialtyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  leaderSpecialtyName: {
+    color: "#E8C868DD",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  leaderSpecialtyDesc: {
+    color: COLORS.onSurfaceSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  leaderPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginTop: 2,
+  },
+  leaderPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+    borderWidth: 0.5,
+    borderColor: "#E8C86860",
+    backgroundColor: "#E8C8681A",
+  },
+  leaderPillTxt: {
+    color: "#E8C868DD",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  leaderScaleNote: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 10,
+    fontStyle: "italic",
+    marginTop: 2,
+  },
 
   /* Chapter unlocked toast */
   chapterToast: {
