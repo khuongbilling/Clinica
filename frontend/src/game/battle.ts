@@ -56,6 +56,7 @@ import { getLeaderBonus, scaleLeaderBonus } from './leaderSpecialty';
 import type { ClassTreeBattleBonus } from './classTree';
 import { getAggregatedEquipmentEffect, type AggregatedEquipmentEffect } from './equipment';
 import type { ActionType } from './types';
+import { AFFLICTION_ENEMIES, ENEMIES, HEROES } from './content';
 
 /**
  * Returns the flat stat bonus from a hero's aggregated equipment effect for a
@@ -2152,3 +2153,5 @@ export function buildSkillCalcBreakdown(
 
   return { effectType, baseDisplay, estimatedBase, rows, estimated, note };
 }
+
+  const _allGameAffinities = new Set<string>();
