@@ -49,7 +49,7 @@ const VN_ART_CFG: Record<
 > = {
   PRODIGY:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1060 / 896) },
   MASTER_BAI:  { artFit: "contain", artHeight: Math.round(W * 0.74 * 1040 / 896) },
-  NIGHTINGALE: { artFit: "cover" },
+  NIGHTINGALE: { artFit: "contain", artHeight: Math.round(W * 0.74 * 1248 / 1422) },
   FLEMING:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1203 / 896) },
 };
 
@@ -174,9 +174,10 @@ export default function PrologueVNBar({
             style={{ width: "100%", height: "100%" }}
             contentFit={speaker.artFit}
           />
-          {/* bottom feather */}
+          {/* Feathered crop edge — narrow strip at the very bottom only,
+              no shading over the portrait body */}
           <LinearGradient
-            colors={["transparent", "rgba(4,8,18,0.96)"]}
+            colors={["transparent", "rgba(4,8,18,0.92)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={s.charBottomFade}
@@ -263,7 +264,7 @@ const s = StyleSheet.create({
     bottom:   0,
     left:     0,
     right:    0,
-    height:   "32%",
+    height:   "10%",
   },
 
   bar: {

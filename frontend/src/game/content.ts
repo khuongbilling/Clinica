@@ -135,7 +135,6 @@ export const HEROES: Hero[] = [
     medicalFocus: 'Clinical assessment, pattern recognition, cue analysis',
     bondLevel: 0,
     bondExp: 0,
-    artPrompt: 'scholarly young female clinician with round glasses and neat dark hair tied back, holding a glowing open codex spellbook, determined intelligent expression, white and purple scholarly robes with gold trim, Genshin Impact style full-body transparent-background donghua cel-shaded gacha card art, soft clean linework, luminous colors, female character',
     starLore: [
       {
         star: 1,
