@@ -347,7 +347,10 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     diseaseCategory: 'cardiac',
   },
   cg_guardian_dome: {
-    clinicalTags: ['safety', 'infection prevention', 'medication safety'],
+    // 'infection isolation'/'transmission prevention' are the tags enemies actually
+    // list; 'infection prevention' alone matched no enemy vocabulary, so this
+    // spread-blocking dome could never advance the protect step vs infection enemies.
+    clinicalTags: ['safety', 'infection isolation', 'transmission prevention', 'medication safety'],
     pathwayRoles: ['protect'],
     diseaseCategory: 'safety',
   },
@@ -358,7 +361,10 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     diseaseCategory: 'neurological',
   },
   mlh_psyche_shield: {
-    clinicalTags: ['safety', 'therapeutic communication'],
+    // Therapeutic-alliance protection with a stability gain is supportive care,
+    // not only safety; without 'general support'/'comfort' it failed to tick the
+    // chain even vs psych enemies (panic_wraith) whose lists use those tags.
+    clinicalTags: ['safety', 'therapeutic communication', 'general support', 'comfort'],
     pathwayRoles: ['protect', 'stabilize'],
     diseaseCategory: 'neurological',
   },
@@ -374,12 +380,17 @@ export const SKILL_CLINICAL: Record<string, ActionClinical> = {
     diseaseCategory: 'safety',
   },
   psa_arbiter_strike: {
-    clinicalTags: ['safety', 'medication safety', 'infection prevention'],
+    // System-level risk elimination is broadly applicable care; 'infection
+    // prevention' matched no enemy vocabulary ('infection isolation' is the
+    // canonical tag) and the safety-only set dead-ended vs most enemies.
+    clinicalTags: ['safety', 'medication safety', 'infection isolation', 'general support'],
     pathwayRoles: ['treat', 'protect'],
     diseaseCategory: 'safety',
   },
   psa_safety_realm: {
-    clinicalTags: ['safety', 'medication safety', 'infection isolation', 'transmission prevention'],
+    // Full institution-wide command (like lcc_ward_command) is broad supportive
+    // care in addition to its safety focus.
+    clinicalTags: ['safety', 'medication safety', 'infection isolation', 'transmission prevention', 'general support'],
     pathwayRoles: ['protect', 'treat'],
     diseaseCategory: 'safety',
   },
