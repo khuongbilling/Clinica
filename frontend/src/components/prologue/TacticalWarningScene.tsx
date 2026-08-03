@@ -392,21 +392,21 @@ export default function TacticalWarningScene({ onComplete }: Props) {
         pointerEvents="none"
       />
 
-      {/* ── ACTIVE SPEAKER PORTRAIT — right side, bottom flush with dialogue panel ── */}
+      {/* ── charPortrait — right side, bottom flush with dialogue panel ── */}
       <Animated.View
         pointerEvents="none"
-        style={{
-          position: "absolute",
-          right:    0,
-          bottom:   charWrapBot,
-          width:    W * 0.68,
-          height:   Math.min(
-            speaker.artHeight ?? (H - charWrapBot),
-            H - charWrapBot
-          ),
-          overflow: "hidden",
-          opacity:  mainFade,
-        }}
+        style={[
+          styles.charPortrait,
+          {
+            bottom:  charWrapBot,
+            width:   W * 0.68,
+            height:  Math.min(
+              speaker.artHeight ?? (H - charWrapBot),
+              H - charWrapBot
+            ),
+            opacity: mainFade,
+          },
+        ]}
       >
         <ExpoImage
           source={speaker.art}
@@ -543,6 +543,13 @@ const styles = StyleSheet.create({
     left:      0,
     right:     0,
     height:    "65%",
+  },
+
+  /** The large full-height character portrait — right-aligned, bottom flush with the dialogue panel. */
+  charPortrait: {
+    position: "absolute",
+    right:    0,
+    overflow: "hidden",
   },
 
   // Active speaker portrait — spans from screen top to the dialogue panel top (set via inline bottom)

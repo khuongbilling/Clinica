@@ -143,20 +143,20 @@ export default function PrologueVNBar({
 
   return (
     <>
-      {/* ── Character portrait — right side, bottom flush with bar ──────── */}
+      {/* ── charPortrait — right side, bottom flush with bar ───────────── */}
       {showPortrait && (
         <Animated.View
           pointerEvents="none"
-          style={{
-            position:  "absolute",
-            right:     0,
-            bottom:    barTotal,
-            transform: [{ translateY: barSlide }],
-            width:     W * 0.74,
-            height:    Math.min(speaker.artHeight ?? (H - barTotal), H - barTotal),
-            overflow:  "hidden",
-            opacity:   charFade,
-          }}
+          style={[
+            s.charPortrait,
+            {
+              bottom:    barTotal,
+              transform: [{ translateY: barSlide }],
+              width:     W * 0.74,
+              height:    Math.min(speaker.artHeight ?? (H - barTotal), H - barTotal),
+              opacity:   charFade,
+            },
+          ]}
         >
           <ExpoImage
             source={speaker.largePortrait}
@@ -247,6 +247,13 @@ export default function PrologueVNBar({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
+  /** The large full-height character portrait — right-aligned, bottom flush with the bar. */
+  charPortrait: {
+    position: "absolute",
+    right:    0,
+    overflow: "hidden",
+  },
+
   charBottomFade: {
     position: "absolute",
     bottom:   0,
