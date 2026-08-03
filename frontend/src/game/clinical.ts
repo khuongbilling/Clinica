@@ -1042,7 +1042,7 @@ function clueRevealedSubstr(revealedLabels: string[], target: string): boolean {
 export function evaluateClinicalAppropriateness(
   action: ActionClinical | undefined,
   enemy: EnemyClinical | undefined,
-  battleState: { revealedLabels: string[]; stability: number },
+  battleState: { revealedLabels: string[]; stability: number; enemyAffinities?: string[] },
 ): EvaluationResult {
   if (!action || !enemy) {
     return { status: 'appropriate', modifier: 1.0, message: '' };
@@ -1086,7 +1086,24 @@ export function evaluateClinicalAppropriateness(
     return { status: 'appropriate', modifier: STATUS_BASE_MODIFIER.appropriate, message: 'Clinically appropriate.' };
   }
 
-  // 7. Default weak
+  // 7. System-affinity match via CARD_CLINICAL / SKILL_CLINICAL appropriateForSystems.
+  //    When the action declares an AffinityFamily that matches the current enemy's
+  //    primary or secondary affinity, treat it as 'appropriate' even if none of its
+  //    clinicalTags appear in the enemy's tag lists.  This ensures the Task #410
+  //    label fix is meaningful: cards with appropriateForSystems: ['Airway / Respiratory']
+  //    correctly avoid the 'weak' default against a respiratory enemy.
+  if (
+    action.appropriateForSystems &&
+    action.appropriateForSystems.length > 0 &&
+    battleState.enemyAffinities &&
+    battleState.enemyAffinities.length > 0
+  ) {
+    if (action.appropriateForSystems.some(sys => battleState.enemyAffinities!.includes(sys))) {
+      return { status: 'appropriate', modifier: STATUS_BASE_MODIFIER.appropriate, message: 'Clinically appropriate for this system.' };
+    }
+  }
+
+  // 8. Default weak
   return { status: 'weak', modifier: STATUS_BASE_MODIFIER.weak, message: 'Limited relevance here.' };
 }
 

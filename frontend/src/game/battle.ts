@@ -752,7 +752,10 @@ function resolveAction(
   state: BattleState,
 ): ResolveResult {
   const enemy = state.enemyClinical;
-  const evalRes = evaluateClinicalAppropriateness(action, enemy, { revealedLabels: state.revealedLabels, stability: state.stability });
+  const enemyAffinities: string[] = (
+    [state.enemy.primaryAffinity, ...(state.enemy.secondaryAffinities ?? [])] as Array<string | undefined>
+  ).filter((a): a is string => !!a);
+  const evalRes = evaluateClinicalAppropriateness(action, enemy, { revealedLabels: state.revealedLabels, stability: state.stability, enemyAffinities });
 
   // Chapter forgiveness on weak/inappropriate
   const forg = getChapterForgiveness(state.chapter);
@@ -1948,31 +1951,33 @@ export function flatSkills(team: Hero[]): { hero: Hero; skill: import('./types')
   return out;
 }
 
-// ============================================================
-// UI helpers: status preview for action buttons
-// ============================================================
-
+/** Builds the enemy affinity list for the current battle state (primary + secondary). */
+function battleEnemyAffinities(state: BattleState): string[] {
+  return (
+    [state.enemy.primaryAffinity, ...(state.enemy.secondaryAffinities ?? [])] as Array<string | undefined>
+  ).filter((a): a is string => !!a);
+}
 export function previewSkillStatus(state: BattleState, skill: HeroSkill): { status: ActionStatus; label: string } {
   const action = SKILL_CLINICAL[skill.id];
-  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability });
+  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability, enemyAffinities: battleEnemyAffinities(state) });
   return { status: res.status, label: statusLabel(res.status) };
 }
 
 export function previewItemStatus(state: BattleState, item: Item): { status: ActionStatus; label: string } {
   const action = ITEM_CLINICAL[item.name];
-  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability });
+  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability, enemyAffinities: battleEnemyAffinities(state) });
   return { status: res.status, label: statusLabel(res.status) };
 }
 
 export function previewTempStatus(state: BattleState, actionId: string): { status: ActionStatus; label: string } {
   const action = TEMP_CLINICAL[actionId];
-  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability });
+  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability, enemyAffinities: battleEnemyAffinities(state) });
   return { status: res.status, label: statusLabel(res.status) };
 }
 
 export function previewCallStatus(state: BattleState, callId: string): { status: ActionStatus; label: string } {
   const action = CALL_CLINICAL[callId];
-  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability });
+  const res = evaluateClinicalAppropriateness(action, state.enemyClinical, { revealedLabels: state.revealedLabels, stability: state.stability, enemyAffinities: battleEnemyAffinities(state) });
   return { status: res.status, label: statusLabel(res.status) };
 }
 
