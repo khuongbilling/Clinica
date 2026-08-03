@@ -82,6 +82,13 @@ export const PROLOGUE_IMAGE_MODULES: readonly number[] = [
   OPENING_WARNING,
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ADDING A NEW CHARACTER?
+//   1. Add the character object below (satisfies PrologueCharacter).
+//   2. Also add a matching entry to VN_ART_CFG in
+//      src/components/prologue/PrologueVNBar.tsx — TypeScript will give you
+//      a compile error if you forget, and `npm run validate` will too.
+// ─────────────────────────────────────────────────────────────────────────────
 export const PROLOGUE_CHARACTERS = {
   PRODIGY: {
     id:            "prodigy_former_self",

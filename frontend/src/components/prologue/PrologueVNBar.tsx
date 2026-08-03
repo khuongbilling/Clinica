@@ -31,6 +31,17 @@ import {
 const { width: W, height: H } = Dimensions.get("window");
 
 // ── Per-character VN art config (artFit + portrait height at 74% screen width) ─
+//
+// ADDING A NEW CHARACTER?
+//   • Add an entry here keyed by the same name used in PROLOGUE_CHARACTERS
+//     (src/game/prologueCharacters.ts).
+//   • `Record<PrologueSpeakerId, …>` is exhaustive — TypeScript will fail to
+//     compile if a key is missing, and `npm run validate` runs
+//     scripts/check-prologue-vn-cfg.js which also catches the gap.
+//   • artHeight formula: Math.round(W * 0.74 * <imgH> / <imgW>)
+//     where <imgH>/<imgW> are the portrait PNG's native pixel dimensions.
+//   • Use artFit:"cover" only when the portrait is already a full-bleed crop
+//     (like Nightingale's extended image) — otherwise use "contain".
 
 const VN_ART_CFG: Record<
   PrologueSpeakerId,
