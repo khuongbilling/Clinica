@@ -2,9 +2,9 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/clinica-layout/PrologueLayoutDiagram.tsx": () => import("../components/mockups/clinica-layout/PrologueLayoutDiagram.tsx"),
+  "./components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx": () => import("../components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx"),
   "./components/mockups/prologue-vn-positions/CoverContainExplainer.tsx": () => import("../components/mockups/prologue-vn-positions/CoverContainExplainer.tsx"),
   "./components/mockups/prologue-vn-positions/SIRevealPositions.tsx": () => import("../components/mockups/prologue-vn-positions/SIRevealPositions.tsx"),
   "./components/mockups/prologue-vn-positions/ScenePositions.tsx": () => import("../components/mockups/prologue-vn-positions/ScenePositions.tsx"),
-  "./components/mockups/prologue-vn-positions/TacticalWarningPositions.tsx": () => import("../components/mockups/prologue-vn-positions/TacticalWarningPositions.tsx"),
-  "./components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx": () => import("../components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx")
+  "./components/mockups/prologue-vn-positions/TacticalWarningPositions.tsx": () => import("../components/mockups/prologue-vn-positions/TacticalWarningPositions.tsx")
 };
