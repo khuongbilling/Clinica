@@ -6,10 +6,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ChapterJourneyMap } from "@/src/components/ChapterJourneyMap";
+import { Chapter1VisualMap } from "@/src/components/Chapter1VisualMap";
+import { Chapter2VisualMap } from "@/src/components/Chapter2VisualMap";
+import { Chapter3VisualMap } from "@/src/components/Chapter3VisualMap";
+import { Chapter4VisualMap } from "@/src/components/Chapter4VisualMap";
+import { Chapter5VisualMap } from "@/src/components/Chapter5VisualMap";
+import { GenericChapterVisualMap } from "@/src/components/GenericChapterVisualMap";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { JourneyEmblem, LotusLessonsEmblem, WardDefenseEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
@@ -17,6 +22,9 @@ import { getMapSprite } from "@/src/game/illustratedAssets";
 import { firstIncompleteLotusNode, isLotusNodeComplete, LOTUS_PATHS } from "@/src/game/lotusLessons";
 import {
   CHAPTERS,
+  Chapter,
+  ChapterPart,
+  ChapterStatus,
   getCurrentChapter,
   getChapterFailureHint,
   getChapterStatus,
@@ -25,21 +33,29 @@ import {
 import { playerLevelFromXp } from "@/src/game/progression";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { usePlayer } from "@/src/game/store";
-import { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
-const TABS: RPGTab[] = [
-  { key: "chapter",  label: "Chapter",  emblem: (a) => <JourneyEmblem size={14} color={a ? "#1B1308" : "#E8C868"} /> },
-  { key: "quests",   label: "Quests",   icon: "list-circle" },
-  { key: "memories", label: "Memories", icon: "book" },
-];
 
 export default function JourneyScreen() {
   const router = useRouter();
-  const { player, loading, claimChapterChest, claimJourneyNode } = usePlayer();
-  const [activeTab, setActiveTab]   = useState("chapter");
-  const [showRounds, setShowRounds] = useState(false);
+  const { player, loading, claimJourneyNode } = usePlayer();
+  const [activeTab, setActiveTab]       = useState("chapter");
+  const [showRounds, setShowRounds]     = useState(false);
+  const [selectedChapterIdx, setSelectedChapterIdx] = useState<number>(0);
+  const chapterIdxInitialized = useRef(false);
+
+  // Auto-select the player's current chapter on first load
+  useEffect(() => {
+    if (!player || chapterIdxInitialized.current) return;
+    chapterIdxInitialized.current = true;
+    const lvl     = playerLevelFromXp(player.xp ?? 0).level;
+    const claimed = player.claimed_journey_nodes ?? [];
+    const current = getCurrentChapter(lvl, claimed);
+    const idx     = Math.max(0, CHAPTERS.findIndex((ch) => ch.id === current.id));
+    setSelectedChapterIdx(idx);
+  }, [player]);
 
   if (loading || !player) {
     return (
@@ -206,19 +222,69 @@ export default function JourneyScreen() {
             </Pressable>
           )}
 
-          <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false} testID="journey-scroll">
-            <ChapterJourneyMap
-              playerLevel={playerLevel}
+          {/* ── Chapter selector tabs ── */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chapterSelectorBar}
+            contentContainerStyle={styles.chapterSelectorContent}
+          >
+            {CHAPTERS.map((ch, idx) => {
+              const st       = getChapterStatus(ch, playerLevel, claimedNodes);
+              const locked   = st === "locked";
+              const selected = idx === selectedChapterIdx;
+              return (
+                <Pressable
+                  key={ch.id}
+                  style={[
+                    styles.chapterTab,
+                    selected && { borderColor: ch.accentColor, backgroundColor: ch.accentColor + "22" },
+                    locked && { opacity: 0.35 },
+                  ]}
+                  onPress={() => !locked && setSelectedChapterIdx(idx)}
+                  disabled={locked}
+                  testID={`journey-ch-tab-${ch.number}`}
+                >
+                  <Text style={[
+                    styles.chapterTabNum,
+                    selected && { color: ch.accentColor },
+                    locked && { color: COLORS.onSurfaceTertiary },
+                  ]}>
+                    CH.{ch.number}
+                  </Text>
+                  {!locked && st === "complete" && (
+                    <Ionicons name="checkmark-circle" size={8} color={ch.accentColor} />
+                  )}
+                  {locked && (
+                    <Ionicons name="lock-closed" size={8} color={COLORS.onSurfaceTertiary + "80"} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* ── Per-chapter visual map page ── */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.chapterPageContent}
+            showsVerticalScrollIndicator={false}
+            testID="journey-scroll"
+          >
+            <ChapterPage
+              chapter={CHAPTERS[selectedChapterIdx]}
+              chapterStatus={getChapterStatus(CHAPTERS[selectedChapterIdx], playerLevel, claimedNodes)}
               battleStars={player.battle_stars ?? {}}
-              claimedChests={player.claimed_chapter_chests ?? []}
-              claimedNodes={player.claimed_journey_nodes ?? []}
+              claimedNodes={claimedNodes}
               storyScenesSeen={player.story_scenes_seen ?? []}
-              wardDefenseWaves={player.ward_defense_waves ?? 0}
               leadHeroSprite={leadHeroSprite}
-              onChestClaim={async (chestId) => {
-                const res = await claimChapterChest(chestId);
-                if (!res.ok) console.warn("[Journey] chest claim failed:", res.message);
+              onPartPress={(part) => {
+                if (part.route && !part.isPlaceholder) {
+                  const isStoryNode = part.type === "story" || part.type === "memory_fragment";
+                  const route = isStoryNode && part.route.includes("story-scene")
+                    ? part.route + "&returnTo=%2Fjourney"
+                    : part.route;
+                  router.push(route as AppRoute);
+                }
               }}
               onNodeClaim={async (nodeId, stars) => {
                 const res = await claimJourneyNode(nodeId, stars);
@@ -406,6 +472,80 @@ export default function JourneyScreen() {
   );
 }
 
+// ─── ChapterPage ────────────────────────────────────────────────────────────
+// Renders the appropriate visual map for a single chapter, or a locked state.
+
+function ChapterPage({
+  chapter,
+  chapterStatus,
+  battleStars,
+  claimedNodes,
+  storyScenesSeen,
+  leadHeroSprite,
+  onPartPress,
+  onNodeClaim,
+}: {
+  chapter:       Chapter;
+  chapterStatus: ChapterStatus;
+  battleStars:   Record<string, number>;
+  claimedNodes:  string[];
+  storyScenesSeen: string[];
+  leadHeroSprite:  ImageSourcePropType | undefined;
+  onPartPress:   (part: ChapterPart) => void;
+  onNodeClaim:   (nodeId: string, stars: number) => Promise<void>;
+}) {
+  if (chapterStatus === "locked") {
+    return (
+      <View style={cpStyles.lockedWrap}>
+        <Ionicons name="lock-closed" size={40} color={COLORS.onSurfaceTertiary} />
+        <Text style={cpStyles.lockedTitle}>Chapter {chapter.number} — {chapter.theme}</Text>
+        <Text style={cpStyles.lockedSub}>Complete the previous chapter to unlock this path.</Text>
+      </View>
+    );
+  }
+
+  const shared = {
+    battleStars,
+    claimedNodes,
+    storyScenesSeen,
+    chapterAccent: chapter.accentColor,
+    onPartPress,
+    onNodeClaim,
+    leadHeroSprite,
+  };
+
+  switch (chapter.number) {
+    case 1:  return <Chapter1VisualMap {...shared} />;
+    case 2:  return <Chapter2VisualMap {...shared} />;
+    case 3:  return <Chapter3VisualMap {...shared} />;
+    case 4:  return <Chapter4VisualMap {...shared} />;
+    case 5:  return <Chapter5VisualMap {...shared} />;
+    default: return <GenericChapterVisualMap {...shared} chapter={chapter} />;
+  }
+}
+
+const cpStyles = StyleSheet.create({
+  lockedWrap: {
+    alignItems:      "center",
+    justifyContent:  "center",
+    paddingVertical: 64,
+    paddingHorizontal: SPACING.xl,
+    gap:             SPACING.md,
+  },
+  lockedTitle: {
+    fontSize:    16,
+    fontWeight:  "700",
+    color:       COLORS.onSurfaceTertiary,
+    textAlign:   "center",
+  },
+  lockedSub: {
+    fontSize:    13,
+    color:       COLORS.onSurfaceTertiary,
+    textAlign:   "center",
+    lineHeight:  20,
+  },
+});
+
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: UI.sanctuaryBg },
   center: { alignItems: "center", justifyContent: "center" },
@@ -464,8 +604,40 @@ const styles = StyleSheet.create({
   comingSoonPill: { backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm, paddingHorizontal: 6, paddingVertical: 3 },
   comingSoonTxt:  { fontSize: 9, fontWeight: "700", color: COLORS.onSurfaceTertiary, letterSpacing: 0.8 },
 
-  scroll:        { flex: 1 },
-  scrollContent: { paddingBottom: SPACING.xl },
+  scroll:            { flex: 1 },
+  scrollContent:     { paddingBottom: SPACING.xl },
+  chapterPageContent: { paddingBottom: SPACING.xl },
+
+  // Chapter selector tab bar
+  chapterSelectorBar: {
+    flexShrink: 0,
+    maxHeight:  52,
+    borderBottomWidth: 1,
+    borderBottomColor: UI.sanctuaryBorder,
+  },
+  chapterSelectorContent: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical:   SPACING.xs,
+    gap:               6,
+    alignItems:        "center",
+    flexDirection:     "row",
+  } as const,
+  chapterTab: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical:   6,
+    borderRadius:      RADIUS.sm,
+    borderWidth:       1,
+    borderColor:       UI.sanctuaryBorder,
+    alignItems:        "center",
+    gap:               2,
+    minWidth:          46,
+  } as const,
+  chapterTabNum: {
+    fontSize:      10,
+    fontWeight:    "700",
+    color:         COLORS.onSurfaceSecondary,
+    letterSpacing: 0.5,
+  },
 
   // Quests / Memories shared
   questsScroll: { padding: SPACING.md, paddingBottom: 80, gap: SPACING.sm },

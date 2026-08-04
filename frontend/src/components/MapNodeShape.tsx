@@ -28,7 +28,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
-export type MapNodeStatus = "complete" | "next" | "available" | "placeholder";
+export type MapNodeStatus = "complete" | "next" | "available" | "placeholder" | "locked";
 
 interface MapNodeShapeProps {
   type:         string;
@@ -38,6 +38,8 @@ interface MapNodeShapeProps {
   isActionable: boolean;
   onPress?:     () => void;
   testID?:      string;
+  /** Best star rating (0–3) for this node — shown as a filled star row on battle/boss nodes */
+  nodeStars?:   number;
 }
 
 // ── V5 illustrated node PNG assets ───────────────────────────────────────────
@@ -125,11 +127,12 @@ export function MapNodeShape({
   isActionable,
   onPress,
   testID,
+  nodeStars = 0,
 }: MapNodeShapeProps) {
   const icon     = NODE_ICON[type] ?? FALLBACK_ICON;
   const SIZE     = r * 2;
   const isBoss   = type === "mini_boss";
-  const isLocked = status === "placeholder";
+  const isLocked = status === "locked" || status === "placeholder";
   const isDone   = status === "complete";
   const isNext   = status === "next";
 
@@ -372,6 +375,29 @@ export function MapNodeShape({
           }}>
             ▶ START
           </Text>
+        </View>
+      )}
+
+      {/* ── STAR RATING: compact row above node art for battle/boss/ward nodes ── */}
+      {nodeStars > 0 && (type === "battle" || type === "mini_boss" || type === "ward_defense") && (
+        <View
+          style={{
+            position:      "absolute",
+            top:           -Math.round(13 * scale),
+            alignSelf:     "center",
+            flexDirection: "row",
+            gap:           Math.round(1 * scale),
+            pointerEvents: "none",
+          } as any}
+        >
+          {[1, 2, 3].map((s) => (
+            <Ionicons
+              key={s}
+              name={s <= nodeStars ? "star" : "star-outline"}
+              size={Math.round(9 * scale)}
+              color={s <= nodeStars ? "#E8C868" : "#8AABB880"}
+            />
+          ))}
         </View>
       )}
     </Pressable>

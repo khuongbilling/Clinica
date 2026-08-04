@@ -155,31 +155,34 @@ function buildNodeData(
     const prevId   = i > 0 ? layout[i - 1].id : null;
     const prevDone = prevId === null || claimedNodes.includes(prevId);
 
+    // First-clear eligibility — all types gated on sequential prevDone
     let eligible = false;
     if (!complete && prevDone) {
       switch (part.type) {
         case "story":
-        case "memory_fragment":
+        case "memory_fragment": {
+          const sidG = part.route?.split("sceneId=")?.[1];
+          // Route-less nodes are directly claimable (Claim IS the interaction);
+          // nodes with sceneId require the scene to be seen first.
           eligible = part.isPlaceholder
             ? true
-            : (part.route?.split("sceneId=")?.[1]
-                ? storyScenesSeen.includes(part.route.split("sceneId=")[1])
-                : true);
+            : sidG ? storyScenesSeen.includes(sidG) : true;
           break;
-        case "battle":
-          // Placeholder battles are auto-eligible; real battles need a win
-          eligible = part.isPlaceholder ? true : anyWon;
-          break;
+        }
         case "mini_boss": {
           if (part.isPlaceholder) {
             eligible = true;
           } else {
-            // Require a win (≥1 star) for the specific enemy tied to this node.
+            // Claimable after beating the specific boss enemy; WD-style (no enemyId) auto-eligible
             const enemyId = part.route?.match(/enemyId=([^&]+)/)?.[1];
-            eligible = enemyId ? (battleStars[enemyId] ?? 0) >= 1 : prevDone;
+            eligible = enemyId ? (battleStars[enemyId] ?? 0) >= 1 : true;
           }
           break;
         }
+        case "battle":
+          // Placeholder battles are auto-eligible; real battles need a win
+          eligible = part.isPlaceholder ? true : anyWon;
+          break;
         case "ward_defense":
           eligible = true;
           break;
@@ -248,6 +251,8 @@ export function GenericChapterVisualMap({
   const handleNodePress = (part: ChapterPart) => {
     if (part.route && !part.isPlaceholder) {
       setMissionPart(part);
+    } else if (part.type === 'reflection' && !claimedNodes.includes(part.id) && onNodeClaim) {
+      onNodeClaim(part.id, 3).catch(() => {});
     } else {
       onPartPress(part);
     }
@@ -268,6 +273,27 @@ export function GenericChapterVisualMap({
     () => buildNodeData(chapter.parts, layout, claimedNodes, battleStars, storyScenesSeen, chapterEnemies),
     [chapter.parts, layout, claimedNodes, battleStars, storyScenesSeen, chapterEnemies],
   );
+
+  const bestStar = useMemo(
+    () => chapterEnemies.reduce((b, e) => Math.max(b, battleStars[e.id] ?? 0), 0),
+    [chapterEnemies, battleStars],
+  );
+
+  // Memory auto-fulfil: auto-claim memory/story nodes whose scene is already seen.
+  // Only claims nodes that are sequentially eligible to prevent progression bypasses.
+  React.useEffect(() => {
+    if (!onNodeClaim) return;
+    nodes.forEach((nd) => {
+      if (!nd.eligible) return; // Respect sequential eligibility order
+      if (nd.part.isPlaceholder || claimedNodes.includes(nd.part.id)) return;
+      if (nd.part.type !== 'memory_fragment' && nd.part.type !== 'story') return;
+      const sceneId = nd.part.route?.split('sceneId=')?.[1]?.split('&')?.[0];
+      if (sceneId && storyScenesSeen.includes(sceneId)) {
+        onNodeClaim(nd.part.id, 3).catch(() => {});
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storyScenesSeen.join(','), claimedNodes.join(',')]);
 
   // P12 anticipation: show teaser when the second-to-last required node is cleared
   const requiredNodes = chapter.requiredCompletionNodes ?? [];
@@ -336,7 +362,12 @@ export function GenericChapterVisualMap({
               const isLocked     = nd.status === "locked";
               const isBossLocked = isLocked && nd.part.type === "mini_boss";
               const isWDLocked   = isLocked && nd.part.type === "ward_defense";
-              const isActionable = !!nd.part.route && !nd.part.isPlaceholder && !isLocked;
+              // Reflection nodes with no route are tap-to-claim; all nodes respect sequential lock
+              const isReflectionAutoClaimable =
+                nd.part.type === 'reflection' && !nd.part.isPlaceholder &&
+                !nd.part.route && !isLocked && !claimedNodes.includes(nd.part.id);
+              const isActionable = isReflectionAutoClaimable ||
+                (!!nd.part.route && !nd.part.isPlaceholder && !isLocked);
 
               const borderColor =
                 nd.status === "complete"      ? chapterAccent
@@ -373,12 +404,16 @@ export function GenericChapterVisualMap({
                 >
                   <MapNodeShape
                     type={nd.part.type}
-                    status={isLocked ? "available" : (nd.status as MapNodeStatus)}
+                    status={nd.status as MapNodeStatus}
                     accentColor={tc}
                     r={r}
-                    isActionable={isActionable && !isLocked}
+                    isActionable={isActionable}
                     onPress={() => handleNodePress(nd.part)}
                     testID={`ch${chapter.number}-node-${nd.part.id}`}
+                    nodeStars={(() => {
+                      const eid = nd.part.route?.match(/enemyId=([^&]+)/)?.[1];
+                      return eid ? (battleStars[eid] ?? 0) : 0;
+                    })()}
                   />
                 </Animated.View>
               );
@@ -699,7 +734,7 @@ const styles = StyleSheet.create({
     paddingVertical:   4,
     borderRadius:      6,
     alignSelf:         "flex-start",
-    marginTop:         2,
+    marginTop:         8,
   },
   claimBtnTxt: {
     fontSize:      13,
