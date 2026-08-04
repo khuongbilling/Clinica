@@ -178,6 +178,15 @@ export default function PrologueVNBar({
             contentFit={speaker.artFit}
             contentPosition="bottom"
           />
+          {/* Feathered crop edge — lives inside the portrait container so it
+              is automatically clipped to the portrait width. */}
+          <LinearGradient
+            colors={["transparent", "rgba(4,8,18,0.95)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={s.charBottomFade}
+            pointerEvents="none"
+          />
         </Animated.View>
       )}
 
@@ -252,6 +261,15 @@ const s = StyleSheet.create({
     right:           0,
     overflow:        "hidden",
     backgroundColor: "transparent",
+  },
+
+  /** Feathered bottom crop — constrained to portrait width by being a child of charPortrait. */
+  charBottomFade: {
+    position: "absolute",
+    bottom:   0,
+    left:     0,
+    right:    0,
+    height:   "18%",
   },
 
   bar: {
