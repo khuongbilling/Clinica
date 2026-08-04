@@ -258,7 +258,7 @@ export function MissionPopupModal({
             {isActionable && (
               part.type === "battle" || part.type === "mini_boss" ? (
                 <Pressable
-                  style={[styles.primaryBtn, { backgroundColor: chapterAccent }]}
+                  style={[styles.primaryBtn, { backgroundColor: "#D4A853" }]}
                   onPress={handlePrepare}
                 >
                   <Ionicons name="people" size={16} color={UI.onGold} />
@@ -266,7 +266,7 @@ export function MissionPopupModal({
                 </Pressable>
               ) : (
                 <Pressable
-                  style={[styles.primaryBtn, { backgroundColor: chapterAccent }]}
+                  style={[styles.primaryBtn, { backgroundColor: "#D4A853" }]}
                   onPress={handleDirectLaunch}
                 >
                   <Ionicons name="play" size={16} color={UI.onGold} />
@@ -289,11 +289,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.60)",
   },
   sheet: {
-    backgroundColor:  UI.panel,
+    backgroundColor:  "#2a1a08",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: 1,
-    borderColor: "rgba(232,200,104,0.22)",
+    borderColor: "rgba(212,168,83,0.35)",
     overflow: "hidden",
     maxHeight: "80%",
   },
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(212,168,83,0.35)",
     alignSelf: "center",
     marginTop: 10,
     marginBottom: 4,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   missionTitle: {
-    color: UI.text,
+    color: "#D4A853",
     fontSize: 21,
     fontWeight: "700",
     lineHeight: 28,
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   rewardLabel: {
-    color: UI.textDim,
+    color: "#B8894A",
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.4,
