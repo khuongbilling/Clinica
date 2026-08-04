@@ -776,16 +776,16 @@ function ChapterCard({
 
           {/* P13: Universal chapter clear card — ALL visual map types */}
           {!isLocked && allRequiredDone && (
-            <View style={[styles.chapterClearCard, { borderColor: accent + "50" }]}>
+            <View style={[styles.chapterClearCard, { borderColor: "#D4A85360" }]}>
               <View style={styles.chapterClearHeader}>
-                <Ionicons name="trophy-outline" size={15} color={accent} />
-                <Text style={[styles.chapterClearTitle, { color: accent }]}>
+                <Ionicons name="trophy-outline" size={15} color="#D4A853" />
+                <Text style={[styles.chapterClearTitle, { color: "#D4A853" }]}>
                   CHAPTER {chapter.number} CLEARED
                 </Text>
                 {CHAPTER_TITLE_HINTS[chapter.number] && (
                   <View style={styles.chapterClearTitleBadge}>
-                    <Ionicons name="ribbon-outline" size={9} color={accent} />
-                    <Text style={[styles.chapterClearTitleBadgeTxt, { color: accent }]}>
+                    <Ionicons name="ribbon-outline" size={9} color="#D4A853" />
+                    <Text style={[styles.chapterClearTitleBadgeTxt, { color: "#D4A853" }]}>
                       {CHAPTER_TITLE_HINTS[chapter.number]}
                     </Text>
                   </View>
@@ -799,8 +799,8 @@ function ChapterCard({
               </Text>
               {CHAPTER_CLEAR_TEASERS[chapter.number] && (
                 <View style={styles.chapterClearTeaser}>
-                  <Ionicons name="arrow-forward-circle-outline" size={10} color={accent + "AA"} />
-                  <Text style={[styles.chapterClearTeaserTxt, { color: accent + "BB" }]}>
+                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#D4A853AA" />
+                  <Text style={[styles.chapterClearTeaserTxt, { color: "#D4A853BB" }]}>
                     {CHAPTER_CLEAR_TEASERS[chapter.number]}
                   </Text>
                 </View>
@@ -808,15 +808,15 @@ function ChapterCard({
               {/* P15: CTA to open the next chapter card after clearing this one. */}
               {onNextChapterOpen && nextChapterNumber && (
                 <Pressable
-                  style={[styles.nextChapterBtn, { borderColor: accent + "60" }]}
+                  style={[styles.nextChapterBtn, { borderColor: "#D4A85360" }]}
                   onPress={onNextChapterOpen}
                   testID={`chapter-clear-next-ch${chapter.number}`}
                 >
-                  <Ionicons name="chevron-down-circle-outline" size={14} color={accent} />
-                  <Text style={[styles.nextChapterBtnTxt, { color: accent }]}>
+                  <Ionicons name="chevron-down-circle-outline" size={14} color="#D4A853" />
+                  <Text style={[styles.nextChapterBtnTxt, { color: "#D4A853" }]}>
                     OPEN CHAPTER {nextChapterNumber}
                   </Text>
-                  <Ionicons name="arrow-forward" size={12} color={accent + "BB"} />
+                  <Ionicons name="arrow-forward" size={12} color="#D4A853BB" />
                 </Pressable>
               )}
             </View>
@@ -1846,7 +1846,7 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    backgroundColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#2a1a0830",
     gap: 4,
   },
   // P14: chapter-level required-node progress bar (in chapter card header)
@@ -1882,7 +1882,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: "rgba(0,0,0,0.10)",
+    backgroundColor: "#2a1a0840",
     borderRadius: 4,
     paddingHorizontal: 5,
     paddingVertical: 2,
