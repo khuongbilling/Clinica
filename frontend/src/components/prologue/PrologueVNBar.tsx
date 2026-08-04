@@ -49,7 +49,10 @@ const VN_ART_CFG: Record<
 > = {
   PRODIGY:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1060 / 896) },
   MASTER_BAI:  { artFit: "contain", artHeight: Math.round(W * 0.74 * 1040 / 896) },
-  NIGHTINGALE: { artFit: "contain", artHeight: Math.round(W * 0.74 * 1248 / 1422) },
+  // nightingale_vn_extended is landscape (1422×1248); use cover so she fills the
+  // portrait container height instead of rendering as a short wide strip.
+  // artHeight is capped to ~PRODIGY's height so she's not full-screen-tall.
+  NIGHTINGALE: { artFit: "cover",    artHeight: Math.round(W * 0.74 * 1060 / 896) },
   FLEMING:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1203 / 896) },
 };
 
@@ -173,6 +176,7 @@ export default function PrologueVNBar({
             source={speaker.largePortrait}
             style={{ width: "100%", height: "100%" }}
             contentFit={speaker.artFit}
+            contentPosition="bottom"
           />
           {/* Feathered crop edge — narrow strip at the very bottom only,
               no shading over the portrait body */}
