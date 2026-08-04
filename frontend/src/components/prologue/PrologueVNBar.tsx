@@ -47,13 +47,16 @@ const VN_ART_CFG: Record<
   PrologueSpeakerId,
   { artFit: "contain" | "cover"; artHeight?: number }
 > = {
-  PRODIGY:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1060 / 896) },
-  MASTER_BAI:  { artFit: "contain", artHeight: Math.round(W * 0.74 * 1040 / 896) },
+  // prodigy_vn_extended.png  1202×1248
+  PRODIGY:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1248 / 1202) },
+  // master_bai_vn_extended.png  1003×1152
+  MASTER_BAI:  { artFit: "contain", artHeight: Math.round(W * 0.74 * 1152 / 1003) },
   // nightingale_vn_extended is landscape (1422×1248); use cover so she fills the
   // portrait container height instead of rendering as a short wide strip.
-  // artHeight is capped to ~PRODIGY's height so she's not full-screen-tall.
-  NIGHTINGALE: { artFit: "cover",    artHeight: Math.round(W * 0.74 * 1060 / 896) },
-  FLEMING:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1203 / 896) },
+  // artHeight is a cap (~PRODIGY height) so she is not full-screen-tall.
+  NIGHTINGALE: { artFit: "cover",   artHeight: Math.round(W * 0.74 * 1248 / 1202) },
+  // fleming_vn_extended.png  1024×1248
+  FLEMING:     { artFit: "contain", artHeight: Math.round(W * 0.74 * 1248 / 1024) },
 };
 
 // ── Public speaker type ───────────────────────────────────────────────────────

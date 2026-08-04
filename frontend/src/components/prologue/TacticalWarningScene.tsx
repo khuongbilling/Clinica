@@ -48,11 +48,16 @@ const ART = {
 
 type SpeakerId = "MASTER_BAI" | "NIGHTINGALE" | "FLEMING" | "PRODIGY";
 
+// artHeight = Math.round(W * 0.68 * nativeH / nativeW) — update if PNGs are regenerated.
 const SPEAKERS: Record<SpeakerId, { label: string; color: string; avatar: any; art: any; artFit: "contain" | "cover"; artHeight?: number }> = {
-  MASTER_BAI:  { label: "Master Bai",           color: "#D9A441", avatar: ART.masterBai,   art: PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,  artFit: "contain", artHeight: Math.round(W * 0.68 * 1040 / 896) },
+  // master_bai_vn_extended.png 1003×1152
+  MASTER_BAI:  { label: "Master Bai",           color: "#D9A441", avatar: ART.masterBai,   art: PROLOGUE_CHARACTERS.MASTER_BAI.largePortrait,  artFit: "contain", artHeight: Math.round(W * 0.68 * 1152 / 1003) },
+  // nightingale_vn_extended.png 1422×1248 (landscape)
   NIGHTINGALE: { label: "Florence Nightingale",  color: "#E8C453", avatar: ART.nightingale, art: PROLOGUE_CHARACTERS.NIGHTINGALE.largePortrait, artFit: "contain", artHeight: Math.round(W * 0.68 * 1248 / 1422) },
-  FLEMING:     { label: "Sir Alexander Fleming", color: "#3ECFB2", avatar: ART.fleming,     art: PROLOGUE_CHARACTERS.FLEMING.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1203 / 896) },
-  PRODIGY:     { label: "The Prodigy",           color: "#7EB8F7", avatar: ART.prodigy,     art: PROLOGUE_CHARACTERS.PRODIGY.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1060 / 896) },
+  // fleming_vn_extended.png 1024×1248
+  FLEMING:     { label: "Sir Alexander Fleming", color: "#3ECFB2", avatar: ART.fleming,     art: PROLOGUE_CHARACTERS.FLEMING.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1248 / 1024) },
+  // prodigy_vn_extended.png 1202×1248
+  PRODIGY:     { label: "The Prodigy",           color: "#7EB8F7", avatar: ART.prodigy,     art: PROLOGUE_CHARACTERS.PRODIGY.largePortrait,     artFit: "contain", artHeight: Math.round(W * 0.68 * 1248 / 1202) },
 };
 
 const SPEAKER_ORDER: SpeakerId[] = ["MASTER_BAI", "NIGHTINGALE", "FLEMING", "PRODIGY"];
