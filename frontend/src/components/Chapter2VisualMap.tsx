@@ -225,9 +225,9 @@ export function Chapter2VisualMap({
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
-        {/* Cool academy sky-blue readability overlay */}
+        {/* Ink & Mist: warm umber readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#0A182555" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A0B0548" }]}
           pointerEvents="none"
         />
         {W > 0 && (

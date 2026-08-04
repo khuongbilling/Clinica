@@ -297,8 +297,9 @@ export function GenericChapterVisualMap({
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
+        {/* Ink & Mist: warm umber readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#0B182565" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A0B0555" }]}
           pointerEvents="none"
         />
         {W > 0 && (

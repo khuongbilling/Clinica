@@ -100,13 +100,14 @@ function stampD(chapter: number, r: number): string {
   }
 }
 
-// ── Per-chapter road surface tints (painted beneath the accent lane) ──────────
+// ── Per-chapter road surface tints — Ink & Mist umber palette ────────────────
+// Warm dark umber palette across all chapters; gold accent lane on completed.
 const ROAD_SURFACE: Record<number, string> = {
-  1: "#0B4030",  // jade earth bed
-  2: "#1A3060",  // academy stone blue
-  3: "#152A50",  // garden slate
-  4: "#3A0B10",  // ward corridor stone
-  5: "#0A3018",  // forest earth green
+  1: "#2A1206",  // deep sanctuary umber
+  2: "#1E0E08",  // academy umber
+  3: "#221006",  // garden umber
+  4: "#2E1008",  // tower umber-crimson
+  5: "#1E1208",  // community umber-brown
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -121,7 +122,7 @@ export function PaintedMapPath({
   const d         = bezPathD(ax, ay, bx, by);
   const roadColor = ROAD_SURFACE[chapter] ?? "#1A2A3A";
 
-  // ── LOCKED: faint ghost road only, no stamps ───────────────────────────────
+  // ── LOCKED: faint umber ghost road only, no stamps ────────────────────────
   if (pathState === "locked") {
     return (
       <Svg
@@ -129,9 +130,9 @@ export function PaintedMapPath({
         style={{ position: "absolute", top: 0, left: 0 }}
         pointerEvents="none"
       >
-        <SvgPath d={d} stroke={"#00000020"} strokeWidth={26} fill="none" strokeLinecap="round" />
-        <SvgPath d={d} stroke={roadColor + "1E"} strokeWidth={18} fill="none" strokeLinecap="round" />
-        <SvgPath d={d} stroke={"#FFFFFF07"} strokeWidth={7}   fill="none" strokeLinecap="round" />
+        <SvgPath d={d} stroke={"#00000025"} strokeWidth={26} fill="none" strokeLinecap="round" />
+        <SvgPath d={d} stroke={"#3d2a1425"} strokeWidth={18} fill="none" strokeLinecap="round" />
+        <SvgPath d={d} stroke={"#D4A85308"} strokeWidth={5}  fill="none" strokeLinecap="round" />
       </Svg>
     );
   }
@@ -147,28 +148,30 @@ export function PaintedMapPath({
       style={{ position: "absolute", top: 0, left: 0 }}
       pointerEvents="none"
     >
-      {/* ── Road band layers ─────────────────────────────────────────────── */}
+      {/* ── Road band layers — Ink & Mist brushstroke ────────────────────── */}
       {isComplete ? (
         <>
           {/* Dark earth grounding shadow */}
-          <SvgPath d={d} stroke={"#00000050"} strokeWidth={32} fill="none" strokeLinecap="round" />
-          {/* Painted road surface */}
-          <SvgPath d={d} stroke={roadColor + "90"} strokeWidth={24} fill="none" strokeLinecap="round" />
-          {/* Glowing accent lane */}
-          <SvgPath d={d} stroke={accentColor + "88"} strokeWidth={12}  fill="none" strokeLinecap="round" />
-          {/* Luminous center spine */}
-          <SvgPath d={d} stroke={accentColor + "CC"} strokeWidth={4.5} fill="none" strokeLinecap="round" />
-          {/* Bright highlight spine */}
-          <SvgPath d={d} stroke={"#FFFFFF30"} strokeWidth={1.5} fill="none" strokeLinecap="round" />
+          <SvgPath d={d} stroke={"#00000055"} strokeWidth={32} fill="none" strokeLinecap="round" />
+          {/* Umber road bed — warm ink wash */}
+          <SvgPath d={d} stroke={roadColor + "B0"} strokeWidth={24} fill="none" strokeLinecap="round" />
+          {/* Gold brushstroke layer 1 — wide soft glow (Ink & Mist) */}
+          <SvgPath d={d} stroke={"#D4A85350"} strokeWidth={16} fill="none" strokeLinecap="round" />
+          {/* Gold brushstroke layer 2 — mid core */}
+          <SvgPath d={d} stroke={"#D4A85399"} strokeWidth={7}  fill="none" strokeLinecap="round" />
+          {/* Gold brushstroke layer 3 — bright spine */}
+          <SvgPath d={d} stroke={"#D4A853DD"} strokeWidth={3}  fill="none" strokeLinecap="round" />
+          {/* Parchment highlight spine */}
+          <SvgPath d={d} stroke={"#F0D88820"} strokeWidth={1}  fill="none" strokeLinecap="round" />
         </>
       ) : (
         <>
-          {/* Faint earth bed */}
+          {/* Faint umber earth bed */}
           <SvgPath d={d} stroke={"#00000030"} strokeWidth={26} fill="none" strokeLinecap="round" />
-          {/* Soft available-ahead road surface */}
-          <SvgPath d={d} stroke={roadColor + "55"} strokeWidth={18} fill="none" strokeLinecap="round" />
-          {/* Dim accent lane */}
-          <SvgPath d={d} stroke={accentColor + "48"} strokeWidth={7}  fill="none" strokeLinecap="round" />
+          {/* Dim umber road surface */}
+          <SvgPath d={d} stroke={roadColor + "70"} strokeWidth={18} fill="none" strokeLinecap="round" />
+          {/* Faint gold hint — path-ahead suggestion */}
+          <SvgPath d={d} stroke={"#D4A85330"} strokeWidth={6}  fill="none" strokeLinecap="round" />
         </>
       )}
 
@@ -184,13 +187,14 @@ export function PaintedMapPath({
           <SvgG key={i} transform={tf}>
             {isComplete ? (
               <>
-                <SvgPath d={sd} fill={accentColor + "E0"} />
-                {/* Inner highlight — smaller, lighter center */}
-                <SvgPath d={stampD(chapter, r * 0.40)} fill={accentColor + "60"} />
+                {/* Gold ink stamp — Ink & Mist palette */}
+                <SvgPath d={sd} fill={"#D4A853E0"} />
+                {/* Inner highlight — warm gold center */}
+                <SvgPath d={stampD(chapter, r * 0.40)} fill={"#F0D88870"} />
               </>
             ) : (
-              /* Dim outline-only — available-ahead look */
-              <SvgPath d={sd} fill={accentColor + "25"} stroke={accentColor + "55"} strokeWidth={1.5} />
+              /* Dim umber outline-only — available-ahead look */
+              <SvgPath d={sd} fill={"#D4A85318"} stroke={"#D4A85340"} strokeWidth={1.5} />
             )}
           </SvgG>
         );

@@ -226,9 +226,9 @@ export function Chapter3VisualMap({
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
-        {/* Pale-blue mist readability overlay */}
+        {/* Ink & Mist: warm umber readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#050F2055" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A0B0548" }]}
           pointerEvents="none"
         />
         {W > 0 && (

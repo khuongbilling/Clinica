@@ -231,9 +231,9 @@ export function ChapterJourneyMap({
         <Text style={styles.phaseTitle}>Kingdom of Healing</Text>
         <Text style={styles.phaseSub} numberOfLines={3}>{PHASE_1_SUMMARY}</Text>
         <View style={styles.phaseFooterRow}>
-          <Ionicons name="person-circle-outline" size={11} color={UI.jade + "90"} />
+          <Ionicons name="person-circle-outline" size={11} color={"#D4A85390"} />
           <Text style={styles.phaseFooterTxt}>10 chapters · your healer walks this path</Text>
-          <Ionicons name="leaf-outline" size={11} color={UI.jade + "90"} />
+          <Ionicons name="leaf-outline" size={11} color={"#D4A85390"} />
         </View>
       </View>
 
@@ -1228,7 +1228,7 @@ function PartRow({
               disabled={claiming}
               hitSlop={8}
             >
-              <Ionicons name="gift-outline" size={13} color="#FFFFFF" />
+              <Ionicons name="gift-outline" size={13} color="#1a0e06" />
               <Text style={styles.nodeClaimBtnTxt}>{claiming ? "…" : "CLAIM REWARD"}</Text>
             </Pressable>
           ) : isEligible && hasScenario && !scenarioDone ? (
@@ -1262,7 +1262,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
 
-  // Phase header
+  // Phase header — Ink & Mist gold on umber
   phaseHeader: {
     alignItems: "center",
     paddingVertical: SPACING.lg,
@@ -1271,10 +1271,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   phaseBadge: {
-    backgroundColor: UI.jade + "18",
+    backgroundColor: "#D4A85318",
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: UI.jade + "55",
+    borderColor: "#D4A85355",
     paddingHorizontal: SPACING.sm,
     paddingVertical: 3,
   },
@@ -1282,12 +1282,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
-    color: UI.jade,
+    color: "#D4A853",
   },
   phaseTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.onSurface,
+    color: "#F0DEB8",
     letterSpacing: 0.3,
   },
   phaseSub: {
@@ -1307,11 +1307,11 @@ const styles = StyleSheet.create({
   phaseDecoDividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: UI.jade + "35",
+    backgroundColor: "#D4A85335",
   },
   phaseDecoGlyph: {
     fontSize: 12,
-    color: UI.jade + "90",
+    color: "#D4A85390",
   },
   phaseFooterRow: {
     flexDirection: "row" as const,
@@ -1568,15 +1568,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // J2 — journey node CLAIM / CLAIMED buttons (outside nav Pressable)
+  // J2 — journey node CLAIM / CLAIMED buttons — Ink & Mist gold
   nodeClaimBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     alignSelf: "flex-start",
     marginTop: 6,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#D4A853",
     borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: "#F0D888",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -1586,7 +1588,7 @@ const styles = StyleSheet.create({
   nodeClaimBtnTxt: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#1a0e06",
     letterSpacing: 0.8,
   },
   nodeClaimedRow: {

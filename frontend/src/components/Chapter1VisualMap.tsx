@@ -208,9 +208,9 @@ export function Chapter1VisualMap({
         style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]}
         contentFit="cover"
       />
-      {/* Teal-jade sanctuary readability overlay */}
+      {/* Ink & Mist: warm umber readability overlay (replaces jade teal) */}
       <View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: "#081E1555", borderRadius: 12 }]}
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A0B0550", borderRadius: 12 }]}
         pointerEvents="none"
       />
 

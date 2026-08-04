@@ -133,8 +133,9 @@ export function MapNodeShape({
   const isDone   = status === "complete";
   const isNext   = status === "next";
 
-  // Boss nodes use dark crimson glow; others use per-chapter accent
-  const glowColor = isBoss ? "#C0392B" : accentColor;
+  // Ink & Mist: boss nodes use dark crimson, others use gold
+  const INK_GOLD  = "#D4A853";
+  const glowColor = isBoss ? "#C0392B" : INK_GOLD;
 
   // ── Scale UI elements proportionally with node size ──────────────────────
   // Base reference: r=44 → label font 10, badge 28, lock icon 10, start font 9
@@ -168,7 +169,7 @@ export function MapNodeShape({
         justifyContent: "center",
       }}
     >
-      {/* ── NEXT: soft radial glow bloom behind art (Genshin-style) ── */}
+      {/* ── NEXT: soft radial glow bloom behind art (Ink & Mist gold pulse) ── */}
       {isNext && (
         <View
           style={{
@@ -176,7 +177,7 @@ export function MapNodeShape({
             width:         bloomSize,
             height:        bloomSize,
             borderRadius:  bloomSize / 2,
-            backgroundColor: glowColor + "28",
+            backgroundColor: glowColor + "30",
             left:          (SIZE - bloomSize) / 2,
             top:           (SIZE - bloomSize) / 2,
             pointerEvents: "none",
@@ -190,9 +191,57 @@ export function MapNodeShape({
             width:         SIZE + Math.round(16 * scale),
             height:        SIZE + Math.round(16 * scale),
             borderRadius:  (SIZE + Math.round(16 * scale)) / 2,
-            backgroundColor: glowColor + "18",
+            backgroundColor: glowColor + "20",
             left:          -Math.round(8 * scale),
             top:           -Math.round(8 * scale),
+            pointerEvents: "none",
+          } as any}
+        />
+      )}
+
+      {/* ── Ink-seal backing circle (Ink & Mist umber fill + gold border) ── */}
+      <View
+        style={{
+          position:        "absolute",
+          width:           SIZE * 0.94,
+          height:          SIZE * 0.94,
+          borderRadius:    SIZE * 0.94 / 2,
+          left:            SIZE * 0.03,
+          top:             SIZE * 0.03,
+          backgroundColor: isLocked ? "#1a100822" : isDone ? "#3d220844" : isNext ? "#2a1a0840" : "#20140830",
+          borderWidth:     isDone ? 1.5 : 1,
+          borderColor:     isDone ? "#D4A853AA" : isNext ? "#D4A85366" : isLocked ? "#3d2a1444" : "#D4A85328",
+          pointerEvents:   "none",
+        } as any}
+      />
+      {/* ── Concentric ink ring 1 ── */}
+      {!isLocked && (
+        <View
+          style={{
+            position:     "absolute",
+            width:        SIZE * 0.74,
+            height:       SIZE * 0.74,
+            borderRadius: SIZE * 0.74 / 2,
+            left:         SIZE * 0.13,
+            top:          SIZE * 0.13,
+            borderWidth:  0.8,
+            borderColor:  isDone ? "#D4A85355" : "#D4A85522",
+            pointerEvents: "none",
+          } as any}
+        />
+      )}
+      {/* ── Concentric ink ring 2 ── */}
+      {!isLocked && (
+        <View
+          style={{
+            position:     "absolute",
+            width:        SIZE * 0.54,
+            height:       SIZE * 0.54,
+            borderRadius: SIZE * 0.54 / 2,
+            left:         SIZE * 0.23,
+            top:          SIZE * 0.23,
+            borderWidth:  0.8,
+            borderColor:  isDone ? "#D4A85340" : "#D4A85518",
             pointerEvents: "none",
           } as any}
         />
@@ -209,15 +258,17 @@ export function MapNodeShape({
         contentFit="contain"
       />
 
-      {/* ── LOCKED: ghost mist pill with lock icon ── */}
+      {/* ── LOCKED: umber ghost mist pill with lock icon ── */}
       {isLocked && (
         <View
           style={{
             position:          "absolute",
             bottom:            2,
             alignSelf:         "center",
-            backgroundColor:   "#1A2A3A99",
+            backgroundColor:   "#2A180E99",
             borderRadius:      labelRad,
+            borderWidth:       1,
+            borderColor:       "#5a3a2044",
             paddingHorizontal: labelPadH,
             paddingVertical:   labelPadV,
             flexDirection:     "row",
@@ -226,10 +277,10 @@ export function MapNodeShape({
             pointerEvents:     "none",
           } as any}
         >
-          <Ionicons name="lock-closed" size={lockIcon} color="#8AABB8" />
+          <Ionicons name="lock-closed" size={lockIcon} color="#8A6A44" />
           <Text style={{
             fontSize:      lockFont,
-            color:         "#8AABB8",
+            color:         "#8A6A44",
             fontWeight:    "700",
             letterSpacing: 0.3,
           }}>
@@ -267,7 +318,7 @@ export function MapNodeShape({
         </View>
       )}
 
-      {/* ── COMPLETE: gold lotus seal badge ── */}
+      {/* ── COMPLETE: Ink & Mist gold lotus seal badge ── */}
       {isDone && (
         <View
           style={{
@@ -277,7 +328,9 @@ export function MapNodeShape({
             width:           badgeSize,
             height:          badgeSize,
             borderRadius:    badgeSize / 2,
-            backgroundColor: "#E8C868",
+            backgroundColor: "#D4A853",
+            borderWidth:     1,
+            borderColor:     "#F0D888",
             alignItems:      "center",
             justifyContent:  "center",
             pointerEvents:   "none",
@@ -285,7 +338,7 @@ export function MapNodeShape({
         >
           <Text style={{
             fontSize:   badgeFont,
-            color:      "#0B1020",
+            color:      "#1a0e06",
             fontWeight: "900",
             lineHeight: badgeFont * 1.2,
           }}>
@@ -294,14 +347,16 @@ export function MapNodeShape({
         </View>
       )}
 
-      {/* ── NEXT/CURRENT: ▶ START play tag below node ── */}
+      {/* ── NEXT/CURRENT: ▶ START play tag below node — Ink & Mist gold ── */}
       {isNext && isActionable && (
         <View
           style={{
             position:          "absolute",
             bottom:            -startBelow,
-            backgroundColor:   glowColor,
+            backgroundColor:   "#D4A853",
             borderRadius:      5,
+            borderWidth:       1,
+            borderColor:       "#F0D888",
             paddingHorizontal: startPadH,
             paddingVertical:   startPadV,
             flexDirection:     "row",
@@ -311,7 +366,7 @@ export function MapNodeShape({
         >
           <Text style={{
             fontSize:      startFont,
-            color:         "#fff",
+            color:         "#1a0e06",
             fontWeight:    "900",
             letterSpacing: 0.6,
           }}>

@@ -236,9 +236,9 @@ export function Chapter4VisualMap({
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
         />
-        {/* Urgent deep-red readability overlay */}
+        {/* Ink & Mist: warm umber readability overlay */}
         <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A050855" }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "#1A0B0550" }]}
           pointerEvents="none"
         />
         {W > 0 && (
