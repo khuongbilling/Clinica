@@ -361,6 +361,14 @@ export default function SilentInfarctionRevealScene({ onComplete }: Props) {
       {isSiStage && (
         <Animated.View style={[styles.siWrap, { opacity: siOpac }]} pointerEvents="none">
           <ExpoImage source={ART.si} style={styles.siPortrait} contentFit="contain" />
+          {/* Feathered crop edge — constrained to portrait width so it doesn't bleed outside */}
+          <LinearGradient
+            colors={["transparent", "rgba(4,8,18,0.95)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.siCropFade}
+            pointerEvents="none"
+          />
           <LinearGradient
             colors={["transparent", "rgba(160,0,0,0.55)", "transparent"]}
             locations={[0, 0.45, 1]}
@@ -452,6 +460,14 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   siPortrait: { width: 440, height: 640, zIndex: 2 },
+  /** Feathered bottom crop — same width as siPortrait so it never bleeds outside the art. */
+  siCropFade: {
+    position: "absolute",
+    bottom:   0,
+    width:    440,
+    height:   "18%",
+    zIndex:   3,
+  },
   siGlow: {
     position:     "absolute",
     bottom:       40,

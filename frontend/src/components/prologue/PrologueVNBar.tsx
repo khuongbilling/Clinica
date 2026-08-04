@@ -178,15 +178,6 @@ export default function PrologueVNBar({
             contentFit={speaker.artFit}
             contentPosition="bottom"
           />
-          {/* Feathered crop edge — narrow strip at the very bottom only,
-              no shading over the portrait body */}
-          <LinearGradient
-            colors={["transparent", "rgba(4,8,18,0.92)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={s.charBottomFade}
-            pointerEvents="none"
-          />
         </Animated.View>
       )}
 
@@ -261,14 +252,6 @@ const s = StyleSheet.create({
     right:           0,
     overflow:        "hidden",
     backgroundColor: "transparent",
-  },
-
-  charBottomFade: {
-    position: "absolute",
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   "10%",
   },
 
   bar: {
