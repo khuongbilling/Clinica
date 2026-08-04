@@ -99,6 +99,10 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   // Ref mirrors so startTutorial can guard synchronously (two screens mounting
   // in the same frame must not preempt each other's tutorial).
   const activeRef = useRef<TutorialId | null>(null);
+  // Rapid-tap dedupe: records the stepIndex most recently passed to doAdvance.
+  // A second call with the same index (rapid double-tap before rerender) is
+  // ignored, preventing steps from being skipped.
+  const lastAdvancedIdxRef = useRef(-1);
   const completedRef = useRef<TutorialProgress>({});
   const dismissedRef = useRef<TutorialProgress>({});
   useEffect(() => { activeRef.current = activeTutorialId; }, [activeTutorialId]);
@@ -158,15 +162,21 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (activeRef.current) return;
     if (completedRef.current[id]) return;
     if (dismissedRef.current[id]) return;
+    lastAdvancedIdxRef.current = -1;
     activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
   }, []);
 
   const doAdvance = useCallback((tutId: TutorialId, idx: number) => {
+    // Dedupe guard: if this exact step was already advanced (rapid double-tap
+    // before rerender), ignore the duplicate call.
+    if (idx === lastAdvancedIdxRef.current) return;
+    lastAdvancedIdxRef.current = idx;
     const steps = TUTORIALS[tutId];
     const nextIdx = idx + 1;
     if (nextIdx >= steps.length) {
+      lastAdvancedIdxRef.current = -1;
       markDone(tutId);
       activeRef.current = null;
       completedRef.current = { ...completedRef.current, [tutId]: true };
@@ -206,6 +216,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     dismissedRef.current = { ...dismissedRef.current, [id]: false };
+    lastAdvancedIdxRef.current = -1;
     activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);

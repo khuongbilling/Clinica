@@ -288,6 +288,9 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const [feedbackIsChain, setFeedbackIsChain] = useState(false);
   const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const turnActionsRef = useRef<string[]>([]);
+  // Rapid-tap guard: set true for the duration of a battle action so a second
+  // tap that arrives before the React rerender cannot fire the same action twice.
+  const actionProcessingRef = useRef(false);
   const [codexExpanded, setCodexExpanded] = useState(false);
   const [sageScoutBonusUsed, setSageScoutBonusUsed] = useState(false);
   const [detail, setDetail] = useState<DetailEntry | null>(null);
@@ -780,6 +783,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   const handleSkill = (hero: Hero, skill: HeroSkill, castQuality: CastQuality = "normal") => {
     if (state.outcome !== "ongoing") return;
+    if (actionProcessingRef.current) return;
     // prologueBattle locks to a specific skill ID; firstBattle locks to a type.
     if (guidedStep && guidedSkillId && skill.id !== guidedSkillId) { tutorialNudge(); return; }
     if (isFirstBattleActionStep && skill.type !== guidedActionType) { tutorialNudge(); return; }
@@ -795,6 +799,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
     // satisfies prologueBattle steps with requiredSkillId (prologue_scout / prologue_stabilize /
     // prologue_counter / prologue_reassess) — the store checks skill.id against requiredSkillId.
+    actionProcessingRef.current = true;
     onRequiredAction(skill.type, skill.id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     // Push 8: capture result so we can display the actual effect in feedbackMsg.
@@ -803,6 +808,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     const prevLogLen = state.log.length;
     const applyResult = applySkill(state, effective, hero, castQuality);
     setState(applyResult.state);
+    requestAnimationFrame(() => { actionProcessingRef.current = false; });
     // affinityMatchIntro: fire on the first skill that produces any non-neutral
     // affinity result so the player learns what the feedback labels mean.
     // Covers both family-affinity ("Affinity advantage" / "Weak affinity") and
@@ -930,11 +936,14 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const handleCueAnswer = (optionIndex: number) => {
     const cue = state.pendingCue;
     if (!cue) return;
+    if (actionProcessingRef.current) return;
     const isCorrect = !!cue.options[optionIndex]?.correct;
     // Guided prologue: only the correct answer is accepted.
     if (guidedCueStep && !isCorrect) { tutorialNudge(); return; }
+    actionProcessingRef.current = true;
     const res = answerClinicalCue(state, optionIndex);
     setState(res.state);
+    requestAnimationFrame(() => { actionProcessingRef.current = false; });
     if (isCorrect) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       if (guidedCueStep) cueAdvanceRef.current = true;
@@ -1008,9 +1017,11 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
 
   const handleEndTurn = () => {
     if (state.outcome !== "ongoing") return;
+    if (actionProcessingRef.current) return;
     // During firstBattle action steps, endTurn is always allowed so the player
     // can refill AP between guided steps without getting stuck.
     if (guidedStep && !guidedEndTurnStep && !isFirstBattleActionStep) { tutorialNudge(); return; }
+    actionProcessingRef.current = true;
     onRequiredAction("endTurn"); // satisfies prologueBattle › prologue_endturn (requiredActionType:"endTurn")
     turnActionsRef.current = [];
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -1023,6 +1034,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
       }
       return next;
     });
+    requestAnimationFrame(() => { actionProcessingRef.current = false; });
   };
 
   const finish = async () => {
