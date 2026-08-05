@@ -824,6 +824,9 @@ function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResu
 
 function CeremonyResultCard({ result }: { result: RecruitResult }) {
   const rc = result.entry ? rarityColor(result.entry.rarity) : "#D4AF37";
+  const sprite = result.entry
+    ? (getHeroBattleSprite(result.entry.heroId) ?? getHeroPortrait(result.entry.heroId))
+    : null;
   return (
     <View style={[styles.ceremonyResultCard, { borderColor: rc }]} testID="recruit-ceremony-result">
       <View style={styles.ceremonyResultHeader}>
@@ -833,6 +836,16 @@ function CeremonyResultCard({ result }: { result: RecruitResult }) {
       </View>
       {result.entry && (
         <>
+          {sprite && (
+            <View style={[styles.ceremonyResultSpriteWrap, { borderColor: rc + "40", backgroundColor: rc + "0C" }]}>
+              <ExpoImage
+                source={sprite}
+                style={styles.ceremonyResultSprite}
+                contentFit="contain"
+                contentPosition="center"
+              />
+            </View>
+          )}
           <Text style={[styles.ceremonyResultName, { color: rc }]}>{result.entry.name}</Text>
           <View style={[styles.tierPill, { borderColor: rc + "70" }]}>
             <Text style={[styles.tierPillTxt, { color: rc }]}>
@@ -849,8 +862,19 @@ function CeremonyResultCard({ result }: { result: RecruitResult }) {
 function ResultCard({ result, isFree }: { result: RecruitResult; isFree?: boolean }) {
   if (result.kind === "hero" || result.kind === "shards") {
     const rc = rarityColor(result.entry!.rarity);
+    const sprite = getHeroBattleSprite(result.entry!.heroId) ?? getHeroPortrait(result.entry!.heroId);
     return (
       <View style={[styles.resultCard, { borderColor: rc }]} testID="recruit-result">
+        {sprite && (
+          <View style={[styles.resultCardSpriteWrap, { borderColor: rc + "30", backgroundColor: rc + "0A" }]}>
+            <ExpoImage
+              source={sprite}
+              style={styles.resultCardSprite}
+              contentFit="contain"
+              contentPosition="center"
+            />
+          </View>
+        )}
         <Text style={[styles.resultName, { color: rc }]}>{result.entry!.name}</Text>
         <View style={[styles.tierPill, { borderColor: rc + "70" }]}>
           <Text style={[styles.tierPillTxt, { color: rc }]}>{rarityTierLabel(result.entry!.rarity)}</Text>
@@ -889,20 +913,33 @@ function ResultCard({ result, isFree }: { result: RecruitResult; isFree?: boolea
 function ResultTile({ result }: { result: RecruitResult }) {
   if (result.kind === "hero" || result.kind === "shards") {
     const rc = rarityColor(result.entry!.rarity);
+    const portrait = getHeroPortrait(result.entry!.heroId);
     return (
       <View style={[styles.tile, { borderColor: rc + "70" }]}>
+        {portrait ? (
+          <ExpoImage
+            source={portrait}
+            style={styles.tilePortrait}
+            contentFit="cover"
+            contentPosition={{ top: "8%" }}
+          />
+        ) : (
+          <View style={[styles.tilePortraitPlaceholder, { backgroundColor: rc + "18" }]}>
+            <Ionicons name="person" size={20} color={rc + "80"} />
+          </View>
+        )}
         <Text style={[styles.tileName, { color: rc }]} numberOfLines={1}>{result.entry!.name}</Text>
         <Text style={styles.tileMeta}>
           {result.kind === "hero"
             ? "NEW"
-            : `+${result.shardAmount} Hero Shards${(result.codexShardRefund ?? 0) > 0 ? ` +${result.codexShardRefund} refund` : ""}`}
+            : `+${result.shardAmount}${(result.codexShardRefund ?? 0) > 0 ? ` +${result.codexShardRefund}↩` : ""}`}
         </Text>
       </View>
     );
   }
   return (
     <View style={[styles.tile, { borderColor: COLORS.brand + "70" }]}>
-      <Ionicons name={result.kind === "trainee" ? "people" : "school"} size={14} color={COLORS.brand} />
+      <Ionicons name={result.kind === "trainee" ? "people" : "school"} size={24} color={COLORS.brand} />
       <Text style={styles.tileMeta}>
         {result.kind === "trainee" ? `+${result.traineeAmount} ${result.trainee?.label}` : `+${result.creditsAmount} Credits`}
       </Text>
@@ -1001,6 +1038,11 @@ const styles = StyleSheet.create({
   ceremonyResultLabel: { fontSize: 12, fontWeight: "700" as const, letterSpacing: 0.8 },
   ceremonyResultName: { fontSize: 22, fontWeight: "400" as const, letterSpacing: 0.1 },
   ceremonyResultMsg: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center" as const, marginTop: 2 },
+  ceremonyResultSpriteWrap: {
+    width: "100%", height: 180, borderRadius: RADIUS.md,
+    borderWidth: 1, overflow: "hidden" as const,
+  },
+  ceremonyResultSprite: { width: "100%", height: "100%" },
 
   // Normal result cards
   resultCard: { backgroundColor: COLORS.surfaceSecondary, padding: SPACING.lg, borderRadius: RADIUS.md, borderWidth: 2, alignItems: "center", gap: 6 },
@@ -1008,13 +1050,22 @@ const styles = StyleSheet.create({
   tierPill: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
   tierPillTxt: { fontSize: 12, fontWeight: "700", letterSpacing: 0.2 },
   resultMsg: { color: COLORS.onSurfaceSecondary, fontSize: 13, textAlign: "center", marginTop: 4 },
+  resultCardSpriteWrap: {
+    width: "100%", height: 160, borderRadius: RADIUS.md,
+    borderWidth: 1, overflow: "hidden" as const,
+  },
+  resultCardSprite: { width: "100%", height: "100%" },
+
   batchGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   tile: {
-    width: "31%", borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.sm,
-    backgroundColor: COLORS.surfaceSecondary, alignItems: "center", gap: 4, minHeight: 64, justifyContent: "center",
+    width: "31%", borderWidth: 1, borderRadius: RADIUS.md, overflow: "hidden" as const,
+    backgroundColor: COLORS.surfaceSecondary, alignItems: "center", gap: 4, minHeight: 110, justifyContent: "center",
+    paddingBottom: SPACING.sm,
   },
-  tileName: { fontSize: 13, fontWeight: "700" },
-  tileMeta: { fontSize: 12, color: COLORS.onSurfaceTertiary, textAlign: "center" },
+  tilePortrait: { width: "100%", height: 64 },
+  tilePortraitPlaceholder: { width: "100%", height: 64, alignItems: "center", justifyContent: "center" },
+  tileName: { fontSize: 12, fontWeight: "700", paddingHorizontal: 4 },
+  tileMeta: { fontSize: 11, color: COLORS.onSurfaceTertiary, textAlign: "center", paddingHorizontal: 4 },
   batchSummary: {
     flexDirection: "row" as const, alignItems: "center", gap: 6,
     backgroundColor: "#4FD8C412", borderRadius: RADIUS.md,
