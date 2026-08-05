@@ -322,9 +322,10 @@ export default function RunHome() {
   // progression.ts playerLevelFromXp.
   const playerLevelInfo = playerLevelFromXp(player.xp);
 
-  const leadHeroId   = player.active_team?.[0] ?? "novice_guardian";
-  const leadHero     = HEROES.find((h) => h.id === leadHeroId);
-  const heroSprite   = getHeroSprite(leadHeroId);
+  const hasRecruitedHeroes = (player.heroes_owned?.length ?? 0) > 0;
+  const leadHeroId   = hasRecruitedHeroes ? (player.active_team?.[0] ?? player.heroes_owned?.[0] ?? null) : null;
+  const leadHero     = leadHeroId ? HEROES.find((h) => h.id === leadHeroId) : null;
+  const heroSprite   = leadHeroId ? getHeroSprite(leadHeroId) : null;
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
   const bossUnlocked = playerLevelInfo.level >= 7;
   // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
@@ -541,25 +542,36 @@ export default function RunHome() {
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
         <Pressable
           style={styles.heroCenter}
-          onPress={() => router.push(ROUTES.heroSelect)}
+          onPress={() => router.push(hasRecruitedHeroes ? ROUTES.heroSelect : ROUTES.UNI_RECRUIT)}
           testID="home-portrait-tap"
         >
-          {heroSprite ? (
+          {hasRecruitedHeroes && heroSprite ? (
             <Image
               source={heroSprite}
               style={styles.heroImg}
               contentFit="contain"
               contentPosition="center"
             />
-          ) : (
+          ) : hasRecruitedHeroes ? (
             <View style={styles.heroPlaceholder} />
+          ) : (
+            /* No heroes yet — prompt to recruit */
+            <View style={styles.heroEmptyState}>
+              <Ionicons name="people-outline" size={36} color="rgba(255,255,255,0.18)" />
+              <Text style={styles.heroEmptyTxt}>No healer recruited</Text>
+              <View style={styles.heroEmptyBtn}>
+                <Text style={styles.heroEmptyBtnTxt}>RECRUIT NOW</Text>
+              </View>
+            </View>
           )}
 
-          {/* Tap hint — minimal pill bottom-right */}
-          <Animated.View style={[styles.tapPulse, { opacity: pulseAnim }]}>
-            <View style={[styles.tapDot, { backgroundColor: elementColor }]} />
-            <Text style={styles.tapLabel}>tap to change</Text>
-          </Animated.View>
+          {/* Tap hint — shown only when a hero is active */}
+          {hasRecruitedHeroes && (
+            <Animated.View style={[styles.tapPulse, { opacity: pulseAnim }]}>
+              <View style={[styles.tapDot, { backgroundColor: elementColor }]} />
+              <Text style={styles.tapLabel}>tap to change</Text>
+            </Animated.View>
+          )}
         </Pressable>
 
         {/* RIGHT COLUMN — progressive reveal
@@ -609,34 +621,50 @@ export default function RunHome() {
         </View>
       </View>
 
-      {/* ── HERO INFO PANEL ── */}
-      <Pressable
-        style={[styles.infoPanel, {
-          borderColor: elementColor + "45",
-          shadowColor: elementColor,
-          shadowOpacity: 0.22,
-          shadowRadius: 14,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 5,
-        }]}
-        onPress={() => router.push(ROUTES.heroSelect)}
-      >
-        <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
-        <View style={[styles.elementBadge, { borderColor: elementColor + "90", backgroundColor: elementColor + "20" }]}>
-          <Text style={[styles.elementTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
-        </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.heroName} numberOfLines={1}>{leadHero?.name ?? "Your Hero"}</Text>
-          <Text style={styles.heroTitle} numberOfLines={1}>{leadHero?.title ?? apt?.title ?? ""}</Text>
-        </View>
-        <View style={styles.xpCol}>
-          <View style={styles.xpBg}>
-            <View style={[styles.xpBar, { width: `${Math.round(progress * 100)}%` as any, backgroundColor: elementColor }]} />
+      {/* ── HERO INFO PANEL — only when a hero is recruited ── */}
+      {hasRecruitedHeroes ? (
+        <Pressable
+          style={[styles.infoPanel, {
+            borderColor: elementColor + "45",
+            shadowColor: elementColor,
+            shadowOpacity: 0.22,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 5,
+          }]}
+          onPress={() => router.push(ROUTES.heroSelect)}
+        >
+          <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
+          <View style={[styles.elementBadge, { borderColor: elementColor + "90", backgroundColor: elementColor + "20" }]}>
+            <Text style={[styles.elementTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
           </View>
-          <Text style={styles.xpTxt}>{nextRank ? `${player.xp}/${nextRank.xpRequired} XP` : "MAX"}</Text>
-          <Text style={[styles.heroTapHint, { color: elementColor + "AA" }]}>TAP TO CHANGE</Text>
-        </View>
-      </Pressable>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.heroName} numberOfLines={1}>{leadHero?.name ?? "Your Hero"}</Text>
+            <Text style={styles.heroTitle} numberOfLines={1}>{leadHero?.title ?? apt?.title ?? ""}</Text>
+          </View>
+          <View style={styles.xpCol}>
+            <View style={styles.xpBg}>
+              <View style={[styles.xpBar, { width: `${Math.round(progress * 100)}%` as any, backgroundColor: elementColor }]} />
+            </View>
+            <Text style={styles.xpTxt}>{nextRank ? `${player.xp}/${nextRank.xpRequired} XP` : "MAX"}</Text>
+            <Text style={[styles.heroTapHint, { color: elementColor + "AA" }]}>TAP TO CHANGE</Text>
+          </View>
+        </Pressable>
+      ) : (
+        /* No heroes yet — compact recruit prompt below the arena */
+        <Pressable
+          style={styles.infoPanelRecruit}
+          onPress={() => router.push(ROUTES.UNI_RECRUIT)}
+          testID="home-recruit-prompt"
+        >
+          <Ionicons name="sparkles" size={18} color={UI.gold} />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Text style={styles.infoPanelRecruitTitle}>Your first healer awaits</Text>
+            <Text style={styles.infoPanelRecruitSub}>Visit the Recruitment Hall to summon your team</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={UI.gold} />
+        </Pressable>
+      )}
 
       {/* ── START SHIFT — gated: first University lesson required ── */}
       {wardShiftGate.unlocked ? (
@@ -1046,6 +1074,36 @@ const styles = StyleSheet.create({
   heroImg:        { flex: 1, width: "100%" },
   heroPlaceholder:{ flex: 1, backgroundColor: "transparent" },
 
+  /* Empty state — no hero recruited yet */
+  heroEmptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  heroEmptyTxt: {
+    color: "rgba(255,255,255,0.30)",
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  heroEmptyBtn: {
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: UI.gold + "55",
+    backgroundColor: UI.gold + "14",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  heroEmptyBtnTxt: {
+    color: UI.gold,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+
   /* Tap hint */
   tapPulse: {
     position: "absolute", bottom: SPACING.sm, right: SPACING.sm,
@@ -1056,6 +1114,30 @@ const styles = StyleSheet.create({
   },
   tapDot:   { width: 5, height: 5, borderRadius: 3, opacity: 0.85 },
   tapLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.3 },
+
+  /* Recruit prompt — shown instead of hero info panel when no heroes */
+  infoPanelRecruit: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+    backgroundColor: UI.gold + "0E",
+    borderRadius: UI_RADIUS.card,
+    padding: SPACING.md,
+    borderWidth: 1.5,
+    borderColor: UI.gold + "40",
+  },
+  infoPanelRecruitTitle: {
+    color: UI.gold + "EE",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  infoPanelRecruitSub: {
+    color: UI.textDim,
+    fontSize: 12,
+    lineHeight: 17,
+  },
 
   /* Hero info panel — RPG character card with element glow */
   infoPanel: {

@@ -943,8 +943,9 @@ export default function MissionLoadoutScreen() {
                     onAdd={() => {
                       const ownedIds   = encodeURIComponent(JSON.stringify([...owned]));
                       const takenSlots = encodeURIComponent(JSON.stringify(teamSlots));
+                      const leaderParam = i === 0 ? "&isLeader=1" : "";
                       router.push(
-                        `/hero-picker?slot=${i}&ownedIds=${ownedIds}&takenSlots=${takenSlots}` as AppRoute
+                        `/hero-picker?slot=${i}&ownedIds=${ownedIds}&takenSlots=${takenSlots}${leaderParam}` as AppRoute
                       );
                     }}
                     onRemove={() => {
@@ -1799,18 +1800,20 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
   startBtn: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
     paddingVertical: 16,
+    paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.md,
+    minHeight: 52,
   },
   startBtnTxt: {
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   // Push 9 — Leader Specialty strip (below the Healer Formation slot row)
   leaderBonusStrip: {

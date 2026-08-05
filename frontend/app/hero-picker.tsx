@@ -26,6 +26,7 @@ import { getHeroSprite } from "@/src/components/HeroSprites";
 import { HEROES } from "@/src/game/content";
 import { rarityColor } from "@/src/game/gacha";
 import { heroRoleLabel } from "@/src/game/university";
+import { getLeaderBonus, formatLeaderBonusPills } from "@/src/game/leaderSpecialty";
 import type { Hero } from "@/src/game/types";
 import { setPendingHeroPick } from "@/src/game/loadoutStore";
 import { usePlayer } from "@/src/game/store";
@@ -89,11 +90,14 @@ export default function HeroPickerScreen() {
   const router = useRouter();
   const { player } = usePlayer();
 
-  const { slot: slotParam, ownedIds: ownedIdsParam, takenSlots: takenSlotsParam } = useLocalSearchParams<{
+  const { slot: slotParam, ownedIds: ownedIdsParam, takenSlots: takenSlotsParam, isLeader: isLeaderParam } = useLocalSearchParams<{
     slot: string;
     ownedIds: string;
     takenSlots: string;
+    isLeader: string;
   }>();
+
+  const isLeader = isLeaderParam === "1";
 
   const slotIndex = Number(slotParam ?? 0);
 
@@ -183,7 +187,9 @@ export default function HeroPickerScreen() {
         <Pressable style={p.backBtn} onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={20} color={UI.textSoft} />
         </Pressable>
-        <Text style={p.navTitle}>Choose Healer · Slot {slotIndex + 1}</Text>
+        <Text style={p.navTitle}>
+          {isLeader ? "Choose Leader · Slot 1" : `Choose Healer · Slot ${slotIndex + 1}`}
+        </Text>
         <View style={{ width: 34 }} />
       </View>
 
@@ -270,6 +276,33 @@ export default function HeroPickerScreen() {
           contentContainerStyle={p.skillScrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Leader bonus panel — shown when this is the leader slot */}
+          {isLeader && (() => {
+            const lb = getLeaderBonus(previewHero);
+            const pills = formatLeaderBonusPills(lb);
+            return (
+              <View style={p.leaderBonusCard}>
+                <View style={p.leaderBonusHeader}>
+                  <Ionicons name="shield-checkmark" size={13} color={UI.gold} />
+                  <Text style={p.leaderBonusKicker}>LEADER SPECIALTY</Text>
+                </View>
+                <Text style={p.leaderBonusName}>{lb.name}</Text>
+                <Text style={p.leaderBonusDesc}>{lb.description}</Text>
+                {pills.length > 0 && (
+                  <View style={p.leaderPillRow}>
+                    {pills.map((pill) => (
+                      <View key={pill.label} style={p.leaderPill}>
+                        <Ionicons name={pill.icon as any} size={9} color={UI.gold} />
+                        <Text style={p.leaderPillTxt}>{pill.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })()}
+
+          <Text style={p.skillSectionLabel}>SKILLS</Text>
           {previewHero.skills.map((sk) => (
             <View key={sk.id} style={p.skillRow}>
               <View style={[p.skillCostBadge, { backgroundColor: rc + "1A" }]}>
@@ -499,6 +532,69 @@ const p = StyleSheet.create({
   rarityStars: {
     fontSize: 10,
     letterSpacing: 1,
+  },
+
+  // Leader bonus card
+  leaderBonusCard: {
+    backgroundColor: UI.gold + "0D",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: UI.gold + "45",
+    padding: SPACING.sm,
+    gap: 5,
+  },
+  leaderBonusHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+  },
+  leaderBonusKicker: {
+    color: UI.gold,
+    fontSize: 10,
+    fontWeight: "800" as const,
+    letterSpacing: 0.8,
+  },
+  leaderBonusName: {
+    color: UI.gold + "EE",
+    fontSize: 13,
+    fontWeight: "700" as const,
+    lineHeight: 17,
+  },
+  leaderBonusDesc: {
+    color: UI.gold + "AA",
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  leaderPillRow: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 5,
+    marginTop: 2,
+  },
+  leaderPill: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 3,
+    backgroundColor: UI.gold + "18",
+    borderRadius: RADIUS.pill,
+    borderWidth: 0.5,
+    borderColor: UI.gold + "55",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  leaderPillTxt: {
+    color: UI.gold,
+    fontSize: 9,
+    fontWeight: "700" as const,
+    letterSpacing: 0.3,
+  },
+
+  skillSectionLabel: {
+    color: UI.textDim,
+    fontSize: 10,
+    fontWeight: "700" as const,
+    letterSpacing: 0.6,
+    marginTop: 4,
   },
 
   // Skill scroll
