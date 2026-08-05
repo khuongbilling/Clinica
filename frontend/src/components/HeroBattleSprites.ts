@@ -31,6 +31,12 @@ const BATTLE_SPRITES: Record<string, any> = {
   crisis_calm_keeper:  require('../../assets/heroes/battle/crisis_calm_keeper.png'),  // Crisis Calm Keeper
   safety_auditor:      require('../../assets/heroes/battle/safety_auditor.png'),      // Safety Auditor
 
+  // ── WARDBORN epics ──
+  lotus_care_captain:     require('../../assets/heroes/battle/lotus_care_captain.png'),     // Lotus Care Captain
+  code_guardian:          require('../../assets/heroes/battle/code_guardian.png'),          // Code Guardian
+  mind_lotus_healer:      require('../../assets/heroes/battle/mind_lotus_healer.png'),      // Mind Lotus Healer
+  patient_safety_arbiter: require('../../assets/heroes/battle/patient_safety_arbiter.png'), // Patient Safety Arbiter
+
   // ── LIFEBREATH commons ──
   breath_aide:         require('../../assets/heroes/battle/breath_aide.png'),         // Breath Aide
   airway_apprentice:   require('../../assets/heroes/battle/airway_apprentice.png'),   // Airway Apprentice
@@ -51,6 +57,10 @@ const BATTLE_SPRITES: Record<string, any> = {
   airway_warden:          require('../../assets/heroes/battle/airway_warden.png'),          // Airway Warden
   night_breath_warden:    require('../../assets/heroes/battle/night_breath_warden.png'),    // Night Breath Warden
 
+  // ── LIFEBREATH epics ──
+  ventilation_strategist: require('../../assets/heroes/battle/ventilation_strategist.png'), // Ventilation Strategist
+  aerosol_guardian:       require('../../assets/heroes/battle/aerosol_guardian.png'),       // Aerosol Guardian
+
   // ── TRUTHSEER commons ──
   anatomy_scribe:      require('../../assets/heroes/battle/anatomy_scribe.png'),      // Anatomy Scribe
   whitecoat_initiate:  require('../../assets/heroes/battle/whitecoat_initiate.png'),  // Whitecoat Initiate
@@ -65,11 +75,18 @@ const BATTLE_SPRITES: Record<string, any> = {
   radiant_lens:           require('../../assets/heroes/battle/radiant_lens.png'),           // Radiant Lens
   lablight_technologist:  require('../../assets/heroes/battle/lablight_technologist.png'),  // Lablight Technologist
   hematology_threader:    require('../../assets/heroes/battle/hematology_threader.png'),    // Hematology Threader
+  cellular_seer:          require('../../assets/heroes/battle/cellular_seer.png'),          // Cellular Seer
 
   // ── TRUTHSEER rares ──
-  wardround_doctor: require('../../assets/heroes/battle/wardround_doctor.png'), // Wardround Doctor
-  spiral_ct_seer:   require('../../assets/heroes/battle/spiral_ct_seer.png'),   // Spiral CT Seer
-  microbe_seer:     require('../../assets/heroes/battle/microbe_seer.png'),     // Microbe Seer
+  wardround_doctor:  require('../../assets/heroes/battle/wardround_doctor.png'),  // Wardround Doctor
+  spiral_ct_seer:    require('../../assets/heroes/battle/spiral_ct_seer.png'),    // Spiral CT Seer
+  microbe_seer:      require('../../assets/heroes/battle/microbe_seer.png'),      // Microbe Seer
+  code_sage:         require('../../assets/heroes/battle/code_sage.png'),         // Code Sage
+  pathology_oracle:  require('../../assets/heroes/battle/pathology_oracle.png'),  // Pathology Oracle
+
+  // ── TRUTHSEER epics ──
+  hearthline_attending: require('../../assets/heroes/battle/hearthline_attending.png'), // Hearthline Attending
+  trauma_image_oracle:  require('../../assets/heroes/battle/trauma_image_oracle.png'),  // Trauma Image Oracle
 
   // ── REMEDYBOUND commons ──
   shelfmark_apprentice: require('../../assets/heroes/battle/shelfmark_apprentice.png'), // Shelfmark Apprentice
@@ -91,6 +108,10 @@ const BATTLE_SPRITES: Record<string, any> = {
   antidote_alchemist:    require('../../assets/heroes/battle/antidote_alchemist.png'),    // Antidote Alchemist
   metabolic_garden_sage: require('../../assets/heroes/battle/metabolic_garden_sage.png'), // Metabolic Garden Sage
 
+  // ── REMEDYBOUND epics ──
+  formula_strategist: require('../../assets/heroes/battle/formula_strategist.png'), // Formula Strategist
+  vital_garden_sage:  require('../../assets/heroes/battle/vital_garden_sage.png'),  // Vital Garden Sage
+
   // ── RESTOREBOUND commons ──
   stepwise_aide:    require('../../assets/heroes/battle/stepwise_aide.png'),    // Stepwise Aide
   gait_apprentice:  require('../../assets/heroes/battle/gait_apprentice.png'),  // Gait Apprentice
@@ -110,6 +131,10 @@ const BATTLE_SPRITES: Record<string, any> = {
   acute_step_warden:          require('../../assets/heroes/battle/acute_step_warden.png'),          // Acute Step Warden
   iron_tendon_adept:          require('../../assets/heroes/battle/iron_tendon_adept.png'),          // Iron Tendon Adept
   cognitive_rehab_specialist: require('../../assets/heroes/battle/cognitive_rehab_specialist.png'), // Cognitive Rehab Specialist
+  lifeweaver:                 require('../../assets/heroes/battle/lifeweaver.png'),                 // Lifeweaver
+
+  // ── RESTOREBOUND epics ──
+  mobility_commander: require('../../assets/heroes/battle/mobility_commander.png'), // Mobility Commander
 
   // ── REALMBOUND commons ──
   village_health_aide:     require('../../assets/heroes/battle/village_health_aide.png'),     // Village Health Aide
@@ -130,6 +155,11 @@ const BATTLE_SPRITES: Record<string, any> = {
   pattern_seer:                require('../../assets/heroes/battle/pattern_seer.png'),                // Pattern Seer
   environmental_seal_warden:   require('../../assets/heroes/battle/environmental_seal_warden.png'),   // Environmental Seal Warden
   chartweave_analyst:          require('../../assets/heroes/battle/chartweave_analyst.png'),          // Chartweave Analyst
+
+  // ── REALMBOUND epics ──
+  outbreak_commander:   require('../../assets/heroes/battle/outbreak_commander.png'),   // Outbreak Commander
+  informatics_architect: require('../../assets/heroes/battle/informatics_architect.png'), // Informatics Architect
+
   florence_nightingale:        require('../../assets/images/nightingale_battle_sprite.png'),        // Florence Nightingale
 
   // ── Prologue loaner heroes (tutorial + scripted-loss boss) ──
