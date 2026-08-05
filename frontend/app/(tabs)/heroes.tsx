@@ -510,24 +510,6 @@ export default function HeroesScreen() {
             <Ionicons name="arrow-forward" size={18} color={COLORS.brand} />
           </Pressable>
 
-          {/* ── Hero Codex deep-link ── */}
-          <Pressable
-            style={styles.codexBanner}
-            onPress={() => router.push(ROUTES.heroCodex)}
-            testID="heroes-codex-btn"
-          >
-            <View style={[styles.codexBannerIcon, { backgroundColor: COLORS.brand + "18" }]}>
-              <Ionicons name="library-outline" size={22} color={COLORS.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.codexBannerTitle}>Hero Codex</Text>
-              <Text style={styles.codexBannerSub}>
-                All {104} heroes · tiers · sprites · pull rates
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward" size={16} color={COLORS.brand} />
-          </Pressable>
-
           <Text style={[styles.sectionLbl, { marginTop: SPACING.lg }]}>All Healers</Text>
           {regularHeroes.map((h) => {
             const isOwned = owned.has(h.id);
@@ -786,20 +768,7 @@ const styles = StyleSheet.create({
   legendaryLockLabel: { color: UI.gold, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   legendaryLockSub:   { color: UI.gold + "99", fontSize: 10, letterSpacing: 0.3 },
 
-  // Recruit tab — Codex banner
-  codexBanner: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.md,
-    backgroundColor: COLORS.surfaceSecondary,
-    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.brand + "40",
-    padding: SPACING.md, marginBottom: SPACING.md,
-  },
-  codexBannerIcon: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: "center", justifyContent: "center",
-  },
-  codexBannerTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
-  codexBannerSub:   { color: COLORS.onSurfaceSecondary, fontSize: 12, marginTop: 1 },
-
+  // Recruit tab
   recruitBanner: {
     flexDirection: "row", alignItems: "center", gap: SPACING.md,
     backgroundColor: COLORS.brand + "15", borderRadius: RADIUS.lg,
