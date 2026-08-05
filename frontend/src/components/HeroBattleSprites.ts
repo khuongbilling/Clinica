@@ -164,10 +164,6 @@ const BATTLE_SPRITES: Record<string, any> = {
   outbreak_commander:    require('../../assets/heroes/battle/outbreak_commander.png'),    // Outbreak Commander
   informatics_architect: require('../../assets/heroes/battle/informatics_architect.png'), // Informatics Architect
   clean_realm_commander: require('../../assets/heroes/battle/clean_realm_commander.png'), // Clean Realm Commander
-  code_sage:             require('../../assets/heroes/battle/code_sage.png'),             // Code Sage
-  pathology_oracle:      require('../../assets/heroes/battle/pathology_oracle.png'),      // Pathology Oracle
-  cellular_seer:         require('../../assets/heroes/battle/cellular_seer.png'),         // Cellular Seer
-  lifeweaver:            require('../../assets/heroes/battle/lifeweaver.png'),            // Lifeweaver
 
   florence_nightingale:        require('../../assets/images/nightingale_battle_sprite.png'),        // Florence Nightingale
 

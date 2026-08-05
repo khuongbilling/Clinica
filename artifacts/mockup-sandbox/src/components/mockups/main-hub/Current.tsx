@@ -50,11 +50,11 @@ const IMG = {
   heroSprite:     '/__mockup/images/hero-sprite.png',
   stamina:        '/__mockup/images/icon-stamina.png',
   crowns:         '/__mockup/images/icon-crowns.png',
-  rounds:         '/__mockup/images/emblem-daily-rounds.png',
+  rounds:         '/__mockup/images/emblem-rounds.png',
   journey:        '/__mockup/images/emblem-journey.png',
-  milestones:     '/__mockup/images/emblem-milestones.png',
-  summoning:      '/__mockup/images/emblem-summoning.png',
-  wardDefense:    '/__mockup/images/emblem-ward-defense.png',
+  goals:          '/__mockup/images/emblem-goals.png',
+  recruit:        '/__mockup/images/emblem-recruit.png',
+  defense:        '/__mockup/images/emblem-defense.png',
 };
 
 // ── Mock player data ──────────────────────────────────────────────────────────
@@ -219,24 +219,102 @@ function EmblemButton({
 }: {
   src: string; label: string; color: string; badge?: number; live?: boolean;
 }) {
+  // Gold colour constants matching the canvas reference
+  const goldBorder  = '#C9960C';
+  const goldGlow    = '#E8B800';
+  const cardBg      = 'linear-gradient(160deg, #0D1F1B 0%, #05100C 100%)';
+  const plateBg     = 'linear-gradient(180deg, rgba(4,16,11,0) 0%, rgba(3,14,9,0.97) 100%)';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, cursor: 'pointer' }}>
-      <div style={{ width: 58, height: 78, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,9,16,0.52)', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
-        <img src={src} style={{ width: 56, height: 75, objectFit: 'contain', display: 'block' }} />
-        {/* Label overlay */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '5px 2px', textAlign: 'center', background: 'rgba(4,7,12,0.78)' }}>
-          <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color, textTransform: 'uppercase' }}>{label}</span>
+    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* ── Card frame ── */}
+      <div style={{
+        position: 'relative',
+        width: 66,
+        height: 84,
+        borderRadius: 12,
+        background: cardBg,
+        border: `2.5px solid ${goldBorder}`,
+        boxShadow: [
+          `0 0 0 1px rgba(232,184,0,0.25)`,
+          `0 0 10px rgba(232,184,0,0.20)`,
+          `inset 0 0 14px rgba(61,196,168,0.12)`,
+        ].join(', '),
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* ── Corner accent dots ── */}
+        {([['top','left'], ['top','right'], ['bottom','left'], ['bottom','right']] as const).map(([v, h]) => (
+          <div key={`${v}${h}`} style={{
+            position: 'absolute', [v]: 2, [h]: 2,
+            width: 4, height: 4, borderRadius: 2,
+            background: goldGlow, opacity: 0.7,
+          }} />
+        ))}
+
+        {/* ── Icon ── */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 4px 2px' }}>
+          <img
+            src={src}
+            style={{
+              width: 52,
+              height: 52,
+              objectFit: 'contain',
+              display: 'block',
+              filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.7)) drop-shadow(0 0 8px ${color}55)`,
+            }}
+          />
         </div>
-        {/* Live dot */}
-        {live && (
-          <div style={{ position: 'absolute', top: 2, right: 2, width: 9, height: 9, borderRadius: 5, background: '#34D399', border: `1.5px solid ${COLORS.surface}` }} />
-        )}
-        {/* Badge */}
+
+        {/* ── Label plate ── */}
+        <div style={{
+          background: plateBg,
+          borderTop: `1px solid ${goldBorder}88`,
+          paddingTop: 3,
+          paddingBottom: 4,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <span style={{
+            fontFamily: '"Cinzel Decorative", "Cinzel", Georgia, serif',
+            fontSize: 8,
+            fontWeight: 700,
+            color,
+            letterSpacing: 0.3,
+            textShadow: `0 0 8px ${color}99, 0 1px 3px rgba(0,0,0,0.9)`,
+            lineHeight: 1,
+            display: 'block',
+          }}>
+            {label}
+          </span>
+        </div>
+
+        {/* ── Badge ── */}
         {badge && badge > 0 ? (
-          <div style={{ position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, borderRadius: 9, background: COLORS.error, border: `1.5px solid ${COLORS.surface}`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
-            <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>{badge}</span>
+          <div style={{
+            position: 'absolute', top: -5, right: -5,
+            width: 18, height: 18, borderRadius: 9,
+            background: COLORS.error,
+            border: `2px solid #030A07`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+          }}>
+            <span style={{ color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1 }}>{badge}</span>
           </div>
         ) : null}
+
+        {/* ── Live dot ── */}
+        {live && (
+          <div style={{
+            position: 'absolute', top: 4, right: 4,
+            width: 7, height: 7, borderRadius: 4,
+            background: '#34D399',
+            boxShadow: '0 0 6px #34D399CC',
+            border: '1.5px solid #030A07',
+          }} />
+        )}
       </div>
     </div>
   );
@@ -244,19 +322,19 @@ function EmblemButton({
 
 function LeftColumn() {
   return (
-    <div style={{ width: 72, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0` }}>
-      <EmblemButton src={IMG.rounds} label="Rounds" color={UI.gold} badge={3} />
+    <div style={{ width: 76, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0` }}>
+      <EmblemButton src={IMG.rounds}  label="Rounds"  color={UI.gold}          badge={3} />
       <EmblemButton src={IMG.journey} label="Journey" color={COLORS.river} />
-      <EmblemButton src={IMG.milestones} label="Goals" color={COLORS.protection} />
+      <EmblemButton src={IMG.goals}   label="Goals"   color={COLORS.protection} />
     </div>
   );
 }
 
 function RightColumn() {
   return (
-    <div style={{ width: 72, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0` }}>
-      <EmblemButton src={IMG.summoning} label="Recruit" color={UI.gold} live />
-      <EmblemButton src={IMG.wardDefense} label="Defense" color={COLORS.air} />
+    <div style={{ width: 76, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0` }}>
+      <EmblemButton src={IMG.recruit} label="Recruit" color={UI.gold}       live />
+      <EmblemButton src={IMG.defense} label="Defense" color={COLORS.air} />
     </div>
   );
 }
