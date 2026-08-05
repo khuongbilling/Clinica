@@ -542,7 +542,7 @@ export default function RunHome() {
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
         <Pressable
           style={styles.heroCenter}
-          onPress={() => router.push(hasRecruitedHeroes ? ROUTES.heroSelect : ROUTES.UNI_RECRUIT)}
+          onPress={() => router.push(hasRecruitedHeroes ? ROUTES.heroSelect : summonUnlocked ? ROUTES.UNI_RECRUIT : ROUTES.UNIVERSITY)}
           testID="home-portrait-tap"
         >
           {hasRecruitedHeroes && heroSprite ? (
@@ -555,13 +555,15 @@ export default function RunHome() {
           ) : hasRecruitedHeroes ? (
             <View style={styles.heroPlaceholder} />
           ) : (
-            /* No heroes yet — prompt to recruit */
+            /* No heroes yet — prompt only shown once summoning is unlocked */
             <View style={styles.heroEmptyState}>
               <Ionicons name="people-outline" size={36} color="rgba(255,255,255,0.18)" />
               <Text style={styles.heroEmptyTxt}>No healer recruited</Text>
-              <View style={styles.heroEmptyBtn}>
-                <Text style={styles.heroEmptyBtnTxt}>RECRUIT NOW</Text>
-              </View>
+              {summonUnlocked && (
+                <View style={styles.heroEmptyBtn}>
+                  <Text style={styles.heroEmptyBtnTxt}>RECRUIT NOW</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -650,8 +652,8 @@ export default function RunHome() {
             <Text style={[styles.heroTapHint, { color: elementColor + "AA" }]}>TAP TO CHANGE</Text>
           </View>
         </Pressable>
-      ) : (
-        /* No heroes yet — compact recruit prompt below the arena */
+      ) : summonUnlocked ? (
+        /* No heroes + hall unlocked — compact recruit prompt below the arena */
         <Pressable
           style={styles.infoPanelRecruit}
           onPress={() => router.push(ROUTES.UNI_RECRUIT)}
@@ -664,7 +666,7 @@ export default function RunHome() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={UI.gold} />
         </Pressable>
-      )}
+      ) : null}
 
       {/* ── START SHIFT — gated: first University lesson required ── */}
       {wardShiftGate.unlocked ? (

@@ -157,8 +157,9 @@ const BATTLE_SPRITES: Record<string, any> = {
   chartweave_analyst:          require('../../assets/heroes/battle/chartweave_analyst.png'),          // Chartweave Analyst
 
   // ── REALMBOUND epics ──
-  outbreak_commander:   require('../../assets/heroes/battle/outbreak_commander.png'),   // Outbreak Commander
+  outbreak_commander:    require('../../assets/heroes/battle/outbreak_commander.png'),    // Outbreak Commander
   informatics_architect: require('../../assets/heroes/battle/informatics_architect.png'), // Informatics Architect
+  clean_realm_commander: require('../../assets/heroes/battle/clean_realm_commander.png'), // Clean Realm Commander
 
   florence_nightingale:        require('../../assets/images/nightingale_battle_sprite.png'),        // Florence Nightingale
 

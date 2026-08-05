@@ -279,22 +279,6 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
 
   firstSummon: [
     {
-      id: "summon_intro",
-      title: "Recruitment Hall",
-      body: "SYSTEM: Healer acquisition interface loaded. Codex Shards are earned from battles and lessons. Spend them here to recruit healers. Each hero carries clinical skills tied to a specific body system.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
-      id: "summon_roles",
-      title: "Healer Classifications",
-      body: "SYSTEM: Role taxonomy logged. Scouts reveal diagnostic clues. Stabilizers protect patient Stability. Strikers reduce Disease Corruption. Coordinators provide team support. A balanced team performs better under pressure.",
-      placement: "center",
-      requireAction: false,
-      nextText: "NEXT",
-    },
-    {
       id: "summon_action",
       title: "Recruit a Healer",
       body: "SYSTEM: Recruitment options active. Use FREE DAILY RECRUITMENT (no shards required) or SINGLE RECRUITMENT to enroll a new healer. Duplicate recruits convert to Hero Shards. Assign recruited heroes to your active team before the next shift.",
