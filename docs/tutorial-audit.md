@@ -1,12 +1,11 @@
 # Clinica Tutorial System — Full Developer Audit
 
 > **Living document.** Re-generated each time an audit is requested.
-> **Last audited:** 2026-08-05 · commit `f0c2b00`
+> **Last audited:** 2026-08-05 · commit `1b4377b`
 > **Source branch:** main (current workspace)
 > **Note:** Auto-stamped by `npm run gen:tutorial-audit`. Re-run after each audit to keep this current.
 
----
-## Table of Contents
+---## Table of Contents
 
 1. [Tutorial System Architecture](#1-tutorial-system-architecture)
 2. [Complete Tutorial Catalogue](#2-complete-tutorial-catalogue)
