@@ -58,6 +58,24 @@ const AUTOMATED_MESSAGES = [
   "SYSTEM: Reconstructing from fragmented instinct.",
 ];
 
+// ── Class-matched random name pools ──────────────────────────────────────────
+// One pool per FantasyClass. Chosen only when the player submits no name —
+// the pool that fires is the one that matches the class they just confirmed,
+// so the designation always resonates with the chosen path.
+const CLASS_RANDOM_NAMES: Record<string, string[]> = {
+  Guardian:   ["Aelric", "Seran", "Verin", "Kora", "Thornwyn", "Lyria", "Brynn", "Aldric"],
+  Seer:       ["Orin", "Vesper", "Sylvara", "Cael", "Miris", "Theron", "Faye", "Aelindra"],
+  Caretaker:  ["Elara", "Rynn", "Solenne", "Calla", "Hadwen", "Mirette", "Nessa", "Brenwyn"],
+  Scholar:    ["Cedron", "Phaedra", "Selwyn", "Ariel", "Dex", "Quill", "Eladys", "Petra"],
+  Alchemist:  ["Zephyr", "Ashen", "Nira", "Calyx", "Sable", "Oryn", "Cindrel", "Vex"],
+  Medic:      ["Lena", "Ren", "Sadie", "Kai", "Mira", "Finn", "Tela", "Cole"],
+};
+
+function getRandomNameForClass(cls: string): string {
+  const pool = CLASS_RANDOM_NAMES[cls] ?? CLASS_RANDOM_NAMES.Medic!;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 export default function PostRecall() {
   const router = useRouter();
   const { player, applyRewards, completeIdentityRestore, confirmClassDiagnostic } = usePlayer();
@@ -70,6 +88,7 @@ export default function PostRecall() {
   // normal onboarding already uses.
   const isReplay = replay === "1";
   const [name, setName] = useState("");
+  const [nameIsEmpty, setNameIsEmpty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -187,8 +206,14 @@ export default function PostRecall() {
   const submitIdentity = async () => {
     if (submitting) return;
     setSubmitting(true);
+    const trimmed = name.trim();
+    // If the player leaves the name blank, mark the flag so we can assign a
+    // class-matched random name once the Diagnostic class is confirmed.
+    // We save "Healer" as a temporary placeholder to advance the phase; it
+    // will be overwritten in beginConfirm before anything is shown to the user.
+    if (!trimmed) setNameIsEmpty(true);
     try {
-      await completeIdentityRestore(name.trim() || "Healer");
+      await completeIdentityRestore(trimmed || "Healer");
       // C1: grant obj_identity_done (step 3) immediately after name is saved.
       const isNew = await completeObjective("obj_identity_done");
       if (isNew) {
@@ -264,18 +289,33 @@ export default function PostRecall() {
     setView("result");
   };
 
-  const beginConfirm = () => {
+  const beginConfirm = async () => {
     if (!result || !previewClass) return;
+
+    // If the player left the name blank, pick a class-matched random name now
+    // (the class is known at this point) and overwrite the "Healer" placeholder
+    // that was saved in submitIdentity. completeIdentityRestore is idempotent
+    // so a second call with a different name goes straight through.
+    let assignedName: string | null = null;
+    if (nameIsEmpty) {
+      assignedName = getRandomNameForClass(previewClass);
+      await completeIdentityRestore(assignedName);
+    }
+
     const resonance = resonanceForPreview(result, previewClass);
     const trait = getClassTree(classIdFromFantasyClass(previewClass))[0];
     confirmFiredRef.current = false;
-    setConfirmMessages([
+    const msgs = [
       `SYSTEM: Class registered \u2014 ${previewClass}.`,
       `SYSTEM: Initial trait unlocked \u2014 ${trait?.name ?? "Field Readiness"}.`,
       `SYSTEM: Secondary resonance detected \u2014 ${formatResonance(resonance)}.`,
-      "SYSTEM: Warning: Insight archive incomplete.",
-      "SYSTEM: Recommended correction: Clinica University.",
-    ]);
+    ];
+    if (assignedName) {
+      msgs.push(`SYSTEM: Designation assigned \u2014 ${assignedName}.`);
+    }
+    msgs.push("SYSTEM: Warning: Insight archive incomplete.");
+    msgs.push("SYSTEM: Recommended correction: Clinica University.");
+    setConfirmMessages(msgs);
     setConfirmMsgIndex(0);
     setView("confirming");
   };
@@ -353,7 +393,7 @@ export default function PostRecall() {
               <Text style={styles.inputLabel}>ENTER DESIGNATION</Text>
               <TextInput
                 value={name}
-                onChangeText={setName}
+                onChangeText={(t) => { setName(t); if (nameIsEmpty && t.trim()) setNameIsEmpty(false); }}
                 placeholder="Your name"
                 placeholderTextColor={COLORS.onSurfaceTertiary}
                 style={styles.input}
@@ -364,13 +404,26 @@ export default function PostRecall() {
                 onSubmitEditing={submitIdentity}
                 testID="post-recall-name-input"
               />
+
+              {/* Hint — shown when the field is empty */}
+              {!name.trim() && (
+                <View style={styles.randomNameHint}>
+                  <Ionicons name="shuffle-outline" size={13} color={COLORS.brand + "99"} />
+                  <Text style={styles.randomNameHintTxt}>
+                    Leave empty — a name matching your chosen class will be assigned after your Diagnostic.
+                  </Text>
+                </View>
+              )}
+
               <Pressable
                 style={[styles.button, submitting && styles.buttonDisabled]}
                 onPress={submitIdentity}
                 disabled={submitting}
                 testID="post-recall-name-continue"
               >
-                <Text style={styles.buttonTxt}>CONFIRM DESIGNATION</Text>
+                <Text style={styles.buttonTxt}>
+                  {name.trim() ? "CONFIRM DESIGNATION" : "SKIP — ASSIGN BY CLASS"}
+                </Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -703,6 +756,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     marginTop: SPACING.md,
+  },
+  randomNameHint: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: COLORS.brand + "0D",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.brand + "28",
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    width: "100%",
+  },
+  randomNameHintTxt: {
+    flex: 1,
+    color: COLORS.brand + "AA",
+    fontSize: 12,
+    lineHeight: 17,
   },
   progressRow: { flexDirection: "row", gap: 6, marginTop: SPACING.sm },
   progressDot: { width: 22, height: 4, borderRadius: 2, backgroundColor: COLORS.border },
