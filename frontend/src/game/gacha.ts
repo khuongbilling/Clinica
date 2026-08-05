@@ -31,10 +31,9 @@ export const FOUNDATION_BANNER: GachaEntry[] = [
   { id: 'H016', heroId: 'patient_safety_arbiter',  name: 'Patient Safety Arbiter',  rarity: 4, role: 'SystemsLeader', aptitude: 'Warden',   weight: 10 },
   { id: 'H017', heroId: 'ventilation_strategist',  name: 'Ventilation Strategist',  rarity: 4, role: 'SystemsLeader', aptitude: 'Sage',     weight: 10 },
   { id: 'H018', heroId: 'hearthline_attending',    name: 'Hearthline Attending',    rarity: 4, role: 'SystemsLeader', aptitude: 'Sage',     weight: 10 },
-  // Rarity 5 ghost slots — heroes don't yet exist in content.ts but are reserved for future expansion.
-  // Pulling these grants a temporary placeholder + bonus shards.
-  { id: 'H011', heroId: 'clinical_sage',    name: 'Clinical Sage',     rarity: 5, role: 'Assessor',    aptitude: 'Sage',     weight: 2 },
-  { id: 'H012', heroId: 'critical_guardian',name: 'Critical Guardian', rarity: 5, role: 'Stabilizer',  aptitude: 'Guardian', weight: 2 },
+  // H011 (clinical_sage) and H012 (critical_guardian) are reserved for future rarity-5 heroes.
+  // They are NOT in this pool until their battle sprites and hero data are complete.
+  // See task #481 to add them properly.
 ];
 
 export const SUMMON_COST = 100;

@@ -31,6 +31,9 @@ const BATTLE_SPRITES: Record<string, any> = {
   crisis_calm_keeper:  require('../../assets/heroes/battle/crisis_calm_keeper.png'),  // Crisis Calm Keeper
   safety_auditor:      require('../../assets/heroes/battle/safety_auditor.png'),      // Safety Auditor
 
+  // ── WARDBORN rares (extended) ──
+  clean_hands_sentinel:   require('../../assets/heroes/battle/clean_hands_sentinel.png'),   // Clean Hands Sentinel
+
   // ── WARDBORN epics ──
   lotus_care_captain:     require('../../assets/heroes/battle/lotus_care_captain.png'),     // Lotus Care Captain
   code_guardian:          require('../../assets/heroes/battle/code_guardian.png'),          // Code Guardian
@@ -104,9 +107,10 @@ const BATTLE_SPRITES: Record<string, any> = {
   glucose_lantern:   require('../../assets/heroes/battle/glucose_lantern.png'),   // Glucose Lantern
 
   // ── REMEDYBOUND rares ──
-  ward_pharmacist:       require('../../assets/heroes/battle/ward_pharmacist.png'),       // Ward Pharmacist
-  antidote_alchemist:    require('../../assets/heroes/battle/antidote_alchemist.png'),    // Antidote Alchemist
-  metabolic_garden_sage: require('../../assets/heroes/battle/metabolic_garden_sage.png'), // Metabolic Garden Sage
+  ward_pharmacist:            require('../../assets/heroes/battle/ward_pharmacist.png'),            // Ward Pharmacist
+  antidote_alchemist:         require('../../assets/heroes/battle/antidote_alchemist.png'),         // Antidote Alchemist
+  metabolic_garden_sage:      require('../../assets/heroes/battle/metabolic_garden_sage.png'),      // Metabolic Garden Sage
+  medication_safety_arbiter:  require('../../assets/heroes/battle/medication_safety_arbiter.png'),  // Medication Safety Arbiter
 
   // ── REMEDYBOUND epics ──
   formula_strategist: require('../../assets/heroes/battle/formula_strategist.png'), // Formula Strategist
