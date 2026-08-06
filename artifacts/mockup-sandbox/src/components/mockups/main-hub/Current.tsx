@@ -132,6 +132,7 @@ function PlusBtn() {
   );
 }
 
+
 // River affinity SVG medallion — painted feel, no emoji
 function RiverMedallion({ size = 44 }: { size?: number }) {
   const r = size / 2;
@@ -353,6 +354,7 @@ function Arena() {
   );
 }
 
+
 // ── Hero Card ─────────────────────────────────────────────────────────────────
 function HeroCard() {
   const xpPct = (HERO.xp / HERO.xpNext) * 100;
@@ -410,47 +412,38 @@ function HeroCard() {
 function EnterWardBtn() {
   return (
     <div style={{ margin: `0 ${SP.sm}px ${SP.xs}px`, position: 'relative' }}>
-      {/* Ornate outer frame */}
+      {/* Outer gold glow layer */}
       <div style={{
-        position: 'relative',
         borderRadius: R.pill,
-        background: `linear-gradient(135deg, ${C.jade} 0%, ${C.jadeBright} 40%, ${C.jade} 70%, ${C.jadeDeep} 100%)`,
-        padding: 2.5,
-        boxShadow: `0 0 22px ${C.jade}60, 0 0 6px ${C.jade}30`,
+        boxShadow: `0 0 28px ${C.gold}55, 0 0 14px ${C.gold}30`,
+        position: 'relative',
       }}>
-        {/* Gold border ring */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: R.pill, border: `2px solid ${C.goldBright}`, pointerEvents: 'none' }} />
-        {/* Inner button surface */}
         <div style={{
+          background: 'linear-gradient(135deg,#0E2820,#091A14)',
+          border: `2px solid ${C.gold}`,
           borderRadius: R.pill,
-          background: `linear-gradient(135deg, ${C.jade}CC 0%, ${C.jadeBright}DD 50%, ${C.jade}CC 100%)`,
-          padding: `${SP.md}px ${SP.lg}px`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', position: 'relative', overflow: 'hidden',
-          gap: SP.sm,
+          padding: `${SP.md}px ${SP.xl}px`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SP.md,
+          cursor: 'pointer',
+          boxShadow: `inset 0 0 12px rgba(199,161,93,0.08)`,
+          position: 'relative', overflow: 'visible',
         }}>
-          {/* Corner flourishes */}
-          <span style={{ position: 'absolute', top: 5, left: 12, fontSize: 9, color: C.goldBright, opacity: 0.9 }}>✦</span>
-          <span style={{ position: 'absolute', top: 5, right: 12, fontSize: 9, color: C.goldBright, opacity: 0.9 }}>✦</span>
-          <span style={{ position: 'absolute', bottom: 5, left: 12, fontSize: 9, color: C.goldBright, opacity: 0.6 }}>✦</span>
-          <span style={{ position: 'absolute', bottom: 5, right: 12, fontSize: 9, color: C.goldBright, opacity: 0.6 }}>✦</span>
-          {/* Left emblem */}
-          <MedCross size={22} />
-          {/* Text — dark navy engraved */}
-          <span style={{
-            fontFamily: F.display,
-            fontSize: 17,
-            color: '#071820',
-            letterSpacing: 2.5,
-            textShadow: `0 1px 0 rgba(255,255,255,0.15), 0 -1px 0 rgba(0,0,0,0.3)`,
-            fontWeight: 400,
-          }}>
+          {/* Sparkle corners */}
+          {(['topLeft','topRight','bottomLeft','bottomRight'] as const).map((pos) => {
+            const s: Record<string,string|number> = { position:'absolute', fontSize:10, opacity:0.7, color:C.goldBright };
+            if (pos==='topLeft')     { s.top=4; s.left=14; }
+            if (pos==='topRight')    { s.top=4; s.right=14; }
+            if (pos==='bottomLeft')  { s.bottom=4; s.left=14; }
+            if (pos==='bottomRight') { s.bottom=4; s.right=14; }
+            return <span key={pos} style={s as any}>✦</span>;
+          })}
+          {/* Midpoint gold diamond ornaments — left & right border edges */}
+          <span style={{ position:'absolute', left:-8, top:'50%', transform:'translateY(-50%)', fontSize:14, color:C.gold, lineHeight:1, textShadow:`0 0 8px ${C.gold}` }}>◆</span>
+          <span style={{ position:'absolute', right:-8, top:'50%', transform:'translateY(-50%)', fontSize:14, color:C.gold, lineHeight:1, textShadow:`0 0 8px ${C.gold}` }}>◆</span>
+          <span style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.goldBright, letterSpacing: 1.5, textShadow: `0 0 14px ${C.gold}CC` }}>
             ENTER THE WARD
           </span>
-          {/* Right arrow */}
-          <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
-            <path d="M2 7H14M9 2L14 7L9 12" stroke="#071820" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <span style={{ fontSize: 18, color: C.goldBright }}>→</span>
         </div>
       </div>
     </div>
@@ -546,3 +539,4 @@ export default function MainHubPreview() {
     </div>
   );
 }
+
