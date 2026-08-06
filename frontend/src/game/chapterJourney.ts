@@ -14,6 +14,22 @@
 
 import type { AppRoute } from './routes';
 
+// ── Map mode ─────────────────────────────────────────────────────────────────
+/**
+ * Determines which map renderer is used for a chapter.
+ * Default (undefined / 'scrollable_chapter') → existing per-chapter visual maps.
+ * 'fogbound_tiles'   → hex tile grid with fog-of-war reveal mechanic.
+ * 'branching_triage' → branching decision tree map (coming soon).
+ * 'ward_restoration' → restoration/build map (coming soon).
+ * 'dual_state'       → day/night or dual-phase map (coming soon).
+ */
+export type MapMode =
+  | 'scrollable_chapter'
+  | 'fogbound_tiles'
+  | 'branching_triage'
+  | 'ward_restoration'
+  | 'dual_state';
+
 // ── Part types ───────────────────────────────────────────────────────────────
 
 export type ChapterPartType =
@@ -92,6 +108,11 @@ export interface Chapter {
   phaseFinale?: boolean;         // true for Ch.10
   realWorldTransition?: boolean; // true for Ch.9
   simulationEra?: boolean;       // true for Ch.1–8 (University-supervised simulations)
+  /**
+   * Push 9: Which map renderer to use for this chapter.
+   * Defaults to 'scrollable_chapter' (existing visual maps) when undefined.
+   */
+  mapMode?: MapMode;
   /** Bonus XP awarded on chapter completion (informational only). */
   completionXp?: number;
   /**
@@ -162,6 +183,8 @@ export const CHAPTERS: Chapter[] = [
     icon: "sparkles-outline",
     simulationEra: true,
     completionXp: 30,
+    // Push 9: set to fogbound_tiles so the new hex-grid renderer can be exercised.
+    mapMode: 'fogbound_tiles',
     prepTips: [
       "Cue Hunt Lab — find three hidden clinical cues",
       "Rapid Triage Hall — sort patients by urgency",

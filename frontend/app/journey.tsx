@@ -15,6 +15,11 @@ import { Chapter3VisualMap } from "@/src/components/Chapter3VisualMap";
 import { Chapter4VisualMap } from "@/src/components/Chapter4VisualMap";
 import { Chapter5VisualMap } from "@/src/components/Chapter5VisualMap";
 import { GenericChapterVisualMap } from "@/src/components/GenericChapterVisualMap";
+import { FogboundTileMap } from "@/src/components/FogboundTileMap";
+import { BranchingTriageMap } from "@/src/components/BranchingTriageMap";
+import { WardRestorationMap } from "@/src/components/WardRestorationMap";
+import { DualStateMap } from "@/src/components/DualStateMap";
+import { getDefaultFogMapConfig } from "@/src/game/fogTileMap";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { JourneyEmblem, LotusLessonsEmblem, WardDefenseEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
@@ -504,6 +509,42 @@ function ChapterPage({
     );
   }
 
+  // ── MapMode dispatcher ───────────────────────────────────────────────────
+  // Push 9: read chapter.mapMode and branch to the correct renderer.
+  // Undefined / 'scrollable_chapter' → existing per-chapter visual maps.
+  const resolvedMode = chapter.mapMode ?? 'scrollable_chapter';
+
+  if (resolvedMode === 'fogbound_tiles') {
+    const mapConfig = getDefaultFogMapConfig(chapter);
+    // Player tile: bottom-centre of the grid (row 7, col 3) — stub for Push 9.
+    const playerTileId = 'tile_7_3';
+    return (
+      <FogboundTileMap
+        chapter={chapter}
+        mapConfig={mapConfig}
+        playerTileId={playerTileId}
+        keyFragmentsCollected={0}
+        stamina={8}
+        maxStamina={12}
+        onTilePress={() => {/* no-op stub — Push 9 */}}
+        onBack={() => {/* handled by parent scroll view */}}
+      />
+    );
+  }
+
+  if (resolvedMode === 'branching_triage') {
+    return <BranchingTriageMap />;
+  }
+
+  if (resolvedMode === 'ward_restoration') {
+    return <WardRestorationMap />;
+  }
+
+  if (resolvedMode === 'dual_state') {
+    return <DualStateMap />;
+  }
+
+  // ── scrollable_chapter (default) ─────────────────────────────────────────
   const shared = {
     battleStars,
     claimedNodes,
