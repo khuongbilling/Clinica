@@ -8,7 +8,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { FeatureLockedView, useFeatureGate } from "@/src/components/FeatureGate";
-import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
@@ -96,7 +95,6 @@ export default function KingdomScreen() {
   const router = useRouter();
   const { player, setRealmLayout, collectRealmProduction } = usePlayer();
   const realmGate = useFeatureGate("realm");
-  const { logEvent } = useTestSession();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
 
   // Realm visit is tracked via player.realm_seed / layout; the old
@@ -123,7 +121,6 @@ export default function KingdomScreen() {
   }, []);
 
   useEffect(() => {
-    logEvent('kingdom_screen_returned', 'kingdom');
     if (!isCompleted("firstKingdom")) {
       const t = setTimeout(() => startTutorial("firstKingdom"), 600);
       return () => clearTimeout(t);

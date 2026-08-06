@@ -5,5 +5,5 @@
  * register the route and show it in the bottom bar. All content lives in the
  * top-level app/item-bag.tsx so non-tab deep-links (e.g. /item-bag) still work.
  */
-// TODO(icons): replace tab-inventory.png with final asset once icon pack ships
+// Icon placeholder: tab-inventory.png is a stand-in; replace when the final icon set ships (tracked as follow-up in icon-pack task)
 export { default } from "../item-bag";

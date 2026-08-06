@@ -10,10 +10,10 @@ import { CHAPTER_MAP_BG_MODULES } from "@/src/game/illustratedAssets";
 const TAB_IMAGE_MODULES: number[] = [
   require("../../assets/images/home_hub_bg.png"), // legacy hub background
   // Tab icon PNGs — warmed so the bar renders instantly on cold launch
-  require("../../assets/ui-icons/tab-journey.png"),   // TODO(icons): replace with final asset
+  require("../../assets/ui-icons/tab-journey.png"),   // follow-up task: Task #469 or new icon-pack task — replace with final asset once icon set ships
   require("../../assets/ui-icons/tab-heroes.png"),
   require("../../assets/ui-icons/tab-realm.png"),     // Sanctuary tab icon
-  require("../../assets/ui-icons/tab-inventory.png"), // TODO(icons): replace with final asset
+  require("../../assets/ui-icons/tab-inventory.png"), // follow-up task: Task #469 or new icon-pack task — replace with final asset once icon set ships
   require("../../assets/ui-icons/tab-shop.png"),
   ...HERO_SPRITE_MODULES,        // Legacy full-body portraits
   ...(HERO_PORTRAIT_MODULES as unknown as number[]), // Bust portraits — collection + gacha cards

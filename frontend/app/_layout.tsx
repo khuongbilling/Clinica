@@ -11,7 +11,6 @@ import { PlayerProvider } from "@/src/game/store";
 import { SettingsProvider } from "@/src/game/settingsStore";
 import { preloadTabAssets } from "@/src/game/tabAssets";
 import { TutorialProvider } from "@/src/game/tutorialStore";
-import { TestSessionProvider } from "@/src/game/testSession";
 import { COLORS } from "@/src/theme/colors";
 import { validateRealmRoutes } from "@/src/game/routes";
 import { REALM_BUILDINGS } from "@/src/game/realm";
@@ -47,7 +46,6 @@ export default function RootLayout() {
         <PlayerProvider>
           <SettingsProvider>
           <TutorialProvider>
-            <TestSessionProvider>
               <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
               <Stack
                 screenOptions={{
@@ -57,7 +55,6 @@ export default function RootLayout() {
                 }}
               />
               <DailyPulseToast />
-            </TestSessionProvider>
           </TutorialProvider>
           </SettingsProvider>
         </PlayerProvider>

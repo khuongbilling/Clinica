@@ -24,7 +24,6 @@ import { computePlayerXpReward, getClassBattleBonuses, splitContributionToHeroXp
 import { getBattleBaseXp, getBattleScrollDrop, starXpMultiplier, starMultiplierLabel, LOSS_LEARNING_XP } from "@/src/game/battleXp";
 import { completeObjective, markObjectiveXpGranted } from "@/src/game/objectiveProgress";
 import { computeEpidemicTokens } from "@/src/game/worldEvent";
-import { useTestSession } from "@/src/game/testSession";
 import { TipBubble, useTipsQueue } from "@/src/components/BattleTips";
 import { TutorialOverlay, TypewriterText } from "@/src/components/TutorialOverlay";
 import { MASTER_BAI } from "@/src/game/systemNarrator";
@@ -73,7 +72,6 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     !!(currentStep?.requireAction) &&
     !!currentStep?.requiredActionType &&
     !["cue", "endTurn"].includes(currentStep.requiredActionType as string);
-  const { logEvent, updateBattleSummary } = useTestSession();
   const { width: screenW } = useWindowDimensions();
   const isTraining = training === "1";
   // Push 1 prologue: "tutorial" is the guided, reliably-winnable Ward Shift
@@ -670,40 +668,20 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
   const sageDiscount = player?.aptitude === "sage" && !sageScoutBonusUsed;
 
   useEffect(() => {
-    logEvent('enemy_viewed', 'battle', { gameState: { enemy: enemy.id, stability: state.stability, corruption: state.corruption, ap: state.ap } });
-    logEvent('patient_stability_first_shown', 'battle', { gameState: { stability: state.stability } });
-    logEvent('disease_corruption_first_shown', 'battle', { gameState: { corruption: state.corruption } });
-    logEvent('mission_briefing_viewed', 'battle', { meta: { mission: mission?.missionTitle, enemy: enemy.id } });
-    updateBattleSummary({ enemy: enemy.name, result: 'in_progress' });
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'items') logEvent('item_tab_opened', 'battle', { gameState: { stability: state.stability, corruption: state.corruption } });
-    if (activeTab === 'call') logEvent('call_tab_opened', 'battle', { gameState: { stability: state.stability, corruption: state.corruption } });
-  }, [activeTab]);
-
-  useEffect(() => {
     if (state.outcome === 'win') {
-      logEvent('battle_won', 'battle', { gameState: { stability: state.stability, turn: state.turnsTaken } });
-      updateBattleSummary({ result: 'win', turns: state.turnsTaken, careChainCompleted: !!state.fullChainCompleted, careAttemptsUsed: state.basicAidUses ?? 0 });
-    } else if (state.outcome === 'loss') {
-      updateBattleSummary({ result: 'loss', turns: state.turnsTaken, careAttemptsUsed: state.basicAidUses ?? 0 });
+      // win outcome — no-op, handled in finish()
     }
   }, [state.outcome]);
 
   useEffect(() => {
     const cur = state.visibleClues.length;
     if (cur > tsPrevClueCount.current) {
-      logEvent('hidden_clue_revealed', 'battle', { gameState: { stability: state.stability, corruption: state.corruption } });
       tsPrevClueCount.current = cur;
     }
   }, [state.visibleClues.length]);
-
-  useEffect(() => {
-    if ((state.basicAidUses ?? 0) > 0) {
-      logEvent('care_attempt_used', 'battle', { gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap } });
-    }
-  }, [state.basicAidUses]);
 
   const showFeedback = (actionType: string) => {
     const prior = turnActionsRef.current;
@@ -850,20 +828,7 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     }
     if (!tsFirstAction.current) {
       tsFirstAction.current = true;
-      logEvent('first_action_used', 'battle', { playerAction: effective.type, gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap - effective.cost } });
     }
-    const isBestCounter = enemy.bestCounters.includes(effective.type as any);
-    const evName =
-      effective.type === 'scout' ? 'scout_used' :
-      effective.type === 'stabilize' ? 'stabilize_used' :
-      effective.type === 'analyze' ? 'reassess_used' :
-      isBestCounter ? 'counter_used' : 'poor_fit_action_used';
-    logEvent(evName, 'battle', {
-      playerAction: effective.type,
-      actionQuality: (effective.type === 'scout' || isBestCounter) ? 'correct' : 'neutral',
-      gameState: { stability: state.stability, corruption: state.corruption, ap: state.ap - effective.cost },
-      feedbackShown: isNonmedical ? (getGuidedFeedback(enemy.id, effective.type) ?? undefined) : undefined,
-    });
     setDetail(null);
   };
   useEffect(() => () => { if (timingAnim.current) clearInterval(timingAnim.current); }, []);

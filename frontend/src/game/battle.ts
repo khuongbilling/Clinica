@@ -856,7 +856,6 @@ function rollRange([min, max]: [number, number]): number {
 }
 
 export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQuality: CastQuality = 'normal'): ApplyResult {
-  const _devModeSkill = (typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production');
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
 
   // Hero must be the selected hero, and ready
@@ -1079,7 +1078,7 @@ export function applySkill(s: BattleState, skill: HeroSkill, hero: Hero, castQua
     effectAmount = Math.max(effectAmount, amt);
     effectType = effectType === 'clue' ? 'mixed' : (effectType === 'stability' ? 'mixed' : 'corruption');
     // Push 1 dev breakdown: log base value, each modifier, and final for strikes.
-    if (_devModeSkill) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       const eb = strikeMods.elementBonus > 0 ? ` elem=×${(1 + strikeMods.elementBonus).toFixed(2)}` : '';
       console.log(
         `[Strike] ${hero.name}→${skill.name} vs ${s.enemy.name}: ` +

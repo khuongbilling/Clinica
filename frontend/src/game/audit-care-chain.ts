@@ -107,10 +107,17 @@ for (const { source, map } of ACTION_MAPS) {
   }
 }
 
+// ── Script-only exit paths ───────────────────────────────────────────────────
+// The process.exit calls below are intentionally script-only. This file is
+// run exclusively via `sucrase-node` as a CI check (see the Run: comment at
+// the top of the file) and is never imported by the Expo bundle. Metro's
+// module resolver excludes script-entry files from the runtime graph, so
+// these exit calls are unreachable in the production or dev app.
+
 console.log(`[audit-care-chain] checked ${pairsChecked} action×enemy pairs across all maps`);
 if (gaps.length === 0) {
   console.log('[audit-care-chain] OK — no silent chain failures found.');
-  process.exit(0);
+  process.exit(0); // script-only: CI success
 }
 
 console.error(`[audit-care-chain] FOUND ${gaps.length} silent chain failure(s):`);
@@ -120,4 +127,4 @@ for (const g of gaps) {
     ` — tags [${g.actionTags.join(', ')}] match neither preferredChainTags nor allowedActionTags nor chainAdvanceTags`,
   );
 }
-process.exit(1);
+process.exit(1); // script-only: CI failure

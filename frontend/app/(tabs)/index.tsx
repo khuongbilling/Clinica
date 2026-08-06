@@ -18,7 +18,6 @@ import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { LocationHeader } from "@/src/components/sanctuary/LocationHeader";
 import { SystemObjectiveCard } from "@/src/components/sanctuary/SystemObjectiveCard";
 import { usePlayer } from "@/src/game/store";
-import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -165,7 +164,6 @@ function hubGuideRoute(obj: ObjectiveDef): string {
 export default function RunHome() {
   const router  = useRouter();
   const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
-  const { logEvent } = useTestSession();
   const { isCompleted, markDone, startTutorial, activeTutorialId } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
@@ -680,7 +678,7 @@ export default function RunHome() {
       {/* ── START SHIFT — gated: first University lesson required ── */}
       {wardShiftGate.unlocked ? (
         <EnterWardButton
-          onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push(ROUTES.shift); }}
+          onPress={() => router.push(ROUTES.shift)}
           style={styles.startBtn}
           testID="run-random-encounter"
         />
@@ -1075,7 +1073,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md, marginTop: SPACING.xs,
     backgroundColor: UI.sanctuaryCard,
-    borderRadius: UI_RADIUS.card, padding: SPACING.sm, paddingLeft: SPACING.md - 2, borderWidth: 1.5,
+    borderRadius: UI_RADIUS.card, padding: SPACING.sm, paddingLeft: SPACING.sm + 2, borderWidth: 1.5, /* +2 optical offset: aligns accent bar with medallion edge */
     overflow: "hidden", position: "relative",
   },
   infoPanelAccent: {
@@ -1095,7 +1093,7 @@ const styles = StyleSheet.create({
   elementTxt:   { fontSize: 10, fontWeight: "700", letterSpacing: 0.4 },
   heroName:     { color: UI.text, fontSize: 15, fontWeight: "700" },
   heroTitle:    { color: UI.textDim, fontSize: 12 },
-  heroLvLabel:  { color: UI.text, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
+  heroLvLabel:  { color: UI.text, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, marginTop: SPACING.xs / 4 }, /* 1 px visual nudge — keeps label baseline aligned with xpBar */
   xpBg:         { height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
   xpBar:        { height: "100%", borderRadius: 2 },
   /* Right XP column */
@@ -1189,7 +1187,7 @@ const styles = StyleSheet.create({
   sysDesc:  { color: UI.textDim, fontSize: 13 },
   introCta: {
     backgroundColor: UI.gold, borderRadius: UI_RADIUS.pill,
-    paddingVertical: SPACING.md + 2, alignItems: "center", marginTop: SPACING.sm,
+    paddingVertical: SPACING.md + 2, /* +2 gives 14 px — sits between md(12) and lg; intentional larger touch target */ alignItems: "center", marginTop: SPACING.sm,
     ...GLOW.gold,
   },
   introCtaTxt: { color: UI.onGold, fontSize: 16, fontWeight: "800", letterSpacing: 0.5 },

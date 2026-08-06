@@ -23,8 +23,6 @@ import { MilestoneReward } from "@/src/components/onboarding/MilestoneReward";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import { OnboardingProgressBar } from "@/src/components/onboarding/OnboardingProgressBar";
 import type { LotusLessonRewards } from "@/src/game/lotusLessons";
-import { HubBottomNav } from "@/src/components/HubBottomNav";
-
 // ── Topic colour + icon per lesson node ─────────────────────────────────────
 const LESSON_META: Record<string, { icon: string; color: string; label: string }> = {
   'recognizing-cues-hydration': { icon: 'water-outline',       color: '#06B6D4', label: 'Hydration Basics' },
@@ -382,7 +380,6 @@ export default function LotusLessonScreen() {
             </View>
           </SceneTransition>
         </ScrollView>
-        <HubBottomNav activeTab="journey" />
       </SafeAreaView>
     );
   }
@@ -485,7 +482,6 @@ export default function LotusLessonScreen() {
           </View>
         </SceneTransition>
       </ScrollView>
-      <HubBottomNav activeTab="journey" />
     </SafeAreaView>
   );
 }

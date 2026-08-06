@@ -15,7 +15,6 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { calculateRewards, computeStars, ENEMY_CLINICAL, getStarRules, type LearningProfile } from "@/src/game/clinical";
 import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import { getMission } from "@/src/game/missions";
-import { useTestSession } from "@/src/game/testSession";
 import { getExplanationLayer, getVictorySummary, buildClinicalReflection } from "@/src/game/explanationLayers";
 import { getDifficultyModifier } from "@/src/game/difficulty";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
@@ -36,7 +35,6 @@ interface PlayerLevelUpParsed { fromLevel: number; toLevel: number }
 export default function Result() {
   const router = useRouter();
   const { player, advanceProloguePhase } = usePlayer();
-  const { logEvent } = useTestSession();
   const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string; epidemicTokens?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
@@ -163,13 +161,8 @@ export default function Result() {
   }, [starResult.stars, rewardBreakdown, crownsEarned, playerXpEarned]);
 
   useEffect(() => {
-    logEvent('victory_screen_viewed', 'result', {
-      meta: { won, enemyId: enemy?.id, stars: starResult.stars },
-    });
     if (won) {
       playRewardCue(true);
-      logEvent('stars_earned', 'result', { meta: { stars: starResult.stars, enemyId: enemy?.id } });
-      if (mission) logEvent('region_progress_updated', 'result', { meta: { region: mission.kingdomRegion } });
       // C1 obj 12: first real (non-prologue, non-training, non-replay) Ward Shift win.
       if (!isTraining && !isPrologueTutorial && !isPrologueBoss && !isReplay) {
         completeObjective("obj_ward_shift_first"); // fire-and-forget
