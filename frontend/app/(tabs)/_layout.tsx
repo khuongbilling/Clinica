@@ -10,16 +10,13 @@ import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@
 // Each icon is an AI-generated donghua/anime illustrated PNG with transparent
 // background. Active = full opacity; inactive = dimmed. No SVG, no rings.
 //
-// TODO(icons): replace tab-journey.png and tab-inventory.png with final assets
-// once the icon-pack push ships (Agent 8).
-
 const TAB_IMAGES = {
-  journey:  require("../../assets/ui-icons/tab-journey.png"),   // TODO(icons): replace with final asset
-  heroes:   require("../../assets/ui-icons/tab-heroes.png"),
+  journey:   require("../../assets/ui-icons/tab-journey.png"),
+  heroes:    require("../../assets/ui-icons/tab-heroes.png"),
   sanctuary: require("../../assets/ui-icons/tab-realm.png"),
-  inventory: require("../../assets/ui-icons/tab-inventory.png"), // TODO(icons): replace with final asset
-  shop:     require("../../assets/ui-icons/tab-shop.png"),
-  profile:  require("../../assets/ui-icons/tab-profile.png"),
+  inventory: require("../../assets/ui-icons/tab-inventory.png"),
+  shop:      require("../../assets/ui-icons/tab-shop.png"),
+  profile:   require("../../assets/ui-icons/tab-profile.png"),
 } as const;
 
 // Hand-drawn stroke label: 4 dark offset copies + color copy on top.

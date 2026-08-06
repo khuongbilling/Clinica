@@ -7,8 +7,6 @@
  * Icons: AI-generated donghua/anime PNGs. Active = full opacity, inactive = 38%.
  * No SVG, no rings, no glow. StrokeLabel gives the painted-text RPG look.
  *
- * TODO(icons): replace tab-journey.png and tab-inventory.png with final assets
- * once the icon-pack push ships (Agent 8).
  */
 import React from "react";
 import { type AppRoute } from "@/src/game/routes";

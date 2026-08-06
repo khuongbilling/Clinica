@@ -15,7 +15,8 @@ import { APTITUDE_INFO, HEROES, RANKS } from "@/src/game/content";
 import { getHeroSprite } from "@/src/components/HeroSprites";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { NarratorGuide } from "@/src/components/NarratorGuide";
-import { getBannerImage } from "@/src/components/ModeBanners";
+import { LocationHeader } from "@/src/components/sanctuary/LocationHeader";
+import { SystemObjectiveCard } from "@/src/components/sanctuary/SystemObjectiveCard";
 import { usePlayer } from "@/src/game/store";
 import { useTestSession } from "@/src/game/testSession";
 import { useTutorial } from "@/src/game/tutorialStore";
@@ -381,14 +382,11 @@ export default function RunHome() {
       {/* ── GLOBAL PLAYER HEADER — identity/stamina/currencies/EXP (Push 3.5) ── */}
       <PlayerHeader player={player} />
 
-      {/* ── SCENE LOCATION LABEL — donghua white title style ── */}
-      <View style={styles.sceneLabelRow}>
-        <View style={styles.sceneTitleLine} />
-        <Text style={styles.sceneTitleDiamond}>◆</Text>
-        <Text style={styles.sceneLabel}>{scene.name.toUpperCase()}</Text>
-        <Text style={styles.sceneTitleDiamond}>◆</Text>
-        <View style={styles.sceneTitleLine} />
-      </View>
+      {/* ── SCENE LOCATION HEADER — Ink & Mist style with diamond decorators ── */}
+      <LocationHeader
+        sceneName={scene.name}
+        subtitle={leadHero ? `${leadHero.element} Affinity · Active Ward` : "A place of healing and learning."}
+      />
 
       {/* ── WORLD EVENT / COMMUNITY BOARD BANNER ─────────────────────────────
            Lv10+ (unlocked): full "WORLD EVENT · LIVE" banner linking to the
@@ -472,8 +470,7 @@ export default function RunHome() {
            so this card is the ONLY orientation layer a new player sees.         */}
       {!localDismissGuide && !activeTutorialId && currentObjective && currentObjective.step <= 15 && (
         <View style={styles.uniOnboard}>
-          <NarratorGuide
-            bgImage={getBannerImage("university")}
+          <SystemObjectiveCard
             message={hubGuideMessage(currentObjective)}
             objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
             ctaLabel={hubGuideCta(currentObjective)}
@@ -485,6 +482,8 @@ export default function RunHome() {
                 router.push(route as AppRoute);
               }
             }}
+            onDismiss={currentObjective.id === "obj_prologue_done" ? () => setLocalDismissGuide(true) : undefined}
+            defaultOpen={true}
             testID="home-objective-guide"
           />
         </View>
@@ -917,19 +916,6 @@ const styles = StyleSheet.create({
   },
 
   lockedFeatureBtn: { opacity: 0.55 },
-
-  /* Scene label — donghua white title style */
-  sceneLabelRow: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: SPACING.md, paddingBottom: 6, paddingTop: 2,
-    gap: 6,
-  },
-  sceneTitleLine:    { flex: 1, height: 1, backgroundColor: "#FFFFFF28", borderRadius: 1 },
-  sceneTitleDiamond: { color: "#FFFFFF60", fontSize: 8, lineHeight: 14 },
-  sceneLabel: {
-    color: "#FFFFFF", fontSize: 11, fontWeight: "700",
-    letterSpacing: 1.8, opacity: 0.92,
-  },
 
   /* University onboarding banner (prominent first step for new players) */
   uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
