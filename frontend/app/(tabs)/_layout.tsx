@@ -107,6 +107,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="journey"
         options={{
+          title: "Journey",
+          tabBarAccessibilityLabel: "Journey",
           tabBarButtonTestID: "tab-journey",
           tabBarIcon: ({ focused }) => mkTabIcon("journey", "JOURNEY", focused),
         }}
@@ -116,6 +118,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="heroes"
         options={{
+          title: "Heroes",
+          tabBarAccessibilityLabel: "Heroes",
           href: heroesUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-heroes",
           tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused),
@@ -126,6 +130,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="kingdom"
         options={{
+          title: "Sanctuary",
+          tabBarAccessibilityLabel: "Sanctuary",
           href: realmUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-sanctuary",
           tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "SANCTUARY", focused),
@@ -136,6 +142,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="inventory"
         options={{
+          title: "Inventory",
+          tabBarAccessibilityLabel: "Inventory",
           tabBarButtonTestID: "tab-inventory",
           tabBarIcon: ({ focused }) => mkTabIcon("inventory", "INVENTORY", focused),
         }}
@@ -145,6 +153,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="shop"
         options={{
+          title: "Shop",
+          tabBarAccessibilityLabel: "Shop",
           href: shopUnlocked ? undefined : null,
           tabBarButtonTestID: "tab-shop",
           tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused),
