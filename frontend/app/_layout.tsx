@@ -23,9 +23,13 @@ SplashScreen.preventAutoHideAsync();
 if (__DEV__) {
   validateRealmRoutes(REALM_BUILDINGS);
 }
+import { useCinematicFonts } from "@/src/hooks/use-cinematic-fonts";
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
+  // Warm the prologue cinematic fonts at launch (non-blocking — the prologue
+  // screens themselves degrade gracefully if these are still loading).
+  useCinematicFonts();
 
   useEffect(() => {
     if (loaded || error) {

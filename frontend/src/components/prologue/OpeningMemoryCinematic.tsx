@@ -6,23 +6,35 @@
  * legendary healer to growing overconfidence, ending on the Silent Infarction
  * encounter setup.
  *
- * Transition system:
- *  - Art panels dissolve directly into each other (A/B layer crossfade).
- *    No black flash between beats.
- *  - Each panel has a slow Ken Burns zoom (1.0 → 1.07 over ~10 s) for depth.
+ * Cinematic presentation:
+ *  - Custom typography (Cinzel display serif + Cormorant Garamond narration),
+ *    loaded via expo-font with graceful system-font fallback.
+ *  - Art panels dissolve directly into each other (A/B layer crossfade) while
+ *    a real per-beat Ken Burns move (scale + translate, direction/intensity
+ *    defined in the beat data) drifts the active panel. No black flash.
+ *  - Narration lines rise gently as they fade in; the intro identity card
+ *    eases in with scale and a soft gold glow.
+ *  - Letterbox bars frame the montage; the bottom bar carries a minimal
+ *    beat-progress indicator.
  *  - The black overlay is used only for the very first fade-in and final exit.
  *
  * UX:
- *  - Tap anywhere to reveal the next narration line, or advance to the next beat
- *    once all lines in the current beat are visible.
+ *  - Tap anywhere to reveal the next narration line, or advance to the next
+ *    beat once all lines in the current beat are visible.
  *  - Each beat auto-advances if the player doesn't tap.
+ *  - A discreet SKIP control fades in after a short delay; it cancels all
+ *    timers, fades to black, and calls onComplete() exactly once.
  *  - Calls onComplete() when the final beat finishes.
+ *
+ * Expo Go constraints honoured: every animation is opacity/transform on the
+ * native driver; no reanimated APIs; fonts come from bundled project assets.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  Easing,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -31,6 +43,11 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  cinematicFontStyles,
+  useCinematicFonts,
+} from "../../hooks/use-cinematic-fonts";
 
 // ─── Art ─────────────────────────────────────────────────────────────────────
 
@@ -46,6 +63,22 @@ const ART = {
 } as const;
 type ArtKey = keyof typeof ART;
 
+// ─── Ken Burns config ─────────────────────────────────────────────────────────
+
+/**
+ * Per-beat camera move. Scale + translate run together over KEN_BURNS_DUR ms
+ * on the active art layer (native-driver transforms only). Directions vary
+ * beat to beat so no two panels feel identical.
+ */
+type KenBurns = {
+  scaleFrom: number;
+  scaleTo:   number;
+  xFrom:     number;
+  xTo:       number;
+  yFrom:     number;
+  yTo:       number;
+};
+
 // ─── Beat data ────────────────────────────────────────────────────────────────
 
 type Beat = {
@@ -55,6 +88,7 @@ type Beat = {
   art:        ArtKey;
   accent:     string;
   tintColor?: string;
+  kb:         KenBurns;
 };
 
 const BEATS: Beat[] = [
@@ -69,6 +103,8 @@ const BEATS: Beat[] = [
     ],
     art:    "origin",
     accent: "#D4AF37",
+    // Gentle push-in, drifting right — a memory surfacing.
+    kb: { scaleFrom: 1.02, scaleTo: 1.10, xFrom: -10, xTo: 8, yFrom: 0, yTo: -6 },
   },
   {
     id: "fame",
@@ -80,6 +116,8 @@ const BEATS: Beat[] = [
     ],
     art:    "fame",
     accent: "#4FD8C4",
+    // Slow pull-back — taking in the acclaim.
+    kb: { scaleFrom: 1.12, scaleTo: 1.03, xFrom: 6, xTo: -6, yFrom: -8, yTo: 6 },
   },
   {
     id: "victory",
@@ -90,6 +128,8 @@ const BEATS: Beat[] = [
     ],
     art:    "victory",
     accent: "#7EB8F7",
+    // Confident lateral sweep with a push-in.
+    kb: { scaleFrom: 1.04, scaleTo: 1.13, xFrom: 12, xTo: -12, yFrom: 0, yTo: 0 },
   },
   {
     id: "caution",
@@ -101,6 +141,8 @@ const BEATS: Beat[] = [
     art:       "caution",
     accent:    "#F7C948",
     tintColor: "rgba(80,50,0,0.25)",
+    // Upward drift — a subtle loss of grounding.
+    kb: { scaleFrom: 1.03, scaleTo: 1.10, xFrom: 0, xTo: 0, yFrom: 10, yTo: -10 },
   },
   {
     id: "infallible",
@@ -112,6 +154,8 @@ const BEATS: Beat[] = [
     art:       "infallible",
     accent:    "#C8A0FF",
     tintColor: "rgba(40,0,60,0.30)",
+    // Retreating diagonal — the profile pulling away to observe.
+    kb: { scaleFrom: 1.13, scaleTo: 1.04, xFrom: -12, xTo: 6, yFrom: 6, yTo: -6 },
   },
   {
     id: "observation",
@@ -122,6 +166,8 @@ const BEATS: Beat[] = [
     art:       "observation",
     accent:    "#F7C948",
     tintColor: "rgba(20,0,0,0.40)",
+    // Firm push-in, sinking slightly — pressure building.
+    kb: { scaleFrom: 1.05, scaleTo: 1.15, xFrom: 0, xTo: -8, yFrom: -8, yTo: 8 },
   },
   {
     id: "judgment",
@@ -132,6 +178,8 @@ const BEATS: Beat[] = [
     art:       "judgment",
     accent:    "#F77B72",
     tintColor: "rgba(60,0,0,0.45)",
+    // Faster, tighter push-in — momentum out of control.
+    kb: { scaleFrom: 1.06, scaleTo: 1.17, xFrom: 8, xTo: -10, yFrom: 4, yTo: -8 },
   },
   {
     id: "warning",
@@ -143,6 +191,8 @@ const BEATS: Beat[] = [
     art:       "warning",
     accent:    "#8B1A1A",
     tintColor: "rgba(80,0,0,0.50)",
+    // Slow ominous creep downward-in — the trap closing.
+    kb: { scaleFrom: 1.02, scaleTo: 1.12, xFrom: -6, xTo: 6, yFrom: -10, yTo: 8 },
   },
 ];
 
@@ -150,7 +200,11 @@ const MAX_LINES          = 4;
 const LINE_INTERVAL_MS   = 1000;
 const AUTO_ADVANCE_MS    = 2600;
 const INTRO_HOLD_MS      = 3400;
-const CROSSFADE_DUR      = 750;   // ms — art dissolve overlap
+const CROSSFADE_DUR      = 750;    // ms — art dissolve overlap
+const KEN_BURNS_DUR      = 13000;  // ms — full camera move per panel
+const LETTERBOX_H        = 34;     // px — cinematic bar height
+const SKIP_DELAY_MS      = 3200;   // ms before the SKIP control fades in
+const LINE_RISE_PX       = 14;     // px — narration upward drift distance
 
 // ─── Particles ────────────────────────────────────────────────────────────────
 
@@ -173,14 +227,20 @@ interface Props {
 
 export default function OpeningMemoryCinematic({ onComplete }: Props) {
   const { width: SW, height: SH } = Dimensions.get("window");
+  const insets = useSafeAreaInsets();
+
+  // ── Typography (graceful fallback while loading) ──
+  const [fontsLoaded] = useCinematicFonts();
+  const fonts = cinematicFontStyles(fontsLoaded);
 
   // ── State machine ──
   const [stage, setStage]     = useState<"intro" | "beat">("intro");
   const [beatIdx, setBeatIdx] = useState(0);
-  const stageRef   = useRef<"intro" | "beat">("intro");
-  const beatIdxRef = useRef(0);
-  const busyRef    = useRef(false);
-  const mountedRef = useRef(true);
+  const stageRef    = useRef<"intro" | "beat">("intro");
+  const beatIdxRef  = useRef(0);
+  const busyRef     = useRef(false);
+  const mountedRef  = useRef(true);
+  const finishedRef = useRef(false); // guarantees onComplete fires exactly once
 
   // ── Art layers (A / B alternating dissolve) ──
   const [artA, setArtA] = useState<ArtKey>("origin");
@@ -188,6 +248,12 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   const layerAOpacity  = useRef(new Animated.Value(1)).current; // A is first on-screen
   const layerBOpacity  = useRef(new Animated.Value(0)).current;
   const activeLayerRef = useRef<"A" | "B">("A");
+
+  // ── Ken Burns per layer: progress value + current move config ──
+  const kbProgA = useRef(new Animated.Value(0)).current;
+  const kbProgB = useRef(new Animated.Value(0)).current;
+  const [kbCfgA, setKbCfgA] = useState<KenBurns>(BEATS[0].kb);
+  const [kbCfgB, setKbCfgB] = useState<KenBurns>(BEATS[0].kb);
 
   // ── Black overlay — used ONLY for very first fade-in and final exit ──
   const fadeOverlay = useRef(new Animated.Value(1)).current; // starts black
@@ -201,6 +267,11 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
   // ── Tint overlay ──
   const tintFade = useRef(new Animated.Value(0)).current;
+
+  // ── Letterbox bars + skip control ──
+  const letterboxAnim = useRef(new Animated.Value(0)).current; // 0 = off-screen
+  const skipFade      = useRef(new Animated.Value(0)).current;
+  const [skipVisible, setSkipVisible] = useState(false);
 
   // ── Particles ──
   const petalAnims = useRef(
@@ -217,38 +288,67 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   // ── Helpers ──
 
   const fadeIn = useCallback((val: Animated.Value, dur = 700) => {
-    Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: true }).start();
+    Animated.timing(val, {
+      toValue:         1,
+      duration:        dur,
+      easing:          Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  // ── A/B dissolve — old panel fades out, new panel fades in simultaneously ──
-  const doCrossFade = useCallback((newArt: ArtKey, onDone: () => void) => {
-    busyRef.current = true;
-    if (activeLayerRef.current === "A") {
-      setArtB(newArt);
-      layerBOpacity.setValue(0);
-      Animated.parallel([
-        Animated.timing(layerAOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: true }),
-        Animated.timing(layerBOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: true }),
-      ]).start(() => {
-        if (!mountedRef.current) return;
-        activeLayerRef.current = "B";
-        onDone();
-        busyRef.current = false;
-      });
-    } else {
-      setArtA(newArt);
-      layerAOpacity.setValue(0);
-      Animated.parallel([
-        Animated.timing(layerBOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: true }),
-        Animated.timing(layerAOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: true }),
-      ]).start(() => {
-        if (!mountedRef.current) return;
-        activeLayerRef.current = "A";
-        onDone();
-        busyRef.current = false;
-      });
-    }
-  }, [layerAOpacity, layerBOpacity]);
+  /** (Re)start the slow camera move on one art layer. */
+  const startKenBurns = useCallback(
+    (layer: "A" | "B") => {
+      const prog = layer === "A" ? kbProgA : kbProgB;
+      prog.stopAnimation();
+      prog.setValue(0);
+      Animated.timing(prog, {
+        toValue:         1,
+        duration:        KEN_BURNS_DUR,
+        easing:          Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    },
+    [kbProgA, kbProgB]
+  );
+
+  // ── A/B dissolve — old panel fades out, new panel fades in simultaneously,
+  //    while the incoming panel starts its own Ken Burns move ──
+  const doCrossFade = useCallback(
+    (newArt: ArtKey, kb: KenBurns, onDone: () => void) => {
+      busyRef.current = true;
+      if (activeLayerRef.current === "A") {
+        setArtB(newArt);
+        setKbCfgB(kb);
+        layerBOpacity.setValue(0);
+        startKenBurns("B");
+        Animated.parallel([
+          Animated.timing(layerAOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: true }),
+          Animated.timing(layerBOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: true }),
+        ]).start(() => {
+          if (!mountedRef.current) return;
+          activeLayerRef.current = "B";
+          onDone();
+          busyRef.current = false;
+        });
+      } else {
+        setArtA(newArt);
+        setKbCfgA(kb);
+        layerAOpacity.setValue(0);
+        startKenBurns("A");
+        Animated.parallel([
+          Animated.timing(layerBOpacity, { toValue: 0, duration: CROSSFADE_DUR, useNativeDriver: true }),
+          Animated.timing(layerAOpacity, { toValue: 1, duration: CROSSFADE_DUR, useNativeDriver: true }),
+        ]).start(() => {
+          if (!mountedRef.current) return;
+          activeLayerRef.current = "A";
+          onDone();
+          busyRef.current = false;
+        });
+      }
+    },
+    [layerAOpacity, layerBOpacity, startKenBurns]
+  );
 
   // ── Text-only soft fade (same art, just text changes) ──
   const softTextFade = useCallback((callback: () => void) => {
@@ -290,10 +390,10 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     lineAnims.forEach(a => a.setValue(0));
     textFade.setValue(1);
 
-    fadeIn(lineAnims[0], 500);
+    fadeIn(lineAnims[0], 600);
     for (let i = 1; i < beat.lines.length; i++) {
       const t = setTimeout(() => {
-        if (mountedRef.current) fadeIn(lineAnims[i], 500);
+        if (mountedRef.current) fadeIn(lineAnims[i], 600);
       }, i * LINE_INTERVAL_MS);
       timers.current.push(t);
     }
@@ -306,18 +406,30 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearTimers, lineAnims, fadeIn]);
 
+  // ── Final exit — fade to black then complete, exactly once ──
+  const finishCinematic = useCallback((fadeDur = 900) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    busyRef.current     = true;
+    clearTimers();
+    Animated.timing(fadeOverlay, {
+      toValue:         1,
+      duration:        fadeDur,
+      easing:          Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      if (mountedRef.current) onComplete();
+    });
+  }, [clearTimers, fadeOverlay, onComplete]);
+
   // ── Advance to next beat or finish ──
   const doAdvanceBeat = useCallback(() => {
-    if (!mountedRef.current || busyRef.current) return;
+    if (!mountedRef.current || busyRef.current || finishedRef.current) return;
     const current = beatIdxRef.current;
     const next    = current + 1;
 
     if (next >= BEATS.length) {
-      // Fade to black then exit
-      busyRef.current = true;
-      Animated.timing(fadeOverlay, { toValue: 1, duration: 900, useNativeDriver: true }).start(() => {
-        if (mountedRef.current) onComplete();
-      });
+      finishCinematic();
       return;
     }
 
@@ -337,30 +449,40 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
       // Fade text out first, then dissolve the art layers
       Animated.timing(textFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
         if (!mountedRef.current) return;
-        doCrossFade(BEATS[next].art, applyBeat);
+        doCrossFade(BEATS[next].art, BEATS[next].kb, applyBeat);
       });
     } else {
       softTextFade(applyBeat);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doCrossFade, softTextFade, onComplete, revealLines, updateTint, clearTimers]);
+  }, [doCrossFade, softTextFade, finishCinematic, revealLines, updateTint, clearTimers]);
 
   // ── Boot sequence ──
   useEffect(() => {
     mountedRef.current = true;
 
-    // Prime layer A with the first beat's art
+    // Prime layer A with the first beat's art and start its camera move
     setArtA(BEATS[0].art);
+    setKbCfgA(BEATS[0].kb);
     layerAOpacity.setValue(1);
     layerBOpacity.setValue(0);
     activeLayerRef.current = "A";
+    startKenBurns("A");
 
     // Fade the black overlay away to reveal the scene (no black-flash start)
     Animated.timing(fadeOverlay, { toValue: 0, duration: 900, useNativeDriver: true }).start();
 
+    // Letterbox bars slide in as the scene reveals
+    Animated.timing(letterboxAnim, {
+      toValue:         1,
+      duration:        1100,
+      easing:          Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+
     // Fade intro card in shortly after
     const cardIn = setTimeout(() => {
-      if (mountedRef.current) fadeIn(introCardFade, 700);
+      if (mountedRef.current) fadeIn(introCardFade, 800);
     }, 300);
     timers.current.push(cardIn);
 
@@ -385,9 +507,24 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Skip control reveal (own timer — survives beat-change clearTimers) ──
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!mountedRef.current) return;
+      setSkipVisible(true);
+      Animated.timing(skipFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    }, SKIP_DELAY_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    finishCinematic(650);
+  }, [finishCinematic]);
+
   // ── Tap handler ──
   const handleTap = useCallback(() => {
-    if (busyRef.current) return;
+    if (busyRef.current || finishedRef.current) return;
 
     if (stageRef.current === "intro") {
       clearTimers();
@@ -424,8 +561,35 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
   }, [clearTimers, doAdvanceBeat, fadeIn, introCardFade, lineAnims, revealLines]);
 
   // ── Derived ──
-  const beat          = BEATS[Math.min(beatIdx, BEATS.length - 1)];
-  const hasTint       = stage === "beat" && !!beat.tintColor;
+  const beat    = BEATS[Math.min(beatIdx, BEATS.length - 1)];
+  const hasTint = stage === "beat" && !!beat.tintColor;
+
+  // Ken Burns transforms (interpolations rebuilt whenever a layer's cfg changes)
+  const kbStyleA = {
+    transform: [
+      { scale:      kbProgA.interpolate({ inputRange: [0, 1], outputRange: [kbCfgA.scaleFrom, kbCfgA.scaleTo] }) },
+      { translateX: kbProgA.interpolate({ inputRange: [0, 1], outputRange: [kbCfgA.xFrom, kbCfgA.xTo] }) },
+      { translateY: kbProgA.interpolate({ inputRange: [0, 1], outputRange: [kbCfgA.yFrom, kbCfgA.yTo] }) },
+    ],
+  };
+  const kbStyleB = {
+    transform: [
+      { scale:      kbProgB.interpolate({ inputRange: [0, 1], outputRange: [kbCfgB.scaleFrom, kbCfgB.scaleTo] }) },
+      { translateX: kbProgB.interpolate({ inputRange: [0, 1], outputRange: [kbCfgB.xFrom, kbCfgB.xTo] }) },
+      { translateY: kbProgB.interpolate({ inputRange: [0, 1], outputRange: [kbCfgB.yFrom, kbCfgB.yTo] }) },
+    ],
+  };
+
+  // Letterbox slide-in transforms
+  const lbTopStyle = {
+    transform: [{ translateY: letterboxAnim.interpolate({ inputRange: [0, 1], outputRange: [-LETTERBOX_H, 0] }) }],
+  };
+  const lbBottomStyle = {
+    transform: [{ translateY: letterboxAnim.interpolate({ inputRange: [0, 1], outputRange: [LETTERBOX_H, 0] }) }],
+  };
+
+  // Intro card ease-in scale
+  const introCardScale = introCardFade.interpolate({ inputRange: [0, 1], outputRange: [0.93, 1] });
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -434,44 +598,48 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
 
       {/* ── Art layer A ──────────────────────────────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: layerAOpacity }]}>
-        {/* Blurred fill — same image at cover, blurred, fills any letterbox bars */}
-        <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, kbStyleA]}>
+          {/* Blurred fill — same image at cover, blurred, fills any letterbox bars */}
+          <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
+            <ExpoImage
+              source={ART[artA]}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              contentPosition="center"
+              blurRadius={22}
+            />
+          </View>
+          {/* Sharp image — full art, no cropping */}
           <ExpoImage
             source={ART[artA]}
             style={StyleSheet.absoluteFill}
-            contentFit="cover"
+            contentFit="contain"
             contentPosition="center"
-            blurRadius={22}
           />
-        </View>
-        {/* Sharp image — full art, no cropping */}
-        <ExpoImage
-          source={ART[artA]}
-          style={StyleSheet.absoluteFill}
-          contentFit="contain"
-          contentPosition="center"
-        />
+        </Animated.View>
       </Animated.View>
 
       {/* ── Art layer B (cross-dissolve target) ─────────────────────── */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: layerBOpacity }]}>
-        {/* Blurred fill */}
-        <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, kbStyleB]}>
+          {/* Blurred fill */}
+          <View style={[StyleSheet.absoluteFill, { opacity: 0.38, overflow: "hidden" }]}>
+            <ExpoImage
+              source={ART[artB]}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              contentPosition="center"
+              blurRadius={22}
+            />
+          </View>
+          {/* Sharp image — full art, no cropping */}
           <ExpoImage
             source={ART[artB]}
             style={StyleSheet.absoluteFill}
-            contentFit="cover"
+            contentFit="contain"
             contentPosition="center"
-            blurRadius={22}
           />
-        </View>
-        {/* Sharp image — full art, no cropping */}
-        <ExpoImage
-          source={ART[artB]}
-          style={StyleSheet.absoluteFill}
-          contentFit="contain"
-          contentPosition="center"
-        />
+        </Animated.View>
       </Animated.View>
 
       {/* ── Per-beat tint overlay ────────────────────────────────────── */}
@@ -528,11 +696,27 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         );
       })}
 
-      {/* ── Black overlay — only for initial reveal and final exit ───── */}
-      <Animated.View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: "#03050A", opacity: fadeOverlay }]}
-      />
+      {/* ── Cinematic letterbox bars ─────────────────────────────────── */}
+      <Animated.View pointerEvents="none" style={[styles.letterboxTop, lbTopStyle]} />
+      <Animated.View pointerEvents="none" style={[styles.letterboxBottom, lbBottomStyle]}>
+        {/* Beat-progress indicator */}
+        <View style={styles.progressRow}>
+          {BEATS.map((b, i) => {
+            const isActive = stage === "beat" && i === beatIdx;
+            const isDone   = stage === "beat" && i < beatIdx;
+            return (
+              <View
+                key={b.id}
+                style={[
+                  styles.progressSeg,
+                  isActive && { backgroundColor: beat.accent, width: 18, opacity: 0.95 },
+                  isDone   && { backgroundColor: "rgba(212,175,55,0.55)" },
+                ]}
+              />
+            );
+          })}
+        </View>
+      </Animated.View>
 
       {/* ── UI content ───────────────────────────────────────────────── */}
       <SafeAreaView style={styles.safe} pointerEvents="box-none">
@@ -541,22 +725,28 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
         <View style={styles.topArea}>
           {stage === "beat" && (
             <Animated.View style={{ opacity: textFade }}>
-              <Text style={[styles.sceneLabel, { color: beat.accent }]}>
+              <Text style={[styles.sceneLabel, fonts.display, { color: beat.accent }]}>
                 {beat.sceneLabel}
               </Text>
             </Animated.View>
           )}
         </View>
 
-        {/* Intro identity card */}
+        {/* Intro identity card — eases in with scale + soft gold glow */}
         {stage === "intro" && (
-          <Animated.View style={[styles.introCard, { opacity: introCardFade }]}>
-            <Text style={styles.classifiedTag}>— CLASSIFIED —</Text>
+          <Animated.View
+            style={[
+              styles.introCard,
+              { opacity: introCardFade, transform: [{ scale: introCardScale }] },
+            ]}
+          >
+            <View style={styles.introGlow} pointerEvents="none" />
+            <Text style={[styles.classifiedTag, fonts.display]}>— CLASSIFIED —</Text>
             <View style={styles.divider} />
-            <Text style={styles.introTitle}>THE FORMER SELF</Text>
-            <Text style={styles.introSubtitle}>The Prodigy</Text>
+            <Text style={[styles.introTitle, fonts.display]}>THE FORMER SELF</Text>
+            <Text style={[styles.introSubtitle, fonts.narrationItalic]}>The Prodigy</Text>
             <View style={styles.divider} />
-            <Text style={styles.classifiedTag}>CLINICA · WARD ARCHIVES</Text>
+            <Text style={[styles.classifiedTag, fonts.display]}>CLINICA · WARD ARCHIVES</Text>
           </Animated.View>
         )}
 
@@ -569,8 +759,17 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
                   key={`${beat.id}-${i}`}
                   style={[
                     styles.line,
+                    fonts.narration,
                     i === 0 && styles.lineFirst,
-                    { opacity: lineAnims[i] },
+                    {
+                      opacity: lineAnims[i],
+                      transform: [{
+                        translateY: lineAnims[i].interpolate({
+                          inputRange:  [0, 1],
+                          outputRange: [LINE_RISE_PX, 0],
+                        }),
+                      }],
+                    },
                   ]}
                 >
                   {line}
@@ -586,17 +785,42 @@ export default function OpeningMemoryCinematic({ onComplete }: Props) {
                 { backgroundColor: stage === "beat" ? beat.accent : "#D4AF37" },
               ]}
             />
-            <Text style={styles.identityName}>THE FORMER SELF</Text>
+            <Text style={[styles.identityName, fonts.display]}>THE FORMER SELF</Text>
             <Text style={styles.identitySep}>·</Text>
-            <Text style={styles.identityTitle}>The Prodigy</Text>
+            <Text style={[styles.identityTitle, fonts.narrationItalic]}>The Prodigy</Text>
           </View>
 
           <Text style={styles.tapHint}>Tap anywhere to continue</Text>
         </View>
       </SafeAreaView>
 
-      {/* Full-screen tap target (below UI, above art) */}
+      {/* Full-screen tap target (below skip button, above art) */}
       <Pressable style={StyleSheet.absoluteFill} onPress={handleTap} />
+
+      {/* ── Discreet SKIP control (above the tap target) ─────────────── */}
+      {skipVisible && (
+        <Animated.View
+          style={[
+            styles.skipWrap,
+            { top: Math.max(insets.top, LETTERBOX_H) + 10, opacity: skipFade },
+          ]}
+        >
+          <Pressable
+            onPress={handleSkip}
+            hitSlop={12}
+            style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={[styles.skipText, fonts.display]}>SKIP ▸</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* ── Black overlay — only for initial reveal and final exit.
+             Rendered last so the exit fade covers every layer. ───────── */}
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: "#03050A", opacity: fadeOverlay }]}
+      />
     </View>
   );
 }
@@ -609,14 +833,44 @@ const styles = StyleSheet.create({
 
   petal: { position: "absolute" },
 
+  // ── Letterbox framing ──
+  letterboxTop: {
+    position:        "absolute",
+    top:             0,
+    left:            0,
+    right:           0,
+    height:          LETTERBOX_H,
+    backgroundColor: "#000000",
+  },
+  letterboxBottom: {
+    position:        "absolute",
+    bottom:          0,
+    left:            0,
+    right:           0,
+    height:          LETTERBOX_H,
+    backgroundColor: "#000000",
+    alignItems:      "center",
+    justifyContent:  "center",
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           6,
+  },
+  progressSeg: {
+    width:           12,
+    height:          2,
+    borderRadius:    1,
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
 
   topArea: {
-    paddingTop:        16,
+    paddingTop:        LETTERBOX_H + 14,
     paddingHorizontal: 20,
-    minHeight:         32,
+    minHeight:         LETTERBOX_H + 30,
   },
   bottomArea: {
-    paddingBottom: 4,
+    paddingBottom: LETTERBOX_H + 2,
   },
 
   introCard: {
@@ -626,6 +880,19 @@ const styles = StyleSheet.create({
     alignItems:        "center",
     gap:               10,
     paddingHorizontal: 32,
+  },
+  introGlow: {
+    position:        "absolute",
+    top:             -48,
+    bottom:          -48,
+    left:            -40,
+    right:           -40,
+    borderRadius:    160,
+    backgroundColor: "rgba(212,175,55,0.07)",
+    shadowColor:     "#D4AF37",
+    shadowOpacity:   0.55,
+    shadowRadius:    60,
+    shadowOffset:    { width: 0, height: 0 },
   },
   classifiedTag: {
     color:         "rgba(212,175,55,0.7)",
@@ -641,14 +908,14 @@ const styles = StyleSheet.create({
   },
   introTitle: {
     color:         "#F4F7FB",
-    fontSize:      30,
+    fontSize:      26,
     fontWeight:    "300",
-    letterSpacing: 8,
+    letterSpacing: 5,
     textAlign:     "center",
   },
   introSubtitle: {
     color:         "rgba(212,175,55,0.9)",
-    fontSize:      16,
+    fontSize:      19,
     fontStyle:     "italic",
     letterSpacing: 1,
   },
@@ -667,13 +934,13 @@ const styles = StyleSheet.create({
   },
   line: {
     color:      "#E8EEF5",
-    fontSize:   22,
+    fontSize:   24,
     fontWeight: "300",
-    lineHeight: 32,
+    lineHeight: 33,
   },
   lineFirst: {
-    fontSize:   24,
-    fontWeight: "400",
+    fontSize:   27,
+    lineHeight: 36,
   },
 
   identityStrip: {
@@ -700,7 +967,7 @@ const styles = StyleSheet.create({
   },
   identityTitle: {
     color:         "rgba(212,175,55,0.7)",
-    fontSize:      11,
+    fontSize:      13,
     fontStyle:     "italic",
     letterSpacing: 0.5,
   },
@@ -711,5 +978,25 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textAlign:     "center",
     paddingBottom: 10,
+  },
+
+  // ── Skip control ──
+  skipWrap: {
+    position: "absolute",
+    right:    16,
+  },
+  skipBtn: {
+    paddingHorizontal: 14,
+    paddingVertical:   7,
+    borderRadius:      999,
+    borderWidth:       1,
+    borderColor:       "rgba(255,255,255,0.18)",
+    backgroundColor:   "rgba(3,5,10,0.45)",
+  },
+  skipText: {
+    color:         "rgba(255,255,255,0.62)",
+    fontSize:      10,
+    letterSpacing: 2.5,
+    fontWeight:    "700",
   },
 });

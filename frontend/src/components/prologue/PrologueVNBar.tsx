@@ -27,6 +27,10 @@ import {
   PROLOGUE_CHARACTERS,
   type PrologueSpeakerId,
 } from "../../game/prologueCharacters";
+import {
+  cinematicFontStyles,
+  useCinematicFonts,
+} from "../../hooks/use-cinematic-fonts";
 
 const { width: W, height: H } = Dimensions.get("window");
 
@@ -152,6 +156,11 @@ export default function PrologueVNBar({
   const insets   = useSafeAreaInsets();
   const barTotal = barHeight + insets.bottom;
 
+  // Cinematic narration typeface (shared with OpeningMemoryCinematic).
+  // Falls back to system text gracefully while fonts load.
+  const [fontsLoaded] = useCinematicFonts();
+  const fonts = cinematicFontStyles(fontsLoaded);
+
   if (!visible) return null;
 
   const arrowVisible = showArrow !== undefined ? showArrow : typewriterDone;
@@ -222,7 +231,7 @@ export default function PrologueVNBar({
               />
             </View>
             <Text
-              style={[s.speakerName, { color: speaker.color }]}
+              style={[s.speakerName, fonts.display, { color: speaker.color }]}
               numberOfLines={2}
             >
               {speaker.name}
@@ -232,9 +241,11 @@ export default function PrologueVNBar({
           {/* Dialogue text */}
           <View style={s.textCol}>
             {isMonologue ? (
-              <Text style={s.dlgMonologue} numberOfLines={4}>{displayed}</Text>
+              <Text style={[s.dlgMonologue, fonts.narrationItalic]} numberOfLines={4}>
+                {displayed}
+              </Text>
             ) : (
-              <Text style={s.dlgText} numberOfLines={4}>
+              <Text style={[s.dlgText, fonts.narration]} numberOfLines={4}>
                 {displayed}
                 {!typewriterDone && (
                   <Text style={{ color: speaker.color }}>▌</Text>
@@ -319,19 +330,21 @@ const s = StyleSheet.create({
 
   textCol: { flex: 1 },
 
+  // Sizes tuned for Cormorant Garamond's smaller x-height (falls back cleanly
+  // to system text at these sizes while fonts load).
   dlgText: {
     color:      "#E8EEF6",
-    fontSize:   17,
+    fontSize:   19,
     fontWeight: "400",
-    lineHeight: 26,
+    lineHeight: 28,
   },
 
   /** SI / enemy monologue style — italic, de-saturated red, no caret. */
   dlgMonologue: {
     color:         "rgba(255,210,210,0.92)",
-    fontSize:      16,
+    fontSize:      18,
     fontWeight:    "300",
-    lineHeight:    26,
+    lineHeight:    28,
     letterSpacing: 0.6,
     fontStyle:     "italic",
   },
