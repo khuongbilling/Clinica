@@ -7,6 +7,9 @@
 // - Jade gradient Enter the Ward button
 // - River SVG medallion on hero card, no emoji, no star decorations
 
+import PlayerStatusBar from './PlayerStatusBar';
+import LocationHeader from './LocationHeader';
+
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 const C = {
   bg:           '#07141D',
@@ -100,11 +103,6 @@ function RiverMedallion({ size = 44 }: { size?: number }) {
   );
 }
 
-// Stamina icon — designed gold-and-teal energy emblem (painterly asset)
-function StaminaEmblem() {
-  return <img src={IMG.staminaEmblem} style={{ width: 15, height: 15, objectFit: 'contain' }} />;
-}
-
 // Medical cross emblem for Enter Ward button
 function MedCross({ size = 20, color = C.jadeDeep }: { size?: number; color?: string }) {
   const s = size / 20;
@@ -119,87 +117,6 @@ function MedCross({ size = 20, color = C.jadeDeep }: { size?: number; color?: st
   );
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
-function Header() {
-  const pct = (PLAYER.stamina / PLAYER.staminaMax) * 100;
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: SP.sm,
-      padding: `${SP.sm}px ${SP.md}px`,
-      background: C.panel,
-      border: `1px solid ${C.border}`,
-      borderRadius: R.xl, margin: `${SP.sm}px ${SP.sm}px 0`,
-      boxShadow: `inset 0 0 16px ${C.jadeGlow}, 0 2px 8px rgba(0,0,0,0.5)`,
-    }}>
-      {/* Profile medallion */}
-      <div style={{ width: 40, height: 40, borderRadius: 20, background: `linear-gradient(135deg, #0D2535, #091822)`, border: `2px solid ${C.jade}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 10px ${C.jade}40` }}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="9" stroke={C.jade} strokeWidth="1" fill="none" opacity="0.5"/>
-          {/* Stethoscope */}
-          <path d="M6 5Q6 3 8 3Q10 3 10 5V10Q10 13 13 13Q16 13 16 10" stroke={C.jade} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-          <circle cx="16" cy="9" r="2" stroke={C.jade} strokeWidth="1.2" fill={C.jadeGlow}/>
-          <circle cx="7" cy="5" r="1" fill={C.jade}/>
-          <circle cx="9" cy="5" r="1" fill={C.jade}/>
-        </svg>
-      </div>
-      {/* Identity */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontFamily: F.display, color: C.ivory, lineHeight: 1.2, letterSpacing: 0.3 }}>
-          {PLAYER.name}&nbsp;<span style={{ fontSize: 11, color: C.jade, fontFamily: F.ui, fontWeight: 600 }}>Lv.{PLAYER.level}</span>
-        </div>
-        <div style={{ fontSize: 10, color: C.muted, fontFamily: F.ui, marginTop: 1 }}>{PLAYER.role}</div>
-      </div>
-      {/* Stamina chip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#091822', borderRadius: R.pill, padding: '4px 7px', border: `1px solid ${C.jadeBorder}` }}>
-        <StaminaEmblem />
-        <div style={{ width: 30, height: 3.5, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${C.jadeDeep},${C.jade})`, borderRadius: 2 }} />
-        </div>
-        <span style={{ fontSize: 10, color: C.jade, fontFamily: F.ui, fontWeight: 700 }}>{PLAYER.stamina}/{PLAYER.staminaMax}</span>
-        <PlusBtn />
-      </div>
-      {/* Crowns chip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#091822', borderRadius: R.pill, padding: '4px 7px', border: `1px solid ${C.border}` }}>
-        <img src={IMG.crowns} style={{ width: 14, height: 14, objectFit: 'contain' }} />
-        <span style={{ fontSize: 10, color: C.goldBright, fontFamily: F.ui, fontWeight: 700 }}>{PLAYER.crowns}</span>
-        <PlusBtn />
-      </div>
-    </div>
-  );
-}
-
-// ── Location Title ─────────────────────────────────────────────────────────────
-function LocationTitle() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `${SP.sm}px ${SP.md}px`, gap: SP.sm, position: 'relative' }}>
-      {/* Diamond dividers + title */}
-      <span style={{ fontSize: 10, color: C.gold, opacity: 0.7 }}>◇</span>
-      <span style={{ fontFamily: F.display, fontSize: 13, color: C.goldBright, letterSpacing: 1.8, textShadow: `0 0 14px ${C.gold}80` }}>
-        GRAND WARD ATRIUM
-      </span>
-      <span style={{ fontSize: 10, color: C.gold, opacity: 0.7 }}>◇</span>
-      {/* Right controls */}
-      <div style={{ position: 'absolute', right: SP.md, display: 'flex', alignItems: 'center', gap: SP.xs }}>
-        <div style={{ width: 24, height: 24, borderRadius: 12, background: C.panel, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <circle cx="6" cy="6" r="5" stroke={C.muted} strokeWidth="1"/>
-            <line x1="6" y1="5" x2="6" y2="9" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round"/>
-            <circle cx="6" cy="3.5" r="0.8" fill={C.muted}/>
-          </svg>
-        </div>
-        <div style={{ width: 24, height: 24, borderRadius: 12, background: C.panel, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <circle cx="6" cy="6" r="2" stroke={C.muted} strokeWidth="1"/>
-            <line x1="6" y1="0" x2="6" y2="2.5" stroke={C.muted} strokeWidth="1"/>
-            <line x1="6" y1="9.5" x2="6" y2="12" stroke={C.muted} strokeWidth="1"/>
-            <line x1="0" y1="6" x2="2.5" y2="6" stroke={C.muted} strokeWidth="1"/>
-            <line x1="9.5" y1="6" x2="12" y2="6" stroke={C.muted} strokeWidth="1"/>
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── System & Objective Card ───────────────────────────────────────────────────
 function SystemCard() {
@@ -467,8 +384,8 @@ export default function MainHubPreview() {
       position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', zIndex: 1, gap: 0 }}>
-        <Header />
-        <LocationTitle />
+        <PlayerStatusBar />
+        <LocationHeader />
         <SystemCard />
         <Arena />
         <HeroCard />
