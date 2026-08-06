@@ -20,6 +20,8 @@ export interface SanctuaryShortcutCardProps {
   available?: boolean;
   /** Compact pill chip below icon frame (e.g. "12 items") */
   quantity?: string | number;
+  /** Overrides the default accessibilityLabel (defaults to the label prop) */
+  accessibilityLabel?: string;
   testID?: string;
 }
 
@@ -31,6 +33,7 @@ export function SanctuaryShortcutCard({
   badge,
   available = false,
   quantity,
+  accessibilityLabel,
   testID,
 }: SanctuaryShortcutCardProps) {
   const hasBadge = !locked && badge !== undefined && badge > 0;
@@ -42,6 +45,9 @@ export function SanctuaryShortcutCard({
       onPress={onPress}
       hitSlop={6}
       testID={testID}
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: locked }}
     >
       {/* ── Icon frame ── */}
       <View style={s.iconFrame}>

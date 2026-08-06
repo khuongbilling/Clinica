@@ -285,8 +285,8 @@ export default function RunHome() {
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 0.25, duration: 850, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: 1,    duration: 850, useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue: 0.25, duration: 850, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1,    duration: 850, useNativeDriver: true }),
       Animated.delay(1600),
     ])).start();
   }, []);
@@ -374,6 +374,8 @@ export default function RunHome() {
           onPress={() => router.push(ROUTES.tutorial)}
           hitSlop={10}
           testID="run-tutorial-button"
+          accessibilityLabel="Open tutorial"
+          accessibilityRole="button"
         >
           <Ionicons name="help-circle-outline" size={20} color={COLORS.onSurfaceSecondary} />
         </Pressable>
@@ -400,6 +402,8 @@ export default function RunHome() {
           style={[styles.eventBanner, !worldEventUnlocked && styles.eventBannerBoard]}
           onPress={() => router.push(ACTIVE_WORLD_EVENT.route as AppRoute)}
           testID="home-world-event-banner"
+          accessibilityLabel={worldEventUnlocked ? `World event: ${ACTIVE_WORLD_EVENT.title}` : "Community Health Board — read-only preview"}
+          accessibilityRole="button"
         >
           <View style={styles.eventBannerIcon}>
             <Ionicons
@@ -434,9 +438,11 @@ export default function RunHome() {
           <Ionicons name="chevron-forward" size={16} color={ACTIVE_WORLD_EVENT.accentColor} />
           <Pressable
             style={styles.eventBannerClose}
-            onPress={dismissEventBanner}
+            onPress={(e) => { e.stopPropagation?.(); dismissEventBanner(); }}
             hitSlop={10}
             testID="home-world-event-dismiss"
+            accessibilityLabel="Dismiss banner"
+            accessibilityRole="button"
           >
             <Ionicons name="close" size={14} color={COLORS.onSurfaceTertiary} />
           </Pressable>
@@ -449,6 +455,8 @@ export default function RunHome() {
           style={styles.memoryBanner}
           onPress={() => router.push(dynRoute.storyScene(newMemory.id))}
           testID="home-new-memory-banner"
+          accessibilityLabel={`New memory unlocked: ${newMemory.title}`}
+          accessibilityRole="button"
         >
           <Ionicons name="sparkles" size={18} color="#E0B45C" />
           <View style={{ flex: 1, gap: 1 }}>
@@ -542,6 +550,8 @@ export default function RunHome() {
           style={styles.heroCenter}
           onPress={() => router.push(hasRecruitedHeroes ? ROUTES.heroSelect : summonUnlocked ? ROUTES.UNI_RECRUIT : ROUTES.UNIVERSITY)}
           testID="home-portrait-tap"
+          accessibilityLabel={hasRecruitedHeroes ? "Change active hero" : summonUnlocked ? "Recruit your first hero" : "Go to University to unlock recruitment"}
+          accessibilityRole="button"
         >
           {hasRecruitedHeroes && heroSprite ? (
             <Image
@@ -607,6 +617,8 @@ export default function RunHome() {
           }]}
           onPress={() => leadHeroId && router.push(`/hero/${leadHeroId}` as any)}
           testID="home-hero-card"
+          accessibilityLabel={leadHero ? `View ${leadHero.name} hero details` : "View hero details"}
+          accessibilityRole="button"
         >
           <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
 
@@ -653,11 +665,13 @@ export default function RunHome() {
           style={styles.infoPanelRecruit}
           onPress={() => router.push(ROUTES.UNI_RECRUIT)}
           testID="home-recruit-prompt"
+          accessibilityLabel="Your first healer awaits — visit the Recruitment Hall"
+          accessibilityRole="button"
         >
           <Ionicons name="sparkles" size={18} color={UI.gold} />
           <View style={{ flex: 1, gap: 1 }}>
-            <Text style={styles.infoPanelRecruitTitle}>Your first healer awaits</Text>
-            <Text style={styles.infoPanelRecruitSub}>Visit the Recruitment Hall to summon your team</Text>
+            <Text style={styles.infoPanelRecruitTitle} numberOfLines={1}>Your first healer awaits</Text>
+            <Text style={styles.infoPanelRecruitSub} numberOfLines={2}>Visit the Recruitment Hall to summon your team</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={UI.gold} />
         </Pressable>
@@ -676,12 +690,17 @@ export default function RunHome() {
             <Ionicons name="lock-closed" size={20} color={UI.jade} />
           </View>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.wardLockedCardTitle}>WARD SHIFT · LOCKED</Text>
-            <Text style={styles.wardLockedCardSub}>
+            <Text style={styles.wardLockedCardTitle} numberOfLines={1}>WARD SHIFT · LOCKED</Text>
+            <Text style={styles.wardLockedCardSub} numberOfLines={2}>
               {wardShiftGate.reason ?? "Finish your first Clinica University lesson to unlock the ward."}
             </Text>
           </View>
-          <Pressable style={styles.wardLockedCardCta} onPress={() => router.push(ROUTES.UNIVERSITY)}>
+          <Pressable
+            style={styles.wardLockedCardCta}
+            onPress={() => router.push(ROUTES.UNIVERSITY)}
+            accessibilityLabel="Go to University to unlock Ward Shift"
+            accessibilityRole="button"
+          >
             <Text style={styles.wardLockedCardCtaTxt}>TRAIN</Text>
             <Ionicons name="arrow-forward" size={12} color="#082019" />
           </Pressable>
@@ -715,7 +734,13 @@ export default function RunHome() {
                 </View>
               ))}
             </View>
-            <Pressable style={styles.introCta} onPress={dismissIntro} testID="intro-dismiss">
+            <Pressable
+              style={styles.introCta}
+              onPress={dismissIntro}
+              testID="intro-dismiss"
+              accessibilityLabel="Begin the journey"
+              accessibilityRole="button"
+            >
               <Text style={styles.introCtaTxt}>BEGIN THE JOURNEY</Text>
             </Pressable>
           </View>
@@ -822,6 +847,8 @@ function ReturnSessionCard({
         <Pressable
           style={rcStyles.btn}
           onPress={hasRewards ? onRounds : onJourney}
+          accessibilityLabel={hasRewards ? "Claim daily rewards" : "Open Journey Map"}
+          accessibilityRole="button"
         >
           <Text style={rcStyles.btnTxt}>GO</Text>
           <Ionicons name="arrow-forward" size={12} color="#FFFFFF" />

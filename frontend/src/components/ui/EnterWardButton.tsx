@@ -23,6 +23,7 @@ export function EnterWardButton({
   loading = false,
   style,
   testID,
+  accessibilityLabel,
 }: {
   onPress: () => void;
   label?: string;
@@ -30,6 +31,7 @@ export function EnterWardButton({
   loading?: boolean;
   style?: ViewStyle;
   testID?: string;
+  accessibilityLabel?: string;
 }) {
   const scaleAnim  = useRef(new Animated.Value(1)).current;
   const shimmerX   = useRef(new Animated.Value(-60)).current;
@@ -93,6 +95,9 @@ export function EnterWardButton({
         disabled={isBlocked}
         testID={testID}
         style={styles.pressable}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isBlocked }}
       >
         {/* ── Jade gradient fill ── */}
         <LinearGradient

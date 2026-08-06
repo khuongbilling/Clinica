@@ -145,7 +145,13 @@ export function SystemObjectiveCard({
 
       {/* ── CTA button ── */}
       {ctaLabel && onPress ? (
-        <Pressable style={s.cta} onPress={onPress} testID={testID ? `${testID}-cta` : undefined}>
+        <Pressable
+          style={s.cta}
+          onPress={onPress}
+          testID={testID ? `${testID}-cta` : undefined}
+          accessibilityLabel={ctaLabel}
+          accessibilityRole="button"
+        >
           <Text style={s.ctaTxt}>{ctaLabel}</Text>
           <Ionicons name="arrow-forward" size={15} color="#082019" />
         </Pressable>
