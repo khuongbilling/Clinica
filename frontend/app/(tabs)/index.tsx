@@ -23,6 +23,7 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, GLOW } from "@/src/theme/ui";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
+import { EnterWardButton } from "@/src/components/ui";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
@@ -628,9 +629,7 @@ export default function RunHome() {
 
       {/* ── START SHIFT — gated: first University lesson required ── */}
       {wardShiftGate.unlocked ? (
-        <PrimaryButton
-          label="ENTER THE WARD"
-          icon="medical"
+        <EnterWardButton
           onPress={() => { logEvent("shifting_ward_opened", "home", {}); router.push(ROUTES.shift); }}
           style={styles.startBtn}
           testID="run-random-encounter"
