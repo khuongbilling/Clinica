@@ -9,6 +9,7 @@
 
 import PlayerStatusBar from './PlayerStatusBar';
 import LocationHeader from './LocationHeader';
+import { SystemCard } from './SystemCard';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -119,56 +120,6 @@ function MedCross({ size = 20, color = C.jadeDeep }: { size?: number; color?: st
 
 
 // ── System & Objective Card ───────────────────────────────────────────────────
-function SystemCard() {
-  return (
-    <div style={{
-      margin: `0 ${SP.sm}px`,
-      background: `linear-gradient(145deg, #0D2228, #091820)`,
-      border: `1.5px solid ${C.border}`,
-      borderRadius: R.xxl,
-      overflow: 'hidden',
-      boxShadow: `inset 0 0 20px rgba(85,200,183,0.07), 0 4px 16px rgba(0,0,0,0.4)`,
-    }}>
-      {/* Main row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: SP.md, padding: `${SP.md}px ${SP.md}px ${SP.sm}px` }}>
-        {/* System medallion — stethoscope emblem */}
-        <div style={{ width: 40, height: 40, borderRadius: 20, background: `radial-gradient(circle, #0E2E26, #071810)`, border: `2px solid ${C.jade}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 12px ${C.jade}50` }}>
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-            <path d="M6 5Q6 3 8 3Q10 3 10 5V10Q10 13 13 13Q16 13 16 10" stroke={C.jade} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
-            <circle cx="16" cy="8.5" r="2.2" stroke={C.jade} strokeWidth="1.3" fill="rgba(130,213,186,0.2)"/>
-            <circle cx="7" cy="4.5" r="1.1" fill={C.jade}/>
-            <circle cx="9" cy="4.5" r="1.1" fill={C.jade}/>
-          </svg>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontFamily: F.display, color: C.jade, letterSpacing: 1.5, marginBottom: 4 }}>THE SYSTEM</div>
-          <div style={{ fontSize: 12, color: C.ivoryDim, fontFamily: F.ui, lineHeight: 1.6 }}>
-            Ward Shift unlocked — step into the ward for your first simulation.
-          </div>
-        </div>
-        {/* Gold-ringed collapse chevron */}
-        <div style={{ width: 24, height: 24, borderRadius: 12, background: 'rgba(199,161,93,0.10)', border: `1.5px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-            <path d="M1 5L5 1L9 5" stroke={C.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-      </div>
-      {/* Objective strip — nested, no harsh divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: `7px ${SP.md}px 10px`, background: `rgba(22,52,59,0.70)` }}>
-        {/* Flag icon per spec */}
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-          <line x1="2" y1="1" x2="2" y2="10.5" stroke={C.jade} strokeWidth="1.4" strokeLinecap="round"/>
-          <path d="M2 1.5H9L7 4L9 6.5H2Z" fill={C.jade} opacity="0.9"/>
-        </svg>
-        <span style={{ fontSize: 9, fontFamily: F.display, color: C.jade, letterSpacing: 1.2 }}>OBJECTIVE</span>
-        <span style={{ fontSize: 11, color: C.ivoryDim, fontFamily: F.ui }}>Complete your first Ward Shift simulation.</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Shortcut Card ─────────────────────────────────────────────────────────────
-// All 5 cards share one component — exact ref crop with baked art + label
 function ShortcutCard({ src, width = 78 }: { src: string; width?: number }) {
   return (
     <img
@@ -397,4 +348,3 @@ export default function MainHubPreview() {
     </div>
   );
 }
-
