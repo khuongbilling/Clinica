@@ -16,6 +16,9 @@ const TAB_IMAGES = {
   shop:    require("../../assets/ui-icons/tab-shop.png"),
   realm:   require("../../assets/ui-icons/tab-realm.png"),
   guild:   require("../../assets/ui-icons/tab-guild.png"),
+  home:    require("../../assets/ui-icons/tab-home.png"),
+  study:   require("../../assets/ui-icons/tab-study.png"),
+  profile: require("../../assets/ui-icons/tab-profile.png"),
 } as const;
 
 // Hand-drawn stroke label: 4 dark offset copies + color copy on top.
@@ -144,7 +147,11 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="profile"
-        options={{ href: null, tabBarButtonTestID: "tab-profile" }}
+        options={{
+          href: null,
+          tabBarButtonTestID: "tab-profile",
+          tabBarIcon: ({ focused }) => mkTabIcon("profile", "PROFILE", focused),
+        }}
       />
       <Tabs.Screen
         name="codex"
