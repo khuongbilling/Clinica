@@ -20,6 +20,7 @@ import { SystemObjectiveCard } from "@/src/components/sanctuary/SystemObjectiveC
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, GLOW } from "@/src/theme/ui";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
@@ -163,6 +164,7 @@ function hubGuideRoute(obj: ObjectiveDef): string {
 
 export default function RunHome() {
   const router  = useRouter();
+  const reduceMotion = useReducedMotion();
   const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
   const { isCompleted, markDone, startTutorial, activeTutorialId } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
@@ -282,12 +284,18 @@ export default function RunHome() {
   }, [loading, player, showIntro, isCompleted, router]);
 
   useEffect(() => {
-    Animated.loop(Animated.sequence([
+    if (reduceMotion) {
+      pulseAnim.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(Animated.sequence([
       Animated.timing(pulseAnim, { toValue: 0.25, duration: 850, useNativeDriver: true }),
       Animated.timing(pulseAnim, { toValue: 1,    duration: 850, useNativeDriver: true }),
       Animated.delay(1600),
-    ])).start();
-  }, []);
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [reduceMotion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissIntro = async () => {
     await AsyncStorage.setItem(INTRO_KEY, "1");

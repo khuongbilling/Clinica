@@ -22,6 +22,7 @@ import {
 import Svg, { Circle, Path } from "react-native-svg";
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, TYPO } from "@/src/theme/ui";
+import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
 export interface SystemObjectiveCardProps {
   message: string;
@@ -86,16 +87,22 @@ export function SystemObjectiveCard({
   testID,
 }: SystemObjectiveCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const reduceMotion = useReducedMotion();
 
-  // Fade-in on mount
+  // Fade-in on mount — skipped when Reduce Motion is enabled
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(8)).current;
   useEffect(() => {
+    if (reduceMotion) {
+      fade.setValue(1);
+      rise.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(rise, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Animated.View

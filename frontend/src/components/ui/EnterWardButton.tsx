@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { UI, UI_RADIUS, GLOW, SPACING } from "@/src/theme/ui";
+import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
 // EnterWardButton — the ceremonial "Enter the Ward" CTA for the Sanctuary hub.
 // Jade mint-to-teal gradient with ornate gold frame, corner flourishes, shimmer,
@@ -33,6 +34,7 @@ export function EnterWardButton({
   testID?: string;
   accessibilityLabel?: string;
 }) {
+  const reduceMotion = useReducedMotion();
   const scaleAnim  = useRef(new Animated.Value(1)).current;
   const shimmerX   = useRef(new Animated.Value(-60)).current;
   const shimmerLoop = useRef<Animated.CompositeAnimation | null>(null);
@@ -40,7 +42,7 @@ export function EnterWardButton({
 
   // ── Shimmer loop ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (disabled || loading) {
+    if (disabled || loading || reduceMotion) {
       shimmerLoop.current?.stop();
       shimmerX.setValue(-60);
       return;
@@ -55,7 +57,7 @@ export function EnterWardButton({
     shimmerLoop.current = anim;
     anim.start();
     return () => anim.stop();
-  }, [disabled, loading, btnWidth]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [disabled, loading, reduceMotion, btnWidth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pressed spring ───────────────────────────────────────────────────────
   const handlePressIn = () => {
