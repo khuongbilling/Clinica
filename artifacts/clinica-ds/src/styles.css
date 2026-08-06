@@ -1,0 +1,157 @@
+/*
+ * Clinica Design System — Tailwind v4 theme
+ *
+ * Google Fonts are loaded by the ds-entry's index.html (non-blocking print-media trick).
+ * Links for reference:
+ *   Marcellus:      https://fonts.googleapis.com/css2?family=Marcellus&display=swap
+ *   Source Sans 3:  https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap
+ *   Cinzel:         https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap
+ */
+
+@import 'tailwindcss';
+
+@theme {
+  /* ── Colours ─────────────────────────────────────────────── */
+  --color-background:       #07141D;
+  --color-panel:            #0B1C25;
+  --color-panel-raised:     #102A31;
+  --color-panel-objective:  #16343B;
+  --color-jade:             #82D5BA;
+  --color-teal-bright:      #55C8B7;
+  --color-gold-antique:     #C7A15D;
+  --color-gold-bright:      #E1C27C;
+  --color-ivory:            #F0E7D5;
+  --color-muted:            #9DA8AA;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-display: 'Marcellus', Georgia, serif;
+  --font-ui:      'Source Sans 3', system-ui, sans-serif;
+  --font-cinzel:  'Cinzel', Georgia, serif;
+
+  /* ── Geometry ────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
+  --radius-pill: 999px;
+
+  --shortcut-card-w: 88px;
+  --shortcut-card-h: 96px;
+  --page-gutter:     16px;
+  --touch-min:       44px;
+
+  /* ── Motion ──────────────────────────────────────────────── */
+  --duration-fast:  120ms;
+  --duration-base:  220ms;
+  --duration-slow:  400ms;
+  --duration-scene: 650ms;
+  --ease-default:   cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── shadcn/ui semantic slot mapping ─────────────────────── */
+@layer base {
+  :root {
+    /* Map Clinica tokens onto shadcn/ui CSS variable slots so shadcn
+       components inherit the Clinica theme automatically.
+       All HSL values are exact conversions from the canonical hex tokens. */
+    --background:             205 61%  7%; /* #07141D */
+    --foreground:              40 47% 89%; /* #F0E7D5 ivory */
+    --card:                   201 54%  9%; /* #0B1C25 panel */
+    --card-foreground:         40 47% 89%; /* #F0E7D5 */
+    --popover:                193 51% 13%; /* #102A31 panel-raised */
+    --popover-foreground:      40 47% 89%; /* #F0E7D5 */
+    --primary:                160 50% 67%; /* #82D5BA jade */
+    --primary-foreground:     201 54%  9%; /* #0B1C25 panel — text on jade */
+    --secondary:              191 46% 16%; /* #16343B panel-objective */
+    --secondary-foreground:    40 47% 89%; /* #F0E7D5 */
+    --muted:                  191 46% 16%; /* #16343B */
+    --muted-foreground:       189  7% 64%; /* #9DA8AA muted */
+    --accent:                 171 51% 56%; /* #55C8B7 teal-bright */
+    --accent-foreground:      201 54%  9%; /* #0B1C25 */
+    --destructive:              0 84% 60%;
+    --destructive-foreground:  40 47% 89%;
+    --border:                  38 49% 57%; /* #C7A15D gold-antique */
+    --input:                  191 46% 16%; /* #16343B */
+    --ring:                   160 50% 67%; /* #82D5BA jade */
+
+    --radius: 0.75rem; /* ~12px; matches --radius-md */
+  }
+
+  * {
+    border-color: var(--color-gold-antique);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-ivory);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Border utilities ─────────────────────────────────────── */
+@utility border-gold {
+  border: 1px solid var(--color-gold-antique);
+}
+
+@utility border-gold-bright {
+  border: 1px solid var(--color-gold-bright);
+}
+
+@utility border-jade {
+  border: 1px solid var(--color-jade);
+}
+
+/* ── Glow / shadow utilities ─────────────────────────────── */
+@utility shadow-teal {
+  box-shadow: 0 0 12px 2px rgba(85, 200, 183, 0.45);
+}
+
+@utility shadow-gold {
+  box-shadow: 0 0 10px 1px rgba(199, 161, 93, 0.55);
+}
+
+@utility shadow-ambient {
+  box-shadow: 0 4px 24px 0 rgba(7, 20, 29, 0.7);
+}
+
+@utility shadow-panel {
+  box-shadow: 0 2px 8px 0 rgba(7, 20, 29, 0.5);
+}
+
+/* ── State utilities ─────────────────────────────────────── */
+
+/* Navigation — active tab */
+@utility nav-active {
+  color: var(--color-jade);
+  opacity: 1;
+}
+
+/* Navigation — inactive tab */
+@utility nav-inactive {
+  color: var(--color-muted);
+  opacity: 0.55;
+}
+
+/* Disabled state */
+@utility disabled-state {
+  opacity: 0.38;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Focus ring */
+@utility focus-ring {
+  outline: 2px solid var(--color-jade);
+  outline-offset: 2px;
+}
+
+/*
+ * NOTE: No @source directive needed here.
+ * When consumed via the @tailwindcss/vite plugin in the mockup-sandbox, Tailwind v4
+ * automatically scans all files in Vite's module graph (including every .tsx under
+ * src/ds/clinica-ds/mockups/) and generates utility classes from them.
+ * An explicit @source pointing at a non-existent "./components" directory would
+ * cause a scanner error — keep this file scanner-directive-free.
+ */

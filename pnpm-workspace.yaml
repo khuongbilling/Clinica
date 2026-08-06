@@ -1,0 +1,5 @@
+# pnpm workspace declaration (for pnpm users).
+# npm users: the mockup-sandbox uses "file:../../clinica-ds" in package.json instead.
+packages:
+  - 'artifacts/mockup-sandbox'
+  - 'artifacts/clinica-ds'

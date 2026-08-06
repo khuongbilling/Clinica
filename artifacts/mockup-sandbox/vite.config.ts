@@ -49,12 +49,24 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      '@workspace/clinica-ds': path.resolve(import.meta.dirname, '../clinica-ds/src'),
     },
   },
   root: path.resolve(import.meta.dirname),
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        // Default sandbox entry
+        main: path.resolve(import.meta.dirname, 'index.html'),
+        // Clinica DS entry — served at /__mockup/src/ds/clinica-ds/
+        'clinica-ds': path.resolve(
+          import.meta.dirname,
+          'src/ds/clinica-ds/index.html',
+        ),
+      },
+    },
   },
   server: {
     port,
@@ -63,6 +75,10 @@ export default defineConfig({
     allowedHosts: true,
     fs: {
       strict: true,
+      allow: [
+        path.resolve(import.meta.dirname),
+        path.resolve(import.meta.dirname, '../clinica-ds'),
+      ],
     },
   },
   preview: {

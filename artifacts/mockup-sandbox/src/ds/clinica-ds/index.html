@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+  Per-design-system entry for the Clinica DS.
+  Mockups under ./mockups/ are served at:
+    /__mockup/src/ds/clinica-ds/#/<ComponentName>
+
+  This page loads ONLY ./styles.css (which pulls in @workspace/clinica-ds/styles.css —
+  one Tailwind build, one token set) and ./main.tsx.
+  Clinica-specific fonts (Marcellus, Source Sans 3, Cinzel) are loaded here
+  as non-blocking <link> tags (print-media trick). The sandbox's src/index.css
+  is intentionally NOT imported here.
+-->
+<html lang="en" style="height: 100%">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+
+    <meta property="og:title" content="Mockup Canvas" />
+    <meta property="og:description" content="UI prototyping sandbox with infinite canvas" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mockup Canvas" />
+    <meta name="twitter:description" content="UI prototyping sandbox with infinite canvas" />
+
+    <title>Clinica DS — Mockup Canvas</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Non-blocking Clinica font bundle (renders with fallback immediately, swaps in when loaded) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" media="print" onload="this.media='all'"
+          href="https://fonts.googleapis.com/css2?family=Marcellus&family=Source+Sans+3:wght@400;600;700&family=Cinzel:wght@600;700&display=swap">
+    <noscript>
+      <link rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Marcellus&family=Source+Sans+3:wght@400;600;700&family=Cinzel:wght@600;700&display=swap">
+    </noscript>
+  </head>
+  <body style="height: 100%; margin: 0">
+    <div id="root" style="height: 100%"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

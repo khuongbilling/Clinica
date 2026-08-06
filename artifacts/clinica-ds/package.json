@@ -1,0 +1,14 @@
+{
+  "name": "@workspace/clinica-ds",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/styles.css",
+  "exports": {
+    "./styles.css": "./src/styles.css",
+    "./tokens": "./src/tokens.ts"
+  },
+  "scripts": {
+    "tokens": "echo 'No token generation script needed — tokens are hand-authored in src/tokens.ts'"
+  }
+}
