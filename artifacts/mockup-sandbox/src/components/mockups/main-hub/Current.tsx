@@ -1,83 +1,182 @@
-// Main Hub — live canvas preview  (redesign v2)
-// Matches the reference redesign: location banner, floating icon buttons,
-// updated hero panel, wide Enter-the-Ward CTA, illustrated tab bar.
-// Pure web React — no React Native dependencies.
+// Main Hub — Sanctuary Redesign (v3)
+// Implements the full 24-section design spec:
+// - Bottom nav: Journey · Heroes · Sanctuary · Inventory · Shop
+// - 3-left / 2-right shortcut asymmetry (Journey removed from shortcuts)
+// - Marcellus display font + Source Sans 3 UI font
+// - Exact spec palette: #07141D bg, #82D5BA jade, #C7A15D gold, etc.
+// - Jade gradient Enter the Ward button
+// - River SVG medallion on hero card, no emoji, no star decorations
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const COLORS = {
-  surface:             '#0C0E12',
-  onSurface:           '#E8EAF0',
-  onSurfaceSecondary:  '#C8CDD8',
-  onSurfaceTertiary:   '#7A8494',
-  river:               '#06B6D4',
+// ── Design Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:           '#07141D',
+  panel:        '#0B1C25',
+  raisedPanel:  '#102A31',
+  jade:         '#82D5BA',
+  jadeBright:   '#55C8B7',
+  jadeDeep:     '#3BA88E',
+  gold:         '#C7A15D',
+  goldBright:   '#E1C27C',
+  goldDim:      '#8A6A2E',
+  ivory:        '#F0E7D5',
+  ivoryDim:     '#C8BFAD',
+  muted:        '#9DA8AA',
+  objSurface:   '#16343B',
+  alert:        '#D43030',
+  available:    '#52D177',
+  river:        '#5BB8D4',
+  riverDim:     '#2D7A95',
+  divider:      'rgba(199,161,93,0.15)',
+  border:       'rgba(199,161,93,0.30)',
+  borderStrong: 'rgba(199,161,93,0.65)',
+  jadeBorder:   'rgba(130,213,186,0.35)',
+  jadeGlow:     'rgba(130,213,186,0.20)',
 };
 
-const UI = {
-  bg:           '#080F14',
-  panel:        'rgba(8,18,26,0.88)',
-  panelSolid:   '#0B1520',
-  card:         'rgba(12,26,38,0.92)',
-  jade:         '#3DC4A8',
-  jadeDim:      '#2A8F7B',
-  gold:         '#E8C868',
-  goldSoft:     '#F3DE97',
-  goldDim:      '#B89A3A',
-  text:         '#F0EAD8',
-  textSoft:     '#C8BFA8',
-  textDim:      '#7A8090',
-  border:       'rgba(232,200,104,0.22)',
-  borderStrong: 'rgba(232,200,104,0.50)',
-  divider:      'rgba(240,234,216,0.08)',
-  riverChip:    'rgba(6,182,212,0.18)',
+const F = {
+  display: '"Marcellus","Cinzel",Georgia,serif',
+  ui:      '"Source Sans 3","Inter",-apple-system,sans-serif',
 };
 
-const GAME_FONT = '"Rajdhani","Barlow Condensed","Impact",sans-serif';
-const CINZEL    = '"Cinzel Decorative","Cinzel",Georgia,serif'; // kept for the Enter Ward button only
-const SANS      = '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
-
-const SP = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 };
-const R  = { sm: 4, md: 8, lg: 14, xl: 20, pill: 999 };
+const SP = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20 };
+const R  = { sm: 4, md: 8, lg: 12, xl: 18, xxl: 24, pill: 999 };
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const IMG = {
   hubBg:      '/__mockup/images/home_hub_bg.png',
   heroSprite: '/__mockup/images/hero-sprite.png',
   crowns:     '/__mockup/images/icon-crowns.png',
-  // emblem cards — cropped 1:1 from the reference art (frame + icon + label baked)
-  journey:    '/__mockup/images/ref-card-journey.png',
-  goals:      '/__mockup/images/ref-card-goals.png',
-  recruit:    '/__mockup/images/ref-card-recruit.png',
+  stamina:    '/__mockup/images/icon-stamina.png',
+  // Shortcut cards — exact crops from reference art (frame + icon + label baked)
   rounds:     '/__mockup/images/ref-card-rounds.png',
   defense:    '/__mockup/images/ref-card-defense.png',
+  goals:      '/__mockup/images/ref-card-goals.png',
+  recruit:    '/__mockup/images/ref-card-recruit.png',
   supplies:   '/__mockup/images/ref-card-supplies.png',
-  // tab icons — cropped 1:1 from the reference art
-  tabHome:    '/__mockup/images/ref-tab-home.png',
-  tabStudy:   '/__mockup/images/ref-tab-study.png',
-  tabShift:   '/__mockup/images/ref-tab-shift.png',
-  tabHeroes:  '/__mockup/images/ref-tab-heroes.png',
-  tabProfile: '/__mockup/images/ref-tab-profile.png',
+  // Tab icons — crops from reference (Sanctuary & Heroes) + SVG for rest
+  tabHeroes:    '/__mockup/images/ref-tab-heroes.png',
+  tabSanctuary: '/__mockup/images/ref-tab-home.png',
 };
 
-const PLAYER = { name: 'Dr. Chen', level: 3, rank: 'Junior Clinician', stamina: 14, staminaMax: 20, crowns: 120 };
-const HERO   = { name: 'Acute Step Warden', title: 'Physiotherapist', element: 'River', level: 8, stars: 2, xp: 340, xpNext: 500 };
+const PLAYER = { name: 'Dr. Chen', level: 3, role: 'Junior Clinician', stamina: 14, staminaMax: 20, crowns: 120 };
+const HERO   = { name: 'Acute Step Warden', profession: 'Physiotherapist', element: 'River', level: 3, xp: 340, xpNext: 500 };
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
+// ── SVG Tab Icons ─────────────────────────────────────────────────────────────
+
+function TabIconJourney({ color }: { color: string }) {
+  // Compass rose — clear silhouette, wayfinder style
+  return (
+    <svg width="28" height="26" viewBox="0 0 28 26" fill="none">
+      {/* Outer ring */}
+      <circle cx="14" cy="13" r="11" stroke={color} strokeWidth="1.5" fill="none" opacity="0.7"/>
+      {/* N pointer (bright) */}
+      <path d="M14 4L16 13H12L14 4Z" fill={color}/>
+      {/* S pointer (dimmer) */}
+      <path d="M14 22L12 13H16L14 22Z" fill={color} opacity="0.5"/>
+      {/* E pointer */}
+      <path d="M24 13L14 11V15L24 13Z" fill={color} opacity="0.7"/>
+      {/* W pointer */}
+      <path d="M4 13L14 15V11L4 13Z" fill={color} opacity="0.7"/>
+      {/* Center gem */}
+      <circle cx="14" cy="13" r="2.2" fill={color}/>
+      <circle cx="14" cy="13" r="1" fill={C.bg}/>
+    </svg>
+  );
+}
+
+function TabIconInventory({ color }: { color: string }) {
+  // Medical satchel / apothecary bag
+  return (
+    <svg width="28" height="26" viewBox="0 0 28 26" fill="none">
+      {/* Bag body */}
+      <rect x="3" y="10" width="22" height="15" rx="3" fill={color}/>
+      {/* Bag flap */}
+      <path d="M3 15Q3 10 8 10H20Q25 10 25 15V14Q25 10 20 10H8Q3 10 3 14Z" fill={color} opacity="0.5"/>
+      {/* Handle */}
+      <path d="M10 10V7Q10 4 14 4Q18 4 18 7V10" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none"/>
+      {/* Cross on bag */}
+      <rect x="12" y="14" width="4" height="7" rx="1" fill={C.bg} opacity="0.6"/>
+      <rect x="10.5" y="16.5" width="7" height="2" rx="1" fill={C.bg} opacity="0.6"/>
+    </svg>
+  );
+}
+
+function TabIconShop({ color }: { color: string }) {
+  // Merchant stall / ornate storefront
+  return (
+    <svg width="28" height="26" viewBox="0 0 28 26" fill="none">
+      {/* Stall canopy */}
+      <path d="M2 10H26V14Q26 16 24 16H4Q2 16 2 14Z" fill={color}/>
+      {/* Canopy scallops */}
+      <path d="M2 16Q4 13 6 16Q8 13 10 16Q12 13 14 16Q16 13 18 16Q20 13 22 16Q24 13 26 16" stroke={color} strokeWidth="1.5" fill="none"/>
+      {/* Counter */}
+      <rect x="4" y="17" width="20" height="8" rx="2" fill={color} opacity="0.75"/>
+      {/* Pole left */}
+      <rect x="5" y="7" width="2" height="3" rx="1" fill={color}/>
+      {/* Pole right */}
+      <rect x="21" y="7" width="2" height="3" rx="1" fill={color}/>
+      {/* Coin on counter */}
+      <circle cx="14" cy="21" r="2.5" fill={C.bg} opacity="0.55"/>
+      <circle cx="14" cy="21" r="1.2" fill={color} opacity="0.7"/>
+    </svg>
+  );
+}
+
+// ── Small Components ──────────────────────────────────────────────────────────
 
 function PlusBtn() {
   return (
-    <div style={{ width: 18, height: 18, borderRadius: 9, background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-      <span style={{ color: UI.text, fontSize: 12, lineHeight: 1, fontWeight: 700, marginTop: -1 }}>+</span>
+    <div style={{ width: 18, height: 18, borderRadius: 9, background: `rgba(199,161,93,0.12)`, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+      <span style={{ color: C.goldBright, fontSize: 12, lineHeight: 1, fontWeight: 700, fontFamily: F.ui }}>+</span>
     </div>
   );
 }
 
-function Stars({ count, total = 3 }: { count: number; total?: number }) {
+// River affinity SVG medallion — painted feel, no emoji
+function RiverMedallion({ size = 44 }: { size?: number }) {
+  const r = size / 2;
   return (
-    <div style={{ display: 'flex', gap: 2 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <span key={i} style={{ fontSize: 13, color: i < count ? UI.gold : 'rgba(232,200,104,0.25)' }}>★</span>
-      ))}
-    </div>
+    <svg width={size} height={size} viewBox="0 0 44 44" fill="none">
+      {/* Outer ring */}
+      <circle cx="22" cy="22" r="21" stroke={C.river} strokeWidth="1.5" opacity="0.7"/>
+      {/* Gradient fill */}
+      <defs>
+        <radialGradient id="riverBg" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#0E3545"/>
+          <stop offset="100%" stopColor="#071822"/>
+        </radialGradient>
+      </defs>
+      <circle cx="22" cy="22" r="19.5" fill="url(#riverBg)"/>
+      {/* Water drop — main symbol */}
+      <path d="M22 9 C22 9 13 19 13 25 A9 9 0 0 0 31 25 C31 19 22 9 22 9Z" fill={C.river} opacity="0.85"/>
+      {/* Inner highlight */}
+      <path d="M20 17 C20 17 17 22 17 25 A3.5 3.5 0 0 0 20.5 25.5" stroke="rgba(180,235,255,0.55)" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      {/* Teal glow dot */}
+      <circle cx="22" cy="25" r="3.5" fill={C.jadeBright} opacity="0.4"/>
+    </svg>
+  );
+}
+
+// Stamina icon — designed teal energy emblem
+function StaminaEmblem() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <polygon points="7,1 9.5,5.5 13.5,5.5 10.5,8.5 11.5,13 7,10.5 2.5,13 3.5,8.5 0.5,5.5 4.5,5.5" fill={C.jade} opacity="0.9"/>
+    </svg>
+  );
+}
+
+// Medical cross emblem for Enter Ward button
+function MedCross({ size = 20, color = C.jadeDeep }: { size?: number; color?: string }) {
+  const s = size / 20;
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="9" stroke={C.goldBright} strokeWidth="1.2" fill={C.jadeDeep} opacity="0.9"/>
+      <rect x="8" y="4" width="4" height="12" rx="1" fill={color === C.jadeDeep ? '#1A5040' : color}/>
+      <rect x="4" y="8" width="12" height="4" rx="1" fill={color === C.jadeDeep ? '#1A5040' : color}/>
+      <rect x="8.5" y="4.5" width="3" height="11" rx="0.8" fill={C.jade} opacity="0.85"/>
+      <rect x="4.5" y="8.5" width="11" height="3" rx="0.8" fill={C.jade} opacity="0.85"/>
+    </svg>
   );
 }
 
@@ -85,169 +184,221 @@ function Stars({ count, total = 3 }: { count: number; total?: number }) {
 function Header() {
   const pct = (PLAYER.stamina / PLAYER.staminaMax) * 100;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: SP.sm, padding: `${SP.sm}px ${SP.md}px`, background: UI.panelSolid, borderBottom: `1px solid ${UI.divider}` }}>
-      {/* Avatar */}
-      <div style={{ width: 36, height: 36, borderRadius: 18, background: '#0D2535', border: `2px solid ${UI.jade}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 17 }}>🩺</span>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: SP.sm,
+      padding: `${SP.sm}px ${SP.md}px`,
+      background: C.panel,
+      border: `1px solid ${C.border}`,
+      borderRadius: R.xl, margin: `${SP.sm}px ${SP.sm}px 0`,
+      boxShadow: `inset 0 0 16px ${C.jadeGlow}, 0 2px 8px rgba(0,0,0,0.5)`,
+    }}>
+      {/* Profile medallion */}
+      <div style={{ width: 40, height: 40, borderRadius: 20, background: `linear-gradient(135deg, #0D2535, #091822)`, border: `2px solid ${C.jade}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 10px ${C.jade}40` }}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="9" stroke={C.jade} strokeWidth="1" fill="none" opacity="0.5"/>
+          {/* Stethoscope */}
+          <path d="M6 5Q6 3 8 3Q10 3 10 5V10Q10 13 13 13Q16 13 16 10" stroke={C.jade} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+          <circle cx="16" cy="9" r="2" stroke={C.jade} strokeWidth="1.2" fill={C.jadeGlow}/>
+          <circle cx="7" cy="5" r="1" fill={C.jade}/>
+          <circle cx="9" cy="5" r="1" fill={C.jade}/>
+        </svg>
       </div>
       {/* Identity */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: UI.text, whiteSpace: 'nowrap' }}>
-          {PLAYER.name}&nbsp;<span style={{ color: UI.jade, fontWeight: 600, fontSize: 12 }}>Lv.{PLAYER.level}</span>
+        <div style={{ fontSize: 14, fontFamily: F.display, color: C.ivory, lineHeight: 1.2, letterSpacing: 0.3 }}>
+          {PLAYER.name}&nbsp;<span style={{ fontSize: 11, color: C.jade, fontFamily: F.ui, fontWeight: 600 }}>Lv.{PLAYER.level}</span>
         </div>
-        <div style={{ fontSize: 10, color: UI.textDim }}>{PLAYER.rank}</div>
+        <div style={{ fontSize: 10, color: C.muted, fontFamily: F.ui, marginTop: 1 }}>{PLAYER.role}</div>
       </div>
       {/* Stamina chip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#0D2535', borderRadius: R.pill, padding: '4px 6px', border: `1px solid ${UI.jade}35` }}>
-        <span style={{ fontSize: 11 }}>⚡</span>
-        <div style={{ width: 32, height: 4, background: 'rgba(255,255,255,0.10)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: UI.jade, borderRadius: 2 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#091822', borderRadius: R.pill, padding: '4px 7px', border: `1px solid ${C.jadeBorder}` }}>
+        <StaminaEmblem />
+        <div style={{ width: 30, height: 3.5, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${C.jadeDeep},${C.jade})`, borderRadius: 2 }} />
         </div>
-        <span style={{ fontSize: 10, color: UI.jade, fontWeight: 700 }}>{PLAYER.stamina}/{PLAYER.staminaMax}</span>
+        <span style={{ fontSize: 10, color: C.jade, fontFamily: F.ui, fontWeight: 700 }}>{PLAYER.stamina}/{PLAYER.staminaMax}</span>
         <PlusBtn />
       </div>
       {/* Crowns chip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#0D2535', borderRadius: R.pill, padding: '4px 6px', border: `1px solid ${UI.gold}35` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#091822', borderRadius: R.pill, padding: '4px 7px', border: `1px solid ${C.border}` }}>
         <img src={IMG.crowns} style={{ width: 14, height: 14, objectFit: 'contain' }} />
-        <span style={{ fontSize: 10, color: UI.gold, fontWeight: 700 }}>{PLAYER.crowns}</span>
+        <span style={{ fontSize: 10, color: C.goldBright, fontFamily: F.ui, fontWeight: 700 }}>{PLAYER.crowns}</span>
         <PlusBtn />
       </div>
     </div>
   );
 }
 
-// ── Location Banner ───────────────────────────────────────────────────────────
-function LocationBanner() {
+// ── Location Title ─────────────────────────────────────────────────────────────
+function LocationTitle() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: SP.md, padding: `${SP.sm}px ${SP.md}px`, background: 'rgba(5,14,20,0.72)', borderBottom: `1px solid ${UI.border}` }}>
-      {/* Cross emblem */}
-      <div style={{ width: 46, height: 46, borderRadius: 10, background: 'linear-gradient(135deg,#0D2E2A,#0A1E1A)', border: `2px solid ${UI.jade}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 12px ${UI.jade}55, inset 0 0 8px rgba(61,196,168,0.15)` }}>
-        <span style={{ fontSize: 22, filter: `drop-shadow(0 0 5px ${UI.jade})` }}>✚</span>
-      </div>
-      {/* Title + subtitle */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 900, color: UI.text, letterSpacing: 0.8, lineHeight: 1.2 }}>GRAND WARD ATRIUM</div>
-        <div style={{ fontSize: 11, color: UI.jade, fontStyle: 'italic', marginTop: 1 }}>A place of healing and learning.</div>
-      </div>
-      {/* View Map */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(12,26,38,0.85)', border: `1px solid ${UI.border}`, borderRadius: R.pill, padding: '5px 10px', cursor: 'pointer', flexShrink: 0 }}>
-        <span style={{ fontSize: 10 }}>📍</span>
-        <span style={{ fontSize: 10, color: UI.textSoft, fontWeight: 600 }}>View Map</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `${SP.sm}px ${SP.md}px`, gap: SP.sm, position: 'relative' }}>
+      {/* Diamond dividers + title */}
+      <span style={{ fontSize: 10, color: C.gold, opacity: 0.7 }}>◇</span>
+      <span style={{ fontFamily: F.display, fontSize: 13, color: C.goldBright, letterSpacing: 1.8, textShadow: `0 0 14px ${C.gold}80` }}>
+        GRAND WARD ATRIUM
+      </span>
+      <span style={{ fontSize: 10, color: C.gold, opacity: 0.7 }}>◇</span>
+      {/* Right controls */}
+      <div style={{ position: 'absolute', right: SP.md, display: 'flex', alignItems: 'center', gap: SP.xs }}>
+        <div style={{ width: 24, height: 24, borderRadius: 12, background: C.panel, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="5" stroke={C.muted} strokeWidth="1"/>
+            <line x1="6" y1="5" x2="6" y2="9" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round"/>
+            <circle cx="6" cy="3.5" r="0.8" fill={C.muted}/>
+          </svg>
+        </div>
+        <div style={{ width: 24, height: 24, borderRadius: 12, background: C.panel, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="2" stroke={C.muted} strokeWidth="1"/>
+            <line x1="6" y1="0" x2="6" y2="2.5" stroke={C.muted} strokeWidth="1"/>
+            <line x1="6" y1="9.5" x2="6" y2="12" stroke={C.muted} strokeWidth="1"/>
+            <line x1="0" y1="6" x2="2.5" y2="6" stroke={C.muted} strokeWidth="1"/>
+            <line x1="9.5" y1="6" x2="12" y2="6" stroke={C.muted} strokeWidth="1"/>
+          </svg>
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Narrator Card ─────────────────────────────────────────────────────────────
-function NarratorCard() {
+// ── System & Objective Card ───────────────────────────────────────────────────
+function SystemCard() {
   return (
-    <div style={{ margin: `${SP.xs}px ${SP.sm}px`, background: UI.card, border: `1.5px solid ${UI.jade}45`, borderRadius: R.lg, overflow: 'hidden' }}>
+    <div style={{
+      margin: `0 ${SP.sm}px`,
+      background: `linear-gradient(145deg, #0D2228, #091820)`,
+      border: `1.5px solid ${C.border}`,
+      borderRadius: R.xxl,
+      overflow: 'hidden',
+      boxShadow: `inset 0 0 20px rgba(85,200,183,0.07), 0 4px 16px rgba(0,0,0,0.4)`,
+    }}>
       {/* Main row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: SP.md, padding: `${SP.md}px ${SP.md}px ${SP.sm}px` }}>
-        {/* Avatar */}
-        <div style={{ width: 38, height: 38, borderRadius: 19, background: '#0A2015', border: `2px solid ${UI.jade}80`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 10px ${UI.jade}55` }}>
-          <span style={{ fontSize: 18 }}>🩺</span>
+        {/* System medallion */}
+        <div style={{ width: 40, height: 40, borderRadius: 20, background: `radial-gradient(circle, #0E2E26, #071810)`, border: `2px solid ${C.jade}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 12px ${C.jade}50` }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 2 L12 8 L18 8 L13 12 L15 18 L10 14 L5 18 L7 12 L2 8 L8 8 Z" fill={C.jade} opacity="0.85"/>
+          </svg>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: UI.jade, letterSpacing: 1.2, marginBottom: 3 }}>THE SYSTEM</div>
-          <div style={{ fontSize: 12, color: COLORS.onSurface, lineHeight: 1.55 }}>
+          <div style={{ fontSize: 10, fontFamily: F.display, color: C.jade, letterSpacing: 1.5, marginBottom: 4 }}>THE SYSTEM</div>
+          <div style={{ fontSize: 12, color: C.ivoryDim, fontFamily: F.ui, lineHeight: 1.6 }}>
             Ward Shift unlocked — step into the ward for your first simulation.
           </div>
         </div>
-        {/* Collapse */}
-        <div style={{ width: 22, height: 22, borderRadius: 11, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: UI.textDim }}>∧</span>
+        {/* Gold-ringed collapse chevron */}
+        <div style={{ width: 24, height: 24, borderRadius: 12, background: 'rgba(199,161,93,0.10)', border: `1.5px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+            <path d="M1 5L5 1L9 5" stroke={C.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
       </div>
-      {/* Objective row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: `6px ${SP.md}px`, background: 'rgba(61,196,168,0.08)', borderTop: `1px solid ${UI.jade}25` }}>
-        <span style={{ fontSize: 11, color: UI.jade }}>⚑</span>
-        <span style={{ fontSize: 10, fontWeight: 800, color: UI.jade, letterSpacing: 0.8 }}>OBJECTIVE</span>
-        <span style={{ fontSize: 11, color: COLORS.onSurfaceSecondary }}>Complete your first Ward Shift simulation.</span>
+      {/* Objective strip — nested, no harsh divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: `7px ${SP.md}px 10px`, background: `rgba(22,52,59,0.70)` }}>
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+          <path d="M1 5.5L4 9L10 2" stroke={C.jade} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span style={{ fontSize: 9, fontFamily: F.display, color: C.jade, letterSpacing: 1.2 }}>OBJECTIVE</span>
+        <span style={{ fontSize: 11, color: C.ivoryDim, fontFamily: F.ui }}>Complete your first Ward Shift simulation.</span>
       </div>
     </div>
   );
 }
 
-// ── Icon Buttons ──────────────────────────────────────────────────────────────
-
-// Emblem cards are exact crops from the reference art — frame, icon, label and
-// badges are all baked into the image, so we just render the card.
-function EmblemCard({ src, width = 74 }: { src: string; width?: number }) {
+// ── Shortcut Card ─────────────────────────────────────────────────────────────
+// All 5 cards share one component — exact ref crop with baked art + label
+function ShortcutCard({ src, width = 78 }: { src: string; width?: number }) {
   return (
     <img
       src={src}
-      style={{ width, height: 'auto', objectFit: 'contain', cursor: 'pointer', filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.8))' }}
+      draggable={false}
+      style={{ width, height: 'auto', objectFit: 'contain', cursor: 'pointer', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.85))' }}
     />
   );
 }
 
-// ── Arena (hero + icon columns) ───────────────────────────────────────────────
+// ── Hero Arena ────────────────────────────────────────────────────────────────
 function Arena() {
   return (
-    <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
-      {/* Hero scene bg */}
+    <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'stretch', minHeight: 0 }}>
+      {/* Background */}
       <img src={IMG.hubBg} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-      {/* Vignettes */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(4,8,14,0.55) 0%, transparent 30%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(4,8,14,0.55) 0%, transparent 30%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%', background: 'linear-gradient(to top, rgba(4,8,14,0.7), transparent)', pointerEvents: 'none' }} />
+      {/* Edge vignettes */}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(7,20,29,0.65) 0%, transparent 28%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(7,20,29,0.65) 0%, transparent 28%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '28%', background: 'linear-gradient(to top, rgba(7,20,29,0.75), transparent)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '12%', background: 'linear-gradient(to bottom, rgba(7,20,29,0.55), transparent)', pointerEvents: 'none' }} />
 
-      {/* Left column */}
-      <div style={{ position: 'relative', zIndex: 1, width: 86, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0 ${SP.sm}px ${SP.xs}px` }}>
-        <EmblemCard src={IMG.journey} />
-        <EmblemCard src={IMG.goals} />
-        <EmblemCard src={IMG.recruit} />
+      {/* Left column — 3 cards (Rounds, Goals, Recruit) */}
+      <div style={{ position: 'relative', zIndex: 2, width: 90, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0 ${SP.sm}px ${SP.xs}px` }}>
+        <ShortcutCard src={IMG.rounds} />
+        <ShortcutCard src={IMG.goals} />
+        <ShortcutCard src={IMG.recruit} />
       </div>
 
       {/* Hero center */}
       <div style={{ flex: 1, position: 'relative' }}>
-        <img src={IMG.heroSprite} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom center' }} />
-        {/* Glow ring under hero */}
-        <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', width: 80, height: 16, borderRadius: '50%', background: `radial-gradient(ellipse, ${UI.jade}50 0%, transparent 70%)` }} />
+        <img src={IMG.heroSprite} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center bottom' }} />
+        {/* Circular glow platform under hero */}
+        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', width: 90, height: 20, borderRadius: '50%', background: `radial-gradient(ellipse, ${C.jade}55 0%, transparent 70%)`, pointerEvents: 'none' }} />
       </div>
 
-      {/* Right column */}
-      <div style={{ position: 'relative', zIndex: 1, width: 86, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px ${SP.xs}px ${SP.sm}px 0` }}>
-        <EmblemCard src={IMG.rounds} />
-        <EmblemCard src={IMG.defense} />
-        <EmblemCard src={IMG.supplies} />
+      {/* Right column — 2 cards (Defense, Supplies) — centered vertically */}
+      <div style={{ position: 'relative', zIndex: 2, width: 90, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: SP.xl, padding: `${SP.sm}px ${SP.xs}px ${SP.sm}px 0` }}>
+        <ShortcutCard src={IMG.defense} />
+        <ShortcutCard src={IMG.supplies} />
       </div>
     </div>
   );
 }
 
-// ── Hero Info Panel ───────────────────────────────────────────────────────────
-function HeroPanel() {
+// ── Hero Card ─────────────────────────────────────────────────────────────────
+function HeroCard() {
   const xpPct = (HERO.xp / HERO.xpNext) * 100;
   return (
-    <div style={{ margin: `0 ${SP.sm}px ${SP.xs}px`, background: UI.card, border: `1px solid ${UI.border}`, borderRadius: R.xl, padding: `${SP.sm}px ${SP.md}px` }}>
+    <div style={{
+      margin: `0 ${SP.sm}px ${SP.xs}px`,
+      background: `linear-gradient(145deg, #0D2028, #091820)`,
+      border: `1px solid ${C.border}`,
+      borderRadius: R.xl,
+      padding: `${SP.md}px ${SP.md}px`,
+      cursor: 'pointer',
+      boxShadow: `0 2px 10px rgba(0,0,0,0.5)`,
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SP.sm }}>
-        {/* Avatar circle with element icon */}
-        <div style={{ width: 44, height: 44, borderRadius: 22, background: 'linear-gradient(135deg,#0A2015,#071510)', border: `2px solid ${COLORS.river}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 12px ${COLORS.river}40` }}>
-          <span style={{ fontSize: 20 }}>🌿</span>
+        {/* River affinity medallion */}
+        <div style={{ flexShrink: 0 }}>
+          <RiverMedallion size={46} />
         </div>
-        {/* Name + title */}
+        {/* Center: name, profession, level, XP bar */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: UI.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{HERO.name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-            <div style={{ background: UI.riverChip, border: `1px solid ${COLORS.river}60`, borderRadius: R.pill, padding: '2px 8px' }}>
-              <span style={{ fontSize: 9, color: COLORS.river, fontWeight: 700, letterSpacing: 0.4 }}>💧 {HERO.element}</span>
-            </div>
-            <Stars count={HERO.stars} />
+          <div style={{ fontSize: 14, fontFamily: F.display, color: C.ivory, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{HERO.name}</div>
+          <div style={{ fontSize: 10, color: C.muted, fontFamily: F.ui, marginTop: 1 }}>{HERO.profession}&nbsp;·&nbsp;Lv. {HERO.level}</div>
+          {/* River chip */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `rgba(91,184,212,0.12)`, border: `1px solid ${C.river}50`, borderRadius: R.pill, padding: '2px 7px', marginTop: 4 }}>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+              <path d="M4 0.5C4 0.5 1.5 3.5 1.5 5.5A2.5 2.5 0 0 0 6.5 5.5C6.5 3.5 4 0.5 4 0.5Z" fill={C.river}/>
+            </svg>
+            <span style={{ fontSize: 9, color: C.river, fontFamily: F.ui, fontWeight: 700, letterSpacing: 0.3 }}>River</span>
           </div>
         </div>
-        {/* XP + View Profile */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 10, color: UI.textSoft }}>{HERO.xp}<span style={{ color: UI.textDim }}>/{HERO.xpNext} XP</span></span>
+        {/* Right: XP values + bar + reward chest */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+          <span style={{ fontSize: 10, color: C.ivoryDim, fontFamily: F.ui }}>
+            {HERO.xp}<span style={{ color: C.muted }}>/{HERO.xpNext} XP</span>
+          </span>
+          <div style={{ width: 80, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: `${xpPct}%`, height: '100%', background: `linear-gradient(90deg,${C.riverDim},${C.river})`, borderRadius: 2 }} />
           </div>
-          <div style={{ width: 72, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ width: `${xpPct}%`, height: '100%', background: COLORS.river, borderRadius: 2 }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: R.pill, padding: '3px 8px', cursor: 'pointer', marginTop: 1 }}>
-            <span style={{ fontSize: 9 }}>👤</span>
-            <span style={{ fontSize: 9, color: UI.textSoft, fontWeight: 600 }}>View Profile</span>
+          {/* Reward chest indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+              <rect x="1" y="3" width="10" height="7" rx="1.5" fill={C.goldDim} opacity="0.8"/>
+              <rect x="1" y="3" width="10" height="2.5" rx="1" fill={C.gold} opacity="0.9"/>
+              <rect x="5" y="2" width="2" height="2" rx="0.5" fill={C.goldBright}/>
+            </svg>
+            <span style={{ fontSize: 9, color: C.gold, fontFamily: F.ui }}>Next at 500</span>
           </div>
         </div>
       </div>
@@ -255,63 +406,118 @@ function HeroPanel() {
   );
 }
 
-// ── Enter-the-Ward Button ─────────────────────────────────────────────────────
+// ── Enter the Ward Button ─────────────────────────────────────────────────────
 function EnterWardBtn() {
   return (
     <div style={{ margin: `0 ${SP.sm}px ${SP.xs}px`, position: 'relative' }}>
-      {/* Gold border glow */}
+      {/* Ornate outer frame */}
       <div style={{
-        background: 'linear-gradient(135deg,#0E2820,#091A14)',
-        border: `2px solid ${UI.gold}`,
+        position: 'relative',
         borderRadius: R.pill,
-        padding: `${SP.md}px ${SP.xl}px`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SP.md,
-        cursor: 'pointer',
-        boxShadow: `0 0 18px ${UI.jade}55, 0 0 0 1px ${UI.gold}30`,
-        position: 'relative', overflow: 'hidden',
+        background: `linear-gradient(135deg, ${C.jade} 0%, ${C.jadeBright} 40%, ${C.jade} 70%, ${C.jadeDeep} 100%)`,
+        padding: 2.5,
+        boxShadow: `0 0 22px ${C.jade}60, 0 0 6px ${C.jade}30`,
       }}>
-        {/* Sparkle corners */}
-        {['topLeft','topRight','bottomLeft','bottomRight'].map((pos) => {
-          const s: Record<string,string|number> = { position:'absolute', fontSize:10, opacity:0.7, color:UI.goldSoft };
-          if (pos==='topLeft')     { s.top=4; s.left=14; }
-          if (pos==='topRight')    { s.top=4; s.right=14; }
-          if (pos==='bottomLeft')  { s.bottom=4; s.left=14; }
-          if (pos==='bottomRight') { s.bottom=4; s.right=14; }
-          return <span key={pos} style={s as any}>✦</span>;
-        })}
-        <span style={{ fontFamily: CINZEL, fontSize: 16, fontWeight: 700, color: UI.goldSoft, letterSpacing: 1.5, textShadow: `0 0 12px ${UI.jade}AA` }}>
-          ENTER THE WARD
-        </span>
-        <span style={{ fontSize: 16, color: UI.goldSoft }}>→</span>
+        {/* Gold border ring */}
+        <div style={{ position: 'absolute', inset: 0, borderRadius: R.pill, border: `2px solid ${C.goldBright}`, pointerEvents: 'none' }} />
+        {/* Inner button surface */}
+        <div style={{
+          borderRadius: R.pill,
+          background: `linear-gradient(135deg, ${C.jade}CC 0%, ${C.jadeBright}DD 50%, ${C.jade}CC 100%)`,
+          padding: `${SP.md}px ${SP.lg}px`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', position: 'relative', overflow: 'hidden',
+          gap: SP.sm,
+        }}>
+          {/* Corner flourishes */}
+          <span style={{ position: 'absolute', top: 5, left: 12, fontSize: 9, color: C.goldBright, opacity: 0.9 }}>✦</span>
+          <span style={{ position: 'absolute', top: 5, right: 12, fontSize: 9, color: C.goldBright, opacity: 0.9 }}>✦</span>
+          <span style={{ position: 'absolute', bottom: 5, left: 12, fontSize: 9, color: C.goldBright, opacity: 0.6 }}>✦</span>
+          <span style={{ position: 'absolute', bottom: 5, right: 12, fontSize: 9, color: C.goldBright, opacity: 0.6 }}>✦</span>
+          {/* Left emblem */}
+          <MedCross size={22} />
+          {/* Text — dark navy engraved */}
+          <span style={{
+            fontFamily: F.display,
+            fontSize: 17,
+            color: '#071820',
+            letterSpacing: 2.5,
+            textShadow: `0 1px 0 rgba(255,255,255,0.15), 0 -1px 0 rgba(0,0,0,0.3)`,
+            fontWeight: 400,
+          }}>
+            ENTER THE WARD
+          </span>
+          {/* Right arrow */}
+          <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+            <path d="M2 7H14M9 2L14 7L9 12" stroke="#071820" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Tab Bar ───────────────────────────────────────────────────────────────────
-// Icons are exact crops from the reference art (hand-drawn style, glow baked in
-// on the active HOME icon).
-function TabBar() {
-  const tabs = [
-    { label: 'HOME',    src: IMG.tabHome,    active: true  },
-    { label: 'STUDY',   src: IMG.tabStudy,   active: false },
-    { label: 'SHIFT',   src: IMG.tabShift,   active: false },
-    { label: 'HEROES',  src: IMG.tabHeroes,  active: false },
-    { label: 'PROFILE', src: IMG.tabProfile, active: false },
-  ];
+// ── Bottom Navigation ─────────────────────────────────────────────────────────
+// Journey · Heroes · Sanctuary · Inventory · Shop
+// Sanctuary is the active tab on main hub
+
+function TabItem({ label, active, iconSrc, IconComp }: {
+  label: string;
+  active: boolean;
+  iconSrc?: string;
+  IconComp?: React.FC<{ color: string }>;
+}) {
+  const col = active ? C.jade : C.muted;
   return (
-    <div style={{ display: 'flex', background: UI.panelSolid, borderTop: `1px solid ${UI.border}`, paddingBottom: 8, paddingTop: 4 }}>
-      {tabs.map((t) => {
-        const col = t.active ? UI.jade : UI.textDim;
-        return (
-          <div key={t.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer' }}>
-            <img src={t.src} style={{ width: 46, height: 31, objectFit: 'contain' }} />
-            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: GAME_FONT, color: col, letterSpacing: 0.8, lineHeight: 1 }}>
-              {t.label}
-            </span>
-          </div>
-        );
-      })}
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+      cursor: 'pointer',
+      position: 'relative',
+      padding: '4px 0 2px',
+      ...(active ? {
+        background: `rgba(16,42,49,0.85)`,
+        borderRadius: R.lg,
+        boxShadow: `inset 0 0 12px rgba(85,200,183,0.18), 0 0 0 1px ${C.jade}40`,
+        margin: '2px 3px 2px',
+      } : {}),
+    }}>
+      {iconSrc
+        ? <img src={iconSrc} style={{ width: 38, height: 26, objectFit: 'contain', opacity: active ? 1 : 0.45, filter: active ? `drop-shadow(0 0 4px ${C.jade}88)` : 'none' }} />
+        : IconComp
+          ? <IconComp color={col} />
+          : null
+      }
+      <span style={{ fontSize: 8.5, fontFamily: F.display, color: col, letterSpacing: 0.8, lineHeight: 1 }}>
+        {label}
+      </span>
+      {active && (
+        <div style={{ width: 22, height: 2.5, borderRadius: 2, background: C.jade, boxShadow: `0 0 6px ${C.jade}AA`, marginTop: 1 }} />
+      )}
+    </div>
+  );
+}
+
+function BottomNav() {
+  return (
+    <div style={{
+      display: 'flex',
+      background: C.panel,
+      borderTop: `1px solid ${C.border}`,
+      paddingBottom: 6,
+      paddingTop: 4,
+      paddingLeft: 2,
+      paddingRight: 2,
+    }}>
+      <TabItem label="JOURNEY"   IconComp={TabIconJourney}   active={false} />
+      <TabItem label="HEROES"    iconSrc={IMG.tabHeroes}     active={false} />
+      <TabItem label="SANCTUARY" iconSrc={IMG.tabSanctuary}  active={true}  />
+      <TabItem label="INVENTORY" IconComp={TabIconInventory} active={false} />
+      <TabItem label="SHOP"      IconComp={TabIconShop}      active={false} />
     </div>
   );
 }
@@ -322,22 +528,20 @@ export default function MainHubPreview() {
     <div style={{
       width: 390, height: 844,
       display: 'flex', flexDirection: 'column',
-      background: UI.bg,
-      fontFamily: SANS,
+      background: C.bg,
+      fontFamily: F.ui,
       position: 'relative', overflow: 'hidden',
     }}>
-      {/* Content stack */}
-      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', zIndex: 1 }}>
+      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', zIndex: 1, gap: 0 }}>
         <Header />
-        <LocationBanner />
-        <NarratorCard />
+        <LocationTitle />
+        <SystemCard />
         <Arena />
-        <HeroPanel />
+        <HeroCard />
         <EnterWardBtn />
       </div>
-      {/* Tab bar pinned */}
       <div style={{ position: 'relative', zIndex: 2 }}>
-        <TabBar />
+        <BottomNav />
       </div>
     </div>
   );
