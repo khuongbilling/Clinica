@@ -4,10 +4,11 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated, Modal, Pressable, StyleSheet, Text, View,
 } from "react-native";
+import { SanctuaryShortcutCard } from "@/src/components/sanctuary/SanctuaryShortcutCard";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APTITUDE_INFO, HEROES, RANKS } from "@/src/game/content";
@@ -31,24 +32,12 @@ import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes"
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
 
 const EMBLEM_IMAGES = {
-  journey:     require("../../assets/ui-icons/emblems/journey.png"),
   dailyRounds: require("../../assets/ui-icons/emblems/daily-rounds.png"),
-  milestones:  require("../../assets/ui-icons/emblems/milestones.png"),
-  summoning:   require("../../assets/ui-icons/emblems/summoning.png"),
-  wardDefense: require("../../assets/ui-icons/emblems/ward-defense.png"),
-  bossWard:    require("../../assets/ui-icons/emblems/boss-ward.png"),
-  worldEvents: require("../../assets/ui-icons/emblems/world-events.png"),
+  goals:       require("../../assets/ui-icons/emblems/goals.png"),
+  recruit:     require("../../assets/ui-icons/emblems/recruit.png"),
+  defense:     require("../../assets/ui-icons/emblems/defense.png"),
+  supplies:    require("../../assets/ui-icons/emblems/supplies.png"),
 } as const;
-
-function HubEmblem({ source }: { source: any }) {
-  return (
-    <Image
-      source={source}
-      style={{ width: 56, height: 75 }}
-      contentFit="contain"
-    />
-  );
-}
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 function dailyRoundsUnlockedModes(player: any): string[] {
@@ -507,36 +496,32 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN — progressive reveal
-             Lv1: Journey only (clean, focused on the objective)
-             Lv2+: add Rounds (with badge) + Milestones              */}
+        {/* LEFT COLUMN — Rounds · Goals · Recruit */}
         <View style={styles.sideCol}>
-          {roundsUnlocked && (
-            <FeatureButton
-              emblem={<HubEmblem source={EMBLEM_IMAGES.dailyRounds} />}
-              label="Rounds"
-              color={COLORS.brand}
-              badge={roundsBadge}
-              onPress={() => setShowRounds(true)}
-              testID="home-float-rounds"
-            />
-          )}
-          <FeatureButton
-            emblem={<HubEmblem source={EMBLEM_IMAGES.journey} />}
-            label="Journey"
-            color={COLORS.river}
-            onPress={() => router.push(ROUTES.journey)}
-            testID="home-float-journey"
+          <SanctuaryShortcutCard
+            emblem={EMBLEM_IMAGES.dailyRounds}
+            label="Rounds"
+            badge={roundsBadge}
+            locked={!roundsUnlocked}
+            onPress={() => setShowRounds(true)}
+            testID="home-float-rounds"
           />
-          {roundsUnlocked && (
-            <FeatureButton
-              emblem={<HubEmblem source={EMBLEM_IMAGES.milestones} />}
-              label="Milestones"
-              color="#D4AF37"
-              onPress={() => router.push(ROUTES.MILESTONES)}
-              testID="home-float-milestones"
-            />
-          )}
+          <SanctuaryShortcutCard
+            emblem={EMBLEM_IMAGES.goals}
+            label="Goals"
+            available={roundsUnlocked}
+            locked={!roundsUnlocked}
+            onPress={() => router.push(ROUTES.MILESTONES)}
+            testID="home-float-goals"
+          />
+          <SanctuaryShortcutCard
+            emblem={EMBLEM_IMAGES.recruit}
+            label="Recruit"
+            available={summonUnlocked}
+            locked={!summonUnlocked}
+            onPress={() => router.push(ROUTES.UNI_RECRUIT)}
+            testID="home-float-recruit"
+          />
         </View>
 
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
@@ -569,57 +554,30 @@ export default function RunHome() {
 
           {/* Tap hint — shown only when a hero is active */}
           {hasRecruitedHeroes && (
-            <Animated.View style={[styles.tapPulse, { opacity: pulseAnim }]}>
+            <Animated.View pointerEvents="none" style={[styles.tapPulse, { opacity: pulseAnim }]}>
               <View style={[styles.tapDot, { backgroundColor: elementColor }]} />
               <Text style={styles.tapLabel}>tap to change</Text>
             </Animated.View>
           )}
         </Pressable>
 
-        {/* RIGHT COLUMN — progressive reveal
-             Lv1:   nothing (hub is clean, objective card dominates)
-             Lv2+:  Summon (Recruitment Hall)
-             Lv4+:  Ward Defense
-             Lv7+:  Boss Ward
-             Lv10+: World Events (only when an event is active)     */}
+        {/* RIGHT COLUMN — Defense · Supplies */}
         <View style={styles.sideCol}>
-          {summonUnlocked && (
-            <FeatureButton
-              emblem={<HubEmblem source={EMBLEM_IMAGES.summoning} />}
-              label="Summon"
-              color="#D4AF37"
-              onPress={() => router.push(ROUTES.UNI_RECRUIT)}
-              testID="home-float-summon"
-            />
-          )}
-          {wardDefUnlocked && (
-            <FeatureButton
-              emblem={<HubEmblem source={EMBLEM_IMAGES.wardDefense} />}
-              label="Defense"
-              color={COLORS.river}
-              onPress={() => router.push(ROUTES.WARD_DEFENSE)}
-              testID="home-float-ward-defense"
-            />
-          )}
-          {bossUnlocked && (
-            <FeatureButton
-              emblem={<HubEmblem source={EMBLEM_IMAGES.bossWard} />}
-              label="Boss"
-              color={COLORS.error}
-              onPress={() => router.push(ROUTES.boss)}
-              testID="home-float-boss"
-            />
-          )}
-          {WORLD_EVENT_ACTIVE && worldEventUnlocked && (
-            <FeatureButton
-              emblem={<HubEmblem source={EMBLEM_IMAGES.worldEvents} />}
-              label="Events"
-              color={COLORS.air}
-              live
-              onPress={() => router.push(ROUTES.events)}
-              testID="home-float-events"
-            />
-          )}
+          <SanctuaryShortcutCard
+            emblem={EMBLEM_IMAGES.defense}
+            label="Defense"
+            available={wardDefUnlocked}
+            locked={!wardDefUnlocked}
+            onPress={() => router.push(ROUTES.WARD_DEFENSE)}
+            testID="home-float-ward-defense"
+          />
+          <SanctuaryShortcutCard
+            emblem={EMBLEM_IMAGES.supplies}
+            label="Supplies"
+            locked={!roundsUnlocked}
+            onPress={() => router.push(ROUTES.ITEM_BAG)}
+            testID="home-float-supplies"
+          />
         </View>
       </View>
 
@@ -905,42 +863,6 @@ const sc = StyleSheet.create({
   topVignette: { position: "absolute", top: 0, left: 0, right: 0,   height: "22%" },
 });
 
-/* ── FeatureButton ── emblem card with integrated label overlay at bottom */
-function FeatureButton({
-  icon, emblem, label, color, locked, lockText, live, badge, onPress, testID,
-}: {
-  icon?: string; emblem?: ReactNode; label: string; color: string;
-  locked?: boolean; lockText?: string; live?: boolean; badge?: number;
-  onPress: () => void; testID?: string;
-}) {
-  return (
-    <Pressable style={[styles.featBtn, locked && { opacity: 0.5 }]} onPress={onPress} testID={testID} hitSlop={6}>
-      <View style={styles.featEmblemWrap}>
-        {emblem !== undefined
-          ? emblem
-          : <Ionicons name={icon as any} size={28} color={locked ? COLORS.onSurfaceTertiary : color} />
-        }
-        {/* Label always visible — overlaid at the bottom of the card */}
-        <View style={styles.featLabelOverlay}>
-          <Text
-            style={[styles.featLabel, { color: locked ? COLORS.onSurfaceTertiary : color }]}
-            numberOfLines={1}
-          >
-            {label.toUpperCase()}
-          </Text>
-        </View>
-        {live && !locked ? <View style={styles.featLiveDot} /> : null}
-        {!locked && badge && badge > 0 ? (
-          <View style={styles.featBadge}>
-            <Text style={styles.featBadgeTxt}>{badge > 9 ? "9+" : badge}</Text>
-          </View>
-        ) : null}
-      </View>
-      {live && !locked ? <Text style={styles.featLiveTxt}>LIVE</Text> : null}
-      {locked && lockText ? <Text style={styles.featLock}>{lockText}</Text> : null}
-    </Pressable>
-  );
-}
 
 /* ── Styles ── */
 const styles = StyleSheet.create({
@@ -979,50 +901,8 @@ const styles = StyleSheet.create({
   /* Arena — fills remaining vertical space */
   arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },
 
-  /* Side columns */
-  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm },
-  featBtn:        { alignItems: "center", gap: 0 },
-  featEmblemWrap: {
-    width: 58, height: 78,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(6, 9, 16, 0.52)",
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-  },
-  featLabelOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 5,
-    paddingHorizontal: 2,
-    alignItems: "center",
-    backgroundColor: "rgba(4, 7, 12, 0.78)",
-  },
-  featLabel: {
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0.9,
-    textAlign: "center",
-  },
-  featLock:   { color: COLORS.onSurfaceTertiary, fontSize: 12 },
-  featLiveDot: {
-    position: "absolute", top: 2, right: 2,
-    width: 9, height: 9, borderRadius: 5,
-    backgroundColor: "#34D399",
-    borderWidth: 1.5, borderColor: COLORS.surface,
-  },
-  featLiveTxt: { color: "#34D399", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
-  featBadge: {
-    position: "absolute", top: -3, right: -3,
-    minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 4,
-    backgroundColor: COLORS.error,
-    borderWidth: 1.5, borderColor: COLORS.surface,
-    alignItems: "center", justifyContent: "center",
-  },
-  featBadgeTxt: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
+  /* Side columns — narrowed ~12 % vs old 72 px to bring cards closer to hero */
+  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm, marginHorizontal: -6 },
 
   /* World Event banner (Shift hub entry point) */
   memoryBanner: {
