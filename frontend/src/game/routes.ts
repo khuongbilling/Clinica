@@ -21,13 +21,17 @@ import type { Href } from "expo-router";
 export type AppRoute = Href;
 
 // ── Tab routes ──────────────────────────────────────────────────────────────
-const HOME:       AppRoute = "/(tabs)";
-const CODEX:      AppRoute = "/(tabs)/codex";
-const HEROES:     AppRoute = "/(tabs)/heroes";
-const KINGDOM:    AppRoute = "/(tabs)/kingdom";
-const PROFILE:    AppRoute = "/(tabs)/profile";
-const SHOP_TAB:   AppRoute = "/(tabs)/shop";
-const FACTION:    AppRoute = "/(tabs)/faction";
+const HOME:           AppRoute = "/(tabs)";
+const CODEX:          AppRoute = "/(tabs)/codex";
+const HEROES:         AppRoute = "/(tabs)/heroes";
+const KINGDOM:        AppRoute = "/(tabs)/kingdom";
+const PROFILE:        AppRoute = "/(tabs)/profile";
+const SHOP_TAB:       AppRoute = "/(tabs)/shop";
+const FACTION:        AppRoute = "/(tabs)/faction";
+const JOURNEY_TAB:    AppRoute = "/(tabs)/journey"   as AppRoute;
+const INVENTORY_TAB:  AppRoute = "/(tabs)/inventory" as AppRoute;
+// SANCTUARY is the new label for KINGDOM in the bottom bar (same route).
+const SANCTUARY:      AppRoute = "/(tabs)/kingdom";
 
 // ── Core gameplay ────────────────────────────────────────────────────────────
 const BATTLE:          AppRoute = "/battle";
@@ -120,6 +124,9 @@ export const ROUTES = {
   PROFILE,
   SHOP_TAB,
   FACTION,
+  JOURNEY_TAB,
+  INVENTORY_TAB,
+  SANCTUARY,
 
   // ── Core gameplay ──────────────────────────────────────────────────────────
   BATTLE,
@@ -198,6 +205,9 @@ export const ROUTES = {
   tabKingdom:       KINGDOM,
   tabProfile:       PROFILE,
   tabFaction:       FACTION,
+  tabJourney:       JOURNEY_TAB,
+  tabInventory:     INVENTORY_TAB,
+  tabSanctuary:     SANCTUARY,
 
   title:                TITLE,
   preloader:            PRELOADER,

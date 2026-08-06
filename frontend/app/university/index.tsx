@@ -745,7 +745,7 @@ export default function UniversityHubScreen() {
         testID="university-info-dialog"
       />
       <TutorialOverlay />
-      <HubBottomNav activeTab="shift" />
+      <HubBottomNav activeTab="journey" />
     </SafeAreaView>
   );
 }

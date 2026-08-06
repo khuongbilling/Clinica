@@ -1,9 +1,14 @@
 /**
  * HubBottomNav — illustrated hand-drawn bottom navigation for non-tab screens.
  *
- * Icons: AI-generated donghua/anime PNGs (tab-shift/heroes/shop/realm/guild).
- * Active = full opacity, inactive = dimmed (38%). No SVG, no rings, no glow.
- * StrokeLabel gives the painted-text look of celestial RPG nav bars.
+ * Mirrors the five-tab structure of the main Expo Router tab bar:
+ *   Journey · Heroes · Sanctuary · Inventory · Shop
+ *
+ * Icons: AI-generated donghua/anime PNGs. Active = full opacity, inactive = 38%.
+ * No SVG, no rings, no glow. StrokeLabel gives the painted-text RPG look.
+ *
+ * TODO(icons): replace tab-journey.png and tab-inventory.png with final assets
+ * once the icon-pack push ships (Agent 8).
  */
 import React from "react";
 import { type AppRoute } from "@/src/game/routes";
@@ -18,18 +23,18 @@ import {
   type CompoundGateContext,
 } from "@/src/game/progression";
 
-export type HubTabId = "shift" | "heroes" | "shop" | "realm" | "community";
+export type HubTabId = "journey" | "heroes" | "sanctuary" | "inventory" | "shop";
 
 interface HubBottomNavProps {
   activeTab?: HubTabId;
 }
 
 const TAB_IMAGES = {
-  shift:   require("../../assets/ui-icons/tab-shift.png"),
-  heroes:  require("../../assets/ui-icons/tab-heroes.png"),
-  shop:    require("../../assets/ui-icons/tab-shop.png"),
-  realm:   require("../../assets/ui-icons/tab-realm.png"),
-  guild:   require("../../assets/ui-icons/tab-guild.png"),
+  journey:   require("../../assets/ui-icons/tab-journey.png"),   // TODO(icons): replace with final asset
+  heroes:    require("../../assets/ui-icons/tab-heroes.png"),
+  sanctuary: require("../../assets/ui-icons/tab-realm.png"),
+  inventory: require("../../assets/ui-icons/tab-inventory.png"), // TODO(icons): replace with final asset
+  shop:      require("../../assets/ui-icons/tab-shop.png"),
 } as const;
 
 function StrokeLabel({ children, focused }: { children: string; focused: boolean }) {
@@ -55,7 +60,7 @@ function StrokeLabel({ children, focused }: { children: string; focused: boolean
   );
 }
 
-export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
+export function HubBottomNav({ activeTab = "journey" }: HubBottomNavProps) {
   const router    = useRouter();
   const insets    = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 8);
@@ -67,10 +72,9 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
     lessonsStarted:     (player?.lessons_completed?.length ?? 0) > 0,
   };
 
-  const shopUnlocked      = checkFeatureGate("shop",            ctx).unlocked;
-  const heroesUnlocked    = checkFeatureGate("hall_of_heroes",  ctx).unlocked;
-  const realmUnlocked     = checkFeatureGate("realm",           ctx).unlocked;
-  const communityUnlocked = checkFeatureGate("community_board", ctx).unlocked;
+  const shopUnlocked   = checkFeatureGate("shop",           ctx).unlocked;
+  const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const realmUnlocked  = checkFeatureGate("realm",          ctx).unlocked;
 
   interface TabDef {
     id:       HubTabId;
@@ -81,11 +85,11 @@ export function HubBottomNav({ activeTab = "shift" }: HubBottomNavProps) {
   }
 
   const tabs: TabDef[] = [
-    { id: "shop",      imgKey: "shop",   label: "SHOP",   route: "/(tabs)/shop",    unlocked: shopUnlocked      },
-    { id: "heroes",    imgKey: "heroes", label: "HEROES", route: "/(tabs)/heroes",  unlocked: heroesUnlocked    },
-    { id: "shift",     imgKey: "shift",  label: "SHIFT",  route: "/(tabs)/",        unlocked: true              },
-    { id: "realm",     imgKey: "realm",  label: "REALM",  route: "/(tabs)/kingdom", unlocked: realmUnlocked     },
-    { id: "community", imgKey: "guild",  label: "GUILD",  route: "/(tabs)/faction", unlocked: communityUnlocked },
+    { id: "journey",   imgKey: "journey",   label: "JOURNEY",   route: "/(tabs)/journey",   unlocked: true              },
+    { id: "heroes",    imgKey: "heroes",    label: "HEROES",    route: "/(tabs)/heroes",    unlocked: heroesUnlocked    },
+    { id: "sanctuary", imgKey: "sanctuary", label: "SANCTUARY", route: "/(tabs)/kingdom",   unlocked: realmUnlocked     },
+    { id: "inventory", imgKey: "inventory", label: "INVENTORY", route: "/(tabs)/inventory", unlocked: true              },
+    { id: "shop",      imgKey: "shop",      label: "SHOP",      route: "/(tabs)/shop",      unlocked: shopUnlocked      },
   ];
 
   return (

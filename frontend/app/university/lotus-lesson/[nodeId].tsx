@@ -382,7 +382,7 @@ export default function LotusLessonScreen() {
             </View>
           </SceneTransition>
         </ScrollView>
-        <HubBottomNav activeTab="shift" />
+        <HubBottomNav activeTab="journey" />
       </SafeAreaView>
     );
   }
@@ -485,7 +485,7 @@ export default function LotusLessonScreen() {
           </View>
         </SceneTransition>
       </ScrollView>
-      <HubBottomNav activeTab="shift" />
+      <HubBottomNav activeTab="journey" />
     </SafeAreaView>
   );
 }

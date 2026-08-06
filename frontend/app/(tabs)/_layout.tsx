@@ -9,16 +9,17 @@ import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@
 // ── Illustrated hand-drawn tab icons ─────────────────────────────────────────
 // Each icon is an AI-generated donghua/anime illustrated PNG with transparent
 // background. Active = full opacity; inactive = dimmed. No SVG, no rings.
+//
+// TODO(icons): replace tab-journey.png and tab-inventory.png with final assets
+// once the icon-pack push ships (Agent 8).
 
 const TAB_IMAGES = {
-  shift:   require("../../assets/ui-icons/tab-shift.png"),
-  heroes:  require("../../assets/ui-icons/tab-heroes.png"),
-  shop:    require("../../assets/ui-icons/tab-shop.png"),
-  realm:   require("../../assets/ui-icons/tab-realm.png"),
-  guild:   require("../../assets/ui-icons/tab-guild.png"),
-  home:    require("../../assets/ui-icons/tab-home.png"),
-  study:   require("../../assets/ui-icons/tab-study.png"),
-  profile: require("../../assets/ui-icons/tab-profile.png"),
+  journey:  require("../../assets/ui-icons/tab-journey.png"),   // TODO(icons): replace with final asset
+  heroes:   require("../../assets/ui-icons/tab-heroes.png"),
+  sanctuary: require("../../assets/ui-icons/tab-realm.png"),
+  inventory: require("../../assets/ui-icons/tab-inventory.png"), // TODO(icons): replace with final asset
+  shop:     require("../../assets/ui-icons/tab-shop.png"),
+  profile:  require("../../assets/ui-icons/tab-profile.png"),
 } as const;
 
 // Hand-drawn stroke label: 4 dark offset copies + color copy on top.
@@ -85,10 +86,9 @@ export default function TabsLayout() {
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
     lessonsStarted:     (player?.lessons_completed?.length ?? 0) > 0,
   };
-  const shopUnlocked      = checkFeatureGate("shop",            ctx).unlocked;
-  const heroesUnlocked    = checkFeatureGate("hall_of_heroes",  ctx).unlocked;
-  const realmUnlocked     = checkFeatureGate("realm",           ctx).unlocked;
-  const communityUnlocked = checkFeatureGate("community_board", ctx).unlocked;
+  const shopUnlocked   = checkFeatureGate("shop",           ctx).unlocked;
+  const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const realmUnlocked  = checkFeatureGate("realm",          ctx).unlocked;
 
   return (
     <Tabs
@@ -106,14 +106,16 @@ export default function TabsLayout() {
         tabBarItemStyle: { paddingVertical: 2 },
       }}
     >
+      {/* ── Tab 1: Journey (no gate — available immediately) ── */}
       <Tabs.Screen
-        name="shop"
+        name="journey"
         options={{
-          href: shopUnlocked ? undefined : null,
-          tabBarButtonTestID: "tab-shop",
-          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused),
+          tabBarButtonTestID: "tab-journey",
+          tabBarIcon: ({ focused }) => mkTabIcon("journey", "JOURNEY", focused),
         }}
       />
+
+      {/* ── Tab 2: Heroes ── */}
       <Tabs.Screen
         name="heroes"
         options={{
@@ -122,36 +124,48 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused),
         }}
       />
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarButtonTestID: "tab-shift",
-          tabBarIcon: ({ focused }) => mkTabIcon("shift", "SHIFT", focused),
-        }}
-      />
+
+      {/* ── Tab 3: Sanctuary (formerly Realm / Kingdom) ── */}
       <Tabs.Screen
         name="kingdom"
         options={{
           href: realmUnlocked ? undefined : null,
-          tabBarButtonTestID: "tab-kingdom",
-          tabBarIcon: ({ focused }) => mkTabIcon("realm", "REALM", focused),
+          tabBarButtonTestID: "tab-sanctuary",
+          tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "SANCTUARY", focused),
         }}
+      />
+
+      {/* ── Tab 4: Inventory (no gate — available immediately) ── */}
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          tabBarButtonTestID: "tab-inventory",
+          tabBarIcon: ({ focused }) => mkTabIcon("inventory", "INVENTORY", focused),
+        }}
+      />
+
+      {/* ── Tab 5: Shop ── */}
+      <Tabs.Screen
+        name="shop"
+        options={{
+          href: shopUnlocked ? undefined : null,
+          tabBarButtonTestID: "tab-shop",
+          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused),
+        }}
+      />
+
+      {/* ── Hidden routes (route alive, not shown in bar) ── */}
+      <Tabs.Screen
+        name="index"
+        options={{ href: null, tabBarButtonTestID: "tab-index" }}
       />
       <Tabs.Screen
         name="faction"
-        options={{
-          href: communityUnlocked ? undefined : null,
-          tabBarButtonTestID: "tab-faction",
-          tabBarIcon: ({ focused }) => mkTabIcon("guild", "GUILD", focused),
-        }}
+        options={{ href: null, tabBarButtonTestID: "tab-faction" }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          href: null,
-          tabBarButtonTestID: "tab-profile",
-          tabBarIcon: ({ focused }) => mkTabIcon("profile", "PROFILE", focused),
-        }}
+        options={{ href: null, tabBarButtonTestID: "tab-profile" }}
       />
       <Tabs.Screen
         name="codex"
