@@ -24,13 +24,16 @@ import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, GLOW } from "@/src/theme/ui";
 import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
 import { EnterWardButton } from "@/src/components/ui";
-import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
+import { getHeroPortrait } from "@/src/components/HeroPortraits";
+import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate, heroXpCostForLevel } from "@/src/game/progression";
+import { getProgress } from "@/src/game/evolution";
+import { levelCapForStar } from "@/src/game/university";
 
 const EMBLEM_IMAGES = {
   dailyRounds: require("../../assets/ui-icons/emblems/daily-rounds.png"),
@@ -317,6 +320,16 @@ export default function RunHome() {
   const leadHero     = leadHeroId ? HEROES.find((h) => h.id === leadHeroId) : null;
   const heroSprite   = leadHeroId ? getHeroSprite(leadHeroId) : null;
   const elementColor = ELEMENT_COLORS[leadHero?.element ?? "River"] ?? COLORS.river;
+
+  // Hero-level XP (separate track from player rank XP shown in PlayerHeader)
+  const heroProg     = leadHeroId != null ? getProgress(player.hero_progression, leadHeroId) : null;
+  const heroLevel    = heroProg?.level ?? 1;
+  const heroLvCap    = heroProg ? levelCapForStar(heroProg.star) : 10;
+  const heroXpBanked = heroProg?.xp ?? 0;
+  const heroXpNeeded = heroXpCostForLevel(heroLevel);
+  const atHeroCap    = heroLevel >= heroLvCap;
+  const heroXpPct    = atHeroCap ? 1 : Math.min(1, heroXpBanked / heroXpNeeded);
+
   const bossUnlocked = playerLevelInfo.level >= 7;
   // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
   const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelInfo.level);
@@ -593,22 +606,46 @@ export default function RunHome() {
             shadowOffset: { width: 0, height: 4 },
             elevation: 5,
           }]}
-          onPress={() => router.push(ROUTES.heroSelect)}
+          onPress={() => leadHeroId && router.push(`/hero/${leadHeroId}` as any)}
+          testID="home-hero-card"
         >
           <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
-          <View style={[styles.elementBadge, { borderColor: elementColor + "90", backgroundColor: elementColor + "20" }]}>
-            <Text style={[styles.elementTxt, { color: elementColor }]}>{leadHero?.element ?? "River"}</Text>
+
+          {/* LEFT — circular medallion + element label */}
+          <View style={styles.heroMedallion}>
+            <View style={[styles.heroMedallionRing, { borderColor: elementColor }]}>
+              {getHeroPortrait(leadHeroId ?? "") ? (
+                <Image
+                  source={getHeroPortrait(leadHeroId ?? "")!}
+                  style={styles.heroMedallionImg}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[styles.heroMedallionImg, { backgroundColor: elementColor + "30" }]} />
+              )}
+            </View>
+            <Text style={[styles.elementTxt, { color: elementColor, marginTop: 2 }]}>
+              {leadHero?.element ?? "River"}
+            </Text>
           </View>
-          <View style={{ flex: 1, gap: 2 }}>
+
+          {/* CENTRE — name, role/title, Lv. X, XP bar */}
+          <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
             <Text style={styles.heroName} numberOfLines={1}>{leadHero?.name ?? "Your Hero"}</Text>
             <Text style={styles.heroTitle} numberOfLines={1}>{leadHero?.title ?? apt?.title ?? ""}</Text>
-          </View>
-          <View style={styles.xpCol}>
+            <Text style={styles.heroLvLabel}>Lv. {heroLevel}</Text>
             <View style={styles.xpBg}>
-              <View style={[styles.xpBar, { width: `${Math.round(progress * 100)}%` as any, backgroundColor: elementColor }]} />
+              <View style={[styles.xpBar, { width: `${Math.round(heroXpPct * 100)}%` as any, backgroundColor: elementColor }]} />
             </View>
-            <Text style={styles.xpTxt}>{nextRank ? `${player.xp}/${nextRank.xpRequired} XP` : "MAX"}</Text>
-            <Text style={[styles.heroTapHint, { color: elementColor + "AA" }]}>TAP TO CHANGE</Text>
+          </View>
+
+          {/* RIGHT — XP figures + chest icon */}
+          <View style={styles.heroXpRight}>
+            <Text style={styles.xpTxt} numberOfLines={1}>
+              {atHeroCap ? "MAX" : `${heroXpBanked} / ${heroXpNeeded}`}
+            </Text>
+            <Text style={[styles.xpTxt, { fontSize: 10, letterSpacing: 0 }]}>XP</Text>
+            <Ionicons name="gift-outline" size={18} color={elementColor} style={{ marginTop: 2 }} />
           </View>
         </Pressable>
       ) : summonUnlocked ? (
@@ -1020,27 +1057,37 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  /* Hero info panel — RPG character card with element glow */
+  /* Hero info panel — three-column RPG character card with element glow */
   infoPanel: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
     marginHorizontal: SPACING.md, marginTop: SPACING.xs,
     backgroundColor: UI.sanctuaryCard,
-    borderRadius: UI_RADIUS.card, padding: SPACING.md, borderWidth: 1.5,
+    borderRadius: UI_RADIUS.card, padding: SPACING.sm, paddingLeft: SPACING.md - 2, borderWidth: 1.5,
     overflow: "hidden", position: "relative",
   },
   infoPanelAccent: {
     position: "absolute", left: 0, top: 0, bottom: 0,
     width: 3, borderRadius: 1.5, opacity: 0.85,
   },
-  elementBadge: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 4, alignSelf: "center" },
-  elementTxt:   { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
-  heroName:     { color: UI.text, fontSize: 17, fontWeight: "700" },
-  heroTitle:    { color: UI.textDim, fontSize: 13 },
-  xpCol:        { alignItems: "flex-end", gap: 2 },
-  xpBg:         { width: 64, height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
+  /* Left medallion */
+  heroMedallion: { alignItems: "center", gap: 2, flexShrink: 0 },
+  heroMedallionRing: {
+    width: 58, height: 58, borderRadius: 29,
+    borderWidth: 2,
+    overflow: "hidden",
+    alignItems: "center", justifyContent: "center",
+  },
+  heroMedallionImg: { width: 54, height: 54, borderRadius: 27 },
+  /* Centre columns */
+  elementTxt:   { fontSize: 10, fontWeight: "700", letterSpacing: 0.4 },
+  heroName:     { color: UI.text, fontSize: 15, fontWeight: "700" },
+  heroTitle:    { color: UI.textDim, fontSize: 12 },
+  heroLvLabel:  { color: UI.text, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, marginTop: 1 },
+  xpBg:         { height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
   xpBar:        { height: "100%", borderRadius: 2 },
-  xpTxt:        { color: UI.textDim, fontSize: 12, letterSpacing: 0.3 },
-  heroTapHint:  { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
+  /* Right XP column */
+  heroXpRight:  { alignItems: "flex-end", gap: 1, flexShrink: 0, minWidth: 52 },
+  xpTxt:        { color: UI.textDim, fontSize: 11, letterSpacing: 0.2 },
 
   /* Start button — layout only; visuals come from PrimaryButton */
   startBtn: {
