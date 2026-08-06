@@ -46,81 +46,23 @@ const IMG = {
   hubBg:      '/__mockup/images/home_hub_bg.png',
   heroSprite: '/__mockup/images/hero-sprite.png',
   crowns:     '/__mockup/images/icon-crowns.png',
-  stamina:    '/__mockup/images/icon-stamina.png',
   // Shortcut cards — exact crops from reference art (frame + icon + label baked)
   rounds:     '/__mockup/images/ref-card-rounds.png',
   defense:    '/__mockup/images/ref-card-defense.png',
   goals:      '/__mockup/images/ref-card-goals.png',
   recruit:    '/__mockup/images/ref-card-recruit.png',
   supplies:   '/__mockup/images/ref-card-supplies.png',
-  // Tab icons — crops from reference (Sanctuary & Heroes) + SVG for rest
-  tabHeroes:    '/__mockup/images/ref-tab-heroes.png',
-  tabSanctuary: '/__mockup/images/ref-tab-home.png',
+  // Bottom-nav icons — painterly transparent PNGs in the unified JRPG style
+  navJourney:   '/__mockup/images/nav-journey.png',
+  navHeroes:    '/__mockup/images/nav-heroes.png',
+  navSanctuary: '/__mockup/images/nav-sanctuary.png',
+  navInventory: '/__mockup/images/nav-inventory.png',
+  navShop:      '/__mockup/images/nav-shop.png',
+  staminaEmblem:'/__mockup/images/icon-stamina-emblem.png',
 };
 
 const PLAYER = { name: 'Dr. Chen', level: 3, role: 'Junior Clinician', stamina: 14, staminaMax: 20, crowns: 120 };
 const HERO   = { name: 'Acute Step Warden', profession: 'Physiotherapist', element: 'River', level: 3, xp: 340, xpNext: 500 };
-
-// ── SVG Tab Icons ─────────────────────────────────────────────────────────────
-
-function TabIconJourney({ color }: { color: string }) {
-  // Compass rose — clear silhouette, wayfinder style
-  return (
-    <svg width="28" height="26" viewBox="0 0 28 26" fill="none">
-      {/* Outer ring */}
-      <circle cx="14" cy="13" r="11" stroke={color} strokeWidth="1.5" fill="none" opacity="0.7"/>
-      {/* N pointer (bright) */}
-      <path d="M14 4L16 13H12L14 4Z" fill={color}/>
-      {/* S pointer (dimmer) */}
-      <path d="M14 22L12 13H16L14 22Z" fill={color} opacity="0.5"/>
-      {/* E pointer */}
-      <path d="M24 13L14 11V15L24 13Z" fill={color} opacity="0.7"/>
-      {/* W pointer */}
-      <path d="M4 13L14 15V11L4 13Z" fill={color} opacity="0.7"/>
-      {/* Center gem */}
-      <circle cx="14" cy="13" r="2.2" fill={color}/>
-      <circle cx="14" cy="13" r="1" fill={C.bg}/>
-    </svg>
-  );
-}
-
-function TabIconInventory({ color }: { color: string }) {
-  // Medical satchel / apothecary bag
-  return (
-    <svg width="28" height="26" viewBox="0 0 28 26" fill="none">
-      {/* Bag body */}
-      <rect x="3" y="10" width="22" height="15" rx="3" fill={color}/>
-      {/* Bag flap */}
-      <path d="M3 15Q3 10 8 10H20Q25 10 25 15V14Q25 10 20 10H8Q3 10 3 14Z" fill={color} opacity="0.5"/>
-      {/* Handle */}
-      <path d="M10 10V7Q10 4 14 4Q18 4 18 7V10" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none"/>
-      {/* Cross on bag */}
-      <rect x="12" y="14" width="4" height="7" rx="1" fill={C.bg} opacity="0.6"/>
-      <rect x="10.5" y="16.5" width="7" height="2" rx="1" fill={C.bg} opacity="0.6"/>
-    </svg>
-  );
-}
-
-function TabIconShop({ color }: { color: string }) {
-  // Merchant stall / ornate storefront
-  return (
-    <svg width="28" height="26" viewBox="0 0 28 26" fill="none">
-      {/* Stall canopy */}
-      <path d="M2 10H26V14Q26 16 24 16H4Q2 16 2 14Z" fill={color}/>
-      {/* Canopy scallops */}
-      <path d="M2 16Q4 13 6 16Q8 13 10 16Q12 13 14 16Q16 13 18 16Q20 13 22 16Q24 13 26 16" stroke={color} strokeWidth="1.5" fill="none"/>
-      {/* Counter */}
-      <rect x="4" y="17" width="20" height="8" rx="2" fill={color} opacity="0.75"/>
-      {/* Pole left */}
-      <rect x="5" y="7" width="2" height="3" rx="1" fill={color}/>
-      {/* Pole right */}
-      <rect x="21" y="7" width="2" height="3" rx="1" fill={color}/>
-      {/* Coin on counter */}
-      <circle cx="14" cy="21" r="2.5" fill={C.bg} opacity="0.55"/>
-      <circle cx="14" cy="21" r="1.2" fill={color} opacity="0.7"/>
-    </svg>
-  );
-}
 
 // ── Small Components ──────────────────────────────────────────────────────────
 
@@ -158,13 +100,9 @@ function RiverMedallion({ size = 44 }: { size?: number }) {
   );
 }
 
-// Stamina icon — designed teal energy emblem
+// Stamina icon — designed gold-and-teal energy emblem (painterly asset)
 function StaminaEmblem() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <polygon points="7,1 9.5,5.5 13.5,5.5 10.5,8.5 11.5,13 7,10.5 2.5,13 3.5,8.5 0.5,5.5 4.5,5.5" fill={C.jade} opacity="0.9"/>
-    </svg>
-  );
+  return <img src={IMG.staminaEmblem} style={{ width: 15, height: 15, objectFit: 'contain' }} />;
 }
 
 // Medical cross emblem for Enter Ward button
@@ -276,10 +214,13 @@ function SystemCard() {
     }}>
       {/* Main row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: SP.md, padding: `${SP.md}px ${SP.md}px ${SP.sm}px` }}>
-        {/* System medallion */}
+        {/* System medallion — stethoscope emblem */}
         <div style={{ width: 40, height: 40, borderRadius: 20, background: `radial-gradient(circle, #0E2E26, #071810)`, border: `2px solid ${C.jade}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 0 12px ${C.jade}50` }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 2 L12 8 L18 8 L13 12 L15 18 L10 14 L5 18 L7 12 L2 8 L8 8 Z" fill={C.jade} opacity="0.85"/>
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+            <path d="M6 5Q6 3 8 3Q10 3 10 5V10Q10 13 13 13Q16 13 16 10" stroke={C.jade} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+            <circle cx="16" cy="8.5" r="2.2" stroke={C.jade} strokeWidth="1.3" fill="rgba(130,213,186,0.2)"/>
+            <circle cx="7" cy="4.5" r="1.1" fill={C.jade}/>
+            <circle cx="9" cy="4.5" r="1.1" fill={C.jade}/>
           </svg>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -297,8 +238,10 @@ function SystemCard() {
       </div>
       {/* Objective strip — nested, no harsh divider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: `7px ${SP.md}px 10px`, background: `rgba(22,52,59,0.70)` }}>
+        {/* Flag icon per spec */}
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-          <path d="M1 5.5L4 9L10 2" stroke={C.jade} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="2" y1="1" x2="2" y2="10.5" stroke={C.jade} strokeWidth="1.4" strokeLinecap="round"/>
+          <path d="M2 1.5H9L7 4L9 6.5H2Z" fill={C.jade} opacity="0.9"/>
         </svg>
         <span style={{ fontSize: 9, fontFamily: F.display, color: C.jade, letterSpacing: 1.2 }}>OBJECTIVE</span>
         <span style={{ fontSize: 11, color: C.ivoryDim, fontFamily: F.ui }}>Complete your first Ward Shift simulation.</span>
@@ -419,13 +362,13 @@ function EnterWardBtn() {
         position: 'relative',
       }}>
         <div style={{
-          background: 'linear-gradient(135deg,#0E2820,#091A14)',
+          background: `linear-gradient(180deg, ${C.jade}EE, ${C.jadeBright}CC)`,
           border: `2px solid ${C.gold}`,
           borderRadius: R.pill,
           padding: `${SP.md}px ${SP.xl}px`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SP.md,
           cursor: 'pointer',
-          boxShadow: `inset 0 0 12px rgba(199,161,93,0.08)`,
+          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -6px 14px rgba(7,24,32,0.25)`,
           position: 'relative', overflow: 'visible',
         }}>
           {/* Sparkle corners */}
@@ -440,10 +383,10 @@ function EnterWardBtn() {
           {/* Midpoint gold diamond ornaments — left & right border edges */}
           <span style={{ position:'absolute', left:-8, top:'50%', transform:'translateY(-50%)', fontSize:14, color:C.gold, lineHeight:1, textShadow:`0 0 8px ${C.gold}` }}>◆</span>
           <span style={{ position:'absolute', right:-8, top:'50%', transform:'translateY(-50%)', fontSize:14, color:C.gold, lineHeight:1, textShadow:`0 0 8px ${C.gold}` }}>◆</span>
-          <span style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: C.goldBright, letterSpacing: 1.5, textShadow: `0 0 14px ${C.gold}CC` }}>
+          <span style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, color: '#071820', letterSpacing: 1.5, textShadow: `0 1px 0 rgba(255,255,255,0.25)` }}>
             ENTER THE WARD
           </span>
-          <span style={{ fontSize: 18, color: C.goldBright }}>→</span>
+          <span style={{ fontSize: 18, color: '#071820' }}>→</span>
         </div>
       </div>
     </div>
@@ -454,11 +397,10 @@ function EnterWardBtn() {
 // Journey · Heroes · Sanctuary · Inventory · Shop
 // Sanctuary is the active tab on main hub
 
-function TabItem({ label, active, iconSrc, IconComp }: {
+function TabItem({ label, active, iconSrc }: {
   label: string;
   active: boolean;
-  iconSrc?: string;
-  IconComp?: React.FC<{ color: string }>;
+  iconSrc: string;
 }) {
   const col = active ? C.jade : C.muted;
   return (
@@ -479,12 +421,11 @@ function TabItem({ label, active, iconSrc, IconComp }: {
         margin: '2px 3px 2px',
       } : {}),
     }}>
-      {iconSrc
-        ? <img src={iconSrc} style={{ width: 38, height: 26, objectFit: 'contain', opacity: active ? 1 : 0.45, filter: active ? `drop-shadow(0 0 4px ${C.jade}88)` : 'none' }} />
-        : IconComp
-          ? <IconComp color={col} />
-          : null
-      }
+      <img src={iconSrc} style={{
+        width: 34, height: 30, objectFit: 'contain',
+        opacity: active ? 1 : 0.55,
+        filter: active ? `drop-shadow(0 0 6px ${C.jade}99)` : 'saturate(0.45) brightness(0.8)',
+      }} />
       <span style={{ fontSize: 8.5, fontFamily: F.display, color: col, letterSpacing: 0.8, lineHeight: 1 }}>
         {label}
       </span>
@@ -506,11 +447,11 @@ function BottomNav() {
       paddingLeft: 2,
       paddingRight: 2,
     }}>
-      <TabItem label="JOURNEY"   IconComp={TabIconJourney}   active={false} />
-      <TabItem label="HEROES"    iconSrc={IMG.tabHeroes}     active={false} />
-      <TabItem label="SANCTUARY" iconSrc={IMG.tabSanctuary}  active={true}  />
-      <TabItem label="INVENTORY" IconComp={TabIconInventory} active={false} />
-      <TabItem label="SHOP"      IconComp={TabIconShop}      active={false} />
+      <TabItem label="JOURNEY"   iconSrc={IMG.navJourney}   active={false} />
+      <TabItem label="HEROES"    iconSrc={IMG.navHeroes}    active={false} />
+      <TabItem label="SANCTUARY" iconSrc={IMG.navSanctuary} active={true}  />
+      <TabItem label="INVENTORY" iconSrc={IMG.navInventory} active={false} />
+      <TabItem label="SHOP"      iconSrc={IMG.navShop}      active={false} />
     </div>
   );
 }
