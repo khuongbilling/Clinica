@@ -28,7 +28,15 @@ export default function SummonScreen() {
     // Wait until the player has loaded so the gate reflects real data.
     if (player === null) return;
 
-    if (gate.unlocked) {
+    // Tutorial bypass: if either ceremony summon hasn't been completed yet the
+    // player is still in the guided recruitment flow.  Let them through
+    // regardless of level so the ceremony isn't silently broken for new
+    // Level-1 players who haven't reached the hall_of_heroes gate threshold.
+    const inTutorialCeremony =
+      !(player.tutorial_summon_1_done ?? false) ||
+      !(player.tutorial_summon_2_done ?? false);
+
+    if (gate.unlocked || inTutorialCeremony) {
       router.replace(ROUTES.UNI_RECRUIT);
     } else {
       // Bounce back to the University hub; it will show the lock notice.
