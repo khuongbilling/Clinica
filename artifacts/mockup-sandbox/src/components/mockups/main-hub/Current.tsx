@@ -9,7 +9,6 @@ const COLORS = {
   onSurface:           '#E8EAF0',
   onSurfaceSecondary:  '#C8CDD8',
   onSurfaceTertiary:   '#7A8494',
-  error:               '#EF4444',
   river:               '#06B6D4',
 };
 
@@ -43,18 +42,20 @@ const R  = { sm: 4, md: 8, lg: 14, xl: 20, pill: 999 };
 const IMG = {
   hubBg:      '/__mockup/images/home_hub_bg.png',
   heroSprite: '/__mockup/images/hero-sprite.png',
-  stamina:    '/__mockup/images/icon-stamina.png',
   crowns:     '/__mockup/images/icon-crowns.png',
-  // emblem icons (transparent PNGs)
-  journey:    '/__mockup/images/emblem-journey.png',
-  goals:      '/__mockup/images/emblem-goals.png',
-  recruit:    '/__mockup/images/emblem-recruit.png',
-  rounds:     '/__mockup/images/emblem-rounds.png',
-  defense:    '/__mockup/images/emblem-defense.png',
-  supplies:   '/__mockup/images/emblem-supplies.png',
-  // tab icons
-  tabShift:   '/__mockup/images/tab-shift.png',
-  tabHeroes:  '/__mockup/images/tab-heroes.png',
+  // emblem cards — cropped 1:1 from the reference art (frame + icon + label baked)
+  journey:    '/__mockup/images/ref-card-journey.png',
+  goals:      '/__mockup/images/ref-card-goals.png',
+  recruit:    '/__mockup/images/ref-card-recruit.png',
+  rounds:     '/__mockup/images/ref-card-rounds.png',
+  defense:    '/__mockup/images/ref-card-defense.png',
+  supplies:   '/__mockup/images/ref-card-supplies.png',
+  // tab icons — cropped 1:1 from the reference art
+  tabHome:    '/__mockup/images/ref-tab-home.png',
+  tabStudy:   '/__mockup/images/ref-tab-study.png',
+  tabShift:   '/__mockup/images/ref-tab-shift.png',
+  tabHeroes:  '/__mockup/images/ref-tab-heroes.png',
+  tabProfile: '/__mockup/images/ref-tab-profile.png',
 };
 
 const PLAYER = { name: 'Dr. Chen', level: 3, rank: 'Junior Clinician', stamina: 14, staminaMax: 20, crowns: 120 };
@@ -170,40 +171,14 @@ function NarratorCard() {
 
 // ── Icon Buttons ──────────────────────────────────────────────────────────────
 
-function LeftIcon({ src, label, badge }: { src: string; label: string; badge?: number }) {
+// Emblem cards are exact crops from the reference art — frame, icon, label and
+// badges are all baked into the image, so we just render the card.
+function EmblemCard({ src, width = 74 }: { src: string; width?: number }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', position: 'relative' }}>
-      <div style={{ position: 'relative', width: 64, height: 64 }}>
-        <img src={src} style={{ width: 64, height: 64, objectFit: 'contain', filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.8))' }} />
-        {badge != null && badge > 0 && (
-          <div style={{ position: 'absolute', top: -3, right: -3, width: 18, height: 18, borderRadius: 9, background: COLORS.error, border: '2px solid #04090E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 10, color: '#fff', fontWeight: 900 }}>{badge}</span>
-          </div>
-        )}
-      </div>
-      <span style={{ fontFamily: CINZEL, fontSize: 9, fontWeight: 700, color: UI.gold, letterSpacing: 0.5, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-        {label.toUpperCase()}
-      </span>
-    </div>
-  );
-}
-
-function RightIcon({ src, label, subtitle, live }: { src: string; label: string; subtitle?: string; live?: boolean }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', position: 'relative' }}>
-      <div style={{ position: 'relative', width: 58, height: 58 }}>
-        <img src={src} style={{ width: 58, height: 58, objectFit: 'contain', filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.85))' }} />
-        {live && (
-          <div style={{ position: 'absolute', top: 1, right: 1, width: 8, height: 8, borderRadius: 4, background: '#34D399', border: '1.5px solid #04090E', boxShadow: '0 0 5px #34D399AA' }} />
-        )}
-      </div>
-      <span style={{ fontFamily: CINZEL, fontSize: 8, fontWeight: 700, color: UI.text, letterSpacing: 0.4, textShadow: '0 1px 4px rgba(0,0,0,0.9)', lineHeight: 1 }}>
-        {label.toUpperCase()}
-      </span>
-      {subtitle && (
-        <span style={{ fontSize: 8, color: UI.jade, fontWeight: 600, letterSpacing: 0.2 }}>{subtitle}</span>
-      )}
-    </div>
+    <img
+      src={src}
+      style={{ width, height: 'auto', objectFit: 'contain', cursor: 'pointer', filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.8))' }}
+    />
   );
 }
 
@@ -219,10 +194,10 @@ function Arena() {
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%', background: 'linear-gradient(to top, rgba(4,8,14,0.7), transparent)', pointerEvents: 'none' }} />
 
       {/* Left column */}
-      <div style={{ position: 'relative', zIndex: 1, width: 80, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0` }}>
-        <LeftIcon src={IMG.journey} label="Journey" badge={3} />
-        <LeftIcon src={IMG.goals}   label="Goals" />
-        <LeftIcon src={IMG.recruit} label="Recruit" />
+      <div style={{ position: 'relative', zIndex: 1, width: 86, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px 0 ${SP.sm}px ${SP.xs}px` }}>
+        <EmblemCard src={IMG.journey} />
+        <EmblemCard src={IMG.goals} />
+        <EmblemCard src={IMG.recruit} />
       </div>
 
       {/* Hero center */}
@@ -233,10 +208,10 @@ function Arena() {
       </div>
 
       {/* Right column */}
-      <div style={{ position: 'relative', zIndex: 1, width: 86, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'flex-start', padding: `${SP.sm}px ${SP.xs}px ${SP.sm}px 0` }}>
-        <RightIcon src={IMG.rounds}   label="Rounds"   subtitle="Available" live />
-        <RightIcon src={IMG.defense}  label="Defense"  subtitle="Lv. 1" />
-        <RightIcon src={IMG.supplies} label="Supplies" subtitle="12" />
+      <div style={{ position: 'relative', zIndex: 1, width: 86, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center', padding: `${SP.sm}px ${SP.xs}px ${SP.sm}px 0` }}>
+        <EmblemCard src={IMG.rounds} />
+        <EmblemCard src={IMG.defense} />
+        <EmblemCard src={IMG.supplies} />
       </div>
     </div>
   );
@@ -313,108 +288,27 @@ function EnterWardBtn() {
   );
 }
 
-// ── Tab Bar SVG Icons ─────────────────────────────────────────────────────────
-
-function IconHome({ color }: { color: string }) {
-  return (
-    <svg width="26" height="24" viewBox="0 0 26 24" fill="none">
-      {/* Roof — peaked with slight pagoda upturn at eaves */}
-      <path d="M13 2L1.5 10.5H4.5V22H10V16H16V22H21.5V10.5H24.5L13 2Z" fill={color} />
-      {/* Door void */}
-      <rect x="10.5" y="16" width="5" height="6" fill={UI.bg} rx="0.5" />
-      {/* Roof decorative ridge line */}
-      <path d="M13 2L1.5 10.5" stroke={color} strokeWidth="0.5" strokeOpacity="0.4" fill="none"/>
-    </svg>
-  );
-}
-
-function IconStudy({ color }: { color: string }) {
-  // Three stacked books — each with a spine bar on the left
-  const spineOpacity = 0.35;
-  return (
-    <svg width="26" height="24" viewBox="0 0 26 24" fill={color}>
-      {/* Bottom book (widest) */}
-      <rect x="1" y="19" width="24" height="4.5" rx="1.5"/>
-      <rect x="1" y="19" width="3.5" height="4.5" rx="1.5" fillOpacity={spineOpacity}/>
-      {/* Middle book */}
-      <rect x="3" y="13" width="21" height="4.5" rx="1.5"/>
-      <rect x="3" y="13" width="3.5" height="4.5" rx="1.5" fillOpacity={spineOpacity}/>
-      {/* Top book (narrowest) */}
-      <rect x="5" y="7" width="18" height="4.5" rx="1.5"/>
-      <rect x="5" y="7" width="3.5" height="4.5" rx="1.5" fillOpacity={spineOpacity}/>
-      {/* Page lines on top book */}
-      <line x1="10" y1="7.8" x2="21" y2="7.8" stroke={UI.bg} strokeWidth="0.6" strokeOpacity="0.25"/>
-      <line x1="10" y1="9.5" x2="21" y2="9.5" stroke={UI.bg} strokeWidth="0.6" strokeOpacity="0.25"/>
-    </svg>
-  );
-}
-
-function IconShift({ color }: { color: string }) {
-  return (
-    <svg width="26" height="24" viewBox="0 0 26 24" fill="none">
-      {/* Left sword blade (top-right to bottom-left) */}
-      <path d="M20 2L6 22" stroke={color} strokeWidth="2.8" strokeLinecap="round"/>
-      {/* Right sword blade (top-left to bottom-right) */}
-      <path d="M6 2L20 22" stroke={color} strokeWidth="2.8" strokeLinecap="round"/>
-      {/* Left guard (horizontal cross-piece at 1/3 down) */}
-      <path d="M8.5 8.5L12.5 8.5" stroke={color} strokeWidth="2.8" strokeLinecap="round"/>
-      {/* Right guard */}
-      <path d="M13.5 8.5L17.5 8.5" stroke={color} strokeWidth="2.8" strokeLinecap="round"/>
-      {/* Center diamond */}
-      <circle cx="13" cy="12" r="1.8" fill={color}/>
-    </svg>
-  );
-}
-
-function IconHeroes({ color }: { color: string }) {
-  return (
-    <svg width="26" height="24" viewBox="0 0 26 24" fill={color}>
-      {/* Left figure (shorter) */}
-      <circle cx="5.5" cy="9" r="2.8"/>
-      <path d="M1.5 24v-7a4 4 0 018 0v7H1.5Z"/>
-      {/* Centre figure (tallest, slightly overlaps sides) */}
-      <circle cx="13" cy="7" r="3.2"/>
-      <path d="M8.5 24v-9a4.5 4.5 0 019 0v9H8.5Z"/>
-      {/* Right figure (shorter) */}
-      <circle cx="20.5" cy="9" r="2.8"/>
-      <path d="M16.5 24v-7a4 4 0 018 0v7H16.5Z"/>
-    </svg>
-  );
-}
-
-function IconProfile({ color }: { color: string }) {
-  return (
-    <svg width="26" height="24" viewBox="0 0 26 24" fill={color}>
-      {/* Head */}
-      <circle cx="13" cy="7.5" r="5"/>
-      {/* Shoulders */}
-      <path d="M2 24v-2.5a11 11 0 0122 0V24H2Z"/>
-    </svg>
-  );
-}
-
 // ── Tab Bar ───────────────────────────────────────────────────────────────────
+// Icons are exact crops from the reference art (hand-drawn style, glow baked in
+// on the active HOME icon).
 function TabBar() {
   const tabs = [
-    { label: 'HOME',    Icon: IconHome,    active: true  },
-    { label: 'STUDY',   Icon: IconStudy,   active: false },
-    { label: 'SHIFT',   Icon: IconShift,   active: false },
-    { label: 'HEROES',  Icon: IconHeroes,  active: false },
-    { label: 'PROFILE', Icon: IconProfile, active: false },
+    { label: 'HOME',    src: IMG.tabHome,    active: true  },
+    { label: 'STUDY',   src: IMG.tabStudy,   active: false },
+    { label: 'SHIFT',   src: IMG.tabShift,   active: false },
+    { label: 'HEROES',  src: IMG.tabHeroes,  active: false },
+    { label: 'PROFILE', src: IMG.tabProfile, active: false },
   ];
   return (
-    <div style={{ display: 'flex', background: UI.panelSolid, borderTop: `1px solid ${UI.border}`, paddingBottom: 8, paddingTop: 6 }}>
+    <div style={{ display: 'flex', background: UI.panelSolid, borderTop: `1px solid ${UI.border}`, paddingBottom: 8, paddingTop: 4 }}>
       {tabs.map((t) => {
         const col = t.active ? UI.jade : UI.textDim;
         return (
-          <div key={t.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-            <t.Icon color={col} />
+          <div key={t.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer' }}>
+            <img src={t.src} style={{ width: 46, height: 31, objectFit: 'contain' }} />
             <span style={{ fontSize: 9, fontWeight: 700, fontFamily: GAME_FONT, color: col, letterSpacing: 0.8, lineHeight: 1 }}>
               {t.label}
             </span>
-            {t.active && (
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: UI.jade, boxShadow: `0 0 6px ${UI.jade}` }} />
-            )}
           </div>
         );
       })}
