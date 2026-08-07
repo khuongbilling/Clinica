@@ -56,7 +56,7 @@ export function HeroAffinityCard({ hero, accentColor, onPress, testID }: HeroAff
 
   const xpLabel = hero.atLevelCap
     ? "MAX"
-    : `${hero.currentXP} / ${hero.requiredXP}`;
+    : `${hero.currentXP}/${hero.requiredXP}`;
 
   return (
     <Pressable
@@ -101,7 +101,7 @@ export function HeroAffinityCard({ hero, accentColor, onPress, testID }: HeroAff
           <Text style={s.heroName} numberOfLines={1}>{hero.name}</Text>
           <Text style={s.heroProfession} numberOfLines={1}>{hero.profession}</Text>
 
-          {/* Level + bar on one row */}
+          {/* Level + short bar + sparkle tip on one row */}
           <View style={s.levelRow}>
             <Text style={[s.levelLabel, { color: accentColor }]}>Lv. {hero.level}</Text>
             <View style={s.xpTrack}>
@@ -115,28 +115,30 @@ export function HeroAffinityCard({ hero, accentColor, onPress, testID }: HeroAff
                 ]}
               />
             </View>
+            <Text style={[s.barSparkle, { color: accentColor }]}>✦</Text>
           </View>
         </View>
 
-        {/* RIGHT — XP figures + NEXT REWARD + chest */}
+        {/* RIGHT — XP figures + NEXT REWARD stacked, chest alongside */}
         <View style={s.right}>
-          <Text style={[s.xpFigures, { color: accentColor }]} numberOfLines={1}>
-            {xpLabel}
-          </Text>
-          <Text style={s.xpUnit}>XP</Text>
-
-          {!hero.atLevelCap && (
-            <>
+          <View style={s.rightText}>
+            <Text style={s.xpLine} numberOfLines={1}>
+              <Text style={[s.xpFigures, { color: accentColor }]}>{xpLabel}</Text>
+              {!hero.atLevelCap && <Text style={s.xpUnit}> XP</Text>}
+            </Text>
+            {!hero.atLevelCap && (
               <Text style={[s.nextRewardKicker, { color: accentColor }]}>
                 NEXT REWARD
               </Text>
-              <Image
-                source={hero.nextRewardArtwork}
-                style={s.chestIcon}
-                contentFit="contain"
-                accessibilityLabel="Next reward"
-              />
-            </>
+            )}
+          </View>
+          {!hero.atLevelCap && (
+            <Image
+              source={hero.nextRewardArtwork}
+              style={s.chestIcon}
+              contentFit="contain"
+              accessibilityLabel="Next reward"
+            />
           )}
         </View>
       </View>
@@ -192,31 +194,36 @@ const s = StyleSheet.create({
   },
   heroName: {
     color: UI.text,        // warm ivory "#F6F0E4"
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
     fontFamily: SERIF,
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
   heroProfession: {
     color: UI.textDim,
-    fontSize: 11,
-    fontWeight: "400",     // body weight — not bold sans
+    fontSize: 12,
+    fontWeight: "400",
+    fontFamily: SERIF,
+    letterSpacing: 0.3,
   },
   levelRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 2,
+    marginTop: 3,
   },
   levelLabel: {
-    fontSize: 11,
-    fontWeight: "600",     // jade progress — UI font, not display
-    letterSpacing: 0.4,
+    fontSize: 13,
+    fontWeight: "700",
+    fontFamily: SERIF,
+    letterSpacing: 0.5,
     flexShrink: 0,
   },
   xpTrack: {
-    flex: 1,
-    height: 4,
+    // Short, deliberate bar (per reference) — no longer stretches to fill.
+    width: 96,
+    maxWidth: "55%",
+    height: 6,
     borderRadius: RADIUS.pill,
     backgroundColor: "rgba(255,255,255,0.10)",
     overflow: "hidden",
@@ -225,37 +232,46 @@ const s = StyleSheet.create({
     height: "100%",
     borderRadius: RADIUS.pill,
   },
+  barSparkle: {
+    fontSize: 9,
+    opacity: 0.9,
+  },
 
-  // ── Right: XP + reward ───────────────────────────────────────────────────
+  // ── Right: XP figures + NEXT REWARD stacked beside the chest ────────────
   right: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 1,
+    gap: 6,
     flexShrink: 0,
-    // Wide enough for "000 / 000" at fontSize 12 without truncating —
-    // the level bar (flex:1) shortens to make room.
-    minWidth: 76,
+  },
+  rightText: {
+    alignItems: "flex-end",
+    gap: 2,
+    // Wide enough for "000/000 XP" at fontSize 14 without truncating.
+    minWidth: 84,
+  },
+  xpLine: {
+    textAlign: "right",
   },
   xpFigures: {
-    fontSize: 12,
-    fontWeight: "600",     // readable at small size, not aggressive bold
+    fontSize: 14,
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   xpUnit: {
     color: UI.textDim,
-    fontSize: 9,
-    fontWeight: "400",
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: "500",
+    letterSpacing: 0.6,
   },
   nextRewardKicker: {
-    fontSize: 7,
-    fontWeight: "600",
-    letterSpacing: 1.0,
-    marginTop: 4,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.1,
     opacity: 0.85,
   },
   chestIcon: {
-    width: 36,
-    height: 36,
-    marginTop: 1,
+    width: 40,
+    height: 40,
   },
 });
