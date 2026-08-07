@@ -28,9 +28,9 @@ import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 // v3 — the ENTIRE button is one hand-painted artwork (frame, "+" medallion,
 // sparkles AND the "ENTER THE WARD" lettering are all baked into the PNG).
 // Code renders nothing but the image + press/shimmer/loading behavior.
-const FULL_ART = require("../../../assets/ui-icons/hub/enter-ward-button-full-v3.png");
-// Trimmed PNG is 993×237 — keep the button at the exact painted proportions.
-const ART_ASPECT = 993 / 237;
+const FULL_ART = require("../../../assets/ui-icons/hub/enter-ward-button-full-v4.png");
+// Trimmed PNG is 995×206 — keep the button at the exact painted proportions.
+const ART_ASPECT = 995 / 206;
 
 // ── Palette — loading spinner only (all visuals live in the PNG) ──────────
 const INK        = "#071820";   // dark ink on jade
@@ -197,6 +197,10 @@ const s = StyleSheet.create({
   outer: {
     // No shadow/glow here — on web a shadow around a transparent view paints
     // a rectangular box behind the painted frame. The PNG carries its own glow.
+    // 90% width, centered — per design the button is slightly narrower than
+    // the content column.
+    width:     "90%",
+    alignSelf: "center",
   },
   outerDisabled: {
     opacity: 0.42,
