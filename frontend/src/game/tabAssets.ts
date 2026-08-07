@@ -8,7 +8,7 @@ import { CHAPTER_MAP_BG_MODULES } from "@/src/game/illustratedAssets";
 // Inventory, Shop) plus the Journey Map chapter backgrounds. Warmed once at
 // game start so switching between tabs and opening chapter maps appears instantly.
 const TAB_IMAGE_MODULES: number[] = [
-  require("../../assets/images/home_hub_bg_v3_tall.png"), // hub background
+  require("../../assets/images/home_hub_bg_v4.png"), // hub background
   // Tab icon PNGs — warmed so the bar renders instantly on cold launch
   require("../../assets/ui-icons/tab-journey.png"),   // follow-up task: Task #469 or new icon-pack task — replace with final asset once icon set ships
   require("../../assets/ui-icons/tab-heroes.png"),

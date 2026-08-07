@@ -769,7 +769,7 @@ function SceneBg({
     <>
       {/* LAYER 1 — Illustrated donghua/anime scene background */}
       <Image
-        source={require("../../assets/images/home_hub_bg_v3_tall.png")}
+        source={require("../../assets/images/home_hub_bg_v4.png")}
         style={StyleSheet.absoluteFillObject}
         contentFit="cover"
       />
