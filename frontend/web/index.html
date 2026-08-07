@@ -42,19 +42,120 @@
       You need to enable JavaScript to run this app.
     </noscript>
     <div id="root"></div>
-    <!-- DEV ONLY: ?qa_player_id=<uuid> injects a player session and drops into /preloader -->
+
+    <!--
+      DEV ONLY — Canvas / screenshot QA helpers
+      ─────────────────────────────────────────
+      ?qa_inject=1   Seeds localStorage with a mock mid-game player and
+                     redirects to /?qa_direct_hub=1 so the hub renders
+                     without going through title → preloader.
+                     Uses a fake UUID (00000000-…-0099) so the backend GET
+                     returns 404 and the store keeps local data.
+
+      ?qa_player_id=<uuid>  (legacy) Loads a real backend player by ID,
+                     patches routing flags, and drops into /preloader.
+                     Requires the backend to be accessible from the same
+                     origin — only works in local dev shell curl, not in
+                     canvas iframes where localhost is unreachable.
+    -->
     <script>
       (function () {
         var params = new URLSearchParams(window.location.search);
+
+        /* ── New: ?qa_inject=1 ── */
+        if (params.get('qa_inject') === '1') {
+          var mockPlayer = {
+            "id": "00000000-0000-0000-0000-000000000099",
+            "name": "Aria",
+            "pronouns": "she/her",
+            "aptitude": "curious",
+            "rank_index": 3,
+            "xp": 480,
+            "stamina": 14,
+            "last_stamina_update": new Date().toISOString(),
+            "crowns": 240,
+            "codex_shards": 18,
+            "refined_lotus_gems": 3,
+            "lotus_gems_paid": 0,
+            "heroes_owned": [
+              {
+                "id": "wardlight_apprentice",
+                "gender": "female",
+                "name": "Wardlight Apprentice",
+                "title": "Keeper of the Lantern",
+                "family": "Wardborn",
+                "rarityTier": "common",
+                "rarity": 1,
+                "role": "Stabilizer",
+                "element": "River",
+                "stats": { "insight": 10, "carePower": 10, "intervention": 5, "guard": 8, "coordination": 7 },
+                "strongAffinities": ["Fluid / Hydration"],
+                "weakAffinities": ["Wound / Tissue"],
+                "roleTags": ["healer", "frontline", "support"],
+                "description": "A new ward nurse who carries the lantern through every night shift.",
+                "skills": []
+              },
+              {
+                "id": "gentle_hands_aide",
+                "gender": "female",
+                "name": "Gentle Hands Aide",
+                "title": "Keeper of Calm Waters",
+                "family": "Wardborn",
+                "rarityTier": "common",
+                "rarity": 1,
+                "role": "Stabilizer",
+                "element": "River",
+                "stats": { "insight": 11, "carePower": 12, "intervention": 5, "guard": 9, "coordination": 8 },
+                "strongAffinities": ["Fluid / Hydration"],
+                "weakAffinities": ["Wound / Tissue"],
+                "roleTags": ["healer", "support"],
+                "description": "A seasoned aide who has steadied countless patients through the night.",
+                "skills": []
+              }
+            ],
+            "active_team": ["wardlight_apprentice", "gentle_hands_aide"],
+            "hero_progression": {
+              "wardlight_apprentice": { "id": "wardlight_apprentice", "level": 6, "star": 1, "xp": 210 },
+              "gentle_hands_aide":   { "id": "gentle_hands_aide",   "level": 4, "star": 1, "xp": 80  }
+            },
+            "chapter_progress": { "current_chapter": 2, "completed_chapters": [1] },
+            "lessons_started": true,
+            "diagnostic_intro_seen": true,
+            "seen_reminiscence": true,
+            "identity_restored": true,
+            "onboarding_complete": true,
+            "seen_lv2_unlock": true,
+            "opening_prologue_complete": true,
+            "prologue_phase": "complete",
+            "prologue_rewards_claimed": true,
+            "daily_rounds": {
+              "streak": 3,
+              "lastCheckin": new Date(Date.now() - 86400000).toISOString(),
+              "claimed_today": false,
+              "objectives": [],
+              "weekly_tasks": [],
+              "claimed_milestones": []
+            },
+            "claimed_level_milestones": [],
+            "claimed_chapter_chests": [],
+            "claimed_chapter_3star": []
+          };
+          try {
+            localStorage.setItem('clinica.player.v2', JSON.stringify(mockPlayer));
+          } catch (e) {}
+          window.location.replace('/?qa_direct_hub=1');
+          return;
+        }
+
+        /* ── Legacy: ?qa_player_id=<uuid> (local dev only, requires backend on localhost) ── */
         var pid = params.get('qa_player_id');
         if (!pid) return;
         try {
           var xhr = new XMLHttpRequest();
-          xhr.open('GET', 'http://localhost:8000/api/player/' + pid, false); // synchronous
+          xhr.open('GET', 'http://localhost:8000/api/player/' + pid, false);
           xhr.send(null);
           if (xhr.status === 200) {
             var p = JSON.parse(xhr.responseText);
-            // Ensure flags route directly to hub (not post-recall / reminiscence)
             p.diagnostic_intro_seen = true;
             p.seen_reminiscence = true;
             p.identity_restored = true;
