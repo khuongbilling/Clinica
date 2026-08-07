@@ -768,11 +768,16 @@ function SceneBg({
   return (
     <>
       {/* LAYER 1 — Illustrated donghua/anime scene background */}
+      {/* Shifted up ~10% so the circular stone platform in the artwork sits
+           right under the hero portrait's feet; the uncovered strip at the
+           bottom hides behind the ground-shadow gradient and info panels. */}
       <Image
         source={require("../../assets/images/home_hub_bg_v4.png")}
-        style={StyleSheet.absoluteFillObject}
+        style={{ position: "absolute", left: 0, right: 0, top: "-10%", height: "100%" }}
         contentFit="cover"
       />
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "10%",
+        backgroundColor: UI.sanctuaryBg }} />
 
       {/* LAYER 2 — Subtle element identity tint (personalises shared scene per hero element) */}
       <View style={[StyleSheet.absoluteFillObject, {
