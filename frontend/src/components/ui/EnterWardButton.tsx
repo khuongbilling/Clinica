@@ -18,24 +18,22 @@ import {
   Animated,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { SPACING, SERIF } from "@/src/theme/ui";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
 // ── Raster assets — code never re-draws these ─────────────────────────────
-// v2 — hand-painted assets matched to the approved Ink & Mist reference:
-// luminous backlit-jade capsule with gold rim + pointed side finials, and a
-// glowing emerald "+" medallion for the left icon.
-const FRAME = require("../../../assets/ui-icons/hub/enter-ward-frame-v3.png");
-const CROSS = require("../../../assets/ui-icons/hub/enter-ward-plus-v2.png");
+// v3 — the ENTIRE button is one hand-painted artwork (frame, "+" medallion,
+// sparkles AND the "ENTER THE WARD" lettering are all baked into the PNG).
+// Code renders nothing but the image + press/shimmer/loading behavior.
+const FULL_ART = require("../../../assets/ui-icons/hub/enter-ward-button-full.png");
+// Trimmed PNG is 1018×210 — keep the button at the exact painted proportions.
+const ART_ASPECT = 1018 / 210;
 
-// ── Palette for text + sparkles only ──────────────────────────────────────
-const INK        = "#071820";   // dark ink on jade for label
-const SPARKLE_C  = "#C8A84B";   // warm gold — matches frame rim tone
+// ── Palette — loading spinner only (all visuals live in the PNG) ──────────
+const INK        = "#071820";   // dark ink on jade
 
 // ── Props ─────────────────────────────────────────────────────────────────
 export interface EnterWardButtonProps {
@@ -145,12 +143,14 @@ export function EnterWardButton({
         accessibilityRole="button"
         accessibilityState={{ disabled: isBlocked }}
         style={s.pressable}
+        onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
       >
-        {/* ── Painted jade frame — artwork background ── */}
+        {/* ── The button IS the painted artwork — frame, medallion,
+             sparkles and lettering are all baked into the PNG ── */}
         <Image
-          source={FRAME}
+          source={FULL_ART}
           style={StyleSheet.absoluteFill}
-          contentFit="fill"         // frame designed to stretch to any button width
+          contentFit="fill"         // pressable keeps the art's exact aspect ratio
           pointerEvents="none"
           accessible={false}
         />
@@ -181,49 +181,12 @@ export function EnterWardButton({
           style={[s.pressTint, { opacity: pressOpacity }]}
         />
 
-        {/* ── Content row ── */}
-        <View
-          style={s.row}
-          onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
-        >
-          {/* Painted jade cross — left icon */}
-          <Image
-            source={CROSS}
-            style={s.cross}
-            contentFit="contain"
-            accessible={false}
-          />
-
-          {/* Label or loader */}
-          {loading ? (
-            <View style={s.labelSlot}>
-              <ActivityIndicator size="small" color={INK} />
-            </View>
-          ) : (
-            <Text
-              style={s.label}
-              numberOfLines={1}
-              allowFontScaling={false}
-            >
-              {label}
-            </Text>
-          )}
-
-          {/* Right sparkle glyph — decorative */}
-          <Text
-            style={s.sparkleRight}
-            accessible={false}
-            importantForAccessibility="no"
-          >
-            ✦
-          </Text>
-        </View>
-
-        {/* ── Corner sparkles (very subtle, static) ── */}
-        <Text style={[s.sparkle, s.sparkleTR]}
-          accessible={false} importantForAccessibility="no">✦</Text>
-        <Text style={[s.sparkle, s.sparkleBL]}
-          accessible={false} importantForAccessibility="no">✦</Text>
+        {/* ── Loading spinner — overlays the painted label while busy ── */}
+        {loading && (
+          <View style={s.loadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="small" color={INK} />
+          </View>
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -240,7 +203,9 @@ const s = StyleSheet.create({
   },
 
   pressable: {
-    minHeight:       56,
+    // Button always keeps the painted art's exact proportions.
+    width:           "100%",
+    aspectRatio:     ART_ASPECT,
     overflow:        "hidden",
     justifyContent:  "center",
     backgroundColor: "transparent",
@@ -261,58 +226,10 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(0,18,10,0.20)",
   },
 
-  // ── Content row ──────────────────────────────────────────────────────────
-  row: {
-    flexDirection:  "row",
+  // ── Loading spinner overlay (centered over the painted label) ───────────
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems:     "center",
     justifyContent: "center",
-    paddingHorizontal: SPACING.xl,
-    paddingVertical:   SPACING.md,
-    gap: SPACING.sm,
   },
-
-  // Painted jade cross — small left icon
-  cross: {
-    width:    26,
-    height:   26,
-    flexShrink: 0,
-  },
-
-  labelSlot: {
-    flex:        1,
-    alignItems:  "center",
-  },
-
-  label: {
-    flex:          1,
-    textAlign:     "center",
-    color:         INK,
-    fontSize:      17,
-    fontWeight:    "700",
-    fontFamily:    SERIF,
-    letterSpacing: 2.2,
-    // Subtle raised-text shadow — lifts it off the jade
-    textShadowColor:  "rgba(255,255,255,0.30)",
-    textShadowRadius: 0,
-    textShadowOffset: { width: 0, height: 1 },
-  },
-
-  sparkleRight: {
-    color:      SPARKLE_C,
-    fontSize:   12,
-    lineHeight: 14,
-    opacity:    0.65,
-    flexShrink: 0,
-  },
-
-  // ── Corner sparkle glyphs (static, very subtle) ─────────────────────────
-  sparkle: {
-    position:   "absolute",
-    color:      SPARKLE_C,
-    fontSize:   9,
-    lineHeight: 11,
-    opacity:    0.38,
-  },
-  sparkleTR: { top: 5, right: 18 },
-  sparkleBL: { bottom: 5, left: 18 },
 });
