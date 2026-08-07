@@ -26,6 +26,7 @@ import {
 import { playerLevelFromXp, heroXpCostForLevel } from "@/src/game/progression";
 import { findSkin } from "@/src/game/shop";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { getAffinityMedallion } from "@/src/game/affinityArtwork";
 import { UI } from "@/src/theme/ui";
 
 const TABS: RPGTab[] = [
@@ -305,6 +306,12 @@ export default function HeroesScreen() {
                         <Text style={[styles.heroName, !isOwned && { color: COLORS.onSurfaceTertiary }]} numberOfLines={1}>{h.name}</Text>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
                           <View style={[styles.elementTag, { borderColor: accent + "70" }]}>
+                            <Image
+                              source={getAffinityMedallion(h.element as any)}
+                              style={styles.elementMedallion}
+                              contentFit="contain"
+                              accessibilityLabel={`${h.element} affinity`}
+                            />
                             <Text style={[styles.elementTxt, { color: accent }]}>{h.element.toUpperCase()}</Text>
                           </View>
                         </View>
@@ -381,6 +388,12 @@ export default function HeroesScreen() {
                             </View>
                             <Text style={[styles.heroName, { color: UI.gold + "CC" }]} numberOfLines={1}>{h.name}</Text>
                             <View style={[styles.elementTag, { borderColor: accent + "50" }]}>
+                              <Image
+                                source={getAffinityMedallion(h.element as any)}
+                                style={[styles.elementMedallion, { opacity: 0.7 }]}
+                                contentFit="contain"
+                                accessibilityLabel={`${h.element} affinity`}
+                              />
                               <Text style={[styles.elementTxt, { color: accent + "BB" }]}>{h.element.toUpperCase()}</Text>
                             </View>
                             <Text style={styles.roleTag}>{heroRoleLabel(h.role)}</Text>
@@ -700,7 +713,8 @@ const styles = StyleSheet.create({
   },
   infoRow:  { flexDirection: "row", alignItems: "flex-end", padding: SPACING.sm, paddingTop: SPACING.xs, gap: SPACING.xs },
   heroName: { color: COLORS.onSurface, fontSize: 14, fontWeight: "600", marginTop: 2 },
-  elementTag: { alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 },
+  elementTag: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 },
+  elementMedallion: { width: 22, height: 22 },
   elementTxt: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
   roleTag:    { color: COLORS.onSurfaceTertiary, fontSize: 11, marginTop: 1 },
   toggleBtn: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: "center", justifyContent: "center", marginBottom: 2 },

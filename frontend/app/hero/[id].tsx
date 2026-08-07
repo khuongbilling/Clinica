@@ -37,6 +37,7 @@ import {
 } from "@/src/game/university";
 import { heroXpCostForLevel, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { getAffinityMedallion } from "@/src/game/affinityArtwork";
 import {
   EQUIPMENT_SLOT_META,
   EQUIPMENT_RARITY_META,
@@ -404,13 +405,25 @@ export default function HeroProfile() {
 
       {/* ── IDENTITY BLOCK ── */}
       <View style={styles.identityBlock}>
+        {/* Affinity medallion — painted icon for this hero's element */}
+        <View style={styles.medallionRow}>
+          <View style={styles.medallionWrap}>
+            <Image
+              source={getAffinityMedallion(hero.element as any)}
+              style={styles.affinityMedallion}
+              contentFit="contain"
+              accessibilityLabel={`${hero.element} affinity`}
+            />
+            <Text style={[styles.medallionLabel, { color: accent }]}>
+              {hero.element.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.identityRow}>
           <Stars count={prog.star} color={accent} />
           <View style={[styles.tierBadgeSm, { borderColor: accent + "70" }]}>
             <Text style={[styles.tierBadgeSmTxt, { color: accent }]}>{rarityTierLabel(hero.rarity)}</Text>
-          </View>
-          <View style={[styles.elementBadge, { borderColor: accent + "80", backgroundColor: accent + "18" }]}>
-            <Text style={[styles.elementTxt, { color: accent }]}>{hero.element.toUpperCase()}</Text>
           </View>
           <View style={styles.roleBadge}>
             <Text style={styles.roleTxt}>{heroRoleLabel(hero.role)}</Text>
@@ -1343,6 +1356,10 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   identityRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexWrap: "wrap" },
+  medallionRow: { alignItems: "flex-start", marginBottom: SPACING.xs },
+  medallionWrap: { alignItems: "center", gap: 3 },
+  affinityMedallion: { width: 68, height: 68 },
+  medallionLabel: { fontSize: 8, fontWeight: "700", letterSpacing: 1.5 },
   elementBadge: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 3 },
   elementTxt:   { fontSize: 9, fontWeight: "700", letterSpacing: 1.5 },
   tierBadgeSm: { borderWidth: 1, borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 2 },
