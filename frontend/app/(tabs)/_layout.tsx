@@ -12,12 +12,14 @@ import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@
 //
 const TAB_IMAGES = {
   hub:       require("../../assets/ui-icons/tab-hub-3d.png"),
-  study:     require("../../assets/ui-icons/tab-study-3d.png"),
-  journey:   require("../../assets/ui-icons/tab-journey.png"),
-  heroes:    require("../../assets/ui-icons/tab-heroes.png"),
-  sanctuary: require("../../assets/ui-icons/tab-realm.png"),
-  inventory: require("../../assets/ui-icons/tab-inventory.png"),
-  shop:      require("../../assets/ui-icons/tab-shop.png"),
+  // Study reuses the painted book stack (formerly the Inventory icon) — a
+  // better semantic fit; Inventory got a new 3D satchel icon instead.
+  study:     require("../../assets/ui-icons/tab-inventory.png"),
+  journey:   require("../../assets/ui-icons/tab-journey-3d.png"),
+  heroes:    require("../../assets/ui-icons/tab-heroes-3d.png"),
+  sanctuary: require("../../assets/ui-icons/tab-sanctuary-3d.png"),
+  inventory: require("../../assets/ui-icons/tab-inventory-3d.png"),
+  shop:      require("../../assets/ui-icons/tab-shop-3d.png"),
   profile:   require("../../assets/ui-icons/tab-profile.png"),
 } as const;
 
@@ -106,18 +108,11 @@ export default function TabsLayout() {
         tabBarItemStyle: { paddingVertical: 2 },
       }}
     >
-      {/* ── Tab 1: Home — the sanctuary hub main screen ── */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarAccessibilityLabel: "Home",
-          tabBarButtonTestID: "tab-index",
-          tabBarIcon: ({ focused }) => mkTabIcon("hub", "HOME", focused),
-        }}
-      />
+      {/* ── Order: Study · Journey · Heroes · HOME (center) · Realm · Bag · Shop.
+           Home sits in the strategic middle slot; short labels keep the
+           7-tab bar from crowding. ── */}
 
-      {/* ── Tab 2: Study — University hub ── */}
+      {/* ── Tab 1: Study — University hub ── */}
       <Tabs.Screen
         name="study"
         options={{
@@ -128,7 +123,7 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ── Tab 3: Journey (no gate — available immediately) ── */}
+      {/* ── Tab 2: Journey (no gate — available immediately) ── */}
       <Tabs.Screen
         name="journey"
         options={{
@@ -139,7 +134,7 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ── Tab 2: Heroes ── */}
+      {/* ── Tab 3: Heroes ── */}
       <Tabs.Screen
         name="heroes"
         options={{
@@ -151,30 +146,41 @@ export default function TabsLayout() {
         listeners={{ tabPress: (e) => { if (!heroesUnlocked) e.preventDefault(); } }}
       />
 
-      {/* ── Tab 3: Sanctuary (formerly Realm / Kingdom) ── */}
+      {/* ── Tab 4 (CENTER): Home — the sanctuary hub main screen ── */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarAccessibilityLabel: "Home",
+          tabBarButtonTestID: "tab-index",
+          tabBarIcon: ({ focused }) => mkTabIcon("hub", "HOME", focused),
+        }}
+      />
+
+      {/* ── Tab 5: Realm (Sanctuary grounds — short label to save bar space) ── */}
       <Tabs.Screen
         name="kingdom"
         options={{
-          title: "Sanctuary",
-          tabBarAccessibilityLabel: realmUnlocked ? "Sanctuary" : "Sanctuary — locked, unlocks later",
+          title: "Realm",
+          tabBarAccessibilityLabel: realmUnlocked ? "Realm" : "Realm — locked, unlocks later",
           tabBarButtonTestID: "tab-sanctuary",
-          tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "SANCTUARY", focused, !realmUnlocked),
+          tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "REALM", focused, !realmUnlocked),
         }}
         listeners={{ tabPress: (e) => { if (!realmUnlocked) e.preventDefault(); } }}
       />
 
-      {/* ── Tab 4: Inventory (no gate — available immediately) ── */}
+      {/* ── Tab 6: Bag (Inventory — short label to save bar space) ── */}
       <Tabs.Screen
         name="inventory"
         options={{
-          title: "Inventory",
-          tabBarAccessibilityLabel: "Inventory",
+          title: "Bag",
+          tabBarAccessibilityLabel: "Bag — your inventory",
           tabBarButtonTestID: "tab-inventory",
-          tabBarIcon: ({ focused }) => mkTabIcon("inventory", "INVENTORY", focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("inventory", "BAG", focused),
         }}
       />
 
-      {/* ── Tab 5: Shop ── */}
+      {/* ── Tab 7: Shop ── */}
       <Tabs.Screen
         name="shop"
         options={{
