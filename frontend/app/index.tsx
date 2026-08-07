@@ -21,7 +21,7 @@ export default function Boot() {
   const { player, loading } = usePlayer();
   // DEV ONLY: ?qa_direct_hub=1 skips the title screen so screenshot tools
   // can reach the hub directly (the <Redirect> is followed by the tool).
-  const { qa_direct_hub } = useLocalSearchParams<{ qa_direct_hub?: string }>();
+  const { qa_direct_hub, qa_inject } = useLocalSearchParams<{ qa_direct_hub?: string; qa_inject?: string }>();
   const [hintIdx, setHintIdx] = useState(() => Math.floor(Math.random() * HINTS.length));
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -56,7 +56,10 @@ export default function Boot() {
   // Once the player store has loaded, always enter through the title/landing
   // screen. From there "Start Game" runs the full-page preloader, which warms
   // every asset (including battle backgrounds) before routing into the game.
-  if (qa_direct_hub === "1") return <Redirect href="/(tabs)" />;
+  // DEV ONLY: either param jumps straight to the hub (no title → preloader chain).
+  // qa_inject=1 also runs the web/index.html script which seeds localStorage with
+  // a mock player before React starts, so readPlayerSync() returns it on frame 1.
+  if (qa_direct_hub === "1" || qa_inject === "1") return <Redirect href="/(tabs)" />;
   return <Redirect href="/title" />;
 }
 
