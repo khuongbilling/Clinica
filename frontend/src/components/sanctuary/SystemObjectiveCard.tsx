@@ -22,7 +22,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { RADIUS, SPACING } from "@/src/theme/colors";
-import { UI, UI_RADIUS, TYPO } from "@/src/theme/ui";
+import { UI, UI_RADIUS, TYPO, SERIF } from "@/src/theme/ui";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
 // ── Raster assets ────────────────────────────────────────────────────────────
@@ -221,12 +221,14 @@ const s = StyleSheet.create({
   kicker: {
     color: JADE,
     fontSize: TYPO.kicker,
-    fontWeight: "700",
-    letterSpacing: 1.5,
+    fontWeight: "600",
+    fontFamily: SERIF,
+    letterSpacing: 1.6,
   },
   message: {
-    color: UI.textSoft,
+    color: UI.text,      // warm ivory — more legible than textSoft on dark card
     fontSize: 12,
+    fontWeight: "400",
     lineHeight: 18,
   },
   toggleBtn: {
@@ -309,7 +311,8 @@ const s = StyleSheet.create({
   objectiveTxt: {
     color: UI.textSoft,
     fontSize: 11,
-    lineHeight: 16,
+    fontWeight: "400",
+    lineHeight: 17,
   },
   // Shallow bevel — 1px semi-transparent white strip along the inside top edge
   insetBevelTop: {
@@ -334,7 +337,8 @@ const s = StyleSheet.create({
   ctaTxt: {
     color: "#082019",
     fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 0.8,
+    fontWeight: "700",
+    fontFamily: SERIF,
+    letterSpacing: 1.0,
   },
 });

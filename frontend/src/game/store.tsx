@@ -794,9 +794,23 @@ async function trySyncToBackend(p: PlayerState): Promise<PlayerState> {
   }
 }
 
+/** Web-only: read clinica.player.v2 from localStorage synchronously so the
+ *  hub can render on frame 1 rather than waiting for the AsyncStorage round-trip.
+ *  Falls back to null on native or when storage is empty/corrupt. */
+function readPlayerSync(): PlayerState | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem('clinica.player.v2');
+    if (!raw) return null;
+    return normalizeProgression(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const [player, setPlayer] = useState<PlayerState | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [player, setPlayer] = useState<PlayerState | null>(readPlayerSync);
+  const [loading, setLoading] = useState(() => readPlayerSync() === null);
   // Mirror of the latest player used for atomic, synchronous spends (e.g.
   // stamina) so concurrent calls in the same tick can't read stale state.
   const playerRef = useRef<PlayerState | null>(null);

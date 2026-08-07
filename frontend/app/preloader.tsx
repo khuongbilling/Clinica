@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
 import { RealmLoadingScreen } from "@/src/components/realm/RealmLoadingScreen";
@@ -17,8 +17,11 @@ const MAX_WAIT_MS = 12000;
 export default function Preloader() {
   const router = useRouter();
   const { player, loading } = usePlayer();
-  const [assetsReady, setAssetsReady] = useState(false);
-  const [minElapsed, setMinElapsed] = useState(false);
+  const { qa_skip } = useLocalSearchParams<{ qa_skip?: string }>();
+  // DEV ONLY: ?qa_skip=1 bypasses asset loading timers for screenshot QA
+  const skipForQA = qa_skip === "1";
+  const [assetsReady, setAssetsReady] = useState(skipForQA);
+  const [minElapsed, setMinElapsed]   = useState(skipForQA);
 
   // Backing out of the preloader would land on the dead title/index route —
   // block it; the forward replace to the resolved entry route passes through.
@@ -26,6 +29,7 @@ export default function Preloader() {
   const navigated = useRef(false);
 
   useEffect(() => {
+    if (skipForQA) return; // timers not needed when skipping
     let alive = true;
     const minTimer = setTimeout(() => {
       if (alive) setMinElapsed(true);
@@ -47,9 +51,14 @@ export default function Preloader() {
     if (navigated.current) return;
     if (minElapsed && assetsReady && !loading) {
       navigated.current = true;
-      router.replace(resolveEntryRoute(player) as never);
+      const nav = () => router.replace(resolveEntryRoute(player) as never);
+      // In qa_skip mode every condition is true on the first effect flush, before
+      // the Root Layout has finished mounting. Defer by one tick to let it settle.
+      if (skipForQA) { setTimeout(nav, 50); } else { nav(); }
     }
-  }, [minElapsed, assetsReady, loading, player, router]);
+  }, [minElapsed, assetsReady, loading, player, router, skipForQA]);
 
+  // DEV ONLY: skip visual so screenshot tools wait for the hub to paint
+  if (skipForQA) return null;
   return <RealmLoadingScreen />;
 }

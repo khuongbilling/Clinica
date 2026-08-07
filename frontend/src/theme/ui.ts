@@ -11,9 +11,26 @@
 // Spacing + base radius are reused from colors.ts so measurements stay
 // consistent across the whole app.
 // ────────────────────────────────────────────────────────────
+import { Platform } from "react-native";
 import { RADIUS, SPACING } from "./colors";
 
 export { SPACING };
+
+// ── Display serif — cross-platform elegant font stack ───────────────────────
+// Used for hero names, location titles, ornamental headings, and CTA labels.
+// Clean UI font (system default) is used for body copy, XP figures, secondary
+// labels, and anything that needs to read fast at small sizes.
+export const SERIF: string = (Platform.select({
+  web:     "Georgia, 'Times New Roman', serif",
+  ios:     "Georgia",
+  android: "serif",
+  default: "Georgia",
+}) ?? "Georgia") as string;
+
+// Warm ivory — primary display text; replaces pure #FFFFFF across all hub surfaces.
+// Already baked into UI.text ("#F6F0E4") — reference via that token.
+// Antique gold kicker — slightly richer than UI.gold for headings on dark surfaces.
+export const HEADING_GOLD = "#C4A245";
 
 export const UI = {
   // ── Warm-dark magical base surfaces ──

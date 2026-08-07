@@ -9,7 +9,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SPACING } from "@/src/theme/colors";
-import { UI, UI_RADIUS, TYPO } from "@/src/theme/ui";
+import { UI, UI_RADIUS, TYPO, SERIF } from "@/src/theme/ui";
 
 export interface LocationHeaderProps {
   sceneName: string;
@@ -72,15 +72,16 @@ const s = StyleSheet.create({
   sceneName: {
     color: UI.goldSoft,
     fontSize: TYPO.kicker + 1,   // 13 px — decorative kicker size
-    fontWeight: "700",
-    letterSpacing: 1.8,
-    // soft text-glow approximated via opacity on the ivory base
+    fontWeight: "600",
+    fontFamily: SERIF,
+    letterSpacing: 2.2,
   },
   subtitle: {
     color: UI.textDim,
     fontSize: 10,
+    fontWeight: "400",
     marginTop: 2,
-    letterSpacing: 0.2,
+    letterSpacing: 0.4,
     textAlign: "center",
   },
   infoBtn: {

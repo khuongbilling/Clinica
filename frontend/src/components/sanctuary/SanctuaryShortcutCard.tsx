@@ -1,13 +1,15 @@
 /**
- * SanctuaryShortcutCard — standardised hero-scene shortcut card.
+ * SanctuaryShortcutCard — Push 5 standardised shortcut card.
  *
- * Used in the Sanctuary hub's side columns.  All five shortcuts share
- * identical sizing, icon framing, badge/dot/chip slots, and touch targets.
+ * All five hub shortcuts (Rounds / Goals / Recruit / Defense / Supplies) use
+ * this component.  Uniform sizing, gold-tinted frame, jade glow shadow,
+ * gradient label scrim, consistent badge + availability-dot positions.
  */
 import { Image, type ImageSource } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { GLOW, TYPO, UI, UI_RADIUS } from "@/src/theme/ui";
+import { TYPO, UI, UI_RADIUS, SERIF } from "@/src/theme/ui";
 
 export interface SanctuaryShortcutCardProps {
   emblem: ImageSource;
@@ -51,31 +53,40 @@ export function SanctuaryShortcutCard({
     >
       {/* ── Icon frame ── */}
       <View style={s.iconFrame}>
+        {/* Illustrated emblem PNG — transparent background */}
         <Image
           source={emblem}
           style={s.icon}
           contentFit="contain"
         />
 
-        {/* Label overlay at icon frame bottom */}
-        <View style={s.labelOverlay}>
+        {/* Label — gradient scrim pinned to frame bottom */}
+        <LinearGradient
+          colors={["transparent", "rgba(2,6,10,0.90)"]}
+          style={s.labelGradient}
+          pointerEvents="none"
+        >
           <Text style={[s.label, locked && s.labelLocked]} numberOfLines={1}>
             {label.toUpperCase()}
           </Text>
-        </View>
+        </LinearGradient>
 
-        {/* Red badge — top-right of icon frame */}
+        {/* Top-right bevel highlight — gives the frame depth */}
+        <View style={s.bevelTop}   pointerEvents="none" />
+        <View style={s.bevelLeft}  pointerEvents="none" />
+
+        {/* Red notification badge — top-right */}
         {hasBadge && (
           <View style={s.badge}>
             <Text style={s.badgeTxt}>{(badge as number) > 9 ? "9+" : badge}</Text>
           </View>
         )}
 
-        {/* Green availability dot — bottom-right of icon frame */}
+        {/* Green availability dot — sits just above label band */}
         {showDot && <View style={s.dot} />}
       </View>
 
-      {/* Quantity chip below icon frame */}
+      {/* Quantity chip pill — below icon frame */}
       {!locked && quantity !== undefined && quantity !== "" && (
         <View style={s.chip}>
           <Text style={s.chipTxt}>{quantity}</Text>
@@ -85,8 +96,18 @@ export function SanctuaryShortcutCard({
   );
 }
 
-const CARD_W = 64;
-const CARD_H = 84;
+/* ── Dimensions ─────────────────────────────────────────────────────────── */
+const CARD_W = 64;   // unchanged — fits 72px column with 4px breathing room
+const CARD_H = 88;   // +4px vs Push 4 → icons feel less cramped
+const ICON_W = 54;
+const ICON_H = 72;
+
+/* ── Colours ─────────────────────────────────────────────────────────────── */
+const GOLD        = UI.gold;           // "#E8C868"
+const JADE        = UI.jade;           // "#3DC4A8"
+const FRAME_BG    = "rgba(4,10,18,0.62)";
+const FRAME_BORD  = GOLD + "4A";       // ~29% gold border
+const GLOW_COLOR  = JADE;
 
 const s = StyleSheet.create({
   card: {
@@ -95,10 +116,10 @@ const s = StyleSheet.create({
     minHeight: 44,
   },
   cardLocked: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
 
-  /* Icon frame */
+  /* ── Icon frame ──────────────────────────────────────────────────────── */
   iconFrame: {
     width: CARD_W,
     height: CARD_H,
@@ -106,38 +127,64 @@ const s = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(6, 9, 16, 0.58)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-  },
-  icon: {
-    width: 56,
-    height: 75,
+    backgroundColor: FRAME_BG,
+    borderWidth: 1.5,
+    borderColor: FRAME_BORD,
+    // Jade glow shadow — matches System card and header chip language
+    shadowColor: GLOW_COLOR,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
 
-  /* Label overlay — dark scrim band pinned to frame bottom */
-  labelOverlay: {
+  icon: {
+    width: ICON_W,
+    height: ICON_H,
+  },
+
+  /* ── Label — gradient scrim ──────────────────────────────────────────── */
+  labelGradient: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    paddingVertical: 5,
-    paddingHorizontal: 2,
+    paddingTop: 14,      // gradient start height above text
+    paddingBottom: 5,
+    paddingHorizontal: 3,
     alignItems: "center",
-    backgroundColor: "rgba(4, 7, 12, 0.82)",
   },
   label: {
     fontSize: TYPO.micro,
-    fontWeight: "800",
-    letterSpacing: 0.9,
+    fontWeight: "600",
+    fontFamily: SERIF,
+    letterSpacing: 0.8,
     textAlign: "center",
-    color: COLORS.onSurface,
+    color: GOLD,         // antique gold matches frame border colour
   },
   labelLocked: {
     color: COLORS.onSurfaceTertiary,
   },
 
-  /* Red notification badge — top-right */
+  /* ── Inner bevel — top + left 1px white strip for depth ─────────────── */
+  bevelTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  bevelLeft: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+
+  /* ── Red notification badge — top-right ─────────────────────────────── */
   badge: {
     position: "absolute",
     top: -3,
@@ -148,7 +195,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     backgroundColor: COLORS.error,
     borderWidth: 1.5,
-    borderColor: COLORS.surface,
+    borderColor: FRAME_BG,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -158,30 +205,30 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  /* Green availability dot — bottom-right */
+  /* ── Green availability dot — bottom-right, above label band ─────────── */
   dot: {
     position: "absolute",
-    bottom: 22,     // just above label band
-    right: 4,
+    bottom: 24,       // clears the label gradient zone (≈ 19px text + 5px padding)
+    right: 5,
     width: 9,
     height: 9,
     borderRadius: 5,
     backgroundColor: COLORS.success,
     borderWidth: 1.5,
-    borderColor: COLORS.surface,
+    borderColor: FRAME_BG,
   },
 
-  /* Quantity chip pill — below icon frame */
+  /* ── Quantity chip pill — below icon frame ───────────────────────────── */
   chip: {
-    backgroundColor: "rgba(232,200,104,0.18)",
+    backgroundColor: GOLD + "1E",
     borderRadius: RADIUS.pill,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: "rgba(232,200,104,0.35)",
+    borderColor: GOLD + "38",
   },
   chipTxt: {
-    color: UI.gold,
+    color: GOLD,
     fontSize: TYPO.micro,
     fontWeight: "700",
     letterSpacing: 0.4,

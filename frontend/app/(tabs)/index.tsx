@@ -17,6 +17,8 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { LocationHeader } from "@/src/components/sanctuary/LocationHeader";
 import { SystemObjectiveCard } from "@/src/components/sanctuary/SystemObjectiveCard";
+import { HeroAffinityCard } from "@/src/components/sanctuary/HeroAffinityCard";
+import { getAffinityMedallion, TREASURE_CHEST } from "@/src/game/affinityArtwork";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -621,60 +623,25 @@ export default function RunHome() {
       </View>
 
       {/* ── HERO INFO PANEL — only when a hero is recruited ── */}
-      {hasRecruitedHeroes ? (
-        <Pressable
-          style={[styles.infoPanel, {
-            borderColor: elementColor + "45",
-            shadowColor: elementColor,
-            shadowOpacity: 0.22,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 5,
-          }]}
-          onPress={() => leadHeroId && router.push(`/hero/${leadHeroId}` as any)}
-          testID="home-hero-card"
-          accessibilityLabel={leadHero ? `View ${leadHero.name} hero details` : "View hero details"}
-          accessibilityRole="button"
-        >
-          <View style={[styles.infoPanelAccent, { backgroundColor: elementColor }]} />
-
-          {/* LEFT — circular medallion + element label */}
-          <View style={styles.heroMedallion}>
-            <View style={[styles.heroMedallionRing, { borderColor: elementColor }]}>
-              {getHeroPortrait(leadHeroId ?? "") ? (
-                <Image
-                  source={getHeroPortrait(leadHeroId ?? "")!}
-                  style={styles.heroMedallionImg}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.heroMedallionImg, { backgroundColor: elementColor + "30" }]} />
-              )}
-            </View>
-            <Text style={[styles.elementTxt, { color: elementColor, marginTop: 2 }]}>
-              {leadHero?.element ?? "River"}
-            </Text>
-          </View>
-
-          {/* CENTRE — name, role/title, Lv. X, XP bar */}
-          <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-            <Text style={styles.heroName} numberOfLines={1}>{leadHero?.name ?? "Your Hero"}</Text>
-            <Text style={styles.heroTitle} numberOfLines={1}>{leadHero?.title ?? apt?.title ?? ""}</Text>
-            <Text style={styles.heroLvLabel}>Lv. {heroLevel}</Text>
-            <View style={styles.xpBg}>
-              <View style={[styles.xpBar, { width: `${Math.round(heroXpPct * 100)}%` as any, backgroundColor: elementColor }]} />
-            </View>
-          </View>
-
-          {/* RIGHT — XP figures + chest icon */}
-          <View style={styles.heroXpRight}>
-            <Text style={styles.xpTxt} numberOfLines={1}>
-              {atHeroCap ? "MAX" : `${heroXpBanked} / ${heroXpNeeded}`}
-            </Text>
-            <Text style={[styles.xpTxt, { fontSize: 10, letterSpacing: 0 }]}>XP</Text>
-            <Ionicons name="gift-outline" size={18} color={elementColor} style={{ marginTop: 2 }} />
-          </View>
-        </Pressable>
+      {hasRecruitedHeroes && leadHero ? (
+        <View style={styles.infoPanelWrap}>
+          <HeroAffinityCard
+            hero={{
+              name:              leadHero.name,
+              profession:        leadHero.title ?? "",
+              level:             heroLevel,
+              affinity:          leadHero.element,
+              affinityArtwork:   getAffinityMedallion(leadHero.element),
+              currentXP:         heroXpBanked,
+              requiredXP:        heroXpNeeded,
+              nextRewardArtwork: TREASURE_CHEST,
+              atLevelCap:        atHeroCap,
+            }}
+            accentColor={elementColor}
+            onPress={() => leadHeroId && router.push(`/hero/${leadHeroId}` as any)}
+            testID="home-hero-card"
+          />
+        </View>
       ) : summonUnlocked ? (
         /* No heroes + hall unlocked — compact recruit prompt below the arena */
         <Pressable
@@ -972,8 +939,8 @@ const styles = StyleSheet.create({
   /* Arena — fills remaining vertical space */
   arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },
 
-  /* Side columns — narrowed ~12 % vs old 72 px to bring cards closer to hero */
-  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm, marginHorizontal: -6 },
+  /* Side columns — Pull inward so cards sit just off the hero portrait */
+  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm, marginHorizontal: -10 },
 
   /* World Event banner (Shift hub entry point) */
   memoryBanner: {
@@ -1090,6 +1057,12 @@ const styles = StyleSheet.create({
     color: UI.textDim,
     fontSize: 12,
     lineHeight: 17,
+  },
+
+  /* Hero info panel wrapper — push-7 HeroAffinityCard sits here */
+  infoPanelWrap: {
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
   },
 
   /* Hero info panel — three-column RPG character card with element glow */

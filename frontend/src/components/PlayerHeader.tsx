@@ -15,7 +15,7 @@ import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
 import { getUiIcon, getClassEmblem } from "@/src/game/uiIcons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
-import { UI } from "@/src/theme/ui";
+import { UI, SERIF } from "@/src/theme/ui";
 
 // ────────────────────────────────────────────────────────────
 // PlayerHeader — persistent global top bar for hub/non-battle pages
@@ -418,13 +418,27 @@ const styles = StyleSheet.create({
     position: "absolute", bottom: -4, right: -4,
     width: 18, height: 18,
   },
-  name: { color: COLORS.onSurface, fontSize: 14, fontWeight: "800" },
-  levelTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
-  rankTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600", letterSpacing: 0.4, marginTop: 1 },
+  name: {
+    color: UI.text,          // warm ivory "#F6F0E4" — not pure white
+    fontSize: 14,
+    fontWeight: "600",       // elegant, not aggressive bold sans
+    fontFamily: SERIF,
+  },
+  levelTxt: {
+    color: UI.jade,          // jade — progress/level tint
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  rankTxt: {
+    color: UI.textDim,       // "Junior Clinician" — clean UI font, muted
+    fontSize: 10,
+    fontWeight: "400",
+    letterSpacing: 0.3,
+    marginTop: 1,
+  },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, flexGrow: 1, justifyContent: "flex-end" },
   chip: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    // Push 3: translucent glass chip — background scene reads through
     backgroundColor: "rgba(10, 22, 30, 0.62)",
     borderWidth: 1,
     borderColor: "rgba(125, 230, 214, 0.20)",
@@ -433,13 +447,22 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   chipIcon: { width: 15, height: 15 },
-  chipTxt: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
+  chipTxt: {
+    color: UI.textSoft,      // warm secondary ivory — not stark white
+    fontSize: 11,
+    fontWeight: "600",
+  },
   expRow: { gap: 3 },
   expBarBg: {
     height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden",
   },
-  expBarFill: { height: "100%", backgroundColor: COLORS.brand, borderRadius: 2 },
-  expTxt: { color: COLORS.onSurfaceTertiary, fontSize: 9, fontWeight: "600", letterSpacing: 0.2 },
+  expBarFill: { height: "100%", backgroundColor: UI.jade, borderRadius: 2 },
+  expTxt: {
+    color: UI.textDim,       // muted — secondary read
+    fontSize: 9,
+    fontWeight: "400",
+    letterSpacing: 0.3,
+  },
   modalBackdrop: {
     flex: 1, backgroundColor: "#000000AA", alignItems: "center", justifyContent: "center", padding: SPACING.xl,
   },

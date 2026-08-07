@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { usePlayer } from "@/src/game/store";
@@ -19,6 +19,9 @@ const HINTS = [
 
 export default function Boot() {
   const { player, loading } = usePlayer();
+  // DEV ONLY: ?qa_direct_hub=1 skips the title screen so screenshot tools
+  // can reach the hub directly (the <Redirect> is followed by the tool).
+  const { qa_direct_hub } = useLocalSearchParams<{ qa_direct_hub?: string }>();
   const [hintIdx, setHintIdx] = useState(() => Math.floor(Math.random() * HINTS.length));
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -53,6 +56,7 @@ export default function Boot() {
   // Once the player store has loaded, always enter through the title/landing
   // screen. From there "Start Game" runs the full-page preloader, which warms
   // every asset (including battle backgrounds) before routing into the game.
+  if (qa_direct_hub === "1") return <Redirect href="/(tabs)" />;
   return <Redirect href="/title" />;
 }
 
