@@ -30,7 +30,7 @@ import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 // v2 — hand-painted assets matched to the approved Ink & Mist reference:
 // luminous backlit-jade capsule with gold rim + pointed side finials, and a
 // glowing emerald "+" medallion for the left icon.
-const FRAME = require("../../../assets/ui-icons/hub/enter-ward-frame-v2.png");
+const FRAME = require("../../../assets/ui-icons/hub/enter-ward-frame-v3.png");
 const CROSS = require("../../../assets/ui-icons/hub/enter-ward-plus-v2.png");
 
 // ── Palette for text + sparkles only ──────────────────────────────────────
@@ -232,12 +232,8 @@ export function EnterWardButton({
 // ── Styles ────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   outer: {
-    // Jade glow shadow — warm green outer bloom (not gold; the frame has gold)
-    shadowColor:   "#4DA87A",
-    shadowOpacity: 0.40,
-    shadowRadius:  20,
-    shadowOffset:  { width: 0, height: 2 },
-    elevation:     6,
+    // No shadow/glow here — on web a shadow around a transparent view paints
+    // a rectangular box behind the painted frame. The PNG carries its own glow.
   },
   outerDisabled: {
     opacity: 0.42,
@@ -248,6 +244,9 @@ const s = StyleSheet.create({
     overflow:        "hidden",
     justifyContent:  "center",
     backgroundColor: "transparent",
+    // Capsule clipping — keeps shimmer/press-tint rectangles from painting
+    // over the frame PNG's transparent corners.
+    borderRadius:    28,
   },
 
   // ── Shimmer — 70px-wide soft strip ──────────────────────────────────────

@@ -231,7 +231,9 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 1,
     flexShrink: 0,
-    minWidth: 56,
+    // Wide enough for "000 / 000" at fontSize 12 without truncating —
+    // the level bar (flex:1) shortens to make room.
+    minWidth: 76,
   },
   xpFigures: {
     fontSize: 12,
