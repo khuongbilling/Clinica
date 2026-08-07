@@ -1,14 +1,16 @@
 /**
- * SystemObjectiveCard — collapsible jade-bordered card with stethoscope
- * SVG medallion. Replaces NarratorGuide at the main-hub call-site only.
+ * SystemObjectiveCard — Push 4 rebuild.
  *
- * Matches the mockup's SystemCard.tsx design: jade border, inset teal
- * glow, "THE SYSTEM" kicker, narrative message, collapsible objective
- * strip, and CTA button.
+ * Structure:
+ *   Card (translucent dark, gold border, jade glow shadow)
+ *   ├── Main row: system medallion PNG · "THE SYSTEM" · narrative · chevron/dismiss
+ *   ├── Inset objective panel (margins + teal border + smoked fill + bevel)
+ *   │     left ornament · flag · "OBJECTIVE" kicker · text · right sparkle
+ *   └── CTA button (flush bottom)
  *
- * Props mirror the existing hub usage so the swap in index.tsx is
- * drop-in with no game-logic changes.
+ * Props contract unchanged so index.tsx call site needs zero edits.
  */
+import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -19,11 +21,16 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, TYPO } from "@/src/theme/ui";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
+// ── Raster assets ────────────────────────────────────────────────────────────
+const SYSTEM_MEDALLION   = require("../../../assets/ui-icons/hub/system-medallion.png");
+const OBJECTIVE_FLAG     = require("../../../assets/ui-icons/hub/objective-flag.png");
+const ORNAMENT_LEFT      = require("../../../assets/ui-icons/hub/objective-ornament-left.png");
+
+// ── Types ────────────────────────────────────────────────────────────────────
 export interface SystemObjectiveCardProps {
   message: string;
   objective?: string;
@@ -35,30 +42,7 @@ export interface SystemObjectiveCardProps {
   testID?: string;
 }
 
-// Stethoscope SVG medallion — matches the mockup's SVG shape
-function StethoscopeMedallion() {
-  return (
-    <View style={m.medallionWrap}>
-      <Svg width={22} height={22} viewBox="0 0 20 20" fill="none">
-        {/* Stethoscope arch */}
-        <Path
-          d="M6 5Q6 3 8 3Q10 3 10 5V10Q10 13 13 13Q16 13 16 10"
-          stroke={UI.jade}
-          strokeWidth={1.6}
-          fill="none"
-          strokeLinecap="round"
-        />
-        {/* Head circle */}
-        <Circle cx={16} cy={8.5} r={2.2} stroke={UI.jade} strokeWidth={1.3} fill="rgba(61,196,168,0.18)" />
-        {/* Ear tips */}
-        <Circle cx={7} cy={4.5} r={1.1} fill={UI.jade} />
-        <Circle cx={9} cy={4.5} r={1.1} fill={UI.jade} />
-      </Svg>
-    </View>
-  );
-}
-
-// Collapse chevron — rotates 180° when collapsed
+// ── Collapse chevron ─────────────────────────────────────────────────────────
 function CollapseChevron({ open }: { open: boolean }) {
   const rotAnim = useRef(new Animated.Value(open ? 0 : 1)).current;
   useEffect(() => {
@@ -67,8 +51,11 @@ function CollapseChevron({ open }: { open: boolean }) {
       duration: 220,
       useNativeDriver: true,
     }).start();
-  }, [open]);
-  const rotate = rotAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rotate = rotAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
   return (
     <Animated.View style={{ transform: [{ rotate }] }}>
       <Ionicons name="chevron-up" size={14} color={UI.gold} />
@@ -76,6 +63,7 @@ function CollapseChevron({ open }: { open: boolean }) {
   );
 }
 
+// ── Main component ───────────────────────────────────────────────────────────
 export function SystemObjectiveCard({
   message,
   objective,
@@ -89,33 +77,30 @@ export function SystemObjectiveCard({
   const [open, setOpen] = useState(defaultOpen);
   const reduceMotion = useReducedMotion();
 
-  // Fade-in on mount — skipped when Reduce Motion is enabled
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(8)).current;
   useEffect(() => {
-    if (reduceMotion) {
-      fade.setValue(1);
-      rise.setValue(0);
-      return;
-    }
+    if (reduceMotion) { fade.setValue(1); rise.setValue(0); return; }
     Animated.parallel([
       Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(rise, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0,  duration: 400, useNativeDriver: true }),
     ]).start();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Animated.View
-      style={[
-        s.card,
-        { opacity: fade, transform: [{ translateY: rise }] },
-        style,
-      ]}
+      style={[s.card, { opacity: fade, transform: [{ translateY: rise }] }, style]}
       testID={testID ?? "system-objective-card"}
     >
-      {/* ── Main row: medallion · text · chevron ── */}
+      {/* ── Main row ── */}
       <View style={s.mainRow}>
-        <StethoscopeMedallion />
+        {/* System medallion — PNG replaces SVG stethoscope */}
+        <ExpoImage
+          source={SYSTEM_MEDALLION}
+          style={s.medallion}
+          contentFit="contain"
+          accessible={false}
+        />
 
         {/* Text block */}
         <View style={{ flex: 1, gap: 3 }}>
@@ -135,22 +120,55 @@ export function SystemObjectiveCard({
 
         {/* Dismiss (optional) */}
         {onDismiss && (
-          <Pressable style={s.dismissBtn} onPress={onDismiss} hitSlop={8} accessibilityLabel="Dismiss">
+          <Pressable
+            style={s.dismissBtn}
+            onPress={onDismiss}
+            hitSlop={8}
+            accessibilityLabel="Dismiss"
+          >
             <Ionicons name="close" size={14} color={UI.textDim} />
           </Pressable>
         )}
       </View>
 
-      {/* ── Objective strip — collapses/expands ── */}
+      {/* ── Inset objective panel ── */}
       {open && objective ? (
-        <View style={s.objectiveStrip}>
-          <Ionicons name="flag" size={11} color={UI.jade} />
-          <Text style={s.objectiveKicker}>OBJECTIVE</Text>
-          <Text style={s.objectiveTxt} numberOfLines={2}>{objective}</Text>
+        <View style={s.insetPanel}>
+          {/* Left vine/floral ornament — clipped to panel height */}
+          <ExpoImage
+            source={ORNAMENT_LEFT}
+            style={s.ornamentLeft}
+            contentFit="cover"
+            contentPosition="top"
+            accessible={false}
+          />
+
+          {/* Panel content — padded away from ornament */}
+          <View style={s.panelContent}>
+            {/* Header row: flag icon + OBJECTIVE kicker */}
+            <View style={s.panelHeaderRow}>
+              <ExpoImage
+                source={OBJECTIVE_FLAG}
+                style={s.flagIcon}
+                contentFit="contain"
+                accessible={false}
+              />
+              <Text style={s.objectiveKicker}>OBJECTIVE</Text>
+
+              {/* Right sparkle — decorative */}
+              <Text style={s.sparkle} accessible={false}>✦</Text>
+            </View>
+
+            {/* Objective text */}
+            <Text style={s.objectiveTxt} numberOfLines={3}>{objective}</Text>
+          </View>
+
+          {/* Shallow bevel — top highlight edge */}
+          <View style={s.insetBevelTop} pointerEvents="none" />
         </View>
       ) : null}
 
-      {/* ── CTA button ── */}
+      {/* ── CTA button — flush with card bottom ── */}
       {ctaLabel && onPress ? (
         <Pressable
           style={s.cta}
@@ -167,50 +185,41 @@ export function SystemObjectiveCard({
   );
 }
 
-const m = StyleSheet.create({
-  medallionWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#0E2E26",
-    borderWidth: 1.5,
-    borderColor: UI.jade + "70",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    // subtle jade glow
-    shadowColor: UI.jade,
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-  },
-});
+// ── Styles ───────────────────────────────────────────────────────────────────
+const JADE        = UI.jade;          // "#3DC4A8"
+const JADE_BORDER = JADE + "55";      // ~33% opacity
+const JADE_FILL   = "rgba(3,28,28,0.58)";
 
 const s = StyleSheet.create({
+  // ── Outer card ──────────────────────────────────────────────────────────
   card: {
-    // Push 3: translucent smoked-glass panel — background shows through
     backgroundColor: "rgba(13, 34, 40, 0.82)",
     borderWidth: 1.5,
-    borderColor: UI.gold + "4D",   // ~30% gold border matching mockup
+    borderColor: UI.gold + "4D",
     borderRadius: UI_RADIUS.xl,
     overflow: "hidden",
-    // inset jade glow approximated via shadow
-    shadowColor: UI.jade,
+    shadowColor: JADE,
     shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
+
+  // ── Main row ────────────────────────────────────────────────────────────
   mainRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: SPACING.md,
+    gap: SPACING.sm,
     padding: SPACING.md,
     paddingBottom: SPACING.sm,
   },
+  medallion: {
+    width: 44,
+    height: 44,
+    flexShrink: 0,
+  },
   kicker: {
-    color: UI.jade,
+    color: JADE,
     fontSize: TYPO.kicker,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -239,34 +248,87 @@ const s = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  objectiveStrip: {
+
+  // ── Inset objective panel ────────────────────────────────────────────────
+  insetPanel: {
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: JADE_BORDER,
+    backgroundColor: JADE_FILL,
+    overflow: "hidden",
+    flexDirection: "row",
+    // Outer glow gives the panel depth
+    shadowColor: JADE,
+    shadowOpacity: 0.20,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
+  },
+  // Tall left ornament — pinned to left edge, full panel height
+  ornamentLeft: {
+    width: 22,
+    // height stretches to panel height via alignSelf: stretch
+    alignSelf: "stretch",
+    flexShrink: 0,
+    opacity: 0.85,
+  },
+  // Content zone — padded away from ornament
+  panelContent: {
+    flex: 1,
+    paddingLeft: 6,
+    paddingRight: 10,
+    paddingTop: 9,
+    paddingBottom: 9,
+    gap: 5,
+  },
+  panelHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: SPACING.md,
-    paddingTop: 6,
-    paddingBottom: 9,
-    backgroundColor: "rgba(22,52,59,0.70)",
+  },
+  flagIcon: {
+    width: 18,
+    height: 22,
+    flexShrink: 0,
   },
   objectiveKicker: {
-    color: UI.jade,
+    color: JADE,
     fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
+    flex: 1,
+  },
+  sparkle: {
+    color: UI.gold,
+    fontSize: 10,
+    opacity: 0.70,
+    lineHeight: 12,
   },
   objectiveTxt: {
-    flex: 1,
     color: UI.textSoft,
     fontSize: 11,
     lineHeight: 16,
   },
+  // Shallow bevel — 1px semi-transparent white strip along the inside top edge
+  insetBevelTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+
+  // ── CTA button ──────────────────────────────────────────────────────────
   cta: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING.sm,
-    backgroundColor: UI.jade,
-    borderRadius: 0,   // flush with card bottom edge
+    backgroundColor: JADE,
+    borderRadius: 0,
     paddingVertical: SPACING.md,
   },
   ctaTxt: {
