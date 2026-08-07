@@ -46,21 +46,22 @@ function StrokeLabel({ children, focused }: { children: string; focused: boolean
 
 type TabKey = keyof typeof TAB_IMAGES;
 
-function mkTabIcon(key: TabKey, label: string, focused: boolean) {
+function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false) {
   return (
-    <View style={s.wrap}>
+    <View style={[s.wrap, locked && s.wrapLocked]}>
       <Image
         source={TAB_IMAGES[key]}
-        style={[s.icon, { opacity: focused ? 1 : 0.38 }]}
+        style={[s.icon, { opacity: locked ? 0.5 : focused ? 1 : 0.38 }]}
         resizeMode="contain"
       />
-      <StrokeLabel focused={focused}>{label}</StrokeLabel>
+      <StrokeLabel focused={focused && !locked}>{label}</StrokeLabel>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   wrap: { alignItems: "center", gap: 0, paddingTop: 2 },
+  wrapLocked: { opacity: 0.55, filter: "grayscale(1)" as any },
   icon: { width: 44, height: 44 },
   label: {
     fontSize:      9.5,
@@ -119,11 +120,11 @@ export default function TabsLayout() {
         name="heroes"
         options={{
           title: "Heroes",
-          tabBarAccessibilityLabel: "Heroes",
-          href: heroesUnlocked ? undefined : null,
+          tabBarAccessibilityLabel: heroesUnlocked ? "Heroes" : "Heroes — locked, unlocks later",
           tabBarButtonTestID: "tab-heroes",
-          tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused, !heroesUnlocked),
         }}
+        listeners={{ tabPress: (e) => { if (!heroesUnlocked) e.preventDefault(); } }}
       />
 
       {/* ── Tab 3: Sanctuary (formerly Realm / Kingdom) ── */}
@@ -131,11 +132,11 @@ export default function TabsLayout() {
         name="kingdom"
         options={{
           title: "Sanctuary",
-          tabBarAccessibilityLabel: "Sanctuary",
-          href: realmUnlocked ? undefined : null,
+          tabBarAccessibilityLabel: realmUnlocked ? "Sanctuary" : "Sanctuary — locked, unlocks later",
           tabBarButtonTestID: "tab-sanctuary",
-          tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "SANCTUARY", focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "SANCTUARY", focused, !realmUnlocked),
         }}
+        listeners={{ tabPress: (e) => { if (!realmUnlocked) e.preventDefault(); } }}
       />
 
       {/* ── Tab 4: Inventory (no gate — available immediately) ── */}
@@ -154,11 +155,11 @@ export default function TabsLayout() {
         name="shop"
         options={{
           title: "Shop",
-          tabBarAccessibilityLabel: "Shop",
-          href: shopUnlocked ? undefined : null,
+          tabBarAccessibilityLabel: shopUnlocked ? "Shop" : "Shop — locked, unlocks later",
           tabBarButtonTestID: "tab-shop",
-          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused, !shopUnlocked),
         }}
+        listeners={{ tabPress: (e) => { if (!shopUnlocked) e.preventDefault(); } }}
       />
 
       {/* ── Hidden routes (route alive, not shown in bar) ── */}

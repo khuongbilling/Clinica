@@ -535,32 +535,35 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN — Rounds · Goals · Recruit */}
+        {/* LEFT COLUMN — Rounds · Goals · Recruit (locked shortcuts are hidden, not dimmed) */}
         <View style={styles.sideCol}>
-          <SanctuaryShortcutCard
-            emblem={EMBLEM_IMAGES.dailyRounds}
-            label="Rounds"
-            badge={roundsBadge}
-            locked={!roundsUnlocked}
-            onPress={() => setShowRounds(true)}
-            testID="home-float-rounds"
-          />
-          <SanctuaryShortcutCard
-            emblem={EMBLEM_IMAGES.goals}
-            label="Goals"
-            available={roundsUnlocked}
-            locked={!roundsUnlocked}
-            onPress={() => router.push(ROUTES.MILESTONES)}
-            testID="home-float-goals"
-          />
-          <SanctuaryShortcutCard
-            emblem={EMBLEM_IMAGES.recruit}
-            label="Recruit"
-            available={summonUnlocked}
-            locked={!summonUnlocked}
-            onPress={() => router.push(ROUTES.UNI_RECRUIT)}
-            testID="home-float-recruit"
-          />
+          {roundsUnlocked && (
+            <SanctuaryShortcutCard
+              emblem={EMBLEM_IMAGES.dailyRounds}
+              label="Rounds"
+              badge={roundsBadge}
+              onPress={() => setShowRounds(true)}
+              testID="home-float-rounds"
+            />
+          )}
+          {roundsUnlocked && (
+            <SanctuaryShortcutCard
+              emblem={EMBLEM_IMAGES.goals}
+              label="Goals"
+              available
+              onPress={() => router.push(ROUTES.MILESTONES)}
+              testID="home-float-goals"
+            />
+          )}
+          {summonUnlocked && (
+            <SanctuaryShortcutCard
+              emblem={EMBLEM_IMAGES.recruit}
+              label="Recruit"
+              available
+              onPress={() => router.push(ROUTES.UNI_RECRUIT)}
+              testID="home-float-recruit"
+            />
+          )}
         </View>
 
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
@@ -602,23 +605,25 @@ export default function RunHome() {
           )}
         </Pressable>
 
-        {/* RIGHT COLUMN — Defense · Supplies */}
+        {/* RIGHT COLUMN — Defense · Supplies (locked shortcuts are hidden, not dimmed) */}
         <View style={styles.sideCol}>
-          <SanctuaryShortcutCard
-            emblem={EMBLEM_IMAGES.defense}
-            label="Defense"
-            available={wardDefUnlocked}
-            locked={!wardDefUnlocked}
-            onPress={() => router.push(ROUTES.WARD_DEFENSE)}
-            testID="home-float-ward-defense"
-          />
-          <SanctuaryShortcutCard
-            emblem={EMBLEM_IMAGES.supplies}
-            label="Supplies"
-            locked={!roundsUnlocked}
-            onPress={() => router.push(ROUTES.ITEM_BAG)}
-            testID="home-float-supplies"
-          />
+          {wardDefUnlocked && (
+            <SanctuaryShortcutCard
+              emblem={EMBLEM_IMAGES.defense}
+              label="Defense"
+              available
+              onPress={() => router.push(ROUTES.WARD_DEFENSE)}
+              testID="home-float-ward-defense"
+            />
+          )}
+          {roundsUnlocked && (
+            <SanctuaryShortcutCard
+              emblem={EMBLEM_IMAGES.supplies}
+              label="Supplies"
+              onPress={() => router.push(ROUTES.ITEM_BAG)}
+              testID="home-float-supplies"
+            />
+          )}
         </View>
       </View>
 
@@ -940,7 +945,7 @@ const styles = StyleSheet.create({
   arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },
 
   /* Side columns — Pull inward so cards sit just off the hero portrait */
-  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm, marginHorizontal: -10 },
+  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm, paddingHorizontal: 2 },
 
   /* World Event banner (Shift hub entry point) */
   memoryBanner: {
