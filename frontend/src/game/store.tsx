@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearBagSeenCache } from '@/src/game/bagSeenStore';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/src/api/client';
 import { Aptitude, PlayerState } from './types';
@@ -2077,6 +2078,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       // Fall back to at least clearing the player record if enumeration fails.
       await AsyncStorage.removeItem(STORAGE_KEY);
     }
+    clearBagSeenCache(); // bag "new item" tracker caches in-module — drop it with the wiped keys
     playerRef.current = null;
     setPlayer(null);
   }, []);

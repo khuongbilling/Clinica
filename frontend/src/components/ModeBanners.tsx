@@ -19,6 +19,9 @@ const BANNER_IMAGES: Record<string, any> = {
   "regalia-upgrades": require("../../assets/images/banner_regalia_upgrades.png"),
   "sanctuary-bank": require("../../assets/images/banner_sanctuary_bank.png"),
   "night-market": require("../../assets/images/banner_night_market.png"),
+  // Journey hub banners
+  "journey-chapters": require("../../assets/images/banner_journey_chapters.png"),
+  "journey-memories": require("../../assets/images/banner_journey_memories.png"),
   // Clinica University hub banners
   "university": require("../../assets/images/banner_university.png"),
   "uni-lessons": require("../../assets/images/banner_uni_lessons.png"),

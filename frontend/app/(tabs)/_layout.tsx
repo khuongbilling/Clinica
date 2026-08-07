@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
 import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
+import { unseenMemoriesCount } from "@/src/game/storyScenes";
+import { useNewBagCount } from "@/src/game/bagSeenStore";
 
 // ── Illustrated hand-drawn tab icons ─────────────────────────────────────────
 // Each icon is an AI-generated donghua/anime illustrated PNG with transparent
@@ -50,7 +52,7 @@ function StrokeLabel({ children, focused }: { children: string; focused: boolean
 
 type TabKey = keyof typeof TAB_IMAGES;
 
-function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false) {
+function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false, badge = false) {
   return (
     <View style={[s.wrap, locked && s.wrapLocked]}>
       <Image
@@ -58,6 +60,8 @@ function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false)
         style={[s.icon, { opacity: locked ? 0.5 : focused ? 1 : 0.38 }]}
         resizeMode="contain"
       />
+      {/* Red "something new" dot — cascades down from unseen content */}
+      {badge && !locked && <View style={s.badgeDot} />}
       <StrokeLabel focused={focused && !locked}>{label}</StrokeLabel>
     </View>
   );
@@ -67,6 +71,12 @@ const s = StyleSheet.create({
   wrap: { alignItems: "center", gap: 0, paddingTop: 2 },
   wrapLocked: { opacity: 0.55, filter: "grayscale(1)" as any },
   icon: { width: 38, height: 38 },
+  badgeDot: {
+    position: "absolute", top: 1, right: "26%",
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: "#E5484D",
+    borderWidth: 1.5, borderColor: UI.sanctuaryBg,
+  },
   label: {
     fontSize:      9.5,
     fontWeight:    "900",
@@ -90,7 +100,12 @@ export default function TabsLayout() {
   };
   const shopUnlocked   = checkFeatureGate("shop",           ctx).unlocked;
   const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
-  const realmUnlocked  = checkFeatureGate("realm",          ctx).unlocked;
+
+  // ── Red notification cascade ──
+  // Journey: any unlocked-but-unwatched memory bubbles up to the tab icon.
+  const journeyBadge = unseenMemoriesCount(player) > 0;
+  // Bag: inventory items the player hasn't opened the bag to see yet.
+  const bagBadge = useNewBagCount(Object.keys(player?.inventory ?? {})) > 0;
 
   return (
     <Tabs
@@ -108,29 +123,18 @@ export default function TabsLayout() {
         tabBarItemStyle: { paddingVertical: 2 },
       }}
     >
-      {/* ── Order: Study · Journey · Heroes · HOME (center) · Realm · Bag · Shop.
-           Home sits in the strategic middle slot; short labels keep the
-           7-tab bar from crowding. ── */}
+      {/* ── Order: Journey · Heroes · HOME (center) · Bag · Shop.
+           Study and Realm moved to hub shortcut icons; their routes stay
+           alive as hidden tabs below. ── */}
 
-      {/* ── Tab 1: Study — University hub ── */}
-      <Tabs.Screen
-        name="study"
-        options={{
-          title: "Study",
-          tabBarAccessibilityLabel: "Study",
-          tabBarButtonTestID: "tab-study",
-          tabBarIcon: ({ focused }) => mkTabIcon("study", "STUDY", focused),
-        }}
-      />
-
-      {/* ── Tab 2: Journey (no gate — available immediately) ── */}
+      {/* ── Tab 1: Journey (no gate — available immediately) ── */}
       <Tabs.Screen
         name="journey"
         options={{
           title: "Journey",
           tabBarAccessibilityLabel: "Journey",
           tabBarButtonTestID: "tab-journey",
-          tabBarIcon: ({ focused }) => mkTabIcon("journey", "JOURNEY", focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("journey", "JOURNEY", focused, false, journeyBadge),
         }}
       />
 
@@ -157,26 +161,14 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ── Tab 5: Realm (Sanctuary grounds — short label to save bar space) ── */}
-      <Tabs.Screen
-        name="kingdom"
-        options={{
-          title: "Realm",
-          tabBarAccessibilityLabel: realmUnlocked ? "Realm" : "Realm — locked, unlocks later",
-          tabBarButtonTestID: "tab-sanctuary",
-          tabBarIcon: ({ focused }) => mkTabIcon("sanctuary", "REALM", focused, !realmUnlocked),
-        }}
-        listeners={{ tabPress: (e) => { if (!realmUnlocked) e.preventDefault(); } }}
-      />
-
-      {/* ── Tab 6: Bag (Inventory — short label to save bar space) ── */}
+      {/* ── Tab 4: Bag (Inventory — short label to save bar space) ── */}
       <Tabs.Screen
         name="inventory"
         options={{
           title: "Bag",
           tabBarAccessibilityLabel: "Bag — your inventory",
           tabBarButtonTestID: "tab-inventory",
-          tabBarIcon: ({ focused }) => mkTabIcon("inventory", "BAG", focused),
+          tabBarIcon: ({ focused }) => mkTabIcon("inventory", "BAG", focused, false, bagBadge),
         }}
       />
 
@@ -193,6 +185,14 @@ export default function TabsLayout() {
       />
 
       {/* ── Hidden routes (route alive, not shown in bar) ── */}
+      <Tabs.Screen
+        name="study"
+        options={{ href: null, tabBarButtonTestID: "tab-study" }}
+      />
+      <Tabs.Screen
+        name="kingdom"
+        options={{ href: null, tabBarButtonTestID: "tab-sanctuary" }}
+      />
       <Tabs.Screen
         name="faction"
         options={{ href: null, tabBarButtonTestID: "tab-faction" }}

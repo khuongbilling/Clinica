@@ -8,12 +8,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { markBagItemsSeen } from "@/src/game/bagSeenStore";
 import { ITEMS } from "@/src/game/items";
 import { getLoadoutItems, setLoadoutItems } from "@/src/game/loadoutStore";
 import { usePlayer } from "@/src/game/store";
@@ -50,6 +51,14 @@ export default function ItemBagScreen() {
   const { player, loading } = usePlayer();
 
   const [selected, setSelected] = useState<string[]>(() => getLoadoutItems());
+
+  // Opening the bag marks every held item as seen — clears the red
+  // "new item" badge on the Bag tab. Must run before any early return
+  // (hooks rule); safe no-op while the player is still loading.
+  const inventoryKey = Object.keys(player?.inventory ?? {}).join("|");
+  useEffect(() => {
+    if (inventoryKey) void markBagItemsSeen(inventoryKey.split("|"));
+  }, [inventoryKey]);
 
   if (loading || !player) {
     return (

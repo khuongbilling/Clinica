@@ -44,6 +44,10 @@ const EMBLEM_IMAGES = {
   recruit:     require("../../assets/ui-icons/emblems/recruit.png"),
   defense:     require("../../assets/ui-icons/emblems/defense.png"),
   supplies:    require("../../assets/ui-icons/emblems/supplies.png"),
+  // Study + Realm moved off the nav bar to hub shortcut icons — reuse their
+  // painted tab artwork so the design language stays consistent.
+  study:       require("../../assets/ui-icons/tab-inventory.png"),
+  realm:       require("../../assets/ui-icons/tab-sanctuary-3d.png"),
 } as const;
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
@@ -351,6 +355,7 @@ export default function RunHome() {
   const summonUnlocked   = playerLevelInfo.level >= 2;
   // Ward Defense unlocks at Level 4.
   const wardDefUnlocked  = isFeatureUnlocked("ward_defense", playerLevelInfo.level);
+  const realmUnlocked    = isFeatureUnlocked("realm",        playerLevelInfo.level);
   // Ward Shift requires first University lesson (narrative gate).
   const wardShiftGate    = checkFeatureGate("ward_shift", buildGateContext(player));
 
@@ -537,8 +542,15 @@ export default function RunHome() {
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
-        {/* LEFT COLUMN — Rounds · Goals · Recruit (locked shortcuts are hidden, not dimmed) */}
+        {/* LEFT COLUMN — Study · Rounds · Goals · Recruit (locked shortcuts are hidden, not dimmed) */}
         <View style={styles.sideCol}>
+          <SanctuaryShortcutCard
+            emblem={EMBLEM_IMAGES.study}
+            label="Study"
+            available
+            onPress={() => router.push(ROUTES.UNIVERSITY)}
+            testID="home-float-study"
+          />
           {roundsUnlocked && (
             <SanctuaryShortcutCard
               emblem={EMBLEM_IMAGES.dailyRounds}
@@ -607,8 +619,17 @@ export default function RunHome() {
           )}
         </Pressable>
 
-        {/* RIGHT COLUMN — Defense · Supplies (locked shortcuts are hidden, not dimmed) */}
+        {/* RIGHT COLUMN — Realm · Defense · Supplies (locked shortcuts are hidden, not dimmed) */}
         <View style={styles.sideCol}>
+          {realmUnlocked && (
+            <SanctuaryShortcutCard
+              emblem={EMBLEM_IMAGES.realm}
+              label="Realm"
+              available
+              onPress={() => router.push(ROUTES.KINGDOM)}
+              testID="home-float-realm"
+            />
+          )}
           {wardDefUnlocked && (
             <SanctuaryShortcutCard
               emblem={EMBLEM_IMAGES.defense}

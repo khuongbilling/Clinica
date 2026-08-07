@@ -173,6 +173,16 @@ export function isSceneSeen(player: PlayerState | null | undefined, sceneId: str
   return !!player?.story_scenes_seen?.includes(sceneId);
 }
 
+/**
+ * Number of story scenes (Memories) the player has unlocked but not yet
+ * watched. Drives the red notification cascade: memory card → Memories
+ * banner → Journey tab. Watching a scene marks it seen and clears it.
+ */
+export function unseenMemoriesCount(player: PlayerState | null | undefined): number {
+  if (!player) return 0;
+  return STORY_SCENES.filter((sc) => isSceneUnlocked(sc, player) && !isSceneSeen(player, sc.id)).length;
+}
+
 /** Whether the scene's narrative beat has been reached for this player. */
 export function isSceneUnlocked(scene: StoryScene, player: PlayerState | null | undefined): boolean {
   if (!player) return false;
