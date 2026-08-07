@@ -13,7 +13,7 @@ import {
 } from "@/src/game/progression";
 import { useLiveStamina } from "@/src/game/stamina";
 import { PlayerState } from "@/src/game/types";
-import { getUiIcon } from "@/src/game/uiIcons";
+import { getUiIcon, getClassEmblem } from "@/src/game/uiIcons";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -95,11 +95,23 @@ export function PlayerHeader({
           hitSlop={4}
           testID="player-header-identity"
         >
-          <View style={[styles.avatar, apt && { borderColor: apt.color + "70" }]}>
-            {avatarSource ? (
-              <ExpoImage source={avatarSource} style={styles.avatarImg} contentFit="cover" />
-            ) : (
-              <Ionicons name={(apt?.icon as any) || "person-circle"} size={compact ? 16 : 20} color={apt?.color || COLORS.onSurfaceSecondary} />
+          {/* Avatar + class-emblem badge overlay */}
+          <View style={styles.avatarWrap}>
+            <View style={[styles.avatar, apt && { borderColor: apt.color + "70" }]}>
+              {avatarSource ? (
+                <ExpoImage source={avatarSource} style={styles.avatarImg} contentFit="cover" />
+              ) : (
+                <Ionicons name={(apt?.icon as any) || "person-circle"} size={compact ? 16 : 20} color={apt?.color || COLORS.onSurfaceSecondary} />
+              )}
+            </View>
+            {/* Class medallion badge — bottom-right corner of avatar */}
+            {getClassEmblem(classId) && (
+              <ExpoImage
+                source={getClassEmblem(classId)!}
+                style={styles.classEmblem}
+                contentFit="contain"
+                accessible={false}
+              />
             )}
           </View>
           <View style={styles.identityText}>
@@ -385,31 +397,37 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.sm,
     gap: 7,
-    backgroundColor: UI.sanctuaryBg,
-    borderBottomWidth: 1,
-    borderBottomColor: UI.sanctuaryBorder,
+    // Push 3: smoked-glass header — background scene continues behind
+    backgroundColor: "rgba(4, 8, 14, 0.68)",
   },
   topRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: SPACING.sm, rowGap: 7 },
   identityRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flexGrow: 1, flexShrink: 1, flexBasis: 160, minWidth: 0 },
   identityText: { flexShrink: 1, minWidth: 0 },
+  avatarWrap: { position: "relative", flexShrink: 0 },
   avatar: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: UI.sanctuaryPanel,
+    backgroundColor: "rgba(14, 30, 40, 0.70)",
     borderWidth: 1.5,
     borderColor: UI.jade,
     alignItems: "center", justifyContent: "center",
     overflow: "hidden",
   },
   avatarImg: { width: "100%", height: "100%" },
+  // Class medallion PNG — small corner badge over avatar bottom-right
+  classEmblem: {
+    position: "absolute", bottom: -4, right: -4,
+    width: 18, height: 18,
+  },
   name: { color: COLORS.onSurface, fontSize: 14, fontWeight: "800" },
   levelTxt: { color: COLORS.brand, fontSize: 12, fontWeight: "700" },
   rankTxt: { color: COLORS.onSurfaceTertiary, fontSize: 10, fontWeight: "600", letterSpacing: 0.4, marginTop: 1 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, flexGrow: 1, justifyContent: "flex-end" },
   chip: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: UI.sanctuaryPanel,
+    // Push 3: translucent glass chip — background scene reads through
+    backgroundColor: "rgba(10, 22, 30, 0.62)",
     borderWidth: 1,
-    borderColor: UI.sanctuaryBorder,
+    borderColor: "rgba(125, 230, 214, 0.20)",
     borderRadius: RADIUS.pill,
     paddingHorizontal: 8,
     paddingVertical: 4,

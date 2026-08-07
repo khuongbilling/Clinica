@@ -189,14 +189,15 @@ const m = StyleSheet.create({
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: "#0D2228",
+    // Push 3: translucent smoked-glass panel — background shows through
+    backgroundColor: "rgba(13, 34, 40, 0.82)",
     borderWidth: 1.5,
     borderColor: UI.gold + "4D",   // ~30% gold border matching mockup
     borderRadius: UI_RADIUS.xl,
     overflow: "hidden",
     // inset jade glow approximated via shadow
     shadowColor: UI.jade,
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,

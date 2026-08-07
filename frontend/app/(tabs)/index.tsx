@@ -371,7 +371,20 @@ export default function RunHome() {
     && (worldEventUnlocked || playerLevelInfo.level >= 3);
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
+    <View style={styles.rootWrap}>
+      {/* ── Full-screen environment background — renders behind SafeAreaView so the
+           Sanctuary scene continues behind the player bar, location title, and
+           System card (Push 3: removes the black upper slab). ── */}
+      <SceneBg element={leadHero?.element ?? "River"} scene={scene} />
+      {/* Top gradient — darkens the header zone for text readability without
+           creating a hard edge. Covers status-bar → PlayerHeader → System card. */}
+      <LinearGradient
+        colors={["rgba(4,6,10,0.92)", "rgba(4,6,10,0.50)", "rgba(4,6,10,0.0)"]}
+        style={styles.topGradient}
+        pointerEvents="none"
+      />
+
+      <SafeAreaView style={styles.root} edges={["top"]}>
 
       {/* ── TUTORIAL SHORTCUT — kept above the global header so it stays reachable ── */}
       <View style={styles.tutorialRow}>
@@ -515,11 +528,8 @@ export default function RunHome() {
         </View>
       )}
 
-      {/* ── MAIN ARENA — layered: scenic bg → side cols → hero portrait ── */}
+      {/* ── MAIN ARENA — side cols + hero portrait float above the full-screen bg ── */}
       <View style={styles.arena}>
-
-        {/* LAYER 1 — full-width scenic background (drawn behind everything) */}
-        <SceneBg element={leadHero?.element ?? "River"} scene={scene} />
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
@@ -764,7 +774,8 @@ export default function RunHome() {
           markLv2UnlockSeen();
         }}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -934,7 +945,12 @@ const sc = StyleSheet.create({
 
 /* ── Styles ── */
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: UI.sanctuaryBg },
+  // Outermost wrapper — holds the full-screen SceneBg behind SafeAreaView
+  rootWrap: { flex: 1, backgroundColor: UI.sanctuaryBg },
+  // SafeAreaView is transparent; background comes from rootWrap + SceneBg
+  root: { flex: 1 },
+  // Gradient that darkens from top → transparent, covering header + System card zone
+  topGradient: { position: "absolute", top: 0, left: 0, right: 0, height: 320 },
 
   /* Tutorial shortcut row (identity/stamina/currencies now live in PlayerHeader) */
   tutorialRow: {
