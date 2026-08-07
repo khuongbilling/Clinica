@@ -497,8 +497,13 @@ export default function RunHome() {
            systemHubIntro and the intro modal are auto-dismissed in the
            useEffect above for all post-prologue players (seen_reminiscence=true),
            so this card is the ONLY orientation layer a new player sees.         */}
+      {/* ── MAIN ARENA — side cols + hero portrait float above the full-screen bg ── */}
+      <View style={styles.arena}>
+
+      {/* The System guide + return card float OVER the arena (absolute overlay)
+           so they never push the hero avatar / side shortcuts down. */}
       {!localDismissGuide && !activeTutorialId && currentObjective && currentObjective.step <= 15 && (
-        <View style={styles.uniOnboard}>
+        <View style={styles.guideOverlay} pointerEvents="box-none">
           <SystemObjectiveCard
             message={hubGuideMessage(currentObjective)}
             objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
@@ -520,7 +525,7 @@ export default function RunHome() {
 
       {/* P6: return-session motivation card — once per session for Lv2+ returning players */}
       {showReturnCard && isCompleted("systemHubIntro") && !(currentObjective && currentObjective.step <= 15) && (
-        <View style={styles.uniOnboard}>
+        <View style={styles.guideOverlay} pointerEvents="box-none">
           <ReturnSessionCard
             roundsBadge={roundsBadge}
             onRounds={() => { setShowRounds(true); setShowReturnCard(false); }}
@@ -529,9 +534,6 @@ export default function RunHome() {
           />
         </View>
       )}
-
-      {/* ── MAIN ARENA — side cols + hero portrait float above the full-screen bg ── */}
-      <View style={styles.arena}>
 
         {/* LAYER 2 — side columns (float above bg, transparent backgrounds) */}
 
@@ -940,6 +942,15 @@ const styles = StyleSheet.create({
 
   /* University onboarding banner (prominent first step for new players) */
   uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
+
+  /* System guide / return card — floats over the arena instead of pushing it down */
+  guideOverlay: {
+    position: "absolute",
+    top: SPACING.xs,
+    left: SPACING.md,
+    right: SPACING.md,
+    zIndex: 30,
+  },
 
   /* Arena — fills remaining vertical space */
   arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },

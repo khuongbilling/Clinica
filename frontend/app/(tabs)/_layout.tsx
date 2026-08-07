@@ -11,6 +11,8 @@ import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@
 // background. Active = full opacity; inactive = dimmed. No SVG, no rings.
 //
 const TAB_IMAGES = {
+  hub:       require("../../assets/ui-icons/tab-hub-3d.png"),
+  study:     require("../../assets/ui-icons/tab-study-3d.png"),
   journey:   require("../../assets/ui-icons/tab-journey.png"),
   heroes:    require("../../assets/ui-icons/tab-heroes.png"),
   sanctuary: require("../../assets/ui-icons/tab-realm.png"),
@@ -62,7 +64,7 @@ function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false)
 const s = StyleSheet.create({
   wrap: { alignItems: "center", gap: 0, paddingTop: 2 },
   wrapLocked: { opacity: 0.55, filter: "grayscale(1)" as any },
-  icon: { width: 44, height: 44 },
+  icon: { width: 38, height: 38 },
   label: {
     fontSize:      9.5,
     fontWeight:    "900",
@@ -104,7 +106,29 @@ export default function TabsLayout() {
         tabBarItemStyle: { paddingVertical: 2 },
       }}
     >
-      {/* ── Tab 1: Journey (no gate — available immediately) ── */}
+      {/* ── Tab 1: Home — the sanctuary hub main screen ── */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarAccessibilityLabel: "Home",
+          tabBarButtonTestID: "tab-index",
+          tabBarIcon: ({ focused }) => mkTabIcon("hub", "HOME", focused),
+        }}
+      />
+
+      {/* ── Tab 2: Study — University hub ── */}
+      <Tabs.Screen
+        name="study"
+        options={{
+          title: "Study",
+          tabBarAccessibilityLabel: "Study",
+          tabBarButtonTestID: "tab-study",
+          tabBarIcon: ({ focused }) => mkTabIcon("study", "STUDY", focused),
+        }}
+      />
+
+      {/* ── Tab 3: Journey (no gate — available immediately) ── */}
       <Tabs.Screen
         name="journey"
         options={{
@@ -163,10 +187,6 @@ export default function TabsLayout() {
       />
 
       {/* ── Hidden routes (route alive, not shown in bar) ── */}
-      <Tabs.Screen
-        name="index"
-        options={{ href: null, tabBarButtonTestID: "tab-index" }}
-      />
       <Tabs.Screen
         name="faction"
         options={{ href: null, tabBarButtonTestID: "tab-faction" }}

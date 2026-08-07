@@ -30,6 +30,7 @@ const SHOP_TAB:       AppRoute = "/(tabs)/shop";
 const FACTION:        AppRoute = "/(tabs)/faction";
 const JOURNEY_TAB:    AppRoute = "/(tabs)/journey"   as AppRoute;
 const INVENTORY_TAB:  AppRoute = "/(tabs)/inventory" as AppRoute;
+const STUDY_TAB:      AppRoute = "/(tabs)/study"     as AppRoute;
 // SANCTUARY is the new label for KINGDOM in the bottom bar (same route).
 const SANCTUARY:      AppRoute = "/(tabs)/kingdom";
 
@@ -126,6 +127,7 @@ export const ROUTES = {
   FACTION,
   JOURNEY_TAB,
   INVENTORY_TAB,
+  STUDY_TAB,
   SANCTUARY,
 
   // ── Core gameplay ──────────────────────────────────────────────────────────
@@ -207,6 +209,7 @@ export const ROUTES = {
   tabFaction:       FACTION,
   tabJourney:       JOURNEY_TAB,
   tabInventory:     INVENTORY_TAB,
+  tabStudy:         STUDY_TAB,
   tabSanctuary:     SANCTUARY,
 
   title:                TITLE,
