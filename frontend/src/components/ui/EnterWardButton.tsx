@@ -197,10 +197,6 @@ const s = StyleSheet.create({
   outer: {
     // No shadow/glow here — on web a shadow around a transparent view paints
     // a rectangular box behind the painted frame. The PNG carries its own glow.
-    // Rendered at 90% width, centered — sizes the painted "+" medallion and
-    // "ENTER THE WARD" lettering to 90% of their previous size.
-    width:     "90%",
-    alignSelf: "center",
   },
   outerDisabled: {
     opacity: 0.42,
