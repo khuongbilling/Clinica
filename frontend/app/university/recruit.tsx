@@ -23,6 +23,7 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { getHeroBattleSprite } from "@/src/components/HeroBattleSprites";
+import { getAffinityMedallion } from "@/src/game/affinityArtwork";
 
 // Collect unique pathway roles from a hero's skills (max 3 displayed).
 function getHeroChainRoles(heroId: string): string[] {
@@ -600,6 +601,15 @@ function RecruitRevealModal({ result, isFree, onDismiss }: { result: RecruitResu
               <Text style={[revealStyles.rarityPillTxt, { color: rc }]}>{rLabel} HEALER ENROLLED</Text>
               <Ionicons name="sparkles" size={11} color={rc} />
             </View>
+
+            {/* Affinity medallion — bottom-right of portrait zone */}
+            {hero?.element && (
+              <Image
+                source={getAffinityMedallion(hero.element)}
+                style={revealStyles.affinityMedallion}
+                resizeMode="contain"
+              />
+            )}
           </View>
 
           {/* ── Info block ── */}
@@ -852,6 +862,12 @@ function CeremonyResultCard({ result }: { result: RecruitResult }) {
               {heroRoleLabel(result.entry.role)} · {rarityTierLabel(result.entry.rarity)}
             </Text>
           </View>
+          {(() => {
+            const h = LAUNCH_ROSTER.find(r => r.id === result.entry!.heroId);
+            return h?.element ? (
+              <Image source={getAffinityMedallion(h.element)} style={{ width: 52, height: 52 }} resizeMode="contain" />
+            ) : null;
+          })()}
         </>
       )}
       <Text style={styles.ceremonyResultMsg}>{result.message}</Text>
@@ -879,6 +895,12 @@ function ResultCard({ result, isFree }: { result: RecruitResult; isFree?: boolea
         <View style={[styles.tierPill, { borderColor: rc + "70" }]}>
           <Text style={[styles.tierPillTxt, { color: rc }]}>{rarityTierLabel(result.entry!.rarity)}</Text>
         </View>
+        {(() => {
+          const h = LAUNCH_ROSTER.find(r => r.id === result.entry!.heroId);
+          return h?.element ? (
+            <Image source={getAffinityMedallion(h.element)} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          ) : null;
+        })()}
         <Text style={styles.resultMsg}>{result.message}</Text>
         {result.kind === "shards" && (
           isFree ? (
@@ -929,6 +951,12 @@ function ResultTile({ result }: { result: RecruitResult }) {
           </View>
         )}
         <Text style={[styles.tileName, { color: rc }]} numberOfLines={1}>{result.entry!.name}</Text>
+        {(() => {
+          const h = LAUNCH_ROSTER.find(r => r.id === result.entry!.heroId);
+          return h?.element ? (
+            <Image source={getAffinityMedallion(h.element)} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          ) : null;
+        })()}
         <Text style={styles.tileMeta}>
           {result.kind === "hero"
             ? "NEW"
@@ -1357,5 +1385,14 @@ const revealStyles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 1.0,
+  },
+
+  // Affinity medallion — absolute overlay at bottom-right of portrait zone
+  affinityMedallion: {
+    position: "absolute",
+    bottom: SPACING.lg,
+    right: SPACING.lg,
+    width: 72,
+    height: 72,
   },
 });
