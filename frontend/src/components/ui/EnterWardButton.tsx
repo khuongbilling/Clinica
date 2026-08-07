@@ -27,8 +27,11 @@ import { SPACING, SERIF } from "@/src/theme/ui";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
 // ── Raster assets — code never re-draws these ─────────────────────────────
-const FRAME = require("../../../assets/ui-icons/hub/enter-ward-frame.webp");
-const CROSS = require("../../../assets/ui-icons/hub/enter-ward-cross.webp");
+// v2 — hand-painted assets matched to the approved Ink & Mist reference:
+// luminous backlit-jade capsule with gold rim + pointed side finials, and a
+// glowing emerald "+" medallion for the left icon.
+const FRAME = require("../../../assets/ui-icons/hub/enter-ward-frame-v2.png");
+const CROSS = require("../../../assets/ui-icons/hub/enter-ward-plus-v2.png");
 
 // ── Palette for text + sparkles only ──────────────────────────────────────
 const INK        = "#071820";   // dark ink on jade for label
