@@ -42,5 +42,28 @@
       You need to enable JavaScript to run this app.
     </noscript>
     <div id="root"></div>
+    <!-- DEV ONLY: ?qa_player_id=<uuid> injects a player session and drops into /preloader -->
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var pid = params.get('qa_player_id');
+        if (!pid) return;
+        try {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', 'http://localhost:8000/api/player/' + pid, false); // synchronous
+          xhr.send(null);
+          if (xhr.status === 200) {
+            var p = JSON.parse(xhr.responseText);
+            // Ensure flags route directly to hub (not post-recall / reminiscence)
+            p.diagnostic_intro_seen = true;
+            p.seen_reminiscence = true;
+            p.identity_restored = true;
+            p.onboarding_complete = true;
+            localStorage.setItem('clinica.player.v2', JSON.stringify(p));
+            window.location.replace('/preloader');
+          }
+        } catch (e) { console.warn('qa_player_id inject failed', e); }
+      })();
+    </script>
   </body>
 </html>

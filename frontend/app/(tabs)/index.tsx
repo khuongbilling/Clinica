@@ -1065,37 +1065,249 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
 
-  /* Hero info panel — three-column RPG character card with element glow */
-  infoPanel: {
+  /* Start button — layout only; visuals come from PrimaryButton */
+  startBtn: {
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm, marginBottom: SPACING.xs,
+  },
+
+  /* Ward Shift locked state — RPG locked gate card */
+  wardLockedCard: {
     flexDirection: "row", alignItems: "center", gap: SPACING.sm,
-    marginHorizontal: SPACING.md, marginTop: SPACING.xs,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm, marginBottom: SPACING.xs,
     backgroundColor: UI.sanctuaryCard,
-    borderRadius: UI_RADIUS.card, padding: SPACING.sm, paddingLeft: SPACING.sm + 2, borderWidth: 1.5, /* +2 optical offset: aligns accent bar with medallion edge */
-    overflow: "hidden", position: "relative",
+    borderWidth: 1.5, borderColor: UI.jade + "35",
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
   },
-  infoPanelAccent: {
-    position: "absolute", left: 0, top: 0, bottom: 0,
-    width: 3, borderRadius: 1.5, opacity: 0.85,
+  wardLockedIconWrap: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: UI.jade + "18",
+    borderWidth: 1.5, borderColor: UI.jade + "50",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
-  /* Left medallion */
-  heroMedallion: { alignItems: "center", gap: 2, flexShrink: 0 },
-  heroMedallionRing: {
-    width: 58, height: 58, borderRadius: 29,
-    borderWidth: 2,
-    overflow: "hidden",
+  wardLockedCardTitle: {
+    color: COLORS.onSurfaceTertiary,
+    fontSize: 13, fontWeight: "700", letterSpacing: 0.5,
+  },
+  wardLockedCardSub: {
+    color: UI.textDim, fontSize: 13, lineHeight: 20,
+  },
+  wardLockedCardCta: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: UI.jade,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 12, paddingVertical: 8,
+    flexShrink: 0,
+  },
+  wardLockedCardCtaTxt: {
+    color: "#082019", fontSize: 13, fontWeight: "700", letterSpacing: 0.3,
+  },
+
+  /* Ward Defense card */
+  wardDefBtn: {
+    flexDirection: "row", alignItems: "center",
+    marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: COLORS.air + "40",
+    backgroundColor: UI.sanctuaryPanel,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  wardDefLeft:  { flex: 1, gap: 2 },
+  wardDefNew:   { color: COLORS.air, fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  wardDefTitle: { color: COLORS.onSurface, fontSize: 18, fontWeight: "700" },
+  wardDefSub:   { color: COLORS.onSurfaceTertiary, fontSize: 13 },
+  wardDefRight: { flexDirection: "row", alignItems: "center", gap: 4 },
+
+  /* Lotus Plate Journal card */
+  lotusBtn: {
+    flexDirection: "row", alignItems: "center",
+    marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md, borderWidth: 1,
+    borderColor: COLORS.growth + "40",
+    backgroundColor: UI.sanctuaryPanel,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  lotusNew: { color: COLORS.growth, fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+
+  /* Intro modal */
+  introOverlay: { flex: 1, backgroundColor: "rgba(10,7,16,0.9)", justifyContent: "flex-end" },
+  introPanel: {
+    backgroundColor: UI.panel,
+    borderTopLeftRadius: UI_RADIUS.xl, borderTopRightRadius: UI_RADIUS.xl,
+    padding: SPACING.xl, paddingBottom: SPACING.xxxl,
+    borderTopWidth: 1, borderColor: UI.borderStrong,
+    gap: SPACING.md,
+  },
+  introHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: UI.divider, alignSelf: "center", marginBottom: SPACING.sm },
+  introKicker:  { color: UI.gold, fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
+  introTitle:   { color: UI.text, fontSize: 30, fontWeight: "800" },
+  introBody:    { color: UI.textSoft, fontSize: 15, lineHeight: 23 },
+  introSystems: { flexDirection: "row", gap: SPACING.xs, flexWrap: "wrap" },
+  sysPill:  { alignItems: "center", gap: 3, minWidth: 46 },
+  sysDot:   { width: 8, height: 8, borderRadius: 4 },
+  sysName:  { fontSize: 13, fontWeight: "700" },
+  sysDesc:  { color: UI.textDim, fontSize: 13 },
+  introCta: {
+    backgroundColor: UI.gold, borderRadius: UI_RADIUS.pill,
+    paddingVertical: SPACING.md + 2, /* +2 gives 14 px — sits between md(12) and lg; intentional larger touch target */ alignItems: "center", marginTop: SPACING.sm,
+    ...GLOW.gold,
+  },
+  introCtaTxt: { color: UI.onGold, fontSize: 16, fontWeight: "800", letterSpacing: 0.5 },
+});
+
+  // SafeAreaView is transparent; background comes from rootWrap + SceneBg
+  root: { flex: 1 },
+  // Gradient that darkens from top → transparent, covering header + System card zone
+  topGradient: { position: "absolute", top: 0, left: 0, right: 0, height: 320 },
+
+  /* Tutorial shortcut row (identity/stamina/currencies now live in PlayerHeader) */
+  tutorialRow: {
+    flexDirection: "row", justifyContent: "flex-end",
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xs,
+  },
+  headerBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: UI.panel, borderWidth: 1, borderColor: UI.border,
     alignItems: "center", justifyContent: "center",
   },
-  heroMedallionImg: { width: 54, height: 54, borderRadius: 27 },
-  /* Centre columns */
-  elementTxt:   { fontSize: 10, fontWeight: "700", letterSpacing: 0.4 },
-  heroName:     { color: UI.text, fontSize: 15, fontWeight: "700" },
-  heroTitle:    { color: UI.textDim, fontSize: 12 },
-  heroLvLabel:  { color: UI.text, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, marginTop: SPACING.xs / 4 }, /* 1 px visual nudge — keeps label baseline aligned with xpBar */
-  xpBg:         { height: 4, borderRadius: 2, backgroundColor: UI.divider, overflow: "hidden" },
-  xpBar:        { height: "100%", borderRadius: 2 },
-  /* Right XP column */
-  heroXpRight:  { alignItems: "flex-end", gap: 1, flexShrink: 0, minWidth: 52 },
-  xpTxt:        { color: UI.textDim, fontSize: 11, letterSpacing: 0.2 },
+
+  lockedFeatureBtn: { opacity: 0.55 },
+
+  /* University onboarding banner (prominent first step for new players) */
+  uniOnboard: { marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2 },
+
+  /* Arena — fills remaining vertical space */
+  arena: { flex: 1, flexDirection: "row", alignItems: "stretch", overflow: "hidden" },
+
+  /* Side columns — Pull inward so cards sit just off the hero portrait */
+  sideCol: { width: 72, justifyContent: "space-evenly", alignItems: "center", paddingVertical: SPACING.sm, marginHorizontal: -10 },
+
+  /* World Event banner (Shift hub entry point) */
+  memoryBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2,
+    backgroundColor: "#1A140840", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#E0B45C55",
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  memoryBannerKicker: { color: "#E0B45C", fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  memoryBannerTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "600" },
+  eventBanner: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    marginHorizontal: SPACING.md, marginTop: SPACING.xs, marginBottom: 2,
+    backgroundColor: "#065F4640", borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: "#34D39955",
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+  },
+  eventBannerIcon: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: "#34D39922",
+    alignItems: "center", justifyContent: "center",
+  },
+  eventLiveDot: {
+    position: "absolute", top: 1, right: 1,
+    width: 9, height: 9, borderRadius: 5,
+    borderWidth: 1.5, borderColor: COLORS.surface,
+  },
+  eventBannerTopRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  eventBannerKicker: { color: "#34D399", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  eventBannerBadge: {
+    backgroundColor: "#5B9BD522", borderWidth: 1, borderColor: "#5B9BD555",
+    borderRadius: RADIUS.pill, paddingHorizontal: 5, paddingVertical: 1,
+  },
+  eventBannerBadgeTxt: { color: "#5B9BD5", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  eventBannerBoard: {
+    backgroundColor: "#065F4625", borderColor: "#34D39933",
+  },
+  eventBannerBadgeBoard: {
+    backgroundColor: "#34D39918", borderColor: "#34D39944",
+  },
+  eventBannerTitle: { color: "#34D399", fontSize: 18, fontWeight: "700" },
+  eventBannerSub:   { color: COLORS.onSurfaceSecondary, fontSize: 13, lineHeight: 19 },
+  eventBannerClose: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: COLORS.surfaceSecondary,
+    alignItems: "center", justifyContent: "center",
+  },
+
+  /* Hero center — transparent, no frame or pedestal */
+  heroCenter: { flex: 1, position: "relative" },
+  heroImg:        { flex: 1, width: "100%" },
+  heroPlaceholder:{ flex: 1, backgroundColor: "transparent" },
+
+  /* Empty state — no hero recruited yet */
+  heroEmptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  heroEmptyTxt: {
+    color: "rgba(255,255,255,0.30)",
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  heroEmptyBtn: {
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: UI.gold + "55",
+    backgroundColor: UI.gold + "14",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  heroEmptyBtnTxt: {
+    color: UI.gold,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+
+  /* Tap hint */
+  tapPulse: {
+    position: "absolute", bottom: SPACING.sm, right: SPACING.sm,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(12,14,18,0.55)",
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+  },
+  tapDot:   { width: 5, height: 5, borderRadius: 3, opacity: 0.85 },
+  tapLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.3 },
+
+  /* Recruit prompt — shown instead of hero info panel when no heroes */
+  infoPanelRecruit: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+    backgroundColor: UI.gold + "0E",
+    borderRadius: UI_RADIUS.card,
+    padding: SPACING.md,
+    borderWidth: 1.5,
+    borderColor: UI.gold + "40",
+  },
+  infoPanelRecruitTitle: {
+    color: UI.gold + "EE",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  infoPanelRecruitSub: {
+    color: UI.textDim,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  /* Hero info panel wrapper — push-7 HeroAffinityCard sits here */
+  infoPanelWrap: {
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+  },
 
   /* Start button — layout only; visuals come from PrimaryButton */
   startBtn: {
