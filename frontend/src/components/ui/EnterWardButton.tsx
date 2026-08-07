@@ -11,12 +11,22 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { UI, UI_RADIUS, GLOW, SPACING } from "@/src/theme/ui";
+import { UI_RADIUS, SPACING } from "@/src/theme/ui";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 
 // EnterWardButton — the ceremonial "Enter the Ward" CTA for the Sanctuary hub.
-// Jade mint-to-teal gradient with ornate gold frame, corner flourishes, shimmer,
-// and deliberate pressed / disabled / loading states.
+// Glossy 3D jade treatment matching the approved Ink & Mist hub mockup:
+// vertical jade gradient with a top gloss highlight and bottom inner shade,
+// 2px gold frame with warm outer glow, sparkle corners, midpoint diamond
+// ornaments, animated shimmer sweep, and pressed / disabled / loading states.
+
+// Palette from the approved mockup spec (main-hub/Current).
+const JADE_TOP = "#82D5BA";
+const JADE_BOTTOM = "#55C8B7";
+const GOLD = "#C7A15D";
+const GOLD_BRIGHT = "#E1C27C";
+const INK = "#071820";
+
 export function EnterWardButton({
   onPress,
   label = "ENTER THE WARD",
@@ -84,7 +94,6 @@ export function EnterWardButton({
     <Animated.View
       style={[
         styles.outer,
-        GLOW.teal,
         { transform: [{ scale: scaleAnim }] },
         isBlocked && styles.disabledOuter,
         style,
@@ -101,23 +110,40 @@ export function EnterWardButton({
         accessibilityRole="button"
         accessibilityState={{ disabled: isBlocked }}
       >
-        {/* ── Jade gradient fill ── */}
+        {/* ── Jade gradient fill (vertical, mint → teal) ── */}
         <LinearGradient
-          colors={["#7DE6D6", "#3DC4A8", "#2C9E88"]}
+          colors={[JADE_TOP, JADE_BOTTOM]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
 
-        {/* ── Gold border overlay (rendered as a sibling so overflow:hidden on
-              the gradient doesn't clip it) ── */}
+        {/* ── Top gloss highlight — the "3D" sheen ── */}
+        <LinearGradient
+          colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0.06)", "transparent"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.gloss}
+          pointerEvents="none"
+        />
+
+        {/* ── Bottom inner shade — grounds the button ── */}
+        <LinearGradient
+          colors={["transparent", "rgba(7,24,32,0.28)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.innerShade}
+          pointerEvents="none"
+        />
+
+        {/* ── Gold border overlay (sibling so overflow:hidden doesn't clip) ── */}
         <View style={styles.goldBorder} pointerEvents="none" />
 
-        {/* ── Corner flourishes — four thin gold L-marks ── */}
-        <View style={[styles.flourish, styles.flourishTL]} pointerEvents="none" />
-        <View style={[styles.flourish, styles.flourishTR]} pointerEvents="none" />
-        <View style={[styles.flourish, styles.flourishBL]} pointerEvents="none" />
-        <View style={[styles.flourish, styles.flourishBR]} pointerEvents="none" />
+        {/* ── Sparkle corners (decorative — hidden from screen readers) ── */}
+        <Text style={[styles.sparkle, styles.sparkleTL]} pointerEvents="none" accessible={false} importantForAccessibility="no">✦</Text>
+        <Text style={[styles.sparkle, styles.sparkleTR]} pointerEvents="none" accessible={false} importantForAccessibility="no">✦</Text>
+        <Text style={[styles.sparkle, styles.sparkleBL]} pointerEvents="none" accessible={false} importantForAccessibility="no">✦</Text>
+        <Text style={[styles.sparkle, styles.sparkleBR]} pointerEvents="none" accessible={false} importantForAccessibility="no">✦</Text>
 
         {/* ── Inner content row ── */}
         <View
@@ -126,20 +152,20 @@ export function EnterWardButton({
         >
           {/* Left medallion */}
           <View style={styles.medallion}>
-            <Ionicons name="medical" size={15} color="#082019" />
+            <Ionicons name="medical" size={15} color={INK} />
           </View>
 
           {/* Label / loader — flex:1 centres between the two fixed icons */}
           {loading ? (
             <View style={styles.labelSlot}>
-              <ActivityIndicator size="small" color="#082019" />
+              <ActivityIndicator size="small" color={INK} />
             </View>
           ) : (
             <Text style={styles.label} numberOfLines={1}>{label}</Text>
           )}
 
           {/* Right arrow */}
-          <Ionicons name="arrow-forward" size={17} color="#082019" />
+          <Ionicons name="arrow-forward" size={17} color={INK} />
         </View>
 
         {/* ── Shimmer overlay ── */}
@@ -152,7 +178,7 @@ export function EnterWardButton({
             ]}
           >
             <LinearGradient
-              colors={["transparent", "rgba(255,255,255,0.28)", "transparent"]}
+              colors={["transparent", "rgba(255,255,255,0.32)", "transparent"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
@@ -160,17 +186,26 @@ export function EnterWardButton({
           </Animated.View>
         )}
       </Pressable>
+
+      {/* ── Midpoint gold diamond ornaments — outside the clipped pressable,
+            decorative only (hidden from screen readers) ── */}
+      <Text style={[styles.diamond, styles.diamondL]} pointerEvents="none" accessible={false} importantForAccessibility="no">◆</Text>
+      <Text style={[styles.diamond, styles.diamondR]} pointerEvents="none" accessible={false} importantForAccessibility="no">◆</Text>
     </Animated.View>
   );
 }
 
-const FLOURISH_SIZE = 6;
 const BORDER_RADIUS = UI_RADIUS.pill;
 
 const styles = StyleSheet.create({
   outer: {
     borderRadius: BORDER_RADIUS,
-    // glow applied via GLOW.teal spread
+    // Warm gold outer glow (mockup spec) instead of teal
+    shadowColor: GOLD,
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 7,
   },
   disabledOuter: {
     opacity: 0.45,
@@ -181,28 +216,58 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     justifyContent: "center",
   },
+  gloss: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "48%",
+    borderTopLeftRadius: BORDER_RADIUS,
+    borderTopRightRadius: BORDER_RADIUS,
+  },
+  innerShade: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "42%",
+    borderBottomLeftRadius: BORDER_RADIUS,
+    borderBottomRightRadius: BORDER_RADIUS,
+  },
   goldBorder: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: BORDER_RADIUS,
-    borderWidth: 1.5,
-    borderColor: UI.gold,
-    // very subtle inner glow via shadow on web / elevation on native
-    shadowColor: UI.gold,
-    shadowOpacity: 0.18,
+    borderWidth: 2,
+    borderColor: GOLD,
+    shadowColor: GOLD,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 0 },
   },
-  flourish: {
+  sparkle: {
     position: "absolute",
-    width: FLOURISH_SIZE,
-    height: FLOURISH_SIZE,
-    borderColor: UI.gold,
-    borderWidth: 1,
+    fontSize: 10,
+    lineHeight: 12,
+    color: GOLD_BRIGHT,
+    opacity: 0.75,
   },
-  flourishTL: { top: 6,    left: 14,  borderRightWidth: 0, borderBottomWidth: 0 },
-  flourishTR: { top: 6,    right: 14, borderLeftWidth: 0,  borderBottomWidth: 0 },
-  flourishBL: { bottom: 6, left: 14,  borderRightWidth: 0, borderTopWidth: 0    },
-  flourishBR: { bottom: 6, right: 14, borderLeftWidth: 0,  borderTopWidth: 0    },
+  sparkleTL: { top: 4,    left: 14 },
+  sparkleTR: { top: 4,    right: 14 },
+  sparkleBL: { bottom: 4, left: 14 },
+  sparkleBR: { bottom: 4, right: 14 },
+  diamond: {
+    position: "absolute",
+    top: "50%",
+    marginTop: -8,
+    fontSize: 13,
+    lineHeight: 16,
+    color: GOLD,
+    textShadowColor: GOLD,
+    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 0 },
+  },
+  diamondL: { left: -7 },
+  diamondR: { right: -7 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -214,12 +279,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#3DC4A8",
+    backgroundColor: JADE_BOTTOM,
     alignItems: "center",
     justifyContent: "center",
-    // Subtle inner shadow via border
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(255,255,255,0.35)",
     flexShrink: 0,
   },
   labelSlot: {
@@ -229,10 +293,13 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     textAlign: "center",
-    color: "#082019",
+    color: INK,
     fontSize: 16,
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
+    textShadowColor: "rgba(255,255,255,0.25)",
+    textShadowRadius: 0,
+    textShadowOffset: { width: 0, height: 1 },
   },
   shimmer: {
     ...StyleSheet.absoluteFillObject,
