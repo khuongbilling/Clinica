@@ -208,6 +208,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.hero_equipment) out = { ...out, hero_equipment: {} };
   // Task 270 — backfill owned equipment list for pre-270 saves.
   if (!Array.isArray(out.owned_equipment)) out = { ...out, owned_equipment: [] };
+  // Task 513 — backfill class specialization map for pre-513 saves.
+  if (!out.class_specialization) out = { ...out, class_specialization: {} };
   // Push 4 — backfill Practice Curriculum completion list for pre-P4 saves.
   if (!out.practice_modules_completed) out = { ...out, practice_modules_completed: [] };
   if (out.seen_practice_curriculum == null) out = { ...out, seen_practice_curriculum: false };
@@ -551,6 +553,8 @@ type Ctx = {
   unequipItem: (heroId: string, slot: string) => Promise<void>;
   // Push 8 — Save all choices from the Lotus Recall identity-reconstruction screen.
   confirmIdentityReconstruction: (data: IdentityReconstructionInput) => Promise<void>;
+  // Task 513 — Permanently lock in a specialization for a class (requires Lv30 claimed).
+  claimSpecialization: (classId: import('./classTree').ClassId, specializationId: string) => Promise<{ ok: boolean; message: string }>;
 };
 
 // Push 8 — Full set of identity choices made during Lotus Recall character creation.
@@ -923,7 +927,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     playerRef.current = next;
     setPlayer(next);
     await saveLocal(next);
-    trySyncToBackend(next);
+    // Fire generic sync in background; when it resolves, merge the server's
+    // authoritative class_specialization back into local state so a concurrent
+    // claim (on this or another device) is never silently discarded.
+    trySyncToBackend(next).then(async (fromServer) => {
+      const serverSpec = fromServer.class_specialization;
+      if (!serverSpec) return;
+      const current = playerRef.current;
+      if (!current) return;
+      const localSpec = current.class_specialization || {};
+      // Check if server has any keys the local copy is missing
+      const hasNew = Object.keys(serverSpec).some((k) => serverSpec[k] !== localSpec[k]);
+      if (!hasNew) return;
+      const merged: PlayerState = { ...current, class_specialization: { ...localSpec, ...serverSpec } };
+      playerRef.current = merged;
+      setPlayer(merged);
+      await saveLocal(merged);
+    }).catch(() => { /* ignore — offline / transient failures are fine */ });
   }, []);
 
   const applyRewards = useCallback(async (rewards: Parameters<Ctx['applyRewards']>[0] & { regionId?: string }) => {
@@ -2116,6 +2136,40 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `${card.name} unlocked.` };
   }, [updateState]);
 
+  // Task 513 — Permanently lock in a specialization for a class.
+  // Client pre-checks prevent unnecessary round-trips; the backend endpoint is
+  // the authoritative guard (Lv30 ownership + valid ID + immutable-once-set).
+  const claimSpecialization = useCallback(async (classId: import('./classTree').ClassId, specializationId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+
+    // Client-side pre-flight (fast fail before network round-trip)
+    const progress = (base.class_progress || {})[classId] || [];
+    if (!progress.includes(30)) return { ok: false, message: 'Claim Lv30 first to unlock your path.' };
+    const existing = base.class_specialization || {};
+    if (existing[classId]) return { ok: false, message: 'Specialization already chosen for this class.' };
+    const { CLASS_SPECIALIZATIONS } = require('./classTree');
+    const validIds: string[] = (CLASS_SPECIALIZATIONS[classId] || []).map((s: { id: string }) => s.id);
+    if (!validIds.includes(specializationId)) {
+      return { ok: false, message: `"${specializationId}" is not a valid specialization for the ${classId} class.` };
+    }
+
+    // Backend is authoritative — call dedicated endpoint so eligibility &
+    // permanence are enforced server-side (not through the generic PUT).
+    try {
+      const updated = await api.claimSpecialization(base.id, specializationId);
+      const next = normalizeProgression(updated);
+      playerRef.current = next;
+      setPlayer(next);
+      await saveLocal(next);
+      return { ok: true, message: 'Specialization path locked in.' };
+    } catch (err: any) {
+      // Surface server rejection (e.g. already set on another device)
+      const msg = err?.message || 'Failed to lock specialization. Try again.';
+      return { ok: false, message: msg };
+    }
+  }, []);
+
   // Push 1 prologue — marks the guided tutorial + scripted boss sequence
   // finished so the player never re-enters it. Idempotent no-op if already set.
   const completePrologue = useCallback(async () => {
@@ -2818,7 +2872,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
     confirmIdentityReconstruction,
     equipItem, unequipItem,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem]);
+    claimSpecialization,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { goBack } from "@/src/utils/navigation";
+import { ROUTES } from "@/src/game/routes";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─── Career path data ──────────────────────────────────────────────────────
@@ -196,11 +197,16 @@ export default function CareerExplorerScreen() {
                     ))}
                   </View>
 
-                  {/* Future branch hint */}
-                  <View style={[styles.branchHint, { borderColor: path.accentColor + "55" }]}>
+                  {/* Future branch hint — tappable, navigates to Class Tree */}
+                  <Pressable
+                    style={[styles.branchHint, { borderColor: path.accentColor + "55" }]}
+                    onPress={() => router.push(ROUTES.CLASS_TREE)}
+                    testID={`career-branch-${path.id}`}
+                  >
                     <Ionicons name="git-branch-outline" size={14} color={path.accentColor} />
                     <Text style={styles.branchTxt}>{path.futureBranch}</Text>
-                  </View>
+                    <Ionicons name="chevron-forward" size={13} color={path.accentColor} />
+                  </Pressable>
                 </View>
               )}
             </Pressable>

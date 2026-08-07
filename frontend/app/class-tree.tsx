@@ -6,7 +6,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import {
-  CLASS_IDENTITIES, CLASS_IDS, ClassAbilityCard, ClassId, GUARDRAIL_LINES,
+  CLASS_IDENTITIES, CLASS_IDS, CLASS_SPECIALIZATIONS, ClassAbilityCard, ClassId,
+  ClassSpecialization, GUARDRAIL_LINES,
   canClaimTier, describeClassBattleBonuses, getClassTree, getClassTreeBattleBonuses, isTierClaimed,
 } from "@/src/game/classTree";
 import { playRewardCue } from "@/src/game/cues";
@@ -18,10 +19,12 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function ClassTreeScreen() {
   const router = useRouter();
-  const { player, setPlayerClass, claimClassTier } = usePlayer();
+  const { player, setPlayerClass, claimClassTier, claimSpecialization } = usePlayer();
   const [viewingId, setViewingId] = useState<ClassId | null>(null);
   const [switchTarget, setSwitchTarget] = useState<ClassId | null>(null);
   const [busyLevel, setBusyLevel] = useState<number | null>(null);
+  const [busySpec, setBusySpec] = useState<string | null>(null);
+  const [specTarget, setSpecTarget] = useState<ClassSpecialization | null>(null);
   const { notice, flashNotice } = useInlineNotice();
 
   if (!player) {
@@ -39,6 +42,9 @@ export default function ClassTreeScreen() {
   const progress = (player.class_progress || {})[activeId] || [];
   const playerLevel = player.player_level ?? playerLevelFromXp(player.xp).level;
   const inventory = player.inventory || {};
+  const specializations = CLASS_SPECIALIZATIONS[activeId] || [];
+  const chosenSpecId = (player.class_specialization || {})[activeId] || null;
+  const lv30Claimed = progress.includes(30);
 
   async function handleClaim(card: ClassAbilityCard) {
     if (activeId !== currentId) return;
@@ -55,6 +61,18 @@ export default function ClassTreeScreen() {
     setSwitchTarget(null);
     flashNotice(`${res.ok ? "Class Updated" : "Could Not Switch"} — ${res.message}`);
   }
+
+  async function confirmSpecialization() {
+    if (!specTarget) return;
+    setBusySpec(specTarget.id);
+    const res = await claimSpecialization(activeId, specTarget.id);
+    setBusySpec(null);
+    setSpecTarget(null);
+    if (res.ok) playRewardCue(true);
+    flashNotice(`${res.ok ? "Path Chosen" : "Not Yet"} — ${res.message}`);
+  }
+
+  const chosenSpec = chosenSpecId ? specializations.find((s) => s.id === chosenSpecId) ?? null : null;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -78,7 +96,13 @@ export default function ClassTreeScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.currentLabel}>CURRENT CLASS</Text>
             <Text style={styles.currentName}>{CLASS_IDENTITIES[currentId].name}</Text>
-            <Text style={styles.currentSub}>Player Level {playerLevel}</Text>
+            {(player.class_specialization || {})[currentId] ? (
+              <Text style={[styles.currentSub, { color: CLASS_IDENTITIES[currentId].color }]}>
+                ✦ {CLASS_SPECIALIZATIONS[currentId]?.find(s => s.id === (player.class_specialization || {})[currentId])?.fantasyTitle ?? ""}
+              </Text>
+            ) : (
+              <Text style={styles.currentSub}>Player Level {playerLevel}</Text>
+            )}
           </View>
         </View>
 
@@ -91,6 +115,7 @@ export default function ClassTreeScreen() {
             const c = CLASS_IDENTITIES[id];
             const isCurrent = id === currentId;
             const isViewing = id === activeId;
+            const specForId = (player.class_specialization || {})[id];
             return (
               <Pressable
                 key={id}
@@ -105,6 +130,7 @@ export default function ClassTreeScreen() {
                 <Ionicons name={c.icon as any} size={22} color={c.color} />
                 <Text style={styles.classCardName}>{c.name}</Text>
                 {isCurrent && <Text style={[styles.currentTag, { color: c.color }]}>CURRENT</Text>}
+                {specForId && <Text style={[styles.specTag, { color: c.color }]}>✦</Text>}
               </Pressable>
             );
           })}
@@ -209,6 +235,74 @@ export default function ClassTreeScreen() {
           })}
         </View>
 
+        {/* ── Specialization Branch Picker (Lv 40 paths) ─────────────────── */}
+        <View style={[styles.branchSection, { borderColor: identity.color + "33" }]} testID="class-tree-specialization">
+          <View style={styles.branchSectionHead}>
+            <Ionicons name="git-branch" size={16} color={identity.color} />
+            <Text style={[styles.branchSectionTitle, { color: identity.color }]}>SPECIALIZATION PATH</Text>
+          </View>
+
+          {!lv30Claimed ? (
+            <View style={styles.branchLocked}>
+              <Ionicons name="lock-closed" size={18} color={COLORS.onSurfaceTertiary} />
+              <Text style={styles.branchLockedTxt}>Claim Lv30 to unlock your specialization path.</Text>
+            </View>
+          ) : chosenSpec ? (
+            /* Active branch — show as locked card with crown badge */
+            <View style={[styles.specChosenCard, { borderColor: identity.color }]} testID="class-tree-spec-chosen">
+              <View style={styles.specChosenHead}>
+                <View style={[styles.specIconWrap, { backgroundColor: identity.color + "22" }]}>
+                  <Ionicons name={chosenSpec.icon as any} size={20} color={identity.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.specChosenLabel, { color: identity.color }]}>ACTIVE PATH</Text>
+                  <Text style={styles.specChosenName}>{chosenSpec.fantasyTitle}</Text>
+                  <Text style={styles.specChosenCareer}>{chosenSpec.careerPath}</Text>
+                </View>
+                <Ionicons name="star" size={18} color={identity.color} />
+              </View>
+              <Text style={styles.specChosenDesc}>{chosenSpec.description}</Text>
+              <View style={[styles.specBonusRow, { borderColor: identity.color + "33" }]}>
+                <Ionicons name="flash" size={12} color={identity.color} />
+                <Text style={[styles.specBonusTxt, { color: identity.color }]}>{chosenSpec.battleBonusLabel}</Text>
+              </View>
+            </View>
+          ) : (
+            /* Branch picker — show selectable cards */
+            <>
+              <Text style={styles.branchIntro}>
+                Choose one specialization path permanently for the {identity.name} class. This cannot be undone.
+              </Text>
+              <View style={{ gap: SPACING.sm }}>
+                {specializations.map((spec) => (
+                  <Pressable
+                    key={spec.id}
+                    style={[styles.specCard, { borderColor: identity.color + "55" }]}
+                    onPress={() => setSpecTarget(spec)}
+                    testID={`class-tree-spec-${spec.id}`}
+                  >
+                    <View style={styles.specCardHead}>
+                      <View style={[styles.specIconWrap, { backgroundColor: identity.color + "22" }]}>
+                        <Ionicons name={spec.icon as any} size={18} color={identity.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.specCardName}>{spec.fantasyTitle}</Text>
+                        <Text style={styles.specCardCareer}>{spec.careerPath}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={14} color={COLORS.onSurfaceTertiary} />
+                    </View>
+                    <Text style={styles.specCardDesc}>{spec.description}</Text>
+                    <View style={[styles.specBonusRow, { borderColor: identity.color + "33" }]}>
+                      <Ionicons name="flash" size={11} color={identity.color} />
+                      <Text style={[styles.specBonusTxt, { color: identity.color }]}>{spec.battleBonusLabel}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+
         {/* Push 11: Active battle bonuses for the viewed class */}
         <View style={[styles.bonusCard, { borderColor: identity.color + "44" }]} testID="class-tree-bonus">
           <View style={styles.bonusHead}>
@@ -218,7 +312,13 @@ export default function ClassTreeScreen() {
               <Text style={styles.bonusHint}>(based on unlocked tiers)</Text>
             )}
           </View>
-          {describeClassBattleBonuses(getClassTreeBattleBonuses(activeId, (player.class_progress || {})[activeId] || [])).map((line, i) => (
+          {describeClassBattleBonuses(
+            getClassTreeBattleBonuses(
+              activeId,
+              (player.class_progress || {})[activeId] || [],
+              (player.class_specialization || {})[activeId],
+            )
+          ).map((line, i) => (
             <View key={i} style={styles.bonusRow}>
               <Ionicons name="checkmark-circle" size={12} color={identity.color} />
               <Text style={styles.bonusTxt}>{line}</Text>
@@ -237,6 +337,7 @@ export default function ClassTreeScreen() {
         </View>
       </ScrollView>
 
+      {/* Class switch confirmation modal */}
       <Modal visible={!!switchTarget} transparent animationType="fade" onRequestClose={() => setSwitchTarget(null)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setSwitchTarget(null)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
@@ -253,6 +354,40 @@ export default function ClassTreeScreen() {
                 <Text style={styles.modalBtnTxt}>Confirm</Text>
               </Pressable>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Specialization confirmation modal */}
+      <Modal visible={!!specTarget} transparent animationType="fade" onRequestClose={() => setSpecTarget(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setSpecTarget(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            {specTarget && (
+              <>
+                <Ionicons name={specTarget.icon as any} size={22} color={identity.color} />
+                <Text style={styles.modalTitle}>Choose {specTarget.fantasyTitle}?</Text>
+                <Text style={styles.modalBody}>
+                  {specTarget.description}
+                  {"\n\n"}
+                  <Text style={{ fontWeight: "700" }}>Bonus: </Text>{specTarget.battleBonusLabel}
+                  {"\n\n"}
+                  This choice is permanent for the {identity.name} class and cannot be changed.
+                </Text>
+                <View style={styles.modalRow}>
+                  <Pressable style={styles.modalBtnGhost} onPress={() => setSpecTarget(null)} testID="class-tree-spec-cancel">
+                    <Text style={styles.modalBtnGhostTxt}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.modalBtn, { backgroundColor: identity.color }]}
+                    disabled={busySpec === specTarget.id}
+                    onPress={confirmSpecialization}
+                    testID="class-tree-spec-confirm"
+                  >
+                    <Text style={styles.modalBtnTxt}>{busySpec ? "Locking in…" : "Choose Path"}</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -286,6 +421,7 @@ const styles = StyleSheet.create({
   },
   classCardName: { color: COLORS.onSurface, fontSize: 11, fontWeight: "700" },
   currentTag: { fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  specTag: { fontSize: 12, fontWeight: "800" },
   identityCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
     padding: SPACING.md, gap: 6,
@@ -318,6 +454,41 @@ const styles = StyleSheet.create({
   claimBtn: { backgroundColor: COLORS.brand, borderRadius: RADIUS.md, paddingVertical: 9, alignItems: "center" },
   claimBtnDisabled: { backgroundColor: COLORS.surfaceTertiary },
   claimBtnTxt: { color: COLORS.onBrand, fontSize: 12, fontWeight: "800" },
+  // Branch / Specialization section
+  branchSection: {
+    backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1.5,
+    padding: SPACING.md, gap: SPACING.sm,
+  },
+  branchSectionHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  branchSectionTitle: { fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  branchLocked: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: SPACING.sm, opacity: 0.6 },
+  branchLockedTxt: { color: COLORS.onSurfaceTertiary, fontSize: 12, flex: 1, lineHeight: 17 },
+  branchIntro: { color: COLORS.onSurfaceTertiary, fontSize: 12, lineHeight: 17, marginBottom: 4 },
+  specCard: {
+    backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.md, borderWidth: 1.5,
+    padding: SPACING.sm, gap: 6,
+  },
+  specCardHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  specIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  specCardName: { color: COLORS.onSurface, fontSize: 13, fontWeight: "700" },
+  specCardCareer: { color: COLORS.onSurfaceTertiary, fontSize: 10, marginTop: 1 },
+  specCardDesc: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 16 },
+  specBonusRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 5,
+    borderTopWidth: 1, paddingTop: 5, marginTop: 2,
+  },
+  specBonusTxt: { fontSize: 11, flex: 1, lineHeight: 16 },
+  // Chosen specialization card
+  specChosenCard: {
+    borderRadius: RADIUS.md, borderWidth: 2,
+    padding: SPACING.sm, gap: 6, backgroundColor: COLORS.surfaceTertiary,
+  },
+  specChosenHead: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  specChosenLabel: { fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  specChosenName: { color: COLORS.onSurface, fontSize: 15, fontWeight: "700" },
+  specChosenCareer: { color: COLORS.onSurfaceTertiary, fontSize: 10 },
+  specChosenDesc: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 16 },
+  // Active bonuses
   bonusCard: {
     backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1.5,
     padding: SPACING.md, gap: 6,

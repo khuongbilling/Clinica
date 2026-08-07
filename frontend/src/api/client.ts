@@ -34,4 +34,9 @@ export const api = {
   getPlayer: (id: string) => http<PlayerState>(`/player/${id}`),
   updatePlayer: (id: string, patch: Partial<PlayerState>) =>
     http<PlayerState>(`/player/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
+  claimSpecialization: (id: string, specializationId: string) =>
+    http<PlayerState>(`/player/${id}/claim-specialization`, {
+      method: 'POST',
+      body: JSON.stringify({ specialization_id: specializationId }),
+    }),
 };

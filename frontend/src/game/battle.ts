@@ -178,6 +178,7 @@ export interface BattleState {
   classBonus: ClassTreeBattleBonus | null;
   classFirstScoutUsed: boolean;        // Seer: true after the first scout action of this battle
   classStabilizeUsedThisTurn: boolean; // Caretaker: true when any stabilize skill fired this turn
+  classItemFirstUsed: boolean;         // Alchemist lotus_pharmacist: true after first item consumed (free-AP once)
 
   // Push 10 — Aggregated equipment effects per hero (computed once at initBattle).
   // Keyed by hero.id. Heroes with no equipped items get a neutral (all-1.00) effect.
@@ -558,6 +559,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     classBonus: opts.classTreeBonus ?? null,
     classFirstScoutUsed: false,
     classStabilizeUsedThisTurn: false,
+    classItemFirstUsed: false,
 
     // Push 10 — pre-compute each hero's aggregated equipment effect once at init.
     heroEquipmentEffects: Object.fromEntries(
@@ -1183,9 +1185,11 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   }
   const hero = s.team.find(h => h.id === heroId);
 
-  // Item cost with prepared-pharmacy discount
+  // Item cost — prepared-pharmacy discount, then Alchemist lotus_pharmacist first-item-free
   let cost = item.costAP;
   if (s.preparedItemDiscount === item.name) cost = Math.max(1, cost - 1);
+  const itemFirstFreeActive = (s.classBonus?.itemFirstFree ?? false) && !s.classItemFirstUsed;
+  if (itemFirstFreeActive) cost = 0;
   if (s.ap < cost) return { state: s, message: 'Not enough AP.', aborted: true };
 
   const qty = s.inventory[item.name] || 0;
@@ -1203,7 +1207,11 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
     ap: s.ap - cost,
     inventory: { ...s.inventory, [item.name]: qty - 1 },
     turnsTaken: post.turnsTaken + 1,
-    log: [...post.log, `${hero?.name || 'Hero'} used ${item.displayName}.`],
+    classItemFirstUsed: true,
+    log: [
+      ...post.log,
+      `${hero?.name || 'Hero'} used ${item.displayName}.${itemFirstFreeActive ? ' 🧪 Lotus Pharmacist: first item this battle costs 0 AP.' : ''}`,
+    ],
   }, heroId);
 
   // Build modifier bags for item use (no castMult for items — no cast prompt).
@@ -1257,6 +1265,13 @@ export function useItem(s: BattleState, item: Item): ApplyResult {
   if (item.target === 'clue') {
     next = revealHiddenClues(next, 1);
     effectType = 'clue';
+  }
+
+  // Task 513 — Alchemist ward_artisan: flat stability bonus on every item use
+  const itemRestoreStab = s.classBonus?.itemRestoreStability ?? 0;
+  if (itemRestoreStab > 0 && item.target !== 'clue') {
+    next.stability = clamp(next.stability + itemRestoreStab, 0, 100);
+    next.log = [...next.log, `🧪 Ward Artisan: +${itemRestoreStab} Stability from compound synthesis.`];
   }
 
   // NM-01: resolve via canonical pathwayRoles
@@ -1547,7 +1562,14 @@ export function answerClinicalCue(s: BattleState, optionIndex: number): ApplyRes
     const leaderCueLog = cueLeaderAp > 0 ? `, +${cueLeaderAp} AP (Leader bonus)` : '';
     const cueBonusClassFlat = s.classBonus?.cueBonusFlatBonus ?? 0;
     const classCueLog = cueBonusClassFlat > 0 ? `, Scholar empowerment +${cueBonusClassFlat}` : '';
-    next = { ...next, log: [...next.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered${bonusLog}${leaderCueLog}${classCueLog})`] };
+    // Task 513 — specialization AP bonuses on correct cue: Seer clinical_oracle (cueApRefund)
+    // and Scholar grand_archivist (cueTeamApBonus). Both grant immediate bonus AP.
+    const specCueAp = (s.classBonus?.cueApRefund ?? 0) + (s.classBonus?.cueTeamApBonus ?? 0);
+    if (specCueAp > 0) {
+      next = { ...next, ap: Math.min(next.ap + specCueAp, AP_BONUS_CEILING) };
+    }
+    const specCueLog = specCueAp > 0 ? `, +${specCueAp} AP (specialization bonus)` : '';
+    next = { ...next, log: [...next.log, `✅ Clinical Cue correct: ${cue.rationale} (+1 bonus AP above the limit, all stabilizing actions this turn empowered${bonusLog}${leaderCueLog}${classCueLog}${specCueLog})`] };
     return { state: next, message: 'Correct! +1 AP and a power boost.', status: 'appropriate' };
   }
 
@@ -1873,6 +1895,14 @@ export function endPlayerTurn(s: BattleState): BattleState {
   }
 
   let stability = clamp(s.stability - reduced, 0, 100);
+  // Task 513 — Guardian ward_shield / Caretaker sanctuary: Stability floor prevents partial
+  // damage from pushing stability below the threshold. Does NOT prevent lethal damage —
+  // if stability reaches 0 the player still loses normally.
+  const classFloor = s.classBonus?.stabilityFloor ?? 0;
+  if (classFloor > 0 && stability > 0 && stability < classFloor) {
+    stability = classFloor;
+    log.push(`🌸 Sanctuary: Stability held at ${classFloor} (partial damage absorbed by floor).`);
+  }
   let corruption = s.corruption;
   if (s.reboundArmed && !s.reassessUsed) {
     corruption = Math.max(0, corruption + 10);
@@ -1897,6 +1927,13 @@ export function endPlayerTurn(s: BattleState): BattleState {
     log.push(`🩸 ${s.enemy.name} unleashes ${attack.name}. Stability −${reduced}%.${shieldNote}`);
   }
 
+  // Task 513 — Caretaker lotus_recovery / community_healer: flat stability restore after enemy turn
+  const perTurnHeal = s.classBonus?.stabilityPerEnemyTurn ?? 0;
+  if (perTurnHeal > 0) {
+    stability = clamp(stability + perTurnHeal, 0, 100);
+    log.push(`🌸 Recovery: +${perTurnHeal} Stability restored after enemy turn.`);
+  }
+
   if (stability <= 0) {
     log.push(`💀 ${s.enemy.dangerTrigger}. The patient is lost.`);
     return { ...s, stability: 0, corruption, shieldNext: 0, log, outcome: 'loss', equipFirstLossUsed };
@@ -1919,7 +1956,7 @@ export function endPlayerTurn(s: BattleState): BattleState {
     ...s,
     stability,
     corruption,
-    shieldNext: 0,
+    shieldNext: 0, // shield consumed by damage this turn; regen applied below
     ap: nextAp,
     apMax: nextAp,
     turn: s.turn + 1,
@@ -1935,6 +1972,15 @@ export function endPlayerTurn(s: BattleState): BattleState {
     selectedHeroId: s.team.find(h => !heroActionsUsed[h.id])?.id || s.selectedHeroId,
     dangerTriggerActive,
   };
+
+  // Task 513 — Guardian triage_commander: shield regenerates each turn.
+  // Applied additively AFTER state construction so it stacks with any other source that
+  // sets shieldNext (e.g. a future passive that already grants a starting shield).
+  const shieldRegen = s.classBonus?.shieldRegenPerTurn ?? 0;
+  if (shieldRegen > 0) {
+    next = { ...next, shieldNext: next.shieldNext + shieldRegen };
+    next.log = [...next.log, `🛡 Triage Commander: Shield +${shieldRegen} refreshed for next turn.`];
+  }
 
   // Clinical Cue — next question lands on a randomized turn, always ≥2 turns after the last one
   if (next.turn >= next.nextCueTurn) {

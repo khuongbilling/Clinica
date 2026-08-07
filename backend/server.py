@@ -134,6 +134,7 @@ class Player(BaseModel):
     class_diagnostic_resonance: Optional[str] = None
     class_diagnostic_secondary: Optional[str] = None
     class_progress: Dict[str, List[int]] = Field(default_factory=dict)
+    class_specialization: Dict[str, str] = Field(default_factory=dict)
     mastery: MasteryStats = Field(default_factory=MasteryStats)
     codex_unlocked: List[str] = Field(default_factory=list)
     heroes_owned: List[str] = Field(default_factory=list)
@@ -236,6 +237,8 @@ class PlayerUpdate(BaseModel):
     class_diagnostic_resonance: Optional[str] = None
     class_diagnostic_secondary: Optional[str] = None
     class_progress: Optional[Dict[str, List[int]]] = None
+    # class_specialization is intentionally excluded — it is immutable once set
+    # and can only be written through POST /player/{id}/claim-specialization.
     mastery: Optional[MasteryStats] = None
     codex_unlocked: Optional[List[str]] = None
     heroes_owned: Optional[List[str]] = None
@@ -383,10 +386,88 @@ async def update_player(player_id: str, payload: PlayerUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="player not found")
     updates: Dict[str, Any] = {k: v for k, v in payload.model_dump().items() if v is not None}
+    # class_specialization is immutable once set; refuse any attempt to overwrite
+    # it through the generic update path — use POST /claim-specialization instead.
+    updates.pop("class_specialization", None)
     if "mastery" in updates and isinstance(updates["mastery"], dict) is False:
         updates["mastery"] = updates["mastery"].model_dump()
     updates["updated_at"] = now_iso()
     await db.players.update_one({"id": player_id}, {"$set": updates})
+    refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return Player(**refreshed)
+
+
+# Task 513 — Valid specialization IDs per class (mirrors classTree.ts CLASS_SPECIALIZATIONS).
+# Kept in sync manually; the endpoint rejects any ID not in this map.
+VALID_SPECIALIZATIONS: dict[str, list[str]] = {
+    "guardian":  ["triage_commander", "intervention_specialist", "ward_shield"],
+    "seer":      ["clinical_oracle", "mindweaver", "observer"],
+    "caretaker": ["community_healer", "sanctuary", "lotus_recovery"],
+    "scholar":   ["grand_archivist", "epidemic_warden", "research_lead"],
+    "alchemist": ["lotus_pharmacist", "innovation_alchemist", "ward_artisan"],
+    "medic":     ["code_calm_specialist", "field_commander", "adaptive_healer"],
+}
+
+
+class ClaimSpecializationRequest(BaseModel):
+    specialization_id: str
+
+
+@api_router.post("/player/{player_id}/claim-specialization", response_model=Player)
+async def claim_specialization(player_id: str, payload: ClaimSpecializationRequest):
+    """Atomically lock a class specialization after Lv30 is claimed.
+
+    Guards enforced server-side (all validated before any write):
+    - class_id derived from player.class_tree_id must be in VALID_SPECIALIZATIONS
+    - specialization_id must be a valid id for that class
+    - A single conditional $set write atomically verifies:
+        * class_progress[class_id] contains 30  (Lv30 claimed)
+        * class_specialization[class_id] does not already exist  (permanent lock)
+      If either condition fails, the filter matches no document → 409 Conflict.
+    Concurrent requests therefore cannot both succeed: the second write will find
+    the field already set and return 409.
+    """
+    # Read once only to get class_tree_id and validate inputs before the write.
+    doc = await db.players.find_one({"id": player_id}, {"_id": 0, "class_tree_id": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="player not found")
+
+    class_id: str | None = doc.get("class_tree_id")
+    if not class_id or class_id not in VALID_SPECIALIZATIONS:
+        raise HTTPException(status_code=400, detail=f"No valid class active on this player (class_tree_id={class_id!r})")
+
+    valid_ids = VALID_SPECIALIZATIONS[class_id]
+    if payload.specialization_id not in valid_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{payload.specialization_id}' is not a valid specialization for class '{class_id}'. Valid: {valid_ids}"
+        )
+
+    # Single conditional write — the filter simultaneously enforces:
+    #   1. Lv30 is in class_progress[class_id]
+    #   2. class_specialization[class_id] has not been set yet
+    # If the filter matches zero documents, either condition failed (or both).
+    spec_field = f"class_specialization.{class_id}"
+    result = await db.players.update_one(
+        {
+            "id": player_id,
+            f"class_progress.{class_id}": 30,
+            spec_field: {"$exists": False},
+        },
+        {"$set": {spec_field: payload.specialization_id, "updated_at": now_iso()}},
+    )
+
+    if result.matched_count == 0:
+        # Either Lv30 not claimed, or specialization already set.
+        # Re-read only to return a meaningful error message.
+        current = await db.players.find_one({"id": player_id}, {"_id": 0, "class_progress": 1, "class_specialization": 1})
+        if not current:
+            raise HTTPException(status_code=404, detail="player not found")
+        existing_spec = (current.get("class_specialization") or {}).get(class_id)
+        if existing_spec:
+            raise HTTPException(status_code=409, detail=f"Specialization already locked for '{class_id}': {existing_spec}")
+        raise HTTPException(status_code=400, detail=f"Lv30 must be claimed for '{class_id}' before choosing a specialization")
+
     refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
     return Player(**refreshed)
 

@@ -167,7 +167,11 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
     // Skipped for prologue loaner battles so tutorial fights stay unscaled.
     const classId = ((player?.class_tree_id as ClassId) || 'medic');
     const classTreeBonus = !isPrologueLoanerBattle
-      ? getClassTreeBattleBonuses(classId, (player?.class_progress || {})[classId] || [])
+      ? getClassTreeBattleBonuses(
+          classId,
+          (player?.class_progress || {})[classId] || [],
+          (player?.class_specialization || {})[classId],
+        )
       : null;
     const base = initBattle(enemy, battleTeam, {
       inventory: player?.inventory || {},

@@ -469,4 +469,8 @@ export interface PlayerState {
   // Earned through Ward Shift clears, University milestones, boss defeats, and
   // Daily Rounds milestones. Backfilled as [] for existing players.
   owned_equipment?: string[];
+  // Task 513 — Specialization branches (Lv40+). Maps classId → chosen
+  // specialization id (e.g. 'triage_commander'). Permanently locked once set
+  // per class. Backfilled as {} for existing players in normalizeProgression.
+  class_specialization?: Record<string, string>;
 }
