@@ -1,10 +1,13 @@
 /**
- * /journey/sagas — Sagas screen
+ * /journey/sagas — Sagas list (deep-link / multi-saga fallback)
  *
- * First drill-down level of the Journey hierarchy.
- * Lists all Sagas from journeyHierarchy.ts using the BannerCard pattern.
- * Coming-soon Sagas display in a visually distinct locked state.
- * Study/Lessons and Memories banners appear below the Saga list.
+ * Reached by direct link or when the player wants to pick a specific Saga.
+ * For now, Saga I is active and Saga II is a locked teaser. Tapping a Saga
+ * navigates forward to its Ages screen.
+ *
+ * The primary entry point is the Journey tab itself, which already shows Ages
+ * from the active Saga. This route exists for deep-links and for when Saga II
+ * ships as a separate selectable arc.
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -15,41 +18,15 @@ import { BannerCard } from "@/src/components/ModeBanners";
 import { JOURNEY_SAGAS, isNodeLocked } from "@/src/game/journeyHierarchy";
 import type { ModeCardDef } from "@/src/game/modeHub";
 import { playerLevelFromXp } from "@/src/game/progression";
-import { ROUTES, dynRoute } from "@/src/game/routes";
-import { unseenMemoriesCount } from "@/src/game/storyScenes";
+import { dynRoute } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { SERIF, UI } from "@/src/theme/ui";
-
-const STUDY_BANNER: ModeCardDef = {
-  id: "journey-study",
-  title: "Study · Lessons",
-  subtitle: "Clinical cases, cue labs, and training",
-  icon: "school",
-  accentColor: "#E8C868",
-  status: "active",
-  size: "large",
-  artBrief: "",
-  imageKey: "study",
-};
-
-const MEMORIES_BANNER: ModeCardDef = {
-  id: "journey-memories",
-  title: "Memories",
-  subtitle: "Relive the moments you've unlocked",
-  icon: "sparkles",
-  accentColor: "#BBA7EA",
-  status: "active",
-  size: "large",
-  artBrief: "",
-  imageKey: "journey-memories",
-};
 
 export default function SagasScreen() {
   const router = useRouter();
   const { player } = usePlayer();
   const playerLevel = player ? playerLevelFromXp(player.xp ?? 0).level : 1;
-  const unseen = unseenMemoriesCount(player);
 
   return (
     <SafeAreaView style={s.root} edges={["top"]}>
@@ -65,7 +42,10 @@ export default function SagasScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.sectionLabel}>Chapters & Story</Text>
+        <Text style={s.intro}>
+          Each Saga is a self-contained arc of the healer's journey. Saga I is
+          open — the rest will unlock as the story expands.
+        </Text>
 
         {JOURNEY_SAGAS.map((saga) => {
           const locked = isNodeLocked(saga, playerLevel);
@@ -92,41 +72,15 @@ export default function SagasScreen() {
               key={saga.id}
               mode={mode}
               onPress={() => {
-                if (!locked) {
-                  router.push(dynRoute.saga(saga.id));
-                }
+                if (!locked) router.push(dynRoute.saga(saga.id));
               }}
-              height={156}
+              height={160}
               locked={locked}
               lockLabel={lockLabel}
               testID={`sagas-banner-${saga.id}`}
             />
           );
         })}
-
-        <View style={s.divider} />
-        <Text style={s.sectionLabel}>Learning & Memories</Text>
-
-        <BannerCard
-          mode={STUDY_BANNER}
-          onPress={() => router.push(ROUTES.STUDY_TAB)}
-          height={130}
-          testID="sagas-banner-study"
-        />
-
-        <View>
-          <BannerCard
-            mode={MEMORIES_BANNER}
-            onPress={() => router.push(ROUTES.storyScene)}
-            height={130}
-            testID="sagas-banner-memories"
-          />
-          {unseen > 0 && (
-            <View style={s.badge} pointerEvents="none">
-              <Text style={s.badgeTxt}>{unseen > 9 ? "9+" : unseen}</Text>
-            </View>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,20 +108,8 @@ const s = StyleSheet.create({
     color: UI.text, fontSize: 24, fontWeight: "700", fontFamily: SERIF,
     letterSpacing: 0.5,
   },
+  intro: {
+    color: UI.textDim, fontSize: 13, lineHeight: 19, marginBottom: SPACING.sm,
+  },
   scroll: { padding: SPACING.md, gap: SPACING.sm, paddingBottom: SPACING.xl },
-  sectionLabel: {
-    color: UI.textDim, fontSize: 11, fontWeight: "700", letterSpacing: 1.1,
-    textTransform: "uppercase", marginBottom: 2,
-  },
-  divider: {
-    height: 1, backgroundColor: UI.border, marginVertical: SPACING.sm,
-  },
-  badge: {
-    position: "absolute", top: -5, right: -3,
-    minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5,
-    backgroundColor: "#E5484D",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1.5, borderColor: UI.sanctuaryBg,
-  },
-  badgeTxt: { color: "#FFF", fontSize: 11, fontWeight: "800" },
 });

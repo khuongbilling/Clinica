@@ -77,7 +77,7 @@ export interface JourneySaga {
 export const JOURNEY_SAGAS: JourneySaga[] = [
   {
     id: "saga-1",
-    title: "Saga I — The Grand Ward",
+    title: "The Grand Ward",
     subtitle: "The foundational arc of every healer's calling",
     theme: "The Grand Ward",
     accentColor: "#4FD8C4",
@@ -87,9 +87,12 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
     ages: [
       {
         id: "age-1",
-        title: "Age I — Awakening",
-        subtitle: "The first steps inside the ward",
-        theme: "Awakening",
+        // ── Age of Foundation ─────────────────────────────────────────────
+        // Covers the player's university years and pre-real-world clinical
+        // training: four Books of ~10 chapters each, one academic year per Book.
+        title: "Age of Foundation",
+        subtitle: "University and pre-clinical training · The formative years",
+        theme: "Foundation",
         accentColor: "#D4AF37",
         unlockCondition: null,
         status: "active",
@@ -97,9 +100,9 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
         books: [
           {
             id: "book-1",
-            title: "Book I — The Ward",
-            subtitle: "Chapters 1–10 · Phase 1 complete arc",
-            theme: "The Ward",
+            title: "Book I: Kingdom of Healing",
+            subtitle: "Chapters 1–10 · First-year foundations and simulated patient care",
+            theme: "Kingdom of Healing",
             accentColor: "#D4AF37",
             chapterRange: [1, 10],
             unlockCondition: null,
@@ -108,22 +111,44 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
           },
           {
             id: "book-2",
-            title: "Book II — Beyond the Ward",
-            subtitle: "Coming soon · New chapters await",
-            theme: "Beyond the Ward",
+            title: "Book II: Anatomy of Duty",
+            subtitle: "Chapters 11–20 · Advanced sciences, disease mechanisms, and team roles",
+            theme: "Anatomy of Duty",
             accentColor: "#56CFE1",
             chapterRange: [11, 20],
             unlockCondition: null,
             status: "coming_soon",
             imageKey: "banner-book-2",
           },
+          {
+            id: "book-3",
+            title: "Book III: The Living Ward",
+            subtitle: "Chapters 21–30 · Clinical immersion and complex simulations",
+            theme: "The Living Ward",
+            accentColor: "#7EB8A0",
+            chapterRange: [21, 30],
+            unlockCondition: null,
+            status: "coming_soon",
+            imageKey: "banner-book-2", // placeholder art until Book III art is generated
+          },
+          {
+            id: "book-4",
+            title: "Book IV: Before the Oath",
+            subtitle: "Chapters 31–40 · Final rotations, capstone exams, and the transition into real practice",
+            theme: "Before the Oath",
+            accentColor: "#C4956A",
+            chapterRange: [31, 40],
+            unlockCondition: null,
+            status: "coming_soon",
+            imageKey: "banner-book-1", // placeholder art until Book IV art is generated
+          },
         ],
       },
       {
         id: "age-2",
-        title: "Age II — Reckoning",
-        subtitle: "Coming soon · The stakes grow higher",
-        theme: "Reckoning",
+        title: "Age II — The Outer Wards",
+        subtitle: "Coming soon · The stakes grow higher beyond the training grounds",
+        theme: "The Outer Wards",
         accentColor: "#E07B54",
         unlockCondition: null,
         status: "coming_soon",
