@@ -4,8 +4,9 @@
  * Tabs: Chapter | Quests | Memories
  */
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
+import { getBook, getBookChapters } from "@/src/game/journeyHierarchy";
 import { FEATURE_FLAG_JOURNEY_FOG_MAP_V1 } from "@/src/game/featureFlags";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,8 +47,6 @@ import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
 import { ShiftSelector } from "@/src/features/journey/ui/ShiftSelector";
 import { getShiftAvailability } from "@/src/features/journey/ui/shiftAvailability";
 import { getFocusedChapters, buildChapterUiSummary } from "@/src/features/journey/ui/journeyVisibility";
-import { ChapterCompletion } from "@/src/features/journey/ui/ChapterCompletion";
-import type { ChapterUiSummary } from "@/src/features/journey/ui/journeyUi.types";
 import {
   loadJourneyExpandedPreference,
   saveJourneyExpandedPreference,
@@ -62,6 +61,11 @@ import { UI } from "@/src/theme/ui";
 
 export default function JourneyScreen() {
   const router = useRouter();
+  const {
+    bookId,
+    sagaId,
+    ageId,
+  } = useLocalSearchParams<{ bookId?: string; sagaId?: string; ageId?: string }>();
   const { player, loading, claimJourneyNode } = usePlayer();
   const [activeTab, setActiveTab]       = useState("chapter");
   const [showRounds, setShowRounds]     = useState(false);
@@ -85,16 +89,34 @@ export default function JourneyScreen() {
   const [activeShift, setActiveShift] = useState<TimeOfDay>('day');
   const chapterIdxInitialized = useRef(false);
 
-  // Auto-select the player's current chapter on first load
+  // Auto-select the player's current chapter on first load.
+  // When a bookId is provided, clamp to chapters within that book's scope so
+  // the rendered chapter is always one that belongs to the active Book.
   useEffect(() => {
     if (!player || chapterIdxInitialized.current) return;
     chapterIdxInitialized.current = true;
     const lvl     = playerLevelFromXp(player.xp ?? 0).level;
     const claimed = player.claimed_journey_nodes ?? [];
     const current = getCurrentChapter(lvl, claimed);
-    const idx     = Math.max(0, CHAPTERS.findIndex((ch) => ch.id === current.id));
-    setSelectedChapterIdx(idx);
-  }, [player]);
+    const candidateIdx = Math.max(0, CHAPTERS.findIndex((ch) => ch.id === current.id));
+
+    // When navigated from a Book, restrict selection to that book's chapters.
+    if (sagaId && ageId && bookId) {
+      const book = getBook(sagaId, ageId, bookId);
+      if (book) {
+        const [min, max] = book.chapterRange;
+        const inScope = CHAPTERS[candidateIdx]?.number >= min &&
+                        CHAPTERS[candidateIdx]?.number <= max;
+        if (!inScope) {
+          // Default to the first chapter in the book's range.
+          const firstInScope = CHAPTERS.findIndex((ch) => ch.number >= min && ch.number <= max);
+          setSelectedChapterIdx(Math.max(0, firstInScope));
+          return;
+        }
+      }
+    }
+    setSelectedChapterIdx(candidateIdx);
+  }, [player, sagaId, ageId, bookId]);
 
   if (loading || !player) {
     return (
@@ -111,13 +133,37 @@ export default function JourneyScreen() {
   const currentChapter = getCurrentChapter(playerLevel, claimedNodes);
   const nextStep     = getNextRecommendedPart(playerLevel, claimedNodes);
 
+  // When opened from a Book card, scope the visible chapters to that Book.
+  // Falls back to all CHAPTERS when no bookId is present (preserves existing deep-links).
+  const bookData = (sagaId && ageId && bookId)
+    ? getBook(sagaId, ageId, bookId)
+    : undefined;
+  const scopedChapters = bookData ? getBookChapters(bookData) : CHAPTERS;
+  const bookHeaderKicker = bookData
+    ? `${bookData.title.toUpperCase()} · CH. ${bookData.chapterRange[0]}–${bookData.chapterRange[1]}`
+    : "PHASE 1 · CHAPTERS 1–10";
+
   // Push I: build ChapterUiSummary for every chapter, then let the selector
   // decide which ones are shown.  getFocusedChapters returns [current, next]
   // in focused mode and all chapters in expanded mode.
-  const chapterSummaries = CHAPTERS.map((ch) =>
+  const chapterSummaries = scopedChapters.map((ch) =>
     buildChapterUiSummary(ch, playerLevel, claimedNodes),
   );
   const visibleChapters = getFocusedChapters(chapterSummaries, fullJourneyExpanded);
+
+  // When navigated from a Book, ensure selectedChapterIdx always refers to a
+  // chapter that belongs to scopedChapters — guards against the global index
+  // drifting outside the book range (e.g. initial player chapter is in another
+  // book, or the index is left over from a previous navigation).
+  const safeSelectedChapterIdx = (() => {
+    if (!bookData) return selectedChapterIdx;
+    const ch = CHAPTERS[selectedChapterIdx];
+    const [min, max] = bookData.chapterRange;
+    if (ch && ch.number >= min && ch.number <= max) return selectedChapterIdx;
+    // Clamp: find the first chapter in the book's range.
+    const firstInScope = CHAPTERS.findIndex((c) => c.number >= min && c.number <= max);
+    return Math.max(0, firstInScope);
+  })();
 
   // ── Push B: deterministic recommendation ────────────────────────────────
   // Build JourneyNodeUi[] from authoritative progression state, then ask the
@@ -226,7 +272,7 @@ export default function JourneyScreen() {
           <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.kicker}>PHASE 1 · CHAPTERS 1–10</Text>
+          <Text style={styles.kicker}>{bookHeaderKicker}</Text>
           <Text style={styles.title}>Chapter Journey</Text>
         </View>
         <View style={styles.levelBadge}>
@@ -331,7 +377,7 @@ export default function JourneyScreen() {
               const ch  = CHAPTERS[chaptersIdx];
               const st  = getChapterStatus(ch, playerLevel, claimedNodes);
               const locked   = st === "locked";
-              const selected = chaptersIdx === selectedChapterIdx;
+              const selected = chaptersIdx === safeSelectedChapterIdx;
               return (
                 <Pressable
                   key={ch.id}
@@ -388,9 +434,8 @@ export default function JourneyScreen() {
             testID="journey-scroll"
           >
             <ChapterPage
-              chapter={CHAPTERS[selectedChapterIdx]}
-              chapterStatus={getChapterStatus(CHAPTERS[selectedChapterIdx], playerLevel, claimedNodes)}
-              chapterSummary={chapterSummaries[selectedChapterIdx]}
+              chapter={CHAPTERS[safeSelectedChapterIdx]}
+              chapterStatus={getChapterStatus(CHAPTERS[safeSelectedChapterIdx], playerLevel, claimedNodes)}
               battleStars={player.battle_stars ?? {}}
               claimedNodes={claimedNodes}
               storyScenesSeen={player.story_scenes_seen ?? []}
@@ -659,7 +704,6 @@ function JourneyCta({
 function ChapterPage({
   chapter,
   chapterStatus,
-  chapterSummary,
   battleStars,
   claimedNodes,
   storyScenesSeen,
@@ -670,7 +714,6 @@ function ChapterPage({
 }: {
   chapter:           Chapter;
   chapterStatus:     ChapterStatus;
-  chapterSummary:    ChapterUiSummary;
   battleStars:       Record<string, number>;
   claimedNodes:      string[];
   storyScenesSeen:   string[];
@@ -692,17 +735,6 @@ function ChapterPage({
     );
   }
 
-  // ── Chapter completion badge ─────────────────────────────────────────────
-  const completionBadge = (
-    <View style={cpStyles.completionWrap}>
-      <ChapterCompletion
-        storyCleared={chapterSummary.storyCleared}
-        masteryStars={chapterSummary.masteryStars}
-        maxMasteryStars={chapterSummary.maxMasteryStars}
-      />
-    </View>
-  );
-
   // ── MapMode dispatcher ───────────────────────────────────────────────────
   // Push 9: read chapter.mapMode and branch to the correct renderer.
   // Undefined / 'scrollable_chapter' → existing per-chapter visual maps.
@@ -713,32 +745,29 @@ function ChapterPage({
     // Player tile: bottom-centre of the grid (row 7, col 3) — stub for Push 9.
     const playerTileId = 'tile_7_3';
     return (
-      <>
-        {completionBadge}
-        <FogboundTileMap
-          chapter={chapter}
-          mapConfig={mapConfig}
-          playerTileId={playerTileId}
-          keyFragmentsCollected={0}
-          stamina={8}
-          maxStamina={12}
-          onTilePress={() => {/* no-op stub — Push 9 */}}
-          onBack={() => {/* handled by parent scroll view */}}
-        />
-      </>
+      <FogboundTileMap
+        chapter={chapter}
+        mapConfig={mapConfig}
+        playerTileId={playerTileId}
+        keyFragmentsCollected={0}
+        stamina={8}
+        maxStamina={12}
+        onTilePress={() => {/* no-op stub — Push 9 */}}
+        onBack={() => {/* handled by parent scroll view */}}
+      />
     );
   }
 
   if (resolvedMode === 'branching_triage') {
-    return <>{completionBadge}<BranchingTriageMap /></>;
+    return <BranchingTriageMap />;
   }
 
   if (resolvedMode === 'ward_restoration') {
-    return <>{completionBadge}<WardRestorationMap /></>;
+    return <WardRestorationMap />;
   }
 
   if (resolvedMode === 'dual_state') {
-    return <>{completionBadge}<DualStateMap /></>;
+    return <DualStateMap />;
   }
 
   // ── scrollable_chapter (default) ─────────────────────────────────────────
@@ -752,18 +781,14 @@ function ChapterPage({
     leadHeroSprite,
   };
 
-  const map = (() => {
-    switch (chapter.number) {
-      case 1:  return <Chapter1VisualMap {...shared} />;
-      case 2:  return <Chapter2VisualMap {...shared} />;
-      case 3:  return <Chapter3VisualMap {...shared} />;
-      case 4:  return <Chapter4VisualMap {...shared} />;
-      case 5:  return <Chapter5VisualMap {...shared} />;
-      default: return <GenericChapterVisualMap {...shared} chapter={chapter} />;
-    }
-  })();
-
-  return <>{completionBadge}{map}</>;
+  switch (chapter.number) {
+    case 1:  return <Chapter1VisualMap {...shared} />;
+    case 2:  return <Chapter2VisualMap {...shared} />;
+    case 3:  return <Chapter3VisualMap {...shared} />;
+    case 4:  return <Chapter4VisualMap {...shared} />;
+    case 5:  return <Chapter5VisualMap {...shared} />;
+    default: return <GenericChapterVisualMap {...shared} chapter={chapter} />;
+  }
 }
 
 const cpStyles = StyleSheet.create({
@@ -785,13 +810,6 @@ const cpStyles = StyleSheet.create({
     color:       COLORS.onSurfaceTertiary,
     textAlign:   "center",
     lineHeight:  20,
-  },
-  completionWrap: {
-    paddingHorizontal: SPACING.md,
-    paddingTop:        SPACING.sm,
-    paddingBottom:     SPACING.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: UI.sanctuaryBorder,
   },
 });
 

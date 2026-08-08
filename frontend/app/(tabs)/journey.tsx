@@ -13,50 +13,47 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
-import { getCurrentChapter } from "@/src/game/chapterJourney";
-import { FEATURE_FLAG_JOURNEY_FOG_MAP_V1 } from "@/src/game/featureFlags";
 import { type ModeCardDef } from "@/src/game/modeHub";
-import { playerLevelFromXp } from "@/src/game/progression";
-import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
+import { ROUTES, dynRoute } from "@/src/game/routes";
 import { unseenMemoriesCount } from "@/src/game/storyScenes";
 import { usePlayer } from "@/src/game/store";
 import { SPACING } from "@/src/theme/colors";
 import { SERIF, UI } from "@/src/theme/ui";
 
-const BANNERS: Record<string, ModeCardDef> = {
-  chapters: {
-    id: "journey-chapters",
-    title: "Chapters",
-    subtitle: "Follow the story across the wards",
-    icon: "map",
-    accentColor: "#4FD8C4",
-    status: "active",
-    size: "large",
-    artBrief: "",
-    imageKey: "journey-chapters",
-  } as ModeCardDef,
-  study: {
-    id: "journey-study",
-    title: "Study · Lessons",
-    subtitle: "Clinical cases, cue labs, and training",
-    icon: "school",
-    accentColor: "#E8C868",
-    status: "active",
-    size: "large",
-    artBrief: "",
-    imageKey: "study",
-  } as ModeCardDef,
-  memories: {
-    id: "journey-memories",
-    title: "Memories",
-    subtitle: "Relive the moments you've unlocked",
-    icon: "sparkles",
-    accentColor: "#BBA7EA",
-    status: "active",
-    size: "large",
-    artBrief: "",
-    imageKey: "journey-memories",
-  } as ModeCardDef,
+const SAGAS_BANNER: ModeCardDef = {
+  id: "journey-chapters",
+  title: "Sagas & Chapters",
+  subtitle: "Follow the story through Sagas, Ages, and Books",
+  icon: "map",
+  accentColor: "#4FD8C4",
+  status: "active",
+  size: "large",
+  artBrief: "",
+  imageKey: "journey-chapters",
+};
+
+const STUDY_BANNER: ModeCardDef = {
+  id: "journey-study",
+  title: "Study · Lessons",
+  subtitle: "Clinical cases, cue labs, and training",
+  icon: "school",
+  accentColor: "#E8C868",
+  status: "active",
+  size: "large",
+  artBrief: "",
+  imageKey: "study",
+};
+
+const MEMORIES_BANNER: ModeCardDef = {
+  id: "journey-memories",
+  title: "Memories",
+  subtitle: "Relive the moments you've unlocked",
+  icon: "sparkles",
+  accentColor: "#BBA7EA",
+  status: "active",
+  size: "large",
+  artBrief: "",
+  imageKey: "journey-memories",
 };
 
 export default function JourneyHub() {
@@ -64,51 +61,28 @@ export default function JourneyHub() {
   const { player } = usePlayer();
   const unseen = unseenMemoriesCount(player);
 
-  // Derive the player's current chapter so the Chapters banner can skip the
-  // chapter-list screen and open the fog-map directly (2 taps instead of 3).
-  const playerLevel   = player ? playerLevelFromXp(player.xp ?? 0).level : 1;
-  const claimedNodes  = player?.claimed_journey_nodes ?? [];
-  const currentChapter = player ? getCurrentChapter(playerLevel, claimedNodes) : null;
-
-  function handleChaptersBannerPress() {
-    if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1 && currentChapter) {
-      // Push 16: go directly to the fog-map for the player's current chapter.
-      // The old /journey chapter-list screen remains reachable via the back
-      // button on the fog-map for players who want to browse other chapters.
-      router.push(dynRoute.chapterFogMap(String(currentChapter.number)) as AppRoute);
-    } else {
-      router.push(ROUTES.JOURNEY);
-    }
-  }
-
   return (
     <SafeAreaView style={s.root} edges={["top"]}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.title}>Journey</Text>
         <Text style={s.subtitle}>Your path through the Grand Ward</Text>
 
+        {/* Primary CTA — opens the Saga list (full hierarchy entry point) */}
         <BannerCard
-          mode={{
-            ...BANNERS.chapters,
-            // Show the active chapter name when the fog-map flag is on and the
-            // player is loaded, so the banner reads as a live shortcut.
-            subtitle: FEATURE_FLAG_JOURNEY_FOG_MAP_V1 && currentChapter
-              ? `Ch.${currentChapter.number} · ${currentChapter.theme}`
-              : BANNERS.chapters.subtitle,
-          }}
-          onPress={handleChaptersBannerPress}
+          mode={SAGAS_BANNER}
+          onPress={() => router.push(dynRoute.sagas())}
           height={140}
           testID="journey-banner-chapters"
         />
         <BannerCard
-          mode={BANNERS.study}
+          mode={STUDY_BANNER}
           onPress={() => router.push(ROUTES.STUDY_TAB)}
           height={140}
           testID="journey-banner-study"
         />
         <View>
           <BannerCard
-            mode={BANNERS.memories}
+            mode={MEMORIES_BANNER}
             onPress={() => router.push(ROUTES.storyScene)}
             height={140}
             testID="journey-banner-memories"

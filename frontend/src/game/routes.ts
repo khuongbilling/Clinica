@@ -34,6 +34,9 @@ const STUDY_TAB:      AppRoute = "/(tabs)/study"     as AppRoute;
 // SANCTUARY is the new label for KINGDOM in the bottom bar (same route).
 const SANCTUARY:      AppRoute = "/(tabs)/kingdom";
 
+// ── Journey hierarchy ────────────────────────────────────────────────────────
+const JOURNEY_SAGAS:   AppRoute = "/journey/sagas" as AppRoute;
+
 // ── Core gameplay ────────────────────────────────────────────────────────────
 const BATTLE:          AppRoute = "/battle";
 const MISSION_LOADOUT: AppRoute = "/mission-loadout";
@@ -198,6 +201,10 @@ export const ROUTES = {
   SHOP,
   LOTUS_RECALL,
 
+  // ── Journey hierarchy ─────────────────────────────────────────────────────
+  JOURNEY_SAGAS,
+  journeySagas: JOURNEY_SAGAS,
+
   // ── camelCase aliases (for files migrated before the uppercase convention) ─
   tabs:             HOME,
   tabHome:          HOME,
@@ -338,4 +345,13 @@ export const dynRoute = {
   // Not reachable from any in-app navigation until the flag is enabled.
   chapterFogMap: (chapterId: string): AppRoute =>
     `/journey/chapter/${chapterId}/fog-map` as AppRoute,
+
+  // ── Journey hierarchy (Saga → Age → Book) ────────────────────────────────
+  sagas: (): AppRoute => JOURNEY_SAGAS,
+  saga:  (sagaId: string): AppRoute =>
+    `/journey/saga/${sagaId}/ages` as AppRoute,
+  age:   (sagaId: string, ageId: string): AppRoute =>
+    `/journey/saga/${sagaId}/age/${ageId}/books` as AppRoute,
+  book:  (sagaId: string, ageId: string, bookId: string): AppRoute =>
+    `/journey?bookId=${bookId}&sagaId=${sagaId}&ageId=${ageId}` as AppRoute,
 } as const;
