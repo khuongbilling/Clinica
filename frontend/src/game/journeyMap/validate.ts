@@ -24,9 +24,11 @@ export interface FlatChestRates {
 // ── Encounter rates ───────────────────────────────────────────────────────────
 
 /**
- * Validates that an EncounterRates object is internally consistent:
+ * Validates that an encounter-rate map is internally consistent:
  * - All individual rates are non-negative.
  * - Rates sum to exactly TOTAL_BP (10 000).
+ *
+ * Accepts the flat record returned by getEncounterRatesBp().
  */
 export function validateEncounterRates(
   cfg: FlatEncounterRates,
@@ -47,13 +49,15 @@ export function validateEncounterRates(
 // ── Chest quality rates ───────────────────────────────────────────────────────
 
 /**
- * Validates that a ChestQualityRates object is internally consistent:
+ * Validates that a chest-quality rate map is internally consistent:
  * - All individual rates are non-negative.
  * - Rates sum to exactly TOTAL_BP (10 000).
  * - Bronze ≥ CHEST_BRONZE_MIN_BP (4 000 bp = 40%).
  * - Gold ≤ CHEST_GOLD_MAX_BP (1 500 bp = 15%).
  * - Silver ≥ 0 (implied by the sum constraint + the bronze/gold bounds,
  *   but checked explicitly for clarity).
+ *
+ * Accepts the flat record returned by getChestTierRatesBp().
  */
 export function validateChestQualityRates(
   cfg: FlatChestRates,

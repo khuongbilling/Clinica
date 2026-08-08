@@ -27,7 +27,7 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HexMapLayer }                    from '@/src/components/journey/HexMapLayer';
@@ -258,8 +258,12 @@ export default function ChapterFogMapShell() {
   const insets               = useSafeAreaInsets();
   const { player, spendStamina, applyRewards } = usePlayer();
 
+  const { height: windowHeight } = useWindowDimensions();
+  // Responsive map height: ~45 % of the window, clamped between 240 and 480 px.
+  const mapContainerHeight = Math.min(480, Math.max(240, Math.round(windowHeight * 0.45)));
+
   const bottomPad = Math.max(insets.bottom, 8);
-  const [mapSize, setMapSize] = useState({ w: 332, h: 360 });
+  const [mapSize, setMapSize] = useState({ w: 332, h: mapContainerHeight });
 
   // ── Chapter metadata ───────────────────────────────────────────────────────
   const chapter = CHAPTERS.find(
@@ -709,7 +713,7 @@ export default function ChapterFogMapShell() {
 
         {/* ── 4. Map viewport ───────────────────────────────────────────── */}
         <View
-          style={s.mapOuter}
+          style={[s.mapOuter, { height: mapContainerHeight }]}
           onLayout={e => {
             const { width, height } = e.nativeEvent.layout;
             setMapSize({ w: Math.floor(width), h: Math.floor(height) });
@@ -1093,11 +1097,11 @@ const s = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Map viewport
+  // Map viewport — height is set dynamically via inline style (useWindowDimensions).
   mapOuter: {
     borderRadius: 14, overflow: 'hidden',
     borderWidth: 1, borderColor: PANEL_BORDER,
-    height: 360, position: 'relative',
+    position: 'relative',
   },
   mapBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   mapLoadingOverlay: {
