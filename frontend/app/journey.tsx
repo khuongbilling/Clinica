@@ -37,9 +37,15 @@ import {
   getNextRecommendedPart,
 } from "@/src/game/chapterJourney";
 import { playerLevelFromXp } from "@/src/game/progression";
+import {
+  getJourneyRecommendation,
+  type JourneyRecommendation,
+} from "@/src/features/journey/ui/journeyRecommendation";
+import type { JourneyNodeUi } from "@/src/features/journey/ui/journeyUi.types";
+import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { usePlayer } from "@/src/game/store";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -50,6 +56,12 @@ export default function JourneyScreen() {
   const [activeTab, setActiveTab]       = useState("chapter");
   const [showRounds, setShowRounds]     = useState(false);
   const [selectedChapterIdx, setSelectedChapterIdx] = useState<number>(0);
+  // Branch selection: keyed by branchGroupId → chosen nodeId.  Session-local;
+  // no new store — the recommendation layer reads this on every render.
+  const [canonicalChoices, setCanonicalChoices] = useState<Record<string, string>>({});
+  const handleBranchSelect = useCallback((branchGroupId: string, nodeId: string) => {
+    setCanonicalChoices((prev) => ({ ...prev, [branchGroupId]: nodeId }));
+  }, []);
   const chapterIdxInitialized = useRef(false);
 
   // Auto-select the player's current chapter on first load
@@ -77,6 +89,51 @@ export default function JourneyScreen() {
   const claimedNodes = player.claimed_journey_nodes ?? [];
   const currentChapter = getCurrentChapter(playerLevel, claimedNodes);
   const nextStep     = getNextRecommendedPart(playerLevel, claimedNodes);
+
+  // ── Push B: deterministic recommendation ────────────────────────────────
+  // Build JourneyNodeUi[] from authoritative progression state, then ask the
+  // selector exactly once.  No gate logic lives in JSX below.
+  const journeyNodes: JourneyNodeUi[] = CHAPTERS.flatMap((chapter) => {
+    const chStatus = getChapterStatus(chapter, playerLevel, claimedNodes);
+    const lockReasons = chStatus === "locked"
+      ? evaluateChapterGate(chapter, playerLevel, claimedNodes).unmetRequirements
+      : [];
+    return chapter.parts
+      .filter((p) => !p.isPlaceholder && p.route)
+      .map((p): JourneyNodeUi => {
+        let nodeStatus: JourneyNodeUi["status"];
+        if (chStatus === "locked") {
+          nodeStatus = "locked";
+        } else if (claimedNodes.includes(p.id)) {
+          nodeStatus = "cleared";
+        } else {
+          nodeStatus = "available";
+        }
+        return {
+          id:               p.id,
+          chapterId:        chapter.id,
+          chapterNumber:    chapter.number,
+          shift:            "day",
+          status:           nodeStatus,
+          requiredForStory: chapter.requiredCompletionNodes?.includes(p.id) ?? false,
+          href:             p.route!,
+          lockReasons,
+        };
+      });
+  });
+
+  const recommendation = getJourneyRecommendation({
+    nodes:               journeyNodes,
+    canonicalChoices,
+    bookCleared:         CHAPTERS.every((ch) =>
+      getChapterStatus(ch, playerLevel, claimedNodes) === "complete",
+    ),
+  });
+
+  const recommendedNodeId =
+    recommendation.kind === "continue" || recommendation.kind === "resume"
+      ? recommendation.nodeId
+      : undefined;
 
   // Field practice / chapter gate logic
   const hasBattleStars = Object.keys(player.battle_stars ?? {}).length > 0;
@@ -195,38 +252,19 @@ export default function JourneyScreen() {
             </View>
           )}
 
-          {nextStep && (
-            <Pressable
-              style={styles.nextStepStrip}
-              onPress={() => {
-                if (nextStep.part.route && !nextStep.part.isPlaceholder) {
-                  const isStoryNode =
-                    nextStep.part.type === "story" || nextStep.part.type === "memory_fragment";
-                  const route =
-                    isStoryNode && nextStep.part.route.includes("story-scene")
-                      ? nextStep.part.route + "&returnTo=%2Fjourney"
-                      : nextStep.part.route;
-                  router.push(route as AppRoute);
-                }
-              }}
-              testID="journey-next-step"
-            >
-              <View style={[styles.nextDot, { backgroundColor: currentChapter.accentColor }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.nextKicker, { color: currentChapter.accentColor }]}>
-                  NEXT · CH.{currentChapter.number} — PART {nextStep.part.part}
-                </Text>
-                <Text style={styles.nextTitle} numberOfLines={1}>{nextStep.part.title}</Text>
-              </View>
-              {nextStep.part.route && !nextStep.part.isPlaceholder ? (
-                <Ionicons name="arrow-forward-circle" size={20} color={currentChapter.accentColor} />
-              ) : (
-                <View style={styles.comingSoonPill}>
-                  <Text style={styles.comingSoonTxt}>SOON</Text>
-                </View>
-              )}
-            </Pressable>
-          )}
+          {/* Push B: single deterministic CTA from getJourneyRecommendation */}
+          <JourneyCta
+            recommendation={recommendation}
+            accentColor={currentChapter.accentColor}
+            onNavigate={(href) => router.push(href as AppRoute)}
+            onChooseBranch={(branchGroupId, nodeIds) => {
+              // Open branch selector — for now select the first candidate as a
+              // placeholder until a dedicated branch-selector modal exists.
+              // The choose_branch CTA is rendered; deep navigation is deferred
+              // until the branch-selector component is built.
+              if (nodeIds[0]) handleBranchSelect(branchGroupId, nodeIds[0]);
+            }}
+          />
 
           {/* ── Chapter selector tabs ── */}
           <ScrollView
@@ -293,6 +331,7 @@ export default function JourneyScreen() {
               claimedNodes={claimedNodes}
               storyScenesSeen={player.story_scenes_seen ?? []}
               leadHeroSprite={leadHeroSprite}
+              recommendedNodeId={recommendedNodeId}
               onPartPress={(part) => {
                 if (part.route && !part.isPlaceholder) {
                   const isStoryNode = part.type === "story" || part.type === "memory_fragment";
@@ -491,6 +530,68 @@ export default function JourneyScreen() {
 // ─── ChapterPage ────────────────────────────────────────────────────────────
 // Renders the appropriate visual map for a single chapter, or a locked state.
 
+// ─── JourneyCta ─────────────────────────────────────────────────────────────
+// Single deterministic CTA — exactly one primary action rendered based on
+// the recommendation kind.  No gate logic lives here.
+
+function JourneyCta({
+  recommendation,
+  accentColor,
+  onNavigate,
+  onChooseBranch,
+}: {
+  recommendation:  JourneyRecommendation;
+  accentColor:     string;
+  onNavigate:      (href: string) => void;
+  onChooseBranch:  (branchGroupId: string, nodeIds: string[]) => void;
+}) {
+  const kind = recommendation.kind;
+  if (kind === "complete") return null;
+
+  let label: string;
+  let color: string;
+  let testID: string;
+  let onPress: () => void;
+
+  if (kind === "resume") {
+    label   = "Resume Encounter";
+    color   = "#20d4b4";
+    testID  = "journey-cta-resume";
+    onPress = () => onNavigate(recommendation.href);
+  } else if (kind === "continue") {
+    label   = "Continue Journey";
+    color   = accentColor;
+    testID  = "journey-cta-continue";
+    onPress = () => onNavigate(recommendation.href);
+  } else if (kind === "choose_branch") {
+    label   = "Choose Shift";
+    color   = "#b480ff";
+    testID  = "journey-cta-choose-branch";
+    onPress = () => onChooseBranch(recommendation.branchGroupId, recommendation.nodeIds);
+  } else {
+    // next_destination
+    label   = "Continue";
+    color   = accentColor;
+    testID  = "journey-cta-next-destination";
+    onPress = () => onNavigate((recommendation as { href: string }).href);
+  }
+
+  return (
+    <Pressable
+      style={[styles.nextStepStrip, { borderColor: color + "55" }]}
+      onPress={onPress}
+      testID={testID}
+    >
+      <View style={[styles.nextDot, { backgroundColor: color }]} />
+      <Text style={[styles.nextTitle, { color }]}>{label}</Text>
+      <Ionicons name="arrow-forward-circle" size={20} color={color} />
+    </Pressable>
+  );
+}
+
+// ─── ChapterPage ─────────────────────────────────────────────────────────────
+// Renders the appropriate visual map for a single chapter, or a locked state.
+
 function ChapterPage({
   chapter,
   chapterStatus,
@@ -498,17 +599,22 @@ function ChapterPage({
   claimedNodes,
   storyScenesSeen,
   leadHeroSprite,
+  recommendedNodeId,
   onPartPress,
   onNodeClaim,
 }: {
-  chapter:       Chapter;
-  chapterStatus: ChapterStatus;
-  battleStars:   Record<string, number>;
-  claimedNodes:  string[];
-  storyScenesSeen: string[];
-  leadHeroSprite:  ImageSourcePropType | undefined;
-  onPartPress:   (part: ChapterPart) => void;
-  onNodeClaim:   (nodeId: string, stars: number) => Promise<void>;
+  chapter:           Chapter;
+  chapterStatus:     ChapterStatus;
+  battleStars:       Record<string, number>;
+  claimedNodes:      string[];
+  storyScenesSeen:   string[];
+  leadHeroSprite:    ImageSourcePropType | undefined;
+  /** The node id the recommendation layer says is next.  Used by visual maps
+   *  to render the restrained teal/gold highlight.  Passed through but visual
+   *  maps are not modified in this push. */
+  recommendedNodeId?: string;
+  onPartPress:       (part: ChapterPart) => void;
+  onNodeClaim:       (nodeId: string, stars: number) => Promise<void>;
 }) {
   if (chapterStatus === "locked") {
     return (
