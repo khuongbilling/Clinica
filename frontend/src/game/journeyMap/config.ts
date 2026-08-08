@@ -8,17 +8,17 @@
  * Nothing in this file imports from React, Expo, or any UI layer.
  * Probability logic must never be duplicated inside a component.
  *
- * Expected encounter examples (from design spec):
- *   Ch  1 → None 55%  Battle 30%  Boss 10%  Treasure  5%  Merchant  0%
- *   Ch  5 → None 53%  Battle 30%  Boss 10%  Treasure  6%  Merchant  1%
- *   Ch 10 → None 51%  Battle 30%  Boss 10%  Treasure  7%  Merchant  2%
- *   Ch 20 → None 47%  Battle 30%  Boss 10%  Treasure  9%  Merchant  4%
- *   Ch 25 → None 45%  Battle 30%  Boss 10%  Treasure 10%  Merchant  5%
- *   Ch 35+ → None 43% Battle 30%  Boss 10%  Treasure 12%  Merchant  5%
+ * Expected encounter examples (updated Push 13 area-boss rates):
+ *   Ch  1– 3 → None 65%  Battle 30%  Boss  0%  Treasure  5%  Merchant  0%
+ *   Ch  4–10 → None 60%  Battle 30%  Boss  3%  Treasure  6%  Merchant  1%
+ *   Ch 11–20 → None 54%  Battle 30%  Boss  4%  Treasure  9%  Merchant  3%
+ *   Ch 21+   → None 52%  Battle 30%  Boss  5%  Treasure 10%  Merchant  3%
  *
  * Authoritative chest checkpoint:
  *   Ch 10 → Bronze 75.5%  Silver 23.5%  Gold 1%
  */
+
+import type { BasisPoints, EncounterType, ChestTier } from './types';
 
 const BP = 10_000;
 
@@ -33,7 +33,7 @@ export function getEncounterRatesBp(chapter: number) {
   const fiveChapterSteps = Math.floor(chapter / 5);
 
   const battle = 3_000;
-  const areaBoss = 1_000;
+  const areaBoss = legacyAreaBossRateBp(chapter);
 
   const treasure = Math.min(
     1_200,
@@ -129,7 +129,7 @@ export interface EncounterRates {
  */
 export function encounterRates(chapter: number): EncounterRates {
   const battle    = BATTLE_RATE_BP;
-  const areaBoss  = AREA_BOSS_RATE_BP;
+  const areaBoss  = legacyAreaBossRateBp(chapter);
   const treasure  = Math.min(
     TREASURE_BASE_BP + Math.floor(chapter / 5) * TREASURE_STEP_BP,
     TREASURE_MAX_BP,
@@ -190,8 +190,31 @@ export const CHEST_GOLD_STEP_BP: BasisPoints = 100; // 1 pp per 10 chapters
 /** Merchant rate increase per 5 chapters. */
 export const MERCHANT_STEP_BP: BasisPoints = 100; // 1%
 
-/** Desired area-boss roll rate (before hard cap is applied by the generator). */
-export const AREA_BOSS_RATE_BP: BasisPoints = 1_000; // 10%
+/**
+ * Chapter-specific area-boss roll rate for the LEGACY encounter generator.
+ * The canonical generator (JOURNEY_CANONICAL_V1) uses canonicalAreaBossRateBp()
+ * from canonicalConfig.ts which defines these same values authoritatively.
+ *
+ *   Ch  1– 3 →    0 bp (  0%)   No area bosses in early chapters.
+ *   Ch  4–10 →  300 bp (  3%)
+ *   Ch 11–20 →  400 bp (  4%)
+ *   Ch 21+   →  500 bp (  5%)
+ *
+ * @deprecated Pass to the legacy assignJourneyEncounters() only.
+ *             Use chapterBossKeys.areaBossProbabilityBp() as the canonical source.
+ */
+export function legacyAreaBossRateBp(chapter: number): BasisPoints {
+  if (chapter <= 3)  return   0;
+  if (chapter <= 10) return 300;
+  if (chapter <= 20) return 400;
+  return 500;
+}
+
+/**
+ * @deprecated Use legacyAreaBossRateBp(chapter) — the flat 10% rate has been
+ * replaced by chapter-specific rates (Push 13).  Kept for any legacy callers.
+ */
+export const AREA_BOSS_RATE_BP: BasisPoints = 1_000; // legacy — do not use for new code
 
 /**
  * Returns the chest-quality probability profile for a given chapter.
