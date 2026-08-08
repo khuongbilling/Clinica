@@ -35,14 +35,25 @@ interface PlayerLevelUpParsed { fromLevel: number; toLevel: number }
 export default function Result() {
   const router = useRouter();
   const { player, advanceProloguePhase } = usePlayer();
-  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam } = useLocalSearchParams<{
+  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string; epidemicTokens?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
     playerXp?: string; heroXp?: string; playerLevelUp?: string; heroLevelUps?: string;
     baseXp?: string; starsPct?: string;
+    // Journey fog-map context — set when battle was launched from the fog-map.
+    journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string;
+    journeyIsAreaBoss?: string; journeyIsChapterBoss?: string;
   }>();
+  // When this battle originated from the fog-map, route back there on finish.
   const won = outcome === "win";
+  const isJourneyBattle = journeyReturn === "1" && !!journeyChapterId && !!journeyTileId;
+  const journeyFogMapParams = isJourneyBattle ? {
+    resolvedTileId:       journeyTileId!,
+    outcome:              won ? "win" : "loss",
+    journeyIsAreaBoss:    journeyIsAreaBoss    ?? "",
+    journeyIsChapterBoss: journeyIsChapterBoss ?? "",
+  } : null;
   const isTraining = training === "1";
   const isPrologueTutorial = prologue === "tutorial";
   // Safety net: if the scripted-loss boss somehow routes here instead of
@@ -646,9 +657,26 @@ export default function Result() {
             </Pressable>
           )}
           {won && !isPrologueTutorial && !isTraining && (
-            <Pressable style={styles.journeyBtn} onPress={() => router.replace(ROUTES.JOURNEY)} testID="result-journey-map">
+            <Pressable
+              style={styles.journeyBtn}
+              onPress={() => {
+                if (journeyFogMapParams) {
+                  // Return to the exact fog-map chapter with the resolved tile params
+                  // so the map can apply encounter resolution immediately on mount.
+                  router.replace({
+                    pathname: dynRoute.chapterFogMap(journeyChapterId!) as any,
+                    params:   journeyFogMapParams,
+                  });
+                } else {
+                  router.replace(ROUTES.JOURNEY);
+                }
+              }}
+              testID="result-journey-map"
+            >
               <Ionicons name="map-outline" size={15} color="#D4AF37" />
-              <Text style={styles.journeyBtnTxt}>CLAIM JOURNEY REWARDS</Text>
+              <Text style={styles.journeyBtnTxt}>
+                {journeyFogMapParams ? 'RETURN TO JOURNEY MAP' : 'CLAIM JOURNEY REWARDS'}
+              </Text>
             </Pressable>
           )}
           {!(won && isPrologueTutorial) && !isPrologueBoss && (
@@ -658,7 +686,20 @@ export default function Result() {
                   On a win it's already covered by the gold "CLAIM JOURNEY REWARDS"
                   button above, so avoid duplicating it here. */}
               {!won && !isTraining && (
-                <Pressable style={styles.secondary} onPress={() => router.replace(ROUTES.JOURNEY)} testID="result-journey-map-loss">
+                <Pressable
+                  style={styles.secondary}
+                  onPress={() => {
+                    if (journeyFogMapParams) {
+                      router.replace({
+                        pathname: dynRoute.chapterFogMap(journeyChapterId!) as any,
+                        params:   journeyFogMapParams,
+                      });
+                    } else {
+                      router.replace(ROUTES.JOURNEY);
+                    }
+                  }}
+                  testID="result-journey-map-loss"
+                >
                   <Text style={styles.secondaryTxt}>VIEW JOURNEY MAP</Text>
                 </Pressable>
               )}

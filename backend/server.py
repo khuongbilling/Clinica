@@ -2,6 +2,8 @@ from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ASCENDING, DESCENDING
+from pymongo.errors import DuplicateKeyError
 import os
 import random
 import logging
@@ -476,6 +478,137 @@ async def claim_specialization(player_id: str, payload: ClaimSpecializationReque
 async def delete_player(player_id: str):
     res = await db.players.delete_one({"id": player_id})
     return {"deleted": res.deleted_count}
+
+
+# ── Journey Runs ─────────────────────────────────────────────────────────────
+# journey_runs collection has a unique compound index:
+#   (player_id, chapter_id, attempt_number)
+# This prevents duplicate runs even under concurrent "Challenge Chapter" clicks.
+
+class JourneyRunCreate(BaseModel):
+    chapter_id:              int
+    seed:                    str
+    attempt_number:          int
+    schema_version:          int            = 1
+    tile_count:              int
+    tiles:                   List[Any]      # opaque JSON, validated client-side
+    start_tile_id:           str
+    current_tile_id:         str
+    gate_anchor_tile_id:     Optional[str]  = None
+    area_boss_count:         int
+    area_boss_keys_collected: int           = 0
+    chapter_boss_defeated:   bool           = False
+    explored_tile_count:     int            = 0
+    stamina_spent:           int            = 0
+
+
+class JourneyRunSave(BaseModel):
+    tiles:                    List[Any]
+    current_tile_id:          str
+    area_boss_keys_collected: Optional[int]  = None
+    chapter_boss_defeated:    Optional[bool] = None
+    explored_tile_count:      Optional[int]  = None
+    stamina_spent:            Optional[int]  = None
+
+
+@api_router.get("/player/{player_id}/journey-runs/{chapter_id}/active")
+async def get_active_journey_run(player_id: str, chapter_id: int):
+    """Return the current active run for this player+chapter, or 404."""
+    doc = await db.journey_runs.find_one(
+        {"player_id": player_id, "chapter_id": chapter_id, "status": "active"},
+        {"_id": 0},
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="no active run")
+    return doc
+
+
+@api_router.get("/player/{player_id}/journey-runs/{chapter_id}/latest")
+async def get_latest_journey_run(player_id: str, chapter_id: int):
+    """Return the most recent run (any status) for this player+chapter, or 404."""
+    cursor = (
+        db.journey_runs
+        .find({"player_id": player_id, "chapter_id": chapter_id}, {"_id": 0})
+        .sort("attempt_number", DESCENDING)
+        .limit(1)
+    )
+    docs = await cursor.to_list(length=1)
+    if not docs:
+        raise HTTPException(status_code=404, detail="no runs found")
+    return docs[0]
+
+
+@api_router.post("/player/{player_id}/journey-runs")
+async def create_journey_run(player_id: str, payload: JourneyRunCreate):
+    """Create a new run (attempt #1 or challenge).
+    Idempotent: the unique compound index (player_id, chapter_id, attempt_number)
+    catches any concurrent duplicate — the handler returns the existing run
+    rather than raising a 5xx.
+    """
+    run_id = str(uuid.uuid4())
+    now    = now_iso()
+    doc    = {
+        "id":         run_id,
+        "player_id":  player_id,
+        "status":     "active",
+        "created_at": now,
+        "updated_at": now,
+        **payload.model_dump(),
+    }
+    try:
+        await db.journey_runs.insert_one(doc)
+    except DuplicateKeyError:
+        # Race: another request already created this attempt. Return it.
+        existing = await db.journey_runs.find_one(
+            {
+                "player_id":      player_id,
+                "chapter_id":     payload.chapter_id,
+                "attempt_number": payload.attempt_number,
+            },
+            {"_id": 0},
+        )
+        if existing:
+            return existing
+        raise HTTPException(status_code=409, detail="duplicate run, refetch failed")
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/journey-runs/{run_id}")
+async def save_journey_run(run_id: str, payload: JourneyRunSave):
+    """Persist updated mutable run state (tiles, position, keys, etc.)."""
+    updates: Dict[str, Any] = {
+        k: v for k, v in payload.model_dump().items() if v is not None
+    }
+    updates["updated_at"] = now_iso()
+    result = await db.journey_runs.update_one({"id": run_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="run not found")
+    doc = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
+    return doc
+
+
+@api_router.patch("/journey-runs/{run_id}/cleared")
+async def mark_run_cleared(run_id: str):
+    """Transition run status from 'active' to 'cleared'."""
+    result = await db.journey_runs.update_one(
+        {"id": run_id},
+        {"$set": {"status": "cleared", "updated_at": now_iso()}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="run not found")
+    doc = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
+    return doc
+
+
+@app.on_event("startup")
+async def startup_db():
+    """Create the unique compound index that prevents duplicate journey runs."""
+    await db.journey_runs.create_index(
+        [("player_id", ASCENDING), ("chapter_id", ASCENDING), ("attempt_number", ASCENDING)],
+        unique=True,
+        name="unique_player_chapter_attempt",
+    )
 
 
 app.include_router(api_router)

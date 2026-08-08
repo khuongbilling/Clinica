@@ -50,7 +50,7 @@ type DetailEntry =
   | { kind: "call"; option: typeof CALL_OPTIONS[number] };
 
 export default function Battle() {
-  const { enemyId, training, prologue, replay } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string }>();
+  const { enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string }>();
   const { player, loading } = usePlayer();
   if (loading || !player) {
     return (
@@ -59,10 +59,10 @@ export default function Battle() {
       </View>
     );
   }
-  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} />;
+  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} journeyReturn={journeyReturn} journeyChapterId={journeyChapterId} journeyTileId={journeyTileId} journeyIsAreaBoss={journeyIsAreaBoss} journeyIsChapterBoss={journeyIsChapterBoss} />;
 }
 
-function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string; training?: string; prologue?: string; replay?: string }) {
+function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss }: { enemyId?: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState, advanceProloguePhase } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId } = useTutorial();
@@ -1243,6 +1243,13 @@ function BattleInner({ enemyId, training, prologue, replay }: { enemyId?: string
         heroLevelUps: JSON.stringify(heroLevelUps),
         baseXp: String(battleBaseXp),
         starsPct: String(battleStarsPct),
+        // Journey fog-map context — threaded through so result.tsx can route
+        // back to the exact fog-map tile rather than the generic Journey tab.
+        journeyReturn:        journeyReturn        ?? "",
+        journeyChapterId:     journeyChapterId     ?? "",
+        journeyTileId:        journeyTileId        ?? "",
+        journeyIsAreaBoss:    journeyIsAreaBoss    ?? "",
+        journeyIsChapterBoss: journeyIsChapterBoss ?? "",
       },
     });
   };

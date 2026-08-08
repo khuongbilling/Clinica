@@ -334,4 +334,8 @@ export const dynRoute = {
   storyScene:  (sceneId: string): AppRoute => `/story-scene?sceneId=${sceneId}` as AppRoute,
   simulation:  (id: string): AppRoute => `/university/simulation/${id}` as AppRoute,
   department:  (id: string): AppRoute => `/university/department/${id}` as AppRoute,
+  // Dev-only fog-map shell — gated by FEATURE_FLAG_JOURNEY_FOG_MAP_V1 at call sites.
+  // Not reachable from any in-app navigation until the flag is enabled.
+  chapterFogMap: (chapterId: string): AppRoute =>
+    `/journey/chapter/${chapterId}/fog-map` as AppRoute,
 } as const;

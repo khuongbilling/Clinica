@@ -6,6 +6,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
+import { FEATURE_FLAG_JOURNEY_FOG_MAP_V1 } from "@/src/game/featureFlags";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -246,7 +247,17 @@ export default function JourneyScreen() {
                     selected && { borderColor: ch.accentColor, backgroundColor: ch.accentColor + "22" },
                     locked && { opacity: 0.35 },
                   ]}
-                  onPress={() => !locked && setSelectedChapterIdx(idx)}
+                  onPress={() => {
+                    if (locked) return;
+                    if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1) {
+                      // Push 15: navigate to the randomised fogbound chapter map.
+                      // The prior visual map at /journey remains intact as a rollback
+                      // fallback — re-disable the flag to restore the old flow instantly.
+                      router.push(dynRoute.chapterFogMap(String(ch.number)) as AppRoute);
+                    } else {
+                      setSelectedChapterIdx(idx);
+                    }
+                  }}
                   disabled={locked}
                   testID={`journey-ch-tab-${ch.number}`}
                 >

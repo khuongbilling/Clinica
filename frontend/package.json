@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts && node_modules/.bin/sucrase-node tests/elemental_counter.test.ts && node_modules/.bin/sucrase-node tests/tutorial_state.test.ts",
+    "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts && node_modules/.bin/sucrase-node tests/elemental_counter.test.ts && node_modules/.bin/sucrase-node tests/tutorial_state.test.ts && node_modules/.bin/sucrase-node tests/journey_map_config.test.ts",
     "check:routes": "node scripts/check-routes.js",
     "check:pronouns": "node scripts/check-hero-pronouns.js",
     "gen:battle-audit": "node_modules/.bin/sucrase-node scripts/generate-battle-audit.ts",
