@@ -267,7 +267,7 @@ export default function ChapterFogMapShell() {
   }>();
   const router               = useRouter();
   const insets               = useSafeAreaInsets();
-  const { player, spendStamina, applyRewards, updateState } = usePlayer();
+  const { player, spendStamina, applyRewards, updateState, applyFogMapChapterBossRewards } = usePlayer();
 
   const { height: windowHeight } = useWindowDimensions();
   // Responsive map height: ~45 % of the window, clamped between 240 and 480 px.
@@ -386,13 +386,16 @@ export default function ChapterFogMapShell() {
       // Also mark cleared on the backend.
       journeyRunRepository.markRunCleared(updated.id)
         .catch(e => console.warn('[fog-map] markRunCleared failed:', e));
-      // Grant the chapter completion XP bonus (separate from battle rewards).
-      const completionXp = chapter?.completionXp ?? 0;
-      if (completionXp > 0) {
-        applyRewards({ xp: completionXp, crowns: 0, codexShards: 0, codex: [],
-          enemyId: 'journey_chapter_boss', enemyName: `Chapter ${chNum} Cleared` })
-          .catch(e => console.warn('[fog-map] chapter completionXp failed:', e));
-      }
+      // ── Atomic: completion XP + required-node claims in one store write ────
+      // applyFogMapChapterBossRewards reads playerRef.current (always fresh)
+      // and issues a single updateState, avoiding the stale-snapshot race that
+      // occurs when applyRewards + a separate updateState are both fired from
+      // the same effect closure.  The single write also flips the
+      // ChapterCompletion badge (chapterSummary useMemo depends on player).
+      applyFogMapChapterBossRewards(
+        chapter?.requiredCompletionNodes ?? [],
+        chapter?.completionXp ?? 0,
+      ).catch(e => console.warn('[fog-map] applyFogMapChapterBossRewards failed:', e));
     } else if (journeyIsAreaBoss === '1') {
       updated = resolveAreaBossWin(run, resolvedTileId);
       // ── Chapter-level key update (Task 570) ────────────────────────────────

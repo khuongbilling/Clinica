@@ -545,6 +545,10 @@ type Ctx = {
   claimChapter3Star: (rewardId: string) => Promise<{ ok: boolean; message: string }>;
   // J2 — one-time journey node first-clear reward claim.
   claimJourneyNode: (nodeId: string, stars: number) => Promise<{ ok: boolean; message: string; reward?: import('./journeyRewards').ComputedJourneyReward }>;
+  // Fog-map chapter boss: atomically apply completion XP + mark requiredCompletionNodes in one
+  // store write.  Reads playerRef (fresh) so it is safe to call from fire-and-forget effects
+  // where the React closure's `player` snapshot may be stale.
+  applyFogMapChapterBossRewards: (requiredNodes: readonly string[], completionXp: number) => Promise<void>;
   // C5 — dismiss the Level 2 "Apprentice Path Opened" celebration modal.
   markLv2UnlockSeen: () => Promise<void>;
   // P5 — dismiss the University intro panel (shown once on first visit).
@@ -2726,6 +2730,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: parts.join(' · ') || 'Node cleared!', reward };
   }, [updateState]);
 
+  // ── Fog-map chapter boss — atomic XP + claimed-nodes update ─────────────────
+  // Reads playerRef.current (always fresh) so that a single updateState covers
+  // both the completion-XP grant and the required-node claims.  This avoids the
+  // stale-closure race that occurs when two independent updateState calls are
+  // fired from the same effect (e.g. the old pattern of applyRewards + a second
+  // updateState using the same captured player snapshot).
+  const applyFogMapChapterBossRewards = useCallback(async (
+    requiredNodes: readonly string[],
+    completionXp: number,
+  ): Promise<void> => {
+    const base = playerRef.current;
+    if (!base) return;
+    // Apply completion XP (advances rank + player_level) when a bonus is set.
+    let next: PlayerState = completionXp > 0 ? applyXp(base, completionXp) : { ...base };
+    // Mark required completion nodes as claimed (idempotent — skips already claimed).
+    const alreadyClaimed = next.claimed_journey_nodes ?? [];
+    const toAdd = requiredNodes.filter((id) => !alreadyClaimed.includes(id));
+    if (toAdd.length > 0) {
+      next = { ...next, claimed_journey_nodes: [...alreadyClaimed, ...toAdd] };
+    }
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   // ── C5 — mark the Level 2 unlock celebration as seen ───────────────────────
   const markLv2UnlockSeen = useCallback(async () => {
     const base = playerRef.current;
@@ -2883,7 +2911,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     confirmIdentityReconstruction,
     equipItem, unequipItem,
     claimSpecialization,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization]);
+    applyFogMapChapterBossRewards,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
