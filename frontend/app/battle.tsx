@@ -37,6 +37,8 @@ import type { ActionType, ClassFamily, Hero, HeroSkill } from "@/src/game/types"
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
 import { getHeroVisuals } from "@/src/components/getHeroVisuals";
 import { applySkillUpgradesToTeam } from "@/src/game/heroSkillAcademy";
+import { getBattleAssistRule } from "@/src/features/battle/battleAssist";
+import { getAssistConfigForEncounter } from "@/src/features/battle/battleAssistConfigs";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -146,6 +148,12 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
   const mentorAid = failureCount >= 3;
   const tacticalHint = failureCount >= 2;
   const gentleHint = failureCount >= 1;
+
+  // Push F — scenario-authored assist rules.  Config is looked up from the
+  // chapter's authored BattleAssistConfig; the UI renders what the config says.
+  // Falls back gracefully to undefined (no assist) for training/prologue/boss.
+  const assistConfig   = getAssistConfigForEncounter(journeyChapterId);
+  const activeAssistRule = getBattleAssistRule(assistConfig, failureCount);
   const explanationLayer = getExplanationLayer(player?.learning_profile);
   const difficultyLevel = (player?.difficulty || 'standard') as DifficultyLevel;
 
@@ -1396,7 +1404,18 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
           <Text style={styles.codexLabel} numberOfLines={codexExpanded ? undefined : 1}>
             {mentorAid ? (isPrologueTutorial || isPrologueBoss ? "MASTER BAI'S AID: " : "SYSTEM'S AID: ") : tacticalHint ? (isPrologueTutorial || isPrologueBoss ? "MASTER BAI: " : "SYSTEM: ") : gentleHint ? "CODEX WHISPERS: " : "CODEX: "}
             <Text style={styles.codexText}>
-              {mentorAid ? `+10 Stability. ${hints.tactical}` : tacticalHint ? hints.tactical : gentleHint ? hints.gentle : `Match actions to the ${enemy.corruptionAspect} pathology.`}
+              {/* Push F: authored mentorText takes precedence over generated hints
+                  when an assist rule is active.  +10 Stability (mentorAid) still
+                  applies — it is a mechanic, not a display choice. */}
+              {mentorAid
+                ? `+10 Stability. ${activeAssistRule?.mentorText ?? hints.tactical}`
+                : activeAssistRule
+                ? activeAssistRule.mentorText
+                : tacticalHint
+                ? hints.tactical
+                : gentleHint
+                ? hints.gentle
+                : `Match actions to the ${enemy.corruptionAspect} pathology.`}
             </Text>
           </Text>
           <Ionicons name={codexExpanded ? "chevron-up" : "chevron-down"} size={11} color={COLORS.onSurfaceTertiary} />
