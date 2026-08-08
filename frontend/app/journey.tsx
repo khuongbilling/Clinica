@@ -404,9 +404,24 @@ export default function JourneyScreen() {
                   ]}>
                     CH.{ch.number}
                   </Text>
-                  {!locked && st === "complete" && (
-                    <Ionicons name="checkmark-circle" size={8} color={ch.accentColor} />
-                  )}
+                  {!locked && chSummary.storyCleared && (() => {
+                    const hasMastery = chSummary.maxMasteryStars > 0;
+                    const mastered   = hasMastery && chSummary.masteryStars >= chSummary.maxMasteryStars;
+                    if (!hasMastery) {
+                      // Narrative chapter — simple checkmark
+                      return <Ionicons name="checkmark-circle" size={8} color={ch.accentColor} />;
+                    }
+                    if (mastered) {
+                      // Fully mastered — gold star
+                      return <Ionicons name="star" size={8} color="#d4a017" />;
+                    }
+                    // Story cleared, mastery in progress — "n/max ★"
+                    return (
+                      <Text style={styles.chapterTabMasteryBadge}>
+                        {chSummary.masteryStars}/{chSummary.maxMasteryStars}★
+                      </Text>
+                    );
+                  })()}
                   {locked && (
                     <Ionicons name="lock-closed" size={8} color={COLORS.onSurfaceTertiary + "80"} />
                   )}
@@ -922,6 +937,12 @@ const styles = StyleSheet.create({
     fontWeight:    "700",
     color:         COLORS.onSurfaceSecondary,
     letterSpacing: 0.5,
+  },
+  chapterTabMasteryBadge: {
+    fontSize:      7,
+    fontWeight:    "700",
+    color:         "#20c4a8",
+    letterSpacing: 0,
   },
   // Push I — journey scope toggle
   journeyScopeToggle: {
