@@ -52,7 +52,7 @@ export const JOURNEY_CANONICAL_V1 = true;
 //
 // Default: false — current single-threat battle system is unchanged.
 // Rollback: set to false.  All existing battle.ts logic continues to run.
-export const MULTI_THREAT_COMBAT_V1 = false;
+export const MULTI_THREAT_COMBAT_V1 = true;
 
 // ── Journey — Ward Events V1 ────────────────────────────────────────────────
 //
