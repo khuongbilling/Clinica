@@ -21,13 +21,13 @@ export function generateSecureSeed(): string {
   const buf = new Uint8Array(16);
 
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    // Expo web, Expo native (RN 0.71+), Node 18+, modern browsers.
     crypto.getRandomValues(buf);
   } else {
-    // Node.js < 19 / older test environments.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const nodeCrypto = require('crypto') as { randomBytes(n: number): { [i: number]: number } };
-    const bytes = nodeCrypto.randomBytes(16);
-    for (let i = 0; i < 16; i++) buf[i] = bytes[i];
+    // Last-resort fallback for environments without Web Crypto (e.g. very old
+    // Node test runners).  Not cryptographically strong, but this seed is only
+    // used for deterministic map generation — not a security primitive.
+    for (let i = 0; i < 16; i++) buf[i] = Math.floor(Math.random() * 256);
   }
 
   return Array.from(buf)
