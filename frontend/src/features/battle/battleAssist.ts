@@ -46,8 +46,16 @@ export interface BattleAssistConfig {
   enabled: boolean;
 
   /**
-   * When true, the retry button skips the stamina cost.
-   * Does NOT refund stamina already spent navigating to this tile.
+   * Battle retry costs 0 additional Journey stamina.
+   *
+   * Canonical stamina rule:
+   *   Moving onto a map tile costs 1 stamina.          ← spent on entry, gone.
+   *   Starting the battle costs nothing extra.
+   *   Failing the battle → retry costs 0.              ← this flag enforces it.
+   *   Failing again      → retry still costs 0.
+   *
+   * MUST NOT refund the 1 stamina already spent entering the tile.
+   * Refunding would let players exploit failure as a stamina-recovery loop.
    */
   freeBattleRetry: boolean;
 

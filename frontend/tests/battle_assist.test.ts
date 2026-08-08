@@ -21,6 +21,8 @@ import {
 } from '../src/features/battle/battleAssist';
 import {
   chapter1BattleAssist,
+  chapter2BattleAssist,
+  chapter3BattleAssist,
   getAssistConfigForEncounter,
 } from '../src/features/battle/battleAssistConfigs';
 
@@ -179,6 +181,7 @@ describe('chapter1BattleAssist', () => {
     expect(chapter1BattleAssist.freeBattleRetry).toBe(true);
   });
 
+
   it('has no hint at 0 failures', () => {
     expect(getBattleAssistRule(chapter1BattleAssist, 0)).toBeNull();
   });
@@ -201,6 +204,34 @@ describe('chapter1BattleAssist', () => {
     const at2 = getBattleAssistRule(chapter1BattleAssist, 2);
     const at5 = getBattleAssistRule(chapter1BattleAssist, 5);
     expect(at2!.mentorText).toBe(at5!.mentorText);
+  });
+});
+
+// ── Canonical stamina invariant across all authored configs ───────────────────
+
+describe('stamina rule invariant', () => {
+  // CANONICAL: tile-entry costs 1 stamina (spent on map movement, gone).
+  // Battle retry costs 0 additional stamina — always.
+  // freeBattleRetry:false would charge stamina twice → forbidden.
+  const allAuthoredConfigs = [
+    { name: 'chapter1BattleAssist', config: chapter1BattleAssist },
+    { name: 'chapter2BattleAssist', config: chapter2BattleAssist },
+    { name: 'chapter3BattleAssist', config: chapter3BattleAssist },
+  ];
+
+  for (const { name, config } of allAuthoredConfigs) {
+    it(`${name}: freeBattleRetry is true (retry never costs additional stamina)`, () => {
+      expect(config.freeBattleRetry).toBe(true);
+    });
+  }
+
+  it('getAssistConfigForEncounter never returns a config with freeBattleRetry:false', () => {
+    for (const ch of ['1', '2', '3', '4', '5', '6']) {
+      const cfg = getAssistConfigForEncounter(ch);
+      if (cfg) {
+        expect(cfg.freeBattleRetry).toBe(true);
+      }
+    }
   });
 });
 

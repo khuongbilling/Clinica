@@ -8,8 +8,10 @@
  *   • highlightActionId and highlightTargetId reference EXISTING identifiers
  *     in the battle action map and enemy registry.  The UI highlights them;
  *     it does not invent new UI elements.
- *   • freeBattleRetry: stamina is NOT refunded for map navigation already spent.
- *     Only the retry itself is free.
+ *   • freeBattleRetry must be true for all authored chapter configs.
+ *     Canonical rule: 1 stamina spent entering the map tile is gone.
+ *     Retrying the battle itself costs 0 additional stamina — always.
+ *     Never set freeBattleRetry:false; that would charge stamina twice.
  */
 
 import type { BattleAssistConfig } from './battleAssist';
@@ -60,7 +62,7 @@ export const chapter2BattleAssist: BattleAssistConfig = {
 
 export const chapter3BattleAssist: BattleAssistConfig = {
   enabled: true,
-  freeBattleRetry: false, // Chapter 3 introduces resource cost for retries
+  freeBattleRetry: true,
 
   rules: [
     {
