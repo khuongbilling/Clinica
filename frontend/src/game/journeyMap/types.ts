@@ -32,6 +32,29 @@ export type EncounterType =
 
 export type ChestTier = 'bronze' | 'silver' | 'gold';
 
+// ── Ward Event subtype ────────────────────────────────────────────────────────
+
+/**
+ * Sub-classification of a wardEvent tile.  Assigned once at map-generation
+ * time and persisted on the tile; NEVER rerolled on revisit.
+ *
+ * The three "interaction" subtypes are shift-exclusive:
+ *   patient_family_team   → Day only
+ *   handoff_patient       → Evening only
+ *   surveillance_patient  → Night only
+ *
+ * All other five subtypes appear across every shift at varying weights.
+ */
+export type WardEventSubtype =
+  | 'support_ally'          // Ally NPC offers assistance
+  | 'protocol_card'         // Clinical protocol card available
+  | 'ward_blessing'         // Passive positive ward effect
+  | 'patient_family_team'   // Daytime interaction event
+  | 'handoff_patient'       // Evening shift-change / patient check
+  | 'surveillance_patient'  // Night monitoring event
+  | 'resource_service'      // Equipment or service encounter
+  | 'ward_hazard';          // Environmental or clinical hazard
+
 // ── Tile visibility ──────────────────────────────────────────────────────────
 
 /**
@@ -65,6 +88,14 @@ export interface JourneyTile {
    * Only set when encounter === 'treasure'; undefined otherwise.
    */
   chestTier?: ChestTier;
+
+  /**
+   * Sub-classification of the ward event on this tile.
+   * Only set when encounter === 'wardEvent'; undefined otherwise.
+   * Assigned once at map-generation time — NEVER rerolled on revisit.
+   * Persisted as part of the tile's JSON in the journey run document.
+   */
+  wardEventSubtype?: WardEventSubtype;
 
   /** Fog visibility state. */
   visibility: TileVisibility;

@@ -31,10 +31,15 @@
 import { generateHexTopology } from '../src/game/journeyMap/topology';
 import {
   assignCanonicalEncounters,
-  WARD_EVENT_SUBTYPES,
   type CanonicalEncounterType,
-  type WardEventSubtype,
 } from '../src/game/journeyMap/canonicalEncounters';
+import {
+  ALL_WARD_EVENT_SUBTYPES,
+  DAY_EXCLUSIVE_SUBTYPE,
+  EVENING_EXCLUSIVE_SUBTYPE,
+  NIGHT_EXCLUSIVE_SUBTYPE,
+} from '../src/game/journeyMap/wardEventSubtypes';
+import type { WardEventSubtype } from '../src/game/journeyMap/types';
 import {
   CANONICAL_AREA_BOSS_HARD_MAX,
   CANONICAL_TOTAL_BP,
@@ -243,7 +248,7 @@ console.log('\n── 11 & 12. Ward event subtypes ──');
   check('all wardEvent tiles have wardEventSubtype', missingSubtype.length === 0,
     `${missingSubtype.length} wardEvent tiles missing subtype`);
 
-  const validSubtypes = new Set<string>(WARD_EVENT_SUBTYPES);
+  const validSubtypes = new Set<string>(ALL_WARD_EVENT_SUBTYPES);
   const invalidSubtype = wardTiles.filter(t => !validSubtypes.has(t.wardEventSubtype!));
   check('all ward event subtypes are valid', invalidSubtype.length === 0,
     `invalid: ${invalidSubtype.map(t => t.wardEventSubtype).join(',')}`);

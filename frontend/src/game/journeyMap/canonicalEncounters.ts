@@ -34,7 +34,7 @@
 
 import { mulberry32, fnv1a32 } from './prng';
 import type { HexTopology } from './topology';
-import type { ChestTier } from './types';
+import type { ChestTier, WardEventSubtype } from './types';
 import {
   CANONICAL_TOTAL_BP,
   CANONICAL_AREA_BOSS_HARD_MAX,
@@ -43,6 +43,7 @@ import {
   canonicalEnemyDensityCapBp,
   type TimeOfDay,
 } from './canonicalConfig';
+import { rollWardEventSubtype } from './wardEventSubtypes';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
@@ -59,24 +60,10 @@ export type CanonicalEncounterType =
   | 'areaBoss'
   | 'wardEvent';
 
-/**
- * Subtypes for wardEvent tiles.  Assigned deterministically at generation time.
- * Full descriptions live in the ward-events content layer (future push).
- */
-export type WardEventSubtype =
-  | 'critical_care'     // High-acuity single patient
-  | 'emergency_triage'  // Multiple patients needing sorting
-  | 'code_response'     // Code blue / rapid response
-  | 'med_audit'         // Medication reconciliation review
-  | 'shift_handoff';    // Complex end-of-shift scenario
-
-export const WARD_EVENT_SUBTYPES: readonly WardEventSubtype[] = [
-  'critical_care',
-  'emergency_triage',
-  'code_response',
-  'med_audit',
-  'shift_handoff',
-];
+// WardEventSubtype is defined in types.ts and the roll engine lives in
+// wardEventSubtypes.ts (Push 3).  Re-exported here for backwards compatibility
+// with any import that still references canonicalEncounters.
+export type { WardEventSubtype };
 
 /** A tile with its canonical encounter, chest tier, and ward-event subtype. */
 export interface CanonicalAssignedTile {
@@ -238,10 +225,10 @@ export function assignCanonicalEncounters({
       assignedTile.chestTier = weightedRoll(chestRates as unknown as Record<string, number>, rng) as ChestTier;
     }
 
-    // Ward event subtype: uniform selection from the five canonical subtypes.
+    // Ward event subtype: shift-weighted roll from wardEventSubtypes.ts (Push 3).
+    // Assigned in-stream so the same PRNG position always yields the same subtype.
     if (encounter === 'wardEvent') {
-      const idx = Math.floor(rng() * WARD_EVENT_SUBTYPES.length);
-      assignedTile.wardEventSubtype = WARD_EVENT_SUBTYPES[idx];
+      assignedTile.wardEventSubtype = rollWardEventSubtype(timeOfDay, rng);
     }
 
     resultTiles.push(assignedTile);
