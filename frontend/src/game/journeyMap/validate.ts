@@ -9,8 +9,17 @@
  */
 
 import { TOTAL_BP, CHEST_BRONZE_MIN_BP, CHEST_GOLD_MAX_BP } from './config';
-import type { EncounterRates, ChestQualityRates } from './config';
 import type { JourneyRun, JourneyTile } from './types';
+
+// ── Flat rate shapes (what getEncounterRatesBp / getChestTierRatesBp return) ─
+// These are the canonical input shapes for the validators so callers do not
+// have to wrap their values in the EncounterRates / ChestQualityRates record.
+export interface FlatEncounterRates {
+  none: number; battle: number; areaBoss: number; treasure: number; merchant: number;
+}
+export interface FlatChestRates {
+  bronze: number; silver: number; gold: number;
+}
 
 // ── Encounter rates ───────────────────────────────────────────────────────────
 
@@ -20,14 +29,12 @@ import type { JourneyRun, JourneyTile } from './types';
  * - Rates sum to exactly TOTAL_BP (10 000).
  */
 export function validateEncounterRates(
-  cfg: EncounterRates,
+  cfg: FlatEncounterRates,
   chapter: number,
 ): string[] {
   const errors: string[] = [];
-  const { rates } = cfg;
-
   let sum = 0;
-  for (const [key, bp] of Object.entries(rates)) {
+  for (const [key, bp] of Object.entries(cfg)) {
     if (bp < 0) errors.push(`ch${chapter}: ${key} rate is negative (${bp} bp)`);
     sum += bp;
   }
@@ -49,11 +56,11 @@ export function validateEncounterRates(
  *   but checked explicitly for clarity).
  */
 export function validateChestQualityRates(
-  cfg: ChestQualityRates,
+  cfg: FlatChestRates,
   chapter: number,
 ): string[] {
   const errors: string[] = [];
-  const { bronze, silver, gold } = cfg.rates;
+  const { bronze, silver, gold } = cfg;
 
   if (bronze < 0)  errors.push(`ch${chapter}: bronze chest rate is negative (${bronze} bp)`);
   if (silver < 0)  errors.push(`ch${chapter}: silver chest rate is negative (${silver} bp)`);

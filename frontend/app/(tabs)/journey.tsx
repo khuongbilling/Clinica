@@ -13,8 +13,11 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
+import { getCurrentChapter } from "@/src/game/chapterJourney";
+import { FEATURE_FLAG_JOURNEY_FOG_MAP_V1 } from "@/src/game/featureFlags";
 import { type ModeCardDef } from "@/src/game/modeHub";
-import { ROUTES } from "@/src/game/routes";
+import { playerLevelFromXp } from "@/src/game/progression";
+import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
 import { unseenMemoriesCount } from "@/src/game/storyScenes";
 import { usePlayer } from "@/src/game/store";
 import { SPACING } from "@/src/theme/colors";
@@ -61,6 +64,23 @@ export default function JourneyHub() {
   const { player } = usePlayer();
   const unseen = unseenMemoriesCount(player);
 
+  // Derive the player's current chapter so the Chapters banner can skip the
+  // chapter-list screen and open the fog-map directly (2 taps instead of 3).
+  const playerLevel   = player ? playerLevelFromXp(player.xp ?? 0).level : 1;
+  const claimedNodes  = player?.claimed_journey_nodes ?? [];
+  const currentChapter = player ? getCurrentChapter(playerLevel, claimedNodes) : null;
+
+  function handleChaptersBannerPress() {
+    if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1 && currentChapter) {
+      // Push 16: go directly to the fog-map for the player's current chapter.
+      // The old /journey chapter-list screen remains reachable via the back
+      // button on the fog-map for players who want to browse other chapters.
+      router.push(dynRoute.chapterFogMap(String(currentChapter.number)) as AppRoute);
+    } else {
+      router.push(ROUTES.JOURNEY);
+    }
+  }
+
   return (
     <SafeAreaView style={s.root} edges={["top"]}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -68,8 +88,15 @@ export default function JourneyHub() {
         <Text style={s.subtitle}>Your path through the Grand Ward</Text>
 
         <BannerCard
-          mode={BANNERS.chapters}
-          onPress={() => router.push(ROUTES.JOURNEY)}
+          mode={{
+            ...BANNERS.chapters,
+            // Show the active chapter name when the fog-map flag is on and the
+            // player is loaded, so the banner reads as a live shortcut.
+            subtitle: FEATURE_FLAG_JOURNEY_FOG_MAP_V1 && currentChapter
+              ? `Ch.${currentChapter.number} · ${currentChapter.theme}`
+              : BANNERS.chapters.subtitle,
+          }}
+          onPress={handleChaptersBannerPress}
           height={140}
           testID="journey-banner-chapters"
         />
