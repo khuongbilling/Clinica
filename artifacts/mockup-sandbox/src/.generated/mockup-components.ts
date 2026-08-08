@@ -3,6 +3,8 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/clinica-layout/PrologueLayoutDiagram.tsx": () => import("../components/mockups/clinica-layout/PrologueLayoutDiagram.tsx"),
   "./components/mockups/journey/Current.tsx": () => import("../components/mockups/journey/Current.tsx"),
+  "./components/mockups/journey-map-aesthetics/FogboundHexMap.tsx": () => import("../components/mockups/journey-map-aesthetics/FogboundHexMap.tsx"),
+  "./components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx": () => import("../components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx"),
   "./components/mockups/main-hub/CommandDeck.tsx": () => import("../components/mockups/main-hub/CommandDeck.tsx"),
   "./components/mockups/main-hub/Current.tsx": () => import("../components/mockups/main-hub/Current.tsx"),
   "./components/mockups/main-hub/EnterWardPreview.tsx": () => import("../components/mockups/main-hub/EnterWardPreview.tsx"),
@@ -11,8 +13,6 @@ export const modules: ModuleMap = {
   "./components/mockups/main-hub/MissionAtlas.tsx": () => import("../components/mockups/main-hub/MissionAtlas.tsx"),
   "./components/mockups/main-hub/PlayerStatusBar.tsx": () => import("../components/mockups/main-hub/PlayerStatusBar.tsx"),
   "./components/mockups/main-hub/SystemCard.tsx": () => import("../components/mockups/main-hub/SystemCard.tsx"),
-  "./components/mockups/journey-map-aesthetics/FogboundHexMap.tsx": () => import("../components/mockups/journey-map-aesthetics/FogboundHexMap.tsx"),
-  "./components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx": () => import("../components/mockups/journey-map-aesthetics/JourneyMapAesthetics.tsx"),
   "./components/mockups/prologue-vn-positions/CoverContainExplainer.tsx": () => import("../components/mockups/prologue-vn-positions/CoverContainExplainer.tsx"),
   "./components/mockups/prologue-vn-positions/SIRevealPositions.tsx": () => import("../components/mockups/prologue-vn-positions/SIRevealPositions.tsx"),
   "./components/mockups/prologue-vn-positions/ScenePositions.tsx": () => import("../components/mockups/prologue-vn-positions/ScenePositions.tsx"),
