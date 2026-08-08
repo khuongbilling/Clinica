@@ -50,6 +50,19 @@ export type StoryScene = {
   /** Ambient sound mood while the scene is open (see ambient.ts). */
   ambience?: AmbienceMood;
   unlock: StorySceneUnlock;
+  /**
+   * Push H — dialogue IDs this scene covers for skip-gating.
+   *
+   * Single-route scenes: omit this field (defaults to [scene.id] at call site).
+   * Alternate-route scenes (Day / Evening / Night variants): list ALL route IDs.
+   *   "Skip Seen Scene" is offered only when EVERY listed ID has been seen,
+   *   preventing a player from skipping new Evening dialogue just because
+   *   they previously completed the Day route for the same chapter.
+   *
+   * Example:
+   *   dialogueIds: ['c4_day_route', 'c4_evening_route', 'c4_night_route']
+   */
+  dialogueIds?: string[];
 };
 
 /**

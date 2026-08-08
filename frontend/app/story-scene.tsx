@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   STORY_SCENES, getStoryScene, isSceneSeen, isSceneUnlocked, sceneAmbience,
 } from "@/src/game/storyScenes";
+import { canSkipDialogueScene } from "@/src/features/story/dialogueSkip";
 import { getNodeIdForScene } from "@/src/game/journeyRewards";
 import { pokeAmbience, startAmbience, stopAmbience } from "@/src/game/ambient";
 import { useSettings } from "@/src/game/settingsStore";
@@ -86,6 +87,16 @@ function SceneViewer({ sceneId, returnTo }: { sceneId: string; returnTo?: string
 
   const done = shown >= allLines.length;
 
+  // Push H: skip is offered only when every dialogue ID in this scene has been
+  // seen — preventing a player from skipping new alternate-route (Day / Evening
+  // / Night) dialogue just because the chapter was previously completed on a
+  // different route.  Defaults to [scene.id] for single-route scenes.
+  const seenDialogueIds = new Set(player?.story_scenes_seen ?? []);
+  const canSkip = canSkipDialogueScene(
+    scene.dialogueIds ?? [scene.id],
+    seenDialogueIds,
+  );
+
   function leave() {
     if (leavingRef.current) return;
     leavingRef.current = true;
@@ -139,9 +150,11 @@ function SceneViewer({ sceneId, returnTo }: { sceneId: string; returnTo?: string
             <Text style={styles.title}>{scene.title}</Text>
           </View>
           <View style={styles.topActions}>
-            <Pressable onPress={leave} hitSlop={10} testID="story-scene-skip">
-              <Text style={styles.skipTxt}>Skip</Text>
-            </Pressable>
+            {canSkip && (
+              <Pressable onPress={leave} hitSlop={10} testID="story-scene-skip">
+                <Text style={styles.skipTxt}>Skip Seen Scene</Text>
+              </Pressable>
+            )}
             <Pressable onPress={leave} hitSlop={12} testID="story-scene-close">
               <Ionicons name="close" size={22} color={INK.paper} />
             </Pressable>
