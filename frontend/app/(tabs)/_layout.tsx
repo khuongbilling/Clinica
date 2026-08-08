@@ -4,9 +4,12 @@ import { Image, Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
-import { checkFeatureGate, playerLevelFromXp, type CompoundGateContext } from "@/src/game/progression";
+import { checkFeatureGate, playerLevelFromXp, buildGateContext, type CompoundGateContext } from "@/src/game/progression";
 import { unseenMemoriesCount } from "@/src/game/storyScenes";
 import { useNewBagCount } from "@/src/game/bagSeenStore";
+import { useNewHeroCount } from "@/src/game/heroSeenStore";
+import { useNewShopSectionCount } from "@/src/game/shopSeenStore";
+import { SHOP_SECTIONS } from "@/src/game/shopHub";
 
 // ── Illustrated hand-drawn tab icons ─────────────────────────────────────────
 // Each icon is an AI-generated donghua/anime illustrated PNG with transparent
@@ -106,6 +109,23 @@ export default function TabsLayout() {
   const journeyBadge = unseenMemoriesCount(player) > 0;
   // Bag: inventory items the player hasn't opened the bag to see yet.
   const bagBadge = useNewBagCount(Object.keys(player?.inventory ?? {})) > 0;
+  // Heroes: newly owned heroes the player hasn't opened the Heroes screen to see.
+  const heroesBadge = useNewHeroCount(player?.heroes_owned ?? []) > 0;
+  // Shop: unlocked shop sections the player hasn't opened the Shop to see yet.
+  // Compute the set of currently-accessible section IDs (mirrors shop.tsx classify logic).
+  const shopGateCtx = player ? buildGateContext(player) : null;
+  const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
+  const unlockedShopIds = shopGateCtx
+    ? SHOP_SECTIONS
+        .filter((s) => {
+          if (s.minLevelToShow && playerLevel < s.minLevelToShow) return false;
+          if (s.status === "coming_soon") return false;
+          if (s.featureGate) return checkFeatureGate(s.featureGate, shopGateCtx).unlocked;
+          return true;
+        })
+        .map((s) => s.id)
+    : [];
+  const shopBadge = useNewShopSectionCount(unlockedShopIds) > 0;
 
   return (
     <Tabs
@@ -145,7 +165,7 @@ export default function TabsLayout() {
           title: "Heroes",
           tabBarAccessibilityLabel: heroesUnlocked ? "Heroes" : "Heroes — locked, unlocks later",
           tabBarButtonTestID: "tab-heroes",
-          tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused, !heroesUnlocked),
+          tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused, !heroesUnlocked, heroesBadge),
         }}
         listeners={{ tabPress: (e) => { if (!heroesUnlocked) e.preventDefault(); } }}
       />
@@ -179,7 +199,7 @@ export default function TabsLayout() {
           title: "Shop",
           tabBarAccessibilityLabel: shopUnlocked ? "Shop" : "Shop — locked, unlocks later",
           tabBarButtonTestID: "tab-shop",
-          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused, !shopUnlocked),
+          tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused, !shopUnlocked, shopBadge),
         }}
         listeners={{ tabPress: (e) => { if (!shopUnlocked) e.preventDefault(); } }}
       />

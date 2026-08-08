@@ -17,6 +17,9 @@ import { SummoningEmblem, HeroesEmblem, WardDefenseEmblem, UniversityEmblem } fr
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import { markHeroesSeen } from "@/src/game/heroSeenStore";
 import { canEvolve, getProgress } from "@/src/game/evolution";
 import {
   rarityTierLabel, heroClassLabel, heroRoleLabel, isClassChangeStar,
@@ -55,6 +58,16 @@ export default function HeroesScreen() {
   const [filterRole,    setFilterRole]    = useState<string | null>(null);
 
   useClearTutorialOnExit();
+
+  // Mark all currently-owned heroes as seen whenever this screen gains focus —
+  // clears the red badge on the Heroes tab and the Recruit shortcut card.
+  useFocusEffect(
+    useCallback(() => {
+      if (player?.heroes_owned?.length) {
+        void markHeroesSeen(player.heroes_owned);
+      }
+    }, [player?.heroes_owned]),
+  );
 
   useEffect(() => {
     if (player) setTeam(player.active_team ?? []);

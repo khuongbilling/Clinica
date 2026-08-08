@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { markShopSectionsSeen } from "@/src/game/shopSeenStore";
 import { ROUTES, type AppRoute } from "@/src/game/routes";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -38,6 +39,25 @@ export default function Shop() {
       return () => clearTimeout(t);
     }
   }, [player, lessonsStarted, isCompleted, startTutorial]);
+
+  // Mark all currently-unlocked shop sections as seen whenever this screen gains
+  // focus — clears the red badge on the Shop tab.
+  useFocusEffect(
+    useCallback(() => {
+      if (!player) return;
+      const lvl = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
+      const gCtx = buildGateContext(player);
+      const ids = SHOP_SECTIONS
+        .filter((s) => {
+          if (s.minLevelToShow && lvl < s.minLevelToShow) return false;
+          if (s.status === "coming_soon") return false;
+          if (s.featureGate) return checkFeatureGate(s.featureGate, gCtx).unlocked;
+          return true;
+        })
+        .map((s) => s.id);
+      if (ids.length) void markShopSectionsSeen(ids);
+    }, [player]),
+  );
 
   if (!player) {
     return (

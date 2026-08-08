@@ -37,6 +37,8 @@ import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate, heroXpCostForLevel } from "@/src/game/progression";
 import { getProgress } from "@/src/game/evolution";
 import { levelCapForStar } from "@/src/game/university";
+import { useNewHeroCount } from "@/src/game/heroSeenStore";
+import { useNewBagCount } from "@/src/game/bagSeenStore";
 
 const EMBLEM_IMAGES = {
   dailyRounds: require("../../assets/ui-icons/emblems/daily-rounds.png"),
@@ -192,6 +194,14 @@ export default function RunHome() {
       getObjectiveProgress().then((done) => setCurrentObjective(getCurrentObjective(done)));
     }, []),
   );
+
+  // ── Hub shortcut card notification badges (hooks must be before early returns) ──
+  // Recruit: badge when new heroes are owned but not yet viewed in the Heroes screen.
+  const newHeroCount  = useNewHeroCount(player?.heroes_owned ?? []);
+  const recruitBadge  = newHeroCount > 0 ? newHeroCount : undefined;
+  // Supplies: badge when inventory has new items not yet viewed in the Bag screen.
+  const newBagCount   = useNewBagCount(Object.keys(player?.inventory ?? {}));
+  const suppliesBadge = newBagCount > 0 ? newBagCount : undefined;
 
   // P6: return-session motivation card — shown once per app session for Lv2+ players
   // who have finished the systemHubIntro orientation. Does NOT repeat on re-focus.
@@ -573,7 +583,8 @@ export default function RunHome() {
             <SanctuaryShortcutCard
               emblem={EMBLEM_IMAGES.recruit}
               label="Recruit"
-              available
+              available={!recruitBadge}
+              badge={recruitBadge}
               onPress={() => router.push(ROUTES.UNI_RECRUIT)}
               testID="home-float-recruit"
             />
@@ -643,6 +654,7 @@ export default function RunHome() {
             <SanctuaryShortcutCard
               emblem={EMBLEM_IMAGES.supplies}
               label="Supplies"
+              badge={suppliesBadge}
               onPress={() => router.push(ROUTES.ITEM_BAG)}
               testID="home-float-supplies"
             />
