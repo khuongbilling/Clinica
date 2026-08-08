@@ -97,7 +97,7 @@ describe('night shift', () => {
     for (let ch = NIGHT_TEASER; ch < NIGHT_UNLOCK; ch++) {
       const { night } = getShiftAvailability(ch);
       expect(night.unlocked).toBe(false);
-      expect(night.teaserVisible).toBe(true, `ch ${ch} should show night teaser`);
+      expect(night.teaserVisible, `ch ${ch} should show night teaser`).toBe(true);
       expect(isShiftVisible(night)).toBe(true);
     }
   });

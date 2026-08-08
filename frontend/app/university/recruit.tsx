@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { playRewardCue } from "@/src/game/cues";
+import { markHeroesSeen } from "@/src/game/heroSeenStore";
 import { rarityColor, SUMMON_COST } from "@/src/game/gacha";
 import { completeObjective } from "@/src/game/objectiveProgress";
 import { RecruitResult, rarityTierLabel, heroRoleLabel } from "@/src/game/university";
@@ -154,6 +155,7 @@ export default function UniversityRecruitScreen() {
     if (!res.ok) setError(res.message);
     else {
       const r = res.result || null;
+      if (r?.kind === "hero" && r.entry) void markHeroesSeen([r.entry.heroId]);
       setCeremonyResult(r);
       setRevealIsFree(true);
       setRevealResult(r);
@@ -172,7 +174,7 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await freeRecruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: true }); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); /* satisfies firstSummon › summon_action */ }
+    else { const r = res.result || null; if (r?.kind === "hero" && r.entry) void markHeroesSeen([r.entry.heroId]); if (r) setSingle({ result: r, isFree: true }); setRevealIsFree(true); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); /* satisfies firstSummon › summon_action */ }
     setBusy(false);
   };
 
@@ -185,7 +187,7 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await recruitOnce();
     if (!res.ok) setError(res.message);
-    else { const r = res.result || null; if (r) setSingle({ result: r, isFree: false }); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); /* satisfies firstSummon › summon_action */ }
+    else { const r = res.result || null; if (r?.kind === "hero" && r.entry) void markHeroesSeen([r.entry.heroId]); if (r) setSingle({ result: r, isFree: false }); setRevealIsFree(false); setRevealResult(r); playRewardCue(false); onRequiredAction("summon"); /* satisfies firstSummon › summon_action */ }
     setBusy(false);
   };
 
@@ -197,7 +199,13 @@ export default function UniversityRecruitScreen() {
     setCeremonyResult(null);
     const res = await recruitTen();
     if (!res.ok) setError(res.message);
-    else { setBatch(res.results || null); playRewardCue(true); }
+    else {
+      const results = res.results || null;
+      const newHeroIds = (results ?? []).filter(r => r.kind === "hero" && r.entry).map(r => r.entry!.heroId);
+      if (newHeroIds.length > 0) void markHeroesSeen(newHeroIds);
+      setBatch(results);
+      playRewardCue(true);
+    }
     setBusy(false);
   };
 
