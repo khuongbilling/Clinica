@@ -43,6 +43,9 @@ import {
 } from "@/src/features/journey/ui/journeyRecommendation";
 import type { JourneyNodeUi } from "@/src/features/journey/ui/journeyUi.types";
 import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
+import { ShiftSelector } from "@/src/features/journey/ui/ShiftSelector";
+import { getShiftAvailability } from "@/src/features/journey/ui/shiftAvailability";
+import type { TimeOfDay } from "@/src/game/journeyMap/types";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { usePlayer } from "@/src/game/store";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -62,6 +65,9 @@ export default function JourneyScreen() {
   const handleBranchSelect = useCallback((branchGroupId: string, nodeId: string) => {
     setCanonicalChoices((prev) => ({ ...prev, [branchGroupId]: nodeId }));
   }, []);
+  // Active shift tab in the inline ShiftSelector.  Resets to 'day' whenever
+  // a new choose_branch recommendation appears.
+  const [activeShift, setActiveShift] = useState<TimeOfDay>('day');
   const chapterIdxInitialized = useRef(false);
 
   // Auto-select the player's current chapter on first load
@@ -257,14 +263,36 @@ export default function JourneyScreen() {
             recommendation={recommendation}
             accentColor={currentChapter.accentColor}
             onNavigate={(href) => router.push(href as AppRoute)}
-            onChooseBranch={(branchGroupId, nodeIds) => {
-              // Open branch selector — for now select the first candidate as a
-              // placeholder until a dedicated branch-selector modal exists.
-              // The choose_branch CTA is rendered; deep navigation is deferred
-              // until the branch-selector component is built.
-              if (nodeIds[0]) handleBranchSelect(branchGroupId, nodeIds[0]);
-            }}
+            onChooseBranch={() => {/* ShiftSelector shown inline below */}}
           />
+
+          {/* ShiftSelector — shown inline when branch choice is needed.
+              Key rule (spec): ShiftSelector receives only availability booleans,
+              never the actual node data. Node routing happens at this parent level
+              after the shift is confirmed. */}
+          {recommendation.kind === 'choose_branch' && (
+            <View style={styles.shiftSelectorWrap}>
+              <Text style={styles.shiftSelectorKicker}>CHOOSE SHIFT</Text>
+              <ShiftSelector
+                availability={getShiftAvailability(currentChapter.number)}
+                activeShift={activeShift}
+                onSelect={(shift) => {
+                  setActiveShift(shift);
+                  // Map selected shift → nodeId from the branch candidates.
+                  // journeyNodes carry a `shift` field; find the matching node.
+                  const nodeId =
+                    journeyNodes.find(
+                      (n) =>
+                        n.shift === shift &&
+                        recommendation.nodeIds.includes(n.id),
+                    )?.id ?? recommendation.nodeIds[0];
+                  if (nodeId) {
+                    handleBranchSelect(recommendation.branchGroupId, nodeId);
+                  }
+                }}
+              />
+            </View>
+          )}
 
           {/* ── Chapter selector tabs ── */}
           <ScrollView
@@ -755,6 +783,24 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.md, marginVertical: SPACING.sm,
     backgroundColor: UI.sanctuaryPanel, borderRadius: RADIUS.md,
     borderWidth: 1, borderColor: UI.sanctuaryBorder, padding: SPACING.sm,
+  },
+  shiftSelectorWrap: {
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    backgroundColor: UI.sanctuaryPanel,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: UI.sanctuaryBorder,
+    overflow: "hidden",
+  },
+  shiftSelectorKicker: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: COLORS.onSurfaceTertiary,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 0,
   },
   nextDot:   { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   nextKicker: { fontSize: 9, fontWeight: "700", letterSpacing: 1 },
