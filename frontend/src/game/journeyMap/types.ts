@@ -19,6 +19,20 @@ export interface AxialCoord {
   readonly r: number;
 }
 
+// ── Shift (time of day) ───────────────────────────────────────────────────────
+
+/**
+ * The shift (time of day) at which a journey run is created.
+ * Frozen for the lifetime of the run — determines ward event subtype distribution
+ * and enemy density caps throughout the chapter.
+ *
+ * Canonical mapping (local device time at run-creation):
+ *   day     →  06:00–13:59
+ *   evening →  14:00–21:59
+ *   night   →  22:00–05:59
+ */
+export type TimeOfDay = 'day' | 'evening' | 'night';
+
 // ── Encounter ────────────────────────────────────────────────────────────────
 
 export type EncounterType =
@@ -54,6 +68,34 @@ export type WardEventSubtype =
   | 'surveillance_patient'  // Night monitoring event
   | 'resource_service'      // Equipment or service encounter
   | 'ward_hazard';          // Environmental or clinical hazard
+
+// ── Run inventory types ───────────────────────────────────────────────────────
+
+/**
+ * A Protocol Card collected from a ward_event tile during a journey run.
+ * Cards are picked up when a 'protocol_card' ward event is resolved and may
+ * be used to unlock bonus effects in subsequent encounters.
+ */
+export interface JourneyCard {
+  /** Unique id within this run (deterministic: e.g. "card:<sourceTileId>"). */
+  readonly id:           string;
+  /** Tile this card came from. */
+  readonly sourceTileId: string;
+  /** Tile where the card was spent, if already used. */
+  usedAtTileId?:         string;
+}
+
+/**
+ * A Ward Blessing active during this run.
+ * Blessings are granted by 'ward_blessing' ward event tiles and provide
+ * passive bonuses (e.g. stability regen, reduced corruption) for the run.
+ */
+export interface JourneyBlessing {
+  /** Unique id within this run. */
+  readonly id:           string;
+  /** Tile this blessing came from. */
+  readonly sourceTileId: string;
+}
 
 // ── Tile visibility ──────────────────────────────────────────────────────────
 
@@ -184,4 +226,39 @@ export interface JourneyRun {
 
   /** Total stamina spent on encounters in this run. */
   staminaSpent: number;
+
+  // ── New canonical-run fields (Push 4) ──────────────────────────────────────
+
+  /**
+   * The shift at which this run was created.
+   * Frozen for the run's lifetime — determines ward event subtypes and
+   * enemy density caps.  Defaults to 'day' on pre-canonical legacy runs.
+   */
+  readonly shift: TimeOfDay;
+
+  /**
+   * Hero IDs available to call for assistance during this run.
+   * Populated by 'support_ally' ward events; consumed by Call actions in
+   * encounters (wired in future pushes).
+   */
+  callTeam: readonly string[];
+
+  /**
+   * Protocol cards collected from 'protocol_card' ward event tiles.
+   * Each card may be spent once to unlock a bonus effect.
+   */
+  cards: JourneyCard[];
+
+  /**
+   * Ward blessings currently active.  Granted by 'ward_blessing' ward event
+   * tiles.  Provide passive bonuses for the duration of the run.
+   */
+  blessings: JourneyBlessing[];
+
+  /**
+   * Ward pressure meter (0–100).
+   * Rises with unresolved ward hazards and corruption spread; falls with
+   * successful care actions.  Affects encounter difficulty modifiers.
+   */
+  pressure: number;
 }

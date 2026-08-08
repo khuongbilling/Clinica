@@ -489,7 +489,7 @@ class JourneyRunCreate(BaseModel):
     chapter_id:              int
     seed:                    str
     attempt_number:          int
-    schema_version:          int            = 1
+    schema_version:          int            = 2   # bumped at Push 4
     tile_count:              int
     tiles:                   List[Any]      # opaque JSON, validated client-side
     start_tile_id:           str
@@ -500,15 +500,26 @@ class JourneyRunCreate(BaseModel):
     chapter_boss_defeated:   bool           = False
     explored_tile_count:     int            = 0
     stamina_spent:           int            = 0
+    # Push 4 canonical fields
+    shift:                   Optional[str]  = None   # 'day' | 'evening' | 'night'
+    call_team:               List[str]      = []
+    cards:                   List[Any]      = []
+    blessings:               List[Any]      = []
+    pressure:                float          = 0.0
 
 
 class JourneyRunSave(BaseModel):
     tiles:                    List[Any]
     current_tile_id:          str
-    area_boss_keys_collected: Optional[int]  = None
-    chapter_boss_defeated:    Optional[bool] = None
-    explored_tile_count:      Optional[int]  = None
-    stamina_spent:            Optional[int]  = None
+    area_boss_keys_collected: Optional[int]   = None
+    chapter_boss_defeated:    Optional[bool]  = None
+    explored_tile_count:      Optional[int]   = None
+    stamina_spent:            Optional[int]   = None
+    # Push 4 canonical mutable fields
+    call_team:                Optional[List[str]] = None
+    cards:                    Optional[List[Any]] = None
+    blessings:                Optional[List[Any]] = None
+    pressure:                 Optional[float]     = None
 
 
 @api_router.get("/player/{player_id}/journey-runs/{chapter_id}/active")

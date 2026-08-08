@@ -1,5 +1,5 @@
 /**
- * journeyMap/journeyRunRepository.ts — PUSH 8
+ * journeyMap/journeyRunRepository.ts — PUSH 4
  *
  * HTTP implementation of IJourneyRunRepository.
  *
@@ -16,6 +16,14 @@
  * `fromWire` parses a raw backend document back to a JourneyRun.
  * Tiles are stored and returned as opaque JSON objects and need no conversion
  * because JourneyTile.id, JourneyTile.q, etc. are already short/unambiguous.
+ *
+ * Concurrency protection (Push 4)
+ * ────────────────────────────────
+ * `_inflightCreates` is a Map<key, Promise<JourneyRun>> that deduplicates
+ * concurrent run-creation calls.  If the user double-taps "Challenge Chapter"
+ * before the first request completes, the second call receives the same promise
+ * as the first — only one HTTP request is ever sent.  The server-side unique
+ * index provides a second safety net for any race that survives the client gate.
  */
 
 import Constants from 'expo-constants';
@@ -23,7 +31,7 @@ import Constants from 'expo-constants';
 import { generateSecureSeed }           from './secureSeed';
 import { buildInitialJourneyRun, generateRunData } from './journeyRunLifecycle';
 import type { IJourneyRunRepository }   from './journeyRunLifecycle';
-import type { JourneyRun }              from './types';
+import type { JourneyRun, TimeOfDay }   from './types';
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -67,29 +75,54 @@ async function httpOrNull<T>(path: string): Promise<T | null> {
   }
 }
 
+// ── Shift determination ───────────────────────────────────────────────────────
+
+/**
+ * Determine the current TimeOfDay from the device's local hour.
+ *
+ *   Day     →  06:00–13:59
+ *   Evening →  14:00–21:59
+ *   Night   →  22:00–05:59
+ *
+ * This is frozen on the run at creation time and never changes.
+ */
+export function getCurrentShift(): TimeOfDay {
+  const hour = new Date().getHours();
+  if (hour >= 6  && hour < 14) return 'day';
+  if (hour >= 14 && hour < 22) return 'evening';
+  return 'night';
+}
+
 // ── Wire format types ─────────────────────────────────────────────────────────
 
 /** Shape of the raw JSON the backend sends and receives. */
 interface WireRun {
-  id:                      string;
-  schema_version:          number;
-  player_id:               string;
-  chapter_id:              number;
-  attempt_number:          number;
-  seed:                    string;
-  status:                  'active' | 'cleared';
-  created_at:              string;
-  updated_at:              string;
-  tile_count:              number;
-  tiles:                   unknown[];        // opaque — passed through as-is
-  start_tile_id:           string;
-  current_tile_id:         string;
-  gate_anchor_tile_id?:    string;
-  area_boss_count:         number;
+  id:                       string;
+  schema_version:           number;
+  player_id:                string;
+  chapter_id:               number;
+  attempt_number:           number;
+  seed:                     string;
+  // Push 4 canonical field — optional for legacy runs that predate this field.
+  shift?:                   string;
+  status:                   'active' | 'cleared';
+  created_at:               string;
+  updated_at:               string;
+  tile_count:               number;
+  tiles:                    unknown[];        // opaque — passed through as-is
+  start_tile_id:            string;
+  current_tile_id:          string;
+  gate_anchor_tile_id?:     string;
+  area_boss_count:          number;
   area_boss_keys_collected: number;
-  chapter_boss_defeated:   boolean;
-  explored_tile_count:     number;
-  stamina_spent:           number;
+  chapter_boss_defeated:    boolean;
+  explored_tile_count:      number;
+  stamina_spent:            number;
+  // Push 4 canonical inventory fields — optional for legacy runs.
+  call_team?:               string[];
+  cards?:                   unknown[];
+  blessings?:               unknown[];
+  pressure?:                number;
 }
 
 function fromWire(w: WireRun): JourneyRun {
@@ -100,6 +133,8 @@ function fromWire(w: WireRun): JourneyRun {
     chapterId:              w.chapter_id,
     attemptNumber:          w.attempt_number,
     seed:                   w.seed,
+    // Canonical fields: fall back to sensible defaults for legacy runs.
+    shift:                  (w.shift as TimeOfDay | undefined) ?? 'day',
     status:                 w.status,
     createdAt:              w.created_at,
     updatedAt:              w.updated_at,
@@ -113,35 +148,54 @@ function fromWire(w: WireRun): JourneyRun {
     chapterBossDefeated:    w.chapter_boss_defeated,
     exploredTileCount:      w.explored_tile_count,
     staminaSpent:           w.stamina_spent,
+    callTeam:               w.call_team  ?? [],
+    cards:                  (w.cards     ?? []) as JourneyRun['cards'],
+    blessings:              (w.blessings ?? []) as JourneyRun['blessings'],
+    pressure:               w.pressure   ?? 0,
   };
 }
 
-function toWire(run: JourneyRun): Omit<WireRun, 'id' | 'created_at' | 'updated_at'> & {
-  chapter_id: number;
-} {
+function toWire(run: JourneyRun): Omit<WireRun, 'id' | 'created_at' | 'updated_at'> {
   return {
-    schema_version:          run.schemaVersion,
-    player_id:               run.playerId,
-    chapter_id:              run.chapterId,
-    attempt_number:          run.attemptNumber,
-    seed:                    run.seed,
-    status:                  run.status,
-    tile_count:              run.tileCount,
-    tiles:                   run.tiles,
-    start_tile_id:           run.startTileId,
-    current_tile_id:         run.currentTileId,
-    gate_anchor_tile_id:     run.gateAnchorTileId,
-    area_boss_count:         run.areaBossCount,
+    schema_version:           run.schemaVersion,
+    player_id:                run.playerId,
+    chapter_id:               run.chapterId,
+    attempt_number:           run.attemptNumber,
+    seed:                     run.seed,
+    shift:                    run.shift,
+    status:                   run.status,
+    tile_count:               run.tileCount,
+    tiles:                    run.tiles,
+    start_tile_id:            run.startTileId,
+    current_tile_id:          run.currentTileId,
+    gate_anchor_tile_id:      run.gateAnchorTileId,
+    area_boss_count:          run.areaBossCount,
     area_boss_keys_collected: run.areaBossKeysCollected,
-    chapter_boss_defeated:   run.chapterBossDefeated,
-    explored_tile_count:     run.exploredTileCount,
-    stamina_spent:           run.staminaSpent,
+    chapter_boss_defeated:    run.chapterBossDefeated,
+    explored_tile_count:      run.exploredTileCount,
+    stamina_spent:            run.staminaSpent,
+    call_team:                run.callTeam as string[],
+    cards:                    run.cards,
+    blessings:                run.blessings,
+    pressure:                 run.pressure,
   };
 }
 
 // ── Concrete repository ───────────────────────────────────────────────────────
 
 export class JourneyRunRepository implements IJourneyRunRepository {
+  /**
+   * Client-side concurrency deduplication.
+   * Key: `${playerId}:${chapterId}:attempt:${attemptNumber}`
+   * Value: in-flight creation promise.
+   *
+   * A second call with the same key before the first resolves receives the
+   * same promise — only one HTTP request is sent.  Entries are deleted on
+   * settlement (both resolve and reject) so future retries after errors go
+   * through fresh requests.
+   */
+  private _inflightCreates = new Map<string, Promise<JourneyRun>>();
+
   // ── Queries ────────────────────────────────────────────────────────────────
 
   async getActiveRun(playerId: string, chapterId: number): Promise<JourneyRun | null> {
@@ -161,14 +215,8 @@ export class JourneyRunRepository implements IJourneyRunRepository {
   // ── Mutations ──────────────────────────────────────────────────────────────
 
   async createFirstRun(playerId: string, chapterId: number): Promise<JourneyRun> {
-    const seed     = generateSecureSeed();
-    const run      = this._buildNewRun(playerId, chapterId, 1, seed);
-    const wire     = toWire(run);
-    const raw      = await http<WireRun>(
-      `/player/${playerId}/journey-runs`,
-      { method: 'POST', body: JSON.stringify(wire) },
-    );
-    return fromWire(raw);
+    const key = `${playerId}:${chapterId}:attempt:1`;
+    return this._dedupCreate(key, () => this._doCreateFirstRun(playerId, chapterId));
   }
 
   async createChallengeRun(
@@ -176,26 +224,11 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     chapterId:          number,
     priorAttemptNumber: number,
   ): Promise<JourneyRun> {
-    const seed         = generateSecureSeed();
-    const attemptNumber = priorAttemptNumber + 1;
-    const run          = this._buildNewRun(playerId, chapterId, attemptNumber, seed);
-    const wire         = toWire(run);
-
-    try {
-      const raw = await http<WireRun>(
-        `/player/${playerId}/journey-runs`,
-        { method: 'POST', body: JSON.stringify(wire) },
-      );
-      return fromWire(raw);
-    } catch (err) {
-      // 409 Conflict = unique index collision from a concurrent request.
-      // Return the run that was already created by the other request.
-      if (err instanceof Error && err.message.startsWith('API 409')) {
-        const existing = await this.getLatestRun(playerId, chapterId);
-        if (existing && existing.status === 'active') return existing;
-      }
-      throw err;
-    }
+    const newAttempt = priorAttemptNumber + 1;
+    const key        = `${playerId}:${chapterId}:attempt:${newAttempt}`;
+    return this._dedupCreate(key, () =>
+      this._doCreateChallengeRun(playerId, chapterId, priorAttemptNumber),
+    );
   }
 
   async saveRun(run: JourneyRun): Promise<JourneyRun> {
@@ -210,6 +243,11 @@ export class JourneyRunRepository implements IJourneyRunRepository {
           chapter_boss_defeated:    run.chapterBossDefeated,
           explored_tile_count:      run.exploredTileCount,
           stamina_spent:            run.staminaSpent,
+          // Canonical mutable fields
+          call_team:                run.callTeam,
+          cards:                    run.cards,
+          blessings:                run.blessings,
+          pressure:                 run.pressure,
         }),
       },
     );
@@ -223,7 +261,66 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     return fromWire(raw);
   }
 
-  // ── Internal helpers ───────────────────────────────────────────────────────
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Deduplication wrapper.  If a promise for `key` is already in-flight,
+   * returns it directly.  Otherwise runs `factory()`, caches the promise,
+   * and cleans up after settlement.
+   */
+  private _dedupCreate(
+    key:     string,
+    factory: () => Promise<JourneyRun>,
+  ): Promise<JourneyRun> {
+    const existing = this._inflightCreates.get(key);
+    if (existing) return existing;
+
+    const promise = factory().finally(() => this._inflightCreates.delete(key));
+    this._inflightCreates.set(key, promise);
+    return promise;
+  }
+
+  private async _doCreateFirstRun(
+    playerId:  string,
+    chapterId: number,
+  ): Promise<JourneyRun> {
+    const seed = generateSecureSeed();
+    const run  = this._buildNewRun(playerId, chapterId, 1, seed);
+    const wire = toWire(run);
+    const raw  = await http<WireRun>(
+      `/player/${playerId}/journey-runs`,
+      { method: 'POST', body: JSON.stringify(wire) },
+    );
+    return fromWire(raw);
+  }
+
+  private async _doCreateChallengeRun(
+    playerId:           string,
+    chapterId:          number,
+    priorAttemptNumber: number,
+  ): Promise<JourneyRun> {
+    const seed          = generateSecureSeed();
+    const attemptNumber = priorAttemptNumber + 1;
+    const run           = this._buildNewRun(playerId, chapterId, attemptNumber, seed);
+    const wire          = toWire(run);
+
+    try {
+      const raw = await http<WireRun>(
+        `/player/${playerId}/journey-runs`,
+        { method: 'POST', body: JSON.stringify(wire) },
+      );
+      return fromWire(raw);
+    } catch (err) {
+      // 409 Conflict = unique index collision from a concurrent request that
+      // slipped through the client-side dedup gate (e.g. different sessions).
+      // Return the run that was already created by the other request.
+      if (err instanceof Error && err.message.startsWith('API 409')) {
+        const existing = await this.getLatestRun(playerId, chapterId);
+        if (existing && existing.status === 'active') return existing;
+      }
+      throw err;
+    }
+  }
 
   /** Generate topology + encounters and assemble an in-memory run (no id yet). */
   private _buildNewRun(
@@ -232,13 +329,15 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     attemptNumber: number,
     seed:          string,
   ): JourneyRun {
-    const { topology, encounters } = generateRunData(chapterId, seed);
+    const shift                  = getCurrentShift();
+    const { topology, encounters } = generateRunData(chapterId, seed, shift);
     return buildInitialJourneyRun({
       id: '',      // server will assign the real UUID
       playerId,
       chapterId,
       attemptNumber,
       seed,
+      shift,
       topology,
       encounters,
     });

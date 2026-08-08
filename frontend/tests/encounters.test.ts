@@ -110,6 +110,12 @@ function makeRun(overrides: Partial<JourneyRun> = {}, tileOverrides: Partial<Jou
     chapterBossDefeated:   false,
     exploredTileCount:     1,
     staminaSpent:          1,
+    // Push 4 canonical fields
+    shift:                 'day' as const,
+    callTeam:              [],
+    cards:                 [],
+    blessings:             [],
+    pressure:              0,
     ...overrides,
   };
 }

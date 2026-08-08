@@ -92,8 +92,8 @@ function buildRealRun(opts: {
   attemptNumber: number;
   seed:          string;
 }): JourneyRun {
-  const { topology, encounters } = generateRunData(opts.chapterId, opts.seed);
-  return buildInitialJourneyRun({ id: makeId(), ...opts, topology, encounters });
+  const { topology, encounters } = generateRunData(opts.chapterId, opts.seed, 'day');
+  return buildInitialJourneyRun({ id: makeId(), shift: 'day', ...opts, topology, encounters });
 }
 
 // ── Mock repository ───────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@ console.log('\n── buildInitialJourneyRun ──');
   const encounters = assignJourneyEncounters({ chapter, seed, topology });
   const run = buildInitialJourneyRun({
     id: 'test-id-1', playerId: 'p1', chapterId: chapter,
-    attemptNumber: 1, seed, topology, encounters,
+    attemptNumber: 1, seed, shift: 'day', topology, encounters,
   });
 
   const tileSet   = new Set(run.tiles.map(t => t.id));

@@ -22,8 +22,11 @@
 export const CANONICAL_TOTAL_BP = 10_000;
 
 // ── Time of day ────────────────────────────────────────────────────────────────
-
-export type TimeOfDay = 'day' | 'evening' | 'night';
+// Canonical definition lives in types.ts (the domain model layer).
+// Imported here for use in this file's function signatures, and re-exported so
+// existing consumers (`import { TimeOfDay } from './canonicalConfig'`) still work.
+import type { TimeOfDay } from './types';
+export type { TimeOfDay };
 export const TIME_OF_DAY_VALUES: readonly TimeOfDay[] = ['day', 'evening', 'night'];
 
 // ── Map tile counts ────────────────────────────────────────────────────────────

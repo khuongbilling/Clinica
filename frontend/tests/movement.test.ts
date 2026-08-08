@@ -126,6 +126,12 @@ function makeRun(tileOverrides: Partial<JourneyTile>[] = []): JourneyRun {
     chapterBossDefeated:   false,
     exploredTileCount:     1,
     staminaSpent:          0,
+    // Push 4 canonical fields
+    shift:                 'day' as const,
+    callTeam:              [],
+    cards:                 [],
+    blessings:             [],
+    pressure:              0,
   };
 }
 

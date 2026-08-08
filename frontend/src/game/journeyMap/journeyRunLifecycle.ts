@@ -1,5 +1,5 @@
 /**
- * journeyMap/journeyRunLifecycle.ts — PUSH 8
+ * journeyMap/journeyRunLifecycle.ts — PUSH 4
  *
  * Pure lifecycle logic for fog-map journey runs.
  *
@@ -30,18 +30,58 @@
  * menu open, stamina refill, failed battle, component remount.
  * The ONLY reroll trigger is an explicit Challenge Chapter call after a
  * cleared run.
+ *
+ * Canonical generator (Push 4)
+ * ─────────────────────────────
+ * When JOURNEY_CANONICAL_V1 is true, generateRunData() uses
+ * assignCanonicalEncounters() (shift-weighted, density-capped, one-roll-per-tile)
+ * instead of the legacy assignJourneyEncounters().
+ *
+ * wardEvent tiles from the canonical generator are silently downgraded to
+ * encounter='none' until WARD_EVENTS_V1 is enabled (and 'wardEvent' is added to
+ * the EncounterType union).  The wardEventSubtype field is preserved on the tile
+ * so no data is lost when WARD_EVENTS_V1 flips true.
  */
 
-import { generateHexTopology }       from './topology';
-import { assignJourneyEncounters }   from './encounters';
-import { computeInitialFog }         from './fogCalculator';
-import type { HexTopology }          from './topology';
-import type { EncounterAssignment }  from './encounters';
-import type { JourneyRun, JourneyTile, TileVisibility } from './types';
+import { generateHexTopology }         from './topology';
+import { assignJourneyEncounters }     from './encounters';
+import { assignCanonicalEncounters }   from './canonicalEncounters';
+import { computeInitialFog }           from './fogCalculator';
+import { JOURNEY_CANONICAL_V1 }        from '../featureFlags';
+import type { HexTopology }            from './topology';
+import type {
+  JourneyRun,
+  JourneyTile,
+  TileVisibility,
+  TimeOfDay,
+  ChestTier,
+  WardEventSubtype,
+  EncounterType,
+} from './types';
 
 // ── Public schema version ─────────────────────────────────────────────────────
 
-export const JOURNEY_RUN_SCHEMA_VERSION = 1;
+export const JOURNEY_RUN_SCHEMA_VERSION = 2;  // bumped at Push 4 (new canonical fields)
+
+// ── Encounter type guard ──────────────────────────────────────────────────────
+
+/**
+ * The current persisted EncounterType values.
+ * 'wardEvent' is NOT here until WARD_EVENTS_V1 enables it.
+ * Any encounter from the canonical generator that isn't in this set is
+ * downgraded to 'none' so the EncounterType union stays stable.
+ *
+ * When WARD_EVENTS_V1 flips true:
+ *   1. Add 'wardEvent' to EncounterType in types.ts.
+ *   2. Remove 'wardEvent' from the list of values that hit this gate.
+ */
+const PERSISTED_ENCOUNTER_TYPES = new Set<string>([
+  'none', 'battle', 'treasure', 'merchant', 'areaBoss',
+]);
+
+function toPersistedEncounterType(raw: string): EncounterType {
+  return PERSISTED_ENCOUNTER_TYPES.has(raw) ? (raw as EncounterType) : 'none';
+}
 
 // ── Repository interface ──────────────────────────────────────────────────────
 
@@ -88,7 +128,27 @@ export interface IJourneyRunRepository {
   markRunCleared(runId: string): Promise<JourneyRun>;
 }
 
-// ── buildInitialJourneyRun ────────────────────────────────────────────────────
+// ── Input interfaces ──────────────────────────────────────────────────────────
+
+/**
+ * Minimal tile descriptor accepted by buildInitialJourneyRun.
+ * Both AssignedTile (encounters.ts) and CanonicalAssignedTile
+ * (canonicalEncounters.ts) satisfy this structurally.
+ */
+export interface RunTileInput {
+  readonly tileKey:           string;
+  readonly encounter:         string;   // string for EncounterType | CanonicalEncounterType compat
+  readonly chestTier?:        ChestTier;
+  readonly wardEventSubtype?: WardEventSubtype;
+}
+
+/** Encounter assignment accepted by buildInitialJourneyRun. */
+export interface RunEncounterInput {
+  readonly tiles:         ReadonlyArray<RunTileInput>;
+  readonly areaBossCount: number;
+}
+
+// ── BuildRunOptions ───────────────────────────────────────────────────────────
 
 export interface BuildRunOptions {
   /** Server-assigned stable UUID for this run. */
@@ -97,9 +157,16 @@ export interface BuildRunOptions {
   chapterId:     number;
   attemptNumber: number;
   seed:          string;
+  /**
+   * Shift at run creation (frozen for lifetime of run).
+   * Determines ward event subtype distribution and density caps.
+   */
+  shift:         TimeOfDay;
   topology:      HexTopology;
-  encounters:    EncounterAssignment;
+  encounters:    RunEncounterInput;
 }
+
+// ── buildInitialJourneyRun ────────────────────────────────────────────────────
 
 /**
  * Assemble a brand-new JourneyRun from a pre-generated topology and encounter
@@ -109,6 +176,11 @@ export interface BuildRunOptions {
  *   start tile          → 'revealed'
  *   tiles adjacent (d=1) → 'frontier'
  *   all others           → 'hidden'
+ *
+ * Encounter type gating:
+ *   Canonical generator values not yet in EncounterType (e.g. 'wardEvent'
+ *   before WARD_EVENTS_V1) are downgraded to 'none'.  The wardEventSubtype
+ *   field is preserved so it can be re-enabled without regeneration.
  */
 export function buildInitialJourneyRun({
   id,
@@ -116,6 +188,7 @@ export function buildInitialJourneyRun({
   chapterId,
   attemptNumber,
   seed,
+  shift,
   topology,
   encounters,
 }: BuildRunOptions): JourneyRun {
@@ -127,7 +200,7 @@ export function buildInitialJourneyRun({
   const coordTiles = topology.tiles.map(t => ({ id: `${t.q},${t.r}`, q: t.q, r: t.r }));
   const visMap     = computeInitialFog(coordTiles, startKey);
 
-  // Build an O(1) lookup from tileKey → AssignedTile.
+  // Build an O(1) lookup from tileKey → RunTileInput.
   const assignedByKey = new Map(encounters.tiles.map(t => [t.tileKey, t]));
 
   const tiles: JourneyTile[] = topology.tiles.map(coord => {
@@ -137,19 +210,33 @@ export function buildInitialJourneyRun({
 
     const visibility: TileVisibility = visMap.get(tileKey) ?? 'hidden';
 
+    // Gate encounter type to values currently in the EncounterType union.
+    // 'wardEvent' from the canonical generator is 'none' until WARD_EVENTS_V1.
+    const rawEncounter   = assigned?.encounter ?? 'none';
+    const encounter      = toPersistedEncounterType(rawEncounter);
+
+    // Preserve wardEventSubtype when the encounter makes it through the gate
+    // (currently never, since wardEvent → none; will pass through once
+    //  WARD_EVENTS_V1 adds 'wardEvent' to EncounterType and the gate check above).
+    // wardEventSubtype is also preserved when encounter === 'none' because the
+    // tile WAS a wardEvent tile — the subtype is kept so that enabling
+    // WARD_EVENTS_V1 on an existing run can restore the correct subtype.
+    const wardEventSubtype = assigned?.wardEventSubtype;
+
     return {
-      id:                    tileKey,   // stable "q,r" key serves as the tile id
-      q:                     coord.q,
-      r:                     coord.r,
-      encounter:             assigned?.encounter ?? 'none',
-      chestTier:             assigned?.chestTier,
+      id:                     tileKey,
+      q:                      coord.q,
+      r:                      coord.r,
+      encounter,
+      chestTier:              encounter === 'treasure' ? assigned?.chestTier : undefined,
+      wardEventSubtype,
       visibility,
-      visited:               tileKey === startKey,
-      resolved:              false,
-      current:               tileKey === startKey,
+      visited:                tileKey === startKey,
+      resolved:               false,
+      current:                tileKey === startKey,
       graphDistanceFromStart: dist,
-      areaBossKeyClaimed:    false,
-      rewardClaimed:         false,
+      areaBossKeyClaimed:     false,
+      rewardClaimed:          false,
     };
   });
 
@@ -163,6 +250,7 @@ export function buildInitialJourneyRun({
     chapterId,
     attemptNumber,
     seed,
+    shift,
     status:                 'active',
     createdAt:              now,
     updatedAt:              now,
@@ -174,21 +262,41 @@ export function buildInitialJourneyRun({
     areaBossCount:          encounters.areaBossCount,
     areaBossKeysCollected:  0,
     chapterBossDefeated:    false,
-    exploredTileCount:      1,  // start tile is revealed at creation
+    exploredTileCount:      1,  // start tile is always revealed at creation
     staminaSpent:           0,
+    // Canonical run inventory — empty at run start
+    callTeam:               [],
+    cards:                  [],
+    blessings:              [],
+    pressure:               0,
   };
 }
 
 // ── generateRunData ───────────────────────────────────────────────────────────
 
 /**
- * Convenience: generate topology + encounters from a seed and chapter.
- * Used by the concrete repository to populate a new run.
+ * Generate topology + encounters from a seed, chapter, and shift.
+ *
+ * When JOURNEY_CANONICAL_V1 is true: uses assignCanonicalEncounters()
+ *   (shift-weighted, density-capped, one-roll-per-tile).
+ * When false: uses the legacy assignJourneyEncounters() generator.
+ *
+ * The returned object satisfies RunEncounterInput plus { topology }.
  */
-export function generateRunData(chapter: number, seed: string) {
-  const topology   = generateHexTopology({ chapter, seed });
-  const encounters = assignJourneyEncounters({ chapter, seed, topology });
-  return { topology, encounters };
+export function generateRunData(
+  chapter: number,
+  seed:    string,
+  shift:   TimeOfDay,
+): { topology: HexTopology; encounters: RunEncounterInput } {
+  const topology = generateHexTopology({ chapter, seed });
+
+  if (JOURNEY_CANONICAL_V1) {
+    const enc = assignCanonicalEncounters({ chapter, seed, timeOfDay: shift, topology });
+    return { topology, encounters: enc };
+  }
+
+  const enc = assignJourneyEncounters({ chapter, seed, topology });
+  return { topology, encounters: enc };
 }
 
 // ── Lifecycle state machine ───────────────────────────────────────────────────
