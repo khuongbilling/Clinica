@@ -58,6 +58,9 @@ import { MerchantModal }                  from '@/src/components/journey/Merchan
 // dynRoute is only used in result.tsx for the return-to-fog-map routing.
 import { ENCOUNTER_COST, useLiveStamina } from '@/src/game/stamina';
 import { usePlayer }                       from '@/src/game/store';
+import { playerLevelFromXp }               from '@/src/game/progression';
+import { buildChapterUiSummary }           from '@/src/features/journey/ui/journeyVisibility';
+import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
@@ -284,6 +287,14 @@ export default function ChapterFogMapShell() {
     : chapter?.realWorldTransition
     ? 'REAL WARD'
     : 'CHAPTER MAP';
+
+  // ── Chapter completion summary (for the badge) ────────────────────────────
+  const chapterSummary = useMemo(() => {
+    if (!chapter || !player) return null;
+    const lvl = playerLevelFromXp(player.xp ?? 0).level;
+    const claimed = player.claimed_journey_nodes ?? [];
+    return buildChapterUiSummary(chapter, lvl, claimed);
+  }, [chapter, player]);
 
   // ── Debug fixture (?debug=N) — bypasses run loading ───────────────────────
   const debugTiles = useMemo<readonly HexMapTile[] | null>(() => {
@@ -745,6 +756,17 @@ export default function ChapterFogMapShell() {
         </Pressable>
       </View>
 
+      {/* ── Chapter completion badge ───────────────────────────────────────── */}
+      {chapterSummary && (
+        <View style={s.completionBadgeWrap}>
+          <ChapterCompletion
+            storyCleared={chapterSummary.storyCleared}
+            masteryStars={chapterSummary.masteryStars}
+            maxMasteryStars={chapterSummary.maxMasteryStars}
+          />
+        </View>
+      )}
+
       {/* ── Scrollable body ───────────────────────────────────────────────── */}
       <ScrollView
         style={s.scroll}
@@ -1201,6 +1223,14 @@ const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: UI.sanctuaryBg },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 14, gap: 12, paddingTop: 10 },
+
+  // Completion badge strip (between header and scroll body)
+  completionBadgeWrap: {
+    paddingHorizontal: 14,
+    paddingVertical:   6,
+    borderBottomWidth: 1,
+    borderBottomColor: PANEL_BORDER,
+  },
 
   // Header
   header: {

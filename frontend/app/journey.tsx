@@ -46,6 +46,8 @@ import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
 import { ShiftSelector } from "@/src/features/journey/ui/ShiftSelector";
 import { getShiftAvailability } from "@/src/features/journey/ui/shiftAvailability";
 import { getFocusedChapters, buildChapterUiSummary } from "@/src/features/journey/ui/journeyVisibility";
+import { ChapterCompletion } from "@/src/features/journey/ui/ChapterCompletion";
+import type { ChapterUiSummary } from "@/src/features/journey/ui/journeyUi.types";
 import {
   loadJourneyExpandedPreference,
   saveJourneyExpandedPreference,
@@ -388,6 +390,7 @@ export default function JourneyScreen() {
             <ChapterPage
               chapter={CHAPTERS[selectedChapterIdx]}
               chapterStatus={getChapterStatus(CHAPTERS[selectedChapterIdx], playerLevel, claimedNodes)}
+              chapterSummary={chapterSummaries[selectedChapterIdx]}
               battleStars={player.battle_stars ?? {}}
               claimedNodes={claimedNodes}
               storyScenesSeen={player.story_scenes_seen ?? []}
@@ -656,6 +659,7 @@ function JourneyCta({
 function ChapterPage({
   chapter,
   chapterStatus,
+  chapterSummary,
   battleStars,
   claimedNodes,
   storyScenesSeen,
@@ -666,6 +670,7 @@ function ChapterPage({
 }: {
   chapter:           Chapter;
   chapterStatus:     ChapterStatus;
+  chapterSummary:    ChapterUiSummary;
   battleStars:       Record<string, number>;
   claimedNodes:      string[];
   storyScenesSeen:   string[];
@@ -687,6 +692,17 @@ function ChapterPage({
     );
   }
 
+  // ── Chapter completion badge ─────────────────────────────────────────────
+  const completionBadge = (
+    <View style={cpStyles.completionWrap}>
+      <ChapterCompletion
+        storyCleared={chapterSummary.storyCleared}
+        masteryStars={chapterSummary.masteryStars}
+        maxMasteryStars={chapterSummary.maxMasteryStars}
+      />
+    </View>
+  );
+
   // ── MapMode dispatcher ───────────────────────────────────────────────────
   // Push 9: read chapter.mapMode and branch to the correct renderer.
   // Undefined / 'scrollable_chapter' → existing per-chapter visual maps.
@@ -697,29 +713,32 @@ function ChapterPage({
     // Player tile: bottom-centre of the grid (row 7, col 3) — stub for Push 9.
     const playerTileId = 'tile_7_3';
     return (
-      <FogboundTileMap
-        chapter={chapter}
-        mapConfig={mapConfig}
-        playerTileId={playerTileId}
-        keyFragmentsCollected={0}
-        stamina={8}
-        maxStamina={12}
-        onTilePress={() => {/* no-op stub — Push 9 */}}
-        onBack={() => {/* handled by parent scroll view */}}
-      />
+      <>
+        {completionBadge}
+        <FogboundTileMap
+          chapter={chapter}
+          mapConfig={mapConfig}
+          playerTileId={playerTileId}
+          keyFragmentsCollected={0}
+          stamina={8}
+          maxStamina={12}
+          onTilePress={() => {/* no-op stub — Push 9 */}}
+          onBack={() => {/* handled by parent scroll view */}}
+        />
+      </>
     );
   }
 
   if (resolvedMode === 'branching_triage') {
-    return <BranchingTriageMap />;
+    return <>{completionBadge}<BranchingTriageMap /></>;
   }
 
   if (resolvedMode === 'ward_restoration') {
-    return <WardRestorationMap />;
+    return <>{completionBadge}<WardRestorationMap /></>;
   }
 
   if (resolvedMode === 'dual_state') {
-    return <DualStateMap />;
+    return <>{completionBadge}<DualStateMap /></>;
   }
 
   // ── scrollable_chapter (default) ─────────────────────────────────────────
@@ -733,14 +752,18 @@ function ChapterPage({
     leadHeroSprite,
   };
 
-  switch (chapter.number) {
-    case 1:  return <Chapter1VisualMap {...shared} />;
-    case 2:  return <Chapter2VisualMap {...shared} />;
-    case 3:  return <Chapter3VisualMap {...shared} />;
-    case 4:  return <Chapter4VisualMap {...shared} />;
-    case 5:  return <Chapter5VisualMap {...shared} />;
-    default: return <GenericChapterVisualMap {...shared} chapter={chapter} />;
-  }
+  const map = (() => {
+    switch (chapter.number) {
+      case 1:  return <Chapter1VisualMap {...shared} />;
+      case 2:  return <Chapter2VisualMap {...shared} />;
+      case 3:  return <Chapter3VisualMap {...shared} />;
+      case 4:  return <Chapter4VisualMap {...shared} />;
+      case 5:  return <Chapter5VisualMap {...shared} />;
+      default: return <GenericChapterVisualMap {...shared} chapter={chapter} />;
+    }
+  })();
+
+  return <>{completionBadge}{map}</>;
 }
 
 const cpStyles = StyleSheet.create({
@@ -762,6 +785,13 @@ const cpStyles = StyleSheet.create({
     color:       COLORS.onSurfaceTertiary,
     textAlign:   "center",
     lineHeight:  20,
+  },
+  completionWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingTop:        SPACING.sm,
+    paddingBottom:     SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: UI.sanctuaryBorder,
   },
 });
 
