@@ -34,7 +34,14 @@ import { HexMapLayer }                    from '@/src/components/journey/HexMapL
 import type { HexMapTile }                from '@/src/components/journey/HexMapLayer';
 import { CHAPTERS }                        from '@/src/game/chapterJourney';
 import { generateDebugFixture, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
-import { loadOrCreateJourneyRun, challengeChapter } from '@/src/game/journeyMap/journeyRunLifecycle';
+import { loadOrCreateJourneyRun, challengeChapter, rechallengeMap } from '@/src/game/journeyMap/journeyRunLifecycle';
+import {
+  checkRechallengeEligibility,
+  claimAreaBossKey,
+  createChapterBossKeyState,
+  RECHALLENGE_MAP_LABEL,
+  CHAPTER_BOSS_KEY_REQUIREMENT,
+} from '@/src/game/journeyMap/chapterBossKeys';
 import { journeyRunRepository }            from '@/src/game/journeyMap/journeyRunRepository';
 import { validateMove, applyMoveToRun, MOVE_STAMINA_COST } from '@/src/game/journeyMap/movement';
 import {
@@ -44,11 +51,6 @@ import {
   TREASURE_REWARDS,
   type TreasureReward,
 } from '@/src/game/journeyMap/encounterResolution';
-import {
-  claimAreaBossKey,
-  createChapterBossKeyState,
-  CHAPTER_BOSS_KEY_REQUIREMENT,
-} from '@/src/game/journeyMap/chapterBossKeys';
 import { claimChapterBossKeyOnServer } from '@/src/game/journeyMap/journeyRunRepository';
 import type { JourneyRun, JourneyTile } from '@/src/game/journeyMap/types';
 import { TreasureModal }                  from '@/src/components/journey/TreasureModal';
@@ -320,6 +322,12 @@ export default function ChapterFogMapShell() {
     useState<'idle' | 'confirming' | 'creating' | 'error'>('idle');
   const [challengeError,  setChallengeError]  = useState<string | null>(null);
 
+  // ── Rechallenge Map state (pre-clear new attempt) ─────────────────────────
+  /** 'idle' → 'confirming' → 'creating' → back to idle (or 'error'). */
+  const [rechallengePhase, setRechallengePhase] =
+    useState<'idle' | 'confirming' | 'creating' | 'error'>('idle');
+  const [rechallengeError, setRechallengeError] = useState<string | null>(null);
+
   useEffect(() => {
     // Debug fixture bypasses the real run entirely.
     if (debugTiles !== null) { setRunLoading(false); return; }
@@ -454,6 +462,19 @@ export default function ChapterFogMapShell() {
   // Run status helpers
   const isCleared = run?.status === 'cleared';
 
+  // ── Rechallenge Map eligibility ────────────────────────────────────────────
+  // Derived from run-level key data.  keysCollected here uses areaBossKeysCollected
+  // (run-scoped) which reflects all keys earned across prior attempts for this
+  // chapter because resolveAreaBossWin carries them forward.
+  const rechallengeKeyState = useMemo(
+    () => createChapterBossKeyState(chNum, run?.areaBossKeysCollected ?? 0),
+    [chNum, run?.areaBossKeysCollected],
+  );
+  const rechallengeEligibility = useMemo(
+    () => checkRechallengeEligibility(rechallengeKeyState, run?.chapterBossDefeated ?? false),
+    [rechallengeKeyState, run?.chapterBossDefeated],
+  );
+
   // Treasure accounting (for summary card reward totals)
   const treasureTiles    = run?.tiles.filter(t => t.encounter === 'treasure') ?? [];
   const claimedTreasures = treasureTiles.filter(t => t.rewardClaimed);
@@ -537,6 +558,34 @@ export default function ChapterFogMapShell() {
       setChallengePhase('error');
     }
   }, [run, player?.id, chNum]);
+
+  /**
+   * Confirm and execute a Rechallenge Map run creation.
+   * Abandons the current active run, then creates a new one with a fresh seed.
+   * Boss keys accumulated so far are preserved in the new run's areaBossKeysCollected.
+   */
+  const handleRechallengeConfirm = useCallback(async () => {
+    if (!run || !player?.id) return;
+    if (run.status !== 'active') return;           // safety guard
+    setRechallengePhase('creating');
+    setRechallengeError(null);
+    try {
+      const newRun = await rechallengeMap(
+        player.id,
+        chNum,
+        journeyRunRepository,
+        rechallengeKeyState,
+      );
+      // Reset in-flight guards for the new run.
+      battleResultApplied.current = false;
+      movingRef.current            = false;
+      setRechallengePhase('idle');
+      setRun(newRun);
+    } catch (err) {
+      setRechallengeError(err instanceof Error ? err.message : 'Failed to start new attempt.');
+      setRechallengePhase('error');
+    }
+  }, [run, player?.id, chNum, rechallengeKeyState]);
 
   /**
    * Fired by TreasureModal when the player opens the chest.
@@ -943,6 +992,95 @@ export default function ChapterFogMapShell() {
                 : `+${chapter?.completionXp ?? 0} XP (defeat Chapter Boss)`}
             </Text>
           </View>
+
+          {/* ── Rechallenge Map section (active runs only) ──────────────── */}
+          {!isCleared && run !== null && (
+            <>
+              <View style={s.summaryDivider} />
+
+              {/* Gate open → direct the player to fight the boss */}
+              {gateUnlocked ? (
+                <Pressable
+                  style={[s.challengeBtn, { borderColor: JADE + '66', backgroundColor: JADE + '10' }]}
+                  onPress={handleGateTap}
+                  testID="fight-boss-btn"
+                >
+                  <Text style={[s.challengeBtnTxt, { color: JADE }]}>FIGHT THE BOSS →</Text>
+                  <Text style={s.challengeBtnSub}>Chapter Boss Gate is unlocked</Text>
+                </Pressable>
+
+              ) : rechallengeEligibility.eligible ? (
+                /* Eligible to rechallenge — show the full confirm/creating/error flow */
+                <>
+                  {rechallengePhase === 'confirming' && (
+                    <View style={s.challengeConfirm}>
+                      <Text style={[s.challengeConfirmTitle, { color: accentColor }]}>
+                        {RECHALLENGE_MAP_LABEL}?
+                      </Text>
+                      <Text style={s.challengeConfirmBody}>
+                        Attempt #{(run.attemptNumber) + 1} will start on a new
+                        randomised map. Your {run.areaBossKeysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT} collected
+                        boss key{run.areaBossKeysCollected !== 1 ? 's' : ''} carry forward —
+                        only the Chapter Boss defeat resets them.
+                      </Text>
+                      <View style={s.challengeConfirmRow}>
+                        <Pressable
+                          style={s.challengeCancel}
+                          onPress={() => setRechallengePhase('idle')}
+                          testID="rechallenge-cancel"
+                        >
+                          <Text style={s.challengeCancelTxt}>CANCEL</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[s.challengeAction, { borderColor: accentColor + '88', backgroundColor: accentColor + '18' }]}
+                          onPress={handleRechallengeConfirm}
+                          testID="rechallenge-confirm"
+                        >
+                          <Text style={[s.challengeActionTxt, { color: accentColor }]}>
+                            START ATTEMPT #{run.attemptNumber + 1} →
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
+
+                  {rechallengePhase === 'creating' && (
+                    <View style={s.challengeCreating}>
+                      <ActivityIndicator size="small" color={accentColor} />
+                      <Text style={[s.challengeCreatingTxt, { color: accentColor }]}>
+                        Generating new map…
+                      </Text>
+                    </View>
+                  )}
+
+                  {rechallengePhase === 'error' && (
+                    <View style={s.challengeConfirm}>
+                      <Text style={s.challengeErrorTxt}>{rechallengeError}</Text>
+                      <Pressable style={s.challengeCancel} onPress={() => setRechallengePhase('idle')}>
+                        <Text style={s.challengeCancelTxt}>DISMISS</Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {rechallengePhase === 'idle' && (
+                    <Pressable
+                      style={[s.challengeBtn, { borderColor: accentColor + '66', backgroundColor: accentColor + '10' }]}
+                      onPress={() => setRechallengePhase('confirming')}
+                      testID="rechallenge-map-btn"
+                    >
+                      <Text style={[s.challengeBtnTxt, { color: accentColor }]}>
+                        {RECHALLENGE_MAP_LABEL.toUpperCase()} →
+                      </Text>
+                      <Text style={s.challengeBtnSub}>
+                        New map · keys carry forward ({run.areaBossKeysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT})
+                      </Text>
+                    </Pressable>
+                  )}
+                </>
+
+              ) : null /* ineligible (should not normally render for non-cleared active runs) */}
+            </>
+          )}
 
           {/* ── Challenge Chapter section (cleared runs only) ────────────── */}
           {isCleared && (

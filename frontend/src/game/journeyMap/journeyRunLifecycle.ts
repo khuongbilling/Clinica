@@ -47,6 +47,10 @@ import { generateHexTopology }         from './topology';
 import { assignJourneyEncounters }     from './encounters';
 import { assignCanonicalEncounters }   from './canonicalEncounters';
 import { computeInitialFog }           from './fogCalculator';
+import {
+  checkRechallengeEligibility,
+} from './chapterBossKeys';
+import type { ChapterBossKeyState }    from './chapterBossKeys';
 import { JOURNEY_CANONICAL_V1 }        from '../featureFlags';
 import type { HexTopology }            from './topology';
 import type {
@@ -126,6 +130,29 @@ export interface IJourneyRunRepository {
 
   /** Transition a run from 'active' to 'cleared' after the chapter boss dies. */
   markRunCleared(runId: string): Promise<JourneyRun>;
+
+  /**
+   * Transition an active run to 'abandoned' before creating a Rechallenge Map
+   * attempt.  The run is preserved in the database for history/debugging; it is
+   * simply ineligible to be returned by getActiveRun or getLatestRun in future.
+   */
+  abandonRun(runId: string): Promise<void>;
+
+  /**
+   * Create the next Rechallenge Map attempt, carrying chapter-level boss keys
+   * accumulated on prior attempts into the new run's initial state.
+   *
+   * Distinct from createChallengeRun (post-clear replay, keys reset to 0).
+   * Uses the same dedup / unique-index guard as createChallengeRun.
+   *
+   * @param inheritedAreaBossKeys  Keys to seed into the new run's areaBossKeysCollected.
+   */
+  createRechallengeRun(
+    playerId:             string,
+    chapterId:            number,
+    priorAttemptNumber:   number,
+    inheritedAreaBossKeys: number,
+  ): Promise<JourneyRun>;
 }
 
 // ── Input interfaces ──────────────────────────────────────────────────────────
@@ -164,6 +191,12 @@ export interface BuildRunOptions {
   shift:         TimeOfDay;
   topology:      HexTopology;
   encounters:    RunEncounterInput;
+  /**
+   * Chapter Boss Keys accumulated on PREVIOUS attempts for this chapter.
+   * Passed only by Rechallenge Map so keys carry forward across map resets.
+   * Defaults to 0 for first runs and post-clear challenge runs.
+   */
+  initialAreaBossKeysCollected?: number;
 }
 
 // ── buildInitialJourneyRun ────────────────────────────────────────────────────
@@ -191,6 +224,7 @@ export function buildInitialJourneyRun({
   shift,
   topology,
   encounters,
+  initialAreaBossKeysCollected = 0,
 }: BuildRunOptions): JourneyRun {
   const now      = new Date().toISOString();
   const startKey = topology.startTileId;
@@ -260,7 +294,8 @@ export function buildInitialJourneyRun({
     currentTileId:          startKey,
     gateAnchorTileId:       gateKey,
     areaBossCount:          encounters.areaBossCount,
-    areaBossKeysCollected:  0,
+    inheritedAreaBossKeys:  Math.max(0, Math.round(initialAreaBossKeysCollected)),
+    areaBossKeysCollected:  Math.max(0, Math.round(initialAreaBossKeysCollected)),
     chapterBossDefeated:    false,
     exploredTileCount:      1,  // start tile is always revealed at creation
     staminaSpent:           0,
@@ -307,7 +342,11 @@ export function generateRunData(
  * Rules:
  *   1. If an active run exists → return it (no re-roll).
  *   2. If the latest run is cleared → return it (show summary; do not auto-create).
- *   3. Otherwise (no run ever started) → create attempt #1 and return it.
+ *   3. Recovery: if the latest run is 'abandoned' (rechallenge creation failed after
+ *      the old run was archived) → create the successor attempt so the chapter is
+ *      playable again.  Keys carried into the successor are sourced from the
+ *      abandoned run's areaBossKeysCollected.
+ *   4. Otherwise (no run ever started) → create attempt #1 and return it.
  */
 export async function loadOrCreateJourneyRun(
   playerId:  string,
@@ -319,6 +358,18 @@ export async function loadOrCreateJourneyRun(
 
   const latest = await repo.getLatestRun(playerId, chapterId);
   if (latest?.status === 'cleared') return latest;
+
+  if (latest?.status === 'abandoned') {
+    // Recovery path: the previous rechallenge succeeded in abandoning the old
+    // run but failed before the new one was created.  Create the successor now,
+    // carrying the inherited key count forward so no progress is lost.
+    return repo.createRechallengeRun(
+      playerId,
+      chapterId,
+      latest.attemptNumber,
+      latest.areaBossKeysCollected,
+    );
+  }
 
   return repo.createFirstRun(playerId, chapterId);
 }
@@ -351,4 +402,61 @@ export async function challengeChapter(
   }
 
   return repo.createChallengeRun(playerId, chapterId, latest.attemptNumber);
+}
+
+/**
+ * Start a new pre-clear map attempt while preserving accumulated boss keys.
+ *
+ * Distinct from challengeChapter (post-clear replay).  Only callable while
+ * the chapter boss has NOT been defeated and fewer than CHAPTER_BOSS_KEY_REQUIREMENT
+ * keys have been collected.
+ *
+ * Ordering — abandon before create:
+ *   Step 1: abandonRun (archive the active run).
+ *           If this fails the active run is untouched — the error propagates to
+ *           the caller and nothing changes for the player.
+ *   Step 2: createRechallengeRun (new attempt, inherited keys).
+ *           If this fails after a successful abandon, loadOrCreateJourneyRun
+ *           detects the abandoned latest run on the next load and creates the
+ *           successor automatically (recovery path), so progress is not lost.
+ *
+ * The backend's get_active_journey_run query sorts by attempt_number DESC, so
+ * if two active runs ever coexist (concurrent sessions), the newer one wins.
+ *
+ * The caller is responsible for passing the preserved ChapterBossKeyState into
+ * whatever UI or storage layer tracks chapter-level key progress.  This function
+ * only manages the JourneyRun lifecycle.
+ */
+export async function rechallengeMap(
+  playerId:  string,
+  chapterId: number,
+  repo:      IJourneyRunRepository,
+  keyState:  ChapterBossKeyState,
+): Promise<JourneyRun> {
+  const active = await repo.getActiveRun(playerId, chapterId);
+  if (!active) {
+    throw new Error(
+      'Rechallenge Map requires an active run. ' +
+      `No active run found for player=${playerId} chapter=${chapterId}.`,
+    );
+  }
+
+  const eligibility = checkRechallengeEligibility(keyState, active.chapterBossDefeated);
+  if (!eligibility.eligible) {
+    throw new Error(eligibility.reason ?? 'Not eligible for Rechallenge Map.');
+  }
+
+  // Archive the current run FIRST.  Any error here surfaces to the caller —
+  // the active run is untouched and the player can retry safely.
+  await repo.abandonRun(active.id);
+
+  // Create the successor with keys carried forward.
+  // If this fails, loadOrCreateJourneyRun will detect the abandoned latest run
+  // on the next load and invoke the recovery path to create the successor.
+  return repo.createRechallengeRun(
+    playerId,
+    chapterId,
+    active.attemptNumber,
+    active.areaBossKeysCollected,
+  );
 }

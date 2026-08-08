@@ -501,7 +501,8 @@ class JourneyRunCreate(BaseModel):
     start_tile_id:           str
     current_tile_id:         str
     gate_anchor_tile_id:     Optional[str]  = None
-    area_boss_count:         int
+    area_boss_count:          int
+    inherited_area_boss_keys: int           = 0
     area_boss_keys_collected: int           = 0
     chapter_boss_defeated:   bool           = False
     explored_tile_count:     int            = 0
@@ -530,14 +531,23 @@ class JourneyRunSave(BaseModel):
 
 @api_router.get("/player/{player_id}/journey-runs/{chapter_id}/active")
 async def get_active_journey_run(player_id: str, chapter_id: int):
-    """Return the current active run for this player+chapter, or 404."""
-    doc = await db.journey_runs.find_one(
-        {"player_id": player_id, "chapter_id": chapter_id, "status": "active"},
-        {"_id": 0},
+    """Return the current active run for this player+chapter, or 404.
+
+    Sorted by attempt_number DESC so that if more than one active run ever
+    exists (e.g. from a partial Rechallenge Map transition where the new run
+    was created before the old one was abandoned), the highest-attempt run is
+    always returned — ensuring the player never sees stale map state.
+    """
+    cursor = (
+        db.journey_runs
+        .find({"player_id": player_id, "chapter_id": chapter_id, "status": "active"}, {"_id": 0})
+        .sort("attempt_number", DESCENDING)
+        .limit(1)
     )
-    if not doc:
+    docs = await cursor.to_list(length=1)
+    if not docs:
         raise HTTPException(status_code=404, detail="no active run")
-    return doc
+    return docs[0]
 
 
 @api_router.get("/player/{player_id}/journey-runs/{chapter_id}/latest")
@@ -661,7 +671,27 @@ async def mark_run_cleared(run_id: str):
     doc = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
     return doc
 
+@api_router.patch("/journey-runs/{run_id}/abandoned")
+async def mark_run_abandoned(run_id: str):
+    """Archive an active run before a Rechallenge Map attempt.
 
+    Transitions status from 'active' → 'abandoned'.  The run is kept in the
+    database for history; it will no longer be returned by the active or latest
+    run queries (which filter for 'active' / most-recent by attempt_number).
+    Idempotent: abandoning an already-abandoned run is a no-op (200 OK).
+    """
+    result = await db.journey_runs.update_one(
+        {"id": run_id, "status": "active"},
+        {"$set": {"status": "abandoned", "updated_at": now_iso()}},
+    )
+    if result.matched_count == 0:
+        # Either not found or already abandoned — either way treat as success.
+        doc = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
+        if doc is None:
+            raise HTTPException(status_code=404, detail="run not found")
+    else:
+        doc = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
+    return doc
 @app.on_event("startup")
 async def startup_db():
     """Create the unique compound index that prevents duplicate journey runs."""

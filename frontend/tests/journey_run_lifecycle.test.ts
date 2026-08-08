@@ -38,9 +38,11 @@ import {
   buildInitialJourneyRun,
   loadOrCreateJourneyRun,
   challengeChapter,
+  rechallengeMap,
   generateRunData,
   type IJourneyRunRepository,
 } from '../src/game/journeyMap/journeyRunLifecycle';
+import { createChapterBossKeyState } from '../src/game/journeyMap/chapterBossKeys';
 
 import { generateHexTopology }     from '../src/game/journeyMap/topology';
 import { assignJourneyEncounters } from '../src/game/journeyMap/encounters';
@@ -108,9 +110,13 @@ class MockRepo implements IJourneyRunRepository {
   }
 
   async getActiveRun(playerId: string, chapterId: number): Promise<JourneyRun | null> {
-    return this.runs.find(
+    // Return the highest-attempt active run, matching the backend's
+    // attempt_number DESC sort on get_active_journey_run.
+    const matches = this.runs.filter(
       r => r.playerId === playerId && r.chapterId === chapterId && r.status === 'active',
-    ) ?? null;
+    );
+    if (matches.length === 0) return null;
+    return matches.reduce((best, r) => r.attemptNumber > best.attemptNumber ? r : best);
   }
 
   async getLatestRun(playerId: string, chapterId: number): Promise<JourneyRun | null> {
@@ -160,6 +166,30 @@ class MockRepo implements IJourneyRunRepository {
     const cleared = { ...this.runs[idx], status: 'cleared' as const };
     this.runs[idx] = cleared;
     return cleared;
+  }
+
+  async abandonRun(runId: string): Promise<void> {
+    const idx = this.runs.findIndex(r => r.id === runId);
+    if (idx < 0) throw new Error(`run ${runId} not found`);
+    this.runs[idx] = { ...this.runs[idx], status: 'abandoned' as const };
+  }
+
+  async createRechallengeRun(
+    playerId:             string,
+    chapterId:            number,
+    priorAttemptNumber:   number,
+    inheritedAreaBossKeys: number,
+  ): Promise<JourneyRun> {
+    this.createChallengeRunCallCount++;
+    const next = priorAttemptNumber + 1;
+    const existing = this.runs.find(
+      r => r.playerId === playerId && r.chapterId === chapterId && r.attemptNumber === next,
+    );
+    if (existing) return existing; // idempotent
+    const base = buildRealRun({ playerId, chapterId, attemptNumber: next, seed: generateSecureSeed() });
+    const run  = { ...base, areaBossKeysCollected: inheritedAreaBossKeys, inheritedAreaBossKeys };
+    this.runs.push(run);
+    return run;
   }
 }
 
@@ -295,12 +325,14 @@ console.log('\n── loadOrCreateJourneyRun ──');
     let latestCalled = false;
     const existing = buildRealRun({ playerId: P, chapterId: C, attemptNumber: 1, seed: generateSecureSeed() });
     const spyRepo: IJourneyRunRepository = {
-      getActiveRun:       async () => existing,
-      getLatestRun:       async () => { latestCalled = true; return null; },
-      createFirstRun:     async () => { throw new Error('should not call'); },
-      createChallengeRun: async () => { throw new Error('should not call'); },
-      saveRun:            async (r) => r,
-      markRunCleared:     async () => { throw new Error('should not call'); },
+      getActiveRun:          async () => existing,
+      getLatestRun:          async () => { latestCalled = true; return null; },
+      createFirstRun:        async () => { throw new Error('should not call'); },
+      createChallengeRun:    async () => { throw new Error('should not call'); },
+      createRechallengeRun:  async () => { throw new Error('should not call'); },
+      saveRun:               async (r) => r,
+      markRunCleared:        async () => { throw new Error('should not call'); },
+      abandonRun:            async () => { throw new Error('should not call'); },
     };
     await loadOrCreateJourneyRun(P, C, spyRepo);
     check('15. getLatestRun skipped when active run found', !latestCalled);
@@ -416,6 +448,132 @@ console.log('\n── Full lifecycle ──');
   const afterChallenge = await loadOrCreateJourneyRun(P, C, repo);
   eq(afterChallenge.id,  run2.id,   '22i. new active run loaded');
   check('22j. old cleared run not returned', afterChallenge.id !== run1.id);
+}
+
+// ── 23–30: rechallengeMap ─────────────────────────────────────────────────────
+
+console.log('\n── rechallengeMap ──');
+
+{
+  const P = 'player-E';
+  const C = 5; // Ch5 has area bosses (3% rate)
+
+  // 23. Eligible rechallenge: creates attempt N+1, inherited keys on new run
+  {
+    const seed1      = generateSecureSeed();
+    const activeRun  = { ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 1, seed: seed1 }), areaBossKeysCollected: 2 };
+    const repo       = new MockRepo([activeRun]);
+    const keyState   = createChapterBossKeyState(C, 2);   // 2 keys, boss not defeated
+    const newRun     = await rechallengeMap(P, C, repo, keyState);
+    eq(newRun.attemptNumber,          2,        '23a. new run = attempt 2');
+    eq(newRun.status,                 'active', '23b. new run is active');
+    eq(newRun.areaBossKeysCollected,  2,        '23c. total keys on new run = 2 (inherited)');
+    eq(newRun.inheritedAreaBossKeys,  2,        '23d. inheritedAreaBossKeys = 2');
+    check('23e. new seed differs',    newRun.seed !== activeRun.seed);
+  }
+
+  // 24. Old run is abandoned after rechallenge
+  {
+    const seed1     = generateSecureSeed();
+    const activeRun = { ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 2, seed: seed1 }), areaBossKeysCollected: 1 };
+    const repo      = new MockRepo([activeRun]);
+    const keyState  = createChapterBossKeyState(C, 1);
+    await rechallengeMap(P, C, repo, keyState);
+    const oldRun    = repo.runs.find(r => r.id === activeRun.id)!;
+    eq(oldRun.status, 'abandoned', '24. old run is abandoned');
+  }
+
+  // 25. Ineligible: chapter boss already defeated → throws
+  {
+    const seed1     = generateSecureSeed();
+    const activeRun = { ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 1, seed: seed1 }), chapterBossDefeated: true };
+    const repo      = new MockRepo([activeRun]);
+    const keyState  = createChapterBossKeyState(C, 0);
+    let threw = false;
+    try { await rechallengeMap(P, C, repo, keyState); } catch { threw = true; }
+    check('25. throws when boss defeated', threw);
+  }
+
+  // 26. Ineligible: 3 keys collected (gate open) → throws
+  {
+    const seed1     = generateSecureSeed();
+    const activeRun = { ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 1, seed: seed1 }), areaBossKeysCollected: 3 };
+    const repo      = new MockRepo([activeRun]);
+    const keyState  = createChapterBossKeyState(C, 3);
+    let threw = false;
+    try { await rechallengeMap(P, C, repo, keyState); } catch { threw = true; }
+    check('26. throws when gate open (3 keys)', threw);
+  }
+
+  // 27. No active run → throws
+  {
+    const repo     = new MockRepo();  // empty
+    const keyState = createChapterBossKeyState(C, 0);
+    let threw = false;
+    try { await rechallengeMap(P, C, repo, keyState); } catch { threw = true; }
+    check('27. throws with no active run', threw);
+  }
+
+  // 28. Keys 0 → new run also starts at 0, inheritedAreaBossKeys = 0
+  {
+    const seed1     = generateSecureSeed();
+    const activeRun = buildRealRun({ playerId: P, chapterId: C, attemptNumber: 1, seed: seed1 }); // areaBossKeysCollected = 0
+    const repo      = new MockRepo([activeRun]);
+    const keyState  = createChapterBossKeyState(C, 0);
+    const newRun    = await rechallengeMap(P, C, repo, keyState);
+    eq(newRun.areaBossKeysCollected, 0, '28a. 0 keys inherited when none collected');
+    eq(newRun.inheritedAreaBossKeys, 0, '28b. inheritedAreaBossKeys = 0 on first attempt');
+  }
+
+  // 28c. First-run creation never sets inheritedAreaBossKeys > 0
+  {
+    const repo    = new MockRepo();
+    const firstRun = await loadOrCreateJourneyRun(P, C, repo);
+    eq(firstRun.inheritedAreaBossKeys, 0, '28c. first run has inheritedAreaBossKeys = 0');
+  }
+
+  // 29. Recovery: loadOrCreateJourneyRun with abandoned latest → creates successor with inherited keys
+  {
+    const seed1       = generateSecureSeed();
+    const abandonedRun = {
+      ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 3, seed: seed1 }),
+      status: 'abandoned' as const,
+      areaBossKeysCollected: 2,
+    };
+    const repo    = new MockRepo([abandonedRun]);
+    const loaded  = await loadOrCreateJourneyRun(P, C, repo);
+    eq(loaded.attemptNumber,         4, '29a. successor = attempt 4');
+    eq(loaded.status,                'active', '29b. successor is active');
+    eq(loaded.areaBossKeysCollected, 2, '29c. inherited keys in recovered run');
+  }
+
+  // 30. Double-tap rechallenge: second call returns same run (dedup)
+  {
+    const seed1     = generateSecureSeed();
+    const activeRun = { ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 4, seed: seed1 }), areaBossKeysCollected: 1 };
+    const repo      = new MockRepo([activeRun]);
+    const keyState  = createChapterBossKeyState(C, 1);
+    const [r1, r2]  = await Promise.all([
+      rechallengeMap(P, C, repo, keyState),
+      rechallengeMap(P, C, repo, keyState),
+    ]);
+    check('30a. double-tap: both attempts get same run id', r1.id === r2.id);
+    const activeRuns = repo.runs.filter(r => r.playerId === P && r.chapterId === C && r.status === 'active');
+    check('30b. only one active run after double-tap', activeRuns.length === 1);
+  }
+
+  // 31. Two active runs (edge case): getActiveRun returns highest-attempt one
+  {
+    const P2   = 'player-F';
+    const seed1 = generateSecureSeed();
+    const seed2 = generateSecureSeed();
+    // Simulate an edge case where two active runs exist (e.g. partial transition).
+    const runLow  = buildRealRun({ playerId: P2, chapterId: C, attemptNumber: 1, seed: seed1 });
+    const runHigh = buildRealRun({ playerId: P2, chapterId: C, attemptNumber: 2, seed: seed2 });
+    const repo    = new MockRepo([runLow, runHigh]);  // both active
+    const loaded  = await loadOrCreateJourneyRun(P2, C, repo);
+    eq(loaded.attemptNumber, 2, '31. two active runs → highest attempt returned');
+  }
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

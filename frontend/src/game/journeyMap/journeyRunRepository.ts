@@ -105,7 +105,7 @@ interface WireRun {
   seed:                     string;
   // Push 4 canonical field — optional for legacy runs that predate this field.
   shift?:                   string;
-  status:                   'active' | 'cleared';
+  status:                   'active' | 'cleared' | 'abandoned';
   created_at:               string;
   updated_at:               string;
   tile_count:               number;
@@ -113,8 +113,9 @@ interface WireRun {
   start_tile_id:            string;
   current_tile_id:          string;
   gate_anchor_tile_id?:     string;
-  area_boss_count:          number;
-  area_boss_keys_collected: number;
+  area_boss_count:           number;
+  inherited_area_boss_keys?: number;  // optional — absent on pre-rechallenge legacy runs
+  area_boss_keys_collected:  number;
   chapter_boss_defeated:    boolean;
   explored_tile_count:      number;
   stamina_spent:            number;
@@ -144,6 +145,7 @@ function fromWire(w: WireRun): JourneyRun {
     currentTileId:          w.current_tile_id,
     gateAnchorTileId:       w.gate_anchor_tile_id,
     areaBossCount:          w.area_boss_count,
+    inheritedAreaBossKeys:  w.inherited_area_boss_keys ?? 0,
     areaBossKeysCollected:  w.area_boss_keys_collected,
     chapterBossDefeated:    w.chapter_boss_defeated,
     exploredTileCount:      w.explored_tile_count,
@@ -169,8 +171,9 @@ function toWire(run: JourneyRun): Omit<WireRun, 'id' | 'created_at' | 'updated_a
     start_tile_id:            run.startTileId,
     current_tile_id:          run.currentTileId,
     gate_anchor_tile_id:      run.gateAnchorTileId,
-    area_boss_count:          run.areaBossCount,
-    area_boss_keys_collected: run.areaBossKeysCollected,
+    area_boss_count:           run.areaBossCount,
+    inherited_area_boss_keys:  run.inheritedAreaBossKeys,
+    area_boss_keys_collected:  run.areaBossKeysCollected,
     chapter_boss_defeated:    run.chapterBossDefeated,
     explored_tile_count:      run.exploredTileCount,
     stamina_spent:            run.staminaSpent,
@@ -261,6 +264,25 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     return fromWire(raw);
   }
 
+  async abandonRun(runId: string): Promise<void> {
+    await http<unknown>(`/journey-runs/${runId}/abandoned`, {
+      method: 'PATCH',
+    });
+  }
+
+  async createRechallengeRun(
+    playerId:             string,
+    chapterId:            number,
+    priorAttemptNumber:   number,
+    inheritedAreaBossKeys: number,
+  ): Promise<JourneyRun> {
+    const newAttempt = priorAttemptNumber + 1;
+    const key        = `${playerId}:${chapterId}:attempt:${newAttempt}`;
+    return this._dedupCreate(key, () =>
+      this._doCreateRechallengeRun(playerId, chapterId, priorAttemptNumber, inheritedAreaBossKeys),
+    );
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   /**
@@ -322,12 +344,39 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     }
   }
 
+  private async _doCreateRechallengeRun(
+    playerId:             string,
+    chapterId:            number,
+    priorAttemptNumber:   number,
+    inheritedAreaBossKeys: number,
+  ): Promise<JourneyRun> {
+    const seed          = generateSecureSeed();
+    const attemptNumber = priorAttemptNumber + 1;
+    const run           = this._buildNewRun(playerId, chapterId, attemptNumber, seed, inheritedAreaBossKeys);
+    const wire          = toWire(run);
+
+    try {
+      const raw = await http<WireRun>(
+        `/player/${playerId}/journey-runs`,
+        { method: 'POST', body: JSON.stringify(wire) },
+      );
+      return fromWire(raw);
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('API 409')) {
+        const existing = await this.getLatestRun(playerId, chapterId);
+        if (existing && existing.status === 'active') return existing;
+      }
+      throw err;
+    }
+  }
+
   /** Generate topology + encounters and assemble an in-memory run (no id yet). */
   private _buildNewRun(
-    playerId:      string,
-    chapterId:     number,
-    attemptNumber: number,
-    seed:          string,
+    playerId:             string,
+    chapterId:            number,
+    attemptNumber:        number,
+    seed:                 string,
+    initialAreaBossKeysCollected = 0,
   ): JourneyRun {
     const shift                  = getCurrentShift();
     const { topology, encounters } = generateRunData(chapterId, seed, shift);
@@ -340,6 +389,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
       shift,
       topology,
       encounters,
+      initialAreaBossKeysCollected,
     });
   }
 }

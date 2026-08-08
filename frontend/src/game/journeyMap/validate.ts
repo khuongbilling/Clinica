@@ -157,10 +157,13 @@ export function validateRun(run: JourneyRun): string[] {
     );
   }
 
-  const derivedKeysCollected = run.tiles.filter((t) => t.areaBossKeyClaimed).length;
-  if (run.areaBossKeysCollected !== derivedKeysCollected) {
+  const currentMapClaimed  = run.tiles.filter((t) => t.areaBossKeyClaimed).length;
+  const inherited          = run.inheritedAreaBossKeys ?? 0;
+  const expectedTotal      = inherited + currentMapClaimed;
+  if (run.areaBossKeysCollected !== expectedTotal) {
     errors.push(
-      `run ch${run.chapterId}: areaBossKeysCollected (${run.areaBossKeysCollected}) ≠ derived (${derivedKeysCollected})`,
+      `run ch${run.chapterId}: areaBossKeysCollected (${run.areaBossKeysCollected}) ≠ ` +
+      `inherited (${inherited}) + current-map claimed (${currentMapClaimed}) = ${expectedTotal}`,
     );
   }
 

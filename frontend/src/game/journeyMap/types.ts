@@ -108,7 +108,7 @@ export type TileVisibility = 'hidden' | 'frontier' | 'revealed';
 
 // ── Run status ───────────────────────────────────────────────────────────────
 
-export type JourneyRunStatus = 'active' | 'cleared';
+export type JourneyRunStatus = 'active' | 'cleared' | 'abandoned';
 
 // ── Tile ─────────────────────────────────────────────────────────────────────
 
@@ -215,7 +215,20 @@ export interface JourneyRun {
   /** How many area-boss tiles were placed in this run. */
   areaBossCount: number;
 
-  /** How many area-boss keys the player has collected so far this run. */
+  /**
+   * Chapter Boss Keys carried forward from prior map attempts (Rechallenge Map).
+   * Always 0 for the first run of a chapter and for post-clear challenge runs.
+   *
+   * Invariant:
+   *   areaBossKeysCollected === inheritedAreaBossKeys
+   *                          + tiles.filter(t => t.areaBossKeyClaimed).length
+   */
+  inheritedAreaBossKeys: number;
+
+  /**
+   * Total Chapter Boss Keys collected so far (inherited + claimed on this map).
+   * This is the counter used for the gate-unlock check.
+   */
   areaBossKeysCollected: number;
 
   /** Whether the chapter boss (gate encounter) has been defeated. */

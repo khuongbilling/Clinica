@@ -122,6 +122,7 @@ function makeRun(tileOverrides: Partial<JourneyTile>[] = []): JourneyRun {
     currentTileId:         '0,0',
     gateAnchorTileId:      undefined,
     areaBossCount:         0,
+    inheritedAreaBossKeys: 0,
     areaBossKeysCollected: 0,
     chapterBossDefeated:   false,
     exploredTileCount:     1,

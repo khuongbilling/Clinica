@@ -106,6 +106,7 @@ function makeRun(overrides: Partial<JourneyRun> = {}, tileOverrides: Partial<Jou
     currentTileId:         '0,0',
     gateAnchorTileId:      undefined,
     areaBossCount:         1,
+    inheritedAreaBossKeys: 0,
     areaBossKeysCollected: 0,
     chapterBossDefeated:   false,
     exploredTileCount:     1,
