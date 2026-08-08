@@ -141,6 +141,7 @@ export function createJourneyRun({
     currentTileId:        startTileId,
     gateAnchorTileId:     gateTileId,
     areaBossCount,
+    inheritedAreaBossKeys: 0,  // 0 for all new runs; carried forward only by rechallenge logic
     areaBossKeysCollected: 0,
     chapterBossDefeated:  false,
     exploredTileCount,
