@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Image, Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UI } from "@/src/theme/ui";
@@ -22,7 +22,7 @@ const TAB_IMAGES = {
   study:     require("../../assets/ui-icons/tab-inventory.png"),
   journey:   require("../../assets/ui-icons/tab-journey-3d.png"),
   heroes:    require("../../assets/ui-icons/tab-heroes-3d.png"),
-  sanctuary: require("../../assets/ui-icons/tab-sanctuary-3d.png"),
+  realm:     require("../../assets/ui-icons/tab-realm.png"),
   inventory: require("../../assets/ui-icons/tab-inventory-3d.png"),
   shop:      require("../../assets/ui-icons/tab-shop-3d.png"),
   profile:   require("../../assets/ui-icons/tab-profile.png"),
@@ -73,7 +73,7 @@ function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false,
 const s = StyleSheet.create({
   wrap: { alignItems: "center", gap: 0, paddingTop: 2 },
   wrapLocked: { opacity: 0.55, filter: "grayscale(1)" as any },
-  icon: { width: 38, height: 38 },
+  icon: { width: 44, height: 44 },
   badgeDot: {
     position: "absolute", top: 1, right: "26%",
     width: 10, height: 10, borderRadius: 5,
@@ -81,7 +81,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: UI.sanctuaryBg,
   },
   label: {
-    fontSize:      9.5,
+    fontSize:      10.5,
     fontWeight:    "900",
     letterSpacing: 0.7,
     textAlign:     "center",
@@ -94,6 +94,7 @@ const s = StyleSheet.create({
 export default function TabsLayout() {
   const insets     = useSafeAreaInsets();
   const bottomPad  = Math.max(insets.bottom, 8);
+  const router     = useRouter();
 
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
@@ -136,11 +137,11 @@ export default function TabsLayout() {
           backgroundColor: UI.sanctuaryBg,
           borderTopWidth:  1,
           borderTopColor:  "#E8C86830",
-          height:          68 + bottomPad,
+          height:          72 + bottomPad,
           paddingTop:      4,
           paddingBottom:   bottomPad,
         },
-        tabBarItemStyle: { paddingVertical: 2 },
+        tabBarItemStyle: { paddingVertical: 2, flex: 1 },
       }}
     >
       {/* ── Order: Journey · Heroes · HOME (center) · Bag · Shop.
@@ -208,6 +209,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="study"
         options={{ href: null, tabBarButtonTestID: "tab-study" }}
+        listeners={{ tabPress: (e) => { e.preventDefault(); router.replace("/(tabs)/journey"); } }}
       />
       <Tabs.Screen
         name="kingdom"

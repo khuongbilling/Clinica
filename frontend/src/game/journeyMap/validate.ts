@@ -8,40 +8,23 @@
  * No imports from React, Expo, or any UI layer belong here.
  */
 
-import { TOTAL_BP } from './config';
+import { TOTAL_BP, CHEST_BRONZE_MIN_BP, CHEST_GOLD_MAX_BP } from './config';
+import type { EncounterRates, ChestQualityRates } from './config';
 import type { JourneyRun, JourneyTile } from './types';
-
-// ── Shared type aliases (mirrors config return shapes) ────────────────────────
-
-interface EncounterRates {
-  none: number;
-  battle: number;
-  areaBoss: number;
-  treasure: number;
-  merchant: number;
-}
-
-interface ChestTierRates {
-  bronze: number;
-  silver: number;
-  gold: number;
-}
 
 // ── Encounter rates ───────────────────────────────────────────────────────────
 
-/** Bronze quality floor in basis points. */
-const CHEST_BRONZE_MIN_BP = 4_000;
-
-/** Gold quality ceiling in basis points. */
-const CHEST_GOLD_MAX_BP = 1_500;
-
 /**
- * Validates that an encounter-rates object is internally consistent:
+ * Validates that an EncounterRates object is internally consistent:
  * - All individual rates are non-negative.
  * - Rates sum to exactly TOTAL_BP (10 000).
  */
-export function validateEncounterRates(rates: EncounterRates, chapter: number): string[] {
+export function validateEncounterRates(
+  cfg: EncounterRates,
+  chapter: number,
+): string[] {
   const errors: string[] = [];
+  const { rates } = cfg;
 
   let sum = 0;
   for (const [key, bp] of Object.entries(rates)) {
@@ -57,19 +40,24 @@ export function validateEncounterRates(rates: EncounterRates, chapter: number): 
 // ── Chest quality rates ───────────────────────────────────────────────────────
 
 /**
- * Validates that a chest-tier rates object is internally consistent:
+ * Validates that a ChestQualityRates object is internally consistent:
  * - All individual rates are non-negative.
  * - Rates sum to exactly TOTAL_BP (10 000).
- * - Bronze ≥ 4 000 bp (40%).
- * - Gold ≤ 1 500 bp (15%).
+ * - Bronze ≥ CHEST_BRONZE_MIN_BP (4 000 bp = 40%).
+ * - Gold ≤ CHEST_GOLD_MAX_BP (1 500 bp = 15%).
+ * - Silver ≥ 0 (implied by the sum constraint + the bronze/gold bounds,
+ *   but checked explicitly for clarity).
  */
-export function validateChestQualityRates(rates: ChestTierRates, chapter: number): string[] {
+export function validateChestQualityRates(
+  cfg: ChestQualityRates,
+  chapter: number,
+): string[] {
   const errors: string[] = [];
-  const { bronze, silver, gold } = rates;
+  const { bronze, silver, gold } = cfg.rates;
 
-  if (bronze < 0) errors.push(`ch${chapter}: bronze chest rate is negative (${bronze} bp)`);
-  if (silver < 0) errors.push(`ch${chapter}: silver chest rate is negative (${silver} bp)`);
-  if (gold   < 0) errors.push(`ch${chapter}: gold chest rate is negative (${gold} bp)`);
+  if (bronze < 0)  errors.push(`ch${chapter}: bronze chest rate is negative (${bronze} bp)`);
+  if (silver < 0)  errors.push(`ch${chapter}: silver chest rate is negative (${silver} bp)`);
+  if (gold   < 0)  errors.push(`ch${chapter}: gold chest rate is negative (${gold} bp)`);
 
   if (bronze < CHEST_BRONZE_MIN_BP) {
     errors.push(`ch${chapter}: bronze (${bronze} bp) is below minimum (${CHEST_BRONZE_MIN_BP} bp)`);
@@ -119,11 +107,13 @@ export function validateTile(tile: JourneyTile): string[] {
  * - tileCount matches the actual tiles array length.
  * - startTileId and currentTileId reference real tile ids.
  * - Every tile passes validateTile.
- * - Denormalised counters match what can be derived from the tiles array.
+ * - Denormalised counters (areaBossCount, areaBossKeysCollected, exploredTileCount)
+ *   match what can be derived from the tiles array.
  */
 export function validateRun(run: JourneyRun): string[] {
   const errors: string[] = [];
 
+  // Tile count
   if (run.tiles.length !== run.tileCount) {
     errors.push(
       `run ch${run.chapterId}: tileCount (${run.tileCount}) ≠ tiles.length (${run.tiles.length})`,
@@ -132,6 +122,7 @@ export function validateRun(run: JourneyRun): string[] {
 
   const tileIndex = new Map(run.tiles.map((t) => [t.id, t]));
 
+  // Reference integrity
   if (!tileIndex.has(run.startTileId)) {
     errors.push(`run ch${run.chapterId}: startTileId '${run.startTileId}' not found in tiles`);
   }
@@ -142,10 +133,12 @@ export function validateRun(run: JourneyRun): string[] {
     errors.push(`run ch${run.chapterId}: gateAnchorTileId '${run.gateAnchorTileId}' not found in tiles`);
   }
 
+  // Per-tile validation
   for (const tile of run.tiles) {
     errors.push(...validateTile(tile));
   }
 
+  // Denormalised counter cross-checks
   const derivedAreaBossCount = run.tiles.filter((t) => t.encounter === 'areaBoss').length;
   if (run.areaBossCount !== derivedAreaBossCount) {
     errors.push(

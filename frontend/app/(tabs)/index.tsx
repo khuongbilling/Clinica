@@ -51,7 +51,7 @@ const EMBLEM_IMAGES = {
   // Study + Realm moved off the nav bar to hub shortcut icons — reuse their
   // painted tab artwork so the design language stays consistent.
   study:       require("../../assets/ui-icons/tab-inventory.png"),
-  realm:       require("../../assets/ui-icons/tab-sanctuary-3d.png"),
+  realm:       require("../../assets/ui-icons/tab-realm.png"),
 } as const;
 
 const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
@@ -413,6 +413,18 @@ export default function RunHome() {
 
       {/* ── TUTORIAL SHORTCUT — kept above the global header so it stays reachable ── */}
       <View style={styles.tutorialRow}>
+        {realmUnlocked && (
+          <Pressable
+            style={styles.headerBtn}
+            onPress={() => router.push(ROUTES.KINGDOM)}
+            hitSlop={10}
+            testID="home-realm-button"
+            accessibilityLabel="Open Realm"
+            accessibilityRole="button"
+          >
+            <Image source={EMBLEM_IMAGES.realm} style={{ width: 22, height: 22 }} contentFit="contain" />
+          </Pressable>
+        )}
         <Pressable
           style={styles.headerBtn}
           onPress={() => router.push(ROUTES.tutorial)}
@@ -976,6 +988,7 @@ const styles = StyleSheet.create({
   /* Tutorial shortcut row (identity/stamina/currencies now live in PlayerHeader) */
   tutorialRow: {
     flexDirection: "row", justifyContent: "flex-end",
+    gap: SPACING.xs,
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.xs,
   },

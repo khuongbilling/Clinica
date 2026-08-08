@@ -1,11 +1,11 @@
 /**
  * (tabs)/journey — Journey hub.
  *
- * Banner-hub landing page (same pattern as the Shift / Shop hubs) with three
+ * Banner-hub landing page (same pattern as the Shift / Shop hubs) with four
  * illustrated destinations:
- *   · University — lessons, recruitment, training
- *   · Chapters   — the shared /journey chapter-map screen
- *   · Memories   — the story-scene gallery; unseen memories carry a red badge
+ *   · Chapters     — the shared /journey chapter-map screen
+ *   · Study/Lessons — University content via the hidden /(tabs)/study route
+ *   · Memories     — the story-scene gallery; unseen memories carry a red badge
  *     that cascades up: memory card → Memories banner → Journey tab icon.
  */
 import { useRouter } from "expo-router";
@@ -21,17 +21,6 @@ import { SPACING } from "@/src/theme/colors";
 import { SERIF, UI } from "@/src/theme/ui";
 
 const BANNERS: Record<string, ModeCardDef> = {
-  university: {
-    id: "journey-university",
-    title: "University",
-    subtitle: "Lessons · Recruitment · Training",
-    icon: "school",
-    accentColor: "#E8C868",
-    status: "active",
-    size: "large",
-    artBrief: "",
-    imageKey: "university",
-  } as ModeCardDef,
   chapters: {
     id: "journey-chapters",
     title: "Chapters",
@@ -42,6 +31,17 @@ const BANNERS: Record<string, ModeCardDef> = {
     size: "large",
     artBrief: "",
     imageKey: "journey-chapters",
+  } as ModeCardDef,
+  study: {
+    id: "journey-study",
+    title: "Study · Lessons",
+    subtitle: "Clinical cases, cue labs, and training",
+    icon: "school",
+    accentColor: "#E8C868",
+    status: "active",
+    size: "large",
+    artBrief: "",
+    imageKey: "study",
   } as ModeCardDef,
   memories: {
     id: "journey-memories",
@@ -68,16 +68,16 @@ export default function JourneyHub() {
         <Text style={s.subtitle}>Your path through the Grand Ward</Text>
 
         <BannerCard
-          mode={BANNERS.university}
-          onPress={() => router.push(ROUTES.UNIVERSITY)}
-          height={140}
-          testID="journey-banner-university"
-        />
-        <BannerCard
           mode={BANNERS.chapters}
           onPress={() => router.push(ROUTES.JOURNEY)}
           height={140}
           testID="journey-banner-chapters"
+        />
+        <BannerCard
+          mode={BANNERS.study}
+          onPress={() => router.push(ROUTES.STUDY_TAB)}
+          height={140}
+          testID="journey-banner-study"
         />
         <View>
           <BannerCard
