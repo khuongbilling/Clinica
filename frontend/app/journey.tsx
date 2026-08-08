@@ -45,6 +45,11 @@ import type { JourneyNodeUi } from "@/src/features/journey/ui/journeyUi.types";
 import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
 import { ShiftSelector } from "@/src/features/journey/ui/ShiftSelector";
 import { getShiftAvailability } from "@/src/features/journey/ui/shiftAvailability";
+import { getFocusedChapters, buildChapterUiSummary } from "@/src/features/journey/ui/journeyVisibility";
+import {
+  loadJourneyExpandedPreference,
+  saveJourneyExpandedPreference,
+} from "@/src/features/journey/ui/journeyExpandedPreference";
 import type { TimeOfDay } from "@/src/game/journeyMap/types";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { usePlayer } from "@/src/game/store";
@@ -64,6 +69,14 @@ export default function JourneyScreen() {
   const [canonicalChoices, setCanonicalChoices] = useState<Record<string, string>>({});
   const handleBranchSelect = useCallback((branchGroupId: string, nodeId: string) => {
     setCanonicalChoices((prev) => ({ ...prev, [branchGroupId]: nodeId }));
+  }, []);
+  // Push I: UI-only preference — not progression. localStorage is correct here.
+  const [fullJourneyExpanded, setFullJourneyExpanded] = useState<boolean>(
+    () => loadJourneyExpandedPreference(),
+  );
+  const handleToggleExpanded = useCallback((next: boolean) => {
+    setFullJourneyExpanded(next);
+    saveJourneyExpandedPreference(next);
   }, []);
   // Active shift tab in the inline ShiftSelector.  Resets to 'day' whenever
   // a new choose_branch recommendation appears.
@@ -95,6 +108,14 @@ export default function JourneyScreen() {
   const claimedNodes = player.claimed_journey_nodes ?? [];
   const currentChapter = getCurrentChapter(playerLevel, claimedNodes);
   const nextStep     = getNextRecommendedPart(playerLevel, claimedNodes);
+
+  // Push I: build ChapterUiSummary for every chapter, then let the selector
+  // decide which ones are shown.  getFocusedChapters returns [current, next]
+  // in focused mode and all chapters in expanded mode.
+  const chapterSummaries = CHAPTERS.map((ch) =>
+    buildChapterUiSummary(ch, playerLevel, claimedNodes),
+  );
+  const visibleChapters = getFocusedChapters(chapterSummaries, fullJourneyExpanded);
 
   // ── Push B: deterministic recommendation ────────────────────────────────
   // Build JourneyNodeUi[] from authoritative progression state, then ask the
@@ -294,17 +315,21 @@ export default function JourneyScreen() {
             </View>
           )}
 
-          {/* ── Chapter selector tabs ── */}
+          {/* ── Chapter selector tabs (Push I: filtered by getFocusedChapters) ── */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.chapterSelectorBar}
             contentContainerStyle={styles.chapterSelectorContent}
           >
-            {CHAPTERS.map((ch, idx) => {
-              const st       = getChapterStatus(ch, playerLevel, claimedNodes);
+            {visibleChapters.map((chSummary) => {
+              // Resolve back to the Chapter definition and its CHAPTERS index so
+              // ChapterPage (which takes a Chapter, not a ChapterUiSummary) still works.
+              const chaptersIdx = CHAPTERS.findIndex((c) => c.id === chSummary.chapterId);
+              const ch  = CHAPTERS[chaptersIdx];
+              const st  = getChapterStatus(ch, playerLevel, claimedNodes);
               const locked   = st === "locked";
-              const selected = idx === selectedChapterIdx;
+              const selected = chaptersIdx === selectedChapterIdx;
               return (
                 <Pressable
                   key={ch.id}
@@ -316,12 +341,9 @@ export default function JourneyScreen() {
                   onPress={() => {
                     if (locked) return;
                     if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1) {
-                      // Push 15: navigate to the randomised fogbound chapter map.
-                      // The prior visual map at /journey remains intact as a rollback
-                      // fallback — re-disable the flag to restore the old flow instantly.
                       router.push(dynRoute.chapterFogMap(String(ch.number)) as AppRoute);
                     } else {
-                      setSelectedChapterIdx(idx);
+                      setSelectedChapterIdx(chaptersIdx);
                     }
                   }}
                   disabled={locked}
@@ -344,6 +366,17 @@ export default function JourneyScreen() {
               );
             })}
           </ScrollView>
+
+          {/* ── Journey scope toggle (Push I) ── */}
+          <Pressable
+            style={styles.journeyScopeToggle}
+            onPress={() => handleToggleExpanded(!fullJourneyExpanded)}
+            testID="journey-scope-toggle"
+          >
+            <Text style={styles.journeyScopeToggleText}>
+              {fullJourneyExpanded ? "Focus on Current Journey" : "View Full Journey"}
+            </Text>
+          </Pressable>
 
           {/* ── Per-chapter visual map page ── */}
           <ScrollView
@@ -841,6 +874,19 @@ const styles = StyleSheet.create({
     fontWeight:    "700",
     color:         COLORS.onSurfaceSecondary,
     letterSpacing: 0.5,
+  },
+  // Push I — journey scope toggle
+  journeyScopeToggle: {
+    alignSelf:       "center",
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.md,
+    marginVertical:  4,
+  },
+  journeyScopeToggleText: {
+    fontSize:      11,
+    fontWeight:    "600",
+    color:         COLORS.brand,
+    letterSpacing: 0.3,
   },
 
   // Quests / Memories shared
