@@ -22,6 +22,10 @@ const BANNER_IMAGES: Record<string, any> = {
   // Journey hub banners
   "journey-chapters": require("../../assets/images/banner_journey_chapters.png"),
   "journey-memories": require("../../assets/images/banner_journey_memories.png"),
+  // Journey hierarchy banners — Saga / Age / Book level cards
+  "banner-saga-1": require("../../assets/images/banner_saga_1.png"),
+  "banner-age-1": require("../../assets/images/banner_age_1.png"),
+  "banner-book-1": require("../../assets/images/banner_book_1.png"),
   // Clinica University hub banners
   "university": require("../../assets/images/banner_university.png"),
   "uni-lessons": require("../../assets/images/banner_uni_lessons.png"),

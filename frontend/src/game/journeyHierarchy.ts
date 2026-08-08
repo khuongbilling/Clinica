@@ -83,7 +83,7 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
     accentColor: "#4FD8C4",
     unlockCondition: null, // always unlocked
     status: "active",
-    imageKey: "journey-chapters",
+    imageKey: "banner-saga-1",
     ages: [
       {
         id: "age-1",
@@ -93,7 +93,7 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
         accentColor: "#D4AF37",
         unlockCondition: null,
         status: "active",
-        imageKey: "journey-chapters",
+        imageKey: "banner-age-1",
         books: [
           {
             id: "book-1",
@@ -104,7 +104,7 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
             chapterRange: [1, 10],
             unlockCondition: null,
             status: "active",
-            imageKey: "journey-chapters",
+            imageKey: "banner-book-1",
           },
         ],
       },
