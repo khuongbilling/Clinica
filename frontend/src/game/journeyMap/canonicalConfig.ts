@@ -26,6 +26,7 @@ export const CANONICAL_TOTAL_BP = 10_000;
 // Imported here for use in this file's function signatures, and re-exported so
 // existing consumers (`import { TimeOfDay } from './canonicalConfig'`) still work.
 import type { TimeOfDay } from './types';
+import { areaBossProbabilityBp as _areaBossProbabilityBp } from './chapterBossKeys';
 export type { TimeOfDay };
 export const TIME_OF_DAY_VALUES: readonly TimeOfDay[] = ['day', 'evening', 'night'];
 
@@ -86,11 +87,14 @@ export function canonicalEnemyDensityCapBp(timeOfDay: TimeOfDay): number {
 /** Hard cap: at most this many area-boss tiles per run. */
 export const CANONICAL_AREA_BOSS_HARD_MAX = 3;
 
+/**
+ * Delegates to `areaBossProbabilityBp` from chapterBossKeys.ts, which is the
+ * authoritative definition.  Having a single implementation guarantees the
+ * canonical encounter generator and the boss-key spec can never silently
+ * diverge.
+ */
 export function canonicalAreaBossRateBp(chapter: number): number {
-  if (chapter <=  3) return     0;  //  0%
-  if (chapter <= 10) return   300;  //  3%
-  if (chapter <= 20) return   400;  //  4%
-  return                       500;  //  5%
+  return _areaBossProbabilityBp(chapter);
 }
 
 // ── Treasure ───────────────────────────────────────────────────────────────────

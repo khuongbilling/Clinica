@@ -211,12 +211,6 @@ export function legacyAreaBossRateBp(chapter: number): BasisPoints {
 }
 
 /**
- * @deprecated Use legacyAreaBossRateBp(chapter) — the flat 10% rate has been
- * replaced by chapter-specific rates (Push 13).  Kept for any legacy callers.
- */
-export const AREA_BOSS_RATE_BP: BasisPoints = 1_000; // legacy — do not use for new code
-
-/**
  * Returns the chest-quality probability profile for a given chapter.
  *
  * Bronze formula:  8 000 − (chapter − 1) × 50,  clamped to [4 000, 8 000]
