@@ -11,7 +11,7 @@ const Q_STEP = 0.75;    // horizontal advance per q unit (= 3/4)
 const R_STEP = 0.866;   // vertical advance per r unit   (≈ √3/2)
 const Q_VOFF = 0.433;   // vertical bump per q unit      (≈ √3/4)
 const SZ = 64;          // tile size in pixels
-const R = SZ * 0.47;    // circumradius of flat-top hex
+const R = SZ * 0.5;     // circumradius of flat-top hex — exactly SZ/2 so tiles tessellate edge-to-edge
 const OX = CW / 2 - SZ / 2;  // x origin (centres tile q=0)
 const OY = 340;               // y origin (visual centre of map)
 
@@ -83,17 +83,59 @@ function flatHexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, radi
 // ─── Tile drawing functions ───────────────────────────────────────────────────
 
 function drawHiddenTile(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  // Dark contiguous base hex only — volumetric fog cloud is layered on top later
   ctx.save();
   flatHexPath(ctx, cx, cy, R);
   const g = ctx.createRadialGradient(cx, cy - R * 0.2, 1, cx, cy, R);
-  g.addColorStop(0, '#1e2030');
-  g.addColorStop(1, '#11121c');
+  g.addColorStop(0, '#181a28');
+  g.addColorStop(1, '#0e0f18');
   ctx.fillStyle = g;
   ctx.fill();
-  ctx.strokeStyle = '#2e3050';
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = 'rgba(46,48,80,0.4)';
+  ctx.lineWidth = 1;
   ctx.stroke();
-  ctx.fillStyle = 'rgba(80,85,130,0.55)';
+  ctx.restore();
+}
+
+// Deterministic pseudo-random from tile coords so fog is stable across redraws
+function hash2(q: number, r: number, i: number): number {
+  const n = Math.sin(q * 127.1 + r * 311.7 + i * 74.7) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function drawFogCloud(ctx: CanvasRenderingContext2D, cx: number, cy: number, q: number, r: number) {
+  ctx.save();
+  // 8 soft overlapping puffs, jittered deterministically, spilling past the hex edge
+  const PUFFS = 8;
+  for (let i = 0; i < PUFFS; i++) {
+    const a = hash2(q, r, i) * Math.PI * 2;
+    const d = hash2(q, r, i + 20) * R * 0.55;
+    const px = cx + Math.cos(a) * d;
+    const py = cy + Math.sin(a) * d * 0.8;
+    const pr = R * (0.45 + hash2(q, r, i + 40) * 0.5);
+    const light = 0.10 + hash2(q, r, i + 60) * 0.10;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, pr);
+    g.addColorStop(0, `rgba(150,158,195,${light + 0.10})`);
+    g.addColorStop(0.55, `rgba(110,118,160,${light})`);
+    g.addColorStop(1, 'rgba(90,95,140,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Brighter central wisp so clouds read as lit volume, not flat haze
+  const core = ctx.createRadialGradient(cx, cy - R * 0.15, 0, cx, cy, R * 0.85);
+  core.addColorStop(0, 'rgba(175,182,215,0.16)');
+  core.addColorStop(1, 'rgba(120,128,170,0)');
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.95, 0, Math.PI * 2);
+  ctx.fill();
+
+  // '?' glyph floating in the fog
+  ctx.fillStyle = 'rgba(205,210,240,0.7)';
+  ctx.shadowColor = 'rgba(160,170,220,0.8)';
+  ctx.shadowBlur = 6;
   ctx.font = 'bold 18px serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -965,9 +1007,14 @@ function draw(canvas: HTMLCanvasElement) {
     return a.r !== b.r ? a.r - b.r : a.q - b.q;
   });
 
+  // Fog clouds are drawn inline in depth order so nearer tiles repaint over
+  // any cloud spill from tiles behind them.
   for (const tile of sorted) {
     const [cx, cy] = tileCenter(tile.q, tile.r);
-    if (tile.vis === 'hidden')   drawHiddenTile(ctx, cx, cy);
+    if (tile.vis === 'hidden') {
+      drawHiddenTile(ctx, cx, cy);
+      drawFogCloud(ctx, cx, cy, tile.q, tile.r);
+    }
     else if (tile.vis === 'frontier') drawFrontierTile(ctx, cx, cy);
     else if (tile.vis === 'gate')    drawGateTile(ctx, cx, cy);
     else if (tile.vis === 'current') {
@@ -1079,7 +1126,7 @@ const SYSTEM_FACTS = [
   },
   {
     title: 'Tile States',
-    body: 'HIDDEN: dark, ? glyph, not interactive.\nFRONTIER: blue glow, ? glyph, tappable.\nREVEALED: stone texture + icon, cleared.\nCURRENT: teal glow + hero token.\nGATE: purple, padlock, boss entrance.',
+    body: 'HIDDEN: volumetric fog cloud + ? glyph, not interactive.\nFRONTIER: blue glow, ? glyph, tappable.\nREVEALED: stone texture + icon, cleared.\nCURRENT: teal glow + hero token.\nGATE: purple, padlock, boss entrance.',
     color: '#e07020',
   },
   {
