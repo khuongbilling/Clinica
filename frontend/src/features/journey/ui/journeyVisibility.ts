@@ -4,11 +4,21 @@
  * Pure read-only functions.  They delegate to the canonical gating layer and
  * surface the results in UI-consumable shapes.  No progression state is mutated.
  *
+ * KEY INVARIANT:
+ *   storyCleared !== mastered
+ *
+ *   isChapterMastered requires maxMasteryStars > 0.
+ *   A narrative/story-only chapter (maxMasteryStars === 0) is NEVER "Mastered"
+ *   even when storyCleared is true.  UI components must not collapse these two
+ *   states — e.g. masteryStars === 3 must never become a story gate check.
+ *
  * Answers:
  *   5. Why is a locked node locked?           → getLockReasonsForNode
  *   6. Is Night Shift unlocked?               → isNightShiftUnlocked
  *   7. Is a Chapter Story Cleared?            → isChapterStoryCleared
  *   8. Is a Chapter Mastered?                 → isChapterMastered
+ *      Which Chapters in focused mode?        → getFocusedChapters
+ *      Completion label for display?          → getCompletionLabel
  *                                             + buildChapterUiSummary
  */
 
@@ -81,27 +91,93 @@ export function isChapterStoryCleared(
 // ── 8. Chapter Mastered ───────────────────────────────────────────────────────
 
 /**
+ * Returns true when the chapter summary represents a fully mastered chapter.
+ *
+ * INVARIANT: requires maxMasteryStars > 0.
+ *   A chapter with no mastery-eligible nodes (pure narrative) is NEVER mastered,
+ *   even if storyCleared is true.  This prevents UI components from accidentally
+ *   treating "masteryStars === 3" as a story gate.
+ */
+export function isChapterMastered(chapter: ChapterUiSummary): boolean {
+  return (
+    chapter.maxMasteryStars > 0 &&
+    chapter.masteryStars >= chapter.maxMasteryStars
+  );
+}
+
+/**
+ * Returns a three-way completion label for display in chapter headers and lists.
+ *
+ *   "In Progress"   — story not yet cleared
+ *   "Story Cleared" — story cleared but mastery incomplete (or no mastery nodes)
+ *   "Mastered"      — story cleared AND all mastery nodes claimed
+ *                     (only reachable when maxMasteryStars > 0)
+ */
+export function getCompletionLabel(
+  chapter: ChapterUiSummary,
+): 'In Progress' | 'Story Cleared' | 'Mastered' {
+  if (!chapter.storyCleared) return 'In Progress';
+  if (isChapterMastered(chapter))  return 'Mastered';
+  return 'Story Cleared';
+}
+
+// ── Focused chapters ──────────────────────────────────────────────────────────
+
+/**
+ * Returns the subset of chapters the Journey screen should display prominently.
+ *
+ * Collapsed (expanded = false):
+ *   • Finds the current chapter (current = true) or, as fallback, the first
+ *     uncleared chapter.
+ *   • Returns [current, next] when a next chapter exists, or [current] alone.
+ *   • When everything is cleared, returns the final chapter.
+ *
+ * Expanded (expanded = true):
+ *   • Returns all chapters in ascending order — the UI is fully scrollable.
+ *
+ * Input order is not assumed; chapters are always sorted by chapterNumber.
+ */
+export function getFocusedChapters(
+  chapters: ChapterUiSummary[],
+  expanded: boolean,
+): ChapterUiSummary[] {
+  const ordered = [...chapters].sort(
+    (a, b) => a.chapterNumber - b.chapterNumber,
+  );
+
+  if (expanded) return ordered;
+
+  const current =
+    ordered.find((ch) => ch.current) ??
+    ordered.find((ch) => !ch.storyCleared);
+
+  if (!current) {
+    // Everything cleared — show the final chapter.
+    return ordered.slice(-1);
+  }
+
+  const next = ordered.find(
+    (ch) => ch.chapterNumber > current.chapterNumber,
+  );
+
+  return next ? [current, next] : [current];
+}
+
+// ── Summary builder ───────────────────────────────────────────────────────────
+
+/**
  * Part types that contribute to chapter mastery.
  * Mastery is measured on combat and defense encounters — the skill-testing nodes.
  */
-const MASTERY_PART_TYPES = new Set([
-  'battle',
-  'mini_boss',
-  'ward_defense',
-]);
+const MASTERY_PART_TYPES = new Set(['battle', 'mini_boss', 'ward_defense']);
 
-/**
- * Returns all non-placeholder mastery-eligible node IDs for the chapter.
- */
 function getMasteryNodeIds(chapter: Chapter): string[] {
   return chapter.parts
     .filter((p) => !p.isPlaceholder && MASTERY_PART_TYPES.has(p.type))
     .map((p) => p.id);
 }
 
-/**
- * Returns the number of mastery-eligible nodes the player has claimed.
- */
+/** Returns the number of mastery-eligible nodes the player has claimed. */
 export function countMasteryStars(
   chapter: Chapter,
   claimedNodeIds: readonly string[],
@@ -110,41 +186,17 @@ export function countMasteryStars(
   return getMasteryNodeIds(chapter).filter((id) => claimedSet.has(id)).length;
 }
 
-/**
- * Returns the total number of mastery stars available in this chapter
- * (i.e. the count of non-placeholder battle/mini-boss/ward-defense nodes).
- */
+/** Returns the total mastery-eligible node count for the chapter. */
 export function maxMasteryStars(chapter: Chapter): number {
   return getMasteryNodeIds(chapter).length;
 }
 
 /**
- * Returns true when the chapter is fully mastered:
- *   • Story is cleared (all requiredCompletionNodes claimed).
- *   • All mastery-eligible nodes are claimed.
- *
- * A chapter with no mastery-eligible nodes is mastered as soon as it is
- * story-cleared (pure narrative chapters).
- */
-export function isChapterMastered(
-  chapter: Chapter,
-  claimedNodeIds: readonly string[],
-): boolean {
-  if (!isChapterStoryCleared(chapter, claimedNodeIds)) return false;
-  const masteryIds = getMasteryNodeIds(chapter);
-  if (masteryIds.length === 0) return true;
-  const claimedSet = new Set(claimedNodeIds);
-  return masteryIds.every((id) => claimedSet.has(id));
-}
-
-// ── Summary builder ───────────────────────────────────────────────────────────
-
-/**
  * Constructs the full ChapterUiSummary for one chapter.
  *
- * @param chapter       - Chapter definition from chapterJourney.ts
- * @param playerLevel   - Current player level (used by getChapterStatus)
- * @param claimedNodeIds - Nodes the player has cleared (player.claimed_journey_nodes)
+ * @param chapter        — Chapter definition from chapterJourney.ts
+ * @param playerLevel    — Current player level (used by getChapterStatus)
+ * @param claimedNodeIds — Nodes the player has cleared (player.claimed_journey_nodes)
  */
 export function buildChapterUiSummary(
   chapter: Chapter,

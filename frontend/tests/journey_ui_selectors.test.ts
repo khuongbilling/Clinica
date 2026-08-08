@@ -34,6 +34,8 @@ import {
   isNightShiftUnlocked,
   isChapterStoryCleared,
   isChapterMastered,
+  getCompletionLabel,
+  getFocusedChapters,
   countMasteryStars,
   maxMasteryStars,
   buildChapterUiSummary,
@@ -522,39 +524,120 @@ describe('countMasteryStars', () => {
   });
 });
 
+// ── isChapterMastered operates on ChapterUiSummary ───────────────────────────
+
+function makeSummary(overrides: Partial<import('../src/features/journey/ui/journeyUi.types').ChapterUiSummary> = {}) {
+  return {
+    chapterId:       'chapter_1',
+    chapterNumber:   1,
+    storyCleared:    true,
+    masteryStars:    0,
+    maxMasteryStars: 3,
+    current:         true,
+    ...overrides,
+  };
+}
+
 describe('isChapterMastered', () => {
+  // ── KEY INVARIANT: storyCleared !== mastered ──────────────────────────────
+  it('INVARIANT: is false when maxMasteryStars === 0 even when storyCleared', () => {
+    // A narrative/story-only chapter must NEVER be labelled "Mastered".
+    expect(isChapterMastered(makeSummary({ storyCleared: true, masteryStars: 0, maxMasteryStars: 0 }))).toBe(false);
+  });
+
   it('is false when story is not cleared', () => {
-    expect(isChapterMastered(CHAPTERS[0], [])).toBe(false);
+    expect(isChapterMastered(makeSummary({ storyCleared: false, masteryStars: 0, maxMasteryStars: 3 }))).toBe(false);
   });
 
-  it('is true for a story-only chapter once cleared', () => {
-    const ch = { ...CHAPTERS[0], parts: [{ id: 's1', part: 1, type: 'story' as const, title: 'T', description: 'D', icon: 'book' }], requiredCompletionNodes: ['s1'] };
-    expect(isChapterMastered(ch, ['s1'])).toBe(true);
+  it('is false when masteryStars < maxMasteryStars', () => {
+    expect(isChapterMastered(makeSummary({ storyCleared: true, masteryStars: 2, maxMasteryStars: 3 }))).toBe(false);
   });
 
-  it('is false when story cleared but mastery nodes unclaimed', () => {
-    const ch = {
-      ...CHAPTERS[0],
-      parts: [
-        { id: 'b1', part: 1, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash' },
-        { id: 'b2', part: 2, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash' },
-        { id: 's1', part: 3, type: 'story'  as const, title: 'T', description: 'D', icon: 'book'  },
-      ],
-      requiredCompletionNodes: ['s1'],
-    };
-    expect(isChapterMastered(ch, ['s1', 'b1'])).toBe(false);
+  it('is true when storyCleared and masteryStars === maxMasteryStars > 0', () => {
+    expect(isChapterMastered(makeSummary({ storyCleared: true, masteryStars: 3, maxMasteryStars: 3 }))).toBe(true);
   });
 
-  it('is true when story cleared and all mastery nodes claimed', () => {
-    const ch = {
-      ...CHAPTERS[0],
-      parts: [
-        { id: 'b1', part: 1, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash' },
-        { id: 's1', part: 2, type: 'story'  as const, title: 'T', description: 'D', icon: 'book'  },
-      ],
-      requiredCompletionNodes: ['s1'],
-    };
-    expect(isChapterMastered(ch, ['s1', 'b1'])).toBe(true);
+  it('is true when masteryStars exceeds maxMasteryStars (bonus stars)', () => {
+    expect(isChapterMastered(makeSummary({ storyCleared: true, masteryStars: 4, maxMasteryStars: 3 }))).toBe(true);
+  });
+});
+
+// ── getCompletionLabel ────────────────────────────────────────────────────────
+
+describe('getCompletionLabel', () => {
+  it('returns "In Progress" when storyCleared is false', () => {
+    expect(getCompletionLabel(makeSummary({ storyCleared: false, masteryStars: 0, maxMasteryStars: 3 }))).toBe('In Progress');
+  });
+
+  it('returns "Story Cleared" when storyCleared and not mastered', () => {
+    expect(getCompletionLabel(makeSummary({ storyCleared: true, masteryStars: 1, maxMasteryStars: 3 }))).toBe('Story Cleared');
+  });
+
+  it('returns "Story Cleared" for a narrative chapter (maxMasteryStars === 0)', () => {
+    // INVARIANT: story-only chapters never reach "Mastered"
+    expect(getCompletionLabel(makeSummary({ storyCleared: true, masteryStars: 0, maxMasteryStars: 0 }))).toBe('Story Cleared');
+  });
+
+  it('returns "Mastered" when all mastery stars claimed and maxMasteryStars > 0', () => {
+    expect(getCompletionLabel(makeSummary({ storyCleared: true, masteryStars: 3, maxMasteryStars: 3 }))).toBe('Mastered');
+  });
+
+  it('never returns "Mastered" when storyCleared is false, regardless of stars', () => {
+    expect(getCompletionLabel(makeSummary({ storyCleared: false, masteryStars: 3, maxMasteryStars: 3 }))).toBe('In Progress');
+  });
+});
+
+// ── getFocusedChapters ────────────────────────────────────────────────────────
+
+describe('getFocusedChapters', () => {
+  const ch = (n: number, overrides: Partial<ReturnType<typeof makeSummary>> = {}) =>
+    makeSummary({ chapterId: `chapter_${n}`, chapterNumber: n, current: false, storyCleared: false, ...overrides });
+
+  it('returns all chapters in order when expanded', () => {
+    const chapters = [ch(3), ch(1), ch(2)];
+    const result = getFocusedChapters(chapters, true);
+    expect(result.map((c) => c.chapterNumber)).toEqual([1, 2, 3]);
+  });
+
+  it('collapsed: returns [current, next] when next exists', () => {
+    const chapters = [ch(1, { storyCleared: true }), ch(2, { current: true }), ch(3)];
+    const result = getFocusedChapters(chapters, false);
+    expect(result.map((c) => c.chapterNumber)).toEqual([2, 3]);
+  });
+
+  it('collapsed: returns [current] alone when it is the last chapter', () => {
+    const chapters = [ch(1, { storyCleared: true }), ch(2, { current: true })];
+    const result = getFocusedChapters(chapters, false);
+    expect(result.map((c) => c.chapterNumber)).toEqual([2]);
+  });
+
+  it('collapsed: falls back to first uncleared when no current', () => {
+    const chapters = [ch(1, { storyCleared: true }), ch(2), ch(3)];
+    const result = getFocusedChapters(chapters, false);
+    // ch2 is first uncleared → [2, 3]
+    expect(result.map((c) => c.chapterNumber)).toEqual([2, 3]);
+  });
+
+  it('collapsed: shows only final chapter when everything is cleared', () => {
+    const chapters = [
+      ch(1, { storyCleared: true }),
+      ch(2, { storyCleared: true }),
+      ch(3, { storyCleared: true }),
+    ];
+    const result = getFocusedChapters(chapters, false);
+    expect(result.map((c) => c.chapterNumber)).toEqual([3]);
+  });
+
+  it('input order does not affect output — always sorted by chapterNumber', () => {
+    const chapters = [ch(3, { current: true }), ch(1, { storyCleared: true }), ch(2, { storyCleared: true }), ch(4)];
+    const result = getFocusedChapters(chapters, false);
+    expect(result[0].chapterNumber).toBe(3);
+    expect(result[1].chapterNumber).toBe(4);
+  });
+
+  it('expanded returns same count as input', () => {
+    const chapters = [ch(1), ch(2), ch(3), ch(4), ch(5)];
+    expect(getFocusedChapters(chapters, true)).toHaveLength(5);
   });
 });
 
