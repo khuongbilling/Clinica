@@ -44,6 +44,12 @@ import {
   TREASURE_REWARDS,
   type TreasureReward,
 } from '@/src/game/journeyMap/encounterResolution';
+import {
+  claimAreaBossKey,
+  createChapterBossKeyState,
+  CHAPTER_BOSS_KEY_REQUIREMENT,
+} from '@/src/game/journeyMap/chapterBossKeys';
+import { claimChapterBossKeyOnServer } from '@/src/game/journeyMap/journeyRunRepository';
 import type { JourneyRun, JourneyTile } from '@/src/game/journeyMap/types';
 import { TreasureModal }                  from '@/src/components/journey/TreasureModal';
 import { MerchantModal }                  from '@/src/components/journey/MerchantModal';
@@ -256,7 +262,7 @@ export default function ChapterFogMapShell() {
   }>();
   const router               = useRouter();
   const insets               = useSafeAreaInsets();
-  const { player, spendStamina, applyRewards } = usePlayer();
+  const { player, spendStamina, applyRewards, updateState } = usePlayer();
 
   const { height: windowHeight } = useWindowDimensions();
   // Responsive map height: ~45 % of the window, clamped between 240 and 480 px.
@@ -370,6 +376,38 @@ export default function ChapterFogMapShell() {
       }
     } else if (journeyIsAreaBoss === '1') {
       updated = resolveAreaBossWin(run, resolvedTileId);
+      // ── Chapter-level key update (Task 570) ────────────────────────────────
+      // resolveAreaBossWin updates run-level areaBossKeysCollected; we must
+      // ALSO update the chapter-level ChapterBossKeyState so keys survive
+      // across Rechallenge Map (new runs for the same chapter).
+      //
+      // Claim key is run-scoped ("{runId}:{tileId}") so tile coordinates
+      // ("q,r") cannot collide across different randomised map attempts.
+      // Each new run has a fresh UUID, guaranteeing a unique claim identity
+      // even when a rechallenge map places a boss at the same coordinates.
+      if (player) {
+        const claimKey = `${run.id}:${resolvedTileId}`;
+        const existing = player.chapter_boss_keys?.[String(chNum)];
+        const currentKeyState = existing
+          ? createChapterBossKeyState(chNum, existing.keys_collected, existing.claimed_tile_ids)
+          : createChapterBossKeyState(chNum);
+        const newKeyState = claimAreaBossKey(currentKeyState, claimKey);
+
+        // Optimistic local update — immediately visible in the gate HUD.
+        const newChapterBossKeys = {
+          ...(player.chapter_boss_keys ?? {}),
+          [String(chNum)]: {
+            keys_collected:   newKeyState.keysCollected,
+            claimed_tile_ids: [...newKeyState.claimedTileIds],
+          },
+        };
+        updateState({ ...player, chapter_boss_keys: newChapterBossKeys })
+          .catch(e => console.warn('[fog-map] updateState chapter_boss_keys failed:', e));
+
+        // Durable backend write — idempotent, survives session close + restart.
+        claimChapterBossKeyOnServer(player.id, chNum, claimKey)
+          .catch(e => console.warn('[fog-map] claimChapterBossKeyOnServer failed:', e));
+      }
     } else {
       updated = resolveBattleWin(run, resolvedTileId);
     }
@@ -390,12 +428,20 @@ export default function ChapterFogMapShell() {
     return [];
   }, [run, debugTiles, player?.id]);
 
-  // Gate unlock: 0-boss maps unlock when gate is discovered; otherwise need keys.
-  const areaBossCount     = run?.areaBossCount     ?? 0;
-  const keysCollected     = run?.areaBossKeysCollected ?? 0;
+  // Gate unlock: 0-boss maps (ch1–3) unlock when gate is discovered; otherwise
+  // require CHAPTER_BOSS_KEY_REQUIREMENT (3) chapter-level keys — a fixed
+  // threshold that does NOT vary with the current run's area-boss count.
+  const areaBossCount     = run?.areaBossCount ?? 0;
+  // Chapter-level key count (Task 570): chapter_boss_keys persists across
+  // Rechallenge Map so keys earned on Run 1 are still visible on Run 2.
+  // Falls back to run-level areaBossKeysCollected for pre-570 saves or first run.
+  const chapterKeyEntry   = player?.chapter_boss_keys?.[String(chNum)];
+  const keysCollected     = chapterKeyEntry?.keys_collected ?? run?.areaBossKeysCollected ?? 0;
   const zeroKeyMap        = areaBossCount === 0;
   const gateDiscovered    = run ? isGateDiscovered(run) : false;
-  const gateUnlocked      = zeroKeyMap ? gateDiscovered : keysCollected >= areaBossCount;
+  // Gate requires the canonical 3-key total, not the number of bosses on the
+  // current map.  Zero-boss chapters (ch1–3) keep the discovery-based fallback.
+  const gateUnlocked      = zeroKeyMap ? gateDiscovered : keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT;
 
   // Stats panel values
   const totalTiles    = run?.tileCount         ?? 0;
@@ -459,7 +505,7 @@ export default function ChapterFogMapShell() {
   const handleGateTap = useCallback(() => {
     if (!run) return;
     if (!gateUnlocked) {
-      const needed = areaBossCount - keysCollected;
+      const needed = CHAPTER_BOSS_KEY_REQUIREMENT - keysCollected;
       showInlineError(`${needed} key fragment${needed !== 1 ? 's' : ''} still needed to unlock the gate.`);
       return;
     }

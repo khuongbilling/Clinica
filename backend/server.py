@@ -208,6 +208,10 @@ class Player(BaseModel):
     hero_equipment: Dict[str, Dict[str, str]] = Field(default_factory=dict)
     seen_card_tutorial: bool = False
     seen_call_tutorial: bool = False
+    # Task 570 — Chapter-level Area Boss key progression.
+    # Maps str(chapter_id) → {"keys_collected": int, "claimed_tile_ids": [str, ...]}.
+    # Persists across Rechallenge Map (new runs) so keys are never lost on re-roll.
+    chapter_boss_keys: Dict[str, Any] = Field(default_factory=dict)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -310,6 +314,8 @@ class PlayerUpdate(BaseModel):
     hero_equipment: Optional[Dict[str, Dict[str, str]]] = None
     seen_card_tutorial: Optional[bool] = None
     seen_call_tutorial: Optional[bool] = None
+    # Task 570 — Chapter-level Area Boss key progression (str chapter_id → key state).
+    chapter_boss_keys: Optional[Dict[str, Any]] = None
 
 
 # ---------- Routes ----------
@@ -597,6 +603,50 @@ async def save_journey_run(run_id: str, payload: JourneyRunSave):
         raise HTTPException(status_code=404, detail="run not found")
     doc = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
     return doc
+
+
+class ClaimAreaBossKeyRequest(BaseModel):
+    chapter_id: int
+    tile_id: str
+
+
+@api_router.post("/player/{player_id}/claim-area-boss-key")
+async def claim_area_boss_key(player_id: str, payload: ClaimAreaBossKeyRequest):
+    """Idempotently claim an Area Boss key for a chapter.
+
+    Reads the current chapter_boss_keys entry for this chapter, adds the
+    tile_id if not already present, increments keys_collected (capped at 3),
+    and persists atomically.  Returns the updated key-state dict so the
+    caller can update its local copy without a full player re-fetch.
+
+    Idempotent: if tile_id was already claimed the response is unchanged state
+    and no write is issued.
+    """
+    doc = await db.players.find_one({"id": player_id}, {"_id": 0, "chapter_boss_keys": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="player not found")
+
+    chapter_key = str(payload.chapter_id)
+    existing_keys = (doc.get("chapter_boss_keys") or {})
+    state = existing_keys.get(chapter_key, {"keys_collected": 0, "claimed_tile_ids": []})
+
+    claimed_ids: List[str] = list(state.get("claimed_tile_ids") or [])
+
+    # Idempotency guard — tile already claimed, nothing to write.
+    if payload.tile_id in claimed_ids:
+        return state
+
+    MAX_KEYS = 3  # CHAPTER_BOSS_KEY_REQUIREMENT from chapterBossKeys.ts
+    new_keys = min((state.get("keys_collected") or 0) + 1, MAX_KEYS)
+    new_ids = sorted(list(set([*claimed_ids, payload.tile_id])))
+    new_state: Dict[str, Any] = {"keys_collected": new_keys, "claimed_tile_ids": new_ids}
+
+    field = f"chapter_boss_keys.{chapter_key}"
+    await db.players.update_one(
+        {"id": player_id},
+        {"$set": {field: new_state, "updated_at": now_iso()}},
+    )
+    return new_state
 
 
 @api_router.patch("/journey-runs/{run_id}/cleared")

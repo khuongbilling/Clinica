@@ -214,6 +214,8 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!Array.isArray(out.owned_equipment)) out = { ...out, owned_equipment: [] };
   // Task 513 — backfill class specialization map for pre-513 saves.
   if (!out.class_specialization) out = { ...out, class_specialization: {} };
+  // Task 570 — backfill chapter-level Area Boss key progression for pre-570 saves.
+  if (!out.chapter_boss_keys) out = { ...out, chapter_boss_keys: {} };
   // Push 4 — backfill Practice Curriculum completion list for pre-P4 saves.
   if (!out.practice_modules_completed) out = { ...out, practice_modules_completed: [] };
   if (out.seen_practice_curriculum == null) out = { ...out, seen_practice_curriculum: false };

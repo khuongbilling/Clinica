@@ -473,4 +473,10 @@ export interface PlayerState {
   // specialization id (e.g. 'triage_commander'). Permanently locked once set
   // per class. Backfilled as {} for existing players in normalizeProgression.
   class_specialization?: Record<string, string>;
+  // Task 570 — Chapter-level Area Boss key progression.
+  // Maps str(chapter_id) → { keys_collected: number; claimed_tile_ids: string[] }.
+  // Chapter-scoped — keys carry across Rechallenge Map (new runs for same chapter).
+  // Keys reset only when the Chapter Boss is defeated (permanent chapter completion).
+  // Backfilled as {} for existing players in normalizeProgression.
+  chapter_boss_keys?: Record<string, { keys_collected: number; claimed_tile_ids: string[] }>;
 }

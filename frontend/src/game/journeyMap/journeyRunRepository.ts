@@ -346,3 +346,40 @@ export class JourneyRunRepository implements IJourneyRunRepository {
 
 /** Singleton instance for use throughout the app. */
 export const journeyRunRepository = new JourneyRunRepository();
+
+// ── Chapter Boss Key helpers ──────────────────────────────────────────────────
+
+/** Shape returned by POST /player/:id/claim-area-boss-key */
+export interface ChapterBossKeyResponse {
+  keys_collected:  number;
+  claimed_tile_ids: string[];
+}
+
+/**
+ * Idempotently claim an Area Boss key for a chapter on the backend.
+ *
+ * Returns the updated chapter key state so the caller can apply it locally
+ * without a full player re-fetch.  If the tile was already claimed the
+ * response is the unchanged state and no DB write is issued server-side.
+ *
+ * Fails silently on network error (the run-level key was already saved by
+ * saveRun; the chapter-level state will sync on the next player fetch).
+ */
+export async function claimChapterBossKeyOnServer(
+  playerId:  string,
+  chapterId: number,
+  tileId:    string,
+): Promise<ChapterBossKeyResponse | null> {
+  try {
+    return await http<ChapterBossKeyResponse>(
+      `/player/${playerId}/claim-area-boss-key`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ chapter_id: chapterId, tile_id: tileId }),
+      },
+    );
+  } catch (err) {
+    console.warn('[journeyRepo] claimChapterBossKeyOnServer failed:', err);
+    return null;
+  }
+}
