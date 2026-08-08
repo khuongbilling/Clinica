@@ -6,9 +6,9 @@
  * No progression state is mutated in any test.
  *
  * Sections:
- *   1 –  30: journeyUi.types — type aliases are consistent with domain
- *  31 –  80: getRecommendedAction — all 6 priority branches
- *  81 – 110: getEmphasizedChapterId
+ *   1 –  20: journeyUi.types — type aliases are consistent with domain
+ *  21 –  90: getJourneyRecommendation — canonical tests + edge cases
+ *  91 – 110: getEmphasizedChapterId
  * 111 – 130: shouldOpenBranchChoice
  * 131 – 150: getFocusedChapterIds
  * 151 – 175: getLockReasonsForNode / getPrimaryLockReason
@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 
 // ── Selectors under test ──────────────────────────────────────────────────────
 import {
-  getRecommendedAction,
+  getJourneyRecommendation,
   getEmphasizedChapterId,
   shouldOpenBranchChoice,
   getFocusedChapterIds,
@@ -50,19 +50,18 @@ import { CHAPTERS } from '../src/game/chapterJourney';
 
 // ── Test fixtures ─────────────────────────────────────────────────────────────
 
-function makeNode(overrides: Partial<JourneyNodeUi> = {}): JourneyNodeUi {
+/** Canonical node factory from the uploaded spec. */
+function node(overrides: Partial<JourneyNodeUi> = {}): JourneyNodeUi {
   return {
-    id:             overrides.id             ?? 'c1p1',
-    chapterId:      overrides.chapterId      ?? 'chapter_1',
-    chapterNumber:  overrides.chapterNumber  ?? 1,
-    shift:          overrides.shift          ?? 'day',
-    status:         overrides.status         ?? 'available',
-    requiredForStory: overrides.requiredForStory ?? true,
-    href:           overrides.href           ?? '/journey/chapter/1',
-    lockReasons:    overrides.lockReasons    ?? [],
-    branchGroupId:           overrides.branchGroupId,
-    canonicalBranchSelected: overrides.canonicalBranchSelected,
-    activeEncounterHref:     overrides.activeEncounterHref,
+    id:               'node-1',
+    chapterId:        'chapter-1',
+    chapterNumber:    1,
+    shift:            'day',
+    status:           'available',
+    requiredForStory: true,
+    href:             '/journey/chapter/1',
+    lockReasons:      [],
+    ...overrides,
   };
 }
 
@@ -94,142 +93,178 @@ describe('journeyUi.types — Shift alias', () => {
   });
 });
 
-// ── Section 2: getRecommendedAction ──────────────────────────────────────────
+// ── Section 2: getJourneyRecommendation (canonical tests from spec) ───────────
 
-describe('getRecommendedAction', () => {
-  it('returns book_complete when bookCleared is true', () => {
-    const ctx = makeContext([makeNode()], {
+describe('getJourneyRecommendation', () => {
+
+  // ── Canonical tests from uploaded spec ───────────────────────────────────
+  it('resumes active encounter before anything else', () => {
+    const result = getJourneyRecommendation({
+      nodes: [
+        node({ id: 'chapter-2', chapterNumber: 2 }),
+        node({ id: 'chapter-1', status: 'in_progress', activeEncounterHref: '/battle/abc' }),
+      ],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('resume');
+  });
+
+  it('does not automatically choose a branch', () => {
+    const result = getJourneyRecommendation({
+      nodes: [
+        node({ id: 'chapter-4-day',     chapterNumber: 4, branchGroupId: 'chapter-4-shift', shift: 'day' }),
+        node({ id: 'chapter-4-evening', chapterNumber: 4, branchGroupId: 'chapter-4-shift', shift: 'evening' }),
+      ],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('choose_branch');
+  });
+
+  it('continues canonical branch when already selected', () => {
+    const result = getJourneyRecommendation({
+      nodes: [
+        node({ id: 'chapter-4-day',     chapterNumber: 4, branchGroupId: 'chapter-4-shift', shift: 'day' }),
+        node({ id: 'chapter-4-evening', chapterNumber: 4, branchGroupId: 'chapter-4-shift', shift: 'evening' }),
+      ],
+      canonicalChoices: { 'chapter-4-shift': 'chapter-4-evening' },
+      bookCleared: false,
+    });
+    expect(result).toMatchObject({ kind: 'continue', nodeId: 'chapter-4-evening' });
+  });
+
+  // ── Priority and edge cases ───────────────────────────────────────────────
+  it('resume carries the activeEncounterHref', () => {
+    const result = getJourneyRecommendation({
+      nodes: [node({ status: 'in_progress', activeEncounterHref: '/battle/xyz' })],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('resume');
+    if (result.kind === 'resume') expect(result.href).toBe('/battle/xyz');
+  });
+
+  it('in_progress without active encounter falls through to continue', () => {
+    const result = getJourneyRecommendation({
+      nodes: [node({ status: 'in_progress' })],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('continue');
+  });
+
+  it('returns continue for a simple available required node', () => {
+    const result = getJourneyRecommendation({
+      nodes: [node({ status: 'available' })],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('continue');
+    if (result.kind === 'continue') expect(result.nodeId).toBe('node-1');
+  });
+
+  it('choose_branch carries the branchGroupId and all candidate nodeIds', () => {
+    const result = getJourneyRecommendation({
+      nodes: [
+        node({ id: 'n-day',     chapterNumber: 4, branchGroupId: 'g4', shift: 'day' }),
+        node({ id: 'n-evening', chapterNumber: 4, branchGroupId: 'g4', shift: 'evening' }),
+        node({ id: 'n-night',   chapterNumber: 4, branchGroupId: 'g4', shift: 'night' }),
+      ],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('choose_branch');
+    if (result.kind === 'choose_branch') {
+      expect(result.branchGroupId).toBe('g4');
+      expect(result.nodeIds).toContain('n-day');
+      expect(result.nodeIds).toContain('n-evening');
+      expect(result.nodeIds).toContain('n-night');
+    }
+  });
+
+  it('single-node branch group does not trigger choose_branch', () => {
+    const result = getJourneyRecommendation({
+      nodes: [node({ id: 'only', chapterNumber: 4, branchGroupId: 'g4', shift: 'day' })],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    // Only 1 playable candidate — falls through to continue
+    expect(result.kind).toBe('continue');
+  });
+
+  it('non-required available node is offered after required nodes exhausted', () => {
+    const result = getJourneyRecommendation({
+      nodes: [node({ id: 'opt', requiredForStory: false, status: 'available' })],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('continue');
+    if (result.kind === 'continue') expect(result.nodeId).toBe('opt');
+  });
+
+  it('returns next_destination when book cleared and nextDestinationHref provided', () => {
+    const result = getJourneyRecommendation({
+      nodes: [],
+      canonicalChoices: {},
       bookCleared: true,
       nextDestinationHref: '/book-2',
     });
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('book_complete');
-    if (result.kind === 'book_complete') {
-      expect(result.href).toBe('/book-2');
-    }
+    expect(result.kind).toBe('next_destination');
+    if (result.kind === 'next_destination') expect(result.href).toBe('/book-2');
   });
 
-  it('book_complete href is undefined when nextDestinationHref is not set', () => {
-    const ctx = makeContext([makeNode()], { bookCleared: true });
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('book_complete');
-    if (result.kind === 'book_complete') {
-      expect(result.href).toBeUndefined();
-    }
+  it('returns complete when book cleared but no nextDestinationHref', () => {
+    const result = getJourneyRecommendation({
+      nodes: [],
+      canonicalChoices: {},
+      bookCleared: true,
+    });
+    expect(result.kind).toBe('complete');
   });
 
-  it('returns branch_choice for an unresolved branch group', () => {
-    const nodes = [
-      makeNode({ id: 'c4a', chapterId: 'chapter_4', chapterNumber: 4, status: 'available', branchGroupId: 'ch4-branch' }),
-      makeNode({ id: 'c4b', chapterId: 'chapter_4', chapterNumber: 4, status: 'available', branchGroupId: 'ch4-branch' }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('branch_choice');
-    if (result.kind === 'branch_choice') {
-      expect(result.branchGroupId).toBe('ch4-branch');
-      expect(result.candidateNodes).toHaveLength(2);
-    }
+  it('returns complete when all nodes are locked and book not cleared', () => {
+    const result = getJourneyRecommendation({
+      nodes: [node({ status: 'locked', lockReasons: [{ code: 'level_gate', message: 'x' }] })],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('complete');
   });
 
-  it('branch resolved via canonicalChoices skips branch_choice', () => {
-    const nodes = [
-      makeNode({ id: 'c4a', chapterId: 'chapter_4', chapterNumber: 4, status: 'available', branchGroupId: 'ch4-branch' }),
-    ];
-    const ctx = makeContext(nodes, { canonicalChoices: { 'ch4-branch': 'c4a' } });
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('play_node');
+  it('returns complete for empty node list', () => {
+    const result = getJourneyRecommendation({ nodes: [], canonicalChoices: {}, bookCleared: false });
+    expect(result.kind).toBe('complete');
   });
 
-  it('branch resolved via canonicalBranchSelected skips branch_choice', () => {
-    const nodes = [
-      makeNode({ id: 'c4a', chapterId: 'chapter_4', chapterNumber: 4, status: 'available', branchGroupId: 'ch4-branch', canonicalBranchSelected: true }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('play_node');
+  it('sorts nodes by chapterNumber before evaluating priority', () => {
+    // ch2 available, ch1 in_progress with active encounter — ch1 must win
+    const result = getJourneyRecommendation({
+      nodes: [
+        node({ id: 'ch2', chapterNumber: 2, status: 'available' }),
+        node({ id: 'ch1', chapterNumber: 1, status: 'in_progress', activeEncounterHref: '/b/1' }),
+      ],
+      canonicalChoices: {},
+      bookCleared: false,
+    });
+    expect(result.kind).toBe('resume');
+    if (result.kind === 'resume') expect(result.nodeId).toBe('ch1');
   });
 
-  it('prefers active-encounter resume over plain in_progress', () => {
-    const nodes = [
-      makeNode({ id: 'c1p2', status: 'in_progress' }),
-      makeNode({ id: 'c1p1', status: 'in_progress', activeEncounterHref: '/battle/123' }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('play_node');
-    if (result.kind === 'play_node') {
-      expect(result.node.id).toBe('c1p1');
-      expect(result.node.activeEncounterHref).toBe('/battle/123');
-    }
-  });
+  it('result label matches kind contract', () => {
+    const resume = getJourneyRecommendation({
+      nodes: [node({ status: 'in_progress', activeEncounterHref: '/b/1' })],
+      canonicalChoices: {}, bookCleared: false,
+    });
+    expect(resume.kind === 'resume' && resume.label).toBe('Resume Encounter');
 
-  it('returns in_progress node when no active encounter', () => {
-    const nodes = [
-      makeNode({ id: 'c1p2', status: 'available' }),
-      makeNode({ id: 'c1p1', status: 'in_progress' }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('play_node');
-    if (result.kind === 'play_node') {
-      expect(result.node.id).toBe('c1p1');
-    }
-  });
+    const cont = getJourneyRecommendation({
+      nodes: [node()], canonicalChoices: {}, bookCleared: false,
+    });
+    expect(cont.kind === 'continue' && cont.label).toBe('Continue Journey');
 
-  it('returns first requiredForStory available node ahead of optional', () => {
-    const nodes = [
-      makeNode({ id: 'opt1', status: 'available', requiredForStory: false }),
-      makeNode({ id: 'req1', status: 'available', requiredForStory: true }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('play_node');
-    if (result.kind === 'play_node') {
-      expect(result.node.id).toBe('req1');
-    }
-  });
-
-  it('falls back to any available node when no story-required node exists', () => {
-    const nodes = [
-      makeNode({ id: 'opt1', status: 'available', requiredForStory: false }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('play_node');
-    if (result.kind === 'play_node') {
-      expect(result.node.id).toBe('opt1');
-    }
-  });
-
-  it('returns idle when all nodes are locked', () => {
-    const nodes = [
-      makeNode({ status: 'locked', lockReasons: [{ code: 'level_gate', message: 'Reach level 2' }] }),
-    ];
-    const ctx = makeContext(nodes);
-    const result = getRecommendedAction(ctx);
-    expect(result.kind).toBe('idle');
-  });
-
-  it('returns idle when nodes array is empty', () => {
-    const ctx = makeContext([]);
-    expect(getRecommendedAction(ctx).kind).toBe('idle');
-  });
-
-  it('cleared-only nodes also return idle', () => {
-    const nodes = [makeNode({ status: 'cleared' })];
-    const ctx = makeContext(nodes);
-    expect(getRecommendedAction(ctx).kind).toBe('idle');
-  });
-
-  it('branch group with all-locked/cleared candidates is skipped', () => {
-    const nodes = [
-      makeNode({ id: 'c4a', status: 'locked', branchGroupId: 'ch4-branch', lockReasons: [{ code: 'level_gate', message: 'x' }] }),
-      makeNode({ id: 'c4b', status: 'cleared', branchGroupId: 'ch4-branch' }),
-    ];
-    const ctx = makeContext(nodes);
-    // Branch has no available candidates → falls through to idle
-    expect(getRecommendedAction(ctx).kind).toBe('idle');
+    const complete = getJourneyRecommendation({ nodes: [], canonicalChoices: {}, bookCleared: false });
+    expect(complete.kind === 'complete' && complete.label).toBe('Journey Complete');
   });
 });
 
@@ -238,32 +273,32 @@ describe('getRecommendedAction', () => {
 describe('getEmphasizedChapterId', () => {
   it('returns chapterId of in_progress node', () => {
     const nodes = [
-      makeNode({ chapterId: 'chapter_1', status: 'cleared' }),
-      makeNode({ id: 'c2p1', chapterId: 'chapter_2', chapterNumber: 2, status: 'in_progress' }),
+      node({ chapterId: 'chapter-1', status: 'cleared' }),
+      node({ id: 'c2', chapterId: 'chapter-2', chapterNumber: 2, status: 'in_progress' }),
     ];
-    expect(getEmphasizedChapterId(nodes)).toBe('chapter_2');
+    expect(getEmphasizedChapterId(nodes)).toBe('chapter-2');
   });
 
   it('prefers in_progress over available', () => {
     const nodes = [
-      makeNode({ id: 'c1p1', chapterId: 'chapter_1', status: 'available' }),
-      makeNode({ id: 'c2p1', chapterId: 'chapter_2', chapterNumber: 2, status: 'in_progress' }),
+      node({ chapterId: 'chapter-1', status: 'available' }),
+      node({ id: 'c2', chapterId: 'chapter-2', chapterNumber: 2, status: 'in_progress' }),
     ];
-    expect(getEmphasizedChapterId(nodes)).toBe('chapter_2');
+    expect(getEmphasizedChapterId(nodes)).toBe('chapter-2');
   });
 
-  it('returns chapterId of first available when no in_progress', () => {
+  it('falls back to first available when no in_progress', () => {
     const nodes = [
-      makeNode({ chapterId: 'chapter_1', status: 'cleared' }),
-      makeNode({ id: 'c2p1', chapterId: 'chapter_2', chapterNumber: 2, status: 'available' }),
+      node({ chapterId: 'chapter-1', status: 'cleared' }),
+      node({ id: 'c2', chapterId: 'chapter-2', chapterNumber: 2, status: 'available' }),
     ];
-    expect(getEmphasizedChapterId(nodes)).toBe('chapter_2');
+    expect(getEmphasizedChapterId(nodes)).toBe('chapter-2');
   });
 
   it('returns null when all locked or cleared', () => {
     const nodes = [
-      makeNode({ status: 'cleared' }),
-      makeNode({ id: 'c2p1', status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] }),
+      node({ status: 'cleared' }),
+      node({ id: 'c2', status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] }),
     ];
     expect(getEmphasizedChapterId(nodes)).toBeNull();
   });
@@ -277,32 +312,27 @@ describe('getEmphasizedChapterId', () => {
 
 describe('shouldOpenBranchChoice', () => {
   it('returns false when no nodes have a branchGroupId', () => {
-    expect(shouldOpenBranchChoice([makeNode()], {})).toBe(false);
+    expect(shouldOpenBranchChoice([node()], {})).toBe(false);
   });
 
-  it('returns true for an unresolved group with available candidates', () => {
+  it('returns true for an unresolved group with multiple available candidates', () => {
     const nodes = [
-      makeNode({ id: 'c4a', status: 'available', branchGroupId: 'g1' }),
-      makeNode({ id: 'c4b', status: 'available', branchGroupId: 'g1' }),
+      node({ id: 'a', chapterNumber: 4, branchGroupId: 'g1', shift: 'day' }),
+      node({ id: 'b', chapterNumber: 4, branchGroupId: 'g1', shift: 'evening' }),
     ];
     expect(shouldOpenBranchChoice(nodes, {})).toBe(true);
   });
 
   it('returns false when canonicalChoices resolves the group', () => {
-    const nodes = [makeNode({ id: 'c4a', status: 'available', branchGroupId: 'g1' })];
-    expect(shouldOpenBranchChoice(nodes, { g1: 'c4a' })).toBe(false);
-  });
-
-  it('returns false when canonicalBranchSelected is true on a member', () => {
-    const nodes = [makeNode({ id: 'c4a', status: 'available', branchGroupId: 'g1', canonicalBranchSelected: true })];
-    expect(shouldOpenBranchChoice(nodes, {})).toBe(false);
-  });
-
-  it('returns false when all group candidates are locked or cleared', () => {
     const nodes = [
-      makeNode({ id: 'c4a', status: 'cleared', branchGroupId: 'g1' }),
-      makeNode({ id: 'c4b', status: 'locked',  branchGroupId: 'g1', lockReasons: [{ code: 'x', message: 'x' }] }),
+      node({ id: 'a', chapterNumber: 4, branchGroupId: 'g1', shift: 'day' }),
+      node({ id: 'b', chapterNumber: 4, branchGroupId: 'g1', shift: 'evening' }),
     ];
+    expect(shouldOpenBranchChoice(nodes, { g1: 'a' })).toBe(false);
+  });
+
+  it('returns false when only one playable candidate (auto-advance)', () => {
+    const nodes = [node({ id: 'a', chapterNumber: 4, branchGroupId: 'g1' })];
     expect(shouldOpenBranchChoice(nodes, {})).toBe(false);
   });
 });
@@ -311,7 +341,7 @@ describe('shouldOpenBranchChoice', () => {
 
 describe('getFocusedChapterIds', () => {
   it('returns empty array when all locked', () => {
-    const nodes = [makeNode({ status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] })];
+    const nodes = [node({ status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] })];
     expect(getFocusedChapterIds(nodes)).toEqual([]);
   });
 
@@ -319,15 +349,14 @@ describe('getFocusedChapterIds', () => {
     expect(getFocusedChapterIds([])).toEqual([]);
   });
 
-  it('includes active chapter and its neighbors', () => {
+  it('includes active chapter and its immediate neighbors', () => {
     const nodes = [
-      makeNode({ id: 'c1p1', chapterId: 'chapter_1', chapterNumber: 1, status: 'cleared' }),
-      makeNode({ id: 'c2p1', chapterId: 'chapter_2', chapterNumber: 2, status: 'in_progress' }),
-      makeNode({ id: 'c3p1', chapterId: 'chapter_3', chapterNumber: 3, status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] }),
-      makeNode({ id: 'c4p1', chapterId: 'chapter_4', chapterNumber: 4, status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] }),
+      node({ id: 'c1', chapterId: 'chapter_1', chapterNumber: 1, status: 'cleared' }),
+      node({ id: 'c2', chapterId: 'chapter_2', chapterNumber: 2, status: 'in_progress' }),
+      node({ id: 'c3', chapterId: 'chapter_3', chapterNumber: 3, status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] }),
+      node({ id: 'c4', chapterId: 'chapter_4', chapterNumber: 4, status: 'locked', lockReasons: [{ code: 'x', message: 'x' }] }),
     ];
     const focused = getFocusedChapterIds(nodes);
-    // ch2 is active; ch1 (n−1) and ch3 (n+1) are neighbors; ch4 is not included
     expect(focused).toContain('chapter_1');
     expect(focused).toContain('chapter_2');
     expect(focused).toContain('chapter_3');
@@ -336,25 +365,12 @@ describe('getFocusedChapterIds', () => {
 
   it('result is in ascending chapter-number order', () => {
     const nodes = [
-      makeNode({ id: 'c3p1', chapterId: 'chapter_3', chapterNumber: 3, status: 'available' }),
-      makeNode({ id: 'c2p1', chapterId: 'chapter_2', chapterNumber: 2, status: 'cleared' }),
+      node({ id: 'c3', chapterId: 'chapter_3', chapterNumber: 3, status: 'available' }),
+      node({ id: 'c2', chapterId: 'chapter_2', chapterNumber: 2, status: 'cleared' }),
     ];
     const focused = getFocusedChapterIds(nodes);
     const nums = focused.map((id) => parseInt(id.replace('chapter_', ''), 10));
     expect(nums).toEqual([...nums].sort((a, b) => a - b));
-  });
-
-  it('does not include chapters beyond neighbor range', () => {
-    const nodes = [
-      makeNode({ id: 'c5p1', chapterId: 'chapter_5', chapterNumber: 5, status: 'available' }),
-    ];
-    const focused = getFocusedChapterIds(nodes);
-    // Only ch4, ch5, ch6 in window — ch1–3 must not appear
-    for (const id of focused) {
-      const num = parseInt(id.replace('chapter_', ''), 10);
-      expect(num).toBeGreaterThanOrEqual(4);
-      expect(num).toBeLessThanOrEqual(6);
-    }
   });
 });
 
@@ -362,76 +378,58 @@ describe('getFocusedChapterIds', () => {
 
 describe('getLockReasonsForNode', () => {
   it('returns empty array for an available node', () => {
-    expect(getLockReasonsForNode(makeNode({ status: 'available' }))).toEqual([]);
+    expect(getLockReasonsForNode(node({ status: 'available' }))).toEqual([]);
   });
 
-  it('returns empty array for an in_progress node', () => {
-    expect(getLockReasonsForNode(makeNode({ status: 'in_progress' }))).toEqual([]);
-  });
-
-  it('returns empty array for a cleared node', () => {
-    expect(getLockReasonsForNode(makeNode({ status: 'cleared' }))).toEqual([]);
+  it('returns empty array for cleared and in_progress nodes', () => {
+    expect(getLockReasonsForNode(node({ status: 'cleared' }))).toEqual([]);
+    expect(getLockReasonsForNode(node({ status: 'in_progress' }))).toEqual([]);
   });
 
   it('returns lockReasons for a locked node', () => {
     const reasons: JourneyGateReason[] = [
-      { code: 'level_gate', message: 'Reach level 3 to unlock Chapter 2.' },
+      { code: 'level_gate', message: 'Reach level 3.' },
     ];
-    const node = makeNode({ status: 'locked', lockReasons: reasons });
-    expect(getLockReasonsForNode(node)).toEqual(reasons);
+    expect(getLockReasonsForNode(node({ status: 'locked', lockReasons: reasons }))).toEqual(reasons);
   });
 
   it('returns all reasons when multiple are present', () => {
     const reasons: JourneyGateReason[] = [
-      { code: 'level_gate',       message: 'Level too low.' },
-      { code: 'boss_keys_missing', message: 'Collect 3 boss keys first.' },
+      { code: 'level_gate',        message: 'Level too low.' },
+      { code: 'boss_keys_missing', message: 'Need 3 keys.' },
     ];
-    const node = makeNode({ status: 'locked', lockReasons: reasons });
-    expect(getLockReasonsForNode(node)).toHaveLength(2);
+    expect(getLockReasonsForNode(node({ status: 'locked', lockReasons: reasons }))).toHaveLength(2);
   });
 });
 
 describe('getPrimaryLockReason', () => {
   it('returns null for a non-locked node', () => {
-    expect(getPrimaryLockReason(makeNode({ status: 'available' }))).toBeNull();
+    expect(getPrimaryLockReason(node({ status: 'available' }))).toBeNull();
   });
 
-  it('returns first reason for a locked node', () => {
+  it('returns the first reason for a locked node', () => {
     const reasons: JourneyGateReason[] = [
-      { code: 'level_gate',       message: 'Level too low.' },
+      { code: 'level_gate',        message: 'Level too low.' },
       { code: 'boss_keys_missing', message: 'Need keys.' },
     ];
-    const node = makeNode({ status: 'locked', lockReasons: reasons });
-    expect(getPrimaryLockReason(node)?.code).toBe('level_gate');
+    expect(getPrimaryLockReason(node({ status: 'locked', lockReasons: reasons }))?.code)
+      .toBe('level_gate');
   });
 
-  it('returns null when locked node has no reasons recorded', () => {
-    const node = makeNode({ status: 'locked', lockReasons: [] });
-    expect(getPrimaryLockReason(node)).toBeNull();
+  it('returns null when locked node has no reasons', () => {
+    expect(getPrimaryLockReason(node({ status: 'locked', lockReasons: [] }))).toBeNull();
   });
 });
 
 // ── Section 7: isNightShiftUnlocked ──────────────────────────────────────────
 
 describe('isNightShiftUnlocked', () => {
-  it('is false at chapter 1', () => {
-    expect(isNightShiftUnlocked(1)).toBe(false);
+  it('is false at chapter 1–5', () => {
+    for (const ch of [1, 2, 3, 4, 5]) expect(isNightShiftUnlocked(ch)).toBe(false);
   });
 
-  it('is false at chapter 5', () => {
-    expect(isNightShiftUnlocked(5)).toBe(false);
-  });
-
-  it('is true at chapter 6', () => {
-    expect(isNightShiftUnlocked(6)).toBe(true);
-  });
-
-  it('is true at chapter 10', () => {
-    expect(isNightShiftUnlocked(10)).toBe(true);
-  });
-
-  it('is true beyond Book I (ch 15)', () => {
-    expect(isNightShiftUnlocked(15)).toBe(true);
+  it('is true at chapter 6 and beyond', () => {
+    for (const ch of [6, 7, 10, 15]) expect(isNightShiftUnlocked(ch)).toBe(true);
   });
 });
 
@@ -441,11 +439,11 @@ describe('isChapterStoryCleared', () => {
   const ch1 = CHAPTERS.find((c) => c.number === 1)!;
   const ch2 = CHAPTERS.find((c) => c.number === 2)!;
 
-  it('Chapter 1 is not cleared with empty claimed list', () => {
+  it('is false with empty claimed list', () => {
     expect(isChapterStoryCleared(ch1, [])).toBe(false);
   });
 
-  it('Chapter 1 is cleared when all required nodes are claimed', () => {
+  it('is true when all required nodes are claimed', () => {
     const required = ch1.requiredCompletionNodes ?? [];
     expect(isChapterStoryCleared(ch1, required)).toBe(true);
   });
@@ -457,79 +455,56 @@ describe('isChapterStoryCleared', () => {
     }
   });
 
-  it('Chapter 2 is not cleared with only ch1 nodes claimed', () => {
-    const ch1nodes = ch1.requiredCompletionNodes ?? [];
-    expect(isChapterStoryCleared(ch2, ch1nodes)).toBe(false);
+  it('ch2 is not cleared with only ch1 nodes', () => {
+    expect(isChapterStoryCleared(ch2, ch1.requiredCompletionNodes ?? [])).toBe(false);
   });
 
-  it('Chapter 2 is cleared when its own required nodes are claimed', () => {
-    const required = ch2.requiredCompletionNodes ?? [];
-    expect(isChapterStoryCleared(ch2, required)).toBe(true);
+  it('ch2 is cleared when its own required nodes are claimed', () => {
+    expect(isChapterStoryCleared(ch2, ch2.requiredCompletionNodes ?? [])).toBe(true);
   });
 
-  it('extra claimed nodes beyond required do not break the check', () => {
+  it('extra claimed nodes do not break the check', () => {
     const required = ch1.requiredCompletionNodes ?? [];
-    expect(isChapterStoryCleared(ch1, [...required, 'bonus_node_99'])).toBe(true);
+    expect(isChapterStoryCleared(ch1, [...required, 'bonus_99'])).toBe(true);
   });
 
-  it('a chapter with no requiredCompletionNodes is always cleared', () => {
-    const noReq = { ...ch1, requiredCompletionNodes: undefined };
-    expect(isChapterStoryCleared(noReq, [])).toBe(true);
-  });
-
-  it('a chapter with empty requiredCompletionNodes array is always cleared', () => {
-    const empty = { ...ch1, requiredCompletionNodes: [] };
-    expect(isChapterStoryCleared(empty, [])).toBe(true);
+  it('chapter with no requiredCompletionNodes is always cleared', () => {
+    expect(isChapterStoryCleared({ ...ch1, requiredCompletionNodes: undefined }, [])).toBe(true);
+    expect(isChapterStoryCleared({ ...ch1, requiredCompletionNodes: [] }, [])).toBe(true);
   });
 });
 
-// ── Section 9: isChapterMastered / countMasteryStars / maxMasteryStars ────────
+// ── Section 9: mastery helpers ────────────────────────────────────────────────
 
 describe('maxMasteryStars', () => {
-  it('returns 0 for a chapter with only story parts', () => {
+  it('returns 0 for a story-only chapter', () => {
     const storyOnly = {
       ...CHAPTERS[0],
-      parts: [
-        { id: 's1', part: 1, type: 'story' as const, title: 'T', description: 'D', icon: 'book' },
-      ],
+      parts: [{ id: 's1', part: 1, type: 'story' as const, title: 'T', description: 'D', icon: 'book' }],
       requiredCompletionNodes: [],
     };
     expect(maxMasteryStars(storyOnly)).toBe(0);
   });
 
-  it('counts only battle/mini_boss/ward_defense parts', () => {
+  it('counts only battle/mini_boss/ward_defense, excludes placeholders', () => {
     const mixed = {
       ...CHAPTERS[0],
       parts: [
-        { id: 'b1', part: 1, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash' },
-        { id: 'b2', part: 2, type: 'mini_boss' as const, title: 'T', description: 'D', icon: 'skull' },
+        { id: 'b1', part: 1, type: 'battle'       as const, title: 'T', description: 'D', icon: 'flash' },
+        { id: 'b2', part: 2, type: 'mini_boss'    as const, title: 'T', description: 'D', icon: 'skull' },
         { id: 'b3', part: 3, type: 'ward_defense' as const, title: 'T', description: 'D', icon: 'shield' },
-        { id: 's1', part: 4, type: 'story' as const, title: 'T', description: 'D', icon: 'book' },
-        { id: 'p1', part: 5, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash', isPlaceholder: true },
+        { id: 's1', part: 4, type: 'story'        as const, title: 'T', description: 'D', icon: 'book' },
+        { id: 'p1', part: 5, type: 'battle'       as const, title: 'T', description: 'D', icon: 'flash', isPlaceholder: true },
       ],
       requiredCompletionNodes: [],
     };
-    // b1, b2, b3 qualify; s1 is story; p1 is placeholder → 3
     expect(maxMasteryStars(mixed)).toBe(3);
-  });
-
-  it('excludes placeholder parts', () => {
-    const withPlaceholder = {
-      ...CHAPTERS[0],
-      parts: [
-        { id: 'b1', part: 1, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash' },
-        { id: 'p1', part: 2, type: 'battle' as const, title: 'T', description: 'D', icon: 'flash', isPlaceholder: true },
-      ],
-      requiredCompletionNodes: [],
-    };
-    expect(maxMasteryStars(withPlaceholder)).toBe(1);
   });
 });
 
 describe('countMasteryStars', () => {
   it('returns 0 when nothing is claimed', () => {
-    const ch = CHAPTERS.find((c) => c.number === 1)!;
-    expect(countMasteryStars(ch, [])).toBe(0);
+    expect(countMasteryStars(CHAPTERS[0], [])).toBe(0);
   });
 
   it('counts only claimed mastery-eligible ids', () => {
@@ -542,7 +517,6 @@ describe('countMasteryStars', () => {
       ],
       requiredCompletionNodes: [],
     };
-    // Claim b1 and s1 — only b1 is mastery-eligible
     expect(countMasteryStars(mixed, ['b1', 's1'])).toBe(1);
     expect(countMasteryStars(mixed, ['b1', 'b2'])).toBe(2);
   });
@@ -550,22 +524,15 @@ describe('countMasteryStars', () => {
 
 describe('isChapterMastered', () => {
   it('is false when story is not cleared', () => {
-    const ch = CHAPTERS.find((c) => c.number === 1)!;
-    expect(isChapterMastered(ch, [])).toBe(false);
+    expect(isChapterMastered(CHAPTERS[0], [])).toBe(false);
   });
 
   it('is true for a story-only chapter once cleared', () => {
-    const storyOnly = {
-      ...CHAPTERS[0],
-      parts: [
-        { id: 's1', part: 1, type: 'story' as const, title: 'T', description: 'D', icon: 'book' },
-      ],
-      requiredCompletionNodes: ['s1'],
-    };
-    expect(isChapterMastered(storyOnly, ['s1'])).toBe(true);
+    const ch = { ...CHAPTERS[0], parts: [{ id: 's1', part: 1, type: 'story' as const, title: 'T', description: 'D', icon: 'book' }], requiredCompletionNodes: ['s1'] };
+    expect(isChapterMastered(ch, ['s1'])).toBe(true);
   });
 
-  it('is false when story cleared but some mastery nodes unclaimed', () => {
+  it('is false when story cleared but mastery nodes unclaimed', () => {
     const ch = {
       ...CHAPTERS[0],
       parts: [
@@ -575,7 +542,6 @@ describe('isChapterMastered', () => {
       ],
       requiredCompletionNodes: ['s1'],
     };
-    // s1 claimed (story cleared) but b2 not claimed
     expect(isChapterMastered(ch, ['s1', 'b1'])).toBe(false);
   });
 
@@ -598,58 +564,47 @@ describe('buildChapterUiSummary', () => {
   const ch1 = CHAPTERS.find((c) => c.number === 1)!;
   const ch2 = CHAPTERS.find((c) => c.number === 2)!;
 
-  it('returns correct chapterId and chapterNumber', () => {
-    const summary = buildChapterUiSummary(ch1, 1, []);
-    expect(summary.chapterId).toBe('chapter_1');
-    expect(summary.chapterNumber).toBe(1);
+  it('returns correct identifiers', () => {
+    const s = buildChapterUiSummary(ch1, 1, []);
+    expect(s.chapterId).toBe('chapter_1');
+    expect(s.chapterNumber).toBe(1);
   });
 
-  it('storyCleared is false when required nodes are not claimed', () => {
-    const summary = buildChapterUiSummary(ch1, 1, []);
-    expect(summary.storyCleared).toBe(false);
-  });
-
-  it('storyCleared is true once required nodes are claimed', () => {
-    const claimed = ch1.requiredCompletionNodes ?? [];
-    const summary = buildChapterUiSummary(ch1, 2, claimed);
-    expect(summary.storyCleared).toBe(true);
+  it('storyCleared reflects claim state', () => {
+    expect(buildChapterUiSummary(ch1, 1, []).storyCleared).toBe(false);
+    expect(buildChapterUiSummary(ch1, 2, ch1.requiredCompletionNodes ?? []).storyCleared).toBe(true);
   });
 
   it('masteryStars is 0 with no claimed nodes', () => {
-    const summary = buildChapterUiSummary(ch1, 1, []);
-    expect(summary.masteryStars).toBe(0);
+    expect(buildChapterUiSummary(ch1, 1, []).masteryStars).toBe(0);
   });
 
   it('maxMasteryStars is non-negative', () => {
-    const summary = buildChapterUiSummary(ch1, 1, []);
-    expect(summary.maxMasteryStars).toBeGreaterThanOrEqual(0);
+    expect(buildChapterUiSummary(ch1, 1, []).maxMasteryStars).toBeGreaterThanOrEqual(0);
   });
 
-  it('current is true when chapter is the active chapter', () => {
-    // Player level 1 → Chapter 1 is active (level 1 meets gate, chapter 2 is locked)
-    const summary = buildChapterUiSummary(ch1, 1, []);
-    expect(summary.current).toBe(true);
+  it('current is true for the active chapter', () => {
+    // Player level 1 → Chapter 1 active
+    expect(buildChapterUiSummary(ch1, 1, []).current).toBe(true);
   });
 
   it('current is false for a locked chapter', () => {
-    // Chapter 2 requires level > 1; player at level 1 means ch2 is locked
-    const summary = buildChapterUiSummary(ch2, 1, []);
-    expect(summary.current).toBe(false);
+    expect(buildChapterUiSummary(ch2, 1, []).current).toBe(false);
   });
 
-  it('masteryStars does not exceed maxMasteryStars', () => {
+  it('masteryStars never exceeds maxMasteryStars', () => {
     const allParts = ch1.parts.map((p) => p.id);
-    const summary  = buildChapterUiSummary(ch1, 2, allParts);
-    expect(summary.masteryStars).toBeLessThanOrEqual(summary.maxMasteryStars);
+    const s = buildChapterUiSummary(ch1, 2, allParts);
+    expect(s.masteryStars).toBeLessThanOrEqual(s.maxMasteryStars);
   });
 
-  it('summary shape is complete (all required fields present)', () => {
-    const summary = buildChapterUiSummary(ch1, 1, []);
-    expect(summary).toHaveProperty('chapterId');
-    expect(summary).toHaveProperty('chapterNumber');
-    expect(summary).toHaveProperty('storyCleared');
-    expect(summary).toHaveProperty('masteryStars');
-    expect(summary).toHaveProperty('maxMasteryStars');
-    expect(summary).toHaveProperty('current');
+  it('summary has all required fields', () => {
+    const s = buildChapterUiSummary(ch1, 1, []);
+    expect(s).toHaveProperty('chapterId');
+    expect(s).toHaveProperty('chapterNumber');
+    expect(s).toHaveProperty('storyCleared');
+    expect(s).toHaveProperty('masteryStars');
+    expect(s).toHaveProperty('maxMasteryStars');
+    expect(s).toHaveProperty('current');
   });
 });

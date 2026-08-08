@@ -124,35 +124,5 @@ export interface JourneyRecommendationContext {
   nextDestinationHref?: string;
 }
 
-// ── Recommended action discriminated union ────────────────────────────────────
-
-/** Player should engage the given node. */
-export interface RecommendedActionPlayNode {
-  kind: 'play_node';
-  node: JourneyNodeUi;
-}
-
-/** Player must choose a canonical branch before proceeding. */
-export interface RecommendedActionBranchChoice {
-  kind: 'branch_choice';
-  branchGroupId: string;
-  /** All candidate nodes in this branch group (available, not yet resolved). */
-  candidateNodes: JourneyNodeUi[];
-}
-
-/** Player has cleared the Book — route to the next destination. */
-export interface RecommendedActionBookComplete {
-  kind: 'book_complete';
-  href?: string;
-}
-
-/** No actionable recommendation can be determined from current state. */
-export interface RecommendedActionIdle {
-  kind: 'idle';
-}
-
-export type RecommendedAction =
-  | RecommendedActionPlayNode
-  | RecommendedActionBranchChoice
-  | RecommendedActionBookComplete
-  | RecommendedActionIdle;
+// Note: JourneyRecommendation (the discriminated union for the recommended
+// next action) lives in journeyRecommendation.ts alongside getJourneyRecommendation.
