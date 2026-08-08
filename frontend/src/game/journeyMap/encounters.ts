@@ -10,7 +10,7 @@
  * Design rules
  * ────────────
  * 1.  Start tile  → always 'none'.
- * 2.  Gate tile   → always 'none' (separate endpoint, not part of normal play).
+ * 2.  Gate tile   → always 'boss' (chapter-boss encounter, never rolled).
  * 3.  All other tiles get exactly one EncounterType: none|battle|treasure|merchant|areaBoss.
  * 4.  Encounters are rolled using the chapter's configured basis-point rates.
  * 5.  Caps are enforced after rolling; excess tiles are converted to 'none'
@@ -272,8 +272,11 @@ export function assignJourneyEncounters({
   const tiles: AssignedTile[] = topology.tiles.map(coord => {
     const tileKey = `${coord.q},${coord.r}`;
     if (frozenKeys.has(tileKey)) {
-      // Start and gate are never randomly assigned.
-      return { tileKey, q: coord.q, r: coord.r, encounter: 'none' };
+      // Start tile → always 'none'.
+      // Gate tile  → always 'boss' (chapter-boss encounter, never rolled).
+      const encounter: EncounterType =
+        tileKey === topology.gateAnchorId ? 'boss' : 'none';
+      return { tileKey, q: coord.q, r: coord.r, encounter };
     }
     return {
       tileKey,

@@ -61,7 +61,7 @@ function eq<T>(a: T, b: T, label: string): void {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const VALID_ENCOUNTERS = new Set(['none', 'battle', 'treasure', 'merchant', 'areaBoss']);
+const VALID_ENCOUNTERS = new Set(['none', 'battle', 'treasure', 'merchant', 'areaBoss', 'boss']);
 const VALID_CHEST_TIERS = new Set(['bronze', 'silver', 'gold']);
 
 const AXIAL_DIRS = [
@@ -129,11 +129,11 @@ function assertAssignment(
     check(`[${label}] start tile has no chestTier`, startTile.chestTier === undefined);
   }
 
-  // ── 7. Gate tile is safe ───────────────────────────────────────────────────
+  // ── 7. Gate tile has encounter = 'boss' ───────────────────────────────────
   const gateTile = tiles.find(t => t.tileKey === topology.gateAnchorId);
   check(`[${label}] gate tile exists in result`, !!gateTile);
   if (gateTile) {
-    eq(gateTile.encounter, 'none', `[${label}] gate encounter = 'none'`);
+    eq(gateTile.encounter, 'boss', `[${label}] gate encounter = 'boss'`);
     check(`[${label}] gate tile has no chestTier`, gateTile.chestTier === undefined);
   }
 

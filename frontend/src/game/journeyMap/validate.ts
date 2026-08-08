@@ -14,6 +14,7 @@ import type { JourneyRun, JourneyTile } from './types';
 // ── Flat rate shapes (what getEncounterRatesBp / getChestTierRatesBp return) ─
 // These are the canonical input shapes for the validators so callers do not
 // have to wrap their values in the EncounterRates / ChestQualityRates record.
+
 export interface FlatEncounterRates {
   none: number; battle: number; areaBoss: number; treasure: number; merchant: number;
 }
@@ -115,25 +116,30 @@ export function validateTile(tile: JourneyTile): string[] {
 
 /**
  * Validates a JourneyRun for structural consistency:
- * - tileCount matches the actual tiles array length.
+ * - tileCount matches the actual tiles array length (excluding the gate tile).
  * - startTileId and currentTileId reference real tile ids.
  * - Every tile passes validateTile.
- * - Denormalised counters (areaBossCount, areaBossKeysCollected, exploredTileCount)
- *   match what can be derived from the tiles array.
+ * - Denormalised counters match what can be derived from the tiles array.
+ *
+ * Gate tile note: when `gateAnchorTileId` is set, the gate tile is stored
+ * inside the `tiles` array with encounter = 'boss' but is NOT counted in
+ * `tileCount` (which covers playable tiles only).  Expected relationship:
+ *   tiles.length === tileCount + (gateAnchorTileId !== undefined ? 1 : 0)
  */
 export function validateRun(run: JourneyRun): string[] {
   const errors: string[] = [];
 
-  // Tile count
-  if (run.tiles.length !== run.tileCount) {
+  const gateOffset = run.gateAnchorTileId !== undefined ? 1 : 0;
+  const expectedLength = run.tileCount + gateOffset;
+  if (run.tiles.length !== expectedLength) {
     errors.push(
-      `run ch${run.chapterId}: tileCount (${run.tileCount}) ≠ tiles.length (${run.tiles.length})`,
+      `run ch${run.chapterId}: expected tiles.length ${expectedLength} ` +
+      `(tileCount ${run.tileCount} + gate ${gateOffset}) but got ${run.tiles.length}`,
     );
   }
 
   const tileIndex = new Map(run.tiles.map((t) => [t.id, t]));
 
-  // Reference integrity
   if (!tileIndex.has(run.startTileId)) {
     errors.push(`run ch${run.chapterId}: startTileId '${run.startTileId}' not found in tiles`);
   }
@@ -144,12 +150,10 @@ export function validateRun(run: JourneyRun): string[] {
     errors.push(`run ch${run.chapterId}: gateAnchorTileId '${run.gateAnchorTileId}' not found in tiles`);
   }
 
-  // Per-tile validation
   for (const tile of run.tiles) {
     errors.push(...validateTile(tile));
   }
 
-  // Denormalised counter cross-checks
   const derivedAreaBossCount = run.tiles.filter((t) => t.encounter === 'areaBoss').length;
   if (run.areaBossCount !== derivedAreaBossCount) {
     errors.push(

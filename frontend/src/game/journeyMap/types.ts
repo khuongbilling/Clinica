@@ -40,7 +40,12 @@ export type EncounterType =
   | 'battle'
   | 'treasure'
   | 'merchant'
-  | 'areaBoss';
+  | 'areaBoss'
+  /**
+   * Assigned exclusively to the chapter-boss gate tile.
+   * Not rolled randomly — set by the run factory; never appears on playable tiles.
+   */
+  | 'boss';
 
 // ── Chest ────────────────────────────────────────────────────────────────────
 
