@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ROUTES, type AppRoute } from "@/src/game/routes";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -39,6 +39,7 @@ import {
   cellDepth, footprintDepth,
 } from "@/src/game/realmIso";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
+import { markRealmBuildingsSeen } from "@/src/game/realmSeenStore";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
@@ -136,6 +137,17 @@ export default function KingdomScreen() {
   const atriumLevel = useMemo(
     () => (player ? getAtriumLevel(player.kingdom_levels || {}) : 0),
     [player]
+  );
+
+  // Mark all currently-unlocked buildings as seen whenever the Realm screen
+  // gains focus, clearing the new-content badge on the hub shortcut card.
+  useFocusEffect(
+    useCallback(() => {
+      const unlockedIds = REALM_BUILDINGS
+        .filter((b) => b.atriumLevelRequired <= atriumLevel)
+        .map((b) => b.id);
+      void markRealmBuildingsSeen(unlockedIds);
+    }, [atriumLevel]),
   );
 
   const layout = player?.realm_layout || buildDefaultRealmLayout();

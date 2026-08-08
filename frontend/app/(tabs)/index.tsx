@@ -39,6 +39,8 @@ import { getProgress } from "@/src/game/evolution";
 import { levelCapForStar } from "@/src/game/university";
 import { useNewHeroCount } from "@/src/game/heroSeenStore";
 import { useNewBagCount } from "@/src/game/bagSeenStore";
+import { useNewRealmBuildingCount } from "@/src/game/realmSeenStore";
+import { REALM_BUILDINGS, getAtriumLevel } from "@/src/game/realm";
 
 const EMBLEM_IMAGES = {
   dailyRounds: require("../../assets/ui-icons/emblems/daily-rounds.png"),
@@ -202,6 +204,12 @@ export default function RunHome() {
   // Supplies: badge when inventory has new items not yet viewed in the Bag screen.
   const newBagCount   = useNewBagCount(Object.keys(player?.inventory ?? {}));
   const suppliesBadge = newBagCount > 0 ? newBagCount : undefined;
+  // Realm: badge when buildings unlock at the current atrium level but haven't been seen yet.
+  const unlockedRealmIds = REALM_BUILDINGS
+    .filter((b) => b.atriumLevelRequired <= getAtriumLevel(player?.kingdom_levels ?? {}))
+    .map((b) => b.id);
+  const newRealmCount = useNewRealmBuildingCount(unlockedRealmIds);
+  const realmBadge    = newRealmCount > 0 ? newRealmCount : undefined;
 
   // P6: return-session motivation card — shown once per app session for Lv2+ players
   // who have finished the systemHubIntro orientation. Does NOT repeat on re-focus.
@@ -637,6 +645,7 @@ export default function RunHome() {
               emblem={EMBLEM_IMAGES.realm}
               label="Realm"
               available
+              badge={realmBadge}
               onPress={() => router.push(ROUTES.KINGDOM)}
               testID="home-float-realm"
             />

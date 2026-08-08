@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clearBagSeenCache } from '@/src/game/bagSeenStore';
 import { clearHeroSeenCache } from '@/src/game/heroSeenStore';
+import { clearRealmSeenCache } from '@/src/game/realmSeenStore';
 import { clearShopSeenCache } from '@/src/game/shopSeenStore';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/src/api/client';
@@ -2082,6 +2083,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     clearBagSeenCache();   // bag "new item" tracker caches in-module — drop it with the wiped keys
     clearHeroSeenCache();  // hero seen-set caches in-module — drop it with the wiped keys
+    clearRealmSeenCache(); // realm building seen-set caches in-module — drop it with the wiped keys
     clearShopSeenCache();  // shop seen-set caches in-module — drop it with the wiped keys
     playerRef.current = null;
     setPlayer(null);
