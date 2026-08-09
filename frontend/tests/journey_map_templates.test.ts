@@ -128,5 +128,67 @@ for (const ch of [1, 5, 10, 12]) {
   check('[ch12] fallback chapterId correct', t.chapterId === '12');
 }
 
+// ── 9. Chapter 1 coordinate SNAPSHOT ─────────────────────────────────────────
+//
+// These coordinates are authored data and must NEVER change regardless of
+// run seed, attempt number, or TimeOfDay (shift).  If this test fails after
+// a code change, it means the Chapter 1 canonical footprint was accidentally
+// mutated — revert AUTHORED_CHAPTER_MAPS[1] in chapterMapTemplates.ts.
+{
+  // Sorted canonical coordinate set for Chapter 1 (30 tiles).
+  const CH1_SNAPSHOT = [
+    '-1,-3', '-1,-2', '-1,-1', '-1,0', '-1,1', '-1,2', '-1,3',
+    '-2,-2', '-2,-1', '-2,0',  '-2,1', '-2,2',
+     '0,-3',  '0,-2',  '0,-1',  '0,0',  '0,1',  '0,2',  '0,3',
+     '1,-3',  '1,-2',  '1,-1',  '1,0',  '1,1',  '1,2',  '1,3',
+     '2,-2',  '2,-1',  '2,0',   '2,1',
+  ].sort().join('|');
+
+  const CH1_START    = '0,1';
+  const CH1_GATE     = '-1,-3';
+  const CH1_ENV      = 'atrium-approach';
+
+  // Template API.
+  const tpl = getChapterMapTemplate(1);
+  const tplCoords = tpl.tiles.map(t => t.id).sort().join('|');
+  check('[ch1 snapshot] template coords match authored set', tplCoords === CH1_SNAPSHOT,
+    tplCoords);
+  check('[ch1 snapshot] template startTileId fixed',    tpl.startTileId   === CH1_START);
+  check('[ch1 snapshot] template gateTileId fixed',     tpl.gateTileId    === CH1_GATE);
+  check('[ch1 snapshot] template environmentId fixed',  tpl.environmentId === CH1_ENV);
+  check('[ch1 snapshot] start role correct', tpl.tiles.find(t => t.id === CH1_START)?.role === 'start');
+  check('[ch1 snapshot] gate role correct',  tpl.tiles.find(t => t.id === CH1_GATE)?.role  === 'gate');
+
+  // HexTopology bridge (used by lifecycle / createRun).
+  const hex = getChapterHexTopology(1);
+  const hexCoords = hex.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
+  check('[ch1 snapshot] HexTopology coords match authored set', hexCoords === CH1_SNAPSHOT);
+  check('[ch1 snapshot] HexTopology startTileId fixed', hex.startTileId  === CH1_START);
+  check('[ch1 snapshot] HexTopology gateAnchorId fixed', hex.gateAnchorId === CH1_GATE);
+
+  // Geometry invariant across DIFFERENT SEEDS.
+  for (const seed of ['seed-aaa', 'seed-bbb', 'completely-different-seed-xyz', '']) {
+    const run = generateRunData(1, seed, 'day');
+    const runCoords = run.topology.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
+    check(`[ch1 snapshot] seed="${seed}" → identical coords`, runCoords === CH1_SNAPSHOT);
+    check(`[ch1 snapshot] seed="${seed}" → identical start`,  run.topology.startTileId  === CH1_START);
+    check(`[ch1 snapshot] seed="${seed}" → identical gate`,   run.topology.gateAnchorId === CH1_GATE);
+  }
+
+  // Geometry invariant across SHIFTS (TimeOfDay).
+  for (const shift of ['day', 'evening', 'night'] as const) {
+    const run = generateRunData(1, 'any-seed', shift);
+    const runCoords = run.topology.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
+    check(`[ch1 snapshot] shift="${shift}" → identical coords`, runCoords === CH1_SNAPSHOT);
+    check(`[ch1 snapshot] shift="${shift}" → identical start`,  run.topology.startTileId  === CH1_START);
+    check(`[ch1 snapshot] shift="${shift}" → identical gate`,   run.topology.gateAnchorId === CH1_GATE);
+  }
+
+  // Geometry invariant across MULTIPLE CALLS (no mutation between calls).
+  const second = getChapterMapTemplate(1);
+  check('[ch1 snapshot] stable across repeated calls',
+    second.tiles.map(t => t.id).sort().join('|') === CH1_SNAPSHOT);
+}
+
 console.log(`\n── Results: ${passed} passed, ${failed} failed ──`);
 if (failed > 0) process.exit(1);

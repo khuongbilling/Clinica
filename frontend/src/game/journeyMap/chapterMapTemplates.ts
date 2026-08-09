@@ -71,10 +71,37 @@ interface AuthoredRawMap {
 }
 
 const AUTHORED_CHAPTER_MAPS: Readonly<Record<number, AuthoredRawMap>> = {
+  /**
+   * Chapter 1 — "Atrium Approach"
+   *
+   * 30-tile compact rounded-square footprint.
+   * Layout (axial, portrait orientation):
+   *
+   *         cap  (-1,-3) (0,-3) (1,-3)
+   *         row  (-2,-2) (-1,-2) (0,-2) (1,-2) (2,-2)
+   *         row  (-2,-1) (-1,-1) (0,-1) (1,-1) (2,-1)
+   *         row  (-2, 0) (-1, 0) (0, 0) (1, 0) (2, 0)
+   *         row  (-2, 1) (-1, 1) (0, 1) (1, 1) (2, 1)
+   *         row  (-2, 2) (-1, 2) (0, 2) (1, 2)          ← (2,2) omitted: slight asymmetry
+   *         cap  (-1, 3) (0, 3) (1, 3)
+   *
+   * Start  (0, 1):  geometric centre-lower; all 6 hex neighbours present.
+   * Gate  (-1,-3):  upper-left cap; BFS distance 5 from start.
+   *
+   * ⚠ DO NOT EDIT these coordinates once shipped.
+   */
   1: {
-    start: '0,2',
-    gate: '2,-5',
-    tiles: [[0,0],[-1,0],[0,1],[-2,1],[0,-1],[1,0],[-1,-1],[-3,2],[-1,1],[0,2],[-1,-2],[0,-2],[2,-1],[2,0],[-2,2],[-1,2],[1,-2],[1,-3],[1,1],[2,-3],[1,-1],[1,2],[2,1],[0,-3],[1,-4],[0,-4],[-2,0],[1,3],[2,-5],[-3,0]],
+    start: '0,1',
+    gate:  '-1,-3',
+    tiles: [
+      [-1,-3],[0,-3],[1,-3],
+      [-2,-2],[-1,-2],[0,-2],[1,-2],[2,-2],
+      [-2,-1],[-1,-1],[0,-1],[1,-1],[2,-1],
+      [-2, 0],[-1, 0],[0, 0],[1, 0],[2, 0],
+      [-2, 1],[-1, 1],[0, 1],[1, 1],[2, 1],
+      [-2, 2],[-1, 2],[0, 2],[1, 2],
+      [-1, 3],[0, 3],[1, 3],
+    ],
   },
   2: {
     start: '-1,4',
