@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ModeCardDef, MODE_STATUS_LABEL } from "@/src/game/modeHub";
@@ -65,6 +66,8 @@ interface BannerCardProps {
   locked?: boolean;
   /** When locked, shows a level/condition unlock label in the center of the card. */
   lockLabel?: string;
+  /** Optional content rendered at the bottom of the card body, after the subtitle. */
+  footerContent?: ReactNode;
   testID?: string;
 }
 
@@ -73,7 +76,7 @@ interface BannerCardProps {
  * Shows the illustrated donghua art (or an accent gradient fallback) with a
  * darkened lower band carrying the mode title, subtitle, and status.
  */
-export function BannerCard({ mode, onPress, height = 132, locked, lockLabel, testID }: BannerCardProps) {
+export function BannerCard({ mode, onPress, height = 132, locked, lockLabel, footerContent, testID }: BannerCardProps) {
   const art = getBannerImage(mode.imageKey);
   const dimmed = locked || mode.status === "coming_soon";
   return (
@@ -121,6 +124,7 @@ export function BannerCard({ mode, onPress, height = 132, locked, lockLabel, tes
             <Text style={styles.rewardTxt} numberOfLines={1}>{mode.rewardPreview}</Text>
           </View>
         )}
+        {footerContent}
       </View>
 
       {/* Enter affordance */}

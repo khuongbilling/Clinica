@@ -21,6 +21,7 @@ import {
 import type { ModeCardDef } from "@/src/game/modeHub";
 import { getChapterStatus } from "@/src/game/chapterJourney";
 import { getBookChapters } from "@/src/game/journeyHierarchy";
+import { ENEMIES } from "@/src/game/content";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { dynRoute, type AppRoute } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
@@ -44,12 +45,94 @@ function buildBookProgress(
   return `${range} · ${completed}/${total} chapters complete`;
 }
 
+/**
+ * Sum all battle stars earned for enemies whose difficulty falls within this
+ * book's chapter range. battle_stars is keyed by enemy id, value is 0-3.
+ */
+function getBookStarCount(
+  book: JourneyBook,
+  battleStars: Record<string, number>,
+): number {
+  const [min, max] = book.chapterRange;
+  return ENEMIES
+    .filter((e) => e.difficulty >= min && e.difficulty <= max)
+    .reduce((sum, e) => sum + (battleStars[e.id] ?? 0), 0);
+}
+
+/** Compact segmented progress bar + star count shown on each Book card. */
+function BookProgressBadge({
+  completed,
+  total,
+  stars,
+  accentColor,
+}: {
+  completed: number;
+  total: number;
+  stars: number;
+  accentColor: string;
+}) {
+  return (
+    <View style={pb.row}>
+      <View style={pb.segments}>
+        {Array.from({ length: total }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              pb.segment,
+              {
+                backgroundColor:
+                  i < completed ? accentColor : "rgba(255,255,255,0.18)",
+              },
+            ]}
+          />
+        ))}
+      </View>
+      {stars > 0 && (
+        <View style={pb.starRow}>
+          <Ionicons name="star" size={10} color="#F59E0B" />
+          <Text style={pb.starTxt}>{stars}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const pb = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginTop: 5,
+  },
+  segments: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 3,
+  },
+  segment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  starRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  starTxt: {
+    color: "#F59E0B",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+});
+
 export default function SagaBooksScreen() {
   const { sagaId } = useLocalSearchParams<{ sagaId: string }>();
   const router     = useRouter();
   const { player } = usePlayer();
   const playerLevel  = player ? playerLevelFromXp(player.xp ?? 0).level : 1;
   const claimedNodes = player?.claimed_journey_nodes ?? [];
+  const battleStars  = player?.battle_stars ?? {};
 
   const saga  = getSaga(sagaId ?? "");
   const books = getSagaBooks(sagaId ?? "");
@@ -90,6 +173,14 @@ export default function SagaBooksScreen() {
             ? book.subtitle
             : buildBookProgress(book, playerLevel, claimedNodes);
 
+          const chapters  = getBookChapters(book);
+          const completed = locked
+            ? 0
+            : chapters.filter(
+                (ch) => getChapterStatus(ch, playerLevel, claimedNodes) === "complete",
+              ).length;
+          const stars = locked ? 0 : getBookStarCount(book, battleStars);
+
           const mode: ModeCardDef = {
             id:          book.id,
             title:       book.title,
@@ -113,9 +204,19 @@ export default function SagaBooksScreen() {
                   );
                 }
               }}
-              height={148}
+              height={160}
               locked={locked}
               lockLabel={lockLabel}
+              footerContent={
+                !locked ? (
+                  <BookProgressBadge
+                    completed={completed}
+                    total={chapters.length}
+                    stars={stars}
+                    accentColor={book.accentColor}
+                  />
+                ) : null
+              }
               testID={`saga-books-banner-${book.id}`}
             />
           );
