@@ -311,6 +311,12 @@ export function HexMapLayer({
   const camRef        = useRef({ x: 0, y: 0 });
   const drag          = useRef({ moved: false, camX0: 0, camY0: 0 });
   const tilesKeyRef   = useRef('');
+  /**
+   * Tracks the container dimensions used for the last re-centre so that an
+   * orientation change (which only mutates containerWidth / containerHeight,
+   * not the tile set) also triggers a fresh re-centre.
+   */
+  const prevContainerRef = useRef({ w: 0, h: 0 });
 
   // ── Camera animation ───────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -333,9 +339,19 @@ export function HexMapLayer({
     };
     boundsRef.current = newBounds;
 
-    // Re-centre whenever the tile set changes (new run loaded, debug mode toggle).
-    if (tilesKey !== tilesKeyRef.current) {
-      tilesKeyRef.current = tilesKey;
+    // Re-centre when:
+    //   (a) the tile set changes — new run loaded or debug-mode toggle; OR
+    //   (b) the container dimensions changed — device rotation / window resize.
+    // Without (b), an orientation flip updates bounds but leaves the camera at
+    // coordinates computed for the old viewport size.
+    const tilesChanged     = tilesKey !== tilesKeyRef.current;
+    const containerChanged =
+      containerWidth  !== prevContainerRef.current.w ||
+      containerHeight !== prevContainerRef.current.h;
+
+    if (tilesChanged || containerChanged) {
+      if (tilesChanged) tilesKeyRef.current = tilesKey;
+      prevContainerRef.current = { w: containerWidth, h: containerHeight };
 
       const playerTile = currentTile ?? tiles[0];
       if (playerTile) {
@@ -354,7 +370,7 @@ export function HexMapLayer({
         cameraAnim.setValue({ x: initX, y: initY });
       }
     }
-  // sz changes when containerWidth changes; tilesKey drives re-centre.
+  // sz changes when containerWidth changes; tilesKey drives re-centre on new run.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerWidth, containerHeight, sz, tilesKey]);
 
