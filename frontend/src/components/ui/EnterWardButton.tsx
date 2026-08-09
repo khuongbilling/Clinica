@@ -18,22 +18,28 @@ import {
   Animated,
   Pressable,
   StyleSheet,
+  Text,
   View,
   type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
+import { SERIF } from "@/src/theme/ui";
 
 // ── Raster assets — code never re-draws these ─────────────────────────────
-// v3 — the ENTIRE button is one hand-painted artwork (frame, "+" medallion,
-// sparkles AND the "ENTER THE WARD" lettering are all baked into the PNG).
-// Code renders nothing but the image + press/shimmer/loading behavior.
-const FULL_ART = require("../../../assets/ui-icons/hub/enter-ward-button-full-v4.png");
-// Trimmed PNG is 995×206 — keep the button at the exact painted proportions.
+// v5 — layered: the hand-painted FRAME artwork (no lettering) stretches to
+// whatever button size layout asks for, while the "+" medallion and the
+// "ENTER THE WARD" label are rendered by code on top. This keeps the text
+// crisp (never stretched with the art) and mathematically centered.
+const FRAME_ART = require("../../../assets/ui-icons/hub/enter-ward-frame-v3.png");
+const PLUS_ART  = require("../../../assets/ui-icons/hub/enter-ward-plus-v2.png");
+// Natural proportions of the v4 full-button artwork — kept as the button's
+// default aspect so existing layouts don't shift.
 const ART_ASPECT = 995 / 206;
 
-// ── Palette — loading spinner only (all visuals live in the PNG) ──────────
-const INK        = "#071820";   // dark ink on jade
+// ── Palette ────────────────────────────────────────────────────────────────
+const INK        = "#071820";   // dark ink on jade (spinner)
+const LABEL_INK  = "#2E5546";   // deep jade-green lettering (matches painted art)
 
 // ── Props ─────────────────────────────────────────────────────────────────
 export interface EnterWardButtonProps {
@@ -149,15 +155,24 @@ export function EnterWardButton({
         style={[s.pressable, heightScale !== 1 && { aspectRatio: ART_ASPECT / heightScale }]}
         onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
       >
-        {/* ── The button IS the painted artwork — frame, medallion,
-             sparkles and lettering are all baked into the PNG ── */}
+        {/* ── Painted frame artwork (no lettering) — stretches with layout ── */}
         <Image
-          source={FULL_ART}
+          source={FRAME_ART}
           style={StyleSheet.absoluteFill}
-          contentFit="fill"         // pressable keeps the art's exact aspect ratio
+          contentFit="fill"
           pointerEvents="none"
           accessible={false}
         />
+
+        {/* ── Content row — medallion · label · sparkle — code-drawn so it
+             stays crisp at any button height and is truly centered ── */}
+        {!loading && (
+          <View style={s.contentRow} pointerEvents="none">
+            <Image source={PLUS_ART} style={s.medallion} contentFit="contain" accessible={false} />
+            <Text style={s.sparkle}>✦</Text>
+            <Text style={s.label} numberOfLines={1}>{label}</Text>
+          </View>
+        )}
 
         {/* ── Shimmer — narrow soft highlight sweeping across jade ── */}
         {!isBlocked && (
@@ -220,6 +235,31 @@ const s = StyleSheet.create({
     // Capsule clipping — keeps shimmer/press-tint rectangles from painting
     // over the frame PNG's transparent corners.
     borderRadius:    28,
+  },
+
+  // ── Content row — centered medallion · sparkle · label ──────────────────
+  contentRow: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection:  "row",
+    alignItems:     "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  medallion: {
+    width:  30,
+    height: 30,
+  },
+  sparkle: {
+    color:    LABEL_INK,
+    fontSize: 12,
+    marginRight: 2,
+  },
+  label: {
+    fontFamily:    SERIF,
+    fontSize:      19,
+    fontWeight:    "700",
+    letterSpacing: 2.4,
+    color:         LABEL_INK,
   },
 
   // ── Shimmer — 70px-wide soft strip ──────────────────────────────────────
