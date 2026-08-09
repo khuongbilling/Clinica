@@ -17,7 +17,7 @@
  * No React, Expo, or UI imports belong here.
  */
 
-import { getChapterMapTemplate } from './chapterMapTemplates';
+import { getChapterHexTopology } from './chapterMapTemplates';
 import { assignJourneyEncounters } from './encounters';
 import type { JourneyRun, JourneyTile, TimeOfDay } from './types';
 
@@ -85,7 +85,7 @@ export function createJourneyRun({
   const id = `run_${playerId}_ch${chapterId}_a${attemptNumber}`;
 
   // ── Fixed authored geometry (coordinates + start/gate) — never seed-derived ──
-  const topology = getChapterMapTemplate(chapterId);
+  const topology = getChapterHexTopology(chapterId);
 
   // ── Assign encounters and chest tiers to every tile ─────────────────────────
   const { tiles: assignedTiles, areaBossCount } = assignJourneyEncounters({

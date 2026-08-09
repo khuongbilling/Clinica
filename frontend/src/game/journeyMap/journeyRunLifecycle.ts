@@ -46,7 +46,7 @@
  * so no data is lost when WARD_EVENTS_V1 flips true.
  */
 
-import { getChapterMapTemplate }       from './chapterMapTemplates';
+import { getChapterHexTopology }       from './chapterMapTemplates';
 import { assignJourneyEncounters }     from './encounters';
 import { assignCanonicalEncounters }   from './canonicalEncounters';
 import { computeInitialFog }           from './fogCalculator';
@@ -335,7 +335,7 @@ export function generateRunData(
   seed:    string,
   shift:   TimeOfDay,
 ): { topology: HexTopology; encounters: RunEncounterInput } {
-  const topology = getChapterMapTemplate(chapter);
+  const topology = getChapterHexTopology(chapter);
 
   if (JOURNEY_CANONICAL_V1) {
     const enc = assignCanonicalEncounters({ chapter, seed, timeOfDay: shift, topology });
