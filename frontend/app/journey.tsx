@@ -16,6 +16,8 @@ import { WardRestorationMap } from "@/src/components/WardRestorationMap";
 import { DualStateMap } from "@/src/components/DualStateMap";
 import { getDefaultFogMapConfig } from "@/src/game/fogTileMap";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
+import { TutorialOverlay } from "@/src/components/TutorialOverlay";
+import { useHighlightTarget } from "@/src/game/tutorialStore";
 import { JourneyEmblem, LotusLessonsEmblem, WardDefenseEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { getMapSprite } from "@/src/game/illustratedAssets";
@@ -85,6 +87,10 @@ export default function JourneyScreen() {
   const [activeShift, setActiveShift] = useState<TimeOfDay>('day');
   const chapterIdxInitialized = useRef(false);
 
+  // Objective guide target: objGuideMemories step 2 requires tapping Memories.
+  // Declared before the redirect effect below, which reads it.
+  const memoriesTarget = useHighlightTarget("journey-tab-memories");
+
   // This screen is a loading bridge: once the chapter is resolved we
   // immediately replace the history entry with the fog-map for that chapter.
   // When a bookId is provided, clamp to chapters within that book's scope.
@@ -93,6 +99,10 @@ export default function JourneyScreen() {
     // Deep-linked to a specific tab (Memories / Quests) — stay on this screen
     // instead of bridging to the fog-map.
     if (tab === "memories" || tab === "quests") return;
+    // Objective guide (objGuideMemories step 2) requires tapping the Memories
+    // tab on THIS screen — bridging to the fog-map would remove the required
+    // target and strand the guide. Stay here while the guide points at it.
+    if (memoriesTarget.isHighlighted) return;
     chapterIdxInitialized.current = true;
     const lvl     = playerLevelFromXp(player.xp ?? 0).level;
     const claimed = player.claimed_journey_nodes ?? [];
@@ -282,7 +292,20 @@ export default function JourneyScreen() {
         </View>
       </View>
 
-      <RPGTabBar tabs={TABS_WITH_BADGE} activeTab={activeTab} onTabPress={setActiveTab} />
+      {/* Objective guide (objGuideMemories step 2): highlight the tab bar and
+          report the Memories tap so the guide completes. Other tabs are
+          swallowed while the guide requires the Memories target. */}
+      <View style={memoriesTarget.isHighlighted ? memoriesTarget.highlightStyle : undefined}>
+        <RPGTabBar
+          tabs={TABS_WITH_BADGE}
+          activeTab={activeTab}
+          onTabPress={(k) => {
+            if (memoriesTarget.isHighlighted && k !== "memories") return; // forced path
+            if (k === "memories") memoriesTarget.onTargetPress();
+            setActiveTab(k);
+          }}
+        />
+      </View>
 
       {/* ── CHAPTER TAB ── */}
       {activeTab === "chapter" && (
@@ -640,6 +663,9 @@ export default function JourneyScreen() {
       )}
 
       <DailyRoundsPanel visible={showRounds} onClose={() => setShowRounds(false)} />
+
+      {/* Objective navigation guide overlay (objGuideMemories step 2) */}
+      <TutorialOverlay />
     </SafeAreaView>
   );
 }

@@ -55,7 +55,7 @@ interface TutorialCtx {
    * Profile → Tutorial Replay Center / Tutorial Encyclopedia). Replay clears
    * the dismissed flag and restarts from step 1.
    */
-  clearActiveTutorial: () => void;
+  clearActiveTutorial: (force?: boolean) => void;
   isCompleted: (id: TutorialId) => boolean;
   onRequiredAction: (actionType: string, skillId?: string) => void;
   /**
@@ -287,7 +287,12 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     persistActiveId(id);
   }, []);
 
-  const clearActiveTutorial = useCallback(() => {
+  const clearActiveTutorial = useCallback((force?: boolean) => {
+    // Objective navigation guides deliberately survive screen changes:
+    // their whole purpose is to walk the player across screens (e.g. hub →
+    // Journey → Memories). They end by completing their last step, or via a
+    // forced clear (hub launcher reconciles guides against objective progress).
+    if (!force && activeRef.current && activeRef.current.startsWith("objGuide")) return;
     // Drop any queued pre-hydration start too — the player has left the screen
     // that requested it, so resolving it later would surface a stale overlay.
     pendingStartRef.current = null;

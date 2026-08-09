@@ -6,6 +6,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
+import { useTutorial } from "@/src/game/tutorialStore";
+import { isObjectiveGuide } from "@/src/game/tutorials";
 import { checkFeatureGate, playerLevelFromXp, buildGateContext, type CompoundGateContext } from "@/src/game/progression";
 import { unseenMemoriesCount } from "@/src/game/storyScenes";
 import { useNewBagCount } from "@/src/game/bagSeenStore";
@@ -248,6 +250,15 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(130,213,186,0.55)",
   },
+  // Golden pulse ring shown around a tab icon when an objective guide
+  // requires tapping it (requiredTargetId matches the tab's target id).
+  guideGlow: {
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#E8C050",
+    backgroundColor: "rgba(232,192,80,0.16)",
+    paddingHorizontal: 4,
+  },
   // Small badge sitting at icon bottom-right (holds the padlock icon)
   lockBadge: {
     position: "absolute",
@@ -267,6 +278,19 @@ export default function TabsLayout() {
   const insets     = useSafeAreaInsets();
   const bottomPad  = Math.max(insets.bottom, 8);
   const router     = useRouter();
+
+  // Objective navigation guides: when an objGuide* tutorial requires a tab tap,
+  // the required tab reports the tap (advancing the guide) and every OTHER tab
+  // is blocked so the player can't wander off the guided path.
+  const { activeTutorialId, requiredTargetId, onTargetTap } = useTutorial();
+  const guideActive = isObjectiveGuide(activeTutorialId);
+  const guideTab = (tabTarget: string) => ({
+    tabPress: (e: { preventDefault: () => void }) => {
+      if (!guideActive) return;
+      if (requiredTargetId === tabTarget) onTargetTap(tabTarget);
+      else e.preventDefault();
+    },
+  });
 
   const { player } = usePlayer();
   const ctx: CompoundGateContext = {
@@ -328,8 +352,13 @@ export default function TabsLayout() {
           title: "Journey",
           tabBarAccessibilityLabel: "Journey",
           tabBarButtonTestID: "tab-journey",
-          tabBarIcon: ({ focused }) => mkTabIcon("journey", "JOURNEY", focused, false, journeyBadge),
+          tabBarIcon: ({ focused }) => (
+            <View style={requiredTargetId === "tab-journey" ? s.guideGlow : undefined}>
+              {mkTabIcon("journey", "JOURNEY", focused, false, journeyBadge)}
+            </View>
+          ),
         }}
+        listeners={guideTab("tab-journey")}
       />
 
       {/* ── Tab 2: Heroes ── */}
@@ -341,7 +370,7 @@ export default function TabsLayout() {
           tabBarButtonTestID: "tab-heroes",
           tabBarIcon: ({ focused }) => mkTabIcon("heroes", "HEROES", focused, !heroesUnlocked, heroesBadge),
         }}
-        listeners={{ tabPress: (e) => { if (!heroesUnlocked) e.preventDefault(); } }}
+        listeners={{ tabPress: (e) => { if (!heroesUnlocked || guideActive) e.preventDefault(); } }}
       />
 
       {/* ── Tab 3 (CENTER): Home — the sanctuary hub main screen ── */}
@@ -353,6 +382,8 @@ export default function TabsLayout() {
           tabBarButtonTestID: "tab-index",
           tabBarIcon: ({ focused }) => mkTabIcon("hub", "HOME", focused),
         }}
+        // Home stays tappable during guides — the hub is the recovery point
+        // that reconciles stale guides against objective progress.
       />
 
       {/* ── Tab 4: Bag (Inventory — short label to save bar space) ── */}
@@ -364,6 +395,7 @@ export default function TabsLayout() {
           tabBarButtonTestID: "tab-inventory",
           tabBarIcon: ({ focused }) => mkTabIcon("inventory", "BAG", focused, false, bagBadge),
         }}
+        listeners={{ tabPress: (e) => { if (guideActive) e.preventDefault(); } }}
       />
 
       {/* ── Tab 5: Shop ── */}
@@ -375,7 +407,7 @@ export default function TabsLayout() {
           tabBarButtonTestID: "tab-shop",
           tabBarIcon: ({ focused }) => mkTabIcon("shop", "SHOP", focused, !shopUnlocked, shopBadge),
         }}
-        listeners={{ tabPress: (e) => { if (!shopUnlocked) e.preventDefault(); } }}
+        listeners={{ tabPress: (e) => { if (!shopUnlocked || guideActive) e.preventDefault(); } }}
       />
 
       {/* ── Tab 6: Sanctuary / Realm kingdom ──────────────────────────────────
@@ -395,7 +427,7 @@ export default function TabsLayout() {
             <SanctuaryTabIcon focused={focused} locked={!realmUnlocked} />
           ),
         }}
-        listeners={{ tabPress: (e) => { if (!realmUnlocked) e.preventDefault(); } }}
+        listeners={{ tabPress: (e) => { if (!realmUnlocked || guideActive) e.preventDefault(); } }}
       />
 
       {/* ── Hidden routes (route alive, not shown in bar) ── */}

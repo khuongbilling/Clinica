@@ -17,7 +17,11 @@ export type TutorialId =
   | "rapidTriageIntro"
   | "stabilizeIntro"
   // ── Off-Shift mini-game tutorials ──
-  | "mealcraftIntro";
+  | "mealcraftIntro"
+  // ── Objective navigation guides (forced-tap wayfinding for the 12-step chain) ──
+  | "objGuideMemories"
+  | "objGuideUniversity"
+  | "objGuideWardShift";
 
 export interface TutorialStep {
   id: string;
@@ -73,7 +77,20 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   rapidTriageIntro: "Rapid Triage",
   stabilizeIntro: "Stabilize Stack",
   mealcraftIntro: "Mealcraft: Lotus Plate",
+  objGuideMemories: "Guide: Memory Unlocked",
+  objGuideUniversity: "Guide: Clinica University",
+  objGuideWardShift: "Guide: First Ward Shift",
 };
+
+// ── Objective navigation guides ──────────────────────────────────────────────
+// Forced-tap wayfinding: when the player is idle on the hub with an incomplete
+// onboarding objective, the matching guide highlights the exact control that
+// advances the chain and blocks everything else. These survive navigation
+// (see clearActiveTutorial exemption in tutorialStore) so a multi-screen path
+// like Journey tab → Memories tab keeps guiding after the route change.
+export function isObjectiveGuide(id: TutorialId | null | undefined): boolean {
+  return !!id && id.startsWith("objGuide");
+}
 
 // Narrator timeline: the System did not exist until the player was Recalled
 // (end of the prologue). Both the prologue battle AND the second battle
@@ -443,6 +460,52 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
       placement: "center",
       requireAction: false,
       nextText: "SHOW ME",
+    },
+  ],
+
+  // ── Objective navigation guides (forced-tap wayfinding) ─────────────────
+  objGuideMemories: [
+    {
+      id: "objmem_tab_journey",
+      title: "The System",
+      body: "SYSTEM: Memory fragment detected.\n\nA reconstruction of your former life is ready. Open the Journey ledger to access it.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "tab-journey",
+      nextText: "TAP JOURNEY",
+    },
+    {
+      id: "objmem_tab_memories",
+      title: "The System",
+      body: "SYSTEM: Archive located.\n\nOpen the Memories archive and witness what brought you here.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "journey-tab-memories",
+      nextText: "TAP MEMORIES",
+    },
+  ],
+
+  objGuideUniversity: [
+    {
+      id: "objuni_cta",
+      title: "The System",
+      body: "SYSTEM: Objective pending.\n\nYour current directive is displayed on the objective card. Tap it to proceed.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "home-objective-cta",
+      nextText: "TAP THE OBJECTIVE",
+    },
+  ],
+
+  objGuideWardShift: [
+    {
+      id: "objward_enter",
+      title: "The System",
+      body: "SYSTEM: Simulation access granted.\n\nEnter the Ward and complete your first clinical shift.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "home-enter-ward",
+      nextText: "ENTER THE WARD",
     },
   ],
 
