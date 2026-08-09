@@ -46,6 +46,8 @@ const SP = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20 };
 const R  = { sm: 4, md: 8, lg: 12, xl: 18, xxl: 24, pill: 999 };
 
 // ── Assets ────────────────────────────────────────────────────────────────────
+// Icon design canon: painterly donghua JRPG style, transparent-bg PNG, warm gold frame,
+// jade/teal accent glow. Generate via generateImage with removeBackground:true. Ref: ref-card-rounds.png.
 const IMG = {
   hubBg:      '/__mockup/images/home_hub_bg.png',
   heroSprite: '/__mockup/images/hero-sprite.png',
@@ -60,7 +62,7 @@ const IMG = {
   navJourney:   '/__mockup/images/nav-journey.png',
   navHeroes:    '/__mockup/images/nav-heroes.png',
   navSanctuary: '/__mockup/images/nav-sanctuary.png',
-  navInventory: '/__mockup/images/nav-inventory.png',
+  navRecruit:   '/__mockup/images/nav-recruit.png',
   navShop:      '/__mockup/images/nav-shop.png',
   staminaEmblem:'/__mockup/images/icon-stamina-emblem.png',
 };
@@ -262,8 +264,7 @@ function EnterWardBtn() {
 }
 
 // ── Bottom Navigation ─────────────────────────────────────────────────────────
-// Journey · Heroes · Sanctuary · Inventory · Shop
-// Sanctuary is the active tab on main hub
+// Journey · Heroes · Sanctuary (🔒 locked until Realm gate) · Recruit · Shop
 
 function TabItem({ label, active, iconSrc }: {
   label: string;
@@ -304,6 +305,50 @@ function TabItem({ label, active, iconSrc }: {
   );
 }
 
+/** Locked tab — monochrome icon, muted label, golden padlock badge. Never shows active glow. */
+function LockedTabItem({ label, iconSrc }: { label: string; iconSrc: string }) {
+  return (
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+      cursor: 'default',
+      position: 'relative',
+      padding: '4px 0 2px',
+    }}>
+      {/* Icon with grayscale + dim filter, plus padlock badge */}
+      <div style={{ position: 'relative', width: 34, height: 30 }}>
+        <img src={iconSrc} style={{
+          width: 34, height: 30, objectFit: 'contain',
+          filter: 'saturate(0) brightness(0.5)',
+          opacity: 0.6,
+        }} />
+        {/* Golden padlock badge — bottom-right corner */}
+        <svg
+          width={11} height={12}
+          viewBox="0 0 11 12"
+          style={{ position: 'absolute', bottom: -1, right: -2 }}
+        >
+          {/* Badge backing circle */}
+          <circle cx="5.5" cy="7" r="5" fill="#07141D" stroke="#C7A15D" strokeWidth="0.8"/>
+          {/* Lock shackle */}
+          <path d="M3.5 5.5 V4 A2 2 0 0 1 7.5 4 V5.5" stroke="#C7A15D" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+          {/* Lock body */}
+          <rect x="2.8" y="5.5" width="5.4" height="3.8" rx="1" fill="#C7A15D" opacity="0.9"/>
+          {/* Keyhole dot */}
+          <circle cx="5.5" cy="7.3" r="0.7" fill="#07141D"/>
+        </svg>
+      </div>
+      <span style={{ fontSize: 8.5, fontFamily: F.display, color: C.muted, letterSpacing: 0.8, lineHeight: 1, opacity: 0.6 }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function BottomNav() {
   return (
     <div style={{
@@ -315,11 +360,11 @@ function BottomNav() {
       paddingLeft: 2,
       paddingRight: 2,
     }}>
-      <TabItem label="JOURNEY"   iconSrc={IMG.navJourney}   active={false} />
-      <TabItem label="HEROES"    iconSrc={IMG.navHeroes}    active={false} />
-      <TabItem label="SANCTUARY" iconSrc={IMG.navSanctuary} active={true}  />
-      <TabItem label="INVENTORY" iconSrc={IMG.navInventory} active={false} />
-      <TabItem label="SHOP"      iconSrc={IMG.navShop}      active={false} />
+      <TabItem     label="JOURNEY"   iconSrc={IMG.navJourney}   active={false} />
+      <TabItem     label="HEROES"    iconSrc={IMG.navHeroes}    active={false} />
+      <LockedTabItem label="SANCTUARY" iconSrc={IMG.navSanctuary} />
+      <TabItem     label="RECRUIT"   iconSrc={IMG.navRecruit}   active={false} />
+      <TabItem     label="SHOP"      iconSrc={IMG.navShop}      active={false} />
     </div>
   );
 }
