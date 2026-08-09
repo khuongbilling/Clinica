@@ -1,12 +1,17 @@
 /**
- * Chapter Journey — Phase 1 Map (Chapters 1–10)
+ * Chapter Journey — Phase 1 Map (Chapters 1–10) + Phase 2 Scaffold (Chapters 41–43)
  *
  * Single source of truth for the Chapter Journey Map shell.
  * Chapters 1–8 are University-supervised simulations.
  * Chapter 9 transitions to real-world ward battles.
  * Chapter 10 is the Phase 1 finale.
  *
- * Phase 2 (Chapters 11–20) is NOT defined here — only Phase 1.
+ * Phase 2 (Chapters 11–40, Books II–IV of Age I) — structural shell defined in
+ * journeyHierarchy.ts; chapter content to be added by the narrative team.
+ *
+ * Phase 2 — Age II: The Outer Wards (Chapters 41–80):
+ *   Chapters 41–43 are defined here as skeleton stubs so Age II Book V renders
+ *   real nodes.  Chapters 44–80 will be filled in as the narrative expands.
  *
  * ECONOMY: uses only Ward Coins, University Credits, Codex Shards,
  * Lotus Gems, and Refined Lotus Gems. No new currencies added.
@@ -152,6 +157,7 @@ export interface ChapterFailureHint {
 // ── Chapter accent palette (one per chapter, warm-dark donghua tones) ────────
 
 const C: Record<number, string> = {
+  // ── Phase 1 — Age I: Foundation (Chapters 1–10) ──────────────────────────
   1:  "#D4AF37", // gold — Fading Apprentice
   2:  "#F59E0B", // amber — Ward Rotation
   3:  "#B0DEFF", // pale sky — Breath
@@ -162,6 +168,102 @@ const C: Record<number, string> = {
   8:  "#A78BFA", // soft purple — Advanced Trials
   9:  "#06B6D4", // cyan — Real Ward
   10: "#F97316", // fire orange — Phase Finale
+
+  // ── Phase 2 — Age I: Foundation continued (Chapters 11–40, Books II–IV) ──
+  // Accent colours reserved; chapter content to be added by narrative team.
+  // Book II: Anatomy of Duty (11–20) — steel-blue to deep teal
+  11: "#38BDF8", // sky blue
+  12: "#22D3EE", // cyan
+  13: "#2DD4BF", // teal
+  14: "#14B8A6", // mid teal
+  15: "#0D9488", // deep teal
+  16: "#0891B2", // ocean
+  17: "#0284C7", // strong sky
+  18: "#0369A1", // dark sky
+  19: "#1D4ED8", // deep blue
+  20: "#3730A3", // indigo — Book II finale
+  // Book III: The Living Ward (21–30) — warm amber to burnt coral
+  21: "#FCD34D", // warm gold
+  22: "#FBBF24", // amber
+  23: "#F59E0B", // deep amber
+  24: "#F97316", // orange
+  25: "#EA580C", // burnt orange
+  26: "#DC2626", // red
+  27: "#B91C1C", // deep red
+  28: "#991B1B", // crimson
+  29: "#C2410C", // brick
+  30: "#9A3412", // terracotta — Book III finale
+  // Book IV: Before the Oath (31–40) — lavender to rose gold
+  31: "#C4B5FD", // soft violet
+  32: "#A78BFA", // violet
+  33: "#9333EA", // purple
+  34: "#7C3AED", // deep violet
+  35: "#6D28D9", // indigo-violet
+  36: "#DB2777", // cerise
+  37: "#BE185D", // deep rose
+  38: "#9D174D", // burgundy
+  39: "#E11D48", // rose red
+  40: "#BE123C", // crimson rose — Book IV / Age I finale
+
+  // ── Phase 2 — Age II: The Outer Wards (Chapters 41–80) ───────────────────
+  // Book V: The Emergency Floor (41–50) — urgent reds and warning oranges
+  41: "#FF6B6B", // coral red — Emergency Floor entry
+  42: "#FF8C42", // rescue orange — Triage Under Pressure
+  43: "#FFAA00", // amber signal — The Night Team
+  44: "#E85D04", // deep burn — coming soon placeholder
+  45: "#DC2F02", // alarm red — coming soon placeholder
+  46: "#D62828", // crisis — coming soon placeholder
+  47: "#E63946", // scarlet — coming soon placeholder
+  48: "#F72585", // hot shock pink — coming soon placeholder
+  49: "#B5179E", // deep magenta — coming soon placeholder
+  50: "#7209B7", // dark violet — Book V finale
+  // Book VI: Critical Care (51–60) — cool clinical greens and teals
+  51: "#4CC9F0", // icy blue — ICU intro
+  52: "#4895EF", // monitor blue
+  53: "#3A86FF", // electric blue
+  54: "#45B69C", // critical teal
+  55: "#1B998B", // ward teal
+  56: "#2EC4B6", // pulse teal
+  57: "#CBF3F0", // pale monitor
+  58: "#52B788", // life-green
+  59: "#40916C", // deep life-green
+  60: "#1B4332", // night ICU — Book VI finale
+  // Book VII: Specialist Rotations (61–70) — specialist golds and purples
+  61: "#CDB4DB", // soft lavender — Specialist intro
+  62: "#FFC8DD", // petal rose
+  63: "#FFAFCC", // blush
+  64: "#BDE0FE", // pale specialist blue
+  65: "#A2D2FF", // soft clinical blue
+  66: "#F4D35E", // specialist gold
+  67: "#EE964B", // golden amber
+  68: "#F95738", // intervention red
+  69: "#E63946", // alert scarlet
+  70: "#A8201A", // deep specialist — Book VII finale
+  // Book VIII: The Ward That Never Sleeps (71–80) — midnight and dawn palette
+  71: "#2B2D42", // midnight ward
+  72: "#3D405B", // deep dusk
+  73: "#4A4E69", // twilight
+  74: "#9A8C98", // dusk grey
+  75: "#C9ADA7", // dawn rose
+  76: "#F2E9E4", // pre-dawn white
+  77: "#22223B", // deep night
+  78: "#4A4E69", // shift change
+  79: "#9A8C98", // late ward grey
+  80: "#F4A261", // dawn gold — Age II finale
+
+  // ── Saga II — The Outer Reaches (Chapters 81+) ───────────────────────────
+  // Age I: The Reckoning (81–120)
+  // Book I: Into the Dark (81–90)
+  81: "#6A0572", // deep reach violet — Outer Reaches entry
+  82: "#9B72CF", // saga II violet
+  83: "#7B2D8B", // dark orchid
+  84: "#5C2A9D", // indigo reach
+  85: "#3A1078", // deep space blue
+  86: "#1B1464", // midnight navy
+  87: "#0E6BA8", // outer ocean
+  88: "#0A2472", // void blue
+  89: "#032B43", // abyssal
+  90: "#16213E", // outer finale — Book I (Saga II)
 };
 
 // ── Phase 1 chapter definitions ───────────────────────────────────────────────
@@ -1745,6 +1847,298 @@ export const CHAPTERS: Chapter[] = [
       },
     ],
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PHASE 2 — AGE II: THE OUTER WARDS
+  // Chapters 41–80 · The Emergency Floor, Critical Care, Specialist Rotations,
+  // and the Ward That Never Sleeps.
+  //
+  // Chapters 41–43 are skeleton stubs that give Age II Book V its first real
+  // nodes.  Chapters 44–80 will be fleshed out by the narrative team.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Chapter 41 — First Outer Ward (5 nodes, Level 30)
+  // Opening chapter of Age II.  The Emergency Floor — no simulation safety net.
+  // story → story → battle → reflection → mini_boss
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    number: 41,
+    id: "chapter_41",
+    levelGate: 30,
+    theme: "First Outer Ward",
+    purpose: "Enter the Emergency Floor — the first Age II encounter with unfiltered urgency",
+    accentColor: C[41],
+    icon: "alert-circle-outline",
+    simulationEra: false,
+    completionXp: 80,
+    prepTips: [
+      "Cue Hunt Lab: Emergency Signs — spot the rapid-deterioration markers",
+      "Rapid Triage Hall: Mass Casualty Drill — sort under extreme pressure",
+      "Stabilize Stack Lab: ABCDE in the Field — airway-first sequencing",
+      "Lotus Lesson: Adrenaline & Calm — managing stress during crises",
+    ],
+    failureHint: {
+      text: "Emergency cases move faster than ward shifts and punish hesitation. Drill your ABCDE sequence until it is automatic — the cues are there if you look in order.",
+      practices: [
+        "Clinical Cue Lab: Rapid Deterioration Signs — time-pressure spotting",
+        "Rapid Triage Hall: Mass Casualty Drill — sustained high-acuity focus",
+        "Stabilize Stack Lab: ABCDE First — locked sequencing under pressure",
+        "Lotus Lesson: Adrenaline & Calm — regulate before you react",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
+    requiredCompletionNodes: ["c41p3", "c41p5"],
+    parts: [
+      {
+        id: "c41p1",
+        part: 1,
+        type: "story",
+        title: "Beyond the Training Doors",
+        description: "The simulation chamber is gone. The Emergency Floor does not reset, does not pause, and does not grade on a curve. The System's voice is quieter here — it watches instead of guides.",
+        icon: "book-outline",
+        isPlaceholder: true,
+        rewardXp: 15,
+        rewardCoins: 30,
+      },
+      {
+        id: "c41p2",
+        part: 2,
+        type: "story",
+        title: "The First Real Triage",
+        description: "Three patients. One nurse. The floor does not care which one you feel most prepared for. The System marks your priority choice — and the clock starts now.",
+        icon: "book-outline",
+        isPlaceholder: true,
+        rewardXp: 15,
+        rewardCoins: 30,
+      },
+      {
+        id: "c41p3",
+        part: 3,
+        type: "battle",
+        title: "Emergency Shift: Haemorrhagic Wraith",
+        description: "A trauma patient — blood pressure dropping, source not yet identified. Stop the cascade before the Wraith compounds the collapse.",
+        icon: "medical-outline",
+        route: "/shift",
+        isPlaceholder: true,
+        rewardXp: 40,
+        rewardCoins: 40,
+      },
+      {
+        id: "c41p4",
+        part: 4,
+        type: "reflection",
+        title: "After the Adrenaline",
+        description: "The patient stabilised. The System asks: what did you see first, and what did you almost miss? The debrief on the Emergency Floor is brief — another case is already waiting.",
+        icon: "alert-circle-outline",
+        isPlaceholder: true,
+        rewardXp: 10,
+        rewardCoins: 15,
+      },
+      {
+        id: "c41p5",
+        part: 5,
+        type: "mini_boss",
+        title: "Trial: The Collapse Shade",
+        description: "The chapter trial. A multi-system collapse — haemorrhage layered with early sepsis. Identify the compound threat and resolve both before the window closes.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=collapse_shade",
+        isPlaceholder: true,
+        rewardXp: 80,
+        rewardCoins: 60,
+        rewardShards: 20,
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Chapter 42 — Triage Under Pressure (5 nodes, Level 31)
+  // Mass-casualty scenario.  Sorting and prioritising under simultaneous demand.
+  // story → battle → story → ward_defense → mini_boss
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    number: 42,
+    id: "chapter_42",
+    levelGate: 31,
+    theme: "Triage Under Pressure",
+    purpose: "Mass-casualty triage — rapid prioritisation with imperfect information",
+    accentColor: C[42],
+    icon: "people-outline",
+    simulationEra: false,
+    completionXp: 85,
+    prepTips: [
+      "Rapid Triage Hall: Mass Casualty Drill — sustained multi-patient prioritisation",
+      "Cue Hunt Lab: Concurrent Signs — find overlapping cues across two patients",
+      "Lotus Lesson: Decision Fatigue — why the fourth decision is harder than the first",
+    ],
+    failureHint: {
+      text: "Triage enemies attack your decision-making, not just your patient. Practise sorting quickly — the penalty is worse on the patients you reach last.",
+      practices: [
+        "Rapid Triage Hall: Mass Casualty Drill — speed and accuracy together",
+        "Clinical Cue Lab: Concurrent Signs — reading two situations at once",
+        "Lotus Lesson: Decision Fatigue — sustaining judgment under load",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
+    requiredCompletionNodes: ["c42p2", "c42p5"],
+    parts: [
+      {
+        id: "c42p1",
+        part: 1,
+        type: "story",
+        title: "The Surge",
+        description: "A multi-vehicle incident fills the bay. Nine patients. Four acuity levels. The System flags a timer — the window for each prioritisation decision is shrinking.",
+        icon: "book-outline",
+        isPlaceholder: true,
+        rewardXp: 15,
+        rewardCoins: 30,
+      },
+      {
+        id: "c42p2",
+        part: 2,
+        type: "battle",
+        title: "Emergency Shift: Surge Wraith",
+        description: "The Surge Wraith embodies competing critical demands — hit one patient and it redirects pressure to another. Spread your care correctly or the wave consumes both.",
+        icon: "medical-outline",
+        route: "/shift",
+        isPlaceholder: true,
+        rewardXp: 45,
+        rewardCoins: 45,
+      },
+      {
+        id: "c42p3",
+        part: 3,
+        type: "story",
+        title: "Between the Calls",
+        description: "A moment of relative quiet in the bay. The System surfaces what the triage chart does not show — the patient who is quiet is not always stable.",
+        icon: "book-outline",
+        isPlaceholder: true,
+        rewardXp: 15,
+        rewardCoins: 20,
+      },
+      {
+        id: "c42p4",
+        part: 4,
+        type: "ward_defense",
+        title: "Bay Perimeter: The Overflow Ward",
+        description: "The bay spills into the corridor. Defend the overflow perimeter — each wave of patients tests the priority system you built.",
+        icon: "shield-half-outline",
+        route: "/ward-defense",
+        isPlaceholder: true,
+        rewardXp: 40,
+        rewardCoins: 40,
+      },
+      {
+        id: "c42p5",
+        part: 5,
+        type: "mini_boss",
+        title: "Trial: The Mass Event Spectre",
+        description: "The chapter trial. A mass-casualty event crystallised into one encounter — simultaneous haemorrhage, toxicology, and airway threats across three linked patients. Prioritise correctly to earn your Chapter 42 star.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=mass_event_spectre",
+        isPlaceholder: true,
+        rewardXp: 85,
+        rewardCoins: 65,
+        rewardShards: 22,
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Chapter 43 — The Night Team (5 nodes, Level 32)
+  // Reduced staffing, lower visibility, heightened autonomy.
+  // story → battle → story → battle → mini_boss
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    number: 43,
+    id: "chapter_43",
+    levelGate: 32,
+    theme: "The Night Team",
+    purpose: "Night-shift autonomy — fewer hands, harder cues, escalation decisions",
+    accentColor: C[43],
+    icon: "moon-outline",
+    simulationEra: false,
+    completionXp: 90,
+    prepTips: [
+      "Lotus Lesson: Night Physiology — how bodies change at night and why cues shift",
+      "Cue Hunt Lab: Low-Light Signs — subtle overnight presentation patterns",
+      "Rapid Triage Hall: Solo Nurse Drill — independent decision-making without backup",
+    ],
+    failureHint: {
+      text: "Night-shift enemies exploit exhaustion and delay — cues are subtler and escalation windows are narrower. Practise independent decision-making so hesitation costs nothing.",
+      practices: [
+        "Lotus Lesson: Night Physiology — overnight physiology and shifted baselines",
+        "Clinical Cue Lab: Low-Light Signs — subtle presentations under low alertness",
+        "Rapid Triage Hall: Solo Nurse Drill — autonomous action without prompts",
+      ],
+      primaryRoute: "/university",
+      secondaryRoute: "/university/skill-academy",
+    },
+    requiredCompletionNodes: ["c43p2", "c43p5"],
+    parts: [
+      {
+        id: "c43p1",
+        part: 1,
+        type: "story",
+        title: "Lights Down",
+        description: "The day team hands over. The ward is quieter — but the System knows that quiet does not mean safe. Three patients flagged for overnight watch. One of them will deteriorate before 03:00.",
+        icon: "book-outline",
+        isPlaceholder: true,
+        rewardXp: 15,
+        rewardCoins: 30,
+      },
+      {
+        id: "c43p2",
+        part: 2,
+        type: "battle",
+        title: "Night Shift: The Dusk Phantom",
+        description: "The Dusk Phantom masks corruption behind normal overnight vitals. Read the pattern across three observations — the deviation only becomes clear in sequence.",
+        icon: "medical-outline",
+        route: "/shift",
+        isPlaceholder: true,
+        rewardXp: 50,
+        rewardCoins: 50,
+      },
+      {
+        id: "c43p3",
+        part: 3,
+        type: "story",
+        title: "The Escalation Call",
+        description: "03:17. The patient you flagged is deteriorating faster than the chart predicted. The registrar is not on the floor. The System asks: when do you call, and what do you say?",
+        icon: "book-outline",
+        isPlaceholder: true,
+        rewardXp: 15,
+        rewardCoins: 25,
+      },
+      {
+        id: "c43p4",
+        part: 4,
+        type: "battle",
+        title: "Night Shift: Silence Wraith",
+        description: "The ward quiets again — deceptively. The Silence Wraith uses low-acuity presentation to buy time for a second deterioration. Catch the masked progression before dawn.",
+        icon: "medical-outline",
+        route: "/shift",
+        isPlaceholder: true,
+        rewardXp: 50,
+        rewardCoins: 50,
+      },
+      {
+        id: "c43p5",
+        part: 5,
+        type: "mini_boss",
+        title: "Trial: The Night Sovereign",
+        description: "The chapter trial. The Night Sovereign commands both the Dusk Phantom and Silence Wraith in concert — alternating masked corruption and rapid-onset deterioration. Hold the ward through the darkest hour to earn your Chapter 43 star.",
+        icon: "skull-outline",
+        route: "/battle?enemyId=night_sovereign",
+        isPlaceholder: true,
+        rewardXp: 90,
+        rewardCoins: 70,
+        rewardShards: 25,
+      },
+    ],
+  },
 ];
 
 // ── Helper functions ──────────────────────────────────────────────────────────
@@ -1873,3 +2267,10 @@ export const PHASE_1_SUMMARY =
   "Phase 1 covers your first era as a summoned healer — from clinical chain basics " +
   "through University simulations, Ward Defense, Boss Wards, and finally your first " +
   "real-world battles. Phase 1 ends with the Silent Infarction rematch at Chapter 10.";
+
+/** Phase 2 — Age II summary used in locked-chapter and hierarchy previews. */
+export const PHASE_2_OUTER_WARDS_SUMMARY =
+  "Age II: The Outer Wards takes you beyond the training grounds into the Emergency " +
+  "Floor, Critical Care, Specialist Rotations, and finally the ward that never sleeps. " +
+  "Stakes are higher, cues are subtler, and the enemies are stronger than anything " +
+  "seen in Age I.";

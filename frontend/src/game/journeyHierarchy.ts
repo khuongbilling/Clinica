@@ -146,27 +146,221 @@ export const JOURNEY_SAGAS: JourneySaga[] = [
       },
       {
         id: "age-2",
+        // ── Age of The Outer Wards ─────────────────────────────────────────
+        // Four Books covering the Emergency Floor, Critical Care, Specialist
+        // Rotations, and the Ward That Never Sleeps (Chapters 41–80).
+        // Book V is active (skeleton chapters 41–43 defined in chapterJourney.ts).
+        // Books VI–VIII are coming_soon until narrative content is written.
         title: "Age II — The Outer Wards",
-        subtitle: "Coming soon · The stakes grow higher beyond the training grounds",
+        subtitle: "The stakes grow higher beyond the training grounds",
         theme: "The Outer Wards",
         accentColor: "#E07B54",
-        unlockCondition: null,
-        status: "coming_soon",
+        unlockCondition: {
+          playerLevel: 30,
+          label: "Reach Level 30 to enter the Outer Wards",
+        },
+        status: "active",
         imageKey: "banner-age-2",
-        books: [],
+        books: [
+          {
+            id: "book-5",
+            title: "Book V: The Emergency Floor",
+            subtitle: "Chapters 41–50 · Unfiltered urgency, mass casualty, and the night team",
+            theme: "The Emergency Floor",
+            accentColor: "#FF6B6B",
+            chapterRange: [41, 50],
+            unlockCondition: {
+              playerLevel: 30,
+              label: "Reach Level 30 to enter the Emergency Floor",
+            },
+            status: "active",
+            imageKey: "banner-book-2", // placeholder art until Book V art is generated
+          },
+          {
+            id: "book-6",
+            title: "Book VI: Critical Care",
+            subtitle: "Chapters 51–60 · ICU rotations, ventilator management, and organ support",
+            theme: "Critical Care",
+            accentColor: "#4CC9F0",
+            chapterRange: [51, 60],
+            unlockCondition: {
+              playerLevel: 40,
+              label: "Reach Level 40 to enter Critical Care",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-2", // placeholder art until Book VI art is generated
+          },
+          {
+            id: "book-7",
+            title: "Book VII: Specialist Rotations",
+            subtitle: "Chapters 61–70 · Cardiology, oncology, paediatrics, and specialist interdisciplinary care",
+            theme: "Specialist Rotations",
+            accentColor: "#CDB4DB",
+            chapterRange: [61, 70],
+            unlockCondition: {
+              playerLevel: 50,
+              label: "Reach Level 50 to begin Specialist Rotations",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-1", // placeholder art until Book VII art is generated
+          },
+          {
+            id: "book-8",
+            title: "Book VIII: The Ward That Never Sleeps",
+            subtitle: "Chapters 71–80 · Night shifts, lone practitioner decisions, and the Age II finale",
+            theme: "The Ward That Never Sleeps",
+            accentColor: "#2B2D42",
+            chapterRange: [71, 80],
+            unlockCondition: {
+              playerLevel: 60,
+              label: "Reach Level 60 to face the Ward That Never Sleeps",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-1", // placeholder art until Book VIII art is generated
+          },
+        ],
       },
     ],
   },
   {
     id: "saga-2",
+    // ── Saga II — The Outer Reaches ────────────────────────────────────────────
+    // A new narrative arc beginning at Chapter 81 — two Ages of four Books each,
+    // covering global health emergencies, leadership, and research frontiers.
+    // All Ages and Books are coming_soon until narrative content is written;
+    // the structural scaffold is here so UI layers have a home for new chapters.
     title: "Saga II — The Outer Reaches",
     subtitle: "Coming soon · A new arc begins beyond the ward",
     theme: "The Outer Reaches",
     accentColor: "#9B72CF",
-    unlockCondition: null,
+    unlockCondition: {
+      playerLevel: 70,
+      label: "Reach Level 70 to unlock The Outer Reaches",
+    },
     status: "coming_soon",
     imageKey: "banner-saga-2",
-    ages: [],
+    ages: [
+      {
+        id: "saga2-age-1",
+        // ── Age of Reckoning ───────────────────────────────────────────────
+        // Chapters 81–120 · The Outer Reaches begin here — global health crises,
+        // inter-system leadership, and encounters that span wards and nations.
+        title: "Age I — The Reckoning",
+        subtitle: "Coming soon · Global emergencies and the limits of the ward",
+        theme: "The Reckoning",
+        accentColor: "#6A0572",
+        unlockCondition: {
+          playerLevel: 70,
+          label: "Reach Level 70 to enter The Reckoning",
+        },
+        status: "coming_soon",
+        imageKey: "banner-age-2", // placeholder until Saga II art is generated
+        books: [
+          {
+            id: "saga2-book-1",
+            title: "Book I: Into the Dark",
+            subtitle: "Chapters 81–90 · The first encounters beyond the known ward",
+            theme: "Into the Dark",
+            accentColor: "#6A0572",
+            chapterRange: [81, 90],
+            unlockCondition: {
+              playerLevel: 70,
+              label: "Reach Level 70 to open Into the Dark",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-2", // placeholder art
+          },
+          {
+            id: "saga2-book-2",
+            title: "Book II: The Outbreak Arc",
+            subtitle: "Chapters 91–100 · Epidemic response, containment, and global coordination",
+            theme: "The Outbreak Arc",
+            accentColor: "#9B72CF",
+            chapterRange: [91, 100],
+            unlockCondition: {
+              playerLevel: 80,
+              label: "Reach Level 80 to enter The Outbreak Arc",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-2", // placeholder art
+          },
+          {
+            id: "saga2-book-3",
+            title: "Book III: The Research Frontier",
+            subtitle: "Chapters 101–110 · Clinical trials, evidence hierarchies, and contested knowledge",
+            theme: "The Research Frontier",
+            accentColor: "#7209B7",
+            chapterRange: [101, 110],
+            unlockCondition: {
+              playerLevel: 90,
+              label: "Reach Level 90 to reach The Research Frontier",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-1", // placeholder art
+          },
+          {
+            id: "saga2-book-4",
+            title: "Book IV: Reckoning's End",
+            subtitle: "Chapters 111–120 · The Age of Reckoning concludes — a convergence of every arc",
+            theme: "Reckoning's End",
+            accentColor: "#5C2A9D",
+            chapterRange: [111, 120],
+            unlockCondition: {
+              playerLevel: 100,
+              label: "Reach Level 100 to face Reckoning's End",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-1", // placeholder art
+          },
+        ],
+      },
+      {
+        id: "saga2-age-2",
+        // ── Age of Ascension ───────────────────────────────────────────────
+        // Chapters 121–160 · The endgame era — leadership, legacy, and the
+        // highest-acuity challenges the Outer Reaches can present.
+        title: "Age II — The Ascension",
+        subtitle: "Coming soon · Leadership, legacy, and the highest calling",
+        theme: "The Ascension",
+        accentColor: "#3730A3",
+        unlockCondition: {
+          playerLevel: 110,
+          label: "Reach Level 110 to begin The Ascension",
+        },
+        status: "coming_soon",
+        imageKey: "banner-age-2", // placeholder until Age of Ascension art is generated
+        books: [
+          {
+            id: "saga2-age2-book-1",
+            title: "Book V: The Leadership Ward",
+            subtitle: "Chapters 121–130 · Charge nurse authority, systemic advocacy, and team formation",
+            theme: "The Leadership Ward",
+            accentColor: "#4338CA",
+            chapterRange: [121, 130],
+            unlockCondition: {
+              playerLevel: 110,
+              label: "Reach Level 110 to open The Leadership Ward",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-2", // placeholder art
+          },
+          {
+            id: "saga2-age2-book-2",
+            title: "Book VI: The Legacy Chapters",
+            subtitle: "Chapters 131–140 · Mentorship, knowledge transfer, and the shape of the next generation",
+            theme: "The Legacy Chapters",
+            accentColor: "#6D28D9",
+            chapterRange: [131, 140],
+            unlockCondition: {
+              playerLevel: 120,
+              label: "Reach Level 120 to write The Legacy Chapters",
+            },
+            status: "coming_soon",
+            imageKey: "banner-book-1", // placeholder art
+          },
+        ],
+      },
+    ],
   },
 ];
 
