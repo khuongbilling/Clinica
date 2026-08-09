@@ -1,7 +1,9 @@
 import React from "react";
 import { Tabs, useRouter } from "expo-router";
-import { Image, Text, View, StyleSheet } from "react-native";
+import { Animated, Image, Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { UI } from "@/src/theme/ui";
 import { usePlayer } from "@/src/game/store";
 import { checkFeatureGate, playerLevelFromXp, buildGateContext, type CompoundGateContext } from "@/src/game/progression";
@@ -10,6 +12,9 @@ import { useNewBagCount } from "@/src/game/bagSeenStore";
 import { useNewHeroCount } from "@/src/game/heroSeenStore";
 import { useNewShopSectionCount } from "@/src/game/shopSeenStore";
 import { SHOP_SECTIONS } from "@/src/game/shopHub";
+
+// ── AsyncStorage key for one-time unlock animation ────────────────────────────
+const SANCTUARY_SEEN_KEY = "clinica.seen_sanctuary_unlock";
 
 // ── Illustrated hand-drawn tab icons ─────────────────────────────────────────
 // Each icon is an AI-generated donghua/anime illustrated PNG with transparent
@@ -70,10 +75,154 @@ function mkTabIcon(key: TabKey, label: string, focused: boolean, locked = false,
   );
 }
 
+// ── Sanctuary tab icon — handles locked state + one-time unlock animation ─────
+//
+// Animation sequence (first time the gate flips to unlocked):
+//   1. Brief 350 ms pause (player can see the tab bar before it plays)
+//   2. Golden padlock badge fades out (400 ms)
+//   3. Greyscale icon cross-fades to full colour (600 ms, overlapping step 2)
+//   4. Two jade glow pulses — scale 1→1.4→1 + opacity 0→0.7→0 (800 ms total)
+//
+// On subsequent visits the animation does not replay (AsyncStorage flag).
+//
+type SanctuaryAnimState = "loading" | "locked" | "unlocking" | "unlocked";
+
+function SanctuaryTabIcon({ focused, locked }: { focused: boolean; locked: boolean }) {
+  const [animState, setAnimState] = React.useState<SanctuaryAnimState>("loading");
+
+  // All values drive useNativeDriver:true animations (opacity + transform only)
+  const lockAnim  = React.useRef(new Animated.Value(1)).current;   // padlock badge opacity
+  const greyAnim  = React.useRef(new Animated.Value(1)).current;   // greyscale icon opacity
+  const colorAnim = React.useRef(new Animated.Value(0)).current;   // colour icon opacity
+  const glowOpacity = React.useRef(new Animated.Value(0)).current;
+  const glowScale   = React.useRef(new Animated.Value(0.85)).current;
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      if (locked) {
+        // Reset to locked visual state without animation
+        lockAnim.setValue(1);
+        greyAnim.setValue(1);
+        colorAnim.setValue(0);
+        glowOpacity.setValue(0);
+        glowScale.setValue(0.85);
+        if (!cancelled) setAnimState("locked");
+        return;
+      }
+
+      // Unlocked — check if the reveal animation has already played
+      const seen = await AsyncStorage.getItem(SANCTUARY_SEEN_KEY);
+      if (cancelled) return;
+
+      if (seen) {
+        // Already played: snap to final unlocked state
+        lockAnim.setValue(0);
+        greyAnim.setValue(0);
+        colorAnim.setValue(1);
+        glowOpacity.setValue(0);
+        setAnimState("unlocked");
+        return;
+      }
+
+      // First unlock — play the reveal animation
+      setAnimState("unlocking");
+
+      const pulse = (toScale: number, toOpacity: number, duration: number) =>
+        Animated.parallel([
+          Animated.timing(glowOpacity, { toValue: toOpacity, duration, useNativeDriver: true }),
+          Animated.timing(glowScale,   { toValue: toScale,   duration, useNativeDriver: true }),
+        ]);
+
+      Animated.sequence([
+        Animated.delay(350),
+        // Fade out padlock badge
+        Animated.timing(lockAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+        // Cross-fade greyscale → colour
+        Animated.parallel([
+          Animated.timing(greyAnim,  { toValue: 0, duration: 600, useNativeDriver: true }),
+          Animated.timing(colorAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ]),
+        // First jade glow pulse
+        pulse(1.4, 0.75, 300),
+        pulse(0.9, 0,    350),
+        // Second, softer pulse
+        pulse(1.2, 0.45, 280),
+        pulse(1.0, 0,    350),
+      ]).start(async ({ finished }) => {
+        if (!finished || cancelled) return;
+        await AsyncStorage.setItem(SANCTUARY_SEEN_KEY, "1");
+        if (!cancelled) setAnimState("unlocked");
+      });
+    }
+
+    init();
+    return () => { cancelled = true; };
+  }, [locked]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isEffectivelyLocked = animState === "loading" || animState === "locked";
+
+  return (
+    <View style={s.wrap} pointerEvents="none">
+      {/* ── Jade glow ring — only visible during unlock pulse ── */}
+      <Animated.View
+        style={[
+          s.sanctuaryGlow,
+          { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+        ]}
+      />
+
+      {/* ── Full-colour icon — always in layout flow (sizes the container) ── */}
+      <Animated.Image
+        source={TAB_IMAGES.realm}
+        style={[
+          s.icon,
+          {
+            opacity: animState === "unlocked"
+              ? (focused ? 1 : 0.38)
+              : colorAnim,
+          },
+        ]}
+        resizeMode="contain"
+      />
+
+      {/* ── Greyscale overlay — absolute, fades out during unlock animation ── */}
+      {animState !== "unlocked" && (
+        <Animated.Image
+          source={TAB_IMAGES.realm}
+          style={[
+            s.icon,
+            s.iconAbsolute,
+            {
+              opacity: greyAnim,
+              // CSS filter: Expo web renders it; native ignores gracefully (image dims via opacity)
+              filter: "saturate(0) brightness(0.5)" as any,
+            },
+          ]}
+          resizeMode="contain"
+        />
+      )}
+
+      {/* ── Golden padlock badge (bottom-right of icon) ── */}
+      {animState !== "unlocked" && (
+        <Animated.View style={[s.lockBadge, { opacity: lockAnim }]}>
+          <Ionicons name="lock-closed" size={10} color="#C7A15D" />
+        </Animated.View>
+      )}
+
+      <StrokeLabel focused={focused && !isEffectivelyLocked}>
+        SANCTUARY
+      </StrokeLabel>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   wrap: { alignItems: "center", gap: 0, paddingTop: 2 },
   wrapLocked: { opacity: 0.55, filter: "grayscale(1)" as any },
   icon: { width: 44, height: 44 },
+  iconAbsolute: { position: "absolute" },
   badgeDot: {
     position: "absolute", top: 1, right: "26%",
     width: 10, height: 10, borderRadius: 5,
@@ -86,6 +235,29 @@ const s = StyleSheet.create({
     letterSpacing: 0.7,
     textAlign:     "center",
     textTransform: "uppercase" as const,
+  },
+  // Jade glow ring drawn behind the realm icon during the unlock pulse.
+  // alignSelf centres it horizontally without a conflicting static transform.
+  sanctuaryGlow: {
+    position: "absolute",
+    alignSelf: "center",
+    width: 58, height: 58,
+    borderRadius: 29,
+    top: -7,
+    backgroundColor: "rgba(130,213,186,0.35)",
+    borderWidth: 1,
+    borderColor: "rgba(130,213,186,0.55)",
+  },
+  // Small badge sitting at icon bottom-right (holds the padlock icon)
+  lockBadge: {
+    position: "absolute",
+    bottom: 16,
+    right: 4,
+    backgroundColor: "#07141D",
+    borderRadius: 8,
+    borderWidth: 0.8,
+    borderColor: "#C7A15D",
+    padding: 2,
   },
 });
 
@@ -102,8 +274,9 @@ export default function TabsLayout() {
     firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
     lessonsStarted:     (player?.lessons_completed?.length ?? 0) > 0,
   };
-  const shopUnlocked   = checkFeatureGate("shop",           ctx).unlocked;
-  const heroesUnlocked = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const shopUnlocked    = checkFeatureGate("shop",           ctx).unlocked;
+  const heroesUnlocked  = checkFeatureGate("hall_of_heroes", ctx).unlocked;
+  const realmUnlocked   = checkFeatureGate("realm",          ctx).unlocked;
 
   // ── Red notification cascade ──
   // Journey: any unlocked-but-unwatched memory bubbles up to the tab icon.
@@ -145,8 +318,8 @@ export default function TabsLayout() {
       }}
     >
       {/* ── Order: Journey · Heroes · HOME (center) · Bag · Shop.
-           Study and Realm moved to hub shortcut icons; their routes stay
-           alive as hidden tabs below. ── */}
+           Sanctuary (kingdom) lives between Heroes and HOME — visible but
+           locked until the Realm gate is met. ── */}
 
       {/* ── Tab 1: Journey (no gate — available immediately) ── */}
       <Tabs.Screen
@@ -159,7 +332,7 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ── Tab 3: Heroes ── */}
+      {/* ── Tab 2: Heroes ── */}
       <Tabs.Screen
         name="heroes"
         options={{
@@ -171,7 +344,7 @@ export default function TabsLayout() {
         listeners={{ tabPress: (e) => { if (!heroesUnlocked) e.preventDefault(); } }}
       />
 
-      {/* ── Tab 4 (CENTER): Home — the sanctuary hub main screen ── */}
+      {/* ── Tab 3 (CENTER): Home — the sanctuary hub main screen ── */}
       <Tabs.Screen
         name="index"
         options={{
@@ -193,7 +366,7 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ── Tab 7: Shop ── */}
+      {/* ── Tab 5: Shop ── */}
       <Tabs.Screen
         name="shop"
         options={{
@@ -205,15 +378,31 @@ export default function TabsLayout() {
         listeners={{ tabPress: (e) => { if (!shopUnlocked) e.preventDefault(); } }}
       />
 
+      {/* ── Tab 6: Sanctuary / Realm kingdom ──────────────────────────────────
+           Visible at all times; locked until the Realm gate (first ward shift
+           completed). On first unlock, SanctuaryTabIcon plays the reveal
+           animation automatically. Subsequent visits show a normal active tab.
+           Tapping while locked is silently swallowed. ── */}
+      <Tabs.Screen
+        name="kingdom"
+        options={{
+          title: "Sanctuary",
+          tabBarAccessibilityLabel: realmUnlocked
+            ? "Sanctuary"
+            : "Sanctuary — locked until Realm is reached",
+          tabBarButtonTestID: "tab-sanctuary",
+          tabBarIcon: ({ focused }) => (
+            <SanctuaryTabIcon focused={focused} locked={!realmUnlocked} />
+          ),
+        }}
+        listeners={{ tabPress: (e) => { if (!realmUnlocked) e.preventDefault(); } }}
+      />
+
       {/* ── Hidden routes (route alive, not shown in bar) ── */}
       <Tabs.Screen
         name="study"
         options={{ href: null, tabBarButtonTestID: "tab-study" }}
         listeners={{ tabPress: (e) => { e.preventDefault(); router.replace("/(tabs)/journey"); } }}
-      />
-      <Tabs.Screen
-        name="kingdom"
-        options={{ href: null, tabBarButtonTestID: "tab-sanctuary" }}
       />
       <Tabs.Screen
         name="faction"
