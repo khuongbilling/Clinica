@@ -309,11 +309,16 @@ export default function ChapterFogMapShell() {
       : undefined;
 
   const { height: windowHeight } = useWindowDimensions();
-  // Responsive map height: ~45 % of the window, clamped between 240 and 480 px.
-  const mapContainerHeight = Math.min(480, Math.max(240, Math.round(windowHeight * 0.45)));
+  // Responsive map height: ~62 % of the window so the map is the primary visual
+  // element. Clamped between 320 and 600 px to stay usable on small/large screens.
+  const mapContainerHeight = Math.min(600, Math.max(320, Math.round(windowHeight * 0.62)));
 
   const bottomPad = Math.max(insets.bottom, 8);
   const [mapSize, setMapSize] = useState({ w: 332, h: mapContainerHeight });
+
+  // ── Legend visibility (collapsed by default) ──────────────────────────────
+  // Toggled by the ⓘ button in the header.
+  const [legendOpen, setLegendOpen] = useState(false);
 
   // ── Chapter metadata ───────────────────────────────────────────────────────
   const chapter = CHAPTERS.find(
@@ -883,8 +888,14 @@ export default function ChapterFogMapShell() {
           <Text style={s.staminaHint}>Movement costs {ENCOUNTER_COST} stamina</Text>
         </View>
 
-        <Pressable style={s.headerBtn} testID="fog-map-info">
-          <Text style={s.headerIcon}>ⓘ</Text>
+        <Pressable
+          style={[s.headerBtn, legendOpen && s.headerBtnActive]}
+          onPress={() => setLegendOpen(v => !v)}
+          testID="fog-map-info"
+          accessibilityLabel={legendOpen ? 'Hide tile legend' : 'Show tile legend'}
+          accessibilityRole="button"
+        >
+          <Text style={[s.headerIcon, legendOpen && s.headerIconActive]}>ⓘ</Text>
         </Pressable>
       </View>
 
@@ -998,7 +1009,7 @@ export default function ChapterFogMapShell() {
 
         {/* ── 4c. No encounter stub — real modals rendered below ────────── */}
 
-        {/* ── 4d. Debug / run info banners ──────────────────────────────── */}
+        {/* ── 4d. Progress strip / debug banner ─────────────────────────── */}
         {debugTiles !== null ? (
           <View style={s.debugBanner}>
             <Text style={s.debugBannerTxt}>
@@ -1006,10 +1017,23 @@ export default function ChapterFogMapShell() {
             </Text>
           </View>
         ) : run !== null ? (
-          <View style={s.runBanner}>
-            <Text style={s.runBannerTxt}>
-              Attempt #{run.attemptNumber} · seed {run.seed.slice(0, 8)}… · {totalTiles} tiles
+          /* Compact progress strip — primary at-a-glance summary after the map */
+          <View style={s.progressStrip}>
+            <Text style={s.progressStripTxt}>
+              <Text style={s.progressStripChapter}>CH. {chNum}</Text>
+              <Text style={s.progressStripDim}> · </Text>
+              <Text style={s.progressStripVal}>{exploredTiles}/{totalTiles}</Text>
+              <Text style={s.progressStripDim}> explored</Text>
+              <Text style={s.progressStripDim}> · </Text>
+              <Text style={s.progressStripLabel}>Keys </Text>
+              <Text style={keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT
+                ? s.progressStripValGood : s.progressStripVal}>
+                {keysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT}
+              </Text>
             </Text>
+            {run.attemptNumber > 1 && (
+              <Text style={s.progressStripAttempt}>Attempt #{run.attemptNumber}</Text>
+            )}
           </View>
         ) : null}
 
@@ -1018,13 +1042,15 @@ export default function ChapterFogMapShell() {
           <DevDiagnostics run={run} chapterKeysCollected={keysCollected} />
         )}
 
-        {/* ── 6. Tile-outcome legend ────────────────────────────────────── */}
-        <Panel>
-          <Text style={s.sectionTitle}>TILE OUTCOMES</Text>
-          {LEGEND_ITEMS.map((item) => (
-            <LegendRow key={item.key} src={item.src} label={item.label} desc={item.desc} />
-          ))}
-        </Panel>
+        {/* ── 6. Tile-outcome legend (collapsed by default; ⓘ to expand) ── */}
+        {legendOpen && (
+          <Panel>
+            <Text style={s.sectionTitle}>TILE OUTCOMES</Text>
+            {LEGEND_ITEMS.map((item) => (
+              <LegendRow key={item.key} src={item.src} label={item.label} desc={item.desc} />
+            ))}
+          </Panel>
+        )}
 
         {/* ── 7. Chapter summary card ───────────────────────────────────── */}
         <Panel style={s.summaryCard}>
@@ -1341,7 +1367,7 @@ const TEXT_DIM     = UI.textDim;
 const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: UI.sanctuaryBg },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 14, gap: 12, paddingTop: 10 },
+  scrollContent: { paddingHorizontal: 14, gap: 8, paddingTop: 8 },
 
   // Completion badge strip (between header and scroll body)
   completionBadgeWrap: {
@@ -1350,6 +1376,30 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: PANEL_BORDER,
   },
+
+  // Header info-button active state (legend open)
+  headerBtnActive: { backgroundColor: JADE + '1A', borderRadius: 8 },
+  headerIconActive: { color: JADE },
+
+  // Compact progress strip (between map and summary card)
+  progressStrip: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: PANEL_BG,
+    borderRadius:    8,
+    borderWidth:     1,
+    borderColor:     PANEL_BORDER,
+  },
+  progressStripTxt:     { flexDirection: 'row', flexShrink: 1 } as object,
+  progressStripChapter: { color: JADE,      fontSize: 11, fontWeight: '800', fontFamily: SERIF, letterSpacing: 0.5 },
+  progressStripVal:     { color: GOLD,      fontSize: 11, fontWeight: '700', fontFamily: SERIF },
+  progressStripValGood: { color: JADE,      fontSize: 11, fontWeight: '700', fontFamily: SERIF },
+  progressStripLabel:   { color: TEXT_SOFT, fontSize: 11, fontFamily: SERIF },
+  progressStripDim:     { color: TEXT_DIM,  fontSize: 11 },
+  progressStripAttempt: { color: TEXT_DIM,  fontSize: 10, fontStyle: 'italic', fontFamily: SERIF },
 
   // Header
   header: {
