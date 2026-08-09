@@ -219,7 +219,7 @@ function SanctuaryTabIcon({ focused, locked }: { focused: boolean; locked: boole
 }
 
 const s = StyleSheet.create({
-  wrap: { alignItems: "center", gap: 0, paddingTop: 8 },
+  wrap: { alignItems: "center", gap: 0, paddingTop: 16 },
   wrapLocked: { opacity: 0.55, filter: "grayscale(1)" as any },
   icon: { width: 44, height: 44 },
   iconAbsolute: { position: "absolute" },
