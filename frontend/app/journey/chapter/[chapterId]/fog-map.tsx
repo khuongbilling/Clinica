@@ -51,6 +51,11 @@ import {
   type TreasureReward,
 } from '@/src/game/journeyMap/encounterResolution';
 import { claimChapterBossKeyOnServer } from '@/src/game/journeyMap/journeyRunRepository';
+import {
+  enqueuePendingBossKeyClaim,
+  getPendingBossKeyClaims,
+  removePendingBossKeyClaims,
+} from '@/src/game/journeyMap/pendingBossKeyClaims';
 import type { JourneyRun, JourneyTile } from '@/src/game/journeyMap/types';
 import { TreasureModal }                  from '@/src/components/journey/TreasureModal';
 import { MerchantModal }                  from '@/src/components/journey/MerchantModal';
@@ -266,7 +271,7 @@ export default function ChapterFogMapShell() {
   }>();
   const router               = useRouter();
   const insets               = useSafeAreaInsets();
-  const { player, spendStamina, applyRewards, updateState, applyFogMapChapterBossRewards } = usePlayer();
+  const { player, spendStamina, applyRewards, updateState, applyFogMapChapterBossRewards, reconcileChapterBossKeys } = usePlayer();
 
   const { height: windowHeight } = useWindowDimensions();
   // Responsive map height: ~45 % of the window, clamped between 240 and 480 px.
@@ -367,6 +372,46 @@ export default function ChapterFogMapShell() {
   // loadAttempt increments when the user taps Retry, re-triggering this effect.
   }, [player?.id, chNum, debugTiles, loadAttempt]);
 
+  // ── Pending boss-key drain effect (Task 576) ──────────────────────────────
+  // On mount (or when the player / chapter changes), retry any Area Boss key
+  // claims that failed to reach the backend during a previous session.
+  // Claims are sent sequentially (not concurrently) so the server always sees
+  // a stable claimed_tile_ids set between requests.
+  // A ref prevents overlapping drains from the same component instance (e.g.
+  // React Strict Mode double-invoke or a rapid player/chapter change).
+  const drainInProgressRef = useRef(false);
+  useEffect(() => {
+    if (!player?.id) return;
+    if (drainInProgressRef.current) return;
+    const playerId = player.id;
+
+    drainInProgressRef.current = true;
+    getPendingBossKeyClaims(playerId, chNum)
+      .then(async pending => {
+        if (pending.length === 0) return;
+        const drained: string[] = [];
+        // Sequential — one claim at a time so the backend's atomic write
+        // always operates on the fully-settled post-previous-claim state.
+        for (const entry of pending) {
+          const serverKeys = await claimChapterBossKeyOnServer(
+            playerId, entry.chapterId, entry.claimKey,
+          );
+          if (serverKeys) {
+            await reconcileChapterBossKeys(entry.chapterId, serverKeys);
+            drained.push(entry.claimKey);
+          }
+          // If still null, leave in the queue for the next attempt.
+        }
+        if (drained.length > 0) {
+          await removePendingBossKeyClaims(drained);
+        }
+      })
+      .catch(e => console.warn('[fog-map] pending boss-key drain failed:', e))
+      .finally(() => { drainInProgressRef.current = false; });
+  // Only re-run when the player or chapter changes, not on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player?.id, chNum]);
+
   // ── Post-battle resolution effect ──────────────────────────────────────────
   // When the fog-map is (re)mounted with `resolvedTileId` + `battleOutcome`
   // params (set by result.tsx when the player returns from a battle started
@@ -426,8 +471,24 @@ export default function ChapterFogMapShell() {
           .catch(e => console.warn('[fog-map] updateState chapter_boss_keys failed:', e));
 
         // Durable backend write — idempotent, survives session close + restart.
-        claimChapterBossKeyOnServer(player.id, chNum, claimKey)
-          .catch(e => console.warn('[fog-map] claimChapterBossKeyOnServer failed:', e));
+        // Capture playerId now to avoid a stale closure after the await gap.
+        const capturedPlayerId = player.id;
+        claimChapterBossKeyOnServer(capturedPlayerId, chNum, claimKey)
+          .then(async serverKeys => {
+            if (serverKeys) {
+              // Reconcile: overwrite the optimistic snapshot with the
+              // authoritative server value.  reconcileChapterBossKeys reads
+              // playerRef.current (always fresh) so it won't clobber any other
+              // writes that happened between the optimistic update and now.
+              await reconcileChapterBossKeys(chNum, serverKeys);
+            } else {
+              // Server returned null — the call failed silently inside
+              // claimChapterBossKeyOnServer.  Queue the claim so it is retried
+              // the next time this chapter's fog-map is opened.
+              await enqueuePendingBossKeyClaim(capturedPlayerId, chNum, claimKey);
+            }
+          })
+          .catch(e => console.warn('[fog-map] boss key reconciliation error:', e));
       }
     } else {
       updated = resolveBattleWin(run, resolvedTileId);

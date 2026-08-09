@@ -624,39 +624,49 @@ class ClaimAreaBossKeyRequest(BaseModel):
 async def claim_area_boss_key(player_id: str, payload: ClaimAreaBossKeyRequest):
     """Idempotently claim an Area Boss key for a chapter.
 
-    Reads the current chapter_boss_keys entry for this chapter, adds the
-    tile_id if not already present, increments keys_collected (capped at 3),
-    and persists atomically.  Returns the updated key-state dict so the
-    caller can update its local copy without a full player re-fetch.
+    Uses a single MongoDB aggregation-pipeline update so the read, set-union,
+    and count derivation are fully atomic — no concurrent request can observe
+    stale state or produce a duplicate increment.
 
-    Idempotent: if tile_id was already claimed the response is unchanged state
-    and no write is issued.
+    Algorithm (all in one round-trip):
+      claimed_tile_ids = setUnion(existing_claimed_tile_ids, [tile_id])
+      keys_collected   = min(3, size(claimed_tile_ids))
+
+    Idempotent: if tile_id was already present, setUnion is a no-op and the
+    returned state is the unchanged current state.  Returns the post-update
+    chapter key state so the caller can reconcile locally without a full
+    player re-fetch.
     """
-    doc = await db.players.find_one({"id": player_id}, {"_id": 0, "chapter_boss_keys": 1})
+    MAX_KEYS = 3  # CHAPTER_BOSS_KEY_REQUIREMENT from chapterBossKeys.ts
+    chapter_key = str(payload.chapter_id)
+    field = f"chapter_boss_keys.{chapter_key}"
+    existing_ids_expr = {"$ifNull": [f"${field}.claimed_tile_ids", []]}
+    new_ids_expr = {"$setUnion": [existing_ids_expr, [payload.tile_id]]}
+
+    doc = await db.players.find_one_and_update(
+        {"id": player_id},
+        [
+            {
+                "$set": {
+                    field: {
+                        "claimed_tile_ids": new_ids_expr,
+                        "keys_collected": {"$min": [MAX_KEYS, {"$size": new_ids_expr}]},
+                    },
+                    "updated_at": now_iso(),
+                }
+            }
+        ],
+        return_document=True,
+        projection={"_id": 0, field: 1},
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="player not found")
 
-    chapter_key = str(payload.chapter_id)
-    existing_keys = (doc.get("chapter_boss_keys") or {})
-    state = existing_keys.get(chapter_key, {"keys_collected": 0, "claimed_tile_ids": []})
-
-    claimed_ids: List[str] = list(state.get("claimed_tile_ids") or [])
-
-    # Idempotency guard — tile already claimed, nothing to write.
-    if payload.tile_id in claimed_ids:
-        return state
-
-    MAX_KEYS = 3  # CHAPTER_BOSS_KEY_REQUIREMENT from chapterBossKeys.ts
-    new_keys = min((state.get("keys_collected") or 0) + 1, MAX_KEYS)
-    new_ids = sorted(list(set([*claimed_ids, payload.tile_id])))
-    new_state: Dict[str, Any] = {"keys_collected": new_keys, "claimed_tile_ids": new_ids}
-
-    field = f"chapter_boss_keys.{chapter_key}"
-    await db.players.update_one(
-        {"id": player_id},
-        {"$set": {field: new_state, "updated_at": now_iso()}},
-    )
-    return new_state
+    state = (doc.get("chapter_boss_keys") or {}).get(chapter_key, {})
+    return {
+        "keys_collected":   state.get("keys_collected", 0),
+        "claimed_tile_ids": state.get("claimed_tile_ids", []),
+    }
 
 
 @api_router.patch("/journey-runs/{run_id}/cleared")

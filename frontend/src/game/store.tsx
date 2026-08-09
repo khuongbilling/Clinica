@@ -549,6 +549,14 @@ type Ctx = {
   // store write.  Reads playerRef (fresh) so it is safe to call from fire-and-forget effects
   // where the React closure's `player` snapshot may be stale.
   applyFogMapChapterBossRewards: (requiredNodes: readonly string[], completionXp: number) => Promise<void>;
+  // Task 576 — reconcile chapter-level Area Boss key state against the
+  // server-confirmed values returned by claimChapterBossKeyOnServer.  Reads
+  // playerRef.current (always fresh) to avoid a stale-closure race with the
+  // optimistic write that fires immediately before the server call.
+  reconcileChapterBossKeys: (
+    chapterId:  number,
+    serverKeys: { keys_collected: number; claimed_tile_ids: string[] },
+  ) => Promise<void>;
   // C5 — dismiss the Level 2 "Apprentice Path Opened" celebration modal.
   markLv2UnlockSeen: () => Promise<void>;
   // P5 — dismiss the University intro panel (shown once on first visit).
@@ -2756,6 +2764,40 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // ── Task 576 — reconcile chapter-level Area Boss keys with server truth ─────
+  // Called after claimChapterBossKeyOnServer resolves so the authoritative
+  // { keys_collected, claimed_tile_ids } from the backend overwrites the
+  // optimistic snapshot.  Reads playerRef.current (fresh) to avoid the stale-
+  // closure race that would occur if we used the `player` captured at the time
+  // the battle-return effect ran.
+  const reconcileChapterBossKeys = useCallback(async (
+    chapterId:  number,
+    serverKeys: { keys_collected: number; claimed_tile_ids: string[] },
+  ): Promise<void> => {
+    const base = playerRef.current;
+    if (!base) return;
+    // Read the current local state fresh from the ref (not the stale closure).
+    const localEntry = base.chapter_boss_keys?.[String(chapterId)];
+    const localCount = localEntry?.keys_collected ?? 0;
+    // Merge: take the union of claimed IDs and the higher key count so an
+    // out-of-order or stale server response never regresses local progress.
+    const localIds: string[] = localEntry?.claimed_tile_ids ?? [];
+    const mergedIds = Array.from(new Set([...localIds, ...serverKeys.claimed_tile_ids])).sort();
+    const mergedCount = Math.max(localCount, serverKeys.keys_collected, mergedIds.length > 3 ? 3 : mergedIds.length);
+    const next: PlayerState = {
+      ...base,
+      chapter_boss_keys: {
+        ...(base.chapter_boss_keys ?? {}),
+        [String(chapterId)]: {
+          keys_collected:   Math.min(mergedCount, 3),
+          claimed_tile_ids: mergedIds,
+        },
+      },
+    };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   // ── C5 — mark the Level 2 unlock celebration as seen ───────────────────────
   const markLv2UnlockSeen = useCallback(async () => {
     const base = playerRef.current;
@@ -2914,7 +2956,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     equipItem, unequipItem,
     claimSpecialization,
     applyFogMapChapterBossRewards,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards]);
+    reconcileChapterBossKeys,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
