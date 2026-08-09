@@ -75,16 +75,19 @@ export function SanctuaryShortcutCard({
         <View style={s.bevelTop}   pointerEvents="none" />
         <View style={s.bevelLeft}  pointerEvents="none" />
 
-        {/* Red notification badge — top-right */}
-        {hasBadge && (
-          <View style={s.badge}>
-            <Text style={s.badgeTxt}>{(badge as number) > 9 ? "9+" : badge}</Text>
-          </View>
-        )}
-
-        {/* Green availability dot — sits just above label band */}
-        {showDot && <View style={s.dot} />}
+        {/* Green availability dot — fully inside the frame, never clipped */}
+        {showDot && <View style={s.dot} pointerEvents="none" />}
       </View>
+
+      {/* Red notification badge — top-right. Rendered OUTSIDE the icon frame
+          because the frame clips (overflow:hidden for rounded corners) and
+          would crop the overhanging badge. */}
+      {hasBadge && (
+        <View style={s.badge} pointerEvents="none">
+          <Text style={s.badgeTxt}>{(badge as number) > 9 ? "9+" : badge}</Text>
+        </View>
+      )}
+
 
       {/* Quantity chip pill — below icon frame */}
       {!locked && quantity !== undefined && quantity !== "" && (
