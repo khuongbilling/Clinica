@@ -194,9 +194,40 @@ CHAPTER_SHIFT_VISUALS[1] = {
     terrainFrontier: CH1_EVE_FRONTIER,
   },
   night: {
-    ...DEFAULT_SHIFT_VISUALS.night,
-    // Night is explicitly assigned — the dark environment belongs to this shift.
-    background: BG_NIGHT,
+    // Push 11 assessment — no regeneration required.
+    // All existing assets already satisfy the Night spec:
+    //
+    //   background  map-platform-background.webp — deep navy/blue-black ward,
+    //               teal medical illumination flanking corridors, purple/violet
+    //               lanterns, gold compass mandala at centre.  Strong contrast,
+    //               sparse localized lighting.  Canonical dark baseline.
+    //
+    //   fogInterior fog-tile.webp — dark teal-grey smoky atmospheric fog.
+    //               Deepest of the three shift fogs.  Transparent at edges so
+    //               it blends with the dark hidden-tile base below.
+    //
+    //   terrainBase hex-revealed.webp — dark cracked stone with thin teal
+    //               medical glow edging.  Transparent background; separates
+    //               clearly from the dark map environment.
+    //
+    //   terrainFrontier hex-frontier.webp — same dark cracked stone with
+    //               rising mist and teal glow — atmospheric, readable as
+    //               reachable even against a dark background.
+    //
+    //   terrainCurrent hex-current.webp — deep jade neon glow radiating
+    //               through cracked stone; strongest glow of all three shifts,
+    //               ensuring current-tile readability at low ambient light.
+    //
+    //   fogEdge     inherits the shared fog-edge-bottom.webp (no shift-
+    //               specific edge raster needed — dark edge blends naturally).
+    //
+    // To replace an individual layer: swap the require() call on that line only.
+    background:      BG_NIGHT,       // map-platform-background.webp — canonical dark ward
+    fogInterior:     FOG_INTERIOR,   // fog-tile.webp — deepest atmospheric fog
+    fogEdge:         FOG_EDGE,       // fog-edge-bottom.webp (shared)
+    terrainBase:     TILE_BASE,      // hex-revealed.webp — dark cracked stone, teal glow edge
+    terrainCurrent:  TILE_CURRENT,   // hex-current.webp — jade neon glow through stone
+    terrainFrontier: TILE_FRONTIER,  // hex-frontier.webp — dark stone + mist, teal glow
   },
 };
 
