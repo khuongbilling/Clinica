@@ -581,11 +581,15 @@ export default function ChapterFogMapShell() {
   const gateUnlocked      = zeroKeyMap ? gateDiscovered : keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT;
 
   // ── Shift-aware map visuals ───────────────────────────────────────────────
-  // Single call-site for all chapter/shift asset resolution.
-  // Background, fog, and terrain tiles all come from this object —
-  // no asset paths are hard-coded outside chapterMapVisuals.ts.
+  // run.chapterId is the authoritative source — it is the chapter frozen into
+  // this JourneyRun at creation and never changes mid-run.  chNum (from the
+  // route param) is the fallback for screens that load before a run hydrates.
+  //
+  // run.shift (TimeOfDay) is also frozen at creation (readonly).
+  // Changing the shift tab on the Book page has no effect here — the run's
+  // own shift drove the encounter generator and now drives the art.
   const mapShift      = run?.shift ?? 'night';
-  const chapterVisuals = getChapterMapVisuals(chNum, mapShift);
+  const chapterVisuals = getChapterMapVisuals(run?.chapterId ?? chNum, mapShift);
 
   // ── Exploration character sprite ──────────────────────────────────────────
   // Resolved from the player's class_tree_id — the same key getMapSprite uses.
@@ -1006,6 +1010,29 @@ export default function ChapterFogMapShell() {
               }}
               explorationCharacter={explorationCharacter}
             />
+          )}
+
+          {/* ── Ambient foreground overlay ────────────────────────────────
+              Rendered on top of tiles but below any screen-level UI chrome.
+              Only active when the chapter/shift visual theme provides one
+              (e.g. a night vignette, a dusk haze, or a light-ray sheet).
+              pointerEvents="none" on the wrapping View so tile taps pass
+              through unaffected (per Expo-web pointer-events discipline).
+              Opacity is set per-asset in the registry; this layer is purely
+              atmospheric — it MUST NOT hide encounter icons or obscure
+              the gate widget.                                              */}
+          {chapterVisuals.ambientOverlay != null && (
+            <View
+              pointerEvents="none"
+              style={StyleSheet.absoluteFillObject}
+              testID="ambient-overlay"
+            >
+              <Image
+                source={chapterVisuals.ambientOverlay}
+                style={[StyleSheet.absoluteFillObject, { opacity: 0.28 }]}
+                contentFit="cover"
+              />
+            </View>
           )}
         </View>
 
