@@ -197,9 +197,10 @@ const s = StyleSheet.create({
   outer: {
     // No shadow/glow here — on web a shadow around a transparent view paints
     // a rectangular box behind the painted frame. The PNG carries its own glow.
-    // 90% width, centered — per design the button is slightly narrower than
-    // the content column.
-    width:     "90%",
+    // 81% width, centered — per design the button is slightly narrower than
+    // the content column. (Was 90%; scaled to 90% of that height — width and
+    // height are locked to the painted art's aspect ratio.)
+    width:     "81%",
     alignSelf: "center",
   },
   outerDisabled: {

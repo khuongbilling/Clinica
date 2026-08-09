@@ -1114,7 +1114,8 @@ const styles = StyleSheet.create({
   /* Hero info panel wrapper — push-7 HeroAffinityCard sits here */
   infoPanelWrap: {
     marginHorizontal: SPACING.md,
-    marginTop: SPACING.xs,
+    // Pushed down to give the hero arena above more breathing room.
+    marginTop: SPACING.md,
   },
 
   /* Start button — layout only; visuals come from PrimaryButton */
