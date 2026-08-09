@@ -124,7 +124,9 @@ export const ROUTES = {
   HOME,
   CODEX,
   HEROES,
-  KINGDOM,
+  // KINGDOM removed — SANCTUARY is the canonical name for this tab now.
+  // Callers using ROUTES.KINGDOM (zero at time of removal) should use ROUTES.SANCTUARY.
+  // The tabKingdom camelCase alias below is kept for backward compat.
   PROFILE,
   SHOP_TAB,
   FACTION,

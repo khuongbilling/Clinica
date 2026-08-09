@@ -1943,6 +1943,7 @@ export const CHAPTERS: Chapter[] = [
         title: "Trial: The Collapse Shade",
         description: "The chapter trial. A multi-system collapse — haemorrhage layered with early sepsis. Identify the compound threat and resolve both before the window closes.",
         icon: "skull-outline",
+        // route omitted — enemy not yet implemented; isPlaceholder gates this node
         isPlaceholder: true,
         rewardXp: 80,
         rewardCoins: 60,
@@ -2036,6 +2037,7 @@ export const CHAPTERS: Chapter[] = [
         title: "Trial: The Mass Event Spectre",
         description: "The chapter trial. A mass-casualty event crystallised into one encounter — simultaneous haemorrhage, toxicology, and airway threats across three linked patients. Prioritise correctly to earn your Chapter 42 star.",
         icon: "skull-outline",
+        // route omitted — enemy not yet implemented; isPlaceholder gates this node
         isPlaceholder: true,
         rewardXp: 85,
         rewardCoins: 65,
@@ -2129,6 +2131,7 @@ export const CHAPTERS: Chapter[] = [
         title: "Trial: The Night Sovereign",
         description: "The chapter trial. The Night Sovereign commands both the Dusk Phantom and Silence Wraith in concert — alternating masked corruption and rapid-onset deterioration. Hold the ward through the darkest hour to earn your Chapter 43 star.",
         icon: "skull-outline",
+        // route omitted — enemy not yet implemented; isPlaceholder gates this node
         isPlaceholder: true,
         rewardXp: 90,
         rewardCoins: 70,

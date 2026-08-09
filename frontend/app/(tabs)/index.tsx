@@ -20,9 +20,7 @@ import { SystemObjectiveCard } from "@/src/components/sanctuary/SystemObjectiveC
 import { HeroAffinityCard } from "@/src/components/sanctuary/HeroAffinityCard";
 import { getAffinityMedallion, TREASURE_CHEST } from "@/src/game/affinityArtwork";
 import { usePlayer } from "@/src/game/store";
-import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
-import { TutorialOverlay } from "@/src/components/TutorialOverlay";
-import { isObjectiveGuide, type TutorialId } from "@/src/game/tutorials";
+import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -92,22 +90,6 @@ const FALLBACK_SCENE = ARENA_SCENES.River;
 // Steps 8-10 (obj_cue_hunt_done / obj_triage_done / obj_stabilize_done) were
 // removed from OBJECTIVES in Fix 4; they are internal sub-step IDs only and
 // will never appear as `currentObjective`, so no switch cases needed for them.
-
-// ── Objective → forced-tap navigation guide ─────────────────────────────────
-// When the hub gains focus with one of these objectives still incomplete, the
-// matching guide tutorial starts: it highlights the exact control that
-// advances the chain and blocks every other navigation path until tapped.
-// Steps 1–5 are omitted — those beats run inside their own forced flows
-// (prologue, identity, diagnostic) that auto-resume at boot.
-const OBJECTIVE_GUIDES: Partial<Record<ObjectiveDef["id"], TutorialId>> = {
-  obj_memory_seen:            "objGuideMemories",   // Journey tab → Memories tab
-  obj_university_arrived:     "objGuideUniversity", // objective card CTA → /university
-  obj_fading_apprentice_done: "objGuideUniversity",
-  obj_recruit_preview:        "objGuideUniversity", // CTA routes to Recruitment Hall
-  obj_lotus_visited:          "objGuideUniversity", // CTA routes to lessons
-  obj_lotus_first_lesson:     "objGuideUniversity",
-  obj_ward_shift_first:       "objGuideWardShift",  // Enter the Ward button
-};
 
 function hubGuideMessage(obj: ObjectiveDef): string {
   switch (obj.id) {
@@ -194,13 +176,7 @@ export default function RunHome() {
   const router  = useRouter();
   const reduceMotion = useReducedMotion();
   const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
-  const { isCompleted, markDone, startTutorial, replayTutorial, clearActiveTutorial, activeTutorialId } = useTutorial();
-  // While an objective guide is active on this screen, all hub navigation
-  // other than the guide's highlighted target is swallowed (forced path).
-  const guideActive = isObjectiveGuide(activeTutorialId);
-  // Objective navigation guides — forced-tap wayfinding targets on this screen.
-  const objCtaTarget  = useHighlightTarget("home-objective-cta");
-  const wardTarget    = useHighlightTarget("home-enter-ward");
+  const { isCompleted, markDone, startTutorial, activeTutorialId } = useTutorial();
   const [showIntro, setShowIntro] = useState(false);
   const [showRounds, setShowRounds] = useState(false);
   const [showLv2Modal, setShowLv2Modal] = useState(false);
@@ -261,33 +237,7 @@ export default function RunHome() {
   );
 
   // Leaving mid-tutorial must never leak the overlay onto the next screen.
-  // (Objective guides are exempt inside clearActiveTutorial — they are
-  //  designed to survive navigation and keep guiding on the next screen.)
   useClearTutorialOnExit();
-
-  // ── Objective navigation guide launcher ─────────────────────────────────
-  // Whenever the hub is focused with an incomplete objective that has a
-  // forced-tap guide, (re)start it. replayTutorial bypasses the
-  // completed/dismissed guards so the guide keeps forcing until the
-  // objective itself is complete — including after a force-quit.
-  useEffect(() => {
-    if (!player?.seen_reminiscence) return;
-    if (currentObjective === undefined) return;     // objective still loading
-    const guideId = currentObjective ? OBJECTIVE_GUIDES[currentObjective.id] : undefined;
-    // Recovery: a guide left active from a previous session/screen that no
-    // longer matches the current objective (completed by another path, or the
-    // objective advanced) must be force-cleared or it blocks tab navigation.
-    if (isObjectiveGuide(activeTutorialId) && activeTutorialId !== guideId) {
-      clearActiveTutorial(true);
-      return; // effect re-runs with activeTutorialId cleared
-    }
-    if (!isCompleted("systemHubIntro")) return;     // orientation first
-    if (activeTutorialId) return;                   // never stack tutorials
-    if (!guideId) return;
-    const t = setTimeout(() => { replayTutorial(guideId); }, 900);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player?.seen_reminiscence, activeTutorialId, currentObjective?.id, currentObjective === undefined]);
 
   // A daily-progress cue (e.g. the "all duties complete" toast) can ask the hub
   // to open the Rounds panel; honour the latest request once.
@@ -507,7 +457,7 @@ export default function RunHome() {
         {realmUnlocked && (
           <Pressable
             style={styles.headerBtn}
-            onPress={() => { if (guideActive) return; router.push(ROUTES.KINGDOM); }}
+            onPress={() => router.push(ROUTES.SANCTUARY)}
             hitSlop={10}
             testID="home-realm-button"
             accessibilityLabel="Open Realm"
@@ -518,7 +468,7 @@ export default function RunHome() {
         )}
         <Pressable
           style={styles.headerBtn}
-          onPress={() => { if (guideActive) return; router.push(ROUTES.tutorial); }}
+          onPress={() => router.push(ROUTES.tutorial)}
           hitSlop={10}
           testID="run-tutorial-button"
           accessibilityLabel="Open tutorial"
@@ -547,7 +497,7 @@ export default function RunHome() {
       {showCommunityBanner && (
         <Pressable
           style={[styles.eventBanner, !worldEventUnlocked && styles.eventBannerBoard]}
-          onPress={() => { if (guideActive) return; router.push(ACTIVE_WORLD_EVENT.route as AppRoute); }}
+          onPress={() => router.push(ACTIVE_WORLD_EVENT.route as AppRoute)}
           testID="home-world-event-banner"
           accessibilityLabel={worldEventUnlocked ? `World event: ${ACTIVE_WORLD_EVENT.title}` : "Community Health Board — read-only preview"}
           accessibilityRole="button"
@@ -620,11 +570,6 @@ export default function RunHome() {
             objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
             ctaLabel={hubGuideCta(currentObjective)}
             onPress={() => {
-              // During a guide, the CTA only works when it IS the target
-              // (objGuideUniversity); otherwise the tap is swallowed so the
-              // forced path (e.g. Journey tab) stays the only way forward.
-              if (guideActive && !objCtaTarget.isHighlighted) return;
-              objCtaTarget.onTargetPress();
               const route = hubGuideRoute(currentObjective);
               if (!route) {
                 setLocalDismissGuide(true);
@@ -661,7 +606,7 @@ export default function RunHome() {
               emblem={EMBLEM_IMAGES.dailyRounds}
               label="Rounds"
               badge={roundsBadge}
-              onPress={() => { if (guideActive) return; setShowRounds(true); }}
+              onPress={() => setShowRounds(true)}
               testID="home-float-rounds"
             />
           )}
@@ -671,7 +616,7 @@ export default function RunHome() {
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
         <Pressable
           style={styles.heroCenter}
-          onPress={() => { if (guideActive) return; router.push(hasRecruitedHeroes ? ROUTES.heroSelect : summonUnlocked ? ROUTES.UNI_RECRUIT : ROUTES.UNIVERSITY); }}
+          onPress={() => router.push(hasRecruitedHeroes ? ROUTES.heroSelect : summonUnlocked ? ROUTES.UNI_RECRUIT : ROUTES.UNIVERSITY)}
           testID="home-portrait-tap"
           accessibilityLabel={hasRecruitedHeroes ? "Change active hero" : summonUnlocked ? "Recruit your first hero" : "Go to University to unlock recruitment"}
           accessibilityRole="button"
@@ -715,7 +660,7 @@ export default function RunHome() {
               label="Realm"
               available
               badge={realmBadge}
-              onPress={() => { if (guideActive) return; router.push(ROUTES.KINGDOM); }}
+              onPress={() => router.push(ROUTES.SANCTUARY)}
               testID="home-float-realm"
             />
           )}
@@ -724,7 +669,7 @@ export default function RunHome() {
               emblem={EMBLEM_IMAGES.defense}
               label="Defense"
               available
-              onPress={() => { if (guideActive) return; router.push(ROUTES.WARD_DEFENSE); }}
+              onPress={() => router.push(ROUTES.WARD_DEFENSE)}
               testID="home-float-ward-defense"
             />
           )}
@@ -748,7 +693,7 @@ export default function RunHome() {
               atLevelCap:        atHeroCap,
             }}
             accentColor={elementColor}
-            onPress={() => { if (guideActive) return; if (leadHeroId) router.push(`/hero/${leadHeroId}` as any); }}
+            onPress={() => leadHeroId && router.push(`/hero/${leadHeroId}` as any)}
             testID="home-hero-card"
           />
         </View>
@@ -757,15 +702,8 @@ export default function RunHome() {
       {/* ── START SHIFT — gated: first University lesson required ── */}
       {wardShiftGate.unlocked ? (
         <EnterWardButton
-          onPress={() => {
-            // During a guide, only proceed when THIS button is the target.
-            if (guideActive && !wardTarget.isHighlighted) return;
-            wardTarget.onTargetPress();
-            router.push(ROUTES.shift);
-          }}
-          style={wardTarget.isHighlighted
-            ? StyleSheet.flatten([styles.startBtn, wardTarget.highlightStyle])
-            : styles.startBtn}
+          onPress={() => router.push(ROUTES.shift)}
+          style={styles.startBtn}
           heightScale={0.75}
           testID="run-random-encounter"
         />
@@ -782,7 +720,7 @@ export default function RunHome() {
           </View>
           <Pressable
             style={styles.wardLockedCardCta}
-            onPress={() => { if (guideActive) return; router.push(ROUTES.UNIVERSITY); }}
+            onPress={() => router.push(ROUTES.UNIVERSITY)}
             accessibilityLabel="Go to University to unlock Ward Shift"
             accessibilityRole="button"
           >
@@ -843,9 +781,6 @@ export default function RunHome() {
           markLv2UnlockSeen();
         }}
       />
-
-      {/* Objective navigation guide overlay (objGuide* dialogue boxes) */}
-      <TutorialOverlay />
       </SafeAreaView>
     </View>
   );

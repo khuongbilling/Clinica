@@ -2,6 +2,10 @@
 // Covers data schema migration, calculation correctness, and integration via applySkill.
 // Run: npx sucrase-node tests/elemental_counter.test.ts
 
+// __DEV__ is a React Native global; set it before any import so that the
+// dev-mode [Strike] breakdown log in battle.ts emits during test runs.
+(global as any).__DEV__ = true;
+
 import {
   calcStrikeEffect,
   calcStabilizeEffect,

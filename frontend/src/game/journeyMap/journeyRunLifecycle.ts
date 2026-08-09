@@ -11,13 +11,16 @@
  * ─────────────
  *
  *   loadOrCreateJourneyRun(playerId, chapterId, repo)
- *   ┌─────────────────────────────────────────────────┐
- *   │ active run exists? ──yes──► return active run    │
- *   │       │ no                                       │
- *   │ latest run is cleared? ──yes──► return cleared   │  ← summary screen
- *   │       │ no (no run ever)                         │
- *   │ createFirstRun ──────────────► return new run    │
- *   └─────────────────────────────────────────────────┘
+ *   ┌─────────────────────────────────────────────────────────────────┐
+ *   │ active run exists? ──yes──► return active run                   │
+ *   │       │ no                                                      │
+ *   │ latest run is cleared? ──yes──► return cleared  ← summary screen│
+ *   │       │ no                                                      │
+ *   │ latest run is abandoned? ──yes──► createRechallengeRun          │
+ *   │   (recovery: rechallenge abandon succeeded but create failed)   │
+ *   │       │ no (no run ever)                                        │
+ *   │ createFirstRun ──────────────► return new run                   │
+ *   └─────────────────────────────────────────────────────────────────┘
  *
  *   challengeChapter(playerId, chapterId, repo)          ← only after cleared
  *   ┌─────────────────────────────────────────────────┐

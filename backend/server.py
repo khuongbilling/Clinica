@@ -552,7 +552,18 @@ async def get_active_journey_run(player_id: str, chapter_id: int):
 
 @api_router.get("/player/{player_id}/journey-runs/{chapter_id}/latest")
 async def get_latest_journey_run(player_id: str, chapter_id: int):
-    """Return the most recent run (any status) for this player+chapter, or 404."""
+    """Return the most recent run (any status, including 'abandoned') for this player+chapter, or 404.
+
+    Intentionally includes 'abandoned' runs so that the frontend recovery path in
+    loadOrCreateJourneyRun can detect the stuck state produced when rechallengeMap
+    succeeds in archiving the old run (step 1) but fails before creating the new
+    run (step 2).  On next load, getLatestRun returns the abandoned run, and
+    loadOrCreateJourneyRun calls createRechallengeRun to complete the transition.
+
+    If abandoned runs were filtered here, that recovery path would be unreachable:
+    getLatestRun would return null and the frontend would call createFirstRun
+    (attempt #1), which would 409 because earlier attempts are still in the DB.
+    """
     cursor = (
         db.journey_runs
         .find({"player_id": player_id, "chapter_id": chapter_id}, {"_id": 0})

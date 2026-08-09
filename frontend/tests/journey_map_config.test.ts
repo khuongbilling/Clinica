@@ -109,42 +109,47 @@ console.log('\n── design-spec table ──');
 function pct(bp: number) { return bp / 100; }
 
 {
+  // Ch1–3: areaBoss = 0% (area bosses start at Ch4).  The 10% that used to be
+  // allocated to areaBoss now goes into none.
   const r = getEncounterRatesBp(1);
-  check('ch1 none=55%',     pct(r.none)     === 55, `${pct(r.none)}%`);
+  check('ch1 none=65%',     pct(r.none)     === 65, `${pct(r.none)}%`);
   check('ch1 battle=30%',   pct(r.battle)   === 30, `${pct(r.battle)}%`);
-  check('ch1 areaBoss=10%', pct(r.areaBoss) === 10, `${pct(r.areaBoss)}%`);
+  check('ch1 areaBoss=0%',  pct(r.areaBoss) ===  0, `${pct(r.areaBoss)}%`);
   check('ch1 treasure=5%',  pct(r.treasure) ===  5, `${pct(r.treasure)}%`);
   check('ch1 merchant=0%',  pct(r.merchant) ===  0, `${pct(r.merchant)}%`);
 }
 {
+  // Ch4–10: areaBoss = 3%.
   const r = getEncounterRatesBp(5);
-  check('ch5 none=53%',     pct(r.none)     === 53, `${pct(r.none)}%`);
+  check('ch5 none=60%',     pct(r.none)     === 60, `${pct(r.none)}%`);
   check('ch5 treasure=6%',  pct(r.treasure) ===  6, `${pct(r.treasure)}%`);
   check('ch5 merchant=1%',  pct(r.merchant) ===  1, `${pct(r.merchant)}%`);
 }
 {
   const r = getEncounterRatesBp(10);
-  check('ch10 none=51%',    pct(r.none)     === 51, `${pct(r.none)}%`);
+  check('ch10 none=58%',    pct(r.none)     === 58, `${pct(r.none)}%`);
   check('ch10 treasure=7%', pct(r.treasure) ===  7, `${pct(r.treasure)}%`);
   check('ch10 merchant=2%', pct(r.merchant) ===  2, `${pct(r.merchant)}%`);
 }
 {
+  // Ch11–20: areaBoss = 4%.
   const r = getEncounterRatesBp(20);
-  check('ch20 none=47%',    pct(r.none)     === 47, `${pct(r.none)}%`);
+  check('ch20 none=53%',    pct(r.none)     === 53, `${pct(r.none)}%`);
   check('ch20 treasure=9%', pct(r.treasure) ===  9, `${pct(r.treasure)}%`);
   check('ch20 merchant=4%', pct(r.merchant) ===  4, `${pct(r.merchant)}%`);
 }
 {
+  // Ch21+: areaBoss = 5%.
   const r = getEncounterRatesBp(25);
-  check('ch25 none=45%',     pct(r.none)     === 45, `${pct(r.none)}%`);
+  check('ch25 none=50%',     pct(r.none)     === 50, `${pct(r.none)}%`);
   check('ch25 treasure=10%', pct(r.treasure) === 10, `${pct(r.treasure)}%`);
   check('ch25 merchant=5%',  pct(r.merchant) ===  5, `${pct(r.merchant)}%`);
 }
 {
-  // ch 35+ means any chapter ≥ 35 where both caps are hit
+  // ch 35+ means any chapter ≥ 35 where both caps are hit.
   for (const ch of [35, 40, 50, 100]) {
     const r = getEncounterRatesBp(ch);
-    check(`ch${ch} none=43%`,     pct(r.none)     === 43, `${pct(r.none)}%`);
+    check(`ch${ch} none=48%`,     pct(r.none)     === 48, `${pct(r.none)}%`);
     check(`ch${ch} treasure=12%`, pct(r.treasure) === 12, `${pct(r.treasure)}%`);
     check(`ch${ch} merchant=5%`,  pct(r.merchant) ===  5, `${pct(r.merchant)}%`);
   }
