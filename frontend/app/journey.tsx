@@ -39,8 +39,6 @@ import type { JourneyNodeUi } from "@/src/features/journey/ui/journeyUi.types";
 import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
 import { ShiftSelector } from "@/src/features/journey/ui/ShiftSelector";
 import { getShiftAvailability } from "@/src/features/journey/ui/shiftAvailability";
-import { getFocusedChapters, buildChapterUiSummary } from "@/src/features/journey/ui/journeyVisibility";
-import { ChapterTabBadge } from "@/src/features/journey/ui/ChapterTabBadge";
 import {
   loadJourneyExpandedPreference,
   saveJourneyExpandedPreference,
@@ -51,6 +49,7 @@ import { usePlayer } from "@/src/game/store";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
+import { getFocusedChapters, buildChapterUiSummary, getChapterTabBadgeState } from "@/src/features/journey/ui/journeyVisibility";
 
 
 export default function JourneyScreen() {
@@ -403,16 +402,22 @@ export default function JourneyScreen() {
                   ]}>
                     CH.{ch.number}
                   </Text>
-                  {!locked && (
-                    <ChapterTabBadge
-                      summary={chSummary}
-                      accentColor={ch.accentColor}
-                      badgeTextStyle={styles.chapterTabMasteryBadge}
-                    />
-                  )}
-                  {locked && (
-                    <Ionicons name="lock-closed" size={8} color={COLORS.onSurfaceTertiary + "80"} />
-                  )}
+                  {(() => {
+                    const badge = getChapterTabBadgeState(chSummary, locked);
+                    if (badge.kind === 'lock')
+                      return <Ionicons name="lock-closed" size={8} color={COLORS.onSurfaceTertiary + "80"} testID={`badge-lock-${ch.number}`} />;
+                    if (badge.kind === 'checkmark')
+                      return <Ionicons name="checkmark-circle" size={8} color={ch.accentColor} testID={`badge-check-${ch.number}`} />;
+                    if (badge.kind === 'star')
+                      return <Ionicons name="star" size={8} color="#d4a017" testID={`badge-star-${ch.number}`} />;
+                    if (badge.kind === 'partial')
+                      return (
+                        <Text style={styles.chapterTabMasteryBadge} testID={`badge-partial-${ch.number}`}>
+                          {badge.earned}/{badge.total}★
+                        </Text>
+                      );
+                    return null;
+                  })()}
                 </Pressable>
               );
             })}

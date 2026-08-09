@@ -191,6 +191,50 @@ export function maxMasteryStars(chapter: Chapter): number {
   return getMasteryNodeIds(chapter).length;
 }
 
+// ── Chapter tab badge state ───────────────────────────────────────────────────
+
+/**
+ * Discriminated union describing which badge (if any) should appear on a
+ * chapter selector tab.
+ *
+ *   none      — Chapter is unlocked but story not yet cleared; no badge shown.
+ *   lock      — Chapter is locked; only the lock icon renders.
+ *   checkmark — Narrative chapter story-cleared (no mastery nodes exist).
+ *   star      — All mastery stars earned; fully mastered.
+ *   partial   — Story cleared but mastery in progress ("earned/total ★").
+ */
+export type ChapterTabBadgeState =
+  | { kind: 'none' }
+  | { kind: 'lock' }
+  | { kind: 'checkmark' }
+  | { kind: 'star' }
+  | { kind: 'partial'; earned: number; total: number };
+
+/**
+ * Pure derivation of the badge that the chapter selector tab should display.
+ *
+ * This is the single source of truth extracted from the inline IIFE in
+ * journey.tsx so that the logic can be unit-tested independently.
+ *
+ * @param summary — ChapterUiSummary produced by buildChapterUiSummary
+ * @param locked  — true when the chapter's gate has not been passed
+ */
+export function getChapterTabBadgeState(
+  summary: ChapterUiSummary,
+  locked: boolean,
+): ChapterTabBadgeState {
+  if (locked) return { kind: 'lock' };
+  if (!summary.storyCleared) return { kind: 'none' };
+
+  const hasMastery = summary.maxMasteryStars > 0;
+  if (!hasMastery) return { kind: 'checkmark' };
+
+  const mastered = summary.masteryStars >= summary.maxMasteryStars;
+  if (mastered) return { kind: 'star' };
+
+  return { kind: 'partial', earned: summary.masteryStars, total: summary.maxMasteryStars };
+}
+
 /**
  * Constructs the full ChapterUiSummary for one chapter.
  *
