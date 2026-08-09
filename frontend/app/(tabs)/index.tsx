@@ -276,6 +276,33 @@ export default function RunHome() {
   // from stacking with the tutorial overlay, return-session card, or rounds
   // panel. lv2SeenRef prevents a second fire if the player object re-renders
   // before markLv2UnlockSeen persists.
+  //
+  // Reset-account contract (Task 624):
+  //   resetPlayer() wipes all `clinica.*` AsyncStorage keys (including the
+  //   persisted player record that carries seen_lv2_unlock) and sets player
+  //   to null. Two paths follow:
+  //
+  //   A) Hub DOES remount after reset (the normal case — reset navigates to
+  //      /title then back):
+  //      lv2SeenRef is a useRef, so it resets to false on unmount/remount.
+  //      The new player starts with seen_lv2_unlock: false (set in
+  //      defaultPlayer in store.tsx). Once the new player completes the
+  //      prologue and reaches Level 2, this effect fires exactly once and
+  //      shows the modal — correct and intended.
+  //
+  //   B) Hub does NOT remount (edge case — reset navigates back without
+  //      unmounting the hub component):
+  //      player becomes null, so the first guard (`!player`) short-circuits
+  //      the effect immediately. lv2SeenRef.current may still be true from
+  //      the previous session, but it is irrelevant because the effect never
+  //      reaches the ref check. When the new player is eventually loaded into
+  //      the same mount, if seen_lv2_unlock is false and the player is Lv2+,
+  //      the modal fires — unless lv2SeenRef is already true, in which case
+  //      it is silently skipped. This is the acceptable trade-off: a mount-
+  //      level ref cannot distinguish "same account re-loaded" from "new
+  //      account loaded into the same mount." Path A (full remount) is the
+  //      authoritative flow; path B is a degenerate edge case that is already
+  //      prevented in practice by the reset navigation sequence.
   useEffect(() => {
     if (!player || loading || showIntro) return;
     if (activeTutorialId || showReturnCard || showRounds) return;
