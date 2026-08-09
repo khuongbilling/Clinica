@@ -158,6 +158,24 @@ const CH1_DAY_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-day.png
 const CH1_DAY_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-day.png')                as number;
 const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png')                 as number;
 
+// Push 10 Ch1 Evening rasters — same atrium at twilight.
+//   background  map-platform-background-ch1-evening.png — amber lanterns, long
+//               diagonal shadows, teal pillars in last daylight, indigo in
+//               corners, central jade fountain, warm gold through arches.
+//   fogInterior fog-tile-evening.png — smoky blue-grey / muted indigo with
+//               warm amber highlights near lit spaces.
+//   terrainBase hex-revealed-evening.png — amber-lit warm stone, jade lotus
+//               rune glowing visibly, amber-silhouetted herbs at corners.
+//   terrainFrontier hex-frontier-evening.png — amber-warm cloud-scroll stone,
+//               jade-teal border glow more prominent in dimming light.
+//   terrainCurrent  hex-current-evening.png — jade-gold mandala, green fire
+//               at border, dramatically vibrant against evening stone.
+const CH1_EVE_BG       = require('@/assets/ui/journey/map/map-platform-background-ch1-evening.png') as number;
+const CH1_EVE_FOG      = require('@/assets/ui/journey/fog/fog-tile-evening.png')                     as number;
+const CH1_EVE_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-evening.png')               as number;
+const CH1_EVE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-evening.png')               as number;
+const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.png')                as number;
+
 CHAPTER_SHIFT_VISUALS[1] = {
   day: {
     background:      CH1_DAY_BG,
@@ -168,9 +186,12 @@ CHAPTER_SHIFT_VISUALS[1] = {
     terrainFrontier: CH1_DAY_FRONTIER,
   },
   evening: {
-    ...DEFAULT_SHIFT_VISUALS.evening,
-    background: BG_EVENING,
-    // Terrain and fog inherit defaults until evening-specific tile art ships.
+    background:      CH1_EVE_BG,
+    fogInterior:     CH1_EVE_FOG,
+    fogEdge:         FOG_EDGE,          // no shift-specific edge raster yet
+    terrainBase:     CH1_EVE_REVEALED,
+    terrainCurrent:  CH1_EVE_CURRENT,
+    terrainFrontier: CH1_EVE_FRONTIER,
   },
   night: {
     ...DEFAULT_SHIFT_VISUALS.night,
