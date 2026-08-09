@@ -25,7 +25,6 @@ import {
   getBookFromSaga,
 } from "@/src/game/journeyHierarchy";
 import {
-  CHAPTERS,
   getChapterStatus,
   type Chapter,
   type ChapterStatus,
@@ -38,11 +37,11 @@ import { SERIF, UI } from "@/src/theme/ui";
 
 // Chapter map backgrounds — one per chapter for Ch1–5, generic fallback for rest
 const CHAPTER_MAP_BG: Record<number, ReturnType<typeof require>> = {
-  1: require("@/assets/map-bg/journey_map_ch1_sanctuary.png"),
-  2: require("@/assets/map-bg/journey_map_ch2_university_courtyard.png"),
-  3: require("@/assets/map-bg/journey_map_ch3_breathing_garden.png"),
-  4: require("@/assets/map-bg/journey_map_ch4_code_rush_tower.png"),
-  5: require("@/assets/map-bg/journey_map_ch5_community_bloom.png"),
+  1: require("@/assets/map-bg/ch1_lotus_sanctuary.png"),
+  2: require("@/assets/map-bg/ch2_amber_ward.png"),
+  3: require("@/assets/map-bg/ch3_sky_citadel.png"),
+  4: require("@/assets/map-bg/ch4_crimson_rush.png"),
+  5: require("@/assets/map-bg/ch5_emerald_forest.png"),
 };
 const CHAPTER_MAP_BG_FALLBACK = require("@/assets/map-bg/ch_generic.png");
 

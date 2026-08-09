@@ -3,9 +3,8 @@
  *
  * Renders the persisted JourneyRun for the current chapter.
  *
- * Feature flag: FEATURE_FLAG_JOURNEY_FOG_MAP_V1 (currently false).
- * This screen is always URL-reachable for development; in-app navigation
- * will only link here once the flag is enabled.
+ * This screen is the primary in-app chapter map; journey.tsx redirects here
+ * unconditionally on load.
  *
  * What is NOT implemented (future pushes):
  *   - Tile movement / path validation

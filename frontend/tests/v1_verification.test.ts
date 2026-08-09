@@ -34,7 +34,6 @@ import {
   JOURNEY_CANONICAL_V1,
   MULTI_THREAT_COMBAT_V1,
   WARD_EVENTS_V1,
-  FEATURE_FLAG_JOURNEY_FOG_MAP_V1,
 } from '../src/game/featureFlags';
 
 import { generateHexTopology }           from '../src/game/journeyMap/topology';
@@ -188,7 +187,7 @@ section('§1  Feature flags');
 test('JOURNEY_CANONICAL_V1 is true', () => ok(JOURNEY_CANONICAL_V1 === true));
 test('MULTI_THREAT_COMBAT_V1 is true', () => ok(MULTI_THREAT_COMBAT_V1 === true));
 test('WARD_EVENTS_V1 is false (not yet enabled — Push 17)', () => ok(WARD_EVENTS_V1 === false));
-test('FEATURE_FLAG_JOURNEY_FOG_MAP_V1 is true', () => ok(FEATURE_FLAG_JOURNEY_FOG_MAP_V1 === true));
+// FEATURE_FLAG_JOURNEY_FOG_MAP_V1 retired — fog-map routing is now unconditional.
 
 test('canonical tile count is defined for ch 1-50', () => {
   for (const ch of [1, 5, 10, 20, 50]) {

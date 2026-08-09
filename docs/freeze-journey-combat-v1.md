@@ -9,7 +9,7 @@
 
 | Flag | Value | Guards |
 |---|---|---|
-| `FEATURE_FLAG_JOURNEY_FOG_MAP_V1` | `true` | Hub Chapters banner → fog-map (Push 15) |
+| `FEATURE_FLAG_JOURNEY_FOG_MAP_V1` | **retired** | Fog-map routing is now unconditional; flag and SVG visual-map components deleted in Push 16 |
 | `JOURNEY_CANONICAL_V1` | `false` | New encounter types: wardEvent, blessing, hazard, supportNpc, protocolCard |
 | `MULTI_THREAT_COMBAT_V1` | `false` | Multi-threat battle system, threat-portrait asset slots |
 | `WARD_EVENTS_V1` | `false` | wardEvent EncounterType, WardEventModal, resolveWardEventVisit |

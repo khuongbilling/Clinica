@@ -7,16 +7,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ROUTES, dynRoute, type AppRoute } from "@/src/game/routes";
 import { getBook, getBookChapters } from "@/src/game/journeyHierarchy";
-import { FEATURE_FLAG_JOURNEY_FOG_MAP_V1 } from "@/src/game/featureFlags";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Chapter1VisualMap } from "@/src/components/Chapter1VisualMap";
-import { Chapter2VisualMap } from "@/src/components/Chapter2VisualMap";
-import { Chapter3VisualMap } from "@/src/components/Chapter3VisualMap";
-import { Chapter4VisualMap } from "@/src/components/Chapter4VisualMap";
-import { Chapter5VisualMap } from "@/src/components/Chapter5VisualMap";
-import { GenericChapterVisualMap } from "@/src/components/GenericChapterVisualMap";
 import { FogboundTileMap } from "@/src/components/FogboundTileMap";
 import { BranchingTriageMap } from "@/src/components/BranchingTriageMap";
 import { WardRestorationMap } from "@/src/components/WardRestorationMap";
@@ -69,7 +62,9 @@ export default function JourneyScreen() {
   const { player, loading, claimJourneyNode } = usePlayer();
   const [activeTab, setActiveTab]       = useState("chapter");
   const [showRounds, setShowRounds]     = useState(false);
-  const [selectedChapterIdx, setSelectedChapterIdx] = useState<number>(0);
+  // ChapterPage is unreachable (redirect fires unconditionally) but its
+  // downstream state still compiles; keep as a constant to avoid regressions.
+  const selectedChapterIdx = 0;
   // Branch selection: keyed by branchGroupId → chosen nodeId.  Session-local;
   // no new store — the recommendation layer reads this on every render.
   const [canonicalChoices, setCanonicalChoices] = useState<Record<string, string>>({});
@@ -89,14 +84,9 @@ export default function JourneyScreen() {
   const [activeShift, setActiveShift] = useState<TimeOfDay>('day');
   const chapterIdxInitialized = useRef(false);
 
-  // Auto-select the player's current chapter on first load.
-  // When a bookId is provided, clamp to chapters within that book's scope so
-  // the rendered chapter is always one that belongs to the active Book.
-  //
-  // When FEATURE_FLAG_JOURNEY_FOG_MAP_V1 is on this screen acts purely as a
-  // loading bridge: once the chapter is resolved we immediately replace the
-  // history entry with the fog-map for that chapter so the user lands on the
-  // handdrawn hex-tile map rather than the old SVG visual-map.
+  // This screen is a loading bridge: once the chapter is resolved we
+  // immediately replace the history entry with the fog-map for that chapter.
+  // When a bookId is provided, clamp to chapters within that book's scope.
   useEffect(() => {
     if (!player || chapterIdxInitialized.current) return;
     chapterIdxInitialized.current = true;
@@ -121,14 +111,9 @@ export default function JourneyScreen() {
       }
     }
 
-    if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1) {
-      // Redirect to the handdrawn hex-tile fog map; don't render the old SVG map.
-      const chapterNumber = CHAPTERS[resolvedIdx]?.number ?? 1;
-      router.replace(dynRoute.chapterFogMap(String(chapterNumber)) as AppRoute);
-      return;
-    }
-
-    setSelectedChapterIdx(resolvedIdx);
+    // Redirect to the handdrawn hex-tile fog map.
+    const chapterNumber = CHAPTERS[resolvedIdx]?.number ?? 1;
+    router.replace(dynRoute.chapterFogMap(String(chapterNumber)) as AppRoute);
   }, [player, sagaId, ageId, bookId]);
 
   if (loading || !player) {
@@ -401,11 +386,7 @@ export default function JourneyScreen() {
                   ]}
                   onPress={() => {
                     if (locked) return;
-                    if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1) {
-                      router.push(dynRoute.chapterFogMap(String(ch.number)) as AppRoute);
-                    } else {
-                      setSelectedChapterIdx(chaptersIdx);
-                    }
+                    router.push(dynRoute.chapterFogMap(String(ch.number)) as AppRoute);
                   }}
                   disabled={locked}
                   testID={`journey-ch-tab-${ch.number}`}
@@ -798,25 +779,9 @@ function ChapterPage({
     return <DualStateMap />;
   }
 
-  // ── scrollable_chapter (default) ─────────────────────────────────────────
-  const shared = {
-    battleStars,
-    claimedNodes,
-    storyScenesSeen,
-    chapterAccent: chapter.accentColor,
-    onPartPress,
-    onNodeClaim,
-    leadHeroSprite,
-  };
-
-  switch (chapter.number) {
-    case 1:  return <Chapter1VisualMap {...shared} />;
-    case 2:  return <Chapter2VisualMap {...shared} />;
-    case 3:  return <Chapter3VisualMap {...shared} />;
-    case 4:  return <Chapter4VisualMap {...shared} />;
-    case 5:  return <Chapter5VisualMap {...shared} />;
-    default: return <GenericChapterVisualMap {...shared} chapter={chapter} />;
-  }
+  // scrollable_chapter mode: fog-map flag is always on so this branch is
+  // unreachable in production (journey.tsx redirects before ChapterPage renders).
+  return null;
 }
 
 const cpStyles = StyleSheet.create({

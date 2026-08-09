@@ -14,18 +14,6 @@
  *   docs/freeze-journey-combat-v1.md.
  */
 
-// ── Journey — Fog Map V1 ────────────────────────────────────────────────────
-//
-// Enabled: Push 15 (production release).
-//
-// When true, tapping an unlocked chapter on the Journey screen navigates
-// directly to /journey/chapter/:chapterId/fog-map (the randomised fogbound
-// hex map).  The prior per-chapter visual maps at /journey remain fully intact
-// as a rollback fallback — disabling this flag instantly restores the old flow.
-//
-// Rollback: set to false, redeploy.  See docs/rollback-journey-fog-map.md.
-export const FEATURE_FLAG_JOURNEY_FOG_MAP_V1 = true;
-
 // ── Journey — Canonical V1 ──────────────────────────────────────────────────
 //
 // Enabled: Push 4 (canonical run persistence).

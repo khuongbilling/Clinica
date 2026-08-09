@@ -12,13 +12,8 @@
  * NOT: flat vector, plain circle icon, photorealistic, dark gray UI, horror,
  * western comic style.
  *
- * ── CHAPTER MAP BACKGROUNDS ──────────────────────────────────────────────────
- * 9:16 (768 × 1408) vertical illustrated journey-map backgrounds.
- * Used by ChapterJourneyMap (V3 push will wire these in).
- *
  * ── NODE PICTURE ICONS ───────────────────────────────────────────────────────
  * 1:1 (1024 × 1024) transparent-bg illustrated 2.5D landmark objects.
- * Used by MapNodeShape (V3 push replaces the NODE_MAP require() entries).
  *
  * ── LESSON BANNERS ───────────────────────────────────────────────────────────
  * 16:9 wide illustrated header banners per lesson topic.
@@ -30,30 +25,7 @@
  *
  * ── MAP SPRITE TOKENS ────────────────────────────────────────────────────────
  * 1:1 transparent-bg chibi/pawn-style map traveler figures per class.
- * Used by ChapterJourneyMap player marker (V3 push).
  */
-
-// ── Chapter Map Backgrounds ───────────────────────────────────────────────────
-
-export const CHAPTER_MAP_BG: Record<string, number> = {
-  /** Ch1 — Lotus Recall Sanctuary training path (teal, jade, warm gold) */
-  ch1_sanctuary: require("../../assets/map-bg/journey_map_ch1_sanctuary.png"),
-  /** Ch2 — Clinica University courtyard and ward bridge (sky-blue, jade, gold) */
-  ch2_university_courtyard: require("../../assets/map-bg/journey_map_ch2_university_courtyard.png"),
-  /** Ch3 — Breathing Garden / Airway Temple path (pale blue, jade mist) */
-  ch3_breathing_garden: require("../../assets/map-bg/journey_map_ch3_breathing_garden.png"),
-  /** Ch4 — Ward Defense Code Rush Tower path (red-gold urgency) */
-  ch4_code_rush_tower: require("../../assets/map-bg/journey_map_ch4_code_rush_tower.png"),
-  /** Ch5 — Community Bloom public health district (civic warmth, gold, jade) */
-  ch5_community_bloom: require("../../assets/map-bg/journey_map_ch5_community_bloom.png"),
-};
-
-/** Resolve chapter map bg by chapter number (1-indexed). Falls back to ch1. */
-export function getChapterMapBg(chapterNumber: number): number {
-  const key = `ch${chapterNumber}_` as string;
-  const match = Object.entries(CHAPTER_MAP_BG).find(([k]) => k.startsWith(key));
-  return match ? match[1] : CHAPTER_MAP_BG.ch1_sanctuary;
-}
 
 // ── Node Picture Icons ────────────────────────────────────────────────────────
 
@@ -76,7 +48,6 @@ export const NODE_ILLUSTRATED: Record<string, number> = {
 
 /**
  * Mapping from ChapterPart.type → illustrated node picture icon.
- * V3 push: drop this into MapNodeShape's NODE_MAP to replace the old entries.
  */
 export const NODE_TYPE_ILLUSTRATED: Record<string, number> = {
   battle:          NODE_ILLUSTRATED.ward_shift_gate,
@@ -198,8 +169,11 @@ export function getMapSprite(classIdOrName: string): number {
 
 // ── Preload module arrays (for launch preloader) ──────────────────────────────
 
-/** All V2 chapter map backgrounds — add to tab/battle preloader if needed. */
-export const CHAPTER_MAP_BG_MODULES: number[] = Object.values(CHAPTER_MAP_BG);
+/**
+ * Chapter map backgrounds were removed when the fog-map renderer replaced the
+ * SVG visual maps. Kept as an empty array so tabAssets.ts spread doesn't break.
+ */
+export const CHAPTER_MAP_BG_MODULES: number[] = [];
 
 /** All V2 node picture icons. */
 export const NODE_ILLUSTRATED_MODULES: number[] = Object.values(NODE_ILLUSTRATED);
