@@ -11,7 +11,7 @@ import { getEnemyHint } from "@/src/game/onboarding";
 import { getMission, getGuidedFeedback } from "@/src/game/missions";
 import { getExplanationLayer, getObjectiveStrip, MISSION_BRIEFINGS, COUNTER_FEEDBACK, getContextualScoutFeedback, getContextualStabilizeFeedback, getContextualReassessFeedback } from "@/src/game/explanationLayers";
 import { getDifficultyModifier, OBJECTIVE_BY_DIFFICULTY, type DifficultyLevel } from "@/src/game/difficulty";
-import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, resolveEnemyWeakElement, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, buildSkillCalcBreakdown, type BattleState, type CastQuality, type CalcBreakdown } from "@/src/game/battle";
+import { applyCall, applyCareAttempt, applySkill, applyTempAction, careAttemptDamage, endPlayerTurn, getEnemySignatureAttack, initBattle, isUltimateReady, resolveEnemyWeakElement, selectHero, useItem as applyItem, previewSkillStatus, previewItemStatus, previewTempStatus, previewCallStatus, applyCard, applyUltimate, answerClinicalCue, skillSupportsCastTiming, buildSkillCalcBreakdown, getRunChance, attemptRun, type BattleState, type CastQuality, type CalcBreakdown } from "@/src/game/battle";
 import { CALL_OPTIONS, ITEMS, TEMP_ACTIONS, Item } from "@/src/game/items";
 import { aggregateUpgradeEffects, findSkin } from "@/src/game/shop";
 import { getCard, CHAIN_TYPE_CONFIG } from "@/src/game/cards";
@@ -31,7 +31,7 @@ import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { BattlefieldScene, type BattleFx, type EnemyAttackKind } from "@/src/components/BattlefieldScene";
 import { SystemPanel } from "@/src/components/onboarding/SystemPanel";
-import { ROUTES } from "@/src/game/routes";
+import { ROUTES, dynRoute } from "@/src/game/routes";
 import { SceneTransition } from "@/src/components/onboarding/SceneTransition";
 import type { ActionType, ClassFamily, Hero, HeroSkill } from "@/src/game/types";
 import { applyStarToHero, getProgress } from "@/src/game/evolution";
@@ -1014,6 +1014,33 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
     requestAnimationFrame(() => { actionProcessingRef.current = false; });
   };
 
+  // ── Run / Flee — replaces the old ✕ instant-exit. Speed-based escape roll;
+  // a failed attempt costs the turn (the enemy acts).
+  const handleRun = () => {
+    if (state.outcome !== "ongoing") return;
+    if (actionProcessingRef.current) return;
+    if (guidedStep) { tutorialNudge(); return; }
+    actionProcessingRef.current = true;
+    const res = attemptRun(state);
+    if (res.escaped) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      // Journey battles: return WITHOUT resolvedTileId/outcome params — the
+      // fog-map only mutates a tile when those come back via result.tsx, so a
+      // fled tile intentionally stays unresolved and can be re-attempted.
+      const dest = journeyReturn === "1" && journeyChapterId
+        ? dynRoute.chapterFogMap(journeyChapterId)
+        : ROUTES.tabs;
+      actionProcessingRef.current = false; // defensive — in case the route stays mounted
+      router.replace(dest as any);
+      return;
+    }
+    showBlockMsg(res.message);
+    turnActionsRef.current = [];
+    triggerEnemyAttack(getEnemySignatureAttack(enemy).kind);
+    setState(endPlayerTurn(res.state));
+    requestAnimationFrame(() => { actionProcessingRef.current = false; });
+  };
+
   const finish = async () => {
     // finish() navigates via router.replace, which the useBlockBack guard
     // deliberately lets through (it only swallows back-type actions).
@@ -1271,9 +1298,12 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
       <View style={styles.zoneA}>
         {/* Hide exit and help buttons during tutorial battles — the ✕ on
             the tutorial overlay box is the only correct exit path. */}
-        {!isMandatoryBattle && (
-          <Pressable style={styles.closeBtn} onPress={() => router.replace(ROUTES.tabs)} testID="battle-close">
-            <Ionicons name="close" size={16} color={COLORS.onSurface} />
+        {/* No ✕ instant-exit — leaving an encounter is a Run attempt with a
+            speed-based success roll (see handleRun). */}
+        {!isMandatoryBattle && state.outcome === "ongoing" && (
+          <Pressable style={styles.runBtn} onPress={handleRun} testID="battle-run">
+            <Ionicons name="walk" size={13} color={COLORS.onSurface} />
+            <Text style={styles.runBtnTxt}>RUN {Math.round(getRunChance(state) * 100)}%</Text>
           </Pressable>
         )}
         {!isMandatoryBattle && (
@@ -2886,6 +2916,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceSecondary,
   },
   closeBtn: { position: "absolute", right: SPACING.xs, top: SPACING.xs, padding: 8, zIndex: 2 },
+  runBtn: {
+    position: "absolute", right: SPACING.xs, top: SPACING.xs, zIndex: 2,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 5,
+    borderRadius: RADIUS.pill,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.18)",
+  },
+  runBtnTxt: { color: COLORS.onSurface, fontSize: 10, fontWeight: "800", letterSpacing: 0.6 },
   helpBtn: { position: "absolute", right: SPACING.xs + 32, top: SPACING.xs, padding: 8, zIndex: 2 },
   enemyHeaderRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingRight: 68 },
   enemyKicker: { color: COLORS.error, fontSize: 12, letterSpacing: 0.5, fontWeight: "700" },

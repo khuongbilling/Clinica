@@ -681,6 +681,52 @@ export function careAttemptDamage(chapter: number, isBoss: boolean): number {
   return 5;
 }
 
+// ── Run / Flee ───────────────────────────────────────────────────────────────
+// Escaping a battle is a speed contest: the team's average Coordination stat
+// (its "speed") against the enemy's pursuit speed (difficulty + instability).
+// Success chance is clamped to 10%–90% — escape is never impossible and never
+// a sure thing.
+export function getRunChance(s: BattleState): number {
+  const team = s.team;
+  const avgSpeed = team.length
+    ? team.reduce((a, h) => a + (h.stats?.coordination ?? 50), 0) / team.length
+    : 50;
+  const enemySpeed = 40 + s.enemy.difficulty * 6 + s.enemy.instability * 2;
+  const raw = 0.55 + (avgSpeed - enemySpeed) / 150;
+  return clamp(raw, 0.10, 0.90);
+}
+
+export interface RunAttemptResult {
+  escaped: boolean;
+  chance: number;
+  state: BattleState;
+  message: string;
+}
+
+/** Roll an escape attempt. On failure the attempt costs the turn — the caller
+ *  must follow up with endPlayerTurn(result.state). `roll` is injectable for
+ *  tests. */
+export function attemptRun(s: BattleState, roll: number = Math.random()): RunAttemptResult {
+  if (s.outcome !== 'ongoing') {
+    return { escaped: false, chance: 0, state: s, message: 'Battle is over.' };
+  }
+  const chance = getRunChance(s);
+  if (roll < chance) {
+    return {
+      escaped: true,
+      chance,
+      state: { ...s, log: [...s.log, '🏃 The team slips away from the encounter!'] },
+      message: 'Escaped!',
+    };
+  }
+  return {
+    escaped: false,
+    chance,
+    state: { ...s, log: [...s.log, `🏃 Escape failed (${Math.round(chance * 100)}% chance) — the ${s.enemy.name} cuts off the retreat!`] },
+    message: 'Escape failed — the enemy presses the attack!',
+  };
+}
+
 export function applyCareAttempt(s: BattleState): ApplyResult {
   if (s.outcome !== 'ongoing') return { state: s, message: 'Battle is over.', aborted: true };
   const heroId = s.selectedHeroId;
