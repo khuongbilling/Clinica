@@ -1129,7 +1129,7 @@ const styles = StyleSheet.create({
   /* Hero info panel wrapper — push-7 HeroAffinityCard sits here */
   infoPanelWrap: {
     marginHorizontal: SPACING.md,
-    marginTop: SPACING.lg,
+    marginTop: SPACING.xl,
   },
 
   /* Start button — layout only; visuals come from PrimaryButton */

@@ -23,6 +23,7 @@
  *   onPress              — navigates to hero detail screen
  */
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { TYPO, UI, UI_RADIUS, SERIF } from "@/src/theme/ui";
@@ -76,8 +77,14 @@ export function HeroAffinityCard({ hero, accentColor, onPress, testID }: HeroAff
       accessibilityLabel={`${hero.name} — Lv. ${hero.level} ${hero.profession}. Tap to view profile.`}
       accessibilityRole="button"
     >
-      {/* Thin coloured accent strip along top edge */}
-      <View style={[s.accentStrip, { backgroundColor: accentColor }]} />
+      {/* Soft themed glow along the top edge — a gradient wash fading into the
+          card, matching the shadow glow on the other three sides. (The old
+          2px solid strip read as a dark line over the dark background.) */}
+      <LinearGradient
+        colors={[accentColor + "66", accentColor + "1A", "transparent"]}
+        style={s.accentGlow}
+        pointerEvents="none"
+      />
 
       {/* ── Row ── */}
       <View style={s.row}>
@@ -155,10 +162,12 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // 2px coloured top strip, same design language as inset panel bevel
-  accentStrip: {
-    height: 2,
-    opacity: 0.70,
+  // Soft top glow — gradient wash replacing the old 2px solid strip
+  accentGlow: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+    height: 14,
+    zIndex: 1,
   },
 
   row: {
