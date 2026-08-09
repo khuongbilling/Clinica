@@ -476,12 +476,12 @@ export default function ChapterFogMapShell() {
   const isCleared = run?.status === 'cleared';
 
   // ── Rechallenge Map eligibility ────────────────────────────────────────────
-  // Derived from run-level key data.  keysCollected here uses areaBossKeysCollected
-  // (run-scoped) which reflects all keys earned across prior attempts for this
-  // chapter because resolveAreaBossWin carries them forward.
+  // Uses chapter-level keysCollected (from player.chapter_boss_keys) so that
+  // eligibility reflects keys earned across ALL prior runs for this chapter,
+  // not just the current run's areaBossKeysCollected.
   const rechallengeKeyState = useMemo(
-    () => createChapterBossKeyState(chNum, run?.areaBossKeysCollected ?? 0),
-    [chNum, run?.areaBossKeysCollected],
+    () => createChapterBossKeyState(chNum, keysCollected),
+    [chNum, keysCollected],
   );
   const rechallengeEligibility = useMemo(
     () => checkRechallengeEligibility(rechallengeKeyState, run?.chapterBossDefeated ?? false),
@@ -1043,8 +1043,8 @@ export default function ChapterFogMapShell() {
                       </Text>
                       <Text style={s.challengeConfirmBody}>
                         Attempt #{(run.attemptNumber) + 1} will start on a new
-                        randomised map. Your {run.areaBossKeysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT} collected
-                        boss key{run.areaBossKeysCollected !== 1 ? 's' : ''} carry forward —
+                        randomised map. Your {keysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT} collected
+                        boss key{keysCollected !== 1 ? 's' : ''} carry forward —
                         only the Chapter Boss defeat resets them.
                       </Text>
                       <View style={s.challengeConfirmRow}>
@@ -1096,7 +1096,7 @@ export default function ChapterFogMapShell() {
                         {RECHALLENGE_MAP_LABEL.toUpperCase()} →
                       </Text>
                       <Text style={s.challengeBtnSub}>
-                        New map · keys carry forward ({run.areaBossKeysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT})
+                        New map · keys carry forward ({keysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT})
                       </Text>
                     </Pressable>
                   )}

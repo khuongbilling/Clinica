@@ -450,13 +450,16 @@ export async function rechallengeMap(
   // the active run is untouched and the player can retry safely.
   await repo.abandonRun(active.id);
 
-  // Create the successor with keys carried forward.
+  // Create the successor with chapter-level keys carried forward.
+  // keyState.keysCollected is the authoritative chapter-level count that
+  // survives across all prior runs — NOT active.areaBossKeysCollected (which
+  // is run-scoped and would be 0 on a fresh run after data loss).
   // If this fails, loadOrCreateJourneyRun will detect the abandoned latest run
   // on the next load and invoke the recovery path to create the successor.
   return repo.createRechallengeRun(
     playerId,
     chapterId,
     active.attemptNumber,
-    active.areaBossKeysCollected,
+    keyState.keysCollected,
   );
 }
