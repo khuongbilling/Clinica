@@ -12,7 +12,7 @@ import { LotusLessonsEmblem, ShiftEmblem, HeroesEmblem, SummoningEmblem } from "
 import { MessageDialog } from "@/src/components/WebAlert";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
-import { useTutorial } from "@/src/game/tutorialStore";
+import { useTutorial, useHighlightTarget } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
@@ -393,12 +393,17 @@ export default function UniversityHubScreen() {
     markUniversityIntroSeen();
   }, [markUniversityIntroSeen]);
 
+  // Objective guide (objGuideUniversity/objGuideApprentice final step):
+  // the chain banner is the highlighted target that completes the guide.
+  const chainTarget = useHighlightTarget("university-chain-banner");
+
   const handleChainEntry = useCallback(() => {
     if (chainProg.stabilizeDone) return;
-    else if (chainProg.rapidTriageDone) router.push(ROUTES.UNI_STABILIZE_STACK);
+    chainTarget.onTargetPress(); // completes an active objective guide
+    if (chainProg.rapidTriageDone)      router.push(ROUTES.UNI_STABILIZE_STACK);
     else if (chainProg.cueHuntDone)     router.push(ROUTES.UNI_RAPID_TRIAGE);
     else                                router.push(ROUTES.UNI_CUE_HUNT);
-  }, [chainProg, router]);
+  }, [chainProg, router, chainTarget]);
 
   useClearTutorialOnExit();
   useWebBackToHub("/(tabs)");
@@ -459,7 +464,9 @@ export default function UniversityHubScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {chainProg.stabilizeDone ? <FaCompleteChip /> : (
             <>
-              <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+              <View style={chainTarget.isHighlighted ? chainTarget.highlightStyle : undefined}>
+                <NextChainBanner chainProg={chainProg} onPress={handleChainEntry} />
+              </View>
               <TutorialQuestPanel
                 chainProg={chainProg}
                 completed={completedObjectives}

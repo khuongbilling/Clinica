@@ -56,7 +56,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs, // slimmed so the System card below is never cropped
     position: "relative",
   },
   titleRow: {

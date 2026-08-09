@@ -21,6 +21,9 @@ export type TutorialId =
   // ── Objective navigation guides (forced-tap wayfinding for the 12-step chain) ──
   | "objGuideMemories"
   | "objGuideUniversity"
+  | "objGuideApprentice"
+  | "objGuideRecruit"
+  | "objGuideLessons"
   | "objGuideWardShift";
 
 export interface TutorialStep {
@@ -79,6 +82,9 @@ export const TUTORIAL_LABELS: Record<TutorialId, string> = {
   mealcraftIntro: "Mealcraft: Lotus Plate",
   objGuideMemories: "Guide: Memory Unlocked",
   objGuideUniversity: "Guide: Clinica University",
+  objGuideApprentice: "Guide: The Fading Apprentice",
+  objGuideRecruit: "Guide: Recruitment Hall",
+  objGuideLessons: "Guide: Lotus Lessons",
   objGuideWardShift: "Guide: First Ward Shift",
 };
 
@@ -464,11 +470,24 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
   ],
 
   // ── Objective navigation guides (forced-tap wayfinding) ─────────────────
+  // Each guide is System-narrated end to end: an opening beat explains WHY
+  // the objective matters, then every subsequent step highlights the exact
+  // control on the current screen and blocks all other navigation until it
+  // is tapped, walking the player all the way to where the objective is
+  // actually completed.
   objGuideMemories: [
+    {
+      id: "objmem_intro",
+      title: "The System",
+      body: "SYSTEM: Memory fragment detected.\n\nA reconstruction of your former life has stabilized. You cannot understand what you are becoming without first seeing what you were. Witness it.",
+      placement: "center",
+      requireAction: false,
+      nextText: "SHOW ME",
+    },
     {
       id: "objmem_tab_journey",
       title: "The System",
-      body: "SYSTEM: Memory fragment detected.\n\nA reconstruction of your former life is ready. Open the Journey ledger to access it.",
+      body: "SYSTEM: The fragment is archived in your Journey ledger — the record of everything you have walked through, and everything still ahead. Open it.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "tab-journey",
@@ -477,7 +496,7 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
     {
       id: "objmem_tab_memories",
       title: "The System",
-      body: "SYSTEM: Archive located.\n\nOpen the Memories archive and witness what brought you here.",
+      body: "SYSTEM: Archive located.\n\nThe Memories shelf holds the fragment. Open it and witness what brought you here.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "journey-tab-memories",
@@ -487,9 +506,95 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
 
   objGuideUniversity: [
     {
+      id: "objuni_intro",
+      title: "The System",
+      body: "SYSTEM: Corrective training required.\n\nClinica University is where raw recall becomes clinical instinct. Until you pass its first case chain, ward access stays sealed. This is not punishment — it is calibration.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
+    },
+    {
       id: "objuni_cta",
       title: "The System",
-      body: "SYSTEM: Objective pending.\n\nYour current directive is displayed on the objective card. Tap it to proceed.",
+      body: "SYSTEM: Your directive is pinned to the objective panel. Tap it — I will route you to the University.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "home-objective-cta",
+      nextText: "TAP THE OBJECTIVE",
+    },
+    {
+      id: "objuni_chain",
+      title: "The System",
+      body: "SYSTEM: This is the Fading Apprentice — a patient case built from your own gaps. Each stage trains one instrument: seeing cues, ordering urgency, holding a patient stable. Begin.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "university-chain-banner",
+      nextText: "START THE CASE",
+    },
+  ],
+
+  objGuideApprentice: [
+    {
+      id: "objfa_intro",
+      title: "The System",
+      body: "SYSTEM: The Fading Apprentice case chain remains open.\n\nThree trials — Cue Hunt, Rapid Triage, Stabilize Stack. Each one you finish becomes a reflex you will not have time to think about in a real ward. Finish the chain.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
+    },
+    {
+      id: "objfa_cta",
+      title: "The System",
+      body: "SYSTEM: Tap your objective. I will take you back to the University.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "home-objective-cta",
+      nextText: "TAP THE OBJECTIVE",
+    },
+    {
+      id: "objfa_chain",
+      title: "The System",
+      body: "SYSTEM: The banner marks your next unfinished trial. The Apprentice is still fading. Continue where you left off.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "university-chain-banner",
+      nextText: "CONTINUE THE CASE",
+    },
+  ],
+
+  objGuideRecruit: [
+    {
+      id: "objrec_intro",
+      title: "The System",
+      body: "SYSTEM: You were never meant to work alone.\n\nThe Recruitment Hall binds legendary healers to your cause. A ward team amplifies every action you take. Preview the ceremony.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
+    },
+    {
+      id: "objrec_cta",
+      title: "The System",
+      body: "SYSTEM: Tap your objective — the Recruitment Hall awaits.",
+      placement: "bottom",
+      requireAction: true,
+      requiredTargetId: "home-objective-cta",
+      nextText: "TAP THE OBJECTIVE",
+    },
+  ],
+
+  objGuideLessons: [
+    {
+      id: "objles_intro",
+      title: "The System",
+      body: "SYSTEM: Knowledge decays unless it is planted.\n\nLotus Lessons are short, focused seeds — each one a clinical concept you will meet again in the ward. Complete the first: recognizing cues of hydration.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
+    },
+    {
+      id: "objles_cta",
+      title: "The System",
+      body: "SYSTEM: Tap your objective — I will open the lesson for you.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "home-objective-cta",
@@ -499,9 +604,17 @@ export const TUTORIALS: Record<TutorialId, TutorialStep[]> = {
 
   objGuideWardShift: [
     {
+      id: "objward_intro",
+      title: "The System",
+      body: "SYSTEM: Calibration complete. Simulation access granted.\n\nEverything you have trained — cues, triage, stability — now faces a patient. This first shift is simulated: fail safely, learn completely.",
+      placement: "center",
+      requireAction: false,
+      nextText: "UNDERSTOOD",
+    },
+    {
       id: "objward_enter",
       title: "The System",
-      body: "SYSTEM: Simulation access granted.\n\nEnter the Ward and complete your first clinical shift.",
+      body: "SYSTEM: Enter the Ward and complete your first clinical shift. I will be watching.",
       placement: "bottom",
       requireAction: true,
       requiredTargetId: "home-enter-ward",

@@ -24,9 +24,11 @@ import {
 import { RADIUS, SPACING } from "@/src/theme/colors";
 import { UI, UI_RADIUS, TYPO, SERIF } from "@/src/theme/ui";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
+import { usePlayer } from "@/src/game/store";
+import { playerLevelFromXp } from "@/src/game/progression";
+import { getSystemIdentity } from "@/src/game/systemNarrator";
 
 // ── Raster assets ────────────────────────────────────────────────────────────
-const SYSTEM_MEDALLION   = require("../../../assets/ui-icons/hub/system-medallion.png");
 const OBJECTIVE_FLAG     = require("../../../assets/ui-icons/hub/objective-flag.png");
 const ORNAMENT_LEFT      = require("../../../assets/ui-icons/hub/objective-ornament-left.png");
 
@@ -75,6 +77,14 @@ export function SystemObjectiveCard({
   const [open, setOpen] = useState(defaultOpen);
   const reduceMotion = useReducedMotion();
 
+  // The System's own avatar (dark silhouette until reveal, then aptitude art)
+  // — same identity source as the NarratorGuide portrait.
+  const { player } = usePlayer();
+  const identity = getSystemIdentity(
+    player ? playerLevelFromXp(player.xp ?? 0).level : 1,
+    player?.aptitude,
+  );
+
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(8)).current;
   useEffect(() => {
@@ -92,11 +102,11 @@ export function SystemObjectiveCard({
     >
       {/* ── Main row ── */}
       <View style={s.mainRow}>
-        {/* System medallion — PNG replaces SVG stethoscope */}
+        {/* The System's avatar portrait (silhouette until reveal) */}
         <ExpoImage
-          source={SYSTEM_MEDALLION}
+          source={identity.art}
           style={s.medallion}
-          contentFit="contain"
+          contentFit="cover"
           accessible={false}
         />
 
@@ -214,6 +224,11 @@ const s = StyleSheet.create({
   medallion: {
     width: 44,
     height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: JADE + "66",
+    backgroundColor: "rgba(3,28,28,0.6)",
+    overflow: "hidden",
     flexShrink: 0,
   },
   kicker: {
