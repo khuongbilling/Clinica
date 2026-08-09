@@ -9,6 +9,7 @@ import { getHeroSprite } from "@/src/components/HeroSprites";
 import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { ROUTES } from "@/src/game/routes";
+import { playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function HeroSelectScreen() {
@@ -30,6 +31,7 @@ export default function HeroSelectScreen() {
   const owned = new Set(player.heroes_owned);
   const ownedHeroes = HEROES.filter((h) => owned.has(h.id));
   const currentTeam = player.active_team ?? [];
+  const summonUnlocked = playerLevelFromXp(player.xp ?? 0).level >= 2;
 
   const confirm = async () => {
     setSaving(true);
@@ -64,10 +66,16 @@ export default function HeroSelectScreen() {
             <Text style={styles.emptyTxt}>
               Heroes join your ward through University Recruitment. Enroll your first healer, then pick your lead here.
             </Text>
-            <Pressable style={styles.emptyBtn} onPress={() => router.push(ROUTES.universityRecruit)} testID="hero-select-empty-recruit-btn">
-              <Ionicons name="school" size={14} color={COLORS.onBrand} />
-              <Text style={styles.emptyBtnTxt}>GO TO RECRUITMENT HALL</Text>
-            </Pressable>
+            {summonUnlocked ? (
+              <Pressable style={styles.emptyBtn} onPress={() => router.push(ROUTES.universityRecruit)} testID="hero-select-empty-recruit-btn">
+                <Ionicons name="school" size={14} color={COLORS.onBrand} />
+                <Text style={styles.emptyBtnTxt}>GO TO RECRUITMENT HALL</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.emptyLocked} testID="hero-select-empty-locked">
+                Complete your training to unlock Recruitment
+              </Text>
+            )}
           </View>
         )}
         <View style={styles.grid}>
@@ -153,6 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.lg, marginTop: SPACING.xs,
   },
   emptyBtnTxt: { color: COLORS.onBrand, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  emptyLocked: { color: COLORS.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", textAlign: "center", marginTop: 4 },
   root: { flex: 1, backgroundColor: COLORS.surface },
   loading: { alignItems: "center", justifyContent: "center" },
   header: {

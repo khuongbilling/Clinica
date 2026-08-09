@@ -184,6 +184,8 @@ export default function RunHome() {
   // (tapping "Explore the Hub" on that card stays on the hub without navigating).
   const [localDismissGuide, setLocalDismissGuide] = useState(false);
   const roundsSignalSeen = useRef(0);
+  // Lv2 modal: fire at most once per mount even if player re-renders before persist.
+  const lv2SeenRef = useRef(false);
   // P6: return-session motivation card (session-scoped, resets each app open)
   const [showReturnCard, setShowReturnCard] = useState(false);
   const returnCardInitRef = useRef(false);
@@ -270,15 +272,20 @@ export default function RunHome() {
   }, [player?.seen_reminiscence, systemHubIntroCompleted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // C5 — Level 2 "Apprentice Path Opened" celebration. Fire once the player
-  // reaches Level 2 and hasn't yet seen the unlock moment. The intro modal
-  // is dismissed first (stacking guard via showIntro).
+  // reaches Level 2 and hasn't yet seen the unlock moment. Guards prevent it
+  // from stacking with the tutorial overlay, return-session card, or rounds
+  // panel. lv2SeenRef prevents a second fire if the player object re-renders
+  // before markLv2UnlockSeen persists.
   useEffect(() => {
     if (!player || loading || showIntro) return;
+    if (activeTutorialId || showReturnCard || showRounds) return;
+    if (lv2SeenRef.current) return;
     const lvl = playerLevelFromXp(player.xp ?? 0).level;
     if (lvl >= 2 && !player.seen_lv2_unlock) {
+      lv2SeenRef.current = true;
       setShowLv2Modal(true);
     }
-  }, [player?.id, player?.xp, player?.seen_lv2_unlock, loading, showIntro]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [player?.id, player?.xp, player?.seen_lv2_unlock, loading, showIntro, activeTutorialId, showReturnCard, showRounds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     AsyncStorage.getItem(WORLD_EVENT_BANNER_KEY).then((v) => setEventBannerDismissed(!!v));
@@ -679,22 +686,6 @@ export default function RunHome() {
             testID="home-hero-card"
           />
         </View>
-      ) : summonUnlocked ? (
-        /* No heroes + hall unlocked — compact recruit prompt below the arena */
-        <Pressable
-          style={styles.infoPanelRecruit}
-          onPress={() => router.push(ROUTES.UNI_RECRUIT)}
-          testID="home-recruit-prompt"
-          accessibilityLabel="Your first healer awaits — visit the Recruitment Hall"
-          accessibilityRole="button"
-        >
-          <Ionicons name="sparkles" size={18} color={UI.gold} />
-          <View style={{ flex: 1, gap: 1 }}>
-            <Text style={styles.infoPanelRecruitTitle} numberOfLines={1}>Your first healer awaits</Text>
-            <Text style={styles.infoPanelRecruitSub} numberOfLines={2}>Visit the Recruitment Hall to summon your team</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={UI.gold} />
-        </Pressable>
       ) : null}
 
       {/* ── START SHIFT — gated: first University lesson required ── */}
@@ -1087,30 +1078,6 @@ const styles = StyleSheet.create({
   },
   tapDot:   { width: 5, height: 5, borderRadius: 3, opacity: 0.85 },
   tapLabel: { color: COLORS.onSurfaceTertiary, fontSize: 12, letterSpacing: 0.3 },
-
-  /* Recruit prompt — shown instead of hero info panel when no heroes */
-  infoPanelRecruit: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.xs,
-    backgroundColor: UI.gold + "0E",
-    borderRadius: UI_RADIUS.card,
-    padding: SPACING.md,
-    borderWidth: 1.5,
-    borderColor: UI.gold + "40",
-  },
-  infoPanelRecruitTitle: {
-    color: UI.gold + "EE",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  infoPanelRecruitSub: {
-    color: UI.textDim,
-    fontSize: 12,
-    lineHeight: 17,
-  },
 
   /* Hero info panel wrapper — push-7 HeroAffinityCard sits here */
   infoPanelWrap: {

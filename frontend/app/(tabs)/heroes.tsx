@@ -151,20 +151,13 @@ export default function HeroesScreen() {
       {activeTab === "roster" && (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {player.heroes_owned.length === 0 && (
-            <Pressable
-              style={styles.emptyBanner}
-              onPress={() => router.push(ROUTES.universityRecruit)}
-              testID="heroes-empty-recruit-btn"
-            >
+            <View style={styles.emptyBanner} testID="heroes-empty-state">
               <Ionicons name="school" size={22} color={COLORS.brand} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.emptyTitle}>No healers yet</Text>
-                <Text style={styles.emptyTxt}>Recruit from Clinica University to build your team.</Text>
+                <Text style={styles.emptyTxt}>Visit the Recruit tab to summon your first hero.</Text>
               </View>
-              <View style={styles.emptyBtn}>
-                <Text style={styles.emptyBtnTxt}>RECRUIT</Text>
-              </View>
-            </Pressable>
+            </View>
           )}
           {/* ── Filter chips ── */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}

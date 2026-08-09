@@ -73,7 +73,7 @@ export function Lv2UnlockModal({ visible, onDismiss }: Props) {
 
   const goToSummoning = () => {
     onDismiss();
-    setTimeout(() => router.push(ROUTES.UNI_RECRUIT), 300);
+    router.push(ROUTES.UNI_RECRUIT);
   };
 
   return (
