@@ -46,7 +46,7 @@
  * so no data is lost when WARD_EVENTS_V1 flips true.
  */
 
-import { generateHexTopology }         from './topology';
+import { getChapterMapTemplate }       from './chapterMapTemplates';
 import { assignJourneyEncounters }     from './encounters';
 import { assignCanonicalEncounters }   from './canonicalEncounters';
 import { computeInitialFog }           from './fogCalculator';
@@ -315,7 +315,14 @@ export function buildInitialJourneyRun({
 // ── generateRunData ───────────────────────────────────────────────────────────
 
 /**
- * Generate topology + encounters from a seed, chapter, and shift.
+ * Generate topology + encounters for a run.
+ *
+ * AUTHORED MAP RULE: the physical geometry (coordinates, shape, tile count,
+ * start tile, boss gate) comes from the chapter's fixed authored template
+ * (getChapterMapTemplate) and does NOT depend on the run seed.  The run seed
+ * randomizes only the encounter layer, so regenerating / rechallenging a
+ * chapter re-rolls encounters on the SAME map.  All shifts share the same
+ * geometry too (shift only affects encounter distribution here).
  *
  * When JOURNEY_CANONICAL_V1 is true: uses assignCanonicalEncounters()
  *   (shift-weighted, density-capped, one-roll-per-tile).
@@ -328,7 +335,7 @@ export function generateRunData(
   seed:    string,
   shift:   TimeOfDay,
 ): { topology: HexTopology; encounters: RunEncounterInput } {
-  const topology = generateHexTopology({ chapter, seed });
+  const topology = getChapterMapTemplate(chapter);
 
   if (JOURNEY_CANONICAL_V1) {
     const enc = assignCanonicalEncounters({ chapter, seed, timeOfDay: shift, topology });

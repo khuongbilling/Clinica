@@ -17,7 +17,7 @@
  * No React, Expo, or UI imports belong here.
  */
 
-import { generateHexTopology } from './topology';
+import { getChapterMapTemplate } from './chapterMapTemplates';
 import { assignJourneyEncounters } from './encounters';
 import type { JourneyRun, JourneyTile, TimeOfDay } from './types';
 
@@ -84,8 +84,8 @@ export function createJourneyRun({
   // Deterministic stable ID: player + chapter + attempt uniquely identifies a run.
   const id = `run_${playerId}_ch${chapterId}_a${attemptNumber}`;
 
-  // ── Generate topology (hex coordinates + start/gate positions) ──────────────
-  const topology = generateHexTopology({ chapter: chapterId, seed });
+  // ── Fixed authored geometry (coordinates + start/gate) — never seed-derived ──
+  const topology = getChapterMapTemplate(chapterId);
 
   // ── Assign encounters and chest tiers to every tile ─────────────────────────
   const { tiles: assignedTiles, areaBossCount } = assignJourneyEncounters({

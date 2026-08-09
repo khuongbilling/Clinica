@@ -71,7 +71,14 @@ import { SERIF, UI }                       from '@/src/theme/ui';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 const ASSET = {
-  mapBg:          require('@/assets/ui/journey/map/map-platform-background.webp')     as number,
+  /**
+   * Per-shift raster map environments (AUTHORED MAP ADJUSTMENT — final art rule).
+   * Dedicated artwork per shift — never simulated with CSS filters.
+   * The original dark environment is the NIGHT visual direction.
+   */
+  mapBgDay:       require('@/assets/ui/journey/map/map-platform-background-day.webp')     as number,
+  mapBgEvening:   require('@/assets/ui/journey/map/map-platform-background-evening.webp') as number,
+  mapBgNight:     require('@/assets/ui/journey/map/map-platform-background.webp')         as number,
   keyFragment:    require('@/assets/ui/journey/gate/key-fragment.webp')               as number,
   gateLocked:     require('@/assets/ui/journey/gate/chapter-boss-gate-locked.webp')   as number,
   gateUnlocked:   require('@/assets/ui/journey/gate/chapter-boss-gate-unlocked.webp') as number,
@@ -965,7 +972,16 @@ export default function ChapterFogMapShell() {
             setMapSize({ w: Math.floor(width), h: Math.floor(height) });
           }}
         >
-          <Image source={ASSET.mapBg} style={s.mapBg} contentFit="cover" testID="map-background" />
+          <Image
+            source={
+              run?.shift === 'day'     ? ASSET.mapBgDay :
+              run?.shift === 'evening' ? ASSET.mapBgEvening :
+              ASSET.mapBgNight
+            }
+            style={s.mapBg}
+            contentFit="cover"
+            testID="map-background"
+          />
 
           {runLoading && !debugTiles ? (
             <View style={s.mapLoadingOverlay}>
