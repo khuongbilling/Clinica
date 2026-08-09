@@ -154,9 +154,14 @@ interface HexTileProps {
   ox:   number;
   oy:   number;
   onPress: (tile: HexMapTile) => void;
+  /**
+   * When set and this tile is current: renders the exploration character
+   * in place of the medallion token.  When absent: medallion is preserved.
+   */
+  explorationCharacter?: number;
 }
 
-function HexTile({ tile, sz, ox, oy, onPress }: HexTileProps) {
+function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter }: HexTileProps) {
   const pos      = tilePos(tile.q, tile.r, sz, ox, oy);
   const base     = baseSrc(tile);
   const marker   = encounterSrc(tile);
@@ -234,15 +239,38 @@ function HexTile({ tile, sz, ox, oy, onPress }: HexTileProps) {
         />
       )}
 
-      {/* ── Player token — current tile only ─────────────────────────────── */}
-      {tile.current && (
-        <Image
-          source={PLAYER_TOKEN}
-          style={[s.marker, { left: tokenX, top: tokenY, width: tokenSz, height: tokenSz }]}
-          contentFit="contain"
-          recyclingKey={`token-${tile.id}`}
-        />
-      )}
+      {/* ── Player token / exploration character — current tile only ──────── */}
+      {/* explorationCharacter: class map sprite (chibi/pawn). Renders in      */}
+      {/* place of the medallion. Absent → fallback to medallion (spec rule).  */}
+      {/* The character is sized slightly taller than the tile so it visually  */}
+      {/* overlaps adjacent terrain — intentional pawn-on-board aesthetic.     */}
+      {tile.current && (() => {
+        if (explorationCharacter) {
+          const charW = Math.round(sz * 0.78);
+          const charH = Math.round(sz * 1.05);
+          const charX = Math.round((sz - charW) / 2);
+          // Anchor so feet sit at ~80 % down the tile; head overflows above.
+          // Negative offset — character top extends above the tile edge so
+          // feet land at ~tile-bottom. 5 % overhang feels like a pawn on a board.
+          const charY = -Math.round(sz * 0.05);
+          return (
+            <Image
+              source={explorationCharacter}
+              style={[s.marker, { left: charX, top: charY, width: charW, height: charH }]}
+              contentFit="contain"
+              recyclingKey={`char-${tile.id}`}
+            />
+          );
+        }
+        return (
+          <Image
+            source={PLAYER_TOKEN}
+            style={[s.marker, { left: tokenX, top: tokenY, width: tokenSz, height: tokenSz }]}
+            contentFit="contain"
+            recyclingKey={`token-${tile.id}`}
+          />
+        );
+      })()}
     </Pressable>
   );
 }
@@ -304,6 +332,20 @@ export interface HexMapLayerProps {
    *   revealed → rendered (gate is in view)
    */
   gateArt?: GateArtProps;
+
+  /**
+   * Raster asset for the player's active exploration character (chibi/pawn
+   * map sprite keyed by the player's class_tree_id).
+   *
+   * When provided: replaces the medallion player token on the current tile
+   * with the character sprite, centred on the hex and sized to overlap the
+   * tile naturally. The jade glow (hex-current.webp base) and tile selection
+   * state are preserved — only the token image changes.
+   *
+   * When absent (player has no resolved class yet): the existing medallion
+   * marker is preserved unchanged. Do NOT substitute a generic icon.
+   */
+  explorationCharacter?: number;
 }
 
 export function HexMapLayer({
@@ -312,6 +354,7 @@ export function HexMapLayer({
   tiles = JOURNEY_MAP_FIXTURE,
   onTilePress,
   gateArt,
+  explorationCharacter,
 }: HexMapLayerProps) {
 
   // ── Geometry (recomputed on every render; cheap enough to not useMemo) ─────
@@ -493,6 +536,7 @@ export function HexMapLayer({
             ox={ox}
             oy={oy}
             onPress={handleTilePress}
+            explorationCharacter={explorationCharacter}
           />
         ))}
 

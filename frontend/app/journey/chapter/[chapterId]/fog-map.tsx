@@ -68,6 +68,7 @@ import { playerLevelFromXp }               from '@/src/game/progression';
 import { buildChapterUiSummary }           from '@/src/features/journey/ui/journeyVisibility';
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
+import { getMapSprite }                    from '@/src/game/illustratedAssets';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 const ASSET = {
@@ -583,6 +584,14 @@ export default function ChapterFogMapShell() {
   // current map.  Zero-boss chapters (ch1–3) keep the discovery-based fallback.
   const gateUnlocked      = zeroKeyMap ? gateDiscovered : keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT;
 
+  // ── Exploration character sprite ──────────────────────────────────────────
+  // Resolved from the player's class_tree_id — the same key getMapSprite uses.
+  // Undefined when the player has no class yet; HexMapLayer falls back to the
+  // medallion token so no generic icon is ever substituted (spec rule).
+  const explorationCharacter: number | undefined = player?.class_tree_id
+    ? getMapSprite(player.class_tree_id)
+    : undefined;
+
   // Stats panel values
   const totalTiles    = run?.tileCount         ?? 0;
   const exploredTiles = run?.exploredTileCount  ?? 0;
@@ -995,6 +1004,7 @@ export default function ChapterFogMapShell() {
                 unlockedSrc: ASSET.gateUnlocked,
                 unlocked:    gateUnlocked,
               }}
+              explorationCharacter={explorationCharacter}
             />
           )}
         </View>
