@@ -34,6 +34,8 @@ import type { HexMapTile }                from '@/src/components/journey/HexMapL
 import { CHAPTERS }                        from '@/src/game/chapterJourney';
 import { generateDebugFixture, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { loadOrCreateJourneyRun, challengeChapter, rechallengeMap } from '@/src/game/journeyMap/journeyRunLifecycle';
+import { resolveRunShift, isCanonicalChoiceChapter } from '@/src/game/journeyMap/chapterShiftRules';
+import type { TimeOfDay } from '@/src/game/journeyMap/types';
 import {
   checkRechallengeEligibility,
   claimAreaBossKey,
@@ -271,6 +273,7 @@ export default function ChapterFogMapShell() {
     outcome:          battleOutcome,
     journeyIsAreaBoss,
     journeyIsChapterBoss,
+    shift:            requestedShiftParam,
   } = useLocalSearchParams<{
     chapterId:            string;
     debug?:               string;
@@ -278,10 +281,23 @@ export default function ChapterFogMapShell() {
     outcome?:             string;
     journeyIsAreaBoss?:   string;
     journeyIsChapterBoss?: string;
+    /** Player-chosen shift for choice chapters (Ch4/7/9/10); validated below. */
+    shift?:               string;
   }>();
   const router               = useRouter();
   const insets               = useSafeAreaInsets();
-  const { player, spendStamina, applyRewards, updateState, applyFogMapChapterBossRewards, reconcileChapterBossKeys } = usePlayer();
+  const { player, spendStamina, applyRewards, updateState, applyFogMapChapterBossRewards, reconcileChapterBossKeys, setCanonicalShift } = usePlayer();
+
+  // Always-fresh refs for shift resolution — updated every render so the
+  // run-load effect and challenge callback never close over stale
+  // canonical-shift or route-param values (review-flagged stale-closure risk).
+  const canonicalShiftsRef = useRef(player?.canonical_shifts);
+  canonicalShiftsRef.current = player?.canonical_shifts;
+  const requestedShiftRef = useRef<TimeOfDay | undefined>(undefined);
+  requestedShiftRef.current =
+    requestedShiftParam === 'day' || requestedShiftParam === 'evening' || requestedShiftParam === 'night'
+      ? requestedShiftParam
+      : undefined;
 
   const { height: windowHeight } = useWindowDimensions();
   // Responsive map height: ~45 % of the window, clamped between 240 and 480 px.
@@ -365,7 +381,17 @@ export default function ChapterFogMapShell() {
     setRunLoading(true);
     setRunError(null);
 
-    loadOrCreateJourneyRun(player.id, chNum, journeyRunRepository, keysCollected)
+    // Shift for a brand-new attempt #1 comes from the ChapterShiftRule layer:
+    // fixed for Ch1-3, canonical-inherit for Ch5-6/8, player choice (via the
+    // requestedShift route param) for Ch4/7/9/10.  Existing runs keep their
+    // frozen shift regardless.  Reads go through refs (updated every render)
+    // so this effect never closes over stale canonical/param values.
+    const newRunShift = resolveRunShift(
+      chNum,
+      (ch) => canonicalShiftsRef.current?.[String(ch)],
+      requestedShiftRef.current,
+    );
+    loadOrCreateJourneyRun(player.id, chNum, journeyRunRepository, keysCollected, newRunShift)
       .then(r => { if (!cancelled) { setRun(r); setRunLoading(false); } })
       .catch(err => {
         if (!cancelled) {
@@ -440,6 +466,14 @@ export default function ChapterFogMapShell() {
       // Also mark cleared on the backend.
       journeyRunRepository.markRunCleared(updated.id)
         .catch(e => console.warn('[fog-map] markRunCleared failed:', e));
+      // ── Canonical shift (Book I choice chapters) ────────────────────────────
+      // First clear of a choice chapter (Ch4/7/9/10) records its shift as the
+      // chapter's canonical shift; inherit chapters (Ch5-6, Ch8) read it.
+      // setCanonicalShift is write-once, so replays never mutate it.
+      if (isCanonicalChoiceChapter(chNum)) {
+        setCanonicalShift(chNum, run.shift)
+          .catch(e => console.warn('[fog-map] setCanonicalShift failed:', e));
+      }
       // ── Atomic: completion XP + required-node claims in one store write ────
       // applyFogMapChapterBossRewards reads playerRef.current (always fresh)
       // and issues a single updateState, avoiding the stale-snapshot race that
@@ -603,9 +637,12 @@ export default function ChapterFogMapShell() {
         journeyTileId:        tileId,
         journeyIsAreaBoss:    isAreaBoss    ? '1' : '0',
         journeyIsChapterBoss: isChapterBoss ? '1' : '0',
+        // Battle bridge: the run's frozen TimeOfDay travels with the battle
+        // so shift-specific orchestration can key off it.
+        journeyShift:         run?.shift ?? 'day',
       },
     });
-  }, [router, chNum]);
+  }, [router, chNum, run?.shift]);
 
   /**
    * Handle a tap on the chapter-boss gate tile or the "ENTER BOSS GATE" button.
@@ -633,7 +670,16 @@ export default function ChapterFogMapShell() {
     setChallengePhase('creating');
     setChallengeError(null);
     try {
-      const newRun = await challengeChapter(player.id, chNum, journeyRunRepository);
+      // Post-clear replays resolve via the ChapterShiftRule layer too: fixed
+      // chapters stay fixed, inherit chapters follow the canonical shift, and
+      // choice chapters default to the chapter's canonical shift (recorded at
+      // first clear) unless a new ?shift= choice was passed.
+      const replayShift = resolveRunShift(
+        chNum,
+        (ch) => canonicalShiftsRef.current?.[String(ch)],
+        requestedShiftRef.current ?? canonicalShiftsRef.current?.[String(chNum)],
+      );
+      const newRun = await challengeChapter(player.id, chNum, journeyRunRepository, replayShift);
       // Reset in-flight guards for the new run.
       battleResultApplied.current = false;
       movingRef.current            = false;

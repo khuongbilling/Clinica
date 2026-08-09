@@ -35,7 +35,7 @@ interface PlayerLevelUpParsed { fromLevel: number; toLevel: number }
 export default function Result() {
   const router = useRouter();
   const { player, advanceProloguePhase } = usePlayer();
-  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss } = useLocalSearchParams<{
+  const { outcome, enemyId, stability, training, prologue, replay, shards, crowns, epidemicTokens, fullChain, unsafe, poorFit, turns, reassess, consults, emergency, inappropriate, basicAid, playerXp, heroXp, playerLevelUp: playerLevelUpParam, heroLevelUps: heroLevelUpsParam, baseXp: baseXpParam, starsPct: starsPctParam, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyShift } = useLocalSearchParams<{
     outcome: string; enemyId: string; stability: string; training?: string; prologue?: string; replay?: string; shards?: string; crowns?: string; epidemicTokens?: string;
     fullChain?: string; unsafe?: string; poorFit?: string; turns?: string; reassess?: string;
     consults?: string; emergency?: string; inappropriate?: string; basicAid?: string;
@@ -43,7 +43,7 @@ export default function Result() {
     baseXp?: string; starsPct?: string;
     // Journey fog-map context — set when battle was launched from the fog-map.
     journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string;
-    journeyIsAreaBoss?: string; journeyIsChapterBoss?: string;
+    journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyShift?: string;
   }>();
   // When this battle originated from the fog-map, route back there on finish.
   const won = outcome === "win";
@@ -53,6 +53,9 @@ export default function Result() {
     outcome:              won ? "win" : "loss",
     journeyIsAreaBoss:    journeyIsAreaBoss    ?? "",
     journeyIsChapterBoss: journeyIsChapterBoss ?? "",
+    // Preserve the frozen run shift on the return route so fog-map's shift
+    // param never falls back to the default after a battle round-trip.
+    shift:                journeyShift         ?? "",
   } : null;
   const isTraining = training === "1";
   const isPrologueTutorial = prologue === "tutorial";

@@ -216,6 +216,7 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.class_specialization) out = { ...out, class_specialization: {} };
   // Task 570 — backfill chapter-level Area Boss key progression for pre-570 saves.
   if (!out.chapter_boss_keys) out = { ...out, chapter_boss_keys: {} };
+  if (!out.canonical_shifts) out = { ...out, canonical_shifts: {} };
   // Push 4 — backfill Practice Curriculum completion list for pre-P4 saves.
   if (!out.practice_modules_completed) out = { ...out, practice_modules_completed: [] };
   if (out.seen_practice_curriculum == null) out = { ...out, seen_practice_curriculum: false };
@@ -559,6 +560,11 @@ type Ctx = {
   ) => Promise<void>;
   // C5 — dismiss the Level 2 "Apprentice Path Opened" celebration modal.
   markLv2UnlockSeen: () => Promise<void>;
+  /**
+   * Record the canonical shift for a choice chapter at FIRST CLEAR.
+   * Idempotent: first write wins — later clears never mutate it.
+   */
+  setCanonicalShift: (chapterId: number, shift: 'day' | 'evening' | 'night') => Promise<void>;
   // P5 — dismiss the University intro panel (shown once on first visit).
   markUniversityIntroSeen: () => Promise<void>;
   // Low-level full-player write — prefer applyRewards for incremental updates.
@@ -2798,6 +2804,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await updateState(next);
   }, [updateState]);
 
+  // ── Canonical shift (Book I choice chapters) — first-clear, write-once ─────
+  const setCanonicalShift = useCallback(async (
+    chapterId: number,
+    shift: 'day' | 'evening' | 'night',
+  ) => {
+    const base = playerRef.current;
+    if (!base) return;
+    const key = String(chapterId);
+    if (base.canonical_shifts?.[key]) return; // first write wins
+    const next: PlayerState = {
+      ...base,
+      canonical_shifts: { ...(base.canonical_shifts ?? {}), [key]: shift },
+    };
+    playerRef.current = next;
+    await updateState(next);
+  }, [updateState]);
+
   // ── C5 — mark the Level 2 unlock celebration as seen ───────────────────────
   const markLv2UnlockSeen = useCallback(async () => {
     const base = playerRef.current;
@@ -2957,6 +2980,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     claimSpecialization,
     applyFogMapChapterBossRewards,
     reconcileChapterBossKeys,
+    setCanonicalShift,
   }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;

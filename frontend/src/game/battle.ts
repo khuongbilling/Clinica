@@ -176,6 +176,8 @@ export interface BattleState {
   // Push 11 — Player class tree combat bonuses (computed once at initBattle from
   // class_tree_id + class_progress; never mutated during battle).
   classBonus: ClassTreeBattleBonus | null;
+  // Journey battle bridge — frozen run shift, null for non-Journey battles.
+  shift: 'day' | 'evening' | 'night' | null;
   classFirstScoutUsed: boolean;        // Seer: true after the first scout action of this battle
   classStabilizeUsedThisTurn: boolean; // Caretaker: true when any stabilize skill fired this turn
   classItemFirstUsed: boolean;         // Alchemist lotus_pharmacist: true after first item consumed (free-AP once)
@@ -200,6 +202,12 @@ export interface BattleState {
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
 
 export interface InitBattleOptions {
+  // Journey battle bridge — the frozen TimeOfDay of the JourneyRun this battle
+  // was launched from ('day' | 'evening' | 'night'). Stored on the battle state
+  // so shift-specific orchestration (shiftOrchestration.ts: Day all-active,
+  // Evening handoff reinforcement, Night latent threat) can key off it.
+  // Undefined for non-Journey battles (ward shift, prologue, training).
+  shift?: 'day' | 'evening' | 'night';
   inventory?: Record<string, number>;
   profile?: LearningProfile;
   enemyMastery?: Record<string, number>;
@@ -557,6 +565,7 @@ export function initBattle(enemy: Enemy, team: Hero[], opts: InitBattleOptions =
     heroContribution: {},
 
     classBonus: opts.classTreeBonus ?? null,
+    shift: opts.shift ?? null,
     classFirstScoutUsed: false,
     classStabilizeUsedThisTurn: false,
     classItemFirstUsed: false,

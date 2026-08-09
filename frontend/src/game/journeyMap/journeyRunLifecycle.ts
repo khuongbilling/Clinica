@@ -113,7 +113,7 @@ export interface IJourneyRunRepository {
    * concurrent request), returns the existing run rather than creating a
    * duplicate.
    */
-  createFirstRun(playerId: string, chapterId: number): Promise<JourneyRun>;
+  createFirstRun(playerId: string, chapterId: number, shift?: TimeOfDay): Promise<JourneyRun>;
 
   /**
    * Atomically create the next challenge attempt.
@@ -126,6 +126,7 @@ export interface IJourneyRunRepository {
     playerId:           string,
     chapterId:          number,
     priorAttemptNumber: number,
+    shift?:             TimeOfDay,
   ): Promise<JourneyRun>;
 
   /** Persist the full mutable run state after player actions. */
@@ -155,6 +156,7 @@ export interface IJourneyRunRepository {
     chapterId:            number,
     priorAttemptNumber:   number,
     inheritedAreaBossKeys: number,
+    shift?:               TimeOfDay,
   ): Promise<JourneyRun>;
 }
 
@@ -362,6 +364,13 @@ export async function loadOrCreateJourneyRun(
   chapterId:            number,
   repo:                 IJourneyRunRepository,
   chapterKeysCollected?: number,
+  /**
+   * Shift for a NEW attempt #1, resolved by the caller via the
+   * ChapterShiftRule layer (chapterShiftRules.resolveRunShift).  Ignored when
+   * an existing run is returned.  Recovery attempts always inherit the
+   * abandoned run's shift (canonical shift persistence).
+   */
+  shift?:               TimeOfDay,
 ): Promise<JourneyRun> {
   const active = await repo.getActiveRun(playerId, chapterId);
   if (active) return active;
@@ -382,10 +391,11 @@ export async function loadOrCreateJourneyRun(
       chapterId,
       latest.attemptNumber,
       inheritedKeys,
+      latest.shift, // pre-clear attempts keep the same canonical shift
     );
   }
 
-  return repo.createFirstRun(playerId, chapterId);
+  return repo.createFirstRun(playerId, chapterId, shift);
 }
 
 /**
@@ -399,6 +409,12 @@ export async function challengeChapter(
   playerId:  string,
   chapterId: number,
   repo:      IJourneyRunRepository,
+  /**
+   * Shift for the new attempt, resolved by the caller via the
+   * ChapterShiftRule layer.  Defaults to the prior run's shift so replays
+   * stay on the canonical shift unless the chapter offers a choice.
+   */
+  shift?:    TimeOfDay,
 ): Promise<JourneyRun> {
   const latest = await repo.getLatestRun(playerId, chapterId);
 
@@ -415,7 +431,7 @@ export async function challengeChapter(
     );
   }
 
-  return repo.createChallengeRun(playerId, chapterId, latest.attemptNumber);
+  return repo.createChallengeRun(playerId, chapterId, latest.attemptNumber, shift ?? latest.shift);
 }
 
 /**
@@ -475,5 +491,6 @@ export async function rechallengeMap(
     chapterId,
     active.attemptNumber,
     keyState.keysCollected,
+    active.shift, // pre-clear rechallenge MUST keep the same canonical shift
   );
 }

@@ -52,7 +52,7 @@ type DetailEntry =
   | { kind: "call"; option: typeof CALL_OPTIONS[number] };
 
 export default function Battle() {
-  const { enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string }>();
+  const { enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyShift } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyShift?: string }>();
   const { player, loading } = usePlayer();
   if (loading || !player) {
     return (
@@ -61,10 +61,10 @@ export default function Battle() {
       </View>
     );
   }
-  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} journeyReturn={journeyReturn} journeyChapterId={journeyChapterId} journeyTileId={journeyTileId} journeyIsAreaBoss={journeyIsAreaBoss} journeyIsChapterBoss={journeyIsChapterBoss} />;
+  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} journeyReturn={journeyReturn} journeyChapterId={journeyChapterId} journeyTileId={journeyTileId} journeyIsAreaBoss={journeyIsAreaBoss} journeyIsChapterBoss={journeyIsChapterBoss} journeyShift={journeyShift} />;
 }
 
-function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss }: { enemyId?: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string }) {
+function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyShift }: { enemyId?: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyShift?: string }) {
   const router = useRouter();
   const { player, applyRewards, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState, advanceProloguePhase } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId } = useTutorial();
@@ -182,6 +182,10 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
         )
       : null;
     const base = initBattle(enemy, battleTeam, {
+      // Journey battle bridge — frozen run shift travels with Journey battles.
+      shift: (journeyReturn === '1' && (journeyShift === 'day' || journeyShift === 'evening' || journeyShift === 'night'))
+        ? journeyShift
+        : undefined,
       inventory: player?.inventory || {},
       profile,
       enemyMastery: player?.enemy_mastery,
@@ -1285,6 +1289,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
         journeyTileId:        journeyTileId        ?? "",
         journeyIsAreaBoss:    journeyIsAreaBoss    ?? "",
         journeyIsChapterBoss: journeyIsChapterBoss ?? "",
+        journeyShift:         journeyShift         ?? "",
       },
     });
   };

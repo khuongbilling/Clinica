@@ -212,6 +212,9 @@ class Player(BaseModel):
     # Maps str(chapter_id) → {"keys_collected": int, "claimed_tile_ids": [str, ...]}.
     # Persists across Rechallenge Map (new runs) so keys are never lost on re-roll.
     chapter_boss_keys: Dict[str, Any] = Field(default_factory=dict)
+    # Canonical shift per Book I choice chapter (str chapter_id → "day"|"evening"|"night").
+    # Written once at first clear; inherit chapters (5-6, 8) read it.
+    canonical_shifts: Dict[str, str] = Field(default_factory=dict)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -316,6 +319,8 @@ class PlayerUpdate(BaseModel):
     seen_call_tutorial: Optional[bool] = None
     # Task 570 — Chapter-level Area Boss key progression (str chapter_id → key state).
     chapter_boss_keys: Optional[Dict[str, Any]] = None
+    # Canonical shift per choice chapter (str chapter_id → "day"|"evening"|"night").
+    canonical_shifts: Optional[Dict[str, str]] = None
 
 
 # ---------- Routes ----------

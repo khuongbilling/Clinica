@@ -479,4 +479,11 @@ export interface PlayerState {
   // Keys reset only when the Chapter Boss is defeated (permanent chapter completion).
   // Backfilled as {} for existing players in normalizeProgression.
   chapter_boss_keys?: Record<string, { keys_collected: number; claimed_tile_ids: string[] }>;
+  /**
+   * Canonical shift per choice chapter (Book I: Ch4/7/9/10) — the TimeOfDay
+   * of the player's FIRST CLEAR of that chapter.  Written once at first clear
+   * and never mutated by UI tab switching; inherit chapters (Ch5-6, Ch8) read
+   * it via chapterShiftRules.  Keys are chapter numbers as strings.
+   */
+  canonical_shifts?: Record<string, 'day' | 'evening' | 'night'>;
 }

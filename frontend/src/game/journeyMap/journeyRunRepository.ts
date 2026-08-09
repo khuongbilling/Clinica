@@ -32,6 +32,7 @@ import { generateSecureSeed }           from './secureSeed';
 import { buildInitialJourneyRun, generateRunData } from './journeyRunLifecycle';
 import type { IJourneyRunRepository }   from './journeyRunLifecycle';
 import type { JourneyRun, TimeOfDay }   from './types';
+import { resolveRunShift }              from './chapterShiftRules';
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -85,6 +86,10 @@ async function httpOrNull<T>(path: string): Promise<T | null> {
  *   Night   →  22:00–05:59
  *
  * This is frozen on the run at creation time and never changes.
+ *
+ * NOTE: no longer used for run creation — a run's shift is resolved by the
+ * ChapterShiftRule layer (chapterShiftRules.ts) and passed explicitly into
+ * the create* methods.  Kept for ambience/flavor callers only.
  */
 export function getCurrentShift(): TimeOfDay {
   const hour = new Date().getHours();
@@ -217,20 +222,21 @@ export class JourneyRunRepository implements IJourneyRunRepository {
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
-  async createFirstRun(playerId: string, chapterId: number): Promise<JourneyRun> {
+  async createFirstRun(playerId: string, chapterId: number, shift?: TimeOfDay): Promise<JourneyRun> {
     const key = `${playerId}:${chapterId}:attempt:1`;
-    return this._dedupCreate(key, () => this._doCreateFirstRun(playerId, chapterId));
+    return this._dedupCreate(key, () => this._doCreateFirstRun(playerId, chapterId, shift));
   }
 
   async createChallengeRun(
     playerId:           string,
     chapterId:          number,
     priorAttemptNumber: number,
+    shift?:             TimeOfDay,
   ): Promise<JourneyRun> {
     const newAttempt = priorAttemptNumber + 1;
     const key        = `${playerId}:${chapterId}:attempt:${newAttempt}`;
     return this._dedupCreate(key, () =>
-      this._doCreateChallengeRun(playerId, chapterId, priorAttemptNumber),
+      this._doCreateChallengeRun(playerId, chapterId, priorAttemptNumber, shift),
     );
   }
 
@@ -275,11 +281,12 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     chapterId:            number,
     priorAttemptNumber:   number,
     inheritedAreaBossKeys: number,
+    shift?:               TimeOfDay,
   ): Promise<JourneyRun> {
     const newAttempt = priorAttemptNumber + 1;
     const key        = `${playerId}:${chapterId}:attempt:${newAttempt}`;
     return this._dedupCreate(key, () =>
-      this._doCreateRechallengeRun(playerId, chapterId, priorAttemptNumber, inheritedAreaBossKeys),
+      this._doCreateRechallengeRun(playerId, chapterId, priorAttemptNumber, inheritedAreaBossKeys, shift),
     );
   }
 
@@ -305,9 +312,10 @@ export class JourneyRunRepository implements IJourneyRunRepository {
   private async _doCreateFirstRun(
     playerId:  string,
     chapterId: number,
+    shift?:    TimeOfDay,
   ): Promise<JourneyRun> {
     const seed = generateSecureSeed();
-    const run  = this._buildNewRun(playerId, chapterId, 1, seed);
+    const run  = this._buildNewRun(playerId, chapterId, 1, seed, 0, shift);
     const wire = toWire(run);
     const raw  = await http<WireRun>(
       `/player/${playerId}/journey-runs`,
@@ -320,10 +328,11 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     playerId:           string,
     chapterId:          number,
     priorAttemptNumber: number,
+    shift?:             TimeOfDay,
   ): Promise<JourneyRun> {
     const seed          = generateSecureSeed();
     const attemptNumber = priorAttemptNumber + 1;
-    const run           = this._buildNewRun(playerId, chapterId, attemptNumber, seed);
+    const run           = this._buildNewRun(playerId, chapterId, attemptNumber, seed, 0, shift);
     const wire          = toWire(run);
 
     try {
@@ -349,10 +358,11 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     chapterId:            number,
     priorAttemptNumber:   number,
     inheritedAreaBossKeys: number,
+    shift?:               TimeOfDay,
   ): Promise<JourneyRun> {
     const seed          = generateSecureSeed();
     const attemptNumber = priorAttemptNumber + 1;
-    const run           = this._buildNewRun(playerId, chapterId, attemptNumber, seed, inheritedAreaBossKeys);
+    const run           = this._buildNewRun(playerId, chapterId, attemptNumber, seed, inheritedAreaBossKeys, shift);
     const wire          = toWire(run);
 
     try {
@@ -377,8 +387,12 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     attemptNumber:        number,
     seed:                 string,
     initialAreaBossKeysCollected = 0,
+    explicitShift?:       TimeOfDay,
   ): JourneyRun {
-    const shift                  = getCurrentShift();
+    // Shift comes from the ChapterShiftRule layer (resolved by the lifecycle
+    // caller). Fallback resolves the chapter rule with no canonical record —
+    // deterministic (never the device clock).
+    const shift = explicitShift ?? resolveRunShift(chapterId, () => undefined);
     const { topology, encounters } = generateRunData(chapterId, seed, shift);
     return buildInitialJourneyRun({
       id: '',      // server will assign the real UUID
