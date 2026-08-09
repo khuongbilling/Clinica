@@ -545,7 +545,7 @@ export default function ChapterFogMapShell() {
     }
     const bossId = getChapterBossEnemyId(chNum);
     navigateToBattle(bossId, run.gateAnchorTileId ?? 'gate', false, true);
-  }, [run, gateUnlocked, areaBossCount, keysCollected, chNum, navigateToBattle, showInlineError]);
+  }, [run, gateUnlocked, keysCollected, chNum, navigateToBattle, showInlineError]);
 
   /**
    * Confirm and execute a Challenge Chapter run creation.
