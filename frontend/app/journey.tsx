@@ -40,6 +40,7 @@ import { evaluateChapterGate } from "@/src/features/journey/ui/gateEvaluation";
 import { ShiftSelector } from "@/src/features/journey/ui/ShiftSelector";
 import { getShiftAvailability } from "@/src/features/journey/ui/shiftAvailability";
 import { getFocusedChapters, buildChapterUiSummary } from "@/src/features/journey/ui/journeyVisibility";
+import { ChapterTabBadge } from "@/src/features/journey/ui/ChapterTabBadge";
 import {
   loadJourneyExpandedPreference,
   saveJourneyExpandedPreference,
@@ -402,24 +403,13 @@ export default function JourneyScreen() {
                   ]}>
                     CH.{ch.number}
                   </Text>
-                  {!locked && chSummary.storyCleared && (() => {
-                    const hasMastery = chSummary.maxMasteryStars > 0;
-                    const mastered   = hasMastery && chSummary.masteryStars >= chSummary.maxMasteryStars;
-                    if (!hasMastery) {
-                      // Narrative chapter — simple checkmark
-                      return <Ionicons name="checkmark-circle" size={8} color={ch.accentColor} />;
-                    }
-                    if (mastered) {
-                      // Fully mastered — gold star
-                      return <Ionicons name="star" size={8} color="#d4a017" />;
-                    }
-                    // Story cleared, mastery in progress — "n/max ★"
-                    return (
-                      <Text style={styles.chapterTabMasteryBadge}>
-                        {chSummary.masteryStars}/{chSummary.maxMasteryStars}★
-                      </Text>
-                    );
-                  })()}
+                  {!locked && (
+                    <ChapterTabBadge
+                      summary={chSummary}
+                      accentColor={ch.accentColor}
+                      badgeTextStyle={styles.chapterTabMasteryBadge}
+                    />
+                  )}
                   {locked && (
                     <Ionicons name="lock-closed" size={8} color={COLORS.onSurfaceTertiary + "80"} />
                   )}
