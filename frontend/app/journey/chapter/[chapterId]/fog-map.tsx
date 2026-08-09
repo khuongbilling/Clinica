@@ -69,17 +69,13 @@ import { buildChapterUiSummary }           from '@/src/features/journey/ui/journ
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getMapSprite }                    from '@/src/game/illustratedAssets';
+import { getChapterMapVisuals }            from '@/src/game/journeyMap/chapterMapVisuals';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
+// Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
+// (chapterMapVisuals.ts) so callers never hard-code asset paths.  The three
+// mapBg* references have been removed from this object; use chapterVisuals.background.
 const ASSET = {
-  /**
-   * Per-shift raster map environments (AUTHORED MAP ADJUSTMENT — final art rule).
-   * Dedicated artwork per shift — never simulated with CSS filters.
-   * The original dark environment is the NIGHT visual direction.
-   */
-  mapBgDay:       require('@/assets/ui/journey/map/map-platform-background-day.webp')     as number,
-  mapBgEvening:   require('@/assets/ui/journey/map/map-platform-background-evening.webp') as number,
-  mapBgNight:     require('@/assets/ui/journey/map/map-platform-background.webp')         as number,
   keyFragment:    require('@/assets/ui/journey/gate/key-fragment.webp')               as number,
   gateLocked:     require('@/assets/ui/journey/gate/chapter-boss-gate-locked.webp')   as number,
   gateUnlocked:   require('@/assets/ui/journey/gate/chapter-boss-gate-unlocked.webp') as number,
@@ -584,6 +580,13 @@ export default function ChapterFogMapShell() {
   // current map.  Zero-boss chapters (ch1–3) keep the discovery-based fallback.
   const gateUnlocked      = zeroKeyMap ? gateDiscovered : keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT;
 
+  // ── Shift-aware map visuals ───────────────────────────────────────────────
+  // Single call-site for all chapter/shift asset resolution.
+  // Background, fog, and terrain tiles all come from this object —
+  // no asset paths are hard-coded outside chapterMapVisuals.ts.
+  const mapShift      = run?.shift ?? 'night';
+  const chapterVisuals = getChapterMapVisuals(chNum, mapShift);
+
   // ── Exploration character sprite ──────────────────────────────────────────
   // Resolved from the player's class_tree_id — the same key getMapSprite uses.
   // Undefined when the player has no class yet; HexMapLayer falls back to the
@@ -962,11 +965,7 @@ export default function ChapterFogMapShell() {
           }}
         >
           <Image
-            source={
-              run?.shift === 'day'     ? ASSET.mapBgDay :
-              run?.shift === 'evening' ? ASSET.mapBgEvening :
-              ASSET.mapBgNight
-            }
+            source={chapterVisuals.background}
             style={s.mapBg}
             contentFit="cover"
             testID="map-background"
@@ -999,6 +998,7 @@ export default function ChapterFogMapShell() {
               containerHeight={mapSize.h}
               tiles={mapTiles}
               onTilePress={handleTilePress}
+              tileVisuals={chapterVisuals}
               gateArt={{
                 lockedSrc:   ASSET.gateLocked,
                 unlockedSrc: ASSET.gateUnlocked,

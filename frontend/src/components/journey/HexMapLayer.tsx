@@ -81,13 +81,30 @@ const ENCOUNTER_ICON = {
   areaBoss:       require('@/assets/ui/journey/encounters/area-boss.webp')       as number,
 };
 
+// ── Resolved tile visual sources ─────────────────────────────────────────────
+
+/**
+ * Effective tile-art sources passed from HexMapLayer down to HexTile.
+ * Callers supply a ChapterShiftVisuals subset via the `tileVisuals` prop;
+ * HexMapLayer merges it with module-level defaults so HexTile always receives
+ * concrete asset numbers.
+ */
+type ResolvedTileVis = {
+  terrainBase:     number;   // hex-revealed equivalent
+  terrainCurrent:  number;   // hex-current (jade glow)
+  terrainFrontier: number;   // hex-frontier
+  fogInterior:     number;   // fog overlay for hidden tiles
+};
+
 // ── Asset helpers ─────────────────────────────────────────────────────────────
 
-function baseSrc(tile: HexMapTile): number {
-  if (tile.current)                    return TILE_BASE.current;
-  if (tile.visibility === 'hidden')    return TILE_BASE.hidden;
-  if (tile.visibility === 'frontier')  return TILE_BASE.frontier;
-  return TILE_BASE.revealed;
+function baseSrc(tile: HexMapTile, vis: ResolvedTileVis): number {
+  if (tile.current)                   return vis.terrainCurrent;
+  // Hidden tiles use the module-level hidden art — shift-unaware for now
+  // (fog textures are overlaid on top; the base does not need to vary).
+  if (tile.visibility === 'hidden')   return TILE_BASE.hidden;
+  if (tile.visibility === 'frontier') return vis.terrainFrontier;
+  return vis.terrainBase;
 }
 
 /**
@@ -159,11 +176,13 @@ interface HexTileProps {
    * in place of the medallion token.  When absent: medallion is preserved.
    */
   explorationCharacter?: number;
+  /** Resolved terrain + fog asset sources for the active chapter/shift. */
+  tileVis: ResolvedTileVis;
 }
 
-function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter }: HexTileProps) {
+function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis }: HexTileProps) {
   const pos      = tilePos(tile.q, tile.r, sz, ox, oy);
-  const base     = baseSrc(tile);
+  const base     = baseSrc(tile, tileVis);
   const marker   = encounterSrc(tile);
   const markerSz = Math.round(sz * 0.52);
   const markerX  = Math.round((sz - markerSz) / 2);
@@ -208,10 +227,10 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter }: HexTilePro
       />
 
       {/* ── Fog overlay — hidden tiles only ─────────────────────────────── */}
-      {/* Uses the approved fog-tile.webp texture; no flat-black opacity layer. */}
+      {/* Texture from tileVis.fogInterior (shift-aware); no flat-black layer. */}
       {isHidden && (
         <Image
-          source={FOG_TILE}
+          source={tileVis.fogInterior}
           style={[s.overlay, { width: sz, height: sz, opacity: 0.90 }]}
           contentFit="contain"
           recyclingKey={`fog-${tile.id}`}
@@ -321,6 +340,16 @@ export interface HexMapLayerProps {
    */
   onTilePress?: (tile: HexMapTile) => void;
   /**
+   * Shift-aware tile visual overrides from the chapter map visuals registry.
+   * Pass the result of `getChapterMapVisuals(chapter, timeOfDay)` here.
+   * When absent, the renderer uses its module-level default assets (night theme).
+   * Only the subset consumed by tile rendering is used here; the `background`
+   * and `fogEdge` fields from ChapterShiftVisuals are consumed by the parent screen.
+   */
+  tileVisuals?: Pick<import('@/src/game/journeyMap/chapterMapVisuals').ChapterShiftVisuals,
+    'terrainBase' | 'terrainCurrent' | 'terrainFrontier' | 'fogInterior'>;
+
+  /**
    * Optional gate artwork anchored spatially to the `isGate` tile.
    * When provided and the gate tile is visible (frontier or revealed),
    * a gate image is rendered inside the world viewport centred on the gate tile.
@@ -353,9 +382,20 @@ export function HexMapLayer({
   containerHeight,
   tiles = JOURNEY_MAP_FIXTURE,
   onTilePress,
+  tileVisuals,
   gateArt,
   explorationCharacter,
 }: HexMapLayerProps) {
+  // ── Resolved tile art (prop overrides merged with module-level defaults) ──
+  // Module-level TILE_BASE / FOG_TILE constants are the night-theme defaults.
+  // When a caller supplies tileVisuals (from getChapterMapVisuals), those
+  // assets take priority.  Never fall through to CSS filter tricks.
+  const resolvedTileVis: ResolvedTileVis = {
+    terrainBase:     tileVisuals?.terrainBase     ?? TILE_BASE.revealed,
+    terrainCurrent:  tileVisuals?.terrainCurrent  ?? TILE_BASE.current,
+    terrainFrontier: tileVisuals?.terrainFrontier ?? TILE_BASE.frontier,
+    fogInterior:     tileVisuals?.fogInterior     ?? FOG_TILE,
+  };
 
   // ── Geometry (recomputed on every render; cheap enough to not useMemo) ─────
   const maxQ = tiles.reduce((m, t) => Math.max(m, t.q), 0);
@@ -537,6 +577,7 @@ export function HexMapLayer({
             oy={oy}
             onPress={handleTilePress}
             explorationCharacter={explorationCharacter}
+            tileVis={resolvedTileVis}
           />
         ))}
 
