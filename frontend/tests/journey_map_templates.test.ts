@@ -72,14 +72,23 @@ for (const [ch, expected] of BAND_CASES) {
   check(`[ch${ch}] canonical tile count ${expected}`, getChapterTileCount(ch) === expected);
 }
 
-// ── 3. Geometry fixed across seeds / shifts via run data ─────────────────────
-for (const ch of [1, 4, 7, 10]) {
+// ── 3. Geometry fixed across seeds / shifts (authored chapters only) ──────────
+// Ch1 is production-authored: seed and shift must not affect coordinates.
+// Unauth'd chapters (ch2+) use procedural generation — they vary by seed.
+for (const ch of [1]) {  // extend this list as chapters are authored + added to PRODUCTION_AUTHORED_CHAPTERS
   const a = generateRunData(ch, 'seed-aaaa', 'day');
   const b = generateRunData(ch, 'seed-bbbb', 'night');
   check(`[ch${ch}] identical coordinates across seeds+shifts`,
     tileKeySet(a.topology.tiles) === tileKeySet(b.topology.tiles));
   check(`[ch${ch}] identical start tile`, a.topology.startTileId === b.topology.startTileId);
   check(`[ch${ch}] identical gate tile`,  a.topology.gateAnchorId === b.topology.gateAnchorId);
+}
+// Unauth'd chapters: different seeds → different geometry (procedural fallback).
+for (const ch of [4, 7, 10]) {
+  const a = generateRunData(ch, 'seed-aaaa', 'day');
+  const b = generateRunData(ch, 'seed-bbbb', 'day');
+  check(`[ch${ch}] (unauth'd) geometry varies between seeds`,
+    tileKeySet(a.topology.tiles) !== tileKeySet(b.topology.tiles));
 }
 
 // ── 4. Encounters vary with run seed on the fixed geometry ───────────────────
@@ -128,7 +137,76 @@ for (const ch of [1, 5, 10, 12]) {
   check('[ch12] fallback chapterId correct', t.chapterId === '12');
 }
 
-// ── 9. Chapter 1 coordinate SNAPSHOT ─────────────────────────────────────────
+// ── 9. Push 3 acceptance criteria ────────────────────────────────────────────
+//
+// Chapter 1: authored geometry — seed / attempt / shift have no effect on layout.
+// Other chapters: procedural geometry — different seeds → different coords.
+{
+  const CH1_START = '0,1';
+  const CH1_GATE  = '-1,-3';
+  const coordsOf  = (r: ReturnType<typeof generateRunData>) =>
+    r.topology.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
+
+  // AC1: Ch1 attempt 1 and attempt 2 have identical physical geometry.
+  {
+    const a1 = generateRunData(1, 'attempt-1-seed-aaa', 'day');
+    const a2 = generateRunData(1, 'attempt-2-seed-bbb', 'day');
+    check('[push3 AC1] ch1 attempt1 vs attempt2 identical coords', coordsOf(a1) === coordsOf(a2));
+    check('[push3 AC1] ch1 attempt1 vs attempt2 identical start', a1.topology.startTileId === a2.topology.startTileId);
+    check('[push3 AC1] ch1 attempt1 vs attempt2 identical gate',  a1.topology.gateAnchorId === a2.topology.gateAnchorId);
+  }
+
+  // AC2: Ch1 Day, Evening, Night have identical physical geometry.
+  {
+    const day     = generateRunData(1, 'seed-xyz', 'day');
+    const evening = generateRunData(1, 'seed-xyz', 'evening');
+    const night   = generateRunData(1, 'seed-xyz', 'night');
+    check('[push3 AC2] ch1 day vs evening identical coords', coordsOf(day) === coordsOf(evening));
+    check('[push3 AC2] ch1 day vs night identical coords',   coordsOf(day) === coordsOf(night));
+    check('[push3 AC2] ch1 day gate fixed',     day.topology.gateAnchorId     === CH1_GATE);
+    check('[push3 AC2] ch1 evening gate fixed', evening.topology.gateAnchorId === CH1_GATE);
+    check('[push3 AC2] ch1 night gate fixed',   night.topology.gateAnchorId   === CH1_GATE);
+  }
+
+  // AC3: Encounter locations may differ between seeds (seed still controls encounters).
+  {
+    const enc1 = generateRunData(1, 'seed-aaa', 'day').encounters;
+    const enc2 = generateRunData(1, 'seed-bbb', 'day').encounters;
+    const encSig = (e: typeof enc1) => e.tiles.map(t => `${t.tileKey}:${t.encounter}`).sort().join('|');
+    check('[push3 AC3] ch1 encounters differ between seeds', encSig(enc1) !== encSig(enc2));
+  }
+
+  // AC4: Gate remains at exactly the authored coordinate.
+  {
+    for (const seed of ['any-seed', 'another-seed', '']) {
+      const r = generateRunData(1, seed, 'day');
+      check(`[push3 AC4] ch1 gate always ${CH1_GATE} (seed="${seed}")`,
+        r.topology.gateAnchorId === CH1_GATE);
+    }
+  }
+
+  // AC5: Start remains at exactly the authored coordinate.
+  {
+    const r = generateRunData(1, 'any-seed', 'night');
+    check('[push3 AC5] ch1 start always at authored coord', r.topology.startTileId === CH1_START);
+  }
+
+  // AC6: isAuthoredChapter routing — Ch1 uses template, Ch2+ use procedural.
+  //   Procedural chapters produce different geometry for different seeds.
+  {
+    const { isAuthoredChapter } = require('../src/game/journeyMap/chapterMapTemplates');
+    check('[push3 AC6] isAuthoredChapter(1) true',  isAuthoredChapter(1)  === true);
+    check('[push3 AC6] isAuthoredChapter(2) false', isAuthoredChapter(2)  === false);
+    check('[push3 AC6] isAuthoredChapter(10) false', isAuthoredChapter(10) === false);
+
+    const ch2a = generateRunData(2, 'seed-aaa', 'day');
+    const ch2b = generateRunData(2, 'seed-bbb', 'day');
+    check('[push3 AC6] ch2 (unauth) geometry varies between seeds',
+      coordsOf(ch2a) !== coordsOf(ch2b));
+  }
+}
+
+// ── 10. Chapter 1 coordinate SNAPSHOT ────────────────────────────────────────
 //
 // These coordinates are authored data and must NEVER change regardless of
 // run seed, attempt number, or TimeOfDay (shift).  If this test fails after

@@ -380,6 +380,40 @@ function masterTemplate(chapter: number): ChapterMapTemplate {
   return template;
 }
 
+// ── Production-authored chapter gate ─────────────────────────────────────────
+
+/**
+ * Chapters whose authored geometry has been deployed to production.
+ *
+ * MIGRATION GATE — add a chapter here only after its template has been:
+ *   1. designed and reviewed (tile coordinates, start, gate)
+ *   2. snapshot-tested
+ *   3. accepted for production use
+ *
+ * Chapters NOT in this set fall back to the procedural topology generator
+ * (generateHexTopology with the per-run seed) so their geometry still varies
+ * between attempts while they await authoring.
+ *
+ * ⚠ Do NOT add a chapter number here until its AUTHORED_CHAPTER_MAPS entry
+ *   has been reviewed and locked — adding it prematurely fixes all existing
+ *   in-progress runs for that chapter to the authored geometry.
+ */
+const PRODUCTION_AUTHORED_CHAPTERS = new Set<number>([
+  1, // "Atrium Approach" — authored and snapshot-tested in Push 2
+]);
+
+/**
+ * Returns true when a chapter's geometry should come from the fixed authored
+ * template rather than the procedural topology generator.
+ *
+ * Use this at every run-creation entry point to route geometry selection.
+ * When false, callers must continue using generateHexTopology({ chapter, seed })
+ * with the per-run seed so encounter variation is preserved.
+ */
+export function isAuthoredChapter(chapter: number): boolean {
+  return PRODUCTION_AUTHORED_CHAPTERS.has(chapter);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**

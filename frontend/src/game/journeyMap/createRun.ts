@@ -17,7 +17,8 @@
  * No React, Expo, or UI imports belong here.
  */
 
-import { getChapterHexTopology } from './chapterMapTemplates';
+import { getChapterHexTopology, isAuthoredChapter } from './chapterMapTemplates';
+import { generateHexTopology } from './topology';
 import { assignJourneyEncounters } from './encounters';
 import type { JourneyRun, JourneyTile, TimeOfDay } from './types';
 
@@ -84,8 +85,10 @@ export function createJourneyRun({
   // Deterministic stable ID: player + chapter + attempt uniquely identifies a run.
   const id = `run_${playerId}_ch${chapterId}_a${attemptNumber}`;
 
-  // ── Fixed authored geometry (coordinates + start/gate) — never seed-derived ──
-  const topology = getChapterHexTopology(chapterId);
+  // ── Geometry: authored (fixed) for production-authored chapters, procedural otherwise ──
+  const topology = isAuthoredChapter(chapterId)
+    ? getChapterHexTopology(chapterId)            // authored: seed has no effect on layout
+    : generateHexTopology({ chapter: chapterId, seed }); // procedural: seed-derived
 
   // ── Assign encounters and chest tiers to every tile ─────────────────────────
   const { tiles: assignedTiles, areaBossCount } = assignJourneyEncounters({

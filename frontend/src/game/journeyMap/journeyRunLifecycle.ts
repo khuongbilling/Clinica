@@ -46,7 +46,8 @@
  * so no data is lost when WARD_EVENTS_V1 flips true.
  */
 
-import { getChapterHexTopology }       from './chapterMapTemplates';
+import { getChapterHexTopology, isAuthoredChapter } from './chapterMapTemplates';
+import { generateHexTopology }         from './topology';
 import { assignJourneyEncounters }     from './encounters';
 import { assignCanonicalEncounters }   from './canonicalEncounters';
 import { computeInitialFog }           from './fogCalculator';
@@ -317,16 +318,23 @@ export function buildInitialJourneyRun({
 /**
  * Generate topology + encounters for a run.
  *
- * AUTHORED MAP RULE: the physical geometry (coordinates, shape, tile count,
- * start tile, boss gate) comes from the chapter's fixed authored template
- * (getChapterMapTemplate) and does NOT depend on the run seed.  The run seed
- * randomizes only the encounter layer, so regenerating / rechallenging a
- * chapter re-rolls encounters on the SAME map.  All shifts share the same
- * geometry too (shift only affects encounter distribution here).
+ * GEOMETRY SOURCE — determined by isAuthoredChapter():
  *
- * When JOURNEY_CANONICAL_V1 is true: uses assignCanonicalEncounters()
- *   (shift-weighted, density-capped, one-roll-per-tile).
- * When false: uses the legacy assignJourneyEncounters() generator.
+ *   Authored chapter (currently Ch1):
+ *     getChapterHexTopology() → fixed coordinates, start tile, Boss Gate.
+ *     The run seed has NO influence on the physical layout.
+ *     Rechallenges, different shifts, and new seeds all share the same map.
+ *
+ *   Unauth'd chapter (Ch2+, temporarily):
+ *     generateHexTopology({ chapter, seed }) → procedural, seed-derived.
+ *     Geometry varies between attempts just as before.
+ *     When a chapter's authored template ships, add it to
+ *     PRODUCTION_AUTHORED_CHAPTERS in chapterMapTemplates.ts.
+ *
+ * ENCOUNTER LAYER (always seed-derived):
+ *   When JOURNEY_CANONICAL_V1 is true: assignCanonicalEncounters()
+ *     (shift-weighted, density-capped, one-roll-per-tile).
+ *   When false: legacy assignJourneyEncounters().
  *
  * The returned object satisfies RunEncounterInput plus { topology }.
  */
@@ -335,7 +343,10 @@ export function generateRunData(
   seed:    string,
   shift:   TimeOfDay,
 ): { topology: HexTopology; encounters: RunEncounterInput } {
-  const topology = getChapterHexTopology(chapter);
+  // Geometry: authored template (fixed) OR procedural (seed-derived fallback).
+  const topology = isAuthoredChapter(chapter)
+    ? getChapterHexTopology(chapter)
+    : generateHexTopology({ chapter, seed });
 
   if (JOURNEY_CANONICAL_V1) {
     const enc = assignCanonicalEncounters({ chapter, seed, timeOfDay: shift, topology });
