@@ -74,6 +74,28 @@ const MAX_TILE_SZ = 88;
  */
 const MIN_TILE_SZ = 44;
 
+// ── Atmospheric fog constants (Push 14) ──────────────────────────────────────
+//
+// Hidden tiles render a TWO-LAYER fog treatment:
+//
+//   Layer A — local concealment (inside each tile's Pressable, clipped to sz):
+//     opacity FOG_LOCAL_OPACITY.  Ensures the tile is fully concealed even when
+//     no neighbour adds atmospheric bleed.
+//
+//   Layer B — atmospheric bleed (in the world layer, pointerEvents="none"):
+//     each hidden tile emits a fog image scaled to FOG_ATMO_SCALE × sz.
+//     At scale 2.0 the image extends 0.5 × sz beyond every edge of the logical
+//     tile.  Adjacent hidden tiles' bleed halos overlap and merge, making the
+//     fog read as ONE continuous atmospheric layer rather than per-tile clouds.
+//     Frontier and recently-revealed tiles adjacent to fog receive a natural haze
+//     (FOG_ATMO_OPACITY ≈ 0.30) — enough to soften the edge without hiding the
+//     frontier glow or encounter icons on revealed tiles.
+//
+// Fog mechanics (hidden/frontier/revealed/current) are NOT changed.
+const FOG_LOCAL_OPACITY = 0.70;  // was 0.90 before atmospheric layer was added
+const FOG_ATMO_SCALE    = 2.00;  // bleed = (scale-1)/2 × sz ≈ 0.5 tile on every side
+const FOG_ATMO_OPACITY  = 0.30;  // per-halo opacity; multiple overlaps compound naturally
+
 // ── Raster assets ─────────────────────────────────────────────────────────────
 const TILE_BASE = {
   hidden:   require('@/assets/ui/journey/tiles/hex-hidden.webp')   as number,
@@ -251,12 +273,14 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis }: H
         recyclingKey={`base-${tile.id}`}
       />
 
-      {/* ── Fog overlay — hidden tiles only ─────────────────────────────── */}
-      {/* Texture from tileVis.fogInterior (shift-aware); no flat-black layer. */}
+      {/* ── Fog overlay — hidden tiles only (Layer A: local concealment) ─── */}
+      {/* Shift-aware texture from tileVis.fogInterior.  Opacity reduced from  */}
+      {/* 0.90 → FOG_LOCAL_OPACITY now that the atmospheric bleed (Layer B,    */}
+      {/* rendered in the world pass) adds additional concealment on top.       */}
       {isHidden && (
         <Image
           source={tileVis.fogInterior}
-          style={[s.overlay, { width: sz, height: sz, opacity: 0.90 }]}
+          style={[s.overlay, { width: sz, height: sz, opacity: FOG_LOCAL_OPACITY }]}
           contentFit="contain"
           recyclingKey={`fog-${tile.id}`}
         />
@@ -615,6 +639,53 @@ export function HexMapLayer({
             tileVis={resolvedTileVis}
           />
         ))}
+
+        {/* ── Atmospheric fog bleed — Layer B (Push 14) ────────────────────
+         * Non-interactive world-layer pass rendered ABOVE the tile bases but
+         * BELOW the current-tile/gate art (zIndex 5000 + depth, vs tile max
+         * ~3000 and current tile 9999).
+         *
+         * Each hidden tile emits ONE oversized fog image (FOG_ATMO_SCALE × sz).
+         * At scale 2.0, the image bleeds ~0.5 × sz past every edge, so
+         * neighbouring hidden tiles' halos overlap and merge into a single
+         * continuous atmospheric bank.  Frontier / revealed tiles adjacent to
+         * fog receive the same haze at FOG_ATMO_OPACITY — enough to soften the
+         * fog boundary without hiding encounter icons or the frontier glow.
+         *
+         * Fog-of-war mechanics are unchanged: only visibility state determines
+         * what this layer renders over, not what it reveals.
+         */}
+        {tiles
+          .filter(t => !t.current && t.visibility === 'hidden')
+          .map(t => {
+            const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
+            const atmoSz  = Math.round(sz * FOG_ATMO_SCALE);
+            const atmoOff = Math.round((atmoSz - sz) / 2);
+            // zIndex mirrors the iso-depth sort key, shifted above all tile
+            // bases so the bleed sits "in front of" the terrain layer.
+            const atmoZ   = Math.round((t.r + t.q * 0.5) * 100) + 5000;
+            return (
+              <View
+                key={`fog-atmo-${t.id}`}
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left:     left - atmoOff,
+                  top:      top  - atmoOff,
+                  width:    atmoSz,
+                  height:   atmoSz,
+                  zIndex:   atmoZ,
+                }}
+              >
+                <Image
+                  source={resolvedTileVis.fogInterior}
+                  style={{ width: atmoSz, height: atmoSz, opacity: FOG_ATMO_OPACITY }}
+                  contentFit="cover"
+                  recyclingKey={`fog-atmo-${t.id}`}
+                />
+              </View>
+            );
+          })}
 
         {/* ── Gate art overlay ──────────────────────────────────────────────
          * Spatially anchored to the isGate tile inside the world viewport.
