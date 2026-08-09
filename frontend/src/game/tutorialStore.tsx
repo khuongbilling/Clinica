@@ -13,6 +13,23 @@ const STORAGE_KEY = "clinica.tutorials.v1";
  * Replay via Tutorial Replay Center clears both dismissed and completed flags.
  */
 const DISMISSED_KEY = "clinica.tutorials.dismissed.v1";
+/**
+ * Persists the tutorial that is currently in-progress so we can detect a
+ * force-quit.  Written when startTutorial fires, cleared on every normal exit
+ * (completion, skip, clearActiveTutorial, replayTutorial start).
+ * On boot: if the stored ID is a battle-screen tutorial it is auto-dismissed
+ * so it cannot block hub UI.
+ */
+const ACTIVE_KEY = "clinica.tutorials.active.v1";
+
+/** Tutorial IDs that only make sense inside the battle screen.
+ *  A stale persisted active-ID from one of these means the app was force-quit
+ *  mid-battle; we dismiss it at boot so hub screens are never blocked. */
+const BATTLE_TUTORIAL_IDS: ReadonlySet<TutorialId> = new Set([
+  "prologueBattle",
+  "firstBattle",
+  "clinicalCueIntro",
+] as TutorialId[]);
 
 export type TutorialProgress = Partial<Record<TutorialId, boolean>>;
 
@@ -89,6 +106,25 @@ async function loadDismissed(): Promise<TutorialProgress> {
   }
 }
 
+async function persistActiveId(id: TutorialId | null) {
+  try {
+    if (id === null) {
+      await AsyncStorage.removeItem(ACTIVE_KEY);
+    } else {
+      await AsyncStorage.setItem(ACTIVE_KEY, id);
+    }
+  } catch {}
+}
+
+async function loadActiveId(): Promise<TutorialId | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ACTIVE_KEY);
+    return (raw as TutorialId | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [completed, setCompleted] = useState<TutorialProgress>({});
   const [dismissed, setDismissed] = useState<TutorialProgress>({});
@@ -118,23 +154,50 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const pendingStartRef = useRef<TutorialId | null>(null);
 
   useEffect(() => {
-    Promise.all([loadProgress(), loadDismissed()]).then(([p, d]) => {
+    Promise.all([loadProgress(), loadDismissed(), loadActiveId()]).then(([p, d, storedActiveId]) => {
+      // Force-quit recovery: if the app was killed while a battle-screen tutorial
+      // was in progress, storedActiveId will still name it.  Dismiss it so it
+      // cannot auto-start on non-battle screens (hub, realm, etc.) after relaunch.
+      // Only fires when the ID is a known battle tutorial AND was not already
+      // completed/dismissed — a normal-exit completion/skip clears ACTIVE_KEY
+      // first, so storedActiveId is null for those cases.
+      let dPatched = d;
+      if (
+        storedActiveId &&
+        BATTLE_TUTORIAL_IDS.has(storedActiveId) &&
+        !p[storedActiveId] &&
+        !d[storedActiveId]
+      ) {
+        dPatched = { ...d, [storedActiveId]: true };
+        saveDismissed(dPatched);
+        // Clear the stale active marker so it doesn't trigger again next boot.
+        persistActiveId(null);
+      } else if (storedActiveId && (p[storedActiveId] || d[storedActiveId])) {
+        // Active marker is present but tutorial is already completed/dismissed —
+        // orphaned marker from an older code path; just clean it up.
+        persistActiveId(null);
+      }
+
       completedRef.current = p;
-      dismissedRef.current = d;
+      dismissedRef.current = dPatched;
       setCompleted(p);
-      setDismissed(d);
+      setDismissed(dPatched);
       hydratedRef.current = true;
       const pending = pendingStartRef.current;
       pendingStartRef.current = null;
-      if (pending && !activeRef.current && !p[pending] && !d[pending]) {
+      if (pending && !activeRef.current && !p[pending] && !dPatched[pending]) {
         activeRef.current = pending;
         setActiveTutorialId(pending);
         setStepIndex(0);
+        persistActiveId(pending);
       }
     });
   }, []);
 
   const markDone = useCallback(async (id: TutorialId) => {
+    // Clear the active-session marker so a subsequent boot cannot misread this
+    // tutorial as force-quit-stale.
+    persistActiveId(null);
     setCompleted(prev => {
       const next = { ...prev, [id]: true };
       saveProgress(next);
@@ -166,6 +229,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
+    persistActiveId(id);
   }, []);
 
   const doAdvance = useCallback((tutId: TutorialId, idx: number) => {
@@ -194,7 +258,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const skipTutorial = useCallback(() => {
     if (!activeTutorialId) return;
-    markDone(activeTutorialId);
+    markDone(activeTutorialId); // markDone already calls persistActiveId(null)
     activeRef.current = null;
     completedRef.current = { ...completedRef.current, [activeTutorialId]: true };
     setActiveTutorialId(null);
@@ -220,6 +284,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     activeRef.current = id;
     setActiveTutorialId(id);
     setStepIndex(0);
+    persistActiveId(id);
   }, []);
 
   const clearActiveTutorial = useCallback(() => {
@@ -236,6 +301,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     dismissedRef.current = nextDismissed;
     setDismissed(nextDismissed);
     saveDismissed(nextDismissed);
+    persistActiveId(null);
     activeRef.current = null;
     setActiveTutorialId(null);
     setStepIndex(0);
@@ -245,6 +311,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
       await AsyncStorage.removeItem(DISMISSED_KEY);
+      await AsyncStorage.removeItem(ACTIVE_KEY);
     } catch {}
     completedRef.current = {};
     dismissedRef.current = {};

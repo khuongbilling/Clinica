@@ -400,6 +400,148 @@ const TOTAL_STEPS = 3; // representative step count for tests
   check('P-5  applyClassDiagnostic: undefined profile is safe', undefResult === undefined);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FQ — Force-quit recovery: hydration dismisses stale battle tutorial IDs
+//      Mirrors the boot-time logic added to tutorialStore.tsx's useEffect.
+//      ACTIVE_KEY is written by startTutorial and cleared by every normal exit
+//      (markDone / skipTutorial / clearActiveTutorial / replayTutorial).  If
+//      the app is force-quit while a battle tutorial is active, ACTIVE_KEY
+//      still names it on next boot; hydration must dismiss it so hub screens
+//      are never blocked.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  // Pure simulation of the tutorialStore hydration guard.
+  const BATTLE_TUTORIAL_IDS = new Set(['prologueBattle', 'firstBattle', 'clinicalCueIntro']);
+
+  type HydrateInput = {
+    completed: Record<string, boolean>;
+    dismissed: Record<string, boolean>;
+    storedActiveId: string | null;
+  };
+  type HydrateOutput = {
+    dismissed: Record<string, boolean>;
+    activeKeyCleared: boolean;
+  };
+
+  function simulateHydration({ completed, dismissed, storedActiveId }: HydrateInput): HydrateOutput {
+    let dPatched = { ...dismissed };
+    let activeKeyCleared = false;
+
+    if (
+      storedActiveId &&
+      BATTLE_TUTORIAL_IDS.has(storedActiveId) &&
+      !completed[storedActiveId] &&
+      !dismissed[storedActiveId]
+    ) {
+      // Force-quit during a battle tutorial → auto-dismiss
+      dPatched = { ...dPatched, [storedActiveId]: true };
+      activeKeyCleared = true;
+    } else if (storedActiveId && (completed[storedActiveId] || dismissed[storedActiveId])) {
+      // Orphaned marker for an already-finished tutorial → just clean up
+      activeKeyCleared = true;
+    }
+
+    return { dismissed: dPatched, activeKeyCleared };
+  }
+
+  // FQ-1  Force-quit during prologueBattle → auto-dismissed
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: {},
+      dismissed: {},
+      storedActiveId: 'prologueBattle',
+    });
+    check('FQ-1a  prologueBattle force-quit: auto-dismissed', dismissed['prologueBattle'] === true, `dismissed=${dismissed['prologueBattle']}`);
+    check('FQ-1b  prologueBattle force-quit: ACTIVE_KEY cleared', activeKeyCleared === true);
+  }
+
+  // FQ-2  Force-quit during firstBattle → auto-dismissed
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: {},
+      dismissed: {},
+      storedActiveId: 'firstBattle',
+    });
+    check('FQ-2a  firstBattle force-quit: auto-dismissed', dismissed['firstBattle'] === true, `dismissed=${dismissed['firstBattle']}`);
+    check('FQ-2b  firstBattle force-quit: ACTIVE_KEY cleared', activeKeyCleared === true);
+  }
+
+  // FQ-3  Force-quit during clinicalCueIntro → auto-dismissed
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: {},
+      dismissed: {},
+      storedActiveId: 'clinicalCueIntro',
+    });
+    check('FQ-3a  clinicalCueIntro force-quit: auto-dismissed', dismissed['clinicalCueIntro'] === true, `dismissed=${dismissed['clinicalCueIntro']}`);
+    check('FQ-3b  clinicalCueIntro force-quit: ACTIVE_KEY cleared', activeKeyCleared === true);
+  }
+
+  // FQ-4  Force-quit during a non-battle tutorial → NOT auto-dismissed
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: {},
+      dismissed: {},
+      storedActiveId: 'systemHubIntro',
+    });
+    check('FQ-4a  systemHubIntro force-quit: NOT auto-dismissed', !dismissed['systemHubIntro'], `dismissed=${dismissed['systemHubIntro']}`);
+    check('FQ-4b  systemHubIntro force-quit: ACTIVE_KEY NOT cleared', activeKeyCleared === false);
+  }
+
+  // FQ-5  Fresh install (no stored active key) → nothing changes
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: {},
+      dismissed: {},
+      storedActiveId: null,
+    });
+    check('FQ-5a  fresh install: no dismissals added', Object.keys(dismissed).length === 0, `keys=${Object.keys(dismissed)}`);
+    check('FQ-5b  fresh install: ACTIVE_KEY not cleared', activeKeyCleared === false);
+  }
+
+  // FQ-6  Normal exit: prologueBattle was already completed before boot
+  //        (ACTIVE_KEY cleared by markDone before force-quit could occur, but
+  //         simulate orphaned-marker cleanup path where completed=true & key set)
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: { prologueBattle: true },
+      dismissed: {},
+      storedActiveId: 'prologueBattle',
+    });
+    check('FQ-6a  already-completed + stale key: NOT re-dismissed', !dismissed['prologueBattle'], `dismissed=${dismissed['prologueBattle']}`);
+    check('FQ-6b  already-completed + stale key: orphaned key cleared', activeKeyCleared === true);
+  }
+
+  // FQ-7  Already dismissed at a prior session + stale key → orphaned marker
+  //        cleaned up, dismissed state not duplicated
+  {
+    const { dismissed, activeKeyCleared } = simulateHydration({
+      completed: {},
+      dismissed: { firstBattle: true },
+      storedActiveId: 'firstBattle',
+    });
+    check('FQ-7a  already-dismissed + stale key: dismissed unchanged', dismissed['firstBattle'] === true, `dismissed=${dismissed['firstBattle']}`);
+    check('FQ-7b  already-dismissed + stale key: orphaned key cleared', activeKeyCleared === true);
+  }
+
+  // FQ-8  After auto-dismissal, replayTutorial must be able to clear the flag
+  //        and restart — force-quit protection must not permanently block replay.
+  {
+    let s = makeTutorialState();
+    // Simulate hydration having auto-dismissed prologueBattle due to force-quit.
+    s = { ...s, dismissed: { ...s.dismissed, prologueBattle: true } };
+    // startTutorial is now blocked (dismissed).
+    const before = s;
+    s = startTutorial(s, 'prologueBattle', TOTAL_STEPS);
+    check('FQ-8a  auto-dismissed battle tutorial: startTutorial blocked', s.active === null && s === before);
+    // But replayTutorial lifts the block.
+    s = replayTutorial(s, 'prologueBattle');
+    check('FQ-8b  replay clears auto-dismissal', s.dismissed['prologueBattle'] === false, `dismissed=${s.dismissed['prologueBattle']}`);
+    check('FQ-8c  replay sets active', s.active === 'prologueBattle', `active=${s.active}`);
+    check('FQ-8d  replay starts at step 0', s.step === 0, `step=${s.step}`);
+  }
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 const passed = results.filter(r => r.pass).length;
 const failed = results.filter(r => !r.pass).length;
