@@ -37,12 +37,17 @@ function check(name: string, cond: boolean, details = '') {
 // Only SCREAMING_SNAKE_CASE keys are checked (e.g. HOME, UNIVERSITY).
 // camelCase aliases (tabs, university, summon…) are intentional convenience
 // duplicates and are explicitly excluded from this guard.
+// KNOWN_ALIAS_KEYS: SCREAMING_SNAKE_CASE keys that are deliberately the same
+// route as another key (documented in routes.ts with a comment).
+// Add here when routes.ts explicitly documents an alias relationship.
 {
+  const KNOWN_ALIAS_KEYS = new Set(['SANCTUARY']); // alias for KINGDOM (same tab, rebranded label)
   const isCanonical = (k: string) => /^[A-Z][A-Z0-9_]*$/.test(k);
   const seen = new Map<string, string>();
   const dupes: string[] = [];
   for (const [key, val] of Object.entries(ROUTES) as [string, string][]) {
-    if (!isCanonical(key)) continue; // skip camelCase aliases
+    if (!isCanonical(key)) continue;        // skip camelCase aliases
+    if (KNOWN_ALIAS_KEYS.has(key)) continue; // skip documented canonical aliases
     if (seen.has(val)) {
       dupes.push(`"${key}" and "${seen.get(val)}" both map to "${val}"`);
     } else {
