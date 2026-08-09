@@ -290,7 +290,7 @@ export default function RunHome() {
   // panel. lv2SeenRef prevents a second fire if the player object re-renders
   // before markLv2UnlockSeen persists.
   //
-  // Reset-account contract (Task 624):
+  // Reset-account contract (Tasks 624 + 625):
   //   resetPlayer() wipes all `clinica.*` AsyncStorage keys (including the
   //   persisted player record that carries seen_lv2_unlock) and sets player
   //   to null. Two paths follow:
@@ -305,17 +305,19 @@ export default function RunHome() {
   //
   //   B) Hub does NOT remount (edge case — reset navigates back without
   //      unmounting the hub component):
-  //      player becomes null, so the first guard (`!player`) short-circuits
-  //      the effect immediately. lv2SeenRef.current may still be true from
-  //      the previous session, but it is irrelevant because the effect never
-  //      reaches the ref check. When the new player is eventually loaded into
-  //      the same mount, if seen_lv2_unlock is false and the player is Lv2+,
-  //      the modal fires — unless lv2SeenRef is already true, in which case
-  //      it is silently skipped. This is the acceptable trade-off: a mount-
-  //      level ref cannot distinguish "same account re-loaded" from "new
-  //      account loaded into the same mount." Path A (full remount) is the
-  //      authoritative flow; path B is a degenerate edge case that is already
-  //      prevented in practice by the reset navigation sequence.
+  //      player becomes null initially, so the first guard (`!player`)
+  //      short-circuits the effect. When the new player is eventually loaded
+  //      into the same mount, the player-identity reset effect below
+  //      (keyed on player?.id) sets lv2SeenRef.current = false, giving the
+  //      new account a clean slate before this effect runs. Path B is now
+  //      fully handled.
+
+  // Reset the dedup ref whenever the player identity changes (new account
+  // loaded into the same mount after a reset).
+  useEffect(() => {
+    lv2SeenRef.current = false;
+  }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!player || loading || showIntro) return;
     if (activeTutorialId || showReturnCard || showRounds) return;
