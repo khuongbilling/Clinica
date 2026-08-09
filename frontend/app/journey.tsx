@@ -92,6 +92,11 @@ export default function JourneyScreen() {
   // Auto-select the player's current chapter on first load.
   // When a bookId is provided, clamp to chapters within that book's scope so
   // the rendered chapter is always one that belongs to the active Book.
+  //
+  // When FEATURE_FLAG_JOURNEY_FOG_MAP_V1 is on this screen acts purely as a
+  // loading bridge: once the chapter is resolved we immediately replace the
+  // history entry with the fog-map for that chapter so the user lands on the
+  // handdrawn hex-tile map rather than the old SVG visual-map.
   useEffect(() => {
     if (!player || chapterIdxInitialized.current) return;
     chapterIdxInitialized.current = true;
@@ -101,6 +106,7 @@ export default function JourneyScreen() {
     const candidateIdx = Math.max(0, CHAPTERS.findIndex((ch) => ch.id === current.id));
 
     // When navigated from a Book, restrict selection to that book's chapters.
+    let resolvedIdx = candidateIdx;
     if (sagaId && ageId && bookId) {
       const book = getBook(sagaId, ageId, bookId);
       if (book) {
@@ -110,12 +116,19 @@ export default function JourneyScreen() {
         if (!inScope) {
           // Default to the first chapter in the book's range.
           const firstInScope = CHAPTERS.findIndex((ch) => ch.number >= min && ch.number <= max);
-          setSelectedChapterIdx(Math.max(0, firstInScope));
-          return;
+          resolvedIdx = Math.max(0, firstInScope);
         }
       }
     }
-    setSelectedChapterIdx(candidateIdx);
+
+    if (FEATURE_FLAG_JOURNEY_FOG_MAP_V1) {
+      // Redirect to the handdrawn hex-tile fog map; don't render the old SVG map.
+      const chapterNumber = CHAPTERS[resolvedIdx]?.number ?? 1;
+      router.replace(dynRoute.chapterFogMap(String(chapterNumber)) as AppRoute);
+      return;
+    }
+
+    setSelectedChapterIdx(resolvedIdx);
   }, [player, sagaId, ageId, bookId]);
 
   if (loading || !player) {
