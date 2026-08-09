@@ -131,22 +131,46 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
 const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShiftVisuals>>> = {};
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────
-// Background: three dedicated shift rasters are available and registered here.
-// Terrain tiles: shift-unaware for now — all three shifts reuse the default
-//   hex-*.webp art.  Replace terrainBase / terrainCurrent / terrainFrontier
-//   per shift once Chapter 1 shift-specific tile art is approved.
-// ambientOverlay: not yet assigned — add when the raster is approved.
+//
+// DAY — Push 9 dedicated raster set:
+//   background  map-platform-background-ch1-day.png — grand healing-academy
+//               atrium in warm morning sunlight, jade-teal pillars, gold
+//               accents, living greenery, pale atmospheric mist.
+//   fogInterior fog-tile-day.png — pale blue-grey / white atmospheric mist,
+//               opaque enough to fully conceal tile content while reading
+//               as daylight fog (not rendered brighter mechanically).
+//   terrainBase hex-revealed-day.png — warm cream stone hex with jade lotus
+//               healing rune, antique-gold border trim.
+//   terrainFrontier hex-frontier-day.png — cream stone, jade-teal glow border,
+//               cloud-scroll relief, transparent background.
+//   terrainCurrent  hex-current-day.png — jade-gold lotus mandala, full
+//               jade radiance, transparent background.
+//   fogEdge     inherits from default (no shift-specific edge raster yet).
+//
+// EVENING — dedicated background; terrain falls back to defaults.
+//
+// NIGHT — canonical dark environment — assigned explicitly, not a catch-all.
+
+// Push 9 Ch1 Day rasters (PNG — Metro requires static require calls)
+const CH1_DAY_BG       = require('@/assets/ui/journey/map/map-platform-background-ch1-day.png')  as number;
+const CH1_DAY_FOG      = require('@/assets/ui/journey/fog/fog-tile-day.png')                      as number;
+const CH1_DAY_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-day.png')                as number;
+const CH1_DAY_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-day.png')                as number;
+const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png')                 as number;
 
 CHAPTER_SHIFT_VISUALS[1] = {
   day: {
-    ...DEFAULT_SHIFT_VISUALS.day,
-    background: BG_DAY,
-    // Terrain and fog fall through to defaults (same assets, no day-specific tiles yet).
+    background:      CH1_DAY_BG,
+    fogInterior:     CH1_DAY_FOG,
+    fogEdge:         FOG_EDGE,          // no shift-specific edge raster yet
+    terrainBase:     CH1_DAY_REVEALED,
+    terrainCurrent:  CH1_DAY_CURRENT,
+    terrainFrontier: CH1_DAY_FRONTIER,
   },
   evening: {
     ...DEFAULT_SHIFT_VISUALS.evening,
     background: BG_EVENING,
-    // Terrain and fog fall through to defaults.
+    // Terrain and fog inherit defaults until evening-specific tile art ships.
   },
   night: {
     ...DEFAULT_SHIFT_VISUALS.night,
