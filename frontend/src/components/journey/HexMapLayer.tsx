@@ -268,6 +268,20 @@ function RecenterButton({ onPress }: { onPress: () => void }) {
 
 // ── HexMapLayer ───────────────────────────────────────────────────────────────
 
+/**
+ * Gate artwork rendered as a spatial overlay anchored to the gate tile.
+ * pointerEvents="none" lets taps fall through to the underlying tile Pressable,
+ * so gate interaction remains associated with the gateTileId.
+ */
+export interface GateArtProps {
+  /** Source for the locked state (< 3 keys). */
+  lockedSrc:   number;
+  /** Source for the unlocked state (≥ 3 keys). */
+  unlockedSrc: number;
+  /** Whether the key requirement has been met. */
+  unlocked:    boolean;
+}
+
 export interface HexMapLayerProps {
   containerWidth:  number;
   containerHeight: number;
@@ -278,6 +292,18 @@ export interface HexMapLayerProps {
    * filtered out).  Hidden tiles are `disabled` and never fire this.
    */
   onTilePress?: (tile: HexMapTile) => void;
+  /**
+   * Optional gate artwork anchored spatially to the `isGate` tile.
+   * When provided and the gate tile is visible (frontier or revealed),
+   * a gate image is rendered inside the world viewport centred on the gate tile.
+   * The overlay is non-interactive — taps fall through to the tile Pressable.
+   *
+   * Gate art participates in the existing fog rules:
+   *   hidden   → not rendered (gate is undiscovered)
+   *   frontier → rendered (gate is nearby)
+   *   revealed → rendered (gate is in view)
+   */
+  gateArt?: GateArtProps;
 }
 
 export function HexMapLayer({
@@ -285,6 +311,7 @@ export function HexMapLayer({
   containerHeight,
   tiles = JOURNEY_MAP_FIXTURE,
   onTilePress,
+  gateArt,
 }: HexMapLayerProps) {
 
   // ── Geometry (recomputed on every render; cheap enough to not useMemo) ─────
@@ -468,6 +495,44 @@ export function HexMapLayer({
             onPress={handleTilePress}
           />
         ))}
+
+        {/* ── Gate art overlay ──────────────────────────────────────────────
+         * Spatially anchored to the isGate tile inside the world viewport.
+         * Visually extends beyond the tile hex to feel like part of the
+         * environment, but does NOT create fake playable tiles:
+         *   - interaction handled entirely by the underlying gate HexTile
+         *   - pointerEvents="none" lets all taps pass through to the tile
+         *   - fog rules: hidden → not rendered; frontier/revealed → visible
+         */}
+        {gateArt && (() => {
+          const gateTile = tiles.find(t => t.isGate);
+          if (!gateTile || gateTile.visibility === 'hidden') return null;
+          const { left, top } = tilePos(gateTile.q, gateTile.r, sz, ox, oy);
+          // Overlay is 1.8× the tile size — visually prominent but centred
+          // so it does not shift the effective tap target.
+          const overlaySize = Math.round(sz * 1.8);
+          const offset      = Math.round((overlaySize - sz) / 2);
+          return (
+            <View
+              key="gate-art-overlay"
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left:     left  - offset,
+                top:      top   - offset,
+                width:    overlaySize,
+                height:   overlaySize,
+              }}
+            >
+              <Image
+                source={gateArt.unlocked ? gateArt.unlockedSrc : gateArt.lockedSrc}
+                style={{ width: overlaySize, height: overlaySize }}
+                contentFit="contain"
+                testID="boss-gate-art"
+              />
+            </View>
+          );
+        })()}
       </Animated.View>
 
       <RecenterButton onPress={recenter} />

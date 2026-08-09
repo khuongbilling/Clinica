@@ -906,67 +906,34 @@ export default function ChapterFogMapShell() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* ── 2. Key-fragment panel ──────────────────────────────────────── */}
-        <Panel style={s.fragmentPanel}>
-          <Image source={ASSET.keyFragment} style={s.fragmentImg} contentFit="contain" />
-          <View style={s.fragmentBody}>
-            <View style={s.fragmentCountRow}>
-              <Text style={s.fragmentCount}>{keysCollected}</Text>
-              <Text style={s.fragmentSep}> / </Text>
-              <Text style={s.fragmentRequired}>{CHAPTER_BOSS_KEY_REQUIREMENT}</Text>
-              <Text style={s.fragmentUnit}> Keys</Text>
+        {/* ── 2. Boss-key progress (compact) ────────────────────────────── */}
+        <View style={s.keyBar}>
+          <Image source={ASSET.keyFragment} style={s.keyBarIcon} contentFit="contain" />
+          <Text style={s.keyBarLabel}>CHAPTER BOSS KEYS</Text>
+          <View style={s.keyBarCountRow}>
+            <Text style={keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT ? s.keyBarCountFull : s.keyBarCountNum}>
+              {keysCollected}
+            </Text>
+            <Text style={s.keyBarSep}> / </Text>
+            <Text style={s.keyBarReq}>{CHAPTER_BOSS_KEY_REQUIREMENT}</Text>
+          </View>
+          <View style={[s.keyBarBadge, gateUnlocked && s.keyBarBadgeOpen]}>
+            <Text style={[s.keyBarBadgeTxt, gateUnlocked && s.keyBarBadgeTxtOpen]}>
+              {gateUnlocked ? 'UNLOCKED' : 'LOCKED'}
+            </Text>
+          </View>
+          {run !== null && run.attemptNumber > 1 && keysCollected > 0 && (
+            <View style={s.carriedOverBadge}>
+              <Text style={s.carriedOverTxt}>↑ carried</Text>
             </View>
-            {/* Carried-over indicator: show on rechallenge runs that already have keys */}
-            {run !== null && run.attemptNumber > 1 && keysCollected > 0 && (
-              <View style={s.carriedOverBadge}>
-                <Text style={s.carriedOverTxt}>↑ carried over from previous attempt</Text>
-              </View>
-            )}
-            <Text style={s.fragmentHint}>
-              {zeroKeyMap
-                ? 'No Area Bosses on this map — the gate opens when you find it.'
-                : `Defeat Area Bosses to collect key fragments.\nCollect ${CHAPTER_BOSS_KEY_REQUIREMENT} total to unlock the Chapter Boss Gate.`}
-            </Text>
-          </View>
-        </Panel>
-
-        {/* ── 3. Chapter Boss Gate ──────────────────────────────────────── */}
-        <View style={s.gateSection}>
-          <Image
-            source={gateUnlocked ? ASSET.gateUnlocked : ASSET.gateLocked}
-            style={s.gateImg}
-            contentFit="contain"
-            testID="boss-gate-art"
-          />
-          <View style={s.gateLabel}>
-            <Text style={[s.gateStatus, gateUnlocked && s.gateStatusOpen]}>
-              {run?.chapterBossDefeated
-                ? '✓ CHAPTER BOSS DEFEATED'
-                : gateUnlocked ? '⚔ BOSS GATE OPEN' : '🔒 BOSS GATE LOCKED'}
-            </Text>
-            <Text style={s.gateSubtext}>
-              {run?.chapterBossDefeated
-                ? 'Chapter cleared!'
-                : gateUnlocked
-                  ? 'Tap the gate tile on the map — or enter below'
-                  : zeroKeyMap
-                    ? 'Find the gate tile to enter'
-                    : `${keysCollected} / ${CHAPTER_BOSS_KEY_REQUIREMENT} key fragments collected`}
-            </Text>
-          </View>
-          {/* "ENTER" button — supplementary to gate tile tap */}
-          {gateUnlocked && !run?.chapterBossDefeated && (
-            <Pressable
-              style={s.gateEnterBtn}
-              onPress={handleGateTap}
-              testID="boss-gate-enter"
-            >
-              <Text style={s.gateEnterTxt}>ENTER CHAPTER BOSS</Text>
-            </Pressable>
           )}
         </View>
+        {/* Contextual note when this attempt has no Area Bosses and gate is still locked */}
+        {zeroKeyMap && keysCollected < CHAPTER_BOSS_KEY_REQUIREMENT && (
+          <Text style={s.keyBarHint}>No Area Bosses detected on this attempt.</Text>
+        )}
 
-        {/* ── 4. Map viewport ───────────────────────────────────────────── */}
+        {/* ── 3. Map viewport ───────────────────────────────────────────── */}
         <View
           style={[s.mapOuter, { height: mapContainerHeight }]}
           onLayout={e => {
@@ -1012,6 +979,11 @@ export default function ChapterFogMapShell() {
               containerHeight={mapSize.h}
               tiles={mapTiles}
               onTilePress={handleTilePress}
+              gateArt={{
+                lockedSrc:   ASSET.gateLocked,
+                unlockedSrc: ASSET.gateUnlocked,
+                unlocked:    gateUnlocked,
+              }}
             />
           )}
         </View>
@@ -1419,55 +1391,52 @@ const s = StyleSheet.create({
     padding: 14, gap: 10,
   },
 
-  // Key-fragment panel
-  fragmentPanel:    { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  fragmentImg:      { width: 56, height: 56 },
-  fragmentBody:     { flex: 1, gap: 4 },
-  fragmentCountRow: { flexDirection: 'row', alignItems: 'baseline' },
-  fragmentCount:    { color: GOLD,      fontSize: 22, fontWeight: '800', fontFamily: SERIF },
-  fragmentSep:      { color: TEXT_DIM,  fontSize: 16 },
-  fragmentRequired: { color: TEXT_SOFT, fontSize: 18, fontWeight: '600', fontFamily: SERIF },
-  fragmentUnit:     { color: TEXT_DIM,  fontSize: 12, marginLeft: 2 },
-  fragmentHint:     { color: TEXT_DIM,  fontSize: 11, lineHeight: 16 },
+  // Compact boss-key progress bar (replaces large fragmentPanel + gateSection)
+  keyBar: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: PANEL_BG,
+    borderRadius:    10,
+    borderWidth:     1,
+    borderColor:     PANEL_BORDER,
+  },
+  keyBarIcon:       { width: 24, height: 24 },
+  keyBarLabel: {
+    color: TEXT_SOFT, fontSize: 9.5, fontWeight: '700',
+    letterSpacing: 1.1, textTransform: 'uppercase', fontFamily: SERIF,
+    flex: 1,
+  },
+  keyBarCountRow:   { flexDirection: 'row', alignItems: 'baseline' },
+  keyBarCountNum:   { color: GOLD,  fontSize: 15, fontWeight: '800', fontFamily: SERIF },
+  keyBarCountFull:  { color: JADE,  fontSize: 15, fontWeight: '800', fontFamily: SERIF },
+  keyBarSep:        { color: TEXT_DIM, fontSize: 13 },
+  keyBarReq:        { color: TEXT_SOFT, fontSize: 13, fontWeight: '600', fontFamily: SERIF },
+  keyBarBadge: {
+    borderWidth: 1, borderColor: TEXT_DIM + '66', borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  keyBarBadgeOpen: { borderColor: JADE + '88', backgroundColor: JADE + '18' },
+  keyBarBadgeTxt: {
+    color: TEXT_DIM, fontSize: 9, fontWeight: '800',
+    letterSpacing: 0.9, textTransform: 'uppercase', fontFamily: SERIF,
+  },
+  keyBarBadgeTxtOpen: { color: JADE },
+  keyBarHint: {
+    color: TEXT_DIM, fontSize: 10.5, fontStyle: 'italic',
+    paddingHorizontal: 2, marginTop: -4,
+  },
   carriedOverBadge: {
-    alignSelf: 'flex-start',
     backgroundColor: GOLD + '1A',
     borderWidth: 1,
     borderColor: GOLD + '44',
     borderRadius: 4,
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    marginBottom: 2,
   },
-  carriedOverTxt:   { color: GOLD, fontSize: 10, fontWeight: '600' },
-
-  // Boss gate
-  gateSection:    { alignItems: 'center', gap: 8, paddingVertical: 4 },
-  gateImg:        { width: 180, height: 180 },
-  gateLabel:      { alignItems: 'center', gap: 3 },
-  gateStatus: {
-    color: TEXT_DIM, fontSize: 11, fontWeight: '700',
-    letterSpacing: 1, textTransform: 'uppercase', fontFamily: SERIF,
-  },
-  gateStatusOpen: { color: JADE },
-  gateSubtext:    { color: TEXT_DIM, fontSize: 11 },
-  gateEnterBtn: {
-    borderWidth:       1,
-    borderColor:       JADE + '80',
-    borderRadius:      10,
-    paddingVertical:   9,
-    paddingHorizontal: 24,
-    backgroundColor:   JADE + '18',
-    alignItems:        'center',
-    marginTop:         2,
-  },
-  gateEnterTxt: {
-    color:         JADE,
-    fontSize:      12,
-    fontWeight:    '800',
-    fontFamily:    SERIF,
-    letterSpacing: 1,
-  },
+  carriedOverTxt: { color: GOLD, fontSize: 9, fontWeight: '600' },
 
   // Map viewport — height is set dynamically via inline style (useWindowDimensions).
   mapOuter: {
