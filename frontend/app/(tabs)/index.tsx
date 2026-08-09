@@ -34,7 +34,6 @@ import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene } from "@/src/game/storyScenes";
-import { getObjectiveProgress, getCurrentObjective, awaitPendingReconcile, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate, heroXpCostForLevel } from "@/src/game/progression";
 import { getProgress } from "@/src/game/evolution";
@@ -43,6 +42,7 @@ import { useNewHeroCount } from "@/src/game/heroSeenStore";
 import { useNewBagCount } from "@/src/game/bagSeenStore";
 import { useNewRealmBuildingCount } from "@/src/game/realmSeenStore";
 import { REALM_BUILDINGS, getAtriumLevel } from "@/src/game/realm";
+import { getObjectiveProgress, getCurrentObjective, awaitPendingReconcile, getObjectiveDef, isObjectiveXpGranted, markObjectiveXpGranted, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
 
 const EMBLEM_IMAGES = {
   dailyRounds: require("../../assets/ui-icons/emblems/daily-rounds.png"),
@@ -170,7 +170,7 @@ function hubGuideRoute(obj: ObjectiveDef): string {
 export default function RunHome() {
   const router  = useRouter();
   const reduceMotion = useReducedMotion();
-  const { player, loading, openRoundsSignal, markLv2UnlockSeen } = usePlayer();
+  const { player, loading, openRoundsSignal, markLv2UnlockSeen, applyRewards } = usePlayer();
   const { isCompleted, markDone, startTutorial, replayTutorial, clearActiveTutorial, activeTutorialId } = useTutorial();
   // Objective navigation guides — forced-tap wayfinding targets on this screen.
   const guideActive  = isObjectiveGuide(activeTutorialId);
@@ -210,19 +210,41 @@ export default function RunHome() {
       OBJECTIVE_GUIDES[currentObjective.id] !== undefined);
   useFocusEffect(
     useCallback(() => {
-      awaitPendingReconcile().then(() =>
-        getObjectiveProgress().then((done) => {
-          const obj = getCurrentObjective(done);
-          if (__DEV__) {
-            console.log(
-              '[ObjectiveCard] completed IDs:', [...done],
-              '| currentStep:', obj ? `${obj.step} (${obj.id})` : 'all done (null)',
-            );
+      awaitPendingReconcile().then(async (newlyReconciled) => {
+        // Grant XP for any objectives newly marked by reconcileEarlyObjectives
+        // that have not yet been paid out.  Steps 7-12 are backfilled by
+        // reconciliation but were never covered by the university catch-up loop,
+        // so players who skipped those screens would silently lose that XP.
+        if (newlyReconciled.length > 0) {
+          // Collect unpaid objectives without marking anything yet.
+          const unpaid: { id: Parameters<typeof markObjectiveXpGranted>[0]; xp: number }[] = [];
+          for (const id of newlyReconciled) {
+            const def = getObjectiveDef(id);
+            if (!def) continue; // internal sub-step ID — no standalone XP
+            const alreadyPaid = await isObjectiveXpGranted(id);
+            if (!alreadyPaid) unpaid.push({ id, xp: def.xpReward });
           }
-          setCurrentObjective(obj);
-        })
-      );
-    }, []),
+          if (unpaid.length > 0) {
+            const bonus = unpaid.reduce((sum, e) => sum + e.xp, 0);
+            // Apply the reward FIRST. Only mark objectives as paid after it
+            // succeeds so a failure or early exit leaves the flags unset and
+            // the grant retries on the next hub focus.
+            await applyRewards({ xp: bonus });
+            for (const { id } of unpaid) await markObjectiveXpGranted(id);
+          }
+        }
+        // Refresh the guide card with post-reconcile objective state.
+        const done = await getObjectiveProgress();
+        const obj = getCurrentObjective(done);
+        if (__DEV__) {
+          console.log(
+            '[ObjectiveCard] completed IDs:', [...done],
+            '| currentStep:', obj ? `${obj.step} (${obj.id})` : 'all done (null)',
+          );
+        }
+        setCurrentObjective(obj);
+      });
+    }, [applyRewards]),
   );
 
   // ── Hub shortcut card notification badges (hooks must be before early returns) ──
