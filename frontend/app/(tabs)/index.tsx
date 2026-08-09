@@ -197,9 +197,17 @@ export default function RunHome() {
   // Full lock: while the current objective has a forced-tap guide, ALL hub
   // navigation is locked — even in the moment before the guide (re)starts —
   // so the only way forward is through the objective and its tutorial.
+  // Escape hatch: the lock only engages when the guide launcher is actually
+  // eligible to start (reminiscence seen + hub orientation completed);
+  // otherwise a player whose systemHubIntro was dismissed/incomplete would be
+  // soft-locked with no guide and no tappable controls.
+  const guideEligible =
+    !!player?.seen_reminiscence && isCompleted("systemHubIntro");
   const hubLocked =
     guideActive ||
-    (!!currentObjective && OBJECTIVE_GUIDES[currentObjective.id] !== undefined);
+    (guideEligible &&
+      !!currentObjective &&
+      OBJECTIVE_GUIDES[currentObjective.id] !== undefined);
   useFocusEffect(
     useCallback(() => {
       awaitPendingReconcile().then(() =>
