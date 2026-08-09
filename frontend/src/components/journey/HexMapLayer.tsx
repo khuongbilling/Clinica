@@ -2,10 +2,24 @@
  * HexMapLayer — PUSH 5 camera / PUSH 9 axial rendering + content privacy
  *
  * Renders a bounded draggable hex map world inside a clipping viewport.
- * All tiles use AXIAL q,r coordinates (flat-top hexes):
+ * All tiles use AXIAL q,r coordinates (flat-top hexes).
  *
- *   pixel_left = q × 0.75 × sz + ox
- *   pixel_top  = (r × 0.866 + q × 0.433) × sz + oy
+ * PUSH 13 — INTENTIONAL TIGHTER SPACING (visual terrain unification):
+ *   The grid constants are deliberately set below the mathematical hex-touching
+ *   values (Q_STEP=0.75, R_STEP=√3/2≈0.866, Q_VOFF=√3/4≈0.433).  The
+ *   reduction creates controlled overlap at tile edges so adjacent hexes read
+ *   as one contiguous terrain mass rather than isolated floating platforms.
+ *
+ *   Q_STEP = 0.72  (was 0.75)   — 4 % tighter in x; covers diagonal corner gaps
+ *   R_STEP = 0.79  (was 0.866)  — 9 % tighter in y; solid hex bodies now overlap
+ *   Q_VOFF = R_STEP/2 = 0.395  (was 0.433) — maintains correct stagger ratio
+ *
+ *   Touch targets remain sz×sz (WCAG 2.5.5 / iOS HIG minimum 44 px enforced).
+ *   Tile coordinates are UNCHANGED — same q,r for all shifts.
+ *
+ *   Pixel positions (for reference):
+ *   pixel_left = q × 0.72 × sz + ox
+ *   pixel_top  = (r × 0.79 + q × 0.395) × sz + oy
  *
  * Privacy rules (Push 9)
  * ──────────────────────
@@ -43,10 +57,14 @@ import {
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI } from '@/src/theme/ui';
 
-// ── Hex layout constants (flat-top axial) ────────────────────────────────────
-const Q_STEP  = 0.75;   // horizontal advance per q unit  (= 3/4)
-const R_STEP  = 0.866;  // vertical advance per r unit    (≈ √3/2)
-const Q_VOFF  = 0.433;  // vertical bump per q unit       (≈ √3/4)
+// ── Hex layout constants (flat-top axial, Push 13 tightened) ─────────────────
+// Values are deliberately below the mathematical hex-touching thresholds so
+// adjacent solid hex bodies overlap — eliminating the transparent-corner gap
+// that makes each tile look like a separate floating platform.
+// See the file header for full rationale.
+const Q_STEP  = 0.72;   // horizontal advance per q unit  (std 0.75 → 0.72)
+const R_STEP  = 0.79;   // vertical advance per r unit    (std 0.866 → 0.79)
+const Q_VOFF  = 0.395;  // vertical bump per q unit       (= R_STEP / 2)
 
 const MAX_TILE_SZ = 88;
 /**
@@ -200,9 +218,16 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis }: H
   const tokenX  = Math.round((sz - tokenSz) / 2);
   const tokenY  = Math.round((sz - tokenSz) / 2) - Math.round(sz * 0.08);
 
+  // Iso-depth zIndex: tiles further down the screen (higher screen-y) must
+  // stack above tiles further up (Push 13 belt-and-suspenders for web, where
+  // CSS stacking context can override React array paint order).
+  // Formula mirrors the iso-depth sort key: (r + q×0.5) × 100.
+  // Current tile always on top (9 999); values stay well below that.
+  const tileZ = tile.current ? 9999 : Math.round((tile.r + tile.q * 0.5) * 100) + 1;
+
   return (
     <Pressable
-      style={[s.tile, { left: pos.left, top: pos.top, width: sz, height: sz }]}
+      style={[s.tile, { left: pos.left, top: pos.top, width: sz, height: sz, zIndex: tileZ }]}
       testID={tile.id}
       onPress={() => onPress(tile)}
       // Hidden tiles must not be selectable.
@@ -548,13 +573,23 @@ export function HexMapLayer({
     onTilePress?.(tile);
   }, [onTilePress]);
 
-  // ── Render order: ascending r for depth; current tile paints last (top) ───
+  // ── Render order: iso-depth sort; current tile paints last (top) ────────────
+  // Push 13: tighter spacing means tiles from adjacent staggered columns now
+  // visually overlap. Sorting by r alone was correct when only same-column rows
+  // overlapped; with the new constants, diagonal neighbours (q, r) vs
+  // (q+1, r−1) also overlap in screen space.
+  //
+  // Iso-depth for flat-top axial: screen_y ∝ r × R_STEP + q × Q_VOFF
+  //   = (r + q × 0.5) × R_STEP   [since Q_VOFF = R_STEP/2]
+  // Sorting by (r + q × 0.5) correctly orders ALL overlapping pairs.
   const sorted = useMemo(
     () =>
       [...tiles].sort((a, b) => {
         if (a.current && !b.current) return  1;
         if (b.current && !a.current) return -1;
-        return a.r !== b.r ? a.r - b.r : a.q - b.q;
+        const da = a.r + a.q * 0.5;
+        const db = b.r + b.q * 0.5;
+        return da !== db ? da - db : a.q - b.q;
       }),
     [tiles],
   );
