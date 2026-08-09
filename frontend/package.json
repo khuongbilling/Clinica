@@ -19,7 +19,8 @@
     "check:skill-clinical": "node scripts/check-skill-clinical.js",
     "gen:tutorial-audit": "bash scripts/stamp-tutorial-audit.sh",
     "check:battle-sprites": "node scripts/check-battle-sprites.js",
-    "validate": "echo '[gen:tutorial-audit]' && bash scripts/stamp-tutorial-audit.sh && echo '[check:routes]' && node scripts/check-routes.js && echo '[check:pronouns]' && node scripts/check-hero-pronouns.js && echo '[check:skill-clinical]' && node scripts/check-skill-clinical.js && echo '[check:battle-audit]' && node_modules/.bin/sucrase-node scripts/generate-battle-audit.ts --check && echo '[check:prologue-vn-cfg]' && node scripts/check-prologue-vn-cfg.js && echo '[check:care-chain]' && node_modules/.bin/sucrase-node src/game/audit-care-chain.ts && echo '[check:battle-sprites]' && node scripts/check-battle-sprites.js && echo '[typecheck]' && npx tsc --noEmit && echo '[lint]' && npx expo lint"
+    "test:unit": "vitest run tests/chapter_completion.test.ts tests/chapter_completion_render.test.ts",
+    "validate": "echo '[gen:tutorial-audit]' && bash scripts/stamp-tutorial-audit.sh && echo '[check:routes]' && node scripts/check-routes.js && echo '[check:pronouns]' && node scripts/check-hero-pronouns.js && echo '[check:skill-clinical]' && node scripts/check-skill-clinical.js && echo '[check:battle-audit]' && node_modules/.bin/sucrase-node scripts/generate-battle-audit.ts --check && echo '[check:prologue-vn-cfg]' && node scripts/check-prologue-vn-cfg.js && echo '[check:care-chain]' && node_modules/.bin/sucrase-node src/game/audit-care-chain.ts && echo '[check:battle-sprites]' && node scripts/check-battle-sprites.js && echo '[test:unit]' && npm run test:unit && echo '[typecheck]' && npx tsc --noEmit && echo '[lint]' && npx expo lint"
   },
   "dependencies": {
     "@expo/metro-runtime": "6.1.2",
