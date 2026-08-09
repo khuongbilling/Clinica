@@ -58,9 +58,10 @@ export default function JourneyScreen() {
     bookId,
     sagaId,
     ageId,
-  } = useLocalSearchParams<{ bookId?: string; sagaId?: string; ageId?: string }>();
+    tab,
+  } = useLocalSearchParams<{ bookId?: string; sagaId?: string; ageId?: string; tab?: string }>();
   const { player, loading, claimJourneyNode } = usePlayer();
-  const [activeTab, setActiveTab]       = useState("chapter");
+  const [activeTab, setActiveTab]       = useState(tab === "memories" || tab === "quests" ? tab : "chapter");
   const [showRounds, setShowRounds]     = useState(false);
   // ChapterPage is unreachable (redirect fires unconditionally) but its
   // downstream state still compiles; keep as a constant to avoid regressions.
@@ -89,6 +90,9 @@ export default function JourneyScreen() {
   // When a bookId is provided, clamp to chapters within that book's scope.
   useEffect(() => {
     if (!player || chapterIdxInitialized.current) return;
+    // Deep-linked to a specific tab (Memories / Quests) — stay on this screen
+    // instead of bridging to the fog-map.
+    if (tab === "memories" || tab === "quests") return;
     chapterIdxInitialized.current = true;
     const lvl     = playerLevelFromXp(player.xp ?? 0).level;
     const claimed = player.claimed_journey_nodes ?? [];

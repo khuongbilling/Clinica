@@ -31,7 +31,7 @@ import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
-import { nextAutoStoryScene, nextUnseenSideScene } from "@/src/game/storyScenes";
+import { nextAutoStoryScene } from "@/src/game/storyScenes";
 import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate, heroXpCostForLevel } from "@/src/game/progression";
@@ -382,10 +382,6 @@ export default function RunHome() {
   const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state;
   const roundsBadge = claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0);
 
-  // Manhwa story layer — a newly unlocked side scene surfaces as a one-time
-  // "new memory" prompt; it disappears once the scene is watched (or skipped).
-  const newMemory = nextUnseenSideScene(player);
-
   // Push 26 — Community board banner is hidden while the tutorial chain is active.
   // `currentObjective === null` is the signal that all 12 steps are done.
   // While `currentObjective` is `undefined` (still loading) or a live step,
@@ -502,26 +498,6 @@ export default function RunHome() {
           >
             <Ionicons name="close" size={14} color={COLORS.onSurfaceTertiary} />
           </Pressable>
-        </Pressable>
-      )}
-
-      {/* ── NEW MEMORY PROMPT — a side story scene has unlocked ── */}
-      {newMemory && (
-        <Pressable
-          style={styles.memoryBanner}
-          onPress={() => router.push(dynRoute.storyScene(newMemory.id))}
-          testID="home-new-memory-banner"
-          accessibilityLabel={`New memory unlocked: ${newMemory.title}`}
-          accessibilityRole="button"
-        >
-          <Ionicons name="sparkles" size={18} color="#E0B45C" />
-          <View style={{ flex: 1, gap: 1 }}>
-            <Text style={styles.memoryBannerKicker}>NEW MEMORY REMEMBERED</Text>
-            <Text style={styles.memoryBannerTitle} numberOfLines={1}>
-              {newMemory.kicker} — {newMemory.title}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#E0B45C" />
         </Pressable>
       )}
 
