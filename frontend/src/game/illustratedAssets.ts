@@ -169,12 +169,6 @@ export function getMapSprite(classIdOrName: string): number {
 
 // ── Preload module arrays (for launch preloader) ──────────────────────────────
 
-/**
- * Chapter map backgrounds were removed when the fog-map renderer replaced the
- * SVG visual maps. Kept as an empty array so tabAssets.ts spread doesn't break.
- */
-export const CHAPTER_MAP_BG_MODULES: number[] = [];
-
 /** All V2 node picture icons. */
 export const NODE_ILLUSTRATED_MODULES: number[] = Object.values(NODE_ILLUSTRATED);
 
@@ -189,7 +183,6 @@ export const MAP_SPRITE_MODULES: number[] = Object.values(MAP_SPRITE);
 
 /** Every V2 illustrated asset — use to warm the full illustrated asset cache. */
 export const ALL_ILLUSTRATED_MODULES: number[] = [
-  ...CHAPTER_MAP_BG_MODULES,
   ...NODE_ILLUSTRATED_MODULES,
   ...LESSON_BANNER_MODULES,
   ...SCHOOL_BANNER_MODULES,

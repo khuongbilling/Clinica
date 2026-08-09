@@ -2,11 +2,8 @@ import { HERO_SPRITE_MODULES } from "@/src/components/HeroSprites";
 import { HERO_PORTRAIT_MODULES } from "@/src/components/HeroPortraits";
 import { HERO_BATTLE_SPRITE_MODULES } from "@/src/components/HeroBattleSprites";
 import { REALM_IMAGE_MODULES, prefetchModules } from "@/src/game/realmAssets";
-import { CHAPTER_MAP_BG_MODULES } from "@/src/game/illustratedAssets";
-
 // Every image rendered across the five bottom tabs (Journey, Heroes, Sanctuary,
-// Inventory, Shop) plus the Journey Map chapter backgrounds. Warmed once at
-// game start so switching between tabs and opening chapter maps appears instantly.
+// Inventory, Shop). Warmed once at game start so switching between tabs appears instantly.
 const TAB_IMAGE_MODULES: number[] = [
   require("../../assets/images/home_hub_bg_v4.png"), // hub background
   // Tab icon PNGs — warmed so the bar renders instantly on cold launch
@@ -19,7 +16,6 @@ const TAB_IMAGE_MODULES: number[] = [
   ...(HERO_PORTRAIT_MODULES as unknown as number[]), // Bust portraits — collection + gacha cards
   ...HERO_BATTLE_SPRITE_MODULES, // Heroes tab — battle sprite cards
   ...REALM_IMAGE_MODULES,        // Realm — terrain + buildings
-  ...CHAPTER_MAP_BG_MODULES,     // empty — chapter map backgrounds removed when fog-map replaced SVG visual maps
 ];
 
 let preloadPromise: Promise<void> | null = null;
