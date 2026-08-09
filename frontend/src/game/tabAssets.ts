@@ -19,7 +19,7 @@ const TAB_IMAGE_MODULES: number[] = [
   ...(HERO_PORTRAIT_MODULES as unknown as number[]), // Bust portraits — collection + gacha cards
   ...HERO_BATTLE_SPRITE_MODULES, // Heroes tab — battle sprite cards
   ...REALM_IMAGE_MODULES,        // Realm — terrain + buildings
-  ...CHAPTER_MAP_BG_MODULES,     // Journey Map — V3 illustrated chapter backgrounds
+  ...CHAPTER_MAP_BG_MODULES,     // empty — chapter map backgrounds removed when fog-map replaced SVG visual maps
 ];
 
 let preloadPromise: Promise<void> | null = null;
