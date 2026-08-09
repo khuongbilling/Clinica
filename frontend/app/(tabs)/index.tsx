@@ -213,12 +213,8 @@ export default function RunHome() {
   );
 
   // ── Hub shortcut card notification badges (hooks must be before early returns) ──
-  // Recruit: badge when new heroes are owned but not yet viewed in the Heroes screen.
-  const newHeroCount  = useNewHeroCount(player?.heroes_owned ?? []);
-  const recruitBadge  = newHeroCount > 0 ? newHeroCount : undefined;
-  // Supplies: badge when inventory has new items not yet viewed in the Bag screen.
-  const newBagCount   = useNewBagCount(Object.keys(player?.inventory ?? {}));
-  const suppliesBadge = newBagCount > 0 ? newBagCount : undefined;
+  // (Recruit/Supplies badges removed with their shortcut cards — the nav bar
+  //  tabs carry their own notification dots.)
   // Realm: badge when buildings unlock at the current atrium level but haven't been seen yet.
   const unlockedRealmIds = REALM_BUILDINGS
     .filter((b) => b.atriumLevelRequired <= getAtriumLevel(player?.kingdom_levels ?? {}))
@@ -604,13 +600,7 @@ export default function RunHome() {
 
         {/* LEFT COLUMN — Study · Rounds · Goals · Recruit (locked shortcuts are hidden, not dimmed) */}
         <View style={styles.sideCol}>
-          <SanctuaryShortcutCard
-            emblem={EMBLEM_IMAGES.study}
-            label="Study"
-            available
-            onPress={() => router.push(ROUTES.UNIVERSITY)}
-            testID="home-float-study"
-          />
+          {/* Study shortcut removed — duplicated nav destination */}
           {roundsUnlocked && (
             <SanctuaryShortcutCard
               emblem={EMBLEM_IMAGES.dailyRounds}
@@ -620,25 +610,7 @@ export default function RunHome() {
               testID="home-float-rounds"
             />
           )}
-          {roundsUnlocked && (
-            <SanctuaryShortcutCard
-              emblem={EMBLEM_IMAGES.goals}
-              label="Goals"
-              available
-              onPress={() => router.push(ROUTES.MILESTONES)}
-              testID="home-float-goals"
-            />
-          )}
-          {summonUnlocked && (
-            <SanctuaryShortcutCard
-              emblem={EMBLEM_IMAGES.recruit}
-              label="Recruit"
-              available={!recruitBadge}
-              badge={recruitBadge}
-              onPress={() => router.push(ROUTES.UNI_RECRUIT)}
-              testID="home-float-recruit"
-            />
-          )}
+          {/* Goals + Recruit shortcuts removed — duplicated nav destinations */}
         </View>
 
         {/* CENTER — hero portrait (plain, no frame, no pedestal, no blob) */}
@@ -701,15 +673,7 @@ export default function RunHome() {
               testID="home-float-ward-defense"
             />
           )}
-          {roundsUnlocked && (
-            <SanctuaryShortcutCard
-              emblem={EMBLEM_IMAGES.supplies}
-              label="Supplies"
-              badge={suppliesBadge}
-              onPress={() => router.push(ROUTES.ITEM_BAG)}
-              testID="home-float-supplies"
-            />
-          )}
+          {/* Supplies shortcut removed — duplicates the Bag tab in the nav bar */}
         </View>
       </View>
 
