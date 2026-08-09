@@ -17,7 +17,7 @@
  * JOURNEY_MAP_FIXTURE construction but is NOT exported.
  */
 
-import type { EncounterType, ChestTier, TileVisibility } from './types';
+import type { EncounterType, ChestTier, TileVisibility, TerrainVisualVariant } from './types';
 
 // ── HexMapTile — canonical rendering type (Push 9) ───────────────────────────
 
@@ -42,6 +42,11 @@ export interface HexMapTile {
   chestTier?:  ChestTier;
   /** True for the chapter-boss gate anchor tile. */
   isGate?:     boolean;
+  /**
+   * Cosmetic surface variant — only set on 'none' encounter tiles.
+   * No gameplay effect; used by the terrain renderer for visual variety.
+   */
+  visualVariant?: TerrainVisualVariant;
 }
 
 // ── Legacy types (internal only) ─────────────────────────────────────────────

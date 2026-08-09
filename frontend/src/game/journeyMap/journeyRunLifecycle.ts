@@ -48,6 +48,7 @@
 
 import { getChapterHexTopology, isAuthoredChapter } from './chapterMapTemplates';
 import { generateHexTopology }         from './topology';
+import { fnv1a32 }                     from './prng';
 import { assignJourneyEncounters }     from './encounters';
 import { assignCanonicalEncounters }   from './canonicalEncounters';
 import { computeInitialFog }           from './fogCalculator';
@@ -65,6 +66,7 @@ import type {
   ChestTier,
   WardEventSubtype,
   EncounterType,
+  TerrainVisualVariant,
 } from './types';
 
 // ── Public schema version ─────────────────────────────────────────────────────
@@ -243,6 +245,19 @@ export function buildInitialJourneyRun({
   // Build an O(1) lookup from tileKey → RunTileInput.
   const assignedByKey = new Map(encounters.tiles.map(t => [t.tileKey, t]));
 
+  // ── Terrain visual variant seeding ──────────────────────────────────────────
+  // Deterministic cosmetic variant for 'none' encounter tiles only.
+  // Namespace is isolated from topology ("ch${c}:${s}") and encounter
+  // ("${s}:encounters") streams so the variant roll never perturbs either.
+  // No gameplay effect — purely surface decoration for the renderer.
+  const TERRAIN_VARIANTS: TerrainVisualVariant[] = [
+    'plain', 'cracked', 'moss', 'rune', 'flowers', 'lantern', 'debris',
+  ];
+  function terrainVariant(tileKey: string): TerrainVisualVariant {
+    const hash = fnv1a32(`${seed}:terrain:${tileKey}`);
+    return TERRAIN_VARIANTS[hash % TERRAIN_VARIANTS.length];
+  }
+
   const tiles: JourneyTile[] = topology.tiles.map(coord => {
     const tileKey  = `${coord.q},${coord.r}`;
     const assigned = assignedByKey.get(tileKey);
@@ -270,6 +285,8 @@ export function buildInitialJourneyRun({
       encounter,
       chestTier:              encounter === 'treasure' ? assigned?.chestTier : undefined,
       wardEventSubtype,
+      // Cosmetic variant — only on empty terrain, no gameplay effect.
+      visualVariant:          encounter === 'none' ? terrainVariant(tileKey) : undefined,
       visibility,
       visited:                tileKey === startKey,
       resolved:               false,

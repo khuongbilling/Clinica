@@ -127,14 +127,16 @@ const TABS = [
  */
 function toHexMapTile(t: JourneyTile, gateId: string | undefined): HexMapTile {
   return {
-    id:        t.id,
-    q:         t.q,
-    r:         t.r,
-    visibility: t.visibility,
-    current:   t.current,
-    encounter: t.encounter,
-    chestTier: t.chestTier,
-    isGate:    t.id === gateId,
+    id:           t.id,
+    q:            t.q,
+    r:            t.r,
+    visibility:   t.visibility,
+    current:      t.current,
+    encounter:    t.encounter,
+    chestTier:    t.chestTier,
+    isGate:       t.id === gateId,
+    // Cosmetic only — no gameplay effect. Only present on 'none' tiles.
+    visualVariant: t.visualVariant,
   };
 }
 

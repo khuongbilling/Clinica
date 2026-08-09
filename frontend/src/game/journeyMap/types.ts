@@ -115,6 +115,38 @@ export type TileVisibility = 'hidden' | 'frontier' | 'revealed';
 
 export type JourneyRunStatus = 'active' | 'cleared' | 'abandoned';
 
+// ── Terrain visual variant ────────────────────────────────────────────────────
+
+/**
+ * Cosmetic surface appearance for a tile with encounter === 'none'.
+ *
+ * Rules:
+ *   • Only assigned to 'none' encounter tiles — encounter tiles use their own
+ *     encounter icon as the visual distinguisher.
+ *   • Deterministic for the current run (seeded from run seed + tile key).
+ *   • Has NO effect on traversal, movement, stamina cost, encounter probability,
+ *     fog behaviour, BFS, or any other gameplay system.
+ *   • Not displayed to the player as a label — purely a visual surface hint for
+ *     the terrain renderer.
+ *
+ * Variants describe the surface texture/decoration of an empty terrain hex:
+ *   plain    — default stone/floor with no added detail
+ *   cracked  — fractured tile surface
+ *   moss     — organic growth between stone seams
+ *   rune     — faint engraved hospital-seal glyph
+ *   flowers  — small botanical cluster at tile centre
+ *   lantern  — unlit wall-mounted lantern bracket
+ *   debris   — scattered medical supply fragments
+ */
+export type TerrainVisualVariant =
+  | 'plain'
+  | 'cracked'
+  | 'moss'
+  | 'rune'
+  | 'flowers'
+  | 'lantern'
+  | 'debris';
+
 // ── Tile ─────────────────────────────────────────────────────────────────────
 
 export interface JourneyTile {
@@ -143,6 +175,16 @@ export interface JourneyTile {
    * Persisted as part of the tile's JSON in the journey run document.
    */
   wardEventSubtype?: WardEventSubtype;
+
+  /**
+   * Cosmetic surface variant for terrain tiles with encounter === 'none'.
+   * Undefined for all other encounter types.
+   *
+   * Assigned once at run-creation time from a deterministic seed derived from
+   * the run seed + tile key.  Has no gameplay effect whatsoever.
+   * See TerrainVisualVariant for the full variant catalogue.
+   */
+  visualVariant?: TerrainVisualVariant;
 
   /** Fog visibility state. */
   visibility: TileVisibility;
