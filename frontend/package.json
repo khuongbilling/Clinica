@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts && node_modules/.bin/sucrase-node tests/elemental_counter.test.ts && node_modules/.bin/sucrase-node tests/tutorial_state.test.ts && node_modules/.bin/sucrase-node tests/journey_map_config.test.ts && node_modules/.bin/sucrase-node tests/journey_map_encounters.test.ts && node_modules/.bin/sucrase-node tests/journey_map_create_run.test.ts",
+    "test": "node_modules/.bin/sucrase-node tests/realm_routes.test.ts && node_modules/.bin/sucrase-node tests/elemental_counter.test.ts && node_modules/.bin/sucrase-node tests/tutorial_state.test.ts && node_modules/.bin/sucrase-node tests/journey_map_config.test.ts && node_modules/.bin/sucrase-node tests/journey_map_encounters.test.ts && node_modules/.bin/sucrase-node tests/journey_map_create_run.test.ts && node_modules/.bin/sucrase-node tests/journey_run_lifecycle.test.ts",
     "check:routes": "node scripts/check-routes.js",
     "check:journey-assets": "node scripts/check-journey-assets.js",
     "check:pronouns": "node scripts/check-hero-pronouns.js",
@@ -19,7 +19,7 @@
     "check:skill-clinical": "node scripts/check-skill-clinical.js",
     "gen:tutorial-audit": "bash scripts/stamp-tutorial-audit.sh",
     "check:battle-sprites": "node scripts/check-battle-sprites.js",
-    "test:unit": "vitest run tests/chapter_completion.test.ts tests/chapter_completion_render.test.ts",
+    "test:unit": "vitest run tests/chapter_completion.test.ts tests/chapter_completion_render.test.ts tests/chapter_tab_badge_render.test.ts",
     "validate": "echo '[gen:tutorial-audit]' && bash scripts/stamp-tutorial-audit.sh && echo '[check:routes]' && node scripts/check-routes.js && echo '[check:pronouns]' && node scripts/check-hero-pronouns.js && echo '[check:skill-clinical]' && node scripts/check-skill-clinical.js && echo '[check:battle-audit]' && node_modules/.bin/sucrase-node scripts/generate-battle-audit.ts --check && echo '[check:prologue-vn-cfg]' && node scripts/check-prologue-vn-cfg.js && echo '[check:care-chain]' && node_modules/.bin/sucrase-node src/game/audit-care-chain.ts && echo '[check:battle-sprites]' && node scripts/check-battle-sprites.js && echo '[test:lifecycle]' && node_modules/.bin/sucrase-node tests/journey_run_lifecycle.test.ts && echo '[test:unit]' && npm run test:unit && echo '[typecheck]' && npx tsc --noEmit && echo '[lint]' && npx expo lint"
   },
   "dependencies": {

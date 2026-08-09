@@ -195,7 +195,13 @@ function LegendRow({ src, label, desc }: { src: number; label: string; desc: str
 }
 
 /** Dev diagnostics panel — always visible on this dev route. */
-function DevDiagnostics({ run }: { run: JourneyRun }) {
+function DevDiagnostics({
+  run,
+  chapterKeysCollected,
+}: {
+  run: JourneyRun;
+  chapterKeysCollected: number;
+}) {
   const { counts, tiers } = useMemo(() => countEncounters(run.tiles), [run.tiles]);
   const exploredPct = run.tileCount > 0
     ? Math.round((run.exploredTileCount / run.tileCount) * 100) : 0;
@@ -235,7 +241,11 @@ function DevDiagnostics({ run }: { run: JourneyRun }) {
 
       <Text style={sDev.row}>
         <Text style={sDev.key}>Gate  </Text>
-        <Text style={sDev.val}>{run.gateAnchorTileId ?? '—'} · {run.areaBossKeysCollected}/{run.areaBossCount} keys</Text>
+        <Text style={sDev.val}>{run.gateAnchorTileId ?? '—'} · {run.areaBossKeysCollected}/{run.areaBossCount} keys (run)</Text>
+      </Text>
+      <Text style={sDev.row}>
+        <Text style={sDev.key}>Keys  </Text>
+        <Text style={sDev.val}>{chapterKeysCollected}/{CHAPTER_BOSS_KEY_REQUIREMENT} chapter-level · {run.areaBossKeysCollected}/{run.areaBossCount} run-level</Text>
       </Text>
       <Text style={sDev.row}>
         <Text style={sDev.key}>Start </Text>
@@ -355,7 +365,7 @@ export default function ChapterFogMapShell() {
     setRunLoading(true);
     setRunError(null);
 
-    loadOrCreateJourneyRun(player.id, chNum, journeyRunRepository)
+    loadOrCreateJourneyRun(player.id, chNum, journeyRunRepository, keysCollected)
       .then(r => { if (!cancelled) { setRun(r); setRunLoading(false); } })
       .catch(err => {
         if (!cancelled) {
@@ -537,12 +547,16 @@ export default function ChapterFogMapShell() {
   const isCleared = run?.status === 'cleared';
 
   // ── Rechallenge Map eligibility ────────────────────────────────────────────
-  // Uses chapter-level keysCollected (from player.chapter_boss_keys) so that
-  // eligibility reflects keys earned across ALL prior runs for this chapter,
-  // not just the current run's areaBossKeysCollected.
+  // Uses the same canonical chapter-level key state as the HUD so eligibility
+  // and run-creation both see the same count.  Falls back to run-level for
+  // legacy saves that pre-date chapter_boss_keys storage (Task 570).
   const rechallengeKeyState = useMemo(
-    () => createChapterBossKeyState(chNum, keysCollected),
-    [chNum, keysCollected],
+    () => createChapterBossKeyState(
+      chNum,
+      keysCollected,
+      chapterKeyEntry?.claimed_tile_ids ?? [],
+    ),
+    [chNum, keysCollected, chapterKeyEntry?.claimed_tile_ids],
   );
   const rechallengeEligibility = useMemo(
     () => checkRechallengeEligibility(rechallengeKeyState, run?.chapterBossDefeated ?? false),
@@ -844,13 +858,19 @@ export default function ChapterFogMapShell() {
             <View style={s.fragmentCountRow}>
               <Text style={s.fragmentCount}>{keysCollected}</Text>
               <Text style={s.fragmentSep}> / </Text>
-              <Text style={s.fragmentRequired}>{areaBossCount}</Text>
+              <Text style={s.fragmentRequired}>{CHAPTER_BOSS_KEY_REQUIREMENT}</Text>
               <Text style={s.fragmentUnit}> Keys</Text>
             </View>
+            {/* Carried-over indicator: show on rechallenge runs that already have keys */}
+            {run !== null && run.attemptNumber > 1 && keysCollected > 0 && (
+              <View style={s.carriedOverBadge}>
+                <Text style={s.carriedOverTxt}>↑ carried over from previous attempt</Text>
+              </View>
+            )}
             <Text style={s.fragmentHint}>
               {zeroKeyMap
                 ? 'No Area Bosses on this map — the gate opens when you find it.'
-                : `Defeat Area Bosses to collect key fragments.\nGather all ${areaBossCount} to unlock the Chapter Boss Gate.`}
+                : `Defeat Area Bosses to collect key fragments.\nCollect ${CHAPTER_BOSS_KEY_REQUIREMENT} total to unlock the Chapter Boss Gate.`}
             </Text>
           </View>
         </Panel>
@@ -876,7 +896,7 @@ export default function ChapterFogMapShell() {
                   ? 'Tap the gate tile on the map — or enter below'
                   : zeroKeyMap
                     ? 'Find the gate tile to enter'
-                    : `${keysCollected} / ${areaBossCount} key fragments collected`}
+                    : `${keysCollected} / ${CHAPTER_BOSS_KEY_REQUIREMENT} key fragments collected`}
             </Text>
           </View>
           {/* "ENTER" button — supplementary to gate tile tap */}
@@ -959,7 +979,7 @@ export default function ChapterFogMapShell() {
 
         {/* ── 5. Dev diagnostics (real run only, dev route) ─────────────── */}
         {run !== null && debugTiles === null && (
-          <DevDiagnostics run={run} />
+          <DevDiagnostics run={run} chapterKeysCollected={keysCollected} />
         )}
 
         {/* ── 6. Tile-outcome legend ────────────────────────────────────── */}
@@ -1020,9 +1040,9 @@ export default function ChapterFogMapShell() {
             <View style={s.statCol}>
               <Text style={[
                 s.statVal,
-                areaBossCount > 0 && keysCollected >= areaBossCount && s.statValAccent,
+                !zeroKeyMap && keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT && s.statValAccent,
               ]}>
-                {keysCollected} / {areaBossCount}
+                {zeroKeyMap ? '—' : `${keysCollected} / ${CHAPTER_BOSS_KEY_REQUIREMENT}`}
               </Text>
               <Text style={s.statLbl}>Keys</Text>
             </View>
@@ -1345,6 +1365,17 @@ const s = StyleSheet.create({
   fragmentRequired: { color: TEXT_SOFT, fontSize: 18, fontWeight: '600', fontFamily: SERIF },
   fragmentUnit:     { color: TEXT_DIM,  fontSize: 12, marginLeft: 2 },
   fragmentHint:     { color: TEXT_DIM,  fontSize: 11, lineHeight: 16 },
+  carriedOverBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: GOLD + '1A',
+    borderWidth: 1,
+    borderColor: GOLD + '44',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 2,
+  },
+  carriedOverTxt:   { color: GOLD, fontSize: 10, fontWeight: '600' },
 
   // Boss gate
   gateSection:    { alignItems: 'center', gap: 8, paddingVertical: 4 },

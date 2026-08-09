@@ -344,14 +344,21 @@ export function generateRunData(
  *   2. If the latest run is cleared → return it (show summary; do not auto-create).
  *   3. Recovery: if the latest run is 'abandoned' (rechallenge creation failed after
  *      the old run was archived) → create the successor attempt so the chapter is
- *      playable again.  Keys carried into the successor are sourced from the
- *      abandoned run's areaBossKeysCollected.
+ *      playable again.  Keys are sourced from `chapterKeysCollected` when provided
+ *      (canonical chapter-level total, same value shown in the HUD), falling back
+ *      to the abandoned run's areaBossKeysCollected for legacy saves.
  *   4. Otherwise (no run ever started) → create attempt #1 and return it.
+ *
+ * @param chapterKeysCollected  Canonical chapter-level key count from
+ *   `player.chapter_boss_keys[chapterId].keys_collected`.  Pass this so the
+ *   recovery path seeds the new run from the same source as the HUD display,
+ *   rather than from the potentially stale run-level field.
  */
 export async function loadOrCreateJourneyRun(
-  playerId:  string,
-  chapterId: number,
-  repo:      IJourneyRunRepository,
+  playerId:             string,
+  chapterId:            number,
+  repo:                 IJourneyRunRepository,
+  chapterKeysCollected?: number,
 ): Promise<JourneyRun> {
   const active = await repo.getActiveRun(playerId, chapterId);
   if (active) return active;
@@ -363,11 +370,15 @@ export async function loadOrCreateJourneyRun(
     // Recovery path: the previous rechallenge succeeded in abandoning the old
     // run but failed before the new one was created.  Create the successor now,
     // carrying the inherited key count forward so no progress is lost.
+    // Prefer the canonical chapter-level total (same source as the HUD) over
+    // the stale run-level field so the recovered run always matches what the
+    // player sees in the key-fragment panel.
+    const inheritedKeys = chapterKeysCollected ?? latest.areaBossKeysCollected;
     return repo.createRechallengeRun(
       playerId,
       chapterId,
       latest.attemptNumber,
-      latest.areaBossKeysCollected,
+      inheritedKeys,
     );
   }
 

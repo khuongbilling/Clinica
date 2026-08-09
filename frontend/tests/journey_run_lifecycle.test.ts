@@ -562,6 +562,26 @@ console.log('\n── rechallengeMap ──');
     check('30b. only one active run after double-tap', activeRuns.length === 1);
   }
 
+  // 32. Recovery: chapterKeysCollected param overrides abandoned run's stale count
+  //     Scenario: Area Boss won on a prior attempt (canonical chapter-level keys = 2)
+  //     but the run record only reflects run-level count (areaBossKeysCollected = 1)
+  //     after a partial update.  The recovered run must inherit the canonical count.
+  {
+    const seed1 = generateSecureSeed();
+    // Stale run-level count (1) differs from canonical chapter count (2)
+    const abandonedRun = {
+      ...buildRealRun({ playerId: P, chapterId: C, attemptNumber: 5, seed: seed1 }),
+      status: 'abandoned' as const,
+      areaBossKeysCollected: 1, // stale run-level
+    };
+    const repo     = new MockRepo([abandonedRun]);
+    // Pass canonical chapter-level count as the authoritative value
+    const loaded   = await loadOrCreateJourneyRun(P, C, repo, 2);
+    eq(loaded.attemptNumber,         6, '32a. successor = attempt 6');
+    eq(loaded.status,                'active', '32b. successor is active');
+    eq(loaded.areaBossKeysCollected, 2, '32c. canonical chapter count (2) wins over stale run count (1)');
+  }
+
   // 31. Two active runs (edge case): getActiveRun returns highest-attempt one
   {
     const P2   = 'player-F';
