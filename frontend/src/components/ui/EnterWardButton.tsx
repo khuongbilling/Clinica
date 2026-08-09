@@ -154,10 +154,7 @@ export function EnterWardButton({
         <Image
           source={FULL_ART}
           style={StyleSheet.absoluteFill}
-          // At natural aspect (heightScale 1) fill === cover. When the button is
-          // shortened, "cover" scales the art to the width and crops the excess
-          // top/bottom instead of squashing it — lettering keeps its proportions.
-          contentFit={heightScale === 1 ? "fill" : "cover"}
+          contentFit="fill"         // pressable keeps the art's exact aspect ratio
           pointerEvents="none"
           accessible={false}
         />
