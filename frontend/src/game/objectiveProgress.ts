@@ -343,10 +343,15 @@ export async function reconcileEarlyObjectives(player: {
     // Step 6 — reminiscence scene completed
     if (player.seen_reminiscence) mark("obj_memory_seen");
 
-    // Steps 8–12 — backfill from later PlayerState / ChainProgress flags so
+    // Steps 7–12 — backfill from later PlayerState / ChainProgress flags so
     // existing players whose objective storage never got written are not
     // hard-blocked at a step they already passed.
     const cp = await getChainProgress();
+    // Step 7 — visited University. No direct flag; any lesson completed (lotus:*
+    // or any other University lesson ID) or any runs completed both prove the
+    // player already passed through University.
+    const hasAnyLesson = (player.lessons_completed ?? []).length > 0;
+    if (hasAnyLesson || (player.runs_completed ?? 0) > 0) mark("obj_university_arrived");
     // Step 8 — Fading Apprentice chain complete (all 3 games done)
     if (cp.stabilizeDone) {
       mark("obj_cue_hunt_done");    // internal — keep storage consistent
