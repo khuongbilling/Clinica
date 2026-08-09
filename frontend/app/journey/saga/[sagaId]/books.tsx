@@ -1,9 +1,10 @@
 /**
- * /journey/saga/[sagaId]/age/[ageId]/books — Books screen
+ * /journey/saga/[sagaId]/books — Books in a Saga
  *
- * Third drill-down level: shows all Books within an Age.
- * Each Book card shows the chapter range and the player's progress.
- * Navigates to the chapter-list screen (/journey?bookId=…) on tap.
+ * Flat list of all Books in the Saga (Ages are a data grouping only, not
+ * a navigation layer). Tapping a Book navigates to its Chapter banners.
+ *
+ * Hierarchy: Journey → Sagas → Books → Chapters → Ward Shift (fog-map)
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,48 +13,48 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
 import {
-  getAge,
-  getBookChapters,
+  getSaga,
+  getSagaBooks,
   isNodeLocked,
   type JourneyBook,
 } from "@/src/game/journeyHierarchy";
 import type { ModeCardDef } from "@/src/game/modeHub";
 import { getChapterStatus } from "@/src/game/chapterJourney";
+import { getBookChapters } from "@/src/game/journeyHierarchy";
 import { playerLevelFromXp } from "@/src/game/progression";
 import { dynRoute, type AppRoute } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { SERIF, UI } from "@/src/theme/ui";
 
-/** Build a subtitle for a Book card that includes the chapter range and progress. */
-function buildBookSubtitle(
+function buildBookProgress(
   book: JourneyBook,
   playerLevel: number,
   claimedNodes: string[],
 ): string {
   const [min, max] = book.chapterRange;
-  const chapters = getBookChapters(book);
-  const completed = chapters.filter(
+  const chapters   = getBookChapters(book);
+  const completed  = chapters.filter(
     (ch) => getChapterStatus(ch, playerLevel, claimedNodes) === "complete",
   ).length;
   const total = chapters.length;
-  const rangeLabel = `Ch. ${min}–${max}`;
-  const progressLabel = completed > 0
-    ? `${completed}/${total} chapters complete`
-    : "Begin your journey";
-  return `${rangeLabel} · ${progressLabel}`;
+  const range = `Ch. ${min}–${max}`;
+  if (completed === 0) return `${range} · Begin your journey`;
+  if (completed === total) return `${range} · All chapters complete ✓`;
+  return `${range} · ${completed}/${total} chapters complete`;
 }
 
-export default function BooksScreen() {
-  const { sagaId, ageId } = useLocalSearchParams<{ sagaId: string; ageId: string }>();
-  const router = useRouter();
+export default function SagaBooksScreen() {
+  const { sagaId } = useLocalSearchParams<{ sagaId: string }>();
+  const router     = useRouter();
   const { player } = usePlayer();
-  const playerLevel = player ? playerLevelFromXp(player.xp ?? 0).level : 1;
+  const playerLevel  = player ? playerLevelFromXp(player.xp ?? 0).level : 1;
   const claimedNodes = player?.claimed_journey_nodes ?? [];
 
-  const age = getAge(sagaId ?? "", ageId ?? "");
+  const saga  = getSaga(sagaId ?? "");
+  const books = getSagaBooks(sagaId ?? "");
 
-  if (!age) {
+  if (!saga) {
     return (
       <SafeAreaView style={[s.root, s.center]} edges={["top"]}>
         <ActivityIndicator color={COLORS.brand} />
@@ -65,19 +66,19 @@ export default function BooksScreen() {
     <SafeAreaView style={s.root} edges={["top"]}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10} testID="books-back">
+        <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10} testID="saga-books-back">
           <Ionicons name="chevron-back" size={22} color={COLORS.onSurface} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={s.kicker}>{age.title.toUpperCase()}</Text>
+          <Text style={s.kicker}>{saga.title.toUpperCase()}</Text>
           <Text style={s.title}>Books</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.intro}>{age.subtitle}</Text>
+        <Text style={s.intro}>{saga.subtitle}</Text>
 
-        {age.books.map((book) => {
+        {books.map((book) => {
           const locked = isNodeLocked(book, playerLevel);
           const lockLabel = book.unlockCondition
             ? book.unlockCondition.label
@@ -87,18 +88,18 @@ export default function BooksScreen() {
 
           const subtitle = locked
             ? book.subtitle
-            : buildBookSubtitle(book, playerLevel, claimedNodes);
+            : buildBookProgress(book, playerLevel, claimedNodes);
 
           const mode: ModeCardDef = {
-            id: book.id,
-            title: book.title,
+            id:          book.id,
+            title:       book.title,
             subtitle,
-            icon: "book",
+            icon:        "book",
             accentColor: book.accentColor,
-            status: book.status === "coming_soon" ? "coming_soon" : "active",
-            size: "large",
-            artBrief: "",
-            imageKey: book.imageKey,
+            status:      book.status === "coming_soon" ? "coming_soon" : "active",
+            size:        "large",
+            artBrief:    "",
+            imageKey:    book.imageKey,
           };
 
           return (
@@ -108,14 +109,14 @@ export default function BooksScreen() {
               onPress={() => {
                 if (!locked) {
                   router.push(
-                    dynRoute.book(sagaId ?? "", ageId ?? "", book.id) as AppRoute,
+                    dynRoute.bookChapters(sagaId ?? "", book.id) as AppRoute,
                   );
                 }
               }}
               height={148}
               locked={locked}
               lockLabel={lockLabel}
-              testID={`books-banner-${book.id}`}
+              testID={`saga-books-banner-${book.id}`}
             />
           );
         })}
@@ -129,11 +130,11 @@ const s = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems:    "center",
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
+    paddingTop:    SPACING.sm,
     paddingBottom: SPACING.xs,
-    gap: SPACING.sm,
+    gap:           SPACING.sm,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,

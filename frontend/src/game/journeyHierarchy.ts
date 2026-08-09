@@ -201,6 +201,28 @@ export function getBookChapters(book: JourneyBook) {
 }
 
 /**
+ * Return all Books across every Age in a Saga, flattened.
+ * This is the canonical list for the Saga → Books navigation layer
+ * (the Age layer is a data grouping only, not a navigation hop).
+ */
+export function getSagaBooks(sagaId: string): JourneyBook[] {
+  const saga = getSaga(sagaId);
+  if (!saga) return [];
+  return saga.ages.flatMap((a) => a.books);
+}
+
+/**
+ * Find a Book by sagaId + bookId, searching across all Ages in the Saga.
+ * Used by screens that navigate without an ageId in the URL.
+ */
+export function getBookFromSaga(
+  sagaId: string,
+  bookId: string,
+): JourneyBook | undefined {
+  return getSagaBooks(sagaId).find((b) => b.id === bookId);
+}
+
+/**
  * Determine whether a hierarchy node is locked for the given player level.
  * Returns true when there is an unlock condition and the player hasn't met it.
  */

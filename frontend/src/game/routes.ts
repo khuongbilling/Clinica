@@ -346,12 +346,14 @@ export const dynRoute = {
   chapterFogMap: (chapterId: string): AppRoute =>
     `/journey/chapter/${chapterId}/fog-map` as AppRoute,
 
-  // ── Journey hierarchy (Saga → Age → Book) ────────────────────────────────
+  // ── Journey hierarchy (Saga → Books → Chapters) ──────────────────────────
   sagas: (): AppRoute => JOURNEY_SAGAS,
-  saga:  (sagaId: string): AppRoute =>
-    `/journey/saga/${sagaId}/ages` as AppRoute,
-  age:   (sagaId: string, ageId: string): AppRoute =>
-    `/journey/saga/${sagaId}/age/${ageId}/books` as AppRoute,
-  book:  (sagaId: string, ageId: string, bookId: string): AppRoute =>
-    `/journey?bookId=${bookId}&sagaId=${sagaId}&ageId=${ageId}` as AppRoute,
+
+  /** Saga → flat Books list (no Age hop). /journey/saga/[sagaId]/books */
+  saga: (sagaId: string): AppRoute =>
+    `/journey/saga/${sagaId}/books` as AppRoute,
+
+  /** Book → Chapter banners. /journey/saga/[sagaId]/book/[bookId]/chapters */
+  bookChapters: (sagaId: string, bookId: string): AppRoute =>
+    `/journey/saga/${sagaId}/book/${bookId}/chapters` as AppRoute,
 } as const;
