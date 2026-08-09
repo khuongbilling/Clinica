@@ -702,6 +702,7 @@ export default function RunHome() {
         <EnterWardButton
           onPress={() => router.push(ROUTES.shift)}
           style={styles.startBtn}
+          heightScale={0.75}
           testID="run-random-encounter"
         />
       ) : (
@@ -1114,7 +1115,7 @@ const styles = StyleSheet.create({
   /* Hero info panel wrapper — push-7 HeroAffinityCard sits here */
   infoPanelWrap: {
     marginHorizontal: SPACING.md,
-    marginTop: SPACING.xs,
+    marginTop: SPACING.lg,
   },
 
   /* Start button — layout only; visuals come from PrimaryButton */

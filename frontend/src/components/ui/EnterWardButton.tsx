@@ -44,6 +44,9 @@ export interface EnterWardButtonProps {
   style?:              ViewStyle;
   testID?:             string;
   accessibilityLabel?: string;
+  /** Scale the button height relative to the artwork's natural aspect ratio.
+   *  Width is unchanged; 0.75 = 75 % of natural height. Default 1. */
+  heightScale?:        number;
 }
 
 export function EnterWardButton({
@@ -54,6 +57,7 @@ export function EnterWardButton({
   style,
   testID,
   accessibilityLabel,
+  heightScale = 1,
 }: EnterWardButtonProps) {
   const reduceMotion   = useReducedMotion();
   const scaleAnim      = useRef(new Animated.Value(1)).current;
@@ -142,7 +146,7 @@ export function EnterWardButton({
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityRole="button"
         accessibilityState={{ disabled: isBlocked }}
-        style={s.pressable}
+        style={[s.pressable, heightScale !== 1 && { aspectRatio: ART_ASPECT / heightScale }]}
         onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
       >
         {/* ── The button IS the painted artwork — frame, medallion,
