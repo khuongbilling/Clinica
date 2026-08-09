@@ -32,7 +32,7 @@ import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { nextAutoStoryScene } from "@/src/game/storyScenes";
-import { getObjectiveProgress, getCurrentObjective, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
+import { getObjectiveProgress, getCurrentObjective, awaitPendingReconcile, OBJECTIVES, type ObjectiveDef } from "@/src/game/objectiveProgress";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate, heroXpCostForLevel } from "@/src/game/progression";
 import { getProgress } from "@/src/game/evolution";
@@ -192,10 +192,23 @@ export default function RunHome() {
 
   // Objective-driven first-session guide — reloads whenever the hub gains focus
   // so returning from University / lessons always shows the freshest step.
+  // We await the latest reconcile promise before reading to avoid the race
+  // where store.tsx's boot reconciliation hasn't finished writing yet.
   const [currentObjective, setCurrentObjective] = useState<ObjectiveDef | null | undefined>(undefined);
   useFocusEffect(
     useCallback(() => {
-      getObjectiveProgress().then((done) => setCurrentObjective(getCurrentObjective(done)));
+      awaitPendingReconcile().then(() =>
+        getObjectiveProgress().then((done) => {
+          const obj = getCurrentObjective(done);
+          if (__DEV__) {
+            console.log(
+              '[ObjectiveCard] completed IDs:', [...done],
+              '| currentStep:', obj ? `${obj.step} (${obj.id})` : 'all done (null)',
+            );
+          }
+          setCurrentObjective(obj);
+        })
+      );
     }, []),
   );
 
@@ -547,7 +560,12 @@ export default function RunHome() {
 
       {/* The System guide + return card float OVER the arena (absolute overlay)
            so they never push the hero avatar / side shortcuts down. */}
-      {!localDismissGuide && !activeTutorialId && currentObjective && currentObjective.step <= 15 && (
+      {/* The card is hidden only while the systemHubIntro overlay is actively
+           running on this screen — that's the one tutorial that visually
+           conflicts with it.  All other activeTutorialId values (e.g. stale
+           prologueBattle / firstBattle from a previous screen) must not block
+           the card or players who completed the prologue never see it at all. */}
+      {!localDismissGuide && activeTutorialId !== "systemHubIntro" && currentObjective && currentObjective.step <= 15 && (
         <View style={styles.guideOverlay} pointerEvents="box-none">
           <SystemObjectiveCard
             message={hubGuideMessage(currentObjective)}

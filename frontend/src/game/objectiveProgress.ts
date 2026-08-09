@@ -265,6 +265,30 @@ export async function resetObjectives(): Promise<void> {
   } catch {}
 }
 
+// ── Pending-reconcile promise slot ─────────────────────────────────────────
+// store.tsx's refresh() calls reconcileEarlyObjectives fire-and-forget.
+// The hub reads getObjectiveProgress() on every focus, which may run before
+// reconciliation finishes writing to AsyncStorage.  This slot lets the hub
+// await the latest reconcile promise so it always sees post-reconcile data.
+
+let _pendingReconcile: Promise<ObjectiveId[]> = Promise.resolve([]);
+
+/**
+ * Called by store.tsx whenever it kicks off a new reconciliation.
+ * Replaces the slot with the live promise so the hub can await it.
+ */
+export function setPendingReconcile(p: Promise<ObjectiveId[]>): void {
+  _pendingReconcile = p;
+}
+
+/**
+ * Returns the latest reconcile promise.  Resolves immediately if no
+ * reconciliation is in progress (e.g. on first mount before refresh runs).
+ */
+export function awaitPendingReconcile(): Promise<ObjectiveId[]> {
+  return _pendingReconcile;
+}
+
 /**
  * Reconcile the first 6 onboarding objectives against PlayerState flags.
  *
@@ -284,6 +308,8 @@ export async function resetObjectives(): Promise<void> {
  */
 export async function reconcileEarlyObjectives(player: {
   prologue_complete?: boolean;
+  /** New cinematic-prologue flag — either flag satisfies step 1. */
+  opening_prologue_complete?: boolean;
   identity_restored?: boolean;
   diagnostic_intro_seen?: boolean;
   class_tree_id?: string | null;
@@ -299,8 +325,10 @@ export async function reconcileEarlyObjectives(player: {
       if (!record[id]) { record[id] = true; newly.push(id); }
     };
 
-    // Step 1 — prologue battle finished
-    if (player.prologue_complete) mark("obj_prologue_done");
+    // Step 1 — prologue battle finished.
+    // The legacy flow writes prologue_complete; the new cinematic-prologue flow
+    // writes opening_prologue_complete.  Treat either as proof step 1 is done.
+    if (player.prologue_complete || player.opening_prologue_complete) mark("obj_prologue_done");
     // Step 2 — Lotus Recall cinematic: no direct flag, but identity_restored
     //           implies the player passed through lotus-recall first
     if (player.identity_restored) mark("obj_lotus_recall");

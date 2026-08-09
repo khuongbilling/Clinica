@@ -31,7 +31,7 @@ import { isValidCellId } from './realmGrid';
 import {
   ClassId, CLASS_IDS, canClaimTier, classIdForAptitude, defaultClassProgress, getClassTree,
 } from './classTree';
-import { reconcileEarlyObjectives } from './objectiveProgress';
+import { reconcileEarlyObjectives, setPendingReconcile } from './objectiveProgress';
 import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
 import { normalizeProfileId } from './onboarding';
 import { TokenExchangeItem, MIASMA_BLOOM_MILESTONES, getMilestoneProgress } from './worldEvent';
@@ -887,8 +887,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       // Reconcile early objectives (steps 1-6) against PlayerState flags so the
       // hub never shows a regressed step for players whose objective storage is
       // behind their actual progress (crash, existing account backfill, etc.).
-      // Fire-and-forget: the hub rereads objective progress on every focus.
-      reconcileEarlyObjectives(normalized).catch(() => {});
+      // Store the promise so the hub can await it before reading objectives
+      // (avoids a focus-read race where the hub picks up stale data).
+      setPendingReconcile(reconcileEarlyObjectives(normalized).catch(() => [] as import('./objectiveProgress').ObjectiveId[]));
 
       try {
         const remote = normalizeProgression(await api.getPlayer(local.id));
@@ -908,7 +909,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         await saveLocal(merged);
         // Also reconcile against the backend-authoritative snapshot in case
         // flags differ between local and remote (e.g. resumed on a new device).
-        reconcileEarlyObjectives(merged).catch(() => {});
+        // Re-set the slot so the hub awaits the freshest reconcile.
+        setPendingReconcile(reconcileEarlyObjectives(merged).catch(() => [] as import('./objectiveProgress').ObjectiveId[]));
       } catch {
         // Backend unavailable — use local data
       }
