@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs, useRouter } from "expo-router";
-import { Animated, Image, Text, View, StyleSheet } from "react-native";
+import { Animated, Image, Platform, Text, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -198,8 +198,12 @@ function SanctuaryTabIcon({ focused, locked }: { focused: boolean; locked: boole
             s.iconAbsolute,
             {
               opacity: greyAnim,
-              // CSS filter: Expo web renders it; native ignores gracefully (image dims via opacity)
-              filter: "saturate(0) brightness(0.5)" as any,
+              // Web: CSS filter desaturates + dims. Native: tintColor recolours
+              // all pixels to mid-grey (CSS filter is silently ignored on native).
+              ...Platform.select({
+                web:     { filter: "saturate(0) brightness(0.5)" } as object,
+                default: { tintColor: "#6B6B6B" },
+              }),
             },
           ]}
           resizeMode="contain"
