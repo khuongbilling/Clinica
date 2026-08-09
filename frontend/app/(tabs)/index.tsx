@@ -118,32 +118,6 @@ function hubGuideMessage(obj: ObjectiveDef): string {
   }
 }
 
-function hubGuideCta(obj: ObjectiveDef): string {
-  switch (obj.id) {
-    case "obj_prologue_done":
-      return "Explore the Hub";
-    case "obj_lotus_recall":
-    case "obj_identity_done":
-    case "obj_diagnostic_done":
-    case "obj_class_result":
-    case "obj_memory_seen":
-      return "Enter Clinica University";
-    case "obj_university_arrived":
-      return "Enter Clinica University";
-    case "obj_fading_apprentice_done":
-      return "Open University";
-    case "obj_lotus_visited":
-      return "Open Lotus Lessons";
-    case "obj_lotus_first_lesson":
-      return "Start First Lotus Lesson";
-    case "obj_recruit_preview":
-      return "Visit Recruitment Hall";
-    case "obj_ward_shift_first":
-      return "Enter Ward Shift";
-    default:
-      return "Continue";
-  }
-}
 
 function hubGuideRoute(obj: ObjectiveDef): string {
   switch (obj.id) {
@@ -568,7 +542,6 @@ export default function RunHome() {
           <SystemObjectiveCard
             message={hubGuideMessage(currentObjective)}
             objective={`Step ${currentObjective.step} of ${OBJECTIVES.length} — ${currentObjective.title}`}
-            ctaLabel={hubGuideCta(currentObjective)}
             onPress={() => {
               const route = hubGuideRoute(currentObjective);
               if (!route) {
@@ -985,7 +958,7 @@ const styles = StyleSheet.create({
   /* System guide / return card — floats over the arena instead of pushing it down */
   guideOverlay: {
     position: "absolute",
-    top: SPACING.xs,
+    top: SPACING.xs - 15, // nudged up 15px so the card sits higher over the arena
     left: SPACING.md,
     right: SPACING.md,
     zIndex: 30,

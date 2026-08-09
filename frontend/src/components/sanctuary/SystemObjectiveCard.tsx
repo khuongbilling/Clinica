@@ -34,7 +34,6 @@ const ORNAMENT_LEFT      = require("../../../assets/ui-icons/hub/objective-ornam
 export interface SystemObjectiveCardProps {
   message: string;
   objective?: string;
-  ctaLabel?: string;
   onPress?: () => void;
   onDismiss?: () => void;
   defaultOpen?: boolean;
@@ -67,7 +66,6 @@ function CollapseChevron({ open }: { open: boolean }) {
 export function SystemObjectiveCard({
   message,
   objective,
-  ctaLabel,
   onPress,
   onDismiss,
   defaultOpen = true,
@@ -131,9 +129,16 @@ export function SystemObjectiveCard({
         )}
       </View>
 
-      {/* ── Inset objective panel ── */}
+      {/* ── Inset objective panel — the tappable CTA (arrow on the right) ── */}
       {open && objective ? (
-        <View style={s.insetPanel}>
+        <Pressable
+          style={s.insetPanel}
+          onPress={onPress}
+          disabled={!onPress}
+          testID={testID ? `${testID}-cta` : undefined}
+          accessibilityLabel={objective}
+          accessibilityRole={onPress ? "button" : undefined}
+        >
           {/* Left vine/floral ornament — clipped to panel height */}
           <ExpoImage
             source={ORNAMENT_LEFT}
@@ -163,22 +168,15 @@ export function SystemObjectiveCard({
             <Text style={s.objectiveTxt} numberOfLines={3}>{objective}</Text>
           </View>
 
+          {/* Forward arrow — signals the objective itself is tappable */}
+          {onPress ? (
+            <View style={s.arrowWrap}>
+              <Ionicons name="arrow-forward" size={16} color={JADE} />
+            </View>
+          ) : null}
+
           {/* Shallow bevel — top highlight edge */}
           <View style={s.insetBevelTop} pointerEvents="none" />
-        </View>
-      ) : null}
-
-      {/* ── CTA button — flush with card bottom ── */}
-      {ctaLabel && onPress ? (
-        <Pressable
-          style={s.cta}
-          onPress={onPress}
-          testID={testID ? `${testID}-cta` : undefined}
-          accessibilityLabel={ctaLabel}
-          accessibilityRole="button"
-        >
-          <Text style={s.ctaTxt}>{ctaLabel}</Text>
-          <Ionicons name="arrow-forward" size={15} color="#082019" />
         </Pressable>
       ) : null}
     </Animated.View>
@@ -324,21 +322,10 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.10)",
   },
 
-  // ── CTA button ──────────────────────────────────────────────────────────
-  cta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    backgroundColor: JADE,
-    borderRadius: 0,
-    paddingVertical: SPACING.md,
-  },
-  ctaTxt: {
-    color: "#082019",
-    fontSize: 14,
-    fontWeight: "700",
-    fontFamily: SERIF,
-    letterSpacing: 1.0,
+  // ── Forward arrow (objective row is the CTA now) ────────────────────────
+  arrowWrap: {
+    alignSelf: "center",
+    paddingRight: 10,
+    flexShrink: 0,
   },
 });
