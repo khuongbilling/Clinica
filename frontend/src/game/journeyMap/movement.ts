@@ -1,5 +1,5 @@
 /**
- * journeyMap/movement.ts — PUSH 11
+ * journeyMap/movement.ts — PUSH 11 / PUSH 15 rename
  *
  * Pure movement validation and application logic.
  * No React, no Expo, no I/O — easy to unit-test and reason about.
@@ -7,11 +7,11 @@
  * MOVEMENT RULES
  * ──────────────
  *   1. Player may only move to an adjacent hex (axial distance === 1).
- *   2. Destination must be 'frontier' or 'revealed' (not 'hidden').
+ *   2. Destination must be 'visibleNow' or 'exploredButOutOfVision' (not 'unexplored').
  *   3. Every successful move costs exactly 1 stamina.
  *   4. All encounter types (none / battle / treasure / merchant / areaBoss)
  *      share the same 1-stamina cost; the encounter itself is free.
- *   5. Backtracking to a previously-visited revealed tile costs 1 stamina.
+ *   5. Backtracking to a previously-visited exploredButOutOfVision tile costs 1 stamina.
  *
  * ATOMICITY CONTRACT
  * ──────────────────
@@ -29,14 +29,14 @@
  *   deduct), the caller bails and nothing else changes.
  */
 
-import { isAdjacent, computeFogAfterMove } from './fogCalculator';
+import { isAdjacent, computeFogAfterMove, REVEAL_RADIUS } from './fogCalculator';
 import type { JourneyRun } from './types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type MoveFailReason =
   | 'NOT_ADJACENT'          // destination is not a hex neighbor of current tile
-  | 'NOT_REACHABLE'         // destination is hidden, or doesn't exist, or no current tile
+  | 'NOT_REACHABLE'         // destination is unexplored, or doesn't exist, or no current tile
   | 'INSUFFICIENT_STAMINA'; // player has < 1 stamina
 
 export type ValidateResult =
@@ -51,7 +51,7 @@ export type ValidateResult =
  * Guards:
  *   • destination must exist in the run's tile array
  *   • destination must be adjacent (axial distance === 1) to the current tile
- *   • destination must be 'frontier' or 'revealed' (never 'hidden')
+ *   • destination must be 'visibleNow' or 'exploredButOutOfVision' (never 'unexplored')
  *   • player must have at least 1 stamina
  *
  * @param run      Current journey run state.
@@ -74,8 +74,8 @@ export function validateMove(
     return { ok: false, reason: 'NOT_ADJACENT' };
   }
 
-  // Guard: destination must be visible (frontier or previously revealed).
-  if (dest.visibility !== 'frontier' && dest.visibility !== 'revealed') {
+  // Guard: destination must be visible (visibleNow or previously explored).
+  if (dest.visibility !== 'visibleNow' && dest.visibility !== 'exploredButOutOfVision') {
     return { ok: false, reason: 'NOT_REACHABLE' };
   }
 
@@ -100,16 +100,24 @@ export function validateMove(
  *   • run.exploredTileCount → +1 if this tile had not been visited before
  *   • run.updatedAt     → current ISO timestamp
  *
- * @param run    Current run (unmodified).
- * @param destId Tile id to move to (must have already passed validateMove).
- * @returns      A new JourneyRun with the move applied.
+ * @param run          Current run (unmodified).
+ * @param destId       Tile id to move to (must have already passed validateMove).
+ * @param visionRadius Effective field-of-vision radius (default: REVEAL_RADIUS = 1).
+ *                     Pass the result of computeEffectiveVisionRadius() from visionConfig
+ *                     to apply class passive bonuses, temporary buffs, or scouting skills.
+ * @returns            A new JourneyRun with the move applied.
  */
-export function applyMoveToRun(run: JourneyRun, destId: string): JourneyRun {
-  const dest            = run.tiles.find(t => t.id === destId);
+export function applyMoveToRun(
+  run:          JourneyRun,
+  destId:       string,
+  visionRadius: number = REVEAL_RADIUS,
+): JourneyRun {
+  const dest              = run.tiles.find(t => t.id === destId);
   const wasAlreadyVisited = dest?.visited ?? false;
 
-  // Recompute fog: destination revealed + frontier ring updates.
-  const tiles = computeFogAfterMove(run.tiles, destId);
+  // Recompute fog using the player's effective vision radius.
+  // visionRadius=1 (default) → current tile + 1 ring; class/skill bonuses add rings.
+  const tiles = computeFogAfterMove(run.tiles, destId, visionRadius);
 
   return {
     ...run,

@@ -171,7 +171,7 @@ export function validateRun(run: JourneyRun): string[] {
     );
   }
 
-  const derivedExplored = run.tiles.filter((t) => t.visibility !== 'hidden').length;
+  const derivedExplored = run.tiles.filter((t) => t.visibility !== 'unexplored').length;
   if (run.exploredTileCount !== derivedExplored) {
     errors.push(
       `run ch${run.chapterId}: exploredTileCount (${run.exploredTileCount}) ≠ derived (${derivedExplored})`,

@@ -109,7 +109,14 @@ export interface JourneyBlessing {
  * frontier — adjacent to a revealed tile; shown as a dim silhouette
  * revealed — player has line-of-sight or has explored an adjacent tile
  */
-export type TileVisibility = 'hidden' | 'frontier' | 'revealed';
+/**
+ * Three-state fog-of-war visibility model (spec rule 5):
+ *   unexplored          — never seen; fully fogged, non-interactive
+ *   visibleNow          — within the player's current reveal radius; fog-free, interactive
+ *   exploredButOutOfVision — visited at least once but outside current reveal radius;
+ *                          permanently uncovered, interactive
+ */
+export type TileVisibility = 'unexplored' | 'visibleNow' | 'exploredButOutOfVision';
 
 // ── Run status ───────────────────────────────────────────────────────────────
 
@@ -281,7 +288,7 @@ export interface JourneyRun {
   /** Whether the chapter boss (gate encounter) has been defeated. */
   chapterBossDefeated: boolean;
 
-  /** Count of tiles whose visibility !== 'hidden'. */
+  /** Count of tiles whose visibility !== 'unexplored'. */
   exploredTileCount: number;
 
   /** Total stamina spent on encounters in this run. */

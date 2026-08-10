@@ -83,7 +83,7 @@ function makeTile(
     q,
     r,
     encounter:             'none',
-    visibility:            'hidden',
+    visibility:            'unexplored',
     visited:               false,
     resolved:              false,
     current:               false,
@@ -148,19 +148,19 @@ check('6. isAdjacent — same tile is false',
   const tiles = linearChain(5).map(t => ({ id: t.id, q: t.q, r: t.r }));
   const fog   = computeInitialFog(tiles, '1,0');
 
-  eq(fog.get('1,0'), 'revealed', '7. computeInitialFog — start tile is revealed');
+  eq(fog.get('1,0'), 'exploredButOutOfVision', '7. computeInitialFog — start tile is revealed');
 
   check('8. computeInitialFog — tiles adjacent to start become frontier',
-    fog.get('0,0') === 'frontier' && fog.get('2,0') === 'frontier');
+    fog.get('0,0') === 'visibleNow' && fog.get('2,0') === 'visibleNow');
 
   check('9. computeInitialFog — tiles not adjacent to start are hidden',
-    fog.get('3,0') === 'hidden' && fog.get('4,0') === 'hidden');
+    fog.get('3,0') === 'unexplored' && fog.get('4,0') === 'unexplored');
 })();
 
 (function () {
   const tiles = [{ id: '0,0', q: 0, r: 0 }];
   const fog   = computeInitialFog(tiles, '0,0');
-  eq(fog.get('0,0'), 'revealed', '10. computeInitialFog — single-tile map is revealed');
+  eq(fog.get('0,0'), 'exploredButOutOfVision', '10. computeInitialFog — single-tile map is revealed');
 })();
 
 check('11. computeInitialFog — throws on missing startId',
@@ -180,23 +180,23 @@ check('11. computeInitialFog — throws on missing startId',
    * We move to (1,0).
    */
   const initialTiles = linearChain(5);
-  initialTiles[0] = { ...initialTiles[0], visibility: 'revealed', visited: true, current: true };
-  initialTiles[1] = { ...initialTiles[1], visibility: 'frontier' };
+  initialTiles[0] = { ...initialTiles[0], visibility: 'exploredButOutOfVision', visited: true, current: true };
+  initialTiles[1] = { ...initialTiles[1], visibility: 'visibleNow' };
   // (2–4) already hidden (default)
 
   const after = computeFogAfterMove(initialTiles, '1,0');
   const dest  = byId(after, '1,0');
 
-  eq(dest.visibility, 'revealed', '12. computeFogAfterMove — destination becomes revealed');
+  eq(dest.visibility, 'exploredButOutOfVision', '12. computeFogAfterMove — destination becomes revealed');
   check('13. computeFogAfterMove — destination visited flag set',   dest.visited);
   check('14. computeFogAfterMove — destination is current',          dest.current);
 
   const oldCurrent = byId(after, '0,0');
   check('15. computeFogAfterMove — old current tile loses current flag', !oldCurrent.current);
-  eq(oldCurrent.visibility, 'revealed', '16. computeFogAfterMove — old current tile stays revealed');
+  eq(oldCurrent.visibility, 'exploredButOutOfVision', '16. computeFogAfterMove — old current tile stays revealed');
 
   // (2,0) is adjacent to new current (1,0) → frontier
-  eq(byId(after, '2,0').visibility, 'frontier', '17. computeFogAfterMove — adjacent tiles become frontier');
+  eq(byId(after, '2,0').visibility, 'visibleNow', '17. computeFogAfterMove — adjacent tiles become frontier');
 
   // (0,0) is adjacent to new current (1,0) — but it's already revealed.
   // The important frontier→hidden case: tiles adjacent ONLY to the OLD current
@@ -221,12 +221,12 @@ check('11. computeInitialFog — throws on missing startId',
    *   frontier: arm2 (1,0), arm3 (0,-1), arm4 (-1,0), arm1 (1,-1)
    *   all others hidden (arm5 is far)
    */
-  const C    = makeTile(0,  0, { visibility: 'revealed', visited: true, current: true });
-  const arm1 = makeTile(1, -1, { visibility: 'frontier' });  // adjacent to C
-  const arm2 = makeTile(1,  0, { visibility: 'frontier' });  // adjacent to C, NOT arm1
-  const arm3 = makeTile(0, -1, { visibility: 'frontier' });  // adjacent to C, IS adjacent to arm1
-  const arm4 = makeTile(-1, 0, { visibility: 'frontier' });  // adjacent to C, NOT arm1
-  const far  = makeTile(2,  0, { visibility: 'hidden'   });  // two steps from C
+  const C    = makeTile(0,  0, { visibility: 'exploredButOutOfVision', visited: true, current: true });
+  const arm1 = makeTile(1, -1, { visibility: 'visibleNow' });  // adjacent to C
+  const arm2 = makeTile(1,  0, { visibility: 'visibleNow' });  // adjacent to C, NOT arm1
+  const arm3 = makeTile(0, -1, { visibility: 'visibleNow' });  // adjacent to C, IS adjacent to arm1
+  const arm4 = makeTile(-1, 0, { visibility: 'visibleNow' });  // adjacent to C, NOT arm1
+  const far  = makeTile(2,  0, { visibility: 'unexplored'   });  // two steps from C
 
   const allTiles = [C, arm1, arm2, arm3, arm4, far];
   const after    = computeFogAfterMove(allTiles, arm1.id); // move to (1,-1)
@@ -234,35 +234,35 @@ check('11. computeInitialFog — throws on missing startId',
   // arm2 (1,0): neighbors of arm1 (1,-1) → check if (1,0) is a neighbor.
   // AXIAL_DIRS of (1,-1): (2,-1),(0,-1),(1,0),(1,-2),(2,-2),(0,0)
   // (1,0) IS a neighbor of (1,-1) → should stay frontier
-  eq(byId(after, arm2.id).visibility, 'frontier',
+  eq(byId(after, arm2.id).visibility, 'visibleNow',
     '17b. tile adjacent to new current (arm2) becomes frontier');
 
   // arm3 (0,-1): neighbors of arm1 (1,-1): includes (0,-1)? yes → frontier
-  eq(byId(after, arm3.id).visibility, 'frontier',
+  eq(byId(after, arm3.id).visibility, 'visibleNow',
     '17c. tile adjacent to new current (arm3) becomes frontier');
 
   // arm4 (-1,0): neighbors of arm1 (1,-1): (-1,0)? (1+AXIAL_DIRS.q, -1+AXIAL_DIRS.r)
   // AXIAL_DIRS: (2,-1),(0,-1),(1,0),(1,-2),(2,-2),(0,0) — does NOT include (-1,0)
   // arm4 was frontier from old current; now no longer adjacent to new current
   // arm4 is not revealed/visited → reverts to hidden
-  eq(byId(after, arm4.id).visibility, 'hidden',
+  eq(byId(after, arm4.id).visibility, 'unexplored',
     '18. computeFogAfterMove — frontier no longer adjacent reverts to hidden');
 
   // C (0,0): neighbors of arm1 (1,-1) include (0,0) (via AXIAL_DIR (-1,+1) from arm1)
   // → C is adjacent to arm1. But C is already revealed. Must stay revealed.
-  eq(byId(after, C.id).visibility, 'revealed',
+  eq(byId(after, C.id).visibility, 'exploredButOutOfVision',
     '19. computeFogAfterMove — revealed tiles never demoted to hidden');
 
   // "far" (2,0): not adjacent to arm1 → hidden. Not adjacent to C → not frontier.
   // Is (2,0) adjacent to arm1 (1,-1)?  (2-1, 0-(-1)) = (1,1) not in AXIAL_DIRS. No.
-  eq(byId(after, far.id).visibility, 'hidden',
+  eq(byId(after, far.id).visibility, 'unexplored',
     '20. computeFogAfterMove — tiles far from new current stay hidden');
 })();
 
 check('21. computeFogAfterMove — throws on unknown destinationId',
   (() => {
     try {
-      computeFogAfterMove([makeTile(0, 0, { visibility: 'revealed', current: true })], '9,9');
+      computeFogAfterMove([makeTile(0, 0, { visibility: 'exploredButOutOfVision', current: true })], '9,9');
       return false;
     } catch { return true; }
   })());
@@ -270,8 +270,8 @@ check('21. computeFogAfterMove — throws on unknown destinationId',
 check('22. computeFogAfterMove — unchanged tiles reuse same object reference',
   (() => {
     const tiles = linearChain(5);
-    tiles[0] = { ...tiles[0], visibility: 'revealed', visited: true, current: true };
-    tiles[1] = { ...tiles[1], visibility: 'frontier' };
+    tiles[0] = { ...tiles[0], visibility: 'exploredButOutOfVision', visited: true, current: true };
+    tiles[1] = { ...tiles[1], visibility: 'visibleNow' };
     const after = computeFogAfterMove(tiles, '1,0');
     // tile (3,0) and (4,0) are both hidden before and after — should be same ref
     return after.find(t => t.id === '3,0') === tiles[3];
@@ -280,21 +280,21 @@ check('22. computeFogAfterMove — unchanged tiles reuse same object reference',
 // ── 23–29: isEncounterVisible / encounter privacy ─────────────────────────────
 
 check('23. isEncounterVisible — hidden tile → false',
-  !isEncounterVisible({ current: false, visibility: 'hidden' }));
+  !isEncounterVisible({ current: false, visibility: 'unexplored' }));
 
 check('24. isEncounterVisible — frontier tile → false',
-  !isEncounterVisible({ current: false, visibility: 'frontier' }));
+  !isEncounterVisible({ current: false, visibility: 'visibleNow' }));
 
 check('25. isEncounterVisible — revealed tile → true',
-  isEncounterVisible({ current: false, visibility: 'revealed' }));
+  isEncounterVisible({ current: false, visibility: 'exploredButOutOfVision' }));
 
 check('26. isEncounterVisible — current tile → true regardless of visibility',
-  isEncounterVisible({ current: true, visibility: 'hidden' }));
+  isEncounterVisible({ current: true, visibility: 'unexplored' }));
 
 (function () {
-  const hiddenBattle   = makeTile(0, 0, { visibility: 'hidden',   encounter: 'battle' });
-  const frontierBattle = makeTile(1, 0, { visibility: 'frontier', encounter: 'battle' });
-  const revealedBattle = makeTile(2, 0, { visibility: 'revealed', encounter: 'battle' });
+  const hiddenBattle   = makeTile(0, 0, { visibility: 'unexplored',   encounter: 'battle' });
+  const frontierBattle = makeTile(1, 0, { visibility: 'visibleNow', encounter: 'battle' });
+  const revealedBattle = makeTile(2, 0, { visibility: 'exploredButOutOfVision', encounter: 'battle' });
 
   check('27. encounter privacy — hidden tile with battle encounter not visible',
     !isEncounterVisible(hiddenBattle));
@@ -315,8 +315,8 @@ check('26. isEncounterVisible — current tile → true regardless of visibility
    * After both moves check the final state.
    */
   let tiles = linearChain(4);
-  tiles[0] = { ...tiles[0], visibility: 'revealed', visited: true, current: true };
-  tiles[1] = { ...tiles[1], visibility: 'frontier' };
+  tiles[0] = { ...tiles[0], visibility: 'exploredButOutOfVision', visited: true, current: true };
+  tiles[1] = { ...tiles[1], visibility: 'visibleNow' };
   // (2,3) hidden
 
   // Move 1: (0,0) → (1,0)
@@ -330,13 +330,13 @@ check('26. isEncounterVisible — current tile → true regardless of visibility
   const t0 = byId(tiles, '0,0');
 
   check('30. chained move — final current is (2,0)', t2.current);
-  eq(t2.visibility, 'revealed', '30b. (2,0) revealed after two moves');
-  eq(t3.visibility, 'frontier', '31. (3,0) is frontier after second move');
-  eq(t1.visibility, 'revealed', '31b. (1,0) stays revealed permanently');
+  eq(t2.visibility, 'exploredButOutOfVision', '30b. (2,0) revealed after two moves');
+  eq(t3.visibility, 'visibleNow', '31. (3,0) is frontier after second move');
+  eq(t1.visibility, 'exploredButOutOfVision', '31b. (1,0) stays revealed permanently');
 
   // Is (0,0) adjacent to (2,0)?  dq=2 → not adjacent. NOT a neighbor.
   // But (0,0) is revealed (visited step 1).  It must stay revealed.
-  eq(t0.visibility, 'revealed', '31c. (0,0) stays revealed — visited tile permanent');
+  eq(t0.visibility, 'exploredButOutOfVision', '31c. (0,0) stays revealed — visited tile permanent');
 })();
 
 (function () {
@@ -348,13 +348,13 @@ check('26. isEncounterVisible — current tile → true regardless of visibility
    *   Then move to (2,0) → (1,0) stays revealed, not frontier/hidden.
    */
   let tiles = linearChain(4);
-  tiles[0] = { ...tiles[0], visibility: 'revealed', visited: true, current: true };
-  tiles[1] = { ...tiles[1], visibility: 'frontier' };
+  tiles[0] = { ...tiles[0], visibility: 'exploredButOutOfVision', visited: true, current: true };
+  tiles[1] = { ...tiles[1], visibility: 'visibleNow' };
 
   tiles = computeFogAfterMove(tiles, '1,0');  // step onto frontier tile
   tiles = computeFogAfterMove(tiles, '2,0');  // step further
 
-  eq(byId(tiles, '1,0').visibility, 'revealed',
+  eq(byId(tiles, '1,0').visibility, 'exploredButOutOfVision',
     '32. tile that was frontier and visited stays revealed after player moves away');
 })();
 

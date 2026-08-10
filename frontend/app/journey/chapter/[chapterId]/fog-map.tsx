@@ -46,6 +46,10 @@ import {
 import { journeyRunRepository }            from '@/src/game/journeyMap/journeyRunRepository';
 import { validateMove, applyMoveToRun, MOVE_STAMINA_COST } from '@/src/game/journeyMap/movement';
 import {
+  resolveVisionBonuses,
+  computeEffectiveVisionRadius,
+} from '@/src/game/journeyMap/visionConfig';
+import {
   resolveNone, resolveBattleWin, resolveAreaBossWin,
   resolveTreasureClaim, resolveMerchantVisit, resolveChapterBossWin,
   deriveEnemyId, getAreaBossEnemyId, getChapterBossEnemyId,
@@ -141,7 +145,7 @@ function toHexMapTile(t: JourneyTile, gateId: string | undefined): HexMapTile {
 function isGateDiscovered(run: JourneyRun): boolean {
   if (!run.gateAnchorTileId) return false;
   const gate = run.tiles.find(t => t.id === run.gateAnchorTileId);
-  return gate?.visibility === 'revealed' || gate?.visibility === 'frontier';
+  return gate?.visibility === 'exploredButOutOfVision' || gate?.visibility === 'visibleNow';
 }
 
 /** Encounter counts across ALL tiles (including gate and unrevealed). */
@@ -599,6 +603,16 @@ export default function ChapterFogMapShell() {
     ? getMapSprite(player.class_tree_id)
     : undefined;
 
+  // ── Effective vision radius (Push 3 — configurable field of vision) ────────
+  // Formula: effectiveVisionRadius = BASE_VISION_RADIUS + Σ(active bonuses)
+  // Currently all classes return 0 bonus → radius = 1 (baseline).
+  // When a Scout/Ranger class passive is added to visionConfig, it will
+  // automatically expand vision here without touching this file.
+  const effectiveVisionRadius = useMemo(
+    () => computeEffectiveVisionRadius(resolveVisionBonuses(player?.class_tree_id ?? undefined)),
+    [player?.class_tree_id],
+  );
+
   // Stats panel values
   const totalTiles    = run?.tileCount         ?? 0;
   const exploredTiles = run?.exploredTileCount  ?? 0;
@@ -810,7 +824,9 @@ export default function ChapterFogMapShell() {
       }
 
       // Apply movement (fog state + visited/current flags).
-      let afterMove = applyMoveToRun(run, tile.id);
+      // effectiveVisionRadius is derived from the player's class/bonuses (Push 3);
+      // defaults to 1 for all current classes.
+      let afterMove = applyMoveToRun(run, tile.id, effectiveVisionRadius);
       const destTile = afterMove.tiles.find(t => t.id === tile.id);
 
       // ── Encounter dispatch ──────────────────────────────────────────────
@@ -1003,6 +1019,7 @@ export default function ChapterFogMapShell() {
               tiles={mapTiles}
               onTilePress={handleTilePress}
               tileVisuals={chapterVisuals}
+              timeOfDay={mapShift}
               gateArt={{
                 lockedSrc:   ASSET.gateLocked,
                 unlockedSrc: ASSET.gateUnlocked,

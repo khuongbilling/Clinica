@@ -76,42 +76,44 @@ function offsetToAxial(col: number, row: number): { q: number; r: number } {
 /** Raw offset tiles for the Push-4 layout. */
 const RAW_FIXTURE: readonly FixtureTile[] = [
   // col 0 (rows 3–5)
-  { id:'t00', col:0, row:3, visibility:'revealed', isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t01', col:0, row:4, visibility:'revealed', isCurrent:false, encounter:'battle',   chestTier:null      },
-  { id:'t02', col:0, row:5, visibility:'revealed', isCurrent:false, encounter:'treasure', chestTier:'gold'    },
+  { id:'t00', col:0, row:3, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t01', col:0, row:4, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'battle',   chestTier:null      },
+  { id:'t02', col:0, row:5, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'treasure', chestTier:'gold'    },
   // col 1 (rows 2–5)
-  { id:'t03', col:1, row:2, visibility:'revealed', isCurrent:true,  encounter:'none',     chestTier:null      },
-  { id:'t04', col:1, row:3, visibility:'revealed', isCurrent:false, encounter:'battle',   chestTier:null      },
-  { id:'t05', col:1, row:4, visibility:'revealed', isCurrent:false, encounter:'treasure', chestTier:'bronze'  },
-  { id:'t06', col:1, row:5, visibility:'revealed', isCurrent:false, encounter:'merchant', chestTier:null      },
+  { id:'t03', col:1, row:2, visibility:'exploredButOutOfVision', isCurrent:true,  encounter:'none',     chestTier:null      },
+  { id:'t04', col:1, row:3, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'battle',   chestTier:null      },
+  { id:'t05', col:1, row:4, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'treasure', chestTier:'bronze'  },
+  { id:'t06', col:1, row:5, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'merchant', chestTier:null      },
   // col 2 (rows 1–5)
-  { id:'t07', col:2, row:1, visibility:'frontier', isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t08', col:2, row:2, visibility:'frontier', isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t09', col:2, row:3, visibility:'revealed', isCurrent:false, encounter:'battle',   chestTier:null      },
-  { id:'t10', col:2, row:4, visibility:'revealed', isCurrent:false, encounter:'treasure', chestTier:'silver'  },
-  { id:'t11', col:2, row:5, visibility:'revealed', isCurrent:false, encounter:'none',     chestTier:null      },
+  // Push 9: visibleNow treasure tile — exercises the frontier-chest exception.
+  // Silver tier shows the cool blue glow pool in the debug ?debug=N view.
+  { id:'t07', col:2, row:1, visibility:'visibleNow', isCurrent:false, encounter:'treasure', chestTier:'silver'  },
+  { id:'t08', col:2, row:2, visibility:'visibleNow', isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t09', col:2, row:3, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'battle',   chestTier:null      },
+  { id:'t10', col:2, row:4, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'treasure', chestTier:'silver'  },
+  { id:'t11', col:2, row:5, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'none',     chestTier:null      },
   // col 3 (rows 0–5)
-  { id:'t12', col:3, row:0, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t13', col:3, row:1, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t14', col:3, row:2, visibility:'frontier', isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t15', col:3, row:3, visibility:'frontier', isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t16', col:3, row:4, visibility:'revealed', isCurrent:false, encounter:'areaBoss', chestTier:null      },
-  { id:'t17', col:3, row:5, visibility:'revealed', isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t12', col:3, row:0, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t13', col:3, row:1, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t14', col:3, row:2, visibility:'visibleNow',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t15', col:3, row:3, visibility:'visibleNow',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t16', col:3, row:4, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'areaBoss', chestTier:null      },
+  { id:'t17', col:3, row:5, visibility:'exploredButOutOfVision', isCurrent:false, encounter:'none',     chestTier:null      },
   // col 4 (rows 0–4)
-  { id:'t18', col:4, row:0, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t19', col:4, row:1, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t20', col:4, row:2, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t21', col:4, row:3, visibility:'frontier', isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t22', col:4, row:4, visibility:'frontier', isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t18', col:4, row:0, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t19', col:4, row:1, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t20', col:4, row:2, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t21', col:4, row:3, visibility:'visibleNow',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t22', col:4, row:4, visibility:'visibleNow',  isCurrent:false, encounter:'none',     chestTier:null      },
   // col 5 (rows 1–4)
-  { id:'t23', col:5, row:1, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t24', col:5, row:2, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t25', col:5, row:3, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t26', col:5, row:4, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t23', col:5, row:1, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t24', col:5, row:2, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t25', col:5, row:3, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t26', col:5, row:4, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
   // col 6 (rows 2–4)
-  { id:'t27', col:6, row:2, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t28', col:6, row:3, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
-  { id:'t29', col:6, row:4, visibility:'hidden',   isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t27', col:6, row:2, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t28', col:6, row:3, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
+  { id:'t29', col:6, row:4, visibility:'unexplored',  isCurrent:false, encounter:'none',     chestTier:null      },
 ] as const;
 
 /**
@@ -188,8 +190,8 @@ export function generateDebugFixture(count: number): readonly HexMapTile[] {
     const { q, r } = offsetToAxial(col, row);
     const pct = i / count;
     const visibility: TileVisibility =
-      pct < 0.38 ? 'revealed' : pct < 0.50 ? 'frontier' : 'hidden';
-    const { enc, tier } = visibility === 'revealed'
+      pct < 0.38 ? 'exploredButOutOfVision' : pct < 0.50 ? 'visibleNow' : 'unexplored';
+    const { enc, tier } = visibility === 'exploredButOutOfVision'
       ? ENC_CYCLE[i % ENC_CYCLE.length]
       : { enc: 'none' as EncounterType, tier: undefined };
     return {

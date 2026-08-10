@@ -112,7 +112,7 @@ export function createJourneyRun({
       encounter:             at.encounter,
       chestTier:             at.chestTier,
       // Start tile is immediately visible; everything else begins in the fog.
-      visibility:            isStart ? 'revealed' : 'hidden',
+      visibility:            isStart ? 'exploredButOutOfVision' : 'unexplored',
       visited:               isStart,
       resolved:              false,
       current:               isStart,

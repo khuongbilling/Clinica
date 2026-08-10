@@ -205,6 +205,13 @@ export interface BuildRunOptions {
    * Defaults to 0 for first runs and post-clear challenge runs.
    */
   initialAreaBossKeysCollected?: number;
+  /**
+   * Player's effective field-of-vision radius for the initial fog computation.
+   * Defaults to REVEAL_RADIUS (= 1) — current tile + 1 ring.
+   * Pass computeEffectiveVisionRadius(resolveVisionBonuses(classTreeId)) from
+   * visionConfig when a class passive or buff should expand the starting view.
+   */
+  visionRadius?: number;
 }
 
 // ── buildInitialJourneyRun ────────────────────────────────────────────────────
@@ -214,9 +221,9 @@ export interface BuildRunOptions {
  * assignment. Pure — no I/O.
  *
  * Initial visibility rules (delegated to fogCalculator.computeInitialFog):
- *   start tile          → 'revealed'
- *   tiles adjacent (d=1) → 'frontier'
- *   all others           → 'hidden'
+ *   start tile                   → 'exploredButOutOfVision'
+ *   tiles within REVEAL_RADIUS   → 'visibleNow'
+ *   all others                   → 'unexplored'
  *
  * Encounter type gating:
  *   Canonical generator values not yet in EncounterType (e.g. 'wardEvent'
@@ -233,14 +240,18 @@ export function buildInitialJourneyRun({
   topology,
   encounters,
   initialAreaBossKeysCollected = 0,
+  visionRadius,
 }: BuildRunOptions): JourneyRun {
   const now      = new Date().toISOString();
   const startKey = topology.startTileId;
   const gateKey  = topology.gateAnchorId;
 
   // Compute initial fog via the canonical fogCalculator.
+  // visionRadius defaults to REVEAL_RADIUS (1) — pass a larger value from
+  // visionConfig.computeEffectiveVisionRadius() when a class/buff expands the
+  // starting field of vision.
   const coordTiles = topology.tiles.map(t => ({ id: `${t.q},${t.r}`, q: t.q, r: t.r }));
-  const visMap     = computeInitialFog(coordTiles, startKey);
+  const visMap     = computeInitialFog(coordTiles, startKey, visionRadius);
 
   // Build an O(1) lookup from tileKey → RunTileInput.
   const assignedByKey = new Map(encounters.tiles.map(t => [t.tileKey, t]));
@@ -263,7 +274,7 @@ export function buildInitialJourneyRun({
     const assigned = assignedByKey.get(tileKey);
     const dist     = topology.graphDistances.get(tileKey) ?? 0;
 
-    const visibility: TileVisibility = visMap.get(tileKey) ?? 'hidden';
+    const visibility: TileVisibility = visMap.get(tileKey) ?? 'unexplored';
 
     // Gate encounter type to values currently in the EncounterType union.
     // 'wardEvent' from the canonical generator is 'none' until WARD_EVENTS_V1.

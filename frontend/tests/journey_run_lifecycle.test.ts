@@ -12,7 +12,7 @@
  * Covers:
  *  1.  buildInitialJourneyRun — tiles.length === topology.tiles.length
  *  2.  buildInitialJourneyRun — start tile is revealed / visited / current
- *  3.  buildInitialJourneyRun — tiles adjacent to start are 'frontier'
+ *  3.  buildInitialJourneyRun — tiles adjacent to start are 'visibleNow'
  *  4.  buildInitialJourneyRun — gate tile has encounter = 'none'
  *  5.  buildInitialJourneyRun — all encounter types are valid
  *  6.  buildInitialJourneyRun — tileCount = tiles.length - 1 (gate excluded)
@@ -221,7 +221,7 @@ console.log('\n── buildInitialJourneyRun ──');
   // 2. Start tile state
   const startTile = run.tiles.find(t => t.id === topology.startTileId);
   check('2a. start tile exists', !!startTile);
-  check('2b. start.visibility = revealed', startTile?.visibility === 'revealed');
+  check('2b. start.visibility = revealed', startTile?.visibility === 'exploredButOutOfVision');
   check('2c. start.visited = true',        startTile?.visited   === true);
   check('2d. start.current = true',        startTile?.current   === true);
 
@@ -229,7 +229,7 @@ console.log('\n── buildInitialJourneyRun ──');
   const adjKeys  = new Set(neighborKeys(topology.startTileId, tileSet));
   const adjTiles = run.tiles.filter(t => adjKeys.has(t.id));
   check('3. start-adjacent tiles are frontier',
-    adjTiles.length > 0 && adjTiles.every(t => t.visibility === 'frontier'),
+    adjTiles.length > 0 && adjTiles.every(t => t.visibility === 'visibleNow'),
     adjTiles.map(t => t.visibility).join(','));
 
   // 4. Gate encounter = none

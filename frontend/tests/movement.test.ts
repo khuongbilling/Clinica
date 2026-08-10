@@ -74,7 +74,7 @@ function makeTile(q: number, r: number, overrides: Partial<JourneyTile> = {}): J
     id:                    `${q},${r}`,
     q, r,
     encounter:             'none',
-    visibility:            'hidden',
+    visibility:            'unexplored',
     visited:               false,
     resolved:              false,
     current:               false,
@@ -96,8 +96,8 @@ function makeTile(q: number, r: number, overrides: Partial<JourneyTile> = {}): J
  */
 function makeRun(tileOverrides: Partial<JourneyTile>[] = []): JourneyRun {
   const defaults: JourneyTile[] = [
-    makeTile(0, 0, { visibility: 'revealed', visited: true, current: true }),
-    makeTile(1, 0, { visibility: 'frontier' }),
+    makeTile(0, 0, { visibility: 'exploredButOutOfVision', visited: true, current: true }),
+    makeTile(1, 0, { visibility: 'visibleNow' }),
     makeTile(2, 0),
     makeTile(3, 0),
   ];
@@ -154,7 +154,7 @@ check('2. adjacent revealed tile (backtrack) → ok',
     // Player is at (1,0), (0,0) is revealed (visited start).
     const r = makeRun();
     r.tiles[0] = { ...r.tiles[0], current: false };
-    r.tiles[1] = { ...r.tiles[1], current: true, visibility: 'revealed', visited: true };
+    r.tiles[1] = { ...r.tiles[1], current: true, visibility: 'exploredButOutOfVision', visited: true };
     r.currentTileId = '1,0';
     return valid(validateMove(r, '0,0', 5));
   })());
@@ -168,7 +168,7 @@ check('4. adjacent hidden tile → NOT_REACHABLE',
     const r: JourneyRun = {
       ...run,
       tiles: run.tiles.map(t =>
-        t.id === '1,0' ? { ...t, visibility: 'hidden' } : t,
+        t.id === '1,0' ? { ...t, visibility: 'unexplored' } : t,
       ),
     };
     return failReason(validateMove(r, '1,0', 5)) === 'NOT_REACHABLE';
@@ -207,21 +207,21 @@ check('10. stamina > 1 → ok',
   const oldTile  = after.tiles.find(t => t.id === '0,0')!;
 
   check('11. destination becomes current',            destTile.current);
-  eq(destTile.visibility, 'revealed',                 '12. destination visibility revealed');
+  eq(destTile.visibility, 'exploredButOutOfVision',                 '12. destination visibility revealed');
   check('13. destination visited flag set',           destTile.visited);
   eq(after.staminaSpent, 1,                           '14. staminaSpent incremented by 1');
   check('18. old current tile loses current flag',    !oldTile.current);
-  eq(oldTile.visibility, 'revealed',                  '19. old current tile stays revealed');
+  eq(oldTile.visibility, 'exploredButOutOfVision',                  '19. old current tile stays revealed');
   eq(after.currentTileId, '1,0',                      '24. currentTileId matches destination');
   check('23. updatedAt is a non-empty ISO string',    after.updatedAt.length > 10);
 
   // Frontier ring: (2,0) is adjacent to new current (1,0) → frontier.
   const tile2 = after.tiles.find(t => t.id === '2,0')!;
-  eq(tile2.visibility, 'frontier',                    '20. adjacent tiles become frontier');
+  eq(tile2.visibility, 'visibleNow',                    '20. adjacent tiles become frontier');
 
   // (3,0) is NOT adjacent to (1,0) → hidden.
   const tile3 = after.tiles.find(t => t.id === '3,0')!;
-  eq(tile3.visibility, 'hidden',                      '21. non-adjacent frontier → hidden');
+  eq(tile3.visibility, 'unexplored',                      '21. non-adjacent frontier → hidden');
 
   // exploredTileCount: destination (1,0) was not visited → +1.
   eq(after.exploredTileCount, 2,                      '17. first visit increments exploredTileCount');
@@ -230,7 +230,7 @@ check('10. stamina > 1 → ok',
   check('22. original run not mutated',
     before.currentTileId === '0,0' &&
     before.staminaSpent === 0 &&
-    before.tiles[1].visibility === 'frontier');
+    before.tiles[1].visibility === 'visibleNow');
 })();
 
 (function () {
@@ -254,12 +254,12 @@ check('10. stamina > 1 → ok',
 
   // Before move: frontier tile has encounter but it must not be considered revealed.
   check('25. frontier tile is NOT revealed before movement',
-    before.tiles.find(t => t.id === '1,0')!.visibility === 'frontier');
+    before.tiles.find(t => t.id === '1,0')!.visibility === 'visibleNow');
 
   // After move: destination becomes revealed — encounter is now visible.
   const after = applyMoveToRun(before, '1,0');
   check('25b. tile IS revealed after movement',
-    after.tiles.find(t => t.id === '1,0')!.visibility === 'revealed');
+    after.tiles.find(t => t.id === '1,0')!.visibility === 'exploredButOutOfVision');
 })();
 
 (function () {
@@ -295,7 +295,7 @@ check('10. stamina > 1 → ok',
   const r2: JourneyRun = {
     ...r,
     tiles: r.tiles.map(t =>
-      t.id === '1,0' ? { ...t, visibility: 'revealed', visited: true } : t,
+      t.id === '1,0' ? { ...t, visibility: 'exploredButOutOfVision', visited: true } : t,
     ),
   };
   check('29. revealed adjacent tile (e.g. gate) is valid destination',

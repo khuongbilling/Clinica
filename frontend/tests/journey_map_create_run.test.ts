@@ -12,8 +12,8 @@
  *  4.  tileCount = tiles.length − 1  (gate excluded from playable count)
  *  5.  gateAnchorTileId references a tile in the tiles array
  *  6.  startTileId and currentTileId both reference the same start tile
- *  7.  Start tile is 'revealed', visited, and current at creation
- *  8.  All non-start tiles begin 'hidden' and unvisited
+ *  7.  Start tile is 'exploredButOutOfVision', visited, and current at creation
+ *  8.  All non-start tiles begin 'unexplored' and unvisited
  *  9.  Determinism — same inputs produce identical tile assignments
  * 10.  Attempt variation — different attempts produce different tile layouts
  * 11.  Chapter variation — different chapters produce different tile layouts
@@ -198,7 +198,7 @@ console.log('\n── Start tile initial state ──');
   const run = makeRun({ chapterId: 1 });
   const startTile = run.tiles.find(t => t.id === run.startTileId)!;
 
-  eq(startTile.visibility, 'revealed', 'start.visibility = revealed');
+  eq(startTile.visibility, 'exploredButOutOfVision', 'start.visibility = revealed');
   check('start.visited = true',  startTile.visited  === true);
   check('start.current = true',  startTile.current  === true);
   check('start.resolved = false', startTile.resolved === false);
@@ -213,7 +213,7 @@ for (const { chapter, attempt } of STD_CASES) {
   const run   = makeRun({ chapterId: chapter, attemptNumber: attempt });
 
   const nonStart = run.tiles.filter(t => t.id !== run.startTileId);
-  const badVis   = nonStart.filter(t => t.visibility !== 'hidden');
+  const badVis   = nonStart.filter(t => t.visibility !== 'unexplored');
   const badVisit = nonStart.filter(t => t.visited);
   const badCurr  = nonStart.filter(t => t.current);
 

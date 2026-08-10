@@ -77,7 +77,7 @@ function makeTile(id: string, overrides: Partial<JourneyTile> = {}): JourneyTile
     id,
     q: 0, r: 0,
     encounter:             'none',
-    visibility:            'revealed',
+    visibility: 'exploredButOutOfVision',
     visited:               true,
     resolved:              false,
     current:               false,
