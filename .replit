@@ -48,7 +48,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && node_modules/@expo/ngrok-bin-linux-x64/ngrok authtoken $NGROK_AUTHTOKEN && NGROK_AUTHTOKEN=$NGROK_AUTHTOKEN npx expo start --clear --port 5000 --tunnel"
+args = "cd frontend && CI=1 npx expo start --web --port 5000"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Start Backend"

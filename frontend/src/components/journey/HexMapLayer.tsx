@@ -384,7 +384,9 @@ const MAP_NODE = {
  * (kept in ChapterShiftVisuals for theming reference / future use).
  */
 type ResolvedTileVis = {
-  terrainCurrent: number;  // hex-current (jade glow for the player's position)
+  terrainCurrent:  number;  // hex-current (jade glow for the player's position)
+  terrainBase:     number;  // hex-revealed (explored terrain floor)
+  terrainFrontier: number;  // hex-frontier (reachable movement cell floor)
 };
 
 /**
@@ -663,6 +665,18 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis, fog
         *                                     marker at small tile sizes
         * Push 10: all colours from fogTheme — Day warm jade, Evening amber,
         *          Night cold teal.                                              */}
+      {/* Terrain floor raster — REQUIRED: the world-space concealment Rect
+        * (Push 11, zIndex 5000) covers the painted background inside the world
+        * bounds. visibleNow tiles sit above it (zIndex 5100+) but have
+        * transparent interiors unless this raster is drawn.                    */}
+      {isVisible && (
+        <Image
+          source={tileVis.terrainFrontier}
+          style={{ width: sz, height: sz }}
+          contentFit="contain"
+          recyclingKey={`vis-${tile.id}`}
+        />
+      )}
       {isVisible && (
         <View style={[s.overlay, { pointerEvents: 'none' }]}>
           <Svg width={sz} height={sz}>
@@ -705,6 +719,16 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis, fog
         *                               a filled card border.
         * Push 10: veilFill / veilStroke / veilStrokeW from fogTheme.
         * Encounter markers (Layer 3) render above both shapes and stay legible. */}
+      {/* Terrain floor raster — same reason as visibleNow above: without it the
+        * concealment Rect below shows through and explored tiles look empty.   */}
+      {isExplored && (
+        <Image
+          source={tileVis.terrainBase}
+          style={{ width: sz, height: sz }}
+          contentFit="contain"
+          recyclingKey={`exp-${tile.id}`}
+        />
+      )}
       {isExplored && (
         <View style={[s.overlay, { pointerEvents: 'none' }]}>
           <Svg width={sz} height={sz}>
@@ -895,12 +919,13 @@ export interface HexMapLayerProps {
    * and `fogEdge` fields from ChapterShiftVisuals are consumed by the parent screen.
    */
   /**
-   * Only `terrainCurrent` and `fogInterior` are consumed by the renderer.
-   * (terrainBase / terrainFrontier stay in ChapterShiftVisuals for future use
-   * but are NOT rendered per-tile — the background painting is the floor.)
+   * `terrainCurrent`, `terrainBase` and `terrainFrontier` are rendered per-tile;
+   * the world-space concealment Rect (Push 11) covers the painted background
+   * inside the world bounds, so explored tiles MUST draw their own terrain
+   * raster or they read as empty dark hexes.
    */
   tileVisuals?: Pick<import('@/src/game/journeyMap/chapterMapVisuals').ChapterShiftVisuals,
-    'terrainCurrent' | 'fogInterior'>;
+    'terrainCurrent' | 'terrainBase' | 'terrainFrontier' | 'fogInterior'>;
 
   /**
    * Push 10: active shift — drives the SVG fog/veil/frontier/ring color theme.
@@ -951,7 +976,9 @@ export function HexMapLayer({
   // Push 4: only terrainCurrent is needed.  Fog is now a world-space SVG
   // (see continuous atmospheric fog constants); no per-tile fog texture.
   const resolvedTileVis: ResolvedTileVis = {
-    terrainCurrent: tileVisuals?.terrainCurrent ?? require('@/assets/ui/journey/tiles/hex-current.webp') as number,
+    terrainCurrent:  tileVisuals?.terrainCurrent  ?? require('@/assets/ui/journey/tiles/hex-current.webp')  as number,
+    terrainBase:     tileVisuals?.terrainBase     ?? require('@/assets/ui/journey/tiles/hex-revealed.webp') as number,
+    terrainFrontier: tileVisuals?.terrainFrontier ?? require('@/assets/ui/journey/tiles/hex-frontier.webp') as number,
   };
 
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────

@@ -99,4 +99,5 @@
 - [Objective navigation guides](clinica-objective-nav-guides.md) — objGuide* tutorials survive navigation (force-clear reconcile on hub); TutorialOverlay is per-screen, not global.
 - [Chapter shift rules & canonical shift](clinica-shift-rules.md) — run shift comes ONLY from chapterShiftRules.ts (never device clock); canonical_shifts write-once at first clear; shift must thread battle→result→fog-map.
 - [Authored chapter map templates](clinica-authored-maps.md) — geometry is checked-in literal data per chapter (never edit shipped entries); run seed randomizes encounters only; shift map bgs are dedicated rasters.
+- [Fog-map legacy run normalization](fogmap-legacy-run-normalization.md) — persisted enum renames need a read-side normalizer in the run repository; gate fog reconstruction on legacy evidence only.
 - [Fog-map encounter assignment](fogmap-encounter-assignment.md) — 'boss' in EncounterType is gate-only (never rolled); EncounterRates.rates uses Exclude<EncounterType,'boss'> or tsc errors; createJourneyRun seed is a string derived from chapterId×100k+attemptNumber.

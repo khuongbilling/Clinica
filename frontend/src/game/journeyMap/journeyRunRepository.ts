@@ -33,6 +33,7 @@ import { buildInitialJourneyRun, generateRunData } from './journeyRunLifecycle';
 import type { IJourneyRunRepository }   from './journeyRunLifecycle';
 import type { JourneyRun, TimeOfDay }   from './types';
 import { resolveRunShift }              from './chapterShiftRules';
+import { computeFogAfterMove, REVEAL_RADIUS } from './fogCalculator';
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -131,6 +132,44 @@ interface WireRun {
   pressure?:                number;
 }
 
+/**
+ * Push 15 renamed TileVisibility values (hidden→unexplored, frontier→visibleNow,
+ * revealed→exploredButOutOfVision).  Runs persisted BEFORE the rename still carry
+ * the legacy strings; without normalization every tile fails all visibility
+ * branches → no terrain, no fog, no movement.  Normalize on read, forever.
+ */
+const LEGACY_VISIBILITY: Record<string, string> = {
+  hidden:   'unexplored',
+  frontier: 'visibleNow',
+  revealed: 'exploredButOutOfVision',
+};
+
+function normalizeTiles(tiles: unknown[], currentTileId: string): JourneyRun['tiles'] {
+  // Detect legacy evidence FIRST: only runs persisted before the rename carry
+  // any of the old strings.  Canonical runs (even ones that legitimately have
+  // no visibleNow frontier, e.g. fully explored maps or class-expanded vision
+  // radii) must pass through completely untouched.
+  const wasLegacy = (tiles as Array<Record<string, unknown>>)
+    .some(t => LEGACY_VISIBILITY[t.visibility as string] !== undefined);
+  if (!wasLegacy) return tiles as unknown as JourneyRun['tiles'];
+
+  let out = (tiles as Array<Record<string, unknown>>).map(t => {
+    const mapped = LEGACY_VISIBILITY[t.visibility as string];
+    return mapped ? { ...t, visibility: mapped } : t;
+  }) as unknown as JourneyRun['tiles'];
+
+  // Legacy runs also predate PERSISTED frontier state: the old renderer derived
+  // "frontier" at display time, so stored tiles are only hidden/revealed and
+  // movement validation (which requires 'visibleNow') rejects every destination.
+  // If no tile is visibleNow, recompute the fog ring around the current tile.
+  // Legacy runs all pre-date class vision bonuses, so REVEAL_RADIUS is correct.
+  const hasFrontier = out.some(t => t.visibility === 'visibleNow');
+  if (!hasFrontier && out.some(t => t.id === currentTileId)) {
+    out = computeFogAfterMove(out, currentTileId, REVEAL_RADIUS);
+  }
+  return out;
+}
+
 function fromWire(w: WireRun): JourneyRun {
   return {
     id:                     w.id,
@@ -145,7 +184,7 @@ function fromWire(w: WireRun): JourneyRun {
     createdAt:              w.created_at,
     updatedAt:              w.updated_at,
     tileCount:              w.tile_count,
-    tiles:                  w.tiles as JourneyRun['tiles'],
+    tiles:                  normalizeTiles(w.tiles, w.current_tile_id),
     startTileId:            w.start_tile_id,
     currentTileId:          w.current_tile_id,
     gateAnchorTileId:       w.gate_anchor_tile_id,
