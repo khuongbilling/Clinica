@@ -207,82 +207,125 @@ const CH1_EVE_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-evening
 const CH1_EVE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-evening.png')               as number;
 const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.png')                as number;
 
+// ── Push 12: Chapter 1 painting alignment — all three shifts ─────────────────
+//
+// COORDINATE BASIS (sz = 88 px, containerWidth ≈ 390 px)
+// ───────────────────────────────────────────────────────
+//   Q_STEP  = 0.72   R_STEP  = 0.79   Q_VOFF  = 0.395
+//   worldOriginX ≈ 55    worldOriginY = 10   worldH ≈ 351   worldW ≈ 390
+//
+//   Key world-space positions:
+//     Start tile (−1,2)  cx = 37,  cy = 158
+//     Gate  tile ( 3,0)  cx = 290, cy = 168
+//     Top cap (r = −3)   world top ≈ −199 to −129
+//     Bottom cap (r = 3) world bottom ≈ 341
+//     Grid x-centre ≈ 131   (vs canvas centre 195)
+//     Grid y-centre ≈  71   (vs canvas centre 175)
+//
+// BACKGROUND TRANSFORM (applied to absoluteFillObject Image in MapWorld)
+// ───────────────────────────────────────────────────────────────────────
+//   transform: [ { scale }, { translateX }, { translateY } ]
+//   contentFit = "cover"  →  1024×1024 source fills 390×351 canvas,
+//   cropping 19.5 px top+bottom (scale = 390/1024 = 0.381).
+//
+//   A source pixel at fraction (fx, fy) appears in element space at:
+//     ex = fx × 1024 × 0.381          ey = fy × 1024 × 0.381 − 19.5
+//   Then the world position after transform(S, offsetX, offsetY):
+//     world_x = (ex − 195) × S + 195 + offsetX
+//     world_y = (ey − 175.5) × S + 175.5 + offsetY
+//
+// CHOSEN VALUES — same for all three shifts (paintings differ; see notes)
+// ───────────────────────────────────────────────────────────────────────
+//   backgroundScale  = 1.60
+//     • Minimum scale to span both top tiles (world y ≈ −199) and bottom
+//       tiles (world y ≈ 341): requires S ≥ 1.54; using 1.60 for margin.
+//     • At S = 1.60 the transformed image spans ≈ 562 px vertically,
+//       comfortably covering the 540 px tile range.
+//     • Zooms into the inner floor area of each painting, pushing sky /
+//       outer walls toward the image extremes.
+//
+//   backgroundOffsetX  — shifts painting LEFT so its architectural centre
+//     lands above the hex-grid x-centre (131) rather than the canvas
+//     centre (195).  Different per shift because each painting places its
+//     centrepiece at a different source x:
+//       Day     centrepiece ≈ 50 % → ex = 195 → offsetX = 131 − 195 = −64
+//       Evening centrepiece ≈ 47 % → ex ≈ 183 → offsetX ≈ −46  (fountain)
+//       Night   centrepiece ≈ 50 % → ex = 195 → offsetX = −64  (compass)
+//
+//   backgroundOffsetY  = −112
+//     • Centres the painting's floor feature on the hex-grid y-centre (71):
+//         world_y = (ey − 175.5) × 1.60 + 175.5 + offsetY = 71
+//         → offsetY = 71 − 175.5 − (ey − 175.5) × 1.60
+//       For the Day mandala at source y ≈ 52 % (ey ≈ 182): offsetY ≈ −112
+//       Evening fountain ≈ 52 %: same calculation → −112
+//       Night compass at source y = 50 % (ey = 175.5): offsetY ≈ −104,
+//         but −112 satisfies the top-coverage constraint and keeps the
+//         compass near the grid centre — used uniformly for consistency.
+//
+// RESULTING TILE → SOURCE PIXEL MAPPING (at S=1.60, offsetX=−64, offsetY=−112)
+// ─────────────────────────────────────────────────────────────────────────────
+//   Start tile (cx=37, cy=158) → source (24 %, 58 %)
+//     Day:     left-centre inner courtyard — entrance approach to the mandala
+//     Evening: left-centre floor near lower garden planters — entrance feel
+//     Night:   left cross-arm of the ward corridor — lower-left entry point
+//
+//   Gate tile (cx=290, cy=168) → source (73 %, 59 %)
+//     Day:     right-side colonnade — pillar arch framing the far-right exit
+//     Evening: right staircase / archway area — sealed passage landmark
+//     Night:   right cross-arm end — sealed corridor terminus (gate position)
+//
+//   Top cap (world y ≈ −155 avg) → source y ≈ 8 %
+//     Day:     upper archway ring — entering from the outer gallery
+//     Evening: entrance archway at top of painting — narrative top entry
+//     Night:   top staircase / gateway — top entrance of the ward plan
+//
+//   Bottom cap (world y ≈ 297 avg) → source y ≈ 91 %
+//     All:     lower perimeter floor — well within the traversable courtyard
+
 CHAPTER_SHIFT_VISUALS[1] = {
   day: {
-    background:       CH1_DAY_BG,
-    // ── Push 11: painting alignment ───────────────────────────────────────
-    // The Day painting (map-platform-background-ch1-day.png) is a 1024×1024
-    // top-down circular atrium.  With no transform and contentFit="cover"
-    // the image centres on the viewport, but in tall-portrait viewports
-    // (height > width) there is no vertical cropping — the sky/cloud layer
-    // that occupies the top ~20 % of the image appears over the tile zone.
-    //
-    // Target alignment (initial camera = start tile q=0,r=1 centred):
-    //   Viewport top  → painting pixel ≈ 210 (just above sky end at ~205)
-    //   Screen centre → painting pixel ≈ 610 (lower central courtyard)
-    //   Viewport bottom → painting pixel ≈ 970 (lower pillar boundary)
-    //
-    // backgroundScale 1.28 zooms the painting in so the floor dominates
-    // and the sky margin is pushed above the viewport for all heights in
-    // the 320–523 px range that mapContainerHeight uses.
-    //
-    // backgroundOffsetY −55 shifts the image UP 55 display px so the
-    // topmost visible row of tiles sits over the upper archways/garden
-    // rather than the cloud layer, while keeping the lower courtyard
-    // floor at the start tile's screen position.
-    //
-    // backgroundOffsetX is omitted — the painting is symmetric left-right.
-    backgroundScale:  1.28,
-    backgroundOffsetY: -55,
-    fogInterior:     CH1_DAY_FOG,
-    fogEdge:         FOG_EDGE,          // no shift-specific edge raster yet
-    terrainBase:     CH1_DAY_REVEALED,
-    terrainCurrent:  CH1_DAY_CURRENT,
-    terrainFrontier: CH1_DAY_FRONTIER,
+    background:        CH1_DAY_BG,
+    backgroundScale:   1.60,
+    backgroundOffsetX: -64,
+    backgroundOffsetY: -112,
+    fogInterior:       CH1_DAY_FOG,
+    fogEdge:           FOG_EDGE,
+    terrainBase:       CH1_DAY_REVEALED,
+    terrainCurrent:    CH1_DAY_CURRENT,
+    terrainFrontier:   CH1_DAY_FRONTIER,
   },
   evening: {
-    background:      CH1_EVE_BG,
-    fogInterior:     CH1_EVE_FOG,
-    fogEdge:         FOG_EDGE,          // no shift-specific edge raster yet
-    terrainBase:     CH1_EVE_REVEALED,
-    terrainCurrent:  CH1_EVE_CURRENT,
-    terrainFrontier: CH1_EVE_FRONTIER,
+    background:        CH1_EVE_BG,
+    // Evening fountain sits at ≈ 47 % image width (not 50 %) so offsetX
+    // is −46 (rather than −64) to keep the courtyard centre on the grid.
+    backgroundScale:   1.60,
+    backgroundOffsetX: -46,
+    backgroundOffsetY: -112,
+    fogInterior:       CH1_EVE_FOG,
+    fogEdge:           FOG_EDGE,
+    terrainBase:       CH1_EVE_REVEALED,
+    terrainCurrent:    CH1_EVE_CURRENT,
+    terrainFrontier:   CH1_EVE_FRONTIER,
   },
   night: {
-    // Push 11 assessment — no regeneration required.
-    // All existing assets already satisfy the Night spec:
-    //
-    //   background  map-platform-background.webp — deep navy/blue-black ward,
-    //               teal medical illumination flanking corridors, purple/violet
-    //               lanterns, gold compass mandala at centre.  Strong contrast,
-    //               sparse localized lighting.  Canonical dark baseline.
-    //
-    //   fogInterior fog-tile.webp — dark teal-grey smoky atmospheric fog.
-    //               Deepest of the three shift fogs.  Transparent at edges so
-    //               it blends with the dark hidden-tile base below.
-    //
-    //   terrainBase hex-revealed.webp — dark cracked stone with thin teal
-    //               medical glow edging.  Transparent background; separates
-    //               clearly from the dark map environment.
-    //
-    //   terrainFrontier hex-frontier.webp — same dark cracked stone with
-    //               rising mist and teal glow — atmospheric, readable as
-    //               reachable even against a dark background.
-    //
-    //   terrainCurrent hex-current.webp — deep jade neon glow radiating
-    //               through cracked stone; strongest glow of all three shifts,
-    //               ensuring current-tile readability at low ambient light.
-    //
-    //   fogEdge     inherits the shared fog-edge-bottom.webp (no shift-
-    //               specific edge raster needed — dark edge blends naturally).
-    //
-    // To replace an individual layer: swap the require() call on that line only.
-    background:      BG_NIGHT,       // map-platform-background.webp — canonical dark ward
-    fogInterior:     FOG_INTERIOR,   // fog-tile.webp — deepest atmospheric fog
-    fogEdge:         FOG_EDGE,       // fog-edge-bottom.webp (shared)
-    terrainBase:     TILE_BASE,      // hex-revealed.webp — dark cracked stone, teal glow edge
-    terrainCurrent:  TILE_CURRENT,   // hex-current.webp — jade neon glow through stone
-    terrainFrontier: TILE_FRONTIER,  // hex-frontier.webp — dark stone + mist, teal glow
+    // Night: map-platform-background.webp — deep navy/blue-black ward,
+    // teal corridors, purple lanterns, gold compass mandala at centre.
+    // Compass sits at exactly 50 % image width and height → offsetX = −64
+    // centres it on the grid x-centre; offsetY = −112 satisfies top-tile
+    // coverage and keeps the compass at grid y ≈ 64 (vs grid centre 71).
+    // The cross-shaped corridor plan maps naturally to the hex-field shape:
+    //   top staircase  → top-cap tiles (r = −3)
+    //   right corridor → gate tile column (q = 3)
+    //   left corridor  → start tile column (q = −1)
+    background:        BG_NIGHT,
+    backgroundScale:   1.60,
+    backgroundOffsetX: -64,
+    backgroundOffsetY: -112,
+    fogInterior:       FOG_INTERIOR,
+    fogEdge:           FOG_EDGE,
+    terrainBase:       TILE_BASE,
+    terrainCurrent:    TILE_CURRENT,
+    terrainFrontier:   TILE_FRONTIER,
   },
 };
 
