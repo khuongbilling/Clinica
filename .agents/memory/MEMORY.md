@@ -102,3 +102,5 @@
 - [Authored chapter map templates](clinica-authored-maps.md) — geometry is checked-in literal data per chapter (never edit shipped entries); run seed randomizes encounters only; shift map bgs are dedicated rasters.
 - [Fog-map legacy run normalization](fogmap-legacy-run-normalization.md) — persisted enum renames need a read-side normalizer in the run repository; gate fog reconstruction on legacy evidence only.
 - [Fog-map encounter assignment](fogmap-encounter-assignment.md) — 'boss' in EncounterType is gate-only (never rolled); EncounterRates.rates uses Exclude<EncounterType,'boss'> or tsc errors; createJourneyRun seed is a string derived from chapterId×100k+attemptNumber.
+- [Fog-map canonical terrain directive (Pushes 1–26)](fogmap-canonical-terrain-directive.md) — MUST READ before any journey/fog-map/HexMapLayer change; terrain fixed, seed=content only; raster-only assets; no CSS/SVG/emoji map art; push discipline rules.
+- [Fog-map field composition (Push 16)](fogmap-field-composition.md) — JourneyFogField: 6 Image banks + SVG clearing layer; opacity attenuation via clearSources not alpha mask; zIndex 5000; JourneyFogLayer stub retained but bypassed.
