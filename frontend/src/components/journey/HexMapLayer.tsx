@@ -380,65 +380,18 @@ const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node sh
 // Push 4:  fog is a world-space SVG layer; terrainCurrent (jade glow) still used.
 // Push 7:  MAP_NODE (world-object PNGs) replaces ENCOUNTER_ICON on the map surface.
 //          ENCOUNTER_ICON is retained for legend panels and MerchantModal UI.
-// Push 10: 2.5D hex terrain base tile.  One asset for ALL states — state
-//          indication is handled by SVG overlays above (Layers 1a/2a/2b).
-//          The same stone surface appears under normal, reachable, current,
-//          and explored tiles; fog hides unexplored ones entirely.
-//
-//          Asset: hex-terrain-normal.png
-//            • 2.5D three-quarter top-down painterly stone hex
-//            • Jade-teal cracked stone surface with gold vein highlights
-//            • Beveled bottom-left / bottom face for 2.5D depth illusion
-//            • TRUE ALPHA transparency outside the hex silhouette
-//            • No black/white/gray rectangular canvas
-//            • Generated at high resolution, background-removed
-
-/** Push 10: 2.5D painterly stone hex — base terrain for every tile state. */
-const TERRAIN_NORMAL = require('@/assets/ui/journey/tiles/hex-terrain-normal.png') as number;
+// Push A:  Layer 0 standalone terrain PNG removed.  The environmentBackground
+//          painting inside MapWorld is the floor; hex cells are a movement-grid
+//          overlay on that environment, not standalone slabs.
+//          TERRAIN_NORMAL / TERRAIN_SCALE / MEMORY_TERRAIN_ALPHA removed.
+//          MEMORY_NODE_ALPHA retained — encounter nodes still dim on memory tiles.
 
 // ── Push 18: memory state opacity constants ───────────────────────────────────
-//
-// exploredButOutOfVision tiles are styled as "remembered terrain" — readable
-// but visually distinct from the fully-lit current field of vision.
-//
-// MEMORY_TERRAIN_ALPHA — terrain image opacity for explored tiles.
-//   Reduces from 1.0 → 0.70: a ~30 % dimming that reads as "less lit"
-//   without hiding the stone surface.  Combined with the hazeColor overlay
-//   (Layer 2b) this produces the "slight desaturation + dimming" effect
-//   without a CSS filter (which is not cross-platform on native).
-//
 // MEMORY_NODE_ALPHA — encounter-node image opacity for explored tiles.
-//   Stays higher (0.82) so known stationary encounters remain clearly
-//   visible after discovery.  Players should always be able to read
-//   the encounter type they previously scouted.
-const MEMORY_TERRAIN_ALPHA = 0.70;
-const MEMORY_NODE_ALPHA    = 0.82;
-
-/**
- * Push 11 — visual unification scale factor.
- *
- * The terrain PNG's hex silhouette has ~7–8 % transparent padding per side
- * inside the sz × sz bounding box (artefact of the 2.5D three-quarter-top
- * perspective and the removeBackground cutout).  Even with coordinate-level
- * hex-body overlap (Q_STEP 0.72 < 0.75, R_STEP 0.79 < 0.866), those
- * transparent bands create visible gaps that make each tile read as an
- * independent floating platform.
- *
- * Rendering the terrain Image at 115 % of sz (centred, with the Pressable's
- * existing `overflow:'visible'`) bleeds the stone surface 7.5 % beyond each
- * edge into neighbouring tiles' transparent-corner zones.  The existing iso-
- * depth zIndex ordering (higher-r / lower-screen-position = higher z) ensures
- * the "closer" tile correctly paints on top in every overlap region — exactly
- * the right 2.5D layering behaviour.
- *
- * SVG state rings stay at 100 % sz and fall just inside the extended terrain
- * hex silhouette, so cell boundaries remain crisp.
- *
- * This constant is the single lever for the bleed amount.  Increase → more
- * join; decrease → more gap.  Do not exceed 1.30 or terrain bleeds over SVG
- * state rings visually.
- */
-const TERRAIN_SCALE = 1.15;
+//   Stays at 0.82 so known stationary encounters remain clearly visible
+//   after discovery.  Players should always be able to read the encounter
+//   type they previously scouted.
+const MEMORY_NODE_ALPHA = 0.82;
 
 // Push 6 fallback — jade medallion token.  Still referenced below as the
 // legacy medallion; replaced in Layer 4a/4b by MAP_SPRITE_EXPLORER (Push 19).
@@ -739,7 +692,8 @@ interface HexTileProps {
 // Push 21: explorationCharacter removed from HexTile — it is now consumed by
 // HexObjectLayer (the object-pass renderer).  HexTile handles terrain + rings
 // + contact shadow only; it never renders sprites directly.
-function HexTile({ tile, coords, onPress, fogTheme, terrainSrc }: HexTileProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: HexTileProps) {
   const { sz } = coords;
   const pos = coords.axialToWorld(tile.q, tile.r);
   // Push 7: world-object node replaces flat encounter icon on the map.
@@ -754,12 +708,9 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc }: HexTileProps) 
   const isVisible  = !tile.current && tile.visibility === 'visibleNow';
   const isExplored = !tile.current && tile.visibility === 'exploredButOutOfVision';
 
-  // Push 11: terrain rendered at TERRAIN_SCALE × sz, centred on the tile.
-  // Negative offset (terrainOff) shifts the image left/up so it is centred;
-  // the Pressable's overflow:'visible' (s.tile) lets it bleed into adjacent
-  // tiles' transparent-corner zones, visually joining the terrain field.
-  const terrainSz  = Math.round(sz * TERRAIN_SCALE);
-  const terrainOff = -Math.round((terrainSz - sz) / 2);
+  // Push A: terrainSz / terrainOff removed — Layer 0 standalone terrain PNG
+  // is gone.  The environmentBackground inside MapWorld is the floor; hex cells
+  // are a movement-grid overlay on that environment, not standalone slabs.
 
   // Push 21: unified terrain z for all non-unexplored tiles.
   //
@@ -805,45 +756,37 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc }: HexTileProps) 
         'data-encounter':  isRevealed ? tile.encounter : 'unknown',
       })}
     >
-      {/* ── Layer 0: 2.5D hex terrain base (Push 10 / Push 11 / Push 18) ──────
-        * Painterly stone surface: jade-teal cracked stone, beveled lower face,
-        * TRUE ALPHA transparency outside the hex silhouette.
+      {/* ── Layer 0 (Push A): floor-presence tint — movement cell, not slab ───
         *
-        * Push 11 — visual field unification:
-        * The Image is rendered at TERRAIN_SCALE (115%) of sz, centred on the
-        * tile (terrainOff = negative offset so left/top = -7.5% of sz).
-        * This bleeds the stone surface beyond the tile bounding box into the
-        * transparent-corner zones of neighbouring tiles, eliminating the
-        * visible gaps that made each cell look like a separate floating platform.
+        * The old standalone terrain PNG (beveled 2.5D stone slab) is removed.
+        * The environmentBackground painting inside MapWorld is the terrain floor.
+        * Hex cells are a movement-grid overlay on that environment.
         *
-        * The Pressable has overflow:'visible' (s.tile) so the extra bleed
-        * renders correctly on both web and native without clipping.
+        * This layer adds a very subtle SVG hex fill (~8 % opacity) for all
+        * revealed tiles so cells read as "walkable steps" against the painted
+        * background without any slab or puzzle-piece border.
         *
-        * ISO DEPTH: tileZ ensures the "closer" (lower-on-screen) tile paints
-        * on top in every overlap region — correct 2.5D layering behaviour.
+        *   current              → brighter tint (12 %) — "you are here"
+        *   visibleNow           → standard tint (8 %) — reachable step
+        *   exploredButOutOfVision → dim tint (6 %) — memory of a trodden path
+        *   unexplored           → no tint (covered by fog above)
         *
-        * Push 18 — memory dimming:
-        * exploredButOutOfVision tiles render at MEMORY_TERRAIN_ALPHA (0.70)
-        * so the stone surface is noticeably dimmer than visibleNow (1.0).
-        * Combined with the hazeColor fill in Layer 2b, this creates the
-        * "remembered but unlit" look without CSS filter (native-compatible).
-        *
-        * SVG state rings (Layers 1a / 2a / 2b) stay at 100% sz and appear
-        * just inside the extended terrain hex silhouette, keeping cell
-        * boundaries crisp while the stone surfaces read as one field. */}
-      <Image
-        source={terrainSrc ?? TERRAIN_NORMAL}
-        style={{
-          position: 'absolute',
-          left:    terrainOff,
-          top:     terrainOff,
-          width:   terrainSz,
-          height:  terrainSz,
-          opacity: isExplored ? MEMORY_TERRAIN_ALPHA : 1,
-        }}
-        contentFit="fill"
-        recyclingKey={`terrain-${tile.id}`}
-      />
+        * The fill colour is drawn from the shift's frontierStroke palette so
+        * the ground glow is always tonally consistent with the fog and rings.
+        * Inset to 0.98 so the fill sits cleanly inside the ring strokes above.
+        */}
+      {!isHidden && (
+        <View style={[s.overlay, { pointerEvents: 'none' }]}>
+          <Svg width={sz} height={sz}>
+            <Polygon
+              points={hexPoints(sz, 0.98)}
+              fill={fogTheme.frontierStroke}
+              fillOpacity={tile.current ? 0.12 : isVisible ? 0.08 : 0.06}
+              stroke="none"
+            />
+          </Svg>
+        </View>
+      )}
 
       {/* ── Layer 1a: current tile — jade glow image + bright SVG border ring ─ */}
       {/* Jade glow image provides the "magical ground illumination" beneath     */}

@@ -76,7 +76,7 @@ import { buildChapterUiSummary }           from '@/src/features/journey/ui/journ
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getMapSprite }                    from '@/src/game/illustratedAssets';
-import { getChapterMapVisuals } from '@/src/game/journeyMap/chapterMapVisuals';
+import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
 import { getChapterTerrainCellCount }                  from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
 
@@ -665,7 +665,10 @@ export default function ChapterFogMapShell() {
   const mapShift: TimeOfDay | undefined = run?.shift;
   const chapterVisuals = mapShift != null
     ? getChapterMapVisuals(run!.chapterId, mapShift)
-    : null;
+    // Debug fixture mode: no real run → fall back to night visuals so HexMapLayer
+    // renders.  DEV_FALLBACK_VISUALS is the same as DEFAULT_SHIFT_VISUALS.night.
+    // This path is only reachable when __DEV__ && debugTiles !== null.
+    : (debugTiles !== null ? DEV_FALLBACK_VISUALS : null);
 
   // ── Exploration character sprite ──────────────────────────────────────────
   // Resolved from the player's class_tree_id — the same key getMapSprite uses.
