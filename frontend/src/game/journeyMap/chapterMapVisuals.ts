@@ -1,5 +1,5 @@
 /**
- * chapterMapVisuals.ts — PUSH 8
+ * chapterMapVisuals.ts — PUSH 23
  *
  * Shift-aware visual theme registry for chapter fog-maps.
  *
@@ -69,34 +69,47 @@ export interface ChapterShiftVisuals {
   backgroundOffsetY?: number;
 
   /**
-   * Fog overlay texture applied on top of HIDDEN tiles (interior fog body).
-   * Different shifts may use lighter/denser fog art.
+   * Push 23: unified per-shift terrain tile texture.
+   *
+   * A single raster PNG used by HexTile Layer 0 for EVERY tile state (base,
+   * frontier, current).  SVG rings in Layer 1a/2a/2b handle state indication;
+   * this image sets the stone palette and lighting for the active shift:
+   *
+   *   day     — warm ivory/cream stone, jade lotus rune, gold vein highlights,
+   *              morning light warmth
+   *   evening — amber-lit stone, indigo shadows, jade rune glowing warmly,
+   *              antique gold veins
+   *   night   — jade-teal cracked stone, sparse gold veins, deep shadow
+   *              (hex-terrain-normal.png — the original push-10 tile)
+   *
+   * Must be a dedicated raster per shift.  NEVER derive a shift variant by
+   * applying a CSS filter (hue-rotate, brightness, etc.) at render time.
+   * When absent: HexTile falls back to TERRAIN_NORMAL (night).
+   */
+  terrainTexture?: number;
+
+  /**
+   * @deprecated Push 13: fogInterior was removed from the per-tile renderer.
+   * JourneyFogField (Push 16/17) manages all fog — it sources fog bank PNGs
+   * directly via its own FOG_BANKS[timeOfDay] registry and never reads this
+   * field.  Retain for backward compat; do NOT read in new code.
    */
   fogInterior: number;
 
   /**
-   * Fog edge indicator (representative single direction: bottom).
-   * Direction-specific variants (fog-edge-top/bottom/left/right.webp) exist
-   * in assets/ui/journey/fog/; wire direction-specific logic in the renderer
-   * when the art set is finalized.
+   * @deprecated Fog edge direction art — no active caller.  Retained for
+   * backward compat with existing per-chapter registrations.
    */
   fogEdge: number;
 
   /**
-   * Hex tile texture for REVEALED tiles (terrain the player has visited or
-   * can see but carries no encounter).
+   * @deprecated Push 23: terrainBase/Current/Frontier are superseded by the
+   * single `terrainTexture` field.  HexTile uses one image for all states
+   * since Push 10 (state differentiation via SVG overlays, not per-state art).
+   * These fields are retained so existing Ch1 registrations don't error.
    */
-  terrainBase: number;
-
-  /**
-   * Hex tile texture for the CURRENT tile (player's position, jade glow).
-   * Keep the jade glow aesthetic across shifts.
-   */
-  terrainCurrent: number;
-
-  /**
-   * Hex tile texture for FRONTIER tiles (adjacent, reachable, not yet entered).
-   */
+  terrainBase:     number;
+  terrainCurrent:  number;
   terrainFrontier: number;
 
   /**
@@ -120,19 +133,40 @@ const BG_NIGHT   = require('@/assets/ui/journey/map/map-platform-background.webp
 const FOG_INTERIOR = require('@/assets/ui/journey/fog/fog-tile.webp')         as number;
 const FOG_EDGE     = require('@/assets/ui/journey/fog/fog-edge-bottom.webp')  as number;
 
-// Tile art — shift-unaware for now; replaced per-shift when dedicated art ships
+// Tile art — legacy per-state assets kept for existing Ch1 registrations
+// (terrainBase/Current/Frontier fields).  These are no longer used by the
+// renderer — see the @deprecated notes on those interface fields above.
 const TILE_BASE     = require('@/assets/ui/journey/tiles/hex-revealed.webp')  as number;
 const TILE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current.webp')   as number;
 const TILE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier.webp')  as number;
+
+// ── Push 23: unified per-shift terrain textures ───────────────────────────────
+//
+// One stone tile drives ALL terrain states per shift — SVG rings/glows in
+// HexTile Layers 1a/2a/2b handle state differentiation on top.
+//
+// Each shift is a DEDICATED raster.  No CSS filter is applied to derive
+// one shift's stone from another.  DO NOT add a filter fallback.
+//
+//   TERRAIN_DAY     — warm ivory/cream stone, jade rune, gold veins, morning light
+//   TERRAIN_EVENING — amber-lit stone, indigo shadows on extrusion, antique gold
+//   TERRAIN_NIGHT   — jade-teal cracked stone, deep navy shadow (Push 10 canonical)
+const TERRAIN_DAY     = require('@/assets/ui/journey/tiles/hex-terrain-day.png')     as number;
+const TERRAIN_EVENING = require('@/assets/ui/journey/tiles/hex-terrain-evening.png') as number;
+const TERRAIN_NIGHT   = require('@/assets/ui/journey/tiles/hex-terrain-normal.png')  as number;
 
 // ── Global default visuals ────────────────────────────────────────────────────
 // Used for any chapter/shift without a dedicated registry entry.
 // Terrain tiles are the same across all three defaults — no shift-specific
 // terrain art exists yet.  Backgrounds differ by shift.
 
+// Push 23: DEFAULT_SHIFT_VISUALS now includes terrainTexture for all shifts.
+// Chapters without a per-chapter CHAPTER_SHIFT_VISUALS entry will still get
+// the correct shift-specific terrain tile (day/evening/night) via this default.
 const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
   day: {
     background:      BG_DAY,
+    terrainTexture:  TERRAIN_DAY,
     fogInterior:     FOG_INTERIOR,
     fogEdge:         FOG_EDGE,
     terrainBase:     TILE_BASE,
@@ -141,6 +175,7 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
   },
   evening: {
     background:      BG_EVENING,
+    terrainTexture:  TERRAIN_EVENING,
     fogInterior:     FOG_INTERIOR,
     fogEdge:         FOG_EDGE,
     terrainBase:     TILE_BASE,
@@ -149,6 +184,7 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
   },
   night: {
     background:      BG_NIGHT,
+    terrainTexture:  TERRAIN_NIGHT,
     fogInterior:     FOG_INTERIOR,
     fogEdge:         FOG_EDGE,
     terrainBase:     TILE_BASE,
@@ -288,6 +324,8 @@ CHAPTER_SHIFT_VISUALS[1] = {
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
+    // Push 23: shift-specific terrain tile — warm ivory stone, gold veins.
+    terrainTexture:    TERRAIN_DAY,
     fogInterior:       CH1_DAY_FOG,
     fogEdge:           FOG_EDGE,
     terrainBase:       CH1_DAY_REVEALED,
@@ -301,6 +339,8 @@ CHAPTER_SHIFT_VISUALS[1] = {
     backgroundScale:   1.60,
     backgroundOffsetX: -46,
     backgroundOffsetY: -112,
+    // Push 23: shift-specific terrain tile — amber-lit stone, indigo shadows.
+    terrainTexture:    TERRAIN_EVENING,
     fogInterior:       CH1_EVE_FOG,
     fogEdge:           FOG_EDGE,
     terrainBase:       CH1_EVE_REVEALED,
@@ -321,6 +361,9 @@ CHAPTER_SHIFT_VISUALS[1] = {
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
+    // Push 23: TERRAIN_NIGHT = hex-terrain-normal.png — the Push 10 canonical
+    // jade-teal cracked stone; already designed for the dark visual direction.
+    terrainTexture:    TERRAIN_NIGHT,
     fogInterior:       FOG_INTERIOR,
     fogEdge:           FOG_EDGE,
     terrainBase:       TILE_BASE,

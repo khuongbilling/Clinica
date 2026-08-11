@@ -1112,6 +1112,7 @@ export default function ChapterFogMapShell() {
               onTilePress={handleTilePress}
               tileVisuals={chapterVisuals}
               timeOfDay={mapShift as TimeOfDay}
+              terrainTexture={chapterVisuals.terrainTexture}
               gateArt={{
                 lockedSrc:    ASSET.gateLocked,
                 unlockedSrc:  ASSET.gateUnlocked,

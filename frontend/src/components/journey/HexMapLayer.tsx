@@ -727,12 +727,19 @@ interface HexTileProps {
    * Atmospheric fog belongs to JourneyFogLayer, not HexTile.
    */
   fogTheme: FogTheme;
+  /**
+   * Push 23: shift-specific terrain tile image from getChapterMapVisuals().
+   * Used in Layer 0 for every tile state — SVG rings/glows above it handle
+   * state differentiation, so one image covers base/frontier/current.
+   * When absent: falls back to TERRAIN_NORMAL (canonical night stone).
+   */
+  terrainSrc?: number;
 }
 
 // Push 21: explorationCharacter removed from HexTile — it is now consumed by
 // HexObjectLayer (the object-pass renderer).  HexTile handles terrain + rings
 // + contact shadow only; it never renders sprites directly.
-function HexTile({ tile, coords, onPress, fogTheme }: HexTileProps) {
+function HexTile({ tile, coords, onPress, fogTheme, terrainSrc }: HexTileProps) {
   const { sz } = coords;
   const pos = coords.axialToWorld(tile.q, tile.r);
   // Push 7: world-object node replaces flat encounter icon on the map.
@@ -825,7 +832,7 @@ function HexTile({ tile, coords, onPress, fogTheme }: HexTileProps) {
         * just inside the extended terrain hex silhouette, keeping cell
         * boundaries crisp while the stone surfaces read as one field. */}
       <Image
-        source={TERRAIN_NORMAL}
+        source={terrainSrc ?? TERRAIN_NORMAL}
         style={{
           position: 'absolute',
           left:    terrainOff,
@@ -1358,6 +1365,15 @@ export interface HexMapLayerProps {
   };
 
   /**
+   * Push 23: shift-resolved terrain tile image from getChapterMapVisuals().
+   * Forwarded to every HexTile as `terrainSrc`.  Uses ChapterShiftVisuals
+   * .terrainTexture — a single stone per shift that all 30 terrain cells share.
+   * When absent (fixture / test routes without a resolved shift): HexTile
+   * falls back to TERRAIN_NORMAL (canonical night-theme jade-teal stone).
+   */
+  terrainTexture?: number;
+
+  /**
    * Per-tile debug overlays controlled by the diagnostics panel checkboxes.
    * Every branch is guarded by `__DEV__`; no overhead in production.
    */
@@ -1373,6 +1389,7 @@ export function HexMapLayer({
   timeOfDay,
   gateArt,
   explorationCharacter,
+  terrainTexture,
   environmentBackground,
   diagRef,
   devOverlay,
@@ -1717,6 +1734,7 @@ export function HexMapLayer({
             coords={coords}
             onPress={handleTilePress}
             fogTheme={fogTheme}
+            terrainSrc={terrainTexture}
           />
         ))}
 
