@@ -668,8 +668,8 @@ export default function ChapterFogMapShell() {
 
   // ── Exploration character sprite ──────────────────────────────────────────
   // Resolved from the player's class_tree_id — the same key getMapSprite uses.
-  // Undefined when the player has no class yet; HexMapLayer falls back to the
-  // medallion token so no generic icon is ever substituted (spec rule).
+  // Undefined when the player has no class yet; HexMapLayer (Layer 4b) will
+  // substitute MAP_SPRITE_EXPLORER (the donghua chibi fallback — Push 19).
   const explorationCharacter: number | undefined = player?.class_tree_id
     ? getMapSprite(player.class_tree_id)
     : undefined;
