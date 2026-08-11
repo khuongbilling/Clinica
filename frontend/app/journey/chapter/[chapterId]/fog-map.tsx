@@ -685,10 +685,19 @@ export default function ChapterFogMapShell() {
     [player?.class_tree_id],
   );
 
-  // Stats panel values
-  const totalTiles    = run?.tileCount         ?? 0;
-  const exploredTiles = run?.exploredTileCount  ?? 0;
-  const exploredPct   = totalTiles > 0 ? Math.round((exploredTiles / totalTiles) * 100) : 0;
+  // Push 24: canonical terrain cell count (includes gate tile — 30 for Ch1-5).
+  // run.tileCount excluded the gate tile (tiles.length - 1) and was the source
+  // of the "X / 29" display bug.  getChapterTerrainCellCount is the authoritative
+  // source and treats every physical hex cell — normal terrain, Start, and Gate —
+  // as part of the map, matching the spec: "terrainExploredCount / terrainCellCount".
+  const terrainCellCount    = getChapterTerrainCellCount(chNum);
+  // FOV-entered count: exploredTileIds accumulates every tile that has been in
+  // Field of Vision at least once (via computeFogAfterMove).  This correctly
+  // includes the Gate tile when the player moves within REVEAL_RADIUS=1 of it,
+  // unlike run.exploredTileCount which only incremented when physically stepping
+  // on a tile.
+  const terrainExploredCount = run?.exploredTileIds.length ?? 0;
+  const exploredPct          = Math.round((terrainExploredCount / terrainCellCount) * 100);
 
   // Chapter accent color (per-chapter warm-dark tint)
   const accentColor = chapter?.accentColor ?? UI.jade;
@@ -1183,7 +1192,7 @@ export default function ChapterFogMapShell() {
             <Text style={s.progressStripTxt}>
               <Text style={s.progressStripChapter}>CH. {chNum}</Text>
               <Text style={s.progressStripDim}> · </Text>
-              <Text style={s.progressStripVal}>{exploredTiles}/{totalTiles}</Text>
+              <Text style={s.progressStripVal}>{terrainExploredCount}/{terrainCellCount}</Text>
               <Text style={s.progressStripDim}> explored</Text>
               <Text style={s.progressStripDim}> · </Text>
               <Text style={s.progressStripLabel}>Keys </Text>
@@ -1256,8 +1265,8 @@ export default function ChapterFogMapShell() {
             </View>
             <View style={s.statDivider} />
             <View style={s.statCol}>
-              <Text style={s.statVal}>{exploredTiles} / {totalTiles}</Text>
-              <Text style={s.statLbl}>Tiles Visited</Text>
+              <Text style={s.statVal}>{terrainExploredCount} / {terrainCellCount}</Text>
+              <Text style={s.statLbl}>Tiles Explored</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.statCol}>
