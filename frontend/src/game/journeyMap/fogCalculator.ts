@@ -75,8 +75,30 @@ export function isAdjacent(q1: number, r1: number, q2: number, r2: number): bool
 }
 
 /**
- * Axial (hex grid) distance between two tiles.
- * dist = max(|dq|, |dr|, |dq+dr|) — cube-coordinate formula for axial.
+ * Axial (cube-coordinate) hex distance between two tiles.
+ * Accepts object params for ergonomic call-site usage.
+ *
+ * Formula (cube-coordinate / axial form):
+ *   dq = a.q − b.q,  dr = a.r − b.r,  ds = (a.q+a.r) − (b.q+b.r)
+ *   distance = (|dq| + |dr| + |ds|) / 2
+ *
+ * Mathematically equivalent to the scalar axialDistance() below but with the
+ * {q, r} object signature expected by visionConfig and external callers.
+ */
+export function axialHexDistance(
+  a: { q: number; r: number },
+  b: { q: number; r: number },
+): number {
+  const dq = a.q - b.q;
+  const dr = a.r - b.r;
+  const ds = (a.q + a.r) - (b.q + b.r);
+  return (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
+}
+
+/**
+ * Axial (hex grid) distance between two tiles — scalar param variant.
+ * Used internally by tilesWithinRadius and isAdjacent.
+ * dist = max(|dq|, |dr|, |dq+dr|) — equivalent to (|dq|+|dr|+|ds|)/2.
  */
 export function axialDistance(q1: number, r1: number, q2: number, r2: number): number {
   const dq = q2 - q1;
