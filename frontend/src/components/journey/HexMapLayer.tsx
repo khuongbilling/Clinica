@@ -248,11 +248,19 @@ import { JourneyFogField } from './JourneyFogField';
 // Push 13: blobColor and blobOpacity removed from FogTheme — they drove the
 // rectangular fillRect fog plane (web) and SVG blob fills (native) which are
 // now gone.  The remaining fields drive per-tile state-ring SVGs only.
+//
+// Push 18: hazeColor + hazeAlpha added — drives the memory-haze SVG fill that
+// tints explored-but-out-of-vision tiles.  Kept in FogTheme so the haze colour
+// matches the per-shift fog palette without a separate prop.
 type FogTheme = {
   veilStroke:     string;   // exploredButOutOfVision hairline edge stroke
   veilStrokeW:    number;   // hairline width (px)
   frontierStroke: string;   // visibleNow edge glow + inner circular glow color
   currentRing:    string;   // current-tile SVG ring stroke (Layer 1a)
+  /** Push 18: SVG fill colour for the explored memory-haze overlay. */
+  hazeColor:      string;
+  /** Push 18: opacity of the memory-haze hex fill (0–1). */
+  hazeAlpha:      number;
 };
 
 const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
@@ -261,18 +269,27 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
     veilStrokeW:    0.8,
     frontierStroke: 'rgba(100,230,208,0.80)', // jade-teal edge glow + inner circular glow source
     currentRing:    'rgba(90,230,205,0.82)',  // bright jade ring
+    // Push 18: cool ink-blue tint — memory of something seen in dim starlight
+    hazeColor:      'rgba(20,35,75,1)',
+    hazeAlpha:      0.32,
   },
   day: {
     veilStroke:     'rgba(140,110,55,0.38)',  // antique gold hairline
     veilStrokeW:    0.9,
     frontierStroke: 'rgba(80,205,165,0.82)',  // warm jade edge glow
     currentRing:    'rgba(80,210,170,0.85)',  // jade ring, warm tone for daylight
+    // Push 18: pale overcast grey — daylight memory haze, minimal tint
+    hazeColor:      'rgba(160,175,195,1)',
+    hazeAlpha:      0.22,
   },
   evening: {
     veilStroke:     'rgba(200,155,70,0.40)',  // warm amber hairline — lantern glow hint
     veilStrokeW:    0.8,
     frontierStroke: 'rgba(195,150,65,0.80)', // amber edge + inner circular glow — lanterns
     currentRing:    'rgba(90,225,195,0.82)', // jade ring (same family as night)
+    // Push 18: muted indigo — dusk memory, fading lantern warmth
+    hazeColor:      'rgba(45,25,85,1)',
+    hazeAlpha:      0.28,
   },
 };
 
@@ -349,6 +366,24 @@ const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node sh
 
 /** Push 10: 2.5D painterly stone hex — base terrain for every tile state. */
 const TERRAIN_NORMAL = require('@/assets/ui/journey/tiles/hex-terrain-normal.png') as number;
+
+// ── Push 18: memory state opacity constants ───────────────────────────────────
+//
+// exploredButOutOfVision tiles are styled as "remembered terrain" — readable
+// but visually distinct from the fully-lit current field of vision.
+//
+// MEMORY_TERRAIN_ALPHA — terrain image opacity for explored tiles.
+//   Reduces from 1.0 → 0.70: a ~30 % dimming that reads as "less lit"
+//   without hiding the stone surface.  Combined with the hazeColor overlay
+//   (Layer 2b) this produces the "slight desaturation + dimming" effect
+//   without a CSS filter (which is not cross-platform on native).
+//
+// MEMORY_NODE_ALPHA — encounter-node image opacity for explored tiles.
+//   Stays higher (0.82) so known stationary encounters remain clearly
+//   visible after discovery.  Players should always be able to read
+//   the encounter type they previously scouted.
+const MEMORY_TERRAIN_ALPHA = 0.70;
+const MEMORY_NODE_ALPHA    = 0.82;
 
 /**
  * Push 11 — visual unification scale factor.
@@ -660,7 +695,7 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         'data-encounter':  isRevealed ? tile.encounter : 'unknown',
       })}
     >
-      {/* ── Layer 0: 2.5D hex terrain base (Push 10 / Push 11) ──────────────
+      {/* ── Layer 0: 2.5D hex terrain base (Push 10 / Push 11 / Push 18) ──────
         * Painterly stone surface: jade-teal cracked stone, beveled lower face,
         * TRUE ALPHA transparency outside the hex silhouette.
         *
@@ -677,6 +712,12 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         * ISO DEPTH: tileZ ensures the "closer" (lower-on-screen) tile paints
         * on top in every overlap region — correct 2.5D layering behaviour.
         *
+        * Push 18 — memory dimming:
+        * exploredButOutOfVision tiles render at MEMORY_TERRAIN_ALPHA (0.70)
+        * so the stone surface is noticeably dimmer than visibleNow (1.0).
+        * Combined with the hazeColor fill in Layer 2b, this creates the
+        * "remembered but unlit" look without CSS filter (native-compatible).
+        *
         * SVG state rings (Layers 1a / 2a / 2b) stay at 100% sz and appear
         * just inside the extended terrain hex silhouette, keeping cell
         * boundaries crisp while the stone surfaces read as one field. */}
@@ -684,10 +725,11 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         source={TERRAIN_NORMAL}
         style={{
           position: 'absolute',
-          left:   terrainOff,
-          top:    terrainOff,
-          width:  terrainSz,
-          height: terrainSz,
+          left:    terrainOff,
+          top:     terrainOff,
+          width:   terrainSz,
+          height:  terrainSz,
+          opacity: isExplored ? MEMORY_TERRAIN_ALPHA : 1,
         }}
         contentFit="fill"
         recyclingKey={`terrain-${tile.id}`}
@@ -764,13 +806,43 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         </View>
       )}
 
-      {/* ── Layer 2b: exploredButOutOfVision — hairline wire only ───────────────
-        * No fill at all — the environment painting shows fully through the tile.
-        * A single thin hairline ring marks "visited territory" at the hex edge.
-        * Encounter markers (Layer 3) render above this and stay legible.       */}
+      {/* ── Layer 2b: exploredButOutOfVision — memory haze + hairline ───────────
+        *
+        * Push 18: upgraded from hairline-only to a two-part treatment:
+        *
+        *   1. Memory haze fill — a very light shift-tinted SVG hex fill that
+        *      sits over the dimmed terrain (Layer 0).  Together they produce:
+        *        • "Slight dimming" — terrain at MEMORY_TERRAIN_ALPHA (0.70)
+        *        • "Atmospheric haze" — hazeColor tint at hazeAlpha (0.22–0.32)
+        *        • "Not heavy unexplored fog" — combined opacity is far lighter
+        *          than the unexplored fog rect (0.82–0.95 in JourneyFogField)
+        *
+        *   2. Hairline ring — preserved exactly as before; marks the hex
+        *      boundary and distinguishes explored from unexplored at a glance.
+        *
+        * visibleNow tiles (Layer 2a) have NO haze fill — the jade inner glow
+        * makes them noticeably brighter than explored terrain.
+        *
+        * Encounter markers (Layer 3) render above this at MEMORY_NODE_ALPHA
+        * so stationary encounters remain readable after discovery.
+        *
+        * FogTheme.hazeColor and hazeAlpha are shift-specific so the haze
+        * always reads as part of the same atmospheric palette as the fog:
+        *   night   — cool ink-blue  at 0.32 opacity
+        *   day     — pale grey-blue at 0.22 opacity  (daylight is gentler)
+        *   evening — muted indigo   at 0.28 opacity
+        */}
       {isExplored && (
         <View style={[s.overlay, { pointerEvents: 'none' }]}>
           <Svg width={sz} height={sz}>
+            {/* Memory haze fill — tints and further dims the explored terrain */}
+            <Polygon
+              points={hexPoints(sz, 0.97)}
+              fill={fogTheme.hazeColor}
+              fillOpacity={fogTheme.hazeAlpha}
+              stroke="none"
+            />
+            {/* Hairline ring — boundary marker for visited territory */}
             <Polygon
               points={hexPoints(sz, 0.96)}
               fill="transparent"
@@ -800,10 +872,15 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
       )}
 
       {/* ── Layer 3: encounter world object (visibleNow / explored / current) ── */}
-      {/* Push 9: all encounter types shown on visibleNow AND exploredButOut-     */}
-      {/* OfVision.  Battle shows the pedestal only (enemy hidden); areaBoss       */}
+      {/* Push 9:  all encounter types shown on visibleNow AND exploredButOut-    */}
+      {/* OfVision.  Battle shows the pedestal only (enemy hidden); areaBoss      */}
       {/* renders the actual boss sprite at 1.35 × sz (larger than player 1.15). */}
       {/* All nodes bottom-anchored at ~88 % tile height (the 2.5D hex floor).   */}
+      {/*                                                                         */}
+      {/* Push 18: exploredButOutOfVision nodes render at MEMORY_NODE_ALPHA       */}
+      {/* (0.82) so known stationary encounters stay clearly readable after        */}
+      {/* discovery — players should always be able to identify what they scouted. */}
+      {/* visibleNow / current nodes stay at full opacity (1.0).                  */}
       {node !== null && (() => {
         const nodeSz = Math.round(sz * node.sizeMul);
         const nodeX  = Math.round((sz - nodeSz) / 2);
@@ -812,7 +889,13 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         return (
           <Image
             source={node.src}
-            style={[s.marker, { left: nodeX, top: nodeY, width: nodeSz, height: nodeSz }]}
+            style={[s.marker, {
+              left:    nodeX,
+              top:     nodeY,
+              width:   nodeSz,
+              height:  nodeSz,
+              opacity: isExplored ? MEMORY_NODE_ALPHA : 1,
+            }]}
             contentFit="contain"
             recyclingKey={`node-${tile.id}`}
           />
