@@ -30,7 +30,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HexMapLayer }                    from '@/src/components/journey/HexMapLayer';
-import type { HexMapTile }                from '@/src/components/journey/HexMapLayer';
+import type { HexMapTile, HexMapWorldMetrics, HexMapDevOverlay } from '@/src/components/journey/HexMapLayer';
+import { JourneyMapDiagnosticsPanel }     from '@/src/components/journey/dev/JourneyMapDiagnosticsPanel';
 import { CHAPTERS }                        from '@/src/game/chapterJourney';
 import { generateDebugFixture, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { loadOrCreateJourneyRun, challengeChapter, rechallengeMap } from '@/src/game/journeyMap/journeyRunLifecycle';
@@ -74,6 +75,8 @@ import { ChapterCompletion }               from '@/src/features/journey/ui/Chapt
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getMapSprite }                    from '@/src/game/illustratedAssets';
 import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
+import { getChapterTileCount }                        from '@/src/game/journeyMap/config';
+import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 // Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
@@ -384,6 +387,13 @@ export default function ChapterFogMapShell() {
     useState<'idle' | 'confirming' | 'creating' | 'error'>('idle');
   const [rechallengeError, setRechallengeError] = useState<string | null>(null);
 
+  // ── Dev diagnostics (Push 0) ───────────────────────────────────────────────
+  // diagRef is written by HexMapLayer after geometry settles; read by panel.
+  // devOverlay controls per-tile debug overlays inside HexMapLayer.
+  // Both are always created (hooks rules) but only consumed in __DEV__ paths.
+  const diagRef    = useRef<HexMapWorldMetrics | null>(null);
+  const [devOverlay, setDevOverlay] = useState<HexMapDevOverlay>({});
+
   useEffect(() => {
     // Debug fixture bypasses the real run entirely.
     if (debugTiles !== null) { setRunLoading(false); return; }
@@ -568,6 +578,35 @@ export default function ChapterFogMapShell() {
     if (!player?.id) return JOURNEY_MAP_FIXTURE;
     return [];
   }, [run, debugTiles, player?.id]);
+
+  // ── Dev diagnostics: template tile count (Push 0) ─────────────────────────
+  // Reads the authored/generated template to compare against the runtime run.
+  // Wrapped in try/catch because getChapterMapTemplate throws for chapters
+  // without a template (should not happen for ch1–9, but safe to guard).
+  // Only evaluated in __DEV__ to keep production bundle clean.
+  const templateTerrainCellCount = useMemo<number | null>(() => {
+    if (!__DEV__) return null;
+    try { return getChapterMapTemplate(chNum).tiles.length; }
+    catch { return null; }
+  }, [chNum]);
+
+  // ── Dev terrain count assertion (Push 0) ──────────────────────────────────
+  // Throws visibly when the runtime tile count does not match the config.
+  // "Do not silently recover from incorrect terrain counts." (directive)
+  // useEffect so the screen renders first (panel visible before crash), then
+  // the assertion fires and shows a red box / console error in dev tools.
+  useEffect(() => {
+    if (!__DEV__ || !run) return;
+    const expected = getChapterTileCount(chNum);
+    if (run.tiles.length !== expected) {
+      const msg =
+        `[fog-map] TERRAIN ASSERTION FAIL — ` +
+        `Chapter ${chNum}: expected ${expected} terrain cells but got ${run.tiles.length}. ` +
+        `(seed: ${run.seed}, start: ${run.startTileId}, gate: ${run.gateAnchorTileId})`;
+      console.error(msg);
+      throw new Error(msg);
+    }
+  }, [run, chNum]);
 
   // Gate unlock: 0-boss maps (ch1–3) unlock when gate is discovered; otherwise
   // require CHAPTER_BOSS_KEY_REQUIREMENT (3) chapter-level keys — a fixed
@@ -1071,6 +1110,9 @@ export default function ChapterFogMapShell() {
                 unlocked:    gateUnlocked,
               }}
               explorationCharacter={explorationCharacter}
+              // Dev diagnostics (Push 0) — no-op in production.
+              diagRef={__DEV__ ? diagRef : undefined}
+              devOverlay={__DEV__ ? devOverlay : undefined}
             />
           )}
 
@@ -1447,6 +1489,31 @@ export default function ChapterFogMapShell() {
           runSeed={run.seed}
           tileId={merchantModalTileId}
           onLeave={() => setMerchantModalTileId(null)}
+        />
+      )}
+
+      {/* ── Dev diagnostics panel (Push 0 — __DEV__ only) ─────────────────── *
+       * Absolutely-positioned floating overlay in the bottom-left corner.
+       * Gives full terrain / visibility / world metrics and overlay toggles.
+       * The `if (!__DEV__)` guard is in the panel itself; this conditional
+       * is an additional belt-and-suspenders gate so the JSX branch is
+       * completely absent from production bundles.                           */}
+      {__DEV__ && (
+        <JourneyMapDiagnosticsPanel
+          chapterId={chapterId ?? ''}
+          chNum={chNum}
+          timeOfDay={mapShift}
+          run={run}
+          expectedTerrainCellCount={getChapterTileCount(chNum)}
+          templateTerrainCellCount={templateTerrainCellCount}
+          renderedTerrainCellCount={mapTiles.length}
+          viewportWidth={mapSize.w}
+          viewportHeight={mapSize.h}
+          keysCollected={keysCollected}
+          areaBossCount={areaBossCount}
+          worldMetricsRef={diagRef}
+          overlay={devOverlay}
+          onOverlayChange={setDevOverlay}
         />
       )}
     </View>

@@ -159,6 +159,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  type MutableRefObject,
 } from 'react';
 import {
   AccessibilityInfo,
@@ -1023,6 +1024,53 @@ function RecenterButton({ onPress }: { onPress: () => void }) {
 
 // ── HexMapLayer ───────────────────────────────────────────────────────────────
 
+// ── Dev-only diagnostic types (exported for JourneyMapDiagnosticsPanel) ───────
+
+/**
+ * World-space metrics written by HexMapLayer to a caller-supplied ref once the
+ * geometry is settled.  Production code must never read from this ref — it exists
+ * solely to feed the development diagnostics panel.
+ */
+export interface HexMapWorldMetrics {
+  /** Full rendered world width in px (same formula as worldW inside the component). */
+  worldW:            number;
+  /** Full rendered world height in px. */
+  worldH:            number;
+  /** Camera X at the moment the metrics were written (initial centre on load). */
+  cameraX:           number;
+  /** Camera Y at the moment the metrics were written. */
+  cameraY:           number;
+  /** Number of HexTile elements actually rendered (= tiles.length). */
+  renderedTileCount: number;
+  /** Resolved tile size in display pixels (sz). */
+  tileSize:          number;
+}
+
+/**
+ * Boolean flags that enable per-tile debug overlays.  All flags are false/absent
+ * in production.  HexMapLayer guards every branch with `__DEV__`.
+ */
+export interface HexMapDevOverlay {
+  /** Draw an outline + dimension label for the full world bounding box. */
+  worldBounds?:      boolean;
+  /** Draw an outline for the container viewport. */
+  viewportBounds?:   boolean;
+  /** Show each tile's string id above the hex. */
+  tileIds?:          boolean;
+  /** Show axial q,r coordinates inside each hex. */
+  axialCoords?:      boolean;
+  /** Mark the computed pixel centre of each tile with a dot. */
+  tileCenters?:      boolean;
+  /** Mark the encounter anchor point (bottom-centre of each tile). */
+  encounterAnchors?: boolean;
+  /** Show a colour-coded badge for each tile's visibility state. */
+  visibilityState?:  boolean;
+  /** Suppress fog rendering so tiles beneath are clearly visible. */
+  fogLayer?:         boolean;
+  /** Mark the sprite anchor point (grounding Y) for the current tile. */
+  spriteAnchors?:    boolean;
+}
+
 /**
  * Gate artwork rendered as a spatial overlay anchored to the gate tile.
  * pointerEvents="none" lets taps fall through to the underlying tile Pressable,
@@ -1095,6 +1143,21 @@ export interface HexMapLayerProps {
    * marker is preserved unchanged. Do NOT substitute a generic icon.
    */
   explorationCharacter?: number;
+
+  // ── Dev-only props (no-op in production) ────────────────────────────────
+
+  /**
+   * When provided, HexMapLayer writes world metrics (worldW/H, camera, sz,
+   * rendered tile count) to this ref after geometry is settled.
+   * Read it from the diagnostics panel — never in production code.
+   */
+  diagRef?: MutableRefObject<HexMapWorldMetrics | null>;
+
+  /**
+   * Per-tile debug overlays controlled by the diagnostics panel checkboxes.
+   * Every branch is guarded by `__DEV__`; no overhead in production.
+   */
+  devOverlay?: HexMapDevOverlay;
 }
 
 export function HexMapLayer({
@@ -1106,6 +1169,8 @@ export function HexMapLayer({
   timeOfDay,
   gateArt,
   explorationCharacter,
+  diagRef,
+  devOverlay,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -1195,6 +1260,22 @@ export function HexMapLayer({
         camRef.current        = { x: initX, y: initY };
         cameraAnim.setValue({ x: initX, y: initY });
       }
+    }
+
+    // ── Dev diagnostics: write world metrics to caller-supplied ref ─────────
+    // Runs on every geometry settle (container resize OR new tile set).
+    // Camera position written here is the post-settle initial value.
+    // Production builds: diagRef is always undefined; this branch is dead code
+    // that tree-shakers eliminate.  __DEV__ guard makes intent explicit.
+    if (__DEV__ && diagRef) {
+      diagRef.current = {
+        worldW,
+        worldH,
+        cameraX:           camRef.current.x,
+        cameraY:           camRef.current.y,
+        renderedTileCount: tiles.length,
+        tileSize:          sz,
+      };
     }
   // sz changes when containerWidth changes; tilesKey drives re-centre on new run.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1367,7 +1448,184 @@ export function HexMapLayer({
             </View>
           );
         })()}
+
+        {/* ── Dev per-tile overlays (Push 0 — __DEV__ only) ────────────────
+         * Rendered as a second pass over `sorted` so overlay text/dots always
+         * appear above every tile Pressable (zIndex 19000 keeps them above the
+         * fog SVG at 5000 but below the diagnostics panel at 19999).
+         * Every branch is wrapped in `__DEV__` — no runtime cost in production.
+         */}
+        {__DEV__ && devOverlay && sorted.map(tile => {
+          const px   = Math.round(tile.q * Q_STEP * sz) + ox;
+          const py   = Math.round((tile.r * R_STEP + tile.q * Q_VOFF) * sz) + oy;
+          const mid  = Math.round(sz / 2);
+          const vis  = tile.visibility;
+          const visColor =
+            vis === 'visibleNow'            ? '#4ade80' :
+            vis === 'exploredButOutOfVision' ? '#facc15' : '#94a3b8';
+
+          return (
+            <View
+              key={`dev-${tile.id}`}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left:     px,
+                top:      py,
+                width:    sz,
+                height:   sz,
+                zIndex:   19000,
+              }}
+            >
+              {/* Tile ID */}
+              {devOverlay.tileIds && (
+                <Text style={{
+                  position:   'absolute',
+                  top:        2,
+                  left:       2,
+                  right:      2,
+                  color:      '#ffffff',
+                  fontSize:   7,
+                  fontWeight: '700',
+                  textShadowColor: '#000',
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 2,
+                  textAlign:  'center',
+                }}>
+                  {tile.id.slice(-6)}
+                </Text>
+              )}
+
+              {/* Axial q,r */}
+              {devOverlay.axialCoords && (
+                <Text style={{
+                  position:   'absolute',
+                  bottom:     2,
+                  left:       2,
+                  right:      2,
+                  color:      '#93c5fd',
+                  fontSize:   7,
+                  fontWeight: '600',
+                  textShadowColor: '#000',
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 2,
+                  textAlign:  'center',
+                }}>
+                  {tile.q},{tile.r}
+                </Text>
+              )}
+
+              {/* Tile centre dot */}
+              {devOverlay.tileCenters && (
+                <View style={{
+                  position:        'absolute',
+                  left:            mid - 2,
+                  top:             mid - 2,
+                  width:           4,
+                  height:          4,
+                  borderRadius:    2,
+                  backgroundColor: '#ffffff88',
+                }} />
+              )}
+
+              {/* Encounter anchor (bottom-centre of tile, 2.5D floor grounding) */}
+              {devOverlay.encounterAnchors && (tile.encounter !== 'none' || tile.isGate) && (
+                <View style={{
+                  position:        'absolute',
+                  left:            mid - 3,
+                  top:             Math.round(sz * 0.78) - 3,
+                  width:           6,
+                  height:          6,
+                  borderRadius:    3,
+                  backgroundColor: tile.isGate ? '#fbbf24' : '#f472b6',
+                  borderWidth:     1,
+                  borderColor:     '#ffffff88',
+                }} />
+              )}
+
+              {/* Sprite anchor (character grounding Y on current tile) */}
+              {devOverlay.spriteAnchors && tile.current && (
+                <View style={{
+                  position:        'absolute',
+                  left:            mid - 4,
+                  top:             Math.round(sz * 0.655) - 2,
+                  width:           8,
+                  height:          4,
+                  backgroundColor: '#34d399CC',
+                  borderRadius:    2,
+                }} />
+              )}
+
+              {/* Visibility state badge */}
+              {devOverlay.visibilityState && (
+                <View style={{
+                  position:        'absolute',
+                  top:             mid - 7,
+                  left:            mid - 7,
+                  width:           14,
+                  height:          14,
+                  borderRadius:    7,
+                  backgroundColor: visColor + '99',
+                  borderWidth:     1,
+                  borderColor:     visColor,
+                }} />
+              )}
+            </View>
+          );
+        })}
+
+        {/* World bounding-box outline */}
+        {__DEV__ && devOverlay?.worldBounds && (
+          <View
+            pointerEvents="none"
+            style={{
+              position:    'absolute',
+              left:        0,
+              top:         0,
+              width:       worldW,
+              height:      worldH,
+              borderWidth: 2,
+              borderColor: '#f472b688',
+              zIndex:      19500,
+            }}
+          >
+            <Text style={{
+              color:      '#f472b8',
+              fontSize:    8,
+              fontWeight: '700',
+              padding:     3,
+            }}>
+              {worldW}×{worldH}
+            </Text>
+          </View>
+        )}
       </Animated.View>
+
+      {/* Viewport bounding-box outline */}
+      {__DEV__ && devOverlay?.viewportBounds && (
+        <View
+          pointerEvents="none"
+          style={{
+            position:    'absolute',
+            left:        0,
+            top:         0,
+            width:       containerWidth,
+            height:      containerHeight,
+            borderWidth: 2,
+            borderColor: '#34d39988',
+            zIndex:      19600,
+          }}
+        >
+          <Text style={{
+            color:     '#34d399',
+            fontSize:   8,
+            fontWeight: '700',
+            padding:    3,
+          }}>
+            VP {containerWidth}×{containerHeight}
+          </Text>
+        </View>
+      )}
 
       <RecenterButton onPress={recenter} />
     </View>
