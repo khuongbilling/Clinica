@@ -38,6 +38,37 @@ export interface ChapterShiftVisuals {
   background: number;
 
   /**
+   * Optional painting transform for aligning the background artwork with the
+   * authored hex footprint.  Applied to the background Image in fog-map.tsx.
+   * Defaults (1.0, 0, 0) leave the image at its contentFit="cover" position.
+   *
+   *   backgroundScale   — uniform scale from the image centre (>1 zooms in).
+   *                       Use to make the floor dominate and push sky/ceiling
+   *                       out of the visible area.
+   *
+   *   backgroundOffsetX — horizontal shift in display pixels.
+   *                       Positive → image moves RIGHT (content shifts right).
+   *                       Negative → image moves LEFT.
+   *
+   *   backgroundOffsetY — vertical shift in display pixels.
+   *                       Positive → image moves DOWN (lower content visible at top).
+   *                       Negative → image moves UP (upper content pushed above viewport;
+   *                                  use to eliminate sky from the tile zone).
+   *
+   * Rationale: the background is a FIXED layer that does not scroll with the
+   * camera.  The transform is tuned for the INITIAL camera position (centred
+   * on the chapter start tile) since that is the frame players encounter first
+   * and spend the most time in.
+   *
+   * Set per chapter / shift only when the default centre-fill creates obvious
+   * misalignment — sky over tiles, or a key landmark in a wrong tile zone.
+   * Leave unset for chapters whose artwork already frames the grid naturally.
+   */
+  backgroundScale?:   number;
+  backgroundOffsetX?: number;
+  backgroundOffsetY?: number;
+
+  /**
    * Fog overlay texture applied on top of HIDDEN tiles (interior fog body).
    * Different shifts may use lighter/denser fog art.
    */
@@ -178,7 +209,31 @@ const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.
 
 CHAPTER_SHIFT_VISUALS[1] = {
   day: {
-    background:      CH1_DAY_BG,
+    background:       CH1_DAY_BG,
+    // ── Push 11: painting alignment ───────────────────────────────────────
+    // The Day painting (map-platform-background-ch1-day.png) is a 1024×1024
+    // top-down circular atrium.  With no transform and contentFit="cover"
+    // the image centres on the viewport, but in tall-portrait viewports
+    // (height > width) there is no vertical cropping — the sky/cloud layer
+    // that occupies the top ~20 % of the image appears over the tile zone.
+    //
+    // Target alignment (initial camera = start tile q=0,r=1 centred):
+    //   Viewport top  → painting pixel ≈ 210 (just above sky end at ~205)
+    //   Screen centre → painting pixel ≈ 610 (lower central courtyard)
+    //   Viewport bottom → painting pixel ≈ 970 (lower pillar boundary)
+    //
+    // backgroundScale 1.28 zooms the painting in so the floor dominates
+    // and the sky margin is pushed above the viewport for all heights in
+    // the 320–523 px range that mapContainerHeight uses.
+    //
+    // backgroundOffsetY −55 shifts the image UP 55 display px so the
+    // topmost visible row of tiles sits over the upper archways/garden
+    // rather than the cloud layer, while keeping the lower courtyard
+    // floor at the start tile's screen position.
+    //
+    // backgroundOffsetX is omitted — the painting is symmetric left-right.
+    backgroundScale:  1.28,
+    backgroundOffsetY: -55,
     fogInterior:     CH1_DAY_FOG,
     fogEdge:         FOG_EDGE,          // no shift-specific edge raster yet
     terrainBase:     CH1_DAY_REVEALED,
@@ -253,3 +308,12 @@ export function getChapterMapVisuals(
 ): ChapterShiftVisuals {
   return CHAPTER_SHIFT_VISUALS[chapter]?.[timeOfDay] ?? DEFAULT_SHIFT_VISUALS[timeOfDay];
 }
+
+/**
+ * Night-shift visuals used ONLY for the developer `?debug=N` preview route,
+ * where no real JourneyRun (and therefore no authoritative shift) exists.
+ *
+ * Never use this as a production fallback — callers must gate on a resolved
+ * run shift and return `null` / show a loading shell instead.
+ */
+export const DEV_FALLBACK_VISUALS: ChapterShiftVisuals = DEFAULT_SHIFT_VISUALS.night;

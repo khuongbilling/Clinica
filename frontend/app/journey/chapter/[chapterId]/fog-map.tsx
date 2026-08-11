@@ -73,7 +73,7 @@ import { buildChapterUiSummary }           from '@/src/features/journey/ui/journ
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getMapSprite }                    from '@/src/game/illustratedAssets';
-import { getChapterMapVisuals }            from '@/src/game/journeyMap/chapterMapVisuals';
+import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 // Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
@@ -592,8 +592,16 @@ export default function ChapterFogMapShell() {
   // run.shift (TimeOfDay) is also frozen at creation (readonly).
   // Changing the shift tab on the Book page has no effect here — the run's
   // own shift drove the encounter generator and now drives the art.
-  const mapShift      = run?.shift ?? 'night';
-  const chapterVisuals = getChapterMapVisuals(run?.chapterId ?? chNum, mapShift);
+  //
+  // IMPORTANT: mapShift is undefined until the authoritative JourneyRun has
+  // loaded.  We must NEVER default to 'night' here — doing so causes a
+  // night→day flash on Day maps during the hydration window.  chapterVisuals
+  // is null while loading; the background Image is gated on it so no
+  // environmental raster is painted until the real shift is known.
+  const mapShift: TimeOfDay | undefined = run?.shift;
+  const chapterVisuals = mapShift != null
+    ? getChapterMapVisuals(run!.chapterId, mapShift)
+    : null;
 
   // ── Exploration character sprite ──────────────────────────────────────────
   // Resolved from the player's class_tree_id — the same key getMapSprite uses.
@@ -984,12 +992,45 @@ export default function ChapterFogMapShell() {
             setMapSize({ w: Math.floor(width), h: Math.floor(height) });
           }}
         >
-          <Image
-            source={chapterVisuals.background}
-            style={s.mapBg}
-            contentFit="cover"
-            testID="map-background"
-          />
+          {/* Background only renders once the authoritative shift is known.
+              Keeping this conditional is the single source-of-truth fix for
+              the night→day flash: no background is painted during the loading
+              window, so the dark app shell (s.root backgroundColor) shows
+              instead of a wrong-shift raster. */}
+          {chapterVisuals != null && (
+            <Image
+              source={chapterVisuals.background}
+              style={[
+                s.mapBg,
+                // Push 11: per-chapter per-shift painting alignment transform.
+                // Applied only when the registry supplies non-default values;
+                // identity (scale=1, translate=0,0) is a no-op so the array
+                // is always safe to include.
+                //
+                // Transform order in the array matters:
+                //   scale   — uniform zoom from element centre (contentFit
+                //             already centres the image, so this zooms from
+                //             the painting's own centre).
+                //   translateX/Y — shift in post-scale display pixels.
+                //             Negative Y moves the image UP (pushes sky above
+                //             the viewport top); positive Y moves it DOWN.
+                //
+                // The background is a FIXED layer — it does not scroll with
+                // the camera.  The transform is tuned for the initial camera
+                // position (start tile centred) where visual impression counts
+                // most.  See chapterMapVisuals.ts for per-chapter rationale.
+                {
+                  transform: [
+                    { scale:      chapterVisuals.backgroundScale   ?? 1 },
+                    { translateX: chapterVisuals.backgroundOffsetX ?? 0 },
+                    { translateY: chapterVisuals.backgroundOffsetY ?? 0 },
+                  ],
+                },
+              ]}
+              contentFit="cover"
+              testID="map-background"
+            />
+          )}
 
           {runLoading && !debugTiles ? (
             <View style={s.mapLoadingOverlay}>
@@ -1018,8 +1059,12 @@ export default function ChapterFogMapShell() {
               containerHeight={mapSize.h}
               tiles={mapTiles}
               onTilePress={handleTilePress}
-              tileVisuals={chapterVisuals}
-              timeOfDay={mapShift}
+              // Real runs: chapterVisuals / mapShift are always non-null here
+              // because run !== null when !runLoading && !runError.
+              // Debug tiles (?debug=N): run may not exist yet; DEV_FALLBACK_VISUALS
+              // (night) is used only for that dev-only preview path.
+              tileVisuals={chapterVisuals ?? DEV_FALLBACK_VISUALS}
+              timeOfDay={mapShift ?? 'night'}
               gateArt={{
                 lockedSrc:   ASSET.gateLocked,
                 unlockedSrc: ASSET.gateUnlocked,
@@ -1038,7 +1083,7 @@ export default function ChapterFogMapShell() {
               Opacity is set per-asset in the registry; this layer is purely
               atmospheric — it MUST NOT hide encounter icons or obscure
               the gate widget.                                              */}
-          {chapterVisuals.ambientOverlay != null && (
+          {chapterVisuals?.ambientOverlay != null && (
             <View
               pointerEvents="none"
               style={StyleSheet.absoluteFillObject}
