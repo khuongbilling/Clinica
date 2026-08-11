@@ -27,6 +27,12 @@
  * 19.  Treasure tiles all have a chestTier; non-treasure tiles do not
  * 20.  All tile ids within a run are unique
  * 21.  All-hidden run variant (zero-areaBoss) still validates cleanly
+ * 22.  Push 4 acceptance — Ch1 fixed terrain with seed-driven encounters
+ *        AC1  Ch1 attempt 1 and 2 → identical 30 terrain tile IDs
+ *        AC2  Ch1 Day / Evening / Night → identical 30 terrain tile IDs
+ *        AC3  Ch1 start and gate tile IDs are invariant across attempts
+ *        AC4  Ch1 encounter assignments differ between attempt 1 and attempt 2
+ *        AC5  Unauth'd chapter (Ch5) still produces distinct terrain per attempt
  */
 
 import {
@@ -36,6 +42,7 @@ import {
 } from '../src/game/journeyMap/createRun';
 import { validateRun } from '../src/game/journeyMap/validate';
 import type { JourneyRun } from '../src/game/journeyMap/types';
+import type { TimeOfDay } from '../src/game/journeyMap/types';
 
 // ── Tiny test harness ─────────────────────────────────────────────────────────
 
@@ -401,6 +408,114 @@ console.log('\n── Zero-areaBoss runs validate ──');
   // If we didn't find any zero-boss runs in 30 attempts, skip gracefully.
   if (tested === 0) {
     console.log('SKIP - no zero-areaBoss run found in 30 ch1 attempts (acceptable)');
+  }
+}
+
+// ── 22. Push 4 — Ch1 fixed terrain with seed-driven encounters ───────────────
+//
+// Two-layer split for authored chapters (Push 4):
+//
+//   Layer 1 — Terrain  (coordinates, start, gate):
+//     Comes from getChapterHexTopology(chapterId) which is backed by the
+//     authored template.  The run seed has NO effect on these values.
+//     Changing the attempt number, time-of-day shift, or player ID cannot
+//     move a tile or reposition start/gate.
+//
+//   Layer 2 — Encounters (battle/areaBoss/treasure/merchant/none…):
+//     Driven by the deterministic seed = String(chapterId * 100_000 + attempt).
+//     Each attempt produces a reproducibly different encounter distribution
+//     over the same fixed terrain.
+//
+// Unauth'd chapters (Ch5, Ch6–10…) retain the procedural topology fallback:
+// distinct seeds produce distinct coordinate sets until an authored template
+// ships for that chapter.
+
+console.log('\n── Push 4: Ch1 fixed terrain + seed-driven encounters ──');
+
+{
+  /** Stable sorted string of all tile IDs in a run (terrain fingerprint). */
+  const terrainOf = (run: JourneyRun): string =>
+    run.tiles.map(t => t.id).sort().join('|');
+
+  /**
+   * Encounter fingerprint — excludes the gate tile (always 'boss', not
+   * seed-driven) so diffs reveal genuine assignment variation.
+   */
+  const encOf = (run: JourneyRun): string =>
+    run.tiles
+      .filter(t => t.id !== run.gateAnchorTileId)
+      .map(t => `${t.id}:${t.encounter}`)
+      .sort()
+      .join('|');
+
+  // ── AC1: Terrain identical across attempts ─────────────────────────────────
+  // The attempt number changes the encounter seed but NOT the tile coordinates.
+  {
+    const a1 = makeRun({ chapterId: 1, attemptNumber: 1 });
+    const a2 = makeRun({ chapterId: 1, attemptNumber: 2 });
+    const a5 = makeRun({ chapterId: 1, attemptNumber: 5 });
+
+    const t1 = terrainOf(a1);
+    check('[push4 AC1] ch1 attempt1 vs attempt2 → same 30 tile IDs',
+      t1 === terrainOf(a2));
+    check('[push4 AC1] ch1 attempt1 vs attempt5 → same 30 tile IDs',
+      t1 === terrainOf(a5));
+    check('[push4 AC1] ch1 tile count fixed at 30 across all attempts',
+      a1.tiles.length === 30 && a2.tiles.length === 30 && a5.tiles.length === 30);
+  }
+
+  // ── AC2: Terrain identical across time-of-day shifts ──────────────────────
+  {
+    const day     = makeRun({ chapterId: 1, attemptNumber: 1, shift: 'day'     as TimeOfDay });
+    const evening = makeRun({ chapterId: 1, attemptNumber: 1, shift: 'evening' as TimeOfDay });
+    const night   = makeRun({ chapterId: 1, attemptNumber: 1, shift: 'night'   as TimeOfDay });
+
+    const tDay = terrainOf(day);
+    check('[push4 AC2] ch1 Day vs Evening → identical terrain',   tDay === terrainOf(evening));
+    check('[push4 AC2] ch1 Day vs Night   → identical terrain',   tDay === terrainOf(night));
+  }
+
+  // ── AC3: Start and gate tile IDs are invariant across attempts ─────────────
+  {
+    const a1 = makeRun({ chapterId: 1, attemptNumber: 1 });
+    const a2 = makeRun({ chapterId: 1, attemptNumber: 2 });
+    const a3 = makeRun({ chapterId: 1, attemptNumber: 3 });
+
+    check('[push4 AC3] ch1 startTileId invariant across attempts',
+      a1.startTileId === a2.startTileId && a1.startTileId === a3.startTileId);
+    check('[push4 AC3] ch1 gateAnchorTileId invariant across attempts',
+      a1.gateAnchorTileId === a2.gateAnchorTileId &&
+      a1.gateAnchorTileId === a3.gateAnchorTileId);
+
+    // Cross-check against the canonical Push 3 coordinates.
+    const startId = `tile_${'-1'.replace('-','n')}`;        // tile IDs use q_r format
+    check('[push4 AC3] ch1 start tile matches Push 3 canonical coord (-1,2)',
+      a1.startTileId === 'tile_-1_2',
+      `actual: ${a1.startTileId}`);
+    check('[push4 AC3] ch1 gate tile matches Push 3 canonical coord (3,0)',
+      a1.gateAnchorTileId === 'tile_3_0',
+      `actual: ${a1.gateAnchorTileId}`);
+  }
+
+  // ── AC4: Encounters differ between attempts (seed controls encounter layer) ─
+  // Seeds are chapterId*100_000 + attemptNumber, so attempt 1 ≠ attempt 2.
+  // With 29 encounter-eligible tiles the probability of a collision is negligible.
+  {
+    const a1 = makeRun({ chapterId: 1, attemptNumber: 1 });
+    const a2 = makeRun({ chapterId: 1, attemptNumber: 2 });
+    check('[push4 AC4] ch1 encounter layer differs between attempt1 and attempt2',
+      encOf(a1) !== encOf(a2));
+  }
+
+  // ── AC5: Unauth'd chapters retain procedural terrain (fallback intact) ──────
+  // Ch5 is NOT in PRODUCTION_AUTHORED_CHAPTERS so it uses generateHexTopology.
+  // Different seeds → different terrain coordinates.  This is the old behaviour
+  // that Push 4 intentionally preserves for not-yet-authored chapters.
+  {
+    const c5a1 = makeRun({ chapterId: 5, attemptNumber: 1 });
+    const c5a2 = makeRun({ chapterId: 5, attemptNumber: 2 });
+    check('[push4 AC5] ch5 (unauth) terrain differs between attempt1 and attempt2',
+      terrainOf(c5a1) !== terrainOf(c5a2));
   }
 }
 
