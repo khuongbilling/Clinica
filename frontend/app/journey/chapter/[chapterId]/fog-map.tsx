@@ -308,12 +308,14 @@ export default function ChapterFogMapShell() {
       : undefined;
 
   const { height: windowHeight } = useWindowDimensions();
-  // Responsive map height: ~62 % of the window so the map is the primary visual
-  // element. Clamped between 320 and 600 px to stay usable on small/large screens.
-  const mapContainerHeight = Math.min(600, Math.max(320, Math.round(windowHeight * 0.62)));
+  // The map now takes flex:1 (fills all space between chrome and nav).
+  // This height is used only to cap the SECONDARY info scroll below the map
+  // so the map always dominates the screen.
+  const secondaryScrollMaxH = Math.min(220, Math.max(100, Math.round(windowHeight * 0.24)));
 
   const bottomPad = Math.max(insets.bottom, 8);
-  const [mapSize, setMapSize] = useState({ w: 332, h: mapContainerHeight });
+  // Initial guess — replaced on first layout event from mapOuter.
+  const [mapSize, setMapSize] = useState({ w: 332, h: 480 });
 
   // ── Legend visibility (collapsed by default) ──────────────────────────────
   // Toggled by the ⓘ button in the header.
@@ -1026,159 +1028,156 @@ export default function ChapterFogMapShell() {
         </View>
       )}
 
-      {/* ── Scrollable body ───────────────────────────────────────────────── */}
+      {/* ── 2. Boss-key progress (compact) — fixed chrome above map ─────── */}
+      <View style={s.keyBar}>
+        <Image source={ASSET.keyFragment} style={s.keyBarIcon} contentFit="contain" />
+        <Text style={s.keyBarLabel}>CHAPTER BOSS KEYS</Text>
+        <View style={s.keyBarCountRow}>
+          <Text style={keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT ? s.keyBarCountFull : s.keyBarCountNum}>
+            {keysCollected}
+          </Text>
+          <Text style={s.keyBarSep}> / </Text>
+          <Text style={s.keyBarReq}>{CHAPTER_BOSS_KEY_REQUIREMENT}</Text>
+        </View>
+        <View style={[s.keyBarBadge, gateUnlocked && s.keyBarBadgeOpen]}>
+          <Text style={[s.keyBarBadgeTxt, gateUnlocked && s.keyBarBadgeTxtOpen]}>
+            {gateUnlocked ? 'UNLOCKED' : 'LOCKED'}
+          </Text>
+        </View>
+        {run !== null && run.attemptNumber > 1 && keysCollected > 0 && (
+          <View style={s.carriedOverBadge}>
+            <Text style={s.carriedOverTxt}>↑ carried</Text>
+          </View>
+        )}
+      </View>
+      {/* Contextual note when this attempt has no Area Bosses and gate is still locked */}
+      {zeroKeyMap && keysCollected < CHAPTER_BOSS_KEY_REQUIREMENT && (
+        <Text style={s.keyBarHint}>No Area Bosses detected on this attempt.</Text>
+      )}
+
+      {/* ── 3. Map viewport — fills all remaining space, NOT inside a ScrollView
+       *
+       * CAMERA ARCHITECTURE (Push 1 fix):
+       *   The map is a world-space scene rendered by HexMapLayer.  All layers
+       *   (terrain, encounters, gate, player, fog) live in a single Animated.View
+       *   translated by cameraAnim.  The viewport clips via overflow:'hidden'.
+       *
+       *   Placing the map inside a ScrollView caused two bugs:
+       *     1. The outer ScrollView captured vertical pan gestures before
+       *        HexMapLayer's PanResponder could claim them, so dragging up/down
+       *        scrolled the page instead of panning the world-space camera.
+       *     2. The height cap (max 600px) forced worldH to exceed the viewport,
+       *        and the camera clamp prevented the top tiles from ever being reached.
+       *
+       *   Fix: map lives directly in the root flex column with flex:1 so it
+       *   naturally fills every pixel between the fixed chrome and the nav bar.
+       *   The secondary info scroll below is a separate, shorter container.     */}
+      <View
+        style={s.mapOuter}
+        onLayout={e => {
+          const { width, height } = e.nativeEvent.layout;
+          setMapSize({ w: Math.floor(width), h: Math.floor(height) });
+        }}
+      >
+        {runLoading && !debugTiles ? (
+          // ── Loading: spinner ───────────────────────────────────────────
+          <View style={s.mapLoadingOverlay}>
+            <ActivityIndicator size="large" color={UI.jade} />
+            <Text style={s.mapLoadingTxt}>Loading map…</Text>
+          </View>
+
+        ) : runError ? (
+          // ── Error: retry prompt ────────────────────────────────────────
+          <View style={s.mapLoadingOverlay}>
+            <Text style={s.mapErrorTxt}>⚠ {runError}</Text>
+            <Text style={s.mapErrorDetail}>
+              Your saved map data is preserved. Tap Retry to try again.
+            </Text>
+            <Pressable
+              style={s.mapRetryBtn}
+              onPress={() => setLoadAttempt(n => n + 1)}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading map"
+              testID="fog-map-retry-btn"
+            >
+              <Text style={s.mapRetryTxt}>RETRY</Text>
+            </Pressable>
+          </View>
+
+        ) : chapterVisuals == null ? (
+          // ── Push 9: neutral shell — shift not yet resolved ─────────────
+          <View
+            style={s.neutralMapShell}
+            testID="neutral-map-shell"
+          />
+
+        ) : (
+          // ── Shift resolved — full HexMapLayer with authoritative visuals ─
+          <HexMapLayer
+            containerWidth={mapSize.w}
+            containerHeight={mapSize.h}
+            tiles={mapTiles}
+            onTilePress={handleTilePress}
+            tileVisuals={chapterVisuals}
+            timeOfDay={mapShift as TimeOfDay}
+            terrainTexture={chapterVisuals.terrainTexture}
+            gateArt={{
+              lockedSrc:    ASSET.gateLocked,
+              unlockedSrc:  ASSET.gateUnlocked,
+              unlocked:     gateUnlocked,
+              keysCollected,
+              keysRequired: CHAPTER_BOSS_KEY_REQUIREMENT,
+              gateTileId:   run?.gateAnchorTileId,
+            }}
+            explorationCharacter={explorationCharacter}
+            environmentBackground={{
+              source:  chapterVisuals.background,
+              scale:   chapterVisuals.backgroundScale,
+              offsetX: chapterVisuals.backgroundOffsetX,
+              offsetY: chapterVisuals.backgroundOffsetY,
+            }}
+            diagRef={__DEV__ ? diagRef : undefined}
+            devOverlay={__DEV__ ? devOverlay : undefined}
+          />
+        )}
+
+        {/* ── Ambient foreground overlay ──────────────────────────────────
+            pointerEvents="none" so tile taps pass through unaffected.     */}
+        {chapterVisuals?.ambientOverlay != null && (
+          <View
+            pointerEvents="none"
+            style={StyleSheet.absoluteFillObject}
+            testID="ambient-overlay"
+          >
+            <Image
+              source={chapterVisuals.ambientOverlay}
+              style={[StyleSheet.absoluteFillObject, { opacity: 0.28 }]}
+              contentFit="cover"
+            />
+          </View>
+        )}
+
+        {/* ── 4b. Move-error banner — absolute overlay inside the map ──────
+         *  Moved out of the ScrollView so it appears anchored to the map
+         *  bottom rather than pushing content below the map.               */}
+        {moveError !== null && (
+          <View style={s.moveErrorOverlay} pointerEvents="none">
+            <View style={s.moveErrorBanner}>
+              <Image source={STAMINA_EMBLEM} style={s.moveErrorIcon} contentFit="contain" />
+              <Text style={s.moveErrorTxt}>{moveError}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* ── Secondary info scroll — sits BELOW the map, compact height ─────
+       *  This is a separate ScrollView from the map so its gesture space
+       *  never overlaps the map's PanResponder region.                    */}
       <ScrollView
-        style={s.scroll}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: 68 + bottomPad + 24 }]}
+        style={[s.infoScroll, { maxHeight: secondaryScrollMaxH }]}
+        contentContainerStyle={s.infoScrollContent}
         showsVerticalScrollIndicator={false}
       >
-
-        {/* ── 2. Boss-key progress (compact) ────────────────────────────── */}
-        <View style={s.keyBar}>
-          <Image source={ASSET.keyFragment} style={s.keyBarIcon} contentFit="contain" />
-          <Text style={s.keyBarLabel}>CHAPTER BOSS KEYS</Text>
-          <View style={s.keyBarCountRow}>
-            <Text style={keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT ? s.keyBarCountFull : s.keyBarCountNum}>
-              {keysCollected}
-            </Text>
-            <Text style={s.keyBarSep}> / </Text>
-            <Text style={s.keyBarReq}>{CHAPTER_BOSS_KEY_REQUIREMENT}</Text>
-          </View>
-          <View style={[s.keyBarBadge, gateUnlocked && s.keyBarBadgeOpen]}>
-            <Text style={[s.keyBarBadgeTxt, gateUnlocked && s.keyBarBadgeTxtOpen]}>
-              {gateUnlocked ? 'UNLOCKED' : 'LOCKED'}
-            </Text>
-          </View>
-          {run !== null && run.attemptNumber > 1 && keysCollected > 0 && (
-            <View style={s.carriedOverBadge}>
-              <Text style={s.carriedOverTxt}>↑ carried</Text>
-            </View>
-          )}
-        </View>
-        {/* Contextual note when this attempt has no Area Bosses and gate is still locked */}
-        {zeroKeyMap && keysCollected < CHAPTER_BOSS_KEY_REQUIREMENT && (
-          <Text style={s.keyBarHint}>No Area Bosses detected on this attempt.</Text>
-        )}
-
-        {/* ── 3. Map viewport ───────────────────────────────────────────── */}
-        <View
-          style={[s.mapOuter, { height: mapContainerHeight }]}
-          onLayout={e => {
-            const { width, height } = e.nativeEvent.layout;
-            setMapSize({ w: Math.floor(width), h: Math.floor(height) });
-          }}
-        >
-          {runLoading && !debugTiles ? (
-            // ── Loading: spinner ───────────────────────────────────────────
-            <View style={s.mapLoadingOverlay}>
-              <ActivityIndicator size="large" color={UI.jade} />
-              <Text style={s.mapLoadingTxt}>Loading map…</Text>
-            </View>
-
-          ) : runError ? (
-            // ── Error: retry prompt ────────────────────────────────────────
-            <View style={s.mapLoadingOverlay}>
-              <Text style={s.mapErrorTxt}>⚠ {runError}</Text>
-              <Text style={s.mapErrorDetail}>
-                Your saved map data is preserved. Tap Retry to try again.
-              </Text>
-              <Pressable
-                style={s.mapRetryBtn}
-                onPress={() => setLoadAttempt(n => n + 1)}
-                accessibilityRole="button"
-                accessibilityLabel="Retry loading map"
-                testID="fog-map-retry-btn"
-              >
-                <Text style={s.mapRetryTxt}>RETRY</Text>
-              </Pressable>
-            </View>
-
-          ) : chapterVisuals == null ? (
-            // ── Push 9: neutral shell — shift not yet resolved ─────────────
-            // chapterVisuals is null whenever mapShift is undefined:
-            //   • player hasn't loaded yet (early bail in run-load effect)
-            //   • debug fixture mode without a real run (?debug=N in __DEV__)
-            //   • any other pre-hydration window
-            //
-            // Rendering HexMapLayer here would require a shift fallback.
-            // The ONLY safe fallback is: render nothing shift-specific.
-            // Night is NOT a neutral fallback — Day maps must never flash Night.
-            //
-            // When run.shift eventually resolves, React swaps this View for
-            // HexMapLayer in a single reconciliation pass — no intermediate frame.
-            <View
-              style={s.neutralMapShell}
-              testID="neutral-map-shell"
-            />
-
-          ) : (
-            // ── Shift resolved — full HexMapLayer with authoritative visuals ─
-            // chapterVisuals != null guarantees mapShift is also non-null.
-            // Every visual prop carries a real resolved value — no shift fallback.
-            // Push 7: environmentBackground renders inside MapWorld so it pans
-            // with terrain, fog, gate, and player in lockstep.
-            <HexMapLayer
-              containerWidth={mapSize.w}
-              containerHeight={mapSize.h}
-              tiles={mapTiles}
-              onTilePress={handleTilePress}
-              tileVisuals={chapterVisuals}
-              timeOfDay={mapShift as TimeOfDay}
-              terrainTexture={chapterVisuals.terrainTexture}
-              gateArt={{
-                lockedSrc:    ASSET.gateLocked,
-                unlockedSrc:  ASSET.gateUnlocked,
-                unlocked:     gateUnlocked,
-                keysCollected,
-                keysRequired: CHAPTER_BOSS_KEY_REQUIREMENT,
-                // Push 22: explicit tile ID so the gate landmark renders at the
-                // exact template-fixed position, independent of the isGate flag.
-                gateTileId:   run?.gateAnchorTileId,
-              }}
-              explorationCharacter={explorationCharacter}
-              environmentBackground={{
-                source:  chapterVisuals.background,
-                scale:   chapterVisuals.backgroundScale,
-                offsetX: chapterVisuals.backgroundOffsetX,
-                offsetY: chapterVisuals.backgroundOffsetY,
-              }}
-              // Dev diagnostics (Push 0) — no-op in production.
-              diagRef={__DEV__ ? diagRef : undefined}
-              devOverlay={__DEV__ ? devOverlay : undefined}
-            />
-          )}
-
-          {/* ── Ambient foreground overlay ────────────────────────────────
-              Rendered on top of tiles but below any screen-level UI chrome.
-              Only active when the chapter/shift visual theme provides one
-              (e.g. a night vignette, a dusk haze, or a light-ray sheet).
-              pointerEvents="none" on the wrapping View so tile taps pass
-              through unaffected (per Expo-web pointer-events discipline).
-              Opacity is set per-asset in the registry; this layer is purely
-              atmospheric — it MUST NOT hide encounter icons or obscure
-              the gate widget.                                              */}
-          {chapterVisuals?.ambientOverlay != null && (
-            <View
-              pointerEvents="none"
-              style={StyleSheet.absoluteFillObject}
-              testID="ambient-overlay"
-            >
-              <Image
-                source={chapterVisuals.ambientOverlay}
-                style={[StyleSheet.absoluteFillObject, { opacity: 0.28 }]}
-                contentFit="cover"
-              />
-            </View>
-          )}
-        </View>
-
-        {/* ── 4b. Move-error banner (insufficient stamina) ──────────────── */}
-        {moveError !== null && (
-          <View style={s.moveErrorBanner}>
-            <Image source={STAMINA_EMBLEM} style={s.moveErrorIcon} contentFit="contain" />
-            <Text style={s.moveErrorTxt}>{moveError}</Text>
-          </View>
-        )}
 
         {/* ── 4c. No encounter stub — real modals rendered below ────────── */}
 
@@ -1564,8 +1563,17 @@ const TEXT_DIM     = UI.textDim;
 
 const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: UI.sanctuaryBg },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 14, gap: 8, paddingTop: 8 },
+
+  // ── Secondary info scroll (below map) ────────────────────────────────────
+  // Separate container from the map so its gesture space never conflicts with
+  // the map's PanResponder.  maxHeight is applied inline from secondaryScrollMaxH.
+  infoScroll: { flexShrink: 0 },
+  infoScrollContent: {
+    paddingHorizontal: 14,
+    gap: 8,
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
 
   // Completion badge strip (between header and scroll body)
   completionBadgeWrap: {
@@ -1639,13 +1647,16 @@ const s = StyleSheet.create({
     padding: 14, gap: 10,
   },
 
-  // Compact boss-key progress bar (replaces large fragmentPanel + gateSection)
+  // Compact boss-key progress bar — now outside the ScrollView, needs its own
+  // horizontal margins to match the map's marginHorizontal:14 edge alignment.
   keyBar: {
     flexDirection:   'row',
     alignItems:      'center',
     gap:             8,
     paddingVertical: 8,
     paddingHorizontal: 12,
+    marginHorizontal: 14,
+    marginTop:       8,
     backgroundColor: PANEL_BG,
     borderRadius:    10,
     borderWidth:     1,
@@ -1674,7 +1685,7 @@ const s = StyleSheet.create({
   keyBarBadgeTxtOpen: { color: JADE },
   keyBarHint: {
     color: TEXT_DIM, fontSize: 10.5, fontStyle: 'italic',
-    paddingHorizontal: 2, marginTop: -4,
+    marginHorizontal: 14, marginTop: -4,
   },
   carriedOverBadge: {
     backgroundColor: GOLD + '1A',
@@ -1686,11 +1697,17 @@ const s = StyleSheet.create({
   },
   carriedOverTxt: { color: GOLD, fontSize: 9, fontWeight: '600' },
 
-  // Map viewport — height is set dynamically via inline style (useWindowDimensions).
+  // Map viewport — flex:1 fills all remaining space between the fixed chrome
+  // (header + keyBar) and the fixed nav bar.  No height cap: the world-space
+  // camera inside HexMapLayer handles all panning and clamping.
+  // The map is NOT inside a ScrollView so vertical gestures go straight to the
+  // PanResponder in HexMapLayer rather than being swallowed by a scroll view.
   mapOuter: {
+    flex: 1,
+    marginHorizontal: 14,
+    marginBottom: 4,
     borderRadius: 14, overflow: 'hidden',
     borderWidth: 1, borderColor: PANEL_BORDER,
-    position: 'relative',
   },
   // mapBg removed Push 7: background is now inside HexMapLayer's MapWorld.
   neutralMapShell: {
@@ -1719,7 +1736,17 @@ const s = StyleSheet.create({
   },
   mapRetryTxt: { color: JADE, fontSize: 12, fontWeight: '800', letterSpacing: 1, fontFamily: SERIF },
 
-  // Movement error banner (insufficient stamina)
+  // Movement error banner — absolute overlay inside the map viewport.
+  // Positioned at the map bottom-centre so it reads as a world-space message
+  // without pushing any scroll content.
+  moveErrorOverlay: {
+    position:  'absolute',
+    bottom:    14,
+    left:      12,
+    right:     12,
+    zIndex:    20000,
+    alignItems: 'center',
+  },
   moveErrorBanner: {
     flexDirection:   'row',
     alignItems:      'center',
@@ -1730,7 +1757,6 @@ const s = StyleSheet.create({
     borderColor:     '#FF6B6B44',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    marginTop:       -4,
   },
   moveErrorIcon: { width: 18, height: 18 },
   moveErrorTxt: {
