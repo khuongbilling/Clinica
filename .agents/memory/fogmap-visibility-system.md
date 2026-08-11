@@ -57,3 +57,33 @@ The screenshot tool and unauthenticated browsers never have a player session. If
 - Revealed: hex-revealed.webp + encounter icon
 - Current: hex-current.webp + encounter icon + player-map-token.webp
 - Hidden tiles are `disabled` (Pressable) — not selectable; frontier tiles are pressable (movement wired in Push 11).
+
+## Named vision bonus slots (Push 5)
+
+`visionConfig.ts` exposes `VisionBonusInputs` — four explicit named fields:
+- `classVisionBonus`, `skillVisionBonus`, `equipmentVisionBonus`, `temporaryVisionBonus`
+
+All default to 0 via `ZERO_VISION_BONUSES`. `resolveVisionBonuses(classTreeId, overrides?)` builds the record; `computeEffectiveVisionRadius(bonuses)` applies the formula (BASE + sum of all four) and clamps to `MAX_VISION_RADIUS = 4`. To test radius 2: `resolveVisionBonuses(undefined, { temporaryVisionBonus: 1 })`.
+
+`axialHexDistance(a, b)` (object params, `(|dq|+|dr|+|ds|)/2`) is exported from `fogCalculator.ts` alongside the existing scalar `axialDistance(q1,r1,q2,r2)`.
+
+## exploredTileIds persistence (Push 6)
+
+`JourneyRun.exploredTileIds: readonly string[]` — tile IDs that have ever entered the player's FOV. Grows monotonically; never shrinks within a run.
+
+**Behaviour change:** `visibleNow` tiles the player hasn't stepped on now stay `exploredButOutOfVision` when they leave FOV, rather than reverting to `unexplored`. Only truly never-seen tiles show dense fog.
+
+**computeFogAfterMove** now returns `{ tiles, exploredTileIds }` instead of `JourneyTile[]`. Pass 4 param: `exploredTileIds: ReadonlySet<string>`. Pass 2 priority: `inFOV → visibleNow | everSeen → exploredButOutOfVision | unexplored`.
+
+**Wire:** `explored_tile_ids?` in WireRun; `fromWire` derives it from tile states for legacy runs (no migration needed). `saveRun` sends it in the PUT body.
+
+**createRun.ts** (alternate run-creation path) also sets `exploredTileIds` — keep both paths in sync when changing run structure.
+
+## Named vision bonus slots (Push 5)
+
+`visionConfig.ts` exposes `VisionBonusInputs` — four explicit named fields:
+- `classVisionBonus`, `skillVisionBonus`, `equipmentVisionBonus`, `temporaryVisionBonus`
+
+All default to 0 via `ZERO_VISION_BONUSES`. `resolveVisionBonuses(classTreeId, overrides?)` builds the record; `computeEffectiveVisionRadius(bonuses)` applies the formula (BASE + sum of all four) and clamps to `MAX_VISION_RADIUS = 4`. To test radius 2: `resolveVisionBonuses(undefined, { temporaryVisionBonus: 1 })`.
+
+`axialHexDistance(a, b)` (object params, `(|dq|+|dr|+|ds|)/2`) is exported from `fogCalculator.ts` alongside the existing scalar `axialDistance(q1,r1,q2,r2)` which is used internally by `tilesWithinRadius` and `isAdjacent`.
