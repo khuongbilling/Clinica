@@ -42,6 +42,12 @@ export type EncounterType =
   | 'merchant'
   | 'areaBoss'
   /**
+   * Push 20: ward event tile — a non-combat clinical encounter.
+   * Subtype is carried on tile.wardEventSubtype (WardEventSubtype).
+   * World-object prop selected by encounterMapNode() → MAP_NODE.ward*.
+   */
+  | 'wardEvent'
+  /**
    * Assigned exclusively to the chapter-boss gate tile.
    * Not rolled randomly — set by the run factory; never appears on playable tiles.
    */

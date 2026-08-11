@@ -17,7 +17,7 @@
  * JOURNEY_MAP_FIXTURE construction but is NOT exported.
  */
 
-import type { EncounterType, ChestTier, TileVisibility, TerrainVisualVariant } from './types';
+import type { EncounterType, ChestTier, TileVisibility, TerrainVisualVariant, WardEventSubtype } from './types';
 
 // ── HexMapTile — canonical rendering type (Push 9) ───────────────────────────
 
@@ -40,6 +40,11 @@ export interface HexMapTile {
   encounter:   EncounterType;
   /** Only set when encounter === 'treasure'. */
   chestTier?:  ChestTier;
+  /**
+   * Push 20: only set when encounter === 'wardEvent'.
+   * Drives which ward-event world-object prop is rendered by encounterMapNode().
+   */
+  wardEventSubtype?: WardEventSubtype;
   /** True for the chapter-boss gate anchor tile. */
   isGate?:     boolean;
   /**

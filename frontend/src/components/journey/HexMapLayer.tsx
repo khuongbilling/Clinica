@@ -438,7 +438,19 @@ const ENCOUNTER_ICON = {
 /**
  * Push 7: 2.5D world-object PNGs for the map surface.
  * All are transparent-background PNGs at native 1024×1024 resolution.
- * Gold chest reuses node_reward_medical_chest.png — the ideal gold tier art.
+ *
+ * Push 20: ward event world-object props added — one per WardEventSubtype group.
+ * All share the same three-quarter top-down isometric camera angle and Clinica
+ * dark-navy / teal-jade / gold palette as the existing encounter nodes.
+ * Contact shadow is baked into each asset; SVG shadow ellipse (Layer 3 shadow)
+ * adds the per-tile grounding ellipse at runtime.
+ *
+ *   wardNpc      — support_ally: jade-lit lantern post + caduceus plinth
+ *   wardPatient  — patient_family_team / handoff / surveillance: clinical bed scene
+ *   wardShrine   — ward_blessing: tiered jade lotus altar with floating orb
+ *   wardProtocol — protocol_card: clinical document lectern with caduceus parchment
+ *   wardSupply   — resource_service: medical equipment trolley with IV hook
+ *   wardHazard   — ward_hazard: overturned biohazard container + spill + cones
  */
 const MAP_NODE = {
   battle:         require('@/assets/map-nodes/encounter_battle.png')             as number,
@@ -447,9 +459,14 @@ const MAP_NODE = {
   treasureBronze: require('@/assets/map-nodes/encounter_chest_bronze.png')       as number,
   treasureSilver: require('@/assets/map-nodes/encounter_chest_silver.png')       as number,
   // Push 9: dedicated isometric gold chest (transparent bg).
-  // Replaces node_reward_medical_chest.png which had a baked-in white background
-  // and a front-facing (non-isometric) perspective inconsistent with the other tiers.
   treasureGold:   require('@/assets/map-nodes/encounter_chest_gold.png')         as number,
+  // Push 20: ward event props
+  wardNpc:        require('@/assets/map-nodes/encounter_ward_npc.png')           as number,
+  wardPatient:    require('@/assets/map-nodes/encounter_ward_patient.png')       as number,
+  wardShrine:     require('@/assets/map-nodes/encounter_ward_shrine.png')        as number,
+  wardProtocol:   require('@/assets/map-nodes/encounter_ward_protocol.png')      as number,
+  wardSupply:     require('@/assets/map-nodes/encounter_ward_supply.png')        as number,
+  wardHazard:     require('@/assets/map-nodes/encounter_ward_hazard.png')        as number,
 };
 
 // ── Resolved tile visual sources ─────────────────────────────────────────────
@@ -530,15 +547,65 @@ function encounterMapNode(tile: HexMapTile): EncounterMapNode | null {
       };
     }
 
-    // wardEvent: renderer-ready stub.
-    // When wardEvent is added to EncounterType, add a case here with dedicated
-    // NPC/prop assets keyed by tile.wardEventSubtype:
-    //   support_ally / ward_blessing       → allied NPC prop
-    //   patient_family_team / handoff /
-    //   surveillance_patient               → patient scene prop
-    //   protocol_card                      → clinical document prop
-    //   resource_service                   → equipment station prop
-    //   ward_hazard                        → hazard marker prop
+    // ── Push 20: wardEvent — clinical non-combat encounter ──────────────────
+    // Prop selected by WardEventSubtype; all three patient interaction subtypes
+    // share one ward-bed scene (the distinction is surfaced in the UI modal, not
+    // on the map itself so the object reads the same regardless of shift).
+    //
+    // sizeMul tuning:
+    //   wardShrine   0.88 — tiered altar is tall; keep it imposing
+    //   wardPatient  0.92 — bed is wide; large footprint reads well at map scale
+    //   wardHazard   0.88 — circular spill base needs room to read the symbol
+    //   wardNpc      0.76 — lantern post is narrow; slightly smaller for balance
+    //   wardSupply   0.82 — trolley is wide; medium footprint
+    //   wardProtocol 0.72 — lectern is tall and narrow; keep it readable but small
+    case 'wardEvent': {
+      const sub = tile.wardEventSubtype;
+      switch (sub) {
+        case 'support_ally':
+          return {
+            src:         MAP_NODE.wardNpc,
+            sizeMul:     0.76,
+            shadowColor: 'rgba(0,180,150,0.28)',   // soft teal pool — welcoming
+          };
+        case 'patient_family_team':
+        case 'handoff_patient':
+        case 'surveillance_patient':
+          return {
+            src:         MAP_NODE.wardPatient,
+            sizeMul:     0.92,
+            // no shadowColor override — dark navy default suits the clinical white linen
+          };
+        case 'ward_blessing':
+          return {
+            src:         MAP_NODE.wardShrine,
+            sizeMul:     0.88,
+            shadowColor: 'rgba(0,200,160,0.35)',   // teal-jade luminous pool — magical
+          };
+        case 'protocol_card':
+          return {
+            src:         MAP_NODE.wardProtocol,
+            sizeMul:     0.72,
+            // no shadowColor — neutral stone base
+          };
+        case 'resource_service':
+          return {
+            src:         MAP_NODE.wardSupply,
+            sizeMul:     0.82,
+            // no shadowColor — institutional dark-iron trolley
+          };
+        case 'ward_hazard':
+          return {
+            src:         MAP_NODE.wardHazard,
+            sizeMul:     0.88,
+            shadowColor: 'rgba(220,50,0,0.38)',    // red-orange glow pool — danger
+          };
+        default:
+          // Unknown subtype or undefined — render nothing; tile stays as terrain only.
+          return null;
+      }
+    }
+
     default:
       return null;
   }

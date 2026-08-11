@@ -143,9 +143,12 @@ export const TREASURE_BASE_BP: BasisPoints = 500; // 5%
 export const CHEST_BRONZE_STEP_BP: BasisPoints = 50; // 0.5 pp
 
 export interface EncounterRates {
-  /** encounter → rate in basis points.  'boss' is excluded — it is assigned
-   *  deterministically to the gate tile, never rolled. */
-  readonly rates: Readonly<Record<Exclude<EncounterType, 'boss'>, BasisPoints>>;
+  /** encounter → rate in basis points.
+   *  'boss'      — excluded: assigned deterministically to the gate tile, never rolled.
+   *  'wardEvent' — excluded from rolling pool (Push 20): assigned by the map template
+   *                generator at authoring time, not by the probability table.
+   */
+  readonly rates: Readonly<Record<Exclude<EncounterType, 'boss' | 'wardEvent'>, BasisPoints>>;
 }
 
 /**

@@ -148,6 +148,56 @@ const ENCOUNTER_NODES: AuditEntry[] = [
   },
 ];
 
+// Push 20: Ward event world-object props — one per WardEventSubtype group
+const WARD_EVENT_NODES: AuditEntry[] = [
+  {
+    key:    'ward-npc',
+    label:  'Ward NPC — Ally Beacon (support_ally)',
+    src:    require('@/assets/map-nodes/encounter_ward_npc.png') as number,
+    status: 'pass',
+    note:   'Jade-lit lantern post on caduceus plinth. Teal shadow pool (rgba 0,180,150,0.28). '
+          + 'Baked contact shadow at plinth base.',
+  },
+  {
+    key:    'ward-patient',
+    label:  'Ward Patient Bed (patient_family_team / handoff / surveillance)',
+    src:    require('@/assets/map-nodes/encounter_ward_patient.png') as number,
+    status: 'pass',
+    note:   'Clinical fantasy bed with teal privacy curtain. Shared across all three patient subtypes. '
+          + 'Shift distinction surfaced in UI modal, not on map.',
+  },
+  {
+    key:    'ward-shrine',
+    label:  'Ward Blessing Shrine (ward_blessing)',
+    src:    require('@/assets/map-nodes/encounter_ward_shrine.png') as number,
+    status: 'pass',
+    note:   'Tiered jade altar with floating lotus orb. Teal-jade luminous shadow pool (rgba 0,200,160,0.35). '
+          + 'Feathered teal mist at base is intentional; not a rectangular matte.',
+  },
+  {
+    key:    'ward-protocol',
+    label:  'Ward Protocol Card Lectern (protocol_card)',
+    src:    require('@/assets/map-nodes/encounter_ward_protocol.png') as number,
+    status: 'pass',
+    note:   'Clinical document lectern with caduceus parchment and wax seal on chain.',
+  },
+  {
+    key:    'ward-supply',
+    label:  'Ward Supply Station (resource_service)',
+    src:    require('@/assets/map-nodes/encounter_ward_supply.png') as number,
+    status: 'pass',
+    note:   'Two-tier medical trolley with IV bag, bandages, surgical tools, supply crate.',
+  },
+  {
+    key:    'ward-hazard',
+    label:  'Ward Hazard Marker (ward_hazard)',
+    src:    require('@/assets/map-nodes/encounter_ward_hazard.png') as number,
+    status: 'pass',
+    note:   'Overturned biohazard container, lava-like spill, warning cones on cobblestone base. '
+          + 'Red-orange shadow pool (rgba 220,50,0,0.38). Circular base is part of the art — not a matte.',
+  },
+];
+
 // Rejected assets — DO NOT use in production
 const REJECTED: AuditEntry[] = [
   {
@@ -204,8 +254,9 @@ const TILE_OVERLAYS_LEGACY: AuditEntry[] = [
 const ALL_SECTIONS: Array<{ title: string; entries: AuditEntry[] }> = [
   { title: 'Player Token',                        entries: PLAYER_TOKEN },
   { title: 'Player Map Sprites',                  entries: PLAYER_SPRITES },
-  { title: 'Encounter Nodes — Active Production', entries: ENCOUNTER_NODES },
-  { title: 'Rejected Assets',                     entries: REJECTED },
+  { title: 'Encounter Nodes — Active Production',         entries: ENCOUNTER_NODES },
+  { title: 'Ward Event Props — Push 20 (future-gated)',   entries: WARD_EVENT_NODES },
+  { title: 'Rejected Assets',                             entries: REJECTED },
   { title: 'Hex Tile Overlays (LEGACY — unused)', entries: TILE_OVERLAYS_LEGACY },
 ];
 
