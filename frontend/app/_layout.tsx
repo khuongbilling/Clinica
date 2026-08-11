@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
+import { useCinematicFonts } from "@/src/hooks/use-cinematic-fonts";
 import { DailyPulseToast } from "@/src/components/DailyPulseToast";
 import { PlayerProvider } from "@/src/game/store";
 import { SettingsProvider } from "@/src/game/settingsStore";
@@ -23,13 +24,33 @@ SplashScreen.preventAutoHideAsync();
 if (__DEV__) {
   validateRealmRoutes(REALM_BUILDINGS);
 }
-import { useCinematicFonts } from "@/src/hooks/use-cinematic-fonts";
+
+// ── Font-timeout safety net ──────────────────────────────────────────────────
+// expo-font's web loader calls FontFaceObserver.load(null, 6000) and returns
+// the raw Promise without a .catch.  On slow mobile connections the font can
+// miss the 6-second window and the rejection goes unhandled, crashing the app.
+//
+// This handler is installed at module load time (before any font loading
+// starts) so it is guaranteed to be present when the rejection fires.
+// It silences only font-timeout rejections — all other rejections propagate.
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
+    const msg: string = e?.reason?.message ?? '';
+    if (msg.endsWith('ms timeout exceeded')) {
+      // Fonts are cosmetic only — the app degrades gracefully without them.
+      e.preventDefault();
+    }
+  });
+}
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
-  // Warm the prologue cinematic fonts at launch (non-blocking — the prologue
-  // screens themselves degrade gracefully if these are still loading).
-  useCinematicFonts();
+  // Warm the prologue cinematic fonts at launch.  Return value is explicitly
+  // destructured so useFonts' internal error state is consumed — this prevents
+  // the async rejection from leaking past the hook's state handler on slow
+  // connections where the 6-second fontfaceobserver timeout fires.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_cfLoaded, _cfError] = useCinematicFonts();
 
   useEffect(() => {
     if (loaded || error) {
