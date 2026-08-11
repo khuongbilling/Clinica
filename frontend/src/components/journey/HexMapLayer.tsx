@@ -365,15 +365,12 @@ const MAP_NODE = {
 
 /**
  * Effective tile-art sources passed from HexMapLayer down to HexTile.
- * Push 4: only terrainCurrent remains — fog is now a world-space SVG layer,
- * not a per-tile texture.  fogInterior is no longer rendered by the renderer
- * (kept in ChapterShiftVisuals for theming reference / future use).
+ * Push 4: terrain images are no longer rendered per-tile.
+ * The chapter background painting is the environment; hex Pressables are an
+ * interaction/state layer placed on top — not a collection of floor tiles.
+ * Push 7: fog rendering moved to JourneyFogLayer (see below) — HexTile carries
+ * only interaction target, state border/glow, and encounter anchor.
  */
-type ResolvedTileVis = {
-  terrainCurrent:  number;  // hex-current (jade glow for the player's position)
-  terrainBase:     number;  // hex-revealed (explored terrain floor)
-  terrainFrontier: number;  // hex-frontier (reachable movement cell floor)
-};
 
 /**
  * Push 7: source + tile-footprint for one world-object prop.
@@ -539,18 +536,16 @@ interface HexTileProps {
    * in place of the medallion token.  When absent: medallion is preserved.
    */
   explorationCharacter?: number;
-  /** Resolved terrain + fog asset sources for the active chapter/shift. */
-  tileVis: ResolvedTileVis;
   /**
-   * Push 10: per-shift SVG color theme — drives fog veil, frontier glow,
-   * and current-tile ring colors.  Resolved by HexMapLayer from the active
-   * `timeOfDay` and passed into every tile so individual tiles never inspect
-   * shift state themselves.
+   * Per-shift SVG color theme — drives state border/glow colors (veil hairline,
+   * frontier jade rim, current-tile ring).  Resolved by HexMapLayer from the
+   * active `timeOfDay`; individual tiles never inspect shift state themselves.
+   * Atmospheric fog belongs to JourneyFogLayer, not HexTile.
    */
   fogTheme: FogTheme;
 }
 
-function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis, fogTheme }: HexTileProps) {
+function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, fogTheme }: HexTileProps) {
   const pos  = tilePos(tile.q, tile.r, sz, ox, oy);
   // Push 7: world-object node replaces flat encounter icon on the map.
   // node.sizeMul controls footprint; bottom of bounding box sits at ~88 % tile height.
@@ -804,6 +799,162 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, tileVis, fog
   );
 }
 
+// ── JourneyFogLayer ───────────────────────────────────────────────────────────
+
+/**
+ * Continuous atmospheric fog surface rendered above all tile Pressables.
+ *
+ * Receives the full tile set plus geometry/theme props; produces ONE visually
+ * seamless fog layer.  Individual HexTile components carry NO fog DOM — all
+ * atmospheric fog logic lives here.
+ *
+ * Web:    imperatively-managed HTML <canvas> child injected into a View ref.
+ *         Canvas 2D destination-out compositing → solid fog fill with feathered
+ *         holes carved at each explored / visible tile.  No tile-boundary seams.
+ * Native: react-native-svg RadialGradient blobs (Skia handles userSpaceOnUse).
+ *
+ * zIndex 5000 — above unexplored tile Pressables (1–3000),
+ *               below exploredButOutOfVision (5050) and visibleNow (5100+).
+ *
+ * Inputs:
+ *   tiles    — full run tile set (visibility + coords read here, not in HexTile)
+ *   sz/ox/oy — tile geometry constants from HexMapLayer
+ *   worldW/H — total world canvas bounds
+ *   fogTheme — per-shift colour palette (blobColor, blobOpacity, etc.)
+ */
+interface JourneyFogLayerProps {
+  tiles:    readonly HexMapTile[];
+  sz:       number;
+  ox:       number;
+  oy:       number;
+  worldW:   number;
+  worldH:   number;
+  fogTheme: FogTheme;
+}
+
+function JourneyFogLayer({ tiles, sz, ox, oy, worldW, worldH, fogTheme }: JourneyFogLayerProps) {
+  // Web: imperatively-managed HTML <canvas> child
+  const fogContainerRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const container = fogContainerRef.current as unknown as HTMLDivElement | null;
+    if (!container || worldW <= 0 || worldH <= 0) return;
+
+    // Reuse the canvas across renders to avoid teardown/setup cost.
+    let canvas = container.querySelector('canvas') as HTMLCanvasElement | null;
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      Object.assign(canvas.style, {
+        position: 'absolute', left: '0', top: '0',
+        display: 'block', pointerEvents: 'none',
+      });
+      container.appendChild(canvas);
+    }
+
+    // Hi-DPI: physical canvas size = logical size × devicePixelRatio.
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = Math.round(worldW * dpr);
+    canvas.height = Math.round(worldH * dpr);
+    canvas.style.width  = worldW + 'px';
+    canvas.style.height = worldH + 'px';
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // ── Step 1: solid fog fill — one continuous atmospheric surface ─────────
+    ctx.clearRect(0, 0, worldW, worldH);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = fogTheme.blobOpacity;
+    ctx.fillStyle   = fogTheme.blobColor;
+    ctx.fillRect(0, 0, worldW, worldH);
+    ctx.globalAlpha = 1;
+
+    // ── Step 2: carve feathered reveal holes at each non-unexplored tile ───
+    // destination-out draws REMOVE canvas opacity.  A radial gradient that is
+    // opaque-black at centre and transparent at the outer edge creates an
+    // organic feathered reveal boundary.  Adjacent holes merge naturally.
+    ctx.globalCompositeOperation = 'destination-out';
+
+    for (const t of tiles) {
+      if (!t.current && t.visibility === 'unexplored') continue;
+
+      const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
+      const cx = left + sz / 2;
+      const cy = top  + sz / 2;
+
+      // Reveal radius scales with visibility quality:
+      //   current              → widest clear area + longest feather
+      //   visibleNow           → medium reach (adjacent territory)
+      //   exploredButOutOfVision → tight (remembered position, not active sight)
+      const isCur    = t.current;
+      const isVis    = !isCur && t.visibility === 'visibleNow';
+      const clearR   = isCur ? sz * 0.60 : isVis ? sz * 0.52 : sz * 0.42;
+      const featherR = isCur ? sz * 1.30 : isVis ? sz * 1.12 : sz * 0.96;
+
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, featherR);
+      grad.addColorStop(0,                 'rgba(0,0,0,1)');
+      grad.addColorStop(clearR / featherR, 'rgba(0,0,0,1)');
+      grad.addColorStop(0.82,              'rgba(0,0,0,0.35)');
+      grad.addColorStop(1,                 'rgba(0,0,0,0)');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, featherR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tiles, sz, ox, oy, worldW, worldH, fogTheme]);
+
+  // ── Web: return the container View; canvas is injected above ──────────────
+  if (Platform.OS === 'web') {
+    return (
+      <View
+        ref={fogContainerRef}
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          width: worldW, height: worldH, zIndex: 5000,
+        } as object}
+      />
+    );
+  }
+
+  // ── Native: SVG RadialGradient blobs (Skia handles userSpaceOnUse) ─────────
+  const unexplored = tiles.filter(t => !t.current && t.visibility === 'unexplored');
+  if (unexplored.length === 0) return null;
+  const blobR = sz * FOG_BLOB_RADIUS;
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, width: worldW, height: worldH, zIndex: 5000, pointerEvents: 'none' } as object}>
+      <Svg width={worldW} height={worldH}>
+        <Defs>
+          {unexplored.map(t => {
+            const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
+            const cx = left + sz / 2;
+            const cy = top  + sz / 2;
+            const id = fogGradId('fog', t.q, t.r);
+            return (
+              <RadialGradient key={id} id={id} cx={cx} cy={cy} r={blobR} fx={cx} fy={cy} gradientUnits="userSpaceOnUse">
+                <Stop offset="0%"   stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity} />
+                <Stop offset="65%"  stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity * 0.95} />
+                <Stop offset="75%"  stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity * 0.50} />
+                <Stop offset="100%" stopColor={fogTheme.blobColor} stopOpacity={0} />
+              </RadialGradient>
+            );
+          })}
+        </Defs>
+        {unexplored.map(t => {
+          const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
+          return (
+            <Circle key={t.id} cx={left + sz / 2} cy={top + sz / 2} r={blobR} fill={`url(#${fogGradId('fog', t.q, t.r)})`} />
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
+
 // ── RecenterButton ────────────────────────────────────────────────────────────
 
 function RecenterButton({ onPress }: { onPress: () => void }) {
@@ -909,15 +1060,6 @@ export function HexMapLayer({
   gateArt,
   explorationCharacter,
 }: HexMapLayerProps) {
-  // ── Resolved tile art (prop override merged with night-theme default) ───
-  // Push 4: only terrainCurrent is needed.  Fog is now a world-space SVG
-  // (see continuous atmospheric fog constants); no per-tile fog texture.
-  const resolvedTileVis: ResolvedTileVis = {
-    terrainCurrent:  tileVisuals?.terrainCurrent  ?? require('@/assets/ui/journey/tiles/hex-current.webp')  as number,
-    terrainBase:     tileVisuals?.terrainBase     ?? require('@/assets/ui/journey/tiles/hex-revealed.webp') as number,
-    terrainFrontier: tileVisuals?.terrainFrontier ?? require('@/assets/ui/journey/tiles/hex-frontier.webp') as number,
-  };
-
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
   // current-tile ring.  Defaults to 'night' when no shift is provided (fixture
@@ -1014,88 +1156,8 @@ export function HexMapLayer({
   // ── Canvas fog (web only) ──────────────────────────────────────────────────
   // react-native-svg RadialGradient with gradientUnits="userSpaceOnUse" on web
   // renders as white rectangles — gradient coords don't map to screen space.
-  // On web we instead imperatively manage a single HTML <canvas> child inside
-  // fogContainerRef and draw the fog using Canvas 2D compositing:
-  //   1. Flood-fill with fog colour (one continuous surface, no tile seams).
-  //   2. For each revealed/visible/current tile, draw a radial gradient with
-  //      globalCompositeOperation='destination-out' — this SUBTRACTS opacity
-  //      from the fog, carving organic feathered holes where the player can see.
-  // On native the SVG blob approach is retained (works with Skia / RNSVG).
-  const fogContainerRef = useRef<View>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const container = fogContainerRef.current as unknown as HTMLDivElement | null;
-    if (!container || worldW <= 0 || worldH <= 0) return;
-
-    // Reuse the canvas across renders to avoid teardown/setup cost.
-    let canvas = container.querySelector('canvas') as HTMLCanvasElement | null;
-    if (!canvas) {
-      canvas = document.createElement('canvas');
-      Object.assign(canvas.style, {
-        position: 'absolute', left: '0', top: '0',
-        display: 'block', pointerEvents: 'none',
-      });
-      container.appendChild(canvas);
-    }
-
-    // Hi-DPI: physical canvas size = logical size × devicePixelRatio.
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width  = Math.round(worldW * dpr);
-    canvas.height = Math.round(worldH * dpr);
-    canvas.style.width  = worldW + 'px';
-    canvas.style.height = worldH + 'px';
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    // Single scale — all subsequent draw calls use logical (CSS) coordinates.
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // ── Step 1: solid fog fill — one continuous atmospheric surface ─────────
-    ctx.clearRect(0, 0, worldW, worldH);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = fogTheme.blobOpacity;
-    ctx.fillStyle   = fogTheme.blobColor;
-    ctx.fillRect(0, 0, worldW, worldH);
-    ctx.globalAlpha = 1;
-
-    // ── Step 2: carve feathered reveal holes at each non-unexplored tile ───
-    // destination-out draws REMOVE existing canvas opacity.  A radial gradient
-    // that is opaque-black at centre (fully removes fog) and transparent at the
-    // outer edge (fog resumes) creates an organic feathered reveal boundary.
-    // Adjacent holes naturally merge into one smooth reveal cluster.
-    ctx.globalCompositeOperation = 'destination-out';
-
-    for (const t of tiles) {
-      if (!t.current && t.visibility === 'unexplored') continue;
-
-      const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
-      const cx = left + sz / 2;
-      const cy = top  + sz / 2;
-
-      // Reveal radius scales with visibility quality:
-      //   current              → widest clear area + longest feather (HERE)
-      //   visibleNow           → medium reach (adjacent territory)
-      //   exploredButOutOfVision → tight (memory of past position, not active sight)
-      const isCur    = t.current;
-      const isVis    = !isCur && t.visibility === 'visibleNow';
-      const clearR   = isCur ? sz * 0.60 : isVis ? sz * 0.52 : sz * 0.42;
-      const featherR = isCur ? sz * 1.30 : isVis ? sz * 1.12 : sz * 0.96;
-
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, featherR);
-      grad.addColorStop(0,                 'rgba(0,0,0,1)');    // fully clear at centre
-      grad.addColorStop(clearR / featherR, 'rgba(0,0,0,1)');    // stays clear to clearR
-      grad.addColorStop(0.82,              'rgba(0,0,0,0.35)'); // soft feather begins
-      grad.addColorStop(1,                 'rgba(0,0,0,0)');    // fog resumes at edge
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, featherR, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-    }
-  // Re-draw when tile visibility, tile positions, world dimensions, or theme change.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tiles, sz, ox, oy, worldW, worldH, fogTheme]);
+  // Push 7: fog rendering extracted to JourneyFogLayer (see above).
+  // HexMapLayer no longer owns fogContainerRef or the canvas useEffect.
 
   // ── PanResponder (created once; reads refs at call-time) ──────────────────
   const panResponder = useMemo(
@@ -1200,61 +1262,25 @@ export function HexMapLayer({
             oy={oy}
             onPress={handleTilePress}
             explorationCharacter={explorationCharacter}
-            tileVis={resolvedTileVis}
             fogTheme={fogTheme}
           />
         ))}
 
-        {/* ── Continuous atmospheric fog ─────────────────────────────────────
-         * Web:    fogContainerRef View receives an imperatively-managed HTML
-         *         <canvas> child (see the useEffect near the top of the render).
-         *         destination-out compositing → solid fog fill with feathered
-         *         holes at each explored/visible tile — one continuous surface.
-         * Native: RadialGradient SVG blobs (RNSVG Skia handles userSpaceOnUse).
-         * zIndex 5000: above normal tiles (1–3000), below current tile (9999).
+        {/* ── Continuous atmospheric fog (Push 7 — JourneyFogLayer) ──────────
+         * All fog rendering is delegated to JourneyFogLayer.
+         * HexTile components carry NO fog DOM — inspecting one HexTile in the
+         * DOM shows only interaction target, state glow/border, encounter anchor.
+         * zIndex 5000: above unexplored Pressables (1–3000), below current (9999).
          */}
-        {Platform.OS === 'web' ? (
-          <View
-            ref={fogContainerRef}
-            pointerEvents="none"
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: worldW, height: worldH, zIndex: 5000,
-            } as object}
-          />
-        ) : (() => {
-          const unexplored = tiles.filter(t => !t.current && t.visibility === 'unexplored');
-          if (unexplored.length === 0) return null;
-          const blobR = sz * FOG_BLOB_RADIUS;
-          return (
-            <View style={{ position: 'absolute', top: 0, left: 0, width: worldW, height: worldH, zIndex: 5000, pointerEvents: 'none' } as object}>
-              <Svg width={worldW} height={worldH}>
-                <Defs>
-                  {unexplored.map(t => {
-                    const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
-                    const cx = left + sz / 2;
-                    const cy = top  + sz / 2;
-                    const id = fogGradId('fog', t.q, t.r);
-                    return (
-                      <RadialGradient key={id} id={id} cx={cx} cy={cy} r={blobR} fx={cx} fy={cy} gradientUnits="userSpaceOnUse">
-                        <Stop offset="0%"   stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity} />
-                        <Stop offset="65%"  stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity * 0.95} />
-                        <Stop offset="75%"  stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity * 0.50} />
-                        <Stop offset="100%" stopColor={fogTheme.blobColor} stopOpacity={0} />
-                      </RadialGradient>
-                    );
-                  })}
-                </Defs>
-                {unexplored.map(t => {
-                  const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
-                  return (
-                    <Circle key={t.id} cx={left + sz / 2} cy={top + sz / 2} r={blobR} fill={`url(#${fogGradId('fog', t.q, t.r)})`} />
-                  );
-                })}
-              </Svg>
-            </View>
-          );
-        })()}
+        <JourneyFogLayer
+          tiles={tiles}
+          sz={sz}
+          ox={ox}
+          oy={oy}
+          worldW={worldW}
+          worldH={worldH}
+          fogTheme={fogTheme}
+        />
 
         {/* ── Gate art overlay ──────────────────────────────────────────────
          * Spatially anchored to the isGate tile inside the world viewport.
