@@ -59,21 +59,26 @@
  * • current → tile at zIndex 9999 (always topmost).
  * Note: SVG <Mask> is NOT used — react-native-svg's web backend has no Mask class.
  *
- * PUSH 9 — Show treasure tier visually on the map
- * ────────────────────────────────────────────────
- * • Treasure is the ONLY encounter type shown on visibleNow (frontier) tiles.
- *   Seeing a gold chest one step away creates real routing decisions without
- *   spoiling anything — there is no hidden enemy composition to protect.
- *   All other encounter types (battle, merchant, areaBoss) remain invisible
- *   on frontier tiles per the existing privacy rule.
- * • encounterMapNode() gains the visibleNow-treasure exception; a11yLabel()
- *   mirrors it so screen-readers announce "Nearby — Treasure (gold)" etc.
- * • EncounterMapNode gains an optional shadowColor field.  Treasure returns
- *   a tier-specific glow pool so the chest tier reads at small map scales:
- *     gold   → rgba(220,170,0,0.55)   warm amber pool
- *     silver → rgba(90,140,255,0.45)  cool blue pool
- *     bronze → undefined (default dark SHADOW_COLOR — humble, no glow)
- * • Layer 2c reads node.shadowColor ?? SHADOW_COLOR.
+ * PUSH 9 — Standardise map encounters as 2.5D world pieces
+ * ──────────────────────────────────────────────────────────
+ * ALL encounter types (battle, merchant, areaBoss, treasure) are now shown
+ * as physical world pieces on BOTH visibleNow (frontier) and
+ * exploredButOutOfVision tiles.  Previous push showed treasure only.
+ *
+ * Disclosure rules:
+ *   battle  → battle pedestal (crossed scalpels + caduceus plinth).
+ *             Composition hidden until fight starts — the pedestal only
+ *             signals that an encounter is waiting, not what the enemy is.
+ *   merchant → apothecary cart.  Full disclosure; it's a positive event.
+ *   areaBoss → actual boss sprite (sizeMul 1.35 > player 1.15).  Intentionally
+ *             intimidating — players should see it coming from one tile away.
+ *   treasure → gold/silver/bronze isometric chest matching tier.
+ *             shadowColor: gold → warm amber pool, silver → cool blue pool.
+ *   wardEvent → renderer-ready stub; dedicated NPC/prop art ships with
+ *               the wardEvent EncounterType addition (future push).
+ *
+ * Area boss shadow: teal-tinted pool matches the creature's flame colour.
+ * New asset: encounter_chest_gold.png (isometric, transparent bg).
  *
  * PUSH 8 — Standardised 2.5D depth sorting and grounding shadows
  * ────────────────────────────────────────────────────────────────
@@ -382,7 +387,10 @@ const MAP_NODE = {
   areaBoss:       require('@/assets/map-nodes/encounter_area_boss.png')          as number,
   treasureBronze: require('@/assets/map-nodes/encounter_chest_bronze.png')       as number,
   treasureSilver: require('@/assets/map-nodes/encounter_chest_silver.png')       as number,
-  treasureGold:   require('@/assets/map-nodes/node_reward_medical_chest.png')    as number,
+  // Push 9: dedicated isometric gold chest (transparent bg).
+  // Replaces node_reward_medical_chest.png which had a baked-in white background
+  // and a front-facing (non-isometric) perspective inconsistent with the other tiers.
+  treasureGold:   require('@/assets/map-nodes/encounter_chest_gold.png')         as number,
 };
 
 // ── Resolved tile visual sources ─────────────────────────────────────────────
@@ -406,59 +414,74 @@ type EncounterMapNode = { src: number; sizeMul: number; shadowColor?: string };
 /**
  * Returns the 2.5D world-object asset and tile footprint for revealed tiles.
  *
- * Privacy rule: encounter type must not be inferrable until explored.
- *   unexplored → always null
- *   visibleNow → null EXCEPT treasure (Push 9 exception — see below)
- *   exploredButOutOfVision / current → all encounter types shown
+ * Visibility rule (Push 9):
+ *   unexplored            → always null (tile not yet in FOV history)
+ *   visibleNow            → ALL encounter types shown (in current FOV)
+ *   exploredButOutOfVision → ALL encounter types shown (remembered)
+ *   current               → ALL encounter types shown
  *
- * Push 9 — treasure visibleNow exception:
- *   Treasure chests are the one encounter type shown on frontier tiles.
- *   Knowing the tier BEFORE stepping there lets players decide whether
- *   a gold chest is worth a detour.  There is no hidden composition to
- *   protect (unlike battles), so early disclosure is purely strategic.
- *   All other encounter types remain hidden until the tile is explored.
+ * Battle discloses the PEDESTAL, not the enemy composition.  Players learn
+ * "a fight is here" but not what they'll face until the battle starts.
  *
  * sizeMul drives the bounding-box size as a fraction of the tile sz.
- * Positioning: bottom of box anchored at ~88 % tile height (hex floor).
+ * Positioning: bottom of bounding box anchored at ~88 % tile height (hex floor).
  *
- *   areaBoss    0.92 — large creature dominates the hex
- *   merchant    0.75 — notable world prop
- *   battle      0.68 — stone pedestal encounter marker
- *   treasure    0.62 — chest scale, grounded on floor
+ *   areaBoss    1.35 — larger than player sprite (CHR_W_RATIO 1.15); imposing
+ *   merchant    0.78 — substantial cart prop, slightly larger than before
+ *   battle      0.70 — stone pedestal; raised slightly for better presence
+ *   treasure    0.68 — chest scale; slightly larger for tier readability
  */
 function encounterMapNode(tile: HexMapTile): EncounterMapNode | null {
   const vis = tile.visibility;
 
-  // Treasure is shown on frontier tiles (Push 9 exception).
-  // All other encounters require exploredButOutOfVision or current.
-  const isTreasureFrontier =
-    tile.encounter === 'treasure' && vis === 'visibleNow';
-
-  if (!tile.current && vis !== 'exploredButOutOfVision' && !isTreasureFrontier) {
-    return null;
-  }
+  // Only truly unexplored tiles suppress world objects.
+  // visibleNow, exploredButOutOfVision, and current all render their encounter.
+  if (!tile.current && vis === 'unexplored') return null;
 
   switch (tile.encounter) {
-    case 'battle':   return { src: MAP_NODE.battle,   sizeMul: 0.68 };
-    case 'merchant': return { src: MAP_NODE.merchant, sizeMul: 0.75 };
-    case 'areaBoss': return { src: MAP_NODE.areaBoss, sizeMul: 0.86 }; // Push 12: reduced from 0.92 — still dominates without clutter
+    case 'battle':
+      return { src: MAP_NODE.battle, sizeMul: 0.70 };
+
+    case 'merchant':
+      return { src: MAP_NODE.merchant, sizeMul: 0.78 };
+
+    case 'areaBoss':
+      // 1.35 × sz — intentionally larger than the player sprite (1.15) so the
+      // boss reads as genuinely threatening from one tile away.
+      // Teal shadow pool matches the creature's ambient flame colour.
+      return {
+        src:         MAP_NODE.areaBoss,
+        sizeMul:     1.35,
+        shadowColor: 'rgba(0,160,140,0.40)',  // teal glow pool
+      };
+
     case 'treasure': {
       const tier = tile.chestTier ?? 'bronze';
       return {
         src: tier === 'gold'   ? MAP_NODE.treasureGold
            : tier === 'silver' ? MAP_NODE.treasureSilver
-           : MAP_NODE.treasureBronze,
-        sizeMul: 0.66, // Push 12: raised from 0.62 — chests need more presence to read clearly
+           :                     MAP_NODE.treasureBronze,
+        sizeMul: 0.68,
         // Tier-specific glow pool so the chest tier reads at small map sizes.
         // Bronze gets no override — the default dark shadow suits its humble look.
         shadowColor:
-          tier === 'gold'   ? 'rgba(220,170,0,0.55)'  // warm amber pool
-        : tier === 'silver' ? 'rgba(90,140,255,0.45)' // cool blue pool
+          tier === 'gold'   ? 'rgba(220,170,0,0.55)'   // warm amber pool
+        : tier === 'silver' ? 'rgba(90,140,255,0.45)'  // cool blue pool
         : undefined,
       };
     }
-    // wardEvent: renderer-ready; placeholder until dedicated NPC/prop art ships.
-    default: return null;
+
+    // wardEvent: renderer-ready stub.
+    // When wardEvent is added to EncounterType, add a case here with dedicated
+    // NPC/prop assets keyed by tile.wardEventSubtype:
+    //   support_ally / ward_blessing       → allied NPC prop
+    //   patient_family_team / handoff /
+    //   surveillance_patient               → patient scene prop
+    //   protocol_card                      → clinical document prop
+    //   resource_service                   → equipment station prop
+    //   ward_hazard                        → hazard marker prop
+    default:
+      return null;
   }
 }
 
@@ -476,20 +499,20 @@ function a11yLabel(tile: HexMapTile): string {
   if (tile.current) return 'Current position';
   if (tile.isGate && tile.visibility === 'exploredButOutOfVision') return 'Chapter Boss Gate';
   if (tile.visibility === 'unexplored') return 'Unexplored tile';
-  if (tile.visibility === 'visibleNow') {
-    // Push 9: treasure is the one encounter type disclosed on frontier tiles.
-    if (tile.encounter === 'treasure') {
-      const tier = tile.chestTier ? ` (${tile.chestTier})` : '';
-      return `Nearby tile — Treasure${tier}`;
-    }
-    return 'Nearby tile, not yet explored';
+
+  // Push 9: all encounter types are disclosed once a tile is visibleNow or
+  // exploredButOutOfVision — the world object is visible, so the label matches.
+  if (tile.encounter !== 'none' && tile.encounter !== 'boss') {
+    const prefix = tile.visibility === 'visibleNow' ? 'Nearby' : 'Tile';
+    const enc =
+      tile.encounter === 'areaBoss' ? 'Area Boss'
+    : tile.encounter === 'treasure' ? `Treasure (${tile.chestTier ?? 'bronze'})`
+    : tile.encounter === 'merchant' ? 'Merchant'
+    : 'Battle';
+    return `${prefix} — ${enc}`;
   }
-  if (tile.encounter !== 'none') {
-    const enc = tile.encounter === 'areaBoss' ? 'Area Boss'
-              : tile.encounter === 'treasure' ? `Treasure (${tile.chestTier ?? ''})`
-              : tile.encounter.charAt(0).toUpperCase() + tile.encounter.slice(1);
-    return `Tile — ${enc}`;
-  }
+
+  if (tile.visibility === 'visibleNow') return 'Nearby tile, not yet explored';
   return tile.isGate ? 'Gate tile' : 'Explored tile — no encounter';
 }
 
@@ -724,11 +747,11 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, fogTheme }: 
         </View>
       )}
 
-      {/* ── Layer 3: encounter world object (exploredButOutOfVision + current) ─ */}
-      {/* Push 7: 2.5D world-object props replace flat UI medallions on the map. */}
-      {/* Each encounter type has a distinct sizeMul; all are bottom-anchored at  */}
-      {/* ~88 % tile height so props sit on the hex floor in 2.5D perspective.   */}
-      {/* Area boss uses the full sizeMul to dominate the tile visually.          */}
+      {/* ── Layer 3: encounter world object (visibleNow / explored / current) ── */}
+      {/* Push 9: all encounter types shown on visibleNow AND exploredButOut-     */}
+      {/* OfVision.  Battle shows the pedestal only (enemy hidden); areaBoss       */}
+      {/* renders the actual boss sprite at 1.35 × sz (larger than player 1.15). */}
+      {/* All nodes bottom-anchored at ~88 % tile height (the 2.5D hex floor).   */}
       {node !== null && (() => {
         const nodeSz = Math.round(sz * node.sizeMul);
         const nodeX  = Math.round((sz - nodeSz) / 2);
