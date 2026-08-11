@@ -372,6 +372,32 @@ const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node sh
 /** Push 10: 2.5D painterly stone hex — base terrain for every tile state. */
 const TERRAIN_NORMAL = require('@/assets/ui/journey/tiles/hex-terrain-normal.png') as number;
 
+/**
+ * Push 11 — visual unification scale factor.
+ *
+ * The terrain PNG's hex silhouette has ~7–8 % transparent padding per side
+ * inside the sz × sz bounding box (artefact of the 2.5D three-quarter-top
+ * perspective and the removeBackground cutout).  Even with coordinate-level
+ * hex-body overlap (Q_STEP 0.72 < 0.75, R_STEP 0.79 < 0.866), those
+ * transparent bands create visible gaps that make each tile read as an
+ * independent floating platform.
+ *
+ * Rendering the terrain Image at 115 % of sz (centred, with the Pressable's
+ * existing `overflow:'visible'`) bleeds the stone surface 7.5 % beyond each
+ * edge into neighbouring tiles' transparent-corner zones.  The existing iso-
+ * depth zIndex ordering (higher-r / lower-screen-position = higher z) ensures
+ * the "closer" tile correctly paints on top in every overlap region — exactly
+ * the right 2.5D layering behaviour.
+ *
+ * SVG state rings stay at 100 % sz and fall just inside the extended terrain
+ * hex silhouette, so cell boundaries remain crisp.
+ *
+ * This constant is the single lever for the bleed amount.  Increase → more
+ * join; decrease → more gap.  Do not exceed 1.30 or terrain bleeds over SVG
+ * state rings visually.
+ */
+const TERRAIN_SCALE = 1.15;
+
 // Player token rendered on top of the current tile (Push 6 fallback).
 const PLAYER_TOKEN = require('@/assets/ui/journey/map/player-map-token.webp') as number;
 
@@ -617,6 +643,13 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
   const isVisible  = !tile.current && tile.visibility === 'visibleNow';
   const isExplored = !tile.current && tile.visibility === 'exploredButOutOfVision';
 
+  // Push 11: terrain rendered at TERRAIN_SCALE × sz, centred on the tile.
+  // Negative offset (terrainOff) shifts the image left/up so it is centred;
+  // the Pressable's overflow:'visible' (s.tile) lets it bleed into adjacent
+  // tiles' transparent-corner zones, visually joining the terrain field.
+  const terrainSz  = Math.round(sz * TERRAIN_SCALE);
+  const terrainOff = -Math.round((terrainSz - sz) / 2);
+
   // Player token sits on top of the current tile.
   const tokenSz = Math.round(sz * 0.62);
   const tokenX  = Math.round((sz - tokenSz) / 2);
@@ -660,17 +693,35 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         'data-encounter':  isRevealed ? tile.encounter : 'unknown',
       })}
     >
-      {/* ── Layer 0: 2.5D hex terrain base (Push 10) ─────────────────────────
-        * Painterly stone surface with jade-teal cracked texture, beveled bottom
-        * face for 2.5D depth, and TRUE ALPHA transparency outside the hex silhouette.
-        * Rendered on every tile (unexplored tiles are hidden under the fog layer above).
-        * contentFit="fill" stretches the 1:1 PNG to exactly sz×sz so the
-        * hex silhouette aligns precisely with the tile's Pressable bounding box.
-        * State rims / glows are SVG layers above this (Layers 1a / 2a / 2b) so
-        * colours stay shift-responsive (day / evening / night fogTheme palette). */}
+      {/* ── Layer 0: 2.5D hex terrain base (Push 10 / Push 11) ──────────────
+        * Painterly stone surface: jade-teal cracked stone, beveled lower face,
+        * TRUE ALPHA transparency outside the hex silhouette.
+        *
+        * Push 11 — visual field unification:
+        * The Image is rendered at TERRAIN_SCALE (115%) of sz, centred on the
+        * tile (terrainOff = negative offset so left/top = -7.5% of sz).
+        * This bleeds the stone surface beyond the tile bounding box into the
+        * transparent-corner zones of neighbouring tiles, eliminating the
+        * visible gaps that made each cell look like a separate floating platform.
+        *
+        * The Pressable has overflow:'visible' (s.tile) so the extra bleed
+        * renders correctly on both web and native without clipping.
+        *
+        * ISO DEPTH: tileZ ensures the "closer" (lower-on-screen) tile paints
+        * on top in every overlap region — correct 2.5D layering behaviour.
+        *
+        * SVG state rings (Layers 1a / 2a / 2b) stay at 100% sz and appear
+        * just inside the extended terrain hex silhouette, keeping cell
+        * boundaries crisp while the stone surfaces read as one field. */}
       <Image
         source={TERRAIN_NORMAL}
-        style={StyleSheet.absoluteFillObject}
+        style={{
+          position: 'absolute',
+          left:   terrainOff,
+          top:    terrainOff,
+          width:  terrainSz,
+          height: terrainSz,
+        }}
         contentFit="fill"
         recyclingKey={`terrain-${tile.id}`}
       />
