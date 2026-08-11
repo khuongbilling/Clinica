@@ -74,33 +74,48 @@ const AUTHORED_CHAPTER_MAPS: Readonly<Record<number, AuthoredRawMap>> = {
   /**
    * Chapter 1 — "Atrium Approach"
    *
-   * 30-tile compact rounded-square footprint.
-   * Layout (axial, portrait orientation):
+   * 30-cell dense hexagonal tactical battlefield.
+   * Philosophy: Final Fantasy Tactics hex field — dense centre, curved perimeter,
+   * interior cells offer multiple movement directions, no narrow corridors.
    *
-   *         cap  (-1,-3) (0,-3) (1,-3)
-   *         row  (-2,-2) (-1,-2) (0,-2) (1,-2) (2,-2)
-   *         row  (-2,-1) (-1,-1) (0,-1) (1,-1) (2,-1)
-   *         row  (-2, 0) (-1, 0) (0, 0) (1, 0) (2, 0)
-   *         row  (-2, 1) (-1, 1) (0, 1) (1, 1) (2, 1)
-   *         row  (-2, 2) (-1, 2) (0, 2) (1, 2)          ← (2,2) omitted: slight asymmetry
-   *         cap  (-1, 3) (0, 3) (1, 3)
+   * Layout (axial portrait orientation, r increases downward):
    *
-   * Start  (0, 1):  geometric centre-lower; all 6 hex neighbours present.
-   * Gate  (-1,-3):  upper-left cap; BFS distance 5 from start.
+   *   r=-3 (top cap, 3)     ·  ·  ⬡  ⬡  ⬡        q= 0  1  2
+   *   r=-2 (4)              · ⬡  ⬡  ⬡  ⬡         q=-1  0  1  2
+   *   r=-1 (5)             ⬡  ⬡  ⬡  ⬡  ⬡         q=-1  0  1  2  3
+   *   r= 0 (6, widest)   ⬡  ⬡  ⬡  ⬡  ⬡  ⬡        q=-2 -1  0  1  2  3
+   *   r= 1 (5)            ⬡  ⬡  ⬡  ⬡  ⬡           q=-2 -1  0  1  2
+   *   r= 2 (4)             ⬡  ⬡  ⬡  ⬡             q=-1  0  1  2
+   *   r= 3 (bottom, 3)      ⬡  ⬡  ⬡               q=-1  0  1
+   *
+   * Tile counts per row: 3+4+5+6+5+4+3 = 30 ✓
+   *
+   * Shape properties:
+   *   • 7 rows, 6-cell maximum width
+   *   • Every cell has ≥3 in-set hex neighbours → no dead-ends, no corridors
+   *   • Start (0,1): interior of row r=1, all 6 neighbours present
+   *   • Gate (1,−3): mid-cap of top row, BFS distance 4 from start
    *
    * ⚠ DO NOT EDIT these coordinates once shipped.
    */
   1: {
     start: '0,1',
-    gate:  '-1,-3',
+    gate:  '1,-3',
     tiles: [
-      [-1,-3],[0,-3],[1,-3],
-      [-2,-2],[-1,-2],[0,-2],[1,-2],[2,-2],
-      [-2,-1],[-1,-1],[0,-1],[1,-1],[2,-1],
-      [-2, 0],[-1, 0],[0, 0],[1, 0],[2, 0],
-      [-2, 1],[-1, 1],[0, 1],[1, 1],[2, 1],
-      [-2, 2],[-1, 2],[0, 2],[1, 2],
-      [-1, 3],[0, 3],[1, 3],
+      // Row r=-3 (top cap, 3 cells)
+      [ 0,-3],[ 1,-3],[ 2,-3],
+      // Row r=-2 (4 cells)
+      [-1,-2],[ 0,-2],[ 1,-2],[ 2,-2],
+      // Row r=-1 (5 cells)
+      [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],
+      // Row r= 0 (widest, 6 cells)
+      [-2, 0],[-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],
+      // Row r= 1 (5 cells)  Start here → (0,1)
+      [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],
+      // Row r= 2 (4 cells)
+      [-1, 2],[ 0, 2],[ 1, 2],[ 2, 2],
+      // Row r= 3 (bottom cap, 3 cells)
+      [-1, 3],[ 0, 3],[ 1, 3],
     ],
   },
   2: {

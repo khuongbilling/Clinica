@@ -143,7 +143,7 @@ for (const ch of [1, 5, 10, 12]) {
 // Other chapters: procedural geometry — different seeds → different coords.
 {
   const CH1_START = '0,1';
-  const CH1_GATE  = '-1,-3';
+  const CH1_GATE  = '1,-3';   // updated Push 2: hexagonal battlefield template
   const coordsOf  = (r: ReturnType<typeof generateRunData>) =>
     r.topology.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
 
@@ -208,22 +208,33 @@ for (const ch of [1, 5, 10, 12]) {
 
 // ── 10. Chapter 1 coordinate SNAPSHOT ────────────────────────────────────────
 //
-// These coordinates are authored data and must NEVER change regardless of
-// run seed, attempt number, or TimeOfDay (shift).  If this test fails after
-// a code change, it means the Chapter 1 canonical footprint was accidentally
-// mutated — revert AUTHORED_CHAPTER_MAPS[1] in chapterMapTemplates.ts.
+// These coordinates are the PERMANENT authored hexagonal battlefield (Push 2).
+// They must NEVER change regardless of run seed, attempt number, or TimeOfDay.
+// If this test fails after a code change, it means the Chapter 1 canonical
+// footprint was accidentally mutated — revert AUTHORED_CHAPTER_MAPS[1] in
+// chapterMapTemplates.ts.
+//
+// Layout: 7 rows, widths 3+4+5+6+5+4+3 = 30 cells.
+//   r=-3: q= 0  1  2   (top cap)
+//   r=-2: q=-1  0  1  2
+//   r=-1: q=-1  0  1  2  3
+//   r= 0: q=-2 -1  0  1  2  3   (widest)
+//   r= 1: q=-2 -1  0  1  2      (start at q=0)
+//   r= 2: q=-1  0  1  2
+//   r= 3: q=-1  0  1   (bottom cap)
 {
-  // Sorted canonical coordinate set for Chapter 1 (30 tiles).
+  // Sorted canonical coordinate set for Chapter 1 (30 tiles, hexagonal battlefield).
   const CH1_SNAPSHOT = [
-    '-1,-3', '-1,-2', '-1,-1', '-1,0', '-1,1', '-1,2', '-1,3',
-    '-2,-2', '-2,-1', '-2,0',  '-2,1', '-2,2',
-     '0,-3',  '0,-2',  '0,-1',  '0,0',  '0,1',  '0,2',  '0,3',
-     '1,-3',  '1,-2',  '1,-1',  '1,0',  '1,1',  '1,2',  '1,3',
-     '2,-2',  '2,-1',  '2,0',   '2,1',
+    '-1,-1', '-1,-2', '-1,0', '-1,1', '-1,2', '-1,3',
+    '-2,0',  '-2,1',
+     '0,-1',  '0,-2', '0,-3', '0,0',  '0,1',  '0,2',  '0,3',
+     '1,-1',  '1,-2', '1,-3', '1,0',  '1,1',  '1,2',  '1,3',
+     '2,-1',  '2,-2', '2,-3', '2,0',  '2,1',  '2,2',
+     '3,-1',  '3,0',
   ].sort().join('|');
 
   const CH1_START    = '0,1';
-  const CH1_GATE     = '-1,-3';
+  const CH1_GATE     = '1,-3';   // Push 2: hexagonal battlefield
   const CH1_ENV      = 'atrium-approach';
 
   // Template API.
@@ -268,7 +279,122 @@ for (const ch of [1, 5, 10, 12]) {
     second.tiles.map(t => t.id).sort().join('|') === CH1_SNAPSHOT);
 }
 
-// ── 11. TerrainVisualVariant seeding ─────────────────────────────────────────
+// ── 11. Push 2 acceptance criteria — Chapter 1 hexagonal battlefield ──────────
+//
+// Validates the specific shape properties of the authored 30-cell tactical field.
+// These are structural guarantees that must hold for the template to be approved.
+{
+  const AXIAL_DIRS: readonly (readonly [number, number])[] = [
+    [1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1],
+  ];
+
+  const tpl   = getChapterMapTemplate(1);
+  const tiles = tpl.tiles;
+  const idSet = new Set(tiles.map(t => t.id));
+
+  // AC1: Exactly 30 unique coordinates.
+  check('[push2 AC1] exactly 30 cells',           tiles.length === 30);
+  check('[push2 AC1] all ids unique',             new Set(tiles.map(t => t.id)).size === 30);
+  check('[push2 AC1] all coordinates unique',     new Set(tiles.map(t => `${t.q},${t.r}`)).size === 30);
+
+  // AC2: Single connected component — BFS from start covers all 30 tiles.
+  {
+    const adj = new Map<string, string[]>();
+    for (const t of tiles) {
+      adj.set(t.id, AXIAL_DIRS
+        .map(([dq,dr]) => `${t.q+dq},${t.r+dr}`)
+        .filter(k => idSet.has(k)));
+    }
+    const visited = new Set<string>([tpl.startTileId]);
+    const queue   = [tpl.startTileId];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      for (const nb of (adj.get(cur) ?? [])) {
+        if (!visited.has(nb)) { visited.add(nb); queue.push(nb); }
+      }
+    }
+    check('[push2 AC2] single connected component (BFS covers all 30)', visited.size === 30);
+  }
+
+  // AC3: Start cell exists and is correctly tagged.
+  check('[push2 AC3] start tile exists',          tiles.some(t => t.id === tpl.startTileId));
+  check('[push2 AC3] start tile role is start',   tiles.find(t => t.id === tpl.startTileId)?.role === 'start');
+  check('[push2 AC3] start at authored coord',    tpl.startTileId === '0,1');
+
+  // AC4: Gate cell exists and is correctly tagged.
+  check('[push2 AC4] gate tile exists',           tiles.some(t => t.id === tpl.gateTileId));
+  check('[push2 AC4] gate tile role is gate',     tiles.find(t => t.id === tpl.gateTileId)?.role === 'gate');
+  check('[push2 AC4] gate at authored coord',     tpl.gateTileId === '1,-3');
+
+  // AC5: Every terrain cell has at least one neighbour (no orphans).
+  //      The hexagonal battlefield requires ≥3 neighbours on every cell.
+  {
+    let minNeighbours = Infinity;
+    let orphanFound   = false;
+    for (const t of tiles) {
+      const count = AXIAL_DIRS.filter(([dq,dr]) => idSet.has(`${t.q+dq},${t.r+dr}`)).length;
+      if (count === 0) orphanFound = true;
+      minNeighbours = Math.min(minNeighbours, count);
+    }
+    check('[push2 AC5] no orphan cells (every cell has ≥1 neighbour)',   !orphanFound);
+    check('[push2 AC5] no dead-ends (every cell has ≥2 neighbours)',
+      minNeighbours >= 2,
+      `min neighbours found: ${minNeighbours}`);
+    check('[push2 AC5] tactical density (every cell has ≥3 neighbours)',
+      minNeighbours >= 3,
+      `min neighbours found: ${minNeighbours}`);
+  }
+
+  // AC6: Gate is reachable from start (BFS distance finite).
+  {
+    const adj2 = new Map<string, string[]>();
+    for (const t of tiles) {
+      adj2.set(t.id, AXIAL_DIRS
+        .map(([dq,dr]) => `${t.q+dq},${t.r+dr}`)
+        .filter(k => idSet.has(k)));
+    }
+    const dist  = new Map<string, number>([[tpl.startTileId, 0]]);
+    const queue = [tpl.startTileId];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const d   = dist.get(cur)!;
+      for (const nb of (adj2.get(cur) ?? [])) {
+        if (!dist.has(nb)) { dist.set(nb, d + 1); queue.push(nb); }
+      }
+    }
+    const gateDistance = dist.get(tpl.gateTileId) ?? -1;
+    check('[push2 AC6] gate is reachable from start',  gateDistance >= 0);
+    check('[push2 AC6] BFS distance start→gate ≥ 4',  gateDistance >= 4,
+      `actual: ${gateDistance}`);
+  }
+
+  // AC7: Shape properties — 7 rows, max width 6.
+  {
+    const rValues = tiles.map(t => t.r);
+    const minR    = Math.min(...rValues);
+    const maxR    = Math.max(...rValues);
+    check('[push2 AC7] 7 rows (r from -3 to +3)', minR === -3 && maxR === 3);
+
+    let maxWidth = 0;
+    for (let r = minR; r <= maxR; r++) {
+      const width = tiles.filter(t => t.r === r).length;
+      maxWidth = Math.max(maxWidth, width);
+    }
+    check('[push2 AC7] max row width = 6', maxWidth === 6,
+      `actual max width: ${maxWidth}`);
+  }
+
+  // AC8: Row-width profile matches the authored 3+4+5+6+5+4+3 pattern.
+  {
+    const widthByRow = [-3,-2,-1,0,1,2,3].map(r => tiles.filter(t => t.r === r).length);
+    const expected   = [3, 4, 5, 6, 5, 4, 3];
+    check('[push2 AC8] row widths match 3+4+5+6+5+4+3',
+      widthByRow.join(',') === expected.join(','),
+      `actual: ${widthByRow.join(',')}`);
+  }
+}
+
+// ── 12. TerrainVisualVariant seeding ─────────────────────────────────────────
 // Verifies Push 4: none-encounter tiles get a deterministic cosmetic variant
 // with no gameplay effect.
 {
