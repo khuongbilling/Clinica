@@ -74,7 +74,7 @@ import { buildChapterUiSummary }           from '@/src/features/journey/ui/journ
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getMapSprite }                    from '@/src/game/illustratedAssets';
-import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
+import { getChapterMapVisuals } from '@/src/game/journeyMap/chapterMapVisuals';
 import { getChapterTerrainCellCount }                  from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
 
@@ -654,11 +654,13 @@ export default function ChapterFogMapShell() {
   // Changing the shift tab on the Book page has no effect here — the run's
   // own shift drove the encounter generator and now drives the art.
   //
-  // IMPORTANT: mapShift is undefined until the authoritative JourneyRun has
-  // loaded.  We must NEVER default to 'night' here — doing so causes a
-  // night→day flash on Day maps during the hydration window.  chapterVisuals
-  // is null while loading; the background Image is gated on it so no
-  // environmental raster is painted until the real shift is known.
+  // Push 9 — NO shift fallback anywhere in this file.
+  // mapShift stays undefined until the authoritative JourneyRun has loaded.
+  // chapterVisuals is the single gate:
+  //   null     → shift unknown → render NeutralMapShell (dark, no palette)
+  //   non-null → shift resolved → render HexMapLayer with EXACTLY these visuals
+  // The night→day flash is impossible when every visual prop comes from
+  // chapterVisuals and HexMapLayer is never rendered while chapterVisuals is null.
   const mapShift: TimeOfDay | undefined = run?.shift;
   const chapterVisuals = mapShift != null
     ? getChapterMapVisuals(run!.chapterId, mapShift)
@@ -1053,19 +1055,15 @@ export default function ChapterFogMapShell() {
             setMapSize({ w: Math.floor(width), h: Math.floor(height) });
           }}
         >
-          {/* Push 7: background is now rendered INSIDE HexMapLayer's MapWorld
-              so it moves in lockstep with terrain, fog, and the gate.
-              It is passed via the environmentBackground prop below.
-              The night→day flash guard is preserved: chapterVisuals is null
-              during the loading window, so environmentBackground is undefined
-              and HexMapLayer renders without a background (dark app shell). */}
-
           {runLoading && !debugTiles ? (
+            // ── Loading: spinner ───────────────────────────────────────────
             <View style={s.mapLoadingOverlay}>
               <ActivityIndicator size="large" color={UI.jade} />
               <Text style={s.mapLoadingTxt}>Loading map…</Text>
             </View>
+
           ) : runError ? (
+            // ── Error: retry prompt ────────────────────────────────────────
             <View style={s.mapLoadingOverlay}>
               <Text style={s.mapErrorTxt}>⚠ {runError}</Text>
               <Text style={s.mapErrorDetail}>
@@ -1081,33 +1079,50 @@ export default function ChapterFogMapShell() {
                 <Text style={s.mapRetryTxt}>RETRY</Text>
               </Pressable>
             </View>
+
+          ) : chapterVisuals == null ? (
+            // ── Push 9: neutral shell — shift not yet resolved ─────────────
+            // chapterVisuals is null whenever mapShift is undefined:
+            //   • player hasn't loaded yet (early bail in run-load effect)
+            //   • debug fixture mode without a real run (?debug=N in __DEV__)
+            //   • any other pre-hydration window
+            //
+            // Rendering HexMapLayer here would require a shift fallback.
+            // The ONLY safe fallback is: render nothing shift-specific.
+            // Night is NOT a neutral fallback — Day maps must never flash Night.
+            //
+            // When run.shift eventually resolves, React swaps this View for
+            // HexMapLayer in a single reconciliation pass — no intermediate frame.
+            <View
+              style={s.neutralMapShell}
+              testID="neutral-map-shell"
+            />
+
           ) : (
+            // ── Shift resolved — full HexMapLayer with authoritative visuals ─
+            // chapterVisuals != null guarantees mapShift is also non-null.
+            // Every visual prop carries a real resolved value — no shift fallback.
+            // Push 7: environmentBackground renders inside MapWorld so it pans
+            // with terrain, fog, gate, and player in lockstep.
             <HexMapLayer
               containerWidth={mapSize.w}
               containerHeight={mapSize.h}
               tiles={mapTiles}
               onTilePress={handleTilePress}
-              // Real runs: chapterVisuals / mapShift are always non-null here
-              // because run !== null when !runLoading && !runError.
-              // Debug tiles (?debug=N): run may not exist yet; DEV_FALLBACK_VISUALS
-              // (night) is used only for that dev-only preview path.
-              tileVisuals={chapterVisuals ?? DEV_FALLBACK_VISUALS}
-              timeOfDay={mapShift ?? 'night'}
+              tileVisuals={chapterVisuals}
+              timeOfDay={mapShift as TimeOfDay}
               gateArt={{
                 lockedSrc:   ASSET.gateLocked,
                 unlockedSrc: ASSET.gateUnlocked,
                 unlocked:    gateUnlocked,
               }}
               explorationCharacter={explorationCharacter}
-              // Push 7: background moves inside MapWorld so it pans with terrain.
-              // undefined when chapterVisuals is null (loading window) — correct:
-              // HexMapLayer renders without a background and the dark app shell shows.
-              environmentBackground={chapterVisuals != null ? {
+              environmentBackground={{
                 source:  chapterVisuals.background,
                 scale:   chapterVisuals.backgroundScale,
                 offsetX: chapterVisuals.backgroundOffsetX,
                 offsetY: chapterVisuals.backgroundOffsetY,
-              } : undefined}
+              }}
               // Dev diagnostics (Push 0) — no-op in production.
               diagRef={__DEV__ ? diagRef : undefined}
               devOverlay={__DEV__ ? devOverlay : undefined}
@@ -1659,6 +1674,13 @@ const s = StyleSheet.create({
     position: 'relative',
   },
   // mapBg removed Push 7: background is now inside HexMapLayer's MapWorld.
+  neutralMapShell: {
+    // Push 9: placeholder rendered when run.shift has not yet resolved.
+    // Intentionally carries no shift-specific color, image, or fog palette.
+    // The parent mapOuter's dark background shows through; this View
+    // exists only to occupy the map slot so layout does not collapse.
+    ...StyleSheet.absoluteFillObject,
+  },
   mapLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center', justifyContent: 'center',
