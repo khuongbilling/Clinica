@@ -1,68 +1,80 @@
 /**
- * JourneyFogField.tsx — Push 26 (procedural runtime fog)
+ * JourneyFogField.tsx — Push B (painted atmospheric fog)
  *
- * Zero raster assets.  Zero SVG.  Zero flat overlay.
+ * Zero circular blobs.  Zero SVG.  Zero flat grey wash.
  *
- * The fog is generated entirely at runtime from deterministic pseudorandom
- * blob positions.  Each blob is three concentric <View> circles whose
- * borderRadius makes them round, and whose stacked opacities produce a
- * feathered radial gradient effect:
+ * Fog is a layered field of painted raster cloud bank Images positioned in
+ * world space.  Three shift-specific assets (A: large cloud mass, B: secondary
+ * drifting bank, C: wispy tendrils) are tiled across 12 placements that span
+ * 110 % of world width/height so every edge bleeds into the viewport margin.
  *
- *   inner ring  — dense fog body       (opacity_factor 0.54)
- *   middle ring — transitional mist    (opacity_factor 0.26)
- *   outer ring  — feathered wisps      (opacity_factor 0.08)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LAYER STACK
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ *   Layer 0 — base tint View
+ *     Shift-coloured semi-opaque fill over the entire fog field.
+ *     Provides even base density so no gaps appear between cloud placements.
+ *     Does NOT clear — always present at fixed opacity.
+ *
+ *   Layer 1 — drifting cloud bank container (Animated.View)
+ *     12 Image placements.  Each image is one of the three fog bank PNGs for
+ *     the current shift (A/B/C), sized and centred at a seeded pseudorandom
+ *     world-space position.  Opacity is driven by the clearing calculation.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * CLEARING
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * Each blob's parent opacity is driven by its centre's distance to the
- * nearest visible tile centre.  Three visibility tiers control clearing radii:
+ * Each placement has a centre point (cx, cy).  The clearing factor is computed
+ * from the distance between that centre and the nearest visible tile centre,
+ * adjusted outward by half the placement's bounding-box diagonal (edge-based
+ * clearing):
  *
- *   current                startR = 1.9 × sz   fullR = 0.6 × sz
- *   visibleNow             startR = 1.6 × sz   fullR = 0.45 × sz
- *   exploredButOutOfVision startR = 1.0 × sz   fullR = 0.25 × sz
+ *   edgeDist = max(0, centreDist − diagonal × 0.36)
  *
- * Linear ramp from fullR (opacity = 0) to startR (opacity = BLOB_ALPHA_MAX).
- * The most-clearing source wins (minimum factor across all sources).
+ * This means clearing begins when the EDGE of the cloud image, not just its
+ * centre, enters the reveal radius — preventing large banks from protruding
+ * into cleared territory even when their centre is far away.
  *
- * Because blobs range from 12 % to 32 % of world width in outer radius, and
- * clearing radii are 1–2 tile-sizes (~80–160 px), multiple blobs near the
- * clearing boundary will fade independently, giving a soft irregular edge
- * that reads as genuine mist thinning rather than a hard boundary.
+ * Three visibility tiers:
+ *   current                startR = 2.0 × sz   fullR = 0.7 × sz
+ *   visibleNow             startR = 1.7 × sz   fullR = 0.5 × sz
+ *   exploredButOutOfVision startR = 1.1 × sz   fullR = 0.3 × sz
+ *
+ * Linear ramp from fullR (opacity 0) → startR (opacity BANK_ALPHA_MAX).
+ * Minimum clearFactor across all sources wins.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * DRIFT
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * A single Animated.ValueXY drives a slow global translateX/Y on the blob
- * container.  useNativeDriver: true keeps the animation off the JS thread.
- * Drift amplitude ±10 px over a 48-second cycle — barely perceptible but
- * enough to make the mist feel alive.
+ * A single Animated.ValueXY translates the cloud container ±12 px over a
+ * 56-second cycle.  useNativeDriver: true keeps it off the JS thread.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * PERFORMANCE
  * ─────────────────────────────────────────────────────────────────────────────
  *
- *   • 22 blobs × 3 rings = 66 views — acceptable for mobile.
- *   • All positions are static (computed once in useMemo on tile/size change).
- *   • Only the global drift transform is animated; it uses the native driver.
- *   • Blobs with opacity < 0.02 are skipped (no invisible views rendered).
- *   • No canvas, no WebGL, no raster assets, no SVG.
+ *   • 12 Image nodes + 1 base tint View = 13 render nodes total.
+ *   • Positions computed once in useMemo; opacity recomputed only when
+ *     clearSources changes (player moves).
+ *   • Only the drift transform is frame-animated (native driver).
+ *   • Assets are pre-loaded by the existing preloadTabAssets pipeline.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * Z-ORDERING (inside MapWorld Animated.View)
  * ─────────────────────────────────────────────────────────────────────────────
  *
  *   unexplored tile Pressables     z  1–3000   (below fog — covered)
- *   JourneyFogField                z  5000     (fog field)
- *   exploredButOutOfVision HexTile z  5050     (above fog)
- *   visibleNow HexTile             z  5100+    (above fog)
- *   current HexTile                z  9999     (topmost)
+ *   JourneyFogField                z  5000     (fog field — this component)
+ *   exploredButOutOfVision HexTile z  5050+    (above fog — visible)
+ *   visibleNow HexTile             z  5100+    (above fog — visible)
  */
 
 import { useEffect, useRef, useMemo } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
@@ -71,95 +83,115 @@ import type { HexWorldCoords } from './hexWorldCoords';
 
 export const FOG_FIELD_Z = 5000;
 
-// ── Seeded pseudorandom number generator ──────────────────────────────────────
-//
-// Deterministic LCG — same blob layout every render for a given index.
-// No Math.random() — positions are stable across React reconciler cycles.
+// ── Seeded PRNG — deterministic, no Math.random() ────────────────────────────
 
 function seededRand(seed: number): number {
   const s = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);
 }
 
-// ── Blob definitions — generated once at module level ─────────────────────────
+// ── Fog bank assets per shift ─────────────────────────────────────────────────
 //
-// 22 blobs placed across 110 % of world width/height (bleed past all edges).
-// xF / yF are fractional: 0.0 = world left/top, 1.0 = world right/bottom.
-// sizeF is outer-ring radius as a fraction of world width.
+// Three painted cloud textures per shift:
+//   A — large primary cloud mass  (dominant coverage, main body)
+//   B — secondary drifting bank   (different silhouette, layering)
+//   C — wispy tendrils            (lighter, edge detail)
 
-const BLOB_COUNT = 22;
-
-type BlobDef = {
-  readonly xF:    number;   // blob centre, fraction of worldWidth
-  readonly yF:    number;   // blob centre, fraction of worldHeight
-  readonly sizeF: number;   // outer ring radius, fraction of worldWidth
-};
-
-const BLOB_DEFS: BlobDef[] = Array.from({ length: BLOB_COUNT }, (_, i) => ({
-  xF:    -0.12 + seededRand(i * 11 + 1) * 1.24,   // -12 % … 112 %
-  yF:    -0.10 + seededRand(i * 11 + 2) * 1.20,   // -10 % … 110 %
-  sizeF:  0.12 + seededRand(i * 11 + 3) * 0.20,   //  12 % …  32 %
-}));
-
-// ── Per-shift fog palette ──────────────────────────────────────────────────────
-//
-// blobColor — the backgroundColor shared by all three rings of every blob.
-// The inner/mid/outer ring opacity factors handle the density gradient.
-// No flat base overlay — blobs provide all coverage.
-
-const FOG_PALETTE: Record<'day' | 'evening' | 'night', { blobColor: string }> = {
-  day:     { blobColor: '#7a9db4' },   // pale blue-grey atmospheric haze
-  evening: { blobColor: '#1e1030' },   // deep indigo-purple twilight fog
-  night:   { blobColor: '#0c1a28' },   // near-black navy mist
-};
-
-// ── Ring opacity factors (inner to outer) ─────────────────────────────────────
-//
-// Applied multiplicatively with the parent blob's clearing opacity.
-// Three rings simulate a radial gradient using only View borderRadius.
-
-const RING_OPACITY = {
-  inner:  0.54,   // dense fog body
-  middle: 0.26,   // transitional mist
-  outer:  0.08,   // feathered wisps
+const FOG_BANKS = {
+  night: [
+    require('@/assets/ui/journey/fog/fog-bank-A-night.png') as number,
+    require('@/assets/ui/journey/fog/fog-bank-B-night.png') as number,
+    require('@/assets/ui/journey/fog/fog-bank-C-night.png') as number,
+  ],
+  day: [
+    require('@/assets/ui/journey/fog/fog-bank-A-day.png') as number,
+    require('@/assets/ui/journey/fog/fog-bank-B-day.png') as number,
+    require('@/assets/ui/journey/fog/fog-bank-C-day.png') as number,
+  ],
+  evening: [
+    require('@/assets/ui/journey/fog/fog-bank-A-evening.png') as number,
+    require('@/assets/ui/journey/fog/fog-bank-B-evening.png') as number,
+    require('@/assets/ui/journey/fog/fog-bank-C-evening.png') as number,
+  ],
 } as const;
 
-// ── Maximum blob opacity (far from any visible tile) ──────────────────────────
+// ── Per-shift palette ─────────────────────────────────────────────────────────
+//
+// baseColor     — tint fill beneath cloud images (provides base coverage)
+// baseOpacity   — opacity of the base tint View  (0–1)
+// bankAlphaMax  — maximum opacity for each cloud bank Image
 
-const BLOB_ALPHA_MAX = 0.84;
+type ShiftPalette = {
+  baseColor:    string;
+  baseOpacity:  number;
+  bankAlphaMax: number;
+};
 
-// ── Clearing radius factors (multiples of sz) ─────────────────────────────────
+const PALETTE: Record<'day' | 'evening' | 'night', ShiftPalette> = {
+  night:   { baseColor: '#0a1520', baseOpacity: 0.50, bankAlphaMax: 0.88 },
+  day:     { baseColor: '#8898a8', baseOpacity: 0.22, bankAlphaMax: 0.78 },
+  evening: { baseColor: '#160e28', baseOpacity: 0.42, bankAlphaMax: 0.85 },
+};
+
+// ── Placement definitions — seeded layout, computed once at module level ──────
+//
+// 12 placements reuse 3 bank assets (bankIdx 0/1/2).
+// xF, yF: fractional centre of the image in world space (-10 %…110 %).
+// wF, hF: fractional size as a share of worldWidth.
+//
+// Rotation is not applied (RN Image rotation on web has layout cost); the
+// different bank silhouettes provide adequate visual variety without it.
+
+type PlacementDef = {
+  bankIdx: 0 | 1 | 2;
+  xF: number;  // centre x, fraction of worldWidth
+  yF: number;  // centre y, fraction of worldHeight
+  wF: number;  // image width, fraction of worldWidth
+  hF: number;  // image height (≈ wF since assets are square-ish 1:1)
+};
+
+// Bank assignment pattern: A A A A B B B B C C C C
+// Positions spread from -10 % to 110 % on both axes.
+const PLACEMENT_DEFS: PlacementDef[] = Array.from({ length: 12 }, (_, i) => {
+  const bankIdx = (Math.floor(i / 4) as 0 | 1 | 2);
+  const s       = i * 13 + bankIdx * 7;   // unique seed per placement
+  return {
+    bankIdx,
+    xF: -0.10 + seededRand(s + 1) * 1.20,   // -10 % … 110 %
+    yF: -0.10 + seededRand(s + 2) * 1.20,   // -10 % … 110 %
+    wF:  0.55 + seededRand(s + 3) * 0.30,   //  55 % …  85 % of worldWidth
+    hF:  0.45 + seededRand(s + 4) * 0.30,   //  45 % …  75 % of worldWidth
+  };
+});
+
+// ── Clearing parameters ───────────────────────────────────────────────────────
 
 const CLEAR = {
-  current:                { startR: 1.9, fullR: 0.6 },
-  visibleNow:             { startR: 1.6, fullR: 0.45 },
-  exploredButOutOfVision: { startR: 1.0, fullR: 0.25 },
+  current:                { startR: 2.0, fullR: 0.7 },
+  visibleNow:             { startR: 1.7, fullR: 0.5 },
+  exploredButOutOfVision: { startR: 1.1, fullR: 0.3 },
 } as const;
 
-// ── Drift animation constants ──────────────────────────────────────────────────
+// ── Drift animation constants ─────────────────────────────────────────────────
 
-const DRIFT_PX  = 10;    // amplitude in pixels (±)
-const DRIFT_MS  = 12000; // milliseconds per step (4 steps = 48 s full cycle)
+const DRIFT_PX = 12;   // ± pixels
+const DRIFT_MS = 14000; // ms per step (4 steps = 56 s full cycle)
 
-// ── ClearSource type ──────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type ClearSource = {
-  cx:     number;
-  cy:     number;
-  startR: number;   // already multiplied by sz
-  fullR:  number;   // already multiplied by sz
+  cx: number; cy: number;
+  startR: number; fullR: number;   // already × sz
 };
 
-// ── Resolved blob (pixel-space, ready for render) ─────────────────────────────
-
-type ResolvedBlob = {
-  cx:      number;
-  cy:      number;
-  outerR:  number;   // outer ring radius (pixels)
-  midR:    number;   // middle ring radius
-  innerR:  number;   // inner ring radius
-  opacity: number;   // clearing-driven parent opacity
-  color:   string;
+type ResolvedPlacement = {
+  bankIdx:  0 | 1 | 2;
+  left:     number;
+  top:      number;
+  width:    number;
+  height:   number;
+  diagonal: number;   // half-diagonal for edge-based clearing
+  opacity:  number;   // clearing-driven
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -172,7 +204,8 @@ export interface JourneyFogFieldProps {
 
 export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldProps) {
   const { worldWidth: W, worldHeight: H, sz } = coords;
-  const { blobColor } = FOG_PALETTE[timeOfDay];
+  const palette = PALETTE[timeOfDay];
+  const banks   = FOG_BANKS[timeOfDay];
 
   // ── Drift animation ─────────────────────────────────────────────────────────
   const driftX = useRef(new Animated.Value(0)).current;
@@ -184,27 +217,27 @@ export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldPro
     const anim = Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(driftX, { toValue:  D,        duration: T, useNativeDriver: true }),
-          Animated.timing(driftY, { toValue:  D * 0.5,  duration: T, useNativeDriver: true }),
+          Animated.timing(driftX, { toValue:  D,       duration: T, useNativeDriver: false }),
+          Animated.timing(driftY, { toValue:  D * 0.4, duration: T, useNativeDriver: false }),
         ]),
         Animated.parallel([
-          Animated.timing(driftX, { toValue: -D * 0.3,  duration: T, useNativeDriver: true }),
-          Animated.timing(driftY, { toValue:  D,        duration: T, useNativeDriver: true }),
+          Animated.timing(driftX, { toValue: -D * 0.4, duration: T, useNativeDriver: false }),
+          Animated.timing(driftY, { toValue:  D,       duration: T, useNativeDriver: false }),
         ]),
         Animated.parallel([
-          Animated.timing(driftX, { toValue: -D,        duration: T, useNativeDriver: true }),
-          Animated.timing(driftY, { toValue: -D * 0.5,  duration: T, useNativeDriver: true }),
+          Animated.timing(driftX, { toValue: -D,       duration: T, useNativeDriver: false }),
+          Animated.timing(driftY, { toValue: -D * 0.4, duration: T, useNativeDriver: false }),
         ]),
         Animated.parallel([
-          Animated.timing(driftX, { toValue:  D * 0.3,  duration: T, useNativeDriver: true }),
-          Animated.timing(driftY, { toValue: -D,        duration: T, useNativeDriver: true }),
+          Animated.timing(driftX, { toValue:  D * 0.4, duration: T, useNativeDriver: false }),
+          Animated.timing(driftY, { toValue: -D,       duration: T, useNativeDriver: false }),
         ]),
       ]),
     );
     anim.start();
     return () => anim.stop();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // drift constants never change; no deps needed
+  }, []);
 
   // ── Clearing sources ────────────────────────────────────────────────────────
   const clearSources: readonly ClearSource[] = useMemo(() => {
@@ -212,50 +245,50 @@ export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldPro
     for (const tile of tiles) {
       if (tile.visibility === 'unexplored') continue;
       const { cx, cy } = coords.axialToWorld(tile.q, tile.r);
-      const params =
-        tile.current              ? CLEAR.current :
-        tile.visibility === 'visibleNow' ? CLEAR.visibleNow :
+      const p =
+        tile.current                           ? CLEAR.current :
+        tile.visibility === 'visibleNow'       ? CLEAR.visibleNow :
         CLEAR.exploredButOutOfVision;
-      out.push({ cx, cy, startR: params.startR * sz, fullR: params.fullR * sz });
+      out.push({ cx, cy, startR: p.startR * sz, fullR: p.fullR * sz });
     }
     return out;
   }, [tiles, coords, sz]);
 
-  // ── Resolved blobs ──────────────────────────────────────────────────────────
-  const blobs: ResolvedBlob[] = useMemo(() => {
-    const result: ResolvedBlob[] = [];
-    for (const def of BLOB_DEFS) {
-      const cx     = def.xF * W;
-      const cy     = def.yF * H;
-      const outerR = def.sizeF * W;
+  // ── Resolved placements ─────────────────────────────────────────────────────
+  // Recomputed when world size, clearing sources, or shift changes.
+  const placements: ResolvedPlacement[] = useMemo(() => {
+    const result: ResolvedPlacement[] = [];
 
-      // Find minimum clearFactor across all sources (most-clearing wins)
+    for (const def of PLACEMENT_DEFS) {
+      const width    = def.wF * W;
+      const height   = def.hF * W;   // keep aspect roughly square
+      const cx       = def.xF * W;
+      const cy       = def.yF * H;
+      const left     = cx - width  / 2;
+      const top      = cy - height / 2;
+      const diagonal = Math.hypot(width, height) * 0.36;  // edge-clearing offset
+
+      // Minimum clearFactor across all sources (edge-adjusted distance)
       let minFactor = 1.0;
       for (const src of clearSources) {
-        const dist = Math.hypot(src.cx - cx, src.cy - cy);
+        const dist     = Math.hypot(src.cx - cx, src.cy - cy);
+        const edgeDist = Math.max(0, dist - diagonal);
         const f =
-          dist <= src.fullR  ? 0 :
-          dist >= src.startR ? 1 :
-          (dist - src.fullR) / (src.startR - src.fullR);
+          edgeDist <= src.fullR  ? 0 :
+          edgeDist >= src.startR ? 1 :
+          (edgeDist - src.fullR) / (src.startR - src.fullR);
         if (f < minFactor) minFactor = f;
         if (minFactor === 0) break;
       }
 
-      const opacity = BLOB_ALPHA_MAX * minFactor;
-      if (opacity < 0.02) continue; // skip fully-cleared blobs
+      const opacity = palette.bankAlphaMax * minFactor;
+      // Keep all placements so world coverage doesn't thin near cleared zones —
+      // fully cleared placements simply become invisible (opacity ≈ 0).
 
-      result.push({
-        cx,
-        cy,
-        outerR,
-        midR:   outerR * 0.70,
-        innerR: outerR * 0.47,
-        opacity,
-        color:  blobColor,
-      });
+      result.push({ bankIdx: def.bankIdx, left, top, width, height, diagonal, opacity });
     }
     return result;
-  }, [W, H, blobColor, clearSources]);
+  }, [W, H, palette.bankAlphaMax, clearSources]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -263,86 +296,39 @@ export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldPro
       pointerEvents="none"
       style={[StyleSheet.absoluteFillObject, styles.field]}
     >
-      {/*
-        Drifting blob container.
-        useNativeDriver:true → translateX/Y run on the GPU thread.
-        Static blob opacities are regular View style props (not animated).
-      */}
+      {/* ── Layer 0: base tint — even atmospheric coverage beneath cloud banks */}
+      <View
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: palette.baseColor, opacity: palette.baseOpacity },
+        ]}
+      />
+
+      {/* ── Layer 1: drifting painted cloud banks ──────────────────────────── */}
       <Animated.View
         style={[
           StyleSheet.absoluteFillObject,
           { transform: [{ translateX: driftX }, { translateY: driftY }] },
         ]}
       >
-        {blobs.map((blob, i) => (
-          <FogBlob key={i} blob={blob} />
+        {placements.map((p, i) => (
+          <Image
+            key={i}
+            source={banks[p.bankIdx]}
+            style={{
+              position: 'absolute',
+              left:     p.left,
+              top:      p.top,
+              width:    p.width,
+              height:   p.height,
+              opacity:  p.opacity,
+            }}
+            contentFit="fill"
+            // Recycling key is placement index — same asset, same slot each render.
+            recyclingKey={`fog-${i}`}
+          />
         ))}
       </Animated.View>
-    </View>
-  );
-}
-
-// ── FogBlob ───────────────────────────────────────────────────────────────────
-//
-// Three concentric circles simulate a radial density gradient.
-// The parent View's opacity is the clearing-driven value; each ring
-// multiplies its own layer factor on top (parent × ring_factor).
-
-function FogBlob({ blob }: { blob: ResolvedBlob }) {
-  const { cx, cy, outerR, midR, innerR, opacity, color } = blob;
-  // Parent positioned at outer-ring bounding box centre
-  const left = cx - outerR;
-  const top  = cy - outerR;
-  const size = outerR * 2;
-
-  return (
-    <View
-      style={{
-        position: 'absolute',
-        left,
-        top,
-        width:   size,
-        height:  size,
-        opacity,
-      }}
-    >
-      {/* Outer feather ring — fills the entire bounding box */}
-      <View
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          borderRadius: 99999,
-          backgroundColor: color,
-          opacity: RING_OPACITY.outer,
-        }}
-      />
-
-      {/* Middle density ring */}
-      <View
-        style={{
-          position:        'absolute',
-          left:            outerR - midR,
-          top:             outerR - midR,
-          width:           midR * 2,
-          height:          midR * 2,
-          borderRadius:    99999,
-          backgroundColor: color,
-          opacity:         RING_OPACITY.middle,
-        }}
-      />
-
-      {/* Inner fog body */}
-      <View
-        style={{
-          position:        'absolute',
-          left:            outerR - innerR,
-          top:             outerR - innerR,
-          width:           innerR * 2,
-          height:          innerR * 2,
-          borderRadius:    99999,
-          backgroundColor: color,
-          opacity:         RING_OPACITY.inner,
-        }}
-      />
     </View>
   );
 }
