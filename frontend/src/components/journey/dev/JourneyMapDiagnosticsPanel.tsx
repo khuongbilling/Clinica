@@ -83,8 +83,14 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
   const unexploredCount   = tiles.filter(t => t.visibility === 'unexplored').length;
 
   // Start + gate are not encounter-eligible.
+  // Primary match: tile id against the run's startTileId / gateAnchorTileId.
+  // Fallback: t.encounter === 'boss' catches the gate tile when gateAnchorTileId
+  // is null on a legacy run (prevents the count showing 29 instead of 28).
   const nonEncounterRoles = tiles.filter(
-    t => t.id === run?.startTileId || t.id === run?.gateAnchorTileId,
+    t =>
+      t.id === run?.startTileId ||
+      t.id === run?.gateAnchorTileId ||
+      t.encounter === 'boss',
   ).length;
   const encounterEligible = Math.max(0, runtimeCount - nonEncounterRoles);
 
@@ -139,14 +145,18 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
         </Section>
 
         {/* ── TERRAIN ────────────────────────────────────────────────────── */}
+        {/* Push 1A: labels now use human-readable terminology:
+          *   Terrain cells (total) = canonical count incl. start + gate
+          *   Encounter eligible    = total minus start and gate (should be 28 for Ch1)
+          *   template / runtime / rendered rows kept for debugging            */}
         <Section title="TERRAIN">
           <Row
-            label="expectedTerrainCellCount"
-            value={String(expectedTerrainCellCount)}
+            label="Terrain cells (canonical)"
+            value={`${expectedTerrainCellCount} / ${expectedTerrainCellCount}`}
             valueColor="#e2e8f0"
           />
           <Row
-            label="templateTerrainCellCount"
+            label="template cell count"
             value={templateTerrainCellCount != null ? String(templateTerrainCellCount) : 'ERR'}
             valueColor={
               templateTerrainCellCount != null
@@ -155,7 +165,7 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
             }
           />
           <Row
-            label="runtimeTerrainCellCount"
+            label="runtime cell count"
             value={String(runtimeCount)}
             valueColor={countColor(runtimeCount, expectedTerrainCellCount)}
           />
@@ -169,7 +179,7 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
             valueColor={countColor(renderedInMapWorld, expectedTerrainCellCount)}
           />
           <Row
-            label="encounterEligibleCellCount"
+            label="Encounter eligible (excl. start+gate)"
             value={String(encounterEligible)}
             valueColor="#e2e8f0"
           />

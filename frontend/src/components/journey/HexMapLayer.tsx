@@ -1385,30 +1385,54 @@ export function HexMapLayer({
   // Runs whenever the world geometry or container changes.
   // Must run BEFORE Effect 2 so the camera centering reads fresh bounds.
   //
-  // Bounds design (Push 8):
-  //   MARGIN ≈ 0.55 × sz  — about half a tile of "overscroll" in every direction.
-  //   This is deliberately modest: large enough that every terrain edge can be
-  //   brought to the middle of the viewport (the world already has built-in
-  //   worldOriginX / worldOriginY padding), small enough that the painted
-  //   background never fully leaves the viewport.
+  // Bounds design (Push 1A fix):
   //
-  //   minX = min(-MARGIN, containerWidth  - worldW - MARGIN)
-  //     → when worldW > containerWidth: allows panning all the way to the right edge
-  //     → when worldW ≤ containerWidth: limits to ±MARGIN around origin (world fits)
-  //   maxX = MARGIN  (overscroll left edge, symmetric)
-  //   Same logic vertically with worldH / containerHeight.
+  //   SPRITE_PAD = 1.0 × sz — clearance for the largest world object (Gate
+  //   at 1.8 × sz).  Enough bleed on every edge so sprites near the world
+  //   boundary can always be panned fully into view.
+  //
+  //   The formula is derived from "what camera offset is needed to centre
+  //   the topmost / bottommost / leftmost / rightmost tile?":
+  //
+  //     maxY = containerHeight/2 − worldOriginY + SPRITE_PAD
+  //       → camera offset that places the topmost tile (at worldOriginY)
+  //         at the viewport centre, plus bleed for the player sprite head.
+  //       → Previously MARGIN (≈ 23 px), so the start-tile player was
+  //         clamped to y ≈ 55 px — top-clipped.  Now ≈ 270 px, allowing
+  //         full vertical centering.
+  //
+  //     minY = containerHeight/2 − worldH − SPRITE_PAD
+  //       → camera offset to centre the bottommost tile.
+  //
+  //     maxX = containerWidth/2 + SPRITE_PAD
+  //       → leftmost-tile centering headroom.
+  //
+  //     minX = containerWidth/2 − worldW − SPRITE_PAD
+  //       → rightmost-tile (Gate) centering headroom.
+  //         Previously too tight, clipping the 1.8 × sz Gate overlay at
+  //         the right viewport edge.
+  //
+  //   When the world fits entirely in the viewport on one axis the bounds
+  //   still allow the camera to centre any tile on that axis; empty world-
+  //   background space outside the tile grid is acceptable (the painted
+  //   chapter background fills the world canvas).
   useLayoutEffect(() => {
     if (containerWidth < 10 || containerHeight < 10) return;
-    const MARGIN = Math.round(sz * 0.55);
+    // 1.0 × sz gives one full tile of bleed — enough for the Gate (1.8 × sz)
+    // and the area-boss sprite (1.35 × sz) to be brought fully into view.
+    const SPRITE_PAD = Math.round(sz * 1.0);
+    // oy = worldOriginY = 10 px (fixed top breathing room in hexWorldCoords).
+    // Used to compute the exact camera position that centres the topmost tile.
     boundsRef.current = {
-      minX: Math.min(-MARGIN, containerWidth  - worldW - MARGIN),
-      maxX: Math.max(0,        MARGIN),
-      minY: Math.min(-MARGIN, containerHeight - worldH - MARGIN),
-      maxY: Math.max(0,        MARGIN),
+      minX: Math.round(containerWidth  / 2 - worldW - SPRITE_PAD),
+      maxX: Math.round(containerWidth  / 2           + SPRITE_PAD),
+      minY: Math.round(containerHeight / 2 - worldH  - SPRITE_PAD),
+      maxY: Math.round(containerHeight / 2 - oy      + SPRITE_PAD),
     };
-  // worldW / worldH encode the tile set indirectly — they change when tiles change.
+  // oy (worldOriginY) is always 10 — a constant in hexWorldCoords.ts.
+  // Listed in deps for correctness; its stability means no extra renders.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerWidth, containerHeight, sz, worldW, worldH]);
+  }, [containerWidth, containerHeight, sz, worldW, worldH, oy]);
 
   // ── Effect 2: position camera on load / player move / resize ─────────────
   // Three distinct camera behaviours (Push 8):
