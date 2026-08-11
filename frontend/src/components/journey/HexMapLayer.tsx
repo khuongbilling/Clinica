@@ -1,5 +1,5 @@
 /**
- * HexMapLayer — PUSH 5 camera / PUSH 9 axial rendering + content privacy
+ * HexMapLayer — PUSH 6 unified world coords / PUSH 5 complete terrain / PUSH 9 axial rendering
  *
  * Renders a bounded draggable hex map world inside a clipping viewport.
  * All tiles use AXIAL q,r coordinates (flat-top hexes).
@@ -175,23 +175,19 @@ import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react
 
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI } from '@/src/theme/ui';
+import {
+  Q_STEP, R_STEP, Q_VOFF,
+  MIN_TILE_SZ, MAX_TILE_SZ,
+  computeHexWorldCoords,
+  type HexWorldCoords,
+} from './hexWorldCoords';
 
-// ── Hex layout constants (flat-top axial, Push 13 tightened) ─────────────────
-// Values are deliberately below the mathematical hex-touching thresholds so
-// adjacent solid hex bodies overlap — eliminating the transparent-corner gap
-// that makes each tile look like a separate floating platform.
-// See the file header for full rationale.
-const Q_STEP  = 0.72;   // horizontal advance per q unit  (std 0.75 → 0.72)
-const R_STEP  = 0.79;   // vertical advance per r unit    (std 0.866 → 0.79)
-const Q_VOFF  = 0.395;  // vertical bump per q unit       (= R_STEP / 2)
-
-const MAX_TILE_SZ = 88;
-/**
- * 44 px is the minimum touch-target size required by WCAG 2.5.5 and iOS HIG.
- * Setting this as the lower bound ensures every interactive tile meets the
- * accessibility touch-target rule regardless of container width.
- */
-const MIN_TILE_SZ = 44;
+// ── Hex layout constants — imported from hexWorldCoords.ts (Push 6) ──────────
+// Q_STEP, R_STEP, Q_VOFF, MIN_TILE_SZ, MAX_TILE_SZ are re-exported from the
+// authoritative hexWorldCoords module.  They remain visible here so that any
+// file-level code that references them (SVG sort rationale, fog comments) can
+// still do so without touching the import chain.
+// Do NOT redefine these constants locally — hexWorldCoords.ts is the owner.
 
 // ── Hex grid overlay constants (Push 16 / 17) ────────────────────────────────
 //
@@ -521,14 +517,9 @@ function a11yLabel(tile: HexMapTile): string {
 const webData = (o: Record<string, string>) => o as unknown as object;
 
 // ── Geometry ──────────────────────────────────────────────────────────────────
-
-/** Top-left pixel position for a tile in axial q,r coordinates. */
-function tilePos(q: number, r: number, sz: number, ox: number, oy: number) {
-  return {
-    left: Math.round(q * Q_STEP * sz) + ox,
-    top:  Math.round((r * R_STEP + q * Q_VOFF) * sz) + oy,
-  };
-}
+// Push 6: tilePos() removed.  All axial-to-pixel conversions now go through
+// HexWorldCoords.axialToWorld(q, r) obtained from computeHexWorldCoords().
+// See frontend/src/components/journey/hexWorldCoords.ts for the formula.
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -574,10 +565,13 @@ function hexPoints(sz: number, inset = 0.89): string {
 // ── HexTile ───────────────────────────────────────────────────────────────────
 
 interface HexTileProps {
-  tile: HexMapTile;
-  sz:   number;
-  ox:   number;
-  oy:   number;
+  tile:   HexMapTile;
+  /**
+   * Push 6: world coordinate system — replaces the former `sz`, `ox`, `oy`
+   * scalar props.  Use `coords.axialToWorld(tile.q, tile.r)` for position and
+   * `coords.sz` wherever the tile size in pixels is needed.
+   */
+  coords: HexWorldCoords;
   onPress: (tile: HexMapTile) => void;
   /**
    * When set and this tile is current: renders the exploration character
@@ -593,8 +587,9 @@ interface HexTileProps {
   fogTheme: FogTheme;
 }
 
-function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, fogTheme }: HexTileProps) {
-  const pos  = tilePos(tile.q, tile.r, sz, ox, oy);
+function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexTileProps) {
+  const { sz } = coords;
+  const pos = coords.axialToWorld(tile.q, tile.r);
   // Push 7: world-object node replaces flat encounter icon on the map.
   // node.sizeMul controls footprint; bottom of bounding box sits at ~88 % tile height.
   const node = encounterMapNode(tile);
@@ -866,21 +861,23 @@ function HexTile({ tile, sz, ox, oy, onPress, explorationCharacter, fogTheme }: 
  *
  * Inputs:
  *   tiles    — full run tile set (visibility + coords read here, not in HexTile)
- *   sz/ox/oy — tile geometry constants from HexMapLayer
- *   worldW/H — total world canvas bounds
+ *   coords   — Push 6: unified world coordinate system; replaces sz/ox/oy/worldW/worldH
  *   fogTheme — per-shift colour palette (blobColor, blobOpacity, etc.)
  */
 interface JourneyFogLayerProps {
   tiles:    readonly HexMapTile[];
-  sz:       number;
-  ox:       number;
-  oy:       number;
-  worldW:   number;
-  worldH:   number;
+  /**
+   * Push 6: world coordinate system — replaces the former `sz`, `ox`, `oy`,
+   * `worldW`, `worldH` scalar props.  Fog hole centres come from
+   * `coords.axialToWorld(t.q, t.r).cx/cy`.  Canvas size from
+   * `coords.worldWidth / coords.worldHeight`.
+   */
+  coords:   HexWorldCoords;
   fogTheme: FogTheme;
 }
 
-function JourneyFogLayer({ tiles, sz, ox, oy, worldW, worldH, fogTheme }: JourneyFogLayerProps) {
+function JourneyFogLayer({ tiles, coords, fogTheme }: JourneyFogLayerProps) {
+  const { sz, worldWidth: worldW, worldHeight: worldH } = coords;
   // Web: imperatively-managed HTML <canvas> child
   const fogContainerRef = useRef<View>(null);
 
@@ -928,9 +925,7 @@ function JourneyFogLayer({ tiles, sz, ox, oy, worldW, worldH, fogTheme }: Journe
     for (const t of tiles) {
       if (!t.current && t.visibility === 'unexplored') continue;
 
-      const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
-      const cx = left + sz / 2;
-      const cy = top  + sz / 2;
+      const { cx, cy } = coords.axialToWorld(t.q, t.r);
 
       // Reveal radius scales with visibility quality:
       //   current              → widest clear area + longest feather
@@ -953,7 +948,7 @@ function JourneyFogLayer({ tiles, sz, ox, oy, worldW, worldH, fogTheme }: Journe
       ctx.fill();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tiles, sz, ox, oy, worldW, worldH, fogTheme]);
+  }, [tiles, coords, fogTheme]);
 
   // ── Web: return the container View; canvas is injected above ──────────────
   if (Platform.OS === 'web') {
@@ -978,9 +973,7 @@ function JourneyFogLayer({ tiles, sz, ox, oy, worldW, worldH, fogTheme }: Journe
       <Svg width={worldW} height={worldH}>
         <Defs>
           {unexplored.map(t => {
-            const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
-            const cx = left + sz / 2;
-            const cy = top  + sz / 2;
+            const { cx, cy } = coords.axialToWorld(t.q, t.r);
             const id = fogGradId('fog', t.q, t.r);
             return (
               <RadialGradient key={id} id={id} cx={cx} cy={cy} r={blobR} fx={cx} fy={cy} gradientUnits="userSpaceOnUse">
@@ -993,9 +986,9 @@ function JourneyFogLayer({ tiles, sz, ox, oy, worldW, worldH, fogTheme }: Journe
           })}
         </Defs>
         {unexplored.map(t => {
-          const { left, top } = tilePos(t.q, t.r, sz, ox, oy);
+          const { cx, cy } = coords.axialToWorld(t.q, t.r);
           return (
-            <Circle key={t.id} cx={left + sz / 2} cy={top + sz / 2} r={blobR} fill={`url(#${fogGradId('fog', t.q, t.r)})`} />
+            <Circle key={t.id} cx={cx} cy={cy} r={blobR} fill={`url(#${fogGradId('fog', t.q, t.r)})`} />
           );
         })}
       </Svg>
@@ -1178,23 +1171,17 @@ export function HexMapLayer({
   // mode / debug route) so the existing dark aesthetic is preserved as fallback.
   const fogTheme = FOG_THEMES[timeOfDay ?? 'night'];
 
-  // ── Geometry (recomputed on every render; cheap enough to not useMemo) ─────
-  const maxQ = tiles.reduce((m, t) => Math.max(m, t.q), 0);
-  const maxR = tiles.reduce((m, t) => Math.max(m, t.r), 0);
-  const wFactor = maxQ * Q_STEP + 1;
-
-  const sz = tiles.length === 0 ? 60 : Math.min(
-    MAX_TILE_SZ,
-    Math.max(MIN_TILE_SZ, Math.floor(containerWidth / wFactor)),
-  );
-  const ox = Math.floor((containerWidth - wFactor * sz) / 2);
-  const oy = 10;
-
-  // World bounding box in pixels (for camera bounds).
-  const maxPxRight  = tiles.reduce((m, t) => Math.max(m, t.q * Q_STEP), 0);
-  const maxPxBottom = tiles.reduce((m, t) => Math.max(m, t.r * R_STEP + t.q * Q_VOFF), 0);
-  const worldW = Math.round(maxPxRight * sz) + sz + Math.max(ox, 0) * 2;
-  const worldH = Math.round(maxPxBottom * sz) + sz + oy + 10;
+  // ── Geometry — Push 6: unified world coordinate system ───────────────────
+  // All tile positions (terrain, player, gate, fog holes, camera) are derived
+  // from this single coords object.  No component may inline the formula.
+  const coords = computeHexWorldCoords(tiles, containerWidth);
+  const {
+    sz,
+    worldOriginX: ox,
+    worldOriginY: oy,
+    worldWidth:   worldW,
+    worldHeight:  worldH,
+  } = coords;
 
   // ── Persistent refs ────────────────────────────────────────────────────────
   const boundsRef     = useRef({ minX: -9999, maxX: 9999, minY: -9999, maxY: 9999 });
@@ -1246,10 +1233,8 @@ export function HexMapLayer({
 
       const playerTile = currentTile ?? tiles[0];
       if (playerTile) {
-        const tileCx =
-          Math.round(playerTile.q * Q_STEP * sz) + ox + sz / 2;
-        const tileCy =
-          Math.round((playerTile.r * R_STEP + playerTile.q * Q_VOFF) * sz) + oy + sz / 2;
+        // Push 6: camera centering uses the same axialToWorld as every other renderer.
+        const { cx: tileCx, cy: tileCy } = coords.axialToWorld(playerTile.q, playerTile.r);
 
         const rawX  = containerWidth  / 2 - tileCx;
         const rawY  = containerHeight / 2 - tileCy;
@@ -1399,9 +1384,7 @@ export function HexMapLayer({
           <HexTile
             key={tile.id}
             tile={tile}
-            sz={sz}
-            ox={ox}
-            oy={oy}
+            coords={coords}
             onPress={handleTilePress}
             explorationCharacter={explorationCharacter}
             fogTheme={fogTheme}
@@ -1416,11 +1399,7 @@ export function HexMapLayer({
          */}
         <JourneyFogLayer
           tiles={tiles}
-          sz={sz}
-          ox={ox}
-          oy={oy}
-          worldW={worldW}
-          worldH={worldH}
+          coords={coords}
           fogTheme={fogTheme}
         />
 
@@ -1435,7 +1414,7 @@ export function HexMapLayer({
         {gateArt && (() => {
           const gateTile = tiles.find(t => t.isGate);
           if (!gateTile || gateTile.visibility === 'unexplored') return null;
-          const { left, top } = tilePos(gateTile.q, gateTile.r, sz, ox, oy);
+          const { left, top } = coords.axialToWorld(gateTile.q, gateTile.r);
           // Overlay is 1.8× the tile size — visually prominent but centred
           // so it does not shift the effective tap target.
           const overlaySize = Math.round(sz * 1.8);
@@ -1470,8 +1449,8 @@ export function HexMapLayer({
          * Every branch is wrapped in `__DEV__` — no runtime cost in production.
          */}
         {__DEV__ && devOverlay && sorted.map(tile => {
-          const px   = Math.round(tile.q * Q_STEP * sz) + ox;
-          const py   = Math.round((tile.r * R_STEP + tile.q * Q_VOFF) * sz) + oy;
+          // Push 6: dev overlay uses the same authoritative axialToWorld as production renderers.
+          const { left: px, top: py } = coords.axialToWorld(tile.q, tile.r);
           const mid  = Math.round(sz / 2);
           const vis  = tile.visibility;
           const visColor =
