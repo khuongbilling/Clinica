@@ -1,57 +1,90 @@
 /**
- * JourneyFogField.tsx — Push 16
+ * JourneyFogField.tsx — Push 17 (feathered fog around field of vision)
  *
- * Continuous atmospheric fog field rendered as a world-space layer inside MapWorld.
- * Replaces the null-stubbed JourneyFogLayer (Push 13) with real painted fog art.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * SEPARATION OF CONCERNS
- * ─────────────────────────────────────────────────────────────────────────────
- *
- *   FOG ART  ─ raster assets only.
- *     Six painted PNG fog banks (2 large + 2 medium + 2 wisp) from Push 15,
- *     positioned in world space as Image components.  They overlap naturally to
- *     form one continuous cloud mass.  No fog cloud shape is drawn in code.
- *
- *   VISIBILITY MASK  ─ code-driven.
- *     Each fog bank's opacity is attenuated by how close its centre lies to
- *     any visible tile centre (visibleNow / current / exploredButOutOfVision).
- *     Closer = less opaque = fog thins away from unexplored terrain.
- *
- *   CLEARING LAYER  ─ SVG radial overlay.
- *     A very-low-opacity SVG radial gradient is placed at each visibleNow /
- *     current tile centre.  This is an atmospheric hint only — not the hard
- *     visibility boundary, which is already enforced by HexTile z-ordering.
- *     The gradient reinforces the sense of fog naturally rolling back around
- *     where the player can see.
+ * Refactors Push 16's coarse per-bank opacity clearing into a continuous
+ * per-pixel gradient field using an SVG <Mask>.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * RENDERING CONTRACT
+ * ARCHITECTURE
  * ─────────────────────────────────────────────────────────────────────────────
  *
- *   Rendered at zIndex 5000 inside MapWorld (same Animated.View as all HexTiles).
+ *   Layer A — SVG gradient mask  (primary fog density field)
+ *   ─────────────────────────────────────────────────────────
+ *   A world-sized <Rect> filled with fogColor is masked by a <Mask> that
+ *   encodes the visibility field:
  *
- *   z-ordering guarantees:
- *     unexplored tile Pressables       z  1–3000   ← below fog field
- *     JourneyFogField                  z  5000     ← fog
- *     exploredButOutOfVision HexTile   z  5050     ← above fog
- *     visibleNow HexTile               z  5100+    ← above fog
- *     current HexTile                  z  9999     ← always topmost
+ *     • White base          → fog visible everywhere (default)
+ *     • Black radial holes  → clearing at visibleNow / current tile centres
+ *     • Dark-grey radials   → lighter mist at exploredButOutOfVision centres
  *
- *   Fog artwork is NEVER attached to individual HexTile components.
- *   All clearing influence is derived from the tile visibility array; the
- *   fog calculator and game state logic in fogCalculator.ts are untouched.
+ *   Because adjacent black radials overlap and sum in the mask buffer, two
+ *   neighbouring visibleNow tiles automatically merge their clearing zones
+ *   into one smooth, organic, non-hex-shaped region.  No geometric hex
+ *   cutout is ever visible.
+ *
+ *   Layer B — raster fog bank Images  (cloud texture)
+ *   ─────────────────────────────────────────────────
+ *   Six painted PNG fog banks (2 large + 2 medium + 2 wisp) from Push 15,
+ *   rendered ON TOP of the SVG mask at a fixed low opacity (TEXTURE_ALPHA).
+ *
+ *   At full opacity the SVG fog rect occludes the underlying terrain in
+ *   unexplored areas.  At the feathered boundary the SVG rect becomes
+ *   partially transparent and the bank Images show through as cloud wisps.
+ *   In the fully clear zone the SVG rect is transparent; the bank Images
+ *   still contribute a small amount of atmospheric haze (≤ 25 %).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CLEARING RADII
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ *   CLEAR_R per tile state (multiples of sz):
+ *     current              1.4 × sz  (player position: maximum clearing)
+ *     visibleNow           1.2 × sz  (visible tile ring: strong clearing)
+ *     exploredButOutOfVision 0.85 × sz (remembered terrain: light mist only)
+ *
+ *   Adjacent visibleNow tiles at ~0.8 × sz apart with CLEAR_R = 1.2 × sz
+ *   overlap by ~0.4 × sz.  Their black radials merge in the mask buffer →
+ *   one organic continuous clearing region with no hex geometry visible.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * GRADIENT STOP DESIGN
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ *   visibleNow / current clearing gradient (mask = white base + black holes):
+ *     0 %  → black, opacity 1.00  (fog absent: fully clear at tile centre)
+ *    55 %  → black, opacity 0.88  (still mostly clear)
+ *    80 %  → black, opacity 0.42  (entering feather zone: half-fog)
+ *   100 %  → black, opacity 0.00  (full fog resumes beyond edge)
+ *
+ *   This produces a "plateau of clear air" surrounded by a soft feathered
+ *   gradient — no sudden edge, no hex-shaped cutout.
+ *
+ *   exploredButOutOfVision mist gradient:
+ *     0 %  → black, opacity 0.52  (fog thinned to ~half: memory mist)
+ *   100 %  → black, opacity 0.00  (full fog resumes at edge)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Z-ORDERING (inside MapWorld Animated.View)
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ *   unexplored tile Pressables     z  1–3000   (below fog)
+ *   JourneyFogField                z  5000     (fog layer)
+ *     ↳ SVG fog mask (Layer A)     — rendered first, appears behind
+ *     ↳ bank Images  (Layer B)     — rendered after, appears in front
+ *   exploredButOutOfVision HexTile z  5050     (above fog)
+ *   visibleNow HexTile             z  5100+    (above fog)
+ *   current HexTile                z  9999     (topmost)
  */
 
 import { Image } from 'expo-image';
-import { useMemo }  from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Mask, Rect, RadialGradient, Stop } from 'react-native-svg';
 
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
 
-// ── zIndex ────────────────────────────────────────────────────────────────────
+// ── zIndex ─────────────────────────────────────────────────────────────────────
 
 /**
  * World-space stack position for JourneyFogField.
@@ -62,7 +95,7 @@ export const FOG_FIELD_Z = 5000;
 // ── Raster fog bank assets ────────────────────────────────────────────────────
 //
 // Metro bundler requires every require() argument to be a STATIC STRING LITERAL.
-// No template literals, no dynamic paths.  All 18 push-15 assets declared here.
+// No template literals, no dynamic paths.  All 18 Push-15 assets declared here.
 
 const FOG_BANKS = {
   day: {
@@ -91,122 +124,85 @@ const FOG_BANKS = {
   },
 } as const;
 
-// ── Fog bank layout ───────────────────────────────────────────────────────────
+// ── Fog bank texture layout ───────────────────────────────────────────────────
 
 /**
- * Fractional world-space placement descriptor for one fog bank image.
- *
- * xF, yF — top-left corner as fraction of worldWidth / worldHeight.
- *           Negative values allowed — banks may bleed left/above the world
- *           edge for a natural coverage with no hard seam.
- * wF, hF — size as fraction of worldWidth / worldHeight.
- * key    — which slot to pull from FOG_BANKS[shift].
- * base   — maximum opacity (before clearing influence reduces it).
+ * Fog bank placement in fractional world coordinates.
+ * xF, yF may be negative (banks bleed beyond the world edge for natural coverage).
  */
 type BankDef = {
-  readonly xF:   number;
-  readonly yF:   number;
-  readonly wF:   number;
-  readonly hF:   number;
-  readonly key:  keyof (typeof FOG_BANKS)['day'];
-  readonly base: number;
+  readonly xF:  number;
+  readonly yF:  number;
+  readonly wF:  number;
+  readonly hF:  number;
+  readonly key: keyof (typeof FOG_BANKS)['day'];
 };
 
 /**
- * Six fog banks arranged so every world quadrant is covered, with heavy
- * central overlap.  The combined result reads as one organic fog mass.
+ * Six fog bank placements covering all four world quadrants with heavy overlap.
+ * Together they read as one continuous organic cloud mass when composited.
  *
- * Layout strategy:
- *   large01  — upper-left primary anchor (heaviest bank)
- *   large02  — lower-right primary anchor (offsets the first for full coverage)
- *   medium01 — upper-right infill
- *   medium02 — lower-left infill
- *   wisp01   — central tendril crossing (adds internal density variation)
- *   wisp02   — lower-right trailing edge tendril
+ * In Push 17 these Images are texture only — they are NOT individually cleared
+ * by visibility proximity.  The SVG mask layer (Layer A) handles all clearing.
  */
 const BANK_DEFS: readonly BankDef[] = [
-  { xF: -0.08, yF: -0.08, wF: 0.75, hF: 0.62, key: 'large01',  base: 0.90 },
-  { xF:  0.30, yF:  0.33, wF: 0.75, hF: 0.62, key: 'large02',  base: 0.88 },
-  { xF:  0.37, yF: -0.06, wF: 0.56, hF: 0.50, key: 'medium01', base: 0.82 },
-  { xF: -0.08, yF:  0.44, wF: 0.56, hF: 0.50, key: 'medium02', base: 0.80 },
-  { xF:  0.10, yF:  0.10, wF: 0.45, hF: 0.26, key: 'wisp01',   base: 0.65 },
-  { xF:  0.42, yF:  0.62, wF: 0.45, hF: 0.26, key: 'wisp02',   base: 0.60 },
+  { xF: -0.08, yF: -0.08, wF: 0.76, hF: 0.62, key: 'large01'  },
+  { xF:  0.30, yF:  0.33, wF: 0.76, hF: 0.62, key: 'large02'  },
+  { xF:  0.37, yF: -0.06, wF: 0.56, hF: 0.50, key: 'medium01' },
+  { xF: -0.08, yF:  0.44, wF: 0.56, hF: 0.50, key: 'medium02' },
+  { xF:  0.10, yF:  0.10, wF: 0.45, hF: 0.26, key: 'wisp01'   },
+  { xF:  0.42, yF:  0.62, wF: 0.45, hF: 0.26, key: 'wisp02'   },
 ];
 
-// ── Clearing influence radii ───────────────────────────────────────────────────
+/**
+ * Fixed opacity for fog bank texture Images.
+ *
+ * Banks are cloud-silhouette PNGs: only painted cloud areas carry pigment.
+ * At TEXTURE_ALPHA they read as wisps / atmospheric haze visible at clearing
+ * boundaries and just perceptible in the clear zone.  The primary fog density
+ * is handled entirely by the SVG mask layer.
+ */
+const TEXTURE_ALPHA = 0.25;
+
+// ── Per-shift fog field parameters ───────────────────────────────────────────
 
 /**
- * Clearing-influence radius in multiples of tile size (sz) per visibility state.
+ * SVG fog rect fill colour and base opacity per time-of-day shift.
  *
- * A fog bank whose centre falls within this radius of a tile will have its
- * opacity attenuated — the closer the centre, the greater the attenuation.
+ * These drive the primary fog density.  Choosing a dark, saturated colour
+ * prevents the fog from reading as a simple grey overlay and ties it to the
+ * Ink & Mist palette.
  *
- * Larger radius = fog clears over a wider surrounding area.
- *
- *   current              — player stands in clear air; strongest clearing
- *   visibleNow           — active field of vision ring; strong clearing
- *   exploredButOutOfVision — remembered territory; gentle haze only
+ *   day     — pale overcast blue; lighter alpha (daylight penetrates more)
+ *   evening — deep indigo-purple; heavy alpha (dusk fog presses in)
+ *   night   — near-black navy ink; maximum alpha (fog is almost impenetrable)
  */
-const CLEAR_RADIUS: Record<string, number> = {
-  current:                2.8,
-  visibleNow:             2.2,
-  exploredButOutOfVision: 1.3,
+const FOG_PARAMS: Record<'day' | 'evening' | 'night', { color: string; alpha: number }> = {
+  day:     { color: '#bdd4e8', alpha: 0.82 },
+  evening: { color: '#2a1950', alpha: 0.90 },
+  night:   { color: '#0e1428', alpha: 0.95 },
 };
 
-// ── SVG clearing overlay colours ──────────────────────────────────────────────
+// ── Clearing radius factors ───────────────────────────────────────────────────
 
 /**
- * Colour used by the SVG radial clearing gradients placed at visible tile centres.
+ * Radial clearing radius in multiples of tile size (sz) per visibility state.
  *
- * Each shift uses a soft hue that evokes "air and light breaking through" the
- * dominant fog palette.  These gradients are very low opacity (≤ 0.28 at peak)
- * — atmospheric hints, not hard cutouts.
- */
-const CLEARING_COLOR: Record<'day' | 'evening' | 'night', string> = {
-  day:     'rgba(210,235,255,1)',   // pale morning blue — dawn light in the mist
-  evening: 'rgba(180,145,215,1)',   // muted lavender — lingering dusk glow
-  night:   'rgba(50,110,175,1)',    // cold deep blue — moonlit fog thinning
-};
-
-// ── Clearing computation ───────────────────────────────────────────────────────
-
-/**
- * Clearing source: a single tile contributing fog attenuation in its vicinity.
- */
-type ClearSource = {
-  readonly cx:     number;  // world-space tile centre X
-  readonly cy:     number;  // world-space tile centre Y
-  readonly radius: number;  // clearing influence radius in px
-};
-
-/**
- * Compute how much a fog bank at (bankCx, bankCy) should be cleared, as a
- * fraction in [0, 1].
+ * Adjacent visibleNow tiles at ~0.8 × sz apart have overlapping clearing
+ * radii at CLEAR_R = 1.2 × sz, blending into one organic merged clear zone.
  *
- * Returns the MAXIMUM clearing from any single tile (not additive).
- * Using max prevents overlapping fields of vision from over-clearing a bank
- * that lies between two visible tiles — the result is never darker than needed.
- *
- * Falloff is linear:
- *   dist = 0           → clearing = 1.0 (fully cleared)
- *   dist = radius      → clearing = 0.0 (no influence)
- *   dist > radius      → clearing = 0.0
+ * The CLEAR_R values are deliberately chosen so:
+ *   1. A single isolated visibleNow tile has a clearly perceptible clear area
+ *      that exceeds its hex body (radius > 0.5 × sz).
+ *   2. Adjacent visibleNow tiles merge (CLEAR_R > adjacent-tile spacing / 2).
+ *   3. The feather gradient extends ~0.3 × sz into the first unexplored ring,
+ *      which reads as "fog edges naturally approaching the visible zone."
  */
-function computeClearing(
-  bankCx:  number,
-  bankCy:  number,
-  sources: readonly ClearSource[],
-): number {
-  let max = 0;
-  for (const src of sources) {
-    const dist = Math.hypot(bankCx - src.cx, bankCy - src.cy);
-    if (dist < src.radius) {
-      const f = 1 - dist / src.radius;
-      if (f > max) max = f;
-    }
-  }
-  return max > 1 ? 1 : max;
-}
+const CLEAR_R = {
+  current:                1.4,   // player position: widest clearing
+  visibleNow:             1.2,   // visible ring: strong clearing, merges with neighbours
+  exploredButOutOfVision: 0.85,  // remembered terrain: light mist thinning only
+} as const;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -215,72 +211,68 @@ export interface JourneyFogFieldProps {
   tiles:     readonly HexMapTile[];
   /** World coordinate system for this render (from computeHexWorldCoords). */
   coords:    HexWorldCoords;
-  /** Shift at run creation — selects the right fog bank asset family. */
+  /** Shift frozen at run creation — selects fog bank asset family and palette. */
   timeOfDay: 'day' | 'evening' | 'night';
 }
 
 /**
- * JourneyFogField — continuous atmospheric fog field for the hex chapter map.
+ * JourneyFogField — feathered atmospheric fog around field of vision (Push 17).
  *
- * Rendered as a world-space sibling of HexTile elements inside MapWorld.
- * Fog artwork (raster PNGs) is positioned in world space; the visibility mask
- * is code-driven from tile state; fog is NEVER drawn per HexTile.
+ * Renders two stacked layers inside MapWorld at zIndex 5000:
+ *
+ *   Layer A  SVG gradient mask — primary fog density with organic per-pixel
+ *            clearing.  No hex geometry, no square boundaries.
+ *
+ *   Layer B  Raster bank Images — cloud texture at low opacity, visible at
+ *            feathered clearing boundaries and as atmospheric wisps in the
+ *            clear zone.
  */
 export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldProps) {
   const { worldWidth: W, worldHeight: H, sz } = coords;
-  const assets       = FOG_BANKS[timeOfDay];
-  const clearColor   = CLEARING_COLOR[timeOfDay];
+  const assets  = FOG_BANKS[timeOfDay];
+  const { color: fogColor, alpha: fogAlpha } = FOG_PARAMS[timeOfDay];
 
-  // ── 1. Clearing source set — derived from tile visibility ────────────────
+  // ── Build clearing sources ────────────────────────────────────────────────
   //
-  // Build the clearing-influence source list once per tile-state change.
-  // Only non-unexplored tiles contribute.  The current tile uses the 'current'
-  // radius key regardless of its visibility field (always a strong clear).
-  const clearSources = useMemo<readonly ClearSource[]>(() => {
-    const out: ClearSource[] = [];
+  // Separate visibleNow/current from exploredButOutOfVision so they can
+  // receive different gradient stop profiles:
+  //   visible  → deep black holes (nearly clear at centre)
+  //   explored → dark-grey holes (half-fog "memory mist")
+  //
+  // current tile uses the 'current' key regardless of its visibility field.
+  type ClearCentre = { cx: number; cy: number; r: number };
+
+  const { visibleCentres, exploredCentres } = useMemo(() => {
+    const vis: ClearCentre[]  = [];
+    const exp: ClearCentre[]  = [];
     for (const tile of tiles) {
       if (tile.visibility === 'unexplored') continue;
       const { cx, cy } = coords.axialToWorld(tile.q, tile.r);
-      const key    = tile.current ? 'current' : tile.visibility;
-      const radius = (CLEAR_RADIUS[key] ?? 1.3) * sz;
-      out.push({ cx, cy, radius });
+      if (tile.current || tile.visibility === 'visibleNow') {
+        const factor = tile.current ? CLEAR_R.current : CLEAR_R.visibleNow;
+        vis.push({ cx, cy, r: factor * sz });
+      } else {
+        // exploredButOutOfVision
+        exp.push({ cx, cy, r: CLEAR_R.exploredButOutOfVision * sz });
+      }
     }
-    return out;
+    return { visibleCentres: vis, exploredCentres: exp };
   }, [tiles, coords, sz]);
 
-  // ── 2. Resolved fog bank placements ─────────────────────────────────────
-  //
-  // For each of the 6 bank defs, compute pixel position, size, and final opacity.
-  // The fog bank's centre is used as the reference point for clearing.
-  // Banks that are fully cleared (opacity ≤ 0.02) are dropped from the render
-  // tree entirely — no empty Image nodes.
-  const placements = useMemo(() => {
-    return BANK_DEFS.map(def => {
-      const x       = Math.round(def.xF * W);
-      const y       = Math.round(def.yF * H);
-      const w       = Math.round(def.wF * W);
-      const h       = Math.round(def.hF * H);
-      const bankCx  = x + w / 2;
-      const bankCy  = y + h / 2;
-      const clearing = computeClearing(bankCx, bankCy, clearSources);
-      const opacity  = def.base * (1 - clearing);
-      return { src: assets[def.key], x, y, w, h, opacity };
-    }).filter(p => p.opacity > 0.02);   // skip fully-cleared banks
-  }, [W, H, assets, clearSources]);
-
-  // ── 3. SVG clearing overlay tile centres ────────────────────────────────
-  //
-  // Collect centres for visibleNow + current tiles to place the soft clearing
-  // radial gradients.  ExploredButOutOfVision tiles are deliberately excluded —
-  // they already sit above the fog (zIndex 5050) and adding a bright gradient
-  // behind them would create a visible halo over dark explored territory.
-  const clearingCentres = useMemo(
+  // ── Resolved bank Image placements ───────────────────────────────────────
+  const bankPlacements = useMemo(
     () =>
-      tiles
-        .filter(t => t.visibility === 'visibleNow' || t.current)
-        .map(t => coords.axialToWorld(t.q, t.r)),
-    [tiles, coords],
+      BANK_DEFS.map(def => ({
+        src: assets[def.key],
+        x:   Math.round(def.xF * W),
+        y:   Math.round(def.yF * H),
+        w:   Math.round(def.wF * W),
+        h:   Math.round(def.hF * H),
+      })),
+    [W, H, assets],
   );
+
+  const hasClearZones = visibleCentres.length > 0 || exploredCentres.length > 0;
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -288,22 +280,168 @@ export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldPro
       pointerEvents="none"
       style={[StyleSheet.absoluteFillObject, styles.field]}
     >
-      {/* ── Fog art layer: positioned raster fog banks ───────────────────────
+      {/*
+        ── Layer A: SVG gradient mask — PRIMARY fog density field ─────────────
         *
-        * Six Image components covering the world in overlapping masses.
-        * Each bank's opacity is attenuated in proportion to proximity to visible
-        * tile centres.  No fog cloud shape is ever drawn in code — the art is
-        * exclusively the Push 15 PNG assets.
+        * A single world-sized <Rect> filled with fogColor is masked by the
+        * <Mask> element.  The mask encodes the visibility field as:
         *
-        * contentFit="fill": the transparent PNG is stretched to the computed
-        * pixel dimensions.  The image's own soft feathered edges and irregular
-        * silhouette prevent any rectangular matte artefact.
+        *   white base              → fog opaque everywhere by default
+        *   black radial gradient   → clearing at visible tile centres
+        *   dark-grey radial        → mist at explored-but-out-of-vision centres
         *
-        * cachePolicy="memory-disk": fog banks are large PNGs (1024 × 1024).
-        * Keeping them decoded in memory prevents per-move decode stutter on
-        * native as the player steps through unexplored territory.
+        * Where adjacent black radials overlap, the mask buffer is at full
+        * black → the fog rect is fully transparent there → clean merged
+        * organic clear region.  No hex boundary is ever painted.
+        *
+        * When hasClearZones is false (all tiles unexplored, e.g. fresh run),
+        * the mask body is all white → full fog everywhere.  The <Mask> is
+        * skipped entirely and the <Rect> renders at full fogAlpha.
         */}
-      {placements.map((p, i) => (
+      <Svg
+        width={W}
+        height={H}
+        style={StyleSheet.absoluteFillObject}
+      >
+        {hasClearZones && (
+          <Defs>
+            <Mask
+              id="fog-mask"
+              x={0}
+              y={0}
+              width={W}
+              height={H}
+              maskContentUnits="userSpaceOnUse"
+            >
+              {/* White base: fog visible everywhere unless overridden below */}
+              <Rect x={0} y={0} width={W} height={H} fill="white" />
+
+              {/*
+                ── Clearing holes at visibleNow / current tile centres ──────
+                *
+                * Gradient design (black over white base):
+                *
+                *   0%  → black opacity 1.00  — fully clear: fog absent
+                *  55%  → black opacity 0.88  — still clear (plateau of clear air)
+                *  80%  → black opacity 0.42  — entering feather zone
+                * 100%  → black opacity 0.00  — fog fully resumes at edge
+                *
+                * The plateau (0%→55%) ensures the hex tile body is fully
+                * clear, not just its precise centre point.
+                * The feather (55%→100%) creates a soft gradual transition.
+                *
+                * When two clearing circles overlap, their black contributions
+                * accumulate in the mask buffer → deeper black → clear region
+                * seamlessly widens without any sharp join.
+                */}
+              {visibleCentres.map((c, i) => (
+                <RadialGradient
+                  key={`vh-${i}`}
+                  id={`vh-${i}`}
+                  cx={c.cx}
+                  cy={c.cy}
+                  r={c.r}
+                  fx={c.cx}
+                  fy={c.cy}
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <Stop offset="0%"   stopColor="black" stopOpacity={1.00} />
+                  <Stop offset="55%"  stopColor="black" stopOpacity={0.88} />
+                  <Stop offset="80%"  stopColor="black" stopOpacity={0.42} />
+                  <Stop offset="100%" stopColor="black" stopOpacity={0.00} />
+                </RadialGradient>
+              ))}
+              {visibleCentres.map((c, i) => (
+                <Circle
+                  key={`vc-${i}`}
+                  cx={c.cx}
+                  cy={c.cy}
+                  r={c.r}
+                  fill={`url(#vh-${i})`}
+                />
+              ))}
+
+              {/*
+                ── Memory mist at exploredButOutOfVision tile centres ────────
+                *
+                * Gradient design:
+                *
+                *   0%  → black opacity 0.52  — mist thinned to ~half density
+                * 100%  → black opacity 0.00  — full fog resumes at edge
+                *
+                * Effect on fog rect: opacity ≈ fogAlpha × (1 − 0.52) ≈ 45%.
+                * The tile itself paints above the fog at z 5050 and is fully
+                * visible regardless; the mist creates an atmospheric haze
+                * around the tile edges that distinguishes "remembered" from
+                * "unexplored" territory.
+                */}
+              {exploredCentres.map((c, i) => (
+                <RadialGradient
+                  key={`eh-${i}`}
+                  id={`eh-${i}`}
+                  cx={c.cx}
+                  cy={c.cy}
+                  r={c.r}
+                  fx={c.cx}
+                  fy={c.cy}
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <Stop offset="0%"   stopColor="black" stopOpacity={0.52} />
+                  <Stop offset="100%" stopColor="black" stopOpacity={0.00} />
+                </RadialGradient>
+              ))}
+              {exploredCentres.map((c, i) => (
+                <Circle
+                  key={`ec-${i}`}
+                  cx={c.cx}
+                  cy={c.cy}
+                  r={c.r}
+                  fill={`url(#eh-${i})`}
+                />
+              ))}
+            </Mask>
+          </Defs>
+        )}
+
+        {/*
+          The fog density rectangle.
+          When hasClearZones is true: masked by "fog-mask" → clearing holes.
+          When hasClearZones is false: no mask → uniform full-opacity fog.
+          maskUnits defaults to "objectBoundingBox" for the <Rect>; we pass
+          the mask id as a string so the SVG engine resolves it correctly.
+        */}
+        <Rect
+          x={0}
+          y={0}
+          width={W}
+          height={H}
+          fill={fogColor}
+          opacity={fogAlpha}
+          mask={hasClearZones ? 'url(#fog-mask)' : undefined}
+        />
+      </Svg>
+
+      {/*
+        ── Layer B: Raster fog bank Images — cloud texture ─────────────────────
+        *
+        * Six painted PNG fog banks from Push 15, rendered ON TOP of the SVG
+        * layer at a fixed low opacity (TEXTURE_ALPHA = 0.25).
+        *
+        * Role: cloud-silhouette texture visible at feathered clearing edges.
+        *
+        * These are NOT driven by visibility proximity.  Their opacity is fixed.
+        * In the clear zone, the SVG fog rect is transparent; the bank Images
+        * contribute a faint atmospheric haze (≤ 25% × cloud coverage ≈ 8-10%).
+        * At the feathered boundary, both layers are partially visible and their
+        * overlap reads as soft organic fog texture.
+        *
+        * contentFit="fill" stretches each bank to its computed pixel bounds;
+        * the PNG's own irregular cloud silhouette prevents rectangular edges.
+        *
+        * cachePolicy="memory-disk" keeps decoded frames resident so that
+        * player movement doesn't cause per-step PNG decode stutter on native.
+        */}
+      {bankPlacements.map((p, i) => (
         <Image
           key={i}
           source={p.src}
@@ -313,67 +451,12 @@ export function JourneyFogField({ tiles, coords, timeOfDay }: JourneyFogFieldPro
             top:      p.y,
             width:    p.w,
             height:   p.h,
-            opacity:  p.opacity,
+            opacity:  TEXTURE_ALPHA,
           }}
           contentFit="fill"
           cachePolicy="memory-disk"
         />
       ))}
-
-      {/* ── Clearing overlay: atmospheric radials at visible tile centres ────
-        *
-        * A soft SVG radial gradient is placed at each visibleNow / current
-        * tile centre.  Gradient peak opacity is 0.28 — an atmospheric hint
-        * that suggests fog rolling back, not a hard pixel-exact cutout.
-        *
-        * The hard visibility boundary (tile content hidden vs. shown) is
-        * handled entirely by HexTile z-ordering (exploredButOutOfVision at
-        * z 5050, visibleNow at z 5100+).  This layer is purely presentational.
-        *
-        * Radius = 1.8 × sz: large enough to cover the hex body and one ring
-        * of overlap into the adjacent fog bank.
-        *
-        * Gradient IDs are positional ("cl-0", "cl-1" …).  They are stable
-        * within a single SVG document and are never shared across SVG elements.
-        */}
-      {clearingCentres.length > 0 && (
-        <Svg
-          width={W}
-          height={H}
-          style={StyleSheet.absoluteFillObject}
-        >
-          <Defs>
-            {clearingCentres.map((c, i) => (
-              <RadialGradient
-                key={i}
-                id={`cl-${i}`}
-                cx={c.cx}
-                cy={c.cy}
-                r={sz * 1.8}
-                fx={c.cx}
-                fy={c.cy}
-                gradientUnits="userSpaceOnUse"
-              >
-                {/* Peak at tile centre: fog almost absent */}
-                <Stop offset="0%"   stopColor={clearColor} stopOpacity={0.28} />
-                {/* Mid-ring: gentle thinning influence */}
-                <Stop offset="50%"  stopColor={clearColor} stopOpacity={0.10} />
-                {/* Edge: fully transparent — no hard boundary */}
-                <Stop offset="100%" stopColor={clearColor} stopOpacity={0}    />
-              </RadialGradient>
-            ))}
-          </Defs>
-          {clearingCentres.map((c, i) => (
-            <Circle
-              key={i}
-              cx={c.cx}
-              cy={c.cy}
-              r={sz * 1.8}
-              fill={`url(#cl-${i})`}
-            />
-          ))}
-        </Svg>
-      )}
     </View>
   );
 }
