@@ -142,8 +142,8 @@ for (const ch of [1, 5, 10, 12]) {
 // Chapter 1: authored geometry — seed / attempt / shift have no effect on layout.
 // Other chapters: procedural geometry — different seeds → different coords.
 {
-  const CH1_START = '0,1';
-  const CH1_GATE  = '1,-3';   // updated Push 2: hexagonal battlefield template
+  const CH1_START = '-1,2';   // Push 3: lower-left wing, 4 exploration dirs
+  const CH1_GATE  = '3,0';    // Push 3: far-right terminus of the atrium hall
   const coordsOf  = (r: ReturnType<typeof generateRunData>) =>
     r.topology.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
 
@@ -233,8 +233,8 @@ for (const ch of [1, 5, 10, 12]) {
      '3,-1',  '3,0',
   ].sort().join('|');
 
-  const CH1_START    = '0,1';
-  const CH1_GATE     = '1,-3';   // Push 2: hexagonal battlefield
+  const CH1_START    = '-1,2';   // Push 3: lower-left wing, 4 exploration dirs
+  const CH1_GATE     = '3,0';    // Push 3: far-right terminus of the atrium hall
   const CH1_ENV      = 'atrium-approach';
 
   // Template API.
@@ -279,7 +279,119 @@ for (const ch of [1, 5, 10, 12]) {
     second.tiles.map(t => t.id).sort().join('|') === CH1_SNAPSHOT);
 }
 
-// ── 11. Push 2 acceptance criteria — Chapter 1 hexagonal battlefield ──────────
+// ── 11. Push 3 acceptance criteria — Chapter 1 start and gate placement ────────
+//
+// These tests lock the deliberate placement decisions for Ch1:
+//   Start  (-1,2): lower-left wing, exactly 4 exploration directions
+//   Gate   ( 3,0): far-right atrium-hall terminus, not top cap
+//
+// "Never changes" means: invariant across seed, attempt number, and TimeOfDay.
+{
+  const CH1_START = '-1,2';
+  const CH1_GATE  = '3,0';
+  const AXIAL_DIRS: readonly (readonly [number, number])[] = [
+    [1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1],
+  ];
+
+  const tpl   = getChapterMapTemplate(1);
+  const idSet = new Set(tpl.tiles.map(t => t.id));
+
+  // S1: Start is at the authored coordinate.
+  check('[push3-placement S1] start at (-1,2)',        tpl.startTileId  === CH1_START);
+  check('[push3-placement S1] start role correct',     tpl.tiles.find(t => t.id === CH1_START)?.role === 'start');
+
+  // S2: Start has exactly 4 neighbours (3–4 exploration directions).
+  {
+    const [q, r] = CH1_START.split(',').map(Number);
+    const n = AXIAL_DIRS.filter(([dq,dr]) => idSet.has(`${q+dq},${r+dr}`)).length;
+    check('[push3-placement S2] start has exactly 4 neighbours',
+      n === 4, `actual: ${n}`);
+  }
+
+  // S3: Start is NOT in the top cap row (r ≠ -3).
+  {
+    const [, r] = CH1_START.split(',').map(Number);
+    check('[push3-placement S3] start not in top-cap row (r ≠ -3)', r !== -3);
+  }
+
+  // S4: Start is in the lower sector (r > 0).
+  {
+    const [, r] = CH1_START.split(',').map(Number);
+    check('[push3-placement S4] start in lower sector (r > 0)', r > 0, `r=${r}`);
+  }
+
+  // G1: Gate is at the authored coordinate.
+  check('[push3-placement G1] gate at (3,0)',          tpl.gateTileId  === CH1_GATE);
+  check('[push3-placement G1] gate role correct',      tpl.tiles.find(t => t.id === CH1_GATE)?.role === 'gate');
+
+  // G2: Gate is NOT in the top cap row (r ≠ -3) — deliberate placement, not auto-top.
+  {
+    const [, r] = CH1_GATE.split(',').map(Number);
+    check('[push3-placement G2] gate not in top-cap row (r ≠ -3)', r !== -3);
+  }
+
+  // G3: Gate is in the widest row (r = 0, the atrium-hall row).
+  {
+    const [, r] = CH1_GATE.split(',').map(Number);
+    check('[push3-placement G3] gate in widest row (r = 0)', r === 0, `r=${r}`);
+  }
+
+  // G4: Gate is at the rightmost q in its row (architectural terminus).
+  {
+    const [gq, gr] = CH1_GATE.split(',').map(Number);
+    const rowCells = tpl.tiles.filter(t => t.r === gr).map(t => t.q);
+    const maxQ     = Math.max(...rowCells);
+    check('[push3-placement G4] gate at rightmost q in row r=0',
+      gq === maxQ, `gate q=${gq}, max q in row=${maxQ}`);
+  }
+
+  // INV1: Start coordinate is invariant across all seeds.
+  for (const seed of ['seed-aaa', 'seed-bbb', 'any-seed-xyz', '']) {
+    const run = generateRunData(1, seed, 'day');
+    check(`[push3-placement INV1] seed="${seed}" → start always ${CH1_START}`,
+      run.topology.startTileId === CH1_START);
+  }
+
+  // INV2: Gate coordinate is invariant across all seeds.
+  for (const seed of ['seed-aaa', 'seed-bbb', 'any-seed-xyz', '']) {
+    const run = generateRunData(1, seed, 'day');
+    check(`[push3-placement INV2] seed="${seed}" → gate always ${CH1_GATE}`,
+      run.topology.gateAnchorId === CH1_GATE);
+  }
+
+  // INV3: Start/gate invariant across all TimeOfDay shifts.
+  for (const shift of ['day', 'evening', 'night'] as const) {
+    const run = generateRunData(1, 'any-seed', shift);
+    check(`[push3-placement INV3] shift="${shift}" → start always ${CH1_START}`,
+      run.topology.startTileId === CH1_START);
+    check(`[push3-placement INV3] shift="${shift}" → gate always ${CH1_GATE}`,
+      run.topology.gateAnchorId === CH1_GATE);
+  }
+
+  // BFS1: Gate is reachable from start in exactly 4 hops.
+  {
+    const adj = new Map<string, string[]>();
+    for (const t of tpl.tiles) {
+      adj.set(t.id, AXIAL_DIRS
+        .map(([dq,dr]) => `${t.q+dq},${t.r+dr}`)
+        .filter(k => idSet.has(k)));
+    }
+    const dist  = new Map<string, number>([[CH1_START, 0]]);
+    const queue = [CH1_START];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const d   = dist.get(cur)!;
+      for (const nb of (adj.get(cur) ?? [])) {
+        if (!dist.has(nb)) { dist.set(nb, d + 1); queue.push(nb); }
+      }
+    }
+    const d = dist.get(CH1_GATE) ?? -1;
+    check('[push3-placement BFS1] gate reachable from start', d >= 0);
+    check('[push3-placement BFS1] BFS distance start→gate = 4', d === 4, `actual: ${d}`);
+  }
+}
+
+// ── 12. Push 2 acceptance criteria — Chapter 1 hexagonal battlefield ──────────
 //
 // Validates the specific shape properties of the authored 30-cell tactical field.
 // These are structural guarantees that must hold for the template to be approved.
@@ -319,12 +431,12 @@ for (const ch of [1, 5, 10, 12]) {
   // AC3: Start cell exists and is correctly tagged.
   check('[push2 AC3] start tile exists',          tiles.some(t => t.id === tpl.startTileId));
   check('[push2 AC3] start tile role is start',   tiles.find(t => t.id === tpl.startTileId)?.role === 'start');
-  check('[push2 AC3] start at authored coord',    tpl.startTileId === '0,1');
+  check('[push2 AC3] start at authored coord',    tpl.startTileId === '-1,2');
 
   // AC4: Gate cell exists and is correctly tagged.
   check('[push2 AC4] gate tile exists',           tiles.some(t => t.id === tpl.gateTileId));
   check('[push2 AC4] gate tile role is gate',     tiles.find(t => t.id === tpl.gateTileId)?.role === 'gate');
-  check('[push2 AC4] gate at authored coord',     tpl.gateTileId === '1,-3');
+  check('[push2 AC4] gate at authored coord',     tpl.gateTileId === '3,0');
 
   // AC5: Every terrain cell has at least one neighbour (no orphans).
   //      The hexagonal battlefield requires ≥3 neighbours on every cell.

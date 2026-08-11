@@ -93,14 +93,28 @@ const AUTHORED_CHAPTER_MAPS: Readonly<Record<number, AuthoredRawMap>> = {
    * Shape properties:
    *   • 7 rows, 6-cell maximum width
    *   • Every cell has ≥3 in-set hex neighbours → no dead-ends, no corridors
-   *   • Start (0,1): interior of row r=1, all 6 neighbours present
-   *   • Gate (1,−3): mid-cap of top row, BFS distance 4 from start
    *
-   * ⚠ DO NOT EDIT these coordinates once shipped.
+   * Start / Gate placement (Push 3 — locked):
+   *
+   *   Start  (−1, 2)  lower-left wing of the atrium floor, row r=2.
+   *                   4 neighbours: (0,2) (−1,3) (−1,1) (0,1).
+   *                   Player enters from an off-centre lower position with
+   *                   3–4 immediate exploration directions.
+   *
+   *   Gate   ( 3, 0)  rightmost cell of the grand-hall row (r=0, widest).
+   *                   3 neighbours: (2,0) (3,−1) (2,1).
+   *                   The Chapter Boss Gate stands at the far-right terminus
+   *                   of the atrium colonnade — visible from the hall floor,
+   *                   sealed until 3/3 keys are claimed.
+   *                   BFS distance from start: 4 hops.
+   *                   Row r=0 is the architectural heart of the map —
+   *                   gate is NOT auto-placed at the top cap (r=−3).
+   *
+   * ⚠ DO NOT EDIT start / gate / tile coordinates once shipped.
    */
   1: {
-    start: '0,1',
-    gate:  '1,-3',
+    start: '-1,2',
+    gate:  '3,0',
     tiles: [
       // Row r=-3 (top cap, 3 cells)
       [ 0,-3],[ 1,-3],[ 2,-3],
@@ -108,11 +122,11 @@ const AUTHORED_CHAPTER_MAPS: Readonly<Record<number, AuthoredRawMap>> = {
       [-1,-2],[ 0,-2],[ 1,-2],[ 2,-2],
       // Row r=-1 (5 cells)
       [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],
-      // Row r= 0 (widest, 6 cells)
+      // Row r= 0 (widest, 6 cells)  Gate → (3,0)
       [-2, 0],[-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],
-      // Row r= 1 (5 cells)  Start here → (0,1)
+      // Row r= 1 (5 cells)
       [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],
-      // Row r= 2 (4 cells)
+      // Row r= 2 (4 cells)  Start → (-1,2)
       [-1, 2],[ 0, 2],[ 1, 2],[ 2, 2],
       // Row r= 3 (bottom cap, 3 cells)
       [-1, 3],[ 0, 3],[ 1, 3],
