@@ -6,7 +6,7 @@
  * Run: npx sucrase-node tests/journey_map_config.test.ts
  *
  * Covers:
- *  - getChapterTileCount at every chapter boundary and band edge
+ *  - getChapterTerrainCellCount at every chapter boundary and band edge
  *  - getEncounterRatesBp totals, individual rates, no negatives
  *  - getTreasureCap / getMerchantCap at every 10-chapter boundary
  *  - getAreaBossCap constant
@@ -18,7 +18,7 @@
 
 import {
   TOTAL_BP,
-  getChapterTileCount,
+  getChapterTerrainCellCount,
   getEncounterRatesBp,
   getTreasureCap,
   getMerchantCap,
@@ -50,31 +50,38 @@ function eq(a: number, b: number, label: string): void {
   check(label, a === b, `got ${a}, expected ${b}`);
 }
 
-// ── 1. getChapterTileCount ────────────────────────────────────────────────────
+// ── 1. getChapterTerrainCellCount ─────────────────────────────────────────────
+//
+// Canonical total physical terrain cell count per chapter band.
+// Count includes Start cell + Gate cell + all traversable cells.
+// Do NOT duplicate these numbers in components, templates, or run creation.
 
-console.log('\n── getChapterTileCount ──');
+console.log('\n── getChapterTerrainCellCount ──');
 
-eq(getChapterTileCount(1),   30, 'ch 1  → 30');
-eq(getChapterTileCount(3),   30, 'ch 3  → 30');
-eq(getChapterTileCount(5),   30, 'ch 5  → 30');
-eq(getChapterTileCount(6),   35, 'ch 6  → 35');
-eq(getChapterTileCount(10),  35, 'ch 10 → 35');
-eq(getChapterTileCount(11),  40, 'ch 11 → 40');
-eq(getChapterTileCount(20),  40, 'ch 20 → 40');
-eq(getChapterTileCount(21),  45, 'ch 21 → 45');
-eq(getChapterTileCount(30),  45, 'ch 30 → 45');
-eq(getChapterTileCount(31),  50, 'ch 31 → 50');
-eq(getChapterTileCount(40),  50, 'ch 40 → 50');
-eq(getChapterTileCount(41),  55, 'ch 41 → 55');
-eq(getChapterTileCount(50),  55, 'ch 50 → 55');
-eq(getChapterTileCount(51),  60, 'ch 51 → 60');
-eq(getChapterTileCount(60),  60, 'ch 60 → 60');
-eq(getChapterTileCount(100), 80, 'ch 100 → 80');
+// Required spec cases
+eq(getChapterTerrainCellCount(1),   30, 'ch 1  → 30');
+eq(getChapterTerrainCellCount(5),   30, 'ch 5  → 30');
+eq(getChapterTerrainCellCount(6),   35, 'ch 6  → 35');
+eq(getChapterTerrainCellCount(10),  35, 'ch 10 → 35');
+eq(getChapterTerrainCellCount(11),  40, 'ch 11 → 40');
+eq(getChapterTerrainCellCount(20),  40, 'ch 20 → 40');
+eq(getChapterTerrainCellCount(21),  45, 'ch 21 → 45');
+eq(getChapterTerrainCellCount(31),  50, 'ch 31 → 50');
+eq(getChapterTerrainCellCount(41),  55, 'ch 41 → 55');
+eq(getChapterTerrainCellCount(51),  60, 'ch 51 → 60');
+
+// Additional band-edge coverage
+eq(getChapterTerrainCellCount(3),   30, 'ch 3  → 30');
+eq(getChapterTerrainCellCount(30),  45, 'ch 30 → 45');
+eq(getChapterTerrainCellCount(40),  50, 'ch 40 → 50');
+eq(getChapterTerrainCellCount(50),  55, 'ch 50 → 55');
+eq(getChapterTerrainCellCount(60),  60, 'ch 60 → 60');
+eq(getChapterTerrainCellCount(100), 80, 'ch 100 → 80');
 
 // +5 per band boundary (ch 11, 21, 31 … 91)
 for (let base = 11; base <= 91; base += 10) {
-  const atBand  = getChapterTileCount(base);
-  const preBand = getChapterTileCount(base - 1);
+  const atBand  = getChapterTerrainCellCount(base);
+  const preBand = getChapterTerrainCellCount(base - 1);
   check(
     `ch${base} is 5 more than ch${base - 1}`,
     atBand === preBand + 5,

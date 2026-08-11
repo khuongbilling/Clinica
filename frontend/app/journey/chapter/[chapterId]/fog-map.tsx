@@ -75,7 +75,7 @@ import { ChapterCompletion }               from '@/src/features/journey/ui/Chapt
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getMapSprite }                    from '@/src/game/illustratedAssets';
 import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
-import { getChapterTileCount }                        from '@/src/game/journeyMap/config';
+import { getChapterTerrainCellCount }                  from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
@@ -597,7 +597,7 @@ export default function ChapterFogMapShell() {
   // the assertion fires and shows a red box / console error in dev tools.
   useEffect(() => {
     if (!__DEV__ || !run) return;
-    const expected = getChapterTileCount(chNum);
+    const expected = getChapterTerrainCellCount(chNum);
     if (run.tiles.length !== expected) {
       const msg =
         `[fog-map] TERRAIN ASSERTION FAIL — ` +
@@ -1504,7 +1504,7 @@ export default function ChapterFogMapShell() {
           chNum={chNum}
           timeOfDay={mapShift}
           run={run}
-          expectedTerrainCellCount={getChapterTileCount(chNum)}
+          expectedTerrainCellCount={getChapterTerrainCellCount(chNum)}
           templateTerrainCellCount={templateTerrainCellCount}
           renderedTerrainCellCount={mapTiles.length}
           viewportWidth={mapSize.w}

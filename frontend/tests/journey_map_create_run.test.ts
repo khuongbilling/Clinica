@@ -338,7 +338,7 @@ console.log('\n── Edge: ch1 attempt 1 ──');
   const run    = makeRun({ chapterId: 1, attemptNumber: 1 });
   const errors = validateRun(run);
   check('ch1/attempt1 validateRun passes', errors.length === 0, errors.join(' | '));
-  // getChapterTileCount(1) = 30 total (gate included).
+  // getChapterTerrainCellCount(1) = 30 total (gate included).
   // tileCount = 29 (30 playable excl. gate); tiles.length = 30.
   check('ch1/attempt1 has 29 playable tiles (30 total − 1 gate)', run.tileCount === 29,
     `tileCount=${run.tileCount}`);

@@ -16,7 +16,7 @@
  *  8. Gate non-adjacency — gate is not a direct neighbour of start
  *  9. Determinism — same seed + chapter always produces identical output
  * 10. Seed variation — different seeds produce meaningfully different maps
- * 11. Chapter boundary tile counts — matches getChapterTileCount exactly
+ * 11. Chapter boundary tile counts — matches getChapterTerrainCellCount exactly
  * 12. graphDistances covers the whole map — size === tile count
  * 13. No throws for supported chapter range
  * 14. Start tile is in the lower portion — r ≥ median r of all tiles
@@ -30,7 +30,7 @@ import {
   type AxialCoord,
 } from '../src/game/journeyMap/topology';
 
-import { getChapterTileCount } from '../src/game/journeyMap/config';
+import { getChapterTerrainCellCount } from '../src/game/journeyMap/config';
 
 // ── Tiny test harness (mirrors journey_map_config.test.ts) ────────────────────
 
@@ -89,7 +89,7 @@ const BOUNDARY_CASES: Array<[number, number]> = [
 ];
 
 for (const [ch, expected] of BOUNDARY_CASES) {
-  eq(getChapterTileCount(ch), expected, `ch ${ch} → ${expected} tiles`);
+  eq(getChapterTerrainCellCount(ch), expected, `ch ${ch} → ${expected} tiles`);
 }
 
 // ── 2–15. Full topology tests ─────────────────────────────────────────────────
@@ -104,7 +104,7 @@ function runStructuralTests(
   strict = true,
 ): boolean {
   const tileKeys = new Set(topo.tiles.map(tileKey));
-  const target   = getChapterTileCount(topo.chapter);
+  const target   = getChapterTerrainCellCount(topo.chapter);
 
   // ── 2. Exact tile count ────────────────────────────────────────────────
   const countOk = topo.tiles.length === target;
@@ -304,7 +304,7 @@ console.log('\n── No-throw across chapter range ──');
     } catch {
       threw = true;
     }
-    const expected = getChapterTileCount(chapter);
+    const expected = getChapterTerrainCellCount(chapter);
     check(
       `ch ${chapter} generates without throw, tile count = ${expected}`,
       !threw && count === expected,

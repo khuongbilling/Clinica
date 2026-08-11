@@ -36,7 +36,7 @@
  * reproducible from the same seed + retry index.
  */
 
-import { getChapterTileCount } from './config';
+import { getChapterTerrainCellCount } from './config';
 import { mulberry32, fnv1a32 } from './prng';
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -312,7 +312,7 @@ const MAX_RETRIES = 60;
  * Generate a deterministic, connected hex-map topology.
  *
  * Guaranteed properties:
- *  • `tiles.length === getChapterTileCount(chapter)`
+ *  • `tiles.length === getChapterTerrainCellCount(chapter)`
  *  • All tiles form one connected component (verified by BFS).
  *  • No duplicate coordinates.
  *  • `startTileId` and `gateAnchorId` are valid keys present in `tiles`.
@@ -326,7 +326,7 @@ export function generateHexTopology({
   chapter,
   seed,
 }: GenerateTopologyOptions): HexTopology {
-  const targetCount = getChapterTileCount(chapter);
+  const targetCount = getChapterTerrainCellCount(chapter);
   const baseSeed    = toNumericSeed(chapter, seed);
   // Width budget: tighter than a square root of N so the map grows tall.
   // √(N × 0.75) gives: 30→5, 35→5, 40→6, 50→7, 55→7.

@@ -13,7 +13,7 @@
 
 import { getChapterMapTemplate, getChapterHexTopology } from '../src/game/journeyMap/chapterMapTemplates';
 import { generateRunData }                               from '../src/game/journeyMap/journeyRunLifecycle';
-import { getChapterTileCount }                           from '../src/game/journeyMap/config';
+import { getChapterTerrainCellCount }                    from '../src/game/journeyMap/config';
 
 let passed = 0, failed = 0;
 function check(name: string, ok: boolean, detail?: string) {
@@ -28,7 +28,7 @@ function tileKeySet(tiles: { q: number; r: number }[]): string {
 // ── 1. ChapterMapTemplate shape and invariants (authored chapters 1–10) ──────
 for (let ch = 1; ch <= 10; ch++) {
   const t = getChapterMapTemplate(ch);
-  const expected = getChapterTileCount(ch);
+  const expected = getChapterTerrainCellCount(ch);
 
   check(`[ch${ch}] chapterId === string(chapter)`, t.chapterId === String(ch));
   check(`[ch${ch}] tile count === ${expected}`,    t.tiles.length === expected);
@@ -69,7 +69,7 @@ const BAND_CASES: [number, number][] = [
   [31, 50], [40, 50],
 ];
 for (const [ch, expected] of BAND_CASES) {
-  check(`[ch${ch}] canonical tile count ${expected}`, getChapterTileCount(ch) === expected);
+  check(`[ch${ch}] canonical tile count ${expected}`, getChapterTerrainCellCount(ch) === expected);
 }
 
 // ── 3. Geometry fixed across seeds / shifts (authored chapters only) ──────────
@@ -131,7 +131,7 @@ for (const ch of [1, 5, 10, 12]) {
 // ── 8. Fallback path for unauth'd chapters (ch11+) ───────────────────────────
 {
   const t  = getChapterMapTemplate(12);
-  const expected = getChapterTileCount(12);
+  const expected = getChapterTerrainCellCount(12);
   check('[ch12] fallback tile count correct', t.tiles.length === expected);
   check('[ch12] fallback has start+gate', t.tiles.some(x => x.role === 'start') && t.tiles.some(x => x.role === 'gate'));
   check('[ch12] fallback chapterId correct', t.chapterId === '12');

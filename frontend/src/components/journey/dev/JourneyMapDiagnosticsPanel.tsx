@@ -30,7 +30,7 @@ export interface JourneyMapDiagnosticsProps {
   chNum:                    number;
   timeOfDay:                string | undefined;
   run:                      JourneyRun | null;
-  /** From getChapterTileCount(chNum) */
+  /** From getChapterTerrainCellCount(chNum) */
   expectedTerrainCellCount: number;
   /** From getChapterMapTemplate(chNum).tiles.length — may be null if template throws */
   templateTerrainCellCount: number | null;

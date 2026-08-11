@@ -22,12 +22,42 @@ import type { BasisPoints, EncounterType, ChestTier } from './types';
 
 const BP = 10_000;
 
-export function getChapterTileCount(chapter: number): number {
-  if (chapter <= 5) return 30;
+/**
+ * Canonical total physical terrain cell count for a chapter.
+ *
+ * This is the SINGLE SOURCE OF TRUTH for terrain sizing.  All systems that
+ * need a cell count — template validation, run creation, progress UI, topology
+ * generation, diagnostics — MUST call this function.  Never duplicate these
+ * numbers in component code, map templates, or JourneyRun creation logic.
+ *
+ * The count includes ALL physical cells on the authored terrain field:
+ *   • 1 Start cell
+ *   • 1 Chapter Boss Gate anchor cell
+ *   • (N − 2) traversable encounter-eligible cells
+ *
+ * So for Chapter 1: total = 30, encounterEligible = 28.
+ *
+ * Band table:
+ *   Ch  1– 5 → 30
+ *   Ch  6–10 → 35
+ *   Ch 11–20 → 40
+ *   Ch 21–30 → 45
+ *   Ch 31–40 → 50
+ *   Ch 41–50 → 55
+ *   Ch 51–60 → 60  … +5 per ten-chapter band thereafter
+ *
+ * Formula for ch ≥ 11: 40 + 5 × floor((chapter − 11) / 10)
+ */
+export function getChapterTerrainCellCount(chapter: number): number {
+  if (chapter <= 5)  return 30;
   if (chapter <= 10) return 35;
 
   return 40 + 5 * Math.floor((chapter - 11) / 10);
 }
+
+/** @deprecated Renamed to getChapterTerrainCellCount. Remove usages; this
+ *  alias will be deleted once all call-sites are migrated. */
+export const getChapterTileCount = getChapterTerrainCellCount;
 
 export function getEncounterRatesBp(chapter: number) {
   const fiveChapterSteps = Math.floor(chapter / 5);

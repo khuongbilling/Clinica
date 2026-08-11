@@ -33,7 +33,7 @@
  */
 
 import { generateHexTopology, bfsDistances } from './topology';
-import { getChapterTileCount }               from './config';
+import { getChapterTerrainCellCount }         from './config';
 import type { AxialCoord, HexTopology }      from './topology';
 import type {
   ChapterMapTemplate,
@@ -220,7 +220,7 @@ function validateTemplate(
   startTileId: string,
   gateTileId:  string,
 ): void {
-  const expectedCount = getChapterTileCount(chapter);
+  const expectedCount = getChapterTerrainCellCount(chapter);
 
   // 1. Tile count.
   if (tiles.length !== expectedCount) {
