@@ -353,9 +353,24 @@ const CHR_SHADOW_RX    = CHR_GLOW_RX + 0.07;     // wider than glow (0.43 × sz)
 const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node shadow
 
 // ── Raster assets ─────────────────────────────────────────────────────────────
-// Push 4: fog is a world-space SVG layer; terrainCurrent (jade glow) still used.
-// Push 7: MAP_NODE (world-object PNGs) replaces ENCOUNTER_ICON on the map surface.
-//         ENCOUNTER_ICON is retained for legend panels and MerchantModal UI.
+// Push 4:  fog is a world-space SVG layer; terrainCurrent (jade glow) still used.
+// Push 7:  MAP_NODE (world-object PNGs) replaces ENCOUNTER_ICON on the map surface.
+//          ENCOUNTER_ICON is retained for legend panels and MerchantModal UI.
+// Push 10: 2.5D hex terrain base tile.  One asset for ALL states — state
+//          indication is handled by SVG overlays above (Layers 1a/2a/2b).
+//          The same stone surface appears under normal, reachable, current,
+//          and explored tiles; fog hides unexplored ones entirely.
+//
+//          Asset: hex-terrain-normal.png
+//            • 2.5D three-quarter top-down painterly stone hex
+//            • Jade-teal cracked stone surface with gold vein highlights
+//            • Beveled bottom-left / bottom face for 2.5D depth illusion
+//            • TRUE ALPHA transparency outside the hex silhouette
+//            • No black/white/gray rectangular canvas
+//            • Generated at high resolution, background-removed
+
+/** Push 10: 2.5D painterly stone hex — base terrain for every tile state. */
+const TERRAIN_NORMAL = require('@/assets/ui/journey/tiles/hex-terrain-normal.png') as number;
 
 // Player token rendered on top of the current tile (Push 6 fallback).
 const PLAYER_TOKEN = require('@/assets/ui/journey/map/player-map-token.webp') as number;
@@ -623,7 +638,15 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
 
   return (
     <Pressable
-      style={[s.tile, { left: pos.left, top: pos.top, width: sz, height: sz, zIndex: tileZ }]}
+      // Push 10: style is a function so we can read pressed state for the
+      // "selected" feedback treatment.  opacity drop makes the whole tile
+      // (including transparent hex corners) dimmer — the beveled stone surface
+      // reads as "touched" without needing a separate selected raster asset.
+      style={({ pressed }) => [
+        s.tile,
+        { left: pos.left, top: pos.top, width: sz, height: sz, zIndex: tileZ },
+        pressed && !isHidden && s.terrainPressed,
+      ]}
       testID={tile.id}
       onPress={() => onPress(tile)}
       disabled={isHidden}
@@ -637,6 +660,21 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         'data-encounter':  isRevealed ? tile.encounter : 'unknown',
       })}
     >
+      {/* ── Layer 0: 2.5D hex terrain base (Push 10) ─────────────────────────
+        * Painterly stone surface with jade-teal cracked texture, beveled bottom
+        * face for 2.5D depth, and TRUE ALPHA transparency outside the hex silhouette.
+        * Rendered on every tile (unexplored tiles are hidden under the fog layer above).
+        * contentFit="fill" stretches the 1:1 PNG to exactly sz×sz so the
+        * hex silhouette aligns precisely with the tile's Pressable bounding box.
+        * State rims / glows are SVG layers above this (Layers 1a / 2a / 2b) so
+        * colours stay shift-responsive (day / evening / night fogTheme palette). */}
+      <Image
+        source={TERRAIN_NORMAL}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="fill"
+        recyclingKey={`terrain-${tile.id}`}
+      />
+
       {/* ── Layer 1a: current tile — jade glow image + bright SVG border ring ─ */}
       {/* Jade glow image provides the "magical ground illumination" beneath     */}
       {/* the player.  The SVG polygon ring on top sharpens the hex edge so it  */}
@@ -1778,6 +1816,10 @@ const s = StyleSheet.create({
   // still governed by tileZ (set on the Pressable itself), so the correct
   // 2.5D "lower tiles in front" ordering is preserved.
   tile:    { position: 'absolute', overflow: 'visible', backgroundColor: 'transparent' },
+  // Push 10: pressed / selected feedback — applied to the whole Pressable so
+  // the beveled stone surface dims uniformly.  Brief opacity drop (1 → 0.72)
+  // reads as a tactile "tap" confirmation without needing a separate raster asset.
+  terrainPressed: { opacity: 0.72 },
   overlay: { position: 'absolute', top: 0, left: 0 },
   marker:  { position: 'absolute' },
   recenterBtn: {
