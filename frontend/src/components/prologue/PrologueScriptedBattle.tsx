@@ -34,7 +34,7 @@ const ART = {
   theProdigy:        require("../../../assets/images/prodigy_vn_extended.png"),
   nightingale:       require("../../../assets/images/nightingale_vn_bust.png"),
   fleming:           require("../../../assets/images/fleming_vn_bust.png"),
-  masterBai:         require("../../../assets/images/master_bai_vn.png"),
+  masterBai:         require("../../../assets/images/master_bai_vn_bust.png"),
   bossPortrait:      require("../../../assets/images/silent_infarction_nobg.png"),
   prodigySprite:     require("../../../assets/images/prodigy_battle_sprite.png"),
   nightingaleSprite: require("../../../assets/images/nightingale_battle_sprite.png"),
