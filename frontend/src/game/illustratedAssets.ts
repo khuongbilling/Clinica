@@ -138,8 +138,10 @@ export function getSchoolBanner(deptIdOrName: string): number | undefined {
 // ── Map Sprite Tokens ─────────────────────────────────────────────────────────
 
 export const MAP_SPRITE: Record<string, number> = {
+  /** Generic explorer — teal-jade longcoat, black hair, no class (Push 19 default) */
+  explorer:    require("../../assets/map-sprites/map_sprite_explorer.png"),
   /** Armored healer — teal + gold shield + healing staff */
-  guardian:   require("../../assets/map-sprites/map_sprite_guardian.png"),
+  guardian:    require("../../assets/map-sprites/map_sprite_guardian.png"),
   /** Cloaked oracle — pale blue + silver, glowing scroll */
   seer:        require("../../assets/map-sprites/map_sprite_seer.png"),
   /** Nurse healer — jade-green robes, warm lantern */

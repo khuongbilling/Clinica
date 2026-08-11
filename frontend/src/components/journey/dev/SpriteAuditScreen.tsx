@@ -36,14 +36,24 @@ interface AuditEntry {
   note?:  string;
 }
 
-// Player token — medallion shown when no class is selected
+// Push 19: explorer sprite — default chibi shown when player has no class yet
 const PLAYER_TOKEN: AuditEntry[] = [
   {
-    key:    'player-token',
-    label:  'Player Token (no-class fallback)',
-    src:    require('@/assets/ui/journey/map/player-map-token.webp') as number,
+    key:    'sprite-explorer',
+    label:  'Explorer Sprite (no-class default)',
+    src:    require('@/assets/map-sprites/map_sprite_explorer.png') as number,
     status: 'pass',
-    note:   'Jade medallion. Rendered in Layer 4b when player.class_tree_id is null.',
+    note:   'Donghua chibi: teal-jade longcoat, black hair, baked contact shadow at feet. '
+          + 'Rendered in Layer 4b via MAP_SPRITE_EXPLORER when player.class_tree_id is null. '
+          + 'Replaces jade medallion token (Push 19). Jade glow (Layer 4a) fires for this sprite.',
+  },
+  {
+    key:    'player-token',
+    label:  'Player Token — jade medallion (LEGACY)',
+    src:    require('@/assets/ui/journey/map/player-map-token.webp') as number,
+    status: 'legacy',
+    note:   'Replaced in Layer 4b by the Explorer Sprite (Push 19). '
+          + 'Still bundled; remove once the new sprite is confirmed in production.',
   },
 ];
 

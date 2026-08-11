@@ -411,8 +411,16 @@ const MEMORY_NODE_ALPHA    = 0.82;
  */
 const TERRAIN_SCALE = 1.15;
 
-// Player token rendered on top of the current tile (Push 6 fallback).
+// Push 6 fallback — jade medallion token.  Still referenced below as the
+// legacy medallion; replaced in Layer 4a/4b by MAP_SPRITE_EXPLORER (Push 19).
 const PLAYER_TOKEN = require('@/assets/ui/journey/map/player-map-token.webp') as number;
+
+// Push 19: generic exploration sprite used when the player has no class yet.
+// Replaces the jade medallion token so the current tile always shows a
+// painterly donghua chibi character rather than a UI ornament.
+// Art spec: 2.5–3-head-tall chibi, teal-jade longcoat, black hair, soft
+// cel-painted rendering, transparent bg, painted contact shadow at feet.
+const MAP_SPRITE_EXPLORER = require('@/assets/map-sprites/map_sprite_explorer.png') as number;
 
 /**
  * Circular-medallion UI icons — LEGEND PANELS / MODAL HEADERS ONLY (not map).
@@ -902,13 +910,16 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         );
       })()}
 
-      {/* ── Layer 4a: jade ambient ground pool — sprite variant only ─────── */}
-      {/* Rendered BELOW the character sprite (above the jade glow background) */}
-      {/* so the character appears to stand in a pool of magical teal light.   */}
-      {/* The sprites carry their own built-in gray contact shadow in the art;  */}
+      {/* ── Layer 4a: jade ambient ground pool — all current-tile sprites ───── */}
+      {/* Rendered BELOW the character sprite (painters order) so the character */}
+      {/* appears to stand in a pool of magical teal light.                     */}
+      {/* The sprites carry their own painted contact shadow in the art;         */}
       {/* this layer adds the ambient "inhabiting-the-world" magical presence.  */}
-      {/* Only shown when an explorationCharacter sprite is active (not token). */}
-      {tile.current && explorationCharacter != null && (
+      {/*                                                                       */}
+      {/* Push 19: condition broadened — jade glow now fires for both the class  */}
+      {/* sprite (explorationCharacter) AND the default chibi explorer fallback  */}
+      {/* (MAP_SPRITE_EXPLORER).  The old jade medallion path is retired here.   */}
+      {tile.current && (
         <View style={[s.overlay, { pointerEvents: 'none' }]}>
           <Svg width={sz} height={sz}>
             <Defs>
@@ -947,33 +958,27 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         </View>
       )}
 
-      {/* ── Layer 4b: player sprite / token — current tile only ───────────── */}
+      {/* ── Layer 4b: player sprite — current tile only ───────────────────── */}
       {/* Push 6: sprite is sized at CHR_H_RATIO × sz so the character stands  */}
       {/* taller than the tile (2.5D camera angle).  The sprite's built-in     */}
-      {/* shadow lands at ~84 % down the tile — the visual "floor".            */}
-      {/* Fallback: jade medallion token when player has no class_tree_id.     */}
+      {/* painted shadow lands at ~84 % down the tile — the visual "floor".    */}
+      {/*                                                                       */}
+      {/* Push 19: the jade medallion token fallback is retired.  When no       */}
+      {/* class_tree_id is set, MAP_SPRITE_EXPLORER (donghua chibi, teal-jade   */}
+      {/* longcoat, black hair) is shown instead.  Both class sprites and the   */}
+      {/* explorer default use the same CHR_* sizing so they sit identically.  */}
       {tile.current && (() => {
-        if (explorationCharacter != null) {
-          const charW = Math.round(sz * CHR_W_RATIO);
-          const charH = Math.round(sz * CHR_H_RATIO);
-          const charX = Math.round((sz - charW) / 2);
-          const charY = -Math.round(sz * CHR_Y_SHIFT);
-          return (
-            <Image
-              source={explorationCharacter}
-              style={[s.marker, { left: charX, top: charY, width: charW, height: charH }]}
-              contentFit="contain"
-              recyclingKey={`chr-${tile.id}`}
-            />
-          );
-        }
-        // No class yet — preserve the jade medallion token unchanged.
+        const activeSprite = explorationCharacter ?? MAP_SPRITE_EXPLORER;
+        const charW = Math.round(sz * CHR_W_RATIO);
+        const charH = Math.round(sz * CHR_H_RATIO);
+        const charX = Math.round((sz - charW) / 2);
+        const charY = -Math.round(sz * CHR_Y_SHIFT);
         return (
           <Image
-            source={PLAYER_TOKEN}
-            style={[s.marker, { left: tokenX, top: tokenY, width: tokenSz, height: tokenSz }]}
+            source={activeSprite}
+            style={[s.marker, { left: charX, top: charY, width: charW, height: charH }]}
             contentFit="contain"
-            recyclingKey={`tok-${tile.id}`}
+            recyclingKey={`chr-${tile.id}`}
           />
         );
       })()}
