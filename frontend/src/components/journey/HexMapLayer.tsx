@@ -179,6 +179,7 @@ import {
   computeHexWorldCoords,
   type HexWorldCoords,
 } from './hexWorldCoords';
+import { JourneyFogField } from './JourneyFogField';
 
 // ── Hex layout constants — imported from hexWorldCoords.ts (Push 6) ──────────
 // Q_STEP, R_STEP, Q_VOFF, MIN_TILE_SZ, MAX_TILE_SZ are re-exported from the
@@ -1461,16 +1462,27 @@ export function HexMapLayer({
           />
         ))}
 
-        {/* ── Push 13: legacy block-based fog suspended ────────────────────
-         * JourneyFogLayer now returns null — the rectangular fillRect base
-         * (web) and SVG blob planes (native) that caused white/square fog
-         * artifacts are gone.  State-ring SVGs in each HexTile are untouched.
-         * Push 14 will introduce a non-rectangular replacement.
+        {/* ── Push 16: JourneyFogField — continuous atmospheric fog overlay ─
+         *
+         * Replaces the null-stubbed JourneyFogLayer (Push 13) with the Push 15
+         * raster fog bank assets, composed as a world-space field.
+         *
+         * The field renders at zIndex 5000:
+         *   above  unexplored tile Pressables (z 1–3000)
+         *   below  exploredButOutOfVision tiles (z 5050+)
+         *   below  visibleNow / current tiles (z 5100+ / 9999)
+         *
+         * Fog bank opacity is attenuated near visible tile centres (code-driven
+         * clearing influence).  An SVG overlay adds a very-low-opacity radial
+         * clearing hint at each visibleNow / current centre.
+         *
+         * Falls back to 'night' palette when timeOfDay is not yet resolved
+         * (dev / test render paths without a shift).
          */}
-        <JourneyFogLayer
+        <JourneyFogField
           tiles={tiles}
           coords={coords}
-          fogTheme={fogTheme}
+          timeOfDay={timeOfDay ?? 'night'}
         />
 
         {/* ── Gate art overlay ──────────────────────────────────────────────
