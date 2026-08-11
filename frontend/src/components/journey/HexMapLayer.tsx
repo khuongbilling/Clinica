@@ -35,6 +35,20 @@
  * • visibleNow             → SVG jade edge glow (transparent center); painting shows through
  * • current                → SVG jade ring; painting shows through the center
  *
+ * PUSH 8 (map sprite) — Player scale + grounding polish
+ * ──────────────────────────────────────────────────────
+ * • CHR_W_RATIO 1.00 → 1.15: sprite occupies 1.15 hex widths (target 1.0–1.25).
+ * • CHR_H_RATIO 1.32 → 1.15: square bounding box matches the 1024×1024 square
+ *   asset so contentFit="contain" fills exactly — no letterbox vertical offset.
+ * • CHR_Y_SHIFT 0.36 → 0.38: feet/boots land at ~0.655 × sz (lower-centre of
+ *   tile).  Character head rises ~32 % of sz above the tile top.
+ * • CHR_GLOW_CY 0.83 → 0.65: jade ground pool tracks the new feet position.
+ * • CHR_GLOW_RX 0.33 → 0.36, CHR_SHADOW_RX + 0.07: wider footprint to match
+ *   the 1.15× sprite scale; shadow remains clearly under the character.
+ * • CHR_SHADOW_RY 0.072 → 0.075: slightly stronger contact shadow presence.
+ * • Current-tile hex ring (Layer 1a) renders below the sprite and remains
+ *   visible in the upper half of the tile above the character's body.
+ *
  * PUSH 4 (fog) — Seamless atmospheric fog (no per-tile fog blocks)
  * ────────────────────────────────────────────────────────────────
  * • TILE_BASE.hidden and per-tile fog textures removed entirely.
@@ -282,27 +296,37 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
   },
 };
 
-// ── Push 6: 2.5D character sprite sizing ─────────────────────────────────────
+// ── Push 8: 2.5D character sprite sizing ─────────────────────────────────────
 //
-// Sprites in assets/map-sprites/ are square PNGs with:
-//   • Transparent background
-//   • Built-in gray contact shadow ellipse at ~91% of image height
-//   • Character body occupying the full image height
+// Sprites in assets/map-sprites/ are 1024 × 1024 square PNGs (transparent bg).
+// The character body is centred horizontally; feet/boots land at ~90 % of the
+// image height.  There is no baked-in contact shadow — Layer 4a supplies it.
 //
-// Sizing goal: the sprite's built-in shadow should land at ~84% down the tile
-// (visual floor of the 2.5D hex), with the body rising 36% above the tile top.
+// Container is a SQUARE bounding box (CHR_W_RATIO = CHR_H_RATIO):
+//   contentFit="contain" fills the square exactly — no letterbox centering offset.
+//   charW = charH = CHR_W_RATIO × sz  (1.15 hex widths)
+//   charX = (sz − charW) / 2 = −0.075 × sz  (extends 7.5 % beyond tile edges)
+//   charY = −CHR_Y_SHIFT × sz         (shifts sprite upward from tile top)
 //
-// Math (shadow at 91% of charH):
-//   CHR_Y_SHIFT + CHR_H_RATIO × sz × 0.91 ≈ 0.84 × sz
-//   → CHR_Y_SHIFT = (0.84 − 1.32 × 0.91) × sz = (0.84 − 1.201) × sz ≈ −0.36 × sz  ✓
+// Sizing goal: feet contact lower-centre of tile (~0.65 × sz from tile top).
 //
-// The jade glow ellipse (Layer 4a) is drawn at the same floor position and
-// slightly wider than the built-in shadow to give a magical ambient halo.
-const CHR_W_RATIO          = 1.00;   // sprite width = full tile sz
-const CHR_H_RATIO          = 1.32;   // sprite height overflows tile (2.5D scale)
-const CHR_Y_SHIFT          = 0.36;   // upward shift from tile top (fraction of sz)
-const CHR_GLOW_CY          = 0.83;   // jade glow ellipse centre Y (fraction of sz)
-const CHR_GLOW_RX          = 0.33;   // jade glow horizontal radius (fraction of sz)
+// Math:
+//   feet_y = charY + 0.90 × charH
+//          = −CHR_Y_SHIFT × sz + 0.90 × CHR_W_RATIO × sz
+//   target = 0.655 × sz
+//   → CHR_Y_SHIFT = 0.90 × 1.15 − 0.655 = 1.035 − 0.655 = 0.38            ✓
+//
+// Head rises to: charY + 0.05 × charH ≈ −0.38sz + 0.058sz = −0.32sz
+// (about 32 % of tile width above the tile top — overlaps the cell above in
+//  isometric depth but renders on top thanks to zIndex 9999.)
+//
+// The jade glow ellipse (Layer 4a) is centred at the feet position and widens
+// slightly beyond the sprite footprint for a magical ambient halo effect.
+const CHR_W_RATIO          = 1.15;   // sprite width  = 1.15 × sz (1.15 hex widths)
+const CHR_H_RATIO          = 1.15;   // sprite height = 1.15 × sz (square bounding box)
+const CHR_Y_SHIFT          = 0.38;   // upward shift from tile top (fraction of sz)
+const CHR_GLOW_CY          = 0.65;   // jade glow centre Y = feet position (fraction of sz)
+const CHR_GLOW_RX          = 0.36;   // jade glow horizontal radius (wider than 1.0× era)
 const CHR_GLOW_RY          = 0.11;   // jade glow vertical radius (flattened ellipse)
 const CHR_GLOW_COLOR       = 'rgba(60,220,180,1)'; // jade/teal to match tile ring glow
 const CHR_GLOW_OPACITY     = 0.55;   // peak centre opacity of jade glow pool
@@ -322,9 +346,9 @@ const CHR_GLOW_OPACITY     = 0.55;   // peak centre opacity of jade glow pool
 const SHADOW_COLOR     = 'rgba(0,5,20,0.62)';   // Ink & Mist dark navy — Push 12: richer grounding
 const SHADOW_RY_FRAC   = 0.068;                  // Push 12: slightly taller profile for clearer contact
 const SHADOW_RX_MUL    = 0.48;                   // node shadow rx = sizeMul × this × sz
-const CHR_SHADOW_CY    = CHR_GLOW_CY;            // same floor as jade glow (0.83 × sz)
-const CHR_SHADOW_RX    = CHR_GLOW_RX + 0.06;     // wider than glow (0.39 × sz)
-const CHR_SHADOW_RY    = 0.072;                  // slightly taller than node shadow
+const CHR_SHADOW_CY    = CHR_GLOW_CY;            // same floor as jade glow (0.65 × sz)
+const CHR_SHADOW_RX    = CHR_GLOW_RX + 0.07;     // wider than glow (0.43 × sz) — Push 8
+const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node shadow
 
 // ── Raster assets ─────────────────────────────────────────────────────────────
 // Push 4: fog is a world-space SVG layer; terrainCurrent (jade glow) still used.
