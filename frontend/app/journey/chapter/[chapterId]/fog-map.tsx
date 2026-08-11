@@ -1053,45 +1053,12 @@ export default function ChapterFogMapShell() {
             setMapSize({ w: Math.floor(width), h: Math.floor(height) });
           }}
         >
-          {/* Background only renders once the authoritative shift is known.
-              Keeping this conditional is the single source-of-truth fix for
-              the night→day flash: no background is painted during the loading
-              window, so the dark app shell (s.root backgroundColor) shows
-              instead of a wrong-shift raster. */}
-          {chapterVisuals != null && (
-            <Image
-              source={chapterVisuals.background}
-              style={[
-                s.mapBg,
-                // Push 11: per-chapter per-shift painting alignment transform.
-                // Applied only when the registry supplies non-default values;
-                // identity (scale=1, translate=0,0) is a no-op so the array
-                // is always safe to include.
-                //
-                // Transform order in the array matters:
-                //   scale   — uniform zoom from element centre (contentFit
-                //             already centres the image, so this zooms from
-                //             the painting's own centre).
-                //   translateX/Y — shift in post-scale display pixels.
-                //             Negative Y moves the image UP (pushes sky above
-                //             the viewport top); positive Y moves it DOWN.
-                //
-                // The background is a FIXED layer — it does not scroll with
-                // the camera.  The transform is tuned for the initial camera
-                // position (start tile centred) where visual impression counts
-                // most.  See chapterMapVisuals.ts for per-chapter rationale.
-                {
-                  transform: [
-                    { scale:      chapterVisuals.backgroundScale   ?? 1 },
-                    { translateX: chapterVisuals.backgroundOffsetX ?? 0 },
-                    { translateY: chapterVisuals.backgroundOffsetY ?? 0 },
-                  ],
-                },
-              ]}
-              contentFit="cover"
-              testID="map-background"
-            />
-          )}
+          {/* Push 7: background is now rendered INSIDE HexMapLayer's MapWorld
+              so it moves in lockstep with terrain, fog, and the gate.
+              It is passed via the environmentBackground prop below.
+              The night→day flash guard is preserved: chapterVisuals is null
+              during the loading window, so environmentBackground is undefined
+              and HexMapLayer renders without a background (dark app shell). */}
 
           {runLoading && !debugTiles ? (
             <View style={s.mapLoadingOverlay}>
@@ -1132,6 +1099,15 @@ export default function ChapterFogMapShell() {
                 unlocked:    gateUnlocked,
               }}
               explorationCharacter={explorationCharacter}
+              // Push 7: background moves inside MapWorld so it pans with terrain.
+              // undefined when chapterVisuals is null (loading window) — correct:
+              // HexMapLayer renders without a background and the dark app shell shows.
+              environmentBackground={chapterVisuals != null ? {
+                source:  chapterVisuals.background,
+                scale:   chapterVisuals.backgroundScale,
+                offsetX: chapterVisuals.backgroundOffsetX,
+                offsetY: chapterVisuals.backgroundOffsetY,
+              } : undefined}
               // Dev diagnostics (Push 0) — no-op in production.
               diagRef={__DEV__ ? diagRef : undefined}
               devOverlay={__DEV__ ? devOverlay : undefined}
@@ -1682,7 +1658,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: PANEL_BORDER,
     position: 'relative',
   },
-  mapBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  // mapBg removed Push 7: background is now inside HexMapLayer's MapWorld.
   mapLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center', justifyContent: 'center',

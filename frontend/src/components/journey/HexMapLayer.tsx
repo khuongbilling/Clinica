@@ -1,5 +1,5 @@
 /**
- * HexMapLayer — PUSH 6 unified world coords / PUSH 5 complete terrain / PUSH 9 axial rendering
+ * HexMapLayer — PUSH 7 unified world transform / PUSH 6 unified world coords / PUSH 5 complete terrain
  *
  * Renders a bounded draggable hex map world inside a clipping viewport.
  * All tiles use AXIAL q,r coordinates (flat-top hexes).
@@ -1147,6 +1147,31 @@ export interface HexMapLayerProps {
   diagRef?: MutableRefObject<HexMapWorldMetrics | null>;
 
   /**
+   * Push 7: world-space background painting.
+   *
+   * When provided, rendered as the FIRST child of MapWorld — the Animated.View
+   * that receives the camera translate transform.  This makes the background
+   * move in lockstep with terrain cells, Gate art, player sprite, encounter
+   * objects, and fog: one world, one transform.
+   *
+   * source  — Expo Image require() source (same as ChapterShiftVisuals.background)
+   * scale   — uniform zoom from the painting's own centre (default 1, no-op)
+   * offsetX — post-scale horizontal shift in display pixels (default 0)
+   * offsetY — post-scale vertical shift in display pixels (default 0)
+   *
+   * The image fills worldWidth × worldHeight with contentFit="cover"; the
+   * viewport's overflow:"hidden" clips whatever extends beyond the screen edge.
+   * When absent (loading / error / debug), MapWorld renders without a background.
+   */
+  environmentBackground?: {
+    /** Same type accepted by expo-image's Image source prop: require() number or {uri} object. */
+    source:   import('expo-image').ImageSource | number;
+    scale?:   number;
+    offsetX?: number;
+    offsetY?: number;
+  };
+
+  /**
    * Per-tile debug overlays controlled by the diagnostics panel checkboxes.
    * Every branch is guarded by `__DEV__`; no overhead in production.
    */
@@ -1162,6 +1187,7 @@ export function HexMapLayer({
   timeOfDay,
   gateArt,
   explorationCharacter,
+  environmentBackground,
   diagRef,
   devOverlay,
 }: HexMapLayerProps) {
@@ -1364,8 +1390,52 @@ export function HexMapLayer({
       {...panResponder.panHandlers}
     >
       <Animated.View
-        style={[s.world, { transform: cameraAnim.getTranslateTransform() }]}
+        style={[
+          s.world,
+          {
+            // Push 7: explicit world dimensions so the background image fills
+            // exactly the same canvas as terrain, fog, and gate elements.
+            width:  worldW,
+            height: worldH,
+            transform: cameraAnim.getTranslateTransform(),
+          },
+        ]}
       >
+        {/* ── Push 7: Chapter environment background ────────────────────────
+          * First child of MapWorld: paints beneath all terrain cells, encounter
+          * objects, gate art, player sprite, and fog.
+          *
+          * This is the fix for "stationary background + moving grid" bug:
+          * background is now INSIDE the Animated.View that receives
+          * cameraAnim.getTranslateTransform(), so it moves in lockstep with
+          * every other world-space element.
+          *
+          * The image fills worldW × worldH (same canvas as the tile grid).
+          * overflow:"hidden" on the viewport View clips the edges.
+          * The scale/offsetX/offsetY transform is forwarded verbatim from
+          * ChapterShiftVisuals — these were the per-chapter alignment tuning
+          * values and remain valid in world space.
+          *
+          * Not rendered during loading / error (environmentBackground absent).
+          */}
+        {environmentBackground && (
+          <Image
+            source={environmentBackground.source}
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                transform: [
+                  { scale:      environmentBackground.scale   ?? 1 },
+                  { translateX: environmentBackground.offsetX ?? 0 },
+                  { translateY: environmentBackground.offsetY ?? 0 },
+                ],
+              },
+            ]}
+            contentFit="cover"
+            testID="map-background"
+          />
+        )}
+
         {/* ── Complete terrain — ALL tiles, no visibility filter (Push 5) ─────
           * Every tile in the `tiles` prop is mounted into MapWorld for the
           * full lifetime of the run.  Do NOT gate this map on visibility,
