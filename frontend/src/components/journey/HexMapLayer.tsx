@@ -155,7 +155,6 @@
 import { Image } from 'expo-image';
 import {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -165,7 +164,6 @@ import {
   AccessibilityInfo,
   Animated,
   PanResponder,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -227,8 +225,6 @@ import {
 //
 //   current                 → tile at zIndex 9999 (always topmost).
 //
-const FOG_BLOB_RADIUS = 2.80; // blob radius multiplier — 2.8×sz merges adjacents
-
 // ── Push 10: per-shift SVG fog and overlay color themes ──────────────────────
 //
 // Three canonical shifts each carry a dedicated color theme that drives every
@@ -248,14 +244,10 @@ const FOG_BLOB_RADIUS = 2.80; // blob radius multiplier — 2.8×sz merges adjac
 //   evening — deep indigo-purple dusk fog / indigo veil / amber hairlines.
 //             Lanterns beginning to matter: amber accents echo lit environment.
 
+// Push 13: blobColor and blobOpacity removed from FogTheme — they drove the
+// rectangular fillRect fog plane (web) and SVG blob fills (native) which are
+// now gone.  The remaining fields drive per-tile state-ring SVGs only.
 type FogTheme = {
-  blobColor:      string;   // fog blob RadialGradient fill color
-  blobOpacity:    number;   // peak center opacity (edges always fade to 0)
-  /**
-   * Push 11: flat-color fill for the base concealment Rect drawn at the START
-   * of the fog SVG (before all gradient blobs).  This is the concealment floor:
-   * even in areas where only one blob's semi-transparent edge covers the tile,
-   */
   veilStroke:     string;   // exploredButOutOfVision hairline edge stroke
   veilStrokeW:    number;   // hairline width (px)
   frontierStroke: string;   // visibleNow edge glow + inner circular glow color
@@ -263,38 +255,23 @@ type FogTheme = {
 };
 
 const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
-  // ── Night — canonical dark environment; values preserved from Push 4–5 ─────
   night: {
-    blobColor:      'rgb(6,10,22)',           // deep ink-blue atmospheric fog
-    blobOpacity:    0.97,                     // dense solid mass; blobs alone cover unexplored area
     veilStroke:     'rgba(255,255,255,0.28)', // white hairline — visited-territory wire
     veilStrokeW:    0.8,
     frontierStroke: 'rgba(100,230,208,0.80)', // jade-teal edge glow + inner circular glow source
     currentRing:    'rgba(90,230,205,0.82)',  // bright jade ring
   },
-
-  // ── Day — bright natural light, warm daylight, pale mist ────────────────────
-  // Backgrounds: ivory/cream marble, sunlight through clouds, jade-teal pillars,
-  // flowering greenery, open active environment.
   day: {
-    blobColor:      'rgb(200,220,238)',        // pale blue-white daylight cloud-mist
-    blobOpacity:    0.94,                      // boosted: blobs alone must cover unexplored area
-    veilStroke:     'rgba(140,110,55,0.38)',   // antique gold hairline (legible on bright stone)
+    veilStroke:     'rgba(140,110,55,0.38)',  // antique gold hairline
     veilStrokeW:    0.9,
-    frontierStroke: 'rgba(80,205,165,0.82)',   // warm jade edge glow + inner circular glow source
-    currentRing:    'rgba(80,210,170,0.85)',   // jade ring, warm tone for daylight
+    frontierStroke: 'rgba(80,205,165,0.82)',  // warm jade edge glow
+    currentRing:    'rgba(80,210,170,0.85)',  // jade ring, warm tone for daylight
   },
-
-  // ── Evening — true twilight: amber lanterns, indigo sky, long shadows ───────
-  // Backgrounds: dusky purple-mauve courtyard, amber lanterns lit, teal columns,
-  // orange sunset sky, long diagonal shadows cutting across the atrium.
   evening: {
-    blobColor:      'rgb(28,18,52)',           // deep indigo-purple dusk shadow
-    blobOpacity:    0.95,
-    veilStroke:     'rgba(200,155,70,0.40)',   // warm amber hairline — lantern glow hint
+    veilStroke:     'rgba(200,155,70,0.40)',  // warm amber hairline — lantern glow hint
     veilStrokeW:    0.8,
-    frontierStroke: 'rgba(195,150,65,0.80)',   // amber edge + inner circular glow — lanterns
-    currentRing:    'rgba(90,225,195,0.82)',   // jade ring (same family as night)
+    frontierStroke: 'rgba(195,150,65,0.80)', // amber edge + inner circular glow — lanterns
+    currentRing:    'rgba(90,225,195,0.82)', // jade ring (same family as night)
   },
 };
 
@@ -577,17 +554,6 @@ function clamp(v: number, lo: number, hi: number) {
  * Corner order (clockwise from right):
  *   right → bottom-right → bottom-left → left → top-left → top-right
  */
-/**
- * Generate a stable, SVG-safe gradient id for a tile at (q, r).
- * Handles negative coordinates by prefixing with 'n' (e.g. -1 → n1).
- * Prefix distinguishes fog blobs ('fog') from memory hazes ('haze').
- */
-function fogGradId(prefix: string, q: number, r: number): string {
-  const qs = q >= 0 ? `${q}` : `n${-q}`;
-  const rs = r >= 0 ? `${r}` : `n${-r}`;
-  return `${prefix}_${qs}_${rs}`;
-}
-
 function hexPoints(sz: number, inset = 0.89): string {
   const cx = sz / 2;
   const cy = sz / 2;
@@ -934,155 +900,32 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
 // ── JourneyFogLayer ───────────────────────────────────────────────────────────
 
 /**
- * Continuous atmospheric fog surface rendered above all tile Pressables.
+ * Push 13: all legacy block-based fog rendering removed.
  *
- * Receives the full tile set plus geometry/theme props; produces ONE visually
- * seamless fog layer.  Individual HexTile components carry NO fog DOM — all
- * atmospheric fog logic lives here.
+ * The previous implementation used:
+ *   Web    — HTML <canvas> fillRect() covering worldW × worldH (rectangular
+ *             solid base) then destination-out radial holes.  The fillRect was
+ *             the source of the "white/square fog plane" artifact.
+ *   Native — react-native-svg RadialGradient Circle blobs per unexplored tile.
+ *             Adjacent blobs merged into rectangular-looking masses.
  *
- * Web:    imperatively-managed HTML <canvas> child injected into a View ref.
- *         Canvas 2D destination-out compositing → solid fog fill with feathered
- *         holes carved at each explored / visible tile.  No tile-boundary seams.
- * Native: react-native-svg RadialGradient blobs (Skia handles userSpaceOnUse).
+ * Both paths are removed here.  The component returns null so the map renders
+ * without any fog overlay.  Push 14 will introduce a new non-rectangular fog
+ * implementation that carries no rectangular artifacts.
  *
- * zIndex 5000 — above unexplored tile Pressables (1–3000),
- *               below exploredButOutOfVision (5050) and visibleNow (5100+).
- *
- * Inputs:
- *   tiles    — full run tile set (visibility + coords read here, not in HexTile)
- *   coords   — Push 6: unified world coordinate system; replaces sz/ox/oy/worldW/worldH
- *   fogTheme — per-shift colour palette (blobColor, blobOpacity, etc.)
+ * State-ring SVGs in HexTile (current / visibleNow / exploredButOutOfVision)
+ * are NOT fog — they are interactivity indicators and are preserved.
  */
 interface JourneyFogLayerProps {
   tiles:    readonly HexMapTile[];
-  /**
-   * Push 6: world coordinate system — replaces the former `sz`, `ox`, `oy`,
-   * `worldW`, `worldH` scalar props.  Fog hole centres come from
-   * `coords.axialToWorld(t.q, t.r).cx/cy`.  Canvas size from
-   * `coords.worldWidth / coords.worldHeight`.
-   */
   coords:   HexWorldCoords;
   fogTheme: FogTheme;
 }
 
-function JourneyFogLayer({ tiles, coords, fogTheme }: JourneyFogLayerProps) {
-  const { sz, worldWidth: worldW, worldHeight: worldH } = coords;
-  // Web: imperatively-managed HTML <canvas> child
-  const fogContainerRef = useRef<View>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const container = fogContainerRef.current as unknown as HTMLDivElement | null;
-    if (!container || worldW <= 0 || worldH <= 0) return;
-
-    // Reuse the canvas across renders to avoid teardown/setup cost.
-    let canvas = container.querySelector('canvas') as HTMLCanvasElement | null;
-    if (!canvas) {
-      canvas = document.createElement('canvas');
-      Object.assign(canvas.style, {
-        position: 'absolute', left: '0', top: '0',
-        display: 'block', pointerEvents: 'none',
-      });
-      container.appendChild(canvas);
-    }
-
-    // Hi-DPI: physical canvas size = logical size × devicePixelRatio.
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width  = Math.round(worldW * dpr);
-    canvas.height = Math.round(worldH * dpr);
-    canvas.style.width  = worldW + 'px';
-    canvas.style.height = worldH + 'px';
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // ── Step 1: solid fog fill — one continuous atmospheric surface ─────────
-    ctx.clearRect(0, 0, worldW, worldH);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = fogTheme.blobOpacity;
-    ctx.fillStyle   = fogTheme.blobColor;
-    ctx.fillRect(0, 0, worldW, worldH);
-    ctx.globalAlpha = 1;
-
-    // ── Step 2: carve feathered reveal holes at each non-unexplored tile ───
-    // destination-out draws REMOVE canvas opacity.  A radial gradient that is
-    // opaque-black at centre and transparent at the outer edge creates an
-    // organic feathered reveal boundary.  Adjacent holes merge naturally.
-    ctx.globalCompositeOperation = 'destination-out';
-
-    for (const t of tiles) {
-      if (!t.current && t.visibility === 'unexplored') continue;
-
-      const { cx, cy } = coords.axialToWorld(t.q, t.r);
-
-      // Reveal radius scales with visibility quality:
-      //   current              → widest clear area + longest feather
-      //   visibleNow           → medium reach (adjacent territory)
-      //   exploredButOutOfVision → tight (remembered position, not active sight)
-      const isCur    = t.current;
-      const isVis    = !isCur && t.visibility === 'visibleNow';
-      const clearR   = isCur ? sz * 0.60 : isVis ? sz * 0.52 : sz * 0.42;
-      const featherR = isCur ? sz * 1.30 : isVis ? sz * 1.12 : sz * 0.96;
-
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, featherR);
-      grad.addColorStop(0,                 'rgba(0,0,0,1)');
-      grad.addColorStop(clearR / featherR, 'rgba(0,0,0,1)');
-      grad.addColorStop(0.82,              'rgba(0,0,0,0.35)');
-      grad.addColorStop(1,                 'rgba(0,0,0,0)');
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, featherR, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tiles, coords, fogTheme]);
-
-  // ── Web: return the container View; canvas is injected above ──────────────
-  if (Platform.OS === 'web') {
-    return (
-      <View
-        ref={fogContainerRef}
-        pointerEvents="none"
-        style={{
-          position: 'absolute', top: 0, left: 0,
-          width: worldW, height: worldH, zIndex: 5000,
-        } as object}
-      />
-    );
-  }
-
-  // ── Native: SVG RadialGradient blobs (Skia handles userSpaceOnUse) ─────────
-  const unexplored = tiles.filter(t => !t.current && t.visibility === 'unexplored');
-  if (unexplored.length === 0) return null;
-  const blobR = sz * FOG_BLOB_RADIUS;
-  return (
-    <View style={{ position: 'absolute', top: 0, left: 0, width: worldW, height: worldH, zIndex: 5000, pointerEvents: 'none' } as object}>
-      <Svg width={worldW} height={worldH}>
-        <Defs>
-          {unexplored.map(t => {
-            const { cx, cy } = coords.axialToWorld(t.q, t.r);
-            const id = fogGradId('fog', t.q, t.r);
-            return (
-              <RadialGradient key={id} id={id} cx={cx} cy={cy} r={blobR} fx={cx} fy={cy} gradientUnits="userSpaceOnUse">
-                <Stop offset="0%"   stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity} />
-                <Stop offset="65%"  stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity * 0.95} />
-                <Stop offset="75%"  stopColor={fogTheme.blobColor} stopOpacity={fogTheme.blobOpacity * 0.50} />
-                <Stop offset="100%" stopColor={fogTheme.blobColor} stopOpacity={0} />
-              </RadialGradient>
-            );
-          })}
-        </Defs>
-        {unexplored.map(t => {
-          const { cx, cy } = coords.axialToWorld(t.q, t.r);
-          return (
-            <Circle key={t.id} cx={cx} cy={cy} r={blobR} fill={`url(#${fogGradId('fog', t.q, t.r)})`} />
-          );
-        })}
-      </Svg>
-    </View>
-  );
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function JourneyFogLayer(_props: JourneyFogLayerProps): null {
+  // Push 13: legacy block fog removed; Push 14 will replace with new implementation.
+  return null;
 }
 
 // ── RecenterButton ────────────────────────────────────────────────────────────
@@ -1185,12 +1028,16 @@ export interface HexMapLayerProps {
    * and `fogEdge` fields from ChapterShiftVisuals are consumed by the parent screen.
    */
   /**
-   * Visual theme assets for the current chapter/shift. Only `fogInterior` is
-   * read by the tile renderer; terrain floor images are no longer rendered
-   * per-tile (Push 2 — transparent hex cells; painting is the terrain).
+   * Visual theme assets for the current chapter/shift.
+   * Terrain floor images are no longer rendered per-tile (Push 2 — transparent
+   * hex cells; painting is the terrain).  fogInterior was removed in Push 13
+   * along with all block-based fog rendering.
+   *
+   * @deprecated All fields are currently unused by the tile renderer; the prop
+   * is retained so call-sites don't need updating when Push 14 fog arrives.
    */
   tileVisuals?: Pick<import('@/src/game/journeyMap/chapterMapVisuals').ChapterShiftVisuals,
-    'terrainCurrent' | 'terrainBase' | 'terrainFrontier' | 'fogInterior'>;
+    'terrainCurrent' | 'terrainBase' | 'terrainFrontier'>;
 
   /**
    * Push 10: active shift — drives the SVG fog/veil/frontier/ring color theme.
@@ -1614,11 +1461,11 @@ export function HexMapLayer({
           />
         ))}
 
-        {/* ── Continuous atmospheric fog (Push 7 — JourneyFogLayer) ──────────
-         * All fog rendering is delegated to JourneyFogLayer.
-         * HexTile components carry NO fog DOM — inspecting one HexTile in the
-         * DOM shows only interaction target, state glow/border, encounter anchor.
-         * zIndex 5000: above unexplored Pressables (1–3000), below current (9999).
+        {/* ── Push 13: legacy block-based fog suspended ────────────────────
+         * JourneyFogLayer now returns null — the rectangular fillRect base
+         * (web) and SVG blob planes (native) that caused white/square fog
+         * artifacts are gone.  State-ring SVGs in each HexTile are untouched.
+         * Push 14 will introduce a non-rectangular replacement.
          */}
         <JourneyFogLayer
           tiles={tiles}
