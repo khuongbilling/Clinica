@@ -18,9 +18,11 @@
  *   revealed → full tile art + encounter icon
  *   current  → special frame art + encounter icon (if any)
  *
- * Gate unlock logic:
- *   areaBossCount === 0  → gate eligible when reached/discovered (0/0 keys)
- *   areaBossCount  >  0  → gate locked until areaBossKeysCollected >= areaBossCount
+ * Gate unlock logic (Push 22):
+ *   Gate ALWAYS requires CHAPTER_BOSS_KEY_REQUIREMENT (3) accumulated chapter-level
+ *   keys — there is no auto-unlock shortcut for zero-boss maps.
+ *   When areaBossCount === 0 an informational note is shown ("No Area Bosses
+ *   detected on this attempt.") but the key requirement is unchanged.
  */
 
 import { Image } from 'expo-image';
@@ -142,13 +144,6 @@ function toHexMapTile(t: JourneyTile, gateId: string | undefined): HexMapTile {
     // Cosmetic only — no gameplay effect. Only present on 'none' tiles.
     visualVariant: t.visualVariant,
   };
-}
-
-/** True when the gate tile has been discovered (revealed or frontier). */
-function isGateDiscovered(run: JourneyRun): boolean {
-  if (!run.gateAnchorTileId) return false;
-  const gate = run.tiles.find(t => t.id === run.gateAnchorTileId);
-  return gate?.visibility === 'exploredButOutOfVision' || gate?.visibility === 'visibleNow';
 }
 
 /** Encounter counts across ALL tiles (including gate and unrevealed). */
@@ -630,20 +625,26 @@ export default function ChapterFogMapShell() {
     }
   }, [run, chNum]);
 
-  // Gate unlock: 0-boss maps (ch1–3) unlock when gate is discovered; otherwise
-  // require CHAPTER_BOSS_KEY_REQUIREMENT (3) chapter-level keys — a fixed
-  // threshold that does NOT vary with the current run's area-boss count.
-  const areaBossCount     = run?.areaBossCount ?? 0;
+  // Push 22: gate always requires CHAPTER_BOSS_KEY_REQUIREMENT (3) accumulated
+  // chapter-level keys.  The old discovery-based shortcut for zero-boss maps
+  // ("gate opens when reached") is removed — gate progress is always 0/3 → 3/3.
+  //
+  // `areaBossCount` is the number of Area Boss tiles placed on THIS run.  When it
+  // is zero the player cannot earn keys on the current attempt — they must rely on
+  // keys carried over from previous attempts (chapter_boss_keys[chNum]).
+  // The zero-boss case shows an informational note in the key bar; the unlock
+  // threshold stays at 3 regardless.
+  const areaBossCount   = run?.areaBossCount ?? 0;
   // Chapter-level key count (Task 570): chapter_boss_keys persists across
   // Rechallenge Map so keys earned on Run 1 are still visible on Run 2.
   // Falls back to run-level areaBossKeysCollected for pre-570 saves or first run.
-  const chapterKeyEntry   = player?.chapter_boss_keys?.[String(chNum)];
-  const keysCollected     = chapterKeyEntry?.keys_collected ?? run?.areaBossKeysCollected ?? 0;
-  const zeroKeyMap        = areaBossCount === 0;
-  const gateDiscovered    = run ? isGateDiscovered(run) : false;
-  // Gate requires the canonical 3-key total, not the number of bosses on the
-  // current map.  Zero-boss chapters (ch1–3) keep the discovery-based fallback.
-  const gateUnlocked      = zeroKeyMap ? gateDiscovered : keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT;
+  const chapterKeyEntry = player?.chapter_boss_keys?.[String(chNum)];
+  const keysCollected   = chapterKeyEntry?.keys_collected ?? run?.areaBossKeysCollected ?? 0;
+  // Informational flag — purely for the "No Area Bosses detected on this attempt."
+  // note; does NOT affect the gate unlock threshold.
+  const zeroKeyMap      = areaBossCount === 0;
+  // Gate is unlocked ONLY when the 3-key threshold is met.  No discovery bypass.
+  const gateUnlocked    = keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT;
 
   // ── Shift-aware map visuals ───────────────────────────────────────────────
   // run.chapterId is the authoritative source — it is the chapter frozen into
@@ -1112,9 +1113,14 @@ export default function ChapterFogMapShell() {
               tileVisuals={chapterVisuals}
               timeOfDay={mapShift as TimeOfDay}
               gateArt={{
-                lockedSrc:   ASSET.gateLocked,
-                unlockedSrc: ASSET.gateUnlocked,
-                unlocked:    gateUnlocked,
+                lockedSrc:    ASSET.gateLocked,
+                unlockedSrc:  ASSET.gateUnlocked,
+                unlocked:     gateUnlocked,
+                keysCollected,
+                keysRequired: CHAPTER_BOSS_KEY_REQUIREMENT,
+                // Push 22: explicit tile ID so the gate landmark renders at the
+                // exact template-fixed position, independent of the isGate flag.
+                gateTileId:   run?.gateAnchorTileId,
               }}
               explorationCharacter={explorationCharacter}
               environmentBackground={{
@@ -1256,9 +1262,9 @@ export default function ChapterFogMapShell() {
             <View style={s.statCol}>
               <Text style={[
                 s.statVal,
-                !zeroKeyMap && keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT && s.statValAccent,
+                keysCollected >= CHAPTER_BOSS_KEY_REQUIREMENT && s.statValAccent,
               ]}>
-                {zeroKeyMap ? '—' : `${keysCollected} / ${CHAPTER_BOSS_KEY_REQUIREMENT}`}
+                {keysCollected} / {CHAPTER_BOSS_KEY_REQUIREMENT}
               </Text>
               <Text style={s.statLbl}>Keys</Text>
             </View>

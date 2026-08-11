@@ -172,7 +172,7 @@ import {
 import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react-native-svg';
 
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
-import { UI } from '@/src/theme/ui';
+import { UI, SERIF } from '@/src/theme/ui';
 import {
   Q_STEP, R_STEP, Q_VOFF,
   MIN_TILE_SZ, MAX_TILE_SZ,
@@ -1235,12 +1235,29 @@ export interface HexMapDevOverlay {
  * so gate interaction remains associated with the gateTileId.
  */
 export interface GateArtProps {
-  /** Source for the locked state (< 3 keys). */
-  lockedSrc:   number;
-  /** Source for the unlocked state (≥ 3 keys). */
-  unlockedSrc: number;
+  /** Source for the locked state (< keysRequired keys). */
+  lockedSrc:    number;
+  /** Source for the unlocked state (≥ keysRequired keys). */
+  unlockedSrc:  number;
   /** Whether the key requirement has been met. */
-  unlocked:    boolean;
+  unlocked:     boolean;
+  /**
+   * Keys already accumulated (chapter-level; persists across attempts).
+   * Displayed as a progress badge on the gate landmark: "X/N LOCKED" or "UNLOCKED".
+   */
+  keysCollected: number;
+  /**
+   * Keys required to open the gate (always CHAPTER_BOSS_KEY_REQUIREMENT = 3).
+   * Passed explicitly so HexMapLayer has no dependency on the game constant.
+   */
+  keysRequired:  number;
+  /**
+   * Push 22: the exact gate anchor tile ID from the chapter map template
+   * (run.gateAnchorTileId).  When provided the gate landmark is positioned by
+   * ID lookup rather than the isGate flag, guaranteeing alignment with the
+   * template-fixed cell even when tile ordering changes.
+   */
+  gateTileId?:  string;
 }
 
 export interface HexMapLayerProps {
@@ -1738,21 +1755,68 @@ export function HexMapLayer({
         />
 
         {/* ── Gate art overlay ──────────────────────────────────────────────
-         * Spatially anchored to the isGate tile inside the world viewport.
-         * Visually extends beyond the tile hex to feel like part of the
-         * environment, but does NOT create fake playable tiles:
-         *   - interaction handled entirely by the underlying gate HexTile
-         *   - pointerEvents="none" lets all taps pass through to the tile
-         *   - fog rules: hidden → not rendered; frontier/revealed → visible
+         * Push 22: spatially anchored to the template-fixed gate tile inside
+         * the world viewport.  The gate is a true map landmark:
+         *
+         *   POSITIONING
+         *   • Primary lookup: tiles.find(t => t.id === gateArt.gateTileId)
+         *     uses the exact run.gateAnchorTileId so the landmark always sits
+         *     on the cell the template reserved for the gate.
+         *   • Fallback: tiles.find(t => t.isGate) for callers that do not yet
+         *     pass gateTileId (dev fixture, tests).
+         *
+         *   FOG PARTICIPATION
+         *   • Gate is not rendered while the tile is 'unexplored'.
+         *   • Gate renders at reduced opacity for 'exploredButOutOfVision'
+         *     (memory state) — the player knows it's there but can't see details.
+         *   • Full-opacity render for 'visibleNow' and 'current'.
+         *
+         *   WORLD INTEGRATION
+         *   • Overlay lives inside the Animated.View world container →
+         *     pans and scales exactly with terrain, fog, and player sprite.
+         *   • Overlay is 1.8 × sz → visually extends beyond the hex cell to
+         *     read as a landmark without creating fake interactive tiles.
+         *   • pointerEvents="none" → all taps reach the underlying HexTile.
+         *
+         *   PROGRESS BADGE
+         *   • A badge below the gate image shows the current key count:
+         *       0/3  LOCKED  |  1/3  LOCKED  |  2/3  LOCKED  |  3/3  UNLOCKED
+         *   • Gate is ALWAYS locked until exactly 3 chapter-level keys are
+         *     accumulated.  No auto-unlock for zero-boss-map runs.
          */}
         {gateArt && (() => {
-          const gateTile = tiles.find(t => t.isGate);
+          // Push 22: prefer explicit gateTileId; fall back to isGate flag.
+          const gateTile = gateArt.gateTileId
+            ? (tiles.find(t => t.id === gateArt.gateTileId) ?? tiles.find(t => t.isGate))
+            : tiles.find(t => t.isGate);
           if (!gateTile || gateTile.visibility === 'unexplored') return null;
+
           const { left, top } = coords.axialToWorld(gateTile.q, gateTile.r);
-          // Overlay is 1.8× the tile size — visually prominent but centred
-          // so it does not shift the effective tap target.
+
+          // Overlay is 1.8 × sz — prominent landmark that bleeds beyond one cell.
           const overlaySize = Math.round(sz * 1.8);
           const offset      = Math.round((overlaySize - sz) / 2);
+
+          // Explored-but-out-of-vision: render at MEMORY_NODE_ALPHA so the
+          // player knows the gate position without seeing the current lock state.
+          const gateOpacity = gateTile.visibility === 'exploredButOutOfVision'
+            ? MEMORY_NODE_ALPHA
+            : 1;
+
+          // Progress badge dimensions — scaled to tile size for legibility
+          // across the range of map sizes (small phones → large tablets).
+          const badgeH   = Math.round(sz * 0.28);
+          const badgePad = Math.round(sz * 0.06);
+          const badgeFsz = Math.max(9, Math.round(sz * 0.12));
+
+          const keyLabel     = `${gateArt.keysCollected}/${gateArt.keysRequired}`;
+          const stateLabel   = gateArt.unlocked ? 'UNLOCKED' : 'LOCKED';
+          // Jade teal for unlocked; amber for locked — matches the Ink & Mist palette.
+          const badgeBg      = gateArt.unlocked ? 'rgba(20,180,140,0.92)' : 'rgba(20,12,40,0.82)';
+          const badgeBorder  = gateArt.unlocked ? '#14b48c' : '#7c5cad';
+          const keyColor     = gateArt.unlocked ? '#fff'    : '#f5c842';
+          const stateColor   = gateArt.unlocked ? '#c8fff0' : '#c4b5d8';
+
           return (
             <View
               key="gate-art-overlay"
@@ -1762,16 +1826,59 @@ export function HexMapLayer({
                 left:     left  - offset,
                 top:      top   - offset,
                 width:    overlaySize,
-                height:   overlaySize,
-                zIndex:   GATE_ART_Z,  // above object pass (~6200–6500), below dev overlays
+                // Extra height to accommodate the badge below the gate image.
+                height:   overlaySize + badgeH + badgePad,
+                zIndex:   GATE_ART_Z,
+                opacity:  gateOpacity,
+                alignItems: 'center',
               }}
             >
+              {/* Gate image — locked or unlocked art */}
               <Image
                 source={gateArt.unlocked ? gateArt.unlockedSrc : gateArt.lockedSrc}
                 style={{ width: overlaySize, height: overlaySize }}
                 contentFit="contain"
                 testID="boss-gate-art"
               />
+
+              {/* Progress badge — "X/N  LOCKED" or "UNLOCKED"
+                * Rendered as an absolutely-positioned pill below the gate image.
+                * Not rendered in the memory state (gate is vague enough already). */}
+              {gateTile.visibility !== 'exploredButOutOfVision' && (
+                <View
+                  style={{
+                    marginTop:       badgePad,
+                    paddingHorizontal: badgePad * 2,
+                    paddingVertical:  Math.round(badgePad * 0.6),
+                    backgroundColor: badgeBg,
+                    borderRadius:    badgeH / 2,
+                    borderWidth:     1,
+                    borderColor:     badgeBorder,
+                    flexDirection:   'row',
+                    alignItems:      'center',
+                    gap:             Math.round(sz * 0.06),
+                  }}
+                >
+                  <Text style={{
+                    fontFamily:  SERIF,
+                    fontSize:    badgeFsz,
+                    fontWeight:  '700',
+                    color:       keyColor,
+                    letterSpacing: 0.5,
+                  }}>
+                    {keyLabel}
+                  </Text>
+                  <Text style={{
+                    fontFamily:  SERIF,
+                    fontSize:    badgeFsz * 0.85,
+                    fontWeight:  '600',
+                    color:       stateColor,
+                    letterSpacing: 1,
+                  }}>
+                    {stateLabel}
+                  </Text>
+                </View>
+              )}
             </View>
           );
         })()}
