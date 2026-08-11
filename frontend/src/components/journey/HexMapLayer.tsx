@@ -1,5 +1,5 @@
 /**
- * HexMapLayer — PUSH 7 unified world transform / PUSH 6 unified world coords / PUSH 5 complete terrain
+ * HexMapLayer — PUSH 8 bounded camera pan / PUSH 7 unified world transform / PUSH 6 unified world coords
  *
  * Renders a bounded draggable hex map world inside a clipping viewport.
  * All tiles use AXIAL q,r coordinates (flat-top hexes).
@@ -1209,86 +1209,150 @@ export function HexMapLayer({
     worldHeight:  worldH,
   } = coords;
 
-  // ── Persistent refs ────────────────────────────────────────────────────────
-  const boundsRef     = useRef({ minX: -9999, maxX: 9999, minY: -9999, maxY: 9999 });
-  const initialCamRef = useRef({ x: 0, y: 0 });
-  const camRef        = useRef({ x: 0, y: 0 });
-  const drag          = useRef({ moved: false, camX0: 0, camY0: 0 });
-  const tilesKeyRef   = useRef('');
-  /**
-   * Tracks the container dimensions used for the last re-centre so that an
-   * orientation change (which only mutates containerWidth / containerHeight,
-   * not the tile set) also triggers a fresh re-centre.
-   */
-  const prevContainerRef = useRef({ w: 0, h: 0 });
+  // ── Persistent refs ─────────────────────────────────────────────────────────
+  const boundsRef          = useRef({ minX: -9999, maxX: 9999, minY: -9999, maxY: 9999 });
+  const initialCamRef      = useRef({ x: 0, y: 0 });
+  const camRef             = useRef({ x: 0, y: 0 });
+  const drag               = useRef({ moved: false, camX0: 0, camY0: 0 });
+  //
+  // Push 8: split the old single tilesKeyRef into two independent signals so
+  // the camera can distinguish "new run loaded" from "player moved one tile":
+  //   prevRunKeyRef    — mirrors tiles.length; changes only when a brand-new
+  //                      run is loaded (tile count changes).
+  //   prevPlayerKeyRef — mirrors currentTile.id; changes after each movement.
+  // Container resize is tracked separately (prevContainerRef).
+  const prevRunKeyRef      = useRef(0);
+  const prevPlayerKeyRef   = useRef('');
+  const prevContainerRef   = useRef({ w: 0, h: 0 });
 
-  // ── Camera animation ───────────────────────────────────────────────────────
+  // ── Camera animation ──────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const cameraAnim = useMemo(() => new Animated.ValueXY({ x: 0, y: 0 }), []);
 
-  // Stable string that changes when the tile set changes (new run loaded).
+  // Derived signals — stable strings that collapse into the two cases.
   const currentTile = tiles.find(t => t.current);
-  const tilesKey = `${tiles.length}:${currentTile?.id ?? ''}`;
+  const runKey      = tiles.length;                // new value = new run
+  const playerKey   = currentTile?.id ?? '';       // new value = player moved
+  const tilesKey    = `${runKey}:${playerKey}`;   // combined for Effect 2 dep
 
-  // ── Recompute bounds + (re-)centre camera when container or tiles change ───
+  // ── Effect 1: recompute camera bounds ────────────────────────────────────
+  // Runs whenever the world geometry or container changes.
+  // Must run BEFORE Effect 2 so the camera centering reads fresh bounds.
+  //
+  // Bounds design (Push 8):
+  //   MARGIN ≈ 0.55 × sz  — about half a tile of "overscroll" in every direction.
+  //   This is deliberately modest: large enough that every terrain edge can be
+  //   brought to the middle of the viewport (the world already has built-in
+  //   worldOriginX / worldOriginY padding), small enough that the painted
+  //   background never fully leaves the viewport.
+  //
+  //   minX = min(-MARGIN, containerWidth  - worldW - MARGIN)
+  //     → when worldW > containerWidth: allows panning all the way to the right edge
+  //     → when worldW ≤ containerWidth: limits to ±MARGIN around origin (world fits)
+  //   maxX = MARGIN  (overscroll left edge, symmetric)
+  //   Same logic vertically with worldH / containerHeight.
   useLayoutEffect(() => {
     if (containerWidth < 10 || containerHeight < 10) return;
-
     const MARGIN = Math.round(sz * 0.55);
-    const newBounds = {
+    boundsRef.current = {
       minX: Math.min(-MARGIN, containerWidth  - worldW - MARGIN),
       maxX: Math.max(0,        MARGIN),
       minY: Math.min(-MARGIN, containerHeight - worldH - MARGIN),
       maxY: Math.max(0,        MARGIN),
     };
-    boundsRef.current = newBounds;
+  // worldW / worldH encode the tile set indirectly — they change when tiles change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerWidth, containerHeight, sz, worldW, worldH]);
 
-    // Re-centre when:
-    //   (a) the tile set changes — new run loaded or debug-mode toggle; OR
-    //   (b) the container dimensions changed — device rotation / window resize.
-    // Without (b), an orientation flip updates bounds but leaves the camera at
-    // coordinates computed for the old viewport size.
-    const tilesChanged     = tilesKey !== tilesKeyRef.current;
+  // ── Effect 2: position camera on load / player move / resize ─────────────
+  // Three distinct camera behaviours (Push 8):
+  //
+  //   A. New run (runKey changed) or container resize
+  //      → instant setValue — no animation; the map was just loaded or the
+  //        viewport just changed size.  A spring here would show the world
+  //        flying in from off-screen on every page open.
+  //
+  //   B. Player moved (playerKey changed, same run)
+  //      → Animated.spring toward the new tile centre.  The camera gently
+  //        follows the player so they always remain near the viewport centre
+  //        without the jarring jump of setValue.  Respects reduce-motion.
+  //
+  // In both cases:
+  //   • initialCamRef is updated so recenter() always targets the current player.
+  //   • camRef is updated immediately (before animation) so stale-closure reads
+  //     in the PanResponder see the correct destination, not the origin.
+  useLayoutEffect(() => {
+    if (containerWidth < 10 || containerHeight < 10) return;
+
+    const isNewRun         = runKey    !== prevRunKeyRef.current;
+    const playerMoved      = playerKey !== prevPlayerKeyRef.current;
     const containerChanged =
       containerWidth  !== prevContainerRef.current.w ||
       containerHeight !== prevContainerRef.current.h;
 
-    if (tilesChanged || containerChanged) {
-      if (tilesChanged) tilesKeyRef.current = tilesKey;
-      prevContainerRef.current = { w: containerWidth, h: containerHeight };
+    if (!isNewRun && !playerMoved && !containerChanged) return;
 
-      const playerTile = currentTile ?? tiles[0];
-      if (playerTile) {
-        // Push 6: camera centering uses the same axialToWorld as every other renderer.
-        const { cx: tileCx, cy: tileCy } = coords.axialToWorld(playerTile.q, playerTile.r);
+    // Commit new prev values before any early returns below.
+    prevRunKeyRef.current      = runKey;
+    prevPlayerKeyRef.current   = playerKey;
+    prevContainerRef.current   = { w: containerWidth, h: containerHeight };
 
-        const rawX  = containerWidth  / 2 - tileCx;
-        const rawY  = containerHeight / 2 - tileCy;
-        const initX = clamp(rawX, newBounds.minX, newBounds.maxX);
-        const initY = clamp(rawY, newBounds.minY, newBounds.maxY);
+    const targetTile = currentTile ?? tiles[0];
+    if (!targetTile) return;
 
-        initialCamRef.current = { x: initX, y: initY };
-        camRef.current        = { x: initX, y: initY };
-        cameraAnim.setValue({ x: initX, y: initY });
-      }
+    const { cx: tileCx, cy: tileCy } = coords.axialToWorld(targetTile.q, targetTile.r);
+    const { minX, maxX, minY, maxY } = boundsRef.current;
+
+    const destX = clamp(containerWidth  / 2 - tileCx, minX, maxX);
+    const destY = clamp(containerHeight / 2 - tileCy, minY, maxY);
+
+    // Recenter always targets the current player tile.
+    initialCamRef.current = { x: destX, y: destY };
+    // camRef updated now so PanResponder reads destination, not flight-path value.
+    camRef.current = { x: destX, y: destY };
+
+    if (isNewRun || containerChanged) {
+      // Case A — instant, no animation.
+      cameraAnim.setValue({ x: destX, y: destY });
+    } else {
+      // Case B — ease camera toward the player's new tile after movement.
+      AccessibilityInfo.isReduceMotionEnabled()
+        .then(reduceMotion => {
+          if (reduceMotion) {
+            cameraAnim.setValue({ x: destX, y: destY });
+          } else {
+            Animated.spring(cameraAnim, {
+              toValue:          { x: destX, y: destY },
+              useNativeDriver:  false,
+              friction:         8,
+              tension:          100,
+            }).start();
+          }
+        })
+        .catch(() => {
+          Animated.spring(cameraAnim, {
+            toValue:         { x: destX, y: destY },
+            useNativeDriver: false,
+            friction:        8,
+            tension:         100,
+          }).start();
+        });
     }
 
-    // ── Dev diagnostics: write world metrics to caller-supplied ref ─────────
-    // Runs on every geometry settle (container resize OR new tile set).
-    // Camera position written here is the post-settle initial value.
-    // Production builds: diagRef is always undefined; this branch is dead code
-    // that tree-shakers eliminate.  __DEV__ guard makes intent explicit.
+    // ── Dev diagnostics ──────────────────────────────────────────────────────
+    // Production: diagRef is always undefined; tree-shakers eliminate this.
     if (__DEV__ && diagRef) {
       diagRef.current = {
         worldW,
         worldH,
-        cameraX:           camRef.current.x,
-        cameraY:           camRef.current.y,
+        cameraX:           destX,
+        cameraY:           destY,
         renderedTileCount: tiles.length,
         tileSize:          sz,
       };
     }
-  // sz changes when containerWidth changes; tilesKey drives re-centre on new run.
+  // tilesKey = `${runKey}:${playerKey}` collapses both movement signals into one dep.
+  // sz/containerWidth/containerHeight cover geometry changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerWidth, containerHeight, sz, tilesKey]);
 
