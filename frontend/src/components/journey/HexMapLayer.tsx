@@ -54,9 +54,9 @@
  * • TILE_BASE.hidden and per-tile fog textures removed entirely.
  * • Fog is ONE world-space SVG above all tile Pressables (zIndex 5000).
  * • unexplored → large RadialGradient blob (2.8 × sz); adjacent blobs overlap
- *   into a seamless ink-blue fog mass.  Tile disabled Pressable at zIndex 1–3000.
- * • visibleNow → tile elevated to zIndex 5100+.  Jade edge glow; full brightness.
- * • current → tile at zIndex 9999 (always topmost).
+ *   into a seamless ink-blue fog mass.  Tile disabled Pressable at zIndex 50–1550.
+ * • visibleNow → terrain at TERRAIN_BASE + worldY*DEPTH (5100–5400).  Jade glow; full brightness.
+ * • current → terrain at same formula as visibleNow; player sprite at OBJECT_BASE + worldY*DEPTH.
  * Note: SVG <Mask> is NOT used — react-native-svg's web backend has no Mask class.
  *
  * PUSH 9 — Standardise map encounters as 2.5D world pieces
@@ -315,7 +315,8 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
 //
 // Head rises to: charY + 0.05 × charH ≈ −0.38sz + 0.058sz = −0.32sz
 // (about 32 % of tile width above the tile top — overlaps the cell above in
-//  isometric depth but renders on top thanks to zIndex 9999.)
+//  isometric depth.  Push 21: sorts correctly via OBJECT_BASE + worldY*DEPTH —
+//  no special-case zIndex needed.)
 //
 // The jade glow ellipse (Layer 4a) is centred at the feet position and widens
 // slightly beyond the sprite footprint for a magical ambient halo effect.
@@ -343,6 +344,34 @@ const CHR_GLOW_OPACITY     = 0.55;   // peak centre opacity of jade glow pool
 const SHADOW_COLOR     = 'rgba(0,5,20,0.62)';   // Ink & Mist dark navy — Push 12: richer grounding
 const SHADOW_RY_FRAC   = 0.068;                  // Push 12: slightly taller profile for clearer contact
 const SHADOW_RX_MUL    = 0.48;                   // node shadow rx = sizeMul × this × sz
+
+// ── Push 21: two-pass depth-sort z-layer bases ────────────────────────────────
+//
+// TERRAIN pass  (HexTile Pressable — terrain image, state rings, contact shadow)
+//   TERRAIN_BASE = 5100 — sits above JourneyFogField (z 5000) for all revealed
+//   tiles, even those with negative worldY.
+//   worldY range for authored maps: roughly 0 – 30.
+//   terrain z range: 5100 – 5400.
+//
+// OBJECT pass  (HexObjectLayer — encounter node sprites, jade glow, player sprite)
+//   OBJECT_BASE = 6200 — clear of the top of the terrain band (~5400) with a
+//   comfortable 800-unit gap.  All world-object sprites always render above all
+//   terrain tiles, then sort among themselves by worldY so southern objects are
+//   visually in front of northern ones.
+//   object z range: 6200 – 6500.
+//
+// GATE_ART_Z = 7000 — above all objects; boss-gate overlay always on top.
+//
+// DEPTH = 10 — one z-unit per 0.1 worldY step; consistent across both passes
+// so a southern tile in pass A cannot accidentally appear above its own objects
+// in pass B.
+//
+// Unexplored Pressables: worldY*50 + 50 → z 50–1550, well below fog (5000).
+const TERRAIN_BASE  = 5100;
+const TERRAIN_DEPTH = 10;
+const OBJECT_BASE   = 6200;
+const OBJECT_DEPTH  = 10;
+const GATE_ART_Z    = 7000;
 const CHR_SHADOW_CY    = CHR_GLOW_CY;            // same floor as jade glow (0.65 × sz)
 const CHR_SHADOW_RX    = CHR_GLOW_RX + 0.07;     // wider than glow (0.43 × sz) — Push 8
 const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node shadow
@@ -692,11 +721,6 @@ interface HexTileProps {
   coords: HexWorldCoords;
   onPress: (tile: HexMapTile) => void;
   /**
-   * When set and this tile is current: renders the exploration character
-   * in place of the medallion token.  When absent: medallion is preserved.
-   */
-  explorationCharacter?: number;
-  /**
    * Per-shift SVG color theme — drives state border/glow colors (veil hairline,
    * frontier jade rim, current-tile ring).  Resolved by HexMapLayer from the
    * active `timeOfDay`; individual tiles never inspect shift state themselves.
@@ -705,7 +729,10 @@ interface HexTileProps {
   fogTheme: FogTheme;
 }
 
-function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexTileProps) {
+// Push 21: explorationCharacter removed from HexTile — it is now consumed by
+// HexObjectLayer (the object-pass renderer).  HexTile handles terrain + rings
+// + contact shadow only; it never renders sprites directly.
+function HexTile({ tile, coords, onPress, fogTheme }: HexTileProps) {
   const { sz } = coords;
   const pos = coords.axialToWorld(tile.q, tile.r);
   // Push 7: world-object node replaces flat encounter icon on the map.
@@ -727,24 +754,25 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
   const terrainSz  = Math.round(sz * TERRAIN_SCALE);
   const terrainOff = -Math.round((terrainSz - sz) / 2);
 
-  // Player token sits on top of the current tile.
-  const tokenSz = Math.round(sz * 0.62);
-  const tokenX  = Math.round((sz - tokenSz) / 2);
-  const tokenY  = Math.round((sz - tokenSz) / 2) - Math.round(sz * 0.08);
-
-  // Iso-depth zIndex: tiles further down the screen paint above tiles further up.
-  // Three distinct strata above / below the fog SVG (zIndex 5000):
-  //   9999        current tile — always topmost
-  //   5100–5200   visibleNow   — above fog, full brightness + jade glow
-  //   5050–5075   exploredButOutOfVision — above fog, terrain visible through veil
-  //   1–3000      unexplored   — below fog, disabled Pressable only
-  const tileZ = tile.current
-    ? 9999
-    : tile.visibility === 'visibleNow'
-      ? 5100 + Math.round((tile.r + tile.q * 0.5) * 10)
-      : tile.visibility === 'exploredButOutOfVision'
-        ? 5050 + Math.round((tile.r + tile.q * 0.5) * 5)
-        : Math.round((tile.r + tile.q * 0.5) * 100) + 1;
+  // Push 21: unified terrain z for all non-unexplored tiles.
+  //
+  // All revealed tiles (exploredButOutOfVision, visibleNow, current) now share
+  // TERRAIN_BASE as their stratum.  worldY offset keeps southern tiles in front
+  // of northern ones within the terrain pass.  The old 9999 sentinel for the
+  // current tile is removed — the player sprite now lives in HexObjectLayer at
+  // OBJECT_BASE + worldY * OBJECT_DEPTH, above all terrain, and sorts correctly
+  // against encounter nodes on adjacent tiles.
+  //
+  // Strata (Push 21):
+  //   OBJECT_BASE + worldY*DEPTH   6200–6500   HexObjectLayer (nodes + player)
+  //   TERRAIN_BASE + worldY*DEPTH  5100–5400   HexTile Pressables (revealed)
+  //   JourneyFogField              5000        atmospheric fog (unchanged)
+  //   worldY*50 + 50               50–1550     unexplored disabled Pressables
+  const worldY = tile.r + tile.q * 0.5;
+  const tileZ  =
+    tile.visibility === 'unexplored' && !tile.current
+      ? Math.round(worldY * 50) + 50
+      : TERRAIN_BASE + Math.round(worldY * TERRAIN_DEPTH);
 
   return (
     <Pressable
@@ -946,110 +974,159 @@ function HexTile({ tile, coords, onPress, explorationCharacter, fogTheme }: HexT
         </View>
       )}
 
-      {/* ── Layer 3: encounter world object (visibleNow / explored / current) ── */}
-      {/* Push 9:  all encounter types shown on visibleNow AND exploredButOut-    */}
-      {/* OfVision.  Battle shows the pedestal only (enemy hidden); areaBoss      */}
-      {/* renders the actual boss sprite at 1.35 × sz (larger than player 1.15). */}
-      {/* All nodes bottom-anchored at ~88 % tile height (the 2.5D hex floor).   */}
-      {/*                                                                         */}
-      {/* Push 18: exploredButOutOfVision nodes render at MEMORY_NODE_ALPHA       */}
-      {/* (0.82) so known stationary encounters stay clearly readable after        */}
-      {/* discovery — players should always be able to identify what they scouted. */}
-      {/* visibleNow / current nodes stay at full opacity (1.0).                  */}
-      {node !== null && (() => {
-        const nodeSz = Math.round(sz * node.sizeMul);
-        const nodeX  = Math.round((sz - nodeSz) / 2);
-        // Bottom of bounding box anchored at 88 % tile height (the hex floor).
-        const nodeY  = Math.round(sz * 0.88 - nodeSz);
-        return (
-          <Image
-            source={node.src}
-            style={[s.marker, {
-              left:    nodeX,
-              top:     nodeY,
-              width:   nodeSz,
-              height:  nodeSz,
-              opacity: isExplored ? MEMORY_NODE_ALPHA : 1,
-            }]}
-            contentFit="contain"
-            recyclingKey={`node-${tile.id}`}
-          />
-        );
-      })()}
-
-      {/* ── Layer 4a: jade ambient ground pool — all current-tile sprites ───── */}
-      {/* Rendered BELOW the character sprite (painters order) so the character */}
-      {/* appears to stand in a pool of magical teal light.                     */}
-      {/* The sprites carry their own painted contact shadow in the art;         */}
-      {/* this layer adds the ambient "inhabiting-the-world" magical presence.  */}
-      {/*                                                                       */}
-      {/* Push 19: condition broadened — jade glow now fires for both the class  */}
-      {/* sprite (explorationCharacter) AND the default chibi explorer fallback  */}
-      {/* (MAP_SPRITE_EXPLORER).  The old jade medallion path is retired here.   */}
-      {tile.current && (
-        <View style={[s.overlay, { pointerEvents: 'none' }]}>
-          <Svg width={sz} height={sz}>
-            <Defs>
-              <RadialGradient
-                id="chr-gnd"
-                cx={sz / 2}    cy={sz * CHR_GLOW_CY}
-                r={sz * CHR_GLOW_RX}
-                fx={sz / 2}   fy={sz * CHR_GLOW_CY}
-                gradientUnits="userSpaceOnUse"
-              >
-                <Stop offset="0%"   stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY} />
-                <Stop offset="55%"  stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY * 0.30} />
-                <Stop offset="100%" stopColor={CHR_GLOW_COLOR} stopOpacity={0} />
-              </RadialGradient>
-            </Defs>
-            {/* Push 8: dark contact shadow — painted first (painters order)   */}
-            {/* so jade glow renders on top.  Shadow edges show at the perimeter */}
-            {/* where the glow gradient fades to transparent — grounded but     */}
-            {/* still magical.                                                   */}
-            <Ellipse
-              cx={sz / 2}
-              cy={sz * CHR_SHADOW_CY}
-              rx={sz * CHR_SHADOW_RX}
-              ry={sz * CHR_SHADOW_RY}
-              fill={SHADOW_COLOR}
-            />
-            {/* Jade ambient glow — renders above shadow, obscures centre */}
-            <Ellipse
-              cx={sz / 2}
-              cy={sz * CHR_GLOW_CY}
-              rx={sz * CHR_GLOW_RX}
-              ry={sz * CHR_GLOW_RY}
-              fill="url(#chr-gnd)"
-            />
-          </Svg>
-        </View>
-      )}
-
-      {/* ── Layer 4b: player sprite — current tile only ───────────────────── */}
-      {/* Push 6: sprite is sized at CHR_H_RATIO × sz so the character stands  */}
-      {/* taller than the tile (2.5D camera angle).  The sprite's built-in     */}
-      {/* painted shadow lands at ~84 % down the tile — the visual "floor".    */}
-      {/*                                                                       */}
-      {/* Push 19: the jade medallion token fallback is retired.  When no       */}
-      {/* class_tree_id is set, MAP_SPRITE_EXPLORER (donghua chibi, teal-jade   */}
-      {/* longcoat, black hair) is shown instead.  Both class sprites and the   */}
-      {/* explorer default use the same CHR_* sizing so they sit identically.  */}
-      {tile.current && (() => {
-        const activeSprite = explorationCharacter ?? MAP_SPRITE_EXPLORER;
-        const charW = Math.round(sz * CHR_W_RATIO);
-        const charH = Math.round(sz * CHR_H_RATIO);
-        const charX = Math.round((sz - charW) / 2);
-        const charY = -Math.round(sz * CHR_Y_SHIFT);
-        return (
-          <Image
-            source={activeSprite}
-            style={[s.marker, { left: charX, top: charY, width: charW, height: charH }]}
-            contentFit="contain"
-            recyclingKey={`chr-${tile.id}`}
-          />
-        );
-      })()}
+      {/* ── Layers 3, 4a, 4b MOVED to HexObjectLayer (Push 21) ───────────────
+        * Encounter node sprites, jade ground glow, and player sprite now live
+        * in the OBJECT pass (z OBJECT_BASE + worldY*DEPTH), above all terrain.
+        * This keeps HexTile as a pure terrain + interaction + shadow element.  */}
     </Pressable>
+  );
+}
+
+// ── HexObjectLayer ────────────────────────────────────────────────────────────
+//
+// Push 21: object-pass renderer — renders encounter node sprites, jade ambient
+// ground pool, and the player sprite in a separate layer above all terrain.
+//
+// Architecture:
+//   • Each tile that has an encounter node OR is the current (player) tile gets
+//     an absolutely-positioned View at that tile's world coordinates.
+//   • zIndex = OBJECT_BASE + round(worldY * OBJECT_DEPTH)
+//     So a tile at r=7 (south) always paints above a tile at r=5 (north) in the
+//     object layer, regardless of its encounter type or visibility state.
+//   • The View is pointerEvents="none" so all taps fall through to the Pressable
+//     terrain tiles in the lower TERRAIN pass.
+//   • overflow="visible" (via s.tile style reuse) lets large sprites (areaBoss
+//     ×1.35, patient bed ×0.92) extend beyond the sz×sz bounding box without
+//     being clipped — the same property that allowed terrain bleed in Push 11.
+//
+// Layer order within each object View (DOM painters order):
+//   1. Jade glow Svg (if current tile) — BELOW player sprite
+//   2. Encounter node Image — anchored at 88% tile height
+//   3. Player sprite Image (if current tile) — ABOVE jade glow
+
+interface HexObjectLayerProps {
+  tiles:                readonly HexMapTile[];
+  coords:               HexWorldCoords;
+  explorationCharacter?: number;
+}
+
+function HexObjectLayer({ tiles, coords, explorationCharacter }: HexObjectLayerProps) {
+  const { sz } = coords;
+
+  return (
+    <>
+      {tiles.map(tile => {
+        const node       = encounterMapNode(tile);
+        const hasCurrent = tile.current;
+        if (!node && !hasCurrent) return null;
+
+        const pos      = coords.axialToWorld(tile.q, tile.r);
+        const worldY   = tile.r + tile.q * 0.5;
+        const objectZ  = OBJECT_BASE + Math.round(worldY * OBJECT_DEPTH);
+        const isExplored = !tile.current && tile.visibility === 'exploredButOutOfVision';
+        // Unique glow gradient id — only one current tile exists at a time but
+        // SVG ids are document-global on web so we namespace per tile anyway.
+        const glowId = `chr-gnd-${tile.id}`;
+
+        return (
+          <View
+            key={`obj-${tile.id}`}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left:     pos.left,
+              top:      pos.top,
+              width:    sz,
+              height:   sz,
+              zIndex:   objectZ,
+              overflow: 'visible',
+            }}
+          >
+            {/* Layer 4a: jade ambient ground pool — current tile only.
+              * Renders BELOW the player sprite (DOM paint order).
+              * Dark contact shadow is drawn first (SVG painters order) so the
+              * jade glow gradient sits on top — grounded but magical.          */}
+            {hasCurrent && (
+              <Svg
+                width={sz}
+                height={sz}
+                style={{ position: 'absolute', left: 0, top: 0 }}
+              >
+                <Defs>
+                  <RadialGradient
+                    id={glowId}
+                    cx={sz / 2}  cy={sz * CHR_GLOW_CY}
+                    r={sz * CHR_GLOW_RX}
+                    fx={sz / 2}  fy={sz * CHR_GLOW_CY}
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <Stop offset="0%"   stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY} />
+                    <Stop offset="55%"  stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY * 0.30} />
+                    <Stop offset="100%" stopColor={CHR_GLOW_COLOR} stopOpacity={0} />
+                  </RadialGradient>
+                </Defs>
+                {/* Contact shadow — below jade glow (SVG painters order) */}
+                <Ellipse
+                  cx={sz / 2}        cy={sz * CHR_SHADOW_CY}
+                  rx={sz * CHR_SHADOW_RX} ry={sz * CHR_SHADOW_RY}
+                  fill={SHADOW_COLOR}
+                />
+                {/* Jade ambient glow — above shadow */}
+                <Ellipse
+                  cx={sz / 2}        cy={sz * CHR_GLOW_CY}
+                  rx={sz * CHR_GLOW_RX} ry={sz * CHR_GLOW_RY}
+                  fill={`url(#${glowId})`}
+                />
+              </Svg>
+            )}
+
+            {/* Layer 3: encounter world-object sprite.
+              * Bottom of bounding box anchored at ~88 % tile height (the hex floor).
+              * Push 18: exploredButOutOfVision nodes at MEMORY_NODE_ALPHA (0.82). */}
+            {node !== null && (() => {
+              const nodeSz = Math.round(sz * node.sizeMul);
+              const nodeX  = Math.round((sz - nodeSz) / 2);
+              const nodeY  = Math.round(sz * 0.88 - nodeSz);
+              return (
+                <Image
+                  source={node.src}
+                  style={[s.marker, {
+                    left:    nodeX,
+                    top:     nodeY,
+                    width:   nodeSz,
+                    height:  nodeSz,
+                    opacity: isExplored ? MEMORY_NODE_ALPHA : 1,
+                  }]}
+                  contentFit="contain"
+                  recyclingKey={`node-${tile.id}`}
+                />
+              );
+            })()}
+
+            {/* Layer 4b: player sprite — current tile only.
+              * Uses explorationCharacter (class sprite) when available, else falls
+              * back to MAP_SPRITE_EXPLORER (donghua chibi — Push 19).
+              * Sized at CHR_W_RATIO × sz; feet land at ~65 % tile height.
+              * Renders ABOVE jade glow (DOM paint order).                       */}
+            {hasCurrent && (() => {
+              const activeSprite = explorationCharacter ?? MAP_SPRITE_EXPLORER;
+              const charW = Math.round(sz * CHR_W_RATIO);
+              const charH = Math.round(sz * CHR_H_RATIO);
+              const charX = Math.round((sz - charW) / 2);
+              const charY = -Math.round(sz * CHR_Y_SHIFT);
+              return (
+                <Image
+                  source={activeSprite}
+                  style={[s.marker, { left: charX, top: charY, width: charW, height: charH }]}
+                  contentFit="contain"
+                  recyclingKey={`chr-${tile.id}`}
+                />
+              );
+            })()}
+          </View>
+        );
+      })}
+    </>
   );
 }
 
@@ -1518,7 +1595,7 @@ export function HexMapLayer({
     onTilePress?.(tile);
   }, [onTilePress]);
 
-  // ── Render order: iso-depth sort; current tile paints last (top) ────────────
+  // ── Render order: iso-depth sort for TERRAIN PASS ────────────────────────────
   // Push 13: tighter spacing means tiles from adjacent staggered columns now
   // visually overlap. Sorting by r alone was correct when only same-column rows
   // overlapped; with the new constants, diagonal neighbours (q, r) vs
@@ -1527,6 +1604,12 @@ export function HexMapLayer({
   // Iso-depth for flat-top axial: screen_y ∝ r × R_STEP + q × Q_VOFF
   //   = (r + q × 0.5) × R_STEP   [since Q_VOFF = R_STEP/2]
   // Sorting by (r + q × 0.5) correctly orders ALL overlapping pairs.
+  //
+  // Push 21: current tile is no longer painted last to assert z=9999 supremacy;
+  // tileZ uses TERRAIN_BASE + worldY*TERRAIN_DEPTH for all revealed tiles.
+  // Putting current tile last in DOM order is still a useful belt-and-suspenders
+  // tie-breaker if two tiles land at the exact same tileZ (unlikely in practice).
+  // The player sprite lives in HexObjectLayer and sorts independently.
   const sorted = useMemo(
     () =>
       [...tiles].sort((a, b) => {
@@ -1606,16 +1689,30 @@ export function HexMapLayer({
           * Camera panning → PanResponder + Animated.ValueXY (this file)
           * Neither deletes terrain from MapWorld.
           */}
+        {/* ── TERRAIN PASS: Pressable + state rings + contact shadow ────────
+          * Push 21: HexTile no longer renders encounter sprites or the player
+          * sprite — those live in HexObjectLayer below.  HexTile is now a pure
+          * terrain + interaction + shadow layer sorted by worldY.              */}
         {sorted.map(tile => (
           <HexTile
             key={tile.id}
             tile={tile}
             coords={coords}
             onPress={handleTilePress}
-            explorationCharacter={explorationCharacter}
             fogTheme={fogTheme}
           />
         ))}
+
+        {/* ── OBJECT PASS: encounter nodes + jade glow + player sprite ────────
+          * Push 21: rendered at OBJECT_BASE (6200) + worldY*DEPTH above all
+          * terrain tiles.  pointerEvents="none" — taps fall through to terrain
+          * Pressables.  Large sprites (areaBoss ×1.35) may visually overlap
+          * adjacent cells and will correctly depth-sort among all world objects. */}
+        <HexObjectLayer
+          tiles={tiles}
+          coords={coords}
+          explorationCharacter={explorationCharacter}
+        />
 
         {/* ── Push 16: JourneyFogField — continuous atmospheric fog overlay ─
          *
@@ -1666,7 +1763,7 @@ export function HexMapLayer({
                 top:      top   - offset,
                 width:    overlaySize,
                 height:   overlaySize,
-                zIndex:   5500,  // above fog SVG (5000), below current tile (9999)
+                zIndex:   GATE_ART_Z,  // above object pass (~6200–6500), below dev overlays
               }}
             >
               <Image
