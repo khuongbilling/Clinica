@@ -311,6 +311,13 @@ export function buildInitialJourneyRun({
   // tileCount = playable tiles only (gate excluded).
   const tileCount = topology.tiles.length - 1;
 
+  // exploredTileIds: all tiles visible at run start (start tile + initial FOV ring).
+  // Derived from the constructed tiles array so the set is always consistent
+  // with the initial visibility states written into each JourneyTile.
+  const exploredTileIds = tiles
+    .filter(t => t.visibility !== 'unexplored')
+    .map(t => t.id);
+
   return {
     id,
     schemaVersion:          JOURNEY_RUN_SCHEMA_VERSION,
@@ -332,6 +339,7 @@ export function buildInitialJourneyRun({
     areaBossKeysCollected:  Math.max(0, Math.round(initialAreaBossKeysCollected)),
     chapterBossDefeated:    false,
     exploredTileCount:      1,  // start tile is always revealed at creation
+    exploredTileIds,
     staminaSpent:           0,
     // Canonical run inventory — empty at run start
     callTeam:               [],

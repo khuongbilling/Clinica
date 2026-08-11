@@ -128,6 +128,13 @@ export function createJourneyRun({
   // Only the start tile is revealed at creation time.
   const exploredTileCount = 1;
 
+  // exploredTileIds: all tiles visible at run start.
+  // createRun only marks the start tile as exploredButOutOfVision (no FOV ring);
+  // derive from tile states so the set is always consistent.
+  const exploredTileIds = tiles
+    .filter(t => t.visibility !== 'unexplored')
+    .map(t => t.id);
+
   return {
     id,
     schemaVersion:        JOURNEY_RUN_SCHEMA_VERSION,
@@ -148,6 +155,7 @@ export function createJourneyRun({
     areaBossKeysCollected: 0,
     chapterBossDefeated:  false,
     exploredTileCount,
+    exploredTileIds,
     staminaSpent:         0,
     shift,
     callTeam:             [],

@@ -291,6 +291,19 @@ export interface JourneyRun {
   /** Count of tiles whose visibility !== 'unexplored'. */
   exploredTileCount: number;
 
+  /**
+   * Set of tile IDs that have ever entered the player's field of vision.
+   * Monotonically growing — never shrinks within a run.
+   *
+   * When a tile in this set falls outside the current FOV it is rendered as
+   * 'exploredButOutOfVision' (remembered terrain, light atmospheric haze) rather
+   * than reverting to 'unexplored' (dense fog).
+   *
+   * Serialised as a string array; legacy runs derive this field from tile
+   * visibility states on load (see journeyRunRepository.fromWire).
+   */
+  exploredTileIds: readonly string[];
+
   /** Total stamina spent on encounters in this run. */
   staminaSpent: number;
 

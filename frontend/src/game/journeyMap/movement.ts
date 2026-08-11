@@ -117,11 +117,20 @@ export function applyMoveToRun(
 
   // Recompute fog using the player's effective vision radius.
   // visionRadius=1 (default) → current tile + 1 ring; class/skill bonuses add rings.
-  const tiles = computeFogAfterMove(run.tiles, destId, visionRadius);
+  // Pass the persistent exploredTileIds set so tiles that have ever been in FOV
+  // become 'exploredButOutOfVision' (remembered terrain) instead of reverting
+  // to 'unexplored' (dense fog) when they fall outside the current radius.
+  const { tiles, exploredTileIds } = computeFogAfterMove(
+    run.tiles,
+    destId,
+    visionRadius,
+    new Set(run.exploredTileIds),
+  );
 
   return {
     ...run,
     tiles,
+    exploredTileIds:   [...exploredTileIds],
     currentTileId:     destId,
     staminaSpent:      run.staminaSpent + 1,
     // exploredTileCount counts tiles the player has stepped on (visited).

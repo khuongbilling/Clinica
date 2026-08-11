@@ -182,23 +182,32 @@ export function computeInitialFog(
  *
  *   Pass 2 — Recompute visibleNow ring:
  *     already-exploredButOutOfVision tiles → unchanged (permanent)
- *     within radius of destination → 'visibleNow'
- *     all others                   → 'unexplored'
+ *     within radius of destination         → 'visibleNow'
+ *     in nextExploredIds but outside FOV   → 'exploredButOutOfVision' (remembered)
+ *     never seen                           → 'unexplored'
  *
- * visibleNow tiles that are no longer within radius of the new current tile
- * revert to 'unexplored' — UNLESS they were previously visited (which means
- * their visibility is already 'exploredButOutOfVision' from Pass 1).
+ * PUSH 6 — REMEMBERED TERRAIN
+ * ─────────────────────────────
+ *   `exploredTileIds` is the caller-provided set of tile IDs that have EVER
+ *   entered the player's field of vision.  Any tile in this set that falls
+ *   outside the current FOV radius is shown as 'exploredButOutOfVision'
+ *   (remembered with light haze) rather than reverting to 'unexplored'.
+ *
+ *   The returned `exploredTileIds` is the grown set (input + destination +
+ *   new FOV ring).  Callers must persist this on the run.
  *
  * Returns a new array; tiles that don't change are the same object references.
  *
- * @param radius   Reveal radius (default: REVEAL_RADIUS = 1).
+ * @param radius          Reveal radius (default: REVEAL_RADIUS = 1).
+ * @param exploredTileIds Tile IDs ever seen; grows with every move (default: empty).
  * @throws If destinationId is not found in tiles.
  */
 export function computeFogAfterMove(
-  tiles:         readonly JourneyTile[],
-  destinationId: string,
-  radius:        number = REVEAL_RADIUS,
-): JourneyTile[] {
+  tiles:           readonly JourneyTile[],
+  destinationId:   string,
+  radius:          number = REVEAL_RADIUS,
+  exploredTileIds: ReadonlySet<string> = new Set(),
+): { tiles: JourneyTile[]; exploredTileIds: Set<string> } {
   const dest = tiles.find(t => t.id === destinationId);
   if (!dest) {
     throw new Error(`fogCalculator: destinationId "${destinationId}" not found in tiles`);
@@ -215,18 +224,35 @@ export function computeFogAfterMove(
     return t;
   });
 
-  // ── Pass 2: recompute visibleNow ring (based on NEW current = destination) ─
-  const tileIds      = new Set(tiles.map(t => t.id));
+  // ── Grow explored set: destination + new FOV ring ─────────────────────────
+  // Build BEFORE Pass 2 so the new ring is included in the memory check.
+  const tileIds        = new Set(tiles.map(t => t.id));
   const inRadiusOfDest = tilesWithinRadius(dest.q, dest.r, radius, tileIds);
 
-  return afterMove.map(t => {
+  const nextExplored = new Set(exploredTileIds);
+  nextExplored.add(destinationId);
+  for (const id of inRadiusOfDest) nextExplored.add(id);
+
+  // ── Pass 2: recompute visibleNow ring (based on NEW current = destination) ─
+  const resultTiles = afterMove.map(t => {
     // exploredButOutOfVision tiles are permanently uncovered — never demoted.
     if (t.visibility === 'exploredButOutOfVision') return t;
 
-    const newVis: TileVisibility = inRadiusOfDest.has(t.id) ? 'visibleNow' : 'unexplored';
+    const inFov    = inRadiusOfDest.has(t.id);
+    const everSeen = nextExplored.has(t.id);
+
+    // Priority: in FOV now → visibleNow
+    //           seen before but outside FOV → exploredButOutOfVision (remembered)
+    //           never in FOV → unexplored (dense fog)
+    const newVis: TileVisibility = inFov    ? 'visibleNow'
+                                 : everSeen ? 'exploredButOutOfVision'
+                                 :            'unexplored';
+
     if (newVis === t.visibility) return t;   // no change — reuse object reference
     return { ...t, visibility: newVis };
   });
+
+  return { tiles: resultTiles, exploredTileIds: nextExplored };
 }
 
 // ── Encounter privacy helper ──────────────────────────────────────────────────

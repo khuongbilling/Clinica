@@ -124,6 +124,11 @@ interface WireRun {
   area_boss_keys_collected:  number;
   chapter_boss_defeated:    boolean;
   explored_tile_count:      number;
+  /**
+   * Push 6 — tile IDs that have ever entered the player's FOV.
+   * Absent on pre-Push-6 legacy runs; derived from tile visibility states on read.
+   */
+  explored_tile_ids?:       string[];
   stamina_spent:            number;
   // Push 4 canonical inventory fields — optional for legacy runs.
   call_team?:               string[];
@@ -165,12 +170,26 @@ function normalizeTiles(tiles: unknown[], currentTileId: string): JourneyRun['ti
   // Legacy runs all pre-date class vision bonuses, so REVEAL_RADIUS is correct.
   const hasFrontier = out.some(t => t.visibility === 'visibleNow');
   if (!hasFrontier && out.some(t => t.id === currentTileId)) {
-    out = computeFogAfterMove(out, currentTileId, REVEAL_RADIUS);
+    // Pass empty exploredTileIds — legacy runs have correct visited flags so
+    // exploredButOutOfVision tiles are already permanent; we only need the
+    // FOV ring fix here.  The exploredTileIds set is derived from tile states
+    // in fromWire() after normalizeTiles() returns.
+    ({ tiles: out } = computeFogAfterMove(out, currentTileId, REVEAL_RADIUS, new Set()));
   }
   return out;
 }
 
 function fromWire(w: WireRun): JourneyRun {
+  const tiles = normalizeTiles(w.tiles, w.current_tile_id);
+
+  // Push 6 — exploredTileIds: tile IDs that have ever entered the player's FOV.
+  // For legacy runs (pre-Push-6) the field is absent on the wire; derive it from
+  // current tile visibility states so they get full remembered-terrain behaviour
+  // immediately on load without a migration script.
+  const exploredTileIds: string[] =
+    w.explored_tile_ids ??
+    tiles.filter(t => t.visibility !== 'unexplored').map(t => t.id);
+
   return {
     id:                     w.id,
     schemaVersion:          w.schema_version,
@@ -184,7 +203,7 @@ function fromWire(w: WireRun): JourneyRun {
     createdAt:              w.created_at,
     updatedAt:              w.updated_at,
     tileCount:              w.tile_count,
-    tiles:                  normalizeTiles(w.tiles, w.current_tile_id),
+    tiles,
     startTileId:            w.start_tile_id,
     currentTileId:          w.current_tile_id,
     gateAnchorTileId:       w.gate_anchor_tile_id,
@@ -193,6 +212,7 @@ function fromWire(w: WireRun): JourneyRun {
     areaBossKeysCollected:  w.area_boss_keys_collected,
     chapterBossDefeated:    w.chapter_boss_defeated,
     exploredTileCount:      w.explored_tile_count,
+    exploredTileIds,
     staminaSpent:           w.stamina_spent,
     callTeam:               w.call_team  ?? [],
     cards:                  (w.cards     ?? []) as JourneyRun['cards'],
@@ -220,6 +240,7 @@ function toWire(run: JourneyRun): Omit<WireRun, 'id' | 'created_at' | 'updated_a
     area_boss_keys_collected:  run.areaBossKeysCollected,
     chapter_boss_defeated:    run.chapterBossDefeated,
     explored_tile_count:      run.exploredTileCount,
+    explored_tile_ids:        run.exploredTileIds as string[],
     stamina_spent:            run.staminaSpent,
     call_team:                run.callTeam as string[],
     cards:                    run.cards,
@@ -290,6 +311,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
           area_boss_keys_collected: run.areaBossKeysCollected,
           chapter_boss_defeated:    run.chapterBossDefeated,
           explored_tile_count:      run.exploredTileCount,
+          explored_tile_ids:        run.exploredTileIds,
           stamina_spent:            run.staminaSpent,
           // Canonical mutable fields
           call_team:                run.callTeam,
