@@ -66,8 +66,17 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
   const metrics = worldMetricsRef.current;
 
   // ── Derived terrain counts ─────────────────────────────────────────────────
-  const tiles       = run?.tiles ?? [];
+  const tiles        = run?.tiles ?? [];
   const runtimeCount = tiles.length;
+
+  // Push 5: "Rendered terrain" = the count from inside HexMapLayer's render
+  // loop (worldMetricsRef.current.renderedTileCount), not mapTiles.length from
+  // the parent.  Both equal tiles.length when no filtering occurs — using the
+  // HexMapLayer value is the more semantically correct source.
+  // Falls back to renderedTerrainCellCount prop (= mapTiles.length) until the
+  // first useLayoutEffect in HexMapLayer fires (requires containerWidth ≥ 10).
+  const renderedInMapWorld =
+    metrics?.renderedTileCount ?? renderedTerrainCellCount;
 
   const visibleNowCount   = tiles.filter(t => t.visibility === 'visibleNow').length;
   const exploredCount     = tiles.filter(t => t.visibility === 'exploredButOutOfVision').length;
@@ -150,10 +159,14 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
             value={String(runtimeCount)}
             valueColor={countColor(runtimeCount, expectedTerrainCellCount)}
           />
+          {/* Push 5: "Rendered terrain: 30 / 30"
+            * Source: worldMetricsRef.current.renderedTileCount (from inside
+            * HexMapLayer's render loop) — falls back to renderedTerrainCellCount
+            * prop until first HexMapLayer useLayoutEffect fires.             */}
           <Row
-            label="renderedTerrainCellCount"
-            value={String(renderedTerrainCellCount)}
-            valueColor={countColor(renderedTerrainCellCount, expectedTerrainCellCount)}
+            label="Rendered terrain"
+            value={`${renderedInMapWorld} / ${expectedTerrainCellCount}`}
+            valueColor={countColor(renderedInMapWorld, expectedTerrainCellCount)}
           />
           <Row
             label="encounterEligibleCellCount"

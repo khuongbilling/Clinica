@@ -570,9 +570,31 @@ export default function ChapterFogMapShell() {
   }, [run, resolvedTileId, battleOutcome, journeyIsAreaBoss, journeyIsChapterBoss]);
 
   // ── Derived display values ─────────────────────────────────────────────────
+  //
+  // TERRAIN INVARIANT (Push 5):
+  //
+  //   When a run is active, ALL run.tiles are passed to HexMapLayer — never a
+  //   filtered subset.  For Chapter 1 this is always 30 cells.
+  //
+  //   Do NOT add a visibility/encounter/fog/viewport filter here.  Terrain must
+  //   be fully mounted in MapWorld for the entire run so that:
+  //     • JourneyFogLayer can carve reveal-holes at EVERY tile position (not
+  //       just visible ones — a missing tile leaves an opaque fog patch forever)
+  //     • BFS adjacency and movement operate over the complete graph
+  //     • Unexplored tile Pressables exist as disabled tap targets (accessible)
+  //
+  //   Fog visibility is controlled by JourneyFogLayer (canvas/SVG overlay).
+  //   What the player sees is controlled by the camera (PanResponder).
+  //   Neither removes terrain from MapWorld.
+  //
+  //   Diagnostic: worldMetricsRef.current.renderedTileCount must equal
+  //   getChapterTerrainCellCount(chNum) for the entire lifetime of the run.
   const mapTiles = useMemo<readonly HexMapTile[]>(() => {
     if (debugTiles !== null) return debugTiles;
-    if (run) return run.tiles.map(t => toHexMapTile(t, run.gateAnchorTileId));
+    if (run) {
+      // ALL tiles — no filter by visibility, encounter, fog state, or position.
+      return run.tiles.map(t => toHexMapTile(t, run.gateAnchorTileId));
+    }
     // No session (no player) — show the static fixture so the dev route always
     // has something visible even without a logged-in player.
     if (!player?.id) return JOURNEY_MAP_FIXTURE;

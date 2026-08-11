@@ -1381,6 +1381,20 @@ export function HexMapLayer({
       <Animated.View
         style={[s.world, { transform: cameraAnim.getTranslateTransform() }]}
       >
+        {/* ── Complete terrain — ALL tiles, no visibility filter (Push 5) ─────
+          * Every tile in the `tiles` prop is mounted into MapWorld for the
+          * full lifetime of the run.  Do NOT gate this map on visibility,
+          * encounter type, fog state, or whether a tile is inside the camera
+          * viewport.  Filtering here would:
+          *   • Leave permanent fog patches over missing tile positions (fog
+          *     carves reveal-holes at tile centres — absent tiles = no hole)
+          *   • Break BFS adjacency and the movement/encounter eligibility graph
+          *   • Remove disabled Pressables that are still accessibility targets
+          *
+          * Fog visibility → JourneyFogLayer (canvas/SVG overlay, below)
+          * Camera panning → PanResponder + Animated.ValueXY (this file)
+          * Neither deletes terrain from MapWorld.
+          */}
         {sorted.map(tile => (
           <HexTile
             key={tile.id}
