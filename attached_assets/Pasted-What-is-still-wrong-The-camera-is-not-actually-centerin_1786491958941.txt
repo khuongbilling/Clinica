@@ -1,0 +1,213 @@
+What is still wrong
+The camera is not actually centering on the player correctly. The character is almost cut off at the very top edge of the viewport. If the player is the camera focus, the default loaded position should put them roughly around the central 40–55% of the map viewport whenever world bounds permit it.
+The gate is also pushed heavily against the right edge. That suggests either the camera clamp is happening too early or the calculated worldBounds are too small and do not include the visual overflow of large sprites like the Gate.
+More importantly, your diagnostics now expose a data discrepancy:
+Tiles 29 playable
+while your canonical Chapter 1 terrain is supposed to be 30 physical cells.
+This may simply mean Replit is excluding the Gate from “playable,” but the terminology is now ambiguous. We should clean that up before continuing.
+And the dark rectangular blocks at the bottom are still present. Those appear to belong to the old fog or world-mask renderer. That is expected because Push 1 did not remove fog yet, but it confirms we should not judge fog visually until the camera/world bounds are correct.
+Do this corrective Push 1A first
+Copy/paste this into Replit:
+PUSH 1A — CORRECT PLAYER CAMERA CENTERING, WORLD BOUNDS, AND TERRAIN COUNT SEMANTICS
+
+This is a correction to Push 1.
+
+Do NOT start the new fog implementation yet.
+
+The unified MapWorld architecture is closer to correct, but the current screenshot shows:
+
+1. The player is nearly clipped at the top of the map viewport instead of being centered.
+2. The Chapter Boss Gate is pushed against the right edge.
+3. Dev diagnostics report "Tiles 29 playable" while Chapter 1 canonically has 30 physical terrain cells.
+4. Old rectangular fog/mask artifacts remain at the bottom, but DO NOT fix those in this push.
+
+PART A — CAMERA CENTERING
+
+On JourneyRun load, center the camera using the CURRENT PLAYER TILE WORLD POSITION.
+
+Use one authoritative function:
+
+const playerWorldPoint =
+  axialToWorld(currentTile.q, currentTile.r);
+
+Target the player near the center of the usable MAP VIEWPORT.
+
+Conceptually:
+
+targetCameraX =
+  viewportWidth / 2 -
+  playerWorldPoint.x;
+
+targetCameraY =
+  viewportHeight / 2 -
+  playerWorldPoint.y;
+
+Then clamp against the padded world bounds.
+
+IMPORTANT:
+
+Do not center the player relative to:
+- page coordinates
+- document coordinates
+- background-image coordinates
+- raw tile-array bounds
+
+Use MapWorld coordinates only.
+
+EXPECTED DEFAULT:
+
+When world bounds permit:
+player should appear approximately around the central 40–55% of the map viewport vertically and near horizontal center.
+
+The player must not load:
+- clipped at the top
+- clipped at the side
+- underneath the header
+- at an arbitrary previously cached camera position unless intentionally restoring a persisted camera
+
+PART B — WORLD BOUNDS MUST INCLUDE VISUAL OVERFLOW
+
+Current bounds appear too tight for large world objects.
+
+Calculate logical terrain bounds from all 30 terrain-cell centers.
+
+Then add WORLD VISUAL PADDING for:
+
+- player sprite overflow
+- Area Boss sprite overflow
+- Merchant overflow
+- Chapter Boss Gate overflow
+- fog overflow
+
+Example concept:
+
+const paddedWorldBounds = {
+  minX: terrainMinX - WORLD_PADDING_X,
+  maxX: terrainMaxX + WORLD_PADDING_X,
+  minY: terrainMinY - WORLD_PADDING_TOP,
+  maxY: terrainMaxY + WORLD_PADDING_BOTTOM,
+};
+
+Do not derive camera clamp solely from the center points of the outermost hexes.
+
+Large world sprites must remain inspectable without being clipped by the viewport edge.
+
+PART C — CAMERA CLAMP LOGIC
+
+Clamp AFTER calculating the desired player-centered camera position.
+
+Do not clamp the player directly.
+
+If the map is larger than the viewport:
+
+allow normal pan.
+
+If one dimension of the map is smaller than the viewport:
+
+center the entire world on that axis instead of pinning it to one edge.
+
+Add a temporary development marker showing:
+
+- player world point
+- viewport center
+- desired camera
+- clamped camera
+
+PART D — CLARIFY 30 TERRAIN CELLS VS 29 ENCOUNTER-ELIGIBLE CELLS
+
+Canonical Chapter 1 definition:
+
+TOTAL PHYSICAL TERRAIN CELLS:
+30
+
+This includes:
+- 1 Start tile
+- 1 Chapter Boss Gate tile
+- 28 other terrain cells
+
+The UI and diagnostics must distinguish:
+
+terrainCellCount = 30
+
+encounterEligibleCellCount = 28
+
+Do NOT label 29 as "playable" without defining what was excluded.
+
+Replace ambiguous dev diagnostics with:
+
+Terrain cells: 30 / 30
+Encounter eligible: 28
+Explored terrain: X / 30
+Visible now: X
+Unexplored: X
+
+If the actual runtime terrain array contains only 29 physical cells:
+
+STOP and report this as a template bug.
+
+Do not silently continue.
+
+If it contains 30 and the Gate is merely excluded from some gameplay selector:
+
+keep the 30-cell physical terrain model and rename the selector appropriately.
+
+PART E — EXPLORATION PROGRESS
+
+The production strip should remain:
+
+CH. 1 · X/30 explored · Keys 0/3
+
+A terrain cell becomes explored after entering Field of Vision.
+
+Gate counts as physical terrain and may count as explored once discovered even while locked.
+
+PART F — DO NOT FIX FOG YET
+
+The dark rectangular shapes at the bottom are part of the remaining legacy fog/mask implementation.
+
+Leave them unchanged for this push.
+
+We need camera and world geometry stable BEFORE replacing fog.
+
+ACCEPTANCE CRITERIA:
+
+1. Fresh Chapter 1 load centers the player whenever world bounds allow.
+2. Player is no longer clipped near the top edge.
+3. Gate can be inspected without being clipped against the right edge.
+4. Recenter button returns camera to the player's current position.
+5. All world elements remain spatially aligned while panning.
+6. Dev diagnostics show exactly:
+   Terrain cells: 30 / 30
+   Encounter eligible: 28
+7. Production exploration denominator remains /30.
+8. No fog implementation changes occur in this push.
+
+Capture screenshots after:
+- fresh load
+- pressing Recenter
+- panning to Gate
+- panning to opposite map edge
+
+Commit:
+
+fix(journey): correct player camera centering world bounds and terrain counts
+What I want the next screenshot to look like
+Before proceeding to fog, the player should load approximately here:
+┌────────────────────────────┐
+│                            │
+│      map / encounters      │
+│                            │
+│           PLAYER           │
+│                            │
+│      map continues         │
+│                            │
+└────────────────────────────┘
+Not:
+┌────────────────────────────┐
+│ PLAYER ← partially clipped │
+│                            │
+│                            │
+│                  GATE →    │
+│                            │
+│                            │
+└────────────────────────────┘
