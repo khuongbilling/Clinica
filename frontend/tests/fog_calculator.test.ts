@@ -50,6 +50,20 @@ import {
   isEncounterVisible,
 } from '../src/game/journeyMap/fogCalculator';
 
+// ── Wrapper: computeFogAfterMove returns { tiles, exploredTileIds } ────────────
+// This thin helper keeps the test bodies readable — the push 10 tests were
+// written before computeFogAfterMove gained the exploredTileIds return.
+// New tests (Push 14 onwards) call computeFogAfterMove directly and destructure.
+
+function fog(
+  tiles:           readonly JourneyTile[],
+  destId:          string,
+  radius?:         number,
+  exploredTileIds?: ReadonlySet<string>,
+): JourneyTile[] {
+  return computeFogAfterMove(tiles, destId, radius, exploredTileIds).tiles;
+}
+
 import type { JourneyTile, TileVisibility } from '../src/game/journeyMap/types';
 
 // ── Tiny test harness ─────────────────────────────────────────────────────────
@@ -184,7 +198,7 @@ check('11. computeInitialFog — throws on missing startId',
   initialTiles[1] = { ...initialTiles[1], visibility: 'visibleNow' };
   // (2–4) already hidden (default)
 
-  const after = computeFogAfterMove(initialTiles, '1,0');
+  const after = fog(initialTiles, '1,0');
   const dest  = byId(after, '1,0');
 
   eq(dest.visibility, 'exploredButOutOfVision', '12. computeFogAfterMove — destination becomes revealed');
@@ -229,7 +243,7 @@ check('11. computeInitialFog — throws on missing startId',
   const far  = makeTile(2,  0, { visibility: 'unexplored'   });  // two steps from C
 
   const allTiles = [C, arm1, arm2, arm3, arm4, far];
-  const after    = computeFogAfterMove(allTiles, arm1.id); // move to (1,-1)
+  const after    = fog(allTiles, arm1.id); // move to (1,-1)
 
   // arm2 (1,0): neighbors of arm1 (1,-1) → check if (1,0) is a neighbor.
   // AXIAL_DIRS of (1,-1): (2,-1),(0,-1),(1,0),(1,-2),(2,-2),(0,0)
@@ -262,7 +276,7 @@ check('11. computeInitialFog — throws on missing startId',
 check('21. computeFogAfterMove — throws on unknown destinationId',
   (() => {
     try {
-      computeFogAfterMove([makeTile(0, 0, { visibility: 'exploredButOutOfVision', current: true })], '9,9');
+      fog([makeTile(0, 0, { visibility: 'exploredButOutOfVision', current: true })], '9,9');
       return false;
     } catch { return true; }
   })());
@@ -272,7 +286,7 @@ check('22. computeFogAfterMove — unchanged tiles reuse same object reference',
     const tiles = linearChain(5);
     tiles[0] = { ...tiles[0], visibility: 'exploredButOutOfVision', visited: true, current: true };
     tiles[1] = { ...tiles[1], visibility: 'visibleNow' };
-    const after = computeFogAfterMove(tiles, '1,0');
+    const after = fog(tiles, '1,0');
     // tile (3,0) and (4,0) are both hidden before and after — should be same ref
     return after.find(t => t.id === '3,0') === tiles[3];
   })());
@@ -320,9 +334,9 @@ check('26. isEncounterVisible — current tile → true regardless of visibility
   // (2,3) hidden
 
   // Move 1: (0,0) → (1,0)
-  tiles = computeFogAfterMove(tiles, '1,0');
+  tiles = fog(tiles, '1,0');
   // Move 2: (1,0) → (2,0)
-  tiles = computeFogAfterMove(tiles, '2,0');
+  tiles = fog(tiles, '2,0');
 
   const t2 = byId(tiles, '2,0');
   const t3 = byId(tiles, '3,0');
@@ -351,8 +365,8 @@ check('26. isEncounterVisible — current tile → true regardless of visibility
   tiles[0] = { ...tiles[0], visibility: 'exploredButOutOfVision', visited: true, current: true };
   tiles[1] = { ...tiles[1], visibility: 'visibleNow' };
 
-  tiles = computeFogAfterMove(tiles, '1,0');  // step onto frontier tile
-  tiles = computeFogAfterMove(tiles, '2,0');  // step further
+  tiles = fog(tiles, '1,0');  // step onto frontier tile
+  tiles = fog(tiles, '2,0');  // step further
 
   eq(byId(tiles, '1,0').visibility, 'exploredButOutOfVision',
     '32. tile that was frontier and visited stays revealed after player moves away');
