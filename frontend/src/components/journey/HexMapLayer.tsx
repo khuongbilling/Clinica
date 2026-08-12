@@ -166,6 +166,7 @@ import {
   Animated,
   Easing,
   PanResponder,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -173,6 +174,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react-native-svg';
 
+import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -1453,6 +1455,14 @@ export interface HexMapDevOverlay {
    * MUST NOT ship — gate all render paths with __DEV__.
    */
   fogDebug?:         boolean;
+  /**
+   * DEV ONLY — world-space fog visibility mask canvas (Push 3 / Layer 1).
+   * Renders the raw mask as a semi-transparent white-on-clear overlay inside
+   * MapWorld so you can verify the organic clearing shape before fog art is added.
+   * Web only — uses HTML5 Canvas 2D.  No-op on native.
+   * MUST NOT ship — gated with __DEV__.
+   */
+  fogMask?:          boolean;
 }
 
 /**
@@ -1661,6 +1671,14 @@ export function HexMapLayer({
   const initialCamRef      = useRef({ x: 0, y: 0 });
   const camRef             = useRef({ x: 0, y: 0 });
   const drag               = useRef({ moved: false, camX0: 0, camY0: 0 });
+
+  // ── Push 3: fog mask canvas refs (dev only, web only) ─────────────────────
+  // fogContainerRef: the world-space View that holds the imperative canvas.
+  // fogCanvasRef:    the <canvas> element appended inside that container.
+  // fogMaskKeyRef:   last-drawn cache key — skip redraw if inputs unchanged.
+  const fogContainerRef = useRef<View>(null);
+  const fogCanvasRef    = useRef<HTMLCanvasElement | null>(null);
+  const fogMaskKeyRef   = useRef<string>('');
   //
   // Push 8: split the old single tilesKeyRef into two independent signals so
   // the camera can distinguish "new run loaded" from "player moved one tile":
@@ -1891,6 +1909,74 @@ export function HexMapLayer({
     onTilePress?.(tile);
   }, [onTilePress]);
 
+  // ── Push 3: fog mask canvas — lifecycle (dev only, web only) ──────────────
+  // Effect A: create the imperative <canvas> when the toggle turns on;
+  //           destroy it when the toggle turns off or the component unmounts.
+  //           Camera pan does NOT touch these deps — no redraw on pan.
+  useEffect(() => {
+    if (!__DEV__ || !devOverlay?.fogMask || Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+
+    const container = fogContainerRef.current as unknown as HTMLDivElement | null;
+    if (!container) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;opacity:0.82;';
+    container.appendChild(canvas);
+    fogCanvasRef.current  = canvas;
+    fogMaskKeyRef.current = ''; // force a draw on first attach
+
+    return () => {
+      canvas.remove();
+      fogCanvasRef.current  = null;
+      fogMaskKeyRef.current = '';
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devOverlay?.fogMask]);
+
+  // ── Push 3: fog mask canvas — redraw when visibility inputs change ─────────
+  // Effect B: runs whenever tiles / world dimensions / sz change.
+  //           Uses fogMaskCacheKey to skip redraws when inputs are unchanged.
+  //           Camera translation is NOT in these deps (pan = no redraw).
+  useEffect(() => {
+    if (!__DEV__ || !devOverlay?.fogMask || Platform.OS !== 'web') return;
+    const canvas = fogCanvasRef.current;
+    if (!canvas) return;
+
+    // Build tile centers and classify visibility from current tile state
+    const tileCenters  = new Map<string, { cx: number; cy: number }>();
+    const visibleNowIds = new Set<string>();
+    const exploredIds   = new Set<string>();
+
+    for (const tile of tiles) {
+      const { left, top } = coords.axialToWorld(tile.q, tile.r);
+      tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
+      if (tile.visibility === 'visibleNow' || tile.current) {
+        visibleNowIds.add(tile.id);
+      } else if (tile.visibility === 'exploredButOutOfVision') {
+        exploredIds.add(tile.id);
+      }
+    }
+
+    // Skip redraw if nothing changed (e.g. cosmetic re-render with same state)
+    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: 1, sz });
+    if (nextKey === fogMaskKeyRef.current) return;
+    fogMaskKeyRef.current = nextKey;
+
+    drawFogMask(canvas, {
+      worldWidth:             worldW,
+      worldHeight:            worldH,
+      sz,
+      tileCenters,
+      visibleNowIds,
+      exploredIds,
+      effectiveFieldOfVision: 1,
+    });
+  // coords.axialToWorld is a pure function derived from tiles + containerWidth;
+  // including coords would cause spurious redraws — sz + tiles are sufficient.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devOverlay?.fogMask, tiles, worldW, worldH, sz]);
+
   // ── Render order: iso-depth sort for TERRAIN PASS ────────────────────────────
   // Push 13: tighter spacing means tiles from adjacent staggered columns now
   // visually overlap. Sorting by r alone was correct when only same-column rows
@@ -1968,6 +2054,34 @@ export function HexMapLayer({
             ]}
             contentFit="cover"
             testID="map-background"
+          />
+        )}
+
+        {/* ── Push 3: fog mask canvas container (dev only, web only) ────────────
+          * A zero-size world-space View whose DOM div hosts the imperative
+          * <canvas> created by Effect A above.  The canvas is sized to
+          * worldW × worldH in that effect, so it covers the full MapWorld.
+          *
+          * zIndex 14500: above terrain (5100–5400), encounters (6200–6500),
+          *               player sprite (6200+), gate (7000) — below the dev
+          *               text overlays (19000) so tile IDs remain readable.
+          *
+          * pointerEvents="none": taps fall through to tiles below.
+          * Opacity 0.82 (set on the canvas element in Effect A).
+          * MUST NOT ship — guarded by __DEV__ && devOverlay.fogMask.
+          */}
+        {__DEV__ && devOverlay?.fogMask && (
+          <View
+            ref={fogContainerRef}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left:     0,
+              top:      0,
+              width:    worldW,
+              height:   worldH,
+              zIndex:   14500,
+            }}
           />
         )}
 

@@ -245,6 +245,7 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
           <ToggleRow label="visibility state"  active={!!overlay.visibilityState}  onToggle={() => toggle('visibilityState')} />
           <ToggleRow label="sprite anchors"    active={!!overlay.spriteAnchors}    onToggle={() => toggle('spriteAnchors')} />
           <ToggleRow label="fog debug tint"    active={!!overlay.fogDebug}         onToggle={() => toggle('fogDebug')} />
+          <ToggleRow label="fog mask canvas"   active={!!overlay.fogMask}          onToggle={() => toggle('fogMask')} />
         </Section>
 
       </ScrollView>
