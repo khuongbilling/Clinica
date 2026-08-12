@@ -177,6 +177,7 @@ import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react
 import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import { FogBaseLayer } from './FogBaseLayer';
 import { FogMidLayer }  from './FogMidLayer';
+import { FogEdgeLayer } from './FogEdgeLayer';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -2127,6 +2128,24 @@ export function HexMapLayer({
           * Web only — native = null stub.
           */}
         <FogMidLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── Push 6: FogEdgeLayer — Layer 3.5 Organic Reveal-Edge Fog ──────────
+          * Sparse edge sprites placed only at the VISIBLE_NOW / fog boundary.
+          * Disguises the mathematical reveal radius with wispy cloud tendrils.
+          * Opacity 0.25–0.50; no full-map coverage; no visibility mask applied
+          * (placement code ensures sprites only appear at the boundary).
+          *
+          * z 5520: above FogMidLayer (z 5510), below WorldObjects (z 6200+).
+          *
+          * Web only — native = null stub.
+          */}
+        <FogEdgeLayer
           tiles={tiles}
           coords={coords}
           worldWidth={worldW}
