@@ -38,7 +38,7 @@
  */
 
 import { Asset } from 'expo-asset';
-import { drawFogMask, type FogMaskParams } from './fogMask';
+import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
 import { JOURNEY_ASSETS } from '../assets';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
@@ -251,4 +251,8 @@ export async function drawFogBase(
   ctx.globalAlpha = 1;
   ctx.drawImage(maskCanvas, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
+
+  // ── Step 5: Edge taper — dissolve fog to transparent at world boundaries ──
+  // Prevents any visible rectangular cutoff where the fog meets the map edge.
+  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
 }

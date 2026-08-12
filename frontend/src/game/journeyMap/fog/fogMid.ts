@@ -42,7 +42,7 @@
  */
 
 import { Asset } from 'expo-asset';
-import { drawFogMask, type FogMaskParams } from './fogMask';
+import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
 import { JOURNEY_ASSETS } from '../assets';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
@@ -229,4 +229,7 @@ export async function drawFogMid(
   ctx.globalAlpha = 1;
   ctx.drawImage(maskCanvas, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
+
+  // ── Step 5: Edge taper — matches fogBase taper so layers dissolve uniformly
+  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
 }

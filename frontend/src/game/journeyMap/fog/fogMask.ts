@@ -196,6 +196,117 @@ export function drawFogMask(
   ctx.globalCompositeOperation = 'source-over';
 }
 
+// ── Edge taper ─────────────────────────────────────────────────────────────────
+
+/**
+ * Fades the fog canvas to transparent at all four world edges, eliminating any
+ * visible rectangular cutoff where the fog meets the map boundary.
+ *
+ * Call this as the LAST step after all fog sprites and the visibility mask have
+ * been applied.  It composites a vignette with `destination-in`:
+ *
+ *   • Interior (> taperPx from world edge)  — fully opaque → fog kept unchanged.
+ *   • Taper zone (0 – taperPx from world edge) — linear fade 100 % → 0 %.
+ *   • Padding area (outside world boundary)  — 0 % → fog fully erased.
+ *
+ * The four edge gradients are applied independently; corners receive the product
+ * of both adjacent gradients, producing a natural diagonal fade.
+ *
+ * @param ctx        The fog canvas 2D context (already has sprites + mask).
+ * @param canvasW    Full canvas width  (worldWidth  + 2 × padding).
+ * @param canvasH    Full canvas height (worldHeight + 2 × padding).
+ * @param padding    The FOG_WORLD_PADDING value used when sizing the canvas.
+ * @param taperPx    Fade distance in pixels measured inward from the world edge.
+ *                   Recommended: 100–180 px.
+ */
+export function applyEdgeTaper(
+  ctx:      CanvasRenderingContext2D,
+  canvasW:  number,
+  canvasH:  number,
+  padding:  number,
+  taperPx:  number,
+): void {
+  // Build a vignette canvas that is white (keep fog) in the interior and
+  // transparent (erase fog) in the padded area and taper zone.
+  const vig = document.createElement('canvas');
+  vig.width  = canvasW;
+  vig.height = canvasH;
+  const v = vig.getContext('2d');
+  if (!v) return;
+
+  // Start fully opaque — fog is preserved everywhere by default.
+  v.fillStyle = 'rgba(255,255,255,1)';
+  v.fillRect(0, 0, canvasW, canvasH);
+
+  // destination-out: wherever we paint, we erase the white.
+  v.globalCompositeOperation = 'destination-out';
+
+  // Helper: fraction of the gradient where the world edge sits.
+  // Gradient spans from canvas edge (0 or canvasW/H) to taper end inside world.
+  // In that span: [canvas-edge … world-edge] = padding/(padding+taperPx) frac.
+  const edgeFrac = (p: number, t: number) => p / (p + t);
+
+  // ── Left edge (erase from canvas x=0; full through x=padding; fade to x=padding+taper)
+  {
+    const gx1 = 0;
+    const gx2 = padding + taperPx;
+    const g = v.createLinearGradient(gx1, 0, gx2, 0);
+    const f = edgeFrac(padding, taperPx);
+    g.addColorStop(0,   'rgba(0,0,0,1)');
+    g.addColorStop(f,   'rgba(0,0,0,1)'); // world edge — still fully erased
+    g.addColorStop(1,   'rgba(0,0,0,0)'); // taper end — keep fog
+    v.fillStyle = g;
+    v.fillRect(gx1, 0, gx2, canvasH);
+  }
+
+  // ── Right edge
+  {
+    const gx1 = canvasW;
+    const gx2 = canvasW - padding - taperPx;
+    const g = v.createLinearGradient(gx1, 0, gx2, 0);
+    const f = edgeFrac(padding, taperPx);
+    g.addColorStop(0,   'rgba(0,0,0,1)');
+    g.addColorStop(f,   'rgba(0,0,0,1)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    v.fillStyle = g;
+    v.fillRect(gx2, 0, padding + taperPx, canvasH);
+  }
+
+  // ── Top edge
+  {
+    const gy1 = 0;
+    const gy2 = padding + taperPx;
+    const g = v.createLinearGradient(0, gy1, 0, gy2);
+    const f = edgeFrac(padding, taperPx);
+    g.addColorStop(0,   'rgba(0,0,0,1)');
+    g.addColorStop(f,   'rgba(0,0,0,1)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    v.fillStyle = g;
+    v.fillRect(0, gy1, canvasW, gy2);
+  }
+
+  // ── Bottom edge
+  {
+    const gy1 = canvasH;
+    const gy2 = canvasH - padding - taperPx;
+    const g = v.createLinearGradient(0, gy1, 0, gy2);
+    const f = edgeFrac(padding, taperPx);
+    g.addColorStop(0,   'rgba(0,0,0,1)');
+    g.addColorStop(f,   'rgba(0,0,0,1)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    v.fillStyle = g;
+    v.fillRect(0, gy2, canvasW, padding + taperPx);
+  }
+
+  v.globalCompositeOperation = 'source-over';
+
+  // Apply the vignette to the fog canvas: keep fog only where vignette is opaque.
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.globalAlpha = 1;
+  ctx.drawImage(vig, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
 /**
