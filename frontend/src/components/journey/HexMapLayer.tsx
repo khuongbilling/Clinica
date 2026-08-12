@@ -1010,6 +1010,13 @@ interface HexObjectLayerProps {
   playerFacing?:         FacingDir;
   /** True while the player is traversing to a new tile — switches to walk animation. */
   isMoving?:             boolean;
+  /**
+   * Task 720: tile ID the hero just stepped off.
+   * HexObjectLayer renders a brief dust-puff SVG centred on that tile,
+   * fading from full opacity to transparent over ~360 ms.
+   * Cleared by the parent after ~420 ms so the View is unmounted cleanly.
+   */
+  dustTileId?:           string;
 }
 
 function HexObjectLayer({
@@ -1018,6 +1025,7 @@ function HexObjectLayer({
   explorationCharacter,
   playerFacing = 'face_e',
   isMoving = false,
+  dustTileId,
 }: HexObjectLayerProps) {
   const { sz } = coords;
 
@@ -1034,6 +1042,31 @@ function HexObjectLayer({
   // Both run on the native driver (transform only); no layout re-measure.
   const bobAnim  = useRef(new Animated.Value(0)).current;
   const swayAnim = useRef(new Animated.Value(0)).current;
+
+  // ── Task 720: step-dust trail ─────────────────────────────────────────────
+  //
+  // dustAnim drives the opacity of a radial SVG dust puff rendered on the tile
+  // the hero just stepped off.  When dustTileId changes to a non-null value the
+  // animation runs once: snap to 1 → ease-out fade to 0 over ~360 ms.
+  // The parent clears dustTileId after ~420 ms so the overlay View is unmounted.
+  // useNativeDriver:true — opacity-only animation, no layout cost.
+  const dustAnim       = useRef(new Animated.Value(0)).current;
+  const prevDustTileId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (dustTileId && dustTileId !== prevDustTileId.current) {
+      prevDustTileId.current = dustTileId;
+      dustAnim.setValue(1);
+      Animated.timing(dustAnim, {
+        toValue:         0,
+        duration:        360,
+        useNativeDriver: true,
+        easing:          Easing.out(Easing.quad),
+      }).start();
+    }
+    // dustAnim is a stable ref value — intentional omission from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dustTileId]);
 
   useEffect(() => {
     bobAnim.stopAnimation();
@@ -1079,7 +1112,8 @@ function HexObjectLayer({
       {tiles.map(tile => {
         const node       = encounterMapNode(tile);
         const hasCurrent = tile.current;
-        if (!node && !hasCurrent) return null;
+        const hasDust    = tile.id === dustTileId;
+        if (!node && !hasCurrent && !hasDust) return null;
 
         const pos      = coords.axialToWorld(tile.q, tile.r);
         const worldY   = tile.r + tile.q * 0.5;
@@ -1163,6 +1197,49 @@ function HexObjectLayer({
                 />
               );
             })()}
+
+            {/* Layer 4c: Task 720 — step-dust departure puff.
+              * Renders on the tile the hero just vacated (hasDust && !hasCurrent).
+              * A radial SVG ellipse centred at the sprite's foot position
+              * (sz × 0.65) fades from opacity 1 → 0 over ~360 ms via dustAnim.
+              * Does NOT affect tile state, fog logic, or movement validation.   */}
+            {hasDust && !hasCurrent && (
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left:  0, top: 0,
+                  width: sz, height: sz,
+                  opacity: dustAnim,
+                }}
+              >
+                <Svg width={sz} height={sz}>
+                  <Defs>
+                    <RadialGradient
+                      id={`dust-${tile.id}`}
+                      cx={sz / 2}
+                      cy={sz * 0.65}
+                      r={sz * 0.34}
+                      fx={sz / 2}
+                      fy={sz * 0.65}
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <Stop offset="0%"   stopColor="rgba(230,218,170,1)" stopOpacity={0.72} />
+                      <Stop offset="55%"  stopColor="rgba(210,198,145,1)" stopOpacity={0.30} />
+                      <Stop offset="100%" stopColor="rgba(190,178,120,1)" stopOpacity={0}    />
+                    </RadialGradient>
+                  </Defs>
+                  {/* Horizontal dust ellipse — wide footprint, flat profile */}
+                  <Ellipse
+                    cx={sz / 2}
+                    cy={sz * 0.65}
+                    rx={sz * 0.36}
+                    ry={sz * 0.13}
+                    fill={`url(#dust-${tile.id})`}
+                  />
+                </Svg>
+              </Animated.View>
+            )}
 
             {/* Layer 4b: player sprite — current tile only.
               * Task 719: Explorer uses EXPLORER_FACING_SPRITES[playerFacing] — a
@@ -1426,6 +1503,15 @@ export interface HexMapLayerProps {
   isMoving?: boolean;
 
   /**
+   * Task 720: tile ID the hero just stepped off.
+   * HexObjectLayer renders a brief dust-puff SVG on that tile,
+   * fading from opacity 1 → 0 over ~360 ms.
+   * Pass the `fromTile.id` captured in fog-map.tsx at move start;
+   * clear to undefined after ~420 ms (the animation will have completed).
+   */
+  dustTileId?: string;
+
+  /**
    * Run seed forwarded to JourneyFogField.
    * Enables per-run placement variation once the fog field is seeded.
    * Pass `run.seed` (string) from fog-map.tsx.
@@ -1493,6 +1579,7 @@ export function HexMapLayer({
   explorationCharacter,
   playerFacing,
   isMoving,
+  dustTileId,
   runSeed,
   terrainTexture,
   environmentBackground,
@@ -1878,6 +1965,7 @@ export function HexMapLayer({
           explorationCharacter={explorationCharacter}
           playerFacing={playerFacing}
           isMoving={isMoving}
+          dustTileId={dustTileId}
         />
 
         {/* ── Push 16: JourneyFogField — continuous atmospheric fog overlay ─

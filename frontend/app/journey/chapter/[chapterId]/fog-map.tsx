@@ -368,6 +368,12 @@ export default function ChapterFogMapShell() {
   const [isMoving, setIsMoving] = useState(false);
   const walkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Task 720: step-dust trail — ID of the tile the hero just stepped off.
+  // Set to fromTile.id at move-start; cleared after ~420 ms (slightly longer
+  // than the 360 ms dustAnim fade so the View unmounts after it's invisible).
+  const [dustTileId, setDustTileId] = useState<string | undefined>(undefined);
+  const dustTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const movingRef = useRef(false);
 
   /** Inline error message (insufficient stamina, locked gate). Auto-clears after 2.5 s. */
@@ -938,6 +944,10 @@ export default function ChapterFogMapShell() {
       const fromTile = run.tiles.find(t => t.current);
       if (fromTile) {
         setPlayerFacing(hexFacingFromDelta(tile.q - fromTile.q, tile.r - fromTile.r));
+        // Task 720: record departing tile for the dust-puff trail effect.
+        if (dustTimerRef.current) clearTimeout(dustTimerRef.current);
+        setDustTileId(fromTile.id);
+        dustTimerRef.current = setTimeout(() => setDustTileId(undefined), 420);
       }
       if (walkTimerRef.current) clearTimeout(walkTimerRef.current);
       setIsMoving(true);
@@ -1168,6 +1178,7 @@ export default function ChapterFogMapShell() {
             explorationCharacter={explorationCharacter}
             playerFacing={playerFacing}
             isMoving={isMoving}
+            dustTileId={dustTileId}
             runSeed={run?.seed}
             environmentBackground={{
               source:  chapterVisuals.background,
