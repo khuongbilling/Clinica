@@ -1444,6 +1444,15 @@ export interface HexMapDevOverlay {
   visibilityState?:  boolean;
   /** Mark the sprite anchor point (grounding Y) for the current tile. */
   spriteAnchors?:    boolean;
+  /**
+   * DEV ONLY — fog visibility debug tint.
+   * Push 2: overlays a full-tile semi-transparent colour per FogVisibility tier:
+   *   VISIBLE_NOW → green  (#4ade80 @ 35 %)
+   *   EXPLORED    → yellow (#facc15 @ 35 %)
+   *   UNEXPLORED  → red    (#ef4444 @ 35 %)
+   * MUST NOT ship — gate all render paths with __DEV__.
+   */
+  fogDebug?:         boolean;
 }
 
 /**
@@ -2254,6 +2263,28 @@ export function HexMapLayer({
                   borderColor:     visColor,
                 }} />
               )}
+
+              {/* Push 2: fog debug tint — full-tile colour per FogVisibility tier.
+               *  VISIBLE_NOW → green  (#4ade80)
+               *  EXPLORED    → yellow (#facc15)
+               *  UNEXPLORED  → red    (#ef4444)
+               *  DEV ONLY — must never ship. */}
+              {devOverlay.fogDebug && (() => {
+                const fogTint =
+                  vis === 'visibleNow'            ? '#4ade8059' :
+                  vis === 'exploredButOutOfVision' ? '#facc1559' :
+                                                    '#ef444459';
+                return (
+                  <View style={{
+                    position:        'absolute',
+                    left:            0,
+                    top:             0,
+                    width:           sz,
+                    height:          sz,
+                    backgroundColor: fogTint,
+                  }} />
+                );
+              })()}
 
             </View>
           );
