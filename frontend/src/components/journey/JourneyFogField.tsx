@@ -8,13 +8,13 @@
  *
  *   BackFogLayer  (z FOG_BACK_Z = 4800)
  *     Dense atmospheric base.  Covers unexplored tiles (z 50–1550).  Clears
- *     around visible and explored tiles.  12 placements using all three
- *     cloud banks (A large mass / B secondary / C wispy).
+ *     around visible and explored tiles.  12 placements across 6 transparent
+ *     PNG banks: large_01/02 (heavy mass), medium_01/02, wisp_01/02.
  *
  *   FrontFogLayer (z FOG_FRONT_Z = 6100)
  *     Light wisp overlay.  Adds atmospheric depth above explored terrain
  *     (z 5100+) and below world objects (z 6200+).  Clears more aggressively
- *     so visible areas remain unobscured.  6 placements, bank C only.
+ *     so visible areas remain unobscured.  6 placements, wisp banks only.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * LAYER STACK (inside MapWorld Animated.View, inherits camera transform)
@@ -57,6 +57,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  *
  *   • 12 back + 6 front Image nodes + 1 base tint View = 19 render nodes.
+ *   • All fog PNGs have true alpha (removeBackground: true on generation).
  *   • Positions computed once in useMemo; opacity recomputed only when
  *     clearing sources change (player moves).
  *   • Only the drift transform is frame-animated (Animated layout bridge).
@@ -88,26 +89,41 @@ function seededRand(seed: number): number {
 
 // ── Fog bank assets per shift ─────────────────────────────────────────────────
 //
-// Three painted cloud textures per shift:
-//   A — large primary cloud mass  (dominant coverage, main body)
-//   B — secondary drifting bank   (different silhouette, layering)
-//   C — wispy tendrils            (lighter, edge detail)
+// Six transparent PNG banks per shift (all generated with removeBackground:true):
+//   0  fog_bank_large_01   — large primary cloud mass, variant A
+//   1  fog_bank_large_02   — large primary cloud mass, variant B
+//   2  fog_bank_medium_01  — medium cloud bank, variant A
+//   3  fog_bank_medium_02  — medium cloud bank, variant B
+//   4  fog_wisp_01         — thin wispy tendrils, variant A
+//   5  fog_wisp_02         — thin wispy tendrils, variant B
+//
+// Back fog uses all 6 banks (2 placements each).
+// Front fog uses only wisp banks 4 & 5 (3 placements each).
 
 const FOG_BANKS = {
-  night: [
-    require('@/assets/ui/journey/fog/fog-bank-A-night.png') as number,
-    require('@/assets/ui/journey/fog/fog-bank-B-night.png') as number,
-    require('@/assets/ui/journey/fog/fog-bank-C-night.png') as number,
-  ],
   day: [
-    require('@/assets/ui/journey/fog/fog-bank-A-day.png') as number,
-    require('@/assets/ui/journey/fog/fog-bank-B-day.png') as number,
-    require('@/assets/ui/journey/fog/fog-bank-C-day.png') as number,
+    require('@/assets/ui/journey/fog/day/fog_bank_large_01.png')  as number,
+    require('@/assets/ui/journey/fog/day/fog_bank_large_02.png')  as number,
+    require('@/assets/ui/journey/fog/day/fog_bank_medium_01.png') as number,
+    require('@/assets/ui/journey/fog/day/fog_bank_medium_02.png') as number,
+    require('@/assets/ui/journey/fog/day/fog_wisp_01.png')        as number,
+    require('@/assets/ui/journey/fog/day/fog_wisp_02.png')        as number,
   ],
   evening: [
-    require('@/assets/ui/journey/fog/fog-bank-A-evening.png') as number,
-    require('@/assets/ui/journey/fog/fog-bank-B-evening.png') as number,
-    require('@/assets/ui/journey/fog/fog-bank-C-evening.png') as number,
+    require('@/assets/ui/journey/fog/evening/fog_bank_large_01.png')  as number,
+    require('@/assets/ui/journey/fog/evening/fog_bank_large_02.png')  as number,
+    require('@/assets/ui/journey/fog/evening/fog_bank_medium_01.png') as number,
+    require('@/assets/ui/journey/fog/evening/fog_bank_medium_02.png') as number,
+    require('@/assets/ui/journey/fog/evening/fog_wisp_01.png')        as number,
+    require('@/assets/ui/journey/fog/evening/fog_wisp_02.png')        as number,
+  ],
+  night: [
+    require('@/assets/ui/journey/fog/night/fog_bank_large_01.png')  as number,
+    require('@/assets/ui/journey/fog/night/fog_bank_large_02.png')  as number,
+    require('@/assets/ui/journey/fog/night/fog_bank_medium_01.png') as number,
+    require('@/assets/ui/journey/fog/night/fog_bank_medium_02.png') as number,
+    require('@/assets/ui/journey/fog/night/fog_wisp_01.png')        as number,
+    require('@/assets/ui/journey/fog/night/fog_wisp_02.png')        as number,
   ],
 } as const;
 
@@ -132,37 +148,57 @@ const PALETTE: Record<'day' | 'evening' | 'night', ShiftPalette> = {
 // ── Placement definitions ─────────────────────────────────────────────────────
 
 type PlacementDef = {
-  bankIdx: 0 | 1 | 2;
+  bankIdx: 0 | 1 | 2 | 3 | 4 | 5;
   xF: number;  // centre x as fraction of worldWidth
   yF: number;  // centre y as fraction of worldHeight
   wF: number;  // image width as fraction of worldWidth
-  hF: number;  // image height (≈ wF since assets are square-ish)
+  hF: number;  // image height as fraction of worldWidth (assets are landscape-ish)
 };
 
-// Back fog: 12 placements, all three banks, spread -10 %…110 %.
-// Bank assignment: A A A A  B B B B  C C C C
+// Size ranges per bank family:
+//   large  (0,1) — wF 0.65–0.90, hF 0.50–0.70  (dominant coverage)
+//   medium (2,3) — wF 0.45–0.65, hF 0.35–0.50  (secondary layering)
+//   wisp   (4,5) — wF 0.30–0.50, hF 0.20–0.35  (edge tendrils)
+
+type BankFamily = 'large' | 'medium' | 'wisp';
+
+function bankFamily(idx: number): BankFamily {
+  return idx < 2 ? 'large' : idx < 4 ? 'medium' : 'wisp';
+}
+
+function bankSize(family: BankFamily, s: number): { wF: number; hF: number } {
+  switch (family) {
+    case 'large':  return { wF: 0.65 + seededRand(s) * 0.25, hF: 0.50 + seededRand(s + 10) * 0.20 };
+    case 'medium': return { wF: 0.45 + seededRand(s) * 0.20, hF: 0.35 + seededRand(s + 10) * 0.15 };
+    case 'wisp':   return { wF: 0.30 + seededRand(s) * 0.20, hF: 0.20 + seededRand(s + 10) * 0.15 };
+  }
+}
+
+// Back fog: 12 placements, 2 per bank (bankIdx 0–5), spread -10 %…110 %.
 const BACK_PLACEMENT_DEFS: PlacementDef[] = Array.from({ length: 12 }, (_, i) => {
-  const bankIdx = (Math.floor(i / 4) as 0 | 1 | 2);
-  const s       = i * 13 + bankIdx * 7;
+  const bankIdx = (Math.floor(i / 2) as 0 | 1 | 2 | 3 | 4 | 5);
+  const s       = i * 13 + bankIdx * 11;
+  const family  = bankFamily(bankIdx);
+  const sz      = bankSize(family, s + 3);
   return {
     bankIdx,
     xF: -0.10 + seededRand(s + 1) * 1.20,   // -10 %…110 %
     yF: -0.10 + seededRand(s + 2) * 1.20,
-    wF:  0.55 + seededRand(s + 3) * 0.30,   //  55 %… 85 % of worldWidth
-    hF:  0.45 + seededRand(s + 4) * 0.30,   //  45 %… 75 %
+    ...sz,
   };
 });
 
-// Front fog: 6 placements, bank C (wispy) only, range 0 %…100 %.
-// Distinct seed range (offset 53) from back placements.
+// Front fog: 6 placements, wisp banks only (4 & 5), range 0 %…100 %.
+// Distinct seed range (offset 97) from back placements.
 const FRONT_PLACEMENT_DEFS: PlacementDef[] = Array.from({ length: 6 }, (_, i) => {
-  const s = i * 17 + 53;
+  const bankIdx = ((4 + Math.floor(i / 3)) as 4 | 5);
+  const s       = i * 19 + 97;
+  const sz      = bankSize('wisp', s + 3);
   return {
-    bankIdx: 2 as const,   // bank C — wispy tendrils only
+    bankIdx,
     xF:  0.00 + seededRand(s + 1) * 1.00,   // 0 %…100 %
     yF:  0.00 + seededRand(s + 2) * 1.00,
-    wF:  0.40 + seededRand(s + 3) * 0.35,   // 40 %… 75 %
-    hF:  0.30 + seededRand(s + 4) * 0.35,   // 30 %… 65 %
+    ...sz,
   };
 });
 
@@ -197,7 +233,7 @@ type ClearSource = {
 };
 
 type ResolvedPlacement = {
-  bankIdx:  0 | 1 | 2;
+  bankIdx:  0 | 1 | 2 | 3 | 4 | 5;
   left:     number;
   top:      number;
   width:    number;
@@ -240,7 +276,7 @@ function resolvePlacements(
       if (minFactor === 0) break;
     }
 
-    return { bankIdx: def.bankIdx, left, top, width, height, diagonal, opacity: alphaMax * minFactor };
+    return { bankIdx: def.bankIdx as ResolvedPlacement['bankIdx'], left, top, width, height, diagonal, opacity: alphaMax * minFactor };
   });
 }
 
@@ -357,21 +393,79 @@ export function JourneyFogField({
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
-  //
-  // Push 2A: rectangular cloud-bank Image nodes and the base-tint View have
-  // been removed.  Unexplored terrain is temporarily unfogged.
-  // The clearing math (backSources, frontSources, backPlacements,
-  // frontPlacements) and z-constants remain intact so the next fog push can
-  // slot painted art back in without architecture changes.
-  //
-  // Variables retained to avoid churn (used by dev mask + next push):
-  //   palette, banks, backPlacements, frontPlacements, driftTransform,
-  //   hideBack, hideFront
-  void palette; void banks; void backPlacements; void frontPlacements;
-  void driftTransform; void hideBack; void hideFront;
-
   return (
     <>
+      {/* ── BackFogLayer — dense atmospheric base ─────────────────────────
+       * z FOG_BACK_Z (4800): above unexplored Pressables, below explored tiles.
+       * Base tint View + 12 transparent-PNG cloud images with clearing-driven
+       * opacity.  All PNGs have true alpha — no rectangular mattes.          */}
+      {!hideBack && (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFillObject, styles.backFog]}
+        >
+          {/* Subtle atmospheric tint beneath cloud images */}
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              { backgroundColor: palette.baseColor, opacity: palette.baseOpacity },
+            ]}
+          />
+          {/* Drifting transparent cloud banks */}
+          <Animated.View
+            style={[StyleSheet.absoluteFillObject, { transform: driftTransform }]}
+          >
+            {backPlacements.map((p, i) => (
+              <Image
+                key={i}
+                source={banks[p.bankIdx]}
+                style={{
+                  position: 'absolute',
+                  left:     p.left,
+                  top:      p.top,
+                  width:    p.width,
+                  height:   p.height,
+                  opacity:  p.opacity,
+                }}
+                contentFit="fill"
+                recyclingKey={`fog-back-${i}`}
+              />
+            ))}
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── FrontFogLayer — wisp overlay ──────────────────────────────────
+       * z FOG_FRONT_Z (6100): above explored terrain, below HexObjectLayer.
+       * Wisp banks only (4 & 5), alpha max 0.22.  No base tint.             */}
+      {!hideFront && (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFillObject, styles.frontFog]}
+        >
+          <Animated.View
+            style={[StyleSheet.absoluteFillObject, { transform: driftTransform }]}
+          >
+            {frontPlacements.map((p, i) => (
+              <Image
+                key={i}
+                source={banks[p.bankIdx]}
+                style={{
+                  position: 'absolute',
+                  left:     p.left,
+                  top:      p.top,
+                  width:    p.width,
+                  height:   p.height,
+                  opacity:  p.opacity,
+                }}
+                contentFit="fill"
+                recyclingKey={`fog-front-${i}`}
+              />
+            ))}
+          </Animated.View>
+        </View>
+      )}
+
       {/* ── Dev: fog mask — back-fog clearing influence rings ─────────────
        * Green ring = fullR (fully cleared).  Amber ring = startR (fog starts).
        * Only rendered when showMask is true (dev diagnostics toggle).       */}
