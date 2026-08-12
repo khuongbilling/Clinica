@@ -2,8 +2,8 @@
  * hexWorldCoords — authoritative hex map world coordinate system (Push 6)
  *
  * Single source of truth for every axial-to-pixel conversion on the fog map.
- * Used by: HexMapLayer, HexTile, JourneyFogLayer, gate art overlay,
- * battle / treasure / merchant / areaBoss markers, fog visibility centres,
+ * Used by: HexMapLayer, HexTile, gate art overlay,
+ * battle / treasure / merchant / areaBoss markers,
  * and camera centering.
  *
  * CONTRACT
@@ -47,9 +47,8 @@ export const MIN_TILE_SZ = 44;
 // ── World bounds padding (named for explicit intent) ──────────────────────────
 
 /**
- * Extra pixels added below the bottommost tile for sprite and fog gradient bleed.
- * Fog radial gradients extend past the outermost tile edges; sprites extend above
- * their tile bounding box.  This clearance prevents both from being clipped.
+ * Extra pixels added below the bottommost tile for sprite bleed.
+ * Sprites extend above their tile bounding box; this clearance prevents clipping.
  */
 export const FOG_BOTTOM_PAD_PX = 10;
 
@@ -60,7 +59,7 @@ export const FOG_BOTTOM_PAD_PX = 10;
  *
  * Created by `computeHexWorldCoords(tiles, containerWidth)` once per geometry
  * settle and shared with every sub-component that places anything in world space:
- * HexTile, JourneyFogLayer, gate art, camera centering, dev overlays.
+ * HexTile, gate art, camera centering, dev overlays.
  *
  * Invariant: the centre of tile (q, r) — `axialToWorld(q, r).cx/cy` — is
  * numerically identical in every renderer for the same layout object.

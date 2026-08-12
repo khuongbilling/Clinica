@@ -590,16 +590,13 @@ export default function ChapterFogMapShell() {
   //   When a run is active, ALL run.tiles are passed to HexMapLayer — never a
   //   filtered subset.  For Chapter 1 this is always 30 cells.
   //
-  //   Do NOT add a visibility/encounter/fog/viewport filter here.  Terrain must
+  //   Do NOT add a visibility/encounter/viewport filter here.  Terrain must
   //   be fully mounted in MapWorld for the entire run so that:
-  //     • JourneyFogLayer can carve reveal-holes at EVERY tile position (not
-  //       just visible ones — a missing tile leaves an opaque fog patch forever)
   //     • BFS adjacency and movement operate over the complete graph
   //     • Unexplored tile Pressables exist as disabled tap targets (accessible)
   //
-  //   Fog visibility is controlled by JourneyFogLayer (canvas/SVG overlay).
   //   What the player sees is controlled by the camera (PanResponder).
-  //   Neither removes terrain from MapWorld.
+  //   Terrain is never removed from MapWorld.
   //
   //   Diagnostic: worldMetricsRef.current.renderedTileCount must equal
   //   getChapterTerrainCellCount(chNum) for the entire lifetime of the run.

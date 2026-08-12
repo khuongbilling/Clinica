@@ -179,16 +179,12 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 //   background  map-platform-background-ch1-day.png — grand healing-academy
 //               atrium in warm morning sunlight, jade-teal pillars, gold
 //               accents, living greenery, pale atmospheric mist.
-//   fogInterior fog-tile-day.png — pale blue-grey / white atmospheric mist,
-//               opaque enough to fully conceal tile content while reading
-//               as daylight fog (not rendered brighter mechanically).
 //   terrainBase hex-revealed-day.png — warm cream stone hex with jade lotus
 //               healing rune, antique-gold border trim.
 //   terrainFrontier hex-frontier-day.png — cream stone, jade-teal glow border,
 //               cloud-scroll relief, transparent background.
 //   terrainCurrent  hex-current-day.png — jade-gold lotus mandala, full
 //               jade radiance, transparent background.
-//   fogEdge     inherits from default (no shift-specific edge raster yet).
 //
 // EVENING — dedicated background; terrain falls back to defaults.
 //
@@ -204,8 +200,6 @@ const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png'
 //   background  map-platform-background-ch1-evening.png — amber lanterns, long
 //               diagonal shadows, teal pillars in last daylight, indigo in
 //               corners, central jade fountain, warm gold through arches.
-//   fogInterior fog-tile-evening.png — smoky blue-grey / muted indigo with
-//               warm amber highlights near lit spaces.
 //   terrainBase hex-revealed-evening.png — amber-lit warm stone, jade lotus
 //               rune glowing visibly, amber-silhouetted herbs at corners.
 //   terrainFrontier hex-frontier-evening.png — amber-warm cloud-scroll stone,

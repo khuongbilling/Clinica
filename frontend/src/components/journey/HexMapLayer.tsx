@@ -352,7 +352,7 @@ const SHADOW_RX_MUL    = 0.48;                   // node shadow rx = sizeMul × 
 // ── Push 21: two-pass depth-sort z-layer bases ────────────────────────────────
 //
 // TERRAIN pass  (HexTile Pressable — terrain image, state rings, contact shadow)
-//   TERRAIN_BASE = 5100 — sits above JourneyFogField (z 5000) for all revealed
+//   TERRAIN_BASE = 5100 — sits above z 5000 for all revealed
 //   tiles, even those with negative worldY.
 //   worldY range for authored maps: roughly 0 – 30.
 //   terrain z range: 5100 – 5400.
@@ -505,8 +505,7 @@ const MAP_NODE = {
  * Push 4: terrain images are no longer rendered per-tile.
  * The chapter background painting is the environment; hex Pressables are an
  * interaction/state layer placed on top — not a collection of floor tiles.
- * Push 7: fog rendering moved to JourneyFogLayer (see below) — HexTile carries
- * only interaction target, state border/glow, and encounter anchor.
+ * HexTile carries only interaction target, state border/glow, and encounter anchor.
  */
 
 /**
@@ -724,7 +723,7 @@ interface HexTileProps {
    * Per-shift SVG color theme — drives state border/glow colors (veil hairline,
    * frontier jade rim, current-tile ring).  Resolved by HexMapLayer from the
    * active `timeOfDay`; individual tiles never inspect shift state themselves.
-   * Atmospheric fog belongs to JourneyFogLayer, not HexTile.
+   * Atmospheric fog is rendered by a separate overlay, not HexTile.
    */
   fogTheme: FogTheme;
   /**
@@ -771,7 +770,7 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
   // Strata (Push 21):
   //   OBJECT_BASE + worldY*DEPTH   6200–6500   HexObjectLayer (nodes + player)
   //   TERRAIN_BASE + worldY*DEPTH  5100–5400   HexTile Pressables (revealed)
-  //   JourneyFogField              5000        atmospheric fog (unchanged)
+  //   fog overlay (future)         5000        atmospheric fog
   //   worldY*50 + 50               50–1550     unexplored disabled Pressables
   const worldY = tile.r + tile.q * 0.5;
   const tileZ  =
@@ -868,10 +867,9 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
         </View>
       )}
 
-      {/* ── Layer 1b: unexplored tile — no per-tile images (Push 4) ────────── */}
-      {/* Fog is now a world-space SVG layer above all tile Pressables.        */}
-      {/* TILE_BASE.hidden and fogInterior textures are removed here.           */}
-      {/* The tile Pressable itself stays (disabled=true → non-interactive).   */}
+      {/* ── Layer 1b: unexplored tile — no per-tile images ────────────────── */}
+      {/* The tile Pressable stays (disabled=true → non-interactive) as an    */}
+      {/* accessibility target and BFS graph node.                             */}
 
       {/* ── Layer 2a: visibleNow — circular inner glow + jade rim ──────────────
         * Transparent interior with a circular radial glow signals reachable
@@ -915,7 +913,6 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
         *        • "Slight dimming" — terrain at MEMORY_TERRAIN_ALPHA (0.70)
         *        • "Atmospheric haze" — hazeColor tint at hazeAlpha (0.22–0.32)
         *        • "Not heavy unexplored fog" — combined opacity is far lighter
-        *          than the unexplored fog rect (0.82–0.95 in JourneyFogField)
         *
         *   2. Hairline ring — preserved exactly as before; marks the hex
         *      boundary and distinguishes explored from unexplored at a glance.
@@ -1493,17 +1490,8 @@ export interface HexMapLayerProps {
    * Shift-aware tile visual overrides from the chapter map visuals registry.
    * Pass the result of `getChapterMapVisuals(chapter, timeOfDay)` here.
    * When absent, the renderer uses its module-level default assets (night theme).
-   * Only the subset consumed by tile rendering is used here; the `background`
-   * and `fogEdge` fields from ChapterShiftVisuals are consumed by the parent screen.
-   */
-  /**
-   * Visual theme assets for the current chapter/shift.
-   * Terrain floor images are no longer rendered per-tile (Push 2 — transparent
-   * hex cells; painting is the terrain).  fogInterior was removed in Push 13
-   * along with all block-based fog rendering.
-   *
-   * @deprecated All fields are currently unused by the tile renderer; the prop
-   * is retained so call-sites don't need updating when Push 14 fog arrives.
+   * Only the terrain subset consumed by tile rendering is used here;
+   * the `background` field is consumed by the parent screen.
    */
   tileVisuals?: Pick<import('@/src/game/journeyMap/chapterMapVisuals').ChapterShiftVisuals,
     'terrainCurrent' | 'terrainBase' | 'terrainFrontier'>;
@@ -1829,12 +1817,6 @@ export function HexMapLayer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerWidth, containerHeight, sz, tilesKey]);
 
-  // ── Canvas fog (web only) ──────────────────────────────────────────────────
-  // react-native-svg RadialGradient with gradientUnits="userSpaceOnUse" on web
-  // renders as white rectangles — gradient coords don't map to screen space.
-  // Push 7: fog rendering extracted to JourneyFogLayer (see above).
-  // HexMapLayer no longer owns fogContainerRef or the canvas useEffect.
-
   // ── PanResponder (created once; reads refs at call-time) ──────────────────
   const panResponder = useMemo(
     () =>
@@ -1985,13 +1967,11 @@ export function HexMapLayer({
           * encounter type, fog state, or whether a tile is inside the camera
           * viewport.  Filtering here would:
           *   • Leave permanent fog patches over missing tile positions (fog
-          *     carves reveal-holes at tile centres — absent tiles = no hole)
           *   • Break BFS adjacency and the movement/encounter eligibility graph
           *   • Remove disabled Pressables that are still accessibility targets
           *
-          * Fog visibility → JourneyFogLayer (canvas/SVG overlay, below)
           * Camera panning → PanResponder + Animated.ValueXY (this file)
-          * Neither deletes terrain from MapWorld.
+          * Terrain is never removed from MapWorld.
           */}
         {/* ── TERRAIN PASS: Pressable + state rings + contact shadow ────────
           * Push 21: HexTile no longer renders encounter sprites or the player

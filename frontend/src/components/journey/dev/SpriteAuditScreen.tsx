@@ -247,7 +247,7 @@ const TILE_OVERLAYS_LEGACY: AuditEntry[] = [
     label:  'Hex — Hidden / Fog',
     src:    require('@/assets/ui/journey/tiles/hex-hidden.webp') as number,
     status: 'legacy',
-    note:   'Not rendered since Push 4. Fog is a continuous JourneyFogLayer (canvas/SVG), not per-tile.',
+    note:   'Not rendered — fog rendering removed; new fog overlay implementation pending.',
   },
 ];
 
