@@ -94,6 +94,7 @@ export function FogMidLayer({
 
     const { sz } = coords;
 
+    // Visibility classification disabled — fog covers entire map.
     const tileCenters   = new Map<string, { cx: number; cy: number }>();
     const visibleNowIds = new Set<string>();
     const exploredIds   = new Set<string>();
@@ -101,11 +102,6 @@ export function FogMidLayer({
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      if (tile.visibility === 'visibleNow' || tile.current) {
-        visibleNowIds.add(tile.id);
-      } else if (tile.visibility === 'exploredButOutOfVision') {
-        exploredIds.add(tile.id);
-      }
     }
 
     const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: 1, sz });

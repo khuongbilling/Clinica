@@ -1042,7 +1042,18 @@ export default function ChapterFogMapShell() {
             <Text style={s.staminaVal}>{stamina}</Text>
             <Text style={s.staminaSep}>/</Text>
             <Text style={s.staminaMax}>{staminaMax}</Text>
-            <Pressable style={s.plusBtn} testID="stamina-refill">
+            <Pressable
+              style={s.plusBtn}
+              testID="stamina-refill"
+              onPress={() => {
+                if (!player) return;
+                void updateState({
+                  ...player,
+                  stamina: staminaMax,
+                  stamina_updated_at: new Date().toISOString(),
+                });
+              }}
+            >
               <Text style={s.plusTxt}>＋</Text>
             </Pressable>
           </View>
