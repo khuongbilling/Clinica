@@ -41,7 +41,7 @@
  *   Web only — HTML5 Canvas 2D.
  */
 
-import { Image as RNImage } from 'react-native';
+import { Asset } from 'expo-asset';
 import { drawFogMask, type FogMaskParams } from './fogMask';
 import { JOURNEY_ASSETS } from '../assets';
 
@@ -102,15 +102,21 @@ function seededRandom(seed: number): () => number {
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
-function loadBundledImage(source: number): Promise<HTMLImageElement> {
-  const uri = RNImage.resolveAssetSource(source).uri;
+/** Same resolver pattern as fogBase — uses expo-asset, not resolveAssetSource. */
+async function loadBundledImage(source: number): Promise<HTMLImageElement> {
+  const asset = Asset.fromModule(source);
+  if (!asset.uri) await asset.downloadAsync();
+  const uri = asset.uri ?? '';
+
   const cached = imageCache.get(uri);
   if (cached) return cached;
+
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
+    if (!uri) { reject(new Error(`fogMid: asset URI unavailable (source=${source})`)); return; }
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.onload  = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = () => reject(new Error(`fogMid: failed to load ${uri}`));
     img.src     = uri;
   });
   imageCache.set(uri, p);

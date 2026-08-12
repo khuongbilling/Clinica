@@ -37,16 +37,16 @@
  *   Callers must guard with `Platform.OS === 'web'` before calling drawFogBase.
  */
 
-import { Image as RNImage } from 'react-native';
+import { Asset } from 'expo-asset';
 import { drawFogMask, type FogMaskParams } from './fogMask';
 import { JOURNEY_ASSETS } from '../assets';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
 // JOURNEY_ASSETS.fog.baseDay is a Metro-bundled require() number.
-// We resolve the actual URI at load time via Image.resolveAssetSource so the
-// canvas HTMLImageElement gets a URL that works in the dev server.
-// Never use a raw '/assets/...' URI string — Metro's dev server does not
-// serve public/ as a static file tree (404 in development).
+// We resolve it via expo-asset's Asset.fromModule() which works cross-platform.
+// DO NOT use Image.resolveAssetSource from react-native — react-native-web
+// does not implement that function (throws on Expo web).
+// DO NOT use a raw '/assets/...' URI — Metro dev server does not serve public/.
 const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
 
 // ── Layout constants ──────────────────────────────────────────────────────────
@@ -103,17 +103,30 @@ function seededRandom(seed: number): () => number {
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
-/** Resolve a Metro-bundled require() number to a web-accessible URL, then
- *  load it into an HTMLImageElement for canvas drawImage(). Cached per URI. */
-function loadBundledImage(source: number): Promise<HTMLImageElement> {
-  const uri = RNImage.resolveAssetSource(source).uri;
+/**
+ * Resolve a Metro-bundled require() number to a web URI via expo-asset, then
+ * load it into an HTMLImageElement for canvas drawImage().  Cached per URI.
+ *
+ * WHY expo-asset and not Image.resolveAssetSource from react-native:
+ * react-native-web does not implement resolveAssetSource — it throws
+ * "not a function" on Expo web.  expo-asset's Asset.fromModule() has its
+ * own cross-platform resolver that works correctly in the Metro dev server.
+ */
+async function loadBundledImage(source: number): Promise<HTMLImageElement> {
+  const asset = Asset.fromModule(source);
+  // uri may be null on first access; downloadAsync() guarantees it is set.
+  if (!asset.uri) await asset.downloadAsync();
+  const uri = asset.uri ?? '';
+
   const cached = imageCache.get(uri);
   if (cached) return cached;
+
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
+    if (!uri) { reject(new Error(`fogBase: asset URI unavailable (source=${source})`)); return; }
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.onload  = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = () => reject(new Error(`fogBase: failed to load ${uri}`));
     img.src     = uri;
   });
   imageCache.set(uri, p);
