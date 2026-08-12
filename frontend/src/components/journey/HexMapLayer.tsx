@@ -178,6 +178,7 @@ import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask'
 import { FogBaseLayer } from './FogBaseLayer';
 import { FogMidLayer }  from './FogMidLayer';
 import { FogEdgeLayer } from './FogEdgeLayer';
+import { FogWispLayer } from './FogWispLayer';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -2146,6 +2147,23 @@ export function HexMapLayer({
           * Web only — native = null stub.
           */}
         <FogEdgeLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── Push 7: FogWispLayer — Layer 4 Foreground Wisps ──────────────────
+          * Topmost fog layer. Thin surface wisps at 0.20–0.45 opacity.
+          * Tighter grid (3.0 × sz) and smaller scale (1.5–3.2 × sz) add fine
+          * surface detail above Base + Mid fog. Same visibility mask applied.
+          *
+          * z 5530: above FogEdgeLayer (z 5520), below WorldObjects (z 6200+).
+          *
+          * Web only — native = null stub.
+          */}
+        <FogWispLayer
           tiles={tiles}
           coords={coords}
           worldWidth={worldW}
