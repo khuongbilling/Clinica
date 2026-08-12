@@ -75,7 +75,7 @@ import { playerLevelFromXp }               from '@/src/game/progression';
 import { buildChapterUiSummary }           from '@/src/features/journey/ui/journeyVisibility';
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
-import { getMapSprite }                    from '@/src/game/illustratedAssets';
+import { getExplorationAvatar }             from '@/src/game/explorationAvatar';
 import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
 import { getChapterTerrainCellCount }                  from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
@@ -673,11 +673,17 @@ export default function ChapterFogMapShell() {
     : (debugTiles !== null ? DEV_FALLBACK_VISUALS : null);
 
   // ── Exploration character sprite ──────────────────────────────────────────
-  // Resolved from the player's class_tree_id — the same key getMapSprite uses.
-  // Undefined when the player has no class yet; HexMapLayer (Layer 4b) will
-  // substitute MAP_SPRITE_EXPLORER (the donghua chibi fallback — Push 19).
-  const explorationCharacter: number | undefined = player?.class_tree_id
-    ? getMapSprite(player.class_tree_id)
+  // Push 3: resolved via getExplorationAvatar() — progression-aware resolver
+  // that factors in chapter era, class, and future skin/variant overrides.
+  // Undefined only when the player object is not yet loaded; HexMapLayer
+  // (Layer 4b) will then substitute its own MAP_SPRITE_EXPLORER fallback.
+  // When player IS loaded, the resolver always returns a valid asset token
+  // (see explorationAvatar.ts for the full resolution priority chain).
+  const explorationCharacter: number | undefined = player
+    ? getExplorationAvatar({
+        classTreeId:   player.class_tree_id,
+        chapterNumber: chNum,
+      })
     : undefined;
 
   // ── Effective vision radius (Push 3 — configurable field of vision) ────────
