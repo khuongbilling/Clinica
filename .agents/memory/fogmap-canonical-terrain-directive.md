@@ -103,12 +103,19 @@ NO-ENCOUNTER tiles are ordinary traversable terrain (not visually distinct platf
 All world-space elements in ONE movable MapWorld:
 
 ```
-1. Painted environment (raster background, per-shift PNG/WebP)
-2. Hex terrain field
-3. 2.5D world objects (raster PNG/WebP sprites)
-4. Continuous atmospheric fog system (raster PNG/WebP)
+0. Painted environment (raster background, per-shift PNG/WebP)
+1. Hex terrain field (z 50–5400)
+2. 2.5D world objects / encounters (z 6200–7000)
+3. Player sprite (z 6200+)
+4. Fog system — 3 canvas layers in world-space (z 5500–5600):
+     Layer 2: Base Fog   — dense clouds   (z 5500)
+     Layer 3: Mid Fog    — medium density  (z 5510)
+     Layer 4: Wisps      — thin foreground (z ~5600, future)
 5. Fixed UI (outside MapWorld)
 ```
+
+Canonical design reference: `frontend/assets/dev-reference/fog_system_design_reference.png`
+Fog behavior spec: see `.agents/memory/fogmap-field-composition.md`
 
 ---
 
