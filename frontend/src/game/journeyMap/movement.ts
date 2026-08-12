@@ -37,6 +37,7 @@ import type { JourneyRun } from './types';
 export type MoveFailReason =
   | 'NOT_ADJACENT'          // destination is not a hex neighbor of current tile
   | 'NOT_REACHABLE'         // destination is unexplored, or doesn't exist, or no current tile
+  | 'GATE_TILE'             // destination is the boss-gate anchor — interact from adjacent tile
   | 'INSUFFICIENT_STAMINA'; // player has < 1 stamina
 
 export type ValidateResult =
@@ -78,6 +79,13 @@ export function validateMove(
   if (dest.visibility !== 'visibleNow' && dest.visibility !== 'exploredButOutOfVision') {
     return { ok: false, reason: 'NOT_REACHABLE' };
   }
+
+  // Guard: the boss-gate anchor tile is not a movement destination.
+  // Players interact with the gate by tapping it from an adjacent tile;
+  // the handleTilePress dispatch table already redirects gate taps to
+  // handleGateTap() before validateMove is reached, so this is a
+  // safety backstop for any future programmatic move paths.
+  if (dest.isGate) return { ok: false, reason: 'GATE_TILE' };
 
   // Guard: must have stamina.
   if (stamina < 1) return { ok: false, reason: 'INSUFFICIENT_STAMINA' };

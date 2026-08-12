@@ -1781,8 +1781,9 @@ export function HexMapLayer({
 
           const { left, top } = coords.axialToWorld(gateTile.q, gateTile.r);
 
-          // Overlay is 1.8 × sz — prominent landmark that bleeds beyond one cell.
-          const overlaySize = Math.round(sz * 1.8);
+          // Overlay is 1.3 × sz — prominent landmark with minimal bleed into
+          // neighbouring cells so the player token is never hidden by gate art.
+          const overlaySize = Math.round(sz * 1.3);
           const offset      = Math.round((overlaySize - sz) / 2);
 
           // Explored-but-out-of-vision: render at MEMORY_NODE_ALPHA so the
