@@ -145,9 +145,14 @@ export function drawFogMask(
 
   // Scale influence radii with tile size and FoV.
   // fovScale stretches the primary radius as vision expands.
+  //
+  // IMPORTANT: radii must stay ≤ ~1.2 × sz so that erase circles don't bleed
+  // more than one tile-spacing (≈0.72 × sz) past each tile centre.  Larger radii
+  // cause accumulated destination-out passes to compound and wipe the mask opaque
+  // everywhere, making the entire fog canvas disappear after destination-in.
   const fovScale         = 1 + (effectiveFieldOfVision - 1) * 0.18;
-  const visiblePrimaryR  = sz * 2.45 * fovScale;  // main clear dome
-  const exploredPrimaryR = sz * 1.95;             // explored haze dome
+  const visiblePrimaryR  = sz * 1.20 * fovScale;  // main clear dome (was 2.45)
+  const exploredPrimaryR = sz * 1.10;             // explored haze dome (was 1.95)
 
   // ── EXPLORED tiles first (lighter clearing, painted underneath VISIBLE_NOW) ──
   // All tile centres are shifted by +P so they align with the padded canvas.
@@ -161,10 +166,10 @@ export function drawFogMask(
     // Primary influence — partial erase; enough opacity remains for light haze
     drawRadialInfluence(ctx, px, py, exploredPrimaryR, 0.55);
 
-    // 3 offset sub-influences — break circular symmetry
-    drawRadialInfluence(ctx, px - 0.44 * sz, py - 0.28 * sz, sz * 1.05, 0.38);
-    drawRadialInfluence(ctx, px + 0.52 * sz, py + 0.32 * sz, sz * 0.88, 0.33);
-    drawRadialInfluence(ctx, px - 0.22 * sz, py + 0.54 * sz, sz * 0.95, 0.36);
+    // 3 offset sub-influences — break circular symmetry (radii ≤ 0.55 × sz)
+    drawRadialInfluence(ctx, px - 0.44 * sz, py - 0.28 * sz, sz * 0.52, 0.38);
+    drawRadialInfluence(ctx, px + 0.52 * sz, py + 0.32 * sz, sz * 0.46, 0.33);
+    drawRadialInfluence(ctx, px - 0.22 * sz, py + 0.54 * sz, sz * 0.50, 0.36);
   }
 
   // ── VISIBLE_NOW tiles on top (stronger clearing, near-fully transparent) ──────
@@ -180,16 +185,17 @@ export function drawFogMask(
     drawRadialInfluence(ctx, px, py, visiblePrimaryR, 0.93);
 
     // 5 offset sub-influences at irregular positions for organic edges
+    // Radii kept ≤ 0.75 × sz × sr so they don't reach past the next tile
     // NW bulge
-    drawRadialInfluence(ctx, px - 0.52 * sz, py - 0.31 * sz, sz * 1.35 * sr, 0.70);
+    drawRadialInfluence(ctx, px - 0.52 * sz, py - 0.31 * sz, sz * 0.68 * sr, 0.70);
     // NE bulge
-    drawRadialInfluence(ctx, px + 0.58 * sz, py - 0.42 * sz, sz * 1.18 * sr, 0.62);
+    drawRadialInfluence(ctx, px + 0.58 * sz, py - 0.42 * sz, sz * 0.60 * sr, 0.62);
     // S bulge
-    drawRadialInfluence(ctx, px - 0.28 * sz, py + 0.62 * sz, sz * 1.10 * sr, 0.65);
+    drawRadialInfluence(ctx, px - 0.28 * sz, py + 0.62 * sz, sz * 0.56 * sr, 0.65);
     // SE extension
-    drawRadialInfluence(ctx, px + 0.41 * sz, py + 0.50 * sz, sz * 1.28 * sr, 0.60);
+    drawRadialInfluence(ctx, px + 0.41 * sz, py + 0.50 * sz, sz * 0.64 * sr, 0.60);
     // N tip
-    drawRadialInfluence(ctx, px + 0.04 * sz, py - 0.72 * sz, sz * 0.92 * sr, 0.55);
+    drawRadialInfluence(ctx, px + 0.04 * sz, py - 0.72 * sz, sz * 0.46 * sr, 0.55);
   }
 
   // ── Reset compositing mode ────────────────────────────────────────────────────

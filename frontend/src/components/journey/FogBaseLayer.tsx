@@ -10,14 +10,17 @@
  *
  *   ChapterEnvironment   (background painting)
  *   HexTerrain           (tile Pressables — z 50–5400)
- *   FogBaseLayer         (this component — z 5000)   ← primary concealment
+ *   FogBaseLayer         (this component — z 5500)   ← primary concealment
+ *   FogMidLayer          (z 5510)
+ *   FogEdgeLayer         (z 5520)
+ *   FogWispLayer         (z 5530)
  *   WorldObjects         (encounter nodes, gate — z 6200–7000)
  *   Player               (sprite — z 6200+)
  *
- * At z 5000, the canvas sits ABOVE unexplored tile Pressables (z 50–1550)
- * and BELOW revealed terrain (z 5100+), so revealed tiles always show through
- * without any masking needed for the tile interiors.  The visibility mask from
- * fogMask.ts (destination-in compositing) adds soft organic clearing edges.
+ * At z 5500, the canvas sits ABOVE all terrain Pressables including revealed
+ * tiles (z 50–5400).  The visibility mask from fogMask.ts (destination-in
+ * compositing) punches clear holes over explored / visible-now tile centres so
+ * they show through the fog; unexplored tiles remain hidden beneath it.
  *
  * ── Redraw triggers ───────────────────────────────────────────────────────────
  *

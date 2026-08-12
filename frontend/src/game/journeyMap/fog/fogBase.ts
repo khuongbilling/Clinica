@@ -234,6 +234,8 @@ export async function drawFogBase(
     }
   }
 
+  ctx.restore(); // undo translate(P, P) opened before the base fog sprite loop
+
   // ── Bank fog pass (secondary irregular variation) ─────────────────────────
   // Uses a separate seed namespace and wider cell grid so bank instances
   // interleave with the base layer, breaking repetition.
