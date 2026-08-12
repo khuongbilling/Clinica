@@ -176,6 +176,7 @@ import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react
 
 import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import { FogBaseLayer } from './FogBaseLayer';
+import { FogMidLayer }  from './FogMidLayer';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -2106,6 +2107,26 @@ export function HexMapLayer({
           * Web only — native = null stub.  Camera pan does not trigger redraw.
           */}
         <FogBaseLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── Push 5: FogMidLayer — Layer 3 Mid Fog ────────────────────────────
+          * Atmospheric texture and density variation stacked over Base Fog.
+          * NOT the primary concealment layer — opacity 0.30–0.60 (vs Base's
+          * 0.70–0.90).  Finer grid spacing (cell 3.5 × sz vs Base's 4.5 × sz)
+          * → more instances → smoky internal detail that prevents Base Fog
+          * from reading as a single flat cloud.
+          *
+          * z 5010: directly above FogBaseLayer (z 5000), still below all
+          *         revealed terrain Pressables (z 5100+).
+          *
+          * Web only — native = null stub.
+          */}
+        <FogMidLayer
           tiles={tiles}
           coords={coords}
           worldWidth={worldW}
