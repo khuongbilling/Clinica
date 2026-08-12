@@ -770,7 +770,8 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
   // Strata (Push 21):
   //   OBJECT_BASE + worldY*DEPTH   6200–6500   HexObjectLayer (nodes + player)
   //   TERRAIN_BASE + worldY*DEPTH  5100–5400   HexTile Pressables (revealed)
-  //   fog overlay (future)         5000        atmospheric fog
+  //   JourneyFogOverlay            5000        atmospheric fog (Push 2+)
+  //   See: /assets/dev-reference/fog_system_design_reference.png
   //   worldY*50 + 50               50–1550     unexplored disabled Pressables
   const worldY = tile.r + tile.q * 0.5;
   const tileZ  =
