@@ -1,63 +1,27 @@
 ---
-name: Fog-map field composition (Push 2 rebuild)
-description: Architecture of JourneyFogField — two-layer world-space atmospheric fog for the hex chapter map.
+name: Fog-map field composition (Push 0 — stripped)
+description: All fog rendering removed in Push 0; ready for a fresh implementation. Preserves tile visibility state and fogCalculator.ts.
 ---
 
-## Rule
-JourneyFogField is a SEPARATE component from HexTile.  Returns a Fragment (two Views + optional dev mask).
-Raster PNG cloud banks only — no SVG, no CSS gradients, no View blobs.
+# Fog-map field composition — Push 0 (clean slate)
 
-## Architecture (current — two-layer split)
+**Rule:** All visual fog rendering has been removed. The map renders with zero fog. `fogCalculator.ts` and tile visibility state (`unexplored`/`visibleNow`/`exploredButOutOfVision`) are intentionally preserved — they are game data, not rendering.
 
-**BackFogLayer** (`z FOG_BACK_Z = 4800`)
-- 12 placements × banks A/B/C (4 each)
-- Placement range: -10 %…110 % of world bounds
-- Base tint View beneath cloud banks (shift-keyed color + opacity)
-- Max opacity: `palette.bankAlphaMax` (0.78–0.88)
-- Clearing: `BACK_CLEAR` — current(2.0/0.7), visibleNow(1.7/0.5), explored(1.1/0.3) × sz
+**Why:** The previous multi-attempt fog system (canvas fillRect → SVG RadialGradient → PNG banks) never reached a satisfactory result. Push 0 strips everything so the new implementation starts clean.
 
-**FrontFogLayer** (`z FOG_FRONT_Z = 6100`)
-- 6 placements × bank C only (wispy tendrils)
-- Placement range: 0 %…100 %
-- No base tint — keeps explored areas readable
-- Max opacity: `FRONT_BANK_ALPHA_MAX = 0.22`
-- Clearing: `FRONT_CLEAR` — current(2.5/1.5), visibleNow(2.2/1.2), explored(1.5/0.9) × sz
-  (more aggressive so visible tiles are never obscured by wisps)
+**What is gone:**
+- `JourneyFogField.tsx` — deleted
+- All PNG/WebP fog assets in `frontend/assets/ui/journey/fog/` — deleted
+- `fogInterior` / `fogEdge` fields from `ChapterShiftVisuals` interface — removed
+- `FOG_INTERIOR`, `FOG_EDGE`, `CH1_DAY_FOG`, `CH1_EVE_FOG` constants — removed
+- Fog dev-overlay props from `HexMapDevOverlay` — removed
+- `runSeed` prop on `HexMapLayerProps` — removed
+- All stale JourneyFogLayer/JourneyFogField comment references — cleaned
 
-**Drift**: single `Animated.ValueXY` shared between both layers — ±12 px, 56-second cycle,
-`useNativeDriver: false` (layout bridge; needed for web).
+**What is preserved (do not remove):**
+- `fogCalculator.ts` — tile visibility logic
+- `tile.visibility` on `HexMapTile` — unexplored / visibleNow / exploredButOutOfVision
+- `FOG_BOTTOM_PAD_PX` export in hexWorldCoords.ts — world height clearance
+- `fogTheme` / `FOG_THEMES` — drives HexTile SVG state ring colours (not fog rendering)
 
-**Clearing helper**: `resolvePlacements(defs, W, H, sources, alphaMax)` — pure function,
-edge-based distance (`edgeDist = max(0, centreDist − diagonal×0.36)`).
-
-## Z-ordering inside MapWorld
-
-| Layer | z-range |
-|---|---|
-| unexplored Pressables | 50–1550 |
-| **BackFogLayer** | **4800** |
-| explored/visibleNow tiles | 5100–5400 |
-| **FrontFogLayer** | **6100** |
-| HexObjectLayer (sprites) | 6200–6500 |
-| BossGate | 7000 |
-
-## Debug props (dev only)
-- `hideBack` / `hideFront` — suppress each layer individually
-- `showMask` — renders green/amber border rings at each clearing source's fullR/startR
-- Wired via `devOverlay.fogBack`, `devOverlay.fogFront`, `devOverlay.fogMask`
-- `devOverlay.fogLayer` = "suppress all fog" shortcut (sets both hideBack + hideFront)
-
-## HexMapDevOverlay fog flags (7 new)
-`fogLayer` (all), `fogBack`, `fogFront`, `fogMask`, `showVisibleNow`, `showExplored`, `showUnexplored`
-
-## Props
-- `seed?: string` — run.seed forwarded from fog-map → HexMapLayer → JourneyFogField;
-  module-level placement defs until seed-variation push
-- `timeOfDay` — selects FOG_BANKS and PALETTE entry
-
-## Key constraint
-`JourneyFogLayer` null stub was removed in this push. Only JourneyFogField is active.
-
-**Why:**
-Previous fog was a single layer at z 5000. Back/front split gives atmospheric depth:
-back covers unexplored (dense, below explored tiles), front adds wisp detail above terrain.
+**How to apply:** New fog slots at zIndex ~5000 inside MapWorld (moves with camera). Use `HexWorldCoords.axialToWorld(q, r)` to get tile centres for reveal-clearing math.
