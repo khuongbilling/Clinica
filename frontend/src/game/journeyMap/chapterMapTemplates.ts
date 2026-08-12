@@ -43,18 +43,34 @@ import type {
 } from './chapterMapTemplate.types';
 
 // ── Canonical environment ids (Book I) ────────────────────────────────────────
+//
+// Push 4: renamed to reflect each chapter's distinct tactical identity.
+// These ids are matched against the art / ambient asset registry when
+// per-environment artwork ships.  Only change ids here if the art team
+// renames an environment — changing them silently breaks asset lookups.
+//
+//   Ch  1  Atrium Approach         — Introductory Central Courtyard
+//   Ch  2  Teaching Ward           — University Teaching Ward
+//   Ch  3  Procedure Hall          — Procedure / Training Hall
+//   Ch  4  Emergency Simulation    — Code Rush / Emergency Simulation hub
+//   Ch  5  Sanctuary Courtyard     — Sanctuary / Supply Courtyard
+//   Ch  6  Outer Ward Transition   — First step beyond the core university
+//   Ch  7  Outbreak Ward           — Fever Season / Outbreak clinical zone
+//   Ch  8  Broken Handoff Floor    — Multi-wing transitional floor
+//   Ch  9  Judgment Corridor       — Weight of Judgment irregular ward
+//   Ch 10  First Oath Capstone     — Grand arena / University Era culmination
 
 const CHAPTER_ENVIRONMENT_IDS: Readonly<Record<number, string>> = {
-  1:  'atrium-approach',
-  2:  'triage-corridor',
-  3:  'observation-wing',
-  4:  'medicine-ward',
-  5:  'isolation-block',
-  6:  'surgical-floor',
-  7:  'emergency-bay',
-  8:  'intensive-unit',
-  9:  'real-ward-east',
-  10: 'finale-summit',
+  1:  'atrium-approach',       // Ch 1 — kept from original; do not rename
+  2:  'teaching-ward',         // Ch 2 — University Teaching Ward
+  3:  'procedure-hall',        // Ch 3 — Procedure / Training Hall
+  4:  'emergency-simulation',  // Ch 4 — Code Rush / Emergency Simulation hub
+  5:  'sanctuary-courtyard',   // Ch 5 — Sanctuary / Supply Courtyard
+  6:  'outer-ward-transition', // Ch 6 — Transition beyond the core university
+  7:  'outbreak-ward',         // Ch 7 — Fever Season / Outbreak Ward
+  8:  'broken-handoff-floor',  // Ch 8 — Broken Handoff multi-wing floor
+  9:  'judgment-corridor',     // Ch 9 — Weight of Judgment
+  10: 'first-oath-capstone',   // Ch 10 — First Oath Capstone arena
 };
 
 function environmentIdFor(chapter: number): string {
@@ -132,50 +148,440 @@ const AUTHORED_CHAPTER_MAPS: Readonly<Record<number, AuthoredRawMap>> = {
       [-1, 3],[ 0, 3],[ 1, 3],
     ],
   },
+  /**
+   * Chapter 2 — "Teaching Ward"
+   *
+   * 30-cell rounded-square tactical map.
+   * Philosophy: organised rows of hexes — a controlled university clinical
+   * floor where every bed bay is within sight of the central nursing station.
+   * The rectangular silhouette contrasts with Chapter 1's circular atrium.
+   *
+   * Layout (portrait, r increases downward):
+   *
+   *   r=-2 (top strip, 4)    · ⬡ ⬡ ⬡ ⬡ ·      q= 1  2  3  4
+   *   r=-1 (upper, 6)       ⬡ ⬡ ⬡ ⬡ ⬡ ⬡       q= 0  1  2  3  4  5
+   *   r= 0 (6)              ⬡ ⬡ ⬡ ⬡ ⬡ ⬡       q= 0  1  2  3  4  5
+   *   r= 1 (6)              ⬡ ⬡ ⬡ ⬡ ⬡ ⬡       q= 0  1  2  3  4  5
+   *   r= 2 (5)              ⬡ ⬡ ⬡ ⬡ ⬡ ·       q= 0  1  2  3  4
+   *   r= 3 (bottom, 3)      · ⬡ ⬡ ⬡ · ·       q= 1  2  3
+   *
+   * Tile counts: 4+6+6+6+5+3 = 30 ✓
+   *
+   * Start  (1, 3)   lower-left bed-bay, 3 exit directions.
+   * Gate   (4,−2)   top-right ward door — secured senior-staff corridor.
+   *                 BFS distance from start: 5 hops.
+   *
+   * Visual era (Chs 1–3): polished university / supervised training.
+   * Bright, structured, safe.
+   */
   2: {
-    start: '-1,4',
-    gate: '2,-3',
-    tiles: [[0,0],[-1,1],[-1,2],[-2,2],[0,1],[-3,2],[1,0],[-2,1],[-2,3],[0,2],[-1,0],[-2,4],[-3,3],[2,-1],[-3,5],[-1,4],[1,-1],[-1,-1],[-2,5],[0,-1],[2,-2],[-2,6],[-1,3],[2,-3],[1,-2],[-2,0],[2,0],[-3,4],[1,1],[1,2]],
+    start: '1,3',
+    gate:  '4,-2',
+    tiles: [
+      // Row r=-2 (top strip, 4 cells)  Gate → (4,−2)
+      [ 1,-2],[ 2,-2],[ 3,-2],[ 4,-2],
+      // Row r=-1 (upper corridor, 6 cells)
+      [ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],[ 4,-1],[ 5,-1],
+      // Row r= 0 (central corridor, 6 cells)
+      [ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],[ 5, 0],
+      // Row r= 1 (lower corridor, 6 cells)
+      [ 0, 1],[ 1, 1],[ 2, 1],[ 3, 1],[ 4, 1],[ 5, 1],
+      // Row r= 2 (approach, 5 cells)
+      [ 0, 2],[ 1, 2],[ 2, 2],[ 3, 2],[ 4, 2],
+      // Row r= 3 (entry bay, 3 cells)  Start → (1,3)
+      [ 1, 3],[ 2, 3],[ 3, 3],
+    ],
   },
+
+  /**
+   * Chapter 3 — "Procedure Hall"
+   *
+   * 30-cell wide horizontal oval.
+   * Philosophy: a long lateral training hall — think skills lab or anatomy
+   * suite.  The 4-row × 8-column footprint gives substantially more lateral
+   * movement than vertical, contrasting with the portrait maps of Ch1-2.
+   *
+   * Layout (landscape, 4 rows):
+   *
+   *   r=-1 (7)    ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ·     q= 0  1  2  3  4  5  6
+   *   r= 0 (8)   ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡     q=-1  0  1  2  3  4  5  6
+   *   r= 1 (8)   ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡     q=-1  0  1  2  3  4  5  6
+   *   r= 2 (7)    ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡      q= 0  1  2  3  4  5  6
+   *
+   * Tile counts: 7+8+8+7 = 30 ✓
+   *
+   * Start  (6, 2)   bottom-right procedure station.
+   * Gate   (0,−1)   top-left secured exit — forces full hall traversal.
+   *                 BFS distance from start: 9 hops.
+   *
+   * Visual era (Chs 1–3): polished university / supervised training.
+   */
   3: {
-    start: '0,6',
-    gate: '1,-3',
-    tiles: [[0,0],[0,-1],[1,-2],[1,-1],[0,1],[0,2],[-1,2],[-1,0],[-1,3],[1,1],[0,3],[2,-2],[-2,3],[-1,1],[0,4],[-2,0],[1,2],[1,4],[1,5],[0,-2],[-3,3],[0,5],[2,4],[2,1],[1,6],[0,6],[2,-3],[1,-3],[-1,6],[-2,7]],
+    start: '6,2',
+    gate:  '0,-1',
+    tiles: [
+      // Row r=-1 (upper hall, 7 cells)  Gate → (0,−1)
+      [ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],[ 4,-1],[ 5,-1],[ 6,-1],
+      // Row r= 0 (main procedure corridor, 8 cells)
+      [-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],[ 5, 0],[ 6, 0],
+      // Row r= 1 (procedure stations mirror, 8 cells)
+      [-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],[ 3, 1],[ 4, 1],[ 5, 1],[ 6, 1],
+      // Row r= 2 (lower hall, 7 cells)  Start → (6,2)
+      [ 0, 2],[ 1, 2],[ 2, 2],[ 3, 2],[ 4, 2],[ 5, 2],[ 6, 2],
+    ],
   },
+
+  /**
+   * Chapter 4 — "Emergency Simulation"
+   *
+   * 30-cell vertical diamond / radial hub.
+   * Philosophy: an emergency simulation centre with a central triage corridor
+   * (widest row r=0) radiating to a top bay and a bottom staging area.
+   * The north–south elongation and single wide hub row create a "radial"
+   * sense without needing literal arms — all movement funnels through the
+   * central triage.  Chapter Boss Gate anchors the east terminus of the hub.
+   *
+   * Layout (portrait diamond, r=−3 → r=4):
+   *
+   *   r=-3 (top, 2)       · ⬡ ⬡ ·          q= 0  1
+   *   r=-2 (4)           ⬡ ⬡ ⬡ ⬡           q=-1  0  1  2
+   *   r=-1 (4)           ⬡ ⬡ ⬡ ⬡           q=-1  0  1  2
+   *   r= 0 (hub, 6)    ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ →Gate  q=-2 -1  0  1  2  3
+   *   r= 1 (5)          ⬡ ⬡ ⬡ ⬡ ⬡          q=-2 -1  0  1  2
+   *   r= 2 (4)          ⬡ ⬡ ⬡ ⬡            q=-2 -1  0  1
+   *   r= 3 (3)           ⬡ ⬡ ⬡              q=-1  0  1
+   *   r= 4 (base, 2)      ⬡ ⬡               q= 0  1
+   *
+   * Tile counts: 2+4+4+6+5+4+3+2 = 30 ✓
+   *
+   * Start  (0, 4)   southern staging zone, 2 initial directions.
+   * Gate   (3, 0)   east terminus of the central triage hub.
+   *                 BFS distance from start: 4 hops (straight up the hub).
+   *
+   * Visual era (Chs 4–6): simulation facilities intensify — emergency
+   * training, elaborate wards, late-shift environments.
+   */
   4: {
-    start: '0,5',
-    gate: '1,-3',
-    tiles: [[0,0],[0,1],[0,2],[-1,1],[-1,2],[-1,3],[-1,4],[-2,4],[1,0],[0,3],[1,1],[1,-1],[2,-1],[0,4],[1,4],[1,2],[0,-1],[-2,3],[-1,0],[2,2],[0,-2],[0,5],[2,1],[-1,5],[-3,5],[1,-2],[1,-3],[2,0],[-1,6],[-1,-1]],
+    start: '0,4',
+    gate:  '3,0',
+    tiles: [
+      // Row r=-3 (top cap, 2 cells)
+      [ 0,-3],[ 1,-3],
+      // Row r=-2 (4 cells)
+      [-1,-2],[ 0,-2],[ 1,-2],[ 2,-2],
+      // Row r=-1 (4 cells)
+      [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],
+      // Row r= 0 (triage hub, widest, 6 cells)  Gate → (3,0)
+      [-2, 0],[-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],
+      // Row r= 1 (5 cells)
+      [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],
+      // Row r= 2 (4 cells)
+      [-2, 2],[-1, 2],[ 0, 2],[ 1, 2],
+      // Row r= 3 (3 cells)
+      [-1, 3],[ 0, 3],[ 1, 3],
+      // Row r= 4 (staging base, 2 cells)  Start → (0,4)
+      [ 0, 4],[ 1, 4],
+    ],
   },
+
+  /**
+   * Chapter 5 — "Sanctuary Courtyard"
+   *
+   * 30-cell asymmetric courtyard + garden footprint.
+   * Philosophy: a supply courtyard with a walled garden annex.  The map
+   * is neither circular nor rectangular — the upper section skews right
+   * (supply wing) while the lower section skews left (garden corner).
+   * This asymmetry gives two distinct spatial zones within one contiguous
+   * terrain field.
+   *
+   * Layout (portrait, asymmetric skew):
+   *
+   *   r=-2 (garden alcove, 3)   · · ⬡ ⬡ ⬡      q= 2  3  4
+   *   r=-1 (supply upper, 6)   ⬡ ⬡ ⬡ ⬡ ⬡ ⬡    q= 0..5  → Start (5,−1)
+   *   r= 0 (courtyard, 7)    ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡   q=-1..5
+   *   r= 1 (supply lower, 6)  ⬡ ⬡ ⬡ ⬡ ⬡ ⬡    q=-1..4
+   *   r= 2 (garden, 5)     ⬡ ⬡ ⬡ ⬡ ⬡ ·        q=-2..-1..0..1..2
+   *   r= 3 (corner, 3)      ⬡ ⬡ ⬡ ·            q=-2 -1  0
+   *
+   * Tile counts: 3+6+7+6+5+3 = 30 ✓
+   *
+   * Start  (5,−1)   upper-right supply entrance.
+   * Gate   (−2, 3)  lower-left garden corner — concealed sanctuary gate.
+   *                 BFS distance from start: 7 hops.
+   *
+   * Visual era (Chs 4–6): simulation facilities intensify.
+   */
   5: {
-    start: '0,5',
-    gate: '0,-1',
-    tiles: [[0,0],[0,1],[1,1],[1,2],[1,-1],[-1,2],[1,3],[-1,1],[-2,2],[2,3],[0,3],[-3,3],[2,2],[0,4],[1,4],[-1,5],[-2,1],[0,5],[0,-1],[1,5],[2,4],[-1,0],[2,0],[-2,5],[-1,4],[2,5],[-2,4],[0,2],[-2,3],[-2,6]],
+    start: '5,-1',
+    gate:  '-2,3',
+    tiles: [
+      // Row r=-2 (garden alcove, 3 cells)
+      [ 2,-2],[ 3,-2],[ 4,-2],
+      // Row r=-1 (supply upper, 6 cells)  Start → (5,−1)
+      [ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],[ 4,-1],[ 5,-1],
+      // Row r= 0 (main courtyard, 7 cells — widest)
+      [-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],[ 5, 0],
+      // Row r= 1 (lower supply, 6 cells)
+      [-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],[ 3, 1],[ 4, 1],
+      // Row r= 2 (garden, 5 cells)
+      [-2, 2],[-1, 2],[ 0, 2],[ 1, 2],[ 2, 2],
+      // Row r= 3 (garden corner, 3 cells)  Gate → (−2,3)
+      [-2, 3],[-1, 3],[ 0, 3],
+    ],
   },
+
+  /**
+   * Chapter 6 — "Outer Ward Transition"
+   *
+   * First 35-cell chapter.  Larger irregular footprint.
+   * Philosophy: the player is stepping beyond the organised university core
+   * into a less controlled clinical environment.  The upper section is
+   * compact and ordered; the lower section opens into a wider, asymmetric
+   * zone — a structural metaphor for leaving the supervised training ward.
+   *
+   * Layout (portrait, irregular):
+   *
+   *   r=-3 (3)          · ⬡ ⬡ ⬡ ·        q= 0  1  2
+   *   r=-2 (4)          ⬡ ⬡ ⬡ ⬡ ·        q= 0  1  2  3
+   *   r=-1 (5)         ⬡ ⬡ ⬡ ⬡ ⬡ ·      q=-1  0  1  2  3
+   *   r= 0 (6, hub)   ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ →G   q=-1  0  1  2  3  4
+   *   r= 1 (6)        ⬡ ⬡ ⬡ ⬡ ⬡ ⬡       q=-2 -1  0  1  2  3
+   *   r= 2 (5)        ⬡ ⬡ ⬡ ⬡ ⬡ ·        q=-2 -1  0  1  2
+   *   r= 3 (4)        ⬡ ⬡ ⬡ ⬡ ·           q=-2 -1  0  1
+   *   r= 4 (2)        ⬡ ⬡ · ·              q=-2 -1  ← Start (−2,4)
+   *
+   * Tile counts: 3+4+5+6+6+5+4+2 = 35 ✓
+   *
+   * Start  (−2, 4)  lower-left tail — entering from the outer corridor.
+   * Gate   ( 4, 0)  east terminus of the central hub row.
+   *                 BFS distance from start: 6 hops.
+   *
+   * Visual era (Chs 4–6): simulation facilities intensify.
+   */
   6: {
-    start: '0,6',
-    gate: '-1,-1',
-    tiles: [[0,0],[0,1],[-1,1],[0,2],[-1,2],[1,-1],[1,2],[-1,3],[-2,3],[1,3],[-2,4],[-1,4],[0,3],[1,0],[0,4],[-3,3],[1,4],[-1,5],[1,1],[2,-1],[-3,4],[2,0],[-3,5],[-2,1],[0,5],[-3,2],[2,3],[-2,2],[-3,1],[2,4],[0,6],[3,3],[-1,0],[2,5],[-1,-1]],
+    start: '-2,4',
+    gate:  '4,0',
+    tiles: [
+      // Row r=-3 (top, 3 cells)
+      [ 0,-3],[ 1,-3],[ 2,-3],
+      // Row r=-2 (4 cells)
+      [ 0,-2],[ 1,-2],[ 2,-2],[ 3,-2],
+      // Row r=-1 (5 cells)
+      [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],
+      // Row r= 0 (hub, 6 cells)  Gate → (4,0)
+      [-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],
+      // Row r= 1 (6 cells)
+      [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],[ 3, 1],
+      // Row r= 2 (5 cells)
+      [-2, 2],[-1, 2],[ 0, 2],[ 1, 2],[ 2, 2],
+      // Row r= 3 (4 cells)
+      [-2, 3],[-1, 3],[ 0, 3],[ 1, 3],
+      // Row r= 4 (tail, 2 cells)  Start → (−2,4)
+      [-2, 4],[-1, 4],
+    ],
   },
+
+  /**
+   * Chapter 7 — "Outbreak Ward"
+   *
+   * 35-cell dense irregular clinical zone with isolation extremities.
+   * Philosophy: a fever-season ward that has grown under outbreak pressure.
+   * The main body is a dense 6-row mass; isolated cells extend north
+   * (quarantine bay r=−4) and south (containment tail r=4) — two "alcove"
+   * dead-ends that evoke sealed isolation rooms.
+   *
+   * Layout (portrait, with isolation extremities):
+   *
+   *   r=-4 (quarantine tip, 1)        · ⬡ ·         q= 1
+   *   r=-3 (isolation bay, 3)        ⬡ ⬡ ⬡          q= 0  1  2
+   *   r=-2 (4)                      ⬡ ⬡ ⬡ ⬡         q= 0  1  2  3
+   *   r=-1 (6, widest upper)        ⬡ ⬡ ⬡ ⬡ ⬡ ⬡    q=-1  0  1  2  3  4
+   *   r= 0 (6)                     ⬡ ⬡ ⬡ ⬡ ⬡ ⬡    q=-1  0  1  2  3  4
+   *   r= 1 (6)                    ⬡ ⬡ ⬡ ⬡ ⬡ ⬡     q=-2 -1  0  1  2  3
+   *   r= 2 (5)                    ⬡ ⬡ ⬡ ⬡ ⬡        q=-2 -1  0  1  2
+   *   r= 3 (containment, 3)       ⬡ ⬡ ⬡ ·           q=-2 -1  0
+   *   r= 4 (containment tip, 1)   ⬡ · · ·            q=-2
+   *
+   * Tile counts: 1+3+4+6+6+6+5+3+1 = 35 ✓
+   *
+   * Start  (−2, 3)   lower containment wing, 4 neighbours (open zone).
+   * Gate   ( 1,−3)   northern isolation bay — must traverse the full ward.
+   *                  BFS distance from start: 6 hops.
+   *
+   * Visual era (Chs 7–9): simulations feel increasingly real and uncontrolled.
+   * Isolation wards, outbreak environments, darker spaces.
+   */
   7: {
-    start: '0,1',
-    gate: '-3,-3',
-    tiles: [[0,0],[-1,0],[0,-1],[-1,1],[-1,-1],[-1,2],[0,-2],[0,-3],[1,-2],[0,1],[1,-3],[1,-4],[-1,-2],[1,1],[1,-1],[-2,-1],[-2,-2],[-3,-1],[-2,0],[-2,2],[1,0],[-1,-3],[-2,-3],[-3,1],[2,-1],[3,-1],[1,-5],[-2,1],[2,-3],[-3,0],[-3,2],[-3,3],[2,-2],[-3,4],[-3,-3]],
+    start: '-2,3',
+    gate:  '1,-3',
+    tiles: [
+      // Row r=-4 (quarantine tip, 1 cell)
+      [ 1,-4],
+      // Row r=-3 (isolation bay, 3 cells)  Gate → (1,−3)
+      [ 0,-3],[ 1,-3],[ 2,-3],
+      // Row r=-2 (4 cells)
+      [ 0,-2],[ 1,-2],[ 2,-2],[ 3,-2],
+      // Row r=-1 (6 cells)
+      [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],[ 4,-1],
+      // Row r= 0 (6 cells)
+      [-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],
+      // Row r= 1 (6 cells)
+      [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],[ 3, 1],
+      // Row r= 2 (5 cells)
+      [-2, 2],[-1, 2],[ 0, 2],[ 1, 2],[ 2, 2],
+      // Row r= 3 (containment zone, 3 cells)  Start → (−2,3)
+      [-2, 3],[-1, 3],[ 0, 3],
+      // Row r= 4 (containment tip, 1 cell)
+      [-2, 4],
+    ],
   },
+
+  /**
+   * Chapter 8 — "Broken Handoff Floor"
+   *
+   * 35-cell multi-wing rectangular layout with a structural break.
+   * Philosophy: a shift-handoff floor where two ward wings connect through
+   * a narrow central junction.  The upper wing (r=−3 → r=0, all q ≥ 0)
+   * and the lower wing (r=1 → r=4, all q ≤ 2) are offset — the "broken"
+   * handoff is the diagonal seam between them.  Intersections and
+   * corridors dominate the inner tiles.
+   *
+   * Upper wing (5 rows, right-biased):
+   *   r=-3: q=0..3   r=-2: q=0..4   r=-1: q=0..4   r=0: q=0..4
+   * Lower wing (4 rows, left-biased):
+   *   r=1: q=−2..2   r=2: q=−3..1   r=3: q=−3..0   r=4: q=−3..−2
+   *
+   * Tile counts: 4+5+5+5+5+5+4+2 = 35 ✓
+   *
+   * Start  (4,−2)   top-right of the upper wing — entering the day shift.
+   * Gate   (−3, 4)  bottom-left corner of the lower wing.
+   *                 BFS distance from start: 7 hops.
+   *
+   * Visual era (Chs 7–9): simulations feel increasingly real and uncontrolled.
+   */
   8: {
-    start: '0,5',
-    gate: '-1,-4',
-    tiles: [[0,0],[0,1],[0,-1],[-1,2],[1,1],[-1,3],[2,0],[1,2],[-2,3],[0,3],[1,3],[-1,4],[-1,1],[2,3],[2,4],[-2,5],[0,-2],[3,-1],[-3,5],[2,2],[1,-3],[0,2],[2,1],[3,2],[0,-3],[-2,2],[-1,-3],[-1,5],[0,5],[2,-4],[-1,-4],[-3,2],[0,4],[1,4],[3,4]],
+    start: '4,-2',
+    gate:  '-3,4',
+    tiles: [
+      // Row r=-3 (upper wing top, 4 cells)
+      [ 0,-3],[ 1,-3],[ 2,-3],[ 3,-3],
+      // Row r=-2 (5 cells)  Start → (4,−2)
+      [ 0,-2],[ 1,-2],[ 2,-2],[ 3,-2],[ 4,-2],
+      // Row r=-1 (5 cells)
+      [ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],[ 4,-1],
+      // Row r= 0 (junction row, 5 cells)
+      [ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],
+      // Row r= 1 (handoff seam, 5 cells — left shift begins)
+      [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],
+      // Row r= 2 (5 cells)
+      [-3, 2],[-2, 2],[-1, 2],[ 0, 2],[ 1, 2],
+      // Row r= 3 (lower wing, 4 cells)
+      [-3, 3],[-2, 3],[-1, 3],[ 0, 3],
+      // Row r= 4 (lower wing tail, 2 cells)  Gate → (−3,4)
+      [-3, 4],[-2, 4],
+    ],
   },
+
+  /**
+   * Chapter 9 — "Weight of Judgment"
+   *
+   * 35-cell asymmetric irregular map.
+   * Philosophy: a simulation environment where the spatial logic begins to
+   * break down — familiar ward geometry twisted into an unpredictable
+   * diagonal.  The upper-right section (q > 0) and the lower-left section
+   * (q < 0) are BOTH occupied but pulled in opposite diagonal directions,
+   * making the map feel off-balance and harder to read at a glance.
+   *
+   * Layout (diagonal skew, upper-right to lower-left):
+   *
+   *   r=-3 (3, top-right)       · · ⬡ ⬡ ⬡    q= 2  3  4
+   *   r=-2 (5)              ⬡ ⬡ ⬡ ⬡ ⬡        q= 0  1  2  3  4  ← Start
+   *   r=-1 (6)             ⬡ ⬡ ⬡ ⬡ ⬡ ⬡      q=-1  0  1  2  3  4
+   *   r= 0 (6)            ⬡ ⬡ ⬡ ⬡ ⬡ ⬡        q=-2 -1  0  1  2  3
+   *   r= 1 (6)           ⬡ ⬡ ⬡ ⬡ ⬡ ⬡          q=-3 -2 -1  0  1  2
+   *   r= 2 (5)          ⬡ ⬡ ⬡ ⬡ ⬡              q=-3 -2 -1  0  1
+   *   r= 3 (4, lower-left) ⬡ ⬡ ⬡ ⬡             q=-4 -3 -2 -1  ← Gate
+   *
+   * Tile counts: 3+5+6+6+6+5+4 = 35 ✓
+   *
+   * Start  ( 4,−2)   upper-right edge — a controlled entry point.
+   * Gate   (−4, 3)   lower-left corner — the judgment seat.
+   *                  BFS distance from start: 8 hops.
+   *
+   * Visual era (Chs 7–9): simulations feel increasingly real and uncontrolled.
+   */
   9: {
-    start: '0,5',
-    gate: '0,-3',
-    tiles: [[0,0],[0,-1],[-1,0],[-1,-1],[1,-1],[-2,0],[0,1],[-3,1],[0,2],[1,0],[-1,1],[-2,2],[0,-2],[1,1],[2,-1],[-1,2],[3,-2],[-1,3],[-2,3],[2,-2],[0,3],[1,2],[0,4],[-2,1],[1,3],[0,-3],[0,5],[-3,3],[-3,2],[1,4],[-3,4],[-1,5],[2,3],[2,4],[-1,-2]],
+    start: '4,-2',
+    gate:  '-4,3',
+    tiles: [
+      // Row r=-3 (upper-right, 3 cells)
+      [ 2,-3],[ 3,-3],[ 4,-3],
+      // Row r=-2 (5 cells)  Start → (4,−2)
+      [ 0,-2],[ 1,-2],[ 2,-2],[ 3,-2],[ 4,-2],
+      // Row r=-1 (6 cells)
+      [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],[ 4,-1],
+      // Row r= 0 (6 cells)
+      [-2, 0],[-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],
+      // Row r= 1 (6 cells)
+      [-3, 1],[-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],
+      // Row r= 2 (5 cells)
+      [-3, 2],[-2, 2],[-1, 2],[ 0, 2],[ 1, 2],
+      // Row r= 3 (lower-left, 4 cells)  Gate → (−4,3)
+      [-4, 3],[-3, 3],[-2, 3],[-1, 3],
+    ],
   },
+
+  /**
+   * Chapter 10 — "First Oath Capstone"
+   *
+   * 35-cell grand arena — University Era culmination.
+   * Philosophy: a prestigious examination arena that blends academy grandeur
+   * with clinical pressure.  The widest row (r=0, 7 cells) is the grand
+   * hall floor; a north gallery (r=−3, 2 cells) frames the ceremonial gate;
+   * a south gallery (r=4, 2 cells) mirrors it.  The arena is broader and
+   * more symmetric than any earlier map, intentionally evoking ceremony.
+   *
+   * Layout (portrait with gallery wings):
+   *
+   *   r=-3 (north gallery, 2)    · ⬡ ⬡ · ·        q= 1  2  ← Gate
+   *   r=-2 (4)                  ⬡ ⬡ ⬡ ⬡ ·         q= 0  1  2  3
+   *   r=-1 (5)                 ⬡ ⬡ ⬡ ⬡ ⬡ ·       q=-1  0  1  2  3
+   *   r= 0 (grand hall, 7)   ⬡ ⬡ ⬡ ⬡ ⬡ ⬡ ⬡      q=-2 -1  0  1  2  3  4
+   *   r= 1 (6)               ⬡ ⬡ ⬡ ⬡ ⬡ ⬡          q=-2 -1  0  1  2  3
+   *   r= 2 (5)                ⬡ ⬡ ⬡ ⬡ ⬡             q=-1  0  1  2  3
+   *   r= 3 (4)                 ⬡ ⬡ ⬡ ⬡               q= 0  1  2  3
+   *   r= 4 (south gallery, 2)   · ⬡ ⬡ ·               q= 1  2  ← Start
+   *
+   * Tile counts: 2+4+5+7+6+5+4+2 = 35 ✓
+   *
+   * Start  (2, 4)   south gallery — entering the ceremony from the rear.
+   * Gate   (1,−3)   north gallery — the First Oath archway.
+   *                 BFS distance from start: 8 hops.
+   *
+   * Visual era (Ch 10): prestigious capstone — academy grandeur meets
+   * serious clinical pressure.  A blend of Chs 1–3 order and Chs 7–9 weight.
+   */
   10: {
-    start: '0,5',
-    gate: '0,-3',
-    tiles: [[0,0],[1,-1],[2,-1],[2,0],[1,0],[3,-1],[1,1],[0,-1],[1,2],[1,-2],[0,1],[0,3],[-1,0],[1,3],[-1,3],[2,-2],[0,4],[1,-3],[-2,4],[-1,5],[-1,4],[2,-3],[0,5],[-1,-1],[1,4],[0,2],[-3,5],[-2,5],[0,-3],[1,-4],[1,5],[2,2],[-2,-1],[3,-2],[-1,2]],
+    start: '2,4',
+    gate:  '1,-3',
+    tiles: [
+      // Row r=-3 (north gallery, 2 cells)  Gate → (1,−3)
+      [ 1,-3],[ 2,-3],
+      // Row r=-2 (4 cells)
+      [ 0,-2],[ 1,-2],[ 2,-2],[ 3,-2],
+      // Row r=-1 (5 cells)
+      [-1,-1],[ 0,-1],[ 1,-1],[ 2,-1],[ 3,-1],
+      // Row r= 0 (grand hall, 7 cells — widest)
+      [-2, 0],[-1, 0],[ 0, 0],[ 1, 0],[ 2, 0],[ 3, 0],[ 4, 0],
+      // Row r= 1 (6 cells)
+      [-2, 1],[-1, 1],[ 0, 1],[ 1, 1],[ 2, 1],[ 3, 1],
+      // Row r= 2 (5 cells)
+      [-1, 2],[ 0, 2],[ 1, 2],[ 2, 2],[ 3, 2],
+      // Row r= 3 (4 cells)
+      [ 0, 3],[ 1, 3],[ 2, 3],[ 3, 3],
+      // Row r= 4 (south gallery, 2 cells)  Start → (2,4)
+      [ 1, 4],[ 2, 4],
+    ],
   },
 };
 
@@ -428,7 +834,18 @@ function masterTemplate(chapter: number): ChapterMapTemplate {
  *   in-progress runs for that chapter to the authored geometry.
  */
 const PRODUCTION_AUTHORED_CHAPTERS = new Set<number>([
-  1, // "Atrium Approach" — authored and snapshot-tested in Push 2
+  // Push 4: all Book I chapters authored, validated, and locked.
+  // ⚠ Never remove a chapter from this set once players have runs on it.
+  1,  // "Atrium Approach"       — Ch 1, 30 cells, circular courtyard
+  2,  // "Teaching Ward"         — Ch 2, 30 cells, rounded-square
+  3,  // "Procedure Hall"        — Ch 3, 30 cells, wide horizontal oval
+  4,  // "Emergency Simulation"  — Ch 4, 30 cells, vertical diamond / radial hub
+  5,  // "Sanctuary Courtyard"   — Ch 5, 30 cells, asymmetric courtyard + garden
+  6,  // "Outer Ward Transition" — Ch 6, 35 cells, irregular transition
+  7,  // "Outbreak Ward"         — Ch 7, 35 cells, dense + isolation extremities
+  8,  // "Broken Handoff Floor"  — Ch 8, 35 cells, multi-wing offset rectangle
+  9,  // "Weight of Judgment"    — Ch 9, 35 cells, asymmetric diagonal skew
+  10, // "First Oath Capstone"   — Ch10, 35 cells, grand ceremonial arena
 ]);
 
 /**
