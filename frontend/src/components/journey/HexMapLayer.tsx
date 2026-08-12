@@ -993,25 +993,67 @@ interface HexObjectLayerProps {
   explorationCharacter?: number;
   /** Last movement direction — drives sprite mirror + idle bob facing. Default 'face_e'. */
   playerFacing?:         FacingDir;
+  /** True while the player is traversing to a new tile — switches to walk animation. */
+  isMoving?:             boolean;
 }
 
-function HexObjectLayer({ tiles, coords, explorationCharacter, playerFacing = 'face_e' }: HexObjectLayerProps) {
+function HexObjectLayer({
+  tiles,
+  coords,
+  explorationCharacter,
+  playerFacing = 'face_e',
+  isMoving = false,
+}: HexObjectLayerProps) {
   const { sz } = coords;
 
-  // ── Idle bob ──────────────────────────────────────────────────────────────
-  // Gentle 3 px vertical oscillation (950 ms up / 950 ms down, sine ease).
-  // Runs on the native driver (transform only); no layout impact on other tiles.
-  const bobAnim = useRef(new Animated.Value(0)).current;
+  // ── Walk / idle animation ─────────────────────────────────────────────────
+  //
+  // Two Animated.Values drive the step cycle:
+  //   bobAnim  — vertical translation (Y axis)
+  //   swayAnim — lateral translation (X axis)
+  //
+  // Idle  : gentle ±3 px bob, 950 ms half-cycle, sway = 0
+  // Moving: quick ±5 px bob + ±3 px lateral sway, 180 ms half-cycle
+  //         (≈ 2.8 steps/s — premium JRPG exploration pace)
+  //
+  // Both run on the native driver (transform only); no layout re-measure.
+  const bobAnim  = useRef(new Animated.Value(0)).current;
+  const swayAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    const loop = Animated.loop(
+    bobAnim.stopAnimation();
+    swayAnim.stopAnimation();
+
+    if (isMoving) {
+      // Walk mode: two parallel loops — fast bob + lateral step sway.
+      const bobLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(bobAnim,  { toValue: -5, duration: 180, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+          Animated.timing(bobAnim,  { toValue:  0, duration: 180, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        ]),
+      );
+      const swayLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(swayAnim, { toValue:  3, duration: 180, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+          Animated.timing(swayAnim, { toValue: -3, duration: 180, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        ]),
+      );
+      bobLoop.start();
+      swayLoop.start();
+      return () => { bobLoop.stop(); swayLoop.stop(); };
+    }
+
+    // Idle mode: slow gentle bob, sway snaps to rest.
+    swayAnim.setValue(0);
+    const idleLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(bobAnim, { toValue: -3, duration: 950, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
         Animated.timing(bobAnim, { toValue:  0, duration: 950, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
       ]),
     );
-    loop.start();
-    return () => loop.stop();
-  }, [bobAnim]);
+    idleLoop.start();
+    return () => idleLoop.stop();
+  }, [isMoving, bobAnim, swayAnim]);
 
   // scaleX from current facing — flips sprite for leftward directions.
   const scaleX = facingScaleX(playerFacing);
@@ -1110,8 +1152,9 @@ function HexObjectLayer({ tiles, coords, explorationCharacter, playerFacing = 'f
               * Uses explorationCharacter (class sprite) when available, else falls
               * back to MAP_SPRITE_EXPLORER (donghua chibi — Push 19).
               * Sized at CHR_W_RATIO × sz; feet land at ~65 % tile height.
-              * Directional facing: scaleX mirrors sprite for westward moves.
-              * Idle bob: translateY oscillates ±3 px on a 1.9 s sine loop.
+              * Directional facing : scaleX mirrors sprite for westward moves.
+              * Idle       : slow ±3 px bob, sway = 0.
+              * Walk (isMoving): fast ±5 px bob + ±3 px lateral sway (step cycle).
               * Renders ABOVE jade glow (DOM paint order).                       */}
             {hasCurrent && (() => {
               const activeSprite = explorationCharacter ?? MAP_SPRITE_EXPLORER;
@@ -1126,7 +1169,7 @@ function HexObjectLayer({ tiles, coords, explorationCharacter, playerFacing = 'f
                     top:       charY,
                     width:     charW,
                     height:    charH,
-                    transform: [{ scaleX }, { translateY: bobAnim }],
+                    transform: [{ scaleX }, { translateY: bobAnim }, { translateX: swayAnim }],
                   }]}
                 >
                   <Image
@@ -1346,6 +1389,14 @@ export interface HexMapLayerProps {
    */
   playerFacing?: FacingDir;
 
+  /**
+   * True while the player is actively traversing to a new tile.
+   * Switches the exploration sprite from slow idle bob to the faster
+   * walk step cycle (quick bob + lateral sway).  Returns to idle
+   * automatically when set back to false.
+   */
+  isMoving?: boolean;
+
   // ── Dev-only props (no-op in production) ────────────────────────────────
 
   /**
@@ -1406,6 +1457,7 @@ export function HexMapLayer({
   gateArt,
   explorationCharacter,
   playerFacing,
+  isMoving,
   terrainTexture,
   environmentBackground,
   diagRef,
@@ -1789,6 +1841,7 @@ export function HexMapLayer({
           coords={coords}
           explorationCharacter={explorationCharacter}
           playerFacing={playerFacing}
+          isMoving={isMoving}
         />
 
         {/* ── Push 16: JourneyFogField — continuous atmospheric fog overlay ─

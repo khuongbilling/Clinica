@@ -361,6 +361,12 @@ export default function ChapterFogMapShell() {
   // holds the last walked direction while standing idle.
   const [playerFacing, setPlayerFacing] = useState<FacingDir>('face_e');
 
+  // Walk animation flag — true during and briefly after each tile traverse.
+  // Drives the walk step cycle in HexObjectLayer; always resolves to false
+  // via walkTimerRef so it can't get stuck if navigation interrupts the move.
+  const [isMoving, setIsMoving] = useState(false);
+  const walkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const movingRef = useRef(false);
 
   /** Inline error message (insufficient stamina, locked gate). Auto-clears after 2.5 s. */
@@ -919,11 +925,13 @@ export default function ChapterFogMapShell() {
         return;
       }
 
-      // Resolve directional facing from the move vector before applying.
+      // Resolve directional facing and start walk animation.
       const fromTile = run.tiles.find(t => t.current);
       if (fromTile) {
         setPlayerFacing(hexFacingFromDelta(tile.q - fromTile.q, tile.r - fromTile.r));
       }
+      if (walkTimerRef.current) clearTimeout(walkTimerRef.current);
+      setIsMoving(true);
 
       // Apply movement (fog state + visited/current flags).
       // effectiveVisionRadius is derived from the player's class/bonuses (Push 3);
@@ -987,6 +995,9 @@ export default function ChapterFogMapShell() {
 
     } finally {
       movingRef.current = false;
+      // Hold the walk cycle for 360 ms after movement commits so the
+      // step animation plays visibly before snapping back to idle.
+      walkTimerRef.current = setTimeout(() => setIsMoving(false), 360);
     }
   // Module-level imports (applyMoveToRun, resolveNone, etc.) are stable.
   }, [
@@ -1147,6 +1158,7 @@ export default function ChapterFogMapShell() {
             }}
             explorationCharacter={explorationCharacter}
             playerFacing={playerFacing}
+            isMoving={isMoving}
             environmentBackground={{
               source:  chapterVisuals.background,
               scale:   chapterVisuals.backgroundScale,
