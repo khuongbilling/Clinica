@@ -1053,6 +1053,26 @@ function HexObjectLayer({
   const dustAnim       = useRef(new Animated.Value(0)).current;
   const prevDustTileId = useRef<string | undefined>(undefined);
 
+  // ── Task 721: tile-to-tile position tween ────────────────────────────────
+  //
+  // tweenAnim is an offset (translateX, translateY) applied to the wrapper
+  // Animated.View that contains ONLY the jade glow + player sprite.
+  //
+  // On each move the current tile's View jumps to the new world coords
+  // (pos.left / pos.top).  To make the sprite appear to glide rather than
+  // snap, we:
+  //   1. Compute delta = oldPos − newPos  (both in world space).
+  //   2. Immediately set tweenAnim to that delta so the sprite visually starts
+  //      at the OLD screen position.
+  //   3. Ease tweenAnim back to (0, 0) over 220 ms — the sprite slides to its
+  //      true destination.
+  //
+  // This runs purely on the native driver (transform only) and does not
+  // interact with the camera spring or tile zIndex ordering.
+  const tweenAnim            = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const prevCurrentTileIdRef  = useRef<string | undefined>(undefined);
+  const prevCurrentTilePosRef = useRef<{ left: number; top: number } | null>(null);
+
   useEffect(() => {
     if (dustTileId && dustTileId !== prevDustTileId.current) {
       prevDustTileId.current = dustTileId;
@@ -1067,6 +1087,60 @@ function HexObjectLayer({
     // dustAnim is a stable ref value — intentional omission from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dustTileId]);
+
+  // Task 721: fire the position tween whenever the current tile changes.
+  //
+  // IMPORTANT: this MUST be useLayoutEffect (not useEffect).
+  //
+  // On web, useEffect fires *after* the browser has painted the committed frame.
+  // That means if we used useEffect:
+  //   1. React commits the new tile View at (left: newLeft, top: newTop) with
+  //      tweenAnim at {x:0, y:0} — the sprite renders at the destination.
+  //   2. useEffect fires, we setValue({x: dx, y: dy}) — sprite jumps back.
+  //   3. Animated.timing runs forward — sprite slides to destination.
+  //   Net result: snap TO destination, then snap BACK, then glide — worse than
+  //   the original teleport.
+  //
+  // useLayoutEffect fires synchronously after React's DOM mutations but BEFORE
+  // the browser paints, so the delta is committed to tweenAnim before the first
+  // visual frame — the sprite starts at the old position and only ever moves
+  // forward to the new one.  This is the same timing the camera spring uses.
+  //
+  // We derive the current tile id and world coords outside the effect so the
+  // effect dep is a primitive (string | undefined), stable across renders that
+  // don't involve a tile change.
+  const currentTile    = tiles.find(t => t.current);
+  const currentTileId  = currentTile?.id;
+  const currentTilePos = currentTile ? coords.axialToWorld(currentTile.q, currentTile.r) : null;
+
+  useLayoutEffect(() => {
+    if (!currentTileId || !currentTilePos) return;
+
+    const prev     = prevCurrentTileIdRef.current;
+    const prevPos  = prevCurrentTilePosRef.current;
+
+    if (prev && prev !== currentTileId && prevPos) {
+      // Tile changed — snap offset to delta then ease back to origin.
+      const dx = prevPos.left - currentTilePos.left;
+      const dy = prevPos.top  - currentTilePos.top;
+      tweenAnim.setValue({ x: dx, y: dy });
+      Animated.timing(tweenAnim, {
+        toValue:         { x: 0, y: 0 },
+        duration:        220,
+        useNativeDriver: true,
+        easing:          Easing.out(Easing.quad),
+      }).start();
+    } else {
+      // First render or same tile — ensure offset is at rest with no animation.
+      tweenAnim.stopAnimation();
+      tweenAnim.setValue({ x: 0, y: 0 });
+    }
+
+    prevCurrentTileIdRef.current  = currentTileId;
+    prevCurrentTilePosRef.current = { left: currentTilePos.left, top: currentTilePos.top };
+    // tweenAnim, prevCurrentTileIdRef, prevCurrentTilePosRef are stable refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTileId]);
 
   useEffect(() => {
     bobAnim.stopAnimation();
@@ -1137,47 +1211,11 @@ function HexObjectLayer({
               overflow: 'visible',
             }}
           >
-            {/* Layer 4a: jade ambient ground pool — current tile only.
-              * Renders BELOW the player sprite (DOM paint order).
-              * Dark contact shadow is drawn first (SVG painters order) so the
-              * jade glow gradient sits on top — grounded but magical.          */}
-            {hasCurrent && (
-              <Svg
-                width={sz}
-                height={sz}
-                style={{ position: 'absolute', left: 0, top: 0 }}
-              >
-                <Defs>
-                  <RadialGradient
-                    id={glowId}
-                    cx={sz / 2}  cy={sz * CHR_GLOW_CY}
-                    r={sz * CHR_GLOW_RX}
-                    fx={sz / 2}  fy={sz * CHR_GLOW_CY}
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <Stop offset="0%"   stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY} />
-                    <Stop offset="55%"  stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY * 0.30} />
-                    <Stop offset="100%" stopColor={CHR_GLOW_COLOR} stopOpacity={0} />
-                  </RadialGradient>
-                </Defs>
-                {/* Contact shadow — below jade glow (SVG painters order) */}
-                <Ellipse
-                  cx={sz / 2}        cy={sz * CHR_SHADOW_CY}
-                  rx={sz * CHR_SHADOW_RX} ry={sz * CHR_SHADOW_RY}
-                  fill={SHADOW_COLOR}
-                />
-                {/* Jade ambient glow — above shadow */}
-                <Ellipse
-                  cx={sz / 2}        cy={sz * CHR_GLOW_CY}
-                  rx={sz * CHR_GLOW_RX} ry={sz * CHR_GLOW_RY}
-                  fill={`url(#${glowId})`}
-                />
-              </Svg>
-            )}
-
             {/* Layer 3: encounter world-object sprite.
               * Bottom of bounding box anchored at ~88 % tile height (the hex floor).
-              * Push 18: exploredButOutOfVision nodes at MEMORY_NODE_ALPHA (0.82). */}
+              * Push 18: exploredButOutOfVision nodes at MEMORY_NODE_ALPHA (0.82).
+              * NOT inside the tween wrapper — encounter nodes stay anchored to
+              * the destination tile; only the hero sprite glides across.        */}
             {node !== null && (() => {
               const nodeSz = Math.round(sz * node.sizeMul);
               const nodeX  = Math.round((sz - nodeSz) / 2);
@@ -1202,7 +1240,8 @@ function HexObjectLayer({
               * Renders on the tile the hero just vacated (hasDust && !hasCurrent).
               * A radial SVG ellipse centred at the sprite's foot position
               * (sz × 0.65) fades from opacity 1 → 0 over ~360 ms via dustAnim.
-              * Does NOT affect tile state, fog logic, or movement validation.   */}
+              * Does NOT affect tile state, fog logic, or movement validation.
+              * NOT inside the tween wrapper — dust stays at the departure tile. */}
             {hasDust && !hasCurrent && (
               <Animated.View
                 pointerEvents="none"
@@ -1241,45 +1280,102 @@ function HexObjectLayer({
               </Animated.View>
             )}
 
-            {/* Layer 4b: player sprite — current tile only.
-              * Task 719: Explorer uses EXPLORER_FACING_SPRITES[playerFacing] — a
-              * dedicated directional frame for each of the 6 hex directions.
-              * No scaleX mirroring is needed for the explorer.
-              * Class sprites (explorationCharacter set) fall back to the mirror
-              * approach (classScaleX) until 6-frame class art is authored.
-              * Idle       : slow ±3 px bob, sway = 0.
-              * Walk (isMoving): fast ±5 px bob + ±3 px lateral sway (step cycle).
-              * Renders ABOVE jade glow (DOM paint order).                       */}
-            {hasCurrent && (() => {
-              // Explorer: pick the dedicated directional frame, no mirror needed.
-              // Class sprite: single source + scaleX mirror fallback.
-              const activeSprite = explorationCharacter
-                ? explorationCharacter
-                : EXPLORER_FACING_SPRITES[playerFacing];
-              const spriteScaleX = explorationCharacter ? classScaleX : 1;
-              const charW = Math.round(sz * CHR_W_RATIO);
-              const charH = Math.round(sz * CHR_H_RATIO);
-              const charX = Math.round((sz - charW) / 2);
-              const charY = -Math.round(sz * CHR_Y_SHIFT);
-              return (
-                <Animated.View
-                  style={[s.marker, {
-                    left:      charX,
-                    top:       charY,
-                    width:     charW,
-                    height:    charH,
-                    transform: [{ scaleX: spriteScaleX }, { translateY: bobAnim }, { translateX: swayAnim }],
-                  }]}
+            {/* Task 721: tween wrapper — jade glow (Layer 4a) + player sprite (Layer 4b).
+              * Applies a translateX/Y offset that starts at (oldTilePos − newTilePos)
+              * and eases to (0, 0) over 220 ms so the sprite glides between tiles
+              * instead of teleporting.  The encounter node and dust puff are
+              * intentionally outside this wrapper so they stay tile-anchored.   */}
+            {hasCurrent && (
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left:     0,
+                  top:      0,
+                  width:    sz,
+                  height:   sz,
+                  overflow: 'visible',
+                  transform: [
+                    { translateX: tweenAnim.x },
+                    { translateY: tweenAnim.y },
+                  ],
+                }}
+              >
+                {/* Layer 4a: jade ambient ground pool.
+                  * Renders BELOW the player sprite (DOM paint order).
+                  * Dark contact shadow is drawn first (SVG painters order) so the
+                  * jade glow gradient sits on top — grounded but magical.        */}
+                <Svg
+                  width={sz}
+                  height={sz}
+                  style={{ position: 'absolute', left: 0, top: 0 }}
                 >
-                  <Image
-                    source={activeSprite}
-                    style={{ width: charW, height: charH }}
-                    contentFit="contain"
-                    recyclingKey={`chr-${tile.id}`}
+                  <Defs>
+                    <RadialGradient
+                      id={glowId}
+                      cx={sz / 2}  cy={sz * CHR_GLOW_CY}
+                      r={sz * CHR_GLOW_RX}
+                      fx={sz / 2}  fy={sz * CHR_GLOW_CY}
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <Stop offset="0%"   stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY} />
+                      <Stop offset="55%"  stopColor={CHR_GLOW_COLOR} stopOpacity={CHR_GLOW_OPACITY * 0.30} />
+                      <Stop offset="100%" stopColor={CHR_GLOW_COLOR} stopOpacity={0} />
+                    </RadialGradient>
+                  </Defs>
+                  {/* Contact shadow — below jade glow (SVG painters order) */}
+                  <Ellipse
+                    cx={sz / 2}        cy={sz * CHR_SHADOW_CY}
+                    rx={sz * CHR_SHADOW_RX} ry={sz * CHR_SHADOW_RY}
+                    fill={SHADOW_COLOR}
                   />
-                </Animated.View>
-              );
-            })()}
+                  {/* Jade ambient glow — above shadow */}
+                  <Ellipse
+                    cx={sz / 2}        cy={sz * CHR_GLOW_CY}
+                    rx={sz * CHR_GLOW_RX} ry={sz * CHR_GLOW_RY}
+                    fill={`url(#${glowId})`}
+                  />
+                </Svg>
+
+                {/* Layer 4b: player sprite.
+                  * Task 719: Explorer uses EXPLORER_FACING_SPRITES[playerFacing] — a
+                  * dedicated directional frame for each of the 6 hex directions.
+                  * No scaleX mirroring is needed for the explorer.
+                  * Class sprites (explorationCharacter set) fall back to the mirror
+                  * approach (classScaleX) until 6-frame class art is authored.
+                  * Idle       : slow ±3 px bob, sway = 0.
+                  * Walk (isMoving): fast ±5 px bob + ±3 px lateral sway (step cycle).
+                  * Renders ABOVE jade glow (DOM paint order).                   */}
+                {(() => {
+                  const activeSprite = explorationCharacter
+                    ? explorationCharacter
+                    : EXPLORER_FACING_SPRITES[playerFacing];
+                  const spriteScaleX = explorationCharacter ? classScaleX : 1;
+                  const charW = Math.round(sz * CHR_W_RATIO);
+                  const charH = Math.round(sz * CHR_H_RATIO);
+                  const charX = Math.round((sz - charW) / 2);
+                  const charY = -Math.round(sz * CHR_Y_SHIFT);
+                  return (
+                    <Animated.View
+                      style={[s.marker, {
+                        left:      charX,
+                        top:       charY,
+                        width:     charW,
+                        height:    charH,
+                        transform: [{ scaleX: spriteScaleX }, { translateY: bobAnim }, { translateX: swayAnim }],
+                      }]}
+                    >
+                      <Image
+                        source={activeSprite}
+                        style={{ width: charW, height: charH }}
+                        contentFit="contain"
+                        recyclingKey={`chr-${tile.id}`}
+                      />
+                    </Animated.View>
+                  );
+                })()}
+              </Animated.View>
+            )}
           </View>
         );
       })}
