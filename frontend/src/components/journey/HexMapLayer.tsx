@@ -181,7 +181,6 @@ import {
   computeHexWorldCoords,
   type HexWorldCoords,
 } from './hexWorldCoords';
-import { JourneyFogField } from './JourneyFogField';
 
 // ── Hex layout constants — imported from hexWorldCoords.ts (Push 6) ──────────
 // Q_STEP, R_STEP, Q_VOFF, MIN_TILE_SZ, MAX_TILE_SZ are re-exported from the
@@ -1383,25 +1382,6 @@ function HexObjectLayer({
   );
 }
 
-// ── JourneyFogLayer ───────────────────────────────────────────────────────────
-
-/**
- * Push 13: all legacy block-based fog rendering removed.
- *
- * The previous implementation used:
- *   Web    — HTML <canvas> fillRect() covering worldW × worldH (rectangular
- *             solid base) then destination-out radial holes.  The fillRect was
- *             the source of the "white/square fog plane" artifact.
- *   Native — react-native-svg RadialGradient Circle blobs per unexplored tile.
- *             Adjacent blobs merged into rectangular-looking masses.
- *
- * Both paths are removed here.  The component returns null so the map renders
- * without any fog overlay.  Push 14 will introduce a new non-rectangular fog
- * implementation that carries no rectangular artifacts.
- *
- * State-ring SVGs in HexTile (current / visibleNow / exploredButOutOfVision)
- * are NOT fog — they are interactivity indicators and are preserved.
- */
 // ── RecenterButton ────────────────────────────────────────────────────────────
 
 function RecenterButton({ onPress }: { onPress: () => void }) {
@@ -1464,20 +1444,6 @@ export interface HexMapDevOverlay {
   encounterAnchors?: boolean;
   /** Show a colour-coded badge for each tile's visibility state. */
   visibilityState?:  boolean;
-  /** Suppress ALL fog rendering (shortcut for fogBack + fogFront). */
-  fogLayer?:         boolean;
-  /** Suppress the dense back-fog layer only. */
-  fogBack?:          boolean;
-  /** Suppress the light front-fog wisp layer only. */
-  fogFront?:         boolean;
-  /** Render fog-clearing influence rings for each visible / explored tile. */
-  fogMask?:          boolean;
-  /** Tint visibleNow tiles with a green overlay. */
-  showVisibleNow?:   boolean;
-  /** Tint exploredButOutOfVision tiles with an amber overlay. */
-  showExplored?:     boolean;
-  /** Tint unexplored tiles with a red overlay. */
-  showUnexplored?:   boolean;
   /** Mark the sprite anchor point (grounding Y) for the current tile. */
   spriteAnchors?:    boolean;
 }
@@ -1607,13 +1573,6 @@ export interface HexMapLayerProps {
    */
   dustTileId?: string;
 
-  /**
-   * Run seed forwarded to JourneyFogField.
-   * Enables per-run placement variation once the fog field is seeded.
-   * Pass `run.seed` (string) from fog-map.tsx.
-   */
-  runSeed?: string;
-
   // ── Dev-only props (no-op in production) ────────────────────────────────
 
   /**
@@ -1676,7 +1635,6 @@ export function HexMapLayer({
   playerFacing,
   isMoving,
   dustTileId,
-  runSeed,
   terrainTexture,
   environmentBackground,
   diagRef,
@@ -2064,33 +2022,6 @@ export function HexMapLayer({
           dustTileId={dustTileId}
         />
 
-        {/* ── Push 16: JourneyFogField — continuous atmospheric fog overlay ─
-         *
-         * Replaces the null-stubbed JourneyFogLayer (Push 13) with the Push 15
-         * raster fog bank assets, composed as a world-space field.
-         *
-         * The field renders at zIndex 5000:
-         *   above  unexplored tile Pressables (z 1–3000)
-         *   below  exploredButOutOfVision tiles (z 5050+)
-         *   below  visibleNow / current tiles (z 5100+ / 9999)
-         *
-         * Fog bank opacity is attenuated near visible tile centres (code-driven
-         * clearing influence).  An SVG overlay adds a very-low-opacity radial
-         * clearing hint at each visibleNow / current centre.
-         *
-         * Falls back to 'night' palette when timeOfDay is not yet resolved
-         * (dev / test render paths without a shift).
-         */}
-        <JourneyFogField
-          tiles={tiles}
-          coords={coords}
-          timeOfDay={timeOfDay ?? 'night'}
-          seed={runSeed}
-          hideBack={__DEV__ && !!(devOverlay?.fogLayer || devOverlay?.fogBack)}
-          hideFront={__DEV__ && !!(devOverlay?.fogLayer || devOverlay?.fogFront)}
-          showMask={__DEV__ && !!devOverlay?.fogMask}
-        />
-
         {/* ── Gate art overlay ──────────────────────────────────────────────
          * Push 22: spatially anchored to the template-fixed gate tile inside
          * the world viewport.  The gate is a true map landmark:
@@ -2343,28 +2274,6 @@ export function HexMapLayer({
                 }} />
               )}
 
-              {/* Visibility tint overlays — separate per-state toggles */}
-              {devOverlay.showVisibleNow && tile.visibility === 'visibleNow' && (
-                <View style={{
-                  position:        'absolute',
-                  left: 0, top: 0, right: 0, bottom: 0,
-                  backgroundColor: 'rgba(74,222,128,0.22)',
-                }} />
-              )}
-              {devOverlay.showExplored && tile.visibility === 'exploredButOutOfVision' && (
-                <View style={{
-                  position:        'absolute',
-                  left: 0, top: 0, right: 0, bottom: 0,
-                  backgroundColor: 'rgba(250,204,21,0.22)',
-                }} />
-              )}
-              {devOverlay.showUnexplored && tile.visibility === 'unexplored' && (
-                <View style={{
-                  position:        'absolute',
-                  left: 0, top: 0, right: 0, bottom: 0,
-                  backgroundColor: 'rgba(239,68,68,0.22)',
-                }} />
-              )}
             </View>
           );
         })}

@@ -89,20 +89,6 @@ export interface ChapterShiftVisuals {
   terrainTexture?: number;
 
   /**
-   * @deprecated Push 13: fogInterior was removed from the per-tile renderer.
-   * JourneyFogField (Push 16/17) manages all fog — it sources fog bank PNGs
-   * directly via its own FOG_BANKS[timeOfDay] registry and never reads this
-   * field.  Retain for backward compat; do NOT read in new code.
-   */
-  fogInterior: number;
-
-  /**
-   * @deprecated Fog edge direction art — no active caller.  Retained for
-   * backward compat with existing per-chapter registrations.
-   */
-  fogEdge: number;
-
-  /**
    * @deprecated Push 23: terrainBase/Current/Frontier are superseded by the
    * single `terrainTexture` field.  HexTile uses one image for all states
    * since Push 10 (state differentiation via SVG overlays, not per-state art).
@@ -128,10 +114,6 @@ const BG_DAY     = require('@/assets/ui/journey/map/map-platform-background-day.
 const BG_EVENING = require('@/assets/ui/journey/map/map-platform-background-evening.webp') as number;
 // Night IS the canonical dark environment — used explicitly, not as a generic fallback.
 const BG_NIGHT   = require('@/assets/ui/journey/map/map-platform-background.webp')          as number;
-
-// Fog
-const FOG_INTERIOR = require('@/assets/ui/journey/fog/fog-tile.webp')         as number;
-const FOG_EDGE     = require('@/assets/ui/journey/fog/fog-edge-bottom.webp')  as number;
 
 // Tile art — legacy per-state assets kept for existing Ch1 registrations
 // (terrainBase/Current/Frontier fields).  These are no longer used by the
@@ -167,8 +149,6 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
   day: {
     background:      BG_DAY,
     terrainTexture:  TERRAIN_DAY,
-    fogInterior:     FOG_INTERIOR,
-    fogEdge:         FOG_EDGE,
     terrainBase:     TILE_BASE,
     terrainCurrent:  TILE_CURRENT,
     terrainFrontier: TILE_FRONTIER,
@@ -176,8 +156,6 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
   evening: {
     background:      BG_EVENING,
     terrainTexture:  TERRAIN_EVENING,
-    fogInterior:     FOG_INTERIOR,
-    fogEdge:         FOG_EDGE,
     terrainBase:     TILE_BASE,
     terrainCurrent:  TILE_CURRENT,
     terrainFrontier: TILE_FRONTIER,
@@ -185,8 +163,6 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
   night: {
     background:      BG_NIGHT,
     terrainTexture:  TERRAIN_NIGHT,
-    fogInterior:     FOG_INTERIOR,
-    fogEdge:         FOG_EDGE,
     terrainBase:     TILE_BASE,
     terrainCurrent:  TILE_CURRENT,
     terrainFrontier: TILE_FRONTIER,
@@ -220,7 +196,6 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 
 // Push 9 Ch1 Day rasters (PNG — Metro requires static require calls)
 const CH1_DAY_BG       = require('@/assets/ui/journey/map/map-platform-background-ch1-day.png')  as number;
-const CH1_DAY_FOG      = require('@/assets/ui/journey/fog/fog-tile-day.png')                      as number;
 const CH1_DAY_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-day.png')                as number;
 const CH1_DAY_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-day.png')                as number;
 const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png')                 as number;
@@ -238,7 +213,6 @@ const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png'
 //   terrainCurrent  hex-current-evening.png — jade-gold mandala, green fire
 //               at border, dramatically vibrant against evening stone.
 const CH1_EVE_BG       = require('@/assets/ui/journey/map/map-platform-background-ch1-evening.png') as number;
-const CH1_EVE_FOG      = require('@/assets/ui/journey/fog/fog-tile-evening.png')                     as number;
 const CH1_EVE_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-evening.png')               as number;
 const CH1_EVE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-evening.png')               as number;
 const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.png')                as number;
@@ -326,8 +300,6 @@ CHAPTER_SHIFT_VISUALS[1] = {
     backgroundOffsetY: -112,
     // Push 23: shift-specific terrain tile — warm ivory stone, gold veins.
     terrainTexture:    TERRAIN_DAY,
-    fogInterior:       CH1_DAY_FOG,
-    fogEdge:           FOG_EDGE,
     terrainBase:       CH1_DAY_REVEALED,
     terrainCurrent:    CH1_DAY_CURRENT,
     terrainFrontier:   CH1_DAY_FRONTIER,
@@ -341,8 +313,6 @@ CHAPTER_SHIFT_VISUALS[1] = {
     backgroundOffsetY: -112,
     // Push 23: shift-specific terrain tile — amber-lit stone, indigo shadows.
     terrainTexture:    TERRAIN_EVENING,
-    fogInterior:       CH1_EVE_FOG,
-    fogEdge:           FOG_EDGE,
     terrainBase:       CH1_EVE_REVEALED,
     terrainCurrent:    CH1_EVE_CURRENT,
     terrainFrontier:   CH1_EVE_FRONTIER,
@@ -364,8 +334,6 @@ CHAPTER_SHIFT_VISUALS[1] = {
     // Push 23: TERRAIN_NIGHT = hex-terrain-normal.png — the Push 10 canonical
     // jade-teal cracked stone; already designed for the dark visual direction.
     terrainTexture:    TERRAIN_NIGHT,
-    fogInterior:       FOG_INTERIOR,
-    fogEdge:           FOG_EDGE,
     terrainBase:       TILE_BASE,
     terrainCurrent:    TILE_CURRENT,
     terrainFrontier:   TILE_FRONTIER,

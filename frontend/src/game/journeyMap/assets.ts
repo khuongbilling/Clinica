@@ -46,20 +46,6 @@ export const JOURNEY_ASSETS = {
     treasureSilver: require('../../../public/assets/ui/journey/encounters/treasure-silver.webp'),
   },
 
-  /** Fog-of-war overlay assets. */
-  fog: {
-    /** Fog edge blending tile — bottom edge. */
-    edgeBottom: require('../../../public/assets/ui/journey/fog/fog-edge-bottom.webp'),
-    /** Fog edge blending tile — left edge. */
-    edgeLeft:   require('../../../public/assets/ui/journey/fog/fog-edge-left.webp'),
-    /** Fog edge blending tile — right edge. */
-    edgeRight:  require('../../../public/assets/ui/journey/fog/fog-edge-right.webp'),
-    /** Fog edge blending tile — top edge. */
-    edgeTop:    require('../../../public/assets/ui/journey/fog/fog-edge-top.webp'),
-    /** Solid fog fill tile. */
-    tile:       require('../../../public/assets/ui/journey/fog/fog-tile.webp'),
-  },
-
   /** Chapter-boss gate assets. */
   gate: {
     /** Boss gate in the locked (not yet unlocked) state. */

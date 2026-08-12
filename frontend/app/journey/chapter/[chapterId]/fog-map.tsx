@@ -1179,7 +1179,6 @@ export default function ChapterFogMapShell() {
             playerFacing={playerFacing}
             isMoving={isMoving}
             dustTileId={dustTileId}
-            runSeed={run?.seed}
             environmentBackground={{
               source:  chapterVisuals.background,
               scale:   chapterVisuals.backgroundScale,

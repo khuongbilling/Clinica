@@ -243,13 +243,6 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
           <ToggleRow label="tile centers"      active={!!overlay.tileCenters}      onToggle={() => toggle('tileCenters')} />
           <ToggleRow label="encounter anchors" active={!!overlay.encounterAnchors} onToggle={() => toggle('encounterAnchors')} />
           <ToggleRow label="visibility state"  active={!!overlay.visibilityState}  onToggle={() => toggle('visibilityState')} />
-          <ToggleRow label="fog (all)"          active={!!overlay.fogLayer}         onToggle={() => toggle('fogLayer')} />
-          <ToggleRow label="back fog"          active={!!overlay.fogBack}          onToggle={() => toggle('fogBack')} />
-          <ToggleRow label="front fog"         active={!!overlay.fogFront}         onToggle={() => toggle('fogFront')} />
-          <ToggleRow label="fog mask"          active={!!overlay.fogMask}          onToggle={() => toggle('fogMask')} />
-          <ToggleRow label="visibleNow tiles"  active={!!overlay.showVisibleNow}   onToggle={() => toggle('showVisibleNow')} />
-          <ToggleRow label="explored tiles"    active={!!overlay.showExplored}     onToggle={() => toggle('showExplored')} />
-          <ToggleRow label="unexplored tiles"  active={!!overlay.showUnexplored}   onToggle={() => toggle('showUnexplored')} />
           <ToggleRow label="sprite anchors"    active={!!overlay.spriteAnchors}    onToggle={() => toggle('spriteAnchors')} />
         </Section>
 
