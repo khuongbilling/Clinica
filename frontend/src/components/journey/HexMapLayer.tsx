@@ -320,9 +320,12 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
 //
 // The jade glow ellipse (Layer 4a) is centred at the feet position and widens
 // slightly beyond the sprite footprint for a magical ambient halo effect.
-const CHR_W_RATIO          = 1.15;   // sprite width  = 1.15 × sz (1.15 hex widths)
-const CHR_H_RATIO          = 1.15;   // sprite height = 1.15 × sz (square bounding box)
-const CHR_Y_SHIFT          = 0.38;   // upward shift from tile top (fraction of sz)
+const CHR_W_RATIO          = 1.38;   // Push 2: 1.15 → 1.38 (+20%) for mobile readability
+const CHR_H_RATIO          = 1.38;   // Push 2: 1.15 → 1.38 (+20%) — square bounding box
+// CHR_Y_SHIFT: keeps feet anchored at the same tile position after the scale-up.
+// Feet land at sz×(CHR_H_RATIO−CHR_Y_SHIFT).  Target = 0.77×sz (unchanged from Push 19).
+// Old: 1.15−0.38 = 0.77 ✓   New: 1.38−0.61 = 0.77 ✓
+const CHR_Y_SHIFT          = 0.61;   // Push 2: 0.38 → 0.61 (compensates for taller sprite)
 const CHR_GLOW_CY          = 0.65;   // jade glow centre Y = feet position (fraction of sz)
 const CHR_GLOW_RX          = 0.36;   // jade glow horizontal radius (wider than 1.0× era)
 const CHR_GLOW_RY          = 0.11;   // jade glow vertical radius (flattened ellipse)
