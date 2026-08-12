@@ -155,6 +155,7 @@
 import { Image } from 'expo-image';
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -163,6 +164,7 @@ import {
 import {
   AccessibilityInfo,
   Animated,
+  Easing,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -406,6 +408,34 @@ const PLAYER_TOKEN = require('@/assets/ui/journey/map/player-map-token.webp') as
 // Art spec: 2.5–3-head-tall chibi, teal-jade longcoat, black hair, soft
 // cel-painted rendering, transparent bg, painted contact shadow at feet.
 const MAP_SPRITE_EXPLORER = require('@/assets/map-sprites/map_sprite_explorer.png') as number;
+
+// ── Directional idle facing for the exploration hero ─────────────────────────
+//
+// The hex grid uses flat-top axial (q,r). Every valid move is one of exactly
+// 6 neighbor vectors; we map that delta to a named facing so the sprite can
+// mirror left/right and hold direction while idle.
+//
+// Art currently ships one sprite; rightward facings (E / NE / SE) use the
+// native orientation, leftward facings (W / NW / SW) apply scaleX:-1.
+// As 6-direction sprite frames are added, replace the mirror with the
+// dedicated frame per FacingDir — no call-site changes required.
+export type FacingDir = 'face_e' | 'face_w' | 'face_ne' | 'face_nw' | 'face_se' | 'face_sw';
+
+/** Resolve an axial move delta (dq, dr) to one of the 6 hex facings. */
+export function hexFacingFromDelta(dq: number, dr: number): FacingDir {
+  if (dq ===  1 && dr ===  0) return 'face_e';
+  if (dq === -1 && dr ===  0) return 'face_w';
+  if (dq ===  1 && dr === -1) return 'face_ne';
+  if (dq === -1 && dr ===  1) return 'face_sw';
+  if (dq ===  0 && dr ===  1) return 'face_se';
+  if (dq ===  0 && dr === -1) return 'face_nw';
+  return 'face_e'; // non-neighbour delta — keep current facing
+}
+
+/** scaleX for a facing: native art faces right; leftward facings mirror. */
+function facingScaleX(f: FacingDir): 1 | -1 {
+  return (f === 'face_w' || f === 'face_nw' || f === 'face_sw') ? -1 : 1;
+}
 
 /**
  * Circular-medallion UI icons — LEGEND PANELS / MODAL HEADERS ONLY (not map).
@@ -961,10 +991,30 @@ interface HexObjectLayerProps {
   tiles:                readonly HexMapTile[];
   coords:               HexWorldCoords;
   explorationCharacter?: number;
+  /** Last movement direction — drives sprite mirror + idle bob facing. Default 'face_e'. */
+  playerFacing?:         FacingDir;
 }
 
-function HexObjectLayer({ tiles, coords, explorationCharacter }: HexObjectLayerProps) {
+function HexObjectLayer({ tiles, coords, explorationCharacter, playerFacing = 'face_e' }: HexObjectLayerProps) {
   const { sz } = coords;
+
+  // ── Idle bob ──────────────────────────────────────────────────────────────
+  // Gentle 3 px vertical oscillation (950 ms up / 950 ms down, sine ease).
+  // Runs on the native driver (transform only); no layout impact on other tiles.
+  const bobAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bobAnim, { toValue: -3, duration: 950, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(bobAnim, { toValue:  0, duration: 950, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bobAnim]);
+
+  // scaleX from current facing — flips sprite for leftward directions.
+  const scaleX = facingScaleX(playerFacing);
 
   return (
     <>
@@ -1060,6 +1110,8 @@ function HexObjectLayer({ tiles, coords, explorationCharacter }: HexObjectLayerP
               * Uses explorationCharacter (class sprite) when available, else falls
               * back to MAP_SPRITE_EXPLORER (donghua chibi — Push 19).
               * Sized at CHR_W_RATIO × sz; feet land at ~65 % tile height.
+              * Directional facing: scaleX mirrors sprite for westward moves.
+              * Idle bob: translateY oscillates ±3 px on a 1.9 s sine loop.
               * Renders ABOVE jade glow (DOM paint order).                       */}
             {hasCurrent && (() => {
               const activeSprite = explorationCharacter ?? MAP_SPRITE_EXPLORER;
@@ -1068,12 +1120,22 @@ function HexObjectLayer({ tiles, coords, explorationCharacter }: HexObjectLayerP
               const charX = Math.round((sz - charW) / 2);
               const charY = -Math.round(sz * CHR_Y_SHIFT);
               return (
-                <Image
-                  source={activeSprite}
-                  style={[s.marker, { left: charX, top: charY, width: charW, height: charH }]}
-                  contentFit="contain"
-                  recyclingKey={`chr-${tile.id}`}
-                />
+                <Animated.View
+                  style={[s.marker, {
+                    left:      charX,
+                    top:       charY,
+                    width:     charW,
+                    height:    charH,
+                    transform: [{ scaleX }, { translateY: bobAnim }],
+                  }]}
+                >
+                  <Image
+                    source={activeSprite}
+                    style={{ width: charW, height: charH }}
+                    contentFit="contain"
+                    recyclingKey={`chr-${tile.id}`}
+                  />
+                </Animated.View>
               );
             })()}
           </View>
@@ -1276,6 +1338,14 @@ export interface HexMapLayerProps {
    */
   explorationCharacter?: number;
 
+  /**
+   * Last movement direction for the exploration hero.
+   * Drives left/right sprite mirroring so the character faces where it just
+   * walked, and holds that direction while standing idle.
+   * Defaults to 'face_e' (native art orientation) when omitted.
+   */
+  playerFacing?: FacingDir;
+
   // ── Dev-only props (no-op in production) ────────────────────────────────
 
   /**
@@ -1335,6 +1405,7 @@ export function HexMapLayer({
   timeOfDay,
   gateArt,
   explorationCharacter,
+  playerFacing,
   terrainTexture,
   environmentBackground,
   diagRef,
@@ -1717,6 +1788,7 @@ export function HexMapLayer({
           tiles={tiles}
           coords={coords}
           explorationCharacter={explorationCharacter}
+          playerFacing={playerFacing}
         />
 
         {/* ── Push 16: JourneyFogField — continuous atmospheric fog overlay ─

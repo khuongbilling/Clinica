@@ -31,8 +31,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HexMapLayer }                    from '@/src/components/journey/HexMapLayer';
-import type { HexMapTile, HexMapWorldMetrics, HexMapDevOverlay } from '@/src/components/journey/HexMapLayer';
+import { HexMapLayer, hexFacingFromDelta } from '@/src/components/journey/HexMapLayer';
+import type { HexMapTile, HexMapWorldMetrics, HexMapDevOverlay, FacingDir } from '@/src/components/journey/HexMapLayer';
 import { JourneyMapDiagnosticsPanel }     from '@/src/components/journey/dev/JourneyMapDiagnosticsPanel';
 import { CHAPTERS }                        from '@/src/game/chapterJourney';
 import { generateDebugFixture, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
@@ -357,6 +357,10 @@ export default function ChapterFogMapShell() {
   // ── Movement + encounter state ─────────────────────────────────────────────
 
   // Ref guard — only one move/encounter interaction in flight at a time.
+  // Directional facing — updated after every successful move so the sprite
+  // holds the last walked direction while standing idle.
+  const [playerFacing, setPlayerFacing] = useState<FacingDir>('face_e');
+
   const movingRef = useRef(false);
 
   /** Inline error message (insufficient stamina, locked gate). Auto-clears after 2.5 s. */
@@ -915,6 +919,12 @@ export default function ChapterFogMapShell() {
         return;
       }
 
+      // Resolve directional facing from the move vector before applying.
+      const fromTile = run.tiles.find(t => t.current);
+      if (fromTile) {
+        setPlayerFacing(hexFacingFromDelta(tile.q - fromTile.q, tile.r - fromTile.r));
+      }
+
       // Apply movement (fog state + visited/current flags).
       // effectiveVisionRadius is derived from the player's class/bonuses (Push 3);
       // defaults to 1 for all current classes.
@@ -1136,6 +1146,7 @@ export default function ChapterFogMapShell() {
               gateTileId:   run?.gateAnchorTileId,
             }}
             explorationCharacter={explorationCharacter}
+            playerFacing={playerFacing}
             environmentBackground={{
               source:  chapterVisuals.background,
               scale:   chapterVisuals.backgroundScale,

@@ -85,7 +85,9 @@ export function validateMove(
   // the handleTilePress dispatch table already redirects gate taps to
   // handleGateTap() before validateMove is reached, so this is a
   // safety backstop for any future programmatic move paths.
-  if (dest.isGate) return { ok: false, reason: 'GATE_TILE' };
+  if (run.gateAnchorTileId && dest.id === run.gateAnchorTileId) {
+    return { ok: false, reason: 'GATE_TILE' };
+  }
 
   // Guard: must have stamina.
   if (stamina < 1) return { ok: false, reason: 'INSUFFICIENT_STAMINA' };
