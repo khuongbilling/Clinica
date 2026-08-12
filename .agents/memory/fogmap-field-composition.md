@@ -1,59 +1,63 @@
 ---
-name: Fog-map field composition (Push 26)
-description: Architecture of JourneyFogField — procedural runtime fog for the hex chapter map.
+name: Fog-map field composition (Push 2 rebuild)
+description: Architecture of JourneyFogField — two-layer world-space atmospheric fog for the hex chapter map.
 ---
 
 ## Rule
-JourneyFogField is a SEPARATE component from HexTile.  Zero raster assets.  Zero SVG.  Zero flat overlay.
-Fog is generated at runtime from deterministic pseudorandom View blobs.
+JourneyFogField is a SEPARATE component from HexTile.  Returns a Fragment (two Views + optional dev mask).
+Raster PNG cloud banks only — no SVG, no CSS gradients, no View blobs.
 
-## Architecture (Push 26 — procedural blob fog)
+## Architecture (current — two-layer split)
 
-**22 blobs × 3 concentric rings each = up to 66 View nodes.**
+**BackFogLayer** (`z FOG_BACK_Z = 4800`)
+- 12 placements × banks A/B/C (4 each)
+- Placement range: -10 %…110 % of world bounds
+- Base tint View beneath cloud banks (shift-keyed color + opacity)
+- Max opacity: `palette.bankAlphaMax` (0.78–0.88)
+- Clearing: `BACK_CLEAR` — current(2.0/0.7), visibleNow(1.7/0.5), explored(1.1/0.3) × sz
 
-Each blob = three nested `<View>` circles with `borderRadius: 99999`:
-  - inner  ring: `opacity_factor 0.54` — dense fog body
-  - middle ring: `opacity_factor 0.26` — transitional mist
-  - outer  ring: `opacity_factor 0.08` — feathered wisps
+**FrontFogLayer** (`z FOG_FRONT_Z = 6100`)
+- 6 placements × bank C only (wispy tendrils)
+- Placement range: 0 %…100 %
+- No base tint — keeps explored areas readable
+- Max opacity: `FRONT_BANK_ALPHA_MAX = 0.22`
+- Clearing: `FRONT_CLEAR` — current(2.5/1.5), visibleNow(2.2/1.2), explored(1.5/0.9) × sz
+  (more aggressive so visible tiles are never obscured by wisps)
 
-Three rings simulate a radial gradient using only React Native primitives.
-Multiple overlapping blobs produce natural variation.
+**Drift**: single `Animated.ValueXY` shared between both layers — ±12 px, 56-second cycle,
+`useNativeDriver: false` (layout bridge; needed for web).
 
-**Blob placement:**
-- Positions generated at MODULE LEVEL via seeded PRNG (`seededRand(i*11+offset)`)
-- xF range: -12% to 112% of world width (bleed past edges)
-- yF range: -10% to 110% of world height
-- sizeF (outer radius): 12%–32% of world width
-- Positions are IDENTICAL every run (deterministic, not per-run seeded)
+**Clearing helper**: `resolvePlacements(defs, W, H, sources, alphaMax)` — pure function,
+edge-based distance (`edgeDist = max(0, centreDist − diagonal×0.36)`).
 
-**Per-blob clearing:**
-Each blob's parent opacity driven by min distance from blob centre to any visible tile centre.
-Three tiers (multiples of sz):
-  current:                startR=1.9, fullR=0.6
-  visibleNow:             startR=1.6, fullR=0.45
-  exploredButOutOfVision: startR=1.0, fullR=0.25
-BLOB_ALPHA_MAX = 0.84. Blobs with opacity < 0.02 skipped (not rendered).
+## Z-ordering inside MapWorld
 
-**Shift palettes (blobColor):**
-  day:     '#7a9db4'  — pale blue-grey atmospheric haze
-  evening: '#1e1030'  — deep indigo-purple twilight fog
-  night:   '#0c1a28'  — near-black navy mist
+| Layer | z-range |
+|---|---|
+| unexplored Pressables | 50–1550 |
+| **BackFogLayer** | **4800** |
+| explored/visibleNow tiles | 5100–5400 |
+| **FrontFogLayer** | **6100** |
+| HexObjectLayer (sprites) | 6200–6500 |
+| BossGate | 7000 |
 
-**Drift:**
-Single `Animated.ValueXY` on blob container — `useNativeDriver: true`, ±10px, 48s cycle.
-GPU-driven. Zero JS-thread cost.
+## Debug props (dev only)
+- `hideBack` / `hideFront` — suppress each layer individually
+- `showMask` — renders green/amber border rings at each clearing source's fullR/startR
+- Wired via `devOverlay.fogBack`, `devOverlay.fogFront`, `devOverlay.fogMask`
+- `devOverlay.fogLayer` = "suppress all fog" shortcut (sets both hideBack + hideFront)
 
-**z-ordering:**
-`JourneyFogField` at `zIndex 5000` — above unexplored Pressables (z 1–3000), below explored tiles (z 5050+).
+## HexMapDevOverlay fog flags (7 new)
+`fogLayer` (all), `fogBack`, `fogFront`, `fogMask`, `showVisibleNow`, `showExplored`, `showUnexplored`
 
-**timeOfDay fallback:**
-HexMapLayer passes `timeOfDay ?? 'night'`.
+## Props
+- `seed?: string` — run.seed forwarded from fog-map → HexMapLayer → JourneyFogField;
+  module-level placement defs until seed-variation push
+- `timeOfDay` — selects FOG_BANKS and PALETTE entry
 
-**Known refinement opportunities:**
-- Blob positions are module-level constants (same every attempt). Per-run seeding from `run.seed` would give variation between attempts.
-- Clearing uses blob CENTRE distance; large blobs whose centre is far but edge overlaps the clearing zone still show. Could refine to (dist - outerR) for edge-based clearing.
+## Key constraint
+`JourneyFogLayer` null stub was removed in this push. Only JourneyFogField is active.
 
-**History of this component:**
-- Push 16/17: SVG Mask + radial gradient + raster PNGs at 0.25 opacity
-- Push 25: removed SVG mask; raster PNGs at 0.82 opacity with per-bank centre clearing
-- Push 26: removed all raster assets; pure procedural View blobs (current)
+**Why:**
+Previous fog was a single layer at z 5000. Back/front split gives atmospheric depth:
+back covers unexplored (dense, below explored tiles), front adds wisp detail above terrain.

@@ -1,0 +1,62 @@
+PUSH 1 — FIX CHAPTER BOSS GATE SCALE, FOOTPRINT, AND OCCLUSION
+
+Do not change:
+- camera centering
+- fog system
+- map generation rules
+- player movement rules
+- encounter probabilities
+- bottom nav
+
+Current issue:
+The Chapter Boss Gate is too large and visually blocks the player when the player moves near or beyond it.
+
+Goal:
+Make the gate feel like a major landmark without covering too much of the playable map.
+
+Implement the following:
+
+1. Reduce Chapter Boss Gate visual size by approximately 20–30%.
+   - It should still feel important
+   - but should no longer dominate the entire upper-middle map region
+
+2. The Boss Gate should occupy a dedicated gate tile / gate anchor area.
+   - The player should NOT move “through” the gate art.
+   - The gate is an interactable landmark, not normal traversable terrain.
+
+3. Add a gate interaction rule:
+   - player only needs to move to an adjacent interaction tile
+   - not onto the same visual tile occupied by the gate asset
+
+4. Prevent player from rendering behind the full gate art.
+   Choose one of these approaches:
+   A. simplest/preferred now:
+      - player cannot move onto the gate’s occupied anchor tile
+      - gate sits at map boundary / endpoint
+      - interaction occurs from adjacent tile
+   B. future polish option:
+      - split gate into back layer + front trim layer for partial occlusion
+      - not required in this push
+
+5. Adjust gate placement so it reads as:
+   “end-of-route objective”
+   rather than
+   “large prop dropped over the map center.”
+
+6. Gate anchor / placement guidance:
+   - place toward upper zone or edge of map
+   - keep the full gate visible
+   - do not let it overlap the player’s standard route too heavily
+
+7. Keep the art itself unchanged.
+   This is a layout / scaling / interaction fix, not a redesign.
+
+Acceptance:
+- Gate remains large and important
+- Gate no longer blocks the character during normal movement
+- Player interacts from an adjacent tile
+- Gate no longer feels like it sits on top of the character
+- Playable area remains readable
+
+Commit:
+fix(journey): reduce boss gate blocking and add adjacent interaction behavior

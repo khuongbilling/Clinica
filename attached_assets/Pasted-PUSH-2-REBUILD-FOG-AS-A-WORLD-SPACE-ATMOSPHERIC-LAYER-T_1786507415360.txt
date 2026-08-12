@@ -1,0 +1,199 @@
+PUSH 2 — REBUILD FOG AS A WORLD-SPACE ATMOSPHERIC LAYER
+
+This resumes the Journey fog work after the camera/world-space correction.
+
+Do NOT change:
+- player camera centering
+- map geometry
+- tile coordinates
+- movement rules
+- stamina
+- encounter placement
+- boss gate logic
+- player sprite
+- Day/Evening/Night unlock logic
+
+CURRENT PROBLEM:
+
+Fog has previously behaved like:
+- rectangular overlays
+- painted corner patches
+- circular blur shapes
+- screen-space effects
+
+The camera/world is now unified enough to fix this properly.
+
+TARGET:
+
+Fog must exist in the SAME WORLD-SPACE coordinate system as:
+- the chapter environment
+- the hex terrain
+- the player
+- encounters
+- the Chapter Boss Gate
+
+Fog should move exactly with MapWorld.
+
+ARCHITECTURE:
+
+MapViewport
+  └── MapWorld
+       ├── ChapterEnvironment
+       ├── HexTerrain
+       ├── BossGate
+       ├── EncounterObjects
+       ├── PlayerSprite
+       ├── BackFogLayer
+       └── FrontFogLayer
+
+Map UI remains outside MapWorld.
+
+IMPORTANT:
+
+Do NOT attach fog directly to individual HexTile components.
+
+Remove / avoid:
+- TileFog components
+- per-tile fog images
+- per-tile white overlays
+- CSS radial-gradient fog
+- circular blur blobs
+- fog rectangles
+
+CREATE:
+
+JourneyFogField
+
+JourneyFogField receives:
+- world bounds
+- tile world positions
+- current player tile
+- visibleNow tile IDs
+- explored tile IDs
+- unexplored tile IDs
+- TimeOfDay
+- run seed
+
+Fog rendering must use world coordinates only.
+
+WORLD-SPACE RULE:
+
+When cameraX/cameraY changes,
+the fog must remain perfectly aligned with:
+- terrain
+- sprites
+- Gate
+- encounters
+
+Fog itself should NOT have a separate camera transform.
+
+VISIBILITY STATES:
+
+Use the existing / canonical three-state model:
+
+VISIBLE_NOW
+- currently within Field of Vision
+- terrain clear
+- no dense fog
+
+EXPLORED
+- previously seen
+- now outside current Field of Vision
+- light memory haze only
+
+UNEXPLORED
+- never seen this run
+- dense fog cover
+
+BASE VISION:
+
+Keep:
+baseVisionRadius = 1
+
+Do not change vision mechanics in this push.
+
+FOG MASK:
+
+The code-driven visibility mask decides WHERE fog is allowed.
+
+The painted fog assets decide HOW the fog looks.
+
+Do not confuse those two responsibilities.
+
+Fog mask:
+code
+
+Fog appearance:
+raster art
+
+The reveal boundary must be soft and feathered.
+
+Do NOT create:
+- hard square openings
+- hard circles
+- hard hex-shaped holes
+
+The visible clear region can be generated from tile-center influence areas and blended together.
+
+WORLD BOUNDS:
+
+FogField must cover the ENTIRE MapWorld bounds, including:
+- terrain area
+- edge padding
+- Gate visual overflow
+- sprite overflow
+
+It must not stop at viewport edges.
+
+PAN TEST:
+
+Pan/recenter the map.
+
+Fog must pan with the world and remain in the same place relative to terrain.
+
+No drifting.
+No sliding.
+No detached corner patch.
+
+TEMPORARY VISUAL FALLBACK:
+
+If the final fog art assets are not ready in this push:
+use a neutral semi-transparent debug fog texture.
+
+Do NOT use:
+- white block
+- circle blur
+- scenic painting
+- CSS radial gradient
+
+The purpose of this push is architecture, not final fog beauty.
+
+ACCEPTANCE CRITERIA:
+
+1. Fog is inside MapWorld.
+2. Fog moves with the terrain during pan/recenter.
+3. No fog exists inside HexTile components.
+4. No rectangular screen-space fog panel exists.
+5. No circular blur fog exists.
+6. Visible / explored / unexplored states remain correct.
+7. Fog covers world-space terrain, not screen-space UI.
+8. Recenter does not shift fog relative to terrain.
+9. Refreshing the same run restores the same exploration state.
+
+DEV DEBUG:
+
+Add development-only toggles:
+
+[ ] back fog
+[ ] front fog
+[ ] fog mask
+[ ] visibleNow
+[ ] explored
+[ ] unexplored
+[ ] world bounds
+
+Do not expose debug controls in production.
+
+Commit:
+
+refactor(journey): rebuild fog as world-space atmospheric layer
