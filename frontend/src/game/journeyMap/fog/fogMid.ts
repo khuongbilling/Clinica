@@ -50,6 +50,13 @@ const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
+/**
+ * Extra pixels on all four sides of the Mid Fog canvas — must match
+ * FOG_WORLD_PADDING in fogBase.ts so both layers bleed identically.
+ * FogMidLayer.tsx reads this export to apply the matching CSS offset.
+ */
+export const FOG_MID_WORLD_PADDING = 200;
+
 /** Grid cell width in tile-size multiples (smaller than Base Fog for finer texture). */
 const MID_CELL_TILES = 3.5;
 
@@ -154,8 +161,12 @@ export async function drawFogMid(
 
   const midImg = await loadBundledImage(FOG_MID_DAY_SOURCE);
 
-  canvas.width  = Math.ceil(worldWidth);
-  canvas.height = Math.ceil(worldHeight);
+  const P = FOG_MID_WORLD_PADDING;
+
+  // Padded canvas: bleeds P px past every world edge.
+  // FogMidLayer offsets CSS left/top by −P to keep alignment with MapWorld.
+  canvas.width  = Math.ceil(worldWidth  + 2 * P);
+  canvas.height = Math.ceil(worldHeight + 2 * P);
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -169,6 +180,9 @@ export async function drawFogMid(
 
   // Separate seed namespace from Base Fog so layers never share a placement.
   const rand = seededRandom(hashString(runSeed + ':fogmid'));
+
+  ctx.save();
+  ctx.translate(P, P); // world-space coords → padded canvas coords
 
   for (let row = -1; row < rows; row++) {
     for (let col = -1; col < cols; col++) {
@@ -195,7 +209,9 @@ export async function drawFogMid(
     }
   }
 
-  // ── Visibility mask (destination-in) ─────────────────────────────────────
+  ctx.restore(); // undo translate(P, P)
+
+  // ── Visibility mask (destination-in) — padded to match canvas size ────────
   const maskCanvas = document.createElement('canvas');
   const maskParams: FogMaskParams = {
     worldWidth,
@@ -205,6 +221,7 @@ export async function drawFogMid(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
+    padding: P,
   };
   drawFogMask(maskCanvas, maskParams);
 

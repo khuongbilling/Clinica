@@ -32,7 +32,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
-import { drawFogMid } from '@/src/game/journeyMap/fog/fogMid';
+import { drawFogMid, FOG_MID_WORLD_PADDING } from '@/src/game/journeyMap/fog/fogMid';
 import { fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
@@ -72,7 +72,8 @@ export function FogMidLayer({
     if (!container) return;
 
     const canvas = document.createElement('canvas');
-    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;';
+    // Offset by −padding so the extended canvas bleeds past all world edges.
+    canvas.style.cssText = `position:absolute;left:${-FOG_MID_WORLD_PADDING}px;top:${-FOG_MID_WORLD_PADDING}px;pointer-events:none;`;
     container.appendChild(canvas);
     canvasRef.current   = canvas;
     cacheKeyRef.current = '';

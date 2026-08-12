@@ -66,6 +66,13 @@ export interface FogMaskParams {
   exploredIds:           ReadonlySet<string>;
   /** Player's effective field of vision radius (from fogVision.effectiveFieldOfVision). */
   effectiveFieldOfVision: number;
+  /**
+   * Extra padding in pixels beyond the world edges (matches the fog canvas padding).
+   * The mask canvas is sized to (worldWidth + 2×padding) × (worldHeight + 2×padding)
+   * and all tile centre coordinates are shifted by +padding so they line up with
+   * the padded fog canvas.  Defaults to 0 (backward-compatible).
+   */
+  padding?: number;
 }
 
 // ── Cache key ──────────────────────────────────────────────────────────────────
@@ -116,9 +123,13 @@ export function drawFogMask(
     effectiveFieldOfVision,
   } = params;
 
-  // ── Size the canvas to the world ─────────────────────────────────────────────
-  canvas.width  = Math.ceil(worldWidth);
-  canvas.height = Math.ceil(worldHeight);
+  // Padding expands the canvas and shifts all tile centres so the mask aligns
+  // with the padded fog canvas.  Padded area starts white (full fog).
+  const P = params.padding ?? 0;
+
+  // ── Size the canvas to the world (+ padding on all 4 sides) ──────────────────
+  canvas.width  = Math.ceil(worldWidth  + 2 * P);
+  canvas.height = Math.ceil(worldHeight + 2 * P);
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -139,17 +150,21 @@ export function drawFogMask(
   const exploredPrimaryR = sz * 1.95;             // explored haze dome
 
   // ── EXPLORED tiles first (lighter clearing, painted underneath VISIBLE_NOW) ──
+  // All tile centres are shifted by +P so they align with the padded canvas.
   for (const id of exploredIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
 
+    const px = c.cx + P;
+    const py = c.cy + P;
+
     // Primary influence — partial erase; enough opacity remains for light haze
-    drawRadialInfluence(ctx, c.cx, c.cy, exploredPrimaryR, 0.55);
+    drawRadialInfluence(ctx, px, py, exploredPrimaryR, 0.55);
 
     // 3 offset sub-influences — break circular symmetry
-    drawRadialInfluence(ctx, c.cx - 0.44 * sz, c.cy - 0.28 * sz, sz * 1.05, 0.38);
-    drawRadialInfluence(ctx, c.cx + 0.52 * sz, c.cy + 0.32 * sz, sz * 0.88, 0.33);
-    drawRadialInfluence(ctx, c.cx - 0.22 * sz, c.cy + 0.54 * sz, sz * 0.95, 0.36);
+    drawRadialInfluence(ctx, px - 0.44 * sz, py - 0.28 * sz, sz * 1.05, 0.38);
+    drawRadialInfluence(ctx, px + 0.52 * sz, py + 0.32 * sz, sz * 0.88, 0.33);
+    drawRadialInfluence(ctx, px - 0.22 * sz, py + 0.54 * sz, sz * 0.95, 0.36);
   }
 
   // ── VISIBLE_NOW tiles on top (stronger clearing, near-fully transparent) ──────
@@ -157,21 +172,24 @@ export function drawFogMask(
     const c = tileCenters.get(id);
     if (!c) continue;
 
+    const px = c.cx + P;
+    const py = c.cy + P;
     const sr = fovScale; // sub-influence scale
+
     // Primary influence — near-full erase at centre
-    drawRadialInfluence(ctx, c.cx, c.cy, visiblePrimaryR, 0.93);
+    drawRadialInfluence(ctx, px, py, visiblePrimaryR, 0.93);
 
     // 5 offset sub-influences at irregular positions for organic edges
     // NW bulge
-    drawRadialInfluence(ctx, c.cx - 0.52 * sz, c.cy - 0.31 * sz, sz * 1.35 * sr, 0.70);
+    drawRadialInfluence(ctx, px - 0.52 * sz, py - 0.31 * sz, sz * 1.35 * sr, 0.70);
     // NE bulge
-    drawRadialInfluence(ctx, c.cx + 0.58 * sz, c.cy - 0.42 * sz, sz * 1.18 * sr, 0.62);
+    drawRadialInfluence(ctx, px + 0.58 * sz, py - 0.42 * sz, sz * 1.18 * sr, 0.62);
     // S bulge
-    drawRadialInfluence(ctx, c.cx - 0.28 * sz, c.cy + 0.62 * sz, sz * 1.10 * sr, 0.65);
+    drawRadialInfluence(ctx, px - 0.28 * sz, py + 0.62 * sz, sz * 1.10 * sr, 0.65);
     // SE extension
-    drawRadialInfluence(ctx, c.cx + 0.41 * sz, c.cy + 0.50 * sz, sz * 1.28 * sr, 0.60);
+    drawRadialInfluence(ctx, px + 0.41 * sz, py + 0.50 * sz, sz * 1.28 * sr, 0.60);
     // N tip
-    drawRadialInfluence(ctx, c.cx + 0.04 * sz, c.cy - 0.72 * sz, sz * 0.92 * sr, 0.55);
+    drawRadialInfluence(ctx, px + 0.04 * sz, py - 0.72 * sz, sz * 0.92 * sr, 0.55);
   }
 
   // ── Reset compositing mode ────────────────────────────────────────────────────

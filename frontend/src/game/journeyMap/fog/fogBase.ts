@@ -51,6 +51,14 @@ const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
+/**
+ * Extra pixels added on all four sides of the fog canvas beyond the MapWorld
+ * boundary.  The canvas is positioned at (−padding, −padding) in world space
+ * so the fog extends past the outermost hex centres and never shows a hard edge.
+ * FogBaseLayer.tsx reads this export to apply the matching CSS offset.
+ */
+export const FOG_WORLD_PADDING = 200;
+
 /** Grid cell width in tile-size multiples. Adjacent cells overlap at ≥ half-width. */
 const BASE_CELL_TILES = 4.5;
 
@@ -164,21 +172,33 @@ export async function drawFogBase(
   // ── Load fog image (Metro-bundled, cached after first call) ──────────────
   const baseImg = await loadBundledImage(FOG_BASE_DAY_SOURCE);
 
-  // ── Size canvas ───────────────────────────────────────────────────────────
-  canvas.width  = Math.ceil(worldWidth);
-  canvas.height = Math.ceil(worldHeight);
+  const P = FOG_WORLD_PADDING;
+
+  // ── Size canvas to world + padding on all sides ───────────────────────────
+  // The canvas is positioned at (−P, −P) in world space (CSS offset applied by
+  // FogBaseLayer) so it bleeds past the outermost hex edges and never shows a
+  // hard rectangular boundary.
+  canvas.width  = Math.ceil(worldWidth  + 2 * P);
+  canvas.height = Math.ceil(worldHeight + 2 * P);
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  // Start fully transparent — no colored background fill.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // ── Step 3: Draw overlapping fog instances ────────────────────────────────
+  // We translate the context by (P, P) so all sprite positions stay in world
+  // space (0,0 = top-left of MapWorld) while canvas(0,0) = world(−P, −P).
   const cellSize = sz * BASE_CELL_TILES;
-  const cols     = Math.ceil(worldWidth  / cellSize) + 2; // +2 for bleed beyond edges
+  const cols     = Math.ceil(worldWidth  / cellSize) + 2; // +2 for bleed beyond world
   const rows     = Math.ceil(worldHeight / cellSize) + 2;
 
   const rand = seededRandom(hashString(runSeed + ':fogbase'));
+
+  ctx.save();
+  // Shift so world coordinates map correctly onto the padded canvas.
+  ctx.translate(P, P);
 
   for (let row = -1; row < rows; row++) {
     for (let col = -1; col < cols; col++) {
@@ -206,10 +226,14 @@ export async function drawFogBase(
     }
   }
 
+  ctx.restore(); // undo translate(P, P)
+
   // ── Step 4: Apply visibility mask with destination-in ─────────────────────
-  // The mask is WHITE where fog must be opaque (unexplored) and TRANSPARENT
-  // where fog must be cleared (visible now).  destination-in keeps the fog
-  // sprite pixels wherever the mask has alpha > 0, attenuated proportionally.
+  // The mask is WHITE (alpha=1) where fog must be opaque — that includes the
+  // padded area and all unexplored tiles.  destination-in keeps fog sprite
+  // pixels proportionally to mask alpha; transparent mask pixels erase fog.
+  // We pass padding=P so the mask is sized to match this canvas and the tile
+  // clearings land at the correct padded canvas positions.
   const maskCanvas = document.createElement('canvas');
   const maskParams: FogMaskParams = {
     worldWidth,
@@ -219,6 +243,7 @@ export async function drawFogBase(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
+    padding: P,
   };
   drawFogMask(maskCanvas, maskParams);
 

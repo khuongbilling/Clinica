@@ -38,7 +38,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
-import { drawFogBase } from '@/src/game/journeyMap/fog/fogBase';
+import { drawFogBase, FOG_WORLD_PADDING } from '@/src/game/journeyMap/fog/fogBase';
 import { fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
@@ -87,7 +87,8 @@ export function FogBaseLayer({
     if (!container) return;
 
     const canvas = document.createElement('canvas');
-    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;';
+    // Offset by −padding so the extended canvas bleeds past all world edges.
+    canvas.style.cssText = `position:absolute;left:${-FOG_WORLD_PADDING}px;top:${-FOG_WORLD_PADDING}px;pointer-events:none;`;
     container.appendChild(canvas);
     canvasRef.current  = canvas;
     cacheKeyRef.current = ''; // force a draw on first attach

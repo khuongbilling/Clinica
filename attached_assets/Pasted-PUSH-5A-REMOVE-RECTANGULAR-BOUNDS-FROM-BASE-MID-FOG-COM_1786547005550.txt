@@ -1,0 +1,214 @@
+PUSH 5A — REMOVE RECTANGULAR BOUNDS FROM BASE + MID FOG COMPOSITION
+
+Do NOT proceed to the Edge Fog asset yet.
+
+Current state:
+- Base Fog exists
+- Mid Fog exists
+- both move with MapWorld
+- but their rectangular/canvas bounds are visibly exposed
+
+CURRENT VISUAL BUG:
+
+The bottom of the tactical map contains:
+- a hard horizontal fog boundary
+- large rectangular fog regions
+- visible seams between fog canvases / fog images
+
+This means the fog artwork may be correct, but the COMPOSITION is wrong.
+
+TARGET:
+
+Base Fog + Mid Fog must visually read as ONE continuous atmospheric field.
+
+The player must never see:
+- the border of a canvas
+- the border of a fog image
+- a rectangular fog region
+- a horizontal cutoff between clear map and fog
+
+DO NOT CHANGE:
+
+- camera
+- map geometry
+- player movement
+- FOV calculations
+- exploredTileIds
+- encounter rendering
+- player sprite
+- fog asset filenames
+
+PART 1 — USE ONE FULL-WORLD CANVAS PER FOG LAYER
+
+FogBaseLayer and FogMidLayer must each use a canvas sized to the ENTIRE MapWorld.
+
+Example:
+
+baseFogCanvas.width = worldWidth;
+baseFogCanvas.height = worldHeight;
+
+midFogCanvas.width = worldWidth;
+midFogCanvas.height = worldHeight;
+
+Do NOT create:
+- one canvas per quadrant
+- one canvas per visible region
+- one canvas per tile
+- separate rectangular fog sections
+
+There should be exactly:
+
+1 Base Fog canvas
+1 Mid Fog canvas
+
+for the whole map world.
+
+PART 2 — DRAW MULTIPLE TRANSPARENT FOG SPRITES INSIDE THE CANVAS
+
+Do not stretch one fog PNG across the world.
+
+Instead:
+
+- clear the full-world canvas
+- draw several copies of the approved fog asset
+- overlap them
+- vary their positions
+- vary scale moderately
+- vary opacity
+- vary rotation slightly
+
+The rectangular source-image bounds must remain invisible because the PNG/WebP exterior is transparent.
+
+PART 3 — REMOVE FALLBACK FILLS
+
+Audit FogBaseLayer and FogMidLayer for:
+
+fillRect(...)
+backgroundColor
+background
+rgba(...)
+solid navy fallback
+solid blue fallback
+canvas initialization fill
+
+Remove any full rectangular colored fill behind the fog.
+
+The fog canvas itself must begin transparent:
+
+ctx.clearRect(
+  0,
+  0,
+  worldWidth,
+  worldHeight
+);
+
+Do NOT fill the fog canvas with:
+- navy
+- gray
+- blue
+- white
+- black
+
+The raster fog sprites provide the visible fog.
+
+PART 4 — MASK THE FINISHED COMPOSITION
+
+Correct order:
+
+1. clear transparent canvas
+2. draw all Base/Mid fog sprites across world
+3. apply visibility mask using destination-in
+4. composite result over map
+
+Do NOT:
+
+apply the mask to a solid rectangular background.
+
+Concept:
+
+TRANSPARENT CANVAS
++
+FOG SPRITES
++
+VISIBILITY MASK
+=
+FINAL FOG LAYER
+
+NOT:
+
+COLORED RECTANGLE
++
+FOG
++
+MASK
+
+PART 5 — COVER THE WORLD BEYOND THE CURRENT VISIBLE CLEARING
+
+Fog sprite placement must extend beyond terrain bounds slightly so the outer unexplored map remains atmospheric.
+
+Use fog padding around MapWorld such as:
+
+FOG_WORLD_PADDING = 150–300 px
+
+depending on map scale.
+
+Do not let the fog composition stop exactly at the outermost hex centers.
+
+PART 6 — CHECK ASSET ALPHA
+
+Validate:
+
+fog_base_day_01.png
+fog_bank_day_01.png
+fog_mid_day_01.png
+
+Render each over:
+- checkerboard
+- pure white
+- pure black
+
+If the source asset contains:
+- opaque rectangular matte
+- colored rectangular backing
+- non-transparent exterior
+
+reject that asset before continuing.
+
+PART 7 — NO EDGE FOG YET
+
+Do not import:
+
+fog_edge_day_01.png
+
+in this push.
+
+The purpose of Push 5A is to prove that Base Fog + Mid Fog can already render without rectangles.
+
+ACCEPTANCE CRITERIA:
+
+1. No horizontal fog cutoff.
+2. No rectangular navy region.
+3. No rectangular blue-gray region.
+4. No visible canvas boundaries.
+5. Base + Mid fog appear as one continuous atmospheric mass.
+6. Fog remains aligned while panning.
+7. Visible FOV remains clear.
+8. Explored terrain remains lightly hazed.
+9. Unexplored terrain remains fogged.
+10. Player/camera behavior unchanged.
+
+DEV TEST:
+
+Temporarily draw the bounds of:
+- Base Fog canvas
+- Mid Fog canvas
+
+using a debug-only 1px outline.
+
+Confirm both canvases equal the full MapWorld dimensions.
+
+Then disable those outlines.
+
+Commit:
+
+fix(journey): remove rectangular bounds from layered fog composition
