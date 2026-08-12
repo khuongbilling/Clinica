@@ -59,8 +59,10 @@ export interface FogBaseLayerProps {
   runSeed:    string;
 }
 
-/** z-index of the fog canvas inside MapWorld. */
-export const FOG_BASE_Z = 5000;
+/** z-index of the fog canvas inside MapWorld.
+ *  Must be above TERRAIN_BASE ceiling (5400) so fog covers all tiles,
+ *  and below WorldObjects / player (6200+). */
+export const FOG_BASE_Z = 5500;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 

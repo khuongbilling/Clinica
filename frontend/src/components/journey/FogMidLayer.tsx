@@ -48,7 +48,8 @@ export interface FogMidLayerProps {
 }
 
 /** z-index inside MapWorld — directly above FogBaseLayer (z 5000). */
-export const FOG_MID_Z = 5010;
+/** Above terrain ceiling (5400) and FOG_BASE_Z (5500); below WorldObjects (6200+). */
+export const FOG_MID_Z = 5510;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
