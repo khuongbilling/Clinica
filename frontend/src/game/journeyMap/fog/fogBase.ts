@@ -38,7 +38,6 @@
  */
 
 import { Asset } from 'expo-asset';
-import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
 import { JOURNEY_ASSETS } from '../assets';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
@@ -228,31 +227,6 @@ export async function drawFogBase(
 
   ctx.restore(); // undo translate(P, P)
 
-  // ── Step 4: Apply visibility mask with destination-in ─────────────────────
-  // The mask is WHITE (alpha=1) where fog must be opaque — that includes the
-  // padded area and all unexplored tiles.  destination-in keeps fog sprite
-  // pixels proportionally to mask alpha; transparent mask pixels erase fog.
-  // We pass padding=P so the mask is sized to match this canvas and the tile
-  // clearings land at the correct padded canvas positions.
-  const maskCanvas = document.createElement('canvas');
-  const maskParams: FogMaskParams = {
-    worldWidth,
-    worldHeight,
-    sz,
-    tileCenters,
-    visibleNowIds,
-    exploredIds,
-    effectiveFieldOfVision,
-    padding: P,
-  };
-  drawFogMask(maskCanvas, maskParams);
-
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.globalAlpha = 1;
-  ctx.drawImage(maskCanvas, 0, 0);
-  ctx.globalCompositeOperation = 'source-over';
-
-  // ── Step 5: Edge taper — dissolve fog to transparent at world boundaries ──
-  // Prevents any visible rectangular cutoff where the fog meets the map edge.
-  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
+  // Mask and edge taper intentionally removed — fog covers the entire map
+  // with no reveal clearing and no edge fade.
 }
