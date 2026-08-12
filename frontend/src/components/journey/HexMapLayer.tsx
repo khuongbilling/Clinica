@@ -407,20 +407,31 @@ const PLAYER_TOKEN = require('@/assets/ui/journey/map/player-map-token.webp') as
 // painterly donghua chibi character rather than a UI ornament.
 // Art spec: 2.5–3-head-tall chibi, teal-jade longcoat, black hair, soft
 // cel-painted rendering, transparent bg, painted contact shadow at feet.
+//
+// Push (Task 719): replaced with per-direction source map below.
+// MAP_SPRITE_EXPLORER retained as the face_e canonical reference only.
 const MAP_SPRITE_EXPLORER = require('@/assets/map-sprites/map_sprite_explorer.png') as number;
 
 // ── Directional idle facing for the exploration hero ─────────────────────────
 //
 // The hex grid uses flat-top axial (q,r). Every valid move is one of exactly
 // 6 neighbor vectors; we map that delta to a named facing so the sprite can
-// mirror left/right and hold direction while idle.
+// show a dedicated directional frame instead of a mirrored copy.
 //
-// Art currently ships one sprite; rightward facings (E / NE / SE) use the
-// native orientation, leftward facings (W / NW / SW) apply scaleX:-1.
-// As 6-direction sprite frames are added, replace the mirror with the
-// dedicated frame per FacingDir — no call-site changes required.
+// Task 719: 6 unique frames ship for the generic explorer sprite.
+// Each FacingDir has its own source PNG — no scaleX mirroring needed for the
+// explorer.  Class sprites fall back to the mirror approach (scaleX:-1 for
+// westward facings) until per-class 6-frame art is authored.
 export type FacingDir = 'face_e' | 'face_w' | 'face_ne' | 'face_nw' | 'face_se' | 'face_sw';
 
+const EXPLORER_FACING_SPRITES: Record<FacingDir, number> = {
+  face_e:  require('@/assets/map-sprites/map_sprite_explorer_face_e.png')  as number,
+  face_w:  require('@/assets/map-sprites/map_sprite_explorer_face_w.png')  as number,
+  face_ne: require('@/assets/map-sprites/map_sprite_explorer_face_ne.png') as number,
+  face_nw: require('@/assets/map-sprites/map_sprite_explorer_face_nw.png') as number,
+  face_se: require('@/assets/map-sprites/map_sprite_explorer_face_se.png') as number,
+  face_sw: require('@/assets/map-sprites/map_sprite_explorer_face_sw.png') as number,
+};
 /** Resolve an axial move delta (dq, dr) to one of the 6 hex facings. */
 export function hexFacingFromDelta(dq: number, dr: number): FacingDir {
   if (dq ===  1 && dr ===  0) return 'face_e';
@@ -432,7 +443,11 @@ export function hexFacingFromDelta(dq: number, dr: number): FacingDir {
   return 'face_e'; // non-neighbour delta — keep current facing
 }
 
-/** scaleX for a facing: native art faces right; leftward facings mirror. */
+/**
+ * scaleX for a facing: used ONLY for class sprites that don't yet have
+ * dedicated 6-frame art.  Native art faces right; leftward facings mirror.
+ * Explorer sprite uses EXPLORER_FACING_SPRITES instead — no scaleX needed.
+ */
 function facingScaleX(f: FacingDir): 1 | -1 {
   return (f === 'face_w' || f === 'face_nw' || f === 'face_sw') ? -1 : 1;
 }
@@ -1055,8 +1070,9 @@ function HexObjectLayer({
     return () => idleLoop.stop();
   }, [isMoving, bobAnim, swayAnim]);
 
-  // scaleX from current facing — flips sprite for leftward directions.
-  const scaleX = facingScaleX(playerFacing);
+  // Class sprites don't yet have 6-frame art → mirror leftward facings.
+  // Explorer uses EXPLORER_FACING_SPRITES per-direction — no scaleX needed.
+  const classScaleX = facingScaleX(playerFacing);
 
   return (
     <>
@@ -1149,15 +1165,21 @@ function HexObjectLayer({
             })()}
 
             {/* Layer 4b: player sprite — current tile only.
-              * Uses explorationCharacter (class sprite) when available, else falls
-              * back to MAP_SPRITE_EXPLORER (donghua chibi — Push 19).
-              * Sized at CHR_W_RATIO × sz; feet land at ~65 % tile height.
-              * Directional facing : scaleX mirrors sprite for westward moves.
+              * Task 719: Explorer uses EXPLORER_FACING_SPRITES[playerFacing] — a
+              * dedicated directional frame for each of the 6 hex directions.
+              * No scaleX mirroring is needed for the explorer.
+              * Class sprites (explorationCharacter set) fall back to the mirror
+              * approach (classScaleX) until 6-frame class art is authored.
               * Idle       : slow ±3 px bob, sway = 0.
               * Walk (isMoving): fast ±5 px bob + ±3 px lateral sway (step cycle).
               * Renders ABOVE jade glow (DOM paint order).                       */}
             {hasCurrent && (() => {
-              const activeSprite = explorationCharacter ?? MAP_SPRITE_EXPLORER;
+              // Explorer: pick the dedicated directional frame, no mirror needed.
+              // Class sprite: single source + scaleX mirror fallback.
+              const activeSprite = explorationCharacter
+                ? explorationCharacter
+                : EXPLORER_FACING_SPRITES[playerFacing];
+              const spriteScaleX = explorationCharacter ? classScaleX : 1;
               const charW = Math.round(sz * CHR_W_RATIO);
               const charH = Math.round(sz * CHR_H_RATIO);
               const charX = Math.round((sz - charW) / 2);
@@ -1169,7 +1191,7 @@ function HexObjectLayer({
                     top:       charY,
                     width:     charW,
                     height:    charH,
-                    transform: [{ scaleX }, { translateY: bobAnim }, { translateX: swayAnim }],
+                    transform: [{ scaleX: spriteScaleX }, { translateY: bobAnim }, { translateX: swayAnim }],
                   }]}
                 >
                   <Image
@@ -1371,13 +1393,19 @@ export interface HexMapLayerProps {
    * Raster asset for the player's active exploration character (chibi/pawn
    * map sprite keyed by the player's class_tree_id).
    *
-   * When provided: replaces the medallion player token on the current tile
-   * with the character sprite, centred on the hex and sized to overlap the
-   * tile naturally. The jade glow (hex-current.webp base) and tile selection
-   * state are preserved — only the token image changes.
+   * Task 719 semantics — callers MUST follow this contract:
    *
-   * When absent (player has no resolved class yet): the existing medallion
-   * marker is preserved unchanged. Do NOT substitute a generic icon.
+   *   Set to a class-specific sprite token (MAP_SPRITE.guardian, .seer, etc.)
+   *   only when the player has an authored class sprite that differs from the
+   *   generic explorer.  In that case HexObjectLayer renders the sprite with a
+   *   scaleX mirror for westward facings (fallback until 6-frame class art ships).
+   *
+   *   Leave UNDEFINED when:
+   *     • Player data is not yet loaded.
+   *     • The resolved avatar would be MAP_SPRITE.explorer (pre-class or era
+   *       default that hasn't been overridden by a class variant yet).
+   *   In the undefined case HexObjectLayer selects from EXPLORER_FACING_SPRITES
+   *   keyed by playerFacing — the 6 unique directional frames, no mirroring.
    */
   explorationCharacter?: number;
 

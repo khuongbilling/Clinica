@@ -76,6 +76,7 @@ import { buildChapterUiSummary }           from '@/src/features/journey/ui/journ
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
 import { SERIF, UI }                       from '@/src/theme/ui';
 import { getExplorationAvatar }             from '@/src/game/explorationAvatar';
+import { MAP_SPRITE }                        from '@/src/game/illustratedAssets';
 import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
 import { getChapterTerrainCellCount }                  from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
@@ -685,16 +686,24 @@ export default function ChapterFogMapShell() {
   // ── Exploration character sprite ──────────────────────────────────────────
   // Push 3: resolved via getExplorationAvatar() — progression-aware resolver
   // that factors in chapter era, class, and future skin/variant overrides.
-  // Undefined only when the player object is not yet loaded; HexMapLayer
-  // (Layer 4b) will then substitute its own MAP_SPRITE_EXPLORER fallback.
-  // When player IS loaded, the resolver always returns a valid asset token
-  // (see explorationAvatar.ts for the full resolution priority chain).
-  const explorationCharacter: number | undefined = player
+  //
+  // Task 719: explorationCharacter is only set when a CLASS-SPECIFIC sprite
+  // was resolved (i.e. not the generic MAP_SPRITE.explorer token).  When the
+  // resolver returns MAP_SPRITE.explorer (pre-class players, or eras whose
+  // class art hasn't shipped yet), we pass undefined so HexObjectLayer selects
+  // from EXPLORER_FACING_SPRITES[playerFacing] — the 6 unique directional
+  // frames — without any scaleX mirroring.  Class sprites continue to use the
+  // single-source + mirror approach until 6-frame class art is authored.
+  const _resolvedAvatar: number | undefined = player
     ? getExplorationAvatar({
         classTreeId:   player.class_tree_id,
         chapterNumber: chNum,
       })
     : undefined;
+  const explorationCharacter: number | undefined =
+    _resolvedAvatar != null && _resolvedAvatar !== MAP_SPRITE.explorer
+      ? _resolvedAvatar
+      : undefined;
 
   // ── Effective vision radius (Push 3 — configurable field of vision) ────────
   // Formula: effectiveVisionRadius = BASE_VISION_RADIUS + Σ(active bonuses)

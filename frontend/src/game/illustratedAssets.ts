@@ -155,6 +155,21 @@ export const MAP_SPRITE: Record<string, number> = {
 };
 
 /**
+ * Task 719: 6 unique directional frames for the generic explorer sprite.
+ * Keyed by FacingDir value.  Used by HexMapLayer.tsx EXPLORER_FACING_SPRITES
+ * to serve the correct frame without any scaleX mirroring.
+ * Included in MAP_SPRITE_MODULES for launch-time preloading.
+ */
+export const MAP_SPRITE_EXPLORER_FACING: Record<string, number> = {
+  face_e:  require("../../assets/map-sprites/map_sprite_explorer_face_e.png"),
+  face_w:  require("../../assets/map-sprites/map_sprite_explorer_face_w.png"),
+  face_ne: require("../../assets/map-sprites/map_sprite_explorer_face_ne.png"),
+  face_nw: require("../../assets/map-sprites/map_sprite_explorer_face_nw.png"),
+  face_se: require("../../assets/map-sprites/map_sprite_explorer_face_se.png"),
+  face_sw: require("../../assets/map-sprites/map_sprite_explorer_face_sw.png"),
+};
+
+/**
  * Resolve a map sprite by player class_tree_id or class name.
  * Defaults to caretaker (most neutral healer look) if no match.
  */
@@ -180,8 +195,11 @@ export const LESSON_BANNER_MODULES: number[] = Object.values(LESSON_BANNER);
 /** All V2 school banners. */
 export const SCHOOL_BANNER_MODULES: number[] = Object.values(SCHOOL_BANNER);
 
-/** All V2 map sprite tokens. */
-export const MAP_SPRITE_MODULES: number[] = Object.values(MAP_SPRITE);
+/** All V2 map sprite tokens (includes Task 719 explorer directional frames). */
+export const MAP_SPRITE_MODULES: number[] = [
+  ...Object.values(MAP_SPRITE),
+  ...Object.values(MAP_SPRITE_EXPLORER_FACING),
+];
 
 /** Every V2 illustrated asset — use to warm the full illustrated asset cache. */
 export const ALL_ILLUSTRATED_MODULES: number[] = [
