@@ -1159,6 +1159,7 @@ export default function ChapterFogMapShell() {
             explorationCharacter={explorationCharacter}
             playerFacing={playerFacing}
             isMoving={isMoving}
+            runSeed={run?.seed}
             environmentBackground={{
               source:  chapterVisuals.background,
               scale:   chapterVisuals.backgroundScale,

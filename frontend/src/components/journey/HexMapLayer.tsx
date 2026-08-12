@@ -1207,18 +1207,6 @@ function HexObjectLayer({
  * State-ring SVGs in HexTile (current / visibleNow / exploredButOutOfVision)
  * are NOT fog — they are interactivity indicators and are preserved.
  */
-interface JourneyFogLayerProps {
-  tiles:    readonly HexMapTile[];
-  coords:   HexWorldCoords;
-  fogTheme: FogTheme;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function JourneyFogLayer(_props: JourneyFogLayerProps): null {
-  // Push 13: legacy block fog removed; Push 14 will replace with new implementation.
-  return null;
-}
-
 // ── RecenterButton ────────────────────────────────────────────────────────────
 
 function RecenterButton({ onPress }: { onPress: () => void }) {
@@ -1281,8 +1269,20 @@ export interface HexMapDevOverlay {
   encounterAnchors?: boolean;
   /** Show a colour-coded badge for each tile's visibility state. */
   visibilityState?:  boolean;
-  /** Suppress fog rendering so tiles beneath are clearly visible. */
+  /** Suppress ALL fog rendering (shortcut for fogBack + fogFront). */
   fogLayer?:         boolean;
+  /** Suppress the dense back-fog layer only. */
+  fogBack?:          boolean;
+  /** Suppress the light front-fog wisp layer only. */
+  fogFront?:         boolean;
+  /** Render fog-clearing influence rings for each visible / explored tile. */
+  fogMask?:          boolean;
+  /** Tint visibleNow tiles with a green overlay. */
+  showVisibleNow?:   boolean;
+  /** Tint exploredButOutOfVision tiles with an amber overlay. */
+  showExplored?:     boolean;
+  /** Tint unexplored tiles with a red overlay. */
+  showUnexplored?:   boolean;
   /** Mark the sprite anchor point (grounding Y) for the current tile. */
   spriteAnchors?:    boolean;
 }
@@ -1397,6 +1397,13 @@ export interface HexMapLayerProps {
    */
   isMoving?: boolean;
 
+  /**
+   * Run seed forwarded to JourneyFogField.
+   * Enables per-run placement variation once the fog field is seeded.
+   * Pass `run.seed` (string) from fog-map.tsx.
+   */
+  runSeed?: string;
+
   // ── Dev-only props (no-op in production) ────────────────────────────────
 
   /**
@@ -1458,6 +1465,7 @@ export function HexMapLayer({
   explorationCharacter,
   playerFacing,
   isMoving,
+  runSeed,
   terrainTexture,
   environmentBackground,
   diagRef,
@@ -1865,6 +1873,10 @@ export function HexMapLayer({
           tiles={tiles}
           coords={coords}
           timeOfDay={timeOfDay ?? 'night'}
+          seed={runSeed}
+          hideBack={__DEV__ && !!(devOverlay?.fogLayer || devOverlay?.fogBack)}
+          hideFront={__DEV__ && !!(devOverlay?.fogLayer || devOverlay?.fogFront)}
+          showMask={__DEV__ && !!devOverlay?.fogMask}
         />
 
         {/* ── Gate art overlay ──────────────────────────────────────────────
@@ -2116,6 +2128,29 @@ export function HexMapLayer({
                   backgroundColor: visColor + '99',
                   borderWidth:     1,
                   borderColor:     visColor,
+                }} />
+              )}
+
+              {/* Visibility tint overlays — separate per-state toggles */}
+              {devOverlay.showVisibleNow && tile.visibility === 'visibleNow' && (
+                <View style={{
+                  position:        'absolute',
+                  left: 0, top: 0, right: 0, bottom: 0,
+                  backgroundColor: 'rgba(74,222,128,0.22)',
+                }} />
+              )}
+              {devOverlay.showExplored && tile.visibility === 'exploredButOutOfVision' && (
+                <View style={{
+                  position:        'absolute',
+                  left: 0, top: 0, right: 0, bottom: 0,
+                  backgroundColor: 'rgba(250,204,21,0.22)',
+                }} />
+              )}
+              {devOverlay.showUnexplored && tile.visibility === 'unexplored' && (
+                <View style={{
+                  position:        'absolute',
+                  left: 0, top: 0, right: 0, bottom: 0,
+                  backgroundColor: 'rgba(239,68,68,0.22)',
                 }} />
               )}
             </View>
