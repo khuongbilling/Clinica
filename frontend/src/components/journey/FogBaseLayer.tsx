@@ -112,9 +112,7 @@ export function FogBaseLayer({
 
     const { sz } = coords;
 
-    // Build tile centres. Visibility classification is intentionally disabled
-    // so the mask stays fully white and fog covers the entire map.
-    // Wire visibleNowIds / exploredIds when per-tile clearing is needed.
+    // Build tile centres and classify visibility for the mask.
     const tileCenters   = new Map<string, { cx: number; cy: number }>();
     const visibleNowIds = new Set<string>();
     const exploredIds   = new Set<string>();
@@ -122,6 +120,11 @@ export function FogBaseLayer({
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
+      if (tile.visibility === 'visibleNow' || tile.current) {
+        visibleNowIds.add(tile.id);
+      } else if (tile.visibility === 'exploredButOutOfVision') {
+        exploredIds.add(tile.id);
+      }
     }
 
     // Skip expensive canvas draw if nothing that affects the output changed.

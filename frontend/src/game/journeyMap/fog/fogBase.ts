@@ -39,14 +39,13 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
+import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
 
-// ── Bundled asset source ───────────────────────────────────────────────────────
-// JOURNEY_ASSETS.fog.baseDay is a Metro-bundled require() number.
-// We resolve it via expo-asset's Asset.fromModule() which works cross-platform.
-// DO NOT use Image.resolveAssetSource from react-native — react-native-web
-// does not implement that function (throws on Expo web).
-// DO NOT use a raw '/assets/...' URI — Metro dev server does not serve public/.
+// ── Bundled asset sources ──────────────────────────────────────────────────────
+// Both are Metro-bundled require() numbers resolved via expo-asset.
+// DO NOT use Image.resolveAssetSource — react-native-web throws on Expo web.
 const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
+const FOG_BANK_DAY_SOURCE = JOURNEY_ASSETS.fog.bankDay;
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -60,15 +59,22 @@ export const FOG_WORLD_PADDING = 200;
 
 /** Grid cell width in tile-size multiples. Adjacent cells overlap at ≥ half-width. */
 const BASE_CELL_TILES = 4.5;
-
-/** Minimum rendered width of one instance (× sz). */
+/** Minimum rendered width of one base instance (× sz). */
 const BASE_W_MIN_TILES = 4;
-
-/** Maximum rendered width of one instance (× sz). */
+/** Maximum rendered width of one base instance (× sz). */
 const BASE_W_MAX_TILES = 8;
-
 /** Natural aspect ratio of the fog_base image (1536 × 1024). */
 const FOG_BASE_ASPECT = 1536 / 1024;
+
+// ── Bank fog (secondary irregular variation) ──────────────────────────────────
+/** Slightly wider grid so bank instances interleave differently from base. */
+const BANK_CELL_TILES = 5.5;
+/** Minimum rendered width of one bank instance (× sz). Narrower range than base. */
+const BANK_W_MIN_TILES = 3;
+/** Maximum rendered width of one bank instance (× sz). */
+const BANK_W_MAX_TILES = 7;
+/** Natural aspect ratio of the fog_bank image (assumed same as base). */
+const FOG_BANK_ASPECT = 1536 / 1024;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -168,8 +174,11 @@ export async function drawFogBase(
     runSeed,
   } = params;
 
-  // ── Load fog image (Metro-bundled, cached after first call) ──────────────
-  const baseImg = await loadBundledImage(FOG_BASE_DAY_SOURCE);
+  // ── Load fog images concurrently (cached after first call) ───────────────
+  const [baseImg, bankImg] = await Promise.all([
+    loadBundledImage(FOG_BASE_DAY_SOURCE),
+    loadBundledImage(FOG_BANK_DAY_SOURCE),
+  ]);
 
   const P = FOG_WORLD_PADDING;
 
@@ -225,8 +234,67 @@ export async function drawFogBase(
     }
   }
 
-  ctx.restore(); // undo translate(P, P)
+  // ── Bank fog pass (secondary irregular variation) ─────────────────────────
+  // Uses a separate seed namespace and wider cell grid so bank instances
+  // interleave with the base layer, breaking repetition.
+  const bankCellSize = sz * BANK_CELL_TILES;
+  const bankCols     = Math.ceil(worldWidth  / bankCellSize) + 2;
+  const bankRows     = Math.ceil(worldHeight / bankCellSize) + 2;
+  const bankRand     = seededRandom(hashString(runSeed + ':fogbank'));
 
-  // Mask and edge taper intentionally removed — fog covers the entire map
-  // with no reveal clearing and no edge fade.
+  ctx.save();
+  ctx.translate(P, P);
+
+  for (let row = -1; row < bankRows; row++) {
+    for (let col = -1; col < bankCols; col++) {
+      const cx = (col + 0.5) * bankCellSize + (bankRand() - 0.5) * bankCellSize * 0.95;
+      const cy = (row + 0.5) * bankCellSize + (bankRand() - 0.5) * bankCellSize * 0.95;
+
+      const wTiles = BANK_W_MIN_TILES + bankRand() * (BANK_W_MAX_TILES - BANK_W_MIN_TILES);
+      const w      = sz * wTiles;
+      const h      = w / FOG_BANK_ASPECT;
+
+      // Rotation: −10° … +10°
+      const angle = (bankRand() * 20 - 10) * (Math.PI / 180);
+
+      // Opacity: 0.55 … 0.80 — lighter than base fog
+      const alpha = 0.55 + bankRand() * 0.25;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.drawImage(bankImg, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+  }
+
+  ctx.restore(); // undo translate(P, P) for bank pass
+
+  // ── Step 4: Apply visibility mask (destination-in) ────────────────────────
+  // White mask canvas = keep fog. Erased regions = reveal player FoV.
+  // padding=P aligns the mask canvas with the padded fog canvas so tile-centre
+  // clearing coordinates land at the correct positions.
+  const maskCanvas = document.createElement('canvas');
+  const maskParams: FogMaskParams = {
+    worldWidth,
+    worldHeight,
+    sz,
+    tileCenters,
+    visibleNowIds,
+    exploredIds,
+    effectiveFieldOfVision,
+    padding: P,
+  };
+  drawFogMask(maskCanvas, maskParams);
+
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.globalAlpha = 1;
+  ctx.drawImage(maskCanvas, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // ── Step 5: Edge taper ────────────────────────────────────────────────────
+  // Dissolve fog to transparent at all four world edges so no rectangular
+  // cutoff is ever visible.
+  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
 }

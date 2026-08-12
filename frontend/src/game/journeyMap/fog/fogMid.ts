@@ -43,6 +43,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
+import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
 const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
@@ -210,5 +211,28 @@ export async function drawFogMid(
 
   ctx.restore(); // undo translate(P, P)
 
-  // Mask and edge taper removed — fog covers the entire map unconditionally.
+  // ── Visibility mask (destination-in) ──────────────────────────────────────
+  // Mid Fog uses the same mask as Base Fog — same clearing radii, same FoV.
+  // Because Mid Fog has lower instance opacity (0.30–0.60), the combined effect
+  // on EXPLORED tiles is a light memory haze (mask residual × low alpha).
+  const maskCanvas = document.createElement('canvas');
+  const maskParams: FogMaskParams = {
+    worldWidth,
+    worldHeight,
+    sz,
+    tileCenters,
+    visibleNowIds,
+    exploredIds,
+    effectiveFieldOfVision,
+    padding: P,
+  };
+  drawFogMask(maskCanvas, maskParams);
+
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.globalAlpha = 1;
+  ctx.drawImage(maskCanvas, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Edge taper — matches fogBase taper so both layers dissolve uniformly.
+  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
 }
