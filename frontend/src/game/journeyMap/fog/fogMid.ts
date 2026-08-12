@@ -41,11 +41,12 @@
  *   Web only — HTML5 Canvas 2D.
  */
 
+import { Image as RNImage } from 'react-native';
 import { drawFogMask, type FogMaskParams } from './fogMask';
+import { JOURNEY_ASSETS } from '../assets';
 
-// ── Asset path ────────────────────────────────────────────────────────────────
-
-export const FOG_MID_DAY_SRC = '/assets/journey/fog/day/fog_mid_day_01.png';
+// ── Bundled asset source ───────────────────────────────────────────────────────
+const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -101,17 +102,18 @@ function seededRandom(seed: number): () => number {
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  const cached = imageCache.get(src);
+function loadBundledImage(source: number): Promise<HTMLImageElement> {
+  const uri = RNImage.resolveAssetSource(source).uri;
+  const cached = imageCache.get(uri);
   if (cached) return cached;
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.onload  = () => resolve(img);
     img.onerror = reject;
-    img.src     = src;
+    img.src     = uri;
   });
-  imageCache.set(src, p);
+  imageCache.set(uri, p);
   return p;
 }
 
@@ -144,7 +146,7 @@ export async function drawFogMid(
     runSeed,
   } = params;
 
-  const midImg = await loadImage(FOG_MID_DAY_SRC);
+  const midImg = await loadBundledImage(FOG_MID_DAY_SOURCE);
 
   canvas.width  = Math.ceil(worldWidth);
   canvas.height = Math.ceil(worldHeight);

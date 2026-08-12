@@ -37,12 +37,17 @@
  *   Callers must guard with `Platform.OS === 'web'` before calling drawFogBase.
  */
 
+import { Image as RNImage } from 'react-native';
 import { drawFogMask, type FogMaskParams } from './fogMask';
+import { JOURNEY_ASSETS } from '../assets';
 
-// ── Image asset paths (relative to web root / public/) ────────────────────────
-
-/** URL for the primary dense fog texture (PASS — clean transparency). */
-export const FOG_BASE_DAY_SRC = '/assets/journey/fog/day/fog_base_day_01.png';
+// ── Bundled asset source ───────────────────────────────────────────────────────
+// JOURNEY_ASSETS.fog.baseDay is a Metro-bundled require() number.
+// We resolve the actual URI at load time via Image.resolveAssetSource so the
+// canvas HTMLImageElement gets a URL that works in the dev server.
+// Never use a raw '/assets/...' URI string — Metro's dev server does not
+// serve public/ as a static file tree (404 in development).
+const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -98,17 +103,20 @@ function seededRandom(seed: number): () => number {
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  const cached = imageCache.get(src);
+/** Resolve a Metro-bundled require() number to a web-accessible URL, then
+ *  load it into an HTMLImageElement for canvas drawImage(). Cached per URI. */
+function loadBundledImage(source: number): Promise<HTMLImageElement> {
+  const uri = RNImage.resolveAssetSource(source).uri;
+  const cached = imageCache.get(uri);
   if (cached) return cached;
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.onload  = () => resolve(img);
     img.onerror = reject;
-    img.src     = src;
+    img.src     = uri;
   });
-  imageCache.set(src, p);
+  imageCache.set(uri, p);
   return p;
 }
 
@@ -140,8 +148,8 @@ export async function drawFogBase(
     runSeed,
   } = params;
 
-  // ── Load fog image (cached) ───────────────────────────────────────────────
-  const baseImg = await loadImage(FOG_BASE_DAY_SRC);
+  // ── Load fog image (Metro-bundled, cached after first call) ──────────────
+  const baseImg = await loadBundledImage(FOG_BASE_DAY_SOURCE);
 
   // ── Size canvas ───────────────────────────────────────────────────────────
   canvas.width  = Math.ceil(worldWidth);

@@ -81,6 +81,30 @@ export const JOURNEY_ASSETS = {
     /** Decorative frame around chapter completion rewards. */
     rewardFrame:    require('../../../public/assets/ui/journey/chapter/chapter-reward-frame.webp'),
   },
+
+  /**
+   * Fog system runtime assets — Pushes 4 & 5.
+   * These are loaded via require() so Metro bundles them; the resolved URI
+   * is obtained at runtime via Image.resolveAssetSource() in fogBase/fogMid.
+   * Do NOT reference these via raw '/assets/...' URI strings — Metro's dev
+   * server does not serve public/ as a static file tree.
+   */
+  fog: {
+    /** Layer 2 — Base Fog primary dense coverage (PASS). */
+    baseDay:  require('../../../public/assets/journey/fog/day/fog_base_day_01.png'),
+    /**
+     * Layer 2 — Base Fog secondary irregular cloud bank.
+     * REJECTED in Push 4 pixel audit (dark background bleed). Included here
+     * so the require() is registered; do not use until asset is regenerated.
+     */
+    bankDay:  require('../../../public/assets/journey/fog/day/fog_bank_day_01.png'),
+    /** Layer 3 — Mid Fog atmospheric texture (PASS). */
+    midDay:   require('../../../public/assets/journey/fog/day/fog_mid_day_01.png'),
+    /** Layer 4 — Edge fog (future push). */
+    edgeDay:  require('../../../public/assets/journey/fog/day/fog_edge_day_01.png'),
+    /** Layer 5 — Foreground wisps (future push). */
+    wispDay:  require('../../../public/assets/journey/fog/day/fog_wisp_day_01.png'),
+  },
 } as const;
 
 /** Convenience type — the resolved shape of JOURNEY_ASSETS. */
