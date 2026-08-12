@@ -175,6 +175,7 @@ import {
 import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react-native-svg';
 
 import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import { FogBaseLayer } from './FogBaseLayer';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -1625,6 +1626,13 @@ export interface HexMapLayerProps {
   terrainTexture?: number;
 
   /**
+   * JourneyRun.seed — drives deterministic fog instance placement in
+   * FogBaseLayer (Push 4).  Same seed = same fog layout every time the run
+   * is loaded.  When absent (fixture / debug routes) a fixed fallback is used.
+   */
+  runSeed?: string;
+
+  /**
    * Per-tile debug overlays controlled by the diagnostics panel checkboxes.
    * Every branch is guarded by `__DEV__`; no overhead in production.
    */
@@ -1645,6 +1653,7 @@ export function HexMapLayer({
   dustTileId,
   terrainTexture,
   environmentBackground,
+  runSeed,
   diagRef,
   devOverlay,
 }: HexMapLayerProps) {
@@ -2084,6 +2093,25 @@ export function HexMapLayer({
             }}
           />
         )}
+
+        {/* ── Push 4: FogBaseLayer — Layer 2 Base Fog ──────────────────────────
+          * Primary atmospheric concealment for unexplored terrain.
+          *
+          * z 5000: above unexplored tile Pressables (z 50–1550) so they are
+          *         hidden; below revealed terrain Pressables (z 5100+) so they
+          *         naturally show through.  The visibility mask (destination-in)
+          *         adds soft organic clearing edges around explored and
+          *         visible-now areas.
+          *
+          * Web only — native = null stub.  Camera pan does not trigger redraw.
+          */}
+        <FogBaseLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
 
         {/* ── Complete terrain — ALL tiles, no visibility filter (Push 5) ─────
           * Every tile in the `tiles` prop is mounted into MapWorld for the

@@ -1182,6 +1182,7 @@ export default function ChapterFogMapShell() {
               offsetX: chapterVisuals.backgroundOffsetX,
               offsetY: chapterVisuals.backgroundOffsetY,
             }}
+            runSeed={run?.seed}
             diagRef={__DEV__ ? diagRef : undefined}
             devOverlay={__DEV__ ? devOverlay : undefined}
           />
