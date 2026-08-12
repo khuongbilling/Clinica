@@ -357,79 +357,21 @@ export function JourneyFogField({
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
+  //
+  // Push 2A: rectangular cloud-bank Image nodes and the base-tint View have
+  // been removed.  Unexplored terrain is temporarily unfogged.
+  // The clearing math (backSources, frontSources, backPlacements,
+  // frontPlacements) and z-constants remain intact so the next fog push can
+  // slot painted art back in without architecture changes.
+  //
+  // Variables retained to avoid churn (used by dev mask + next push):
+  //   palette, banks, backPlacements, frontPlacements, driftTransform,
+  //   hideBack, hideFront
+  void palette; void banks; void backPlacements; void frontPlacements;
+  void driftTransform; void hideBack; void hideFront;
+
   return (
     <>
-      {/* ── BackFogLayer — dense atmospheric base ─────────────────────────
-       * z FOG_BACK_Z (4800): above unexplored Pressables, below explored tiles.
-       * Base tint View provides even dark coverage between cloud banks.       */}
-      {!hideBack && (
-        <View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, styles.backFog]}
-        >
-          {/* Base tint — even atmospheric coverage beneath cloud banks */}
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              { backgroundColor: palette.baseColor, opacity: palette.baseOpacity },
-            ]}
-          />
-          {/* Drifting painted cloud banks */}
-          <Animated.View
-            style={[StyleSheet.absoluteFillObject, { transform: driftTransform }]}
-          >
-            {backPlacements.map((p, i) => (
-              <Image
-                key={i}
-                source={banks[p.bankIdx]}
-                style={{
-                  position: 'absolute',
-                  left:     p.left,
-                  top:      p.top,
-                  width:    p.width,
-                  height:   p.height,
-                  opacity:  p.opacity,
-                }}
-                contentFit="fill"
-                recyclingKey={`fog-back-${i}`}
-              />
-            ))}
-          </Animated.View>
-        </View>
-      )}
-
-      {/* ── FrontFogLayer — light wisp overlay ────────────────────────────
-       * z FOG_FRONT_Z (6100): above explored/visible terrain, below
-       * HexObjectLayer (z 6200+).  Bank C only (wispy tendrils).
-       * No base tint — keeps explored areas readable.                      */}
-      {!hideFront && (
-        <View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, styles.frontFog]}
-        >
-          <Animated.View
-            style={[StyleSheet.absoluteFillObject, { transform: driftTransform }]}
-          >
-            {frontPlacements.map((p, i) => (
-              <Image
-                key={i}
-                source={banks[p.bankIdx]}
-                style={{
-                  position: 'absolute',
-                  left:     p.left,
-                  top:      p.top,
-                  width:    p.width,
-                  height:   p.height,
-                  opacity:  p.opacity,
-                }}
-                contentFit="fill"
-                recyclingKey={`fog-front-${i}`}
-              />
-            ))}
-          </Animated.View>
-        </View>
-      )}
-
       {/* ── Dev: fog mask — back-fog clearing influence rings ─────────────
        * Green ring = fullR (fully cleared).  Amber ring = startR (fog starts).
        * Only rendered when showMask is true (dev diagnostics toggle).       */}
